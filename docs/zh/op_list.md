@@ -4840,6 +4840,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/psroi_pooling_grad_v2_d/README.md">psroi_pooling_grad_v2_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将PS ROI Pooling的上游梯度按位置敏感通道映射和bin面积散射回输入特征图空间。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/roi_pooling/README.md">roi_pooling</a></td>
     <td>✓</td>
     <td>✓</td>

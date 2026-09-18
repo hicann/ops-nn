@@ -1,0 +1,67 @@
+{
+  "op_type": "PSROIPoolingGradV2D",
+  "op_list": [
+    {
+      "bin_filename": "PSROIPoolingGradV2D_7176bdf18337ae09250af65d9321a57c",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "rois",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "spatial_scale",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "output_dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "input_size",
+          "dtype": "list_int",
+          "value": []
+        }
+      ]
+    }
+  ]
+}

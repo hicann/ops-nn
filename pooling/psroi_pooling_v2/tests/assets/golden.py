@@ -239,18 +239,6 @@ class PsroiPoolingV2TestSpec:
             **kwargs,
         ):
             del kwargs
-            if not isinstance(spatial_scale, (int, float)):
-                raise TypeError("spatial_scale must be a Python scalar")
-            if (
-                spatial_scale <= 0
-                or spatial_scale != spatial_scale
-                or abs(spatial_scale) == float("inf")
-            ):
-                raise ValueError("spatial_scale must be positive and finite")
-            if int(output_dim) != output_dim or output_dim <= 0:
-                raise ValueError("output_dim must be a positive integer")
-            if int(group_size) != group_size or not 1 <= group_size < 128:
-                raise ValueError("group_size must be an integer in [1, 127]")
             self.spatial_scale = float(spatial_scale)
             self.output_dim = int(output_dim)
             self.group_size = int(group_size)
@@ -258,33 +246,13 @@ class PsroiPoolingV2TestSpec:
         def __call__(self, x, rois, **kwargs):
             """Adapt provider tensors to the shared Torch computation core."""
             del kwargs
-            if not isinstance(x, torch.Tensor) or not isinstance(rois, torch.Tensor):
-                raise TypeError("TTK third_party inputs x/rois must be torch.Tensor")
-            if x.device != rois.device:
-                raise ValueError("x and rois must be on the same provider device")
-            if x.dtype not in (torch.float16, torch.float32) or rois.dtype != x.dtype:
-                raise TypeError("x/rois must have the same float16 or float32 dtype")
-            if x.ndim != 4:
-                raise ValueError("x must be a rank-4 ND tensor [N,C,H,W]")
-            if rois.ndim != 3 or rois.shape[1] != 5:
-                raise ValueError("rois must have shape [N,5,R]")
-
-            n, c, h, w = x.shape
-            if rois.shape[0] != n:
-                raise ValueError("rois.shape[0] must equal x.shape[0]")
-            if h <= 0 or w <= 0:
-                raise ValueError("H and W must be greater than zero")
-            output_dim = self.output_dim
-            group_size = self.group_size
-            if c != output_dim * group_size * group_size:
-                raise ValueError("C must equal output_dim*group_size^2")
             return [
                 _psroi_pooling_v2_torch_core(
                     x,
                     rois,
                     self.spatial_scale,
-                    output_dim,
-                    group_size,
+                    self.output_dim,
+                    self.group_size,
                 )
             ]
 
