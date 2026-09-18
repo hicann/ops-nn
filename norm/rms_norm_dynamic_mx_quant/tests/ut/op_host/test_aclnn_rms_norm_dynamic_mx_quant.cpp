@@ -63,7 +63,7 @@ TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_fp16_fp8_e4m3fn)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_null_round_mode_uses_default_rint)
+TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_null_round_mode_returns_error)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_desc_x = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -85,7 +85,7 @@ TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_null_round_mode_uses_de
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_fp16_fp8_e5m2)

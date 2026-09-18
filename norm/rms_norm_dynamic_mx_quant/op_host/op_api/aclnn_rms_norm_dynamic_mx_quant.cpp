@@ -110,6 +110,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const
 
     // 检查必选输入/输出是否为空指针
     CHECK_RET(CheckNotNull(x, gamma, yOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(roundMode != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
     // 校验x除尾轴外的维度不能为0
     auto xShape = x->GetViewShape();
