@@ -112,6 +112,167 @@ TEST_F(IndexTest, index_infershape_success_03)
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
 
+TEST_F(IndexTest, index_infershape_dynamic_shape_01)
+{
+    vector<int64_t> indexed_sizes_data{1, 0, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{-1, -1, -1}, {-1, -1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{-1, -1}, {-1, -1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, -1, -1, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_dynamic_shape_02)
+{
+    vector<int64_t> indexed_sizes_data{0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{-2}, {-2}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_dynamic_shape_03)
+{
+    vector<int64_t> indexed_sizes_data{1, 0, 0, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{8, 2, 4, 16}, {8, 2, 4, 16}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{-2}, {-2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_dynamic_shape_04)
+{
+    vector<int64_t> indexed_sizes_data{1, 0, 0, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{-1, 2, 4, -1}, {-1, 2, 4, -1}}, ge::DT_FLOAT,
+                                                           ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{-1, 2, 4, -1}, {-1, 2, 4, -1}}, ge::DT_INT64,
+                                                                    ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, 2, 4, -1, 2, 4, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_dynamic_shape_05)
+{
+    vector<int64_t> indexed_sizes_data{1, 0, 0, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{-1, 2, 4, -1}, {-1, 2, 4, -1}}, ge::DT_FLOAT,
+                                                           ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{4}, {4}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{-2}, {-2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_dynamic_shape_06)
+{
+    vector<int64_t> indexed_sizes_data{1, 1, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{10, 20, 30}, {10, 20, 30}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{-1, 5}, {-1, 5}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{3, -1}, {3, -1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {3, 5, 30},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_broadcast_01)
+{
+    vector<int64_t> indexed_sizes_data{1, 1, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{10, 20, 30}, {10, 20, 30}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{3, 5}, {3, 5}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{5}, {5}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {3, 5, 30},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_broadcast_02)
+{
+    vector<int64_t> indexed_sizes_data{1, 1, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{10, 20, 30}, {10, 20, 30}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{3, 1}, {3, 1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{1, 5}, {1, 5}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {3, 5, 30},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_broadcast_03)
+{
+    vector<int64_t> indexed_sizes_data{1, 1};
+    gert::InfershapeContextPara::TensorDescription x_shape({{10, 20}, {10, 20}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{3}, {3}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{5}, {5}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}
+
 TEST_F(IndexTest, index_inferdtype_success_01)
 {
     fe::PlatformInfo platformInfo;
