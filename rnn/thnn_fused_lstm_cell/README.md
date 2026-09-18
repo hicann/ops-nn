@@ -4,7 +4,7 @@
 
 | 产品                                                                            | 是否支持 |
 | :------------------------------------------------------------------------------ | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                                                |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                                                |     √    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                          |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                                          |    ×     |
@@ -18,7 +18,7 @@
 - 计算公式：
 
   计算门控激活值：
-  
+
   $$
   \begin{aligned}
   b &= b_{ih} + b_{hh} \\
@@ -29,24 +29,24 @@
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
-  
+
   更新细胞状态：
-  
+
   $$
   cy = f_{out} \odot cx + i_{out} \odot g_{out}
   $$
-  
+
   更新隐状态：
-  
+
   $$
   \begin{aligned}
   tanhc &= \tanh(cy) \\
   hy &= o_{out} \odot tanhc
   \end{aligned}
   $$
-  
+
   相关符号说明：
-  
+
   * 偏置 $b_{ih} = \text{inputBias}$, $b_{hh} = \text{hiddenBias}$
   * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
   * 将得到的4个门控激活值沿最后一维拼接成$\text{storage}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$

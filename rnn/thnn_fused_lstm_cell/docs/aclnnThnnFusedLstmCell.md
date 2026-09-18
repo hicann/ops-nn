@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -118,7 +118,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输入</td>
         <td>输入层的4个门，即输入门（Input Gate）、候选细胞状态（Cell Candidate）、遗忘门（Forget Gate）、输出门（Output Gate）的值。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
         <td>√</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输入</td>
         <td>隐藏层的4个门的值。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
         <td>√</td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输入</td>
         <td>上一时刻的细胞状态。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
         <td>√</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>可选输入</td>
         <td>可选的输入偏置。传入nullptr时，代表没有偏置。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
         <td>√</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>可选输入</td>
         <td>可选的隐藏层偏置。传入nullptr时，代表没有偏置。</td>
         <td>当inputBiasOptional输入有效时，hiddenBiasOptional须有效，否则须为nullptr。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
         <td>√</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输出</td>
         <td>当前时刻的隐状态，即当前时刻的输出。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
         <td>√</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输出</td>
         <td>当前时刻的细胞状态。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
         <td>√</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>输出</td>
         <td>4个门的激活值，提供给反向计算。</td>
         <td>无。</td>
-        <td>FLOAT、FLOAT16</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4 * hidden_size)</td>
         <td>√</td>
@@ -214,6 +214,13 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>-</td>
       </tr>
     </tbody> </table>
+
+  <!-- npu="A3" id7 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型不支持BFLOAT16。
+  <!-- end id7 -->
+  <!-- npu="910b" id8 -->
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型不支持BFLOAT16。
+  <!-- end id8 -->
 
 - **返回值：**
 
@@ -296,6 +303,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - 确定性说明：aclnnThnnFusedLstmCell默认确定性实现。
 - 所有输入、输出参数的数据类型需保持一致。
+- BFLOAT16数据类型仅Ascend 950PR/Ascend 950DT支持；Atlas A3 训练/推理系列、Atlas A2 训练/推理系列产品不支持。
 
 ## 调用示例
 

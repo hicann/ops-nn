@@ -68,26 +68,34 @@ __aicore__ inline void TanhPartialHighPrecision(LocalTensor<float>& inputTensor,
                                                 LocalTensor<float>& temp1Tensor, LocalTensor<float>& temp2Tensor,
                                                 uint32_t calcSizeAlign)
 {
-    // temp1Tensor: x^2, temp2Tensor: tanh(x)
-    Mul(temp1Tensor, inputTensor, inputTensor, calcSizeAlign);
+    // 新结构(参考 CUDA tanhf 小参数路径的数值特性): tanh(x) = x + x^3 * r(x^2)
+    // 旧结构 x*q(x^2) 的 q 在 1 量级求值(ulp 6e-8), 舍入噪声经 *x 传到小值结果上(~1ulp 中位);
+    // 新结构修正项 x^3*r(x^2) 全程在 x 量级收尾, r 在 0.33 量级求值,
+    // |x|<=0.55 全域 <=1ulp(vs 旧 ~1ulp 中位/42%>1ulp@小值), 小值域达正确舍入级(0%>1ulp)
+    // temp1Tensor: x^2, temp2Tensor: 多项式结果
+    Mul(temp1Tensor, inputTensor, inputTensor, calcSizeAlign); // x^2
     PipeBarrier<PIPE_V>();
-    Muls(temp2Tensor, temp1Tensor, 0.016090461204f, calcSizeAlign); // Tanh多项式系数
+    Muls(temp2Tensor, temp1Tensor, -0.00661274015811f, calcSizeAlign); // r 系数 c5
     PipeBarrier<PIPE_V>();
-    Adds(temp2Tensor, temp2Tensor, -0.052421370438f, calcSizeAlign); // Tanh多项式系数
-    PipeBarrier<PIPE_V>();
-    Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
-    PipeBarrier<PIPE_V>();
-    Adds(temp2Tensor, temp2Tensor, 0.133147126779f, calcSizeAlign); // Tanh多项式系数
-    PipeBarrier<PIPE_V>();
-    Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
-    PipeBarrier<PIPE_V>();
-    Adds(temp2Tensor, temp2Tensor, -0.333324134737f, calcSizeAlign); // Tanh多项式系数
+    Adds(temp2Tensor, temp2Tensor, 0.0213028867879f, calcSizeAlign); // c4
     PipeBarrier<PIPE_V>();
     Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
     PipeBarrier<PIPE_V>();
-    Adds(temp2Tensor, temp2Tensor, 0.999999873294f, calcSizeAlign); // Tanh多项式系数
+    Adds(temp2Tensor, temp2Tensor, -0.0539060619477f, calcSizeAlign); // c3
     PipeBarrier<PIPE_V>();
-    Mul(temp2Tensor, temp2Tensor, inputTensor, calcSizeAlign);
+    Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
+    PipeBarrier<PIPE_V>();
+    Adds(temp2Tensor, temp2Tensor, 0.133330698055f, calcSizeAlign); // c2
+    PipeBarrier<PIPE_V>();
+    Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign);
+    PipeBarrier<PIPE_V>();
+    Adds(temp2Tensor, temp2Tensor, -0.333333307106f, calcSizeAlign); // c1, r(x^2) 完成
+    PipeBarrier<PIPE_V>();
+    Mul(temp2Tensor, temp2Tensor, temp1Tensor, calcSizeAlign); // x^2 * r
+    PipeBarrier<PIPE_V>();
+    Mul(temp2Tensor, temp2Tensor, inputTensor, calcSizeAlign); // x^3 * r
+    PipeBarrier<PIPE_V>();
+    Add(temp2Tensor, temp2Tensor, inputTensor, calcSizeAlign); // x + x^3*r
     PipeBarrier<PIPE_V>();
     // temp1Tensor: abs(x)
     Abs(temp1Tensor, inputTensor, calcSizeAlign);
@@ -161,7 +169,7 @@ public:
     // 处理1轮任务
     {
         ProcessAlloc();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             ProcessCopyInHalf();
             ProcessCastIn();
         } else {
@@ -170,7 +178,7 @@ public:
 
         ProcessCompute();
 
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             ProcessCopyOutHalf();
         } else {
             ProcessCopyOut();
@@ -182,7 +190,7 @@ public:
         ubTotal = que.AllocTensor<float>();
         for (uint32_t i = 0; i < bufCnt; i++) {
             ubs[i] = ubTotal[ubOffsets[i]];
-            ubsHalf[i] = ubs[i].ReinterpretCast<half>();
+            ubsHalf[i] = ubs[i].ReinterpretCast<dtype>();
         }
     }
 
@@ -247,7 +255,7 @@ public:
 
     __aicore__ inline void ProcessCastIn()
     {
-        // fp16 -> fp32
+        // fp16/bf16 -> fp32
         for (uint32_t i = 0; i < bufCnt; i++) {
             Cast(ubs[i], ubsHalf[i][tilingData.taskSize], RoundMode::CAST_NONE, info.x);
         }
@@ -276,7 +284,7 @@ public:
         PipeBarrier<PIPE_V>();
         Sigmoid(ubs[BUF3], ubs[BUF1], info.x);
         PipeBarrier<PIPE_V>();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             Cast(ubsHalf[BUF2], ubs[BUF3], RoundMode::CAST_RINT, info.x);
             PipeBarrier<PIPE_V>();
         }
@@ -294,7 +302,7 @@ public:
         PipeBarrier<PIPE_V>();
         TanhPartialHighPrecision(ubs[BUF5], ubs[BUF6], ubs[BUF7], ubs[BUF8], info.x);
         PipeBarrier<PIPE_V>();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             Cast(ubsHalf[BUF7], ubs[BUF6], RoundMode::CAST_RINT, info.x);
             PipeBarrier<PIPE_V>();
         }
@@ -310,7 +318,7 @@ public:
         PipeBarrier<PIPE_V>();
         Sigmoid(ubs[BUF11], ubs[BUF9], info.x);
         PipeBarrier<PIPE_V>();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             Cast(ubsHalf[BUF10], ubs[BUF11], RoundMode::CAST_RINT, info.x);
             PipeBarrier<PIPE_V>();
         }
@@ -326,7 +334,7 @@ public:
         PipeBarrier<PIPE_V>();
         Sigmoid(ubs[BUF15], ubs[BUF13], info.x);
         PipeBarrier<PIPE_V>();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             Cast(ubsHalf[BUF14], ubs[BUF15], RoundMode::CAST_RINT, info.x);
             PipeBarrier<PIPE_V>();
         }
@@ -338,9 +346,9 @@ public:
         PipeBarrier<PIPE_V>();
         Mul(ubs[BUF4], ubs[BUF3], ubs[BUF6], info.x);
         PipeBarrier<PIPE_V>();
-        Add(ubs[BUF1], ubs[BUF3], ubs[BUF4], info.x);
+        Add(ubs[BUF1], ubs[BUF1], ubs[BUF4], info.x);
         PipeBarrier<PIPE_V>();
-        if constexpr (Std::is_same<dtype, half>::value) {
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             Cast(ubsHalf[BUF17], ubs[BUF1], RoundMode::CAST_RINT, info.x);
             PipeBarrier<PIPE_V>();
         }
@@ -356,8 +364,8 @@ public:
 
     __aicore__ inline void ProcessHy()
     {
-        Mul(ubs[BUF13], ubs[BUF14], ubs[BUF4], info.x);
-        if constexpr (Std::is_same<dtype, half>::value) {
+        Mul(ubs[BUF13], ubs[BUF15], ubs[BUF4], info.x);
+        if constexpr (Std::is_same<dtype, half>::value || Std::is_same<dtype, bfloat16_t>::value) {
             PipeBarrier<PIPE_V>();
             Cast(ubsHalf[BUF16], ubs[BUF13], RoundMode::CAST_RINT, info.x);
         }
@@ -422,9 +430,9 @@ public:
     GlobalTensor<dtype> storageGM; // [B, 4H]
     // Local Mem
     TQueBind<TPosition::VECIN, TPosition::VECOUT, BUFFER_NUM> que;
-    LocalTensor<float> ubTotal;        // taskSize(64B aligned) * bufCnt
-    LocalTensor<float> ubs[bufCnt];    // many taskSize
-    LocalTensor<half> ubsHalf[bufCnt]; // same buf addr as ubs
+    LocalTensor<float> ubTotal;         // taskSize(64B aligned) * bufCnt
+    LocalTensor<float> ubs[bufCnt];     // many taskSize
+    LocalTensor<dtype> ubsHalf[bufCnt]; // same buf addr as ubs (fp16/bf16)
     // api params
     TEventID evtIDVToMTE2; // 搬入等计算
     TEventID evtIDMTE3ToV; // 计算等搬出

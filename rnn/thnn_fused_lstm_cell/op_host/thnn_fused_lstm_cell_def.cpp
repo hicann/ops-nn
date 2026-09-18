@@ -17,54 +17,57 @@
 #include "exe_graph/runtime/infer_shape_context.h"
 
 namespace ops {
+static const std::vector<ge::DataType> DTYPE_COMMON = {ge::DT_FLOAT, ge::DT_FLOAT16};
+static const std::vector<ge::Format> FMT_COMMON = {ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> DTYPE_950 = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::Format> FMT_950 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
 class ThnnFusedLstmCell : public OpDef {
 public:
     explicit ThnnFusedLstmCell(const char* name) : OpDef(name)
     {
-        this->Input("inputGates")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        // 全局声明（ascend910b / ascend910_93 生效）：fp32 / fp16
+        this->Input("inputGates").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Input("hiddenGates")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("hiddenGates").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Input("cx")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("cx").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Input("inputBias")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("inputBias").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Input("hiddenBias")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("hiddenBias").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Output("hy")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("hy").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Output("cy")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("cy").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        this->Output("storage")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("storage").ParamType(REQUIRED).DataType(DTYPE_COMMON).Format(FMT_COMMON);
 
-        OpAICoreConfig aicore_config;
-        aicore_config.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
-        this->AICore().AddConfig("ascend910b", aicore_config);
-        this->AICore().AddConfig("ascend910_93", aicore_config);
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
+        this->AICore().AddConfig("ascend910_93", aicoreConfig);
+
+        // ascend950 专属：Input/Output 全量重声明，新增 bfloat16
+        OpAICoreConfig aicoreConfig950;
+        aicoreConfig950.Input("inputGates").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Input("hiddenGates").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Input("cx").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Input("inputBias").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Input("hiddenBias").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Output("hy").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Output("cy").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.Output("storage").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
+
+        aicoreConfig950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", aicoreConfig950);
     }
 };
 

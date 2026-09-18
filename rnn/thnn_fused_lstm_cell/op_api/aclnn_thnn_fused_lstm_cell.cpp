@@ -22,6 +22,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
+#include "opdev/platform.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
@@ -60,7 +61,20 @@ struct BaseOpOutputs {
     aclTensor* storage;
 } baseOuts;
 
-const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_COMMON_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                              op::DataType::DT_FLOAT16};
+// ascend950 def 新增 bfloat16
+static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> GetDtypeSupportList()
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return DTYPE_950_SUPPORT_LIST;
+    }
+    return DTYPE_COMMON_SUPPORT_LIST;
+}
+
 const int64_t INDEX_2 = 2;
 const int64_t INDEX_4 = 4;
 
@@ -128,6 +142,7 @@ static aclnnStatus CheckShapes()
 
 static aclnnStatus CheckDtypes()
 {
+    auto DTYPE_SUPPORT_LIST = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(aclnnParams.inputGates, DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     info.dtype = aclnnParams.inputGates->GetDataType();
     OP_CHECK_DTYPE_NOT_MATCH(aclnnParams.hiddenGates, info.dtype, return ACLNN_ERR_PARAM_INVALID);
