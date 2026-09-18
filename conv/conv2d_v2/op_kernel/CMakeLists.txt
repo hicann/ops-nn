@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC conv2d_v2.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
     OPTIONS "-DENABLE_CV_COMM_VIA_SSBUF=true" "--cce-no-dcache-flush" "-DFORCE_TILING_CONST_PROPAGATION"
 )

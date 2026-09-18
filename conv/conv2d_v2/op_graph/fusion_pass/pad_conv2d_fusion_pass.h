@@ -45,7 +45,7 @@ const std::string FUSION_NAME = "PadConv2dFusionPass";
 const std::string DN2NZ_INTRINSIC = "Intrinsic_data_move_out2l1_dn2nz";
 
 // Only DAV_3510 needs a dedicated branch, unlisted socs keep the original behavior as DAV_RESV.
-const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
 
 constexpr int32_t PADDINGS_INPUT_INDEX = 1;
 constexpr int32_t CONSTANT_VALUES_INPUT_INDEX = 2;

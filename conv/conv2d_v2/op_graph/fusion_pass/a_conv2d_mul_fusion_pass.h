@@ -39,7 +39,7 @@ constexpr size_t SINGLE_CONSUMER_CNT = 1;
 const std::string FILTER_MUL_NAME_SUFFIX = "_filter";
 const std::string BIAS_MUL_NAME_SUFFIX = "_bias";
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
 
 } // namespace AConv2dMulFusionConsts
 

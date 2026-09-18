@@ -25,7 +25,8 @@ namespace Conv {
 namespace Conv2dToConv2dV2Fusion {
 const std::string FUSION_NAME = "Conv2dToConv2dV2FusionPass";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
+                                                         {"Ascend350", NpuArch::DAV_3510}};
 
 // Fmap Filter Output Bias
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_3510 = {
