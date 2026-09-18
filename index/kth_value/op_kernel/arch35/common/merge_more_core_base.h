@@ -20,13 +20,13 @@
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "merge_sort_constants.h"
+#include "ping_pong_merge_sort.h"
 #include "util_type_simd.h"
 
 namespace MergeMoreCoreCommon {
 
 using namespace AscendC;
 
-using MergeSortConstants::DEALING_CONCAT_NUM_ONCE;
 using MergeSortConstants::DEALING_EXTRACT_NUM_ONCE;
 using MergeSortConstants::DEALING_SORT_NUM_ONCE;
 using MergeSortConstants::FP32_DTYPE_BYTES;
@@ -77,27 +77,28 @@ public:
     // ===== Local Buffers =====
     TBuf<QuePosition::VECCALC> sortedValueUb_;
     TBuf<QuePosition::VECCALC> sortedValueIndexUb_;
-    TBuf<QuePosition::VECCALC> concatTempBuf_;
     TBuf<QuePosition::VECCALC> sortTempBuf_;
-    TBuf<QuePosition::VECCALC> sortedValueLocalCastTbuf_;
 
     // ===== Scalar Members =====
     TPipe* pipe_ = nullptr;
     uint32_t blockIdx_ = 0;
     uint32_t numTileData_ = 0;
-    uint32_t sortLoopRound_ = 0;
-    uint32_t platformCoreNum_ = 0;
     uint32_t outputLastDimValue_ = 0;
     uint32_t frontCoreNum_ = 0;
+    uint32_t rowGroupIdx_ = 0;
     uint32_t rowIdx_ = 0;
     uint32_t rowCoreIdx_ = 0;
+    uint32_t rowsPerRound_ = 0;
+    uint32_t sortLoopTimes_ = 1;
+    uint32_t logicalBlockSize_ = 0;
+    bool syncMergeSortMode_ = false;
+    int64_t batchNum_ = 0;
     uint32_t vfLenFp32_ = Ops::Base::GetVRegSize() / FP32_DTYPE_BYTES;
     int64_t rowDataOffset_ = 0;
     int64_t rowWorkspaceOffset_ = 0;
 
     // ===== Merge-sort state =====
     int64_t listNum_{0};
-    int64_t flag_ = 0;
     int64_t remainListNum_{0};
     int64_t outOffset_{0};
     int64_t offsets_[4] = {0};
@@ -112,49 +113,173 @@ public:
     uint16_t validBitTail_;
     uint32_t listSortedNums_[4] = {0};
     uint32_t workSpaceFlag_ = 0;
-    LocalTensor<CONVERT_TYPE> ubInputs_[4];
-    LocalTensor<CONVERT_TYPE> ubMainInput_;
 
     // ======================== Shared Member Functions ========================
 
     __aicore__ inline void Process()
     {
+        if (this->frontCoreNum_ == 0U || this->rowsPerRound_ == 0U || this->sortLoopTimes_ == 0U) {
+            return;
+        }
+        for (uint32_t loopIdx = 0; loopIdx < this->sortLoopTimes_; loopIdx++) {
+            this->rowIdx_ = loopIdx * this->rowsPerRound_ + this->rowGroupIdx_;
+            // In multi-round mode, the last round may have fewer rows than rowsPerRound_.
+            // Cores assigned to out-of-range rows skip real work but still join SyncAll to avoid deadlock.
+            bool rowActive = static_cast<int64_t>(this->rowIdx_) < this->batchNum_;
+            if (rowActive) {
+                static_cast<Derived*>(this)->PrepareRowWorkspace();
+                static_cast<Derived*>(this)->InitSortBuffers();
+            }
+
+            int64_t offsetPerCore = 0;
+            uint32_t tileNum = 0;
+            if (rowActive) {
+                uint32_t phase1BlockSize = this->syncMergeSortMode_ ? this->logicalBlockSize_ : this->numTileData_;
+                offsetPerCore = static_cast<int64_t>(phase1BlockSize) * static_cast<int64_t>(this->rowCoreIdx_);
+                if (this->rowCoreIdx_ < this->frontCoreNum_ - 1) {
+                    tileNum = phase1BlockSize;
+                } else if (this->rowCoreIdx_ == this->frontCoreNum_ - 1) {
+                    tileNum = this->outputLastDimValue_ - phase1BlockSize * (this->frontCoreNum_ - 1);
+                }
+            }
+            if (rowActive && tileNum > 0U) {
+                if (this->syncMergeSortMode_) {
+                    this->SortLogicalBlock(tileNum, offsetPerCore);
+                } else {
+                    this->SortInSingleCore(tileNum, offsetPerCore);
+                }
+            }
+            SyncAll();
+            this->pipe_->Reset();
+
+            if (rowActive) {
+                static_cast<Derived*>(this)->InitMergeBuffers();
+                if (this->syncMergeSortMode_ && tileNum > 0U) {
+                    this->workspaceInput_ = this->workspaceGm_[0];
+                    this->workspaceOutput_ = this->workspaceGm_[1];
+                    this->MergeLogicalBlock(tileNum, offsetPerCore);
+                    this->ClearCache();
+                }
+            }
+            if (this->syncMergeSortMode_) {
+                SyncAll();
+            }
+
+            InitMergeState(this->syncMergeSortMode_ ? this->logicalBlockSize_ : this->numTileData_,
+                           this->syncMergeSortMode_ ? 1U : 0U);
+            MergeAcrossCores(rowActive);
+            this->pipe_->Reset();
+        }
+    }
+
+    // The one-round, non-sync schedule has one active row per core group. Keeping it in a dedicated
+    // kernel instance removes the generic row-activity and sync-mode branches from this hot orchestration path.
+    __aicore__ inline void ProcessDirect()
+    {
         if (this->frontCoreNum_ == 0U) {
             return;
         }
-        int64_t offsetPerCore = 0;
-        if (this->rowCoreIdx_ < this->frontCoreNum_ - 1) {
-            offsetPerCore = this->numTileData_ * this->rowCoreIdx_;
-            this->SortInSingleCore(this->numTileData_, offsetPerCore);
-        } else if (this->rowCoreIdx_ == this->frontCoreNum_ - 1) {
-            uint32_t tailNum = this->outputLastDimValue_ - this->numTileData_ * (this->frontCoreNum_ - 1);
-            offsetPerCore = this->numTileData_ * this->rowCoreIdx_;
-            this->SortInSingleCore(tailNum, offsetPerCore);
-        }
+        int64_t offsetPerCore = static_cast<int64_t>(this->numTileData_) * this->rowCoreIdx_;
+        uint32_t tileNum = this->rowCoreIdx_ < this->frontCoreNum_ - 1 ?
+                               this->numTileData_ :
+                               this->outputLastDimValue_ - this->numTileData_ * (this->frontCoreNum_ - 1);
+        SortInSingleCore(tileNum, offsetPerCore);
         SyncAll();
         this->pipe_->Reset();
 
         static_cast<Derived*>(this)->InitMergeBuffers();
+        InitMergeState(this->numTileData_, 0U);
+        MergeAcrossCores(true);
+    }
 
+    __aicore__ inline void InitMergeState(int64_t blockElements, uint32_t workspaceFlag)
+    {
+        this->workSpaceFlag_ = workspaceFlag;
         this->listNum_ = this->frontCoreNum_;
-        this->currentElements_ = this->numTileData_;
-        this->currentTailElements_ = this->outputLastDimValue_ - this->numTileData_ * (this->frontCoreNum_ - 1);
-        uint32_t currentCoreNum;
-        uint32_t remainListNum;
+        this->currentElements_ = blockElements;
+        this->currentTailElements_ = this->outputLastDimValue_ - blockElements * (this->frontCoreNum_ - 1);
+    }
+
+    // Inactive row groups advance the same merge levels and participate in the
+    // barriers inside SortInMultiCore/FinalSortAndCopy, without accessing row workspace.
+    __aicore__ inline void MergeAcrossCores(bool rowActive)
+    {
         while (this->listNum_ > MERGE_LIST_MAX_NUM) {
-            this->workspaceInput_ = this->workspaceGm_[this->workSpaceFlag_];
-            this->workspaceOutput_ = this->workspaceGm_[1 - this->workSpaceFlag_];
-            this->SortInMultiCore();
-            currentCoreNum = Ops::Base::CeilDiv(this->listNum_, static_cast<int64_t>(MERGE_LIST_MAX_NUM));
-            remainListNum = this->listNum_ - (currentCoreNum - 1) * MERGE_LIST_MAX_NUM;
-            this->currentTailElements_ = this->currentElements_ * (remainListNum - 1) + this->currentTailElements_;
+            if (rowActive) {
+                this->workspaceInput_ = this->workspaceGm_[this->workSpaceFlag_];
+                this->workspaceOutput_ = this->workspaceGm_[1U - this->workSpaceFlag_];
+            }
+            SortInMultiCore(rowActive);
+            uint32_t currentCoreNum = Ops::Base::CeilDiv(this->listNum_, static_cast<int64_t>(MERGE_LIST_MAX_NUM));
+            uint32_t remainListNum = this->listNum_ - (currentCoreNum - 1U) * MERGE_LIST_MAX_NUM;
+            this->currentTailElements_ = this->currentElements_ * (remainListNum - 1U) + this->currentTailElements_;
             this->listNum_ = currentCoreNum;
-            this->currentElements_ = this->currentElements_ * MERGE_LIST_MAX_NUM;
-            this->workSpaceFlag_ = (this->workSpaceFlag_ + 1) % MERGE_WORKSPACE_BUFFER_NUM;
+            this->currentElements_ *= MERGE_LIST_MAX_NUM;
+            this->workSpaceFlag_ = 1U - this->workSpaceFlag_;
         }
-        this->workspaceInput_ = this->workspaceGm_[this->workSpaceFlag_];
-        this->workspaceOutput_ = this->workspaceGm_[1 - this->workSpaceFlag_];
-        this->FinalSortAndCopy();
+        if (rowActive) {
+            this->workspaceInput_ = this->workspaceGm_[this->workSpaceFlag_];
+            this->workspaceOutput_ = this->workspaceGm_[1U - this->workSpaceFlag_];
+        }
+        FinalSortAndCopy(rowActive);
+    }
+
+    // Sync-merge mode: sort a logical block (larger than numTileData_) in multiple passes,
+    // each pass handling one numTileData_-sized chunk and flushing to workspaceGm_[0].
+    __aicore__ inline void SortLogicalBlock(uint32_t tileNum, int64_t offsetPerCore)
+    {
+        uint32_t sortedNum = 0;
+        while (sortedNum < tileNum) {
+            uint32_t curTileNum = this->numTileData_;
+            if (curTileNum > tileNum - sortedNum) {
+                curTileNum = tileNum - sortedNum;
+            }
+            this->SortInSingleCore(curTileNum, offsetPerCore + static_cast<int64_t>(sortedNum));
+            event_t eventIdMTE3ToS = static_cast<event_t>(this->pipe_->FetchEventID(HardEvent::MTE3_S));
+            SetFlag<HardEvent::MTE3_S>(eventIdMTE3ToS);
+            WaitFlag<HardEvent::MTE3_S>(eventIdMTE3ToS);
+            sortedNum += curTileNum;
+        }
+    }
+
+    // Sync-merge mode: merge the locally sorted chunks (produced by SortLogicalBlock) into one
+    // contiguous sorted logical block, using the streaming merge loop (CopyIn → MrgSort → CopyOut).
+    __aicore__ inline void MergeLogicalBlock(uint32_t tileNum, int64_t offsetPerCore)
+    {
+        this->listNum_ = Ops::Base::CeilDiv(tileNum, this->numTileData_);
+        this->currentElements_ = this->numTileData_;
+        this->currentTailElements_ = tileNum - this->numTileData_ * (this->listNum_ - 1);
+        this->InitLogicalBlockMerge(tileNum, offsetPerCore);
+        for (; this->allRemainElements_ > 0;) {
+            CopyInMultiCore();
+            UpdateMrgParam();
+            DealingMergeSort();
+            UpdateSortInfo();
+            CopyOutMultiCore();
+        }
+    }
+
+    // Set up per-run offsets and remaining element counts for the logical block merge.
+    // Each run corresponds to one numTileData_-sized chunk sorted in SortLogicalBlock.
+    __aicore__ inline void InitLogicalBlockMerge(uint32_t tileNum, int64_t offsetPerCore)
+    {
+        this->outOffset_ = GetSortLen<CONVERT_TYPE>(offsetPerCore);
+        for (int64_t i = 0; i < MERGE_LIST_MAX_NUM; i++) {
+            if (i < this->listNum_ - 1) {
+                this->listRemainElements_[i] = this->numTileData_;
+                this->offsets_[i] = GetSortOffset<CONVERT_TYPE>(offsetPerCore + i * this->numTileData_);
+                this->allRemainElements_ += this->listRemainElements_[i];
+            } else if (i == this->listNum_ - 1) {
+                this->listRemainElements_[i] = this->currentTailElements_;
+                this->offsets_[i] = GetSortOffset<CONVERT_TYPE>(offsetPerCore + i * this->numTileData_);
+                this->allRemainElements_ += this->currentTailElements_;
+            } else {
+                this->listRemainElements_[i] = 0;
+            }
+        }
+        if (this->listNum_ == 1) {
+            this->currentTailElements_ = tileNum;
+        }
     }
 
     __aicore__ inline void SortInSingleCore(uint32_t tileNum, int64_t offsetPerCore)
@@ -172,6 +297,8 @@ public:
         this->inputQueue_.FreeTensor(inputLocal);
     }
 
+    // Copy tileNum elements from GM to UB, padding the tail to alignment with defaultValue
+    // (−INF for descending, NAN for ascending) so Sort API processes a full aligned block.
     __aicore__ inline void CopyInData(uint32_t tileNum, int64_t offsetPerCore)
     {
         LocalTensor<T> inputLocal = this->inputQueue_.template AllocTensor<T>();
@@ -213,22 +340,18 @@ public:
                                   LocalTensor<uint32_t> sortedValueIndexLocal)
     {
         AscendC::LocalTensor<CONVERT_TYPE> sortTempLocal = this->sortTempBuf_.template Get<CONVERT_TYPE>();
-        AscendC::LocalTensor<CONVERT_TYPE> concatTempLocal = this->concatTempBuf_.template Get<CONVERT_TYPE>();
-        AscendC::LocalTensor<CONVERT_TYPE> sortedValueLocalCast = this->sortedValueLocalCastTbuf_
-                                                                      .template Get<CONVERT_TYPE>();
-
         uint32_t aglinTileNum = ROUND_UP_AGLIN(tileNum);
         uint32_t sortRepeatTimes = Ops::Base::CeilDiv(aglinTileNum, DEALING_SORT_NUM_ONCE);
-        uint32_t concatRepeatTimes = Ops::Base::CeilDiv(aglinTileNum, DEALING_CONCAT_NUM_ONCE);
 
         static_cast<Derived*>(this)->PrepareInputForSort(inputLocal, aglinTileNum);
         if constexpr (!IS_DESCEND) {
             FlipSignBit(inputLocal, aglinTileNum);
         }
-        AscendC::LocalTensor<CONVERT_TYPE> concatLocal;
-        AscendC::Concat(concatLocal, inputLocal, concatTempLocal, concatRepeatTimes);
-        AscendC::Sort<CONVERT_TYPE, true>(sortedValueLocal, concatLocal, sortedValueIndexLocal, sortTempLocal,
-                                          sortRepeatTimes);
+        bool resultInSorted = PingPongMergeSortCommon::SortToProposal(sortedValueLocal, sortTempLocal, inputLocal,
+                                                                      sortedValueIndexLocal, sortRepeatTimes);
+        if (!resultInSorted) {
+            DataCopy(sortedValueLocal, sortTempLocal, GetSortOffset<CONVERT_TYPE>(aglinTileNum));
+        }
     }
 
     __aicore__ inline void FlipSignBit(LocalTensor<CONVERT_TYPE> xLocal, uint32_t aglinTileNum)
@@ -272,12 +395,12 @@ public:
         this->sortedQueue_.template FreeTensor<CONVERT_TYPE>(sortTempBuffer);
     }
 
-    __aicore__ inline void SortInMultiCore()
+    __aicore__ inline void SortInMultiCore(bool rowActive)
     {
         // Phase 2: every active row core merges up to 4 sorted runs. The merged output is written to the alternate
         // workspace buffer, and Process/derived code swaps the input/output workspace for the next merge level.
         uint32_t needCoreNum = Ops::Base::CeilDiv(this->listNum_, static_cast<int64_t>(MERGE_LIST_MAX_NUM));
-        if (this->rowCoreIdx_ < needCoreNum) {
+        if (rowActive && this->rowCoreIdx_ < needCoreNum) {
             MultiCoreInit();
             for (; this->allRemainElements_ > 0;) {
                 CopyInMultiCore();
@@ -291,11 +414,11 @@ public:
         SyncAll();
     }
 
-    __aicore__ inline void FinalSortAndCopy()
+    __aicore__ inline void FinalSortAndCopy(bool rowActive)
     {
         // Phase 3: once at most 4 runs remain for the row, rowCoreIdx_ 0 performs the final merge and lets the
         // derived kernel extract values/indices directly to the operator outputs.
-        if (this->rowCoreIdx_ == 0) {
+        if (rowActive && this->rowCoreIdx_ == 0) {
             FinalSortInit();
             for (; this->allRemainElements_ > 0;) {
                 CopyInMultiCore();
@@ -395,6 +518,9 @@ public:
         }
     }
 
+    // Perform MrgSort on 2/3/4 source runs. Unused source-list slots are filled with a duplicate
+    // of tmpUbInputs[0] because MrgSort requires valid tensor addresses for all four parameters;
+    // validBitTail_ controls which lists actually participate.
     __aicore__ inline void DealingMergeSort()
     {
         LocalTensor<CONVERT_TYPE> sortTempBuffer = this->sortedQueue_.template AllocTensor<CONVERT_TYPE>();

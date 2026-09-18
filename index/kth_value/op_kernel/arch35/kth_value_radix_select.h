@@ -11,18 +11,27 @@
 #ifndef KTH_VALUE_RADIX_SELECT_H
 #define KTH_VALUE_RADIX_SELECT_H
 
+#include <limits>
+
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
 #include "common/radix_sort_simd_utils.h"
 
-// Radix select: narrows the kth element by histogramming one byte at a time (MSB to LSB),
+// Radix select: narrows the kth element using cumulative byte histograms (MSB to LSB),
 // selecting one bucket per round instead of fully sorting. Supports multi-core per row.
+// prefixMask/prefixKey identify surviving keys; leftK is the rank within that prefix.
+// Tile histograms are widened before row accumulation so only the per-tile count is B16.
+// Resident rows retain keys in UB; long rows rescan tiles, with shared decisions for split rows.
+// Once few positions remain, active-index compaction avoids rescanning discarded keys.
+// Final tie resolution follows original positions and reads the raw input value back.
 namespace KthValue {
 using namespace AscendC;
 using namespace RadixSortCommon;
 
+constexpr uint32_t RADIX_SELECT_WORD_BITS = std::numeric_limits<uint32_t>::digits;
+constexpr uint32_t RADIX_SELECT_WORD_MAX = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t RADIX_SELECT_BYTE_MASK = RADIX_SORT_NUM - 1U;
 constexpr uint32_t RADIX_SELECT_FIND_THREADS = 128U;
 constexpr uint32_t RADIX_SELECT_RESULT_WORDS = 8U;
@@ -74,16 +83,20 @@ __aicore__ inline void StoreRadixByteHistogram(__ubuf__ uint16_t* histogramPtr, 
     Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(histogramPtr, hist1, VF_LEN_B16, maskB16);
 }
 
+// ACCUMULATE adds an inclusive prefix histogram to the existing destination:
+// hist0[b] += count(byte <= b), hist1[b] += count(byte <= 128 + b).
+// BIN1 includes values below 128. Zero once per tile, accumulate all vector
+// repeats, then store directly; another prefix sum would count values twice.
 __aicore__ inline void AddSelectedByteHistogram(Reg::RegTensor<uint16_t>& hist0, Reg::RegTensor<uint16_t>& hist1,
                                                 Reg::RegTensor<uint8_t>& bytes, Reg::RegTensor<uint8_t>& flagBytes,
                                                 Reg::MaskReg histMask)
 {
     Reg::MaskReg selectedMask;
     Reg::Compares<uint8_t, CMPMODE::EQ>(selectedMask, flagBytes, 1, histMask);
-    Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN0, Reg::HistogramsType::FREQUENCY>(hist0, bytes,
-                                                                                                     selectedMask);
-    Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN1, Reg::HistogramsType::FREQUENCY>(hist1, bytes,
-                                                                                                     selectedMask);
+    Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN0, Reg::HistogramsType::ACCUMULATE>(hist0, bytes,
+                                                                                                      selectedMask);
+    Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN1, Reg::HistogramsType::ACCUMULATE>(hist1, bytes,
+                                                                                                      selectedMask);
 }
 
 template <typename VT>
@@ -248,6 +261,77 @@ __simt_vf__ LAUNCH_BOUND(RADIX_SELECT_FIND_THREADS) __aicore__
         uint32_t bucket = static_cast<uint32_t>((key >> shift) & static_cast<UT>(RADIX_SELECT_BYTE_MASK));
         histogram[bucket] += 1UL;
     }
+    // Match the SIMD path's inclusive cumulative histogram.
+    for (uint32_t bucket = 1; bucket < RadixSortCommon::RADIX_SORT_NUM; ++bucket) {
+        histogram[bucket] += histogram[bucket - 1U];
+    }
+}
+
+// Inclusive cumulative counts are monotonic. Locate the first bucket exceeding
+// the zero-based rank in eight scalar UB reads instead of scanning up to 256 bins.
+__aicore__ inline uint32_t SelectCumulativeBucket(LocalTensor<uint64_t>& histogram, uint64_t& leftK,
+                                                  uint64_t& selectedCount)
+{
+    uint32_t low = 0U;
+    uint32_t high = RadixSortCommon::RADIX_SORT_NUM;
+    while (low < high) {
+        uint32_t mid = low + (high - low) / 2U;
+        if (histogram.GetValue(mid) <= leftK) {
+            low = mid + 1U;
+        } else {
+            high = mid;
+        }
+    }
+    selectedCount = 0U;
+    if (low < RadixSortCommon::RADIX_SORT_NUM) {
+        uint64_t before = low == 0U ? 0U : histogram.GetValue(low - 1U);
+        selectedCount = histogram.GetValue(low) - before;
+        leftK -= before;
+    }
+    return low;
+}
+
+// Find the first cumulative count above k in both halves of the local histogram.
+// The completed range reduction leaves its scratch available for the bucket index.
+__aicore__ inline uint32_t SelectCumulativeBucket16(LocalTensor<uint16_t>& histogram, uint64_t& leftK,
+                                                    uint64_t& selectedCount, LocalTensor<uint64_t>& scratch,
+                                                    TPipe* pipe)
+{
+    __ubuf__ uint16_t* histogramPtr = reinterpret_cast<__ubuf__ uint16_t*>(histogram.GetPhyAddr());
+    __ubuf__ uint16_t* resultPtr = reinterpret_cast<__ubuf__ uint16_t*>(scratch.GetPhyAddr());
+    uint16_t kth = static_cast<uint16_t>(leftK);
+    __VEC_SCOPE__
+    {
+        Reg::RegTensor<uint16_t> h0, h1, idx0, idx1, sentinel, v0, v1, minimum;
+        Reg::MaskReg full = Reg::CreateMask<uint16_t>();
+        Reg::MaskReg one = Reg::CreateMask<uint16_t, Reg::MaskPattern::VL1>();
+        Reg::MaskReg mask0, mask1;
+        Reg::RegTensor<int16_t> positions;
+        Reg::Arange(positions, static_cast<int16_t>(0));
+        idx0 = (Reg::RegTensor<uint16_t>&)positions;
+        Reg::Adds(idx1, idx0, static_cast<uint16_t>(VF_LEN_B16), full);
+        Reg::Duplicate(sentinel, static_cast<uint16_t>(RADIX_SORT_NUM));
+        Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(h0, histogramPtr, VF_LEN_B16);
+        Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(h1, histogramPtr, VF_LEN_B16);
+        Reg::Compares<uint16_t, CMPMODE::GT>(mask0, h0, kth, full);
+        Reg::Compares<uint16_t, CMPMODE::GT>(mask1, h1, kth, full);
+        Reg::Select(v0, idx0, sentinel, mask0);
+        Reg::Select(v1, idx1, sentinel, mask1);
+        Reg::Min(v0, v0, v1, full);
+        Reg::Reduce<Reg::ReduceType::MIN>(minimum, v0, full);
+        Reg::StoreAlign(resultPtr, minimum, one);
+    }
+    event_t ready = static_cast<event_t>(pipe->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(ready);
+    WaitFlag<HardEvent::V_S>(ready);
+    uint32_t selected = scratch.ReinterpretCast<uint16_t>().GetValue(0);
+    selectedCount = 0;
+    if (selected < RADIX_SORT_NUM) {
+        uint64_t before = selected == 0 ? 0 : histogram.GetValue(selected - 1);
+        selectedCount = histogram.GetValue(selected) - before;
+        leftK -= before;
+    }
+    return selected;
 }
 
 // Active-mode compaction: filter activeIndices in-place by the expanded prefix.
@@ -270,6 +354,183 @@ __simt_vf__ LAUNCH_BOUND(RADIX_SELECT_FIND_THREADS) __aicore__
     result[0] = static_cast<int64_t>(writePos);
 }
 
+// B64 min/max and comparisons expand into several instructions on arch35.
+// Independent native B32 bounds suffice: only equal leading bytes are skipped.
+// When the high words differ, low-word bounds are conservative and cannot hide
+// a differing high byte; when they agree, the combined bounds are exact.
+__aicore__ inline void FindSelectedKeyRangeB64(LocalTensor<uint64_t>& keys, uint32_t count, uint64_t prefixMask,
+                                               uint64_t prefixKey, LocalTensor<uint64_t>& scratch)
+{
+    constexpr uint32_t lanes = Ops::Base::GetVRegSize() / sizeof(uint32_t);
+    uint16_t repeats = static_cast<uint16_t>(CeilDivision(count, lanes));
+    uint32_t remaining = count;
+    uint32_t maskLo = static_cast<uint32_t>(prefixMask),
+             maskHi = static_cast<uint32_t>(prefixMask >> RADIX_SELECT_WORD_BITS);
+    uint32_t keyLo = static_cast<uint32_t>(prefixKey),
+             keyHi = static_cast<uint32_t>(prefixKey >> RADIX_SELECT_WORD_BITS);
+    __ubuf__ uint32_t* ptr = reinterpret_cast<__ubuf__ uint32_t*>(keys.GetPhyAddr());
+    __ubuf__ uint32_t* minPtr = reinterpret_cast<__ubuf__ uint32_t*>(scratch.GetPhyAddr());
+    __ubuf__ uint32_t* maxPtr = minPtr + lanes;
+    __VEC_SCOPE__
+    {
+        Reg::RegTensor<uint32_t> in0, in1, lo, hi, maskedLo, maskedHi, maskLoReg, maskHiReg;
+        Reg::RegTensor<uint32_t> minLo, maxLo, minHi, maxHi, allOnes, zero, chosenLo, chosenHi;
+        Reg::RegTensor<uint32_t> rMinLo, rMaxLo, rMinHi, rMaxHi, minPair, maxPair, unused;
+        Reg::MaskReg full = Reg::CreateMask<uint32_t>();
+        Reg::MaskReg pair = Reg::CreateMask<uint32_t, Reg::MaskPattern::VL2>();
+        Reg::Duplicate(allOnes, RADIX_SELECT_WORD_MAX);
+        Reg::Duplicate(zero, 0U);
+        Reg::Duplicate(minLo, RADIX_SELECT_WORD_MAX);
+        Reg::Duplicate(minHi, RADIX_SELECT_WORD_MAX);
+        Reg::Duplicate(maxLo, 0U);
+        Reg::Duplicate(maxHi, 0U);
+        Reg::Duplicate(maskLoReg, maskLo);
+        Reg::Duplicate(maskHiReg, maskHi);
+        for (uint16_t i = 0; i < repeats; ++i) {
+            Reg::MaskReg valid = Reg::UpdateMask<uint32_t>(remaining);
+            Reg::MaskReg selectedLo, selectedHi, selected;
+            Reg::LoadAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(in0, ptr, lanes);
+            Reg::LoadAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(in1, ptr, lanes);
+            Reg::DeInterleave(lo, hi, in0, in1);
+            Reg::And(maskedLo, lo, maskLoReg, full);
+            Reg::And(maskedHi, hi, maskHiReg, full);
+            Reg::Compares<uint32_t, CMPMODE::EQ>(selectedLo, maskedLo, keyLo, valid);
+            Reg::Compares<uint32_t, CMPMODE::EQ>(selectedHi, maskedHi, keyHi, valid);
+            Reg::And(selected, selectedLo, selectedHi, valid);
+            Reg::Select(chosenLo, lo, allOnes, selected);
+            Reg::Select(chosenHi, hi, allOnes, selected);
+            Reg::Min(minLo, minLo, chosenLo, full);
+            Reg::Min(minHi, minHi, chosenHi, full);
+            Reg::Select(chosenLo, lo, zero, selected);
+            Reg::Select(chosenHi, hi, zero, selected);
+            Reg::Max(maxLo, maxLo, chosenLo, full);
+            Reg::Max(maxHi, maxHi, chosenHi, full);
+        }
+        Reg::Reduce<Reg::ReduceType::MIN>(rMinLo, minLo, full);
+        Reg::Reduce<Reg::ReduceType::MIN>(rMinHi, minHi, full);
+        Reg::Reduce<Reg::ReduceType::MAX>(rMaxLo, maxLo, full);
+        Reg::Reduce<Reg::ReduceType::MAX>(rMaxHi, maxHi, full);
+        Reg::Interleave(minPair, unused, rMinLo, rMinHi);
+        Reg::Interleave(maxPair, unused, rMaxLo, rMaxHi);
+        Reg::StoreAlign<uint32_t>(minPtr, minPair, pair);
+        Reg::StoreAlign<uint32_t>(maxPtr, maxPair, pair);
+    }
+}
+
+// Reduce the prefix-matching keys' range to skip equal high bytes (B16/B32/B64).
+// The two scalar results occupy separate vector-aligned slots in existing scratch.
+template <typename UT>
+__aicore__ inline void FindSelectedKeyRangeVec(LocalTensor<UT>& keys, uint32_t count, UT prefixMask, UT prefixKey,
+                                               LocalTensor<UT>& scratch)
+{
+    if constexpr (sizeof(UT) == sizeof(uint64_t)) {
+        FindSelectedKeyRangeB64(keys, count, prefixMask, prefixKey, scratch);
+        return;
+    }
+    constexpr uint32_t vectorElems = Ops::Base::GetVRegSize() / sizeof(UT);
+    uint16_t repeats = static_cast<uint16_t>(CeilDivision(count, vectorElems));
+    uint32_t remaining = count;
+    __ubuf__ UT* keyPtr = reinterpret_cast<__ubuf__ UT*>(keys.GetPhyAddr());
+    __ubuf__ UT* minPtr = reinterpret_cast<__ubuf__ UT*>(scratch.GetPhyAddr());
+    __ubuf__ UT* maxPtr = minPtr + vectorElems;
+    __VEC_SCOPE__
+    {
+        Reg::RegTensor<UT> input, masked, maskBits, minInput, maxInput;
+        Reg::RegTensor<UT> minimum, maximum, allOnes, zero, reducedMin, reducedMax;
+        Reg::MaskReg full = Reg::CreateMask<UT>();
+        Reg::MaskReg one = Reg::CreateMask<UT, Reg::MaskPattern::VL1>();
+        Reg::Duplicate(allOnes, static_cast<UT>(-1));
+        Reg::Duplicate(zero, static_cast<UT>(0));
+        Reg::Duplicate(minimum, static_cast<UT>(-1));
+        Reg::Duplicate(maximum, static_cast<UT>(0));
+        Reg::Duplicate(maskBits, prefixMask);
+        for (uint16_t i = 0; i < repeats; ++i) {
+            Reg::MaskReg valid = Reg::UpdateMask<UT>(remaining);
+            Reg::MaskReg selected;
+            Reg::LoadAlign<UT, Reg::PostLiteral::POST_MODE_UPDATE>(input, keyPtr, vectorElems);
+            Reg::And(masked, input, maskBits, full);
+            Reg::Compares<UT, CMPMODE::EQ>(selected, masked, prefixKey, valid);
+            Reg::Select(minInput, input, allOnes, selected);
+            Reg::Select(maxInput, input, zero, selected);
+            Reg::Min(minimum, minimum, minInput, full);
+            Reg::Max(maximum, maximum, maxInput, full);
+        }
+        Reg::Reduce<Reg::ReduceType::MIN>(reducedMin, minimum, full);
+        Reg::Reduce<Reg::ReduceType::MAX>(reducedMax, maximum, full);
+        Reg::StoreAlign<UT>(minPtr, reducedMin, one);
+        Reg::StoreAlign<UT>(maxPtr, reducedMax, one);
+    }
+}
+
+// Compact matching source positions in order. The caller limits each chunk to
+// ACTIVE_INDEX_CAP, so even an all-equal row fits the existing index scratch.
+template <typename UT>
+__aicore__ inline uint32_t CompactMatchingPositions(LocalTensor<UT>& keys, uint32_t start, uint32_t count,
+                                                    UT prefixMask, UT prefixKey, LocalTensor<uint32_t>& indices)
+{
+    constexpr uint32_t vectorElems = Ops::Base::GetVRegSize() / sizeof(uint32_t);
+    uint16_t repeats = static_cast<uint16_t>(CeilDivision(count, vectorElems));
+    uint32_t remaining = count;
+    __ubuf__ UT* keyPtr = reinterpret_cast<__ubuf__ UT*>(keys.GetPhyAddr()) + start;
+    __ubuf__ int32_t* indexPtr = reinterpret_cast<__ubuf__ int32_t*>(indices.GetPhyAddr());
+    __ubuf__ uint32_t* keyWords = reinterpret_cast<__ubuf__ uint32_t*>(keyPtr);
+    uint32_t maskLo = static_cast<uint32_t>(prefixMask),
+             maskHi = static_cast<uint32_t>(static_cast<uint64_t>(prefixMask) >> RADIX_SELECT_WORD_BITS);
+    uint32_t keyLo = static_cast<uint32_t>(prefixKey),
+             keyHi = static_cast<uint32_t>(static_cast<uint64_t>(prefixKey) >> RADIX_SELECT_WORD_BITS);
+    __VEC_SCOPE__
+    {
+        Reg::RegTensor<UT> input, masked, maskBits;
+        Reg::RegTensor<int32_t> positions, packed;
+        Reg::RegTensor<uint32_t> in0, in1, lo, hi, maskedLo, maskedHi, maskLoReg, maskHiReg;
+        Reg::Duplicate(maskLoReg, maskLo);
+        Reg::Duplicate(maskHiReg, maskHi);
+        Reg::MaskReg fullIndex = Reg::CreateMask<int32_t>();
+        Reg::UnalignRegForStore unaligned;
+        Reg::Arange(positions, static_cast<int32_t>(start));
+        Reg::Duplicate(maskBits, prefixMask);
+        Reg::ClearSpr<SpecialPurposeReg::AR>();
+        for (uint16_t i = 0; i < repeats; ++i) {
+            Reg::MaskReg indexMask;
+            if constexpr (sizeof(UT) == sizeof(uint64_t)) {
+                Reg::MaskReg valid = Reg::UpdateMask<uint32_t>(remaining);
+                Reg::MaskReg selectedLo, selectedHi;
+                Reg::LoadAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(in0, keyWords, vectorElems);
+                Reg::LoadAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(in1, keyWords, vectorElems);
+                Reg::DeInterleave(lo, hi, in0, in1);
+                Reg::And(maskedLo, lo, maskLoReg, valid);
+                Reg::And(maskedHi, hi, maskHiReg, valid);
+                Reg::Compares<uint32_t, CMPMODE::EQ>(selectedLo, maskedLo, keyLo, valid);
+                Reg::Compares<uint32_t, CMPMODE::EQ>(selectedHi, maskedHi, keyHi, valid);
+                Reg::And(indexMask, selectedLo, selectedHi, valid);
+            } else if constexpr (sizeof(UT) == sizeof(uint16_t)) {
+                // Compact 64 source positions at a time; expand the B16 predicate
+                // to B32 lanes before applying it to the source indices. LOWEST
+                // expands predicate bit 2*i to bit 4*i for i < 64; the
+                // source tail is already disabled by valid before expansion.
+                uint32_t current = remaining < vectorElems ? remaining : vectorElems;
+                remaining -= current;
+                Reg::MaskReg valid = Reg::UpdateMask<UT>(current);
+                Reg::MaskReg selected;
+                Reg::LoadAlign<UT, Reg::PostLiteral::POST_MODE_UPDATE>(input, keyPtr, vectorElems);
+                Reg::And(masked, input, maskBits, valid);
+                Reg::Compares<UT, CMPMODE::EQ>(selected, masked, prefixKey, valid);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(indexMask, selected);
+            } else {
+                Reg::MaskReg valid = Reg::UpdateMask<UT>(remaining);
+                Reg::LoadAlign<UT, Reg::PostLiteral::POST_MODE_UPDATE>(input, keyPtr, vectorElems);
+                Reg::And(masked, input, maskBits, valid);
+                Reg::Compares<UT, CMPMODE::EQ>(indexMask, masked, prefixKey, valid);
+            }
+            Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(packed, positions, indexMask);
+            Reg::StoreUnAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(indexPtr, packed, unaligned);
+            Reg::Adds(positions, positions, static_cast<int32_t>(vectorElems), fullIndex);
+        }
+        Reg::StoreUnAlignPost(indexPtr, unaligned);
+    }
+    return static_cast<uint32_t>(Reg::GetSpr<SpecialPurposeReg::AR>() / sizeof(uint32_t));
+}
+
 // Selects one radix bucket per byte instead of scattering a fully sorted row.
 // Cores are grouped by row. Each core builds the histogram for a contiguous axis
 // slice; the leader reduces the group histogram and broadcasts the selected prefix.
@@ -280,13 +541,13 @@ class KthValueRadixSelect {
 public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR values, GM_ADDR indices, GM_ADDR workspace,
                                 const KthValueTilingData* tiling, TPipe* pipe);
+    template <bool UseResidentHistogram = false>
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline LocalTensor<UT> MakeSortKeys(LocalTensor<T>& input, uint32_t count);
     __aicore__ inline uint32_t CountNonNan(LocalTensor<T>& input, uint32_t count);
     __aicore__ inline int64_t FindFirstNan(LocalTensor<T>& input, uint32_t count);
-    __aicore__ inline void MapNanKeysToMax(LocalTensor<T>& input, LocalTensor<UT>& keys, uint32_t count);
     __aicore__ inline void LoadTile(int64_t offset, uint32_t count, LocalTensor<T>& input);
     __aicore__ inline void CountByte(int64_t rowOffset, int64_t sliceStart, int64_t sliceCount, uint32_t shift,
                                      UT prefixMask, UT prefixKey, LocalTensor<uint64_t>& histogram);
@@ -304,14 +565,26 @@ private:
                                                  UT prefixKey, LocalTensor<uint16_t>& tileHistogram);
     __aicore__ inline void BuildTileHistogramB64(LocalTensor<UT>& keys, uint32_t count, uint32_t shift, UT prefixMask,
                                                  UT prefixKey, LocalTensor<uint16_t>& tileHistogram);
+    __aicore__ inline T RestoreInputValue(T value)
+    {
+        if constexpr (IsSameType<T, int8_t>::value || IsSameType<T, int16_t>::value || IsSameType<T, int32_t>::value ||
+                      IsSameType<T, int64_t>::value) {
+            return static_cast<T>(static_cast<UT>(value) ^
+                                  (static_cast<UT>(1) << (std::numeric_limits<UT>::digits - 1U)));
+        }
+        return value;
+    }
     __aicore__ inline void WriteOutput(int64_t row, T value, int64_t index);
+    template <bool UseResidentHistogram>
     __aicore__ inline void SelectOneRow(int64_t row, uint32_t group, uint32_t coreInGroup, bool writeOutput);
     __aicore__ inline void UpdateActiveIndices(LocalTensor<UT>& retainedKeys, LocalTensor<uint32_t>& activeIndices,
                                                uint32_t retainedCount, UT prefixMask, UT prefixKey, bool& activeMode,
                                                uint32_t& activeCount);
+    __aicore__ inline void FindGroupKeyRange(LocalTensor<UT>& keys, uint32_t count, UT prefixMask, UT prefixKey,
+                                             uint32_t group, uint32_t coreInGroup, UT& minimum, UT& maximum);
     __aicore__ inline void StoreCoreHistogram(LocalTensor<uint64_t>& histogram);
     __aicore__ inline uint64_t LoadCoreHistogramBucket(uint32_t group, uint32_t coreInGroup, uint32_t bucket,
-                                                       LocalTensor<uint64_t>& scratch);
+                                                       LocalTensor<uint64_t>& scratch, bool cumulative = true);
     __aicore__ inline void ReduceGroupHistogram(uint32_t group, LocalTensor<uint64_t>& histogram,
                                                 LocalTensor<uint64_t>& scratch);
     __aicore__ inline void StoreGroupState(uint32_t group, LocalTensor<uint64_t>& state);
@@ -378,7 +651,9 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::Init(GM_ADDR x,
     groupStateGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(workspace) + histogramWords,
                                   static_cast<uint64_t>(rowsParallel_) * RADIX_SELECT_RESULT_WORDS);
     pipe_->InitBuffer(inputQueue_, 1, tileElems_ * sizeof(T));
-    pipe_->InitBuffer(keyBuf_, tileElems_ * sizeof(UT));
+    if constexpr (IS_MEDIAN_FLOAT_TYPE<T>) {
+        pipe_->InitBuffer(keyBuf_, tileElems_ * sizeof(UT));
+    }
     pipe_->InitBuffer(histogramBuf_, RADIX * sizeof(uint64_t));
     pipe_->InitBuffer(tileHistogramBuf_, RADIX * sizeof(uint16_t));
     pipe_->InitBuffer(outputValueBuf_, Ops::Base::GetUbBlockSize());
@@ -449,8 +724,10 @@ __aicore__ inline bool KthValueRadixSelect<T, UT, EnableMedian>::PrepareMedianRa
             nonNanCount = 0;
             firstNanGlobal = INVALID_NAN_INDEX;
             for (uint32_t core = 0; core < coresPerRow_; ++core) {
-                nonNanCount += LoadCoreHistogramBucket(group, core, RADIX_SELECT_STATE_NON_NAN_COUNT_IDX, scratch);
-                uint64_t coreFirstNan = LoadCoreHistogramBucket(group, core, RADIX_SELECT_STATE_FIRST_NAN_IDX, scratch);
+                nonNanCount += LoadCoreHistogramBucket(group, core, RADIX_SELECT_STATE_NON_NAN_COUNT_IDX, scratch,
+                                                       false);
+                uint64_t coreFirstNan = LoadCoreHistogramBucket(group, core, RADIX_SELECT_STATE_FIRST_NAN_IDX, scratch,
+                                                                false);
                 firstNanGlobal = coreFirstNan < firstNanGlobal ? coreFirstNan : firstNanGlobal;
             }
             state.SetValue(RADIX_SELECT_STATE_NON_NAN_COUNT_IDX, nonNanCount);
@@ -506,68 +783,17 @@ __aicore__ inline int64_t KthValueRadixSelect<T, UT, EnableMedian>::FindFirstNan
     return result.GetValue(0);
 }
 
-// Forces every NaN's radix key to the all-ones maximum so NaNs order strictly last in key space;
-// required because twiddled negative NaNs would otherwise land at the very bottom of the key range.
-template <typename T, typename UT, bool EnableMedian>
-__aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::MapNanKeysToMax(LocalTensor<T>& input,
-                                                                                 LocalTensor<UT>& keys, uint32_t count)
-{
-    __ubuf__ T* inputPtr = reinterpret_cast<__ubuf__ T*>(input.GetPhyAddr());
-    __ubuf__ UT* keyPtr = reinterpret_cast<__ubuf__ UT*>(keys.GetPhyAddr());
-    if constexpr (IsSameType<float, T>::value) {
-        constexpr uint32_t FLOAT_VL = VF_LEN_B32;
-        uint16_t repeatTime = static_cast<uint16_t>(CeilDivision(count, FLOAT_VL));
-        uint32_t remaining = count;
-        __VEC_SCOPE__
-        {
-            Reg::RegTensor<float> value;
-            Reg::RegTensor<UT> key, maxKey, mappedKey;
-            Reg::MaskReg validMask, nanMask;
-            Reg::Duplicate(maxKey, static_cast<UT>(-1));
-            for (uint16_t i = 0; i < repeatTime; ++i) {
-                validMask = Reg::UpdateMask<float>(remaining);
-                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(
-                    value, reinterpret_cast<__ubuf__ float*>(inputPtr) + i * FLOAT_VL);
-                Reg::Compare<float, CMPMODE::NE>(nanMask, value, value, validMask);
-                Reg::LoadAlign<UT, Reg::LoadDist::DIST_NORM>(key, keyPtr + i * FLOAT_VL);
-                Reg::Select(mappedKey, maxKey, key, nanMask);
-                Reg::StoreAlign<UT, Reg::StoreDist::DIST_NORM_B32>(keyPtr + i * FLOAT_VL, mappedKey, validMask);
-            }
-        }
-    } else {
-        // Detect FP16/BF16 NaNs directly from their 16-bit encoding. This keeps the mask and
-        // radix keys in the same 128-lane layout and avoids per-element scalar accesses.
-        constexpr uint32_t B16_VL = VF_LEN_B16;
-        constexpr uint16_t ABS_MASK = 0x7FFFU;
-        constexpr uint16_t INF_BITS = IsSameType<half, T>::value ? 0x7C00U : 0x7F80U;
-        uint16_t repeatTime = static_cast<uint16_t>(CeilDivision(count, B16_VL));
-        uint32_t remaining = count;
-        __VEC_SCOPE__
-        {
-            Reg::RegTensor<uint16_t> rawBits, absBits, absMask;
-            Reg::RegTensor<UT> key, maxKey, mappedKey;
-            Reg::MaskReg validMask, nanMask;
-            Reg::Duplicate(absMask, ABS_MASK);
-            Reg::Duplicate(maxKey, static_cast<UT>(-1));
-            for (uint16_t i = 0; i < repeatTime; ++i) {
-                validMask = Reg::UpdateMask<uint16_t>(remaining);
-                Reg::LoadAlign<uint16_t, Reg::LoadDist::DIST_NORM>(
-                    rawBits, reinterpret_cast<__ubuf__ uint16_t*>(inputPtr) + i * B16_VL);
-                Reg::And(absBits, rawBits, absMask, validMask);
-                Reg::Compares<uint16_t, CMPMODE::GT>(nanMask, absBits, INF_BITS, validMask);
-                Reg::LoadAlign<UT, Reg::LoadDist::DIST_NORM>(key, keyPtr + i * B16_VL);
-                Reg::Select(mappedKey, maxKey, key, nanMask);
-                Reg::StoreAlign<UT, Reg::StoreDist::DIST_NORM_B16>(keyPtr + i * B16_VL, mappedKey, validMask);
-            }
-        }
-    }
-}
-
 template <typename T, typename UT, bool EnableMedian>
 __aicore__ inline LocalTensor<UT> KthValueRadixSelect<T, UT, EnableMedian>::MakeSortKeys(LocalTensor<T>& input,
                                                                                          uint32_t count)
 {
-    LocalTensor<UT> keys = keyBuf_.Get<UT>();
+    LocalTensor<UT> keys;
+    if constexpr (IS_MEDIAN_FLOAT_TYPE<T>) {
+        keys = keyBuf_.Get<UT>();
+    } else {
+        // Integer keys are reversible in place; keep one UB row, not two.
+        keys = input.template ReinterpretCast<UT>();
+    }
     if constexpr (IsSameType<int8_t, T>::value) {
         TwiddleInB8<T, UT, 0>(input, keys, count);
     } else if constexpr (IsSameType<int16_t, T>::value) {
@@ -577,16 +803,13 @@ __aicore__ inline LocalTensor<UT> KthValueRadixSelect<T, UT, EnableMedian>::Make
     } else if constexpr (IsSameType<int64_t, T>::value) {
         TwiddleInB64<T, UT, 0>(input, keys, count);
     } else if constexpr (IsSameType<half, T>::value || IsSameType<bfloat16_t, T>::value) {
-        TwiddleInFp16<T, UT, 0>(input, keys, count);
+        // Canonicalize every NaN in the existing key-transform pass; preserve the original input.
+        TwiddleInFp16Impl<T, UT, 0, true>(input, keys, count);
     } else if constexpr (IsSameType<float, T>::value) {
-        TwiddleInFp32<T, UT, 0>(input, keys, count);
+        TwiddleInFp32Impl<T, UT, 0, true>(input, keys, count);
     } else {
         // Ascending unsigned integers already have lexicographically sortable bit patterns.
         keys = input.template ReinterpretCast<UT>();
-    }
-    if constexpr (EnableMedian &&
-                  (IsSameType<float, T>::value || IsSameType<half, T>::value || IsSameType<bfloat16_t, T>::value)) {
-        MapNanKeysToMax(input, keys, count);
     }
     return keys;
 }
@@ -639,9 +862,9 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::BuildTileHistog
             Reg::And(masked, input, prefixMaskReg, validMask);
             Reg::MaskReg selectedMask;
             Reg::Compares<uint8_t, CMPMODE::EQ>(selectedMask, masked, prefixKey, validMask);
-            Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN0, Reg::HistogramsType::FREQUENCY>(
+            Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN0, Reg::HistogramsType::ACCUMULATE>(
                 hist0, input, selectedMask);
-            Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN1, Reg::HistogramsType::FREQUENCY>(
+            Reg::Histograms<uint8_t, uint16_t, Reg::HistogramsBinType::BIN1, Reg::HistogramsType::ACCUMULATE>(
                 hist1, input, selectedMask);
         }
         StoreRadixByteHistogram(histogramPtr, hist0, hist1, maskB16);
@@ -914,6 +1137,62 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::CountByte(int64
     }
 }
 
+// All blocks belong to one row here, so every block executes the same range exchanges.
+// Reuse histogram workspace before its next producer; no additional UB or GM allocation.
+template <typename T, typename UT, bool EnableMedian>
+__aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::FindGroupKeyRange(LocalTensor<UT>& keys,
+                                                                                   uint32_t count, UT prefixMask,
+                                                                                   UT prefixKey, uint32_t group,
+                                                                                   uint32_t coreInGroup, UT& minimum,
+                                                                                   UT& maximum)
+{
+    LocalTensor<UT> range = groupReduceBuf_.Get<UT>();
+    FindSelectedKeyRangeVec(keys, count, prefixMask, prefixKey, range);
+    event_t ready = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(ready);
+    WaitFlag<HardEvent::V_S>(ready);
+    LocalTensor<uint64_t> state = findResultBuf_.Get<uint64_t>();
+    constexpr uint32_t maximumOffset = Ops::Base::GetVRegSize() / sizeof(UT);
+    state.SetValue(0, static_cast<uint64_t>(range.GetValue(0)));
+    state.SetValue(1, static_cast<uint64_t>(range.GetValue(maximumOffset)));
+    constexpr uint32_t rangeWords = 2U;
+    DataCopyExtParams params{1, rangeWords * static_cast<uint32_t>(sizeof(uint64_t)), 0, 0, 0};
+    event_t storeReady = static_cast<event_t>(pipe_->FetchEventID(HardEvent::S_MTE3));
+    SetFlag<HardEvent::S_MTE3>(storeReady);
+    WaitFlag<HardEvent::S_MTE3>(storeReady);
+    DataCopyPad(coreHistogramGm_[static_cast<uint64_t>(blockIdx_) * RADIX], state, params);
+    event_t stored = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE3_S));
+    SetFlag<HardEvent::MTE3_S>(stored);
+    WaitFlag<HardEvent::MTE3_S>(stored);
+    SyncAll();
+    if (coreInGroup == 0U) {
+        minimum = static_cast<UT>(-1);
+        maximum = 0U;
+        LocalTensor<uint64_t> scratch = groupReduceBuf_.Get<uint64_t>();
+        DataCopyPadExtParams<uint64_t> pad{false, 0, 0, 0};
+        for (uint32_t core = 0; core < coresPerRow_; ++core) {
+            uint64_t offset = (static_cast<uint64_t>(group) * coresPerRow_ + core) * RADIX;
+            DataCopyPad(scratch, coreHistogramGm_[offset], params, pad);
+            event_t loaded = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE2_S));
+            SetFlag<HardEvent::MTE2_S>(loaded);
+            WaitFlag<HardEvent::MTE2_S>(loaded);
+            UT low = static_cast<UT>(scratch.GetValue(0));
+            UT high = static_cast<UT>(scratch.GetValue(1));
+            if (low <= high) {
+                minimum = low < minimum ? low : minimum;
+                maximum = high > maximum ? high : maximum;
+            }
+        }
+        state.SetValue(0, static_cast<uint64_t>(minimum));
+        state.SetValue(1, static_cast<uint64_t>(maximum));
+        StoreGroupState(group, state);
+    }
+    SyncAll();
+    LoadGroupState(group, state);
+    minimum = static_cast<UT>(state.GetValue(0));
+    maximum = static_cast<UT>(state.GetValue(1));
+}
+
 template <typename T, typename UT, bool EnableMedian>
 __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::StoreCoreHistogram(LocalTensor<uint64_t>& histogram)
 {
@@ -929,16 +1208,18 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::StoreCoreHistog
 
 template <typename T, typename UT, bool EnableMedian>
 __aicore__ inline uint64_t KthValueRadixSelect<T, UT, EnableMedian>::LoadCoreHistogramBucket(
-    uint32_t group, uint32_t coreInGroup, uint32_t bucket, LocalTensor<uint64_t>& scratch)
+    uint32_t group, uint32_t coreInGroup, uint32_t bucket, LocalTensor<uint64_t>& scratch, bool cumulative)
 {
-    DataCopyExtParams params{1, static_cast<uint32_t>(sizeof(uint64_t)), 0, 0, 0};
+    // Histogram entries are cumulative; median statistics are raw state words.
+    uint32_t count = !cumulative || bucket == 0U ? 1U : 2U;
+    DataCopyExtParams params{1, count * static_cast<uint32_t>(sizeof(uint64_t)), 0, 0, 0};
     DataCopyPadExtParams<uint64_t> padParams{false, 0, 0, 0};
     uint64_t coreOffset = (static_cast<uint64_t>(group) * coresPerRow_ + coreInGroup) * RADIX;
-    DataCopyPad(scratch, coreHistogramGm_[coreOffset + bucket], params, padParams);
+    DataCopyPad(scratch, coreHistogramGm_[coreOffset + bucket + 1U - count], params, padParams);
     event_t eventId = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventId);
     WaitFlag<HardEvent::MTE2_S>(eventId);
-    return scratch.GetValue(0);
+    return count == 1U ? scratch.GetValue(0) : scratch.GetValue(1) - scratch.GetValue(0);
 }
 
 template <typename T, typename UT, bool EnableMedian>
@@ -993,6 +1274,11 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::WriteOutput(int
 {
     LocalTensor<T> outputValue = outputValueBuf_.Get<T>();
     LocalTensor<int64_t> outputIndex = outputIndexBuf_.Get<int64_t>();
+    // Wait for the previous row's DMA before scalar stores reuse either buffer.
+    // Waiting here lets that DMA overlap the current row's selection work.
+    event_t outputDone = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE3_S));
+    SetFlag<HardEvent::MTE3_S>(outputDone);
+    WaitFlag<HardEvent::MTE3_S>(outputDone);
     outputValue.SetValue(0, value);
     outputIndex.SetValue(0, index);
     event_t eventId = static_cast<event_t>(pipe_->FetchEventID(HardEvent::S_MTE3));
@@ -1037,6 +1323,7 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::UpdateActiveInd
 // contains the kth element, extend prefix. Multi-core: each core handles a slice,
 // leader reduces histograms and broadcasts the selected bucket via workspace GM.
 template <typename T, typename UT, bool EnableMedian>
+template <bool UseResidentHistogram>
 __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(int64_t row, uint32_t group,
                                                                               uint32_t coreInGroup, bool writeOutput)
 {
@@ -1082,6 +1369,11 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
     uint32_t finalTargetCore = coreInGroup;
     uint64_t finalTargetLeftK = leftK;
     bool keepFinalTile = sliceCount > 0 && sliceCount <= static_cast<int64_t>(tileElems_);
+    // A single resident tile already holds the complete cumulative histogram.
+    // Keep the wide accumulation path for tiled rows, core groups and median.
+    const bool useTileHistogram = UseResidentHistogram && !EnableMedian && IS_MEDIAN_FLOAT_TYPE<T> &&
+                                  coresPerRow_ == 1U && keepFinalTile &&
+                                  sliceCount <= static_cast<int64_t>(std::numeric_limits<uint16_t>::max());
     bool hasRetainedTile = false;
     bool activeMode = false;
     uint32_t activeCount = 0;
@@ -1102,6 +1394,51 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
                 retainedKeys = MakeSortKeys(retainedInput, retainedCount);
                 hasRetainedTile = true;
             }
+            if constexpr (sizeof(UT) == sizeof(uint64_t)) {
+                if (coresPerRow_ > 1U && blockNum_ == coresPerRow_ &&
+                    axisLen_ <= static_cast<int64_t>(tileElems_) * coresPerRow_ && byte > 0) {
+                    UT minimum, maximum;
+                    FindGroupKeyRange(retainedKeys, retainedCount, prefixMask, prefixKey, group, coreInGroup, minimum,
+                                      maximum);
+                    UT different = minimum ^ maximum;
+                    // Keep the last byte round to resolve k across cores and preserve tie indices.
+                    while (byte > 0 && (different >> shift) == 0U) {
+                        UT byteMask = static_cast<UT>(static_cast<UT>(RADIX_SELECT_BYTE_MASK) << shift);
+                        prefixMask |= byteMask;
+                        prefixKey |= minimum & byteMask;
+                        --byte;
+                        shift = static_cast<uint32_t>(byte) * BYTE_BITS;
+                    }
+                }
+            }
+            // Other rows may require different numbers of bytes. Only skip
+            // rounds when this path has no cross-core SyncAll obligations.
+            if constexpr (sizeof(UT) >= sizeof(uint16_t)) {
+                if (coresPerRow_ == 1U && !activeMode) {
+                    LocalTensor<UT> range = reduceScratch.template ReinterpretCast<UT>();
+                    FindSelectedKeyRangeVec(retainedKeys, retainedCount, prefixMask, prefixKey, range);
+                    event_t rangeReady = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+                    SetFlag<HardEvent::V_S>(rangeReady);
+                    WaitFlag<HardEvent::V_S>(rangeReady);
+                    UT minimum = range.GetValue(0);
+                    constexpr uint32_t maxOffset = Ops::Base::GetVRegSize() / sizeof(UT);
+                    UT maximum = range.GetValue(maxOffset);
+                    UT different = minimum ^ maximum;
+                    while (byte >= 0 && (different >> shift) == 0U) {
+                        UT byteMask = static_cast<UT>(static_cast<UT>(RADIX_SELECT_BYTE_MASK) << shift);
+                        prefixMask |= byteMask;
+                        prefixKey |= minimum & byteMask;
+                        --byte;
+                        if (byte >= 0) {
+                            shift = static_cast<uint32_t>(byte) * BYTE_BITS;
+                        }
+                    }
+                    if (byte < 0) {
+                        break;
+                    }
+                }
+            }
+            // Only types without vector candidate compaction enable activeMode.
             if (activeMode) {
                 asc_vf_call<BuildActiveHistogram<UT>>(
                     dim3(RADIX_SELECT_FIND_THREADS), reinterpret_cast<__ubuf__ UT*>(retainedKeys.GetPhyAddr()),
@@ -1111,33 +1448,37 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
                 SetFlag<HardEvent::V_S>(eventId);
                 WaitFlag<HardEvent::V_S>(eventId);
             } else {
-                ClearHistogram(histogram);
-                event_t clearEvent = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
-                SetFlag<HardEvent::V_S>(clearEvent);
-                WaitFlag<HardEvent::V_S>(clearEvent);
+                if (!useTileHistogram) {
+                    ClearHistogram(histogram);
+                    event_t clearEvent = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+                    SetFlag<HardEvent::V_S>(clearEvent);
+                    WaitFlag<HardEvent::V_S>(clearEvent);
+                }
                 LocalTensor<uint16_t> tileHistogram = tileHistogramBuf_.Get<uint16_t>();
                 BuildTileHistogram(retainedKeys, retainedCount, shift, prefixMask, prefixKey, tileHistogram);
-                event_t eventId = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
-                SetFlag<HardEvent::V_S>(eventId);
-                WaitFlag<HardEvent::V_S>(eventId);
-                AccumulateTileHistogram(histogram, tileHistogram);
+                if (!useTileHistogram) {
+                    event_t eventId = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+                    SetFlag<HardEvent::V_S>(eventId);
+                    WaitFlag<HardEvent::V_S>(eventId);
+                    AccumulateTileHistogram(histogram, tileHistogram);
+                }
             }
         } else {
             CountByte(rowOffset, sliceStart, sliceCount, shift, prefixMask, prefixKey, histogram);
         }
-        event_t histSyncEvent = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(histSyncEvent);
-        WaitFlag<HardEvent::V_S>(histSyncEvent);
+        if (!useTileHistogram || !hasRetainedTile || activeMode) {
+            event_t histSyncEvent = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(histSyncEvent);
+            WaitFlag<HardEvent::V_S>(histSyncEvent);
+        }
         if (coresPerRow_ == 1U) {
-            uint64_t accumulated = 0;
-            uint32_t selected = 0;
-            for (; selected < RADIX; ++selected) {
-                uint64_t count = histogram.GetValue(selected);
-                if (leftK < accumulated + count) {
-                    leftK -= accumulated;
-                    break;
-                }
-                accumulated += count;
+            uint64_t selectedCount = 0U;
+            uint32_t selected;
+            if (useTileHistogram && hasRetainedTile && !activeMode) {
+                LocalTensor<uint16_t> tileHistogram = tileHistogramBuf_.Get<uint16_t>();
+                selected = SelectCumulativeBucket16(tileHistogram, leftK, selectedCount, reduceScratch, pipe_);
+            } else {
+                selected = SelectCumulativeBucket(histogram, leftK, selectedCount);
             }
             if (selected >= RADIX) {
                 if (hasRetainedTile) {
@@ -1145,11 +1486,13 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
                 }
                 return;
             }
-            uint64_t selectedCount = histogram.GetValue(selected);
             UT byteMask = static_cast<UT>(static_cast<UT>(RADIX_SELECT_BYTE_MASK) << shift);
             prefixMask = static_cast<UT>(prefixMask | byteMask);
             prefixKey = static_cast<UT>(prefixKey | (static_cast<UT>(selected) << shift));
-            if (keepFinalTile && selectedCount <= RADIX_SELECT_ACTIVE_MODE_THRESHOLD) {
+            // Native vector range/histogram/compaction avoids serial SIMT active
+            // scans for retained 16-bit and wider rows, including full-range input.
+            constexpr bool useVectorCandidates = sizeof(T) >= sizeof(uint16_t);
+            if (!useVectorCandidates && keepFinalTile && selectedCount <= RADIX_SELECT_ACTIVE_MODE_THRESHOLD) {
                 UpdateActiveIndices(retainedKeys, activeIndices, retainedCount, prefixMask, prefixKey, activeMode,
                                     activeCount);
             }
@@ -1168,16 +1511,8 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
             event_t reduceSyncEvent = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(reduceSyncEvent);
             WaitFlag<HardEvent::V_S>(reduceSyncEvent);
-            uint64_t accumulated = 0;
-            for (; selected < RADIX; ++selected) {
-                uint64_t count = histogram.GetValue(selected);
-                if (leftK < accumulated + count) {
-                    leftK -= accumulated;
-                    break;
-                }
-                accumulated += count;
-            }
-            if (byte == 0 && selected < RADIX) {
+            selected = SelectCumulativeBucket(histogram, leftK, selectedCount);
+            if ((byte == 0 || (selectedCount == 1UL && blockNum_ == coresPerRow_)) && selected < RADIX) {
                 uint64_t coreAccumulated = 0;
                 uint32_t targetCore = coresPerRow_;
                 uint64_t targetLeftK = leftK;
@@ -1195,8 +1530,7 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
             }
             state.SetValue(RADIX_SELECT_STATE_LEFT_K_IDX, leftK);
             state.SetValue(RADIX_SELECT_STATE_SELECTED_IDX, selected);
-            state.SetValue(RADIX_SELECT_STATE_SELECTED_COUNT_IDX,
-                           selected < RADIX ? histogram.GetValue(selected) : 0UL);
+            state.SetValue(RADIX_SELECT_STATE_SELECTED_COUNT_IDX, selectedCount);
             StoreGroupState(group, state);
         }
         SyncAll();
@@ -1210,16 +1544,22 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
         }
         leftK = state.GetValue(RADIX_SELECT_STATE_LEFT_K_IDX);
         selectedCount = state.GetValue(RADIX_SELECT_STATE_SELECTED_COUNT_IDX);
-        if (byte == 0) {
+        if (byte == 0 || (selectedCount == 1UL && blockNum_ == coresPerRow_)) {
             finalTargetCore = static_cast<uint32_t>(state.GetValue(RADIX_SELECT_STATE_TARGET_CORE_IDX));
             finalTargetLeftK = state.GetValue(RADIX_SELECT_STATE_TARGET_LEFT_K_IDX);
         }
         UT byteMask = static_cast<UT>(static_cast<UT>(RADIX_SELECT_BYTE_MASK) << shift);
         prefixMask = static_cast<UT>(prefixMask | byteMask);
         prefixKey = static_cast<UT>(prefixKey | (static_cast<UT>(selected) << shift));
-        if (keepFinalTile && selectedCount <= RADIX_SELECT_ACTIVE_MODE_THRESHOLD) {
+        // Native vector range/histogram/compaction avoids serial SIMT active
+        // scans for retained 16-bit and wider rows, including full-range input.
+        constexpr bool useVectorCandidates = sizeof(T) >= sizeof(uint16_t);
+        if (!useVectorCandidates && keepFinalTile && selectedCount <= RADIX_SELECT_ACTIVE_MODE_THRESHOLD) {
             UpdateActiveIndices(retainedKeys, activeIndices, retainedCount, prefixMask, prefixKey, activeMode,
                                 activeCount);
+        }
+        if (selectedCount == 1UL && blockNum_ == coresPerRow_) {
+            break;
         }
     }
 
@@ -1238,10 +1578,34 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
     if (hasRetainedTile && activeMode && leftK < static_cast<uint64_t>(activeCount)) {
         uint32_t found = activeIndices.GetValue(static_cast<uint32_t>(leftK));
         if (writeOutput) {
-            WriteOutput(row, retainedInput.GetValue(found), sliceStart + found);
+            WriteOutput(row, RestoreInputValue(retainedInput.GetValue(found)), sliceStart + found);
         }
         inputQueue_.FreeTensor(retainedInput);
         return;
+    }
+
+    if constexpr (sizeof(UT) >= sizeof(uint16_t)) {
+        if (hasRetainedTile) {
+            for (uint32_t start = 0; start < retainedCount; start += RADIX_SELECT_ACTIVE_INDEX_CAP) {
+                uint32_t count = retainedCount - start;
+                count = count < RADIX_SELECT_ACTIVE_INDEX_CAP ? count : RADIX_SELECT_ACTIVE_INDEX_CAP;
+                uint32_t matches = CompactMatchingPositions(retainedKeys, start, count, prefixMask, prefixKey,
+                                                            activeIndices);
+                event_t compactDone = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+                SetFlag<HardEvent::V_S>(compactDone);
+                WaitFlag<HardEvent::V_S>(compactDone);
+                if (leftK < matches) {
+                    uint32_t found = activeIndices.GetValue(static_cast<uint32_t>(leftK));
+                    if (writeOutput) {
+                        WriteOutput(row, RestoreInputValue(retainedInput.GetValue(found)), sliceStart + found);
+                    }
+                    break;
+                }
+                leftK -= matches;
+            }
+            inputQueue_.FreeTensor(retainedInput);
+            return;
+        }
     }
 
     if (hasRetainedTile) {
@@ -1256,7 +1620,8 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
         WaitFlag<HardEvent::V_S>(findEvent);
         int64_t found = findResult.GetValue(0);
         if (found >= 0 && writeOutput) {
-            WriteOutput(row, retainedInput.GetValue(static_cast<uint32_t>(found)), sliceStart + found);
+            WriteOutput(row, RestoreInputValue(retainedInput.GetValue(static_cast<uint32_t>(found))),
+                        sliceStart + found);
         }
         inputQueue_.FreeTensor(retainedInput);
         return;
@@ -1288,7 +1653,8 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
         uint64_t tileMatches = static_cast<uint64_t>(findResult.GetValue(1));
         if (found >= 0 && leftK >= matched) {
             if (writeOutput) {
-                WriteOutput(row, input.GetValue(static_cast<uint32_t>(found)), sliceStart + start + found);
+                WriteOutput(row, RestoreInputValue(input.GetValue(static_cast<uint32_t>(found))),
+                            sliceStart + start + found);
             }
             inputQueue_.FreeTensor(input);
             break;
@@ -1299,6 +1665,7 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::SelectOneRow(in
 }
 
 template <typename T, typename UT, bool EnableMedian>
+template <bool UseResidentHistogram>
 __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::Process()
 {
     if (tileElems_ == 0U || blockNum_ == 0U || rowsParallel_ == 0U || coresPerRow_ == 0U || sortLoopTimes_ == 0U) {
@@ -1310,7 +1677,7 @@ __aicore__ inline void KthValueRadixSelect<T, UT, EnableMedian>::Process()
         int64_t logicalRow = static_cast<int64_t>(loop) * rowsParallel_ + group;
         bool writeOutput = logicalRow < rowCount_;
         int64_t row = writeOutput ? logicalRow : 0;
-        SelectOneRow(row, group, coreInGroup, writeOutput);
+        SelectOneRow<UseResidentHistogram>(row, group, coreInGroup, writeOutput);
     }
 }
 } // namespace KthValue

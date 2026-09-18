@@ -55,16 +55,16 @@ gert::TilingContextPara MakeKthValueTilingContext(const gert::StorageShape& xSha
 }
 } // namespace
 
-TEST_F(KthValueTilingTest, test_kthvalue_merge_sort_fp32_2x1024)
+TEST_F(KthValueTilingTest, test_kthvalue_radix_select_fp32_2x1024)
 {
     auto tilingContextPara = MakeKthValueTilingContext({{2, 1024}, {2, 1024}}, {{2, 1}, {2, 1}}, {{2, 1}, {2, 1}},
                                                        ge::DT_FLOAT, 5);
 
     TilingInfo tilingInfo;
     ASSERT_TRUE(ExecuteTiling(tilingContextPara, tilingInfo));
-    EXPECT_EQ(tilingInfo.tilingKey, 256);
+    EXPECT_EQ(tilingInfo.tilingKey, 267);
     ASSERT_EQ(tilingInfo.workspaceSizes.size(), 1);
-    EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE);
+    EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE + 4224UL);
 }
 
 TEST_F(KthValueTilingTest, test_kthvalue_axis_one_copy_fp32_100x1)
@@ -91,16 +91,16 @@ TEST_F(KthValueTilingTest, test_kthvalue_merge_sort_bf16_8x512)
     EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE);
 }
 
-TEST_F(KthValueTilingTest, test_kthvalue_merge_sort_fp32_3d_8x16x1024)
+TEST_F(KthValueTilingTest, test_kthvalue_radix_select_fp32_3d_8x16x1024)
 {
     auto tilingContextPara = MakeKthValueTilingContext({{8, 16, 1024}, {8, 16, 1024}}, {{8, 16, 1}, {8, 16, 1}},
                                                        {{8, 16, 1}, {8, 16, 1}}, ge::DT_FLOAT, 500, 2);
 
     TilingInfo tilingInfo;
     ASSERT_TRUE(ExecuteTiling(tilingContextPara, tilingInfo));
-    EXPECT_EQ(tilingInfo.tilingKey, 256);
+    EXPECT_EQ(tilingInfo.tilingKey, 267);
     ASSERT_EQ(tilingInfo.workspaceSizes.size(), 1);
-    EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE);
+    EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE + 135168UL);
 }
 
 TEST_F(KthValueTilingTest, test_kthvalue_axis_one_copy_int32_64x1)
@@ -132,7 +132,7 @@ TEST_F(KthValueTilingTest, test_kthvalue_axis_one_copy_allows_unsorted_dim_over_
     EXPECT_EQ(tilingInfo.workspaceSizes[0], WORK_SPACE_SIZE);
 }
 
-TEST_F(KthValueTilingTest, test_kthvalue_merge_intra_core_allows_unsorted_dim_over_uint32)
+TEST_F(KthValueTilingTest, test_kthvalue_radix_select_allows_unsorted_dim_over_uint32)
 {
     int64_t largeBatch = static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1;
     auto tilingContextPara = MakeKthValueTilingContext({{largeBatch, 4097}, {largeBatch, 4097}},
@@ -141,7 +141,7 @@ TEST_F(KthValueTilingTest, test_kthvalue_merge_intra_core_allows_unsorted_dim_ov
 
     TilingInfo tilingInfo;
     ASSERT_TRUE(ExecuteTiling(tilingContextPara, tilingInfo));
-    EXPECT_EQ(tilingInfo.tilingKey, 260);
+    EXPECT_EQ(tilingInfo.tilingKey, 267);
     ASSERT_GE(tilingInfo.tilingDataSize, sizeof(KthValueTilingData));
     const auto* tilingData = reinterpret_cast<const KthValueTilingData*>(tilingInfo.tilingData.get());
     EXPECT_EQ(tilingData->unsortedDimNum, largeBatch);

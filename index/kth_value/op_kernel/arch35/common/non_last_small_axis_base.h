@@ -24,6 +24,8 @@
 #include "simt_api/asc_simt.h"
 #include "signed_zero_sort_utils.h"
 #include "util_type_simd.h"
+#include "merge_sort_constants.h"
+#include "ping_pong_merge_sort.h"
 
 namespace SmallAxisCommon {
 using namespace AscendC;
@@ -61,6 +63,9 @@ public:
         const uint64_t startTile = static_cast<uint64_t>(this->blockIdx_) * tilesPerCore;
         uint64_t endTile = startTile + tilesPerCore;
         endTile = endTile > tileCount ? tileCount : endTile;
+        // The derived class may place this tensor in shared UB instead of sortedValueBuf_.
+        // Keep its allocated address across tiles: merge Extract redirects sortedValue_ to sortInput_.
+        LocalTensor<SortT> proposalPing = this->sortedValue_;
         for (uint64_t tileId = startTile; tileId < endTile; ++tileId) {
             const uint64_t outerId = tileId / this->innerLoopNum_;
             const uint32_t innerTileId = static_cast<uint32_t>(tileId -
@@ -76,7 +81,7 @@ public:
             int64_t outputOffset = static_cast<int64_t>(outerId) * this->innerSize_ + innerStart;
             this->LoadTile(inputOffset, curInnerChunk);
             this->TransposeToSortMajor(curInnerChunk);
-            this->SortRows(curInnerChunk);
+            this->SortRows(curInnerChunk, proposalPing);
             static_cast<Derived*>(this)->StoreTile(inputOffset, outputOffset, curInnerChunk);
         }
     }
@@ -247,13 +252,29 @@ protected:
         }
     }
 
-    __aicore__ inline void SortRows(uint32_t curInnerChunk)
+    __aicore__ inline void SortRows(uint32_t curInnerChunk, LocalTensor<SortT> proposalPing)
     {
+        LocalTensor<uint32_t> baseIndex;
+        if constexpr (UseMergeSort) {
+            // The last row's indices stay unused until its Extract, after every Sort32 has read this sequence.
+            baseIndex = this->sortedIndex_[(curInnerChunk - 1U) * this->indexAxisElems_];
+            ArithProgression<int32_t>(baseIndex.template ReinterpretCast<int32_t>(), 0, 1, this->sortCount_);
+        }
+        // Keep one batched flip, but exclude trailing UB storage that Sort32 never reads.
+        // sortCount_ includes the padding needed by the final Sort32 group.
+        if constexpr (UseMergeSort && !IsDescend) {
+            FlipMergeSignBit(this->sortInput_, (curInnerChunk - 1U) * this->valueAxisElems_ + this->sortCount_);
+        }
         for (uint32_t inner = 0; inner < curInnerChunk; ++inner) {
             LocalTensor<SortT> src = this->sortInput_[inner * this->valueAxisElems_];
-            LocalTensor<SortT> dst = this->sortedValue_[inner * this->valueAxisElems_];
+            LocalTensor<SortT> dst = proposalPing[inner * this->valueAxisElems_];
             LocalTensor<uint32_t> dstIndex = this->sortedIndex_[inner * this->indexAxisElems_];
-            if constexpr (NormalizeSignedZero) {
+            if constexpr (UseMergeSort) {
+                LocalTensor<SortT> pong = this->tmp_.template ReinterpretCast<SortT>();
+                uint32_t repeatTimes = this->sortCount_ / MergeSortConstants::DEALING_SORT_NUM_ONCE;
+                bool resultInPing = PingPongMergeSortCommon::SortToProposal(dst, pong, src, baseIndex, repeatTimes);
+                Extract(src, dstIndex, resultInPing ? dst : pong, repeatTimes);
+            } else if constexpr (NormalizeSignedZero) {
                 SignedZeroSortCommon::PrepareSignedZeroKeysVec(src, this->sourceIndex_, this->sortCount_);
                 AscendC::Sort<SortT, true, sortConfig_>(dst, dstIndex, src, this->tmp_, this->sortCount_);
                 SignedZeroSortCommon::RestoreSignedZeroValuesByIndexVec(dst, dstIndex, this->sourceIndex_,
@@ -261,6 +282,25 @@ protected:
             } else {
                 AscendC::Sort<SortT, true, sortConfig_>(dst, dstIndex, src, this->tmp_, this->sortCount_);
             }
+        }
+        if constexpr (UseMergeSort) {
+            if constexpr (!IsDescend) {
+                FlipMergeSignBit(this->sortInput_, (curInnerChunk - 1U) * this->valueAxisElems_ + this->sortCount_);
+            }
+            // Extract writes the sorted values back to sortInput_ after its original input is dead,
+            // so the input buffer is intentionally reused as the value output without extra UB.
+            this->sortedValue_ = this->sortInput_;
+        }
+    }
+
+    __aicore__ inline void FlipMergeSignBit(LocalTensor<SortT> tensor, uint32_t count)
+    {
+        if constexpr (std::is_same_v<SortT, float>) {
+            LocalTensor<int32_t> bits = tensor.template ReinterpretCast<int32_t>();
+            Adds(bits, bits, MergeSortConstants::XOR_OP_VALUE_FP, count);
+        } else if constexpr (std::is_same_v<SortT, half>) {
+            LocalTensor<int16_t> bits = tensor.template ReinterpretCast<int16_t>();
+            Adds(bits, bits, MergeSortConstants::XOR_OP_VALUE_HALF, count);
         }
     }
 };

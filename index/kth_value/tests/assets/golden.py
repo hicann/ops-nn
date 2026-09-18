@@ -93,6 +93,22 @@ def _fill_pattern_along_axis(tensor, values, axis):
 
 def kth_value_input(x, *, dim=-1, testcase_name="", **kwargs):
     name = str(testcase_name)
+    if name.endswith("_mixed_nan"):
+        # Preserve NaN signs and payloads rather than relying on float conversions.
+        if str(x.dtype) == "float32":
+            bits = x.view("uint32").reshape(-1)
+            encodings = (0xFFC00000, 0x7FC00000, 0xFFC00001, 0x7FC00002)
+        else:
+            bits = x.view("uint16").reshape(-1)
+            nan_bits = 0xFFC0 if "bfloat16" in str(x.dtype) else 0xFE00
+            encodings = (
+                nan_bits,
+                nan_bits & 0x7FFF,
+                nan_bits | 1,
+                (nan_bits | 2) & 0x7FFF,
+            )
+        bits[: len(encodings)] = encodings
+        return (x,)
     patterns = {
         "duplicate": [2.0, 1.0, 1.0, 3.0, 2.0, 1.0, 3.0, 1.0],
         "signed_zero": [-0.0, 0.0, 0.0, -0.0, 1.0, -1.0, 0.0, -0.0],

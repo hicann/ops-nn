@@ -26,7 +26,6 @@ namespace KthValue {
 using namespace AscendC;
 
 // Import shared constants from MergeSortConstants namespace
-using MergeSortConstants::DEALING_CONCAT_NUM_ONCE;
 using MergeSortConstants::DEALING_EXTRACT_NUM_ONCE;
 using MergeSortConstants::DEALING_SORT_NUM_ONCE;
 using MergeSortConstants::MERGE_LIST_MAX_NUM;
@@ -48,6 +47,8 @@ struct KthValueMergeSortMoreCore : public MergeMoreCoreCommon::MergeMoreCoreBase
     __aicore__ inline KthValueMergeSortMoreCore() {}
     __aicore__ inline void Init(GM_ADDR inputValue, GM_ADDR value, GM_ADDR indices, GM_ADDR workSpace,
                                 const KthValueTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void PrepareRowWorkspace();
+    __aicore__ inline void InitSortBuffers();
     __aicore__ inline void InitMergeBuffers();
     __aicore__ inline void ExtractAndCopyOut();
     __aicore__ inline void OnInputLoaded(LocalTensor<T> inputLocal, uint32_t tileNum);
@@ -56,8 +57,13 @@ struct KthValueMergeSortMoreCore : public MergeMoreCoreCommon::MergeMoreCoreBase
 
     // KthValue-specific member
     uint32_t kthIndex_ = 0;
+    uint32_t staticKthIndex_ = 0;
     uint32_t medianMode_ = 0;
+    uint32_t nonNanCount_ = 0;
+    TBuf<QuePosition::VECCALC> medianScratchBuf_;
     GlobalTensor<uint32_t> medianCountGm_;
+    __gm__ CONVERT_TYPE* workspaceBase_ = nullptr;
+    uint64_t rowWorkspaceElements_ = 0;
 };
 
 template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYPE, bool EnableMedian>
@@ -73,45 +79,72 @@ __aicore__ inline void KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, IN
     this->outputLastDimValue_ = tilingData->lastDimTileNum;
     this->numTileData_ = tilingData->numTileDataSize;
     this->frontCoreNum_ = tilingData->lastDimNeedCore;
+    this->rowsPerRound_ = tilingData->unsortedDimParallel;
+    this->sortLoopTimes_ = tilingData->sortLoopTimes;
+    this->batchNum_ = tilingData->unsortedDimNum;
+    this->logicalBlockSize_ = tilingData->keyParams1;
+    this->syncMergeSortMode_ = this->logicalBlockSize_ > this->numTileData_ && this->numTileData_ > 0U;
     kthIndex_ = tilingData->kthIndex;
+    staticKthIndex_ = kthIndex_;
     medianMode_ = tilingData->medianMode;
-    if (this->frontCoreNum_ == 0U) {
+    if (this->frontCoreNum_ == 0U || this->rowsPerRound_ == 0U || this->sortLoopTimes_ == 0U) {
         return;
     }
     uint32_t sortBufferSize = 8;
-    this->rowIdx_ = this->blockIdx_ / this->frontCoreNum_;
+    this->rowGroupIdx_ = this->blockIdx_ / this->frontCoreNum_;
     this->rowCoreIdx_ = this->blockIdx_ % this->frontCoreNum_;
-    this->rowDataOffset_ = static_cast<int64_t>(this->rowIdx_) * static_cast<int64_t>(this->outputLastDimValue_);
     // Per-row workspace stores Sort API sort-struct data. This capacity uses sortBufferSize bytes per
     // original element and UB-block byte alignment; it must cover later GetSortLen-based accesses.
     uint64_t rowWorkspaceBytes = ROUND_UP_AGLIN_UINT64(static_cast<uint64_t>(this->outputLastDimValue_) *
                                                        sortBufferSize);
-    uint64_t rowWorkspaceElements = rowWorkspaceBytes / sizeof(CONVERT_TYPE);
-    this->rowWorkspaceOffset_ = static_cast<int64_t>(this->rowIdx_) * static_cast<int64_t>(rowWorkspaceElements) * 2;
+    this->rowWorkspaceElements_ = rowWorkspaceBytes / sizeof(CONVERT_TYPE);
     this->onceMaxElements_ = tilingData->keyParams0 / DEALING_SORT_NUM_ONCE * DEALING_SORT_NUM_ONCE;
 
     this->inputValueGm_.SetGlobalBuffer((__gm__ T*)(inputValue));
     this->outValueGm_.SetGlobalBuffer((__gm__ T*)(value));
     this->outIndexGm_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
-    this->workspaceGm_[0].SetGlobalBuffer((__gm__ CONVERT_TYPE*)(workSpace) + this->rowWorkspaceOffset_,
-                                          rowWorkspaceElements);
-    this->workspaceGm_[1].SetGlobalBuffer(
-        (__gm__ CONVERT_TYPE*)(workSpace) + this->rowWorkspaceOffset_ + rowWorkspaceElements, rowWorkspaceElements);
+    this->workspaceBase_ = (__gm__ CONVERT_TYPE*)workSpace;
     uint64_t medianCountOffset = ROUND_UP_AGLIN_UINT64(static_cast<uint64_t>(tilingData->lastAxisNum) *
                                                        static_cast<uint64_t>(tilingData->unsortedDimNum) *
                                                        MERGE_SORT_WORKSPACE_PARAM * sizeof(uint32_t));
     medianCountGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(workSpace + medianCountOffset),
                                    tilingData->lastDimNeedCore * tilingData->unsortedDimNum);
+}
 
-    uint32_t tailNum = this->outputLastDimValue_ - (this->frontCoreNum_ - 1) * this->numTileData_;
-    uint32_t alignTile = ROUND_UP_AGLIN(tailNum);
+// Called by the base Process() loop before each row's sort phase so the ping-pong
+// workspace is rebound to the current row's GM region.
+template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYPE, bool EnableMedian>
+__aicore__ inline void
+KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, INDEX_TYPE, EnableMedian>::PrepareRowWorkspace()
+{
+    this->rowDataOffset_ = static_cast<int64_t>(this->rowIdx_) * static_cast<int64_t>(this->outputLastDimValue_);
+    this->rowWorkspaceOffset_ = static_cast<int64_t>(this->rowIdx_) *
+                                static_cast<int64_t>(this->rowWorkspaceElements_) * 2;
+    this->workspaceGm_[0].SetGlobalBuffer(this->workspaceBase_ + this->rowWorkspaceOffset_,
+                                          this->rowWorkspaceElements_);
+    this->workspaceGm_[1].SetGlobalBuffer(
+        this->workspaceBase_ + this->rowWorkspaceOffset_ + this->rowWorkspaceElements_, this->rowWorkspaceElements_);
+    nonNanCount_ = 0U;
+}
+
+template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYPE, bool EnableMedian>
+__aicore__ inline void
+KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, INDEX_TYPE, EnableMedian>::InitSortBuffers()
+{
+    uint32_t sortBufferSize = 8;
+    uint32_t sortTileNum = this->syncMergeSortMode_ ?
+                               this->numTileData_ :
+                               this->outputLastDimValue_ - (this->frontCoreNum_ - 1) * this->numTileData_;
+    uint32_t alignTile = ROUND_UP_AGLIN(sortTileNum);
     this->pipe_->InitBuffer(this->inputQueue_, MERGE_MORE_BUFFER_NUM, alignTile * sizeof(T));
 
     this->pipe_->InitBuffer(this->sortedValueUb_, alignTile * sortBufferSize);
     this->pipe_->InitBuffer(this->sortedValueIndexUb_, alignTile * sizeof(uint32_t));
-    this->pipe_->InitBuffer(this->concatTempBuf_, alignTile * sortBufferSize);
     this->pipe_->InitBuffer(this->sortTempBuf_, alignTile * sortBufferSize);
-    this->pipe_->InitBuffer(this->sortedValueLocalCastTbuf_, alignTile * sortBufferSize);
+    if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
+        uint32_t medianScratchBytes = ROUND_UP_AGLIN(this->frontCoreNum_ * sizeof(uint32_t));
+        this->pipe_->InitBuffer(medianScratchBuf_, medianScratchBytes);
+    }
 }
 
 template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYPE, bool EnableMedian>
@@ -119,10 +152,15 @@ __aicore__ inline void KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, IN
     LocalTensor<T> inputLocal, uint32_t tileNum)
 {
     if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
-        LocalTensor<float> scratch = this->concatTempBuf_.template Get<float>();
-        uint32_t nonNanCount = CountNonNan(inputLocal, tileNum, scratch, this->pipe_);
+        if constexpr (KTH_VALUE_ENABLE_STATIC_MEDIAN_FAST_PATH) {
+            if (medianMode_ == MEDIAN_MODE_STATIC) {
+                return;
+            }
+        }
+        LocalTensor<float> scratch = medianScratchBuf_.template Get<float>();
+        nonNanCount_ += CountNonNan(inputLocal, tileNum, scratch, this->pipe_);
         LocalTensor<uint32_t> countLocal = scratch.template ReinterpretCast<uint32_t>();
-        countLocal.SetValue(0, nonNanCount);
+        countLocal.SetValue(0, nonNanCount_);
         event_t eventId = static_cast<event_t>(this->pipe_->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventId);
         WaitFlag<HardEvent::S_MTE3>(eventId);
@@ -150,8 +188,9 @@ template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYP
 __aicore__ inline uint32_t
 KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, INDEX_TYPE, EnableMedian>::ResolveRowK()
 {
-    LocalTensor<uint32_t> countLocal = this->concatTempBuf_.template Get<uint32_t>();
-    uint32_t countOffset = this->rowIdx_ * this->frontCoreNum_;
+    LocalTensor<uint32_t> countLocal = medianScratchBuf_.template Get<uint32_t>();
+    // Each round finishes before the next one starts, so the physical row-group count slots can be reused.
+    uint32_t countOffset = this->rowGroupIdx_ * this->frontCoreNum_;
     DataCopyExtParams copyParams{1, this->frontCoreNum_ * static_cast<uint32_t>(sizeof(uint32_t)), 0, 0, 0};
     DataCopyPad(countLocal, medianCountGm_[countOffset], copyParams, {false, 0, 0, 0});
     event_t eventId = static_cast<event_t>(this->pipe_->FetchEventID(HardEvent::MTE2_S));
@@ -161,7 +200,7 @@ KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, INDEX_TYPE, EnableMedian>
     for (uint32_t core = 0U; core < this->frontCoreNum_; ++core) {
         nonNanCount += countLocal.GetValue(core);
     }
-    return ResolveMedianK(kthIndex_, this->outputLastDimValue_, nonNanCount, medianMode_);
+    return ResolveMedianK(staticKthIndex_, this->outputLastDimValue_, nonNanCount, medianMode_);
 }
 
 template <typename T, typename CONVERT_TYPE, bool IS_DESCEND, typename INDEX_TYPE, bool EnableMedian>
@@ -186,8 +225,14 @@ __aicore__ inline void
 KthValueMergeSortMoreCore<T, CONVERT_TYPE, IS_DESCEND, INDEX_TYPE, EnableMedian>::ExtractAndCopyOut()
 {
     if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
-        if (this->outOffset_ == 0) {
-            kthIndex_ = ResolveRowK();
+        if constexpr (KTH_VALUE_ENABLE_STATIC_MEDIAN_FAST_PATH) {
+            if (medianMode_ != MEDIAN_MODE_STATIC && this->outOffset_ == 0) {
+                kthIndex_ = ResolveRowK();
+            }
+        } else {
+            if (this->outOffset_ == 0) {
+                kthIndex_ = ResolveRowK();
+            }
         }
     }
     LocalTensor<CONVERT_TYPE> sortTempBuffer = this->sortedQueue_.template DeQue<CONVERT_TYPE>();

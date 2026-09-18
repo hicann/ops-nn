@@ -30,10 +30,11 @@ namespace KthValue {
 using namespace AscendC;
 
 template <bool EnableMedian, uint64_t schId>
-__aicore__ inline void RunMergeSortRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, KthValueTilingData* tilingData, TPipe* pipe)
+__aicore__ inline void RunMergeSortRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, KthValueMergeOneCoreTilingData* tilingData,
+                                         TPipe* pipe)
 {
     constexpr uint64_t isSort32SmallAxis = (schId == KTH_VALUE_SCHID_SORT32_SMALL_AXIS);
-    if constexpr (IsSameType<bfloat16_t, DTYPE_X>::value) {
+    if constexpr (IsSameType<bfloat16_t, DTYPE_X>::value || IsSameType<int16_t, DTYPE_X>::value) {
         KthValueMergeSortOneCore<DTYPE_X, float, isSort32SmallAxis, EnableMedian> op;
         op.Init(x, y1, y2, tilingData, pipe);
         op.Process();
@@ -158,8 +159,8 @@ __aicore__ inline void RunAxisOneCopyRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM
 }
 
 template <bool EnableMedian>
-__aicore__ inline void RunRadixOneCoreRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, KthValueTilingData* tilingData,
-                                            TPipe* pipe)
+__aicore__ inline void RunRadixOneCoreRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2,
+                                            KthValueRadixOneCoreTilingData* tilingData, TPipe* pipe)
 {
     constexpr bool enableNanMode = EnableMedian && IS_MEDIAN_FLOAT_TYPE<DTYPE_X>;
     KthValueRadixOneCore<DTYPE_X, enableNanMode> op;
@@ -167,7 +168,7 @@ __aicore__ inline void RunRadixOneCoreRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, K
     op.Process();
 }
 
-template <bool EnableMedian>
+template <bool EnableMedian, bool UseResidentHistogram = false>
 __aicore__ inline void RunRadixSelectRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR workspace,
                                            KthValueTilingData* tilingData, TPipe* pipe)
 {
@@ -175,19 +176,19 @@ __aicore__ inline void RunRadixSelectRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM
     if constexpr (sizeof(DTYPE_X) == 1) {
         KthValueRadixSelect<DTYPE_X, uint8_t, enableNanMode> op;
         op.Init(x, y1, y2, workspace, tilingData, pipe);
-        op.Process();
+        op.template Process<UseResidentHistogram>();
     } else if constexpr (sizeof(DTYPE_X) == 2) {
         KthValueRadixSelect<DTYPE_X, uint16_t, enableNanMode> op;
         op.Init(x, y1, y2, workspace, tilingData, pipe);
-        op.Process();
+        op.template Process<UseResidentHistogram>();
     } else if constexpr (sizeof(DTYPE_X) == 4) {
         KthValueRadixSelect<DTYPE_X, uint32_t, enableNanMode> op;
         op.Init(x, y1, y2, workspace, tilingData, pipe);
-        op.Process();
+        op.template Process<UseResidentHistogram>();
     } else if constexpr (sizeof(DTYPE_X) == 8) {
         KthValueRadixSelect<DTYPE_X, uint64_t, enableNanMode> op;
         op.Init(x, y1, y2, workspace, tilingData, pipe);
-        op.Process();
+        op.template Process<UseResidentHistogram>();
     }
 }
 
@@ -232,8 +233,8 @@ __aicore__ inline bool TryRunSmallAxisRoute(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, K
 
 // EnableMedian selects the shared Median/NanMedian behavior. tilingData->medianMode
 // distinguishes propagate-NaN Median from ignore-NaN NanMedian at runtime.
-template <bool EnableMedian, uint64_t schId, uint64_t isInt32>
-__aicore__ inline void Dispatch(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR workspace, KthValueTilingData* tilingData,
+template <bool EnableMedian, uint64_t schId, uint64_t isInt32, typename TilingData>
+__aicore__ inline void Dispatch(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR workspace, TilingData* tilingData,
                                 TPipe* pipe)
 {
     GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
@@ -245,6 +246,8 @@ __aicore__ inline void Dispatch(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR works
         RunRadixOneCoreRoute<EnableMedian>(x, y1, y2, tilingData, pipe);
     } else if constexpr (schId == KTH_VALUE_SCHID_RADIX_MORE_CORE) {
         RunRadixMoreCoreRoute<EnableMedian, isInt32>(x, y1, y2, userWorkspace, tilingData, pipe);
+    } else if constexpr (schId == KTH_VALUE_SCHID_RESIDENT_HISTOGRAM) {
+        RunRadixSelectRoute<EnableMedian, true>(x, y1, y2, userWorkspace, tilingData, pipe);
     } else if constexpr (schId == KTH_VALUE_SCHID_RADIX_SELECT) {
         RunRadixSelectRoute<EnableMedian>(x, y1, y2, userWorkspace, tilingData, pipe);
     } else if constexpr (schId == KTH_VALUE_SCHID_SMALL_AXIS_INSERTION ||

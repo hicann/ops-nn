@@ -20,6 +20,7 @@ using namespace AscendC;
 #define KTH_VALUE_RADIX_MORE_CORE_UINT32_TILING_KEY 258
 #define KTH_VALUE_MERGE_MORE_CORE_TILING_KEY 259
 #define KTH_VALUE_RADIX_SELECT_TILING_KEY 267
+#define KTH_VALUE_RESIDENT_HISTOGRAM_TILING_KEY 269
 
 template <uint64_t schId, uint64_t isInt32>
 __global__ __aicore__ void kth_value(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR workspace, GM_ADDR tiling)
@@ -29,8 +30,22 @@ __global__ __aicore__ void kth_value(GM_ADDR x, GM_ADDR y1, GM_ADDR y2, GM_ADDR 
     KERNEL_TASK_TYPE(KTH_VALUE_RADIX_MORE_CORE_UINT32_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
     KERNEL_TASK_TYPE(KTH_VALUE_MERGE_MORE_CORE_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
     KERNEL_TASK_TYPE(KTH_VALUE_RADIX_SELECT_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
+    KERNEL_TASK_TYPE(KTH_VALUE_RESIDENT_HISTOGRAM_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(KthValueTilingData);
-    GET_TILING_DATA_WITH_STRUCT(KthValueTilingData, tilingData, tiling);
     TPipe pipe;
-    KthValue::Dispatch<false, schId, isInt32>(x, y1, y2, workspace, &tilingData, &pipe);
+    // Host StoreKthValueTiling serializes a different layout for these single-core keys.
+    // Register and decode the matching compact struct before Dispatch; a full-struct read
+    // would use wrong field offsets. if constexpr removes the other layouts from each binary.
+    if constexpr (schId == KTH_VALUE_SCHID_MERGE_SORT || schId == KTH_VALUE_SCHID_SORT32_SMALL_AXIS) {
+        REGISTER_TILING_FOR_TILINGKEY(KTH_VALUE_MERGE_ONE_CORE_TILING_CONDITION, KthValueMergeOneCoreTilingData);
+        GET_TILING_DATA_WITH_STRUCT(KthValueMergeOneCoreTilingData, tilingData, tiling);
+        KthValue::Dispatch<false, schId, isInt32>(x, y1, y2, workspace, &tilingData, &pipe);
+    } else if constexpr (schId == KTH_VALUE_SCHID_RADIX_ONE_CORE) {
+        REGISTER_TILING_FOR_TILINGKEY(KTH_VALUE_RADIX_ONE_CORE_TILING_CONDITION, KthValueRadixOneCoreTilingData);
+        GET_TILING_DATA_WITH_STRUCT(KthValueRadixOneCoreTilingData, tilingData, tiling);
+        KthValue::Dispatch<false, schId, isInt32>(x, y1, y2, workspace, &tilingData, &pipe);
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(KthValueTilingData, tilingData, tiling);
+        KthValue::Dispatch<false, schId, isInt32>(x, y1, y2, workspace, &tilingData, &pipe);
+    }
 }

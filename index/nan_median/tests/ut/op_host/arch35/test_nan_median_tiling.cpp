@@ -48,7 +48,8 @@ TEST(NanMedianTilingTest, UsesIgnoreNanMode)
     TilingInfo tilingInfo;
     ASSERT_TRUE(ExecuteTiling(context, tilingInfo));
     EXPECT_EQ(tilingInfo.tilingKey, 264);
-    const auto* tilingData = GetTilingData(tilingInfo);
+    ASSERT_EQ(tilingInfo.tilingDataSize, sizeof(KthValueMergeOneCoreTilingData));
+    const auto* tilingData = reinterpret_cast<const KthValueMergeOneCoreTilingData*>(tilingInfo.tilingData.get());
     EXPECT_EQ(tilingData->medianMode, 2U);
     EXPECT_EQ(tilingData->kthIndex, 3);
 }

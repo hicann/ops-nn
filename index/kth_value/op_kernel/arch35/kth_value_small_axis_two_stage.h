@@ -18,6 +18,7 @@
 #include "simt_api/asc_simt.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
+#include "kth_value_narrow_select.h"
 #include "common/small_axis_two_stage_base.h"
 
 namespace KthValue {
@@ -69,6 +70,9 @@ __simt_vf__ LAUNCH_BOUND(SmallAxisCommon::TWO_STAGE_THREAD_NUM) __aicore__
     }
 }
 
+// The shared base sorts each short segment in two stages; this adapter emits only its kth pair.
+// Partial batches use validSegs throughout, and indices stay local to the selected axis.
+// Median hooks canonicalize ordering keys before sorting and resolve NaN policy before the final gather.
 template <typename T, bool EnableMedian = false>
 class KthValueSmallAxisTwoStage
     : public SmallAxisCommon::SmallAxisTwoStageBase<KthValueSmallAxisTwoStage<T, EnableMedian>, T, uint32_t, false> {
@@ -101,6 +105,7 @@ private:
     __aicore__ inline void LoadBatch(uint32_t batchId, uint32_t validSegs, uint32_t totalElems);
     __aicore__ inline void StoreKth(uint32_t batchId, int64_t segStart, uint32_t validSegs);
 
+    TBuf<TPosition::VECCALC> narrowInputBuf_;
     GlobalTensor<T> inputGm_;
     GlobalTensor<T> valueGm_;
     GlobalTensor<int64_t> indexGm_;
@@ -143,6 +148,14 @@ __aicore__ inline void KthValueSmallAxisTwoStage<T, EnableMedian>::Init(GM_ADDR 
         return;
     }
 
+    if constexpr (!EnableMedian && (IsSameType<T, int8_t>::value || IsSameType<T, uint8_t>::value ||
+                                    IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value)) {
+        if (!IsNonLastMode() && tiling_->keyParams3 == NARROW_SELECT_MODE) {
+            pipe_->InitBuffer(narrowInputBuf_, ROUND_UP_AGLIN(maxFlatElems_ * sizeof(T)));
+            inputValues_ = narrowInputBuf_.template Get<T>();
+            return;
+        }
+    }
     Base::InitSortBuffers(pipe, maxFlatElems_, tiling_->tmpUbSize, tiling_->keyParams2 != 0U, sizeof(uint32_t));
 }
 
@@ -181,6 +194,44 @@ __aicore__ inline void KthValueSmallAxisTwoStage<T, EnableMedian>::ProcessBatch(
     uint32_t totalElems = validSegs * segmentLen_;
     int64_t segStart = GetOutputStart(batchId);
     LoadBatch(batchId, validSegs, totalElems);
+    if constexpr (!EnableMedian && (IsSameType<T, int8_t>::value || IsSameType<T, uint8_t>::value ||
+                                    IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value)) {
+        if (!IsNonLastMode() && tiling_->keyParams3 == NARROW_SELECT_MODE) {
+            bool useByteCapacity = (IsSameType<T, int8_t>::value || IsSameType<T, uint8_t>::value) &&
+                                   segmentLen_ > NARROW_SELECT_CAPACITY_MEDIUM &&
+                                   segmentLen_ <= NARROW_SELECT_CAPACITY_BYTE;
+            if (useByteCapacity) {
+                asc_vf_call<SimtSelectNarrowRows<T, NARROW_SELECT_CAPACITY_BYTE>>(
+                    dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), validSegs, segmentLen_, kthIndex_,
+                    static_cast<uint64_t>(segStart), (__ubuf__ T*)inputValues_.GetPhyAddr(),
+                    (__gm__ volatile T*)valueGm_.GetPhyAddr(), (__gm__ volatile int64_t*)indexGm_.GetPhyAddr());
+            } else if (segmentLen_ <= NARROW_SELECT_CAPACITY_SMALL) {
+                asc_vf_call<SimtSelectNarrowRows<T, NARROW_SELECT_CAPACITY_SMALL>>(
+                    dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), validSegs, segmentLen_, kthIndex_,
+                    static_cast<uint64_t>(segStart), (__ubuf__ T*)inputValues_.GetPhyAddr(),
+                    (__gm__ volatile T*)valueGm_.GetPhyAddr(), (__gm__ volatile int64_t*)indexGm_.GetPhyAddr());
+            } else if (segmentLen_ <= NARROW_SELECT_CAPACITY_MEDIUM) {
+                asc_vf_call<SimtSelectNarrowRows<T, NARROW_SELECT_CAPACITY_MEDIUM>>(
+                    dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), validSegs, segmentLen_, kthIndex_,
+                    static_cast<uint64_t>(segStart), (__ubuf__ T*)inputValues_.GetPhyAddr(),
+                    (__gm__ volatile T*)valueGm_.GetPhyAddr(), (__gm__ volatile int64_t*)indexGm_.GetPhyAddr());
+            } else if (segmentLen_ <= NARROW_SELECT_CAPACITY_LARGE) {
+                asc_vf_call<SimtSelectNarrowRows<T, NARROW_SELECT_CAPACITY_LARGE>>(
+                    dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), validSegs, segmentLen_, kthIndex_,
+                    static_cast<uint64_t>(segStart), (__ubuf__ T*)inputValues_.GetPhyAddr(),
+                    (__gm__ volatile T*)valueGm_.GetPhyAddr(), (__gm__ volatile int64_t*)indexGm_.GetPhyAddr());
+            } else if (segmentLen_ <= NARROW_SELECT_CAPACITY_MAX) {
+                asc_vf_call<SimtSelectNarrowRows<T, NARROW_SELECT_CAPACITY_MAX>>(
+                    dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), validSegs, segmentLen_, kthIndex_,
+                    static_cast<uint64_t>(segStart), (__ubuf__ T*)inputValues_.GetPhyAddr(),
+                    (__gm__ volatile T*)valueGm_.GetPhyAddr(), (__gm__ volatile int64_t*)indexGm_.GetPhyAddr());
+            }
+            event_t done = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(done);
+            WaitFlag<HardEvent::V_S>(done);
+            return;
+        }
+    }
     if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
         asc_vf_call<SimtCanonicalizeMedianSortValues<T>>(dim3(SmallAxisCommon::TWO_STAGE_THREAD_NUM), totalElems,
                                                          reinterpret_cast<__ubuf__ T*>(inputValues_.GetPhyAddr()));

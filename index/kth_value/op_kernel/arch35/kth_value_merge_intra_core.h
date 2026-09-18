@@ -32,7 +32,6 @@ namespace KthValue {
 using namespace AscendC;
 
 // Import shared constants from MergeSortConstants namespace
-using MergeSortConstants::DEALING_CONCAT_NUM_ONCE;
 using MergeSortConstants::DEALING_EXTRACT_NUM_ONCE;
 using MergeSortConstants::DEALING_SORT_NUM_ONCE;
 using MergeSortConstants::MERGE_INTRA_BUFFER_NUM;
@@ -117,7 +116,6 @@ __aicore__ inline void KthValueMergeIntraCore<ValueType, IndexType, IsDescend, E
     this->batchSortLen_ = AscendC::GetSortLen<ValueType>(this->alignNum_);
     this->sortBufferSize_ = this->blockSortLen_ * sizeof(ValueType);
     this->sortRepeatTimes_ = this->blockSortSize_ / DEALING_SORT_NUM_ONCE;
-    this->concatRepeatTimes_ = this->blockSortSize_ / DEALING_CONCAT_NUM_ONCE;
     this->lastBlockSize_ = static_cast<uint32_t>(this->sortAxisNum_ -
                                                  static_cast<int64_t>(this->blocksPerRow_ - 1) * this->blockSortSize_);
 
@@ -134,7 +132,6 @@ template <typename ValueType, typename IndexType, bool IsDescend, bool EnableMed
 __aicore__ inline void KthValueMergeIntraCore<ValueType, IndexType, IsDescend, EnableMedian>::InitPhase1Buffers()
 {
     this->pipe_->InitBuffer(this->inQueueX_, MERGE_INTRA_BUFFER_NUM, this->blockSortSize_ * sizeof(ValueType));
-    this->pipe_->InitBuffer(this->concatTmpBuf_, this->sortBufferSize_);
     this->pipe_->InitBuffer(this->sortTmpBuf_, this->sortBufferSize_);
     this->pipe_->InitBuffer(this->sortedOutQueue_, MERGE_INTRA_BUFFER_NUM, this->sortBufferSize_);
     this->pipe_->InitBuffer(this->indexTmpBuf_, this->blockSortSize_ * sizeof(uint32_t));
@@ -178,7 +175,13 @@ __aicore__ inline void KthValueMergeIntraCore<ValueType, IndexType, IsDescend, E
 {
     int64_t outputOffset = batchIdx;
     if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<ValueType>) {
-        kthIndex_ = ResolveBatchK(batchIdx);
+        if constexpr (KTH_VALUE_ENABLE_STATIC_MEDIAN_FAST_PATH) {
+            if (medianMode_ != MEDIAN_MODE_STATIC) {
+                kthIndex_ = ResolveBatchK(batchIdx);
+            }
+        } else {
+            kthIndex_ = ResolveBatchK(batchIdx);
+        }
     }
 
     // resultRegion: 0 = Ping (offset 0), 1 = Pong (offset batchSortLen_)

@@ -194,6 +194,8 @@ __aicore__ inline void KthValueNonLastSmallAxis<T, IsDescend, UseMergeSort, Enab
     if (endTile > tileCount) {
         endTile = tileCount;
     }
+    // Merge Extract redirects sortedValue_ to sortInput_; preserve the proposal storage across tiles.
+    LocalTensor<SortT> proposalPing = this->sortedValue_;
     for (uint64_t tileId = startTile; tileId < endTile; ++tileId) {
         uint64_t outerId = tileId / this->innerLoopNum_;
         uint32_t innerTileId = static_cast<uint32_t>(tileId - outerId * static_cast<uint64_t>(this->innerLoopNum_));
@@ -208,7 +210,7 @@ __aicore__ inline void KthValueNonLastSmallAxis<T, IsDescend, UseMergeSort, Enab
         this->LoadTile(inputOffset, curInnerChunk);
         this->TransposeToSortMajor(curInnerChunk);
         PrepareSortRows(curInnerChunk);
-        this->SortRows(curInnerChunk);
+        this->SortRows(curInnerChunk, proposalPing);
         StoreTile(inputOffset, outputOffset, curInnerChunk);
     }
 }

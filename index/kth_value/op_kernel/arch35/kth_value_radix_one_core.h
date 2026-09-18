@@ -25,12 +25,13 @@ using namespace AscendC;
 template <typename T, bool EnableMedian = false>
 class KthValueRadixOneCore {
 public:
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR values, GM_ADDR indices, const KthValueTilingData* tiling,
-                                TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR values, GM_ADDR indices,
+                                const KthValueRadixOneCoreTilingData* tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ParseTilingData();
+    __aicore__ inline uint32_t PrepareMedianRank(LocalTensor<T> xLocal);
     __aicore__ inline void CopyInputToUb(LocalTensor<T>& xLocal, int64_t row);
     __aicore__ inline void ProcessOneRow(int64_t row, uint32_t localOffset, LocalTensor<T>& compactValue,
                                          LocalTensor<int64_t>& compactIndex);
@@ -46,7 +47,7 @@ private:
     GlobalTensor<int64_t> indicesGm_;
 
     TPipe* pipe_{nullptr};
-    const KthValueTilingData* tiling_{nullptr};
+    const KthValueRadixOneCoreTilingData* tiling_{nullptr};
     TQue<QuePosition::VECIN, 1> inQueueX_;
     TQue<QuePosition::VECOUT, 1> outValueQueue_;
     TQue<QuePosition::VECOUT, 1> outIndexQueue_;
@@ -73,7 +74,8 @@ private:
 
 template <typename T, bool EnableMedian>
 __aicore__ inline void KthValueRadixOneCore<T, EnableMedian>::Init(GM_ADDR x, GM_ADDR values, GM_ADDR indices,
-                                                                   const KthValueTilingData* tiling, TPipe* pipe)
+                                                                   const KthValueRadixOneCoreTilingData* tiling,
+                                                                   TPipe* pipe)
 {
     if (tiling == nullptr || pipe == nullptr) {
         return;
@@ -128,6 +130,29 @@ __aicore__ inline void KthValueRadixOneCore<T, EnableMedian>::CopyInputToUb(Loca
 }
 
 template <typename T, bool EnableMedian>
+__aicore__ inline uint32_t KthValueRadixOneCore<T, EnableMedian>::PrepareMedianRank(LocalTensor<T> xLocal)
+{
+    uint32_t selectedK = kthIndex_;
+    if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
+        if constexpr (KTH_VALUE_ENABLE_STATIC_MEDIAN_FAST_PATH) {
+            if (medianMode_ != MEDIAN_MODE_STATIC) {
+                CanonicalizeNanValues(xLocal, numTileData_);
+                uint32_t nonNanCount = CountNonNan(xLocal, numTileData_, tmpUb_.Get<float>(), pipe_);
+                selectedK = ResolveMedianK(kthIndex_, numTileData_, nonNanCount, medianMode_);
+            }
+        } else {
+            if (medianMode_ != MEDIAN_MODE_STATIC) {
+                CanonicalizeNanValues(xLocal, numTileData_);
+            }
+            uint32_t nonNanCount = CountNonNan(xLocal, numTileData_, tmpUb_.Get<float>(), pipe_);
+            selectedK = ResolveMedianK(kthIndex_, numTileData_, nonNanCount, medianMode_);
+        }
+    }
+
+    return selectedK;
+}
+
+template <typename T, bool EnableMedian>
 __aicore__ inline void KthValueRadixOneCore<T, EnableMedian>::ProcessOneRow(int64_t row, uint32_t localOffset,
                                                                             LocalTensor<T>& compactValue,
                                                                             LocalTensor<int64_t>& compactIndex)
@@ -139,14 +164,7 @@ __aicore__ inline void KthValueRadixOneCore<T, EnableMedian>::ProcessOneRow(int6
     LocalTensor<T> sortedValue = outValueQueue_.AllocTensor<T>();
     LocalTensor<uint32_t> sortedIndex = outIndexQueue_.AllocTensor<uint32_t>();
     LocalTensor<uint8_t> tmpUb = tmpUb_.Get<uint8_t>();
-    uint32_t selectedK = kthIndex_;
-    if constexpr (EnableMedian && IS_MEDIAN_FLOAT_TYPE<T>) {
-        if (medianMode_ != MEDIAN_MODE_STATIC) {
-            CanonicalizeNanValues(xLocal, numTileData_);
-        }
-        uint32_t nonNanCount = CountNonNan(xLocal, numTileData_, tmpUb_.Get<float>(), pipe_);
-        selectedK = ResolveMedianK(kthIndex_, numTileData_, nonNanCount, medianMode_);
-    }
+    uint32_t selectedK = PrepareMedianRank(xLocal);
 
     bool hasNegativeZero = false;
     if constexpr (SignedZeroSortCommon::IS_FLOATING_POINT_V<T>) {

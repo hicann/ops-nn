@@ -41,6 +41,8 @@ constexpr int64_t NON_LAST_SMALL_AXIS_MIN_AXIS_LEN = 2;
 constexpr int64_t NON_LAST_SMALL_AXIS_THRESHOLD = 2048;
 constexpr int64_t ONE_CORE_DATA_SIZE = 2048;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
+constexpr uint32_t MERGE_MORE_CORE_DATA_SIZE_BASE = 2048;
+constexpr uint32_t MERGE_MORE_CORE_DATA_SIZE_LARGE = 4096;
 constexpr uint32_t SORT32_SMALL_AXIS_THRESHOLD = 32;
 constexpr uint32_t SMALL_AXIS_MAX_DATACOPY_BLOCK_COUNT = 4095; // DataCopy hardware limit for blockCount
 constexpr uint32_t SORT_STRUCT_BYTES = 8;                      // fp32 sort struct size (index + value)
@@ -216,7 +218,8 @@ bool SearchNonLastSmallAxisPlan(
     std::function<bool(SortKthTileInfo&, uint32_t, uint64_t&, NonLastSmallAxisCandidate&)> estimateUb,
     NonLastSmallAxisCandidate& best, SortKthTileInfo* selectedInfo = nullptr);
 
-bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan);
+bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan,
+                          const SmallAxisRule* ruleOverride = nullptr);
 bool SelectNonLastSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan);
 bool SelectSortNonLastSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan);
 
@@ -265,6 +268,9 @@ constexpr uint32_t MERGE_SORT_LIST_NUM = 4;
 constexpr uint32_t MERGE_SORT_DATA_BYTES = 8;
 constexpr int64_t MERGE_SORT_WORKSPACE_PARAM = 5;
 constexpr uint32_t MULTI_CORE_MERGE_SORT_MAX_AXIS = 32768;
+// Multi-round merge-more-core executes global barriers for every merge level. Use this route only when the sort axis
+// can occupy at least eight cores per row; smaller horizontal splits fall back to a route with less barrier overhead.
+constexpr uint32_t MERGE_MORE_CORE_MIN_CORES_PER_ROW_FOR_MULTI_ROUND = 8;
 constexpr uint32_t MERGE_INTRA_CORE_SORT_ALIGN = 32; // Sort/Extract API alignment requirement (elements)
 // Beyond 4 merge rounds (>256 blocks), radix sort has little performance disadvantage.
 constexpr uint32_t MERGE_INTRA_CORE_MAX_BLOCKS = 256;
@@ -280,7 +286,7 @@ struct MergeSortPlan {
 
 bool ComputeMergeSortPlan(int64_t axisLen, int64_t unsortedDim, uint32_t blockUbSize, uint32_t tileDataNum,
                           uint32_t maxCoreNum, MergeSortPlan& plan);
-bool FillMergeSortInfo(SortKthTileInfo& info, uint32_t indexDtypeSize, uint32_t concatTmpSize);
+bool FillMergeSortInfo(SortKthTileInfo& info, uint32_t indexDtypeSize, bool useUbCapacity = false);
 
 // =============================================================================
 // Merge sort — multi-core (more-core)
@@ -293,17 +299,23 @@ struct MergeMoreCorePlan {
     uint32_t sortLoopTimes = 1;
     uint32_t coreNumNeed = 0;
     uint32_t keyParams0 = 0;
+    uint32_t keyParams1 = 0;
 };
 
-bool IsMergeMoreCoreSupported(ge::DataType dataType, int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum);
-bool ComputeMergeMoreCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t mergeBytesPerElem,
-                              MergeMoreCorePlan& plan);
+// Shared performance eligibility; the tiling builder still validates resource feasibility.
+// Callers may impose operator-specific priorities before choosing this route.
+bool IsMergeMoreCoreProfitable(ge::DataType dataType, int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum);
+bool SelectMergeMoreCoreDataSize(int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum, uint32_t& dataSize);
+bool SelectMergeSyncMergeBlockSize(int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum, uint32_t& blockSize);
+bool ComputeMergeMoreCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t maxCoreNum,
+                              uint32_t mergeBytesPerElem, MergeMoreCorePlan& plan);
 bool FillMergeMoreCoreInfo(SortKthTileInfo& info, uint32_t mergeBytesPerElem);
 
 // =============================================================================
 // Merge sort — intra-core
 // =============================================================================
 uint32_t ComputeMergeIntraCoreBlockSortSize(uint32_t ubSize);
+uint32_t ComputeMergeIntraCoreSingleBlockSortSize(uint32_t ubSize);
 uint32_t ComputeMergeIntraCoreExtractChunkSize(uint32_t ubSize);
 
 struct MergeIntraCorePlan {
@@ -370,7 +382,8 @@ void PlanToTilingData(const SortKthTileInfo& info, TilingData* tiling)
     tiling->indexAxisBytes = info.indexAxisBytes;
 }
 
-bool ComputeMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info, uint32_t indexDtypeSize);
+bool ComputeMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info, uint32_t indexDtypeSize,
+                            bool useUbCapacity = false);
 bool ComputeMergeMoreCoreTiling(gert::TilingContext* context, SortKthTileInfo& info, uint32_t mergeBytesPerElem);
 bool ComputeMergeIntraCoreTiling(gert::TilingContext* context, SortKthTileInfo& info);
 

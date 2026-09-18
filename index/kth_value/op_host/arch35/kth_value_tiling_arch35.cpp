@@ -353,9 +353,9 @@ static ge::graphStatus SetRadixMoreCoreTiling(gert::TilingContext* context, Sort
 }
 
 static ge::graphStatus SetKthValueMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info,
-                                                  uint32_t& blockDim, uint64_t& schId)
+                                                  uint32_t& blockDim, uint64_t& schId, bool useUbCapacity)
 {
-    OP_CHECK_IF(!ComputeMergeSortTiling(context, info, static_cast<uint32_t>(sizeof(uint32_t))),
+    OP_CHECK_IF(!ComputeMergeSortTiling(context, info, static_cast<uint32_t>(sizeof(uint32_t)), useUbCapacity),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ComputeMergeSortTiling", "false",
                                                       "The value of ComputeMergeSortTiling must be true."),
                 return ge::GRAPH_FAILED);
@@ -377,7 +377,8 @@ static ge::graphStatus SetMergeMoreCoreTiling(gert::TilingContext* context, Sort
                                                       "The value of ComputeMergeMoreCoreTiling must be true."),
                 return ge::GRAPH_FAILED);
     blockDim = info.coreNumNeed;
-    OP_LOGI("KthValueMergeMoreCoreTiling", "maxDealingNum: %u", info.keyParams0);
+    OP_LOGI("KthValueMergeMoreCoreTiling", "maxDealingNum: %u, syncMergeBlockSize: %u", info.keyParams0,
+            info.keyParams1);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -589,7 +590,76 @@ static bool TryRadixOneCore(gert::TilingContext* context, const SortKthTileInfo&
     return true;
 }
 
-static bool IsRadixSelectProfitable(const SortKthTileInfo& info, int64_t kthIndex)
+// Empirical route policy, including the power-of-two crossovers below. These are not
+// hardware capacity guarantees; each tiling builder independently checks its UB footprint.
+namespace KthRoutePolicy {
+constexpr int64_t RESIDENT_MIN_AXIS = 4096;
+constexpr int64_t RESIDENT_MAX_AXIS = 16384;
+constexpr uint64_t RADIX_SELECT_MAX_TILE_ELEMS = 32768UL;
+constexpr int64_t INT32_RESIDENT_MIN_AXIS = 1024;
+constexpr int64_t FLOAT_SELECT_MIN_AXIS = 1024;
+constexpr int64_t RESIDENT_HISTOGRAM_MAX_AXIS = 2048;
+constexpr int64_t RESIDENT_HISTOGRAM_SINGLE_WAVE_MAX_AXIS = 8192;
+constexpr int64_t RESIDENT_HISTOGRAM_MIN_ROWS_PER_CORE = 8;
+// Keep the validated resident-half range and tile/core split stable. Growing this cap
+// changes both route eligibility and cores per row, even when the extra elements fit UB.
+constexpr uint64_t HALF_SELECT_MAX_TILE_ELEMS = 49152UL;
+// Measured merge/radix crossover, not an alignment constraint. Cast + merge is not
+// selected for the shorter rows handled by the earlier narrow/byte policies.
+constexpr int64_t INT16_MERGE_MIN_AXIS = 192;
+constexpr int64_t INT16_MERGE_MAX_AXIS = 512;
+// KthValue batches wider byte rows than Sort. Keep its policy explicit rather
+// than copying and patching the shared Sort rule at runtime.
+// Signed and unsigned byte keys use the same one-byte radix pipeline.
+constexpr SmallAxisRule BYTE_SMALL_AXIS_RULES[] = {
+    {ge::DT_INT8, 8, 384, {{4, 2}, {8, 7}, {0, 0}}, {{3, 8}, {64, 7}, {384, 16}, {0, 0}}},
+    {ge::DT_UINT8, 8, 384, {{4, 2}, {8, 7}, {0, 0}}, {{3, 8}, {64, 7}, {384, 16}, {0, 0}}},
+};
+static_assert(HALF_SELECT_MAX_TILE_ELEMS <= std::numeric_limits<uint16_t>::max(),
+              "A per-tile cumulative histogram must not overflow uint16_t");
+static_assert(RADIX_SELECT_MAX_TILE_ELEMS <= std::numeric_limits<uint16_t>::max(),
+              "A per-tile cumulative histogram must not overflow uint16_t");
+} // namespace KthRoutePolicy
+
+static bool IsResidentIntegerSelect(const SortKthTileInfo& info)
+{
+    using namespace KthRoutePolicy;
+    if (info.dataType == ge::DT_INT32 && info.lastAxis >= INT32_RESIDENT_MIN_AXIS &&
+        info.lastAxis < RESIDENT_MIN_AXIS) {
+        return true;
+    }
+    // Int16 rows can use the full existing tile capacity; the tiling builder
+    // still limits allocation by available UB before selecting the kernel.
+    int64_t maxResidentAxis = info.dataType == ge::DT_INT16 ? static_cast<int64_t>(RADIX_SELECT_MAX_TILE_ELEMS) :
+                                                              RESIDENT_MAX_AXIS;
+    return (info.dataType == ge::DT_INT16 || info.dataType == ge::DT_INT32 || info.dataType == ge::DT_UINT32 ||
+            info.dataType == ge::DT_INT64 || info.dataType == ge::DT_UINT64) &&
+           info.lastAxis >= RESIDENT_MIN_AXIS && info.lastAxis <= maxResidentAxis;
+}
+
+static bool IsResidentFloatSelect(const SortKthTileInfo& info, uint32_t medianMode)
+{
+    // Resident rows avoid full-sort traffic. NaN propagation keeps its existing multi-core schedule.
+    using namespace KthRoutePolicy;
+    return info.dataType == ge::DT_FLOAT && (info.unsortedDim == 1 || medianMode != MEDIAN_MODE_PROPAGATE_NAN) &&
+           info.lastAxis > RESIDENT_MIN_AXIS && info.lastAxis <= RESIDENT_MAX_AXIS;
+}
+
+static bool IsKthFloatSelect(const SortKthTileInfo& info, uint32_t medianMode)
+{
+    using namespace KthRoutePolicy;
+    if (medianMode != MEDIAN_MODE_STATIC || info.lastAxis < FLOAT_SELECT_MIN_AXIS) {
+        return false;
+    }
+    // Extend small FP32 rows and resident 16-bit float rows; retain median policies.
+    if (info.dataType == ge::DT_FLOAT) {
+        return info.lastAxis <= RESIDENT_MIN_AXIS;
+    }
+    return (info.dataType == ge::DT_FLOAT16 || info.dataType == ge::DT_BF16) &&
+           info.lastAxis <= static_cast<int64_t>(HALF_SELECT_MAX_TILE_ELEMS);
+}
+
+static bool IsRadixSelectProfitable(const SortKthTileInfo& info, int64_t kthIndex, uint32_t medianMode)
 {
     if (kthIndex < 0 || info.lastAxis <= 0 || info.unsortedDim <= 0) {
         return false;
@@ -598,6 +668,12 @@ static bool IsRadixSelectProfitable(const SortKthTileInfo& info, int64_t kthInde
     uint64_t kth = static_cast<uint64_t>(kthIndex);
     if (kth >= axisLen) {
         return false;
+    }
+
+    // Retained rows can select in UB without scattering a complete sorted row.
+    if (IsResidentIntegerSelect(info) || IsResidentFloatSelect(info, medianMode) ||
+        IsKthFloatSelect(info, medianMode)) {
+        return true;
     }
 
     constexpr uint64_t radixSelectMinAxis = 65536UL;
@@ -665,26 +741,33 @@ static uint64_t GetRadixSelectFixedBytes()
            ((reservedRawBytes + radixSelectReserveAlign - 1UL) / radixSelectReserveAlign) * radixSelectReserveAlign;
 }
 
-static bool ComputeRadixSelectTileElems(const SortKthTileInfo& info, uint64_t& tileElems)
+static bool ComputeRadixSelectTileElems(const SortKthTileInfo& info, uint32_t medianMode, uint64_t& tileElems)
 {
-    constexpr uint64_t radixSelectMaxTileElems = 32768UL;
     constexpr uint64_t radixSelectMinAlignElems = 256UL;
     uint64_t usableUb = ComputeUbAfterSimtReserve(info.ubSize);
-    uint64_t bytesPerElem = static_cast<uint64_t>(info.dtypeSize) * 2UL;
+    // Retain the established slice/core plan outside the resident integer range.
+    // A larger tile there can reduce cores per row and lose parallelism.
+    uint64_t bytesPerElem = static_cast<uint64_t>(info.dtypeSize) * (IsResidentIntegerSelect(info) ? 1UL : 2UL);
     uint64_t fixedBytes = GetRadixSelectFixedBytes();
     if (bytesPerElem == 0U || usableUb <= fixedBytes) {
         return false;
     }
-    tileElems = std::min<uint64_t>((usableUb - fixedBytes) / bytesPerElem, radixSelectMaxTileElems);
+    // Only the newly enabled resident half/bfloat range needs the larger tile.
+    // Both caps (32768/49152) are below 65536: each tile clears its uint16
+    // cumulative histogram, then widens it before accumulating across tiles.
+    uint64_t maxTileElems = IsKthFloatSelect(info, medianMode) && info.dataType != ge::DT_FLOAT ?
+                                KthRoutePolicy::HALF_SELECT_MAX_TILE_ELEMS :
+                                KthRoutePolicy::RADIX_SELECT_MAX_TILE_ELEMS;
+    tileElems = std::min<uint64_t>((usableUb - fixedBytes) / bytesPerElem, maxTileElems);
     uint64_t alignElems = std::max<uint64_t>(radixSelectMinAlignElems, info.blockUbSize / info.dtypeSize);
     tileElems = tileElems / alignElems * alignElems;
     tileElems = std::min<uint64_t>(tileElems, static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()));
     return tileElems != 0U;
 }
 
-static bool ComputeRadixSelectPlan(const SortKthTileInfo& info, RadixSelectPlan& plan)
+static bool ComputeRadixSelectPlan(const SortKthTileInfo& info, uint32_t medianMode, RadixSelectPlan& plan)
 {
-    if (!ComputeRadixSelectTileElems(info, plan.tileElems)) {
+    if (!ComputeRadixSelectTileElems(info, medianMode, plan.tileElems)) {
         return false;
     }
     plan.rowsParallel = static_cast<uint32_t>(
@@ -723,12 +806,20 @@ static bool ComputeRadixSelectWorkspace(const SortKthTileInfo& info, RadixSelect
 static bool TryRadixSelect(gert::TilingContext* context, SortKthTileInfo& info, KthValueTilingData* tilingData,
                            uint32_t& blockDim, uint64_t& schId)
 {
-    if (!IsRadixSelectProfitable(info, tilingData->kthIndex) || info.isNonLastAxis ||
-        info.lastAxis <= static_cast<int64_t>(SMALL_AXIS_THRESHOLD) || info.maxCoreNum == 0U) {
+    if (info.isNonLastAxis || info.lastAxis <= static_cast<int64_t>(SMALL_AXIS_THRESHOLD) || info.maxCoreNum == 0U) {
         return false;
     }
     RadixSelectPlan plan;
-    if (!ComputeRadixSelectPlan(info, plan) || !ComputeRadixSelectWorkspace(info, plan)) {
+    if (!ComputeRadixSelectPlan(info, tilingData->medianMode, plan) || !ComputeRadixSelectWorkspace(info, plan)) {
+        return false;
+    }
+    // A single B64 row can skip common prefix bytes across its cooperating cores when
+    // every slice remains in UB. Streaming rows retain the established routing policy.
+    // ParseKthValueShapeInfo has already checked 1 <= k <= lastAxis before
+    // kthIndex = k - 1 is initialized; this exception only bypasses profitability.
+    bool retainedB64Row = (info.dataType == ge::DT_INT64 || info.dataType == ge::DT_UINT64) && info.unsortedDim == 1 &&
+                          plan.coresPerRow > 1U && plan.tileCount <= plan.coresPerRow;
+    if (!IsRadixSelectProfitable(info, tilingData->kthIndex, tilingData->medianMode) && !retainedB64Row) {
         return false;
     }
     size_t* userWorkspaceSize = context->GetWorkspaceSizes(1);
@@ -750,7 +841,18 @@ static bool TryRadixSelect(gert::TilingContext* context, SortKthTileInfo& info, 
     info = candidate;
     blockDim = plan.blockDim;
     PlanToTilingData(info, tilingData);
-    schId = KTH_VALUE_SCHID_RADIX_SELECT;
+    // Use local histograms for batched medium rows or longer rows that fit in one core wave.
+    bool batchedResidentHistogram = info.lastAxis >= KthRoutePolicy::FLOAT_SELECT_MIN_AXIS &&
+                                    info.lastAxis <= KthRoutePolicy::RESIDENT_HISTOGRAM_MAX_AXIS &&
+                                    info.unsortedDim >= static_cast<int64_t>(info.maxCoreNum) *
+                                                            KthRoutePolicy::RESIDENT_HISTOGRAM_MIN_ROWS_PER_CORE;
+    bool singleWaveResidentHistogram = info.lastAxis > KthRoutePolicy::RESIDENT_MIN_AXIS &&
+                                       info.lastAxis <= KthRoutePolicy::RESIDENT_HISTOGRAM_SINGLE_WAVE_MAX_AXIS &&
+                                       info.unsortedDim <= static_cast<int64_t>(info.maxCoreNum);
+    bool useResidentHistogram = tilingData->medianMode == MEDIAN_MODE_STATIC && info.dataType == ge::DT_FLOAT16 &&
+                                (batchedResidentHistogram || singleWaveResidentHistogram) && plan.coresPerRow == 1U &&
+                                plan.tileCount == 1U;
+    schId = useResidentHistogram ? KTH_VALUE_SCHID_RESIDENT_HISTOGRAM : KTH_VALUE_SCHID_RADIX_SELECT;
     userWorkspaceSize[0] = static_cast<size_t>(WORK_SPACE_SIZE + plan.workspace);
     context->SetScheduleMode(1);
     return true;
@@ -788,8 +890,61 @@ static bool TrySmallAxisShortRankSelect(const SortKthTileInfo& info, KthValueTil
     return true;
 }
 
+static bool SelectKthSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan)
+{
+    for (const auto& rule : KthRoutePolicy::BYTE_SMALL_AXIS_RULES) {
+        if (info.dataType == rule.dtype) {
+            return SelectSmallAxisRoute(info, plan, &rule);
+        }
+    }
+    return SelectSmallAxisRoute(info, plan);
+}
+
+static bool SetNarrowSelectBatch(const SortKthTileInfo& info, uint32_t medianMode, SmallAxisRoutePlan& plan)
+{
+    constexpr int64_t maxByteAxis = 384;
+    constexpr int64_t maxSignedByteAxis = 512;
+    constexpr int64_t minFloatAxis = 32;
+    constexpr int64_t maxFloatAxis = 256;
+    constexpr uint64_t rowsPerWave = 32UL;
+    constexpr uint64_t maxInputBytes = 131072UL;
+    bool isByte = info.dataType == ge::DT_INT8 || info.dataType == ge::DT_UINT8;
+    bool isFloat = info.dataType == ge::DT_FLOAT16 || info.dataType == ge::DT_BF16;
+    if (info.isNonLastAxis || medianMode != MEDIAN_MODE_STATIC || info.lastAxis <= 0 || info.maxCoreNum == 0U ||
+        (!isByte && !isFloat) || info.unsortedDim < static_cast<int64_t>(info.maxCoreNum * rowsPerWave)) {
+        return false;
+    }
+    int64_t maxAxis = isFloat ? maxFloatAxis : (info.dataType == ge::DT_INT8 ? maxSignedByteAxis : maxByteAxis);
+    if (info.lastAxis > maxAxis || (isFloat && info.lastAxis < minFloatAxis) ||
+        (isByte && info.lastAxis <= maxByteAxis && plan.kind != SmallAxisRouteKind::TWO_STAGE)) {
+        return false;
+    }
+    uint64_t elementBytes = isByte ? sizeof(uint8_t) : sizeof(uint16_t);
+    if (info.dtypeSize != elementBytes) {
+        return false;
+    }
+    uint64_t inputBytes = std::min<uint64_t>(ComputeUbAfterSimtReserve(info.ubSize), maxInputBytes);
+    inputBytes = inputBytes / rowsPerWave * rowsPerWave;
+    uint64_t capacity = inputBytes / (static_cast<uint64_t>(info.lastAxis) * elementBytes);
+    if (capacity == 0U) {
+        return false;
+    }
+    uint64_t rows = Ops::Base::CeilDiv(static_cast<uint64_t>(info.unsortedDim), static_cast<uint64_t>(info.maxCoreNum));
+    rows = std::min<uint64_t>(Ops::Base::CeilAlign(rows, rowsPerWave), capacity);
+    uint64_t batches = Ops::Base::CeilDiv(static_cast<uint64_t>(info.unsortedDim), rows);
+    if (batches > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+    plan.batchSize = static_cast<uint32_t>(rows);
+    plan.batchNum = static_cast<uint32_t>(batches);
+    plan.blockDim = std::min<uint32_t>(plan.batchNum, info.maxCoreNum);
+    plan.tmpUbSize = 0;
+    plan.kind = SmallAxisRouteKind::TWO_STAGE;
+    return true;
+}
+
 static bool TrySmallAxis(gert::TilingContext* context, SortKthTileInfo& info, KthValueTilingData* tilingData,
-                         uint32_t& blockDim, uint64_t& schId)
+                         uint32_t& blockDim, uint64_t& schId, bool isMedianOp)
 {
     if (info.lastAxis > static_cast<int64_t>(SMALL_AXIS_THRESHOLD)) {
         return false;
@@ -804,8 +959,9 @@ static bool TrySmallAxis(gert::TilingContext* context, SortKthTileInfo& info, Kt
         return true;
     }
     SmallAxisRoutePlan plan;
-    bool selected = info.isNonLastAxis ? SelectNonLastSmallAxisRoute(info, plan) : SelectSmallAxisRoute(info, plan);
-    if (!selected) {
+    bool selected = info.isNonLastAxis ? SelectNonLastSmallAxisRoute(info, plan) : SelectKthSmallAxisRoute(info, plan);
+    bool narrowSelect = !isMedianOp && SetNarrowSelectBatch(info, tilingData->medianMode, plan);
+    if (!selected && !narrowSelect) {
         return false;
     }
     if (info.isNonLastAxis) {
@@ -814,24 +970,78 @@ static bool TrySmallAxis(gert::TilingContext* context, SortKthTileInfo& info, Kt
         }
     } else {
         FillSmallAxisTiling(tilingData, plan, static_cast<uint32_t>(info.lastAxis), blockDim);
+        if (narrowSelect) {
+            // Small-axis keyParams3 selects the narrow-key value-domain kernel and its input-only UB layout.
+            constexpr uint32_t narrowSelectMode = 1U;
+            tilingData->keyParams3 = narrowSelectMode;
+        }
     }
     schId = plan.kind == SmallAxisRouteKind::TWO_STAGE ? KTH_VALUE_SCHID_SMALL_AXIS_TWO_STAGE :
                                                          KTH_VALUE_SCHID_SMALL_AXIS_INSERTION;
     return true;
 }
 
+static bool FitsInt16MergeUb(const SortKthTileInfo& info)
+{
+    uint64_t rows = info.keyParams0;
+    uint64_t alignedAxis = info.keyParams3;
+    uint64_t buffers = info.keyParams4 == 0U ? 1U : info.keyParams4;
+    uint64_t compactValues = Ops::Base::CeilAlign(rows * sizeof(int16_t), static_cast<uint64_t>(info.blockUbSize));
+    uint64_t compactIndices = Ops::Base::CeilAlign(rows * sizeof(int64_t), static_cast<uint64_t>(info.blockUbSize));
+    // Input/value/index queues and compact outputs, two proposal buffers, source
+    // indices, and the exact int16-to-float cast batch mirror Kernel::Init.
+    uint64_t queues = buffers * (2UL * info.keyParams1 + info.keyParams2 + compactValues + compactIndices);
+    uint64_t proposalsAndIndices = alignedAxis * (2UL * MERGE_SORT_DATA_BYTES + sizeof(uint32_t));
+    uint64_t castBatch = alignedAxis * rows * sizeof(float);
+    uint64_t fullOutputUb = queues + proposalsAndIndices + castBatch;
+    uint64_t mergeBatchRows = alignedAxis >= KTH_INT16_MERGE_BATCH_MIN_AXIS &&
+                                      alignedAxis <= KTH_INT16_MERGE_BATCH_MAX_AXIS &&
+                                      rows >= KTH_INT16_MERGE_BATCH_ROWS ?
+                                  KTH_INT16_MERGE_BATCH_ROWS :
+                                  1U;
+    // Non-median int16 keeps only one Sort32 block per output row. The freed
+    // space holds per-row proposals and repeated source indices for batched merging.
+    uint64_t compactRowBytes = SORT32_SMALL_AXIS_THRESHOLD * (sizeof(int16_t) + sizeof(uint32_t));
+    uint64_t compactQueues = buffers * (info.keyParams1 + rows * compactRowBytes + compactValues + compactIndices);
+    uint64_t compactOutputUb = compactQueues + proposalsAndIndices * mergeBatchRows + castBatch;
+    // Median retains full outputs, so validate both kernel layouts before accepting the route.
+    return std::max(fullOutputUb, compactOutputUb) <= info.ubSize;
+}
+
+static bool PreferKthMergeMoreCore(const SortKthTileInfo& info)
+{
+    // Splitting every row needs at least two cores per row. Beyond that budget,
+    // prefer the existing row-parallel plan when its UB and occupancy checks pass.
+    constexpr uint32_t minCoresPerSplitRow = 2U;
+    bool canSplitEveryRow = info.unsortedDim <= static_cast<int64_t>(info.maxCoreNum / minCoresPerSplitRow);
+    return IsMergeMoreCoreProfitable(info.dataType, info.lastAxis, info.unsortedDim, info.maxCoreNum) &&
+           (canSplitEveryRow ||
+            !IsMergeIntraCoreSupported(info.dataType, info.lastAxis, info.unsortedDim, info.maxCoreNum, info.ubSize));
+}
+
 static bool TryMerge(gert::TilingContext* context, SortKthTileInfo& info, KthValueTilingData* tilingData,
                      uint32_t& blockDim, uint64_t& schId)
 {
-    if (IsMergeSortSupported(info.dataType, info.lastAxis)) {
+    // Dispatch, compact extraction and GatherKthInt16 implement signed int16 only.
+    // uint16 needs its own dispatch/cast validation; byte types already have a one-byte/narrow route.
+    // int16 is exactly representable in float. Batch medium short rows through
+    // the merge hardware instead of paying two radix passes and scalar waits per row.
+    bool useInt16Merge = info.dataType == ge::DT_INT16 && info.lastAxis > KthRoutePolicy::INT16_MERGE_MIN_AXIS &&
+                         info.lastAxis <= KthRoutePolicy::INT16_MERGE_MAX_AXIS &&
+                         info.unsortedDim >= static_cast<int64_t>(info.maxCoreNum);
+    if (useInt16Merge || IsMergeSortSupported(info.dataType, info.lastAxis)) {
         SortKthTileInfo candidate = info;
-        if (SetKthValueMergeSortTiling(context, candidate, blockDim, schId) == ge::GRAPH_SUCCESS) {
+        if (SetKthValueMergeSortTiling(context, candidate, blockDim, schId,
+                                       tilingData->medianMode == MEDIAN_MODE_STATIC) == ge::GRAPH_SUCCESS) {
+            if (useInt16Merge && !FitsInt16MergeUb(candidate)) {
+                return false;
+            }
             info = candidate;
             PlanToTilingData(info, tilingData);
             return true;
         }
     }
-    if (IsMergeMoreCoreSupported(info.dataType, info.lastAxis, info.unsortedDim, info.maxCoreNum)) {
+    if (PreferKthMergeMoreCore(info)) {
         SortKthTileInfo candidate = info;
         if (SetMergeMoreCoreTiling(context, candidate, blockDim) == ge::GRAPH_SUCCESS) {
             info = candidate;
@@ -873,12 +1083,13 @@ static bool TryNonLastSmallAxis(gert::TilingContext* context, const SortKthTileI
 // Route selection and finalization
 // =============================================================================
 static ge::graphStatus SelectKthValueRoute(gert::TilingContext* context, SortKthTileInfo& info,
-                                           KthValueTilingData* tilingData, uint32_t& blockDim, uint64_t& schId)
+                                           KthValueTilingData* tilingData, uint32_t& blockDim, uint64_t& schId,
+                                           bool isMedianOp)
 {
     if (TrySmallAxisShortRankSelect(info, tilingData, blockDim, schId)) {
         return ge::GRAPH_SUCCESS;
     }
-    if (TrySmallAxis(context, info, tilingData, blockDim, schId)) {
+    if (TrySmallAxis(context, info, tilingData, blockDim, schId, isMedianOp)) {
         return ge::GRAPH_SUCCESS;
     }
     if (TryNonLastSmallAxis(context, info, tilingData, blockDim, schId)) {
@@ -889,6 +1100,13 @@ static ge::graphStatus SelectKthValueRoute(gert::TilingContext* context, SortKth
             context->GetNodeName(), "sortAxis", std::to_string(info.sortAxis).c_str(),
             "The value of sortAxis must be the last axis or meet no-transpose schedule constraints.");
         return ge::GRAPH_FAILED;
+    }
+    // Priority: small/non-last axes, resident select, merge, radix-one,
+    // general select, intra-core merge, then radix-more as the fallback.
+    if ((IsResidentIntegerSelect(info) || IsResidentFloatSelect(info, tilingData->medianMode) ||
+         IsKthFloatSelect(info, tilingData->medianMode)) &&
+        TryRadixSelect(context, info, tilingData, blockDim, schId)) {
+        return ge::GRAPH_SUCCESS;
     }
     if (TryMerge(context, info, tilingData, blockDim, schId) || TryRadixOneCore(context, info, tilingData, schId) ||
         TryRadixSelect(context, info, tilingData, blockDim, schId) ||
@@ -932,7 +1150,8 @@ static ge::graphStatus FinalizeKthValueRoute(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, userWorkspaceSize);
     if (schId != KTH_VALUE_SCHID_MERGE_MORE_CORE && schId != KTH_VALUE_SCHID_MERGE_INTRA_CORE &&
         schId != KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS && schId != KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS_RADIX &&
-        schId != KTH_VALUE_SCHID_RADIX_MORE_CORE && schId != KTH_VALUE_SCHID_RADIX_SELECT) {
+        schId != KTH_VALUE_SCHID_RADIX_MORE_CORE && schId != KTH_VALUE_SCHID_RADIX_SELECT &&
+        schId != KTH_VALUE_SCHID_RESIDENT_HISTOGRAM) {
         userWorkspaceSize[0] = WORK_SPACE_SIZE;
     }
     return ge::GRAPH_SUCCESS;
@@ -946,8 +1165,8 @@ static void SetKthValueTilingContext(gert::TilingContext* context, uint64_t schI
     context->SetBlockDim(blockDim);
     if (schId == KTH_VALUE_SCHID_SMALL_AXIS_INSERTION || schId == KTH_VALUE_SCHID_SMALL_AXIS_TWO_STAGE ||
         schId == KTH_VALUE_SCHID_SMALL_AXIS_SHORT_RANK_SELECT || schId == KTH_VALUE_SCHID_RADIX_MORE_CORE ||
-        schId == KTH_VALUE_SCHID_RADIX_SELECT || schId == KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS ||
-        schId == KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS_RADIX) {
+        schId == KTH_VALUE_SCHID_RADIX_SELECT || schId == KTH_VALUE_SCHID_RESIDENT_HISTOGRAM ||
+        schId == KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS || schId == KTH_VALUE_SCHID_NON_LAST_SMALL_AXIS_RADIX) {
         context->SetLocalMemorySize(info.ubSize - SIMT_UB);
     } else {
         context->SetLocalMemorySize(info.ubSize);
@@ -1017,6 +1236,44 @@ static ge::graphStatus AddMedianWorkspace(gert::TilingContext* context, const So
     return ge::GRAPH_SUCCESS;
 }
 
+// Serialize the selected layout only after routing and workspace planning have completed.
+static void StoreKthValueTiling(gert::TilingContext* context, uint64_t schId, const KthValueTilingData& data)
+{
+    if (schId == KTH_VALUE_SCHID_MERGE_SORT || schId == KTH_VALUE_SCHID_SORT32_SMALL_AXIS) {
+        KthValueMergeOneCoreTilingData compact{};
+        compact.kthIndex = data.kthIndex;
+        compact.unsortedDimNum = data.unsortedDimNum;
+        compact.numTileDataSize = data.numTileDataSize;
+        compact.unsortedDimParallel = data.unsortedDimParallel;
+        compact.sortLoopTimes = data.sortLoopTimes;
+        compact.keyParams0 = data.keyParams0;
+        compact.keyParams1 = data.keyParams1;
+        compact.keyParams2 = data.keyParams2;
+        compact.keyParams3 = data.keyParams3;
+        compact.keyParams4 = data.keyParams4;
+        compact.medianMode = data.medianMode;
+        // Capacity was already checked for the larger common layout.
+        *context->GetTilingData<KthValueMergeOneCoreTilingData>() = compact;
+    } else if (schId == KTH_VALUE_SCHID_RADIX_ONE_CORE) {
+        KthValueRadixOneCoreTilingData compact{};
+        compact.kthIndex = data.kthIndex;
+        compact.lastAxisNum = data.lastAxisNum;
+        compact.unsortedDimNum = data.unsortedDimNum;
+        compact.numTileDataSize = data.numTileDataSize;
+        compact.unsortedDimParallel = data.unsortedDimParallel;
+        compact.keyParams0 = data.keyParams0;
+        compact.keyParams1 = data.keyParams1;
+        compact.keyParams3 = data.keyParams3;
+        compact.keyParams4 = data.keyParams4;
+        compact.tmpUbSize = data.tmpUbSize;
+        compact.medianMode = data.medianMode;
+        // Capacity was already checked for the larger common layout.
+        *context->GetTilingData<KthValueRadixOneCoreTilingData>() = compact;
+    } else {
+        *context->GetTilingData<KthValueTilingData>() = data;
+    }
+}
+
 static ge::graphStatus SelectAndFinalizeKthValueRoute(gert::TilingContext* context,
                                                       const platform_ascendc::PlatformAscendC& ascendcPlatform,
                                                       SortKthTileInfo& info, KthValueTilingData* tilingData,
@@ -1025,10 +1282,11 @@ static ge::graphStatus SelectAndFinalizeKthValueRoute(gert::TilingContext* conte
     KthValueTilingData candidateTilingData = *tilingData;
     uint64_t schId = KTH_VALUE_SCHID_RADIX_MORE_CORE;
     uint32_t blockDim = 1;
-    OP_CHECK_IF((SelectKthValueRoute(context, info, &candidateTilingData, blockDim, schId) != ge::GRAPH_SUCCESS),
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "SelectKthValueRoute", "GRAPH_FAILED",
-                                                      "The value of SelectKthValueRoute must be GRAPH_SUCCESS."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (SelectKthValueRoute(context, info, &candidateTilingData, blockDim, schId, isMedianOp) != ge::GRAPH_SUCCESS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "SelectKthValueRoute", "GRAPH_FAILED",
+                                              "The value of SelectKthValueRoute must be GRAPH_SUCCESS."),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF((FinalizeKthValueRoute(context, ascendcPlatform, info, &candidateTilingData, schId, blockDim) !=
                  ge::GRAPH_SUCCESS),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "FinalizeKthValueRoute", "GRAPH_FAILED",
@@ -1039,7 +1297,7 @@ static ge::graphStatus SelectAndFinalizeKthValueRoute(gert::TilingContext* conte
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "AddMedianWorkspace", "GRAPH_FAILED",
                                               "The value of AddMedianWorkspace must be GRAPH_SUCCESS."),
         return ge::GRAPH_FAILED);
-    *tilingData = candidateTilingData;
+    StoreKthValueTiling(context, schId, candidateTilingData);
     OP_LOGI(context->GetNodeName(),
             "KthValueTiling: schId=%lu, blockDim=%u, lastAxis=%ld, unsortedDim=%ld, "
             "isNonLastAxis=%d, dtypeSize=%u",

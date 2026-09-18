@@ -11,6 +11,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 
+#define KTH_VALUE_STATIC_MEDIAN_FAST_PATH 1
 #include "../../kth_value/arch35/kth_value_kernel_dispatch.h"
 
 using namespace AscendC;
@@ -31,7 +32,17 @@ __global__ __aicore__ void median(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR
     KERNEL_TASK_TYPE(MEDIAN_MERGE_MORE_CORE_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
     KERNEL_TASK_TYPE(MEDIAN_RADIX_SELECT_TILING_KEY, KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(KthValueTilingData);
-    GET_TILING_DATA_WITH_STRUCT(KthValueTilingData, tilingData, tiling);
     TPipe pipe;
-    KthValue::Dispatch<true, schId, isInt32>(x, y, indices, workspace, &tilingData, &pipe);
+    if constexpr (schId == KTH_VALUE_SCHID_MERGE_SORT || schId == KTH_VALUE_SCHID_SORT32_SMALL_AXIS) {
+        REGISTER_TILING_FOR_TILINGKEY(KTH_VALUE_MERGE_ONE_CORE_TILING_CONDITION, KthValueMergeOneCoreTilingData);
+        GET_TILING_DATA_WITH_STRUCT(KthValueMergeOneCoreTilingData, tilingData, tiling);
+        KthValue::Dispatch<true, schId, isInt32>(x, y, indices, workspace, &tilingData, &pipe);
+    } else if constexpr (schId == KTH_VALUE_SCHID_RADIX_ONE_CORE) {
+        REGISTER_TILING_FOR_TILINGKEY(KTH_VALUE_RADIX_ONE_CORE_TILING_CONDITION, KthValueRadixOneCoreTilingData);
+        GET_TILING_DATA_WITH_STRUCT(KthValueRadixOneCoreTilingData, tilingData, tiling);
+        KthValue::Dispatch<true, schId, isInt32>(x, y, indices, workspace, &tilingData, &pipe);
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(KthValueTilingData, tilingData, tiling);
+        KthValue::Dispatch<true, schId, isInt32>(x, y, indices, workspace, &tilingData, &pipe);
+    }
 }

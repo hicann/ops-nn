@@ -25,12 +25,12 @@
 #include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
 #include "merge_sort_constants.h"
+#include "ping_pong_merge_sort.h"
 
 namespace MergeIntraCoreCommon {
 
 using namespace AscendC;
 
-using MergeSortConstants::DEALING_CONCAT_NUM_ONCE;
 using MergeSortConstants::DEALING_EXTRACT_NUM_ONCE;
 using MergeSortConstants::DEALING_SORT_NUM_ONCE;
 using MergeSortConstants::MERGE_INTRA_BUFFER_NUM;
@@ -83,13 +83,12 @@ public:
     uint32_t lastBlockSize_ = 0;      // Actual element count of the last block
     uint32_t sortBufferSize_ = 0;     // blockSortLen_ * sizeof(ValueType)
     uint32_t sortRepeatTimes_ = 0;    // blockSortSize_ / DEALING_SORT_NUM_ONCE
-    uint32_t concatRepeatTimes_ = 0;  // blockSortSize_ / DEALING_CONCAT_NUM_ONCE
     uint32_t maxMergeIterations_ = 0; // INT32_MAX / blockSortSize_
 
     // Queues and buffers for UB sorting (Phase 1)
     TQue<QuePosition::VECIN, MERGE_INTRA_BUFFER_NUM> inQueueX_;
     TQue<QuePosition::VECOUT, MERGE_INTRA_BUFFER_NUM> outValueQueue_, outIdxQueue_, outIdxInt64Queue_;
-    TBuf<TPosition::VECCALC> concatTmpBuf_, sortTmpBuf_, indexTmpBuf_;
+    TBuf<TPosition::VECCALC> sortTmpBuf_, indexTmpBuf_;
     TQue<QuePosition::VECOUT, MERGE_INTRA_BUFFER_NUM> sortedOutQueue_;
 
     // Merge queues (Phase 2)
@@ -142,16 +141,21 @@ __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDesce
         return;
     }
 
-    for (int64_t batchIdx = startBatch; batchIdx < endBatch; batchIdx++) {
+    int64_t batchOffset = startBatch * this->sortAxisNum_;
+    for (int64_t batchIdx = startBatch; batchIdx < endBatch; batchIdx++, batchOffset += this->sortAxisNum_) {
         // Phase 1: derived owns the phase-specific UB allocation; base owns phase ordering.
         static_cast<Derived*>(this)->InitPhase1Buffers();
-        this->SortSingleBatchInUb(this->inputXGm_, batchIdx * this->sortAxisNum_);
+        this->SortSingleBatchInUb(this->inputXGm_, batchOffset);
         PhaseBarrierAndReset();
 
         // Phase 2: merge sorted blocks in the per-core ping-pong cache.
-        static_cast<Derived*>(this)->InitPhase2Buffers();
-        uint32_t resultRegion = this->MergeSingleBatch();
-        PhaseBarrierAndReset();
+        // A single block is already a complete sorted row in cache region 0, so skip the merge phase and its UB.
+        uint32_t resultRegion = 0;
+        if (this->blocksPerRow_ > 1) {
+            static_cast<Derived*>(this)->InitPhase2Buffers();
+            resultRegion = this->MergeSingleBatch();
+            PhaseBarrierAndReset();
+        }
 
         // Phase 3: derived writes either the full sorted row or the kth pair.
         static_cast<Derived*>(this)->InitPhase3Buffers();
@@ -175,8 +179,8 @@ template <typename Derived, typename ValueType, typename IndexType, bool IsDesce
 __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDescend>::SortSingleBatchInUb(
     GlobalTensor<ValueType> inputX, int64_t batchOffset)
 {
-    for (uint32_t blockId = 0; blockId < this->blocksPerRow_; blockId++) {
-        uint32_t elemOffset = blockId * this->blockSortSize_;
+    for (uint32_t blockId = 0, elemOffset = 0; blockId < this->blocksPerRow_;
+         blockId++, elemOffset += this->blockSortSize_) {
         uint32_t actualElem = (blockId < this->blocksPerRow_ - 1) ? this->blockSortSize_ : this->lastBlockSize_;
 
         LocalTensor<ValueType> xLocal = this->inQueueX_.template AllocTensor<ValueType>();
@@ -201,7 +205,7 @@ __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDesce
 {
     ValueType defaultValue = IsDescend ? static_cast<ValueType>(-INFINITY) : static_cast<ValueType>(NAN);
 
-    // For the last block (actualElem < blockSortSize_), Sort/Concat APIs process up to
+    // For the last block (actualElem < blockSortSize_), Sort API processes up to
     // CeilAlign(actualElem, UB_BLOCK_BYTES) elements. DataCopyPad only pads to
     // CeilAlign(actualElem, UB_BLOCK_BYTES/sizeof(ValueType)) which may be smaller.
     // Pre-fill with Duplicate to cover the full aligned region, then overwrite valid data.
@@ -230,11 +234,6 @@ __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDesce
     uint32_t sortRepeatTimes = (actualElem == this->blockSortSize_) ?
                                    this->sortRepeatTimes_ :
                                    Ops::Base::CeilDiv(alignSize, DEALING_SORT_NUM_ONCE);
-    uint32_t concatRepeatTimes = (actualElem == this->blockSortSize_) ?
-                                     this->concatRepeatTimes_ :
-                                     Ops::Base::CeilDiv(alignSize, DEALING_CONCAT_NUM_ONCE);
-
-    LocalTensor<ValueType> concatTmpLocal = this->concatTmpBuf_.template Get<ValueType>();
     LocalTensor<ValueType> sortTmpLocal = this->sortTmpBuf_.template Get<ValueType>();
     LocalTensor<uint32_t> indexTmpLocal = this->indexTmpBuf_.template Get<uint32_t>();
     ArithProgression<int32_t>(indexTmpLocal.template ReinterpretCast<int32_t>(), baseOffset, 1, actualElem);
@@ -247,9 +246,11 @@ __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDesce
         Adds(castTensor, castTensor, 0x80000000, alignSize); // Flip sign bit for ascending float order
     }
 
-    LocalTensor<ValueType> concatLocal;
-    Concat(concatLocal, xLocal, concatTmpLocal, concatRepeatTimes);
-    AscendC::Sort<ValueType, true>(sortedLocal, concatLocal, indexTmpLocal, sortTmpLocal, sortRepeatTimes);
+    bool resultInSorted = PingPongMergeSortCommon::SortToProposal(sortedLocal, sortTmpLocal, xLocal, indexTmpLocal,
+                                                                  sortRepeatTimes);
+    if (!resultInSorted) {
+        DataCopy(sortedLocal, sortTmpLocal, AscendC::GetSortLen<ValueType>(alignSize));
+    }
 }
 
 template <typename Derived, typename ValueType, typename IndexType, bool IsDescend>

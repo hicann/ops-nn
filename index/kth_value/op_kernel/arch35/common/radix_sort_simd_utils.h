@@ -130,7 +130,7 @@ __aicore__ inline void TwiddleInFp16Impl(LocalTensor<T1> inputX, LocalTensor<UT>
         Reg::Duplicate(xorMaskReg, LOWEST_KEY_VALUE_B16, maskB16);
         Reg::Duplicate(vandMask, XOR_OP_VALUE_B16, maskB16);
         Reg::Duplicate(twiddledZeroReg, TWIDDLED_ZERO_BITS_FP16, maskB16);
-        // Median mode only: precompute the canonical NaN key and the abs-bits mask used below.
+        // Precompute the canonical NaN key and abs-bits mask when normalization is enabled.
         if constexpr (CanonicalizeNan) {
             Reg::Duplicate(canonicalNanReg, CANONICAL_NAN_KEY_B16, maskB16);
             Reg::Duplicate(absMaskReg, FLOAT_ABS_MASK_B16, maskB16);
@@ -161,7 +161,7 @@ __aicore__ inline void TwiddleInFp16Impl(LocalTensor<T1> inputX, LocalTensor<UT>
             // change -0.0 to +0.0
             Reg::RegTensor<uint16_t> resultReg;
             Reg::Select(resultReg, twiddledZeroReg, xorVectorOne, minusZeroMask);
-            // Median mode only: detect NaN from the raw input bits (|bits| > inf, sign-independent)
+            // Detect NaN from the raw input bits (|bits| > inf, sign-independent)
             // and overwrite the twiddled key with the canonical NaN key, so every NaN lands in one
             // shared max bucket. Only the output key changes; the input data stays untouched.
             if constexpr (CanonicalizeNan) {

@@ -17,6 +17,18 @@ constexpr uint32_t MEDIAN_MODE_STATIC = 0U;
 constexpr uint32_t MEDIAN_MODE_PROPAGATE_NAN = 1U;
 constexpr uint32_t MEDIAN_MODE_IGNORE_NAN = 2U;
 
+// Median opts into the legacy fixed-rank shortcut before including the shared kernels.
+// This translation-unit selector is independent of runtime medianMode; normal Median uses
+// PROPAGATE_NAN, so it still counts NaNs. Implementation branches below use if constexpr.
+#ifndef KTH_VALUE_STATIC_MEDIAN_FAST_PATH
+#define KTH_VALUE_STATIC_MEDIAN_FAST_PATH 0
+#endif
+constexpr bool KTH_VALUE_ENABLE_STATIC_MEDIAN_FAST_PATH = KTH_VALUE_STATIC_MEDIAN_FAST_PATH != 0;
+
+constexpr uint32_t KTH_INT16_MERGE_BATCH_ROWS = 8U;
+constexpr uint32_t KTH_INT16_MERGE_BATCH_MIN_AXIS = 128U;
+constexpr uint32_t KTH_INT16_MERGE_BATCH_MAX_AXIS = 512U;
+
 struct KthValueTilingData {
     uint32_t numTileDataSize;     // h轴ub一次处理个数
     uint32_t unsortedDimParallel; // b轴使用的核数
@@ -39,6 +51,7 @@ struct KthValueTilingData {
     // small_axis_insertion/two_stage: batchNum_
     // non_last_small_axis: inputValueAxisBytes_ (bf16 merge)
     // axis_one_copy: loopTimes_
+    // merge_more_core: sort_sync_merge_sort 逻辑块大小，0 表示普通 more-core
     uint32_t keyParams1;
     // radix: 清零的一次 ub 数据量
     // merge_sort_one_core: y2OutQue 的 ub 大小
@@ -69,6 +82,35 @@ struct KthValueTilingData {
     uint32_t valueAxisBytes; // non-last-axis: value轴字节数
     uint32_t indexAxisBytes; // non-last-axis: index轴字节数
     // 0: KthValue, 1: Median (propagate NaN), 2: NanMedian (ignore NaN).
+    uint32_t medianMode;
+};
+
+// Single-core routes transfer only the fields consumed by their kernels.
+struct KthValueMergeOneCoreTilingData {
+    int64_t kthIndex;
+    int64_t unsortedDimNum;
+    uint32_t numTileDataSize;
+    uint32_t unsortedDimParallel;
+    uint32_t sortLoopTimes;
+    uint32_t keyParams0; // rows per UB batch (> 0)
+    uint32_t keyParams1; // input queue capacity in bytes
+    uint32_t keyParams2; // index queue capacity in bytes
+    uint32_t keyParams3; // Sort32-aligned axis length in elements
+    uint32_t keyParams4; // queue buffer count: 0/1 = single, 2 = double
+    uint32_t medianMode;
+};
+
+struct KthValueRadixOneCoreTilingData {
+    int64_t kthIndex;
+    int64_t lastAxisNum;
+    int64_t unsortedDimNum;
+    uint32_t numTileDataSize;
+    uint32_t unsortedDimParallel;
+    uint32_t keyParams0; // input UB capacity in bytes
+    uint32_t keyParams1; // index UB capacity in bytes
+    uint32_t keyParams3; // queue buffer count: 2 = double, otherwise single
+    uint32_t keyParams4; // output rows per loop: 0 defaults to 1
+    uint32_t tmpUbSize;
     uint32_t medianMode;
 };
 

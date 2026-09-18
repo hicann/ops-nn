@@ -10,6 +10,7 @@
 
 #include "kth_value_tiling_common.h"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <string>
@@ -267,8 +268,14 @@ bool GetNonLastSortTmpSize(ge::DataType dataType, uint32_t sortCount, bool useMe
     uint32_t minValue = 0;
     AscendC::GetSortMaxMinTmpSize(srcShape, GetNonLastSortDtype(dataType, useMergeSort), ge::DT_UINT32, true, config,
                                   maxValue, minValue);
-    tmpUbSize = maxValue;
-    return maxValue > 0;
+    // The unified merge path reuses tmp as the pong proposal buffer. Each proposal is
+    // value/index packed into 8 bytes, independent of the value storage dtype.
+    uint64_t proposalBytes = static_cast<uint64_t>(sortCount) * MERGE_SORT_DATA_BYTES;
+    if (proposalBytes > static_cast<uint64_t>(UINT32_MAX)) {
+        return false;
+    }
+    tmpUbSize = useMergeSort ? std::max(maxValue, static_cast<uint32_t>(proposalBytes)) : maxValue;
+    return tmpUbSize > 0;
 }
 
 bool SearchNonLastSmallAxisPlan(
@@ -410,7 +417,8 @@ static bool AdjustBSharedSingleHTile(int64_t axisLen, int64_t unsortedDim, uint3
     if (hCore == 0U) {
         return false;
     }
-    uint64_t hTileData64 = static_cast<uint64_t>(axisLen) / hCore;
+    // Cover the full axis with hCore tiles. Floor division may introduce an extra tail tile after alignment.
+    uint64_t hTileData64 = Ops::Base::CeilDiv(static_cast<uint64_t>(axisLen), static_cast<uint64_t>(hCore));
     if (hTileData64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
         return false;
     }
@@ -427,7 +435,8 @@ static bool AdjustMultiTileHWithBSharing(int64_t axisLen, int64_t unsortedDim, u
                                          uint32_t& tileData, uint32_t lastDimTileNum, uint32_t& tmpUbSize,
                                          bool& adjusted)
 {
-    uint64_t newTileData64 = static_cast<uint64_t>(axisLen) / static_cast<uint64_t>(lastDimTileNum);
+    // Keep the adjusted split within lastDimTileNum; floor division can recreate a one-element tail tile.
+    uint64_t newTileData64 = Ops::Base::CeilDiv(static_cast<uint64_t>(axisLen), static_cast<uint64_t>(lastDimTileNum));
     if (!CeilAlignUint32(newTileData64, BIN_NUM, tileData)) {
         return false;
     }
@@ -706,13 +715,56 @@ bool ComputeMergeSortPlan(int64_t axisLen, int64_t unsortedDim, uint32_t blockUb
     return true;
 }
 
-bool FillMergeSortInfo(SortKthTileInfo& info, uint32_t indexDtypeSize, uint32_t concatTmpSize)
+static bool ComputeMergeSortBatchCapacity(const SortKthTileInfo& info, uint32_t indexDtypeSize, uint32_t& tileDataNum)
 {
-    constexpr uint32_t TILE_DATA_NUM = 4096;
-    MergeSortPlan plan;
-    if (!ComputeMergeSortPlan(info.lastAxis, info.unsortedDim, info.blockUbSize, TILE_DATA_NUM, info.maxCoreNum,
-                              plan)) {
+    if (info.lastAxis <= 0 || info.blockUbSize == 0U || info.dtypeSize == 0U || indexDtypeSize == 0U) {
         return false;
+    }
+    uint64_t alignedAxis = Ops::Base::CeilAlign(static_cast<uint64_t>(info.lastAxis),
+                                                static_cast<uint64_t>(info.blockUbSize));
+    uint32_t bufferNum = info.lastAxis > ONE_CORE_DATA_SIZE ? 1U : DOUBLE_BUFFER_NUM;
+    // Both kernels keep one index vector and two 8-byte proposal buffers per row axis.
+    uint64_t fixedBytes = alignedAxis * (sizeof(uint32_t) + 2U * MERGE_SORT_DATA_BYTES);
+    uint32_t castBytes = (info.dataType == ge::DT_BF16 || info.dataType == ge::DT_INT16) ? sizeof(float) : 0U;
+    uint64_t rowBytes = alignedAxis * ((2U * info.dtypeSize + indexDtypeSize) * bufferNum + castBytes);
+    rowBytes += (info.dtypeSize + sizeof(int64_t)) * bufferNum;
+    // KthValue additionally aligns two compact output queues independently per batch.
+    fixedBytes += 2U * bufferNum * (info.blockUbSize - 1U);
+    if (fixedBytes >= info.ubSize || rowBytes == 0U) {
+        return false;
+    }
+    uint64_t rows = (info.ubSize - fixedBytes) / rowBytes;
+    // ComputeMergeSortPlan consumes half of tileDataNum as the batch element budget.
+    uint64_t tileElements = rows * alignedAxis * 2U;
+    if (rows == 0U || tileElements > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+    tileDataNum = static_cast<uint32_t>(tileElements);
+    return true;
+}
+
+bool FillMergeSortInfo(SortKthTileInfo& info, uint32_t indexDtypeSize, bool useUbCapacity)
+{
+    // The fixed budget keeps small Sort batches pipelined; the UB-derived budget also
+    // rebalances rows across rounds. Switching policies is not only a capacity check.
+    constexpr uint32_t SORT_TILE_DATA_NUM = 4096;
+    uint32_t tileDataNum = SORT_TILE_DATA_NUM;
+    if (useUbCapacity && !ComputeMergeSortBatchCapacity(info, indexDtypeSize, tileDataNum)) {
+        return false;
+    }
+    MergeSortPlan plan;
+    if (!ComputeMergeSortPlan(info.lastAxis, info.unsortedDim, info.blockUbSize, tileDataNum, info.maxCoreNum, plan)) {
+        return false;
+    }
+    if (useUbCapacity) {
+        // Balance the per-core row budget instead of leaving an oversized final batch on a few cores.
+        uint64_t rowsPerCore = Ops::Base::CeilDiv(static_cast<uint64_t>(info.unsortedDim),
+                                                  static_cast<uint64_t>(plan.coreNumNeed));
+        uint64_t rounds = Ops::Base::CeilDiv(rowsPerCore, static_cast<uint64_t>(plan.oneCoreRowNum));
+        plan.oneCoreRowNum = static_cast<uint32_t>(Ops::Base::CeilDiv(rowsPerCore, rounds));
+        uint64_t rowsPerRound = static_cast<uint64_t>(plan.coreNumNeed) * plan.oneCoreRowNum;
+        plan.sortLoopTimes = static_cast<uint32_t>(
+            Ops::Base::CeilDiv(static_cast<uint64_t>(info.unsortedDim), rowsPerRound));
     }
     info.sortLoopTimes = plan.sortLoopTimes;
     info.lastDimTileNum = 1;
@@ -725,24 +777,15 @@ bool FillMergeSortInfo(SortKthTileInfo& info, uint32_t indexDtypeSize, uint32_t 
     info.keyParams2 = plan.alignNum * plan.oneCoreRowNum * indexDtypeSize;
     info.keyParams3 = plan.alignNum;
     info.keyParams4 = info.lastAxis > ONE_CORE_DATA_SIZE ? 1 : DOUBLE_BUFFER_NUM;
-    info.tmpUbSize = std::max(concatTmpSize, info.blockUbSize);
+    info.tmpUbSize = 0;
     info.workspaceSize = WORK_SPACE_SIZE;
     return true;
 }
 
-bool ComputeMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info, uint32_t indexDtypeSize)
+bool ComputeMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info, uint32_t indexDtypeSize,
+                            bool useUbCapacity)
 {
-    constexpr uint32_t TILE_DATA_NUM = 4096;
-    MergeSortPlan plan;
-    if (!ComputeMergeSortPlan(info.lastAxis, info.unsortedDim, info.blockUbSize, TILE_DATA_NUM, info.maxCoreNum,
-                              plan)) {
-        return false;
-    }
-    auto platformInfo = context->GetPlatformInfo();
-    auto plat = platform_ascendc::PlatformAscendC(platformInfo);
-    uint32_t maxTypeSize = (info.dataType == ge::DT_BF16) ? static_cast<uint32_t>(sizeof(float)) : info.dtypeSize;
-    uint32_t concatTmpSize = AscendC::GetConcatTmpSize(plat, plan.alignNum, maxTypeSize);
-    if (!FillMergeSortInfo(info, indexDtypeSize, concatTmpSize)) {
+    if (!FillMergeSortInfo(info, indexDtypeSize, useUbCapacity)) {
         return false;
     }
     size_t* userWorkSpaceSize = context->GetWorkspaceSizes(1);
@@ -753,51 +796,167 @@ bool ComputeMergeSortTiling(gert::TilingContext* context, SortKthTileInfo& info,
 // =============================================================================
 // Merge sort — multi-core (more-core)
 // =============================================================================
-bool IsMergeMoreCoreSupported(ge::DataType dataType, int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum)
+// Select per-core data chunk size (2048 or 4096) for merge-more-core. Prefers the smaller base size when direct
+// parallel fits within maxCoreNum; otherwise falls back to the larger size to reduce horizontal core count.
+bool SelectMergeMoreCoreDataSize(int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum, uint32_t& dataSize)
 {
-    if (dataType != ge::DT_FLOAT || axisLen <= static_cast<int64_t>(MERGE_SORT_MAX_AXIS_FP32) ||
-        axisLen > static_cast<int64_t>(MULTI_CORE_MERGE_SORT_MAX_AXIS)) {
+    if (axisLen <= 0 || unsortedDim <= 0 || maxCoreNum == 0U) {
         return false;
     }
-    uint64_t hCoreNum = (static_cast<uint64_t>(axisLen) + ONE_CORE_DATA_SIZE - 1U) / ONE_CORE_DATA_SIZE;
-    return hCoreNum > 0 && static_cast<uint64_t>(unsortedDim) * hCoreNum <= maxCoreNum;
+    uint32_t baseHCoreNum;
+    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), MERGE_MORE_CORE_DATA_SIZE_BASE, baseHCoreNum) ||
+        baseHCoreNum == 0U || baseHCoreNum > maxCoreNum) {
+        return false;
+    }
+    if (static_cast<uint64_t>(unsortedDim) * baseHCoreNum <= maxCoreNum) {
+        dataSize = MERGE_MORE_CORE_DATA_SIZE_BASE;
+        return true;
+    }
+    uint32_t largeHCoreNum;
+    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), MERGE_MORE_CORE_DATA_SIZE_LARGE, largeHCoreNum) ||
+        largeHCoreNum == 0U || largeHCoreNum > maxCoreNum) {
+        return false;
+    }
+    dataSize = MERGE_MORE_CORE_DATA_SIZE_LARGE;
+    return true;
 }
 
-bool ComputeMergeMoreCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t mergeBytesPerElem,
-                              MergeMoreCorePlan& plan)
+// Select a sync-merge block size (aligned to 2048) that groups multiple 4096-element chunks into one block,
+// reducing horizontal core count so that unsortedDim * hCoreNum fits within maxCoreNum.
+bool SelectMergeSyncMergeBlockSize(int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum, uint32_t& blockSize)
+{
+    if (axisLen <= static_cast<int64_t>(MERGE_MORE_CORE_DATA_SIZE_LARGE) || unsortedDim <= 0 || maxCoreNum == 0U) {
+        return false;
+    }
+    uint32_t maxHCoreByCore = static_cast<uint32_t>(static_cast<uint64_t>(maxCoreNum) /
+                                                    static_cast<uint64_t>(unsortedDim));
+    uint32_t rawChunkNum = 0;
+    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), MERGE_MORE_CORE_DATA_SIZE_LARGE, rawChunkNum) ||
+        rawChunkNum <= 1U || maxHCoreByCore <= 1U) {
+        return false;
+    }
+    // A sync-merge block is larger than one 4096-element Sort block. Use the available per-row core budget,
+    // capped below the direct 4096 split, then align to the existing 2048-element more-core granularity.
+    uint32_t targetHCore = std::min(rawChunkNum - 1U, maxHCoreByCore);
+    if (targetHCore <= 1U) {
+        return false;
+    }
+    uint32_t candidate = 0;
+    if (!CeilAlignUint32(Ops::Base::CeilDiv(static_cast<uint64_t>(axisLen), static_cast<uint64_t>(targetHCore)),
+                         MERGE_MORE_CORE_DATA_SIZE_BASE, candidate) ||
+        candidate <= MERGE_MORE_CORE_DATA_SIZE_LARGE) {
+        return false;
+    }
+    uint32_t hCoreNum = 0;
+    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), candidate, hCoreNum) || hCoreNum <= 1U ||
+        hCoreNum > maxCoreNum ||
+        static_cast<uint64_t>(unsortedDim) * static_cast<uint64_t>(hCoreNum) > static_cast<uint64_t>(maxCoreNum)) {
+        return false;
+    }
+    blockSize = candidate;
+    return true;
+}
+
+bool IsMergeMoreCoreProfitable(ge::DataType dataType, int64_t axisLen, int64_t unsortedDim, uint32_t maxCoreNum)
+{
+    if (dataType != ge::DT_FLOAT || axisLen <= static_cast<int64_t>(MERGE_SORT_MAX_AXIS_FP32) ||
+        axisLen > static_cast<int64_t>(MULTI_CORE_MERGE_SORT_MAX_AXIS) || unsortedDim <= 0 || maxCoreNum == 0U) {
+        return false;
+    }
+    uint32_t dataSize;
+    if (!SelectMergeMoreCoreDataSize(axisLen, unsortedDim, maxCoreNum, dataSize)) {
+        return false;
+    }
+    uint64_t hCoreNum = (static_cast<uint64_t>(axisLen) + dataSize - 1U) / dataSize;
+    if (static_cast<uint64_t>(unsortedDim) * hCoreNum <= maxCoreNum) {
+        return true;
+    }
+    uint32_t syncBlockSize = 0;
+    if (SelectMergeSyncMergeBlockSize(axisLen, unsortedDim, maxCoreNum, syncBlockSize)) {
+        return true;
+    }
+    return hCoreNum >= MERGE_MORE_CORE_MIN_CORES_PER_ROW_FOR_MULTI_ROUND;
+}
+
+namespace {
+
+bool BuildMergeMoreCoreRoundPlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t maxCoreNum,
+                                 uint32_t mergeBytesPerElem, uint32_t hCoreNum, uint32_t numTileDataSize,
+                                 uint32_t syncBlockSize, MergeMoreCorePlan& plan)
+{
+    uint64_t rowsPerRound64 = std::min(static_cast<uint64_t>(maxCoreNum) / hCoreNum,
+                                       static_cast<uint64_t>(unsortedDim));
+    if (rowsPerRound64 == 0U || rowsPerRound64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+        return false;
+    }
+    uint64_t coreNumNeed64 = rowsPerRound64 * hCoreNum;
+    uint64_t sortLoopTimes64 = Ops::Base::CeilDiv(static_cast<uint64_t>(unsortedDim), rowsPerRound64);
+    if (static_cast<uint64_t>(axisLen) > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
+        static_cast<uint64_t>(unsortedDim) > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
+        coreNumNeed64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
+        sortLoopTimes64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+        return false;
+    }
+    plan.lastDimTileNum = static_cast<uint32_t>(axisLen);
+    plan.lastDimNeedCore = hCoreNum;
+    plan.numTileDataSize = numTileDataSize;
+    plan.unsortedDimParallel = static_cast<uint32_t>(rowsPerRound64);
+    plan.sortLoopTimes = static_cast<uint32_t>(sortLoopTimes64);
+    plan.coreNumNeed = static_cast<uint32_t>(coreNumNeed64);
+    plan.keyParams0 = ubSize / mergeBytesPerElem;
+    plan.keyParams1 = syncBlockSize;
+    return true;
+}
+
+bool BuildMergeSyncBlockPlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t maxCoreNum,
+                             uint32_t mergeBytesPerElem, uint32_t syncBlockSize, MergeMoreCorePlan& plan)
+{
+    uint32_t syncHCoreNum = 0;
+    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), syncBlockSize, syncHCoreNum) || syncHCoreNum <= 1U ||
+        syncHCoreNum > maxCoreNum) {
+        return false;
+    }
+    return BuildMergeMoreCoreRoundPlan(axisLen, unsortedDim, ubSize, maxCoreNum, mergeBytesPerElem, syncHCoreNum,
+                                       MERGE_MORE_CORE_DATA_SIZE_LARGE, syncBlockSize, plan);
+}
+
+} // namespace
+
+// Try direct, sync-block, then multi-round scheduling in that order.
+bool ComputeMergeMoreCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t maxCoreNum,
+                              uint32_t mergeBytesPerElem, MergeMoreCorePlan& plan)
 {
     if (axisLen <= 0 || unsortedDim <= 0 || mergeBytesPerElem == 0U) {
         return false;
     }
-    uint32_t hCoreNum;
-    if (!CeilDivUint32(static_cast<uint64_t>(axisLen), ONE_CORE_DATA_SIZE, hCoreNum)) {
+    uint32_t dataSize = 0;
+    uint32_t hCoreNum = 0;
+    if (!SelectMergeMoreCoreDataSize(axisLen, unsortedDim, maxCoreNum, dataSize) ||
+        !CeilDivUint32(static_cast<uint64_t>(axisLen), dataSize, hCoreNum) || hCoreNum == 0U || hCoreNum > maxCoreNum) {
         return false;
     }
-    uint64_t coreNumNeed64 = static_cast<uint64_t>(unsortedDim) * hCoreNum;
-    if (static_cast<uint64_t>(axisLen) > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
-        static_cast<uint64_t>(unsortedDim) > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) ||
-        coreNumNeed64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+    bool directFit = static_cast<uint64_t>(unsortedDim) * hCoreNum <= maxCoreNum;
+    uint32_t syncBlockSize = 0;
+    if (!directFit && SelectMergeSyncMergeBlockSize(axisLen, unsortedDim, maxCoreNum, syncBlockSize)) {
+        return BuildMergeSyncBlockPlan(axisLen, unsortedDim, ubSize, maxCoreNum, mergeBytesPerElem, syncBlockSize,
+                                       plan);
+    }
+    if (!directFit && hCoreNum < MERGE_MORE_CORE_MIN_CORES_PER_ROW_FOR_MULTI_ROUND) {
         return false;
     }
     uint64_t numTileDataSize64 = static_cast<uint64_t>(axisLen) / hCoreNum;
     if (numTileDataSize64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
         return false;
     }
-    plan.lastDimTileNum = static_cast<uint32_t>(static_cast<uint64_t>(axisLen));
-    plan.lastDimNeedCore = hCoreNum;
-    plan.numTileDataSize = static_cast<uint32_t>(numTileDataSize64);
-    plan.unsortedDimParallel = static_cast<uint32_t>(static_cast<uint64_t>(unsortedDim));
-    plan.sortLoopTimes = 1;
-    plan.coreNumNeed = static_cast<uint32_t>(coreNumNeed64);
-    // keyParams0 is max elements handled per UB round by the merge more-core pipeline.
-    plan.keyParams0 = ubSize / mergeBytesPerElem;
-    return true;
+    return BuildMergeMoreCoreRoundPlan(axisLen, unsortedDim, ubSize, maxCoreNum, mergeBytesPerElem, hCoreNum,
+                                       static_cast<uint32_t>(numTileDataSize64), 0U, plan);
 }
 
 bool FillMergeMoreCoreInfo(SortKthTileInfo& info, uint32_t mergeBytesPerElem)
 {
     MergeMoreCorePlan plan;
-    if (!ComputeMergeMoreCorePlan(info.lastAxis, info.unsortedDim, info.ubSize, mergeBytesPerElem, plan)) {
+    if (!ComputeMergeMoreCorePlan(info.lastAxis, info.unsortedDim, info.ubSize, info.maxCoreNum, mergeBytesPerElem,
+                                  plan)) {
         return false;
     }
     info.lastDimTileNum = plan.lastDimTileNum;
@@ -807,6 +966,7 @@ bool FillMergeMoreCoreInfo(SortKthTileInfo& info, uint32_t mergeBytesPerElem)
     info.sortLoopTimes = plan.sortLoopTimes;
     info.coreNumNeed = plan.coreNumNeed;
     info.keyParams0 = plan.keyParams0;
+    info.keyParams1 = plan.keyParams1;
     uint64_t wsBytes = static_cast<uint64_t>(MERGE_SORT_WORKSPACE_PARAM) * info.lastAxis * info.unsortedDim *
                        sizeof(int32_t);
     info.workspaceSize = static_cast<size_t>(wsBytes + WORK_SPACE_SIZE);
@@ -834,6 +994,19 @@ uint32_t ComputeMergeIntraCoreBlockSortSize(uint32_t ubSize)
     return (blockSortSize / MERGE_INTRA_CORE_SORT_ALIGN) * MERGE_INTRA_CORE_SORT_ALIGN;
 }
 
+// Max elements a single core can sort in one pass (single-block mode).
+// Constrained by the tighter of phase1 (initial sort) and phase3 (extract/merge) UB capacity.
+uint32_t ComputeMergeIntraCoreSingleBlockSortSize(uint32_t ubSize)
+{
+    constexpr uint32_t MERGE_INTRA_PHASE_BUFFER_NUM = 2;
+    constexpr uint32_t PHASE1_BYTES_PER_ELEM = MERGE_INTRA_PHASE_BUFFER_NUM * sizeof(float) + SORT_STRUCT_BYTES +
+                                               MERGE_INTRA_PHASE_BUFFER_NUM * SORT_STRUCT_BYTES + sizeof(uint32_t);
+    uint32_t phase1Size = ubSize / PHASE1_BYTES_PER_ELEM;
+    uint32_t phase3Size = ComputeMergeIntraCoreExtractChunkSize(ubSize);
+    uint32_t singleBlockSize = std::min(phase1Size, phase3Size);
+    return (singleBlockSize / MERGE_INTRA_CORE_SORT_ALIGN) * MERGE_INTRA_CORE_SORT_ALIGN;
+}
+
 uint32_t ComputeMergeIntraCoreExtractChunkSize(uint32_t ubSize)
 {
     constexpr uint32_t PHASE3_BYTES_PER_ELEM = (SORT_STRUCT_BYTES + sizeof(float) + sizeof(int32_t) + sizeof(int64_t)) *
@@ -854,11 +1027,13 @@ bool IsMergeIntraCoreSupported(ge::DataType dataType, int64_t axisLen, int64_t u
         return false;
     }
     uint32_t blockSortSize = ComputeMergeIntraCoreBlockSortSize(ubSize);
+    uint32_t singleBlockSortSize = ComputeMergeIntraCoreSingleBlockSortSize(ubSize);
     uint32_t extractChunkSize = ComputeMergeIntraCoreExtractChunkSize(ubSize);
-    if (blockSortSize == 0U || extractChunkSize == 0U) {
+    if (blockSortSize == 0U || singleBlockSortSize == 0U || extractChunkSize == 0U) {
         return false;
     }
-    return axisLen <= static_cast<int64_t>(blockSortSize) * MERGE_INTRA_CORE_MAX_BLOCKS;
+    return axisLen <= static_cast<int64_t>(singleBlockSortSize) ||
+           axisLen <= static_cast<int64_t>(blockSortSize) * MERGE_INTRA_CORE_MAX_BLOCKS;
 }
 
 bool ComputeMergeIntraCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ubSize, uint32_t maxCoreNum,
@@ -877,12 +1052,24 @@ bool ComputeMergeIntraCorePlan(int64_t axisLen, int64_t unsortedDim, uint32_t ub
         return false;
     }
     plan.actualCoreNum = static_cast<uint32_t>(actualCoreNum64);
-    plan.blockSortSize = ComputeMergeIntraCoreBlockSortSize(ubSize);
-    if (plan.blockSortSize == 0U) {
-        return false;
-    }
     plan.extractChunkSize = ComputeMergeIntraCoreExtractChunkSize(ubSize);
     if (plan.extractChunkSize == 0U) {
+        return false;
+    }
+    uint32_t singleBlockSortSize = ComputeMergeIntraCoreSingleBlockSortSize(ubSize);
+    if (axisLen <= static_cast<int64_t>(singleBlockSortSize)) {
+        uint64_t blockSortSize64 = Ops::Base::CeilAlign(static_cast<uint64_t>(axisLen),
+                                                        static_cast<uint64_t>(MERGE_INTRA_CORE_SORT_ALIGN));
+        if (blockSortSize64 == 0U || blockSortSize64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+            return false;
+        }
+        plan.blockSortSize = static_cast<uint32_t>(blockSortSize64);
+        plan.blocksPerRow = 1;
+        plan.alignNum = plan.blockSortSize;
+        return true;
+    }
+    plan.blockSortSize = ComputeMergeIntraCoreBlockSortSize(ubSize);
+    if (plan.blockSortSize == 0U) {
         return false;
     }
     uint64_t blocksPerRow64 = (static_cast<uint64_t>(axisLen) + plan.blockSortSize - 1U) / plan.blockSortSize;
@@ -1258,13 +1445,14 @@ static bool EstimateSmallAxisTwoStageBatching(const SortKthTileInfo& info, uint3
 // =============================================================================
 static bool SelectSmallAxisRouteImpl(const SortKthTileInfo& info, uint32_t batchSizeCap,
                                      std::function<bool(uint32_t, uint32_t&)> computeBatchNum,
-                                     bool preferFullCoreBatching, SmallAxisRoutePlan& plan)
+                                     bool preferFullCoreBatching, SmallAxisRoutePlan& plan,
+                                     const SmallAxisRule* ruleOverride = nullptr)
 {
     uint32_t axisLen = static_cast<uint32_t>(info.lastAxis);
     if (axisLen <= 1U) {
         return false;
     }
-    const SmallAxisRule* rule = FindSmallAxisRule(info.dataType);
+    const SmallAxisRule* rule = ruleOverride == nullptr ? FindSmallAxisRule(info.dataType) : ruleOverride;
     if (rule == nullptr) {
         return false;
     }
@@ -1292,7 +1480,7 @@ static bool SelectSmallAxisRouteImpl(const SortKthTileInfo& info, uint32_t batch
     return true;
 }
 
-bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan)
+bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan, const SmallAxisRule* ruleOverride)
 {
     uint32_t fullCoreSegs = 0;
     if (!CeilDivUint32(static_cast<uint64_t>(info.unsortedDim), static_cast<uint64_t>(info.maxCoreNum), fullCoreSegs)) {
@@ -1301,7 +1489,7 @@ bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan)
     auto computeBatchNum = [&info](uint32_t batchSize, uint32_t& batchNum) -> bool {
         return CeilDivUint32(static_cast<uint64_t>(info.unsortedDim), batchSize, batchNum);
     };
-    return SelectSmallAxisRouteImpl(info, fullCoreSegs, computeBatchNum, false, plan);
+    return SelectSmallAxisRouteImpl(info, fullCoreSegs, computeBatchNum, false, plan, ruleOverride);
 }
 
 static bool SelectNonLastSmallAxisRouteImpl(const SortKthTileInfo& info, SmallAxisRoutePlan& plan,
