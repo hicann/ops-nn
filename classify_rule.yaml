@@ -1856,7 +1856,7 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/smooth_l1_loss_v2/op_api/
         - ops/ops-nn/loss/smooth_l1_loss_v2/op_graph/
         - ops/ops-nn/loss/soft_margin_loss/op_api/
-        - ops/ops-nn/loss/soft_margin_loss_grad/op_api/
+        - ops/ops-nn/loss/soft_margin_loss_grad/
         - ops/ops-nn/optim/apply_adam_w_quant/docs/
         - ops/ops-nn/optim/apply_adam_w_quant/README.md
         - ops/ops-nn/optim/apply_adam_w_quant/op_host/
@@ -2199,8 +2199,6 @@ VC3@ops-nn:
         - ops/ops-nn/quant/quant_max/
         # reverse_sequence
         - ops/ops-nn/index/reverse_sequence/
-        # soft_margin_loss_grad
-        - ops/ops-nn/loss/soft_margin_loss_grad/
         # glu
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.cpp
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.h

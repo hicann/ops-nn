@@ -2841,12 +2841,12 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/soft_margin_loss_grad/README.md">soft_margin_loss_grad</a></td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>求soft_margin_loss反向传播的梯度值。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -4080,16 +4080,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/inplace_apply_adadelta/README.md">inplace_apply_adadelta</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>Adadelta 优化器三输出 inplace 参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，通过三显式inplace输出端口原地更新权重参数var以及accum、accum_update。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/inplace_apply_adagrad_da/README.md">inplace_apply_adagrad_da</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4827,16 +4817,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入数据进行均匀线性量化（ULQ），支持broadcast和固定下界，输出量化结果及上下界掩码和量化损失。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/acts_ulq_input_grad/README.md">acts_ulq_input_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>ActsULQ均匀线性量化的反向输入梯度算子，按上下界掩码对上游梯度做逐元素门控，x_grad = y_grad * clamp_min_mask * clamp_max_mask。</td>
   </tr>
   <tr>
     <td>quant</td>
