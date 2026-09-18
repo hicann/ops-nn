@@ -790,7 +790,7 @@ std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(const aclTensor* self, co
 } // namespace
 
 aclnnStatus aclnnMatmulGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
-                                        int8_t cubeMathType, size_t* workspaceSize, aclOpExecutor** executor)
+                                        int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmul, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 
@@ -834,7 +834,7 @@ aclnnStatus aclnnMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
 }
 
 aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
-                                                int8_t cubeMathType, size_t* workspaceSize, aclOpExecutor** executor)
+                                                int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmulWeightNz, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 

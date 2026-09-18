@@ -114,7 +114,7 @@ public:
 } // namespace
 
 aclnnStatus aclnnMmGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType,
-                                    size_t* workspaceSize, aclOpExecutor** executor)
+                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMm, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 
@@ -129,7 +129,7 @@ aclnnStatus aclnnMmGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2
     // 空tensor处理
     if (out->IsEmpty() && (self->IsEmpty() || mat2->IsEmpty())) {
         OP_LOGI("Returning an empty tensor without actually doing calculation.");
-        *workspaceSize = 0UL;
+        *workspaceSize = 0ULL;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
