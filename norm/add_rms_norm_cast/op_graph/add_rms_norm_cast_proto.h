@@ -22,7 +22,7 @@ namespace ge {
 * @brief AddRmsNormCast operator interface implementation. \n
 *  calculating: x1, x2, gamma \n
 *  x = float(x1) + float(x2) \n
-*  rstd = np.rsqrt(np.mean(np.power(x,2), reduce_axis, keepdims=True) + epsilon)) \n
+*  rstd = np.rsqrt(np.mean(np.power(x,2), reduce_axis, keepdims=True) + epsilon) \n
 *  y1 = gamma * (x * rstd) \n
 *  y2 = cast(y1) \n
 

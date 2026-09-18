@@ -51,7 +51,7 @@ namespace ge {
 * @li round_mode: An optional string. Defaults to "rint".
 * @li dst_type: An optional attribute. Declare the output y dtype. Support FLOAT4_E2M1, FLOAT4_E1M2,
 * FLOAT8_E4M3FN or FLOAT8_E5M2. Defaults to FLOAT4_E2M1 (40).
-* @li output_rstd: An optional attribute. Defaults to "false". Whether to output Rstd.
+* @li output_rstd: An optional attribute. Defaults to "false". Whether to output rstd.
 
 * @par Outputs:
 * @li y: Quantize result.
@@ -71,7 +71,7 @@ namespace ge {
 * @li When dst_type is DT_FLOAT8_E5M2 or DT_FLOAT8_E4M3FN, round_mode only supports "rint".
 * @li When dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, round_mode supports "rint", "floor" and "round".
 * @li If dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, the input x last dimension of the shape must be divisible by 2.
-* @li If dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, the scale_alg only support (OCP , count 0).
+* @li If dst_type is DT_FLOAT4_E2M1 or DT_FLOAT4_E1M2, the scale_alg only supports (OCP , count 0).
 */
 REG_OP(AddRmsNormDynamicMxQuant)
     .INPUT(x1, TensorType({DT_FLOAT16, DT_BF16}))

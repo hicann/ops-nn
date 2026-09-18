@@ -19,7 +19,7 @@
 
 namespace ge {
 /**
-*@brief Layernorm operator interface implementation \n
+*@brief LayerNorm operator interface implementation \n
 *  calculating: x, gamma, beta \n
 *  mean  = np.mean(x, reduce_axis, keepdims=True) \n
 *  variance = np.mean(np.power((x - mean),2), reduce_axis, keepdims=True) \n
@@ -30,11 +30,11 @@ namespace ge {
 * @li x: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * The shape is [A1,...,Ai,R1,...,Rj].
 * @li gamma: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as beta. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤
+* Has the same dtype and shape as beta. The shape is [R1,...,Rj],[Rn,...,Rj]or[Am,...,Ai,R1,...,Rj](1 < n ≤ j,1 ≤ m ≤
 i).
 * Dtype must match input x or be float32.
 * @li beta: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as gamma. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤
+* Has the same dtype and shape as gamma. The shape is [R1,...,Rj],[Rn,...,Rj]or[Am,...,Ai,R1,...,Rj](1 < n ≤ j,1 ≤ m ≤
 i). \n
 
 *@par Attributes

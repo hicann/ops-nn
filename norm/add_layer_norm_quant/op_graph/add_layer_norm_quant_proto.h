@@ -60,7 +60,7 @@ string. Defaults to "dynamic".
 * @li additional_output: An optional attribute control whether output x valid or invalid, the type is bool. Defaults
 to false, which means x output is invalid.
 * @li div_mode: An optional attribute control static quant algorithm, the type is bool. Defaults
-to true, which means scales while be divided by normlization output.
+to true, which means scales will be divided by normalization output.
 
 * @par Outputs
 * @li y1: Quantize result 1.

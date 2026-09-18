@@ -22,7 +22,7 @@ namespace ge {
 * @brief InplaceAddRmsNorm operator interface implementation. \n
 *  calculating: x1, x2, gamma \n
 *  x2 = x1 + x2 \n
-*  rstd = np.rsqrt(np.mean(np.power(x,2), reduce_axis, keepdims=True) + epsilon)) \n
+*  rstd = np.rsqrt(np.mean(np.power(x,2), reduce_axis, keepdims=True) + epsilon) \n
 *  x1 = gamma * (x2 * rstd)
 
 * @par Inputs
@@ -32,7 +32,7 @@ namespace ge {
 * @li gamma: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
 
 * @par Attributes:
-* epsilon: A optional attribute, the type is float. Defaults to 1e-6.
+* epsilon: An optional attribute, the type is float. Defaults to 1e-6.
 
 * @par Outputs
 * Three outputs, including:

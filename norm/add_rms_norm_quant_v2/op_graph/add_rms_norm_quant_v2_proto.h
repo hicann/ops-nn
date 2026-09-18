@@ -23,7 +23,7 @@ namespace ge {
 * Calculating input: x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, bias \n
 * Calculating process: \n
 *  x = x1 + x2 \n
-*  rstd = np.rsqrt(np.mean(np.power(x, 2), reduce_axis, keepdims=True) + epsilon)) \n
+*  rstd = np.rsqrt(np.mean(np.power(x, 2), reduce_axis, keepdims=True) + epsilon) \n
 *  resOut = x * rstd * gamma \n
 *  rmsnorm_out = resOut + bias \n
 *  if div_mode is true: \n

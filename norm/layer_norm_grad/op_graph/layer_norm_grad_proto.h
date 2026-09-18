@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file nn_norm_ops.h
+ * \file layer_norm_grad_proto.h
  * \brief
  */
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_NN_NORM1_OPS_H_

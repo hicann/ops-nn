@@ -41,11 +41,11 @@ namespace ge {
 *            Support dtype: float32/float16/bfloat16, support format: ND.
 * @li scales1: A tensor. Describing the weight of the first quant operation.
 *              Support dtype: float32/float16/bfloat16, support format: ND.
-* @li scales2: An optional input tensor. Describing the weight of the secend quant operation.
+* @li scales2: An optional input tensor. Describing the weight of the second quant operation.
 *              Support dtype: float32/float16/bfloat16, support format: ND.
 * @li zero_points1: An optional input tensor. Describing the bias of the first quant operation.
 *                   Support dtype: int32/float32/float16/bfloat16, support format: ND.
-* @li zero_points2: An optional input tensor. Describing the bias of the secend quant operation.
+* @li zero_points2: An optional input tensor. Describing the bias of the second quant operation.
 *                   Support dtype: int32/float32/float16/bfloat16, support format: ND.
 * @li beta: An optional input tensor. Describing the bias of the add operation.
 *                   Support dtype: float32/float16/bfloat16, support format: ND.
@@ -55,7 +55,7 @@ namespace ge {
 *           The type is int. Defaults to -1.
 * @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
 *              The type is float. Defaults to 1e-6.
-* @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses
+* @li div_mode: An optional attribute. When div_mode is true, the quant operation uses division, otherwise, uses
 multiplication.
 *               The type is bool. Defaults to true.
 * @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2,

@@ -26,11 +26,11 @@ namespace ge {
 * @li x2: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
 * @li gamma: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
 * @li beta: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
-* @li bias: A optional input Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
+* @li bias: An optional input Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
 
 * @par Attributes
-* @li epsilon: A optional attribute, the type is float. Defaults to 1e-5.
-* @li additional_output: A optional attribute, the type is bool. Defaults to false.
+* @li epsilon: An optional attribute, the type is float. Defaults to 1e-5.
+* @li additional_output: An optional attribute, the type is bool. Defaults to false.
 
 * @par Outputs
 * @li y: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].

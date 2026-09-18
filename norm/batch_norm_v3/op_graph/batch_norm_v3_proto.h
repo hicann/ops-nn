@@ -25,7 +25,7 @@ namespace ge {
 
 * @par Inputs:
 * @li x: A 4D/5D tensor of type float16/bfloat16/float32, with format NCHW/NHWC/NCDHW/NDHWC. describing the feature_map.
-* @li weight: A 1D tensor with the shape is same as dim C of input x, support dtypes are related to input x dtype,
+* @li weight: A 1D tensor with the shape is same as dim C of input x, supported dtypes are related to input x dtype,
 * the following combinations are supported: [x: float16, weight: float16/float32], [x: bfloat16, weight:
 bfloat16/float32], [x: float32, weight: float32].
 * describing the weight.

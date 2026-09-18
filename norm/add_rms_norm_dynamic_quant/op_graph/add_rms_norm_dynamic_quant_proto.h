@@ -25,14 +25,14 @@ namespace ge {
 *  x = x1 + x2 \n
 *  rstd = np.rsqrt(np.mean(np.power(x, 2), reduce_axis, keepdims=True) + epsilon)) \n
 *  rmsnorm_out = x * rstd * gamma \n
-*  if smooth_scales1 exist: \n
+*  if smooth_scale1 exist: \n
 *    scale1 = row_max(abs(rmsnorm_out * smooth_scale1)) / 127 \n
-*  if smooth_scales1 not exist: \n
+*  if smooth_scale1 not exist: \n
 *    scale1 = row_max(abs(rmsnorm_out)) / 127 \n
 *  y1 = round(rmsnorm_out / scale1) \n
-*  if smooth_scales2 exist: \n
+*  if smooth_scale2 exist: \n
 *    scale2 = row_max(abs(rmsnorm_out * smooth_scale2)) / 127 \n
-*  if smooth_scales2 not exist:  \n
+*  if smooth_scale2 not exist:  \n
 *    scale2 = row_max(abs(rmsnorm_out)) / 127 \n
 *  y2 = round(rmsnorm_out / scale2) \n
 
@@ -50,7 +50,7 @@ namespace ge {
 
 * @par Attributes:
 * epsilon: An optional Float, default value is 1e-6.
-* output_mask: An optional listBool, default value is {}.
+* output_mask: An optional ListBool, default value is {}.
 * dst_type: An optional Int, default value is DT_INT8.
 
 * @par Outputs:

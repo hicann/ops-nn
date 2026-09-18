@@ -22,15 +22,15 @@ namespace ge {
 *@brief Computes the gradient for log softmax activations.
 
 *@par Inputs:
-* @li grad: A ND tensor. Must be one of the following data types: float16, bfloat16, float32.
-* @li x: A ND tensor. Has the same data type and shape as "grad". \n
+* @li grad: An ND tensor. Must be one of the following data types: float16, bfloat16, float32.
+* @li x: An ND tensor. Has the same data type and shape as "grad". \n
 
 *@par Attributes:
 * axis: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}".
 * In Ascend 950 AI Processor, only single-axis reduction is supported. \n
 
 *@par Outputs:
-* y: A ND tensor. Has the same data type and shape as "grad". \n
+* y: An ND tensor. Has the same data type and shape as "grad". \n
 
 *@par Third-party framework compatibility
 *Compatible with the TensorFlow operator LogSoftmaxGrad.

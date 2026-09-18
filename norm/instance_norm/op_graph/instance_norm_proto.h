@@ -35,8 +35,8 @@ with format ND, the second dim is fixed as the dim C.
 
 * @par Attributes:
 * Two attributes, including:
-* @li data_format: A optional attribute, the type is string. Defaults to "NDHWC".
-* @li epsilon: A optional attribute, the type is float. Defaults to "1e-6".
+* @li data_format: An optional attribute, the type is string. Defaults to "NDHWC".
+* @li epsilon: An optional attribute, the type is float. Defaults to "1e-6".
 
 * @par Outputs:
 * Three outputs, including:

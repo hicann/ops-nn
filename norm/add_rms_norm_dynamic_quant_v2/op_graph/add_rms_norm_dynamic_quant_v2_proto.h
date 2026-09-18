@@ -35,7 +35,7 @@ namespace ge {
 
 * @par Attributes:
 * epsilon: An optional Float, default value is 1e-6.
-* output_mask: An optional listBool, default value is {}.
+* output_mask: An optional ListBool, default value is {}.
 * dst_type: An optional Int, default value is DT_INT8.
 
 * @par Outputs:

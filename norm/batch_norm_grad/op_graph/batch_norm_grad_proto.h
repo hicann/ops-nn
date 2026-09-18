@@ -47,7 +47,7 @@ inference mode.
 *@li is_training: An optional bool. Defaults to "true". Specifies the operation is for training (default) or inference.
 *@li output_mask: An optional ListBool. Defaults to [true, false, false]. Valid only in inference mode, it determines
 whether
-* the outputs "x_backprop", "scale_backprop" and "offset_backprop" contain actual reseluts. \n
+* the outputs "x_backprop", "scale_backprop" and "offset_backprop" contain actual results. \n
 
 *@par Outputs:
 *@li x_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW. For the

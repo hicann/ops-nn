@@ -24,11 +24,11 @@ namespace ge {
 
 *@par Inputs
 *Two inputs, including:
-* @li grad: A ND tensor. Must be one of the following data types: bfloat16, float16, float32.
-* @li x: A ND tensor. Has the same shape and data type as "grad". \n
+* @li grad: An ND tensor. Must be one of the following data types: bfloat16, float16, float32.
+* @li x: An ND tensor. Has the same shape and data type as "grad". \n
 
 *@par Outputs
-* y: A ND tensor.  Has the same shape and data type as "grad". \n
+* y: An ND tensor.  Has the same shape and data type as "grad". \n
 
 *@par Restrictions
 *Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.
