@@ -213,7 +213,7 @@ CATLASS_HOST_DEVICE constexpr auto CropOriginShape(OriginBase const& originBase,
 /// Supports layouts of any rank (rank >= 1) for depth==1 layouts.
 /// For depth>1 (fractal) layouts, currently only rank-2 is supported.
 template <class Layout, class TileShape, class Coord>
-CATLASS_HOST_DEVICE constexpr auto GetTileLayout(Layout const& layout, TileShape const& tileShape, Coord const& coord)
+CATLASS_HOST_DEVICE auto GetTileLayout(Layout const& layout, TileShape const& tileShape, Coord const& coord)
 {
     static_assert(is_tuple<TileShape>::value && depth_v<TileShape> == 1 && rank_v<TileShape> >= 1,
                   "GetTileLayout: TileShape must be a flat tuple with rank >= 1.");
