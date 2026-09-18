@@ -2760,16 +2760,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/sigmoid_focal_loss/README.md">sigmoid_focal_loss</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算带类别平衡和难样本聚焦因子的Sigmoid二分类损失，支持none、sum和mean归约。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_grad/README.md">smooth_l1_loss_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3797,16 +3787,6 @@
     <td>AI Core</td>
     <td>RmsNorm算子是大模型常用的归一化操作。DynamicQuant算子则是为输入张量进行对称动态量化的算子。MultiAddRmsNormDynamicQuant算子将RmsNorm前的n个Add算子和RmsNorm归一化输出给到的DynamicQuant算子融合起来，减少搬入搬出操作（n支持0到4）。
     </td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/mvn_v2/README.md">mvn_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>均值方差归一化算子，对输入张量沿指定轴计算均值与标准差，执行y=(x-mean)/(std+eps)归一化。</td>
   </tr>
   <tr>
     <td>norm</td>
