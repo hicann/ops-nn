@@ -253,6 +253,9 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT2(const Glo
 template <typename T1, typename T2>
 __aicore__ inline void GroupNormSwishBase<T1, T2>::CastMeanAndRstd(const int64_t copyNum)
 {
+    event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    SetFlag<HardEvent::S_V>(eventIdSToV);
+    WaitFlag<HardEvent::S_V>(eventIdSToV);
     if constexpr (std::is_same_v<T2, float>) {
         outQueueMean.EnQue(meanOut);
         outQueueRstd.EnQue(rstdOut);
