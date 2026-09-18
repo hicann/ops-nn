@@ -154,9 +154,6 @@ aclnnStatus aclnnThresholdBackward(
     <!-- npu="910,310p" id8 -->
     - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：不支持BFLOAT16、INT64数据类型。
     <!-- end id8 -->
-    <!-- npu="950" id9 -->
-    - <term>Ascend 950PR/Ascend 950DT</term>：仅取值为0.0时，支持本产品。
-    <!-- end id9 -->
 
 - **返回值：**
 
