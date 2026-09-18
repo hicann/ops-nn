@@ -442,7 +442,7 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DBackpropFilterV2StreamKTiling, 3);
+REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DBackpropFilterV2StreamKTiling, 10);
 } // namespace Conv
 } // namespace NN
 } // namespace Ops
