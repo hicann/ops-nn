@@ -25,7 +25,7 @@ protected:
     static void TearDownTestCase() { std::cout << "SwigluGroupQuantKernelTest TearDown" << std::endl; }
 };
 
-void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
+void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWeight = false)
 {
     constexpr int64_t bs = 2;
     constexpr int64_t d = 256;
@@ -37,12 +37,14 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
     const size_t outputYSize = bs * splitD * sizeof(uint8_t);
     const size_t outputScaleSize = bs * scaleCol * sizeof(float);
     const size_t yOriginSize = bs * splitD * sizeof(half);
+    const size_t weightSize = bs * sizeof(float);
     const size_t tilingDataSize = sizeof(SwigluGroupQuantTilingData);
 
     uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(inputSize));
     uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
+    uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
     uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
@@ -78,12 +80,15 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
                                      GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
         ::swiglu_group_quant(x, weight, groupIndex, scale, y, yScale, yOrigin, workspace, tiling);
     };
-    ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, nullptr, nullptr, nullptr, y, yScale, yOrigin, workspace, tiling);
+    ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, weight, nullptr, nullptr, y, yScale, yOrigin, workspace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(yScale);
     AscendC::GmFree(yOrigin);
+    if (hasWeight) {
+        AscendC::GmFree(weight);
+    }
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
@@ -91,6 +96,159 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
 TEST_F(SwigluGroupQuantKernelTest, block_fp8) { RunKernelWithTilingKey(1000, false); }
 
 TEST_F(SwigluGroupQuantKernelTest, block_fp8_y_origin) { RunKernelWithTilingKey(1100, true); }
+
+TEST_F(SwigluGroupQuantKernelTest, block_fp8_y_origin_weight) { RunKernelWithTilingKey(1100, true, true); }
+
+void RunMxKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWeight = false)
+{
+    constexpr int64_t bs = 2;
+    constexpr int64_t d = 256;
+    constexpr int64_t splitD = d / 2;
+    constexpr int64_t scaleCol = 4; // ceil((D/2)/32)
+    constexpr uint32_t blockDim = 2;
+
+    const size_t inputSize = bs * d * sizeof(half);
+    const size_t outputYSize = bs * splitD * sizeof(uint8_t);
+    // UT kernel is compiled with DTYPE_Y_SCALE=float, so the scale GM buffer is sized in float.
+    const size_t outputScaleSize = bs * scaleCol * sizeof(float);
+    const size_t yOriginSize = bs * splitD * sizeof(half);
+    const size_t weightSize = bs * sizeof(float);
+    const size_t tilingDataSize = sizeof(SwigluGroupQuantTilingData);
+
+    uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(inputSize));
+    uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
+    uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
+    uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
+    uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
+    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    auto* tilingData = reinterpret_cast<SwigluGroupQuantTilingData*>(tiling);
+    tilingData->bs = bs;
+    tilingData->d = d;
+    tilingData->splitD = splitD;
+    tilingData->scaleCol = scaleCol;
+    tilingData->rowOfFormerBlock = 1;
+    tilingData->rowOfTailBlock = 1;
+    tilingData->rowLoopOfFormerBlock = 1;
+    tilingData->rowLoopOfTailBlock = 1;
+    tilingData->rowFactor = 1;
+    tilingData->tailRowFactorOfFormerBlock = 1;
+    tilingData->tailRowFactorOfTailBlock = 1;
+    tilingData->dLoop = 1;
+    tilingData->dFactor = splitD;
+    tilingData->tailDFactor = splitD;
+    tilingData->roundScale = 1;
+    tilingData->outputOrigin = outputOrigin ? 1 : 0;
+    tilingData->clampLimit = 0.0f;
+    tilingData->hasClampLimit = 0;
+    tilingData->g = 0;
+    tilingData->ubSize = 253952;
+    tilingData->gLoop = 0;
+    tilingData->gFactor = 0;
+    tilingData->tailGFactor = 0;
+    tilingData->coreNum = blockDim;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    auto swigluGroupQuantKernel = [](GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y,
+                                     GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
+        ::swiglu_group_quant(x, weight, groupIndex, scale, y, yScale, yOrigin, workspace, tiling);
+    };
+    ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, weight, nullptr, nullptr, y, yScale, yOrigin, workspace, tiling);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(y);
+    AscendC::GmFree(yScale);
+    AscendC::GmFree(yOrigin);
+    if (hasWeight) {
+        AscendC::GmFree(weight);
+    }
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp8) { RunMxKernelWithTilingKey(2000, false); }
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp8_y_origin) { RunMxKernelWithTilingKey(2100, true); }
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp8_y_origin_weight) { RunMxKernelWithTilingKey(2100, true, true); }
+
+void RunMxFp4KernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWeight = false)
+{
+    constexpr int64_t bs = 2;
+    constexpr int64_t d = 256;
+    constexpr int64_t splitD = d / 2;
+    constexpr int64_t scaleCol = 4; // ceil((D/2)/32)
+    constexpr uint32_t blockDim = 2;
+
+    const size_t inputSize = bs * d * sizeof(half);
+    // fp4 y is packed 2 elements per byte: D/2 elements occupy D/4 bytes.
+    const size_t outputYSize = bs * splitD / 2;
+    // UT kernel is compiled with DTYPE_Y_SCALE=float, so the scale GM buffer is sized in float.
+    const size_t outputScaleSize = bs * scaleCol * sizeof(float);
+    const size_t yOriginSize = bs * splitD * sizeof(half);
+    const size_t weightSize = bs * sizeof(float);
+    const size_t tilingDataSize = sizeof(SwigluGroupQuantTilingData);
+
+    uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(inputSize));
+    uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
+    uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
+    uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
+    uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
+    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    auto* tilingData = reinterpret_cast<SwigluGroupQuantTilingData*>(tiling);
+    tilingData->bs = bs;
+    tilingData->d = d;
+    tilingData->splitD = splitD;
+    tilingData->scaleCol = scaleCol;
+    tilingData->rowOfFormerBlock = 1;
+    tilingData->rowOfTailBlock = 1;
+    tilingData->rowLoopOfFormerBlock = 1;
+    tilingData->rowLoopOfTailBlock = 1;
+    tilingData->rowFactor = 1;
+    tilingData->tailRowFactorOfFormerBlock = 1;
+    tilingData->tailRowFactorOfTailBlock = 1;
+    tilingData->dLoop = 1;
+    tilingData->dFactor = splitD;
+    tilingData->tailDFactor = splitD;
+    tilingData->roundScale = 1;
+    tilingData->outputOrigin = outputOrigin ? 1 : 0;
+    tilingData->clampLimit = 0.0f;
+    tilingData->hasClampLimit = 0;
+    tilingData->g = 0;
+    tilingData->ubSize = 253952;
+    tilingData->gLoop = 0;
+    tilingData->gFactor = 0;
+    tilingData->tailGFactor = 0;
+    tilingData->coreNum = blockDim;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    auto swigluGroupQuantKernel = [](GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y,
+                                     GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
+        ::swiglu_group_quant(x, weight, groupIndex, scale, y, yScale, yOrigin, workspace, tiling);
+    };
+    ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, weight, nullptr, nullptr, y, yScale, yOrigin, workspace, tiling);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(y);
+    AscendC::GmFree(yScale);
+    AscendC::GmFree(yOrigin);
+    if (hasWeight) {
+        AscendC::GmFree(weight);
+    }
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp4) { RunMxFp4KernelWithTilingKey(3000, false); }
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp4_y_origin) { RunMxFp4KernelWithTilingKey(3100, true); }
+
+TEST_F(SwigluGroupQuantKernelTest, mx_fp4_y_origin_weight) { RunMxFp4KernelWithTilingKey(3100, true, true); }
 
 void RunHifp8KernelWithTilingKey(uint64_t tilingKey, bool hasScale, bool outputOrigin)
 {

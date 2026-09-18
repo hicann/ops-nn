@@ -39,6 +39,7 @@ public:
     ge::graphStatus CalcMxFp4QuantOpTiling();
     ge::graphStatus CalcBlockQuantOpTiling();
     ge::graphStatus CalcGroupIndexTiling();
+    void SetEmptyTiling();
     void SetTilingData();
     void SetTilingKey();
 

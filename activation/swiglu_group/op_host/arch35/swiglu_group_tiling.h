@@ -76,6 +76,7 @@ public:
     ge::graphStatus GetShapeAttrsInfoInner();
     ge::graphStatus CalcOpTiling();
     ge::graphStatus CalcGroupIndexTiling();
+    void SetEmptyTiling();
     void SetTilingData();
     void SetTilingKey();
 

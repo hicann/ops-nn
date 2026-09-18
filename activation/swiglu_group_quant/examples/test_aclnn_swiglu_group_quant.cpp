@@ -122,6 +122,7 @@ struct SwigluGroupQuantCase {
     double dstTypeMax;
     aclDataType yDataType;
     int64_t yElementSize;
+    bool outputOrigin;
     bool hasScaleInput;
     std::vector<int64_t> scaleShape;
 };
@@ -177,7 +178,7 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
     }
 
     double clampLimit = -1.0;
-    bool outputOrigin = false;
+    bool outputOrigin = testCase.outputOrigin;
     const aclTensor* scaleTensor = testCase.hasScaleInput ? scaleResource.tensor : nullptr;
 
     LOG_PRINT("Run %s: quant_mode=%ld\n", testCase.name, testCase.quantMode);
@@ -251,10 +252,25 @@ int main()
     }
 
     std::vector<SwigluGroupQuantCase> testCases = {
-        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
-        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
-        {"hifp8_static", 2, 0, false, {1}, ACL_FLOAT, false, 27, 448.0, ACL_HIFLOAT8, 1, true, {1}},
-        {"hifp8_dynamic", 3, 0, false, {1}, ACL_FLOAT, false, 27, 15.0, ACL_HIFLOAT8, 1, false, {}},
+        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, false, {}},
+        {"block_fp8_y_origin", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, true, false, {}},
+        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, false, {}},
+        {"mx_fp8_y_origin",
+         1,
+         0,
+         true,
+         {2, 2, 2},
+         ACL_FLOAT8_E8M0,
+         true,
+         36,
+         448.0,
+         ACL_FLOAT8_E4M3FN,
+         1,
+         true,
+         false,
+         {}},
+        {"hifp8_static", 2, 0, false, {1}, ACL_FLOAT, false, 27, 448.0, ACL_HIFLOAT8, 1, false, true, {1}},
+        {"hifp8_dynamic", 3, 0, false, {1}, ACL_FLOAT, false, 27, 15.0, ACL_HIFLOAT8, 1, false, false, {}},
     };
 
     for (const auto& testCase : testCases) {

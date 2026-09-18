@@ -21,13 +21,14 @@
 
 namespace SwigluGroupQuant {
 using namespace AscendC;
-template <typename T0, typename T1, typename T2>
+template <typename T0, typename T1, typename T2, bool outputOrigin>
 class SwigluMxFp4QuantPerf {
 public:
     __aicore__ inline SwigluMxFp4QuantPerf() {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR topkWeight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
-                                GM_ADDR workspace, const SwigluGroupQuantTilingData* tilingDataPtr, TPipe* pipePtr)
+                                GM_ADDR yOrigin, GM_ADDR workspace, const SwigluGroupQuantTilingData* tilingDataPtr,
+                                TPipe* pipePtr)
     {
         pipe = pipePtr;
         tilingData = tilingDataPtr;
@@ -50,6 +51,11 @@ public:
             tBufPool.InitBuffer(topkWeightQue, DOUBLE_BUFFER_NUM,
                                 RoundUp<float>(tilingData->rowFactor) * sizeof(float));
         }
+        if constexpr (outputOrigin) {
+            yOriginGm.SetGlobalBuffer((__gm__ T0*)yOrigin);
+            tBufPool.InitBuffer(yOriginQue, DOUBLE_BUFFER_NUM,
+                                tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
+        }
 
         tBufPool.InitBuffer(xQue, DOUBLE_BUFFER_NUM,
                             tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0) * DIGIT_TWO);
@@ -61,10 +67,10 @@ public:
         tBufPool.InitBuffer(scaleQue, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T2>(scaleColNum) * sizeof(T2));
 
         tBufPool.InitBuffer(swigluBuf, tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
+        swigluLocal = swigluBuf.Get<T0>();
         tBufPool.InitBuffer(maxExpBuf, tilingData->rowFactor * RoundUp<uint16_t>(scaleColNum) * sizeof(uint16_t));
         tBufPool.InitBuffer(invScaleBuf, tilingData->rowFactor * RoundUp<uint16_t>(scaleColNum) * sizeof(uint16_t));
 
-        swigluLocal = swigluBuf.Get<T0>();
         maxExpLocal = maxExpBuf.Get<uint16_t>();
         invScaleLocal = invScaleBuf.Get<uint16_t>();
 
@@ -75,6 +81,10 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (tilingData->bs == 0 || tilingData->splitD == 0) {
+            // Empty input (zero token count or zero last dim of x): nothing to compute.
+            return;
+        }
         if (GetBlockIdx() >= usedCoreNums) {
             return;
         }
@@ -111,25 +121,31 @@ public:
                        curRowFactor, curDFactor, tilingData->d - curDFactor);
                 xQue.template EnQue(xLocal);
                 xLocal = xQue.template DeQue<T0>();
+                // yOrigin keeps the pre-weight swiglu result and is copied out through the queue
+                // (VF->MTE3 sync), while quantization always consumes the swiglu result from the
+                // dedicated swiglu buffer.
+                if constexpr (outputOrigin) {
+                    yOriginLocal = yOriginQue.template AllocTensor<T0>();
+                }
                 if (hasTopkWeight_) {
                     if (hasClampValue_) {
-                        VFProcessSwiglu<T0, true, true>(swigluLocal, xLocal,
-                                                        xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
-                                                        topkWeightLocal, curRowFactor, curDFactor, clampValue_);
+                        VFProcessSwiglu<T0, true, true, outputOrigin>(
+                            swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                            topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
-                        VFProcessSwiglu<T0, true, false>(swigluLocal, xLocal,
-                                                         xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
-                                                         topkWeightLocal, curRowFactor, curDFactor, clampValue_);
+                        VFProcessSwiglu<T0, true, false, outputOrigin>(
+                            swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                            topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }
                 } else {
                     if (hasClampValue_) {
-                        VFProcessSwiglu<T0, false, true>(swigluLocal, xLocal,
-                                                         xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
-                                                         topkWeightLocal, curRowFactor, curDFactor, clampValue_);
+                        VFProcessSwiglu<T0, false, true, outputOrigin>(
+                            swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                            topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
-                        VFProcessSwiglu<T0, false, false>(swigluLocal, xLocal,
-                                                          xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
-                                                          topkWeightLocal, curRowFactor, curDFactor, clampValue_);
+                        VFProcessSwiglu<T0, false, false, outputOrigin>(
+                            swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                            topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }
                 }
                 VFComputeMaxExpMXFP4(swigluLocal, maxExpLocal, curRowFactor, curDFactor);
@@ -174,6 +190,18 @@ public:
                         curRowFactor, CeilDiv(curDFactor, FP4_PACK_NUM),
                         tilingData->splitD / FP4_PACK_NUM - CeilDiv(curDFactor, FP4_PACK_NUM));
                 yQue.template FreeTensor(yLocal);
+
+                // copy yOrigin to gm
+                if constexpr (outputOrigin) {
+                    int64_t yOriginGmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->splitD;
+                    yOriginQue.template EnQue(yOriginLocal);
+                    yOriginLocal = yOriginQue.template DeQue<T0>();
+                    CopyOut(yOriginLocal,
+                            yOriginGm[yOriginGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->splitD +
+                                      dLoopIdx * tilingData->dFactor],
+                            curRowFactor, curDFactor, tilingData->splitD - curDFactor);
+                    yOriginQue.template FreeTensor(yOriginLocal);
+                }
             }
             if (hasTopkWeight_) {
                 topkWeightQue.template FreeTensor(topkWeightLocal);
@@ -198,10 +226,12 @@ private:
     GlobalTensor<int8_t> yGm;
     GlobalTensor<T2> scaleGm;
     GlobalTensor<float> topkWeightGm;
+    GlobalTensor<T0> yOriginGm;
 
     TQue<QuePosition::VECIN, 1> xQue;
     TQue<QuePosition::VECOUT, 1> yQue;
     TQue<QuePosition::VECOUT, 1> scaleQue;
+    TQue<QuePosition::VECOUT, 1> yOriginQue;
 
     TBuf<QuePosition::VECCALC> swigluBuf;
     TBuf<QuePosition::VECCALC> maxExpBuf;
@@ -215,6 +245,7 @@ private:
     LocalTensor<T1> yLocal;
     LocalTensor<T2> scaleLocal;
     LocalTensor<T0> swigluLocal;
+    LocalTensor<T0> yOriginLocal;
     LocalTensor<uint16_t> maxExpLocal;
     LocalTensor<uint16_t> invScaleLocal;
     LocalTensor<int64_t> groupIndexLocal;

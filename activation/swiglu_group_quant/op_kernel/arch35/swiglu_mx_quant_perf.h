@@ -80,6 +80,10 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (tilingData->bs == 0 || tilingData->splitD == 0) {
+            // Empty input (zero token count or zero last dim of x): nothing to compute.
+            return;
+        }
         if (GetBlockIdx() >= usedCoreNums) {
             return;
         }

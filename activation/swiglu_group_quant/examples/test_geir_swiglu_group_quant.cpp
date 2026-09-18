@@ -99,6 +99,7 @@ struct SwigluGroupQuantCase {
     bool roundScale;
     vector<int64_t> yScaleShape;
     DataType yScaleDtype;
+    bool outputOrigin;
 };
 
 void PrintTensorInfo(const char* caseName, const vector<Tensor>& tensors, const char* prefix)
@@ -152,7 +153,7 @@ int CreateSwigluGroupQuantGraph(const SwigluGroupQuantCase& testCase, Graph& gra
     swigluGroupQuant.set_attr_round_scale(testCase.roundScale);
     swigluGroupQuant.set_attr_clamp_limit(-1.0f);
     swigluGroupQuant.set_attr_dst_type_max(448.0f);
-    swigluGroupQuant.set_attr_output_origin(false);
+    swigluGroupQuant.set_attr_output_origin(testCase.outputOrigin);
 
     outputs.push_back(swigluGroupQuant);
     return SUCCESS;
@@ -221,8 +222,10 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Initialize ge success\n", GetTime().c_str());
 
     vector<SwigluGroupQuantCase> testCases = {
-        {"block_fp8", 0, 0, false, {2, 1}, ge::DT_FLOAT},
-        {"mx_fp8", 1, 0, true, {2, 2, 2}, ge::DT_FLOAT8_E8M0},
+        {"block_fp8", 0, 0, false, {2, 1}, ge::DT_FLOAT, false},
+        {"block_fp8_y_origin", 0, 0, false, {2, 1}, ge::DT_FLOAT, true},
+        {"mx_fp8", 1, 0, true, {2, 2, 2}, ge::DT_FLOAT8_E8M0, false},
+        {"mx_fp8_y_origin", 1, 0, true, {2, 2, 2}, ge::DT_FLOAT8_E8M0, true},
     };
 
     for (const auto& testCase : testCases) {
