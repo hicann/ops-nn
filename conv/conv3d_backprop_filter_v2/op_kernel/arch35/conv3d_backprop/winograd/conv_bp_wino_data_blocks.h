@@ -209,7 +209,7 @@ public:
     __aicore__ inline bool GetHW(uint32_t loopIdx, uint16_t coreId, uint32_t& outH, uint32_t& outW) const
     {
         uint32_t flattenIdx = loopIdx * GetBlockNum() + coreId;
-        // 拦截越界
+        // 越界判断
         if (unlikely(flattenIdx >= totalCnt_)) {
             outH = h_;
             outW = w_;

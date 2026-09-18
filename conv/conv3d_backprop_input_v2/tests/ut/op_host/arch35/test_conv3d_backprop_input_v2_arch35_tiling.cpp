@@ -344,7 +344,7 @@ const string COMPILE_INFO_STR_950 = R"({"_pattern": "Conv3d_backprop_input_v2", 
                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
                           })";
 
-// CV核配比不满足1:2的compile info，CheckVectorCoreNum应拦截需要V核的tiling路径
+// CV核配比不满足1:2的compile info，CheckVectorCoreNum应返回不支持需要V核的tiling路径
 const string COMPILE_INFO_STR_950_CV_BAD = R"({"_pattern": "Conv3d_backprop_input_v2", "tiling_type": "binary",
                           "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,

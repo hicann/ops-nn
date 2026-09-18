@@ -425,7 +425,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::trySplitKernelAndWo()
     // 直接将wo切块成k0，splitkernel标志置true
     blockTiling_.isSplitKernelHW = true;
     if (enableSplitW) {
-        // 切Wi/Wo的NDHWC格式没有支持，通过enableSplitW进行拦截
+        // 切Wi/Wo的NDHWC格式没有支持，通过enableSplitW进行处理
         blockTiling_.splitWo = static_cast<int32_t>(tilingData_.dwTiling.k0);
         blockTiling_.tailWo = runInfo_.wo % blockTiling_.splitWo;
         blockTiling_.splitWi = GetWiCal(blockTiling_.splitWo, blockTiling_.isSplitKernelHW);
@@ -1127,7 +1127,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
                     return false);
     format_.filterFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
 
-    // NDHWC/DHWCN格式下D维度大于1，进行拦截
+    // NDHWC/DHWCN格式下D维度大于1，进行处理
     bool isNo2DFilterFormat = (format_.filterFormat == ge::FORMAT_NDHWC || format_.filterFormat == ge::FORMAT_DHWCN) &&
                               (runInfo_.kd != 1 || runInfo_.di != 1 || runInfo_.dout != 1);
     if (isNo2DFilterFormat) {

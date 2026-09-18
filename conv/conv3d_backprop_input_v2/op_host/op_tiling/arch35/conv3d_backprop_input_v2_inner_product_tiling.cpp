@@ -229,7 +229,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    // input attribute 拦截 （stride dilation）
+    // input attribute 支持判断 （stride dilation）
     if (!SetRunInfoToV2(context_, runInfo_, opType_)) {
         OP_LOGE(context_->GetNodeName(), "SetRunInfoToV2 failed");
         return ge::GRAPH_FAILED;
@@ -275,7 +275,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 
 bool Conv3DDXV2InnerProductTiling::CheckBasicSplitKCondition()
 {
-    // 拦截c04场景,group场景和8bit场景
+    // 判断c04场景,group场景和8bit场景，返回不支持
     if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) ||
         context_->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_INT8) {
         tilingRunInfo_.enableSplitK = 0;
