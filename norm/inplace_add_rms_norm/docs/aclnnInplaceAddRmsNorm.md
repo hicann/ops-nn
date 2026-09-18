@@ -93,7 +93,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>x2Ref（aclTensor*）</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>gamma（aclTensor*）</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>epsilon（double）</td>
