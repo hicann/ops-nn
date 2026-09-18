@@ -157,7 +157,7 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_test_1)
     free(path_);
 }
 
-TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test)
+TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_bias_basic_test)
 {
 #ifdef __CCE_KT_TEST__
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
@@ -167,6 +167,7 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test)
     constexpr uint32_t k = 16;
     size_t shapeA = m * k * sizeof(DTYPE_X1);
     size_t shapeB = k * n * sizeof(DTYPE_X2);
+    size_t shapeBias = n * sizeof(DTYPE_BIAS);
     size_t shapeOutput = m * n * sizeof(DTYPE_Y);
     size_t workspaceSize = 20 * 1024 * 1024;
 
@@ -174,11 +175,13 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(MatMulV3BasicTilingData));
     uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shapeA);
     uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shapeB);
+    uint8_t* biasGM = (uint8_t*)AscendC::GmAlloc(shapeBias);
     uint8_t* output = (uint8_t*)AscendC::GmAlloc(shapeOutput);
 
     memset(workspace, 0, workspaceSize);
     memset(aGM, 0, shapeA);
     memset(bGM, 0, shapeB);
+    memset(biasGM, 0, shapeBias);
     memset(output, 0xff, shapeOutput);
 
     auto* tilingData = reinterpret_cast<MatMulV3BasicTilingData*>(tiling);
@@ -193,13 +196,14 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test)
                                                                                                  workspace, tiling);
     };
 
-    ICPU_RUN_KF(fusedMatMulWrapper, 1, aGM, bGM, nullptr, nullptr, output, workspace, tiling);
+    ICPU_RUN_KF(fusedMatMulWrapper, 1, aGM, bGM, biasGM, nullptr, output, workspace, tiling);
     ExpectAllZero(output, shapeOutput);
 
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)aGM);
     AscendC::GmFree((void*)bGM);
+    AscendC::GmFree((void*)biasGM);
     AscendC::GmFree((void*)output);
 #endif
 }

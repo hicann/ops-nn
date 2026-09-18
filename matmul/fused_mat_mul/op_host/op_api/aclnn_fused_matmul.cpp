@@ -47,7 +47,8 @@ static constexpr float FUSED_MATMUL_DEFAULT_SCALE_VALUE = 1.0F;
 
 static const std::vector<const char*> kAllSupportedOpTypes = {"",         "16cast32",  "add", "mul",
                                                               "gelu_erf", "gelu_tanh", "relu"};
-static const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul"};
+static const std::vector<const char*> kSupportedBiasOpTypes = {"",    "16cast32", "relu",     "add",
+                                                               "mul", "gelu_erf", "gelu_tanh"};
 static const std::vector<const char*> kSupportedFp32OpTypes = {"", "relu", "add", "mul"};
 static const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
 static const std::vector<const char*> kSupportedIn16CastOut32OpTypes = {"16cast32"};

@@ -47,13 +47,13 @@
   gelu_tanh运算:
 
   $$
-  y = gelu\_tanh(x1 @ x2)
+  y = gelu\_tanh(x1 @ x2 + bias)
   $$
 
   gelu_erf运算:
 
   $$
-  y = gelu\_erf(x1 @ x2)
+  y = gelu\_erf(x1 @ x2 + bias)
   $$
 
   relu运算:
@@ -152,7 +152,7 @@ aclnnStatus aclnnFusedMatmulV2(
         <td>bias</td>
         <td>输入</td>
         <td>表示偏置项，对应公式中的bias。</td>
-        <td><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></td>
+        <td><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"、"gelu_erf"、"gelu_tanh"时生效，其他情况传入空指针即可。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>1-2</td>
@@ -277,15 +277,12 @@ aclnnStatus aclnnFusedMatmulV2(
       </tr></thead>
     <tbody>
       <tr>
-        <td rowspan="3">ACLNN_ERR_PARAM_NULLPTR</td>
-        <td rowspan="3">161001</td>
+        <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
+        <td rowspan="2">161001</td>
         <td>传入的x1、x2和y是空指针。</td>
       </tr>
       <tr>
         <td>fusedOpType为add、mul时，传入的x3为空指针。</td>
-      </tr>
-      <tr>
-        <td>fusedOpType为gelu_tanh、gelu_erf，传入的bias不是空指针。</td>
       </tr>
       <tr>
         <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
@@ -360,6 +357,8 @@ aclnnStatus aclnnFusedMatmulV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
+
+- GELU（gelu_erf、gelu_tanh）支持可选 bias，计算顺序为先计算矩阵乘并加 bias，再执行 GELU。bias 的数据类型必须与矩阵输入一致或为 FLOAT32，shape 为 (N,) 或 (1, N)；传入 bias 时，矩阵乘的 K 轴必须大于 0。
 
 - 确定性说明：
 

@@ -36,7 +36,8 @@ const int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1;
 
 const std::vector<const char*> kAllSupportedOpTypes = {"",          "16cast32", "add",   "mul",        "gelu_erf",
                                                        "gelu_tanh", "relu",     "quant", "relu_quant", "scale_add"};
-const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul", "quant", "relu_quant"};
+const std::vector<const char*> kSupportedBiasOpTypes = {"",      "16cast32",   "relu",     "add",      "mul",
+                                                        "quant", "relu_quant", "gelu_erf", "gelu_tanh"};
 const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul", "quant", "relu_quant", "scale_add"};
 const std::vector<const char*> kQuantOpTypes = {"quant", "relu_quant"};
 const std::vector<const char*> kBroadcastBatchOpTypes = {"relu", "quant", "relu_quant"};
@@ -91,7 +92,7 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     // 不支持bias的OpType拦截bias
     if (!IsInSupportedOpTypes(fused_op_type, kSupportedBiasOpTypes)) {
         OP_CHECK_IF(shape_bias != nullptr && shape_bias->GetDimNum() != 0,
-                    CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type gelu_erf/gelu_tanh/scale_add"),
+                    CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type %s", fused_op_type),
                     return ge::GRAPH_FAILED);
     }
     const bool is_quant_op = IsInSupportedOpTypes(fused_op_type, kQuantOpTypes);

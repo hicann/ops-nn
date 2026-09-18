@@ -96,6 +96,54 @@ class KernelMatmulStreamK<
             Block::BlockEpilogueStreamK<float, half,
                                         MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
         AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, float,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, bfloat16_t,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, half,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_ERF>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, float,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, bfloat16_t,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, half,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_TANH>>> ||
+        AscendC::Std::is_base_of_v<
             BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
                                 float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
         AscendC::Std::is_base_of_v<

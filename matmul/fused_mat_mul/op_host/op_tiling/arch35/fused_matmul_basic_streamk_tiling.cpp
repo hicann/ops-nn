@@ -33,13 +33,13 @@ bool FusedMatMulStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    // Only relu and "" and 16cast32 support streamK unconditionally
+    // Only the op types in FusedOpTypeSupportStreamK support Stream-K.
     if (FusedOpTypeSupportStreamK.find(opType) == FusedOpTypeSupportStreamK.end()) {
         return false;
     }
 
-    // mul and add only supports pure SK scenario (no DP tiles with fixpipe)
-    if (opType == "add" || opType == "mul") {
+    // AIV epilogues only support pure SK here (no mixed DP and SK tiles).
+    if (opType == "add" || opType == "mul" || IsGeluOpType(opType)) {
         constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
         constexpr uint64_t NUM_TWO = 2UL;
         uint64_t mCnt = (args_.mValue + BASIC_BLOCK_SIZE_256 - 1) / BASIC_BLOCK_SIZE_256;

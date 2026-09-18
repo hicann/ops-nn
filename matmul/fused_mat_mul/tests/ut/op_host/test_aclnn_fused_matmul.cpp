@@ -371,7 +371,7 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_tanh_fp16_success)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_bias_failed)
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_erf_bias_fp16_success)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -383,7 +383,87 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_bias_failed)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_tanh_bias_bf16_fp32_success)
+{
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "gelu_tanh", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_erf_fp16_bias_bf16_2d_failed)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "gelu_erf", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_erf_fp16_bias_fp32_2d_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "gelu_erf", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_tanh_bf16_bias_bf16_2d_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "gelu_tanh", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_tanh_bf16_bias_fp32_2d_v2_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmulV2,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, (aclScalar*)nullptr,
+                              (aclScalar*)nullptr, "gelu_tanh", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fusedmatmul_test, ascend950_test_gelu_fp32_failed)

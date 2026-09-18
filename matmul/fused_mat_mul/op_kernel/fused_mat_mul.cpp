@@ -558,7 +558,7 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
         } else if constexpr (OPTYPE == F_OPTYPE_GELU_ERF || OPTYPE == F_OPTYPE_GELU_TANH) { // Gelu
             if constexpr (MODEL == MAT_MUL_BASIC && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                           L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-                // Gelu当前仅支持BASIC模板
+                // Basic fallback for GELU.
                 GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
                 if constexpr (OPTYPE == F_OPTYPE_GELU_ERF) {
                     MatmulV3Advanced::MatMulGeluMixWithoutQueActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout,
@@ -571,8 +571,20 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                                                                        OP_TYPE_GELU_TANH>(x1GM, x2GM, biasGM, yGM, user,
                                                                                           tilingData);
                 }
+            } else if constexpr (MODEL == MAT_MUL_STREAM_K && FULL_LOAD == MAT_MUL_NO_FULL_LOAD) {
+                GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+                    MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                                           MatMulL0C2Out::ON_THE_FLY, OPTYPE>(x1GM, x2GM, biasGM, yGM, workspaceGM,
+                                                                              tilingData);
+                } else if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+                    MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                                           MatMulL0C2Out::ND_FIXPIPE_1_2, OPTYPE>(x1GM, x2GM, biasGM, yGM, workspaceGM,
+                                                                                  tilingData);
+                } else {
+                    static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
+                }
             } else {
-                // 不支持非Basic
                 static_assert(AscendC::Std::always_false_v<decltype(MODEL)>, "not support yet");
             }
         } else if constexpr (OPTYPE == F_OPTYPE_ADD) { // Add

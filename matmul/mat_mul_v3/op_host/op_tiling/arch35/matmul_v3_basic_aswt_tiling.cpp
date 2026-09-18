@@ -13,6 +13,7 @@
  * \brief
  */
 #include "matmul_v3_basic_aswt_tiling.h"
+#include "matmul_v3_tiling_helper.h"
 #include "matmul_v3_tiling_strategy.h"
 #include "./matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
@@ -162,7 +163,7 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad()
     uint64_t maxBaseNWithL1 = remainL1Size / (runInfo_.baseK * args_.bDtypeSize * DB_SIZE);
     uint64_t maxBaseNWithL0cDb = compileInfo_.l0CSize / (runInfo_.baseM * DATA_SIZE_FP32 * DB_SIZE);
     uint64_t maxBaseN = ops::FloorAlign(std::min(maxBaseNWithL1, maxBaseNWithL0cDb), BASIC_BLOCK_SIZE_16);
-    uint64_t balanceBaseN = args_.batchInfo != nullptr ?
+    uint64_t balanceBaseN = !IsMatMulTiling(args_) ?
                                 maxBaseN :
                                 ops::CeilAlign(MathUtil::CeilDivision(args_.nValue, compileInfo_.aicNum),
                                                BASIC_BLOCK_SIZE_16);
@@ -214,7 +215,7 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad()
                                                                                               BASIC_L1_BUFFER_NUM;
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     uint64_t nCore = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
-    uint64_t batchNum = args_.batchInfo == nullptr ? 1 : args_.batchInfo->batchC;
+    uint64_t batchNum = IsMatMulTiling(args_) ? 1UL : args_.batchInfo->batchC;
     runInfo_.usedCoreNum = std::min(nCore * batchNum, compileInfo_.aicNum);
     CalcTailBasicBlockAL1Full();
     fullLoad_ = MatMulV3FullLoad::A_FULL_LOAD;
@@ -237,7 +238,7 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     uint64_t maxBaseMWithL1 = remainL1Size / (runInfo_.baseK * args_.aDtypeSize * DB_SIZE);
     uint64_t maxBaseMWithL0cDb = compileInfo_.l0CSize / (runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE);
     uint64_t maxBaseM = ops::FloorAlign(std::min(maxBaseMWithL1, maxBaseMWithL0cDb), BASIC_BLOCK_SIZE_16);
-    uint64_t balanceBaseM = args_.batchInfo != nullptr ?
+    uint64_t balanceBaseM = !IsMatMulTiling(args_) ?
                                 maxBaseM :
                                 ops::CeilAlign(MathUtil::CeilDivision(args_.mValue, compileInfo_.aicNum),
                                                BASIC_BLOCK_SIZE_16);
@@ -286,7 +287,7 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <= compileInfo_.ubSize ? DB_SIZE : 1UL;
     uint64_t mCore = MathUtil::CeilDivision(args_.mValue, runInfo_.baseM);
-    uint64_t batchNum = args_.batchInfo == nullptr ? 1 : args_.batchInfo->batchC;
+    uint64_t batchNum = IsMatMulTiling(args_) ? 1UL : args_.batchInfo->batchC;
     runInfo_.usedCoreNum = std::min(mCore * batchNum, compileInfo_.aicNum);
     CalcTailBasicBlockBL1Full();
     fullLoad_ = MatMulV3FullLoad::B_FULL_LOAD;

@@ -16,6 +16,7 @@
 #pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
+#include "math/erf.h"
 #else
 #include "kernel_operator.h"
 #endif
@@ -124,6 +125,72 @@ public:
         }
     }
 
+    static __simd_vf__ inline void GeluTanhVf(__ubuf__ float* inputAddr, uint32_t dataSize)
+    {
+        constexpr float BETA = 0.044715F;
+        constexpr float ALPHA = -1.5957691F;
+        constexpr float ONE = 1.0F;
+        constexpr uint32_t VF_REPEAT_SIZE = AscendC::VECTOR_REG_WIDTH / sizeof(float);
+
+        AscendC::Reg::RegTensor<float> inputReg;
+        AscendC::Reg::RegTensor<float> tmpReg;
+        AscendC::Reg::RegTensor<float> outputReg;
+        AscendC::Reg::MaskReg mask;
+        uint32_t count = dataSize;
+        for (uint32_t offset = 0; offset < dataSize; offset += VF_REPEAT_SIZE) {
+            mask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::DataCopy(inputReg, inputAddr + offset);
+            AscendC::Reg::Mul(tmpReg, inputReg, inputReg, mask);
+            AscendC::Reg::Mul(tmpReg, inputReg, tmpReg, mask);
+            AscendC::Reg::Muls(tmpReg, tmpReg, BETA, mask);
+            AscendC::Reg::Add(tmpReg, inputReg, tmpReg, mask);
+            AscendC::Reg::Muls(tmpReg, tmpReg, ALPHA, mask);
+            AscendC::Reg::Exp(tmpReg, tmpReg, mask);
+            AscendC::Reg::Adds(tmpReg, tmpReg, ONE, mask);
+            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(outputReg, inputReg, tmpReg, mask);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(inputAddr + offset, outputReg, mask);
+        }
+    }
+
+    static __simd_vf__ inline void GeluErfPostVf(__ubuf__ float* inputAddr, __ubuf__ float* erfAddr, uint32_t dataSize)
+    {
+        constexpr float ONE = 1.0F;
+        constexpr float HALF = 0.5F;
+        constexpr uint32_t VF_REPEAT_SIZE = AscendC::VECTOR_REG_WIDTH / sizeof(float);
+
+        AscendC::Reg::RegTensor<float> inputReg;
+        AscendC::Reg::RegTensor<float> erfReg;
+        AscendC::Reg::RegTensor<float> outputReg;
+        AscendC::Reg::MaskReg mask;
+        uint32_t count = dataSize;
+        for (uint32_t offset = 0; offset < dataSize; offset += VF_REPEAT_SIZE) {
+            mask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::DataCopy(inputReg, inputAddr + offset);
+            AscendC::Reg::DataCopy(erfReg, erfAddr + offset);
+            AscendC::Reg::Adds(erfReg, erfReg, ONE, mask);
+            AscendC::Reg::Muls(inputReg, inputReg, HALF, mask);
+            AscendC::Reg::Mul(outputReg, erfReg, inputReg, mask);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(inputAddr + offset, outputReg, mask);
+        }
+    }
+
+    __aicore__ inline void RunGelu(AscendC::LocalTensor<float>& inputTensor, uint64_t dataSize)
+    {
+        auto inputAddr = reinterpret_cast<__ubuf__ float*>(inputTensor.GetPhyAddr());
+        if constexpr (DispatchPolicy::fusedOpType == OP_TYPE_GELU_ERF) {
+            constexpr float REQ_SQRT_TWO = 0.70710678F;
+            // Pure Stream-K always has at least two K partial buffers. All partials have already been reduced into the
+            // first buffer, so the second one can be reused as GELU scratch space.
+            AscendC::LocalTensor<float> tmpTensor = inputTensor[dataSize];
+            auto tmpAddr = reinterpret_cast<__ubuf__ float*>(tmpTensor.GetPhyAddr());
+            AscendC::Muls(tmpTensor, inputTensor, REQ_SQRT_TWO, dataSize);
+            AscendC::Erf(tmpTensor, tmpTensor, dataSize);
+            AscendC::VF_CALL<GeluErfPostVf>(inputAddr, tmpAddr, static_cast<uint32_t>(dataSize));
+        } else if constexpr (DispatchPolicy::fusedOpType == OP_TYPE_GELU_TANH) {
+            AscendC::VF_CALL<GeluTanhVf>(inputAddr, static_cast<uint32_t>(dataSize));
+        }
+    }
+
     __aicore__ inline void Run()
     {
         UpdateAivBasicIndex();
@@ -144,6 +211,10 @@ public:
 
             for (uint64_t i = 1; i < copyGm2UbParams_.kCnt; ++i) {
                 Add(ubAddTensor, ubAddTensor, ubAddTensor[i * copyGm2UbParams_.burstLen], copyGm2UbParams_.burstLen);
+            }
+
+            if constexpr (DispatchPolicy::enableGelu) {
+                RunGelu(ubAddTensor, copyGm2UbParams_.burstLen);
             }
 
             DataCopyExtParams ub2gmExtParams{

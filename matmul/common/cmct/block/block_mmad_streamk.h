@@ -40,6 +40,14 @@ class BlockMmad<
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>,
                                    DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_ERF>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_ERF>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_TANH>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_TANH>,
                                    DispatchPolicy_>>> {
 public:
     using AType = AType_;

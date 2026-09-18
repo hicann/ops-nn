@@ -78,9 +78,13 @@ static const std::vector<std::vector<ge::DataType>> DTYPE_LIST_16CAST32_DAV_3510
     {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_UNDEFINED, ge::DT_UNDEFINED},
 };
 
-// opType group: gelu_erf / gelu_tanh (no bias, no x3, only DAV_3510)
+// opType group: gelu_erf / gelu_tanh (no x3, only DAV_3510)
 static const std::vector<std::vector<ge::DataType>> DTYPE_LIST_GELU_DAV_3510 = {
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_UNDEFINED},
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_UNDEFINED},
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_UNDEFINED, ge::DT_UNDEFINED},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_UNDEFINED},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_UNDEFINED},
     {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_UNDEFINED, ge::DT_UNDEFINED},
 };
 
@@ -303,8 +307,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateOpSpecific()
 // ====== Phase 7: ValidateBias (bias shape constraints: no batch bias) ======
 ge::graphStatus FusedMatMulBuiltInTiling::ValidateBias()
 {
-    // gelu/scale_add op type does not support bias
-    if ((IsGeluOpType(opType_) || opType_ == "scale_add") && args_.hasBias) {
+    // scale_add op type does not support bias
+    if (opType_ == "scale_add" && args_.hasBias) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             args_.opName, "fusedOpType, bias", Ops::NN::FormatString("%s, not null", opType_.c_str()).c_str(),
             Ops::NN::FormatString("The input %s is not supported for %s op type", "bias", opType_.c_str()).c_str());

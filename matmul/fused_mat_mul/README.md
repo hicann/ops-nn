@@ -74,7 +74,7 @@
         <td>bias</td>
         <td>输入</td>
         <td>公式中的输入bias。</td>
-        <td><ul><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"时生效，其他情况传入空指针即可。</li></ul></td>
+        <td><ul><li>仅当fusedOpType为""、"16cast32"、"relu"、"add"、"mul"、"gelu_erf"、"gelu_tanh"时生效，其他情况传入空指针即可。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -121,6 +121,8 @@
   </tbody></table>
 
 ## 约束说明
+
+- GELU（gelu_erf、gelu_tanh）支持可选 bias，计算顺序为先计算矩阵乘并加 bias，再执行 GELU。bias 的数据类型必须与矩阵输入一致或为 FLOAT32，shape 为 (N,) 或 (1, N)；传入 bias 时，矩阵乘的 K 轴必须大于 0。
 
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。

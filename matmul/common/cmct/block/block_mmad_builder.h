@@ -155,6 +155,14 @@ class BlockMmadBuilder<
                                    BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>,
                                    BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_ERF>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_ERF>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_GELU_TANH>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_GELU_TANH>,
+                                   BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<BatchMatmulToMul<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulToMul<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulToVector<>, BlockMatmulPolicy_>>> {
@@ -217,10 +225,6 @@ public:
 
     __host_aicore__ static Status CanImplement(Arguments const& args)
     {
-        if (AscendC::Std::is_same_v<bfloat16_t, AType> && args.biasGmAddr != nullptr) {
-            return Status::bf16BiasErrorInvalidDataType;
-        }
-
         if (l0M * l0K * sizeof(AType) * DOUBLE_BUFFER_COUNT > L0A_SIZE ||
             l0N * l0K * sizeof(BType) * DOUBLE_BUFFER_COUNT > L0B_SIZE || l0M * l0N * sizeof(CType) > L0C_SIZE ||
             (l1M * l1K * sizeof(AType) + l1K * l1N * sizeof(BType)) * DOUBLE_BUFFER_COUNT > L1_SIZE) {

@@ -148,7 +148,7 @@ const static std::vector<CASE_TUPLE> testcase_fusedmatmul_runtime = {
                false,
                "",
                RES_TUPLE{{3, 3}, {}, ge::DT_BF16, false}},
-    // failed case: not support bias with fused_op_type gelu_tanh
+    // bf16 + bias_bf16 gelu_tanh
     CASE_TUPLE{OP_TUPLE{{2, 3}, ge::DT_BF16, {}},
                OP_TUPLE{{2, 3}, ge::DT_BF16, {}},
                OP_TUPLE{{3}, ge::DT_BF16, {}},
@@ -157,7 +157,17 @@ const static std::vector<CASE_TUPLE> testcase_fusedmatmul_runtime = {
                false,
                false,
                "gelu_tanh",
-               RES_TUPLE{{3, 3}, {}, ge::DT_BF16, false}},
+               RES_TUPLE{{3, 3}, {}, ge::DT_BF16, true}},
+    // f16 + bias_f32 gelu_erf
+    CASE_TUPLE{OP_TUPLE{{2, 3}, ge::DT_FLOAT16, {}},
+               OP_TUPLE{{2, 3}, ge::DT_FLOAT16, {}},
+               OP_TUPLE{{3}, ge::DT_FLOAT, {}},
+               {},
+               true,
+               false,
+               false,
+               "gelu_erf",
+               RES_TUPLE{{3, 3}, {}, ge::DT_FLOAT16, true}},
     // failed case 1: wrong fused_op_type no fused_op_type called gelu
     CASE_TUPLE{OP_TUPLE{{4, 5}, ge::DT_FLOAT16, {}},
                OP_TUPLE{{5, 4}, ge::DT_FLOAT16, {}},

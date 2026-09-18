@@ -22,6 +22,8 @@
 namespace optiling {
 namespace matmul_v3_advanced {
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
+bool IsMatMulTiling(const MatMulV3Args& args);
+
 class MatMulV3TilingHelper {
 public:
     static void ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);

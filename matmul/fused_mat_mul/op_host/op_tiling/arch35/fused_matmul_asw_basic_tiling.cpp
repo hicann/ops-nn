@@ -274,7 +274,7 @@ uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType == "gelu_erf" || opType == "gelu_tanh") {
-        // gelu 操作当前仅支持BASIC模板
+        // GELU Basic fallback uses no full load and ON_THE_FLY.
         return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
             .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
             .SetModel(MatMulV3Model::BASIC)

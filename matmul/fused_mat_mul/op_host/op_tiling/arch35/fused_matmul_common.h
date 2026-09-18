@@ -77,7 +77,7 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {{"", FusedOpType::
                                                               {"relu_quant", FusedOpType::RELU_QUANT},
                                                               {"scale_add", FusedOpType::SCALE_ADD}};
 
-const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul"};
+const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul", "gelu_erf", "gelu_tanh"};
 
 inline bool IsQuantOpType(const std::string& opType) { return opType == "quant" || opType == "relu_quant"; }
 

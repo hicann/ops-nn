@@ -203,10 +203,10 @@ uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMu
     if (isRightMatrix && args.hasBias) {
         maxBaseBlock = std::min(maxBaseBlock, compileInfo.btSize / DB_SIZE / DATA_SIZE_FP32);
     }
-    // K内轴时，要求kL1至少256B对齐,目前batchmatmul固定内轴512B对齐
+    // K内轴时，要求kL1至少256B对齐；有效batch为1时按照MatMul处理
     uint64_t kAlignUnit = !args.isATrans || args.isBTrans ?
-                              (isMemoryBound && args.batchInfo == nullptr ? BASIC_BLOCK_K_256_BYTE :
-                                                                            BASIC_BLOCK_K_512_BYTE) /
+                              (isMemoryBound && IsMatMulTiling(args) ? BASIC_BLOCK_K_256_BYTE :
+                                                                       BASIC_BLOCK_K_512_BYTE) /
                                   args.aDtypeSize :
                               BASIC_BLOCK_SIZE_16;
     uint64_t maxBaseMNWithKInner = compileInfo.l1Size /
@@ -223,7 +223,7 @@ uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMu
 static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, uint64_t baseM, uint64_t baseN)
 {
     // 考虑尾轮优化负载均衡率，仅针对cubebound场景生效
-    uint64_t batch = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
+    uint64_t batch = IsMatMulTiling(args) ? 1UL : args.batchInfo->batchA;
     uint64_t totalRound = batch * MathUtil::CeilDivision(args.mValue, baseM) *
                           MathUtil::CeilDivision(args.nValue, baseN);
     uint64_t mainRound = MathUtil::CeilDivision(totalRound, usedCoreNum) - 1;
@@ -234,8 +234,7 @@ static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCore
     if (args.nValue <= BASIC_BLOCK_SIZE_16) {
         baseN = args.nValue;
     }
-    if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE ||
-        args.batchInfo != nullptr) {
+    if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE || !IsMatMulTiling(args)) {
         return (static_cast<double>(batch) * args.mValue * args.nValue / usedCoreNum) /
                ((mainRound + 1) * baseM * baseN);
     }
@@ -273,6 +272,12 @@ static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args&
 
 namespace optiling {
 namespace matmul_v3_advanced {
+bool IsMatMulTiling(const MatMulV3Args& args)
+{
+    return args.batchInfo == nullptr ||
+           (args.batchInfo->batchA == 1UL && args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
+}
+
 void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                      MatMulV3RunInfo& runInfo)
 {
@@ -410,7 +415,7 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
                                      compileInfo.l0CSize :
                                      std::min(compileInfo.l0CSize, compileInfo.ubSize);
 
-    uint64_t batchNum = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
+    uint64_t batchNum = IsMatMulTiling(args) ? 1UL : args.batchInfo->batchA;
     double l2CacheUsage = std::max(
         static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
             compileInfo.l2Size,
