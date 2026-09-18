@@ -478,6 +478,28 @@ static aclnnStatus Run310PPertokenBiasCase(aclDataType biasType)
     return ut.TestGetWorkspaceSize(&workspaceSize);
 }
 
+TEST(QuantBatchMatmulV4EmptyTensor, NzZeroNReturnsEmptyOutputWithoutWorkspace)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    for (bool transposeX2 : {false, true}) {
+        SCOPED_TRACE(testing::Message() << "transposeX2=" << transposeX2);
+        std::vector<int64_t> x2Shape = transposeX2 ? std::vector<int64_t>{0, 32} : std::vector<int64_t>{32, 0};
+        std::vector<int64_t> x2StorageShape = transposeX2 ? std::vector<int64_t>{1, 0, 16, 32} :
+                                                            std::vector<int64_t>{0, 2, 16, 32};
+        TensorDesc x1Desc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
+        TensorDesc x2Desc(x2Shape, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, x2StorageShape);
+        TensorDesc scaleDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+        TensorDesc pertokenDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+        TensorDesc outDesc({4, 0}, ACL_BF16, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnQuantMatmulV4,
+                            INPUT(x1Desc, x2Desc, scaleDesc, nullptr, pertokenDesc, nullptr, false, transposeX2),
+                            OUTPUT(outDesc));
+        uint64_t workspaceSize = 1;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
 TEST(l2_QuantBatchMatmulV4_310P_pertoken, bias_fp32_success)
 {
     SocVersionManager versionManager(SocVersion::ASCEND310P);

@@ -400,6 +400,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - 上表数据类型列中的角标“3”代表该系列不支持的数据类型。
     - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
     - 支持groupSize传非0。
+    - 全量化场景下，当输入x1的m为0或x2的n为0时，输出为空Tensor。
     </details>
     <!-- end id18 -->
 
@@ -435,7 +436,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out是空tensor。</td>
+      <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out是空tensor，且不属于上述支持的空Tensor场景。</td>
     </tr>
     <tr>
         <td>输入的yScale、x1Offset和yOffset不是nullptr并且不是空tensor。</td>

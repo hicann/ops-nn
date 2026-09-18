@@ -390,6 +390,76 @@ TEST(QuantBatchMatmulWeightNzCompatibility, KeepsLegacyTwoDimensionalX2ScaleOuts
     EXPECT_EQ(RunInt8WeightNzScaleShapeCase({}, {1, 256}, workspaceSize, true), ACLNN_SUCCESS);
 }
 
+TEST(QuantBatchMatmulWeightNzEmptyTensor, ZeroNReturnsEmptyOutputWithoutWorkspace)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    const std::vector<std::pair<bool, bool>> transposeCases = {
+        {false, false},
+        {false, true},
+        {true, false},
+        {true, true},
+    };
+    for (const auto& [transposeX1, transposeX2] : transposeCases) {
+        for (bool batched : {false, true}) {
+            std::vector<int64_t> x1Shape = transposeX1 ? std::vector<int64_t>{32, 4} : std::vector<int64_t>{4, 32};
+            std::vector<int64_t> x2Shape = transposeX2 ? std::vector<int64_t>{0, 32} : std::vector<int64_t>{32, 0};
+            std::vector<int64_t> x2StorageShape = transposeX2 ? std::vector<int64_t>{1, 0, 16, 32} :
+                                                                std::vector<int64_t>{0, 2, 16, 32};
+            std::vector<int64_t> outShape = {4, 0};
+            if (batched) {
+                for (auto* shape : {&x1Shape, &x2Shape, &x2StorageShape, &outShape}) {
+                    shape->insert(shape->begin(), 2);
+                }
+            }
+            for (int64_t scaleSize : {0, 1}) {
+                SCOPED_TRACE(testing::Message() << "transposeX1=" << transposeX1 << ", transposeX2=" << transposeX2
+                                                << ", batched=" << batched << ", scaleSize=" << scaleSize);
+                TensorDesc x1Desc(x1Shape, ACL_INT8, ACL_FORMAT_ND);
+                TensorDesc x2Desc(x2Shape, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, x2StorageShape);
+                TensorDesc x2ScaleDesc({scaleSize}, ACL_UINT64, ACL_FORMAT_ND);
+                TensorDesc outDesc(outShape, ACL_BF16, ACL_FORMAT_ND);
+                auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                    INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                          nullptr, transposeX1, transposeX2, 0),
+                                    OUTPUT(outDesc));
+                uint64_t workspaceSize = 1;
+                EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+                EXPECT_EQ(workspaceSize, 0U);
+            }
+        }
+    }
+}
+
+TEST(QuantBatchMatmulWeightNzEmptyTensor, RejectsZeroNOutsideDAV3510)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_2201);
+    TensorDesc x1Desc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2Desc({32, 0}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {0, 2, 16, 32});
+    TensorDesc x2ScaleDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc outDesc({4, 0}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulWeightNz,
+        INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
+        OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    EXPECT_NE(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST(QuantBatchMatmulWeightNzEmptyTensor, RejectsZeroKWithNonEmptyOutput)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1Desc({4, 0}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2Desc({0, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 0, 16, 32});
+    TensorDesc x2ScaleDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc outDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulWeightNz,
+        INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
+        OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    EXPECT_NE(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
 TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeNormal)
 {
     op::NpuArchManager archManager(NpuArch::DAV_3510);

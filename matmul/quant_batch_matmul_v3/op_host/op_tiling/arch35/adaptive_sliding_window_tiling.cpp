@@ -282,6 +282,15 @@ ge::graphStatus AdaptiveSlidingWindowTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->SetBlockDim(basicTiling_.usedCoreNum);
+    // IsCapable may replace the internal INT4 dtypes with INT8; the input descriptors retain the original dtypes.
+    const auto x1Dtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
+    const auto x2Dtype = context_->GetInputDesc(GetX2Idx())->GetDataType();
+    if (x1Dtype == ge::DT_INT4 && x2Dtype == ge::DT_INT4 && !compileInfo_.supportMmadS8S4) {
+        // A4W4I uses SyncAll<false> between AIV preprocessing and matmul; all cores must start together.
+        OP_TILING_CHECK(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to set batch scheduling for A4W4I."),
+                        return ge::GRAPH_FAILED);
+    }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(1); // Set workspace size.
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);

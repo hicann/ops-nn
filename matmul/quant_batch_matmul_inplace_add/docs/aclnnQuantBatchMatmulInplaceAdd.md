@@ -151,7 +151,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2</td>
-      <td>√</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>transposeX1（bool）</td>

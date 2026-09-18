@@ -536,16 +536,11 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
                                             x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
             auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
                                             x2->GetViewShape().GetDim(x2DimNum - 1);
-            if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
-                if (inputSizeM == 0) {
-                    OP_LOGD("aclnnV4 nz m=0");
-                    return ACLNN_SUCCESS;
-                }
-            } else {
-                if (inputSizeM == 0 || inputSizeN == 0) {
-                    OP_LOGD("aclnnV4 nd m/n=0");
-                    return ACLNN_SUCCESS;
-                }
+            if (inputSizeM == 0 || inputSizeN == 0) {
+                OP_LOGD("%s: M=%ld, N=%ld; at least one output dimension is zero. "
+                        "Skip matmul computation and return success with an empty output tensor.",
+                        apiName, inputSizeM, inputSizeN);
+                return ACLNN_SUCCESS;
             }
         }
     }
