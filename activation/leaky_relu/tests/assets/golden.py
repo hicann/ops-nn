@@ -72,3 +72,34 @@ def aclnn_leaky_relu_golden(self, negativeSlope, out=None, **kwargs):
     if hasattr(negativeSlope, "item"):
         negativeSlope = negativeSlope.item()
     return [torch.nn.functional.leaky_relu(self, negative_slope=negativeSlope)]
+
+
+# ----------------------------------------------------------------------------
+# E2E 通路（纯新增，上方存量 kernel/aclnn golden 与 __golden__ 注册保持原样）:
+# torch.ops.aten.leaky_relu 的 NPU 侧由 torch_npu 的 PrivateUse1 kernel 分派到
+# aclnnLeakyRelu（本算子交付的 API），golden 侧直接调 ATen CPU kernel，两侧实现
+# 来源独立。tolerance 不另行声明，走框架缺省（浮点 mix_tolerance / 整型逐位比对）。
+# ----------------------------------------------------------------------------
+__spec__ = {"torch.ops.aten.leaky_relu": "LeakyReluE2eSpec"}
+
+
+def leaky_relu_e2e_golden(input, negative_slope=0.0, **kwargs):
+    """
+    E2E golden for torch.ops.aten.leaky_relu.
+    Parameters follow the aten schema (self / negative_slope) without outputs;
+    tensors are CPU torch.Tensor bound positionally via the param plan.
+    Runs the ATen CPU kernel as the reference against the torch_npu dispatch
+    (aten::leaky_relu -> aclnnLeakyRelu).
+
+    Returns:
+        [output]
+    """
+    import torch
+
+    if hasattr(negative_slope, "item"):
+        negative_slope = negative_slope.item()
+    return [torch.nn.functional.leaky_relu(input, negative_slope=float(negative_slope))]
+
+
+class LeakyReluE2eSpec:
+    golden = staticmethod(leaky_relu_e2e_golden)
