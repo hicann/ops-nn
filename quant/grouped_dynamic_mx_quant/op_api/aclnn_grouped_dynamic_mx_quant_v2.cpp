@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <dlfcn.h>
+#include <cmath>
 #include <new>
 #include "aclnn_grouped_dynamic_mx_quant_v2.h"
 #include "grouped_dynamic_mx_quant.h"
@@ -38,6 +39,8 @@ static constexpr int64_t X_DIM_NUM = 2;
 static constexpr int64_t NUM_TWO = 2;
 static constexpr int64_t SCALE_DIM_NUM = 3;
 static constexpr uint64_t NUM_ZERO = 0;
+
+static bool IsDoubleZero(double value) { return std::fpclassify(value) == FP_ZERO; }
 
 static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
                                                                          op::DataType::DT_BF16};
@@ -148,21 +151,21 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
                  return false);
         if (isFp4) {
             if (dstType == op::DataType::DT_FLOAT4_E2M1) {
-                OP_CHECK(dstTypeMax == 0.0 || (dstTypeMax >= 6.0 && dstTypeMax <= 12.0),
+                OP_CHECK(IsDoubleZero(dstTypeMax) || (dstTypeMax >= 6.0 && dstTypeMax <= 12.0),
                          OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                                  "dstTypeMax:%f only support '0.0' or range [6.0, 12.0] for FLOAT4_E2M1.", dstTypeMax),
                          return false);
             } else {
                 static constexpr double kE1M2_MAX = 3.5;
                 static constexpr double kFloatUlpEpsilon = 2.5e-7;
-                OP_CHECK(dstTypeMax == 0.0 || (dstTypeMax >= 1.75 && dstTypeMax <= kE1M2_MAX - kFloatUlpEpsilon),
+                OP_CHECK(IsDoubleZero(dstTypeMax) || (dstTypeMax >= 1.75 && dstTypeMax <= kE1M2_MAX - kFloatUlpEpsilon),
                          OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                                  "dstTypeMax:%f only support '0.0' or range [1.75, %1.7f) for FLOAT4_E1M2.", dstTypeMax,
                                  kE1M2_MAX),
                          return false);
             }
         } else {
-            OP_CHECK(dstTypeMax == 0.0,
+            OP_CHECK(IsDoubleZero(dstTypeMax),
                      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax only support '0.0' for FLOAT8, get: %f", dstTypeMax),
                      return false);
         }

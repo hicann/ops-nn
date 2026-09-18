@@ -119,6 +119,27 @@ TEST_F(l2_grouped_dynamic_mx_quant_v2_test, ascend950_grouped_dynamic_mx_quant_v
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_grouped_dynamic_mx_quant_v2_test, ascend950_grouped_dynamic_mx_quant_v2_fp16_E5M2_tiny_nonzero_fail)
+{
+    TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({3, 5, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
+    int64_t blocksize = 32;
+    int64_t scaleAlg = 0;
+    double dstTypeMax = DBL_EPSILON;
+    const char* roundMode = "rint";
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnGroupedDynamicMxQuantV2,
+                        INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize, scaleAlg, dstTypeMax),
+                        OUTPUT(y_desc, mxscale_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_grouped_dynamic_mx_quant_v2_test, ascend950_grouped_dynamic_mx_quant_v2_fp16_E4M3FN_odd_tail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
