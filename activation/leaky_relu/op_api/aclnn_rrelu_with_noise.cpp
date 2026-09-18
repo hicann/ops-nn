@@ -95,7 +95,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* noise, const
 
 static bool CheckFormatValid(const aclTensor* self, const aclTensor* noise, const aclTensor* out)
 {
-    const size_t max_support_dim = 32;
+    // 框架gert::Shape::kMaxDimNum为25（定长数组），超过25维的shape会被截断，numel计算错误并静默产出错误结果，故维度上限为25
+    const size_t max_support_dim = 25;
 
     OP_CHECK_MAX_DIM(self, max_support_dim, return false);
     OP_CHECK_MAX_DIM(noise, max_support_dim, return false);
