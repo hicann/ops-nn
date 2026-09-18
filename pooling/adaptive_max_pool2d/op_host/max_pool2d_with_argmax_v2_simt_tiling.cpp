@@ -101,7 +101,7 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs()
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "AdaptiveMaxPool2d: invalid dtype %s, should be BFloat16、Float16 or Float32",
+                                        "AdaptiveMaxPool2d: invalid dtype %s, should be BFloat16, Float16 or Float32",
                                         Ops::Base::ToString(dtype).c_str());
         return ge::GRAPH_FAILED;
     }
