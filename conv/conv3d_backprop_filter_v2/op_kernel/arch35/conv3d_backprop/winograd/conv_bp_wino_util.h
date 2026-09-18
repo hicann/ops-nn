@@ -16,15 +16,11 @@
 #ifndef CONV_BP_WINO_UTIL_H
 #define CONV_BP_WINO_UTIL_H
 
-#include "basic_api/kernel_basic_intf.h"
 #include "utils/std/algorithm.h"
 #include "op_kernel/math_util.h"
+#include "../util/conv_bp_common_util.h"
 
-template <typename T>
-static constexpr __aicore__ inline uint32_t C0()
-{
-    return AscendC::DEFAULT_C0_SIZE / sizeof(T);
-}
+using BpUtils::C0;
 
 template <typename T>
 static constexpr __aicore__ inline uint32_t VL()
@@ -168,10 +164,9 @@ static constexpr __aicore__ inline uint32_t CeilDiv(const uint32_t a, const uint
 } // namespace ConstexprMaths
 
 namespace BlockConfig {
-enum InputTensor {
-    FMAP,
-    DY,
-};
+// InputTensor 枚举已迁移至公共层 ConvBpUtil（winograd/fullload 共用），此处保留别名兼容既有引用；
+// FMAP/DY 经 using 声明引入，保证本命名空间内裸用枚举值的比较（如 TensorType == FMAP）不变
+using InputTensor = BpUtils::InputTensor;
 
 template <uint16_t SingleShapeCoutVal, uint16_t SingleShapeCinVal, uint16_t SingleTransformC1Val,
           uint16_t SingleShapeTileHVal, uint16_t SingleShapeTileWVal, uint8_t SingleTransformBufCntVal,
@@ -205,9 +200,9 @@ static constexpr __aicore__ inline uint16_t SingleShapeCin()
 template <typename TilingT, InputTensor TensorType>
 static constexpr __aicore__ inline uint16_t SingleShapeC()
 {
-    if constexpr (TensorType == FMAP) {
+    if constexpr (TensorType == InputTensor::FMAP) {
         return SingleShapeCin<TilingT>();
-    } else if constexpr (TensorType == DY) {
+    } else if constexpr (TensorType == InputTensor::DY) {
         return SingleShapeCout<TilingT>();
     }
 }
@@ -300,61 +295,12 @@ static __aicore__ inline void CalRtSingleShapeBlock(RtTiling& tiling, uint32_t c
 
 } // namespace BlockConfig
 
-struct CoutCinRange {
-    uint32_t coutIdx = 0;
-    uint32_t cinIdx = 0;
-    uint32_t coutLength = 0;
-    uint32_t cinLength = 0;
-
-    template <BlockConfig::InputTensor t>
-    __aicore__ inline uint32_t GetIdx() const
-    {
-        if constexpr (t == BlockConfig::InputTensor::FMAP) {
-            return cinIdx;
-        } else if constexpr (t == BlockConfig::InputTensor::DY) {
-            return coutIdx;
-        }
-    }
-
-    template <BlockConfig::InputTensor t>
-    __aicore__ inline uint32_t GetLen() const
-    {
-        if constexpr (t == BlockConfig::InputTensor::FMAP) {
-            return cinLength;
-        } else if constexpr (t == BlockConfig::InputTensor::DY) {
-            return coutLength;
-        }
-    }
-
-    __aicore__ inline bool NotEmpty() const { return coutLength != 0 && cinLength != 0; }
-};
-
-static inline constexpr uint32_t __aicore__ AivNumInBlock()
-{
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    return 2;
-#else
-    return 1;
-#endif
-}
-
-static inline uint32_t __aicore__ AivCoreId()
-{
-    // use it in aiv only
-    return GetBlockIdx();
-}
-
-static inline uint32_t __aicore__ AicCoreId()
-{
-    if ASCEND_IS_AIC {
-        return GetBlockIdx();
-    }
-    if ASCEND_IS_AIV {
-        return GetBlockIdx() / AivNumInBlock();
-    }
-}
-
-static inline uint32_t __aicore__ AivNums() { return GetBlockNum() * AivNumInBlock(); }
+// ConvBpUtil（winograd/fullload 共用），此处保留全局别名兼容既有引用
+using CoutCinRange = BpUtils::CoutCinRange;
+using BpUtils::AicCoreId;
+using BpUtils::AivCoreId;
+using BpUtils::AivNumInBlock;
+using BpUtils::AivNums;
 
 // 余数均摊切分实现
 //

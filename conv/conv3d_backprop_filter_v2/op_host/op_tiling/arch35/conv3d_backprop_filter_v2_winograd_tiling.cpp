@@ -290,7 +290,7 @@ ge::graphStatus Conv3DBackpropFilterV2WinogradTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DBackpropFilterV2WinogradTiling, 2);
+REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DBackpropFilterV2WinogradTiling, 9);
 } // namespace Conv
 } // namespace NN
 } // namespace Ops

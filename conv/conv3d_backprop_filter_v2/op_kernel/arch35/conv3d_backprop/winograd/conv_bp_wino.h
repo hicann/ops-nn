@@ -75,8 +75,10 @@ public:
         BlockConfig::RtTiling tiling;
         BlockConfig::CalRtSingleShapeBlock<TilingT>(tiling, cout_, cin_);
 
-        // 可切k的话进行尾轮循环
-        auto blockIter = BlockIterator<BasicBlockIterDir, TilingT>::Create(cuttableK > 1, cout_, cin_, tiling);
+        // 可切k的话进行尾轮循环（util 化：BlockIterator 单模板参 + SingleShape 运行时入参——
+        // 分核档位由 CalRtSingleShapeBlock 运行时自适应，未命中调节档时为 TilingT 模板静态量）
+        auto blockIter = BlockIterator<BasicBlockIterDir>::Create(cuttableK > 1, cout_, cin_, tiling.singleShapeCout,
+                                                                  tiling.singleShapeCin);
 
         uint32_t watermarkResidentC = 0;
 
