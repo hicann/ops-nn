@@ -868,27 +868,6 @@
     <td>让NPU设备休眠指定的时钟周期数，通过忙等待实现精确的延时控制，语义与CUDA的torch.cuda._sleep一致。</td>
   </tr>
   <tr>
-    <td>control</td>
-    <td><a href="../../control/npu_alloc_float_status/README.md">npu_alloc_float_status</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>分配8个float32零值的Tensor，用于NPU溢出状态检测。</td>
-  </tr>
-  <tr>
-    <td>control</td>
-    <td><a href="../../control/npu_clear_float_status/README.md">npu_clear_float_status</a></td>
-    <td>√</td>
-    <td>×</td>
-    <td>×</td>
-    <td>√</td>
-    <td>√</td>
-    <td>AI Core</td>
-    <td>清除NPU浮点溢出状态寄存器，输出固定8个float32零值。</td>
-  </tr>
-  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>
@@ -1650,16 +1629,6 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/add_row_ranges/README.md">add_row_ranges</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对矩阵x的每一行r，将矩阵src中由indices指定行范围的按列求和结果累加到x对应行上。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/apply_top_k_top_p_with_sorted/README.md">apply_top_k_top_p_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1947,16 +1916,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>根据indices指定的第0维位置，将v中的值从x对应切片中减去并输出更新后的张量。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/inplace_update/README.md">inplace_update</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>根据indices将 updates 中的值更新到 x 中，实现原地更新操作。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2327,16 +2286,6 @@
     <td>✓</td>
     <td>AI CPU</td>
     <td>SparseSegmentSum 用于沿稀疏分段对输入张量切片求和。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/sparse_segment_sum_grad/README.md">sparse_segment_sum_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>SparseSegmentSumGrad 是 SparseSegmentSum 的反向传播算子，用于计算稀疏分段求和操作的梯度。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -4470,16 +4419,6 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/avg_pool1_d/README.md">avg_pool1d</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入Tensor的最后一维做一维平均池化，支持不对称padding、ceil_mode输出长度修正和count_include_pad分母选择。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
     <td><a href="../../pooling/avg_pool1d_avg_matrix/README.md">avg_pool1d_avg_matrix</a></td>
     <td>✓</td>
     <td>✗</td>
@@ -4527,16 +4466,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
-    <td><a href="../../pooling/dilation2_d/README.md">dilation2_d</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入图像的每个通道独立执行滑窗操作：在每个窗口位置，取输入值与滤波器值之和的最大值作为输出。</td>
   </tr>
   <tr>
     <td>pooling</td>
@@ -4620,16 +4549,6 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/max_pool_grad_grad_with_argmax/README.md">max_pool_grad_grad_with_argmax</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>最大池化的二阶梯度反向传播，根据argmax索引从grad张量中收集值到output。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
     <td><a href="../../pooling/max_pool_grad_with_argmax_v3/README.md">max_pool_grad_with_argmax_v3</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4670,16 +4589,6 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/max_pool_3d_grad_grad/README.md">max_pool_3d_grad_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>三维最大池化的二阶梯度，根据orig_x与orig_y的首个匹配位置从grads取值；无匹配时按固定顺序累加有效窗口内的grads。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
     <td><a href="../../pooling/max_pool3d_with_argmax_v2/README.md">max_pool3d_with_argmax_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4687,26 +4596,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
-    <td><a href="../../pooling/avg_pool_update/README.md">avg_pool_update</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算平均池化的更新值，将求和池化结果除以池化窗口实际覆盖的有效元素个数得到平均值。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
-    <td><a href="../../pooling/roi_pooling/README.md">roi_pooling</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入特征图按ROI区域进行最大池化，输出固定尺寸的池化结果，用于目标检测等任务。</td>
   </tr>
   <tr>
     <td>quant</td>
@@ -5380,46 +5269,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/sparse_apply_rms_prop/README.md">sparse_apply_rms_prop</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对indices指定的稀疏行执行RMSProp优化器更新，gather对应行应用更新公式后scatter写回，原地更新var/ms/mom，未命中行保持不变。对标TensorFlow的SparseApplyRMSProp接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/sparse_apply_proximal_adagrad/README.md">sparse_apply_proximal_adagrad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对indices指定的稀疏行执行ProximalAdagrad优化（Adagrad自适应学习率结合FOBOS近端的L1软阈值与L2缩放），原地更新var/accum。对标TensorFlow的SparseApplyProximalAdagrad接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/sparse_apply_ftrl/README.md">sparse_apply_ftrl</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对indices指定的稀疏行执行FTRL-proximal优化器更新，原地更新var/accum/linear。对标TensorFlow的SparseApplyFtrl和ResourceSparseApplyFtrl接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/sparse_apply_ftrl_v2/README.md">sparse_apply_ftrl_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对indices指定的稀疏行执行FTRL-proximal V2优化器更新，原地更新var/accum/linear。对标TensorFlow的ResourceSparseApplyFtrlV2接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_momentum/README.md">apply_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5458,16 +5307,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>执行带L1/L2正则的近端梯度下降单步更新，显式输出更新后的var_out；本仓提供Ascend950的GE图模式实现，对齐TensorFlow近端梯度下降更新语义。</td>
-  </tr>
-	  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/sparse_apply_adagrad_v2/README.md">sparse_apply_adagrad_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>稀疏版本的AdagradV2优化器算子，根据稀疏梯度和索引向量原地更新参数变量和累加器。</td>
   </tr>
   <tr>
     <td>optim</td>

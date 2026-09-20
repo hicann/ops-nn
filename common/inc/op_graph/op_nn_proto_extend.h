@@ -2397,6 +2397,44 @@ currently supported.
     .OP_END_FACTORY_REG(LpNormUpdateV2)
 
     /**
+    *@brief Performs Position Sensitive PS ROI Pooling . \n
+
+    *@par Inputs:
+    * Two inputs, including:
+    *@li x: A tensor of type float16 or float32, describing the feature
+    * map, dimension C1 must be equal to
+    * (int(output_dim+15)/C0))*group_size*group_size.
+    *@li rois: A tensor of type float16 or float32, with shape
+    * [batch, 5, rois_num], describing the ROIs, each ROI consists of five
+    * elements: "batch_id", "x1", "y1", "x2", and "y2", which "batch_id" indicates
+    * the index of the input feature map, "x1", "y1", "x2", or "y2" must be
+    * greater than or equal to "0.0" . \n
+
+    *@par Attributes:
+    *@li output_dim: A required int32, specifying the number of output channels,
+    * must be greater than 0.
+    *@li group_size: A required int32, specifying the number of groups to encode
+    * position-sensitive score maps, must be within the range (0, 128).
+    *@li spatial_scale: A required float32, scaling factor for mapping the input
+    * coordinates to the ROI coordinates . \n
+
+    *@par Outputs:
+    *y: A tensor of type float16 or float32, describing the result
+    * feature map . \n
+
+    *@attention Constraints:
+    * HC1HWC0: channel must be Group_size squared, rois_num is a multiple of 16
+    */
+    REG_OP(PSROIPoolingV2)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(rois, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .REQUIRED_ATTR(spatial_scale, Float)
+    .REQUIRED_ATTR(output_dim, Int)
+    .REQUIRED_ATTR(group_size, Int)
+    .OP_END_FACTORY_REG(PSROIPoolingV2)
+
+    /**
     * @brief Computes second-order gradients of the maxpooling function .
 
     * @par Inputs:
@@ -2440,32 +2478,34 @@ currently supported.
     .ATTR(data_format, String, "NHWC")
     .OP_END_FACTORY_REG(MaxPoolGradGrad)
 
+#ifndef OPS_PROTO_DEF_MAXPOOLGRADGRADWITHARGMAX
+#define OPS_PROTO_DEF_MAXPOOLGRADGRADWITHARGMAX
     /**
-    * @brief Computes second-order gradients of the maxpooling function .
+        * @brief Computes second-order gradients of the maxpooling function .
 
-    * @par Inputs:
-    * @li x: Original forward input tensor. Supported type: float16, Support format: NC1HWC0.
-    * @li grad: Gradient tensor. Supported type: float16, Support format: NC1HWC0.
-    * @li argmax: An tensor of type uint16 or int64, Support format: NC1HWC0.
-    * @par Attributes:
-    * @li ksize: A required list, specifying the size of the sliding window.
-    * @li strides: A required list, specifying the stride of the sliding window.
-    * @li padding: A required string, window sliding mode. Either SAME or VALID.
-    * @par Outputs:
-    * y:Result tensor. Supported type: float16, Support format: NC1HWC0.
+        * @par Inputs:
+        * @li x: Original forward input tensor. Supported type: float16, Support format: NC1HWC0.
+        * @li grad: Gradient tensor. Supported type: float16, Support format: NC1HWC0.
+        * @li argmax: An tensor of type uint16 or int64, Support format: NC1HWC0.
+        * @par Attributes:
+        * @li ksize: A required list, specifying the size of the sliding window.
+        * @li strides: A required list, specifying the stride of the sliding window.
+        * @li padding: A required string, window sliding mode. Either SAME or VALID.
+        * @par Outputs:
+        * y:Result tensor. Supported type: float16, Support format: NC1HWC0.
 
-    * @attention Constraints:
-    * @li Only the cloud platform is supported.
-    * @li "x1" and "grads" must have the same shape.
-    * @li length of the shape of x, grads, argmax, y must be 5.
-    * @li shape of argmax must be (fmap_n, fmap_c1, kernel_h * kernel_w,
-    * (shape_max_pool[2] * shape_max_pool[3] + 15) // 16 * 16, 1),
-    * or (fmap_n, fmap_c1, kernel_h * kernel_w,
-    * (shape_max_pool[2] * shape_max_pool[3] + 31) // 16, 16), else failed . \n
+        * @attention Constraints:
+        * @li Only the cloud platform is supported.
+        * @li "x1" and "grads" must have the same shape.
+        * @li length of the shape of x, grads, argmax, y must be 5.
+        * @li shape of argmax must be (fmap_n, fmap_c1, kernel_h * kernel_w,
+        * (shape_max_pool[2] * shape_max_pool[3] + 15) // 16 * 16, 1),
+        * or (fmap_n, fmap_c1, kernel_h * kernel_w,
+        * (shape_max_pool[2] * shape_max_pool[3] + 31) // 16, 16), else failed . \n
 
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator MaxPoolGradGradWithArgmax.
-    */
+        * @par Third-party framework compatibility
+        * Compatible with the TensorFlow operator MaxPoolGradGradWithArgmax.
+        */
     REG_OP(MaxPoolGradGradWithArgmax)
     .INPUT(x, TensorType::RealNumberType())
     .INPUT(grad, TensorType::RealNumberType())
@@ -2475,6 +2515,7 @@ currently supported.
     .REQUIRED_ATTR(strides, ListInt)
     .REQUIRED_ATTR(padding, String)
     .OP_END_FACTORY_REG(MaxPoolGradGradWithArgmax)
+#endif
 
     /**
     * @brief Performs max pooling on the input and outputs both max values and indices .
@@ -3535,43 +3576,404 @@ currently supported.
     .REQUIRED_ATTR(equation, String)
     .REQUIRED_ATTR(N, Int)
     .OP_END_FACTORY_REG(Einsum)
+
+#ifndef OPS_PROTO_DEF_ROIPOOLING
+#define OPS_PROTO_DEF_ROIPOOLING
     /**
-    *@brief Performs Position Sensitive PS ROI Pooling . \n
+            *@brief Performs Region of Interest (ROI) Pooling . \n
 
-    *@par Inputs:
-    * Two inputs, including:
-    *@li x: A tensor of type float16 or float32, describing the feature
-    * map, dimension C1 must be equal to
-    * (int(output_dim+15)/C0))*group_size*group_size.
-    *@li rois: A tensor of type float16 or float32, with shape
-    * [batch, 5, rois_num], describing the ROIs, each ROI consists of five
-    * elements: "batch_id", "x1", "y1", "x2", and "y2", which "batch_id" indicates
-    * the index of the input feature map, "x1", "y1", "x2", or "y2" must be
-    * greater than or equal to "0.0" . \n
+            *@par Inputs:
+            * Three inputs, including:
+            *@li x: A tensor of type float16 or float32, describing the feature
+            * map. The data of x must be greater than or equal to "0.0".
+            *@li rois: A tensor of type float16 or float32, with 3D shape
+            * [batch, 5, roi_max_num], describing the RIOs. Each ROI consists of five
+            * elements: "batch_id", "x1", "y1", "x2", and "y2", which "batch_id" indicates
+            * the index of the input feature map, "x1", "y1", "x2", or "y2" must be
+            * greater than or equal to "0.0".
+            * roi_max_num must be less than or equal to 6000 and must be divided by 16.
+            * The input data of the rois cannot exceed the width and height range of the x,
+            * otherwise, the accuracy of the output result may not be as expected.
+            *@li roi_actual_num: A  optional tensor of type int32, with shape [batch, 8], specifying
+            * the number of ROIs per batch . \n
 
-    *@par Attributes:
-    *@li output_dim: A required int32, specifying the number of output channels,
-    * must be greater than 0.
-    *@li group_size: A required int32, specifying the number of groups to encode
-    * position-sensitive score maps, must be within the range (0, 128).
-    *@li spatial_scale: A required float32, scaling factor for mapping the input
-    * coordinates to the ROI coordinates . \n
+            *@par Attributes:
+            *@li pooled_h: A required int32, specifying the pooled H. Must be greater
+            * than 0.
+            *@li pooled_w: A required int32, specifying the pooled W. Must be greater
+            * than 0.
+            *@li spatial_scale_h: An required scaling factor for mapping the input
+            * coordinates of height to the ROI coordinates.
+            *@li spatial_scale_w: An required scaling factor for mapping the input
+            * coordinates of width to the ROI coordinates . \n
 
-    *@par Outputs:
-    *y: A tensor of type float16 or float32, describing the result
-    * feature map . \n
+            *@par Outputs:
+            *y: A tensor of type float16 or float32, describing the result
+            * feature map . \n
 
-    *@attention Constraints:
-    * HC1HWC0: channel must be Group_size squared, rois_num is a multiple of 16
-    */
-    REG_OP(PSROIPoolingV2)
+            *@attention Constraints:
+            * For the feature map input:
+            *@li If pooled_h = pooled_w = 2, the feature map size must not exceed 50.
+            *@li If pooled_h = pooled_w = 3, the feature map size must not exceed 60.
+            *@li If pooled_h = pooled_w = 4, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 5, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 6, the feature map size must not exceed 80.
+            *@li If pooled_h = pooled_w = 7, the feature map size must not exceed 80.
+            *@li If pooled_h = pooled_w = 8, the feature map size must not exceed 80.
+            *@li If pooled_h = pooled_w = 9, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 10, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 11, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 12, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 13, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 14, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 15, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 16, the feature map size must not exceed 70.
+            *@li If pooled_h = pooled_w = 17, the feature map size must not exceed 50.
+            *@li If pooled_h = pooled_w = 18, the feature map size must not exceed 40.
+            *@li If pooled_h = pooled_w = 19, the feature map size must not exceed 40.
+            *@li If pooled_h = pooled_w = 20, the feature map size must not exceed 40.
+            *@par Third-party framework compatibility
+            * It is a custom operator. It has no corresponding operator in Caffe.
+            */
+    REG_OP(ROIPooling)
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .INPUT(rois, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .OPTIONAL_INPUT(roi_actual_num, TensorType({DT_INT32}))
+    .REQUIRED_ATTR(pooled_h, Int)
+    .REQUIRED_ATTR(pooled_w, Int)
+    .REQUIRED_ATTR(spatial_scale_h, Float)
+    .REQUIRED_ATTR(spatial_scale_w, Float)
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .OP_END_FACTORY_REG(ROIPooling)
+#endif
+
+#ifndef OPS_PROTO_DEF_ADDROWRANGES
+#define OPS_PROTO_DEF_ADDROWRANGES
+        REG_OP(AddRowRanges)
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .INPUT(src, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .INPUT(indices, TensorType({DT_INT32}))
+    .OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .OP_END_FACTORY_REG(AddRowRanges)
+#endif
+
+#ifndef OPS_PROTO_DEF_DILATION2D
+#define OPS_PROTO_DEF_DILATION2D
+        REG_OP(Dilation2D)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8, DT_UINT16}))
+    .INPUT(filter,
+           TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8, DT_UINT16}))
+    .OUTPUT(y,
+            TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8, DT_UINT16}))
+    .REQUIRED_ATTR(strides, ListInt)
+    .REQUIRED_ATTR(rates, ListInt)
+    .ATTR(padding_mode, String, "SAME")
+    .ATTR(pads, ListInt, {0, 0, 0, 0})
+    .ATTR(ceil_mode, Bool, false)
+    .ATTR(data_format, String, "NHWC")
+    .OP_END_FACTORY_REG(Dilation2D)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSESEGMENTSUMGRAD
+#define OPS_PROTO_DEF_SPARSESEGMENTSUMGRAD
+        REG_OP(SparseSegmentSumGrad)
+    .INPUT(grad, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
+    .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
+    .INPUT(segment_ids, TensorType({DT_INT32, DT_INT64}))
+    .INPUT(output_dim0, TensorType({DT_INT32}))
+    .OUTPUT(output, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
+    .OP_END_FACTORY_REG(SparseSegmentSumGrad)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYADADELTA
+#define OPS_PROTO_DEF_SPARSEAPPLYADADELTA
+        REG_OP(SparseApplyAdadelta)
+    .INPUT(var, TensorType({DT_FLOAT}))
+    .INPUT(accum, TensorType({DT_FLOAT}))
+    .INPUT(accum_update, TensorType({DT_FLOAT}))
+    .INPUT(lr, TensorType({DT_FLOAT}))
+    .INPUT(rho, TensorType({DT_FLOAT}))
+    .INPUT(epsilon, TensorType({DT_FLOAT}))
+    .INPUT(grad, TensorType({DT_FLOAT}))
+    .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
+    .OUTPUT(var, TensorType({DT_FLOAT}))
+    .OUTPUT(accum, TensorType({DT_FLOAT}))
+    .OUTPUT(accum_update, TensorType({DT_FLOAT}))
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(SparseApplyAdadelta)
+#endif
+
+#ifndef OPS_PROTO_DEF_AVGPOOL1D
+#define OPS_PROTO_DEF_AVGPOOL1D
+        REG_OP(AvgPool1D)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(rois, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .REQUIRED_ATTR(spatial_scale, Float)
-    .REQUIRED_ATTR(output_dim, Int)
-    .REQUIRED_ATTR(group_size, Int)
-    .OP_END_FACTORY_REG(PSROIPoolingV2)
+    .REQUIRED_ATTR(ksize, Int)
+    .REQUIRED_ATTR(strides, Int)
+    .REQUIRED_ATTR(pads, ListInt)
+    .ATTR(ceil_mode, Bool, false)
+    .ATTR(count_include_pad, Bool, false)
+    .OP_END_FACTORY_REG(AvgPool1D)
+#endif
+
+#ifndef OPS_PROTO_DEF_MAXPOOL3DGRADGRAD
+#define OPS_PROTO_DEF_MAXPOOL3DGRADGRAD
+        REG_OP(MaxPool3DGradGrad)
+    .INPUT(orig_x, TensorType::RealNumberType())
+    .INPUT(orig_y, TensorType::RealNumberType())
+    .INPUT(grads, TensorType::RealNumberType())
+    .OUTPUT(y, TensorType::RealNumberType())
+    .REQUIRED_ATTR(ksize, ListInt)
+    .REQUIRED_ATTR(strides, ListInt)
+    .REQUIRED_ATTR(pads, ListInt)
+    .ATTR(data_format, String, "NDHWC")
+    .OP_END_FACTORY_REG(MaxPool3DGradGrad)
+#endif
+
+#ifndef OPS_PROTO_DEF_NPUALLOCFLOATSTATUS
+#define OPS_PROTO_DEF_NPUALLOCFLOATSTATUS
+        REG_OP(NPUAllocFloatStatus)
+    .OUTPUT(data, TensorType({DT_FLOAT}))
+    .OP_END_FACTORY_REG(NPUAllocFloatStatus)
+#endif
+
+#ifndef OPS_PROTO_DEF_NPUCLEARFLOATSTATUS
+#define OPS_PROTO_DEF_NPUCLEARFLOATSTATUS
+        REG_OP(NPUClearFloatStatus)
+    .INPUT(addr, TensorType({DT_FLOAT}))
+    .OUTPUT(data, TensorType({DT_FLOAT}))
+    .OP_END_FACTORY_REG(NPUClearFloatStatus)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYFTRLV2
+#define OPS_PROTO_DEF_SPARSEAPPLYFTRLV2
+        REG_OP(SparseApplyFtrlV2)
+    .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(linear, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(grad, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(indices, TensorType::IndexNumberType())
+    .INPUT(lr, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(l1, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(l2, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(l2_shrinkage, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(lr_power, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(linear, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(SparseApplyFtrlV2)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYPROXIMALADAGRAD
+#define OPS_PROTO_DEF_SPARSEAPPLYPROXIMALADAGRAD
+        REG_OP(SparseApplyProximalAdagrad)
+    .INPUT(var, TensorType::NumberType())
+    .INPUT(accum, TensorType::NumberType())
+    .INPUT(lr, TensorType::NumberType())
+    .INPUT(l1, TensorType::NumberType())
+    .INPUT(l2, TensorType::NumberType())
+    .INPUT(grad, TensorType::NumberType())
+    .INPUT(indices, TensorType::IndexNumberType())
+    .OUTPUT(var, TensorType::NumberType())
+    .OUTPUT(accum, TensorType::NumberType())
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(SparseApplyProximalAdagrad)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYRMSPROP
+#define OPS_PROTO_DEF_SPARSEAPPLYRMSPROP
+        REG_OP(SparseApplyRMSProp)
+    .INPUT(var, TensorType::NumberType())
+    .INPUT(ms, TensorType::NumberType())
+    .INPUT(mom, TensorType::NumberType())
+    .INPUT(lr, TensorType::NumberType())
+    .INPUT(rho, TensorType::NumberType())
+    .INPUT(momentum, TensorType::NumberType())
+    .INPUT(epsilon, TensorType::NumberType())
+    .INPUT(grad, TensorType::NumberType())
+    .INPUT(indices, TensorType::IndexNumberType())
+    .OUTPUT(var, TensorType::NumberType())
+    .OUTPUT(ms, TensorType::NumberType())
+    .OUTPUT(mom, TensorType::NumberType())
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(SparseApplyRMSProp)
+#endif
+
+#ifndef OPS_PROTO_DEF_SCATTERNONALIASINGADD
+#define OPS_PROTO_DEF_SCATTERNONALIASINGADD
+    /**
+     *@brief Scatter non-aliasing add: copy x to y, then scatter-add updates into y at positions specified by indices.
+     *@par Inputs:
+     *Three inputs, including:
+     * @li x: A ND Tensor. Must be one of the following types: float32, float16, int32.
+     * @li indices: A ND Tensor. Must be one of the following types: int32, int64.
+     * @li updates: A ND Tensor. Must be one of the following types: float32, float16, int32.
+     *@par Outputs:
+     *y: A ND Tensor. Must be one of the following types: float32, float16, int32.
+     */
+    REG_OP(ScatterNonAliasingAdd)
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
+    .INPUT(indices, TensorType::IndexNumberType())
+    .INPUT(updates, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
+    .OP_END_FACTORY_REG(ScatterNonAliasingAdd)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYFTRL
+#define OPS_PROTO_DEF_SPARSEAPPLYFTRL
+    /**
+     *@brief Updates sparse entries of var, accum, and linear using FTRL-Proximal algorithm.
+     *@par Inputs:
+     *Nine inputs, including:
+     * @li var: A Tensor. Must be one of the following types: float32.
+     * @li accum: A Tensor. Must be one of the following types: float32.
+     * @li linear: A Tensor. Must be one of the following types: float32.
+     * @li grad: A Tensor. Must be one of the following types: float32.
+     * @li indices: A Tensor. Must be one of the following types: int32, int64.
+     * @li lr: A Tensor. Must be one of the following types: float32.
+     * @li l1: A Tensor. Must be one of the following types: float32.
+     * @li l2: A Tensor. Must be one of the following types: float32.
+     * @li lr_power: A Tensor. Must be one of the following types: float32.
+     *
+     *@par Outputs:
+     *Three outputs, including:
+     * @li var: A Tensor. Must be one of the following types: float32.
+     * @li accum: A Tensor. Must be one of the following types: float32.
+     * @li linear: A Tensor. Must be one of the following types: float32.
+     *
+     *@par Attributes:
+     * @li use_locking: An optional bool. Defaults to false.
+     *
+     *@par Third-party framework compatibility
+     *Compatible with the TensorFlow operator SparseApplyFtrl.
+     */
+    REG_OP(SparseApplyFtrl)
+    .INPUT(var, TensorType({DT_FLOAT}))
+    .INPUT(accum, TensorType({DT_FLOAT}))
+    .INPUT(linear, TensorType({DT_FLOAT}))
+    .INPUT(grad, TensorType({DT_FLOAT}))
+    .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
+    .INPUT(lr, TensorType({DT_FLOAT}))
+    .INPUT(l1, TensorType({DT_FLOAT}))
+    .INPUT(l2, TensorType({DT_FLOAT}))
+    .INPUT(lr_power, TensorType({DT_FLOAT}))
+    .OUTPUT(var, TensorType({DT_FLOAT}))
+    .OUTPUT(accum, TensorType({DT_FLOAT}))
+    .OUTPUT(linear, TensorType({DT_FLOAT}))
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(SparseApplyFtrl)
+#endif
+
+#ifndef OPS_PROTO_DEF_AVGPOOLUPDATE
+#define OPS_PROTO_DEF_AVGPOOLUPDATE
+    /**
+     *@brief Average pooling update operator.
+     *@par Inputs:
+     *Two inputs, including:
+     * @li x1: A Tensor. Must be one of the following types: float16, float32.
+     * @li x2: A Tensor. Must be one of the following types: int4, int8, float16, float32. \n
+
+     *@par Attributes:
+     * @li ksize: A required ListInt. The size of the sliding window for each dimension of the input tensor.
+     * @li strides: A required ListInt. The stride of the sliding window for each dimension of the input tensor.
+     * @li padding_mode: An optional String. Padding mode, defaults to "CALCULATED".
+     * @li pads: An optional ListInt. Padding sizes, defaults to {0, 0, 0, 0}.
+     * @li data_format: An optional String. Data format, defaults to "NHWC".
+     * @li ceil_mode: An optional Bool. Whether to use ceil mode, defaults to false.
+     * @li exclusive: An optional Bool. Whether to use exclusive mode, defaults to true. \n
+
+     *@par Outputs:
+     *y: A Tensor. Must be one of the following types: float16, float32.
+     *Has the same type and shape as input x1.
+     *@par Third-party framework compatibility
+     *Compatible with the TensorFlow operator AvgPool.
+     */
+    REG_OP(AvgPoolUpdate)
+    .INPUT(x1, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(x2, TensorType({DT_INT4, DT_INT8, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .REQUIRED_ATTR(ksize, ListInt)
+    .REQUIRED_ATTR(strides, ListInt)
+    .ATTR(padding_mode, String, "CALCULATED")
+    .ATTR(pads, ListInt, {0, 0, 0, 0})
+    .ATTR(data_format, String, "NHWC")
+    .ATTR(ceil_mode, Bool, false)
+    .ATTR(exclusive, Bool, true)
+    .OP_END_FACTORY_REG(AvgPoolUpdate)
+#endif
+
+#ifndef OPS_PROTO_DEF_INPLACEUPDATE
+#define OPS_PROTO_DEF_INPLACEUPDATE
+    /**
+     * @brief Updates specified rows with values in v.
+     * Computes y = x; y[indices[i], ...] = v[i, ...]; return y.
+     *
+     * @par Inputs:
+     * Three inputs, including:
+     * @li x: A Tensor, Format is ND, Support 1D ~ 8D.
+     *     Type must be one of the following types:
+     *     float16, float32, int8, int16, uint16, uint8, int32, int64, uint32,
+     *     uint64, double, bfloat16, complex32, complex64, complex128.
+     * @li indices: A vector of type int32, Format is ND.
+     *     Indices into the left-most dimension of "x".
+     * @li v: A Tensor of the same type as "x", Format is ND.
+     *     Same dimension sizes as x except the first dimension,
+     *     which must be the same as the size of "indices".
+     *
+     * @par Outputs:
+     * y: A Tensor of the same type as "x", Format is ND.
+     *    An alias of "x". The content of "y" is undefined if there are duplicates in indices.
+     *
+     * @par Third-party framework compatibility
+     * Compatible with the TensorFlow operator InplaceUpdate.
+     */
+    REG_OP(InplaceUpdate)
+    .INPUT(x, TensorType::BasicType())
+    .INPUT(indices, TensorType({DT_INT32}))
+    .INPUT(v, TensorType::BasicType())
+    .OUTPUT(y, TensorType::BasicType())
+    .OP_END_FACTORY_REG(InplaceUpdate)
+#endif
+
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYADAGRADV2
+#define OPS_PROTO_DEF_SPARSEAPPLYADAGRADV2
+    /**
+     *@brief Sparse AdagradV2 optimizer update. Updates var and accum based on sparse gradients.
+     *@par Inputs:
+     *Six inputs, including:
+     * @li var: A Tensor of type float32.
+     * @li accum: A Tensor of type float32.
+     * @li lr: A scalar Tensor of type float32.
+     * @li epsilon: A scalar Tensor of type float32.
+     * @li grad: A Tensor of type float32.
+     * @li indices: A 1-D Tensor of type int32.
+
+     *@par Outputs:
+     *Two outputs, including:
+     * @li var: A Tensor. Same type as input "var".
+     * @li accum: A Tensor. Same type as input "accum".
+
+     *@par Attributes:
+     * @li use_locking: Bool, default false. Whether to use locking.
+     * @li update_slots: Bool, default true. Whether to update accum.
+
+     *@par Third-party framework compatibility
+     *Compatible with the TensorFlow operator SparseApplyAdagradV2.
+     */
+    REG_OP(SparseApplyAdagradV2)
+    .INPUT(var, TensorType({DT_FLOAT}))
+    .INPUT(accum, TensorType({DT_FLOAT}))
+    .INPUT(lr, TensorType({DT_FLOAT}))
+    .INPUT(epsilon, TensorType({DT_FLOAT}))
+    .INPUT(grad, TensorType({DT_FLOAT}))
+    .INPUT(indices, TensorType({DT_INT32}))
+    .OUTPUT(var, TensorType({DT_FLOAT}))
+    .OUTPUT(accum, TensorType({DT_FLOAT}))
+    .ATTR(use_locking, Bool, false)
+    .ATTR(update_slots, Bool, true)
+    .OP_END_FACTORY_REG(SparseApplyAdagradV2)
+#endif
 
 } // namespace ge
 #endif

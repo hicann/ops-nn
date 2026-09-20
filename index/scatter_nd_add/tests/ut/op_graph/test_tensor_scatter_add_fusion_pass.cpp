@@ -162,7 +162,7 @@ TEST_F(TensorScatterAddFusionPassTest, pattern_test)
 {
     OPS::NN::TensorScatterAddFusionPass pass;
     std::vector<PatternUniqPtr> patterns = pass.Patterns();
-    EXPECT_EQ(patterns.size(), 1);
+    EXPECT_EQ(patterns.size(), 2);
 }
 
 TEST_F(TensorScatterAddFusionPassTest, pattern_test_mc62)
@@ -204,16 +204,16 @@ TEST_F(TensorScatterAddFusionPassTest, tensor_scatter_add_float16_success)
     EXPECT_FALSE(FindNodeByType(graph, "TensorScatterAdd"));
 }
 
-TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_ascend950_skip)
+TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_ascend950_success)
 {
     auto graph = BuildTestGraph("ScatterNonAliasingAdd", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
     CustomPassContext pass_context;
     OPS::NN::TensorScatterAddFusionPass pass;
     Status status = pass.Run(graph, pass_context);
-    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
-    EXPECT_TRUE(FindNodeByType(graph, "ScatterNonAliasingAdd"));
-    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
-    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdAdd"));
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdAdd"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNonAliasingAdd"));
 }
 
 TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_mc62_success)
