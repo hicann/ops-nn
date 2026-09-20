@@ -8,9 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
 #include "nlohmann/json.hpp"
-#include "error_util.h"
 
 using json = nlohmann::json;
 namespace domi {
@@ -40,11 +41,16 @@ static Status ParseBoundingBoxDecodeAttr(json& attr, std::vector<int64_t>& max_s
         GetAttrListFromJson(attr, stds, dtype);
     } else if (attr["name"] == "wh_ratio_clip" && attr["type"] == kTypeFloat) {
         // float type in json has accuracy loss, so we use string type to store it
-        std::string wh_ratio_clip_str = attr["f"];
         float wh_ratio_clip = 0.016f;
-        if (!StrToFloat(wh_ratio_clip_str, wh_ratio_clip)) {
-            OP_LOGE("bounding_box_decode", "invalid wh_ratio_clip value: %s", wh_ratio_clip_str.c_str());
-            return FAILED;
+        if (attr.contains("f")) {
+            std::string wh_ratio_clip_str = attr["f"];
+            if (!StrToFloat(wh_ratio_clip_str, wh_ratio_clip)) {
+                OP_LOGE("bounding_box_decode", "invalid wh_ratio_clip value: %s", wh_ratio_clip_str.c_str());
+                return FAILED;
+            }
+        } else {
+            // GE 序列化 float 属性时会省略值为 0 的 "f" 字段，此时 wh_ratio_clip 实际值为 0
+            wh_ratio_clip = 0.0f;
         }
         op_dest.SetAttr("wh_ratio_clip", wh_ratio_clip);
     }
@@ -84,35 +90,51 @@ static Status ParseParamsBoundingBoxDecode(const ge::Operator& op_src, ge::Opera
     return SUCCESS;
 }
 
-static Status ParseParamsBoundingBoxDecodeV2(const Message* op_src, ge::Operator& op_dest)
+static Status ParseParamsBoundingBoxDecodeV2(const ge::Operator& op_src, ge::Operator& op_dest)
 {
-    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
     std::vector<int> max_shape;
-    std::vector<float> means;
-    std::vector<float> stds;
-    std::map<string, float> attr_map = {{"means0", 0.0f}, {"means1", 0.0f}, {"means2", 0.0f},
-                                        {"means3", 0.0f}, {"stds0", 1.0f},  {"stds1", 1.0f},
-                                        {"stds2", 1.0f},  {"stds3", 1.0f},  {"wh_ratio_clip", 0.016f}};
-
-    for (const auto& attr : node->attribute()) {
-        if (attr_map.find(attr.name()) != attr_map.end() && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-            attr_map[attr.name()] = attr.f();
-        } else if (attr.name() == "max_shapes") {
-            int nums = attr.ints_size();
-            for (int i = 0; i < nums; i++) {
-                max_shape.push_back(attr.ints(i));
+    std::map<std::string, float> attr_map = {{"means0", 0.0f}, {"means1", 0.0f}, {"means2", 0.0f},
+                                             {"means3", 0.0f}, {"stds0", 1.0f},  {"stds1", 1.0f},
+                                             {"stds2", 1.0f},  {"stds3", 1.0f},  {"wh_ratio_clip", 0.016f}};
+    ge::AscendString attrs_string;
+    try {
+        if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+            json attrs = json::parse(attrs_string.GetString());
+            for (json& attr : attrs["attribute"]) {
+                std::string attr_name = attr.value("name", "");
+                if (attr_map.find(attr_name) != attr_map.end()) {
+                    if (attr.contains("f")) {
+                        std::string value_str = attr["f"];
+                        if (!StrToFloat(value_str, attr_map[attr_name])) {
+                            OP_LOGE(GetOpName(op_dest).c_str(), "invalid %s value: %s", attr_name.c_str(),
+                                    value_str.c_str());
+                            return FAILED;
+                        }
+                    } else {
+                        // GE 序列化 float 属性时会省略值为 0 的 "f" 字段，此时属性值为 0
+                        attr_map[attr_name] = 0.0f;
+                    }
+                } else if (attr_name == "max_shapes" && attr.contains("ints")) {
+                    for (json& v : attr["ints"]) {
+                        max_shape.push_back(v.get<int>());
+                    }
+                }
             }
         }
+    } catch (const json::parse_error& e) {
+        OP_LOGE("bounding_box_decode", "JSON parse error: %s", e.what());
+        return FAILED;
+    } catch (const json::exception& e) {
+        OP_LOGE("bounding_box_decode", "JSON processing error: %s", e.what());
+        return FAILED;
     }
 
     if (max_shape.empty()) {
         OP_LOGE(GetOpName(op_dest).c_str(), "Node must have attr max_shape.");
         return FAILED;
     }
+    std::vector<float> means;
+    std::vector<float> stds;
     means.push_back(attr_map["means0"]);
     means.push_back(attr_map["means1"]);
     means.push_back(attr_map["means2"]);
@@ -150,6 +172,6 @@ REGISTER_CUSTOM_OP("BoundingBoxDecode")
          ge::AscendString("ai.onnx::15::NPUBoundingBoxDecode"), ge::AscendString("ai.onnx::16::NPUBoundingBoxDecode"),
          ge::AscendString("ai.onnx::17::NPUBoundingBoxDecode"), ge::AscendString("ai.onnx::18::NPUBoundingBoxDecode"),
          "npu::1::NPUBoundingBoxDecode"})
-    .ParseParamsFn(ParseParamsBoundingBoxDecodeV2)
+    .ParseParamsByOperatorFn(ParseParamsBoundingBoxDecodeV2)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

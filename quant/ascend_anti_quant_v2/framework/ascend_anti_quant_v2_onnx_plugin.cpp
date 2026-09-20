@@ -25,12 +25,17 @@ static Status ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op_
 
     try {
         if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
-          json attrs = json::parse(attrs_string.GetString());
-          for (json& attr : attrs["attribute"]) {
-              if (attr["name"] == "dst_dtype") {
-                  dst_dtype = attr["i"];
-              }
-          }
+            json attrs = json::parse(attrs_string.GetString());
+            for (json& attr : attrs["attribute"]) {
+                if (attr["name"] == "dst_dtype") {
+                    if (attr.contains("i")) {
+                        dst_dtype = attr["i"];
+                    } else {
+                        // GE 序列化 int 属性时会省略值为 0 的 "i" 字段，此时 dst_dtype 实际值为 0
+                        dst_dtype = 0;
+                    }
+                }
+            }
         }
 
         op_dest.SetAttr("dst_type", dst_dtype);
@@ -40,10 +45,10 @@ static Status ParseParamsAntiQuant(const ge::Operator& op_src, ge::Operator& op_
         tensor_desc.SetDataType(static_cast<ge::DataType>(dst_dtype));
         auto ret_y = op_dest.UpdateOutputDesc("y", tensor_desc);
         if (ret_y != ge::GRAPH_SUCCESS) {
-          ge::AscendString name = "";
-          (void)tensor_desc.GetName(name);
-          OP_LOGE(name.GetString(), "change output format failed.");
-          return FAILED;
+            ge::AscendString name = "";
+            (void)tensor_desc.GetName(name);
+            OP_LOGE(name.GetString(), "change output format failed.");
+            return FAILED;
         }
     } catch (const json::parse_error& e) {
         OP_LOGE("ascend_anti_quant_v2", "JSON parse error: %s", e.what());

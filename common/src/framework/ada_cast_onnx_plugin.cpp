@@ -25,8 +25,14 @@ static Status ParseParamsAdaCast(const ge::Operator& op_src, ge::Operator& op_ds
             json attrs = json::parse(attrs_string.GetString());
             if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
                 for (json& attr : attrs["attribute"]) {
-                    if (attr.value("name", "") == "pixel" && attr.contains("i")) {
-                        pixel_value = attr["i"].get<int>();
+                    if (attr.value("name", "") == "pixel") {
+                        if (attr.contains("i")) {
+                            pixel_value = attr["i"].get<int>();
+                        } else {
+                            // GE 序列化 int 属性时会省略值为 0 的 "i" 字段，
+                            // 此时 pixel 实际值为 0，不能用默认值 65535 兜底。
+                            pixel_value = 0;
+                        }
                     }
                 }
             }

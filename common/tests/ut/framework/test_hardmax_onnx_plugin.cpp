@@ -44,3 +44,15 @@ TEST(OnnxHardMaxPluginTest, KeepsDefaultWithoutAttributes)
     EXPECT_EQ(op_dest.GetAttr("axis", axis), ge::GRAPH_SUCCESS);
     EXPECT_EQ(axis, -1);
 }
+
+TEST(OnnxHardMaxPluginTest, ParseZeroAxisWithoutIField)
+{
+    // GE 序列化 int 属性时省略值为 0 的 "i" 字段，axis 应为 0 而非默认 -1
+    ge::Operator op_src = CreateSourceOperator(R"({"attribute":[{"name":"axis","type":2}]})");
+    ge::Operator op_dest = CreateOperator("hardmax");
+    int64_t axis = -999;
+
+    EXPECT_EQ(domi::parse_params_hard_max(op_src, op_dest), domi::SUCCESS);
+    EXPECT_EQ(op_dest.GetAttr("axis", axis), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(axis, 0);
+}

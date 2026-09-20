@@ -24,8 +24,14 @@ static Status parse_params_hard_max(const ge::Operator& op_src, ge::Operator& op
             json attrs = json::parse(attrs_string.GetString());
             if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
                 for (json& attr : attrs["attribute"]) {
-                    if (attr.value("name", "") == "axis" && attr.contains("i")) {
-                        axis = attr["i"].get<int>();
+                    if (attr.value("name", "") == "axis") {
+                        if (attr.contains("i")) {
+                            axis = attr["i"].get<int>();
+                        } else {
+                            // GE 序列化 int 属性时会省略值为 0 的 "i" 字段，
+                            // 此时 axis 实际值为 0，不能用默认值 -1 兜底。
+                            axis = 0;
+                        }
                     }
                 }
             }
