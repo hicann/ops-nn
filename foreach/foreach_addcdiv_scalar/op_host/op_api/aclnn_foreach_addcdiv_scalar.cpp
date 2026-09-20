@@ -19,6 +19,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "../../foreach_utils/op_host/foreach_null_check_helper.h"
 
 using namespace op;
 
@@ -135,30 +136,10 @@ static inline aclnnStatus CheckParams(const aclTensorList* x1, const aclTensorLi
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape/CheckFormat.
-    for (uint64_t i = 0; i < x1->Size(); i++) {
-        if ((*x1)[i] == nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1[%lu] is null.", i);
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-    }
-    for (uint64_t i = 0; i < x2->Size(); i++) {
-        if ((*x2)[i] == nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2[%lu] is null.", i);
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-    }
-    for (uint64_t i = 0; i < x3->Size(); i++) {
-        if ((*x3)[i] == nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x3[%lu] is null.", i);
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-    }
-    for (uint64_t i = 0; i < out->Size(); i++) {
-        if ((*out)[i] == nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out[%lu] is null.", i);
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-    }
+    CHECK_RET(CheckTensorListNotNull(x1, "x1"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(x2, "x2"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(x3, "x3"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckDtypeValid(x1, x2, x3, scalar, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(x1, x2, x3, out), ACLNN_ERR_PARAM_INVALID);
