@@ -176,8 +176,7 @@ bool CrossEntropySumExpAndIndexLogitTiling::CheckParam()
                                      std::to_string(logitsDim).c_str(), "2D or 3D");
         return false;
     }
-    // 空 tensor 校验：本算子不支持任一输入任一维为 0 的空 tensor（现有 N/V_local 范围检查
-    //   虽会间接拦截，但此处显式校验并给出明确错误信息）
+    // 空 tensor 校验：本算子不支持任一输入任一维为 0 的空 tensor
     auto CheckInputNotEmpty = [&](const auto& shape, const char* name) -> bool {
         for (size_t i = 0; i < shape.GetDimNum(); ++i) {
             if (shape.GetDim(i) <= NUM_ZERO) {
