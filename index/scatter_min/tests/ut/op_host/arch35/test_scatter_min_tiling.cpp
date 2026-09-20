@@ -188,9 +188,9 @@ TEST_F(ScatterMinTiling, test_tiling_var_dim0_eq_int32max)
     EXPECT_EQ(key, 0);
 }
 
-// var first axis == INT32_MAX + 1 -> rejected. An in-bound index may then equal INT32_MAX, which is
-// indistinguishable from the sort padding key. Matches the declared constraint in README.
-// 见 scatter_max 同名用例的说明: 首维 > INT32_MAX 由拒收改为走两趟基数排序, 断言随之反转。
+// var 首维 == INT32_MAX + 1 -> **接受**。排序 key 直接取索引真值(AscendC::Sort 支持 int64 key),
+// 不再折算低位、不再分桶, 首维不存在 int32 上限。历史上此处曾因 32 位 key 装不下 in-bound index
+// 而拒收, 使 A5 支持面窄于 A2; 该上限已随 int64 直排消除, README/aclnn 资料的对应约束亦已删除。
 // 共享 tiling 的四个算子(div/max/min/mul)各有独立 UT 上下文, 故每个算子都要单独核对。
 TEST_F(ScatterMinTiling, test_tiling_var_dim0_over_int32max)
 {
@@ -200,9 +200,9 @@ TEST_F(ScatterMinTiling, test_tiling_var_dim0_over_int32max)
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
 
-// 桶数上限: 宽档按 2^30 一桶分区, kernel 侧计数数组只有 64 桶(+1 溢出桶), 故 host 必须在
-// 桶数 > 64 时拒收, 否则 kernel 里会越界写计数数组。这两条只能在 host UT 覆盖 ——
-// 64 桶对应 var 首维 2^36, 真机上 var 本身就要 68GB, 物理上无法造用例。
+// 超大首维(2^37 量级): 直排 int64 key 后不分桶, host 不设任何上限。只能在 host UT 覆盖 ——
+// 对应 var 真机上要 500GB 以上, 物理上无法造真机用例。
+// 注: 用例名 wide_buckets_* 是旧分桶实现留下的历史命名, 该机制已下线, 保留名字仅为对齐历史基线。
 TEST_F(ScatterMinTiling, test_tiling_wide_buckets_single_window)
 {
     uint64_t key = 0xFFFF;
@@ -228,7 +228,7 @@ TEST_F(ScatterMinTiling, test_tiling_wide_buckets_multi_window)
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
 
-// 首维 2^40 = 1024 个桶, 需要 16 个窗口: 桶数无上限, tiling 不拦, 与 A2 支持面一致。
+// 首维 2^40: 排序 key 为索引真值, 不分桶不开窗, tiling 不设上限, 与 A2 支持面一致。
 TEST_F(ScatterMinTiling, test_tiling_huge_first_dim_no_cap)
 {
     uint64_t key = 0xFFFF;

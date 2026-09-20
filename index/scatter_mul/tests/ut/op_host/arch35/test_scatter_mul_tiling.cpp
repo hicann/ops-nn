@@ -177,9 +177,9 @@ TEST_F(ScatterMulTiling, test_tiling_big_slice)
     EXPECT_EQ(key, 0);
 }
 
-// 桶数上限: 宽档按 2^30 一桶分区, kernel 侧计数数组只有 64 桶(+1 溢出桶), 故 host 必须在
-// 桶数 > 64 时拒收, 否则 kernel 里会越界写计数数组。这两条只能在 host UT 覆盖 ——
-// 64 桶对应 var 首维 2^36, 真机上 var 本身就要 68GB, 物理上无法造用例。
+// 超大首维(2^37 量级): 直排 int64 key 后不分桶, host 不设任何上限。只能在 host UT 覆盖 ——
+// 对应 var 真机上要 500GB 以上, 物理上无法造真机用例。
+// 注: 用例名 wide_buckets_* 是旧分桶实现留下的历史命名, 该机制已下线, 保留名字仅为对齐历史基线。
 TEST_F(ScatterMulTiling, test_tiling_wide_buckets_single_window)
 {
     uint64_t key = 0xFFFF;
@@ -205,7 +205,7 @@ TEST_F(ScatterMulTiling, test_tiling_wide_buckets_multi_window)
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
 
-// 首维 2^40 = 1024 个桶, 需要 16 个窗口: 桶数无上限, tiling 不拦, 与 A2 支持面一致。
+// 首维 2^40: 排序 key 为索引真值, 不分桶不开窗, tiling 不设上限, 与 A2 支持面一致。
 TEST_F(ScatterMulTiling, test_tiling_huge_first_dim_no_cap)
 {
     uint64_t key = 0xFFFF;
