@@ -62,7 +62,7 @@
 
     $$
     scale_{weight} = scale_{weight} * scale_{x} \\
-    scale_{weight} = torch.tensor(np.frombuffer(scale_{weight}.numpy().astype(np.float32). \\tobytes(), dtype=np.int32).astype(np.int64))
+    scale_{weight} = torch.tensor(np.frombuffer(scale_{weight}.numpy().astype(np.float32).tobytes(), dtype=np.int32).astype(np.int64))
     $$
 
 ## 函数原型
