@@ -3102,20 +3102,6 @@ currently supported.
     *@li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the square root
     instruction.
     */
-    REG_OP(GNTrainingUpdate)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(sum, TensorType({DT_FLOAT}))
-    .INPUT(square_sum, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(scale, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(offset, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(mean, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(variance, TensorType({DT_FLOAT}))
-    .ATTR(num_groups, Int, 2)
-    .ATTR(epsilon, Float, 0.0001)
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(batch_mean, TensorType({DT_FLOAT}))
-    .OUTPUT(batch_variance, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(GNTrainingUpdate)
 
     /**
     * @brief Computes the softmax focal loss of "pred" and "target".

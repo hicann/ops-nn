@@ -3629,6 +3629,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/gn_training_update/README.md">gn_training_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>GNTrainingUpdate是GroupNorm训练前向更新融合算子，消费GNTrainingReduce的组内sum/square_sum现算均值方差，对x做归一化与可选仿射，旁路输出batch_mean/batch_variance。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/group_norm/README.md">group_norm</a></td>
     <td>✓</td>
     <td>✓</td>

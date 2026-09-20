@@ -1,0 +1,1296 @@
+{
+    "op_type": "GNTrainingUpdate",
+    "optional_input_mode": "gen_placeholder",
+    "op_list": [
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT16_NCHW_YND",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT16_NHWC_YND",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT16_NCHW",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT16_NHWC",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT32",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT32_NCHW_YND",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT32_NHWC_YND",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT32_NCHW",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GNTrainingUpdate_FLOAT32_NHWC",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "sum",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "square_sum",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "offset",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NHWC",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "num_groups",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}
