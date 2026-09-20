@@ -463,7 +463,7 @@ aclnnStatus aclnnDynamicQuant(void* workspace, uint64_t workspaceSize, aclOpExec
     L2_DFX_PHASE_2(aclnnDynamicQuant);
     auto ret = CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "This is an error in DynamicQuant launch aicore");
+        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuant launch aicore failed");
         return ACLNN_ERR_INNER;
     }
     return ACLNN_SUCCESS;
@@ -490,7 +490,7 @@ aclnnStatus aclnnDynamicQuantV2(void* workspace, uint64_t workspaceSize, aclOpEx
     L2_DFX_PHASE_2(aclnnDynamicQuantV2);
     auto ret = CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "This is an error in DynamicQuant launch aicore");
+        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV2 launch aicore failed");
         return ACLNN_ERR_INNER;
     }
     return ACLNN_SUCCESS;
@@ -519,7 +519,7 @@ aclnnStatus aclnnDynamicQuantV3(void* workspace, uint64_t workspaceSize, aclOpEx
     L2_DFX_PHASE_2(aclnnDynamicQuantV3);
     auto ret = CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "This is an error in DynamicQuant launch aicore");
+        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV3 launch aicore failed");
         return ACLNN_ERR_INNER;
     }
     return ACLNN_SUCCESS;
@@ -557,7 +557,7 @@ aclnnStatus aclnnDynamicQuantV4(void* workspace, uint64_t workspaceSize, aclOpEx
     L2_DFX_PHASE_2(aclnnDynamicQuantV4);
     auto ret = CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "This is an error in DynamicQuant launch aicore");
+        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV4 launch aicore failed");
         return ACLNN_ERR_INNER;
     }
     return ACLNN_SUCCESS;
