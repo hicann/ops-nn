@@ -14,59 +14,82 @@
 namespace ge {
 
 /**
- *@brief Updates '*var' according to the Adam algorithm..
- *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
- *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
- *   v_t := beta_2 * v_{t-1} + (1 - beta_2) * g * g
- *   vhat_t := max{vhat_{t-1}, v_t}
- *   variable := variable - lr_t * m_t / (sqrt{vhat_t} + epsilon)
- *
- *@par Inputs:
- *Eleven inputs, including:
- *@li var: A mutable tensor of type float32 (DT_FLOAT only). Should be from a
- *    Variable().
- *@li m: A mutable tensor. Has the same type as "var". Should be from a
- *    Variable().
- *@li v: A mutable tensor. Has the same type as "var". Should be from a
- *    Variable().
- *@li vhat: A mutable tensor. Has the same type as "var". Should be from a
- *    Variable().
- *@li beta1_power: A mutable tensor. Has the same type as "var". Should be from a
- *    Variable().
- *@li beta2_power: A mutable tensor. Has the same type as "var". Should be from a
- *    Variable().
- *@li lr: A tensor for the learning rate. Has the same type as "var". Should be
- *    from a Variable().
- *@li beta1: A mutable tensor. Has the same type as "var". Should be
- *    from a Variable().
- *@li beta2: A mutable tensor. Has the same type as "var". Should be
- *    from a Variable().
- *@li epsilon: A mutable tensor. Has the same type as "var". Should be
- *    from a Variable().
- *@li grad: A tensor for the gradient. Has the same type as "var". Should be
- *    from a Variable().
- *
- *@par Attribute:
- *one attribute, including:
- *@li use_locking: An optional bool. Defaults to "False".
- *    If "True", updating of the "var" tensor is protected by a lock;
- *    otherwise the behavior is undefined, but may exhibit less contention.
- *
- *@par Outputs:
- *four outputs, including:
- *@li var: A mutable tensor. Has the same type as input "var".
- *@li m: A mutable tensor. Has the same type as input "var"
- *@li v: A mutable tensor. Has the same type as input "var"
- *@li vhat: A mutable tensor. Has the same type as input "var"
- *
- *@attention Constraints:
- * The input tensors must have the same shape.
- *
- *@par Third-party framework compatibility
- * Compatible with the TensorFlow operator ResourceApplyKerasMomentum.
- *
- */
-REG_OP(ApplyAdamWithAmsgradV2)
+*@brief data conversion operator
+Convert uint16 to uint32, convert to int32, convert to float32,
+multiply by the reciprocal of pixel, convert to float16 . \n
+*@par Inputs:
+*one inputs, including:
+*@li x: A Tensor. Must be one of the following types: uint16.
+*@par Outputs:
+*y: A Tensor. Must be one of the following types: float16. \n
+*@par Third-party framework compatibility
+*only for use by corresponding operators in HDRnet networks
+*/
+#ifndef OPS_PROTO_DEF_ADACAST
+#define OPS_PROTO_DEF_ADACAST
+REG_OP(AdaCast)
+    .INPUT(x, "T1")
+    .OUTPUT(y, "T2")
+    .ATTR(pixel, Int, 65535)
+    .DATATYPE(T1, TensorType({DT_UINT16}))
+    .DATATYPE(T2, TensorType({DT_FLOAT16}))
+    .OP_END_FACTORY_REG(AdaCast)
+#endif // OPS_PROTO_DEF_ADACAST
+
+    /**
+     *@brief Updates '*var' according to the Adam algorithm..
+     *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
+     *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
+     *   v_t := beta_2 * v_{t-1} + (1 - beta_2) * g * g
+     *   vhat_t := max{vhat_{t-1}, v_t}
+     *   variable := variable - lr_t * m_t / (sqrt{vhat_t} + epsilon)
+     *
+     *@par Inputs:
+     *Eleven inputs, including:
+     *@li var: A mutable tensor of type float32 (DT_FLOAT only). Should be from a
+     *    Variable().
+     *@li m: A mutable tensor. Has the same type as "var". Should be from a
+     *    Variable().
+     *@li v: A mutable tensor. Has the same type as "var". Should be from a
+     *    Variable().
+     *@li vhat: A mutable tensor. Has the same type as "var". Should be from a
+     *    Variable().
+     *@li beta1_power: A mutable tensor. Has the same type as "var". Should be from a
+     *    Variable().
+     *@li beta2_power: A mutable tensor. Has the same type as "var". Should be from a
+     *    Variable().
+     *@li lr: A tensor for the learning rate. Has the same type as "var". Should be
+     *    from a Variable().
+     *@li beta1: A mutable tensor. Has the same type as "var". Should be
+     *    from a Variable().
+     *@li beta2: A mutable tensor. Has the same type as "var". Should be
+     *    from a Variable().
+     *@li epsilon: A mutable tensor. Has the same type as "var". Should be
+     *    from a Variable().
+     *@li grad: A tensor for the gradient. Has the same type as "var". Should be
+     *    from a Variable().
+     *
+     *@par Attribute:
+     *one attribute, including:
+     *@li use_locking: An optional bool. Defaults to "False".
+     *    If "True", updating of the "var" tensor is protected by a lock;
+     *    otherwise the behavior is undefined, but may exhibit less contention.
+     *
+     *@par Outputs:
+     *four outputs, including:
+     *@li var: A mutable tensor. Has the same type as input "var".
+     *@li m: A mutable tensor. Has the same type as input "var"
+     *@li v: A mutable tensor. Has the same type as input "var"
+     *@li vhat: A mutable tensor. Has the same type as input "var"
+     *
+     *@attention Constraints:
+     * The input tensors must have the same shape.
+     *
+     *@par Third-party framework compatibility
+     * Compatible with the TensorFlow operator ResourceApplyKerasMomentum.
+     *
+     */
+    REG_OP(ApplyAdamWithAmsgradV2)
     .INPUT(var, TensorType({DT_FLOAT}))
     .INPUT(m, TensorType({DT_FLOAT}))
     .INPUT(v, TensorType({DT_FLOAT}))
@@ -3319,6 +3342,40 @@ tensor "x" on the C axis.
     .ATTR(alpha, Float, 0.25)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
+
+/**
+* @brief Computes the regression box of the RPN. It is a FasterRCNN operator.
+
+* @par Inputs:
+* Two inputs, including:
+* @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value.
+* The maximum dimension is 8.
+* @li label: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the target value.
+* The maximum dimension is 8, predict and label can be broadcast.
+
+* @par Attributes:
+* sigma: Must be a floating point number. Defaults to "1.0".
+
+* @par Outputs:
+* loss: Indicates the loss between the predictive value and target value.
+* Has the same dtype and dimensions as "predict".
+
+* @attention Constraints:
+* This operator does not perform the "reduce" operation on the loss value.
+* Call other reduce operators to perform "reduce" operation on the loss if required.
+
+* @par Third-party framework compatibility
+* Compatible with the scenario where "reduction" is set to "none"of PyTorch operator SmoothL1Loss.
+*/
+#ifndef OPS_PROTO_DEF_SMOOTHL1LOSS
+#define OPS_PROTO_DEF_SMOOTHL1LOSS
+        REG_OP(SmoothL1Loss)
+    .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OUTPUT(loss, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .ATTR(sigma, Float, 1.0)
+    .OP_END_FACTORY_REG(SmoothL1Loss)
+#endif // OPS_PROTO_DEF_SMOOTHL1LOSS
 
 /**
 * @brief Performs the backpropagation of SmoothL1Loss for training scenarios .

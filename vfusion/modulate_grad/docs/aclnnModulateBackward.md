@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -26,7 +26,7 @@
 - 算子功能：完成ModulateBackward反向传播中参数的计算，进行梯度更新。
 - 计算公式：
 
-    设输入input的shape为[B, L, D]计算公式如下：
+    设输入self的shape为[B, L, D]计算公式如下：
     公式：
 
     $$
@@ -204,18 +204,18 @@ aclnnStatus aclnnModulateBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的grad_output或input等入参是空指针。</td>
+      <td>传入的self或out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>grad_output、input、scale、shift的数据类型和数据格式不在支持的范围之内。</td>
+      <td>self、scaleOptional、shiftOptional的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>grad_output、input、scale、shift之间的shape不满足约束。</td>
+      <td>self、scaleOptional、shiftOptional之间的shape不满足约束。</td>
     </tr>
     <tr>
-      <td>input为空tensor，且scale或shift不为空tensor。</td>
+      <td>self为空tensor，且scale或shift不为空tensor。</td>
     </tr>
   </tbody>
   </table>
@@ -295,7 +295,7 @@ aclnnStatus aclnnModulateBackward(
   - aclnnModulateBackward默认确定性实现。
 
 - scale和shift是二维向量，第一维需要和input的第一维shape相同，第二维需要和input的第三维shape相同。
-- 输入grad_output的shape需要和输入input的shape保持一致。
+- 输入gradoutput的shape需要和输入input的shape保持一致。
 
 ## 调用示例
 
@@ -440,10 +440,10 @@ int main()
     // 创建grad_shift aclTensor
     ret = CreateAclTensor(grad_shiftHostData, grad_shiftShape, &grad_shiftDeviceAddr, aclDataType::ACL_FLOAT, &grad_shift);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 3. 调用CANN算子库API，需要修改为具体的API名称
+    // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    // 调用aclnnModulateBackward第一段接口
+    // 调用aclnnModulate第一段接口
     ret = aclnnModulateBackwardGetWorkspaceSize(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnModulateBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -452,7 +452,7 @@ int main()
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
-    // 调用aclnnModulateBackward第二段接口
+    // 调用aclnnModulate第二段接口
     ret = aclnnModulateBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnModulateBackward failed. ERROR: %d\n", ret); return ret);
 
