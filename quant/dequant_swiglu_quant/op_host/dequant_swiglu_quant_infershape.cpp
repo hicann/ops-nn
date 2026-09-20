@@ -59,7 +59,7 @@ graphStatus InferShape4DequantSwigluQuant(gert::InferShapeContext* context)
     int64_t activateShape = xShape->GetDim(selectDim);
     int64_t outActivateShape = activateShape == CONST_UNKNOW_SHAPE ? CONST_UNKNOW_SHAPE : activateShape / NUM_TWO;
     OP_CHECK_IF((activateShape != CONST_UNKNOW_SHAPE) && (activateShape % NUM_TWO != 0),
-                OP_LOGE(context, "The active axis must be an even number， but is %ld", activateShape),
+                OP_LOGE(context, "The active axis must be an even number, but is %ld", activateShape),
                 return ge::GRAPH_FAILED);
     // 设置Y的shape
     yShape->SetDim(selectDim, outActivateShape);
