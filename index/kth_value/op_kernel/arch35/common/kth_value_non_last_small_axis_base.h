@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file non_last_small_axis_base.h
+ * \file kth_value_non_last_small_axis_base.h
  * \brief CRTP base class and constants shared by sort and kth_value non_last_small_axis kernels.
  */
 
-#ifndef NON_LAST_SMALL_AXIS_BASE_H
-#define NON_LAST_SMALL_AXIS_BASE_H
+#ifndef KTH_VALUE_NON_LAST_SMALL_AXIS_BASE_H
+#define KTH_VALUE_NON_LAST_SMALL_AXIS_BASE_H
 
 #include <type_traits>
 
@@ -22,10 +22,10 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "op_kernel/platform_util.h"
 #include "simt_api/asc_simt.h"
-#include "signed_zero_sort_utils.h"
-#include "util_type_simd.h"
-#include "merge_sort_constants.h"
-#include "ping_pong_merge_sort.h"
+#include "kth_value_signed_zero_sort_utils.h"
+#include "kth_value_util_type_simd.h"
+#include "kth_value_merge_sort_constants.h"
+#include "kth_value_ping_pong_merge_sort.h"
 
 namespace SmallAxisCommon {
 using namespace AscendC;

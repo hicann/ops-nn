@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef MERGE_SORT_CONSTANTS_H
-#define MERGE_SORT_CONSTANTS_H
+#ifndef KTH_VALUE_MERGE_SORT_CONSTANTS_H
+#define KTH_VALUE_MERGE_SORT_CONSTANTS_H
 
 #include <cstdint>
 #include "op_kernel/platform_util.h"

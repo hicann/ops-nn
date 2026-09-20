@@ -9,11 +9,11 @@
  */
 
 /* !
- * \file util_type_simd.h
+ * \file kth_value_util_type_simd.h
  * \brief util simd impl
  */
-#ifndef UTIL_TYPE_SIMD_H
-#define UTIL_TYPE_SIMD_H
+#ifndef KTH_VALUE_UTIL_TYPE_SIMD_H
+#define KTH_VALUE_UTIL_TYPE_SIMD_H
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 

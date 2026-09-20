@@ -9,18 +9,18 @@
  */
 
 /*!
- * \file small_axis_two_stage_base.h
+ * \file kth_value_small_axis_two_stage_base.h
  * \brief Common SIMT kernels and constants shared by sort and kth_value small_axis_two_stage kernels.
  */
 
-#ifndef SMALL_AXIS_TWO_STAGE_BASE_H
-#define SMALL_AXIS_TWO_STAGE_BASE_H
+#ifndef KTH_VALUE_SMALL_AXIS_TWO_STAGE_BASE_H
+#define KTH_VALUE_SMALL_AXIS_TWO_STAGE_BASE_H
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "simt_api/asc_simt.h"
-#include "signed_zero_sort_utils.h"
-#include "util_type_simd.h"
+#include "kth_value_signed_zero_sort_utils.h"
+#include "kth_value_util_type_simd.h"
 
 namespace SmallAxisCommon {
 using namespace AscendC;

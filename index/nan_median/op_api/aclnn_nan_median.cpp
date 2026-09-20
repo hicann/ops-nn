@@ -77,7 +77,8 @@ static const aclTensor* GetNanMedianDimIndexTensor(const aclTensor* selfReshape,
     // 减1
     auto one = 1;
     const aclTensor* oneTensor = executor->ConvertToTensor(&one, 1, dtype);
-    OP_CHECK(oneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."), return nullptr);
+    OP_CHECK(oneTensor != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor for the Sub operand returned nullptr."), return nullptr);
 
     auto subOneTensor = l0op::Sub(reduceSumTensor, oneTensor, executor);
     OP_CHECK(subOneTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Sub return nullptr."), return nullptr);
@@ -86,7 +87,8 @@ static const aclTensor* GetNanMedianDimIndexTensor(const aclTensor* selfReshape,
     if (dimSize >= MAX_CONVERT_NUM) {
         int64_t rightShiftisor = 1;
         const aclTensor* otherTensor = executor->ConvertToTensor(&rightShiftisor, 1, dtype);
-        OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."),
+        OP_CHECK(otherTensor != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor for the RightShift operand returned nullptr."),
                  return nullptr);
 
         // 调用l0算子rightShift计算中位数索引
@@ -96,7 +98,8 @@ static const aclTensor* GetNanMedianDimIndexTensor(const aclTensor* selfReshape,
     } else {
         int64_t Divisor = 2;
         const aclTensor* otherTensor = executor->ConvertToTensor(&Divisor, 1, dtype);
-        OP_CHECK(otherTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor return nullptr."),
+        OP_CHECK(otherTensor != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor for the Div operand returned nullptr."),
                  return nullptr);
 
         // 调用l0算子rightShift计算中位数索引

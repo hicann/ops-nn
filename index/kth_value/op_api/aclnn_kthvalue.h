@@ -24,8 +24,13 @@ extern "C" {
  *
  * 算子功能：完成计算输入的第k个最小值及下标。
  *
- * @param [in] self: npu
- * npu device侧的aclTensor，数据类型支持INT32、FLOAT16、FLOAT32。
+ * @param [in] self:
+ * npu device侧的aclTensor。不同产品的数据类型支持范围如下：
+ * - Atlas推理系列产品、Atlas训练系列产品：FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8；
+ * - Atlas A2训练系列产品/Atlas A2推理系列产品、Atlas A3训练系列产品/Atlas A3推理系列产品：
+ *   BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8；
+ * - Ascend 950PR/Ascend 950DT：BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、
+ *   UINT16、UINT32、UINT64。
  * 支持连续和非连续的Tensor，数据格式支持ND。
  * @param [in] k:
  * int64_t类型整数。表示计算维度上输出的第几个最小值。
@@ -35,7 +40,7 @@ extern "C" {
  * bool类型数据。True表示输出张量的大小与self相同，
  * False表示dim将被压缩，得到的张量维数比input少1。
  * @param [in] valuesOut:
- * dnpu device侧的aclTensor，数据类型支持INT32、FLOAT16、FLOAT32，且数据类型与self保持一致。
+ * npu device侧的aclTensor，支持的数据类型和平台范围与self一致，且数据类型与self保持一致。
  * 支持连续和非连续的Tensor，数据格式支持ND。
  * @param [in] indicesOut:
  * npu device侧的aclTensor，数据类型支持INT64。支持连续和非连续的Tensor，数据格式支持ND。

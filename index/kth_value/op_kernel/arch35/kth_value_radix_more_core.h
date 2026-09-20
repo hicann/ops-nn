@@ -18,8 +18,8 @@
 #include "simt_api/asc_simt.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
-#include "common/radix_more_core_base.h"
-#include "common/util_type_simd.h"
+#include "common/kth_value_radix_more_core_base.h"
+#include "common/kth_value_util_type_simd.h"
 
 namespace KthValue {
 using namespace AscendC;

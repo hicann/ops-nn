@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file merge_intra_core_base.h
+ * \file kth_value_merge_intra_core_base.h
  * \brief Common constants, data structures, and CRTP base class shared by sort and kth_value
  *        merge_intra_core kernels.
  *        Phase 1 (Sort blocks in UB) and Phase 2 (Merge sorted blocks) use identical constants,
@@ -17,15 +17,15 @@
  *        between the two operators.
  */
 
-#ifndef MERGE_INTRA_CORE_BASE_H
-#define MERGE_INTRA_CORE_BASE_H
+#ifndef KTH_VALUE_MERGE_INTRA_CORE_BASE_H
+#define KTH_VALUE_MERGE_INTRA_CORE_BASE_H
 
 #include <cmath>
 #include "kernel_operator.h"
 #include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
-#include "merge_sort_constants.h"
-#include "ping_pong_merge_sort.h"
+#include "kth_value_merge_sort_constants.h"
+#include "kth_value_ping_pong_merge_sort.h"
 
 namespace MergeIntraCoreCommon {
 
@@ -538,4 +538,4 @@ __aicore__ inline void MergeIntraCoreBase<Derived, ValueType, IndexType, IsDesce
 
 } // namespace MergeIntraCoreCommon
 
-#endif // MERGE_INTRA_CORE_BASE_H
+#endif // KTH_VALUE_MERGE_INTRA_CORE_BASE_H

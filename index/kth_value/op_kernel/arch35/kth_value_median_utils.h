@@ -38,7 +38,7 @@
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
-#include "common/util_type_simd.h"
+#include "common/kth_value_util_type_simd.h"
 
 namespace KthValue {
 using namespace AscendC;

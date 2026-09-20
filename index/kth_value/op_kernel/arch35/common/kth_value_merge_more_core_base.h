@@ -9,19 +9,19 @@
  */
 
 /*!
- * \file merge_more_core_base.h
+ * \file kth_value_merge_more_core_base.h
  * \brief Common constants, free functions, and CRTP base class shared by sort and kth_value
  *        merge_sort_more_core kernels.
  */
 
-#ifndef MERGE_MORE_CORE_BASE_H
-#define MERGE_MORE_CORE_BASE_H
+#ifndef KTH_VALUE_MERGE_MORE_CORE_BASE_H
+#define KTH_VALUE_MERGE_MORE_CORE_BASE_H
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
-#include "merge_sort_constants.h"
-#include "ping_pong_merge_sort.h"
-#include "util_type_simd.h"
+#include "kth_value_merge_sort_constants.h"
+#include "kth_value_ping_pong_merge_sort.h"
+#include "kth_value_util_type_simd.h"
 
 namespace MergeMoreCoreCommon {
 
@@ -590,4 +590,4 @@ public:
 
 } // namespace MergeMoreCoreCommon
 
-#endif // MERGE_MORE_CORE_BASE_H
+#endif // KTH_VALUE_MERGE_MORE_CORE_BASE_H

@@ -9,17 +9,17 @@
  */
 
 /*!
- * \file small_axis_insertion_base.h
+ * \file kth_value_small_axis_insertion_base.h
  * \brief Common SIMT kernels and constants shared by sort and kth_value small_axis_insertion kernels.
  */
 
-#ifndef SMALL_AXIS_INSERTION_BASE_H
-#define SMALL_AXIS_INSERTION_BASE_H
+#ifndef KTH_VALUE_SMALL_AXIS_INSERTION_BASE_H
+#define KTH_VALUE_SMALL_AXIS_INSERTION_BASE_H
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "simt_api/asc_simt.h"
-#include "util_type_simd.h"
+#include "kth_value_util_type_simd.h"
 
 namespace SmallAxisCommon {
 using namespace AscendC;

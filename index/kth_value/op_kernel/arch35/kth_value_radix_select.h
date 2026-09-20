@@ -17,7 +17,7 @@
 #include "op_kernel/platform_util.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
-#include "common/radix_sort_simd_utils.h"
+#include "common/kth_value_radix_sort_simd_utils.h"
 
 // Radix select: narrows the kth element using cumulative byte histograms (MSB to LSB),
 // selecting one bucket per round instead of fully sorting. Supports multi-core per row.
