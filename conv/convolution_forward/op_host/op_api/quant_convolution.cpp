@@ -184,7 +184,7 @@ const aclTensor* ExtendConv2dNCHW(const aclTensor* input, const aclTensor* weigh
     auto ret = ExtendConv2dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode,
                                    extendConvOut, executor);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "ExtendConv2dL0Inner failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "ExtendConv2dL0Inner failed.");
         return nullptr;
     }
     return extendConvOut;
@@ -204,7 +204,7 @@ const aclTensor* QuantConv3dNCDHW(const aclTensor* input, const aclTensor* weigh
     auto ret = QuantConv3dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode,
                                   quantConvOut, executor);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "QuantConv3dL0Inner failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "QuantConv3dL0Inner failed.");
         return nullptr;
     }
     return quantConvOut;
