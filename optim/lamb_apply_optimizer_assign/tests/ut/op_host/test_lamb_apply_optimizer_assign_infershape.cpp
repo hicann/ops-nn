@@ -107,14 +107,15 @@ namespace {
 // 按 grad / inputv / inputm / input3 四个张量的形状跑一次 infershape，
 // 标量输入统一用 {1}。用于核对 infershape 与 tiling 的支持范围是否一致。
 ge::graphStatus RunInferShape(const gert::Shape& grad, const gert::Shape& inputv, const gert::Shape& inputm,
-                              const gert::Shape& input3, gert::Shape* out0, gert::Shape* out1, gert::Shape* out2)
+                              const gert::Shape& input3, gert::Shape* out0, gert::Shape* out1, gert::Shape* out2,
+                              const gert::Shape& scalar = gert::Shape({1}))
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambApplyOptimizerAssign")->infer_shape;
     gert::Shape g = grad;
     gert::Shape v = inputv;
     gert::Shape m = inputm;
     gert::Shape p = input3;
-    gert::Shape s = {1};
+    gert::Shape s = scalar;
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
@@ -159,11 +160,15 @@ TEST_F(LambApplyOptimizerAssignProtoTest, moment_shape_decides_output_shape)
     ASSERT_EQ(Ops::Base::ToString(o2), Ops::Base::ToString(expect));
 }
 
-// grad 不参与广播：小于动量形状同样拒收（底层广播模板不支持对 In0 广播）。
-TEST_F(LambApplyOptimizerAssignProtoTest, grad_smaller_than_moment_is_rejected)
+// grad 与其余输入一样参与广播：小于动量形状时按右对齐广播进动量形状，须放行。
+TEST_F(LambApplyOptimizerAssignProtoTest, grad_broadcast_into_moment_is_accepted)
 {
     gert::Shape o0 = {}, o1 = {}, o2 = {};
-    ASSERT_EQ(RunInferShape({1, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_FAILED);
+    gert::Shape expect = {512, 1024};
+    ASSERT_EQ(RunInferShape({1, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
+    ASSERT_EQ(Ops::Base::ToString(o1), Ops::Base::ToString(expect));
+    ASSERT_EQ(Ops::Base::ToString(o2), Ops::Base::ToString(expect));
 }
 
 // input3 是唯一参与广播的输入：小于动量形状时按右对齐广播，须放行。
@@ -194,6 +199,23 @@ TEST_F(LambApplyOptimizerAssignProtoTest, inputv_inputm_mismatch_is_rejected)
 {
     gert::Shape o0 = {}, o1 = {}, o2 = {};
     ASSERT_EQ(RunInferShape({512, 1024}, {512, 1024}, {1, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_FAILED);
+}
+
+// 系数输入不再限定为标量: 与动量同形的系数张量须放行(对齐 A2 的可广播 ND Tensor 声明)。
+TEST_F(LambApplyOptimizerAssignProtoTest, non_scalar_coefficient_is_accepted)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    gert::Shape expect = {512, 1024};
+    ASSERT_EQ(RunInferShape({512, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2, {512, 1024}),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
+}
+
+// 系数输入大于动量形状: 广播结果无处容纳(动量是原地输出), 须拒收。
+TEST_F(LambApplyOptimizerAssignProtoTest, coefficient_larger_than_moment_is_rejected)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    ASSERT_EQ(RunInferShape({1, 1024}, {1, 1024}, {1, 1024}, {1, 1024}, &o0, &o1, &o2, {512, 1024}), ge::GRAPH_FAILED);
 }
 
 TEST_F(LambApplyOptimizerAssignProtoTest, lambapplyoptimizerassign_infer_datatype)

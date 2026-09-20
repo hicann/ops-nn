@@ -16,7 +16,8 @@
 #ifndef OPS_OPTIM_ADAM_APPLY_ONE_OP_HOST_ADAM_APPLY_ONE_TILING_ARCH35_H
 #define OPS_OPTIM_ADAM_APPLY_ONE_OP_HOST_ADAM_APPLY_ONE_TILING_ARCH35_H
 
-#include "../../op_kernel/arch35/lamb_apply_optimizer_assign_tiling_key.h"
+#include "../lamb_apply_optimizer_assign_tiling_def.h"
+#include "../../../lamb_apply_common/op_host/arch35/lamb_brc_tiling_plan.h"
 #include "op_host/tiling_base.h"
 
 using namespace Ops::NN::Optiling;
@@ -44,9 +45,12 @@ protected:
 
 private:
     // 校验 in-place 更新的动量输入(inputv/inputm)形状 == 全广播输出网格(grad/input3 可向上广播)。
-    // dtype 一致性、标量非空的通用校验见 lamb_apply_common/lamb_apply_check_util.h。
+    // dtype 一致性、标量非空的通用校验见 lamb_apply_common/op_host/arch35/lamb_apply_check_util.h。
     ge::graphStatus CheckInplaceShapeConstraint();
     uint64_t tilingKey = 0;
+    uint64_t coreNum_ = 0;
+    uint64_t ubSize_ = 0;
+    LambBrcTilingData<12, 3> td_;
 };
 
 } // namespace optiling

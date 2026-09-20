@@ -67,63 +67,63 @@
     <tr>
       <td>input3</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input3（参与权重衰减的参数）。<b>唯一参与广播的输入</b>：按右对齐broadcast规则向inputv对齐，维度数可少于inputv（不可多于），对应维需相等或为1。</td>
+      <td>支持空Tensor。公式中的input3（参与权重衰减的参数），shape需与其他输入满足broadcast关系。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul0_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul0_x（beta1），标量。</td>
+      <td>支持空Tensor。公式中的mul0_x（beta1），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul1_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul1_x（1-beta1），标量。</td>
+      <td>支持空Tensor。公式中的mul1_x（1-beta1），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul2_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul2_x（beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul2_x（beta2），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul3_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul3_x（1-beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul3_x（1-beta2），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>add2_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的add2_y（epsilon），标量。</td>
+      <td>支持空Tensor。公式中的add2_y（epsilon），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>steps</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的steps（步数），标量。</td>
+      <td>支持空Tensor。公式中的steps（步数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>do_use_weight</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的do_use_weight（是否使用权重衰减），标量。</td>
+      <td>支持空Tensor。公式中的do_use_weight（是否使用权重衰减），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight_decay_rate</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的weight_decay_rate（权重衰减率），标量。</td>
+      <td>支持空Tensor。公式中的weight_decay_rate（权重衰减率），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -152,9 +152,9 @@
 
 ## 约束说明
 
-- shape约束：`grad`、`inputv`、`inputm`三者shape必须**完全相同**，并直接决定三个输出的shape。`inputv`与`inputm`是原地更新的动量输出，不会被广播放大；`grad`同样不参与广播。**广播只发生在`input3`上**：`input3`按右对齐broadcast规则向`inputv`对齐，维度数可少于`inputv`（含标量），对应维需与`inputv`相等或为1；`input3`的维度数大于`inputv`、或某一维大于`inputv`对应维，均不被支持。
+- shape约束：所有输入的shape需两两满足broadcast规则（右对齐，对应维相等或为1）。`inputv`与`inputm`是原地(in-place)更新的动量输出，两者shape必须**完全相同**，且全部输入的broadcast结果必须恰好等于该shape（否则原地写回会越界）；三个输出的shape均取该shape。其余输入（含`grad`）可向其广播。
+- 所有输入及输出的维度数不超过8。
 
-- `mul0_x`、`mul1_x`、`mul2_x`、`mul3_x`、`add2_y`、`steps`、`do_use_weight`、`weight_decay_rate`这8个标量输入不支持空Tensor；`grad`、`inputv`、`inputm`、`input3`支持空Tensor。
 
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 

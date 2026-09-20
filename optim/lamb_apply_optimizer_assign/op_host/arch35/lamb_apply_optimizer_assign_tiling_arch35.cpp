@@ -14,26 +14,29 @@
  */
 
 #include "lamb_apply_optimizer_assign_tiling_arch35.h"
-#include "../../../lamb_apply_common/lamb_apply_check_util.h"
+#include "../../../lamb_apply_common/op_host/arch35/lamb_apply_check_util.h"
 #include <graph/utils/type_utils.h>
+#include <securec.h>
+#include <algorithm>
 #include <string>
 #include "infershape_broadcast_util.h"
-#include "../../op_kernel/arch35/lamb_apply_optimizer_assign_dag.h"
-#include "atvoss/broadcast/broadcast_tiling.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-using namespace AscendC;
 using namespace ge;
 
 namespace optiling {
 
 constexpr static uint64_t LAMB_APPLY_OPTIMIZER_ASSIGN_TILING_PRIORITY = 0;
+constexpr static uint64_t TILING_KEY_FP32 = 100;
+constexpr static uint64_t TILING_KEY_FP16 = 200;
 constexpr static int32_t INPUT_NUM = 12;
 constexpr static int32_t OUTPUT_NUM = 3;
+constexpr static int32_t INPUTV_IDX = 1; // inputv: ref(原地)输出
+constexpr static int32_t INPUTM_IDX = 2; // inputm: ref(原地)输出
 static const char* const kInputNames[] = {"grad",   "inputv", "inputm", "input3", "mul0_x",        "mul1_x",
                                           "mul2_x", "mul3_x", "add2_y", "steps",  "do_use_weight", "weight_decay_rate"};
 static const char* const kOutputNames[] = {"output0", "inputv", "inputm"};
@@ -52,112 +55,75 @@ static ge::graphStatus TilingPrepareForLambApplyOptimizerAssign(gert::TilingPars
 
 ge::graphStatus LambApplyOptimizerAssignTiling::GetShapeAttrsInfo()
 {
-    static const int32_t kScalarInputIdx[] = {4, 5, 6, 7, 8, 9, 10, 11};
     if (CheckLambApplyDtypeConsistency(context_, INPUT_NUM, kInputNames, OUTPUT_NUM, kOutputNames) !=
         ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (CheckLambApplyScalarNotEmpty(context_, kScalarInputIdx, sizeof(kScalarInputIdx) / sizeof(kScalarInputIdx[0]),
-                                     kInputNames) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return CheckInplaceShapeConstraint();
 }
 
 // inputv、inputm 是 in-place 更新的动量输出(next_v/next_m 原地写回它们的输入 buffer,见 proto "(in-place)"),
-// 输出形状由它们决定,故 inputv、inputm 必须同形状。
-// grad 绑定在广播 DAG 的 In0 位,底层 Ops::Base 广播模板(DoDimensionCollapse)不支持对 In0 做广播:
-// grad 为标量时 EnsureNotScalar 只抬到 {1}、不会左补 1 对齐输出 rank,直接撞 "dim num is not same";
-// grad 与输出同 rank 但某维为 1 时同样被拒("dim index is not same with out")。故 grad 必须与 inputv 等形。
-// 仅 input3 参与广播(右对齐,维度数可少于 inputv,含标量),这是实测支持的形态。
-// 若后续 ops-base 放开 In0 广播,此处与 infershape 需同步放宽。
+// 两者形状必须相同, 且必须 == 全部输入广播的完整网格。其余输入(含绑在 In0 的 grad)可广播进这个网格。
 ge::graphStatus LambApplyOptimizerAssignTiling::CheckInplaceShapeConstraint()
 {
-    auto gradShape = context_->GetInputShape(0);
-    auto inputvShape = context_->GetInputShape(1);
-    auto inputmShape = context_->GetInputShape(2);
-    auto input3Shape = context_->GetInputShape(3);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, gradShape);
+    auto inputvShape = context_->GetInputShape(INPUTV_IDX);
+    auto inputmShape = context_->GetInputShape(INPUTM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputvShape);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputmShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, input3Shape);
-    const auto& gs = gradShape->GetStorageShape();
     const auto& vs = inputvShape->GetStorageShape();
     const auto& ms = inputmShape->GetStorageShape();
-    const auto& ps = input3Shape->GetStorageShape();
-    gert::Shape bcShape;
     if (!(vs == ms)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "inputv and inputm",
             (Ops::Base::ToString(vs) + " and " + Ops::Base::ToString(ms)).c_str(),
-            "inputv and inputm are in-place updated moments and must have the same shape equal to the broadcast "
-            "output shape");
+            "inputv and inputm are in-place updated moments and must have the same shape");
         return ge::GRAPH_FAILED;
     }
-    // grad 不参与广播,必须与 inputv/inputm 等形
-    if (!(gs == vs)) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "grad", Ops::Base::ToString(gs).c_str(),
-            "grad does not support broadcast and must have exactly the same shape as inputv/inputm");
-        return ge::GRAPH_FAILED;
-    }
-    // input3 能广播进 inputv <=> broadcast(input3, inputv) == inputv
-    if (!Ops::Base::BroadcastShape(&ps, &vs, &bcShape) || !(bcShape == vs)) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "input3", Ops::Base::ToString(ps).c_str(),
-            "input3 must be broadcastable into the in-place moment shape inputv/inputm");
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
+    return CheckLambApplyBroadcastIntoRef(context_, INPUT_NUM, INPUTV_IDX, "inputv");
 }
 
 bool LambApplyOptimizerAssignTiling::IsCapable() { return true; }
 
 ge::graphStatus LambApplyOptimizerAssignTiling::DoOpTiling()
 {
-    // 空 tensor 应对(空进空出): 输出为空(0元素)时设 1 核(空转), 配合全0 tiling 数据(blockFormer=0)使 kernel 空转退出,
-    // 直接成功。
-    auto emptyTensorOutShape0 = context_->GetOutputShape(0);
-    if (emptyTensorOutShape0 != nullptr && emptyTensorOutShape0->GetStorageShape().GetShapeSize() == 0) {
-        auto emptyRawTiling = context_->GetRawTilingData();
-        if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
-            size_t emptyCap = emptyRawTiling->GetCapacity();
-            uint8_t* emptyPtr = static_cast<uint8_t*>(emptyRawTiling->GetData());
-            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) {
-                emptyPtr[emptyIdx] = 0;
-            }
-            emptyRawTiling->SetDataSize(emptyCap);
-        }
-        size_t* emptyWs = context_->GetWorkspaceSizes(1);
-        if (emptyWs != nullptr) {
-            emptyWs[0] = 0;
-        }
-        context_->SetBlockDim(1);
-        tilingKey = GET_TPL_TILING_KEY(1); // schMode=1(已编译), 配合全0 tiling(blockFormer=0)空转
-        return ge::GRAPH_SUCCESS;
-    }
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
+
     ge::DataType input0DType = input0Desc->GetDataType();
-    if (input0DType == ge::DT_FLOAT16) {
-        BroadcastBaseTiling<LambApplyOptimizerAssignOp::LambApplyOptimizerAssignCompute<half, float>::OpDag>
-            brcBaseTiling(context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
-        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
-    } else if (input0DType == ge::DT_FLOAT) {
-        BroadcastBaseTiling<LambApplyOptimizerAssignOp::LambApplyOptimizerAssignCompute<float, float>::OpDag>
-            brcBaseTiling(context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
-        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
+    uint32_t dtSize = 0;
+    if (input0DType == ge::DT_FLOAT) {
+        tilingKey = TILING_KEY_FP32;
+        dtSize = sizeof(float);
+    } else if (input0DType == ge::DT_FLOAT16) {
+        tilingKey = TILING_KEY_FP16;
+        dtSize = sizeof(uint16_t);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad", Ops::Base::ToString(input0DType).c_str(),
                                   "fp16 or fp32");
         return ge::GRAPH_FAILED;
     }
+
+    using PlanTiling = LambBrcTilingData<12, 3>;
+    td_ = PlanTiling{};
+    // 空进空出: 输出 0 元素时 tiling 全 0, kernel 按 usedCoreNum=0 直接退出。
+    auto outShape0 = context_->GetOutputShape(0);
+    if (outShape0 == nullptr || outShape0->GetStorageShape().GetShapeSize() != 0) {
+        // 先取返回值再判: 模板实参里的逗号会被预处理器当成 OP_CHECK_IF 的参数分隔符。
+        ge::graphStatus planRet = BuildLambBrcPlan<12, 3>(context_, coreNum_, ubSize_, dtSize, td_);
+        OP_CHECK_IF(planRet != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "build broadcast plan failed"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), &td_, sizeof(td_));
+    OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "copy tiling data failed, ret %d", ret),
+                return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(sizeof(td_));
+    context_->SetBlockDim(std::max<uint32_t>(td_.usedCoreNum, 1));
+    size_t* ws = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ws);
+    ws[0] = 0U;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -169,7 +135,17 @@ ge::graphStatus LambApplyOptimizerAssignTiling::GetWorkspaceSize() { return ge::
 
 ge::graphStatus LambApplyOptimizerAssignTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LambApplyOptimizerAssignTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus LambApplyOptimizerAssignTiling::GetPlatformInfo()
+{
+    auto compileInfo = static_cast<const LambApplyOptimizerAssignCompileInfo*>(context_->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    coreNum_ = compileInfo->coreNum;
+    ubSize_ = compileInfo->ubSize;
+    OP_CHECK_IF(coreNum_ == 0 || ubSize_ == 0,
+                OP_LOGE(context_->GetNodeName(), "invalid platform info: coreNum %lu ubSize %lu", coreNum_, ubSize_),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus TilingForLambApplyOptimizerAssign(gert::TilingContext* context)
 {

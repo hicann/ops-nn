@@ -44,56 +44,56 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的x1（权重范数），标量。</td>
+      <td>支持空Tensor。公式中的x1（权重范数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的x2（梯度范数），标量。</td>
+      <td>支持空Tensor。公式中的x2（梯度范数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x3</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的x3（学习率），标量。</td>
+      <td>支持空Tensor。公式中的x3（学习率），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x4</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的x4（update），主张量，shape需与x5满足broadcast关系。</td>
+      <td>支持空Tensor。公式中的x4（update），主张量，shape需与其他输入满足broadcast关系。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x5</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的x5（参数），主张量，shape需与x4满足broadcast关系，其broadcast结果决定输出y的shape。</td>
+      <td>支持空Tensor。公式中的x5（参数），主张量，shape需与其他输入满足broadcast关系，全部输入的broadcast结果决定输出y的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>greater_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的greater_y（阈值），标量。</td>
+      <td>支持空Tensor。公式中的greater_y（阈值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>select_e</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的select_e（回退值），标量。</td>
+      <td>支持空Tensor。公式中的select_e（回退值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y（更新后的参数），shape取x4与x5的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y（更新后的参数），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -101,6 +101,8 @@
 
 ## 约束说明
 
+- 所有输入的shape需两两满足broadcast规则（右对齐，对应维相等或为1），输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数不超过8。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明

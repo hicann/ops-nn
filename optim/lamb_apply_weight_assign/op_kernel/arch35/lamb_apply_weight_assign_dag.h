@@ -22,6 +22,21 @@
 namespace LambApplyWeightAssignOp {
 using namespace AscendC;
 using namespace Ops::Base;
+
+// Vec::Div / Vec::Sqrt 的默认档(Div/SqrtAlgo::INTRINSIC)会把非规格化操作数冲刷成 ±0,
+// 两个非规格化数相除因此退化成 0/0 = NaN。此处显式取 PRECISION_0ULP_FTZ_FALSE 不冲刷,
+// 与竞品(torch 在 CPU/A100 上全程保留 fp32 非规格化数)及本族手写 regbase 算子一致。
+// 就地定义而非抽公共头: 本文件同时被 op_host(源码树)与 kernel(构建树)包含, 两棵树相对路径不同。
+template <class T>
+struct DivFtzFalse : public Ops::Base::Vec::ElemwiseBinaryOP<T, T, T> {
+    __aicore__ inline DivFtzFalse(LocalTensor<T>& dst, LocalTensor<T>& src1, LocalTensor<T>& src2, int count)
+    {
+#ifdef __CCE_AICORE__
+        static constexpr AscendC::DivConfig config = {AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+        AscendC::Div<T, config>(dst, src1, src2, count);
+#endif
+    }
+};
 constexpr int COMPARE_MODE_GT = 1;
 constexpr int SELECT_MODE_T_T = 2;
 // In : 0 input0(w_norm, scalar), 1 input1(g_norm, scalar), 2 input2(lr, scalar),
@@ -34,9 +49,12 @@ struct LambApplyWeightAssignCompute {
     using CZero = MAKE_CONST(U, 0.0);
     using COne = MAKE_CONST(U, 1.0);
 
-    using InWNorm = Bind<Vec::Duplicate<T>, Placeholder::In0<T, Placeholder::ScalarAttr<true>>>;
-    using InGNorm = Bind<Vec::Duplicate<T>, Placeholder::In1<T, Placeholder::ScalarAttr<true>>>;
-    using InLr = Bind<Vec::Duplicate<T>, Placeholder::In2<T, Placeholder::ScalarAttr<true>>>;
+    // 全部输入统一走 Vec::CopyInBrc: 这些"系数"输入在 A2 的声明就是可广播的 ND Tensor
+    // (IR 注释为 "A ND Tensor"、op_info shape 为 all、infershape 走 Broadcast、impl 全程
+    // broadcast_shapes), 故按支持范围对齐 A2 补齐广播语义; 融合场景传 (1,) 时行为不变。
+    using InWNorm = Bind<Vec::CopyInBrc<T>, Placeholder::In0<T>>;
+    using InGNorm = Bind<Vec::CopyInBrc<T>, Placeholder::In1<T>>;
+    using InLr = Bind<Vec::CopyInBrc<T>, Placeholder::In2<T>>;
     using InUpdate = Bind<Vec::CopyInBrc<T>, Placeholder::In3<T>>;
     using InParam = Bind<Vec::CopyInBrc<T>, Placeholder::In4<T>>;
 
@@ -50,7 +68,7 @@ struct LambApplyWeightAssignCompute {
     using OneTensor = Bind<Vec::Duplicate<U>, COne>;
     using GreaterG = Bind<Vec::Compare<uint8_t, U, COMPARE_MODE_GT>, GNorm, CZero>;
     using GreaterW = Bind<Vec::Compare<uint8_t, U, COMPARE_MODE_GT>, WNorm, CZero>;
-    using WDivG = Bind<Vec::Div<U>, WNorm, GNorm>;
+    using WDivG = Bind<DivFtzFalse<U>, WNorm, GNorm>;
     using Select1 = Bind<Vec::Select<uint8_t, U, SELECT_MODE_T_T>, GreaterG, WDivG, OneTensor>;
     using Ratio = Bind<Vec::Select<uint8_t, U, SELECT_MODE_T_T>, GreaterW, Select1, OneTensor>;
 
@@ -63,7 +81,10 @@ struct LambApplyWeightAssignCompute {
     using OpCopyOut0 = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, NextParamCast>;
 
     using Outputs = Elems<OpCopyOut0>;
-    using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
+    // LEVEL_0 = 交给框架按 32 buffer 预算自动择档(LEVEL_2->LEVEL_1->LEVEL_0 取第一个装得下的),
+    // 不手工钉死档位: 本族算子输入个数差异大(5~13), 手拍的档位对大输入算子会触发
+    // dag.h 的 (mte2+mte3)*BUF_PING_PONG+tmp <= 32 静态断言而编译失败。
+    using MemCfg = MemOptCfg<MemLevel::LEVEL_0>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 } // namespace LambApplyWeightAssignOp

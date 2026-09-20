@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "infershape_broadcast_util.h"
@@ -20,33 +21,60 @@
 using namespace Ops::Base;
 using namespace ge;
 namespace ops {
-constexpr size_t UPDATE_IDX = 3;
+// A2 语义: 本族算子的所有输入都是可广播的 ND Tensor(见 canndev
+// ops/built-in/tbe/impl/lamb_*.py, 每一步 mul/sub/div 都先 shape_util.broadcast_shapes
+// 再 tbe.broadcast), 输出形状为全部输入广播的结果。A2 的 op_proto 只声明了其中两个输入,
+// 属声明宽松, 不作为支持面依据。
+// input_param 同时是 ref 输出(原地写回), 故广播结果必须恰好等于 input_param 的形状,
+// 否则原地写回会越过 input_param 的显存边界。
+constexpr size_t IN_NUM = 5;
 constexpr size_t PARAM_IDX = 4;
-constexpr size_t OUTPUT_IDX = 0;
 
 static ge::graphStatus InferShape4LambApplyWeightAssign(gert::InferShapeContext* context)
 {
-    auto update_shape = context->GetInputShape(UPDATE_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, update_shape);
-    auto param_shape = context->GetInputShape(PARAM_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, param_shape);
-    auto output_shape = context->GetOutputShape(OUTPUT_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
-
-    OP_CHECK_IF(!BroadcastShape(update_shape, param_shape, output_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*update_shape).c_str(),
-                        ToString(*param_shape).c_str()),
-                return ge::GRAPH_FAILED);
-
-    // 标量归一：全标量输入 broadcast 得 0 维空 shape ()，与 A2 的 shape_util.scalar2tensor_one 对齐，归一为 (1,)。
-    // 否则动态 shape 编译期 DFX 生成会对空 shape 做 reduce 连乘（无初值）而报 TypeError 编译失败。
-    if (output_shape->GetDimNum() == 0) {
-        output_shape->SetDimNum(1);
-        output_shape->SetDim(0, 1);
+    std::vector<const gert::Shape*> inShapes;
+    inShapes.reserve(IN_NUM);
+    for (size_t i = 0; i < IN_NUM; i++) {
+        auto in = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, in);
+        inShapes.push_back(in);
     }
-
+    gert::Shape bcShape;
+    // 逐对折叠广播: 只用两参数重载。vector 重载虽在 op_common/op_host/infershape_broadcast_util.h
+    // 以 Ops::Base 声明, 但 libops_base.so 只导出两参数版, vector 版的实现在 libop_common.so 的
+    // 小写 ops 命名空间下 —— 声明与实现命名空间不一致, 用它会编译期通过、加载期
+    // undefined symbol 而装不上包。
+    bcShape = *inShapes[0];
+    for (size_t i = 1; i < inShapes.size(); i++) {
+        gert::Shape tmp;
+        OP_CHECK_IF(!BroadcastShape(&bcShape, inShapes[i], &tmp),
+                    OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together"), return ge::GRAPH_FAILED);
+        bcShape = tmp;
+    }
+    // 标量归一: 全标量输入 broadcast 得 0 维空 shape (), 与 A2 的 shape_util.scalar2tensor_one
+    // 对齐, 归一为 (1,)。否则动态 shape 编译期 DFX 生成会对空 shape 做 reduce 连乘(无初值)而报
+    // TypeError 编译失败。
+    if (bcShape.GetDimNum() == 0) {
+        bcShape.SetDimNum(1);
+        bcShape.SetDim(0, 1);
+    }
+    const gert::Shape& paramShape = *inShapes[PARAM_IDX];
+    gert::Shape normParam = paramShape;
+    if (normParam.GetDimNum() == 0) {
+        normParam.SetDimNum(1);
+        normParam.SetDim(0, 1);
+    }
+    OP_CHECK_IF(!(bcShape == normParam),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "input_param", ToString(paramShape).c_str(),
+                    "input_param is an in-place(ref) output, so the broadcast shape of all inputs must equal it"),
+                return ge::GRAPH_FAILED);
+    auto out = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out);
+    *out = normParam;
     return GRAPH_SUCCESS;
 }
+
 static ge::graphStatus InferDataType4LambApplyWeightAssign(gert::InferDataTypeContext* context)
 {
     if (context == nullptr) {

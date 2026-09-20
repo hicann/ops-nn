@@ -44,7 +44,7 @@ protected:
 
 private:
     // 校验 in-place 更新的 input_param 形状 == broadcast(input3, input_param)(input3 可向上广播)。
-    // dtype 一致性、标量非空的通用校验见 lamb_apply_common/lamb_apply_check_util.h。
+    // dtype 一致性、标量非空的通用校验见 lamb_apply_common/op_host/arch35/lamb_apply_check_util.h。
     ge::graphStatus CheckInplaceShapeConstraint();
     uint64_t tilingKey = 0;
 };

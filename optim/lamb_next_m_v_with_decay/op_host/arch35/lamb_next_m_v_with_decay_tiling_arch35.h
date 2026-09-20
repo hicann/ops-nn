@@ -16,7 +16,8 @@
 #ifndef OPS_OPTIM_ADAM_APPLY_ONE_OP_HOST_ADAM_APPLY_ONE_TILING_ARCH35_H
 #define OPS_OPTIM_ADAM_APPLY_ONE_OP_HOST_ADAM_APPLY_ONE_TILING_ARCH35_H
 
-#include "../../op_kernel/arch35/lamb_next_m_v_with_decay_tiling_key.h"
+#include "../lamb_next_m_v_with_decay_tiling_def.h"
+#include "../../../lamb_apply_common/op_host/arch35/lamb_brc_tiling_plan.h"
 #include "op_host/tiling_base.h"
 
 using namespace Ops::NN::Optiling;
@@ -44,6 +45,9 @@ protected:
 
 private:
     uint64_t tilingKey = 0;
+    uint64_t coreNum_ = 0;
+    uint64_t ubSize_ = 0;
+    LambBrcTilingData<13, 4> td_;
 };
 
 } // namespace optiling

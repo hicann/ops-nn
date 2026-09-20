@@ -46,70 +46,70 @@
     <tr>
       <td>input_greater1</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input_greater1（权重范数），标量。</td>
+      <td>支持空Tensor。公式中的input_greater1（权重范数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_greater_realdiv</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input_greater_realdiv（信任比分子），标量。</td>
+      <td>支持空Tensor。公式中的input_greater_realdiv（信任比分子），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_realdiv</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input_realdiv（信任比分母），标量。</td>
+      <td>支持空Tensor。公式中的input_realdiv（信任比分母），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul0</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input_mul0（学习率），标量。</td>
+      <td>支持空Tensor。公式中的input_mul0（学习率），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul1</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul1（update），主张量，shape需与input_sub满足broadcast关系，其broadcast结果决定输出y的shape。</td>
+      <td>支持空Tensor。公式中的input_mul1（update），主张量，shape需与其他输入满足broadcast关系，全部输入的broadcast结果决定输出y的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_sub</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_sub（参数），主张量，shape需与input_mul1满足broadcast关系，其broadcast结果决定输出y的shape。</td>
+      <td>支持空Tensor。公式中的input_sub（参数），主张量，shape需与其他输入满足broadcast关系，全部输入的broadcast结果决定输出y的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>greater_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的greater_y（阈值），标量。</td>
+      <td>支持空Tensor。公式中的greater_y（阈值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>select_e</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的select_e（回退值），标量。</td>
+      <td>支持空Tensor。公式中的select_e（回退值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>minimum_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的minimum_y（裁剪上界），标量。</td>
+      <td>支持空Tensor。公式中的minimum_y（裁剪上界），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y（更新后的参数），shape取input_mul1与input_sub的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y（更新后的参数），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -117,6 +117,8 @@
 
 ## 约束说明
 
+- 所有输入的shape需两两满足broadcast规则（右对齐，对应维相等或为1），输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数不超过8。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明
