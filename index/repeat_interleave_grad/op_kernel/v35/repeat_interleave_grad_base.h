@@ -18,7 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_utils.h"
-#include "platform.h"
+#include "repeat_interleave_grad_platform.h"
 #include "repeat_interleave_grad_david_tiling_data.h"
 
 namespace RepeatInterleaveGrad {
@@ -115,4 +115,4 @@ __aicore__ inline void DoUbSplit(int64_t splitLen, int64_t splitFactor, UbParaUn
 
 } // namespace __RIGUtil
 } // namespace RepeatInterleaveGrad
-#endif // CANN_OPS_BUILD_IN_TBE_IMPL_ASCENDC_CUMSUM_CUMSUM_CORE_SS_UB_SS_TWOWAY_SS_H
+#endif // REPEAT_INTERLEAVE_GRAD_BASE_H

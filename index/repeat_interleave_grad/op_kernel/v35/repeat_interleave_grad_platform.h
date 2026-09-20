@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file platform.h
+ * \file repeat_interleave_grad_platform.h
  * \brief platform apator
  */
-#ifndef OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
-#define OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
+#ifndef REPEAT_INTERLEAVE_GRAD_PLATFORM_H
+#define REPEAT_INTERLEAVE_GRAD_PLATFORM_H
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
@@ -74,4 +74,4 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport() { return platform::IsDat
 
 } // namespace PlatformSocInfo
 
-#endif // OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
+#endif // REPEAT_INTERLEAVE_GRAD_PLATFORM_H

@@ -17,7 +17,7 @@
 #define _REDUCE_BUF_POOL_H_
 
 #include "kernel_operator.h"
-#include "platform.h"
+#include "repeat_interleave_grad_platform.h"
 #include "kernel_utils.h"
 
 namespace RepeatInterleaveGrad {

@@ -16,7 +16,7 @@
 #ifndef _REPEAT_INTERLEAVE_GRAD_DAVID_MN_H_
 #define _REPEAT_INTERLEAVE_GRAD_DAVID_MN_H_
 #include "kernel_operator.h"
-#include "platform.h"
+#include "repeat_interleave_grad_platform.h"
 #include "reduce_buf_pool.h"
 #include "repeat_interleave_grad_base.h"
 #include "repeat_interleave_grad_david_tiling_data.h"
