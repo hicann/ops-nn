@@ -366,10 +366,10 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeDtype()
 
     // 输出yScale
     auto outScaleDesc = this->context_->GetOutputDesc(Y_SCALE_OUTPUT_INDEX);
-    OP_CHECK_IF(outScaleDesc == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "outputScale", "null",
-                                                      "outputScale can not be null"),
-                return false);
+    OP_CHECK_IF(
+        outScaleDesc == nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "yScale", "null", "yScale can not be null"),
+        return false);
     return CheckDtype();
 }
 

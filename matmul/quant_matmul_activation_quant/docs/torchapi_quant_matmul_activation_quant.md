@@ -170,6 +170,12 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 - 该接口支持单算子模式调用。
 - 不支持空Tensor。
 - 支持连续Tensor，非连续Tensor仅支持最后两根轴转置场景。
+- 本接口不暴露转置参数，内部调用aclnn时transposeX1、transposeX2固定为false，转置只能通过Tensor的stride表达：
+  - `x1`的逻辑shape始终为`(..., M, K)`，`x2`的逻辑shape始终为`(..., K, N)`。
+  - 需要转置时，以最后两维的转置视图传入：`x1`的stride为`(..., 1, M)`，`x2`的stride为`(..., 1, K)`；不转置时stride为正常的连续步长，`x1`为`(..., K, 1)`，`x2`为`(..., N, 1)`。
+  - 接口依据stride自动识别转置并推导M/N/K；仅支持沿最后两维的转置，其他轴的视图/非连续Tensor不支持。
+- `x1_scale`、`x2_scale`不携带转置标志，shape方向与`x1`、`x2`一致：转置时`x1_scale`为`(..., CeilDiv(K, 64), M, 2)`、`x2_scale`为`(..., N, CeilDiv(K, 64), 2)`；非转置时为`(..., M, CeilDiv(K, 64), 2)`、`(..., CeilDiv(K, 64), N, 2)`。
+- 当`x1`最后两维相等（M = K）或`x2`最后两维相等（K = N）时，转置不按stride判断；由于本接口内部固定向aclnn传入transposeX1、transposeX2为false，该场景始终按不转置处理。
 - `x1`支持 2-6 维，`x2`为NZ时支持 4-8 维，`x2`为ND时支持 2-6 维。
 - `x2`为NZ时仅支持数据类型为torch.float8_e4m3fn。
 - 当`K`或`N`为1时，无法使用weightNz特性，本接口不支持此种场景。

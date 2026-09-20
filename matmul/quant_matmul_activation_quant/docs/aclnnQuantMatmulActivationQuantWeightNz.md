@@ -416,7 +416,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>1-8</td>
+        <td>3-7</td>
         <td>-</td>
       </tr>
       <tr>
@@ -545,6 +545,11 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式，在使用时必须使用0来填充以防引入脏数据。
   - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示batch不存在。
   - transposeX2为false时x2的shape：(batch, n1, k1, k0, n0)。transposeX2为true时x2的shape：(batch, k1, n1, n0, k0)。其中batch代表前0~4维，0维表示batch不存在。k与x1的shape中的k一致。
+  - x1、x2的转置状态由转置标记和stride共同决定，任改一处即可（两种方式等价，注意不要同时使用）：
+    - 方式一：将对应标记transposeX1/transposeX2置为true，shape按转置后传入（见上方true时shape的说明）。
+    - 方式二：标记保持为false，将Tensor以转置视图传入（shape仍为false时的形状，如x2为(batch, k, n)，stride倒数第二维为1），接口会自动按转置处理。
+  - x1Scale、x2Scale不携带转置标记，其shape需与x1、x2的转置方向保持一致（转置时x2Scale为(batch, n, ceil(k/64), 2)，非转置时为(batch, ceil(k/64), n, 2)）。
+  - 当x1最后两维相等（m = k）或x2最后两维相等（k = n）时，转置以transposeX1/transposeX2标记为准进行判断，不按stride进行转置判断。
   - x1支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
   - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
   - 当x1数据类型为FLOAT8_E5M2时，x2数据类型必须为FLOAT8_E4M3FN。
@@ -580,9 +585,9 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
 
         |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM, gsN, gsK]|groupSize|
         |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
 
     - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
     - MX量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
