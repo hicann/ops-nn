@@ -48,6 +48,8 @@ constexpr int64_t INT8_SEL_BUF_NUM = 3;
 constexpr int64_t MASK_BYTES_PER_POINT = 1;
 // 与 op_kernel/arch35/arg_max_grad_nd.h 的 BUFFER_NUM 一致
 constexpr int64_t BUFFER_NUM = 2;
+// 内核 varQue_ / outQue_ 各自使用一个TQue
+constexpr int64_t VAR_AND_OUT_TQUE_NUM = 2;
 // UB / GM 的搬运块大小: DataCopyPad 写不足一块时按块读-改-写
 constexpr int64_t BITS_PER_BYTE = 8;
 constexpr int64_t UB_BLOCK_BYTES = 32;
@@ -79,7 +81,7 @@ struct UbLayout {
 
     int64_t Total() const
     {
-        return BUFFER_NUM * (2 * tBufBytes) + i32BufBytes + maskBufBytes + selBufBytes +
+        return BUFFER_NUM * VAR_AND_OUT_TQUE_NUM * tBufBytes + i32BufBytes + maskBufBytes + selBufBytes +
                BUFFER_NUM * (idxBufBytes + updBufBytes);
     }
 };
@@ -99,9 +101,9 @@ private:
     ge::graphStatus CalUbSplit();
     UbLayout MakeUbLayout(int64_t cols, bool rowDirect) const;
     int64_t SolveColsPerChunk(bool rowDirect, int64_t upperCols) const;
-    void CalMergeParams(int64_t cols);
+    void CalMergeParams(int64_t cols) const;
     void CalCoreSplit();
-    void PrintTilingData();
+    void PrintTilingData() const;
 
     gert::TilingContext* context_ = nullptr;
     ArgMaxGradArch35TilingData* tilingData_{nullptr};
@@ -290,7 +292,7 @@ int64_t ArgMaxGradTiling::SolveColsPerChunk(bool rowDirect, int64_t upperCols) c
 }
 
 // ── 多行合并的 UB 布局参数: host 一次算准, 内核直接取用 ──────────────────────────────
-void ArgMaxGradTiling::CalMergeParams(int64_t cols)
+void ArgMaxGradTiling::CalMergeParams(int64_t cols) const
 {
     int64_t alignElems = UB_BLOCK_BYTES / DTYPE_LEN_INT32;
     if (UB_BLOCK_BYTES / varDtypeLen_ > alignElems) {
@@ -393,7 +395,7 @@ ge::graphStatus ArgMaxGradTiling::CalUbSplit()
     return ge::GRAPH_SUCCESS;
 }
 
-void ArgMaxGradTiling::PrintTilingData()
+void ArgMaxGradTiling::PrintTilingData() const
 {
     auto nodeName = context_->GetNodeName();
     OP_LOGD(nodeName, "ArgMaxGrad tiling: outer=%ld dimSize=%ld inner=%ld totalElems=%ld", tilingData_->outer,

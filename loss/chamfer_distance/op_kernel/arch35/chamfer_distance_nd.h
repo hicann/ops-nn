@@ -169,11 +169,7 @@ protected:
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
     // 查询点分块大小(32B 的整数倍; 决定候选块的复用次数)
     constexpr static int64_t QUERY_TILE = 64;
-    // 跨段最小值的初值必须是 +inf, 不能用 3.4e38 之类的"极大值"哨兵:
-    // 坐标取到 fp32 极值域时真实距离会溢出成 inf, 而 `inf < 3.4e38` 为假 → 哨兵反而赢过真实值,
-    // 输出 3.4e38 而不是 inf(真机实测过的缺陷)。
-    // 注意: 只把本文件的哨兵定成 +inf 并不足够 —— AscendC::ReduceMin 内部的累加器初值同样是
-    // FLT_MAX, 同一缺陷会从库函数入口漏回来。段内归约后的还原见 ReduceSegment 的 ②。
+    // 跨段最小值的初值为 +inf。
     constexpr static float DIST_INIT_VALUE = __builtin_inff();
 };
 
@@ -330,7 +326,7 @@ __aicore__ inline void ChamferDistanceND<T>::ReduceChunk(int64_t len, float& seg
     segMin = redBuf.GetValue(0);
     segIdx = static_cast<int32_t>(redBuf.template ReinterpretCast<uint32_t>().GetValue(1));
 
-    // ── 归约结果的两处还原(实测缺陷, 见下) ──────────────────────────────────
+    // ── 归约结果的两处还原 ──────────────────────────────────
     // ① NaN: AscendC::ReduceMin 会被段内任一 NaN 污染成 NaN, 但它给回的下标不是"首个
     //    NaN"。torch.min(golden 用的就是它)的语义是 NaN 传播且取首个 NaN 的下标, 故这里
     //    自行扫出首个 NaN。该分支只在段内出现 NaN 时进入, 正常数据的热路径不受影响。
