@@ -11,7 +11,7 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND/NHWC、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（输入4维NHWC/NCHW，内部NC1HWC0/NDC1HWC0布局）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅 FLOAT16/FLOAT32。
+> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND/NHWC、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（输入4维NHWC/NCHW，内部NC1HWC0/NDC1HWC0布局）。数据类型BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅FLOAT16/FLOAT32。
 
 ## 功能说明
 

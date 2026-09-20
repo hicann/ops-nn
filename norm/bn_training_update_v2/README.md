@@ -11,7 +11,7 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅 FLOAT16/FLOAT32。
+> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅FLOAT16/FLOAT32。
 
 ## 功能说明
 
@@ -139,4 +139,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | 图模式调用 | [test_geir_bn_training_update_v2](./examples/arch35/test_geir_bn_training_update_v2.cpp) | 通过[算子IR](op_graph/bn_training_update_v2_proto.h)构图方式调用BNTrainingUpdateV2算子（含两组shape/epsilon用例）。 |
-| tf图解析 | [bn_training_update_v2_tf_plugin.cpp](./framework/bn_training_update_v2_tf_plugin.cpp) | TF图节点BNTrainingUpdateV2经插件（REGISTER_CUSTOM_OP，AutoMappingFn参数直传）映射到本算子；aclgrphParseTensorFlow预生成.pb实测18/18 PASS（3 dtype × rank{3,4,5} × epsilon两档，见交付件05_test_result/harness/tf_pathway/）。 |

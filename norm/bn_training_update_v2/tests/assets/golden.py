@@ -32,6 +32,13 @@ casting ``y`` back to the input dtype.
 import numpy as np
 import torch
 
+try:
+    import ml_dtypes
+
+    _BF16 = np.dtype(ml_dtypes.bfloat16)
+except ImportError:  # pragma: no cover
+    _BF16 = None
+
 
 # Kernel and GEIR resolve the same snake-case operator key and share one Spec.
 __spec__ = {"bn_training_update_v2": "BNTrainingUpdateV2KernelSpec"}
@@ -74,7 +81,11 @@ def _as_tensor(value):
     """Convert a Kernel/GEIR NumPy input to a CPU Torch tensor losslessly."""
     if isinstance(value, torch.Tensor):
         return value.detach().cpu()
-    return torch.from_numpy(np.ascontiguousarray(np.asarray(value)))
+    array = np.ascontiguousarray(np.asarray(value))
+    if _BF16 is not None and array.dtype == _BF16:
+        # numpy/ml_dtypes bfloat16 → uint16 bit view → torch.bfloat16（按位无损）
+        return torch.from_numpy(array.view(np.uint16)).view(torch.bfloat16)
+    return torch.from_numpy(array)
 
 
 def _reference_dtype(*tensors):

@@ -624,6 +624,11 @@ private:
             event_t eventMS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
             SetFlag<HardEvent::MTE2_S>(eventMS);
             WaitFlag<HardEvent::MTE2_S>(eventMS);
+            // 标量覆写 tailG/tailP 前需等上一轮向量 ReduceSum 读完(与 ProcessScalarTinyR 同款
+            // V→S 危险:多轮/多 channel 复用尾缓冲时标量写可与向量读并发提交)
+            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventVS);
+            WaitFlag<HardEvent::V_S>(eventVS);
             LocalTensor<float> tailG = expMean_.Get<float>();
             LocalTensor<float> tailP = expRstd_.Get<float>();
             for (int64_t k = eff64; k < eff; k++) {
@@ -691,6 +696,12 @@ private:
         for (int64_t n0 = 0; n0 < tl_->numN; n0 += VL_FP32) {
             int64_t cnt = (tl_->numN - n0 < static_cast<int64_t>(VL_FP32)) ? (tl_->numN - n0) :
                                                                              static_cast<int64_t>(VL_FP32);
+            // 标量即将覆写 tailG/tailP：必须先等上一轮(或上一 channel)向量 ReduceSum 读完。
+            // 缺此 V_S 时标量写可与向量读并发提交，令上一块部分和混入当前块 lane（实测 N≥2·VL
+            // 的两轮形态随机丢/重计 lane，误差随运行时刻变化，N<2·VL 单轮不触发）。
+            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventVS);
+            WaitFlag<HardEvent::V_S>(eventVS);
             for (int64_t k = 0; k < cnt; k++) {
                 int64_t idx = (n0 + k) * tl_->numC + cPos;
                 float gv = ScalarToFp32(gUb, static_cast<uint32_t>(idx));
@@ -802,6 +813,11 @@ private:
                 event_t eventMS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
                 SetFlag<HardEvent::MTE2_S>(eventMS);
                 WaitFlag<HardEvent::MTE2_S>(eventMS);
+                // 标量覆写 tailG/tailP 前需等上一批向量 ReduceSum 读完(同 ProcessScalarTinyR 的
+                // V→S 危险,仅当按 nRowsCap 分批且末批 rem>0 才会多轮复用尾缓冲)
+                event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+                SetFlag<HardEvent::V_S>(eventVS);
+                WaitFlag<HardEvent::V_S>(eventVS);
                 LocalTensor<float> tailG = expMean_.Get<float>();
                 LocalTensor<float> tailP = expRstd_.Get<float>();
                 for (int64_t k = eff64; k < elems; k++) {
