@@ -4,7 +4,7 @@
 
 该融合规则将MatMul/MatMulV2 → Reshape → BiasAdd/Add结构融合为带bias输入的MatMul/MatMulV2（has_bias=true）：删除BiasAdd/Add节点，bias改为直连MatMul/MatMulV2，Reshape节点保留并移至MatMul/MatMulV2之后，由Reshape输出直连下游节点。
 
-![](../../../docs/zh/figures/MatMulReshapeBiasAddFusionPass_1.png)
+![](../../../docs/zh/figures/matmul_reshape_bias_add_fusion_pass_1.png)
 
 ## 使用约束
 

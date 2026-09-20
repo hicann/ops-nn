@@ -6,11 +6,11 @@
 
 融合前：
 
-![](../../../docs/zh/figures/Conv2DBackpropInputToV2FusionPass_1.png)
+![](../../../docs/zh/figures/conv2d_backprop_input_to_v2_fusion_pass_1.png)
 
 融合后：
 
-![](../../../docs/zh/figures/Conv2DBackpropInputToV2FusionPass_2.png)
+![](../../../docs/zh/figures/conv2d_backprop_input_to_v2_fusion_pass_2.png)
 
 ## 使用约束
 

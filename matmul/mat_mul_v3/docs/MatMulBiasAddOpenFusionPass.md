@@ -4,7 +4,7 @@
 
 将MatMul/MatMulV2/BatchMatMul/BatchMatMulV2算子和BiasAdd/Add算子融合为MatMul/MatMulV2/BatchMatMulV2算子。
 
-![](../../../docs/zh/figures/MatMulBiasAddOpenFusionPass_1.png)
+![](../../../docs/zh/figures/matmul_bias_add_open_fusion_pass_1.png)
 
 ## 使用约束
 

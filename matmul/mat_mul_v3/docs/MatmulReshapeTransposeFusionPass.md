@@ -6,7 +6,7 @@
 
 虚线框中的结构可以是一个或者多个。
 
-![](../../../docs/zh/figures/MatmulReshapeTransposeFusionPass_1.png)
+![](../../../docs/zh/figures/matmul_reshape_transpose_fusion_pass_1.png)
 
 ## 使用约束
 

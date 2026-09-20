@@ -6,19 +6,19 @@
 
 - 场景一：
 
-  ![](../../../docs/zh/figures/LayerNormFusionPass_1.png)
+  ![](../../../docs/zh/figures/layer_norm_fusion_pass_1.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/LayerNormFusionPass_2.png)
+  ![](../../../docs/zh/figures/layer_norm_fusion_pass_2.png)
 
 - 场景二：
 
-  ![](../../../docs/zh/figures/LayerNormFusionPass_3.png)
+  ![](../../../docs/zh/figures/layer_norm_fusion_pass_3.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/LayerNormFusionPass_4.png)
+  ![](../../../docs/zh/figures/layer_norm_fusion_pass_4.png)
 
 ## 使用约束
 

@@ -6,19 +6,19 @@
 
 MatMul/MatMulV2/BatchMatMul/BatchMatMulV2支持1 dim x N dim和N dim x 1 dim的输入场景下，需要将1 dim的输入插入Unsqueeze算子扩成二维，输出插入Squeeze算子去掉对应的扩维轴。
 
-![](../../../docs/zh/figures/MatMulUnsqueezeSqueezeFusionPass_1.png)
+![](../../../docs/zh/figures/matmul_unsqueeze_squeeze_fusion_pass_1.png)
 
 **融合模式二**
 
 MatMul/MatMulV2/BatchMatMul/BatchMatMulV2支持1 dim x 1 dim的输入场景下，需要将1 dim的输入插入Unsqueeze算子扩成二维。
 
-![](../../../docs/zh/figures/MatMulUnsqueezeSqueezeFusionPass_2.png)
+![](../../../docs/zh/figures/matmul_unsqueeze_squeeze_fusion_pass_2.png)
 
 **融合模式三**
 
 MatMul/MatMulV2/BatchMatMul/BatchMatMulV2支持AscendDequant场景，1维输入的扩维处理与模式一/模式二一致，Squeeze算子插入在AscendDequant算子之后。
 
-![](../../../docs/zh/figures/MatMulUnsqueezeSqueezeFusionPass_3.png)
+![](../../../docs/zh/figures/matmul_unsqueeze_squeeze_fusion_pass_3.png)
 
 ## 使用约束
 

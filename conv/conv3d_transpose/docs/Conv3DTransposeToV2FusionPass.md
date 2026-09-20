@@ -6,11 +6,11 @@
 
 融合前：
 
-![](../../../docs/zh/figures/Conv3DTransposeToV2FusionPass_1.png)
+![](../../../docs/zh/figures/conv3d_transpose_to_v2_fusion_pass_1.png)
 
 融合后：
 
-![](../../../docs/zh/figures/Conv3DTransposeToV2FusionPass_2.png)
+![](../../../docs/zh/figures/conv3d_transpose_to_v2_fusion_pass_2.png)
 
 ## 使用约束
 

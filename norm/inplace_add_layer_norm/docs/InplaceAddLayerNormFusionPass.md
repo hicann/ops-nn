@@ -19,7 +19,7 @@ Atlas A3 训练系列产品/Atlas A3 推理系列产品
 Ascend 950PR/Ascend 950DT
 <!-- end id4 -->
 
-![](../../../docs/zh/figures/InplaceAddLayerNormFusionPass_1.png)
+![](../../../docs/zh/figures/inplace_add_layer_norm_fusion_pass_1.png)
 
 <!-- end id1 -->
 

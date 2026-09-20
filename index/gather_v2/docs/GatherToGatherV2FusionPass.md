@@ -4,7 +4,7 @@
 
 该融合将符合图融合pattern的Gather算子改为GatherV2算子。
 
-![](../../../docs/zh/figures/GatherToGatherV2FusionPass_1.png)
+![](../../../docs/zh/figures/gather_to_gather_v2_fusion_pass_1.png)
 
 ## 使用约束
 

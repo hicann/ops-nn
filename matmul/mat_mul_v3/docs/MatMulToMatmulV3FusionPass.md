@@ -4,7 +4,7 @@
 
 该融合将符合图融合pattern的MatMulV2/MatMul、BatchMatMulV2/BatchMatMul的算子转换为MatMulV3/BatchMatMulV3算子。
 
-![](../../../docs/zh/figures/MatMulToMatmulV3FusionPass_1.png)
+![](../../../docs/zh/figures/matmul_to_matmul_v3_fusion_pass_1.png)
 
 ## 使用约束
 

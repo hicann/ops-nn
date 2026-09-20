@@ -4,7 +4,7 @@
 
 该融合将符合条件的`QuantBatchMatmulV4`节点替换为`QuantBatchMatmulV3`节点，按两种算子的输入定义重排连接，并保留输出的形状、数据类型、格式及相关属性，使量化矩阵乘计算由`QuantBatchMatmulV3`完成。如下图所示。
 
-![QuantBatchMatmulV4转换为QuantBatchMatmulV3](../../../docs/zh/figures/QuantBatchMatmulV4ToV3FusionPass_1.png)
+![QuantBatchMatmulV4转换为QuantBatchMatmulV3](../../../docs/zh/figures/quant_batch_matmul_v4_to_v3_fusion_pass_1.png)
 
 图中展示参与映射的输入，V3的可选输入未连接时保持缺省。`x2_scale`虽然在V4中为可选输入，但映射到V3的必选输入scale，因此可转换的输入图需要提供合法的`x2_scale`。输入映射如下，索引为算子IR定义中的索引。
 

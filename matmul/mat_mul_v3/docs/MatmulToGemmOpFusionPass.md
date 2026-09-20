@@ -12,7 +12,7 @@
 - <term>Ascend 950PR/Ascend 950DT</term>：该融合将符合图融合pattern的MatMulV3/MatMulV2/MatMul的算子转换为GemmV3算子。
 <!-- end id3 -->
 
-![](../../../docs/zh/figures/MatmulToGemmOpFusionPass_1.png)
+![](../../../docs/zh/figures/matmul_to_gemm_op_fusion_pass_1.png)
 
 ## 使用约束
 

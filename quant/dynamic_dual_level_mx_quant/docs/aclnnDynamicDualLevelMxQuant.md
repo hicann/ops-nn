@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：目的数据类型为FLOAT4类的MX量化。只对尾轴进行量化，前面所有的轴都合轴处理，通过给定的level0BlockSize将输入划分成多个数据块，对每个数据块进行一级量化，输出量化尺度level0ScaleOut；然后将一级量化的结果作为新的输入，并通过给定的level1BlockSize将其划分成多个数据块，对每个数据块进行二级量化，输出量化尺度level1ScaleOut，根据round_mode进行数据类型的转换，得到量化结果yOut，具体参见[图示](../../../docs/zh/figures/DynamicDualLevelMxQuant.png)。
+- 接口功能：目的数据类型为FLOAT4类的MX量化。只对尾轴进行量化，前面所有的轴都合轴处理，通过给定的level0BlockSize将输入划分成多个数据块，对每个数据块进行一级量化，输出量化尺度level0ScaleOut；然后将一级量化的结果作为新的输入，并通过给定的level1BlockSize将其划分成多个数据块，对每个数据块进行二级量化，输出量化尺度level1ScaleOut，根据round_mode进行数据类型的转换，得到量化结果yOut，具体参见[图示](../../../docs/zh/figures/dynamic_dual_level_mx_quant.png)。
   - 可选功能：融合smooth scale运算，在对数据输入x进行量化前先进行x=x*smooth_scale（广播逐元素乘法）。
 
 - 计算公式：

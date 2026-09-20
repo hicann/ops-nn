@@ -4,7 +4,7 @@
 
 该融合将符合下图左侧图结构的Mul、ReduceSum、Sub这些小算子，融合成下图右侧的SoftmaxGradExt算子。
 
-![](../../../docs/zh/figures/SoftmaxGradExtFusionPass_1.png)
+![](../../../docs/zh/figures/softmax_grad_ext_fusion_pass_1.png)
 
 ## 使用约束
 

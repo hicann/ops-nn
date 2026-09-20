@@ -4,7 +4,7 @@
 
 该融合将MatMul/MatMulV2/MatMulV3、BatchMatMul/BatchMatMulV2/BatchMatMulV3算子转换为QuantBatchMatMulV3算子，并插入scale为1.0的常量作为scale输入，bias输入、转置属性及输出y的数据类型保持不变。
 
-![](../../../docs/zh/figures/ZZMatMulTOQBMMV3FusionPass_1.png)
+![](../../../docs/zh/figures/zz_matmul_to_qbmmv3_fusion_pass_1.png)
 
 ## 使用约束
 

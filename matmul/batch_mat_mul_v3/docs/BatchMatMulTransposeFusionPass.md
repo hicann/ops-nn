@@ -4,7 +4,7 @@
 
 该融合将MatMul输入侧仅交换最后两维的Transpose算子吸收进MatMul算子：删除Transpose节点，并将MatMul对应输入的转置属性取反（BatchMatMul/BatchMatMulV2翻转adj_x1/adj_x2，MatMul/MatMulV2翻转transpose_x1/transpose_x2）。
 
-![](../../../docs/zh/figures/BatchMatMulTransposeFusionPass_1.png)
+![](../../../docs/zh/figures/batch_matmul_transpose_fusion_pass_1.png)
 
 ## 使用约束
 

@@ -4,7 +4,7 @@
 
 由于Gemm接口无单算子实现，该融合将符合图融合pattern的Gemm算子拆分成包含matmul、mul、add的几种算子的组合。
 
-![](../../../docs/zh/figures/GemmToMatmulFusionPass_1.png)
+![](../../../docs/zh/figures/gemm_to_matmul_fusion_pass_1.png)
 
 ## 使用约束
 

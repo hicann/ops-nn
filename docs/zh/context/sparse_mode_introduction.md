@@ -18,11 +18,11 @@
 
 attenMask的工作原理为，在Mask为True的位置遮蔽query(Q)与key(K)的转置矩阵乘积的值，示意如下：
 
-![原理图](../figures/QK_transpose_diagram.png)
+![原理图](../figures/qk_transpose_diagram.png)
 
 $QK^T$矩阵在attenMask为True的位置会被遮蔽，效果如下：
 
-![原理图](../figures/masked_QK_diagram.png)
+![原理图](../figures/masked_qk_diagram.png)
 
 ## sparseMode=0
 

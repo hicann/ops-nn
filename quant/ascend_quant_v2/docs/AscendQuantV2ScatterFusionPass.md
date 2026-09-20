@@ -4,7 +4,7 @@
 
 该融合将符合下图左侧图结构的AscendQuantV2、Scatter两个小算子，融合成下图右侧的QuantUpdateScatter算子。其中Scatter的updates输入为AscendQuantV2的输出，AscendQuantV2的输入（x、scale，以及可选的offset）与Scatter的输入（var、indices）一起，作为融合后QuantUpdateScatter算子的输入。
 
-![](../../../docs/zh/figures/AscendQuantV2ScatterFusionPass_1.png)
+![](../../../docs/zh/figures/ascend_quant_v2_scatter_fusion_pass_1.png)
 
 ## 使用约束
 

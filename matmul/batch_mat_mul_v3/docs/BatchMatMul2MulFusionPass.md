@@ -7,11 +7,11 @@
 >[!NOTE]说明
 >Ascend 950PR/Ascend 950DT仅融合MatMul/MatMulv2/MatMulV3节点，不融合BatchMatmul/BatchMatMulV2/BatchMatMulV3节点。
 
-![](../../../docs/zh/figures/BatchMatMul2MulFusionPass_1.png)
+![](../../../docs/zh/figures/batch_matmul_2_mul_fusion_pass_1.png)
 
 若输入的对应的adj为true则需要在对应输入前插入reshape算子。
 
-![](../../../docs/zh/figures/BatchMatMul2MulFusionPass_2.png)
+![](../../../docs/zh/figures/batch_matmul_2_mul_fusion_pass_2.png)
 
 ## 使用约束
 

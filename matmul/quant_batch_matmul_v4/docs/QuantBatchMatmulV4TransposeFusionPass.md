@@ -5,15 +5,15 @@
 <!-- npu="950" id1 -->
 融合模式一：将QuantBatchMatmulV4算子x2和x2_scale输入前的Transpose/TransposeD节点从图中删除，并将转置信息打在QuantBatchMatmulV4算子的transpose_x2属性上。如下图所示。
 
-![](../../../docs/zh/figures/QuantBatchMatmulV4TransposeFusionPass_1.png)
+![](../../../docs/zh/figures/quant_batch_matmul_v4_transpose_fusion_pass_1.png)
 
 融合模式二：将QuantBatchMatmulV4算子x2输入前的Transpose/TransposeD节点和x2_scale输入前的Reshape节点从图中删除，并将转置信息打在QuantBatchMatmulV4算子的transpose_x2属性上。如下图所示。
 
-![](../../../docs/zh/figures/QuantBatchMatmulV4TransposeFusionPass_2.png)
+![](../../../docs/zh/figures/quant_batch_matmul_v4_transpose_fusion_pass_2.png)
 
 融合模式三：将QuantBatchMatmulV4算子x2输入前的Transpose/TransposeD节点和x2_scale输入前的Reshape节点（含Shape→Gather→Pack动态shape链）从图中删除，并将转置信息打在QuantBatchMatmulV4算子的transpose_x2属性上。如下图所示。
 
-![](../../../docs/zh/figures/QuantBatchMatmulV4TransposeFusionPass_3.png)
+![](../../../docs/zh/figures/quant_batch_matmul_v4_transpose_fusion_pass_3.png)
 
 >[!NOTE]说明
 >该图融合仅支持Ascend 950PR/Ascend 950DT，不支持其他芯片型号。

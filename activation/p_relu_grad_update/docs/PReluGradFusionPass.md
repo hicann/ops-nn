@@ -4,7 +4,7 @@
 
 该融合将图中的PReluGrad算子拆分为PReluGradUpdate、PReluGradReduce两个算子：PReluGradUpdate基于dy、x、weight计算dx，并输出中间结果update；PReluGradReduce基于dy、x、weight和update计算da。融合前后图结构如下。
 
-![](../../../docs/zh/figures/PReluGradFusionPass.png)
+![](../../../docs/zh/figures/prelu_grad_fusion_pass.png)
 
 ## 使用约束
 

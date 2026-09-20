@@ -5,7 +5,7 @@
 <!-- npu="950" id1 -->
 网络中的MaxPoolGrad算子在支持的型号上没有对应的算子二进制实现。该融合规则将图中符合条件的MaxPoolGrad算子整体替换为MaxPoolV3Grad算子，输入、输出保持一一对应，属性按等价语义改写。MaxPoolGradFusionPass采用的属性转换规则，与MaxPoolFusionPass将MaxPool转换为MaxPoolV3时采用的属性转换规则保持一致。如下图所示。
 
-![](../../../docs/zh/figures/MaxPoolGradFusionPass_1.png)
+![](../../../docs/zh/figures/max_pool_grad_fusion_pass_1.png)
 
 <!-- end id1 -->
 

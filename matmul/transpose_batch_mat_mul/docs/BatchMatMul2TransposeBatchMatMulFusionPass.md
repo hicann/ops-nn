@@ -6,19 +6,19 @@
 
 当Transpose（可选）、BatchMatMul、Transpose这几个节点按下图所示顺序连接时，可融合为TransposeBatchMatMul算子节点。
 
-![](../../../docs/zh/figures/BatchMatMul2TransposeBatchMatMulFusionPass_1.png)
+![](../../../docs/zh/figures/batch_matmul_2_transpose_batch_matmul_fusion_pass_1.png)
 
 **模式二：**
 
 当BatchMatMul/BatchMatMulV2节点的x1输入shape为\[B2,B1,1,K\]，x2输入shape为\[1,B1,K,N\]/\[1,B1,N,K\]时，融合为TransposeBatchMatMul算子：x1、x2先分别经Reshape合轴为\[B2,B1,K\]、\[B1,K,N\]/\[B1,N,K\]，经TransposeBatchMatMul计算得到\[B2,B1,N\]，再经Reshape恢复为\[B2,B1,1,N\]。
 
-![](../../../docs/zh/figures/BatchMatMul2TransposeBatchMatMulFusionPass_2.png)
+![](../../../docs/zh/figures/batch_matmul_2_transpose_batch_matmul_fusion_pass_2.png)
 
 **模式三：**
 
 当Transpose（可选）、Transpose（可选）、BatchMatMul、Transpose、Reshape、Reshape、Transpose这几个节点按下图所示顺序连接时，可融合为TransposeBatchMatMul算子节点。
 
-![](../../../docs/zh/figures/BatchMatMul2TransposeBatchMatMulFusionPass_3.png)
+![](../../../docs/zh/figures/batch_matmul_2_transpose_batch_matmul_fusion_pass_3.png)
 
 ## 使用约束
 

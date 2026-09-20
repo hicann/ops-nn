@@ -7,15 +7,15 @@
 
 融合模式一：AscendAntiQuant + Add + Mul + MatMul场景。AscendAntiQuant的输出经过Add（加常量offset）和Mul（乘常量scale）后进入MatMul。融合后Add的常量offset和Mul的常量scale与AscendAntiQuant的scale/offset属性折叠为antiquant_scale和antiquant_offset。如下图所示。
 
-![](../../../docs/zh/figures/AntiQuantMatMulFusionPass_1.png)
+![](../../../docs/zh/figures/anti_quant_matmul_fusion_pass_1.png)
 
 融合模式二：AscendAntiQuant + Mul + MatMul场景。AscendAntiQuant的输出经过Mul（乘以常量scale）后进入MatMul，不存在Add节点。融合后Mul的常量scale与AscendAntiQuant的scale属性折叠为antiquant_scale，antiquant_offset默认为0。如下图所示。
 
-![](../../../docs/zh/figures/AntiQuantMatMulFusionPass_2.png)
+![](../../../docs/zh/figures/anti_quant_matmul_fusion_pass_2.png)
 
 融合模式三：AscendAntiQuant + MatMul场景。AscendAntiQuant的输出直接进入MatMul，不存在Add和Mul节点。融合后antiquant_scale默认为1，antiquant_offset默认为0。如下图所示。
 
-![](../../../docs/zh/figures/AntiQuantMatMulFusionPass_3.png)
+![](../../../docs/zh/figures/anti_quant_matmul_fusion_pass_3.png)
 
 >[!NOTE]说明
 >常量折叠公式：antiquant_scale = scale_data * anti_scale，antiquant_offset = offset_data / anti_scale + anti_offset。其中anti_scale和anti_offset为AscendAntiQuant的属性，scale_data和offset_data分别为Mul和Add的常量输入。当不存在Add节点时， antiquant_offset默认为0。当不存在Mul节点时，antiquant_scale默认为1。

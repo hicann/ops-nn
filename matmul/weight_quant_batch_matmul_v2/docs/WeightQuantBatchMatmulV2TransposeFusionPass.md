@@ -5,11 +5,11 @@
 <!-- npu="950,A3,910b" id1 -->
 融合模式一：将WeightQuantBatchMatmulV2算子x和/或weight输入前的Transpose/TransposeD节点从图中删除，并将转置信息打在算子的transpose_x和transpose_weight属性上。当weight输入连接Transpose节点时，同时将antiquant_scale和antiquant_offset输入前的Transpose/TransposeD节点从图中删除。如下图所示。
 
-![](../../../docs/zh/figures/WeightQuantBatchMatmulV2TransposeFusionPass_1.png)
+![](../../../docs/zh/figures/weight_quant_batch_matmul_v2_transpose_fusion_pass_1.png)
 
 融合模式二：将WeightQuantBatchMatmulV2算子weight输入前的Transpose/TransposeD节点从图中删除，并将转置信息打在算子的transpose_weight属性上。同时将antiquant_scale和antiquant_offset输入前的简单Reshape节点从图中删除。如下图所示。
 
-![](../../../docs/zh/figures/WeightQuantBatchMatmulV2TransposeFusionPass_2.png)
+![](../../../docs/zh/figures/weight_quant_batch_matmul_v2_transpose_fusion_pass_2.png)
 
 该融合模式支持的产品如下。
 

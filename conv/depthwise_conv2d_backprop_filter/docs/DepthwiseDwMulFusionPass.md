@@ -6,11 +6,11 @@
 
 融合前：
 
-![](../../../docs/zh/figures/DepthwiseDwMulFusionPass_1.png)
+![](../../../docs/zh/figures/depthwise_dw_mul_fusion_pass_1.png)
 
 融合后：
 
-![](../../../docs/zh/figures/DepthwiseDwMulFusionPass_2.png)
+![](../../../docs/zh/figures/depthwise_dw_mul_fusion_pass_2.png)
 
 ## 使用约束
 

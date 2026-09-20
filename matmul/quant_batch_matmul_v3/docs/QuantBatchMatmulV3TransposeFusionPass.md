@@ -17,37 +17,37 @@
 
 `x1`支路和`x1_scale`支路中各存在一个转置节点时，分别旁路这两个转置节点，将它们的输入直接连接到`QuantBatchMatmulV3`的`x1`和`pertoken_scale`输入端口。同时，将`QuantBatchMatmulV3`节点的`transpose_x1`属性取反。`x2`和`scale`输入的连接，以及该节点的`transpose_x2`属性保持不变。
 
-![仅融合x1及x1_scale转置，四路输入独立连接](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_1.png)
+![仅融合x1及x1_scale转置，四路输入独立连接](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_1.png)
 
 ### 仅融合x2侧转置
 
 `x2`支路和`x2_scale`支路中各存在一个转置节点时，分别旁路这两个转置节点，将它们的输入直接连接到`QuantBatchMatmulV3`的`x2`和`scale`输入端口。同时，将`QuantBatchMatmulV3`节点的`transpose_x2`属性取反。`x1`和`pertoken_scale`输入的连接，以及该节点的`transpose_x1`属性保持不变。
 
-![仅融合x2及x2_scale转置，四路输入独立连接](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_2.png)
+![仅融合x2及x2_scale转置，四路输入独立连接](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_2.png)
 
 ### 同时融合两侧转置
 
 `x1`、`x2`、`x1_scale`和`x2_scale`四条支路中各存在一个转置节点，且`x1`、`x2`两侧均满足本节开头所列使用约束时，分别旁路四个转置节点。四个转置节点的输入分别连接到`QuantBatchMatmulV3`的`x1`、`x2`、`pertoken_scale`和`scale`输入端口；`QuantBatchMatmulV3`节点的`transpose_x1`和`transpose_x2`属性均取反。仅匹配图中结构不足以触发融合，还需满足数据类型、维度和平台能力等约束。
 
-![两路数据和两路scale的四个转置分别融合](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_3.png)
+![两路数据和两路scale的四个转置分别融合](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_3.png)
 
 ### 普通scale的Reshape融合
 
 `x1`、`x2`支路中各存在一个转置节点，两路`scale`支路中各存在一个等价于所需转置的`Reshape`时，分别旁路两个转置节点和两个`Reshape`。四条支路连接到各自对应的`QuantBatchMatmulV3`输入端口，`QuantBatchMatmulV3`节点的`transpose_x1`和`transpose_x2`属性均取反。静态普通`scale`的识别要求见[scale的Reshape要求](#scale的reshape要求)。图中展示两侧均可融合的情形，也可仅处理满足约束的一侧。
 
-![两路普通scale的Reshape分别随对应数据转置融合](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_4.png)
+![两路普通scale的Reshape分别随对应数据转置融合](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_4.png)
 
 ### MX scale的Reshape融合
 
 以`x2`侧为例：`x2`输入前为`Transpose`或`TransposeD`，`x2_scale`为`FLOAT8_E8M0`，其`Reshape`将(1, N, 2)变为(N, 1, 2)。融合时旁路`x2`支路的转置节点和`x2_scale`支路的`Reshape`，将二者的输入分别连接到`QuantBatchMatmulV3`的`x2`和`scale`输入端口，并将`QuantBatchMatmulV3`节点的`transpose_x2`属性取反；`x1`及`x1_scale`保持原连接。`x1`侧满足相应条件时采用相同的处理逻辑。
 
-![MX场景分别展示x1、x2及两个scale和三维Reshape](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_5.png)
+![MX场景分别展示x1、x2及两个scale和三维Reshape](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_5.png)
 
 ### 保留Bitcast的转置融合
 
 `Bitcast`按目标数据类型重新解释数据的位表示。四路输入各自按“转置节点 → `Bitcast` → `QuantBatchMatmulV3`”连接时，融合会将四个转置节点的输入分别直接连接到后面的`Bitcast`，保留四个`Bitcast`及其到`QuantBatchMatmulV3`的连接，并将`QuantBatchMatmulV3`节点的`transpose_x1`和`transpose_x2`属性取反。融合后，`Bitcast`输出的数据类型保持不变。
 
-![四路输入的转置分别融合并各自保留Bitcast](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_6.png)
+![四路输入的转置分别融合并各自保留Bitcast](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_6.png)
 
 各路输入不要求同时存在`Bitcast`。转置节点可以直接连接矩阵乘，也可以通过一个`Bitcast`连接矩阵乘；不支持越过连续多个`Bitcast`进行融合。对于`scale`支路，`Bitcast`前的节点也可以是满足下文要求的`Reshape`。平台限制和动态`Reshape`的适用边界见使用约束。
 
@@ -55,7 +55,7 @@
 
 `x1`或`x2`存在未知维度时，按动态场景处理。以`x2`侧为例，融合时旁路`x2`支路的转置节点和`x2_scale`支路的`Reshape`，将二者的输入分别连接到`QuantBatchMatmulV3`的`x2`和`scale`输入端口，并将`QuantBatchMatmulV3`节点的`transpose_x2`属性取反；`x1`和`x1_scale`保持原连接。动态场景不执行静态`Reshape`的维度条件检查，但输入图仍须保证该`Reshape`与所需的`scale`转置等价。
 
-![动态场景中四路输入独立展示，仅处理x2侧转置与Reshape](../../../docs/zh/figures/QuantBatchMatmulV3TransposeFusionPass_7.png)
+![动态场景中四路输入独立展示，仅处理x2侧转置与Reshape](../../../docs/zh/figures/quant_batch_matmul_v3_transpose_fusion_pass_7.png)
 
 各图中的`scale`转换节点是所示场景的具体结构，不要求每一路`scale`都存在转换节点。只有相应数据输入的`Transpose`或`TransposeD`被融合时，才处理该路`scale`；`pertoken_scale`未连接时不处理该输入。被旁路的节点仍有其他数据使用者时保留，否则从图中删除。
 
