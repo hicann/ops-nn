@@ -576,7 +576,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = 0;
+    workspaces[0] = GetSysWorkspaceSize();
 
     if (isGetTilingFromRepo) {
         workspaces[0] += usrSpaceSizeForKernelSplit_;

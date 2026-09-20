@@ -1186,11 +1186,20 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+size_t Conv3DDXV2InnerProductTiling::GetSysWorkspaceSize()
+{
+    if (IsSocVersionFuse(context_)) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+        return static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
+    }
+    return 0;
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = 0;
+    workspaces[0] = GetSysWorkspaceSize();
     // 前置transpose暂时与 kernel拆分、splitK 互斥
     if (tilingRunInfo_.enableVecTransFlag) {
         uint64_t usrSpaceSizeForVecTrans = static_cast<uint64_t>(runInfo_.dedy_cout) * runInfo_.kernel_d *

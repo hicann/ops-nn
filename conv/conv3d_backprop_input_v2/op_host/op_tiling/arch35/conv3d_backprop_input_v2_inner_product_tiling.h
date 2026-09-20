@@ -159,6 +159,7 @@ protected:
     void CloseL0PingPong(L0TilingParams& l0Params);
     uint64_t GetCVRation();
     bool CheckVectorCoreNum();
+    size_t GetSysWorkspaceSize();
 
     bool GetTilingFromRepo();
     std::shared_ptr<tuningtiling::TuningTilingDef> GetKnowledgeTiling();
