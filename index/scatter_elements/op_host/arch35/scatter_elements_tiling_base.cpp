@@ -44,6 +44,15 @@ constexpr int64_t SORT_ADMIT_MID_OUTER_RATIO = 50;
 constexpr int64_t SORT_ADMIT_HALF_CORE_RATIO = 2;
 constexpr uint64_t SCAC_ELE_DETERM_KEY_BASE = 1000000;
 constexpr uint64_t SCAC_ELE_SORT_KEY_PREFIX = 1000000;
+constexpr int64_t KEY_SIZE_INT16 = sizeof(int16_t);
+constexpr int64_t KEY_SIZE_UINT32 = sizeof(uint32_t);
+constexpr int64_t KEY_SIZE_INT64 = sizeof(int64_t);
+constexpr int32_t COUNT_MODE_INT32 = 0;
+constexpr int32_t COUNT_MODE_INT64 = 1;
+constexpr int64_t PERM_SIZE_INT32 = sizeof(uint32_t);
+constexpr int64_t PERM_SIZE_INT64 = sizeof(uint64_t);
+constexpr int16_t INT8_SORT_MAX_RANK = 8;
+constexpr int16_t OTHER_INT_SORT_RANK = 1;
 
 constexpr int64_t DATA_IDX = 0;
 constexpr int64_t INDICES_IDX = 1;
@@ -155,10 +164,14 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
 
     indicesTotalNum_ = allAxis_;
     int64_t maxElem = std::max(dataAxis_, updatesAxis_);
-    keySize_ = (maxElem <= MAX_INT16_NUM) ? 2 : (maxElem <= MAX_UINT32_COUNT) ? 4 : 8;
-    keyDtype_ = (keySize_ == 2) ? ge::DT_INT16 : (keySize_ == 4) ? ge::DT_UINT32 : ge::DT_INT64;
-    countMode_ = SortLib::IsInt32Safe(indicesTotalNum_) ? 0 : 1;
-    permSize_ = (countMode_ == 0) ? 4 : 8;
+    keySize_ = (maxElem <= MAX_INT16_NUM)    ? KEY_SIZE_INT16 :
+               (maxElem <= MAX_UINT32_COUNT) ? KEY_SIZE_UINT32 :
+                                               KEY_SIZE_INT64;
+    keyDtype_ = (keySize_ == KEY_SIZE_INT16)  ? ge::DT_INT16 :
+                (keySize_ == KEY_SIZE_UINT32) ? ge::DT_UINT32 :
+                                                ge::DT_INT64;
+    countMode_ = SortLib::IsInt32Safe(indicesTotalNum_) ? COUNT_MODE_INT32 : COUNT_MODE_INT64;
+    permSize_ = (countMode_ == COUNT_MODE_INT32) ? PERM_SIZE_INT32 : PERM_SIZE_INT64;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -432,9 +445,9 @@ bool ScatterElementsTiling::IsScatterAxisDominant() const
 bool ScatterElementsTiling::IsSortAdmittedInt() const
 {
     if (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8) {
-        return rank_ <= 8;
+        return rank_ <= INT8_SORT_MAX_RANK;
     }
-    return rank_ == 1;
+    return rank_ == OTHER_INT_SORT_RANK;
 }
 
 bool ScatterElementsTiling::IsSortAdmittedFloat(int64_t aAxisCoreNum) const
@@ -544,9 +557,10 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
 
     if (isSortDeterministic_ && IsSortTemplateAdmitted(indicesUsedCoreNum_)) {
         isSortDeterm_ = true;
-        sortR_ = SortLib::SortTilingCompute(
-            indicesTotalNum_, totalCoreNum_, static_cast<uint64_t>(ubSize_ - STATIC_UB_ESTIMATE),
-            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_), countMode_ == 0, keyDtype_);
+        sortR_ = SortLib::SortTilingCompute(indicesTotalNum_, totalCoreNum_,
+                                            static_cast<uint64_t>(ubSize_ - STATIC_UB_ESTIMATE),
+                                            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_),
+                                            countMode_ == COUNT_MODE_INT32, keyDtype_);
         if (sortR_.errCode != SortLib::SORT_TILING_OK) {
             isSortDeterm_ = false;
             sortR_ = SortLib::SortTilingResult{};

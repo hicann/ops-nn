@@ -142,7 +142,7 @@ private:
     int32_t countMode_ = 0;
     int64_t indicesTotalNum_ = 0;
     int64_t keySize_ = 0;
-    int64_t permSize_ = 4;
+    int64_t permSize_ = sizeof(uint32_t);
     int64_t sortUsedCoreNum_ = 0;
     int64_t multiSortWsBytes_ = 0;
     uint64_t wsLinearIdxOff_ = 0;
