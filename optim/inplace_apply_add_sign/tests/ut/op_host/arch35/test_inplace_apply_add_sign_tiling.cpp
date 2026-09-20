@@ -13,10 +13,6 @@
 /*!
  * \file test_inplace_apply_add_sign_tiling.cpp
  * \brief InplaceApplyAddSign tiling unit tests
- *
- * 覆盖: dtype(FP32/FP16/BF16) × shape(标量/空tensor/512边界/多核/非对齐尾/大shape多tile)
- *       + L2 异常拦截(shape/dtype/标量/rank)
- * oracle 为与被测 TilingFunc 完全独立的手写公式实现。
  */
 
 #include <cstring>
@@ -274,7 +270,6 @@ TEST_F(InplaceApplyAddSignTiling, inplace_apply_add_sign_tiling_shape_mismatch_v
 
 TEST_F(InplaceApplyAddSignTiling, inplace_apply_add_sign_tiling_dtype_mismatch)
 {
-    // m 的 dtype 与 var 不一致 → GetInputDesc 逐项比对拦截
     gert::StorageShape var = {{2, 3}, {2, 3}};
     gert::StorageShape lr = {{1}, {1}};
     gert::StorageShape alpha = {{1}, {1}};
@@ -340,13 +335,11 @@ TEST_F(InplaceApplyAddSignTiling, inplace_apply_add_sign_tiling_unsupported_dtyp
 
 TEST_F(InplaceApplyAddSignTiling, inplace_apply_add_sign_tiling_lr_not_scalar)
 {
-    // lr shape=(2,) 非标量 → 拦截
     DoTestGeneral(ge::DT_FLOAT, ge::GRAPH_FAILED, {2, 3}, {2, 3}, {2, 3}, {2}, {1}, {1}, {1});
 }
 
 TEST_F(InplaceApplyAddSignTiling, inplace_apply_add_sign_tiling_rank_exceeded)
 {
-    // rank=9 > MAX_RANK=8 → 拦截
     DoTestGeneral(ge::DT_FLOAT, ge::GRAPH_FAILED, {1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1},
                   {1, 1, 1, 1, 1, 1, 1, 1, 1});
 }
