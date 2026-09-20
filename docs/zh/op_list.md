@@ -909,6 +909,17 @@
   </tr>
   <tr>
     <td>control</td>
+    <td><a href="../../control/npu_clear_float_status/README.md">npu_clear_float_status</a></td>
+    <td>√</td>
+    <td>×</td>
+    <td>×</td>
+    <td>√</td>
+    <td>√</td>
+    <td>AI Core</td>
+    <td>清除NPU浮点溢出状态寄存器，输出固定8个float32零值。</td>
+  </tr>
+  <tr>
+    <td>control</td>
     <td><a href="../../control/update_tensor_desc/README.md">update_tensor_desc</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4806,6 +4817,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/avg_pool_update/README.md">avg_pool_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算平均池化的更新值，将求和池化结果除以池化窗口实际覆盖的有效元素个数得到平均值。</td>
   </tr>
   <tr>
     <td>pooling</td>

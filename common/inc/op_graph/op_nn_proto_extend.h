@@ -1722,14 +1722,6 @@ currently supported.
     .OUTPUT(y, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SparseSegmentMeanGrad)
 
-#ifndef OPS_PROTO_DEF_NPUCLEARFLOATSTATUS
-#define OPS_PROTO_DEF_NPUCLEARFLOATSTATUS
-        REG_OP(NPUClearFloatStatus)
-    .INPUT(addr, TensorType({DT_FLOAT}))
-    .OUTPUT(data, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(NPUClearFloatStatus)
-#endif
-
 /**
 * @brief Gather slices from "params" according to "indices"."indices" must be
     an integer tensor of any dimension(usually 0-D or 1-D).
@@ -2800,44 +2792,6 @@ currently supported.
     .OUTPUT(count, TensorType({DT_INT32, DT_INT64}))
     .REQUIRED_ATTR(out_idx, Type)
     .OP_END_FACTORY_REG(UniqueWithCounts)
-
-#ifndef OPS_PROTO_DEF_AVGPOOLUPDATE
-#define OPS_PROTO_DEF_AVGPOOLUPDATE
-    /**
-     *@brief Average pooling update operator.
-     *@par Inputs:
-     *Two inputs, including:
-     * @li x1: A Tensor. Must be one of the following types: float16, float32.
-     * @li x2: A Tensor. Must be one of the following types: int4, int8, float16, float32. \n
-
-     *@par Attributes:
-     * @li ksize: A required ListInt. The size of the sliding window for each dimension of the input tensor.
-     * @li strides: A required ListInt. The stride of the sliding window for each dimension of the input tensor.
-     * @li padding_mode: An optional String. Padding mode, defaults to "CALCULATED".
-     * @li pads: An optional ListInt. Padding sizes, defaults to {0, 0, 0, 0}.
-     * @li data_format: An optional String. Data format, defaults to "NHWC".
-     * @li ceil_mode: An optional Bool. Whether to use ceil mode, defaults to false.
-     * @li exclusive: An optional Bool. Whether to use exclusive mode, defaults to true. \n
-
-     *@par Outputs:
-     *y: A Tensor. Must be one of the following types: float16, float32.
-     *Has the same type and shape as input x1.
-     *@par Third-party framework compatibility
-     *Compatible with the TensorFlow operator AvgPool.
-     */
-    REG_OP(AvgPoolUpdate)
-    .INPUT(x1, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(x2, TensorType({DT_INT4, DT_INT8, DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .REQUIRED_ATTR(ksize, ListInt)
-    .REQUIRED_ATTR(strides, ListInt)
-    .ATTR(padding_mode, String, "CALCULATED")
-    .ATTR(pads, ListInt, {0, 0, 0, 0})
-    .ATTR(data_format, String, "NHWC")
-    .ATTR(ceil_mode, Bool, false)
-    .ATTR(exclusive, Bool, true)
-    .OP_END_FACTORY_REG(AvgPoolUpdate)
-#endif
 
     /**
     *@brief Finds unique elements in a 1D tensor. \n
