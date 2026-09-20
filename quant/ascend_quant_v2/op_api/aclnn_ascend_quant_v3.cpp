@@ -198,10 +198,7 @@ static bool CheckDim(const aclTensor* x, const aclTensor* scale, const aclTensor
 static bool CheckInt32OutputShape(const aclTensor* x, const aclTensor* y)
 {
     int64_t dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
-    if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x does not support scalar.");
-        return false;
-    }
+    // dimNum 不可能小于 1：0 维 x 已在 CheckParams 的 CheckInputScalar 中先行拦截
     int64_t dimInput = x->GetViewShape().GetDim(dimNum - 1);
     int64_t dimOutput = y->GetViewShape().GetDim(dimNum - 1);
     // check last dim
@@ -229,10 +226,7 @@ static bool CheckInt32OutputShape(const aclTensor* x, const aclTensor* y)
 static bool CheckInt4LastDim(const aclTensor* x)
 {
     int64_t dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
-    if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x does not support scalar.");
-        return false;
-    }
+    // dimNum 不可能小于 1：0 维 x 已在 CheckParams 的 CheckInputScalar 中先行拦截
     int64_t lastDimInput = x->GetViewShape().GetDim(dimNum - 1);
     if (lastDimInput % INT4_NUMS_IN_INT8_SPACE) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if y dtype is int4, x last dim must be divisible by 2, last dim is (%ld).",
