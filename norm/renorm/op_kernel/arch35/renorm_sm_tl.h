@@ -306,14 +306,12 @@ __aicore__ inline void RenormSmTl<D_T_X, INTEGER_POWER>::Init(GM_ADDR x, GM_ADDR
     if (batchSize_ < 1) {
         batchSize_ = 1;
     }
-    // DataCopyPad expresses a strided source in 32-byte units.  If one
-    // logical row is not 32B aligned, a blockCount>1 transfer would truncate
-    // the row gap and read an invalid address.  Keep the existing kernel but
-    // force one block per transfer for those rows; with blockCount==1 the
-    // source stride is ignored and the unaligned tail remains bounds-safe.
-    if ((sliceCount_ * typeSize) % 32 != 0) {
-        batchSize_ = 1;
-    }
+    // DataCopyPad expresses a non-zero source gap in 32-byte units.  The
+    // logical row itself does not need to be aligned when the current tile
+    // covers the complete slice: in that case the gap is zero and a batched
+    // copy is both valid and faster.  Process() checks the actual tile gap
+    // before selecting the strided path, so do not globally serialize
+    // unaligned rows here.
 
     // --- 步骤7: 分配所有 UB buffer ---
     // Pass3 双缓冲: dataBuf0 和 dataBuf1 等大，交替使用

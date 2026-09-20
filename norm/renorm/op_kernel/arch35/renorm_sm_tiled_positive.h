@@ -75,8 +75,8 @@ __aicore__ inline void RenormSmTiledPositive<D_T_X>::Init(GM_ADDR x, GM_ADDR y, 
     int64_t tileElements = sliceTile_ * blockSize_;
     int64_t vectorElements = sliceTile_;
     if (blockSize_ == 1) {
-        // Case 225 uses a dense [row, slice] batch. Each 15-element FP32 row
-        // is padded to a 16-element RA row in UB.
+        // B=1 rows use a dense [row, slice] batch. The logical row is padded
+        // to the hardware RA alignment in UB.
         int64_t rowAlign = 32 / static_cast<int64_t>(sizeof(D_T_X));
         int64_t alignedSliceCount = (sliceCount_ + rowAlign - 1) / rowAlign * rowAlign;
         tileElements = sliceTile_ * alignedSliceCount;
@@ -116,15 +116,9 @@ __aicore__ inline void RenormSmTiledPositive<D_T_X>::Process()
     LocalTensor<uint8_t> maskLocal = maskBuf.Get<uint8_t>();
     LocalTensor<float> matrixScale = scaleTensor;
 
-    // Case 225 is isolated to one column per core.  Use compact row tiles
-    // and the 1-D reduction primitive; this avoids both the 2-D pattern
-    // reduction ambiguity and padding values entering x^8.
-    const bool isCase225 = sizeof(D_T_X) == sizeof(float) && blockSize_ == 1 && sliceCount_ == 15 &&
-                           numBlocks_ == 131073 && p_ == 8.0f;
-    // The compact single-column fallback is retained for reference only.
-    // A5 requires the case-225 60-byte logical row to be loaded intact, so
-    // the batched RA path below is selected with one core by host tiling.
-    if (false && isCase225) {
+    // The compact single-column fallback is retained for reference only. The
+    // active B=1 path below uses bounded row tiles and the batched RA form.
+    if (false) {
         const int64_t rowTile = sliceTile_;
         const int64_t currentSlices = sliceEnd - sliceBegin;
         Duplicate(partialLocal, 0.0f, 1);
@@ -225,11 +219,10 @@ __aicore__ inline void RenormSmTiledPositive<D_T_X>::Process()
         return;
     }
 
-    // Case 225 has blockSize=1.  Its 15 output values are the independent
-    // reduction vectors, each spanning numBlocks rows.  Keep one or more
-    // columns on a core, reduce bounded row tiles with RA, and accumulate the
-    // partial sums.  This preserves the renorm axis while avoiding the
-    // uint16 blockCount limit of a single DMA over all 131073 rows.
+    // B=1 has independent output columns, each spanning numBlocks rows.
+    // Keep one or more columns on a core, reduce bounded row tiles with RA,
+    // and accumulate the partial sums. This preserves the renorm axis while
+    // avoiding the uint16 blockCount limit of a single DMA over all rows.
     if (blockSize_ == 1) {
         const int64_t rowAlign = 32 / static_cast<int64_t>(sizeof(D_T_X));
         const int64_t rowTile = sliceTile_;

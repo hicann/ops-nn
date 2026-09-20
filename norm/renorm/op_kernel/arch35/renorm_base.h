@@ -183,12 +183,14 @@ __aicore__ inline void Renorm<D_T_X, SAFE_A_ROUTE, STABLE_POSITIVE_P_ROUTE>::Ini
         scaleBufSize = 32;
     }
     pipe.InitBuffer(scaleBuf, scaleBufSize);
-    // The p=11 compensated reduction uses tmpBuf as a second FP32 tile.
-    // All other Template-A shapes retain the original scalar scratch buffer.
+    // High-order integer-power compensation uses tmpBuf as a second FP32
+    // tile.  Match the host's aspect-ratio policy rather than identifying a
+    // generated shape.
     bool needVectorTmp = false;
     if constexpr (sizeof(D_T_X) == 4) {
-        needVectorTmp = p_ == 11.0f && sliceCount_ == 17 && blockSize_ == 1 && numBlocks_ == 6482700 &&
-                        totalElements_ == 110205900;
+        needVectorTmp = normMode_ == NORM_MODE_P_POSITIVE && blockSize_ == 1 && sliceCount_ >= 8 && sliceCount_ <= 32 &&
+                        numBlocks_ >= (1LL << 20) && totalElements_ >= (1LL << 24) && p_ >= 7.0f && p_ <= 16.0f &&
+                        p_ == static_cast<float>(static_cast<int32_t>(p_));
     }
     pipe.InitBuffer(tmpBuf, needVectorTmp ? alignedTileLen * sizeof(float) : 32);
 }
@@ -267,11 +269,12 @@ __aicore__ inline void Renorm<D_T_X, SAFE_A_ROUTE, STABLE_POSITIVE_P_ROUTE>::Pro
                         norm = ComputeNormPPositiveCompensated<D_T_X>(workLocal, dataLocal, reduceLocal, tmpLocal,
                                                                       inputGM, sliceIdx, blockSize_, numBlocks_,
                                                                       sliceCount_, tileLength_, 2, eps_);
-                    } else if (p_ == 11.0f && sliceCount_ == 17 && blockSize_ == 1 && numBlocks_ == 6482700 &&
-                               totalElements_ == 110205900) {
-                        norm = ComputeNormPPositiveCompensated<D_T_X>(workLocal, dataLocal, reduceLocal, tmpLocal,
-                                                                      inputGM, sliceIdx, blockSize_, numBlocks_,
-                                                                      sliceCount_, tileLength_, 11, eps_);
+                    } else if (normMode_ == NORM_MODE_P_POSITIVE && blockSize_ == 1 && sliceCount_ >= 8 &&
+                               sliceCount_ <= 32 && numBlocks_ >= (1LL << 20) && totalElements_ >= (1LL << 24) &&
+                               p_ >= 7.0f && p_ <= 16.0f && p_ == static_cast<float>(static_cast<int32_t>(p_))) {
+                        norm = ComputeNormPPositiveCompensated<D_T_X>(
+                            workLocal, dataLocal, reduceLocal, tmpLocal, inputGM, sliceIdx, blockSize_, numBlocks_,
+                            sliceCount_, tileLength_, static_cast<int32_t>(p_), eps_);
                     } else {
                         norm = ComputeNormPPositive<D_T_X>(workLocal, dataLocal, reduceLocal, tmpLocal, inputGM,
                                                            sliceIdx, blockSize_, numBlocks_, sliceCount_, tileLength_,

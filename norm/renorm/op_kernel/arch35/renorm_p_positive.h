@@ -68,7 +68,8 @@ __aicore__ inline float ComputeNormPPositiveCompensated(LocalTensor<float>& work
                 PipeBarrier<PIPE_V>();
             } else {
                 // Match the generic path's zero guard, then replace Log/Exp
-                // with exact integer exponentiation for p=11.
+                // with exact integer exponentiation for the selected integer
+                // exponent.
                 Maxs(workBuf, workBuf, eps, static_cast<int32_t>(alignedLen));
                 PipeBarrier<PIPE_V>();
                 DataCopy(tmpBuf, workBuf, static_cast<int32_t>(alignedLen));
@@ -103,7 +104,7 @@ __aicore__ inline float ComputeNormPPositiveCompensated(LocalTensor<float>& work
         return ScalarSqrt(tmpBuf, sum);
     }
     // ScalarPow supplies a well-scaled initial value; two Newton steps remove
-    // its Log/Exp approximation from the final p=11 scale calculation.
+    // its Log/Exp approximation from the final integer-power scale calculation.
     float root = ScalarPow(tmpBuf, sum, 1.0f / static_cast<float>(exponent), eps);
     if (root > 0.0f && root < 3.402823466e38f) {
         for (int32_t iter = 0; iter < 2; ++iter) {
@@ -224,6 +225,7 @@ __aicore__ inline float ComputeNormPPositive(LocalTensor<float>& workBuf, LocalT
     // p=1 或 p=2: 直接路径，不会溢出
     if (p == 1.0f || p == 2.0f) {
         float norm = 0.0f;
+        float compensation = 0.0f;
         for (int64_t b = 0; b < numBlocks; ++b) {
             int64_t gmOffset = b * sliceCount * blockSize + sliceIdx * blockSize;
             int64_t remaining = blockSize;
@@ -243,7 +245,11 @@ __aicore__ inline float ComputeNormPPositive(LocalTensor<float>& workBuf, LocalT
                     SetFlag<HardEvent::V_S>(eventID);
                     WaitFlag<HardEvent::V_S>(eventID);
                 }
-                norm += reduceLocal.GetValue(0);
+                float value = reduceLocal.GetValue(0);
+                float corrected = value - compensation;
+                float next = norm + corrected;
+                compensation = (next - norm) - corrected;
+                norm = next;
                 remaining -= chunkLen;
                 chunkStart += chunkLen;
             }
@@ -267,6 +273,7 @@ __aicore__ inline float ComputeNormPPositive(LocalTensor<float>& workBuf, LocalT
     //   后续 Exp(-inf*p) = 0 是对的，但 -inf 参与 ReduceSum 可能导致结果不确定。
     //   Maxs(eps) 将所有 |x| 限制在不小于 eps，避免 log(0)=-inf 的问题。
     float sumPow = 0.0f;
+    float compensation = 0.0f;
     for (int64_t b = 0; b < numBlocks; ++b) {
         int64_t gmOffset = b * sliceCount * blockSize + sliceIdx * blockSize;
         int64_t remaining = blockSize;
@@ -275,8 +282,6 @@ __aicore__ inline float ComputeNormPPositive(LocalTensor<float>& workBuf, LocalT
             int64_t chunkLen = (remaining > tileLength) ? tileLength : remaining;
             int64_t alignedLen = LoadChunkAndCastToFP32(workBuf, dataBuf, inputGM, gmOffset + chunkStart, chunkLen);
             Abs(workBuf, workBuf, static_cast<int32_t>(alignedLen));
-            PipeBarrier<PIPE_V>();
-            Maxs(workBuf, workBuf, eps, static_cast<int32_t>(alignedLen));
             PipeBarrier<PIPE_V>();
             Log(workBuf, workBuf, static_cast<int32_t>(alignedLen));
             PipeBarrier<PIPE_V>();
@@ -290,7 +295,11 @@ __aicore__ inline float ComputeNormPPositive(LocalTensor<float>& workBuf, LocalT
                 SetFlag<HardEvent::V_S>(eventID);
                 WaitFlag<HardEvent::V_S>(eventID);
             }
-            sumPow += reduceLocal.GetValue(0);
+            float value = reduceLocal.GetValue(0);
+            float corrected = value - compensation;
+            float next = sumPow + corrected;
+            compensation = (next - sumPow) - corrected;
+            sumPow = next;
             remaining -= chunkLen;
             chunkStart += chunkLen;
         }

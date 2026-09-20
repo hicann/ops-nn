@@ -11,7 +11,6 @@
 #ifndef __RENORM_TILING_KEY_H__
 #define __RENORM_TILING_KEY_H__
 
-#include "graph/c_types.h"
 #include "ascendc/host_api/tiling/template_argument.h"
 
 // 模板编号
@@ -27,7 +26,7 @@ ASCENDC_TPL_ARGS_DECL(Renorm,
                       ASCENDC_TPL_UINT_DECL(TEMPLATE, 8, ASCENDC_TPL_UI_LIST, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
                                             13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32,
                                             33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
-                                            52, 55, 58, 59));
+                                            52, 55, 58, 59, 60, 61));
 
 ASCENDC_TPL_SEL(
     // TEMPLATE=0 (Template A: SM-CT, Slice-Major Continuous Single-Level)
@@ -347,6 +346,20 @@ ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16),
                          ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 59)),
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16),
-                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 59)), );
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 59)),
+    // TEMPLATE=60 (Template J: elementwise single-reduction pass)
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 60)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 60)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 60)),
+    // TEMPLATE=61 (stable packed B1 cross-core reduction)
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 61)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 61)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE, ASCENDC_TPL_UI_LIST, 61)), );
 
 #endif // __RENORM_TILING_KEY_H__
