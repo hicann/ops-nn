@@ -1,0 +1,146 @@
+{
+  "op_type": "SoftmaxCrossEntropyWithLogits",
+  "op_list": [
+      {
+          "bin_filename": "SoftmaxCrossEntropyWithLogits_2113be7c1a014a9b063cdf6ff866dddc",
+          "inputs": [
+              {
+                  "name": "features",
+                  "index": 0,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "labels",
+                  "index": 1,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "outputs": [
+              {
+                  "name": "loss",
+                  "index": 0,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "backprop",
+                  "index": 1,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ]
+      },
+      {
+        "bin_filename": "SoftmaxCrossEntropyWithLogits_dade9c10bd8e41d56b18cf577d4c69aa",
+        "inputs": [
+            {
+                "name": "features",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "labels",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "loss",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "backprop",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ]
+    },
+    {
+        "bin_filename": "SoftmaxCrossEntropyWithLogits_15379a5c7566cb0cd2c4149400c9b368",
+        "inputs": [
+            {
+                "name": "features",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "labels",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "loss",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "backprop",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ]
+    }
+  ]
+}

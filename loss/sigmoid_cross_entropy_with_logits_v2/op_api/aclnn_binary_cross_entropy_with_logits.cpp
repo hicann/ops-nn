@@ -47,8 +47,9 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if ((GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;

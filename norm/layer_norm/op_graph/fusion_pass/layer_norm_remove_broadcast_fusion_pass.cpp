@@ -99,7 +99,7 @@ bool IsSupportedPlatform()
 
     const std::string soc = platform_info.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s", soc.c_str());
-    const static std::set<std::string> support_soc = {"Ascend950", "MC62"};
+    const static std::set<std::string> support_soc = {"Ascend950", "Ascend350", "MC62"};
     if (support_soc.count(soc) == 0) {
         OPS_LOG_D(kPassName.c_str(), "Platform is not support!");
         return false;
