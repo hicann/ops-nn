@@ -7,9 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term> | √ |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
-| <term>Atlas 训练系列产品</term> | × |
+| <term>Atlas 200I/500 A2 推理产品</term> | √ |
+| <term>Atlas 推理系列产品</term> | √ |
+| <term>Atlas 训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -24,6 +24,8 @@
   $$
   square\_sum_c = \sum_{n,h,w}x_{n,c,h,w}^{2}
   $$
+
+上述公式以4维NCHW为例；其他支持的Rank和数据格式均保留C轴并归约其余所有轴，NCDHW场景还包括D轴。
 
 ## 参数说明
 
@@ -72,6 +74,7 @@
 - sum和square_sum的逻辑shape均为一维[C]，长度等于x的C维，数据类型固定为FLOAT。
 - FLOAT16和BFLOAT16输入按FLOAT精度执行平方与累加。
 - 算子无属性，支持空Tensor；归约集合为空时输出为零或空向量。
+- Ascend 950图模式支持动态Shape（-1未知维）和动态Rank（-2未知秩）。
 
 ## 调用说明
 

@@ -66,4 +66,4 @@ $$
 
 | 调用方式 | 样例代码 | 说明 |
 | :--- | :--- | :--- |
-| GE图模式 | - | 通过[SigmoidFocalLossGrad IR定义](op_graph/sigmoid_focal_loss_grad_proto.h)构建算子图。 |
+| GE图模式 | [test_geir_sigmoid_focal_loss_grad.cpp](examples/arch35/test_geir_sigmoid_focal_loss_grad.cpp) | 通过[SigmoidFocalLossGrad IR定义](op_graph/sigmoid_focal_loss_grad_proto.h)构建算子图。 |
