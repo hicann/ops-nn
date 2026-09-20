@@ -56,7 +56,7 @@ float Bfloat16ToFloat(uint16_t value)
     // BF16是FP32的高16位，低16位补0后即可得到对应的FP32位表示。
     const uint32_t bits = static_cast<uint32_t>(value) << 16U;
     float result = 0.0F;
-    std::memcpy(&result, &bits, sizeof(result));
+    (void)memcpy_s(&result, sizeof(result), &bits, sizeof(result));
     return result;
 }
 
