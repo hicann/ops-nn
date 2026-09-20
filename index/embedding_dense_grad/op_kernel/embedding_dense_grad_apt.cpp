@@ -15,7 +15,7 @@
 
 #include "./arch35/embedding_dense_grad_base.h"
 #include "./arch35/embedding_dense_grad_full_load.h"
-#include "./arch35/embedding_dense_grad.h"
+#include "./arch35/embedding_dense_grad_regbase.h"
 using namespace AscendC;
 using namespace EmbeddingDenseGrad;
 

@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file embedding_dense_grad.h
+ * \file embedding_dense_grad_regbase.h
  * \brief embedding_dense_grad
  */
 
