@@ -30,7 +30,7 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "../op_graph/deformable_offsets_grad_proto.h"
+#include "../../op_graph/deformable_offsets_grad_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -80,8 +80,8 @@ using std::vector;
     add1.update_input_desc_##inputName(placeholder##inputIndex##_desc);                                                \
     inputs.push_back(placeholder##inputIndex)
 
-#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                             \
-    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), ge::FORMAT_NHWC, outputDtype); \
+#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                           \
+    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), ge::FORMAT_ND, outputDtype); \
     add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 #define LOG_PRINT(message, ...)         \
