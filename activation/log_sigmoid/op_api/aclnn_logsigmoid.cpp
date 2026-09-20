@@ -20,7 +20,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "logsigmoid.h"
 #include "aclnn_kernels/reshape.h"
-#include "op_api/level2_base_caculation.h"
+#include "op_api/level2_base_caculation_nn.h"
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
