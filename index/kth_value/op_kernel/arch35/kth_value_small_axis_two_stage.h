@@ -19,7 +19,7 @@
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
 #include "kth_value_narrow_select.h"
-#include "common/small_axis_two_stage_base.h"
+#include "common/kth_value_small_axis_two_stage_base.h"
 
 namespace KthValue {
 using namespace AscendC;

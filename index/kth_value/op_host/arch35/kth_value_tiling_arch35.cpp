@@ -1276,7 +1276,7 @@ static void StoreKthValueTiling(gert::TilingContext* context, uint64_t schId, co
 
 static ge::graphStatus SelectAndFinalizeKthValueRoute(gert::TilingContext* context,
                                                       const platform_ascendc::PlatformAscendC& ascendcPlatform,
-                                                      SortKthTileInfo& info, KthValueTilingData* tilingData,
+                                                      SortKthTileInfo& info, const KthValueTilingData* tilingData,
                                                       bool isMedianOp)
 {
     KthValueTilingData candidateTilingData = *tilingData;

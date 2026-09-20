@@ -16,8 +16,8 @@
 #include "op_kernel/platform_util.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
-#include "common/signed_zero_sort_utils.h"
-#include "common/util_type_simd.h"
+#include "common/kth_value_signed_zero_sort_utils.h"
+#include "common/kth_value_util_type_simd.h"
 
 namespace KthValue {
 using namespace AscendC;

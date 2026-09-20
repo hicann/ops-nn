@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef SIGNED_ZERO_SORT_UTILS_H
-#define SIGNED_ZERO_SORT_UTILS_H
+#ifndef KTH_VALUE_SIGNED_ZERO_SORT_UTILS_H
+#define KTH_VALUE_SIGNED_ZERO_SORT_UTILS_H
 
 #include <type_traits>
 
@@ -233,4 +233,4 @@ __aicore__ inline void RestoreSignedZeroValuesByIndexVec(LocalTensor<T>& values,
 
 } // namespace SignedZeroSortCommon
 
-#endif // SIGNED_ZERO_SORT_UTILS_H
+#endif // KTH_VALUE_SIGNED_ZERO_SORT_UTILS_H

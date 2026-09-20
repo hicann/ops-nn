@@ -13,7 +13,7 @@
 
 #include "kernel_operator.h"
 #include "simt_api/asc_simt.h"
-#include "common/small_axis_two_stage_base.h"
+#include "common/kth_value_small_axis_two_stage_base.h"
 
 namespace KthValue {
 constexpr uint32_t NARROW_SELECT_MODE = 1U;

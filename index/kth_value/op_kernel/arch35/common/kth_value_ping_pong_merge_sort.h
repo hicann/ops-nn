@@ -8,11 +8,11 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef PING_PONG_MERGE_SORT_H
-#define PING_PONG_MERGE_SORT_H
+#ifndef KTH_VALUE_PING_PONG_MERGE_SORT_H
+#define KTH_VALUE_PING_PONG_MERGE_SORT_H
 
 #include "kernel_operator.h"
-#include "merge_sort_constants.h"
+#include "kth_value_merge_sort_constants.h"
 
 namespace PingPongMergeSortCommon {
 using namespace AscendC;
@@ -112,4 +112,4 @@ __aicore__ inline bool SortToProposal(LocalTensor<T> ping, LocalTensor<T> pong, 
 
 } // namespace PingPongMergeSortCommon
 
-#endif // PING_PONG_MERGE_SORT_H
+#endif // KTH_VALUE_PING_PONG_MERGE_SORT_H

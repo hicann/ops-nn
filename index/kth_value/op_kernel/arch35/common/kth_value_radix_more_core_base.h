@@ -9,22 +9,23 @@
  */
 
 /*!
- * \file radix_more_core_base.h
+ * \file kth_value_radix_more_core_base.h
  * \brief Radix sort multi-core infrastructure: free functions (histogram, scatter, copy)
  *        and CRTP base class for sort and kth_value kernels.
- *        Twiddle preprocessing is in radix_sort_simd_utils.h; constants in radix_sort_constants.h.
+ *        Twiddle preprocessing is in kth_value_radix_sort_simd_utils.h; constants in
+ *        kth_value_radix_sort_constants.h.
  */
 
-#ifndef RADIX_MORE_CORE_BASE_H
-#define RADIX_MORE_CORE_BASE_H
+#ifndef KTH_VALUE_RADIX_MORE_CORE_BASE_H
+#define KTH_VALUE_RADIX_MORE_CORE_BASE_H
 
 #include "kernel_operator.h"
 #include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
 #include "simt_api/asc_simt.h"
-#include "util_type_simd.h"
-#include "radix_sort_constants.h"
-#include "radix_sort_simd_utils.h"
+#include "kth_value_util_type_simd.h"
+#include "kth_value_radix_sort_constants.h"
+#include "kth_value_radix_sort_simd_utils.h"
 
 namespace RadixSortCommon {
 
@@ -1197,4 +1198,4 @@ public:
 
 } // namespace RadixSortCommon
 
-#endif // RADIX_MORE_CORE_BASE_H
+#endif // KTH_VALUE_RADIX_MORE_CORE_BASE_H

@@ -8,14 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef RADIX_SORT_SIMD_UTILS_H
-#define RADIX_SORT_SIMD_UTILS_H
+#ifndef KTH_VALUE_RADIX_SORT_SIMD_UTILS_H
+#define KTH_VALUE_RADIX_SORT_SIMD_UTILS_H
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "simt_api/asc_simt.h"
-#include "util_type_simd.h"
-#include "radix_sort_constants.h"
+#include "kth_value_util_type_simd.h"
+#include "kth_value_radix_sort_constants.h"
 
 namespace RadixSortCommon {
 

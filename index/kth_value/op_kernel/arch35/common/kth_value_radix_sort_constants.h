@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef RADIX_SORT_CONSTANTS_H
-#define RADIX_SORT_CONSTANTS_H
+#ifndef KTH_VALUE_RADIX_SORT_CONSTANTS_H
+#define KTH_VALUE_RADIX_SORT_CONSTANTS_H
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"

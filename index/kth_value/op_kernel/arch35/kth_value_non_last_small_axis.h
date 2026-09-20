@@ -19,7 +19,7 @@
 #include "simt_api/asc_simt.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
-#include "common/non_last_small_axis_base.h"
+#include "common/kth_value_non_last_small_axis_base.h"
 
 namespace KthValue {
 using namespace AscendC;

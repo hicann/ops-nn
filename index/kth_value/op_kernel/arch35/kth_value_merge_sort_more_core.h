@@ -19,8 +19,8 @@
 #include "kernel_operator.h"
 #include "kth_value_median_utils.h"
 #include "kth_value_tiling_data.h"
-#include "common/merge_sort_constants.h"
-#include "common/merge_more_core_base.h"
+#include "common/kth_value_merge_sort_constants.h"
+#include "common/kth_value_merge_more_core_base.h"
 
 namespace KthValue {
 using namespace AscendC;
