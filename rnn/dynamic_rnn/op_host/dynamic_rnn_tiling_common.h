@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file dynamic_lstm.h
+ * \file dynamic_rnn_tiling_common.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_H
-#define OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_H
+#ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_TILING_COMMON_H
+#define OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_TILING_COMMON_H
 #include <cstdint>
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -85,4 +85,4 @@ public:
     virtual ~CompileInfoBase() {}
 };
 } // namespace optiling
-#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_LSTM_H
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_TILING_COMMON_H
