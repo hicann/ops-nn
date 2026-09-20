@@ -30,6 +30,13 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
+namespace optiling {
+// Forward declaration of the registered tiling entry and of the (unregistered but exported)
+// tiling-parse helper so their guard / platform-query branches can be exercised directly.
+ge::graphStatus Tiling4KlDivLossGrad(gert::TilingContext* context);
+ge::graphStatus KlDivLossGradTilingPrepareAscendC(gert::TilingParseContext* context);
+} // namespace optiling
+
 class KlDivLossGradDagTiling : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "KlDivLossGradDagTiling SetUp" << std::endl; }
@@ -512,4 +519,46 @@ TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_batchmean_zero_batch_failed)
     uint64_t tilingKey = 0;
     DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                               ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// A null tiling context is rejected by the Tiling4KlDivLossGrad guard.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_null_context_failed)
+{
+    std::string opType("KlDivLossGrad");
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
+    ASSERT_NE(opImpl, nullptr);
+    EXPECT_EQ(opImpl->tiling(nullptr), ge::GRAPH_FAILED);
+}
+
+// KlDivLossGradTilingPrepareAscendC queries the platform for core number / UB size on a valid
+// parse context. It is not the registered TilingParse entry, so it is driven directly here to
+// exercise the platform-query success path.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_prepare_ascendc_success)
+{
+    fe::PlatFormInfos platFormInfo;
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> socVersion;
+    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersion);
+
+    optiling::KlDivLossGradCompileInfo compileInfo;
+    string compileInfoStr = R"({})";
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+    auto parseContext = kernelHolder.GetContext<gert::TilingParseContext>();
+    ASSERT_NE(parseContext, nullptr);
+    ASSERT_TRUE(parseContext->GetPlatformInfo()->Init());
+    parseContext->GetPlatformInfo()->SetPlatformRes("version", socVersion);
+    parseContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    parseContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    parseContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    parseContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(optiling::KlDivLossGradTilingPrepareAscendC(parseContext), ge::GRAPH_SUCCESS);
+    EXPECT_GT(compileInfo.coreNum, 0U);
+    EXPECT_GT(compileInfo.ubSize, 0U);
 }

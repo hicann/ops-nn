@@ -29,6 +29,12 @@
 
 using namespace std;
 
+namespace optiling {
+// Forward declaration of the registered tiling-parse entry so its null-context guard can be
+// exercised directly (it is not exposed through the tiling header).
+ge::graphStatus TilingPrepareForSmoothL1LossGradV2(gert::TilingParseContext* context);
+} // namespace optiling
+
 class SmoothL1LossGradV2Tiling : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "SmoothL1LossGradV2Tiling SetUp" << std::endl; }
@@ -442,4 +448,19 @@ TEST_F(SmoothL1LossGradV2Tiling, smooth_l1_loss_grad_v2_mean_empty_tensor_failed
     uint64_t tilingKey = 0;
     DoSmoothL1LossGradV2StatusCase(predictShape, labelShape, doutShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT,
                                    ge::DT_FLOAT, ge::DT_FLOAT, "mean", 1.0f, ge::GRAPH_FAILED, tilingKey);
+}
+
+// A null tiling context is rejected by the TilingForSmoothL1LossGradV2 guard.
+TEST_F(SmoothL1LossGradV2Tiling, smooth_l1_loss_grad_v2_null_context_failed)
+{
+    std::string opType("SmoothL1LossGradV2");
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
+    ASSERT_NE(opImpl, nullptr);
+    EXPECT_EQ(opImpl->tiling(nullptr), ge::GRAPH_FAILED);
+}
+
+// A null tiling-parse context is rejected by the TilingPrepareForSmoothL1LossGradV2 guard.
+TEST_F(SmoothL1LossGradV2Tiling, smooth_l1_loss_grad_v2_prepare_null_context_failed)
+{
+    EXPECT_EQ(optiling::TilingPrepareForSmoothL1LossGradV2(nullptr), ge::GRAPH_FAILED);
 }

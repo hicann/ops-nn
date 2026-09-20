@@ -26,6 +26,12 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
+namespace optiling {
+// Forward declaration of the (unregistered but exported) parse helper so its platform-query
+// success path and null guards can be exercised directly.
+ge::graphStatus SetTotalCoreNum(gert::TilingParseContext* context);
+} // namespace optiling
+
 namespace {
 constexpr size_t SYSTEM_WORKSPACE_SIZE = 16 * 1024 * 1024;
 constexpr uint64_t CTC_TILING_KEY_IS_FP32 = 1UL;           // isFP32 occupies bit 0..7
@@ -419,4 +425,47 @@ TEST_F(CTCLossV2Tiling, ctc_loss_v2_tiling_input_lengths_overflow_int64_failed)
                                  neg_log_likelihood_shape, log_alpha_shape, ge::DT_FLOAT, ge::DT_INT64, input_lengths,
                                  {2, 2}, 0, tiling, tiling_key, block_dim),
               ge::GRAPH_FAILED);
+}
+
+// SetTotalCoreNum queries the platform for the AIV core number on a valid parse context. It is a
+// helper that is not wired into the registered TilingParse entry, so it is driven directly here to
+// exercise its null-guards and platform-query success path.
+TEST_F(CTCLossV2Tiling, ctc_loss_v2_set_total_core_num_success)
+{
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version_infos;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version_infos);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::CTCLossV2ForCompileInfo compile_info;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    auto parse_context = kernel_holder.GetContext<gert::TilingParseContext>();
+    ASSERT_NE(parse_context, nullptr);
+    ASSERT_TRUE(parse_context->GetPlatformInfo()->Init());
+    parse_context->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    parse_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    parse_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    parse_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    parse_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(optiling::SetTotalCoreNum(parse_context), ge::GRAPH_SUCCESS);
+    EXPECT_GT(compile_info.totalCoreNum, 0);
 }

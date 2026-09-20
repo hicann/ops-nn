@@ -26,6 +26,12 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
+namespace optiling {
+// Forward declaration of the registered tiling-parse entry so the null-context guard can be
+// exercised directly (it is not exposed through the arch35 header).
+ge::graphStatus TilingPrepareForMseLossGrad(gert::TilingParseContext* context);
+} // namespace optiling
+
 namespace {
 // GET_TPL_TILING_KEY(schMode, doutIsScalar): schMode occupies bit 0..15, doutIsScalar occupies bit 16.
 constexpr uint64_t DOUT_IS_SCALAR_MASK = 1UL << 16;
@@ -316,4 +322,34 @@ TEST_F(MseLossGradTiling, mse_loss_grad_tiling_mean_empty_tensor_failed)
     EXPECT_EQ(RunMseLossGradTiling(input_shape, input_shape, input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT,
                                    ge::DT_FLOAT, ge::DT_FLOAT, "mean", tiling_key, block_dim),
               ge::GRAPH_FAILED);
+}
+
+// int32 with a scalar dout reaches the DoScalarDagOpTiling stage before the dtype is rejected:
+// GetShapeAttrsInfo only enforces predict==label==dout==output, so an all-int32 case passes it,
+// then the scalar-dout path hits the unsupported-dtype else branch of DoScalarDagOpTiling.
+TEST_F(MseLossGradTiling, mse_loss_grad_tiling_int32_scalar_dout_failed)
+{
+    gert::StorageShape input_shape = {{182, 4}, {182, 4}};
+    gert::StorageShape dout_shape = {{1}, {1}};
+    gert::StorageShape output_shape = {{182, 4}, {182, 4}};
+    uint64_t tiling_key = 0;
+    uint32_t block_dim = 0;
+    EXPECT_EQ(RunMseLossGradTiling(input_shape, input_shape, dout_shape, output_shape, ge::DT_INT32, ge::DT_INT32,
+                                   ge::DT_INT32, ge::DT_INT32, "none", tiling_key, block_dim),
+              ge::GRAPH_FAILED);
+}
+
+// A null tiling context is rejected by the TilingForMseLossGrad guard.
+TEST_F(MseLossGradTiling, mse_loss_grad_tiling_null_context_failed)
+{
+    std::string op_type("MseLossGrad");
+    auto op_impl = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
+    ASSERT_NE(op_impl, nullptr);
+    EXPECT_EQ(op_impl->tiling(nullptr), ge::GRAPH_FAILED);
+}
+
+// A null tiling-parse context is rejected by the TilingPrepareForMseLossGrad guard.
+TEST_F(MseLossGradTiling, mse_loss_grad_tiling_prepare_null_context_failed)
+{
+    EXPECT_EQ(optiling::TilingPrepareForMseLossGrad(nullptr), ge::GRAPH_FAILED);
 }
