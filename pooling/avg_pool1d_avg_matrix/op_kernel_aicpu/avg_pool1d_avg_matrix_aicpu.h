@@ -17,7 +17,7 @@ namespace aicpu {
 class AvgPool1DAvgMatrixCpuKernel : public CpuKernel {
 public:
     AvgPool1DAvgMatrixCpuKernel() = default;
-    ~AvgPool1DAvgMatrixCpuKernel() = default;
+    ~AvgPool1DAvgMatrixCpuKernel() override = default;
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:

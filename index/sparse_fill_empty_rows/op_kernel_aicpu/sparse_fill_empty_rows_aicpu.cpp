@@ -38,10 +38,10 @@ constexpr int32_t kYValuesOutput = 1;
 constexpr int32_t kEmptyRowIndicatorOutput = 2;
 constexpr int32_t kReverseIndexMapOutput = 3;
 
-#define SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DTYPE, TYPE)                                      \
-    case (DTYPE): {                                                                             \
-        ret = ComputeSparseFillEmptyRows<TYPE>(ctx, indices, values, denseShape, defaultValue); \
-        break;                                                                                  \
+#define SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DTYPE, TYPE, RET, CTX, INDICES, VALUES, DENSE_SHAPE, DEFAULT_VALUE) \
+    case (DTYPE): {                                                                                               \
+        (RET) = ComputeSparseFillEmptyRows<TYPE>((CTX), (INDICES), (VALUES), (DENSE_SHAPE), (DEFAULT_VALUE));     \
+        break;                                                                                                    \
     }
 } // namespace
 
@@ -170,20 +170,23 @@ uint32_t SparseFillEmptyRowsCpuKernel::Compute(CpuKernelContext& ctx)
 
     KernelStatus ret = KERNEL_STATUS_OK;
     switch (values->GetDataType()) {
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_BOOL, bool)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_COMPLEX128, std::complex<double>)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_COMPLEX64, std::complex<float>)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_DOUBLE, double)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_FLOAT, float)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_FLOAT16, Eigen::half)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT16, int16_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT32, int32_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT64, int64_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT8, int8_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT16, uint16_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT32, uint32_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT64, uint64_t)
-        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT8, uint8_t)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_BOOL, bool, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_COMPLEX128, std::complex<double>, ret, ctx, indices, values,
+                                              denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_COMPLEX64, std::complex<float>, ret, ctx, indices, values, denseShape,
+                                              defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_DOUBLE, double, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_FLOAT, float, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_FLOAT16, Eigen::half, ret, ctx, indices, values, denseShape,
+                                              defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT16, int16_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT32, int32_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT64, int64_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_INT8, int8_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT16, uint16_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT32, uint32_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT64, uint64_t, ret, ctx, indices, values, denseShape, defaultValue)
+        SPARSE_FILL_EMPTY_ROWS_DATA_TYPE_CASE(DT_UINT8, uint8_t, ret, ctx, indices, values, denseShape, defaultValue)
         default:
             KERNEL_LOG_ERROR("SparseFillEmptyRows doesn't support data type [%s]",
                              DTypeStr(values->GetDataType()).c_str());

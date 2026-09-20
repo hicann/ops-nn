@@ -133,7 +133,8 @@ uint32_t InitializeOutput(const CpuKernelContextInfo& info)
     const size_t per_core_size = static_cast<size_t>(total_nums / max_thread_num) * sizeof(T);
     const size_t last_core_size = static_cast<size_t>(total_nums % max_thread_num) * sizeof(T) + per_core_size;
 
-    auto shard_copy = [&](uint64_t start, uint64_t end) {
+    auto shard_copy = [x_data, output_data, total_nums, max_thread_num, per_core_size, last_core_size, &work_ret](
+                          uint64_t start, uint64_t end) {
         for (uint64_t i = start; i < end; ++i) {
             const size_t core_size = (i == (max_thread_num - 1)) ? last_core_size : per_core_size;
             const uint64_t ptr_offset = i * (total_nums / max_thread_num);
@@ -195,7 +196,7 @@ uint32_t UpdateOutput(const CpuKernelContextInfo& info)
     // work_ret is shared by all ParallelFor workers, so it must be atomic. The loop body keeps the per-update
     // status in a local variable to avoid storing to the shared cache line on every iteration.
     std::atomic<uint32_t> work_ret(KERNEL_STATUS_OK);
-    auto shard_copy = [&](uint64_t start, uint64_t end) {
+    auto shard_copy = [&info, &args, &work_ret](uint64_t start, uint64_t end) {
         if (work_ret != KERNEL_STATUS_OK) {
             return;
         }
