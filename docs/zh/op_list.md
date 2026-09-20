@@ -169,16 +169,6 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/fused_bias_leaky_relu/README.md">fused_bias_leaky_relu</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>BiasAdd + LeakyReLU + Scale 三合一前向算子，对应MMCV FusedBiasLeakyReLU前向。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
     <td><a href="../../activation/ge_glu_grad_v2/README.md">ge_glu_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2459,16 +2449,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/sigmoid_cross_entropy_with_logits_grad/README.md">sigmoid_cross_entropy_with_logits_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>Sigmoid + 二元交叉熵融合损失的反向梯度计算。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/cross_v2/README.md">cross_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2706,16 +2686,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>计算SmoothL1Loss的反向传播梯度。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
-    <td><a href="../../loss/smooth_l1_loss/README.md">smooth_l1_loss</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算预测值与标签值之间的平滑L1损失（element-wise，无reduction）。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -3428,16 +3398,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/in_training_reduce_grad/README.md">in_training_reduce_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>InstanceNorm训练反向中reduce阶段的梯度计算。根据上游梯度dy、前向输入x及归约统计量（mean/variance）与res_gamma/res_beta，计算输入x的梯度pd_x。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/centralization/README.md">centralization</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3977,36 +3937,6 @@
     <td>AI Core</td>
     <td>实现Adagrad V2优化器单步参数更新功能，原地更新权重参数var及梯度累加器accum。</td>
    </tr>
-   <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_ftrl_v2/README.md">inplace_apply_ftrl_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>FTRL-Proximal在线学习优化算法的单步参数更新算子，原地更新var/accum/linear三个状态张量。</td>
-   </tr>
-   <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_ftrl/README.md">inplace_apply_ftrl</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现FTRL-Proximal优化器单步参数更新，就地更新var、accum、linear三个状态量。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_proximal_adagrad/README.md">inplace_apply_proximal_adagrad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>ApplyProximalAdagrad的inplace双输出版本，将var和accum均显式暴露为输出端口（inplace alias），完整反映Proximal Adagrad算法的inplace更新语义，对标TensorFlow的ApplyProximalAdagrad接口。</td>
-  </tr>
   <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_add_sign/README.md">inplace_apply_add_sign</a></td>
@@ -4089,16 +4019,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/lars_v2_update/README.md">lars_v2_update</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>LARS-V2优化器梯度更新：根据权重的L2范数自适应调整梯度的信任系数，计算更新后的梯度。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_adamax/README.md">apply_adamax</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4116,16 +4036,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>CAME优化器第4段（参数更新段）：按CAME更新规则，利用置信因子r、c对参数param进行更新，回写更新后的param、r、c；sum_r与global_shape为可选输入，缺省时kernel内归约并取本地形状。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_ada_max/README.md">inplace_apply_ada_max</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行AdaMax优化器的单步参数更新，基于无穷范数的Adam变种，根据当前梯度更新一阶矩m和无穷范数v，原地更新权重参数var以及m、v。输出端口var/m/v与输入同名（GE inplace 别名），输出内存别名到输入内存实现原地更新。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -4176,16 +4086,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现adamW优化器功能。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/apply_came_part2/README.md">apply_came_part2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行CAME优化器（置信度引导的自适应内存高效随机优化器）4-Part拆分的第2段：对Part1产出的梯度行/列/总和统计与上一step的行/列二阶矩r/c做EMA更新，并用置信度归一化计算归一化更新方向u及平方和sum_square_u，原地更新r、c，供Part3/Part4继续消费。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -5209,16 +5109,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_adam_v2/README.md">apply_adam_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现adam优化器V2版本功能，支持FP32和FP16数据类型。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_adam_d/README.md">apply_adam_d</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5277,26 +5167,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>执行带L1/L2正则的近端梯度下降单步更新，显式输出更新后的var_out；本仓提供Ascend950的GE图模式实现，对齐TensorFlow近端梯度下降更新语义。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_keras_momentum/README.md">inplace_apply_keras_momentum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行Keras Momentum优化器的单步参数更新，根据动量系数momentum、学习率lr和梯度grad更新累积量accum，并按标准模式或Nesterov模式原地更新权重参数var。对标TensorFlow的ResourceApplyKerasMomentum接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/fused_mul_apply_momentum/README.md">fused_mul_apply_momentum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>CANN图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新，支持标准动量与Nesterov动量。</td>
   </tr>
   <tr>
     <td>hash</td>
