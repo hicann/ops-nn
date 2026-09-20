@@ -74,6 +74,7 @@ class MatmulEmuSplitWeightOpBuilder(OpBuilder):
 
 
 matmul_emu_split_weight_builder = MatmulEmuSplitWeightOpBuilder()
+matmul_emu_split_weight_builder._ensure_initialized()
 
 
 @impl(
