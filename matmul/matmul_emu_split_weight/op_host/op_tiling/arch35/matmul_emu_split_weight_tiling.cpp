@@ -57,11 +57,13 @@ ge::graphStatus MatmulEmuSplitWeightTiling::GetPlatformInfo()
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
-    OP_TILING_CHECK(socVersion != platform_ascendc::SocVersion::ASCEND950,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "MatmulEmuSplitWeight only supports Ascend950, current socVersion is %d",
-                                          static_cast<int32_t>(socVersion)),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        socVersion != platform_ascendc::SocVersion::ASCEND950 && socVersion != platform_ascendc::SocVersion::ASCEND350,
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
+                              "MatmulEmuSplitWeight only supports Ascend950 and Ascend350, "
+                              "current socVersion is %d",
+                              static_cast<int32_t>(socVersion)),
+        return ge::GRAPH_FAILED);
     aicNum_ = ascendcPlatform.GetCoreNumAic();
     aivNum_ = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1Size_);

@@ -36,7 +36,8 @@ static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* conte
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
+    if (socVersion == platform_ascendc::SocVersion::ASCEND950 ||
+        socVersion == platform_ascendc::SocVersion::ASCEND350) {
         return MatmulEmuSplitWeightTiling(context).DoTiling();
     }
 
