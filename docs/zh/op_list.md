@@ -529,16 +529,6 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/relu6_d/README.md">relu6_d</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>带缩放系数的ReLU6激活函数，对输入逐元素计算 y = min(max(x, 0), 6*scale)，将输出钳位在 [0, 6*scale] 区间；scale 默认 1.0 时等价于标准 ReLU6，适用于轻量级网络激活层与低精度量化场景。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
     <td><a href="../../activation/selu/README.md">selu</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2679,16 +2669,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/smooth_l1_loss_grad/README.md">smooth_l1_loss_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算SmoothL1Loss的反向传播梯度。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_grad_v2/README.md">smooth_l1_loss_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3917,26 +3897,6 @@
     <td>AI Core</td>
     <td>计算CAME优化器第三阶段的一阶矩更新以及行、列和全局统计量。</td>
   </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_adagrad_da/README.md">inplace_apply_adagrad_da</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现Adagrad Dual Averaging优化器的核心更新操作，用于深度学习模型训练中的参数更新。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_adagrad_v2/README.md">inplace_apply_adagrad_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现Adagrad V2优化器单步参数更新功能，原地更新权重参数var及梯度累加器accum。</td>
-   </tr>
   <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_add_sign/README.md">inplace_apply_add_sign</a></td>
