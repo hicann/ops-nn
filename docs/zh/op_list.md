@@ -560,12 +560,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/selu_grad/README.md">selu_grad</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
-    <td>完成SELU激活函数的反向梯度计算。给定上游梯度gradients和前向输出outputs，按元素计算输出梯度。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -2469,16 +2469,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/sigmoid_focal_loss_grad/README.md">sigmoid_focal_loss_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算Sigmoid Focal Loss对前向logits的反向梯度。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/cross_v2/README.md">cross_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3339,16 +3329,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算Batch Normalization推理模式下输入的反向梯度。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/bn_inference/README.md">bn_inference</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3360,12 +3340,12 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
-    <td>对四维NCHW输入的N、H、W轴执行归约，输出每个通道的元素和与平方和。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -4166,16 +4146,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>执行RMSProp优化器的单步参数更新，通过三个显式inplace输出更新权重var、梯度平方移动平均ms和动量累积mom；本仓对应Ascend950/GEIR实现。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/apply_centered_rms_prop/README.md">apply_centered_rms_prop</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行Centered RMSProp优化器的单步参数更新，在标准RMSProp基础上额外维护一阶梯度移动平均mg，以ms - mg²作为方差估计，根据当前梯度更新mg、ms和动量累积mom，原地更新权重参数var以及mg、ms、mom。对标TensorFlow的tf.raw_ops.ApplyCenteredRMSProp接口。</td>
   </tr>
   <tr>
     <td>optim</td>

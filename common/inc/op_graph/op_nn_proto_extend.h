@@ -3012,6 +3012,35 @@ currently supported.
     .ATTR(adjoint, Bool, false)
     .OP_END_FACTORY_REG(MatrixInverse)
 
+/**
+* @brief Performs reduced batch normalization .
+
+* @par Inputs:
+* x: A 4D tensor of type float16 or float32 or bfloat16, with format NHWC or NCHW.
+* Indicates the input tensor, that is, the original data to be normalized.
+
+* @par Outputs:
+* @li sum: A 1D tensor of type float32 for SUM reduced "x". It represents the sum of the input tensor "x" on the C
+axis.
+* The shape of sum is consistent with the C axis of "x". Has the same format as "x".
+* @li square_sum: A 1D tensor of type float32 for SUMSQ reduced "x". It represents the sum of squares of the input
+tensor "x" on the C axis.
+* The shape of sum is consistent with the C axis of "x". Has the same format as "x". \n
+
+* @attention Constraints:
+* This operator is a BatchNorm fusion operator for updating the moving
+* averages for training.
+* This operator is used in conjunction with BNTrainingReduce.
+*/
+#ifndef OPS_PROTO_DEF_BNTRAININGREDUCE
+#define OPS_PROTO_DEF_BNTRAININGREDUCE
+        REG_OP(BNTrainingReduce)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OUTPUT(sum, TensorType({DT_FLOAT}))
+    .OUTPUT(square_sum, TensorType({DT_FLOAT}))
+    .OP_END_FACTORY_REG(BNTrainingReduce)
+#endif // OPS_PROTO_DEF_BNTRAININGREDUCE
+
     /**
     * @brief Performs reduced batch normalization .
 
@@ -3974,6 +4003,179 @@ currently supported.
     .ATTR(update_slots, Bool, true)
     .OP_END_FACTORY_REG(SparseApplyAdagradV2)
 #endif
+
+/**
+ * @brief Computes the gradient of SELU:
+ *    y = scale * gradients                          if outputs >= 0
+ *    y = gradients * (outputs + scale * alpha)      if outputs < 0
+ *
+ *    where alpha = 1.6732632423543772848170429916717
+ *          scale = 1.0507009873554804934193349852946
+ *
+ * @par Inputs:
+ * Two inputs:
+ * gradients: A Tensor. Support 1D ~ 8D. Must be one of the following types: float16, float,
+ * bfloat16, int32, int8, uint8. format:ND.
+ * outputs: A Tensor. Has the same type, shape and format as "gradients".
+ *
+ * @par Outputs:
+ * y: A Tensor. Has the same type, shape and format as "gradients".
+ *
+ * @par Third-party framework compatibility
+ * @li Compatible with the TensorFlow operator SeluGrad.
+ */
+#ifndef OPS_PROTO_DEF_SELUGRAD
+#define OPS_PROTO_DEF_SELUGRAD
+        REG_OP(SeluGrad)
+    .INPUT(gradients, TensorType::RealNumberType())
+    .INPUT(outputs, TensorType::RealNumberType())
+    .OUTPUT(y, TensorType::RealNumberType())
+    .OP_END_FACTORY_REG(SeluGrad)
+#endif // OPS_PROTO_DEF_SELUGRAD
+
+/**
+* @brief MMCV Function: sigmoid_focal_loss_grad  .
+
+* @par Inputs:
+* Four inputs, including one optional input:
+* @li pred: the predicted tensor. The type support float16 and float32.
+* @li target: the target label Tensor. The type support Int32.
+* @li dout: the gradient from the previous operator. It has the same shape as pred and supports float16 and float32.
+* @li weight: A optional input Tensor, default is None, which helps to calculate the loss by supplying sample weights:
+*     shape of pred should be (B, D), B means batch size, D means the number of labels.
+*     shape of target, dout and weight should be (B, D), the same as pred.
+      The type support float16 and float32. \n
+
+* @par Attributes:
+* @li alpha: A attribute is used to reweight the sample. The type is float . \n
+* @li gamma: A attribute is used to calculate the power of the probability.
+*     The type is float . \n
+* @li reduction: a type of the reduce method. default is 'mean', which means computing the average loss.
+                'sum' means computing the sum of the loss, 'none' means no reducing .\n
+
+* @par Outputs:
+* grad: A mutable Tensor. Has the same type and shape as "pred". \n
+
+* @par Third-party framework compatibility
+* Compatible with the MMCV operator SigmoidFocalLoss.
+*/
+#ifndef OPS_PROTO_DEF_SIGMOIDFOCALLOSSGRAD
+#define OPS_PROTO_DEF_SIGMOIDFOCALLOSSGRAD
+        REG_OP(SigmoidFocalLossGrad)
+    .INPUT(pred, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(target, TensorType({DT_INT32}))
+    .INPUT(dout, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(grad, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .ATTR(alpha, Float, 0.25)
+    .ATTR(gamma, Float, 2.0)
+    .ATTR(reduction, String, "mean")
+    .OP_END_FACTORY_REG(SigmoidFocalLossGrad)
+#endif // OPS_PROTO_DEF_SIGMOIDFOCALLOSSGRAD
+
+/**
+ * @brief Performs the backpropagation of BatchNorm for inference .
+
+
+ * @par Inputs:
+ * Three inputs, including:
+ * @li grads: A tensor of type float16 or float32 or bfloat16. Indicates the gradient of the BathNorm output parameter
+ "y".
+ * Shape support 4D and 5D. Format support NHWC, NCHW or NC1HWC0.
+ * @li scale: A 1D tensor of type float32. Shape must be C channel.
+ * Specifies the scaling factor. Has the same format as "grads".
+ * @li batch_variance: A 1D tensor of type float32. Calculated variance, that is, the value of BatchNorm output
+ parameter "batch_variance".
+ * Shape must be C channel. Has the same format as "grads". \n
+
+
+ * @par Attributes:
+ * epsilon: An optional float32. Defaults to "0.0001". A small float number
+ * added to the variance of "batch_variance". \n
+
+
+ * @par Outputs:
+ * x_backprop: A tensor of type float16 or float32 or bfloat16.
+ * Indicates the gradient of BathNorm input data "x".
+ * Has the same type, shape and format as "grads". \n
+
+
+ * @attention Constraints:
+ * The preceding layer of this operator must be operator BatchNorm.
+ */
+#ifndef OPS_PROTO_DEF_BNINFERGRAD
+#define OPS_PROTO_DEF_BNINFERGRAD
+        REG_OP(BNInferGrad)
+    .INPUT(grads, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .INPUT(scale, TensorType({DT_FLOAT}))
+    .INPUT(batch_variance, TensorType({DT_FLOAT}))
+    .OUTPUT(x_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .ATTR(epsilon, Float, 0.0001)
+    .OP_END_FACTORY_REG(BNInferGrad)
+#endif // OPS_PROTO_DEF_BNINFERGRAD
+
+/**
+ *@brief Updates "var" according to the centered RMSProp algorithm.
+ *  The centered RMSProp algorithm uses an estimate of the centered second moment
+ *  (i.e., the variance) for normalization, as opposed to regular RMSProp, which
+ *  uses the (uncentered) second moment. This often helps with training, but is
+ *  slightly more expensive in terms of computation and memory.
+ *
+ *  t-1 mean previous period.
+ *  mg <- rho * mg{t-1} + (1-rho) * grad
+ *  ms <- rho * ms{t-1} + (1-rho) * grad * grad
+ *  mom <- momentum * mom{t-1} + lr * grad / sqrt(ms - mg * mg + epsilon)
+ *  var <- var - mom
+ *
+ *@attention Constraints:
+ *@li in dense implementation of this algorithm, mg, ms, and mom will
+ *    update even if the grad is zero, but in this sparse implementation, mg, ms,
+ *    and mom will not update in iterations during which the grad is zero.
+ *@li the input tensors must have the same shape.
+ *
+ *@par Inputs:
+ *@li var: A mutable tensor. Should be from a Variable().
+ *@li mg: A mutable tensor. Has the same type as "var".
+ *     Should be from a Variable().
+ *@li ms: A mutable tensor. Has the same type as "var".
+ *     Should be from a Variable().
+ *@li mom: A mutable tensor. Has the same type as "var".
+ *     Should be from a Variable().
+ *@li lr: A scalar. Has the same type as "var".
+ *@li rho: A scalar. Has the same type as "var".
+ *@li momentum: A tensor. Has the same type as "var".
+ *@li epsilon: A scalar. Has the same type as "var".
+ *@li grad: A tensor for the gradient. Has the same type as "var".
+ *
+ *@par Attributes:
+ * use_locking: An optional bool. Defaults to "False".
+ *     If "True", updating of the "var", "ms", and "mom" tensors is protected
+ *     by a lock; otherwise the behavior is undefined, but may exhibit less
+ *     contention.
+ *
+ *@par Outputs:
+ * var: A mutable tensor. Has the same type as input "var".
+ *
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator ApplyCenteredRMSProp.
+ *
+ */
+#ifndef OPS_PROTO_DEF_APPLYCENTEREDRMSPROP
+#define OPS_PROTO_DEF_APPLYCENTEREDRMSPROP
+        REG_OP(ApplyCenteredRMSProp)
+    .INPUT(var, TensorType::NumberType())
+    .INPUT(mg, TensorType::NumberType())
+    .INPUT(ms, TensorType::NumberType())
+    .INPUT(mom, TensorType::NumberType())
+    .INPUT(lr, TensorType::NumberType())
+    .INPUT(rho, TensorType::NumberType())
+    .INPUT(momentum, TensorType::NumberType())
+    .INPUT(epsilon, TensorType::NumberType())
+    .INPUT(grad, TensorType::NumberType())
+    .OUTPUT(var, TensorType::NumberType())
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(ApplyCenteredRMSProp)
+#endif // OPS_PROTO_DEF_APPLYCENTEREDRMSPROP
 
 } // namespace ge
 #endif
