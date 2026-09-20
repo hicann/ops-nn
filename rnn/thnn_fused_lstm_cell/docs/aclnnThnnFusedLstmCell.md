@@ -303,7 +303,6 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - 确定性说明：aclnnThnnFusedLstmCell默认确定性实现。
 - 所有输入、输出参数的数据类型需保持一致。
-- BFLOAT16数据类型仅Ascend 950PR/Ascend 950DT支持；Atlas A3 训练/推理系列、Atlas A2 训练/推理系列产品不支持。
 
 ## 调用示例
 
