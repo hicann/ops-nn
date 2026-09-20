@@ -111,7 +111,7 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
         Conv3DDXV2InnerProductTiling::LegalProtection(l1Params, l0Params); // L1合法性兜底, 兜底也不行就报错
         if (Conv3DDXV2InnerProductTiling::IsL1ParamsValid(l1Params, l0Params)) {
             SetSingleCoreInfo(coreParams, l0Params); // 重新设置核间切分数据
-            CalStepK(l1Params, l0Params);            // 可能需要更新stepK
+            Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params); // 可能需要更新stepK
         } else {
             CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
