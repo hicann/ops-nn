@@ -13,7 +13,7 @@
  * \brief A5 (Ascend950) APT kernel entry for Renorm.
  */
 
-#include "arch35/renorm.h"
+#include "arch35/renorm_base.h"
 #include "arch35/renorm_sm_tl.h"
 #include "arch35/renorm_sm_cr.h"
 #include "arch35/renorm_sm_st.h"
