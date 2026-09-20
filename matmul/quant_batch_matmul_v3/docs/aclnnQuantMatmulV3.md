@@ -247,7 +247,7 @@ aclnnStatus aclnnQuantMatmulV3(
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - bias支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
-    - 全量化场景下，x2为ND格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor；A8W8全量化场景下，x2为NZ格式时，当输入x1的m为0时，输出为空Tensor。
+    - 全量化场景下，x2为ND格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor；A8W8全量化场景下，x2为NZ格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor。
 
   <!-- end id10 -->
 
@@ -283,7 +283,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>x1、x2、bias、scale、offset或out的shape不满足校验条件。</td>
       </tr>
       <tr>
-        <td>x1、x2、bias、scale、offset或out是空tensor。</td>
+        <td>x1、x2、bias、scale、offset或out是空tensor，且不属于上述支持的空Tensor场景。</td>
       </tr>
     </tbody>
     </table>

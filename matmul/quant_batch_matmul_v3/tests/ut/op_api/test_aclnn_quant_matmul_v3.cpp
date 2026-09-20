@@ -358,6 +358,26 @@ TEST_P(l2_QuantBatchMatmulV3_special_test, ascend_special_csv_test)
     }
 }
 
+TEST(QuantBatchMatmulV3EmptyTensor, NzZeroNReturnsEmptyOutputWithoutWorkspace)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    for (bool transposeX2 : {false, true}) {
+        SCOPED_TRACE(testing::Message() << "transposeX2=" << transposeX2);
+        std::vector<int64_t> x2Shape = transposeX2 ? std::vector<int64_t>{0, 32} : std::vector<int64_t>{32, 0};
+        std::vector<int64_t> x2StorageShape = transposeX2 ? std::vector<int64_t>{1, 0, 16, 32} :
+                                                            std::vector<int64_t>{0, 2, 16, 32};
+        TensorDesc x1Desc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
+        TensorDesc x2Desc(x2Shape, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, x2StorageShape);
+        TensorDesc scaleDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+        TensorDesc outDesc({4, 0}, ACL_BF16, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnQuantMatmulV3, INPUT(x1Desc, x2Desc, scaleDesc, nullptr, nullptr, false, transposeX2),
+                            OUTPUT(outDesc));
+        uint64_t workspaceSize = 1;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV3Special, l2_QuantBatchMatmulV3_special_test,
                          testing::ValuesIn(GetSpecialParams()));
 
