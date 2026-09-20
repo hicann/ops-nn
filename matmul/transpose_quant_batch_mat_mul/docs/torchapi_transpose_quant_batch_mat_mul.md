@@ -30,7 +30,7 @@
   y[m, n] = \sum_{j=0}^{K/32-1} \left(\left(\sum_{k=0}^{31} x1[m, j \times 32 + k] \cdot x2[j \times 32 + k, n]\right) \cdot x1Scale[m, j] \cdot x2Scale[j, n]\right)
   $$
 
-  其中K为矩阵乘的K轴长度，x1Scale、x2Scale为FLOAT8_E8M0编码的MX量化缩放因子，矩阵乘中间结果按K轴每32个元素一组进行缩放累加。
+  其中K为矩阵乘的K轴长度，x1Scale、x2Scale为torch.float8_e8m0fnu编码的MX量化缩放因子，矩阵乘中间结果按K轴每32个元素一组进行缩放累加。
 
 - 示例：假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，输出y的shape是(M, B, N)。
 
@@ -61,7 +61,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| x1 | Tensor | 必选 | 矩阵乘运算中的左矩阵，shape为(M, B, K)。MXFP4场景Tensor最后一维为FP4拼包后的物理长度K/2。 | torch.float8_e4m3fn；MXFP4场景为实际存储类型（如torch.uint8），并通过x1_dtype指定为FLOAT4_E2M1 | 3维，(M, B, K) |
+| x1 | Tensor | 必选 | 矩阵乘运算中的左矩阵，shape为(M, B, K)。MXFP4场景Tensor最后一维为FP4拼包后的物理长度K/2。 | torch.float8_e4m3fn；MXFP4场景为实际存储类型（如torch.uint8），并通过x1_dtype指定为torch_npu.float4_e2m1fn_x2 | 3维，(M, B, K) |
 | x2 | Tensor | 必选 | 矩阵乘运算中的右矩阵，数据类型与x1一致，K轴长度与x1一致。perm_x2为[0, 1, 2]时shape为(B, K, N)；perm_x2为[0, 2, 1]时shape为(B, N, K)。MXFP4场景Tensor最后一维为FP4拼包后的物理长度（N/2或K/2）。 | 同x1 | 3维 |
 | dtype | int | 必选 | 输出y的数据类型枚举值：1表示torch.float16，27表示torch.bfloat16。 | int64 | - |
 | bias | Tensor | 可选 | 矩阵乘运算后累加的偏置。预留参数，当前暂不支持，必须传入None。 | - | - |
@@ -97,7 +97,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 - batch_split_factor当前仅支持取值1。
 - bias为预留参数，当前暂不支持。
 - 不支持空Tensor。
-- MXFP4场景数据按两个FLOAT4_E2M1拼包存储（Tensor最后一维为物理长度，即逻辑长度的一半）：x1的最后一维为K/2；x2在perm_x2为[0, 1, 2]时最后一维为N/2，在perm_x2为[0, 2, 1]时最后一维为K/2。此时Tensor实际存储类型（如torch.uint8）无法自动推导出FP4类型，必须通过x1_dtype、x2_dtype指定为torch_npu.float4_e2m1fn_x2。
+- MXFP4场景数据以torch_npu.float4_e2m1fn_x2格式存储（两个FP4元素拼包，Tensor最后一维为物理长度，即逻辑长度的一半）：x1的最后一维为K/2；x2在perm_x2为[0, 1, 2]时最后一维为N/2，在perm_x2为[0, 2, 1]时最后一维为K/2。此时Tensor实际存储类型（如torch.uint8）无法自动推导出FP4类型，必须通过x1_dtype、x2_dtype指定为torch_npu.float4_e2m1fn_x2。
 - 仅x2支持FRACTAL_NZ格式（仅MX量化模式）。
 
 ## 确定性计算
@@ -140,7 +140,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
     import cann_ops_nn
 
     M, B, K, N = 64, 16, 128, 256
-    # FP4按两个FLOAT4_E2M1拼包存储，Tensor最后一维为物理长度（逻辑长度的一半）
+    # FP4以torch_npu.float4_e2m1fn_x2格式存储（两个FP4元素拼包），Tensor最后一维为物理长度（逻辑长度的一半）
     x1 = torch.randint(0, 256, (M, B, K // 2), dtype=torch.uint8).npu()
     x2 = torch.randint(0, 256, (B, K, N // 2), dtype=torch.uint8).npu()
     x1_scale = torch.ones(M, B, K // 64, 2, dtype=torch.float8_e8m0fnu).npu()

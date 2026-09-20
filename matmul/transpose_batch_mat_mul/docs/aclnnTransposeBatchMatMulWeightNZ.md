@@ -112,7 +112,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
             <li>x2的Reduce维度需要与x1的Reduce维度大小相等。</li>
             <li>不支持输入x1,x2分别为BFLOAT16和FLOAT16的数据类型推导。</li>
-            <li>NZ格式各个维度表示：（b, n1，k1，k0，n0），其中k0 = 16， n0为16。x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，x2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
+            <li>NZ格式各个维度表示：（b，n1，k1，k0，n0），其中k0 = 16，n0为16。x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil(k, k0) = k1，x2 shape中的n1与out的n满足以下关系：ceil(n, n0) = n1。</li>
         </ul>
         </td>
         <td>BFLOAT16、FLOAT16</td>
@@ -232,8 +232,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <ul>
           <li>当batchSplitFactor大于1时，out的输出shape为(batchSplitFactor, M, B * N / batchSplitFactor)。</li>
           <ul>
-            <li> 示例一: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
-            <li> 示例二: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li>
+            <li> 示例一：M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
+            <li> 示例二：M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li>
           </ul>
         </ul>
         </td>
@@ -290,8 +290,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>传入的x1、x2或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x1、x2或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -376,8 +376,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 <!-- end id8 -->
-- self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
-- 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
+- x1只支持3维，x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
+- 不支持x2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 ## 调用示例
 

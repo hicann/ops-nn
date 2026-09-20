@@ -232,8 +232,8 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <ul>
           <li>当batchSplitFactor大于1时，out的输出shape为(batchSplitFactor, M, B * N / batchSplitFactor)。</li>
           <ul>
-            <li> 示例一: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
-            <li> 示例二: M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li>
+            <li> 示例一：M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 2时，out的输出shape大小为(2, 32, 1024)。</li>
+            <li> 示例二：M, K, N, B = 32, 512, 128, 16；batchSplitFactor = 4时，out的输出shape大小为(4, 32, 512)。</li>
           </ul>
         </ul>
         </td>
@@ -270,8 +270,8 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <td>传入的x1、x2或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x1、x2或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -339,9 +339,9 @@ aclnnStatus aclnnTransposeBatchMatMul(
 <!-- npu="A3,910b" id7 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
-    - 当x1的输入shape为(B, M, K)时，需要K <= 65535;当x1的输入shape为(M, B, K)且B * K > 65535时，不支持传入scale，并且batchSplitFactor只能等于1, permX1必须为[1, 0, 2]。
-    - 当permX2输入为[0, 2, 1]时，不支持传入scale，并且batchSplitFactor只能等于1, permX1必须为[1, 0, 2]。
-    - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536,且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    - 当x1的输入shape为(B, M, K)时，需要K <= 65535；当x1的输入shape为(M, B, K)且B * K > 65535时，不支持传入scale，并且batchSplitFactor只能等于1，permX1必须为[1, 0, 2]。
+    - 当permX2输入为[0, 2, 1]时，不支持传入scale，并且batchSplitFactor只能等于1，permX1必须为[1, 0, 2]。
+    - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：

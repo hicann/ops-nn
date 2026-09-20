@@ -277,8 +277,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <td>传入的x1、x2、out、x1Scale、x2Scale、permX1、permX2、permY是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x1、x2、x1Scale、x2Scale或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -288,7 +288,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <td>x1或x2的ViewShape的维度大小不等于3。</td>
     </tr>
     <tr>
-      <td>batchSplitFactor不在支持的范围内</td>
+      <td>batchSplitFactor不在支持的范围内。</td>
     </tr>
     <tr>
       <td>permX1、permX2、permY的取值不在支持的范围内。</td>
@@ -350,7 +350,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  - x1只支持3维, x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
+  - x1只支持3维，x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
   - K仅支持64的倍数。groupSize的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
   - groupSize相关约束：
     - 仅在MX量化场景中生效。
