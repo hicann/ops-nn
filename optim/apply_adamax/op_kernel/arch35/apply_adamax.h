@@ -215,7 +215,7 @@ __aicore__ inline void ApplyAdamax<T, IS_ALIGN>::LoadScalars(GM_ADDR beta1Power,
     // 标量极值防护：β1Power → 1 时 (1-β1Power) → 0，lrAdj 会爆 Inf。
     // 使用极小正值 SCALAR_EPS 兜底，避免 Inf 污染下游计算。
     // 注：根据 REQUIREMENTS §5.3，beta1Power==1.0 属于非法输入；
-    // L2 层无法读取 device 标量值做静态拦截，此处为最后一道防线（与文档
+    // L2 层无法读取 device 标量值做防护，此处为最后一道防线（与文档
     // aclnnApplyAdamax.md §"边界值与内部 clamp"保持一致）。
     constexpr float SCALAR_EPS = 1e-30f;
     float denomPower = 1.0f - beta1Power_;
@@ -227,7 +227,7 @@ __aicore__ inline void ApplyAdamax<T, IS_ALIGN>::LoadScalars(GM_ADDR beta1Power,
     // 给 epsilon 设最小下限（IEEE 754 fp32 denormal 之上的最小 normal），
     // 既不影响精度（远小于一般 ε=1e-8），又能消除 0/0 风险。
     // 注：根据 REQUIREMENTS §5.3，epsilon 必须 > 0；L2 层无法读取 device 标量
-    // 值做静态拦截，此处为最后一道防线（与文档 aclnnApplyAdamax.md §"边界值与
+    // 值做防护，此处为最后一道防线（与文档 aclnnApplyAdamax.md §"边界值与
     // 内部 clamp"保持一致）。
     constexpr float EPS_FLOOR = 1.1754944e-38f; // FLT_MIN
     if (epsilon_ >= 0.0f && epsilon_ < EPS_FLOOR) {

@@ -269,7 +269,7 @@ TEST(APGDCommonTiling, CoreSaturationAndAlignedTailFix) // 例 7
 {
     // 核数饱和（§9.5 表）：dim0=163840 得候选=80、factor=2048、used=80、tail=2048
     ExpectMultiCore(163840, 80, {true, 80, 2048, 2048});
-    // 对齐后减少实际核数（缺陷反例修复）：候选=80、raw=2049 → factor=2560、
+    // 对齐后减少实际核数：候选=80、raw=2049 → factor=2560、
     // used=CeilDiv(163841,2560)=65、tail=163841-64*2560=1，不再产生负 tail
     ExpectMultiCore(163841, 80, {true, 65, 2560, 1});
 
