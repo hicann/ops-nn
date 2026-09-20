@@ -1341,6 +1341,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::MSDAProcess()
     LocalTensor<float> gridOutput = gridOutQue_.Get<float>();
 
     int64_t valueOffset = 0;
+    int64_t accumulatedKeys = 0; // 已处理 level 的面积和 Σ(H*W)，单位与 numKeys_ 一致
     int64_t samplingOffset = 0;
     int64_t attentionOffset = 0;
 
@@ -1351,6 +1352,17 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::MSDAProcess()
         currentLevel = i;
         inputH_ = valueSpatialShapesGm_.GetValue(2 * i);
         inputW_ = valueSpatialShapesGm_.GetValue(2 * i + 1);
+
+        // 校验 H/W 合法性，numKeys_（host 侧元数据）为唯一可信上界：非法则打印诊断并 Trap 报错，
+        // 防止 H/W 为负或超预算导致 valueOffset 越界/回绕
+        if (inputH_ <= 0 || inputW_ <= 0 || inputH_ * inputW_ > numKeys_ - accumulatedKeys) {
+            ascendc_assert(false,
+                           "MSDA invalid spatial shape at level %d: H=%d, W=%d, H*W=%d, numKeys=%d, accumulated=%d\n",
+                           (int64_t)i, inputH_, inputW_, inputH_ * inputW_, numKeys_, accumulatedKeys);
+            AscendC::Trap();
+            break;
+        }
+        accumulatedKeys += inputH_ * inputW_;
 
         GridSamplerProcess(location, output, gridOutput, valueOffset, samplingOffset, attentionOffset);
 
