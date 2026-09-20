@@ -35,6 +35,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include <cmath>
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -66,10 +67,11 @@ constexpr const char* OUTPUT_NAMES[OUTPUT_COUNT] = {"var", "accum"};
 // 属性索引（对齐 CANNDEV ApplyAdagradV2D：epsilon, update_slots, use_locking）
 constexpr uint32_t EPSILON_ATTR_INDEX = 0;
 constexpr uint32_t UPDATE_SLOTS_ATTR_INDEX = 1;
+constexpr uint32_t USE_LOCKING_ATTR_INDEX = 2;
 
 // Buffer 数量（用于 UB 空间计算）
 constexpr int64_t BITS_PER_BYTE = 8;
-constexpr int64_t FP32_BUFFER_COUNT = 4; // FP32 路径：var + grad + outVar + outAccum
+constexpr int64_t FP32_BUFFER_COUNT = 5; // FP32 路径：var + accum + grad + outVar + outAccum
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -166,7 +168,7 @@ static ge::graphStatus ValidateDtypeAndScalar(gert::TilingContext* context, ge::
 }
 
 // 读取属性（属性顺序：epsilon(0), update_slots(1), use_locking(2)）
-static void ReadAttrs(gert::TilingContext* context, float* epsilonVal, bool* updateSlots)
+static ge::graphStatus ReadAttrs(gert::TilingContext* context, float* epsilonVal, bool* updateSlots)
 {
     const auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
@@ -176,16 +178,23 @@ static void ReadAttrs(gert::TilingContext* context, float* epsilonVal, bool* upd
         } else {
             *epsilonVal = 1e-10f;
         }
+        OP_CHECK_IF(!std::isfinite(*epsilonVal) || *epsilonVal < 0.0f,
+                    OP_LOGE(context, "epsilon must be finite and non-negative"), return ge::GRAPH_FAILED);
         const bool* usPtr = attrs->GetBool(UPDATE_SLOTS_ATTR_INDEX);
         if (usPtr != nullptr) {
             *updateSlots = *usPtr;
         } else {
             *updateSlots = true;
         }
+        const bool* lockingPtr = attrs->GetBool(USE_LOCKING_ATTR_INDEX);
+        OP_CHECK_IF(lockingPtr != nullptr && *lockingPtr,
+                    OP_LOGE(context, "use_locking=true is unsupported by this implementation"),
+                    return ge::GRAPH_FAILED);
     } else {
         *epsilonVal = 1e-10f;
         *updateSlots = true;
     }
+    return ge::GRAPH_SUCCESS;
 }
 
 // 获取 shape 和 epsilon/update_slots 属性（CACHE-SAFE: 不读 lr，lr 由 kernel 从 GM_ADDR 读）
@@ -210,7 +219,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                 OP_LOGE(context, "ValidateDtypeAndScalar error"), return ge::GRAPH_FAILED);
 
     // 读取属性
-    ReadAttrs(context, epsilonVal, updateSlots);
+    OP_CHECK_IF(ReadAttrs(context, epsilonVal, updateSlots) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ReadAttrs error"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

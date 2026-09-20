@@ -262,6 +262,14 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 static ge::graphStatus InplaceApplyAdagradDATilingFunc(gert::TilingContext* context)
 {
     OP_LOGI(context->GetNodeName(), "Enter InplaceApplyAdagradDATilingFunc");
+    // The current kernel has no device-side mutex/atomic update primitive. Reject
+    // the locking mode instead of silently accepting an unenforced contract.
+    const auto* attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const bool* useLocking = attrs->GetBool(0);
+    OP_CHECK_IF(useLocking != nullptr && *useLocking,
+                OP_LOGE(context, "InplaceApplyAdagradDA: use_locking=true is unsupported by this kernel"),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,

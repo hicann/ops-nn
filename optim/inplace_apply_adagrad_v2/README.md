@@ -89,7 +89,7 @@
   <tr>
     <td>use_locking</td>
     <td>属性</td>
-    <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
+    <td>是否在更新时加锁。默认false。当前实现不支持设置为true，仅支持false。</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>
@@ -114,6 +114,9 @@
 - 输入张量var、accum、grad必须具有相同的形状和数据类型
 - 支持空Tensor
 - 支持的维度范围为0-8维
+- `update_slots`和`use_locking`为可选属性，默认值分别为`true`和`false`；仅支持`use_locking=false`。
+- `lr`的shape须为`[1]`；`epsilon`须为非负有限值。
+- ACLNN通路支持非连续输入，接口层会通过`AutoContiguous()`连续化；GE图通路仅接受ND格式。
 
 ## 调用说明
 

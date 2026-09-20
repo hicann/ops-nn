@@ -22,13 +22,13 @@
   g_{out}   &= g_{acc} + grad \\
   gg_{out}  &= gg_{acc} + grad^2 \\
   T         &= float(global\_step) \\
-  tmp       &= sign(g_{out}) \cdot \max(|g_{out}| - l1 \cdot T,\ 0) \quad &\text{if } l1 \neq 0 \\
-  tmp       &= g_{out} \quad &\text{if } l1 = 0 \\
+  tmp       &= sign(g_{out}) \cdot \max(|g_{out}| - l1 \cdot T,\ 0) \quad &\text{if } l1 > 0 \\
+  tmp       &= g_{out} \quad &\text{if } l1 \le 0 \\
   var_{out} &= \frac{-lr \cdot tmp}{l2 \cdot T \cdot lr + \sqrt{gg_{out}}}
   \end{aligned}
   $$
 
-  其中`lr`为学习率，`l1`为 L1 正则化系数，`l2`为 L2 正则化系数，`global_step`为训练步数，`sign(\cdot)`为符号函数（NaN保留NaN）。
+  其中`lr`为学习率，`l1`为 L1 正则化系数，`l2`为 L2 正则化系数，`global_step`为训练步数。仅当 `l1 > 0` 时执行稀疏截断；NaN/Inf 输入不属于本算子保证的数值范围，传播结果取决于底层向量指令语义。
 
 ## 参数说明
 
@@ -107,7 +107,7 @@
   <tr>
     <td>use_locking</td>
     <td>属性</td>
-    <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
+    <td>是否在更新时加锁。默认false。当前实现不支持true，传入true时Tiling阶段报错。</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>

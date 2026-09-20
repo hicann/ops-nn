@@ -37,7 +37,6 @@ using namespace AscendC;
 
 static constexpr int32_t BUFFER_NUM = 1;
 // 硬件常量
-static constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32; // MTE2 minimum block size on dav-3510
 static constexpr uint32_t SCALAR_UB_SIZE = 64;      // 标量读取 UB buffer 大小
 static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32; // FP32 标量 Cast buffer 大小
 static constexpr DivConfig FP16_DIV_CONFIG = {DivAlgo::DIFF_COMPENSATION};
@@ -93,7 +92,7 @@ private:
     {
         DataCopyExtParams cpSc;
         cpSc.blockCount = 1;
-        cpSc.blockLen = MTE2_MIN_BLOCK_SIZE;
+        cpSc.blockLen = sizeof(float);
         cpSc.srcStride = 0;
         cpSc.dstStride = 0;
         pipe_.InitBuffer(queSc_, 1, SCALAR_UB_SIZE);
@@ -106,13 +105,13 @@ private:
         ReadGlobalStep(cpSc);
 
         // Compute derived scalar values
-        l1IsZero_ = (l1Val_ == 0.0f) ? 1 : 0;
-        l1T_ = (l1IsZero_) ? 0.0f : (l1Val_ * globalStepVal_);
+        l1T_ = (l1Val_ <= 0.0f) ? 0.0f : (l1Val_ * globalStepVal_);
         l2Tlr_ = l2Val_ * globalStepVal_ * lrVal_;
     }
 
     __aicore__ inline void ReadScalarsFloat(DataCopyExtParams cpSc)
     {
+        cpSc.blockLen = sizeof(float);
         LocalTensor<float> scBuf = queSc_.template AllocTensor<float>();
         GlobalTensor<float> lrGM, l1GM, l2GM;
         lrGM.SetGlobalBuffer((__gm__ float*)lrAddr_, 1);
@@ -142,6 +141,7 @@ private:
     // fp16: read as T, cast to float
     __aicore__ inline void ReadScalarsHalf(DataCopyExtParams cpSc)
     {
+        cpSc.blockLen = sizeof(T);
         TQue<QuePosition::VECOUT, 1> queScFloat;
         pipe_.InitBuffer(queScFloat, 1, FP32_SCALAR_UB_SIZE);
 
@@ -191,6 +191,7 @@ private:
     __aicore__ inline void ReadGlobalStep(DataCopyExtParams cpSc)
     {
         if (gsDtype_ == 0) {
+            cpSc.blockLen = sizeof(int32_t);
             LocalTensor<int32_t> scBufI = queSc_.template AllocTensor<int32_t>();
             GlobalTensor<int32_t> gsGM;
             gsGM.SetGlobalBuffer((__gm__ int32_t*)globalStepAddr_, 1);
@@ -201,6 +202,7 @@ private:
             globalStepVal_ = static_cast<float>(scBufI.GetValue(0));
             queSc_.FreeTensor(scBufI);
         } else {
+            cpSc.blockLen = sizeof(int64_t);
             LocalTensor<int64_t> scBufL = queSc_.template AllocTensor<int64_t>();
             GlobalTensor<int64_t> gsGM;
             gsGM.SetGlobalBuffer((__gm__ int64_t*)globalStepAddr_, 1);
@@ -338,8 +340,8 @@ private:
         Sqrt(varOut, ggAccOut, n);       // varOut(temp) = sqrt(gg_acc_out)
         Adds(varOut, varOut, l2Tlr_, n); // varOut(temp) = denom
 
-        if (l1IsZero_) {
-            // l1 == 0: tmp_val = g_acc_out，gAccOut 为 g_acc 输出需保留，用 grad 做临时
+        if (l1Val_ <= 0.0f) {
+            // l1 <= 0: tmp_val = g_acc_out，gAccOut 为 g_acc 输出需保留，用 grad 做临时
             Muls(grad, gAccOut, -lrVal_, n); // grad(temp) = -lr * g_acc_out
             Div(varOut, grad, varOut, n);    // varOut = -lr * g_acc_out / denom
         } else {
@@ -376,8 +378,8 @@ private:
         Sqrt<float, FP16_SQRT_CONFIG>(varOutF32, ggAccOutF32, n); // varOutF32(temp) = sqrt(gg_acc_out)
         Adds(varOutF32, varOutF32, l2Tlr_, n);                    // varOutF32(temp) = denom
 
-        if (l1IsZero_) {
-            // l1 == 0: tmp_val = g_acc_out，gAccOutF32 为 g_acc 输出需保留，用 scratch 做临时
+        if (l1Val_ <= 0.0f) {
+            // l1 <= 0: tmp_val = g_acc_out，gAccOutF32 为 g_acc 输出需保留，用 scratch 做临时
             Muls(scratch, gAccOutF32, -lrVal_, n); // scratch = -lr * g_acc_out
             Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n);
         } else {
@@ -434,7 +436,6 @@ private:
     float l1Val_ = 0.0f;
     float l2Val_ = 0.0f;
     float globalStepVal_ = 0.0f;
-    uint8_t l1IsZero_ = 0;
     float l1T_ = 0.0f;
     float l2Tlr_ = 0.0f;
 

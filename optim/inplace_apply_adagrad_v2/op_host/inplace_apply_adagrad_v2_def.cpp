@@ -81,8 +81,8 @@ public:
 
         // 属性顺序对齐 CANNDEV ApplyAdagradV2D：epsilon(0), update_slots(1), use_locking(2)
         this->Attr("epsilon").Float();
-        this->Attr("update_slots").Bool(true);
-        this->Attr("use_locking").Bool(false);
+        this->Attr("update_slots").AttrType(OPTIONAL).Bool(true);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)

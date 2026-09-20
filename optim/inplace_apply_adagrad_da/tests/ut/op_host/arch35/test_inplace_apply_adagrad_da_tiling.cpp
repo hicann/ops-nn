@@ -161,7 +161,7 @@ TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp32_use_locking)
 {
     gert::StorageShape varShape = {{256}, {256}};
     gert::StorageShape scalarShape = {{1}, {1}};
-    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, true);
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, true, ge::GRAPH_FAILED);
 }
 
 TEST_F(InplaceApplyAdagradDATilingTest, tiling_empty_tensor)

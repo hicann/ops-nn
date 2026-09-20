@@ -34,8 +34,9 @@
  * 保证 inplace 语义下输入地址被正确更新。
  *
  * Buffer 规划（FP32 直算，4-buffer）:
- *   varQueue(VECIN), gradQueue(VECIN), outVarQueue(VECOUT+workBuf), outAccumQueue(VECOUT)
- *   总 UB: 4 × ubFormer × 4B ≤ 248 KB
+ *   varQueue(VECIN), accumQueue(VECIN), gradQueue(VECIN),
+ *   outVarQueue(VECOUT+workBuf), outAccumQueue(VECOUT)
+ *   总 UB: 5 × ubFormer × 4B ≤ 248 KB
  *
  * 已知限制：
  *   所有 TQue 使用 bufferNum=1（Single Buffer），搬运和计算无法重叠。
@@ -55,18 +56,16 @@ namespace NsInplaceApplyAdagradV2 {
 using namespace AscendC;
 
 // 硬件常量
-constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32;   // MTE2 minimum block size on dav-3510
-constexpr uint32_t SCALAR_UB_SIZE = 64;        // 标量读取 UB buffer 大小
+constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32; // MTE2 minimum block size on dav-3510
+constexpr uint32_t SCALAR_UB_SIZE = 64;      // 标量读取 UB buffer 大小
 
 template <typename T, bool UPDATE_SLOTS>
 class InplaceApplyAdagradV2Kernel {
 public:
     __aicore__ inline InplaceApplyAdagradV2Kernel() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum,
-                                GM_ADDR lr, GM_ADDR grad,
-                                GM_ADDR var_out, GM_ADDR accum_out,
-                                const InplaceApplyAdagradV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR var_out,
+                                GM_ADDR accum_out, const InplaceApplyAdagradV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -75,9 +74,8 @@ private:
     __aicore__ inline void ComputeFP32(int64_t tileSize);
     __aicore__ inline void CopyOut(int64_t offset, int64_t tileSize);
     __aicore__ inline void ReadLrScalar(GM_ADDR lr);
-    __aicore__ inline void SetupGlobalTensors(GM_ADDR var, GM_ADDR accum, GM_ADDR grad,
-                                              GM_ADDR var_out, GM_ADDR accum_out,
-                                              int64_t blockLength);
+    __aicore__ inline void SetupGlobalTensors(GM_ADDR var, GM_ADDR accum, GM_ADDR grad, GM_ADDR var_out,
+                                              GM_ADDR accum_out, int64_t blockLength);
 
 private:
     TPipe pipe;
@@ -87,6 +85,7 @@ private:
 
     // === FP32 路径队列（T=float 时使用） ===
     TQue<QuePosition::VECIN, 1> varQueue;
+    TQue<QuePosition::VECIN, 1> accumQueue;
     TQue<QuePosition::VECIN, 1> gradQueue;
     TQue<QuePosition::VECOUT, 1> outVarQueue;
     TQue<QuePosition::VECOUT, 1> outAccumQueue;
@@ -121,9 +120,7 @@ private:
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
 __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::Init(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR accum_out,
+    GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR var_out, GM_ADDR accum_out,
     const InplaceApplyAdagradV2TilingData* tilingData)
 {
     // 缓存 TilingData（lr 不存入 TilingData，CACHE-SAFE；epsilon 存入 TilingData）
@@ -149,6 +146,7 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::Init(
 
     // 初始化 UB Buffer（仅 FP32 路径：4 份 FP32 队列）
     pipe.InitBuffer(varQueue, 1, ubFormer_ * sizeof(float));
+    pipe.InitBuffer(accumQueue, 1, ubFormer_ * sizeof(float));
     pipe.InitBuffer(gradQueue, 1, ubFormer_ * sizeof(float));
     pipe.InitBuffer(outVarQueue, 1, ubFormer_ * sizeof(float));
     pipe.InitBuffer(outAccumQueue, 1, ubFormer_ * sizeof(float));
@@ -183,9 +181,10 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ReadLrScala
 // SetupGlobalTensors — 设置 GM 地址 + DUAL-WRITE 输入地址
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::SetupGlobalTensors(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR accum_out, int64_t blockLength)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::SetupGlobalTensors(GM_ADDR var, GM_ADDR accum,
+                                                                                        GM_ADDR grad, GM_ADDR var_out,
+                                                                                        GM_ADDR accum_out,
+                                                                                        int64_t blockLength)
 {
     int64_t blockIdx = AscendC::GetBlockIdx();
     int64_t offset = blockFormer_ * blockIdx;
@@ -249,7 +248,7 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::CopyIn(int6
 {
     AscendC::LocalTensor<T> varLocal = varQueue.template AllocTensor<T>();
     AscendC::LocalTensor<T> gradLocal = gradQueue.template AllocTensor<T>();
-    AscendC::LocalTensor<T> outAccumLocal = outAccumQueue.template AllocTensor<T>();
+    AscendC::LocalTensor<T> accumLocal = accumQueue.template AllocTensor<T>();
 
     // 使用 DataCopyExtParams（blockLen 为 uint32_t），避免 uint16_t 溢出
     AscendC::DataCopyExtParams copyParams;
@@ -259,11 +258,11 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::CopyIn(int6
     copyParams.dstStride = 0;
 
     AscendC::DataCopyPad(varLocal, varGM[offset], copyParams, {false, 0, 0, 0});
-    AscendC::DataCopyPad(outAccumLocal, accumGM[offset], copyParams, {false, 0, 0, 0});
+    AscendC::DataCopyPad(accumLocal, accumGM[offset], copyParams, {false, 0, 0, 0});
     AscendC::DataCopyPad(gradLocal, gradGM[offset], copyParams, {false, 0, 0, 0});
 
     varQueue.EnQue(varLocal);
-    outAccumQueue.EnQue(outAccumLocal);
+    accumQueue.EnQue(accumLocal);
     gradQueue.EnQue(gradLocal);
 }
 
@@ -272,9 +271,10 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ComputeFP32
 {
     AscendC::LocalTensor<T> varLocal = varQueue.template DeQue<T>();
     AscendC::LocalTensor<T> gradLocal = gradQueue.template DeQue<T>();
-    AscendC::LocalTensor<T> outAccumLocal = outAccumQueue.template DeQue<T>();
+    AscendC::LocalTensor<T> accumLocal = accumQueue.template DeQue<T>();
 
     AscendC::LocalTensor<T> outVarLocal = outVarQueue.template AllocTensor<T>();
+    AscendC::LocalTensor<T> outAccumLocal = outAccumQueue.template AllocTensor<T>();
 
     // lr 从 GM_ADDR 读取（CACHE-SAFE），epsilon 从 TilingData 读取（REQUIRED_ATTR）
     // Step 1: workBuf = grad²
@@ -282,11 +282,11 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ComputeFP32
 
     // Step 2: outAccumLocal = accum + grad² (仅 UPDATE_SLOTS=true 时更新)
     if constexpr (UPDATE_SLOTS) {
-        AscendC::Add(outAccumLocal, outAccumLocal, outVarLocal, tileSize);
+        AscendC::Add(accumLocal, accumLocal, outVarLocal, tileSize);
     }
 
     // Step 3: workBuf = sqrt(accum_new)
-    AscendC::Sqrt(outVarLocal, outAccumLocal, tileSize);
+    AscendC::Sqrt(outVarLocal, accumLocal, tileSize);
 
     // Step 4: workBuf = sqrt(accum_new) + epsilon
     AscendC::Adds(outVarLocal, outVarLocal, epsilon_, tileSize);
@@ -299,11 +299,13 @@ __aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ComputeFP32
 
     // Step 7: outVarLocal = var - update
     AscendC::Sub(outVarLocal, varLocal, gradLocal, tileSize);
+    AscendC::DataCopy(outAccumLocal, accumLocal, tileSize);
 
     outVarQueue.template EnQue<T>(outVarLocal);
     outAccumQueue.template EnQue<T>(outAccumLocal);
 
     varQueue.FreeTensor(varLocal);
+    accumQueue.FreeTensor(accumLocal);
     gradQueue.FreeTensor(gradLocal);
 }
 

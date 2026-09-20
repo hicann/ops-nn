@@ -89,6 +89,10 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
     // 标量(rank==0)与空 tensor(totalNum==0)统一放行：SetBlockDim(1) + return SUCCESS，
     // 与 relu6/selu/hard_shrink 等 15 个同类 arch35 elementwise 算子一致
     if (!isUnknownRank && storageShape.GetShapeSize() == 0) {
+        auto tilingData = context->GetTilingData<SoftsignTilingData>();
+        OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+        OP_CHECK_IF(memset_s(tilingData, sizeof(SoftsignTilingData), 0, sizeof(SoftsignTilingData)) != EOK,
+                    OP_LOGE(context, "Softsign: initialize tiling data failed"), return ge::GRAPH_FAILED);
         context->SetBlockDim(1);
         uint32_t schMode = static_cast<uint32_t>(SOFTSIGN_SCH_MODE_DEFAULT);
         ASCENDC_TPL_SEL_PARAM(context, schMode);
