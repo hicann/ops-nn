@@ -93,10 +93,10 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelCo
     }
 
     size_t numIndices = ctx.Input(2)->GetTensorShape()->NumElements();
-    auto xPtr = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto indicesPtr = reinterpret_cast<T1*>(ctx.Input(1)->GetData());
-    auto segmentIdsPtr = reinterpret_cast<T2*>(ctx.Input(2)->GetData());
-    auto yPtr = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto xPtr = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto indicesPtr = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
+    auto segmentIdsPtr = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
+    auto yPtr = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     if (numIndices == 0) {
         return KERNEL_STATUS_OK;
     }

@@ -86,7 +86,8 @@ uint32_t ScatterNdMinCpuKernel::InitScatterNdMinOutput(const CpuKernelContext& c
         }
         size_t block_size = static_cast<size_t>(output_num / thread_num) * sizeof(T);
         size_t tail_block_size = static_cast<size_t>(output_num % thread_num) * sizeof(T) + block_size;
-        auto copy_by_shard = [&](size_t start, size_t end) {
+        auto copy_by_shard = [src_ref, dst_ref, output_num, thread_num, block_size, tail_block_size, &copy_status](
+                                 size_t start, size_t end) {
             for (size_t shard_idx = start; shard_idx < end; ++shard_idx) {
                 size_t copy_size = (shard_idx == static_cast<size_t>(thread_num - 1)) ? tail_block_size : block_size;
                 int64_t data_offset = static_cast<int64_t>(shard_idx) * (output_num / thread_num);

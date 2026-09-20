@@ -235,8 +235,8 @@ uint32_t ScatterElementsCpuKernel::Compute(CpuKernelContext& ctx)
 template <typename T>
 uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num)
 {
-    auto* input_data = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto* output_data = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto* input_data = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto* output_data = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     if (total_value_num == 0) {
         return KERNEL_STATUS_OK;
     }
@@ -250,7 +250,8 @@ uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int
     std::atomic<uint32_t> work_ret(KERNEL_STATUS_OK);
     size_t per_core_size = static_cast<size_t>(total_value_num / max_thread_num) * sizeof(T);
     size_t last_core_size = static_cast<size_t>(total_value_num % max_thread_num) * sizeof(T) + per_core_size;
-    auto shard_copy = [&](int64_t start, int64_t end) {
+    auto shard_copy = [input_data, output_data, total_value_num, max_thread_num, per_core_size, last_core_size,
+                       &work_ret](int64_t start, int64_t end) {
         for (int64_t i = start; i < end; ++i) {
             size_t core_size = i == max_thread_num - 1 ? last_core_size : per_core_size;
             int64_t ptr_offset = i * (total_value_num / max_thread_num);
@@ -326,9 +327,9 @@ uint32_t ScatterElementsCpuKernel::DoCompute(const CpuKernelContext& ctx)
     KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "BuildScatterElementsInfo failed");
     ret = UpdateOutput<T>(ctx, info.total_value_num);
     KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "UpdateOutput failed");
-    auto* indices_data = reinterpret_cast<TI*>(ctx.Input(1)->GetData());
-    auto* updates = reinterpret_cast<T*>(ctx.Input(kUpdatesInputIndex)->GetData());
-    auto* output = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto* indices_data = PtrToPtr<void, TI>(ctx.Input(1)->GetData());
+    auto* updates = PtrToPtr<void, T>(ctx.Input(kUpdatesInputIndex)->GetData());
+    auto* output = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     return info.update_value_num == info.update_src_num ? ScatterSameNum(info, indices_data, updates, output) :
                                                           ScatterDiffNum(info, indices_data, updates, output);
 }

@@ -92,7 +92,7 @@ public:
         // result is shared by every ParallelFor worker, so it must be atomic.
         std::atomic<uint32_t> result(static_cast<uint32_t>(KERNEL_STATUS_OK));
         const uint32_t shardRet = aicpu::CpuKernelUtils::ParallelFor(
-            ctx, dimsSize, dimsSize / maxCoreNum, [&](std::int64_t begin, std::int64_t end) {
+            ctx, dimsSize, dimsSize / maxCoreNum, [this, &result](std::int64_t begin, std::int64_t end) {
                 int64_t start = begin;
                 if (begin == 0) {
                     start = begin + 1;
@@ -186,7 +186,8 @@ public:
         int64_t maxCoreNum = std::max(minCoreNum, availCoreNum);
         // result is shared by every ParallelFor worker, so it must be atomic.
         std::atomic<uint32_t> result(static_cast<uint32_t>(KERNEL_STATUS_OK));
-        auto parallelProc = [&](std::int64_t begin, std::int64_t end) {
+        auto parallelProc = [this, ixT, outShape, strides, outputT, valsT, &result](std::int64_t begin,
+                                                                                    std::int64_t end) {
             for (int64_t n = begin; n < end; ++n) {
                 bool invalidDims = false;
                 int64_t ix = 0;
@@ -506,7 +507,7 @@ uint32_t SparseToDenseCpuKernel::ParallelSetDefaultValue(const CpuKernelContext&
     const uint32_t curCoreNum = aicpu::CpuKernelUtils::GetCPUNum(ctx);
     const uint32_t availCoreNum = (curCoreNum > kResvCpuNum) ? (curCoreNum - kResvCpuNum) : 0U;
     int64_t maxCoreNum = std::max(minCoreNum, availCoreNum);
-    auto defaultValue = [&](std::int64_t begin, std::int64_t end) {
+    auto defaultValue = [outputAddr, typeSize, defaultValueAddr](std::int64_t begin, std::int64_t end) {
         int64_t total = end - begin;
         int64_t remainder = total % kCopyDataSize;
         int64_t piece = total / kCopyDataSize;

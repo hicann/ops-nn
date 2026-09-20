@@ -188,7 +188,7 @@ template <typename T>
 uint32_t AvgPool1DAvgMatrixCpuKernel::DoCompute(CpuKernelContext& ctx)
 {
     auto output_data_temp = ctx.Output(0)->GetData();
-    auto output_data = reinterpret_cast<T*>(output_data_temp);
+    auto output_data = PtrToPtr<void, T>(output_data_temp);
     AvgPool1DAvgMatrixParam param;
     uint32_t ret = InitAvgPool1DAvgMatrixParam(ctx, param);
     KERNEL_CHECK_FALSE((ret == KERNEL_STATUS_OK), ret, "Init AvgPool1DAvgMatrix param failed.");
