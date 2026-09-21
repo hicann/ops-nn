@@ -19,7 +19,7 @@ namespace aicpu {
 class BucketizeCpuKernel : public CpuKernel {
 public:
     BucketizeCpuKernel() = default;
-    ~BucketizeCpuKernel() = default;
+    ~BucketizeCpuKernel() override = default;
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:

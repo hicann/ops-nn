@@ -17,7 +17,7 @@
 namespace aicpu {
 class ReverseSequenceMsCpuKernel : public CpuKernel {
 public:
-    ~ReverseSequenceMsCpuKernel() = default;
+    ~ReverseSequenceMsCpuKernel() override = default;
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:
