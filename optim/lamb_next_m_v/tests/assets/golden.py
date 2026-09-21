@@ -19,14 +19,18 @@ __golden__ = {"kernel": {"lamb_next_mv": "lamb_next_mv_golden"}}
 
 def _scalars(*xs):
     """取标量并落到 float32 torch 标量张量上。不能返回 Python float——那是 fp64，标量
-    运算会被抬到双精度，而算子在 fp32 上算（A2 的 TBE compute 里 dtype='float32'，
+    运算会被抬到双精度，而 arch35 内核的计算类型 U = float（fp16 输入 unpack 成 fp32 再算）。
+    注：A2 并**不**升精度 —— canndev 的 tbe impl 是 tvm.placeholder(dtype=input_dtype)，全程无 cast_to，
+    fp16 输入就在 fp16 上做 vmul/vdiv/vsqrt。此处跟随 arch35 的计算类型，不跟随 A2（
     arch35 DAG 的计算类型 U = float）。numpy 只用于取值与 dtype 转换。"""
     # 标量落成 **0 维 float64** 张量: torch 的类型提升里 0 维张量不会把 dim>0 的张量抬档，
     # 所以数据是 fp32 时结果仍是 fp32(与改动前一致)，数据被 Promote 成 fp64 时标量自动
     # 跟到 fp64，不会用一个先降到 fp32 的标量去污染高精度真值。
-    return tuple(
-        torch.from_numpy(np.asarray(x, "float64").reshape(-1)[:1])[0] for x in xs
-    )
+    # A2 语义: 这些"系数"输入是**可广播的 ND Tensor**(canndev ops/built-in/tbe/impl/lamb_*.py
+    # 每步 mul/sub/div 都先 shape_util.broadcast_shapes 再 tbe.broadcast)。原先 reshape(-1)[:1]
+    # 只取首元素, 传多元素张量时静默按首元素计算 —— 与内核的广播实现不一致, 广播档必然假红。
+    # 改为返回完整张量交给 torch 自然广播: 形状 (1,) 的行为与原标量完全一致, 故常规档不变。
+    return tuple(_t(x) for x in xs)
 
 
 def _t(x):
@@ -49,6 +53,24 @@ def _t(x):
     """
     a = np.asarray(x)
     return torch.from_numpy(a if a.dtype == np.float64 else a.astype("float32"))
+
+
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    return np.broadcast_shapes(*[np.asarray(x).shape or (1,) for x in xs])
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定四个输出**一律**取全体输入的广播结果; 而逐输出的自然形状可能更小
+    —— 例如 next_v 只由 input_mul2/mul2_x/input_mul3/mul3_sub1 决定, 这四个整组退化成
+    标量时自然形状就是 (1,)。值完全相同(同一个数铺开), 但形状必须对齐声明:
+    TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py 的 alloc_shape
+    = golden_shape), golden 少铺一层就会让内核按满格写进只有 1 个元素的 buffer, 大规模
+    下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
 
 
 def lamb_next_mv_golden(
@@ -95,12 +117,30 @@ def lamb_next_mv_golden(
     v_unb, m_unb = next_v / rd1, next_m / rd0
     y1 = param * wd + m_unb / torch.sqrt(v_unb + eps)
     y4 = m_unb / (torch.sqrt(v_unb) + eps)
-    return [
-        y1.numpy().astype(dt),
-        next_m.numpy().astype(dt),
-        next_v.numpy().astype(dt),
-        y4.numpy().astype(dt),
-    ]
+    shape = _decl_shape(
+        input_mul3,
+        input_mul2,
+        input_realdiv1,
+        input_mul1,
+        input_mul0,
+        input_realdiv0,
+        input_mul4,
+        mul0_x,
+        mul1_sub,
+        mul2_x,
+        mul3_sub1,
+        mul4_x,
+        add2_y,
+    )
+    return _to_decl(
+        [
+            y1.numpy().astype(dt),
+            next_m.numpy().astype(dt),
+            next_v.numpy().astype(dt),
+            y4.numpy().astype(dt),
+        ],
+        shape,
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -140,31 +180,24 @@ def _tp_t(x):
 
 
 def _tp_widen(t):
-    """把三方入参加宽到**内核的计算类型**, 复刻 op_kernel/arch35/lamb_next_m_v_dag.h 的
-    `Cast<U, T, 0>`(见该文件注释: "Compute in U (=float): half casts to float")。
+    """按 NPU 的加宽行为加宽三方入参。
 
-    这不是"给竞品放水抬精度", 而是**同算法转写**——本算子是融合 DAG, 十几步中间量全程留在
-    fp32、一次都不落回 T; 而 torch 只在**单个算子内部**用 opmath=float, 算子之间每一步都把
-    结果落回 fp16(A100 实测: fp16 的 300*300 直接得 inf, 而 (a*a)/a 真值 300 明明存得下)。
-    不加宽就等于拿"逐步截断的实现"当竞品, 与被测内核不是同一个算法。
-
-    整型不动: 内核对 int 也是原生/int32 累加, 走 fp32 会把 >2^24 抹掉低位。
+    三方腿拿到的是**原始 dtype T**(TTK 的 Promote 只作用于 golden)。内核对 fp16 输入 unpack
+    成 fp32 全程不落回(dag.h 的 `Cast<U, T, 0>`, U = float), 而 torch 只在单个算子内部用
+    opmath=float、算子之间每步落回 T —— 不加宽就等于拿"逐步截断的实现"当竞品。
+    T = fp32 时内核计算类型即 fp32, 不加宽; 整型不动(走 fp32 会抹掉 >2^24 的低位)。
     """
     return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
 
 
 def _tp_narrow(outs, dt):
-    """出口复刻内核的 `Cast<T, U, 1>`: 算完窄回算子输出 dtype。
-
-    这个 cast **必须与 _tp_widen 成对出现**: 少了它, 三方停在 fp32, 会与走 TTK Promote
-    (fp16->fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母被夹到 §4.5.1 的 err,
-    有量纲的 RMSE 比值随输出量级线性放大而假红。
-    """
+    """出口复刻内核的 `Cast<T, U, 1>`: 窄回算子声明的 dtype T。"""
     return [o.to(dt) if o.is_floating_point() else o for o in outs]
 
 
 def _tp_s(x):
-    return _tp_t(x).reshape(-1)[0]
+    # 同 _scalars: 三方腿也必须广播, 不能只取首元素
+    return _tp_t(x)
 
 
 class _LambNextMVCompose:
@@ -185,7 +218,7 @@ class _LambNextMVCompose:
         add2_y,
         **kwargs,
     ):
-        _dt = _tp_t(input_mul3).dtype  # 算子输出 dtype
+        _dt = _tp_t(input_mul3).dtype  # 算子声明的 dtype T(三方腿入参不经 Promote)
         g2, v, g, m, param = (
             _tp_widen(_tp_t(t))
             for t in (input_mul3, input_mul2, input_mul1, input_mul0, input_mul4)
@@ -211,7 +244,25 @@ class _LambNextMVCompose:
         v_unb, m_unb = next_v / rd1, next_m / rd0
         y1 = param * wd + m_unb / torch.sqrt(v_unb + eps)
         y4 = m_unb / (torch.sqrt(v_unb) + eps)
-        return _tp_narrow([y1, next_m, next_v, y4], _dt)
+        shape = _decl_shape(
+            input_mul3,
+            input_mul2,
+            input_realdiv1,
+            input_mul1,
+            input_mul0,
+            input_realdiv0,
+            input_mul4,
+            mul0_x,
+            mul1_sub,
+            mul2_x,
+            mul3_sub1,
+            mul4_x,
+            add2_y,
+        )
+        outs = [
+            torch.broadcast_to(o, shape).contiguous() for o in (y1, next_m, next_v, y4)
+        ]
+        return _tp_narrow(outs, _dt)
 
 
 class LambNextMVKernelSpec:

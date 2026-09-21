@@ -10,19 +10,21 @@
 
 /*!
  * \file lamb_apply_check_util.h
- * \brief lamb_apply_optimizer_assign / lamb_apply_weight_assign 复用的输入校验(dtype 一致性、标量非空)。
+ * \brief lamb_apply_optimizer_assign / lamb_apply_weight_assign 复用的输入校验(dtype 一致性、ref 输出形状)。
  */
 #ifndef OPS_OPTIM_LAMB_APPLY_COMMON_CHECK_UTIL_H
 #define OPS_OPTIM_LAMB_APPLY_COMMON_CHECK_UTIL_H
 
 #include <cstddef>
 #include <string>
+#include <vector>
 #include "exe_graph/runtime/tiling_context.h"
+#include "atvoss/broadcast/broadcast_tiling.h"
+#include "infershape_broadcast_util.h"
 #include "log/log.h"
 
 namespace optiling {
 
-// 所有输入(1..inputNum-1)、输出(0..outputNum-1)的 dtype 必须与 input0 一致。
 inline ge::graphStatus CheckLambApplyDtypeConsistency(gert::TilingContext* context, int32_t inputNum,
                                                       const char* const inputNames[], int32_t outputNum,
                                                       const char* const outputNames[])
@@ -57,20 +59,49 @@ inline ge::graphStatus CheckLambApplyDtypeConsistency(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-// 标量类输入(系数)为每元素计算所必需, 空Tensor 视为缺失必选值(畸形输入), 不支持。
-inline ge::graphStatus CheckLambApplyScalarNotEmpty(gert::TilingContext* context, const int32_t* scalarIdx,
-                                                    size_t scalarCount, const char* const inputNames[])
+// ref(原地写回)输出所绑定的输入, 其形状必须恰好等于全部输入广播的结果:
+// 内核按广播后的完整网格计算并写回该输入的 buffer, 形状不等就会越过它的显存边界。
+inline ge::graphStatus CheckLambApplyBroadcastIntoRef(gert::TilingContext* context, int32_t inputNum, int32_t refIdx,
+                                                      const char* refName)
 {
-    for (size_t i = 0; i < scalarCount; i++) {
-        int32_t idx = scalarIdx[i];
-        auto scalarShape = context->GetInputShape(idx);
-        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
-        if (scalarShape->GetStorageShape().GetShapeSize() == 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), inputNames[idx],
-                                                  Ops::Base::ToString(scalarShape->GetStorageShape()).c_str(),
-                                                  "scalar input does not support empty tensor");
-            return ge::GRAPH_FAILED;
+    std::vector<const gert::Shape*> inShapes;
+    inShapes.reserve(static_cast<size_t>(inputNum));
+    for (int32_t i = 0; i < inputNum; i++) {
+        auto inShape = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
+        inShapes.push_back(&Ops::Base::EnsureNotScalar(inShape->GetStorageShape()));
+    }
+    // 本地折叠广播, 不依赖 Ops::Base::BroadcastShape —— 该符号由 libops_base.so 导出, 但自定义
+    // vendor 包的 tiling 库不链它, 装包后 so 带未解析符号(ldd -r 可见)。带未解析符号的 so 早期
+    // dlopen 会失败、被退到内置之后加载, 导致本算子的 tiling 模板抢不到注册槽位(实测 tilingKey
+    // 拿到的是内置 ATVOSS 的值)。改为本地实现后 so 无未解析符号。
+    gert::Shape bcShape = *inShapes[0];
+    for (size_t i = 1; i < inShapes.size(); i++) {
+        const gert::Shape& rhs = *inShapes[i];
+        size_t lr = bcShape.GetDimNum();
+        size_t rr = rhs.GetDimNum();
+        size_t rank = (lr > rr) ? lr : rr;
+        gert::Shape tmpShape;
+        tmpShape.SetDimNum(rank);
+        for (size_t d = 0; d < rank; d++) {
+            // 右对齐: 缺的高位维按 1 处理
+            int64_t a = (d + lr >= rank) ? bcShape.GetDim(d + lr - rank) : 1;
+            int64_t b = (d + rr >= rank) ? rhs.GetDim(d + rr - rank) : 1;
+            if (a != b && a != 1 && b != 1) {
+                OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together");
+                return ge::GRAPH_FAILED;
+            }
+            // 取"非 1 的那个", 不能取 max —— 空 Tensor 场景下 0 与 1 广播应得 0。
+            tmpShape.SetDim(d, (a == 1) ? b : a);
         }
+        bcShape = tmpShape;
+    }
+    const gert::Shape& refShape = *inShapes[refIdx];
+    if (!(bcShape == refShape)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), refName, Ops::Base::ToString(refShape).c_str(),
+            "it is an in-place(ref) output, so the broadcast shape of all inputs must equal it");
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }

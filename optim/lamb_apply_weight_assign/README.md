@@ -44,42 +44,42 @@
     <tr>
       <td>input0</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input0（权重范数），标量。</td>
+      <td>支持空Tensor。公式中的input0（权重范数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input1</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input1（梯度范数），标量。</td>
+      <td>支持空Tensor。公式中的input1（梯度范数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input2</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的input2（学习率），标量。</td>
+      <td>支持空Tensor。公式中的input2（学习率），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input3</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input3（update）。允许小于input_param并向上广播，但其shape必须能broadcast进input_param的shape。</td>
+      <td>支持空Tensor。公式中的input3（update），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_param</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_param（参数）。input_param为**原地(in-place)更新**输出，其shape必须等于input3与input_param广播后的完整输出shape（即input3须能broadcast进input_param）。</td>
+      <td>支持空Tensor。公式中的input_param（参数）。input_param为<b>原地(in-place)更新</b>输出，其shape必须等于全部输入的broadcast结果（即其余输入均须能broadcast进input_param）。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_param</td>
       <td>输出</td>
-      <td>支持空Tensor。更新后的input_param（原地更新），shape取input3与input_param的broadcast结果。</td>
+      <td>支持空Tensor。更新后的input_param（原地更新），shape取全部输入的broadcast结果，等于input_param的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -87,6 +87,8 @@
 
 ## 约束说明
 
+- 所有输入的shape需两两满足broadcast规则。`input_param`是原地(in-place)更新的输出，故全部输入的broadcast结果必须恰好等于`input_param`的shape，否则原地写回会越界。
+- 所有输入及输出的维度数为0~8。当全部输入均为0维时，输出的shape为(1,)。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明

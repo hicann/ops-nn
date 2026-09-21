@@ -15,20 +15,21 @@
 
 #include "lamb_next_m_v_with_decay_tiling_arch35.h"
 #include <graph/utils/type_utils.h>
-#include "../../op_kernel/arch35/lamb_next_m_v_with_decay_dag.h"
-#include "atvoss/broadcast/broadcast_tiling.h"
+#include <securec.h>
+#include <algorithm>
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-using namespace AscendC;
 using namespace ge;
 
 namespace optiling {
 
 constexpr static uint64_t LAMB_NEXT_M_V_TILING_PRIORITY = 0;
+constexpr static uint64_t TILING_KEY_FP32 = 100;
+constexpr static uint64_t TILING_KEY_FP16 = 200;
 constexpr static int32_t INPUT_NUM = 13;
 constexpr static int32_t OUTPUT_NUM = 4;
 
@@ -80,18 +81,6 @@ ge::graphStatus LambNextMVWithDecayTiling::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED;
         }
     }
-    // 标量类输入为每元素计算所必需的系数, 空Tensor 视为缺失必选值(畸形输入), 不支持。
-    static const int32_t kScalarInputIdx[] = {7, 8, 9, 10, 11, 12};
-    for (int32_t scalarIdx : kScalarInputIdx) {
-        auto scalarShape = context_->GetInputShape(scalarIdx);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, scalarShape);
-        if (scalarShape->GetStorageShape().GetShapeSize() == 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), kInputNames[scalarIdx],
-                                                  Ops::Base::ToString(scalarShape->GetStorageShape()).c_str(),
-                                                  "scalar input does not support empty tensor");
-            return ge::GRAPH_FAILED;
-        }
-    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -99,49 +88,44 @@ bool LambNextMVWithDecayTiling::IsCapable() { return true; }
 
 ge::graphStatus LambNextMVWithDecayTiling::DoOpTiling()
 {
-    // 空 tensor 应对(空进空出): 输出为空(0元素)时设 1 核(空转), 配合全0 tiling 数据(blockFormer=0)使 kernel 空转退出,
-    // 直接成功。
-    auto emptyTensorOutShape0 = context_->GetOutputShape(0);
-    if (emptyTensorOutShape0 != nullptr && emptyTensorOutShape0->GetStorageShape().GetShapeSize() == 0) {
-        auto emptyRawTiling = context_->GetRawTilingData();
-        if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
-            size_t emptyCap = emptyRawTiling->GetCapacity();
-            uint8_t* emptyPtr = static_cast<uint8_t*>(emptyRawTiling->GetData());
-            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) {
-                emptyPtr[emptyIdx] = 0;
-            }
-            emptyRawTiling->SetDataSize(emptyCap);
-        }
-        size_t* emptyWs = context_->GetWorkspaceSizes(1);
-        if (emptyWs != nullptr) {
-            emptyWs[0] = 0;
-        }
-        context_->SetBlockDim(1);
-        tilingKey = GET_TPL_TILING_KEY(1); // schMode=1(已编译), 配合全0 tiling(blockFormer=0)空转
-        return ge::GRAPH_SUCCESS;
-    }
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
+
     ge::DataType input0DType = input0Desc->GetDataType();
-    if (input0DType == ge::DT_FLOAT16) {
-        BroadcastBaseTiling<LambNextMVWithDecayOp::LambNextMVWithDecayCompute<half, float>::OpDag> brcBaseTiling(
-            context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
-        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
-    } else if (input0DType == ge::DT_FLOAT) {
-        BroadcastBaseTiling<LambNextMVWithDecayOp::LambNextMVWithDecayCompute<float, float>::OpDag> brcBaseTiling(
-            context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
-        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
+    uint32_t dtSize = 0;
+    if (input0DType == ge::DT_FLOAT) {
+        tilingKey = TILING_KEY_FP32;
+        dtSize = sizeof(float);
+    } else if (input0DType == ge::DT_FLOAT16) {
+        tilingKey = TILING_KEY_FP16;
+        dtSize = sizeof(uint16_t);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input_mul3", Ops::Base::ToString(input0DType).c_str(),
                                   "fp16 or fp32");
         return ge::GRAPH_FAILED;
     }
+
+    using PlanTiling = LambBrcTilingData<13, 4>;
+    td_ = PlanTiling{};
+    // 空进空出: 输出 0 元素时 tiling 全 0, kernel 按 usedCoreNum=0 直接退出。
+    auto outShape0 = context_->GetOutputShape(0);
+    if (outShape0 == nullptr || outShape0->GetStorageShape().GetShapeSize() != 0) {
+        // 先取返回值再判: 模板实参里的逗号会被预处理器当成 OP_CHECK_IF 的参数分隔符。
+        ge::graphStatus planRet = BuildLambBrcPlan<13, 4>(context_, coreNum_, ubSize_, dtSize, td_);
+        OP_CHECK_IF(planRet != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "build broadcast plan failed"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), &td_, sizeof(td_));
+    OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "copy tiling data failed, ret %d", ret),
+                return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(sizeof(td_));
+    context_->SetBlockDim(std::max<uint32_t>(td_.usedCoreNum, 1));
+    size_t* ws = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ws);
+    ws[0] = 0U;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -153,7 +137,17 @@ ge::graphStatus LambNextMVWithDecayTiling::GetWorkspaceSize() { return ge::GRAPH
 
 ge::graphStatus LambNextMVWithDecayTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LambNextMVWithDecayTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus LambNextMVWithDecayTiling::GetPlatformInfo()
+{
+    auto compileInfo = static_cast<const LambNextMVWithDecayCompileInfo*>(context_->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    coreNum_ = compileInfo->coreNum;
+    ubSize_ = compileInfo->ubSize;
+    OP_CHECK_IF(coreNum_ == 0 || ubSize_ == 0,
+                OP_LOGE(context_->GetNodeName(), "invalid platform info: coreNum %lu ubSize %lu", coreNum_, ubSize_),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus TilingForLambNextMVWithDecay(gert::TilingContext* context)
 {

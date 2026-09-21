@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "infershape_broadcast_util.h"
@@ -20,65 +21,71 @@
 using namespace Ops::Base;
 using namespace ge;
 namespace ops {
-constexpr size_t GRAD_IDX = 0;
+// A2 语义: 本族算子的所有输入都是可广播的 ND Tensor(见 canndev
+// ops/built-in/tbe/impl/lamb_*.py, 每一步 mul/sub/div 都先 shape_util.broadcast_shapes
+// 再 tbe.broadcast), 输出形状为全部输入广播的结果。A2 的 op_proto 只声明了其中两个输入,
+// 属声明宽松, 不作为支持面依据。
+// inputv/inputm 同时是 ref 输出(原地更新的动量), 故广播结果必须恰好等于它们的形状,
+// 否则原地写回会越过其显存边界。其余输入(含 In0 的 grad)可广播进这个形状。
+constexpr size_t IN_NUM = 12;
 constexpr size_t INPUTV_IDX = 1;
 constexpr size_t INPUTM_IDX = 2;
-constexpr size_t INPUT3_IDX = 3;
-constexpr size_t OUTPUT0_IDX = 0;
-constexpr size_t OUTPUTV_IDX = 1;
-constexpr size_t OUTPUTM_IDX = 2;
+constexpr size_t OUT_NUM = 3;
 
 static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeContext* context)
 {
-    auto grad_shape = context->GetInputShape(GRAD_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, grad_shape);
-    auto inputv_shape = context->GetInputShape(INPUTV_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputv_shape);
-    auto inputm_shape = context->GetInputShape(INPUTM_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputm_shape);
-    auto input3_shape = context->GetInputShape(INPUT3_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, input3_shape);
-    auto output0_shape = context->GetOutputShape(OUTPUT0_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, output0_shape);
-    auto outputv_shape = context->GetOutputShape(OUTPUTV_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputv_shape);
-    auto outputm_shape = context->GetOutputShape(OUTPUTM_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputm_shape);
-
-    // grad、inputv、inputm 三者形状必须完全相同：inputv/inputm 是原地更新的动量输出，
-    // 输出形状由它们决定；grad 绑定在广播 DAG 的 In0 位，底层 Ops::Base 广播模板
-    // (DoDimensionCollapse) 不支持对 In0 做广播——实测 grad 为标量、或任一维为 1 时
-    // 均在 tiling 阶段被拒(“dim num is not same”/“dim index is not same with out”)。
-    // 故此处直接按等形拒绝，避免放行后到 tiling 才抛 E90003。
-    // 仅 input3 参与广播(右对齐，维度数可少于 inputv)。
-    // 此处的判定与 tiling 的 CheckInplaceShapeConstraint 保持一致，避免两个 host
-    // 阶段对同一组合给出不同结论。
-    OP_CHECK_IF(!(*inputv_shape == *inputm_shape),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    context->GetNodeName(), "inputv and inputm",
-                    (ToString(*inputv_shape) + " and " + ToString(*inputm_shape)).c_str(),
-                    "inputv and inputm are in-place updated moments and must have the same shape"),
-                return ge::GRAPH_FAILED);
-
-    gert::Shape broadcast_shape;
-    OP_CHECK_IF(!(*grad_shape == *inputv_shape),
+    std::vector<const gert::Shape*> inShapes;
+    inShapes.reserve(IN_NUM);
+    for (size_t i = 0; i < IN_NUM; i++) {
+        auto in = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, in);
+        inShapes.push_back(in);
+    }
+    gert::Shape bcShape;
+    // 逐对折叠广播: 只用两参数重载。vector 重载虽在 op_common/op_host/infershape_broadcast_util.h
+    // 以 Ops::Base 声明, 但 libops_base.so 只导出两参数版, vector 版的实现在 libop_common.so 的
+    // 小写 ops 命名空间下 —— 声明与实现命名空间不一致, 用它会编译期通过、加载期
+    // undefined symbol 而装不上包。
+    bcShape = *inShapes[0];
+    for (size_t i = 1; i < inShapes.size(); i++) {
+        gert::Shape tmp;
+        OP_CHECK_IF(!BroadcastShape(&bcShape, inShapes[i], &tmp),
+                    OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together"), return ge::GRAPH_FAILED);
+        bcShape = tmp;
+    }
+    // 标量归一: 全标量输入 broadcast 得 0 维空 shape (), 与 A2 的 shape_util.scalar2tensor_one
+    // 对齐, 归一为 (1,)。否则动态 shape 编译期 DFX 生成会对空 shape 做 reduce 连乘(无初值)而报
+    // TypeError 编译失败。
+    if (bcShape.GetDimNum() == 0) {
+        bcShape.SetDimNum(1);
+        bcShape.SetDim(0, 1);
+    }
+    const gert::Shape& vShape = *inShapes[INPUTV_IDX];
+    const gert::Shape& mShape = *inShapes[INPUTM_IDX];
+    OP_CHECK_IF(
+        !(vShape == mShape),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "inputv and inputm", (ToString(vShape) + " and " + ToString(mShape)).c_str(),
+            "inputv and inputm are in-place updated moments and must have the same shape"),
+        return ge::GRAPH_FAILED);
+    gert::Shape normV = vShape;
+    if (normV.GetDimNum() == 0) {
+        normV.SetDimNum(1);
+        normV.SetDim(0, 1);
+    }
+    OP_CHECK_IF(!(bcShape == normV),
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    context->GetNodeName(), "grad", ToString(*grad_shape).c_str(),
-                    "grad does not support broadcast and must have exactly the same shape as inputv/inputm"),
+                    context->GetNodeName(), "inputv", ToString(vShape).c_str(),
+                    "inputv/inputm are in-place(ref) outputs, so the broadcast shape of all inputs must equal them"),
                 return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(!BroadcastShape(input3_shape, inputv_shape, &broadcast_shape) || !(broadcast_shape == *inputv_shape),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    context->GetNodeName(), "input3", ToString(*input3_shape).c_str(),
-                    "input3 must be broadcastable into the in-place moment shape inputv/inputm"),
-                return ge::GRAPH_FAILED);
-
-    *output0_shape = *inputv_shape;
-    *outputv_shape = *inputv_shape;
-    *outputm_shape = *inputm_shape;
-
+    for (size_t i = 0; i < OUT_NUM; i++) {
+        auto out = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, out);
+        *out = normV;
+    }
     return GRAPH_SUCCESS;
 }
+
 static ge::graphStatus InferDataType4LambApplyOptimizerAssign(gert::InferDataTypeContext* context)
 {
     if (context == nullptr) {

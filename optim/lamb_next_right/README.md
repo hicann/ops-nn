@@ -44,56 +44,56 @@
     <tr>
       <td>input_square</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_square（梯度g），主张量，shape需与input_mul2满足broadcast关系。</td>
+      <td>支持空Tensor。公式中的input_square（梯度g），主张量，shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul2</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul2（二阶矩v），主张量，shape需与input_square满足broadcast关系，其broadcast结果决定各输出的shape。</td>
+      <td>支持空Tensor。公式中的input_mul2（二阶矩v），主张量，shape需与其他输入满足broadcast关系，全部输入的broadcast结果决定各输出的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul2_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul2_x（beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul2_x（beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul3_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul3_x（1-beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul3_x（1-beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>truediv1_recip</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的truediv1_recip（偏差校正分母的倒数），标量。</td>
+      <td>支持空Tensor。公式中的truediv1_recip（偏差校正分母的倒数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>add2_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的add2_y（epsilon），标量。</td>
+      <td>支持空Tensor。公式中的add2_y（epsilon），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y1（next_v），shape取input_square与input_mul2的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y1（next_v），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y2（偏差校正分母），shape取input_square与input_mul2的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y2（偏差校正分母），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -101,6 +101,8 @@
 
 ## 约束说明
 
+- 所有输入的shape需两两满足broadcast规则，输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数为0~8。当全部输入均为0维时，y1、y2的shape为(1,)。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明

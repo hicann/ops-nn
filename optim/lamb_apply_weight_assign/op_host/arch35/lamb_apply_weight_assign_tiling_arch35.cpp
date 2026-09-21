@@ -14,7 +14,7 @@
  */
 
 #include "lamb_apply_weight_assign_tiling_arch35.h"
-#include "../../../lamb_apply_common/lamb_apply_check_util.h"
+#include "../../../lamb_apply_common/op_host/arch35/lamb_apply_check_util.h"
 #include <graph/utils/type_utils.h>
 #include <string>
 #include "infershape_broadcast_util.h"
@@ -34,6 +34,7 @@ namespace optiling {
 constexpr static uint64_t LAMB_APPLY_WEIGHT_ASSIGN_TILING_PRIORITY = 0;
 constexpr static int32_t INPUT_NUM = 5;
 constexpr static int32_t OUTPUT_NUM = 1;
+constexpr static int32_t PARAM_IDX = 4; // input_param: ref(原地)输出
 static const char* const kInputNames[] = {"input0", "input1", "input2", "input3", "input_param"};
 static const char* const kOutputNames[] = {"input_param"};
 
@@ -51,39 +52,18 @@ static ge::graphStatus TilingPrepareForLambApplyWeightAssign(gert::TilingParseCo
 
 ge::graphStatus LambApplyWeightAssignTiling::GetShapeAttrsInfo()
 {
-    static const int32_t kScalarInputIdx[] = {0, 1, 2};
     if (CheckLambApplyDtypeConsistency(context_, INPUT_NUM, kInputNames, OUTPUT_NUM, kOutputNames) !=
         ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (CheckLambApplyScalarNotEmpty(context_, kScalarInputIdx, sizeof(kScalarInputIdx) / sizeof(kScalarInputIdx[0]),
-                                     kInputNames) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return CheckInplaceShapeConstraint();
 }
 
 // input_param 是 in-place 更新的参数输出(next_param 原地写回其输入 buffer,见 proto "(in-place)"),
-// 内核按 broadcast(input3, input_param) 的完整网格计算并写回,故 input_param 形状必须 == 该网格。
-// 等价充要条件:input3 能广播进 input_param。
+// 内核按全部输入广播的完整网格计算并写回,故 input_param 形状必须 == 该网格。
 ge::graphStatus LambApplyWeightAssignTiling::CheckInplaceShapeConstraint()
 {
-    auto input3Shape = context_->GetInputShape(3);
-    auto inputParamShape = context_->GetInputShape(4);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, input3Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputParamShape);
-    const auto& i3s = input3Shape->GetStorageShape();
-    const auto& ips = inputParamShape->GetStorageShape();
-    // input3 能广播进 input_param <=> broadcast(input3, input_param) == input_param
-    gert::Shape bcShape;
-    if (!Ops::Base::BroadcastShape(&i3s, &ips, &bcShape) || !(bcShape == ips)) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "input3", Ops::Base::ToString(i3s).c_str(),
-            "input3 must be broadcastable into the in-place param shape input_param (input_param is updated "
-            "in-place and must equal the broadcast output shape)");
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
+    return CheckLambApplyBroadcastIntoRef(context_, INPUT_NUM, PARAM_IDX, "input_param");
 }
 
 bool LambApplyWeightAssignTiling::IsCapable() { return true; }

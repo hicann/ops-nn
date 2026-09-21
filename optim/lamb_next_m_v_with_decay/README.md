@@ -48,7 +48,7 @@
     <tr>
       <td>input_mul3</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul3（g^2），主张量，shape需与input_mul0满足broadcast关系。</td>
+      <td>支持空Tensor。公式中的input_mul3（g^2），主张量，shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -76,7 +76,7 @@
     <tr>
       <td>input_mul0</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul0（一阶矩m），主张量，shape需与input_mul3满足broadcast关系，其broadcast结果决定各输出的shape。</td>
+      <td>支持空Tensor。公式中的input_mul0（一阶矩m），主张量，shape需与其他输入满足broadcast关系，全部输入的broadcast结果决定各输出的shape。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -97,70 +97,70 @@
     <tr>
       <td>mul0_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul0_x（beta1），标量。</td>
+      <td>支持空Tensor。公式中的mul0_x（beta1），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul1_sub</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul1_sub（1-beta1），标量。</td>
+      <td>支持空Tensor。公式中的mul1_sub（1-beta1），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul2_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul2_x（beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul2_x（beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul3_sub1</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul3_sub1（1-beta2），标量。</td>
+      <td>支持空Tensor。公式中的mul3_sub1（1-beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul4_x</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的mul4_x（权重衰减系数），标量。</td>
+      <td>支持空Tensor。公式中的mul4_x（权重衰减系数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>add2_y</td>
       <td>输入</td>
-      <td>不支持空Tensor。公式中的add2_y（epsilon），标量。</td>
+      <td>支持空Tensor。公式中的add2_y（epsilon），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y1（update），shape取input_mul3与input_mul0的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y1（update），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y2（next_m），shape取input_mul3与input_mul0的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y2（next_m），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y3</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y3（next_v），shape取input_mul3与input_mul0的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y3（next_v），shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y4</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的y4，shape取input_mul3与input_mul0的broadcast结果。</td>
+      <td>支持空Tensor。公式中的y4，shape取全部输入的broadcast结果。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -168,8 +168,10 @@
 
 ## 约束说明
 
+- 所有输入的shape需两两满足broadcast规则，输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数为0~8。当全部输入均为0维时，y1、y2、y3、y4的shape为(1,)。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
-- input_mul0/input_mul1/input_mul2/input_mul3/input_mul4 为主张量，其shape需保持一致（或可相互广播到同一shape）；各输出y1/y2/y3/y4的shape均取该广播结果（实现以input_mul3与input_mul0的broadcast结果为准）。
+- 各输出y1/y2/y3/y4的shape均取全部输入的broadcast结果。
 
 ## 调用说明
 
