@@ -8,19 +8,10 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = [
-    "situ_glu",
-    "situ_glu_grad",
-    "swiglu_group",
-    "swiglu_group_backward",
-    "swiglu_group_grad",
-    "cla_gate_quant",
-    "swiglu_group_quant",
-]
+# 设置算子定义时支持的芯片类型
+set(SUPPORT_COMPUTE_UNIT "ascend950")
+# 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
+set(SUPPORT_TILING_DIR "arch35")
 
-from .situ_glu import situ_glu
-from .situ_glu_grad import situ_glu_grad
-from .swiglu_group import swiglu_group
-from .swiglu_group_grad import swiglu_group_backward, swiglu_group_grad
-from .cla_gate_quant import cla_gate_quant
-from .swiglu_group_quant import swiglu_group_quant
+add_all_modules_sources(OPTYPE cla_gate_quant ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
+                        TILING_DIR ${SUPPORT_TILING_DIR})
