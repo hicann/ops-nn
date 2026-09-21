@@ -17,7 +17,7 @@
 #define CONV3D_BP_INPUT_INTF_H
 
 #include "./conv3d_backprop_input_impl/conv3d_bp_func.h"
-#include "./conv3d_backprop_input_impl/conv3d_bp_util.h"
+#include "./conv3d_backprop_input_impl/conv3d_bp_input_util.h"
 
 namespace Convolution3DBackprop {
 template <class Config_, template <typename, class> class Impl>
