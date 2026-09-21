@@ -314,8 +314,7 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ProcessMa
         sum2Main_ = inQueueX.template DeQue<float>();
         CastToFp32From<T>(sum2Main_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
-    Normalize(sum2Main_, sum2Main_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
-    VectorMul(sum2Main_, sum2Main_, sum1Main_, mfactor * td_->backwardNfactorBlockAligned);
+    ComputeSum2Common(sum2Main_, sum2Main_, sum1Main_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
 }
 
 template <typename T, typename U>
@@ -373,8 +372,7 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ProcessFo
         xFold_ = inQueueX.template DeQue<float>();
         CastToFp32From<T>(xFold_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
-    Normalize(xFold_, xFold_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
-    VectorMul(xFold_, xFold_, dyFold_, mfactor * td_->backwardNfactorBlockAligned);
+    ComputeSum2Common(xFold_, xFold_, dyFold_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
 
     VectorAdd(sum1Main_, sum1Main_, dyFold_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     inQueueDy.FreeTensor(dyFold_);

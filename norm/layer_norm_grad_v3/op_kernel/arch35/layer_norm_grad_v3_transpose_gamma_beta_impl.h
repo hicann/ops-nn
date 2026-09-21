@@ -414,8 +414,8 @@ __aicore__ inline void LayerNormGradV3TransposeGammaBeta<T, PD_GAMMA_TYPE>::Comp
                 LoadAlign(xReg, x + i * outerLoopStride);
                 LoadAlign(dyReg, dy + i * outerLoopStride);
                 Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(tmpReg, xReg, meanReg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, tmpReg, rstdReg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, dyReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, dyReg, tmpReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, rstdReg, pMask);
                 StoreAlign(x + i * outerLoopStride, resultReg, pMask);
             }
         }
@@ -437,8 +437,8 @@ __aicore__ inline void LayerNormGradV3TransposeGammaBeta<T, PD_GAMMA_TYPE>::Comp
                     LoadAlign(xReg, x + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(dyReg, dy + i * outerLoopStride + j * innerLoopStride);
                     Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(tmpReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, tmpReg, rstdReg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, dyReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, dyReg, tmpReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, rstdReg, pMask);
                     StoreAlign(x + i * outerLoopStride + j * innerLoopStride, resultReg, pMask);
                 }
             }
@@ -478,8 +478,8 @@ __aicore__ inline void LayerNormGradV3TransposeGammaBeta<T, PD_GAMMA_TYPE>::Comp
                 LoadAlign(dyReg, dy + i * outerLoopStride);
                 LoadAlign(xMainReg, xMain + i * outerLoopStride);
                 Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(tmpReg, xReg, meanReg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, tmpReg, rstdReg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, dyReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, dyReg, tmpReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, rstdReg, pMask);
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, xMainReg, resultReg, pMask);
                 StoreAlign(xMain + i * outerLoopStride, resultReg, pMask);
             }
@@ -504,8 +504,8 @@ __aicore__ inline void LayerNormGradV3TransposeGammaBeta<T, PD_GAMMA_TYPE>::Comp
                     LoadAlign(dyReg, dy + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(xMainReg, xMain + i * outerLoopStride + j * innerLoopStride);
                     Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(tmpReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, tmpReg, rstdReg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, dyReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, dyReg, tmpReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, resultReg, rstdReg, pMask);
                     Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(resultReg, xMainReg, resultReg, pMask);
                     StoreAlign(xMain + i * outerLoopStride + j * innerLoopStride, resultReg, pMask);
                 }

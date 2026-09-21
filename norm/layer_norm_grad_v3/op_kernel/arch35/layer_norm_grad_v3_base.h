@@ -102,8 +102,6 @@ public:
     __aicore__ inline static void VectorAdd(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
                                             const LocalTensor<float>& src1Tensor, const int64_t mSize,
                                             const int64_t nSize, const int64_t stride);
-    __aicore__ inline static void VectorMul(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
-                                            const LocalTensor<float>& src1Tensor, const int64_t count);
     __aicore__ inline static void NlastBroadcastMul(const LocalTensor<float>& dstTensor,
                                                     const LocalTensor<float>& src0Tensor,
                                                     const LocalTensor<float>& src1Tensor, const int64_t bSize,
@@ -124,6 +122,18 @@ public:
     __aicore__ inline static void Normalize(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                             const LocalTensor<float>& meanTensor, const LocalTensor<float>& rstdTensor,
                                             const int64_t rowSize, const int64_t colSize);
+    __aicore__ inline static void ComputeSum2MultiVector(const LocalTensor<float>& dstTensor,
+                                                         const LocalTensor<float>& xTensor,
+                                                         const LocalTensor<float>& dyGammaTensor,
+                                                         const LocalTensor<float>& meanTensor,
+                                                         const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+                                                         const int64_t colSize);
+    __aicore__ inline static void ComputeSum2Common(const LocalTensor<float>& dstTensor,
+                                                    const LocalTensor<float>& xTensor,
+                                                    const LocalTensor<float>& dyGammaTensor,
+                                                    const LocalTensor<float>& meanTensor,
+                                                    const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+                                                    const int64_t colSize);
     __aicore__ inline static void ComputeGammaCommon(const LocalTensor<float>& dstTensor,
                                                      const LocalTensor<float>& dyTensor,
                                                      const LocalTensor<float>& xTensor,
@@ -441,34 +451,6 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& 
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, aReg, pMask);
                 }
             }
-        }
-    }
-}
-
-__aicore__ inline void LayerNormGradV3Base::VectorMul(const LocalTensor<float>& dstTensor,
-                                                      const LocalTensor<float>& src0Tensor,
-                                                      const LocalTensor<float>& src1Tensor, const int64_t count)
-{
-    // VectorMul
-    if (count <= 0) {
-        return;
-    }
-    uint16_t loopTimes = CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
-    __VEC_SCOPE__
-    {
-        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
-        __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
-        __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
-        uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::Reg::RegTensor<float> aReg, bReg, mulReg;
-        AscendC::Reg::MaskReg pMask;
-
-        for (uint16_t i = 0; i < loopTimes; ++i) {
-            pMask = AscendC::Reg::UpdateMask<float>(sreg);
-            LoadAlign(aReg, (__ubuf__ float*)src0 + i * VL_FP32);
-            LoadAlign(bReg, (__ubuf__ float*)src1 + i * VL_FP32);
-            Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(mulReg, aReg, bReg, pMask);
-            StoreAlign((__ubuf__ float*)dst + i * VL_FP32, mulReg, pMask);
         }
     }
 }
@@ -931,6 +913,89 @@ __aicore__ inline void LayerNormGradV3Base::Normalize(const LocalTensor<float>& 
     }
 }
 
+__aicore__ inline void LayerNormGradV3Base::ComputeSum2MultiVector(const LocalTensor<float>& dstTensor,
+                                                                   const LocalTensor<float>& srcTensor,
+                                                                   const LocalTensor<float>& dyGammaTensor,
+                                                                   const LocalTensor<float>& meanTensor,
+                                                                   const LocalTensor<float>& rstdTensor,
+                                                                   const int64_t rowSize, const int64_t colSize)
+{
+    // Sum2 term: ((dy * gamma) * (x - mean)) * rstd.
+    uint16_t outerLoopTimes = rowSize;
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
+    uint32_t outerLoopStride = colSize;
+    uint32_t innerLoopStride = VL_FP32;
+    __VEC_SCOPE__
+    {
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dyGamma = (__ubuf__ float*)dyGammaTensor.GetPhyAddr();
+        __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg, dyGammaReg;
+        AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+        AscendC::Reg::MaskReg pMask;
+        uint32_t count;
+        for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+            count = static_cast<uint32_t>(colSize);
+            LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+            LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+            for (uint16_t j = 0; j < innerLoopTimes; ++j) {
+                pMask = AscendC::Reg::UpdateMask<float>(count);
+                LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + j * innerLoopStride);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+                LoadAlign(dyGammaReg, dyGamma + i * outerLoopStride + j * innerLoopStride);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, dyGammaReg, bReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, cReg, rstdReg, pMask);
+                StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
+            }
+        }
+    }
+}
+
+__aicore__ inline void LayerNormGradV3Base::ComputeSum2Common(const LocalTensor<float>& dstTensor,
+                                                              const LocalTensor<float>& srcTensor,
+                                                              const LocalTensor<float>& dyGammaTensor,
+                                                              const LocalTensor<float>& meanTensor,
+                                                              const LocalTensor<float>& rstdTensor,
+                                                              const int64_t rowSize, const int64_t colSize)
+{
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
+    if (innerLoopTimes != 1) {
+        ComputeSum2MultiVector(dstTensor, srcTensor, dyGammaTensor, meanTensor, rstdTensor, rowSize, colSize);
+        return;
+    }
+    // Sum2 term: ((dy * gamma) * (x - mean)) * rstd.
+    uint16_t outerLoopTimes = rowSize;
+    uint32_t outerLoopStride = colSize;
+    uint32_t innerLoopStride = VL_FP32;
+    __VEC_SCOPE__
+    {
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dyGamma = (__ubuf__ float*)dyGammaTensor.GetPhyAddr();
+        __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg, dyGammaReg;
+        AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+        AscendC::Reg::MaskReg pMask;
+        uint32_t count = static_cast<uint32_t>(colSize);
+        pMask = AscendC::Reg::UpdateMask<float>(count);
+        for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+            LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+            LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+            LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + 0 * innerLoopStride);
+            Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+            LoadAlign(dyGammaReg, dyGamma + i * outerLoopStride + 0 * innerLoopStride);
+            Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, dyGammaReg, bReg, pMask);
+            Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, cReg, rstdReg, pMask);
+            StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, cReg, pMask);
+        }
+    }
+}
+
 __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
     const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
     const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
@@ -962,9 +1027,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
                 AscendC::Reg::RegTensor<float> dyReg;
                 LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerStride);
                 Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                 LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerStride);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, dyReg, xReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                 StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerStride, xReg, pMask);
             }
         }
@@ -990,9 +1055,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
                     pMask = AscendC::Reg::UpdateMask<float>(count);
                     LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerStride);
                     Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                     LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerStride);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, dyReg, xReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerStride, xReg, pMask);
                 }
             }
@@ -1223,13 +1288,13 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
                 LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(gammaReg, (__ubuf__ float*)gamma + 0 * innerLoopStride);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, pMask);
-                MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, gammaReg, floatN, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg1, pMask);
+                MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, dyReg, pMask);
                 Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg1, sum1Reg, pMask);
-                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, rstdReg, reciprocalN, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg4, Reg5, pMask);
                 StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
             }
         }
@@ -1260,13 +1325,13 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
                     LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(gammaReg, (__ubuf__ float*)gamma + j * innerLoopStride);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                    Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, pMask);
-                    MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, gammaReg, floatN, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                    Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg1, pMask);
+                    MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, dyReg, pMask);
                     Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg1, sum1Reg, pMask);
-                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, rstdReg, reciprocalN, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg4, Reg5, pMask);
                     StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
                 }
             }
