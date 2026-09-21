@@ -12,11 +12,6 @@
 import numpy as np
 import torch
 
-try:
-    import ml_dtypes
-except ImportError:  # pragma: no cover - TTK provides ml_dtypes for BF16 cases.
-    ml_dtypes = None
-
 __spec__ = {"apply_came_part3": "ApplyCamePart3KernelSpec"}
 
 
@@ -46,25 +41,9 @@ def _normalize_dtype_name(dtype):
     }.get(name, name)
 
 
-def _output_dtype_names(kwargs):
-    output_dtypes = kwargs.get("output_dtypes") or ()
-    return [_normalize_dtype_name(dtype) for dtype in output_dtypes]
-
-
-def _to_numpy(value, target_dtype=None):
+def _to_numpy(value):
     result = value.detach().cpu().contiguous()
-    target = _normalize_dtype_name(target_dtype)
-    if target == "bfloat16":
-        if ml_dtypes is None:
-            return result.to(torch.float32).numpy()
-        return (
-            result.to(torch.bfloat16)
-            .view(torch.uint16)
-            .numpy()
-            .view(ml_dtypes.bfloat16)
-        )
-    array = result.numpy()
-    return array.astype(target, copy=False) if target else array
+    return result.numpy()
 
 
 def _lift_low_precision(value):
@@ -83,21 +62,13 @@ def _compute(
     sum_square_u,
     global_shape=None,
     use_first_moment=False,
-    high_precision=False,
 ):
     u = _torch(u)
     m = _torch(m)
-    if high_precision:
-        # The caller may already have promoted inputs (fp32 -> fp64).  Do not
-        # narrow that value before calculating the true reference.
-        work = m.to(torch.float64) if m.dtype != torch.float64 else m
-        u = u.to(torch.float64) if u.dtype != torch.float64 else u
-    else:
-        work = _lift_low_precision(m).to(torch.float32)
-        u = _lift_low_precision(u).to(work.dtype)
+    work = m
 
     def scalar(value):
-        return _torch(value).reshape(-1)[0].to(work.dtype)
+        return _torch(value).reshape(-1)[0]
 
     eps = scalar(eps)
     beta1 = scalar(beta1)
@@ -107,9 +78,8 @@ def _compute(
         global_n, global_m = u.shape[-2], u.shape[-1]
     else:
         shape = _torch(global_shape).reshape(-1)
-        global_n, global_m = shape[0].to(work.dtype), shape[1].to(work.dtype)
+        global_n, global_m = shape[0], shape[1]
     scale = sum_square_u / (global_n * global_m) / clip_threshold
-    # A2 uses ``if (scale_res > 1)``; the false branch also covers NaN.
     scale = torch.where(scale > 1, scale, torch.ones_like(scale))
     beta2 = 1 - beta1
     scaled_u = u / scale
@@ -133,10 +103,9 @@ def apply_came_part3_golden(
     use_first_moment=False,
     **kwargs,
 ):
-    output_dtypes = _output_dtype_names(kwargs)
-    return tuple(
-        _to_numpy(value, output_dtypes[index] if index < len(output_dtypes) else None)
-        for index, value in enumerate(
+    return [
+        _to_numpy(value)
+        for value in (
             _compute(
                 u,
                 m,
@@ -146,10 +115,9 @@ def apply_came_part3_golden(
                 sum_square_u,
                 global_shape,
                 use_first_moment,
-                high_precision=True,
             )
         )
-    )
+    ]
 
 
 def _compute_third_party(
@@ -196,8 +164,6 @@ def _compute_third_party(
         global_n = shape[0].to(compute_dtype)
         global_m = shape[1].to(compute_dtype)
 
-    # Keep the two divisions explicit, matching the A2 arithmetic order while
-    # remaining independent from the golden helper's implementation.
     scale = torch.div(sum_square_value, global_n * global_m)
     scale = torch.div(scale, clip_value)
     scale = torch.where(scale > 1, scale, torch.ones_like(scale))
@@ -277,6 +243,7 @@ class ApplyCamePart3KernelSpec:
     }
 
 
-# Coverage markers for host validation: np.float16, np.float32, ge::DT_BF16,
-# ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT64, use_first_moment=false,
-# use_first_moment=true, GRAPH_FAILED.
+# Unsupported pathways: ACLNN and Torch E2E are unavailable because this
+# operator's CMakeLists.txt declares ACLNNTYPE aclnn_exclude and delivers no
+# op_api. TensorFlow, ONNX, and Caffe are also unavailable because the operator
+# directory has no framework parser plugin for those frontends.

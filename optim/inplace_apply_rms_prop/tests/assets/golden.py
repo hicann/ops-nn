@@ -10,7 +10,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-import ml_dtypes
 import numpy as np
 import torch
 
@@ -33,6 +32,8 @@ def _dtype_name(value):
 
 def _numpy_dtype(dtype_name):
     if dtype_name == "bfloat16":
+        import ml_dtypes
+
         return ml_dtypes.bfloat16
     return np.dtype(dtype_name)
 
@@ -62,32 +63,17 @@ def _to_torch(value):
     return torch.from_numpy(np.ascontiguousarray(array))
 
 
-def inplace_apply_rms_prop_golden(
-    var, ms, mom, lr, rho, momentum, epsilon, grad, output_dtype=None
-):
-    """PyTorch operator composition used by the NumPy-facing golden path."""
-    source_dtype = _dtype_name(var)
-    target_dtype_name = output_dtype or source_dtype
-    target_dtype = _numpy_dtype(target_dtype_name)
+def inplace_apply_rms_prop_golden(var, ms, mom, lr, rho, momentum, epsilon, grad):
     if np.asarray(var).size == 0:
-        return [
-            np.asarray(value).astype(target_dtype, copy=True)
-            for value in (var, ms, mom)
-        ]
+        return [np.asarray(value).copy() for value in (var, ms, mom)]
 
     var_tensor, ms_tensor, mom_tensor, grad_tensor = map(
         _to_torch, (var, ms, mom, grad)
     )
-    if var_tensor.dtype in (torch.float16, torch.bfloat16):
-        var_tensor = var_tensor.float()
-        ms_tensor = ms_tensor.float()
-        mom_tensor = mom_tensor.float()
-        grad_tensor = grad_tensor.float()
-
-    lr_value = _to_torch(lr).reshape(-1)[0].to(var_tensor.dtype)
-    rho_value = _to_torch(rho).reshape(-1)[0].to(var_tensor.dtype)
-    momentum_value = _to_torch(momentum).reshape(-1)[0].to(var_tensor.dtype)
-    epsilon_value = _to_torch(epsilon).reshape(-1)[0].to(var_tensor.dtype)
+    lr_value = _to_torch(lr).reshape(-1)[0]
+    rho_value = _to_torch(rho).reshape(-1)[0]
+    momentum_value = _to_torch(momentum).reshape(-1)[0]
+    epsilon_value = _to_torch(epsilon).reshape(-1)[0]
     epsilon_floor = torch.tensor(
         torch.finfo(torch.float32).tiny, dtype=var_tensor.dtype
     )
@@ -108,14 +94,10 @@ def inplace_apply_rms_prop_golden(
         torch.div(torch.mul(grad_tensor, lr_value), denominator),
     )
     var_out = torch.sub(var_tensor, mom_out)
-    return [
-        value.detach().cpu().numpy().astype(target_dtype, copy=False)
-        for value in (var_out, ms_out, mom_out)
-    ]
+    return [value.detach().cpu().numpy() for value in (var_out, ms_out, mom_out)]
 
 
 def _torch_rms_prop(var, ms, mom, lr, rho, momentum, epsilon, grad):
-    """Independent GPU composition used by the remote third-party provider."""
     target_dtype = var.dtype
     if target_dtype in (torch.float16, torch.bfloat16):
         var = var.float()
@@ -143,8 +125,6 @@ def _torch_rms_prop(var, ms, mom, lr, rho, momentum, epsilon, grad):
 
 
 class _TorchRMSPropCompose:
-    """Eager PyTorch composition used as the independent GPU baseline."""
-
     def __init__(self, use_locking=False, **kwargs):
         del use_locking, kwargs
 
@@ -154,8 +134,6 @@ class _TorchRMSPropCompose:
 
 
 class InplaceApplyRMSPropKernelSpec:
-    """Shared TestSpec for the kernel and GE IR invocation paths."""
-
     @staticmethod
     def golden(
         var,
@@ -169,13 +147,9 @@ class InplaceApplyRMSPropKernelSpec:
         use_locking=False,
         **kwargs,
     ):
-        output_dtypes = kwargs.get("output_dtypes") or []
-        output_dtype = None
-        if output_dtypes:
-            output_dtype = _normalize_dtype_name(output_dtypes[0])
         del use_locking
         return inplace_apply_rms_prop_golden(
-            var, ms, mom, lr, rho, momentum, epsilon, grad, output_dtype=output_dtype
+            var, ms, mom, lr, rho, momentum, epsilon, grad
         )
 
     third_party = {"torch": _TorchRMSPropCompose}

@@ -30,13 +30,11 @@ def _to_torch(tensor):
     return torch.from_numpy(array)
 
 
-def _compute(grad, eps, *, high_precision=False):
+def _compute(grad, eps, *, match_kernel=False):
     grad_tensor = _to_torch(grad)
-    if high_precision and grad_tensor.dtype.is_floating_point:
-        grad_tensor = grad_tensor.to(torch.float64)
-    elif grad_tensor.dtype in (torch.float16, torch.bfloat16):
+    if match_kernel and grad_tensor.dtype in (torch.float16, torch.bfloat16):
         grad_tensor = grad_tensor.to(torch.float32)
-    eps_scalar = _to_torch(eps).reshape(-1)[0].to(grad_tensor.dtype)
+    eps_scalar = _to_torch(eps).reshape(-1)[0]
     values = torch.square(grad_tensor) + eps_scalar
     return [
         torch.sum(values, dim=-1),
@@ -46,12 +44,12 @@ def _compute(grad, eps, *, high_precision=False):
 
 
 def _to_numpy(outputs):
-    return tuple(output.detach().cpu().numpy() for output in outputs)
+    return [output.detach().cpu().numpy() for output in outputs]
 
 
 def apply_came_part1_golden(grad, eps, **kwargs):
-    """Independent high-precision Torch reference for the three reductions."""
-    return _to_numpy(_compute(grad, eps, high_precision=True))
+    """Torch reference; TTK Promote exclusively controls CPU precision."""
+    return _to_numpy(_compute(grad, eps))
 
 
 class _ApplyCamePart1Compose:
@@ -59,8 +57,17 @@ class _ApplyCamePart1Compose:
         pass
 
     def __call__(self, grad, eps, **kwargs):
-        outputs = _compute(grad, eps)
-        return [output.to(torch.float32) for output in outputs]
+        grad_tensor = grad.contiguous()
+        if grad_tensor.dtype in (torch.float16, torch.bfloat16):
+            grad_tensor = grad_tensor.to(torch.float32)
+        eps_value = eps.reshape(-1)[0].to(grad_tensor.dtype)
+        squared = torch.mul(grad_tensor, grad_tensor)
+        values = torch.add(squared, eps_value)
+        return [
+            torch.sum(values, dim=-1).to(torch.float32),
+            torch.sum(values, dim=-2).to(torch.float32),
+            torch.sum(values, dim=(-2, -1)).to(torch.float32),
+        ]
 
 
 class ApplyCamePart1KernelSpec:

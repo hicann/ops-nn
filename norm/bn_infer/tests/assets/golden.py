@@ -25,9 +25,9 @@ __spec__ = {
 }
 
 _TOL = {
-    "float32": {"standard": "cross_check", "threshold": 1e-2},
-    "float16": {"standard": "cross_check", "threshold": 2e-2},
-    "bfloat16": {"standard": "cross_check", "threshold": 4e-2},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
 }
 
 
@@ -95,18 +95,7 @@ def _f32_floor(tensor):
 
 def _prepare_param(tensor, channel_len, dtype, device):
     tensor = _f32_floor(tensor)
-    if tensor.ndim == 1 and tensor.numel() == channel_len:
-        param = tensor.to(device=device, dtype=dtype).reshape(-1)
-        return param.contiguous()
-    if (
-        tensor.ndim > 1
-        and tensor.shape[-1] == channel_len
-        and tensor.numel() % channel_len == 0
-    ):
-        # TTK 的通用探测偶尔会把参数张量喂成批量占位形状；golden 只取首个通道向量，
-        # 保证第三方探测可运行，同时不放松正式一维参数契约。
-        tensor = tensor.reshape(-1, channel_len)[0]
-    elif tensor.numel() != channel_len:
+    if tensor.ndim != 1 or tensor.numel() != channel_len:
         raise ValueError(
             f"BNInfer parameter must be 1-D with {channel_len} elements; "
             f"got shape {tuple(tensor.shape)}"
@@ -132,8 +121,6 @@ def _infer_x_format(x, scale, input_formats):
             else input_formats
         )
 
-    # TTK's remote third-party provider sends tensors and attributes only. The
-    # three-way case set keeps the channel dimension unambiguous for rank 4/5.
     if (
         x.ndim in (4, 5)
         and x.shape[-1] == scale.numel()
@@ -185,20 +172,55 @@ def _compute(
 
 
 def _compute_numpy(x, scale, offset, mean, variance, epsilon=1e-5, **kwargs):
-    call_kwargs = _call_kwargs(kwargs)
-    result = _compute(
-        _to_torch(x),
-        _to_torch(scale),
-        _to_torch(offset),
-        _to_torch(mean),
-        _to_torch(variance),
-        epsilon=epsilon,
-        output_dtype=torch.float64,
-        promote_to_fp64=True,
-        **call_kwargs,
+    import tensorflow as tf
+
+    data_format = _infer_x_format(
+        _to_torch(x), _to_torch(scale), kwargs.get("input_formats")
     )
-    y_tensor = result[0].detach().cpu()
-    return [y_tensor.numpy()]
+    channel_axis = -1 if data_format in ("NHWC", "NDHWC") else 1
+    channel_len = np.asarray(x).shape[channel_axis]
+    for name, value in (
+        ("scale", scale),
+        ("offset", offset),
+        ("mean", mean),
+        ("variance", variance),
+    ):
+        array = np.asarray(value)
+        if array.ndim != 1 or array.size != channel_len:
+            raise ValueError(
+                f"BNInfer {name} must be 1-D with {channel_len} elements; "
+                f"got shape {array.shape}"
+            )
+
+    x_tensor = tf.convert_to_tensor(x)
+    scale_tensor = tf.reshape(tf.convert_to_tensor(scale), [-1])
+    offset_tensor = tf.reshape(tf.convert_to_tensor(offset), [-1])
+    mean_tensor = tf.reshape(tf.convert_to_tensor(mean), [-1])
+    variance_tensor = tf.reshape(tf.convert_to_tensor(variance), [-1])
+    tensors = (x_tensor, scale_tensor, offset_tensor, mean_tensor, variance_tensor)
+    compute_dtype = max(
+        (tensor.dtype for tensor in tensors), key=lambda dtype: dtype.size
+    )
+    # TTK Promote advances each input from its original dtype independently.
+    # Align mixed promoted inputs upward to the highest resulting dtype so TF
+    # arithmetic is type-consistent; this does not select or narrow precision.
+    x_tensor, scale_tensor, offset_tensor, mean_tensor, variance_tensor = (
+        tf.cast(tensor, compute_dtype) for tensor in tensors
+    )
+    if data_format == "NHWC":
+        x_tensor = tf.transpose(x_tensor, [0, 3, 1, 2])
+    elif data_format == "NDHWC":
+        x_tensor = tf.transpose(x_tensor, [0, 4, 1, 2, 3])
+    shape = [1, -1] + [1] * (len(x_tensor.shape) - 2)
+    y = (x_tensor - tf.reshape(mean_tensor, shape)) * tf.math.rsqrt(
+        tf.reshape(variance_tensor, shape) + epsilon
+    )
+    y = y * tf.reshape(scale_tensor, shape) + tf.reshape(offset_tensor, shape)
+    if data_format == "NHWC":
+        y = tf.transpose(y, [0, 2, 3, 1])
+    elif data_format == "NDHWC":
+        y = tf.transpose(y, [0, 2, 3, 4, 1])
+    return [y.numpy()]
 
 
 class _BNInferCompose:
@@ -216,16 +238,46 @@ class _BNInferCompose:
         for input_name in ("x", "scale", "offset", "mean", "variance"):
             merged.pop(input_name, None)
         x_tensor = x if isinstance(x, torch.Tensor) else _to_torch(x)
-        return _compute(
-            x_tensor,
-            scale if isinstance(scale, torch.Tensor) else _to_torch(scale),
-            offset if isinstance(offset, torch.Tensor) else _to_torch(offset),
-            mean if isinstance(mean, torch.Tensor) else _to_torch(mean),
-            variance if isinstance(variance, torch.Tensor) else _to_torch(variance),
-            epsilon=call_epsilon,
-            output_dtype=x_tensor.dtype,
-            **merged,
-        )
+        output_dtype = x_tensor.dtype
+        data_format = _infer_x_format(x_tensor, scale, merged.get("input_formats"))
+        if x_tensor.dtype in (torch.float16, torch.bfloat16):
+            x_tensor = x_tensor.to(torch.float32)
+        if data_format == "NHWC":
+            x_tensor = x_tensor.permute(0, 3, 1, 2).contiguous()
+            inverse_perm = (0, 2, 3, 1)
+        elif data_format == "NDHWC":
+            x_tensor = x_tensor.permute(0, 4, 1, 2, 3).contiguous()
+            inverse_perm = (0, 2, 3, 4, 1)
+        else:
+            inverse_perm = None
+        channel_len = x_tensor.shape[1]
+
+        def strict_param(value, name):
+            tensor = value if isinstance(value, torch.Tensor) else _to_torch(value)
+            if tensor.ndim != 1 or tensor.numel() != channel_len:
+                raise ValueError(
+                    f"BNInfer {name} must be 1-D with {channel_len} elements; "
+                    f"got shape {tuple(tensor.shape)}"
+                )
+            return tensor.to(device=x_tensor.device, dtype=x_tensor.dtype).contiguous()
+
+        mean_tensor = strict_param(mean, "mean")
+        variance_tensor = strict_param(variance, "variance")
+        scale_tensor = strict_param(scale, "scale")
+        offset_tensor = strict_param(offset, "offset")
+        shape = [1, -1] + [1] * (x_tensor.ndim - 2)
+
+        # Match the Ascend 950 kernel's explicit FP32 arithmetic order. Keep
+        # these as separate Torch operations so no fused batch-norm backend can
+        # fold scale and reciprocal standard deviation into a different order.
+        y = torch.sub(x_tensor, mean_tensor.reshape(shape))
+        y = torch.mul(y, scale_tensor.reshape(shape))
+        rstd = torch.rsqrt(variance_tensor.reshape(shape) + call_epsilon)
+        y = torch.mul(y, rstd)
+        y = torch.add(y, offset_tensor.reshape(shape))
+        if inverse_perm is not None:
+            y = y.permute(*inverse_perm).contiguous()
+        return [y.to(output_dtype)]
 
 
 class BNInferKernelSpec:
@@ -251,5 +303,10 @@ __golden__ = {"kernel": {"bn_infer": "__golden_bn_infer"}}
 
 
 # Not registered in __spec__:
-# - aclnn: BNInfer has no public aclnnBNInfer interface in norm/bn_infer.
-# - e2e: torch_npu has no dedicated BNInfer torch binding for this GE internal op.
+# - ACLNN/Torch E2E: BNInfer has no public aclnnBNInfer interface or dedicated
+#   torch_npu binding.
+# - TensorFlow E2E: framework/bn_infer_tf_plugin.cpp provides TensorFlow parser
+#   connectivity, but TensorFlow 2.16.1 has no tf.raw_ops.BNInfer callable.
+#   Parser connectivity is therefore validated separately and is not an E2E
+#   TestSpec registration.
+# - ONNX/Caffe: no parser plugin is delivered under this operator directory.
