@@ -11,7 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "../../../op_host/mse_loss_grad_v2_tiling.h"
+#include "../../../../op_host/arch22/mse_loss_grad_v2_tiling.h"
 #include "log/log.h"
 #include "ut_op_common.h"
 #include "register/op_impl_registry.h"

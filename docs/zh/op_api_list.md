@@ -348,7 +348,7 @@
 | [aclnnModulate](../../vfusion/modulate/docs/aclnnModulate.md) | 实现特征的自适应缩放（scale）和平移（shift）。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnModulateBackward](../../vfusion/modulate_grad/docs/aclnnModulateBackward.md) | 完成ModulateBackward反向传播中参数的计算，进行梯度更新。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLoss](../../loss/mse_loss/docs/aclnnMseLoss.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 均方误差函数aclnnMseLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 计算均方误差损失对预测值self的反向梯度，支持gradOutput、self、target三输入广播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossOut](../../loss/mse_loss/docs/aclnnMseLossOut.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md) | 计算多标签分类的间隔损失值。 | 默认非确定性实现，不支持配置开启 | 默认非确定性实现，不支持配置开启 |
 | [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | 默认非确定性实现，支持配置开启。 |

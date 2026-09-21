@@ -2736,7 +2736,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>均方误差函数aclnnMseLoss的反向传播。</td>
+    <td>计算均方误差损失对预测值self的反向梯度，支持gradOutput、self、target三输入广播。</td>
   </tr>
   <tr>
     <td>loss</td>

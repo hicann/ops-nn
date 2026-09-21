@@ -78,6 +78,18 @@ public:
             .PrecisionReduceFlag(true);
 
         this->AICore().AddConfig("ascend310p", config_310p);
+
+        // ascend950: op 级原型与 ascend910b/910_93/310p 一致, 只覆盖 950 特有项
+        // (opFile + dynamic flags), 其余继承 this->(见 opdef-aicoreconfig-partial-override)。
+        OpAICoreConfig config950;
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "mse_loss_grad_v2");
+        this->AICore().AddConfig("ascend950", config950);
     }
 };
 

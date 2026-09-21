@@ -134,7 +134,7 @@ aclnnStatus aclnnMseLossBackward(
       <td class="tg-0pky">out(aclTensor*)</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失，公式中的输出`MselossBackward(grad, x, y)`。</td>
-      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型是self可推导的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -253,6 +253,8 @@ aclnnStatus aclnnMseLossBackward(
 
 ## 约束说明
 
+- 输入gradOutput、self、target的数据类型需保持一致，且必须满足broadcast关系；out的shape为三者broadcast之后的结果。
+- 空tensor：gradOutput、self、target任一为空tensor时，输出为空tensor，直接返回成功。
 - 确定性计算：
     - aclnnMseLossBackward默认确定性实现。
 
