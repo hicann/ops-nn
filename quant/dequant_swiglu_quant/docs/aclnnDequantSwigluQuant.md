@@ -1,26 +1,26 @@
 # aclnnDequantSwigluQuant
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dequant_swiglu_quant)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/quant/dequant_swiglu_quant)
 
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+- <term>Atlas A3系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -231,7 +231,7 @@ aclnnStatus aclnnDequantSwigluQuant(
   </table>
 
   <!-- npu="910b" id7 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>：
     - weightScaleOptional参数中，shape表示为[H]，且取值H和x最后一维保持一致。
     - activationScaleOptional参数中，shape为[N..., 1]，最后一维为1，其余和x保持一致。
     - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
@@ -239,7 +239,7 @@ aclnnStatus aclnnDequantSwigluQuant(
     - quantModeOptional参数中，支持“dynamic”和“static"。
   <!-- end id7 -->
   <!-- npu="950" id8 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
     - weightScaleOptional参数中，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]，[1, H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。
     - activationScaleOptional参数中，shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。
     - quantScaleOptional参数中，仅支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。
@@ -344,12 +344,12 @@ aclnnStatus aclnnDequantSwigluQuant(
   - aclnnDequantSwigluQuant默认确定性实现。
 
 <!-- npu="910b" id9 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
 <!-- end id9 -->
 <!-- npu="950" id10 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 输入x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
   - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
@@ -358,7 +358,7 @@ aclnnStatus aclnnDequantSwigluQuant(
 <!-- end id10 -->
 
 <!-- npu="A3,910b" id11 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 +（activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 +（activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 <!-- end id11 -->
 
 ## 调用示例

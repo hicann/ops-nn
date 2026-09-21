@@ -4,14 +4,14 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
-| <term>Kirin X90 处理器系列产品</term> | √ |
-| <term>Kirin 9030 处理器系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
+| <term>Atlas A3系列产品</term>     |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                             |    √     |
+| <term>Atlas训练系列产品</term>                              |    √     |
+| <term>kirin X90处理器系列产品</term> | √ |
+| <term>kirin 9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -27,9 +27,9 @@
   $$
    yOut=round(x/scaleOut)
   $$
-  
+
   - 若输入smoothScalesOptional，则
-  
+
   $$
   input = x\cdot smoothScalesOptional
   $$
@@ -41,7 +41,7 @@
   $$
    yOut=round(input/scaleOut)
   $$
-  
+
   其中row\_max代表每行求最大值，dtypeMax为输出数据类型的最大值。
 
 ## 参数说明
@@ -106,13 +106,13 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> ：
+- <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term> ：
   - 输入`x`、`smooth_scales`：数据类型仅支持FLOAT16。
   - 输出`y`：数据类型仅支持INT8。
   - 输入`smooth_scales`为预留参数，当前版本不参与计算。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
 
-- Kirin X90/Kirin 9030 处理器系列产品：
+- Kirin X90/kirin 9030处理器系列产品：
   - 输入`x`、`smooth_scales`：不支持BFLOAT16。
   - 输出`y`：数据类型不支持INT4、FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8。
 

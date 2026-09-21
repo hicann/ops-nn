@@ -4,14 +4,14 @@
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    √    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
-| <term>Kirin X90 处理器系列产品</term> | √ |
-| <term>Kirin 9030 处理器系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
+| <term>Atlas A3系列产品</term>     |    √    |
+| <term>Atlas A2系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×    |
+| <term>Atlas推理系列产品</term>                             |    √    |
+| <term>Atlas训练系列产品</term>                              |    ×    |
+| <term>kirin X90处理器系列产品</term> | √ |
+| <term>kirin 9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -99,8 +99,8 @@
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
-- <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
+- <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
+- <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：该接口对应的aclnn接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
 - 关于scale、offset、y的shape说明如下：
   - 当无offset时，y shape与scale shape一致。
     - 若y作为matmul类算子输入，shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
