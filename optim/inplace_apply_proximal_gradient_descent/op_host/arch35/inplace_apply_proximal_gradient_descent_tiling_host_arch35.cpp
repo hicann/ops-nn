@@ -163,7 +163,7 @@ bool CalcMultiCore(int64_t dim0, uint32_t availableCoreNum, int32_t& usedCoreNum
     const int64_t candidate = std::min<int64_t>(requested, coreCap);
     int64_t rawFactor = 0;
     int64_t actualCoreNum = 0;
-    // 候选核 → 512 对齐 blockFactor → 实际核数重算（缺陷反例修复，§9.5）
+    // 候选核 → 512 对齐 blockFactor → 实际核数重算
     if (!CeilDivPositive(dim0, candidate, rawFactor) || !AlignUpPositive(rawFactor, kElemAlignFactor, blockFactor) ||
         !CeilDivPositive(dim0, blockFactor, actualCoreNum) || actualCoreNum > candidate || actualCoreNum > INT32_MAX) {
         return false;
