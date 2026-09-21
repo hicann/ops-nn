@@ -26,7 +26,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "op_api/aclnn_util.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 
 using namespace op;
 

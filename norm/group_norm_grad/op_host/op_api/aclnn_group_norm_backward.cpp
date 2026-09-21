@@ -37,7 +37,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 #include "op_api/aclnn_util.h"
 #include "op_api/op_api_def_nn.h"
 #include "aclnn_group_norm_backward.h"

@@ -16,7 +16,7 @@
 #include "opdev/shape_utils.h"
 #include "level0/fill.h"
 #include "aclnn_kernels/reshape.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 
 #ifdef __cplusplus
 extern "C" {

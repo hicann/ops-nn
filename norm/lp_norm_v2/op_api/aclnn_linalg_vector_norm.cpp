@@ -24,7 +24,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
-#include "op_api/level2_base_caculation.h"
+#include "op_api/level2_base_caculation_nn.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_linalg_vector_norm.h"
 

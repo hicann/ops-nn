@@ -39,7 +39,7 @@
 #include "opdev/shape_utils.h"
 #include "op_api/aclnn_util.h"
 #include "opdev/platform.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 #if __has_include("runtime/context.h")
 #include "runtime/context.h"
 #else
