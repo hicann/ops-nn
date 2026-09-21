@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file conv3d_api.h
+ * \file conv3dv2_api.h
  * \brief
  */
 
-#ifndef CONV3D_API_H
-#define CONV3D_API_H
+#ifndef CONV3DV2_API_H
+#define CONV3DV2_API_H
 
 #include "conv3d_intf.h"
 #include "conv3d_config.h"
@@ -35,4 +35,4 @@ struct Conv3dIntfExt : public Intf<Config, Impl> {
 
 REGISTER_CONV3D_API(Conv3d, Conv3dCfg, Conv3dApiImpl, Conv3dIntf);
 } // namespace conv3d
-#endif
+#endif // CONV3DV2_API_H
