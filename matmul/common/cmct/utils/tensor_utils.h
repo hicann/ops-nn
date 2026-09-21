@@ -139,8 +139,8 @@ __aicore__ inline __gm__ T* GetTensorAddr(uint64_t index, GM_ADDR tensorPtr)
 }
 
 template <class T, AscendC::TPosition Pos, class Layout, class Coord, class Shape>
-__aicore__ inline constexpr auto GetTile(AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const& tensor,
-                                         Coord const& coord, Shape const& shape)
+__aicore__ inline auto GetTile(AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const& tensor,
+                               Coord const& coord, Shape const& shape)
 {
     auto layout = tensor.GetTensorTrait().GetLayout();
     auto offset = layout(coord);
@@ -178,7 +178,7 @@ __aicore__ inline auto ReinerpretCast(const AscendC::LocalTensor<T>& tensorIn)
 }
 
 template <class T, class Layout, AscendC::TPosition Pos = AscendC::TPosition::GM>
-__aicore__ inline constexpr auto MakeTensor(__gm__ T* addr, Layout const& layout)
+__aicore__ inline auto MakeTensor(__gm__ T* addr, Layout const& layout)
 {
     using TensorTraitType = AscendC::TensorTrait<T, Pos, Layout>;
     using TensorType = AscendC::Std::conditional_t<

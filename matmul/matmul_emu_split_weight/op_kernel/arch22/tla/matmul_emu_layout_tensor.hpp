@@ -194,7 +194,7 @@ CATLASS_DEVICE constexpr auto HadamardU32(A const& a, B const& b, seq<Is...>)
 }
 
 template <class TensorT, class CoordT, class ShapeT, int R>
-CATLASS_DEVICE constexpr auto GetTileImpl(TensorT const& tensor, CoordT const& coord, ShapeT const& shape, Int<R>)
+CATLASS_DEVICE auto GetTileImpl(TensorT const& tensor, CoordT const& coord, ShapeT const& shape, Int<R>)
 {
     static_assert(is_tuple<CoordT>::value && depth_v<CoordT> == 1 && rank_v<CoordT> == R, "Coord rank mismatch.");
     static_assert(is_tuple<ShapeT>::value && depth_v<ShapeT> == 1 && rank_v<ShapeT> == R, "Shape rank mismatch.");
@@ -331,7 +331,7 @@ CATLASS_HOST_DEVICE constexpr auto MakeTensor(BuiltinTensor const& builtinTensor
 // and layout.originShape() is the actual logical size (may be smaller than shape).
 // Supports tensors of any rank (rank >= 1).
 template <class Tensor, class Coord, class Shape>
-CATLASS_DEVICE constexpr auto GetTile(Tensor const& tensor, Coord const& coord, Shape const& shape)
+CATLASS_DEVICE auto GetTile(Tensor const& tensor, Coord const& coord, Shape const& shape)
 {
     static_assert(Tensor::rank >= 1, "GetTile requires tensor rank >= 1.");
     static_assert(Tensor::rank == rank_v<Coord> && Tensor::rank == rank_v<Shape>,
