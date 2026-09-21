@@ -18,7 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "conv3d/conv3d_api.h"
+#include "conv3d/conv3dv2_api.h"
 #include "conv3d_v2_tiling_data.h"
 
 using namespace AscendC;
