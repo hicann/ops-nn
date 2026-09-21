@@ -90,7 +90,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas Kirin X90 处理器系列产品</term>、<term>Atlas Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
+- <term>Atlas Kirin X90处理器系列产品</term>、<term>Atlas Kirin 9030处理器系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

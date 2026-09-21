@@ -1,6 +1,6 @@
 # aclnnGeGluV3Backward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/ge_glu_grad_v2)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/ge_glu_grad_v2)
 
 ## 产品支持情况
 

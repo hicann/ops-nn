@@ -1,6 +1,6 @@
 # aclnnFatreluMul
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/fatrelu_mul)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/fatrelu_mul)
 
 ## 产品支持情况
 

@@ -41,10 +41,10 @@ extern "C" {
  *
  * @param [in] self: npu
  * device侧的aclTensor，数据类型支持 FLOAT、FLOAT16、INT32、BFLOAT16，支持非连续的Tensor。
- * Atlas 训练系列产品不支持BFLOAT16，数据格式支持ND。
+ * Atlas训练系列产品不支持BFLOAT16，数据格式支持ND。
  * @param [in] out: npu
  * device侧的aclTensor，数据类型支持 FLOAT、FLOAT16、INT32、BFLOAT16，支持非连续的Tensor。
- * Atlas 训练系列产品不支持BFLOAT16，数据格式支持ND。
+ * Atlas训练系列产品不支持BFLOAT16，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

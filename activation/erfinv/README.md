@@ -55,7 +55,7 @@ $$y=\mathrm{erfinv}(x)$$
     </tr>
   </tbody></table>
 
-  - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
+  - <term>Atlas训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 ## 约束说明
 

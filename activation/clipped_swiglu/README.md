@@ -181,7 +181,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品/Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品/Atlas A3系列产品</term>：
   - 属性`clamp_mode`为无效值，计算逻辑同clamp_mode=0。
 
 ## 约束说明

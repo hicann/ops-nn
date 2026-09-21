@@ -165,7 +165,7 @@ aclnnStatus aclnnGeluBackwardV2(
   </table>
 
   <!-- npu="910,310p" id7 -->
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
+  - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
   <!-- end id7 -->
 
 - **返回值：**
