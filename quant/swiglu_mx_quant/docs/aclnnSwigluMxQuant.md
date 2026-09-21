@@ -416,8 +416,8 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>传入的x、yOut或mxscaleOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="9">161002</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
