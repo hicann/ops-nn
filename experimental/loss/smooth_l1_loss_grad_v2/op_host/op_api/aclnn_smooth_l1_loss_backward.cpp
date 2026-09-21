@@ -21,7 +21,7 @@
 #include "smooth_l1_loss_grad_v2.h"
 #include "aclnn_kernels/transdata.h"
 #include "opdev/op_dfx.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 
 using namespace op;
 #ifdef __cplusplus

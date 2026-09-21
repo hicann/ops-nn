@@ -22,7 +22,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "op_api/op_api_def_nn.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 
 using namespace op;
 
