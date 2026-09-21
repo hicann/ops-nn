@@ -190,7 +190,8 @@ uint32_t ComputeSoftmaxV2Parallel(const CpuKernelContext& ctx, T* input, T* outp
     KERNEL_HANDLE_ERROR(
         aicpu::CpuKernelUtils::ParallelFor(
             ctx, length, per_unit_size,
-            [&](int64_t begin, int64_t end) {
+            [input, output, dims_exp_sum, dims_maximum, inner_size, pivot_len, constant_one](int64_t begin,
+                                                                                             int64_t end) {
                 for (int64_t index = begin, outer_index, index_base; index < end; ++index) {
                     outer_index = index / inner_size;
                     index_base = outer_index * pivot_len * inner_size + index % inner_size;

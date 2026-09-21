@@ -70,19 +70,18 @@ KernelStatus CalReverseSequence(const std::vector<void*>& ioAddrs, std::vector<i
     int64_t seqStep = 1;
     int64_t batchSize = 1;
     int64_t totalSize = 1;
-    Tlen* seq = reinterpret_cast<Tlen*>(ioAddrs[1]);
+    Tlen* seq = static_cast<Tlen*>(ioAddrs[1]);
     KERNEL_CHECK_ERROR(CalcSeqParam(seqStep, batchSize, totalSize, seq, ctx));
     int64_t runLen = seqStep;
 
-    T* input = reinterpret_cast<T*>(ioAddrs[0]);
-    T* output = reinterpret_cast<T*>(ioAddrs[kOutputIndex]);
+    T* input = static_cast<T*>(ioAddrs[0]);
+    T* output = static_cast<T*>(ioAddrs[kOutputIndex]);
     size_t seqDim = static_cast<size_t>(ctx.GetAttr("seq_dim")->GetInt());
     size_t batchDim = static_cast<size_t>(ctx.GetAttr("batch_dim")->GetInt());
     int64_t n = totalSize / (runLen * shape[seqDim]);
     bool parallelIn = runLen > n;
     const int64_t kMaxCoreNum = std::max(static_cast<uint32_t>(1), aicpu::CpuKernelUtils::GetCPUNum(ctx) - kResvCpuNum);
-
-    auto reverseSequenceFunc = [&](int64_t offset, int64_t reverseNum) {
+    auto reverseSequenceFunc = [&shape, seqDim, output, seqStep, input](int64_t offset, int64_t reverseNum) {
         for (int64_t i = 0; i < shape[seqDim]; ++i) {
             if (i < reverseNum / kEven) {
                 output[i * seqStep + offset] = input[((reverseNum - i) - 1) * seqStep + offset];
@@ -93,11 +92,12 @@ KernelStatus CalReverseSequence(const std::vector<void*>& ioAddrs, std::vector<i
             }
         }
     };
-
-    auto shard = [&](const int64_t start, const int64_t end) {
+    auto shard = [runLen, &shape, seqDim, seq, batchSize, batchDim, &reverseSequenceFunc, parallelIn, &ctx,
+                  kMaxCoreNum](const int64_t start, const int64_t end) {
         for (int64_t j = start; j < end; ++j) {
             int64_t begin = runLen * shape[seqDim] * j;
-            auto shardIn = [&](int64_t startIn, int64_t endIn) {
+            auto shardIn = [begin, seq, batchSize, &shape, batchDim, &reverseSequenceFunc](int64_t startIn,
+                                                                                           int64_t endIn) {
                 for (int64_t r = startIn; r < endIn; ++r) {
                     int64_t offset = r + begin;
                     int64_t reverseNum = static_cast<int64_t>(seq[offset / batchSize % shape[batchDim]]);
@@ -165,9 +165,9 @@ KernelStatus ReverseSequenceMsCpuKernel::GetInputAndCheck(CpuKernelContext& ctx)
 
     Tensor* outputTensor = ctx.Output(0);
     KERNEL_CHECK_NULLPTR(outputTensor, KERNEL_STATUS_PARAM_INVALID, "Get output:[0] failed")
-    ioAddrs_.push_back(reinterpret_cast<void*>(xTensor->GetData()));
-    ioAddrs_.push_back(reinterpret_cast<void*>(seqLengthsTensor->GetData()));
-    ioAddrs_.push_back(reinterpret_cast<void*>(outputTensor->GetData()));
+    ioAddrs_.push_back(xTensor->GetData());
+    ioAddrs_.push_back(seqLengthsTensor->GetData());
+    ioAddrs_.push_back(outputTensor->GetData());
 
     KERNEL_LOG_INFO("Parse done, seqDim: [%zu], batchDim: %zu, x_dtype: [%d]", seqDim, batchDim,
                     static_cast<int32_t>(xDtype_));
