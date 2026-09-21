@@ -23,6 +23,7 @@ public:
 
 protected:
     ge::AscendString GetNodeType() const override;
+    bool MeetRequirements(const ge::GNode& matchedNode) override;
     bool GetNodeDesc(const ge::GNode& node) override;
     bool GetNodeAttrs(const ge::GNode& node) override;
     bool CheckTransposeNeeded() override;

@@ -30,6 +30,7 @@ ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size
                                           const char* const_tensor_name, size_t dim_num);
 // Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
 ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* context);
+ge::graphStatus PartialInferFilterShapeWhenConstInvisible(gert::InferShapeContext* context);
 // Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
 ge::graphStatus InferDataTypeForConv2DBackpropFilter(gert::InferDataTypeContext* context);
 // Conv2DBackpropInputV2 和 Conv3DBackpropInputV2 共用

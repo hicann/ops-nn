@@ -1,0 +1,225 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#include "conv3d_backprop_filter_to_v2_fusion_pass.h"
+
+#include "es_math_ops.h"
+#include "es_nn_ops.h"
+#include "log/log.h"
+#include "register/register_custom_pass.h"
+
+namespace ops {
+using namespace ge;
+using namespace ge::es;
+using namespace fusion;
+using namespace ConvBackpropFusionUtils;
+
+// FilterV2特有的常量
+const std::vector<int32_t> TRANSPOSE_PERM_NDHWC = {0, 2, 3, 4, 1}; // NCDHW -> NDHWC
+const std::vector<int32_t> TRANSPOSE_PERM_DHWCN = {2, 3, 4, 1, 0}; // NCDHW -> DHWCN
+
+// IsShapeNeedTranspose 计算量阈值相关常量
+const int64_t COMPUTE_SIZE_PER_ROUND = 32 * 32; // 单核单轮次计算量
+const int64_t MAX_ROUND_COUNT = 4;              // 最大轮次数
+const int64_t HALF_CORE_DIVISOR = 2;            // 2D场景不超过一半的核参与计算
+
+AscendString Conv3DBackpropFilterToV2FusionPass::GetNodeType() const { return CONV_BACKPROP_FILTER_V2_PASS; }
+
+bool Conv3DBackpropFilterToV2FusionPass::IsDynamicShape() const
+{
+    return input0Desc.GetShape().GetShapeSize() == -1 || input2Desc.GetShape().GetShapeSize() == -1 ||
+           outputDesc.GetShape().GetShapeSize() == -1;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::GetOutputChannelDims(int64_t& cin, int64_t& cout) const
+{
+    auto yShapeVec = outputDesc.GetShape().GetDims();
+    OP_CHECK_IF(yShapeVec.size() != CONV_DIM_LENGTH,
+                OP_LOGE(GetNodeType().GetString(), "y shape size %zu != %d", yShapeVec.size(), CONV_DIM_LENGTH),
+                return false);
+
+    auto outputOriginFormat = outputDesc.GetOriginFormat();
+    if (outputOriginFormat == Format::FORMAT_NDHWC) {
+        cin = yShapeVec[C_DIM_NDHWC_INDEX];
+        cout = yShapeVec[N_DIM_NDHWC_INDEX];
+    } else {
+        cin = yShapeVec[C_DIM_DHWCN_INDEX];
+        cout = yShapeVec[N_DIM_DHWCN_INDEX];
+    }
+    return true;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::GetInputDepthDim(int64_t& di) const
+{
+    auto xShapeVec = input0Desc.GetShape().GetDims();
+    OP_CHECK_IF(xShapeVec.size() != CONV_DIM_LENGTH,
+                OP_LOGE(GetNodeType().GetString(), "x shape size %zu != %d", xShapeVec.size(), CONV_DIM_LENGTH),
+                return false);
+
+    auto xOriginFormat = input0Desc.GetOriginFormat();
+    if (xOriginFormat == Format::FORMAT_NDHWC) {
+        di = xShapeVec[D_DIM_NDHWC_INDEX];
+    } else if (xOriginFormat == Format::FORMAT_DHWCN) {
+        di = xShapeVec[D_DIM_DHWCN_INDEX];
+    } else {
+        di = xShapeVec[D_DIM_NCDHW_INDEX];
+    }
+    return true;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::IsShapeNeedTranspose() const
+{
+    if (IsDynamicShape()) {
+        OP_LOGD(GetNodeType().GetString(), "all shape must be specify.");
+        return false;
+    }
+
+    int64_t cin = 0, cout = 0, di = 0;
+    OP_CHECK_IF(!GetOutputChannelDims(cin, cout), OP_LOGE(GetNodeType().GetString(), "GetOutputChannelDims failed"),
+                return false);
+    OP_CHECK_IF(!GetInputDepthDim(di), OP_LOGE(GetNodeType().GetString(), "GetInputDepthDim failed"), return false);
+
+    int64_t coreCount = ConvBackpropFusionUtilsPass::GetAiCoreCount();
+    if (coreCount <= 0) {
+        OP_LOGI(GetNodeType().GetString(), "coreCount=%lld is invalid, not meet divide k condition", coreCount);
+        return false;
+    }
+
+    int64_t totalCount = di * cin * cout;
+
+    // 3D场景总计算量估算不超过4个轮次，否则transpose代价大；2D场景保持原有逻辑，不超过一半的核参与计算
+    int64_t shapeLimit = coreCount * COMPUTE_SIZE_PER_ROUND * MAX_ROUND_COUNT;
+    if (di == 1) {
+        shapeLimit = (coreCount / HALF_CORE_DIVISOR) * COMPUTE_SIZE_PER_ROUND;
+    }
+
+    OP_LOGD(GetNodeType().GetString(),
+            "IsShapeNeedTranspose di=%lld, cin=%lld, cout=%lld, coreCount=%lld, totalCount=%lld, shapeLimit=%lld", di,
+            cin, cout, coreCount, totalCount, shapeLimit);
+
+    return totalCount <= shapeLimit;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::CheckTransposeNeeded()
+{
+    auto outputOriginFormat = outputDesc.GetOriginFormat();
+    if (outputOriginFormat == Format::FORMAT_NCDHW) {
+        OP_LOGD(GetNodeType().GetString(), "y format is NCDHW, need not insert transpose node.");
+        return false;
+    }
+
+    if (!IsShapeNeedTranspose()) {
+        OP_LOGD(GetNodeType().GetString(), "not divide k condition");
+        return false;
+    }
+
+    OP_LOGD(GetNodeType().GetString(), "Transpose needed");
+    return true;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::CreateOutputWithTranspose(EsGraphBuilder& builder,
+                                                                   const EsTensorHolder& conv3dBackpropFilterV2,
+                                                                   GNode* conv3dBackpropFilterV2Node,
+                                                                   EsTensorHolder& transOutput)
+{
+    TensorDesc ncdhwDesc;
+    ncdhwDesc.SetDataType(outputDesc.GetDataType());
+    auto yShapeVec = outputDesc.GetShape().GetDims();
+    std::vector<int64_t> yShapeNcdhw;
+    auto outputOriginFormat = outputDesc.GetOriginFormat();
+    if (outputOriginFormat == Format::FORMAT_NDHWC) {
+        yShapeNcdhw = {yShapeVec[N_DIM_NDHWC_INDEX], yShapeVec[C_DIM_NDHWC_INDEX], yShapeVec[D_DIM_NDHWC_INDEX],
+                       yShapeVec[H_DIM_NDHWC_INDEX], yShapeVec[W_DIM_NDHWC_INDEX]};
+    } else {
+        yShapeNcdhw = {yShapeVec[N_DIM_DHWCN_INDEX], yShapeVec[C_DIM_DHWCN_INDEX], yShapeVec[D_DIM_DHWCN_INDEX],
+                       yShapeVec[H_DIM_DHWCN_INDEX], yShapeVec[W_DIM_DHWCN_INDEX]};
+    }
+
+    ncdhwDesc.SetShape(ge::Shape(yShapeNcdhw));
+    ncdhwDesc.SetOriginShape(ge::Shape(yShapeNcdhw));
+    ncdhwDesc.SetFormat(Format::FORMAT_NCDHW);
+    ncdhwDesc.SetOriginFormat(Format::FORMAT_NCDHW);
+    conv3dBackpropFilterV2Node->UpdateOutputDesc(OUTPUT_INDEX, ncdhwDesc);
+
+    std::vector<int32_t> transposePerm = TRANSPOSE_PERM_DHWCN;
+    if (outputOriginFormat == Format::FORMAT_NDHWC) {
+        transposePerm = TRANSPOSE_PERM_NDHWC;
+    }
+
+    auto config = TransposeNodeConfig::Create(conv3dBackpropFilterV2, transposePerm, "y_transpose", outputOriginFormat);
+
+    TensorDesc transOutDesc;
+    OP_CHECK_IF(
+        !ConvBackpropFusionUtilsPass::CreateTransposeNode(builder, config, transOutput, transOutDesc, GetNodeType()),
+        OP_LOGE(GetNodeType().GetString(), "Create y transpose node failed"), return false);
+
+    return true;
+}
+
+GraphUniqPtr Conv3DBackpropFilterToV2FusionPass::Replacement(const GNode& convBpFilterNode)
+{
+    OP_LOGD(GetNodeType().GetString(), "Replacement start");
+
+    OP_CHECK_IF(!GetNodeDesc(convBpFilterNode), OP_LOGE(GetNodeType().GetString(), "GetNodeDesc failed"),
+                return nullptr);
+    OP_CHECK_IF(!GetNodeAttrs(convBpFilterNode), OP_LOGE(GetNodeType().GetString(), "GetNodeAttrs failed"),
+                return nullptr);
+
+    auto builder = EsGraphBuilder("replacement");
+    auto [x, filterSize, outBackprop] = builder.CreateInputs<3>();
+
+    auto conv3dBackpropFilterV2 = Conv3DBackpropFilterV2(x, filterSize, outBackprop, convBpAttr.strides,
+                                                         convBpAttr.pads, convBpAttr.dilations, convBpAttr.groups,
+                                                         convBpAttr.dataFormat.c_str(), convBpAttr.hf32);
+    auto* conv3dBackpropFilterV2Node = conv3dBackpropFilterV2.GetProducer();
+    OP_CHECK_IF(conv3dBackpropFilterV2Node == nullptr,
+                OP_LOGE(GetNodeType().GetString(), "Create Conv3DBackpropFilterV2 node failed"), return nullptr);
+
+    conv3dBackpropFilterV2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
+    conv3dBackpropFilterV2Node->SetAttr("from_depthwise", convBpAttr.from_depthwise);
+    conv3dBackpropFilterV2Node->SetAttr("padding", convBpAttr.padding);
+
+    // V2 kernel仅注册fp32-y组合：声明dtype非fp32时，V2输出desc固定fp32，由输出侧Cast恢复声明dtype
+    const auto origDtype = outputDesc.GetDataType();
+    TensorDesc declaredOutDesc(outputDesc);
+    if (origDtype != ge::DT_FLOAT) {
+        TensorDesc fp32OutDesc(outputDesc);
+        fp32OutDesc.SetDataType(ge::DT_FLOAT);
+        outputDesc = fp32OutDesc;
+    }
+
+    OP_CHECK_IF(!UpdateNodeInputDescInfo(conv3dBackpropFilterV2Node),
+                OP_LOGE(GetNodeType().GetString(), "Update conv3dBackpropFilterV2Node DescInfo failed"),
+                return nullptr);
+
+    EsTensorHolder finalY = conv3dBackpropFilterV2;
+    bool needTranspose = CheckTransposeNeeded();
+    if (needTranspose) {
+        OP_CHECK_IF(!CreateOutputWithTranspose(builder, conv3dBackpropFilterV2, conv3dBackpropFilterV2Node, finalY),
+                    OP_LOGE(GetNodeType().GetString(), "Create y with transpose failed"), return nullptr);
+    }
+
+    if (origDtype != ge::DT_FLOAT) {
+        auto castOutput = es::Cast(finalY, static_cast<int64_t>(origDtype));
+        OP_CHECK_IF(castOutput.GetProducer() == nullptr, OP_LOGE(GetNodeType().GetString(), "Create Cast node failed"),
+                    return nullptr);
+        // EsCast只建节点接输入边、不设输出desc，子图最终输出必须显式补上声明desc，否则编译期推导读到空shape(rank 0)
+        OP_CHECK_IF(castOutput.GetProducer()->UpdateOutputDesc(OUTPUT_INDEX, declaredOutDesc) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(GetNodeType().GetString(), "Update cast output desc failed"), return nullptr);
+        finalY = castOutput;
+    }
+
+    return builder.BuildAndReset(std::vector<EsTensorHolder>{finalY});
+}
+
+REG_DECOMPOSE_PASS(Conv3DBackpropFilterToV2FusionPass, {CONV_BACKPROP_FILTER})
+    .Stage(CustomPassStage::kCompatibleInherited);
+
+} // namespace ops

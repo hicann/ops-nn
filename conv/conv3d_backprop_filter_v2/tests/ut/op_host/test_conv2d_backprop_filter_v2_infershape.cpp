@@ -336,7 +336,7 @@ TEST_F(Conv2DBackpropFilterV2ProtoTest, filter_size_empty_tensor)
     ASSERT_EQ(Ops::NN::Conv::InferShapeForConv2DBackpropFilter(holder.GetContext<gert::InferShapeContext>()),
               ge::GRAPH_SUCCESS);
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), "[-1, -1, -1, -1]");
+    ASSERT_EQ(Ops::Base::ToString(*output), "[256, 128, -1, -1]");
 }
 
 // cover conv_backprop_infershape.cpp InferDataTypeForConv2DBackpropFilter (L130-L138):

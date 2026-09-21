@@ -83,16 +83,29 @@ static ge::graphStatus InferShapeForConv3DBackpropFilter(gert::InferShapeContext
     } else {
         ret = InferShapeForConvBackprop(context, 1, "filter_size", kConv3dDimSizeLimit);
     }
-    return ret;
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+
+    // filter_size const编译期不可见时补推C/N维(from_depthwise场景语义不同，跳过)
+    const auto runtime_attrs = context->GetAttrs();
+    if (runtime_attrs != nullptr && runtime_attrs->GetAttrNum() > FROM_DEPTHWISE_INDEX) {
+        const bool* from_depthwise = runtime_attrs->GetAttrPointer<bool>(FROM_DEPTHWISE_INDEX);
+        if (from_depthwise == nullptr || !*from_depthwise) {
+            return PartialInferFilterShapeWhenConstInvisible(context);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InferDataTypeForConv3DBackpropFilterV2(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConv3DBackpropFilterV2 enter");
+    // V2 kernel仅注册fp32-y组合，输出固定fp32；声明dtype由fusion pass插入的Cast节点恢复
     ge::graphStatus ret = context->SetOutputDataType(0, ge::DT_FLOAT);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
                 return ge::GRAPH_FAILED);
-    OP_LOGD(context->GetNodeName(), "InferDataTypeForConv3DBackpropFilterV2 enter");
+    OP_LOGD(context->GetNodeName(), "InferDataTypeForConv3DBackpropFilterV2 end");
     return ge::GRAPH_SUCCESS;
 }
 } // namespace Conv

@@ -10,6 +10,8 @@
 
 #include "conv3d_transpose_to_v2_fusion_pass.h"
 
+#include <algorithm>
+
 #include "es_nn_ops.h"
 #include "log/log.h"
 #include "register/register_custom_pass.h"
@@ -43,6 +45,28 @@ const std::vector<int32_t> FILTER_TRANSPOSE_PERM_NCDHW_TO_NDHWC = {0, 2, 3, 4, 1
 } // namespace
 
 AscendString Conv3DTransposeToV2FusionPass::GetNodeType() const { return PASS_NAME; }
+
+namespace {
+bool IsUnknownRankShape(const std::vector<int64_t>& dims) { return dims.size() == 1 && dims[0] == -2; }
+} // namespace
+
+bool Conv3DTransposeToV2FusionPass::MeetRequirements(const GNode& matchedNode)
+{
+    OP_LOGD(GetNodeType().GetString(), "Enter MeetRequirements");
+
+    OP_CHECK_IF(!ConvBackpropFusionBasePass::MeetRequirements(matchedNode),
+                OP_LOGD(GetNodeType().GetString(), "Base MeetRequirements failed."), return false);
+
+    // filter的shape必须为5维，unknown rank shape [-2]不支持
+    TensorDesc filterDesc;
+    OP_CHECK_IF(matchedNode.GetInputDesc(FILTER_INDEX, filterDesc) != GRAPH_SUCCESS,
+                OP_LOGD(GetNodeType().GetString(), "Get filter desc failed."), return false);
+    const auto& filterDims = filterDesc.GetShape().GetDims();
+    OP_CHECK_IF(IsUnknownRankShape(filterDims),
+                OP_LOGD(GetNodeType().GetString(), "filter shape [-2] is not supported, skip fusion."), return false);
+
+    return true;
+}
 
 bool Conv3DTransposeToV2FusionPass::GetNodeDesc(const GNode& node)
 {
@@ -205,8 +229,16 @@ GraphUniqPtr Conv3DTransposeToV2FusionPass::Replacement(const GNode& convTranspo
     v2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
     v2Node->SetAttr("enable_hf32", convBpAttr.hf32);
 
+    // 与1.0 TBE通用化层保持一致：x为unknown rank shape [-2]时，归一为-1*5后传给V2节点
+    TensorDesc xDescForV2 = input1Desc;
+    if (IsUnknownRankShape(xDescForV2.GetShape().GetDims())) {
+        const std::vector<int64_t> unknownDims = {-1, -1, -1, -1, -1};
+        xDescForV2.SetShape(ge::Shape(unknownDims));
+        xDescForV2.SetOriginShape(ge::Shape(unknownDims));
+    }
+
     v2Node->UpdateInputDesc(INPUT_SIZE_INDEX, input0Desc);
-    v2Node->UpdateInputDesc(X_INDEX, input1Desc);
+    v2Node->UpdateInputDesc(X_INDEX, xDescForV2);
     v2Node->UpdateInputDesc(FILTER_INDEX, needTranspose ? transFilterDesc : input2Desc);
     if (hasBias) {
         v2Node->UpdateInputDesc(BIAS_INDEX, biasDesc);

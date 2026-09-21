@@ -71,9 +71,13 @@ bool ConvBackpropFusionBasePass::GetNodeAttrs(const GNode& node)
     OP_CHECK_IF(node.GetAttr("strides", convBpAttr.strides) != GRAPH_SUCCESS ||
                     node.GetAttr("pads", convBpAttr.pads) != GRAPH_SUCCESS ||
                     node.GetAttr("dilations", convBpAttr.dilations) != GRAPH_SUCCESS ||
-                    node.GetAttr("groups", convBpAttr.groups) != GRAPH_SUCCESS ||
                     node.GetAttr("data_format", format) != GRAPH_SUCCESS,
                 OP_LOGE(GetNodeType().GetString(), "Get attrs from %s failed", name.GetString()), return false);
+
+    // groups软读：depthwise场景attr可能缺失，保留默认值
+    if (node.GetAttr("groups", convBpAttr.groups) != GRAPH_SUCCESS) {
+        OP_LOGD(GetNodeType().GetString(), "Get groups attrs from %s failed, set default value", name.GetString());
+    }
 
     if (node.GetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum) != GRAPH_SUCCESS) {
         OP_LOGD(GetNodeType().GetString(), "Get _op_impl_mode_enum attrs from %s failed, set default value",

@@ -17,6 +17,7 @@
 
 #include "error_util.h"
 #include "runtime/infer_shape_context.h"
+#include "util/shape_util.h"
 
 namespace Ops {
 #define OP_CHECK(cond, log_func, return_expr) \
@@ -151,6 +152,52 @@ constexpr size_t kWDimNCHWStridesIdx = 1;
 inline bool IsUnknownRank(const gert::Shape* check_shape)
 {
     return check_shape->GetDimNum() == 1 && check_shape->GetDim(0) == UNKNOWN_RANK_DIM_VALUE_;
+}
+
+/*
+ * @brief: check whether the size input tensor is const, 与conv_backprop_infershape.cpp中
+ *         IsConstTensor语义保持一致(空tensor视为const)
+ */
+inline bool IsConstSizeTensor(const gert::Tensor* tensor)
+{
+    if (tensor == nullptr) {
+        return false;
+    }
+    if (tensor->GetAddr() == nullptr) {
+        return tensor->GetShapeSize() == 0;
+    }
+    return true;
+}
+
+/*
+ * @brief: check whether the shape is static(非[-2]且不含-1)
+ */
+inline bool IsStaticShape(const gert::Shape& shape)
+{
+    return !Ops::Base::IsUnknownRank(shape) && !Ops::Base::IsUnknownShape(shape);
+}
+
+/*
+ * @brief: 获取format中H/W维度位置，仅支持NCHW/NHWC/HWCN
+ */
+inline bool GetHwDimIndex(const ge::Format format, size_t& hIndex, size_t& wIndex)
+{
+    if (format == ge::FORMAT_NCHW) {
+        hIndex = 2;
+        wIndex = 3;
+        return true;
+    }
+    if (format == ge::FORMAT_NHWC) {
+        hIndex = 1;
+        wIndex = 2;
+        return true;
+    }
+    if (format == ge::FORMAT_HWCN) {
+        hIndex = 0;
+        wIndex = 1;
+        return true;
+    }
+    return false;
 }
 
 } // namespace Conv

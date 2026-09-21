@@ -39,6 +39,13 @@ constexpr size_t kConv2dDimSizeLimit = 4;
 constexpr size_t kConv3dDimSizeLimit = 5;
 constexpr int32_t extendDimSizeLimit = 5;
 constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
+constexpr size_t kXIndex = 0;
+constexpr size_t kOutBackpropIndex = 2;
+constexpr size_t kGroupsAttrIndex = 3;
+constexpr size_t kNDimIndexOfNFirst = 0;
+constexpr size_t kCDimIndexOfNSecond = 1;
+constexpr size_t kCDimIndexOfHWCN = 2;
+constexpr size_t kNDimIndexOfHWCN = 3;
 
 ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size_t const_tensor_idx,
                                           const char* const_tensor_name, size_t dim_num)
@@ -50,7 +57,13 @@ ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size
     auto const_tensor = context->GetInputTensor(const_tensor_idx);
     OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null %s tensor", const_tensor_name),
                 return ge::GRAPH_FAILED);
-    size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
+    // unknown场景（[-2]unknown rank / [-1]shape未知），输出直接设为全-1，与V1行为对齐
+    const auto& const_tensor_shape = const_tensor->GetOriginShape();
+    if (Ops::Base::IsUnknownRank(const_tensor_shape) || Ops::Base::IsUnknownShape(const_tensor_shape)) {
+        Ops::Base::SetUnknownShape(static_cast<int64_t>(dim_num), *y_shape);
+        return ge::GRAPH_SUCCESS;
+    }
+    size_t const_tensor_dim_num = static_cast<size_t>(const_tensor_shape.GetShapeSize());
     OP_CHECK_IF(const_tensor_dim_num != dim_num,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, const_tensor_name, std::to_string(const_tensor_dim_num).c_str(),
                                              std::to_string(dim_num).c_str()),
@@ -90,6 +103,124 @@ ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size
     return ge::GRAPH_SUCCESS;
 }
 
+// 按format(4D/5D)定位C/N维下标，无法识别的format返回false
+static bool GetFilterCnDimIndex(const ge::Format& format, size_t dimNum, size_t& cIdx, size_t& nIdx)
+{
+    if (dimNum == kConv2dDimSizeLimit) {
+        if (format == ge::FORMAT_NCHW) {
+            cIdx = kCDimIndexOfNSecond;
+            nIdx = kNDimIndexOfNFirst;
+        } else if (format == ge::FORMAT_NHWC) {
+            cIdx = dimNum - 1;
+            nIdx = kNDimIndexOfNFirst;
+        } else if (format == ge::FORMAT_HWCN) {
+            cIdx = dimNum - 2;
+            nIdx = dimNum - 1;
+        } else {
+            return false;
+        }
+    } else if (dimNum == kConv3dDimSizeLimit) {
+        if (format == ge::FORMAT_NCDHW) {
+            cIdx = kCDimIndexOfNSecond;
+            nIdx = kNDimIndexOfNFirst;
+        } else if (format == ge::FORMAT_NDHWC) {
+            cIdx = dimNum - 1;
+            nIdx = kNDimIndexOfNFirst;
+        } else if (format == ge::FORMAT_DHWCN) {
+            cIdx = dimNum - 2;
+            nIdx = dimNum - 1;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    return true;
+}
+
+// bpf家族(groups attr idx: 3，输入序x(0)/filter_size(1)/out_backprop(2))的groups读取
+static const int64_t* GetFilterGroupsAttr(const gert::InferShapeContext* context)
+{
+    const auto runtime_attrs = context->GetAttrs();
+    if (runtime_attrs == nullptr || runtime_attrs->GetAttrNum() <= kGroupsAttrIndex) {
+        return nullptr;
+    }
+    return runtime_attrs->GetAttrPointer<int64_t>(kGroupsAttrIndex);
+}
+
+// filter_size的const数据在编译期不可见(动态图)时，把结构上可确定的维度填回：
+// y的C维=x的C维/groups(cin/groups)、y的N维=out_backprop的C维(cout)，其余维度保持-1交给运行时；
+// from_depthwise场景(depthwise dw的C/N语义不同)由调用方跳过。
+ge::graphStatus PartialInferFilterShapeWhenConstInvisible(gert::InferShapeContext* context)
+{
+    const auto op_name = context->GetNodeName();
+    auto y_shape = context->GetOutputShape(0);
+    OP_CHECK_IF(y_shape == nullptr, CUBE_INNER_ERR_REPORT(op_name, "Get %s failed", "y shape"),
+                return ge::GRAPH_FAILED);
+    // 仅在输出全未知(const不可见)时补推；const可见或已部分推导的场景直接返回
+    bool allUnknown = true;
+    for (size_t idx = 0; idx < y_shape->GetDimNum(); ++idx) {
+        if (y_shape->GetDim(idx) >= 0) {
+            allUnknown = false;
+            break;
+        }
+    }
+    if (!allUnknown) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    const int64_t* groups = GetFilterGroupsAttr(context);
+    OP_CHECK_IF(groups == nullptr || *groups <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "groups",
+                                                      (groups == nullptr ? "0" : std::to_string(*groups)).c_str(),
+                                                      "The value of groups must be a positive integer"),
+                return ge::GRAPH_FAILED);
+
+    const auto y_desc = context->GetOutputDesc(0);
+    OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(op_name, "Get %s failed", "y desc"), return ge::GRAPH_FAILED);
+    size_t yCIdx = 0;
+    size_t yNIdx = 0;
+    if (!GetFilterCnDimIndex(y_desc->GetOriginFormat(), y_shape->GetDimNum(), yCIdx, yNIdx)) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    // y的C维 = x的C维/groups
+    const auto x_desc = context->GetInputDesc(kXIndex);
+    const auto x_shape = context->GetInputShape(kXIndex);
+    if (x_desc != nullptr && x_shape != nullptr) {
+        size_t xCIdx = 0;
+        size_t xNIdx = 0;
+        if (GetFilterCnDimIndex(x_desc->GetOriginFormat(), x_shape->GetDimNum(), xCIdx, xNIdx)) {
+            const int64_t xC = x_shape->GetDim(xCIdx);
+            if (xC > 0) {
+                OP_CHECK_IF(xC % *groups != 0,
+                            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                                op_name, "x channel", std::to_string(xC).c_str(),
+                                ("The channel of x must be divisible by groups " + std::to_string(*groups)).c_str()),
+                            return ge::GRAPH_FAILED);
+                y_shape->SetDim(yCIdx, xC / *groups);
+            }
+        }
+    }
+
+    // y的N维 = out_backprop的C维
+    const auto dedy_desc = context->GetInputDesc(kOutBackpropIndex);
+    const auto dedy_shape = context->GetInputShape(kOutBackpropIndex);
+    if (dedy_desc != nullptr && dedy_shape != nullptr) {
+        size_t dedyCIdx = 0;
+        size_t dedyNIdx = 0;
+        if (GetFilterCnDimIndex(dedy_desc->GetOriginFormat(), dedy_shape->GetDimNum(), dedyCIdx, dedyNIdx)) {
+            const int64_t dedyC = dedy_shape->GetDim(dedyCIdx);
+            if (dedyC > 0) {
+                y_shape->SetDim(yNIdx, dedyC);
+            }
+        }
+    }
+
+    OP_LOGD(op_name, "partial inferred y_shape: %s", Ops::Base::ToString(*y_shape).c_str());
+    return ge::GRAPH_SUCCESS;
+}
+
 // Conv2DBackpropFilterV2 和 Conv2DBackpropFilterV3 共用
 ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* context)
 {
@@ -103,7 +234,7 @@ ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* conte
                 return ge::GRAPH_FAILED);
     const auto from_depthwise = runtime_attrs->GetBool(6); // from_depthwise attr idx: 6
     if (from_depthwise == nullptr || !*from_depthwise) {
-        return ge::GRAPH_SUCCESS;
+        return PartialInferFilterShapeWhenConstInvisible(context);
     }
 
     OP_LOGD(context->GetNodeName(), "transfer from DepthwiseConv2DBackpropFilter, need to reset y shape");
@@ -116,11 +247,12 @@ ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* conte
                 return ge::GRAPH_FAILED);
     const auto y_format = y_desc->GetOriginFormat();
     if (y_format == ge::FORMAT_NCHW) {
-        y_shape->SetDim(0, y_shape->GetDim(0) * y_shape->GetDim(1));
-        y_shape->SetDim(1, 1);
+        // dw折叠：N维=C维*N维，C维置1
+        y_shape->SetDim(kNDimIndexOfNFirst, y_shape->GetDim(kNDimIndexOfNFirst) * y_shape->GetDim(kCDimIndexOfNSecond));
+        y_shape->SetDim(kCDimIndexOfNSecond, 1);
     } else if (y_format == ge::FORMAT_HWCN) {
-        y_shape->SetDim(3, y_shape->GetDim(2) * y_shape->GetDim(3)); // 2: C dim, 3: N dim
-        y_shape->SetDim(2, 1);
+        y_shape->SetDim(kNDimIndexOfHWCN, y_shape->GetDim(kCDimIndexOfHWCN) * y_shape->GetDim(kNDimIndexOfHWCN));
+        y_shape->SetDim(kCDimIndexOfHWCN, 1);
     }
 
     OP_LOGD(context->GetNodeName(), "y_shape: %s", Ops::Base::ToString(*y_shape).c_str());
@@ -130,10 +262,25 @@ ge::graphStatus InferShapeForConv2DBackpropFilter(gert::InferShapeContext* conte
 ge::graphStatus InferDataTypeForConv2DBackpropFilter(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConv2DBackpropFilterV2 enter");
+    // 从输出desc读声明dtype透传：desc与InferDataType推导槽位独立存储
+    // 推导槽位不预填充声明值(读GetOutputDataType拿不到)，硬编码fp32会污染desc
+    // 导致后续to_v3/to_v2 pass读不到声明dtype而跳过Cast插入
+    const auto y_desc = context->GetOutputDesc(0);
+    if (y_desc != nullptr) {
+        const auto declared = y_desc->GetDataType();
+        if (declared == ge::DT_FLOAT || declared == ge::DT_FLOAT16 || declared == ge::DT_BF16) {
+            ge::graphStatus ret = context->SetOutputDataType(0, declared);
+            OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
+                        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
+                        return ge::GRAPH_FAILED);
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    // 无有效声明(如L0直调，输出恒为fp32)时维持fp32
     ge::graphStatus ret = context->SetOutputDataType(0, ge::DT_FLOAT);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
                 return ge::GRAPH_FAILED);
-    OP_LOGD(context->GetNodeName(), "InferDataTypeForConv2DBackpropFilterV2 enter");
+    OP_LOGD(context->GetNodeName(), "InferDataTypeForConv2DBackpropFilterV2 end");
     return ge::GRAPH_SUCCESS;
 }
 // Conv2DBackpropInputV2 和 Conv3DBackpropInputV2 共用
@@ -202,7 +349,13 @@ ge::graphStatus InferShapeForConvBackpropExtend3D(gert::InferShapeContext* conte
     const auto op_name = context->GetNodeName();
     OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null %s tensor", const_tensor_name),
                 return ge::GRAPH_FAILED);
-    size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
+    // unknown场景（[-2]unknown rank / [-1]shape未知），输出直接设为全-1，与V1行为对齐
+    const auto& const_tensor_shape = const_tensor->GetOriginShape();
+    if (Ops::Base::IsUnknownRank(const_tensor_shape) || Ops::Base::IsUnknownShape(const_tensor_shape)) {
+        Ops::Base::SetUnknownShape(extendDimSizeLimit, *y_shape);
+        return ge::GRAPH_SUCCESS;
+    }
+    size_t const_tensor_dim_num = static_cast<size_t>(const_tensor_shape.GetShapeSize());
     OP_CHECK_IF(const_tensor_dim_num != kConv2dDimSizeLimit,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, const_tensor_name, std::to_string(const_tensor_dim_num).c_str(),
                                              std::to_string(kConv2dDimSizeLimit).c_str()),

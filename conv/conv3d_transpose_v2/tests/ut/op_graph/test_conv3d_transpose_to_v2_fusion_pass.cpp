@@ -355,3 +355,88 @@ TEST_F(Conv3DTransposeToV2FusionPassTest, noTranspose_coutCinRatioOutOfRange)
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DTransposeV2"));
     EXPECT_FALSE(CheckNodeExists(graph, "Transpose"));
 }
+
+// Test 13: filter为unknown rank shape [-2]时不融合
+TEST_F(Conv3DTransposeToV2FusionPassTest, unknownRankFilterFail)
+{
+    auto builder = es::EsGraphBuilder("unknownRankFilterFail");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto x = builder.CreateInput(1, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 16, 16, 16});
+    auto filter = builder.CreateInput(2, "filter", DT_FLOAT16, FORMAT_NCDHW, {-2});
+    auto bias = builder.CreateInput(3, "bias", DT_FLOAT16, FORMAT_ND, {64});
+
+    auto y = CreateConv3DTransposeNode(builder, "Conv3DTranspose", inputSize, x, filter, bias, {1, 1, 1, 1, 1},
+                                       {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 64, 18, 18, 18},
+                                       FORMAT_NCDHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DTransposeToV2FusionPass pass({AscendString("Conv3DTranspose")});
+    EXPECT_EQ(pass.Run(graph, ctx), GRAPH_NOT_CHANGED);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DTransposeV2"));
+}
+
+// Test: x为unknown rank shape [-2]、input_size为const、bias为静态shape时融合成功。
+// (impl.ops_nn.dynamic.conv3_d_transpose不存在)，跳过融合后legacy节点无kernel可编；
+// 融合后V2节点x输入归一为-1*5(与1.0动态链通用化行为一致)，复现GEIR动态图现场用例
+TEST_F(Conv3DTransposeToV2FusionPassTest, unknownRankXConstInputSizeStaticBiasNormalizeSuccess)
+{
+    auto builder = es::EsGraphBuilder("unknownRankXConstInputSizeStaticBiasNormalizeSuccess");
+    // 注意：图输入索引需从0连续编号(CreateInput)，CreateConst不占图输入索引
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {-2});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_NCDHW, {32, 64, 3, 3, 3});
+    auto bias = builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, {64});
+    auto inputSize = builder.CreateConst(std::vector<int32_t>{2, 64, 18, 18, 18}, {INPUT_SIZE_DIM});
+
+    auto y = CreateConv3DTransposeNode(builder, "Conv3DTranspose", inputSize, x, filter, bias, {1, 1, 1, 1, 1},
+                                       {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 64, 18, 18, 18},
+                                       FORMAT_NCDHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DTransposeToV2FusionPass pass({AscendString("Conv3DTranspose")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DTransposeV2"));
+}
+
+// Test: 对齐1.0 TBE动态链行为：x为unknown rank shape [-2]且bias含-1时
+// 走动态链归一，融合成功（V2节点x输入归一为-1*5）
+TEST_F(Conv3DTransposeToV2FusionPassTest, unknownRankXDynamicBiasNormalizeSuccess)
+{
+    auto builder = es::EsGraphBuilder("unknownRankXDynamicBiasNormalizeSuccess");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto x = builder.CreateInput(1, "x", DT_FLOAT16, FORMAT_NCDHW, {-2});
+    auto filter = builder.CreateInput(2, "filter", DT_FLOAT16, FORMAT_NCDHW, {32, 64, 3, 3, 3});
+    auto bias = builder.CreateInput(3, "bias", DT_FLOAT16, FORMAT_ND, {-1});
+
+    auto y = CreateConv3DTransposeNode(builder, "Conv3DTranspose", inputSize, x, filter, bias, {1, 1, 1, 1, 1},
+                                       {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 64, 18, 18, 18},
+                                       FORMAT_NCDHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DTransposeToV2FusionPass pass({AscendString("Conv3DTranspose")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DTransposeV2"));
+}
+
+// Test: 对齐1.0 TBE通用化行为：x为unknown rank shape [-2]（无bias）时
+// 归一为-1*5，融合成功
+TEST_F(Conv3DTransposeToV2FusionPassTest, unknownRankXNoBiasNormalizeSuccess)
+{
+    auto builder = es::EsGraphBuilder("unknownRankXNoBiasNormalizeSuccess");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto x = builder.CreateInput(1, "x", DT_FLOAT16, FORMAT_NCDHW, {-2});
+    auto filter = builder.CreateInput(2, "filter", DT_FLOAT16, FORMAT_NCDHW, {32, 64, 3, 3, 3});
+    auto bias = builder.CreateInput(3, "bias", DT_FLOAT16, FORMAT_ND, {-2});
+
+    auto y = CreateConv3DTransposeNode(builder, "Conv3DTranspose", inputSize, x, filter, bias, {1, 1, 1, 1, 1},
+                                       {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 64, 18, 18, 18},
+                                       FORMAT_NCDHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DTransposeToV2FusionPass pass({AscendString("Conv3DTranspose")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DTransposeV2"));
+}
