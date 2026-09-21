@@ -15,7 +15,8 @@
 Device-independent (no NPU hardware required):
 
   1. Type interception at the raw Python entry
-     (``cann_ops_nn.ops.add_rms_norm_dynamic_quant``, the @impl function):
+     (``cann_ops_nn.ops.add_rms_norm_dynamic_quant``, the validating public
+     entry):
      tensors must be torch.Tensor (beta/x3 may be None); scalars must be
      Python-native. Rejected: bool for int slots, torch.dtype, and numpy
      scalars — including np.float64/np.str_, which subclass the Python
@@ -30,11 +31,12 @@ Device-independent (no NPU hardware required):
       device checks and therefore need Ascend 950 hardware to fire (covered by
       test_torch_extension.py negative cases).
 
-  3. Framework behavior lock: the top-level ``cann_ops_nn.<op>`` attribute
-      resolves (package __getattr__) to the dispatcher OpOverloadPacket, where
-      torch converts torch.dtype to its ScalarType ordinal (float8_e5m2 -> 23)
-      before any op code runs. Type interception cannot fire on that path; the
-      dst_type domain check is the only guard. These tests pin that behavior.
+  3. Entry structure lock: the top-level ``cann_ops_nn.<op>`` attribute
+     resolves (package __getattr__) to the validating public entry, NOT the
+     dispatcher OpOverloadPacket, so the gate also covers the documented eager
+     script path. Direct ``torch.ops`` calls still get schema coercion
+     (torch.dtype to its ScalarType ordinal, float8_e5m2 -> 23) with only the
+     dst_type domain check as guard; that framework behavior is pinned too.
 
 Usage:
     cd <ops-nn repo root>
@@ -52,9 +54,8 @@ import torch
 import torch_npu  # noqa: F401
 import cann_ops_nn  # noqa: F401
 
-# Raw Python entry (bypasses the dispatcher). NOTE: the top-level
-# cann_ops_nn.add_rms_norm_dynamic_quant resolves to torch.ops (dispatcher),
-# NOT this function — see test_toplevel_entry_is_dispatcher_packet.
+# Raw Python entry (validating public entry; the top-level
+# cann_ops_nn.add_rms_norm_dynamic_quant resolves to this same function).
 _RAW_OP = cann_ops_nn.ops.add_rms_norm_dynamic_quant
 _OP = torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant
 
@@ -159,56 +160,37 @@ def test_scalar_type_interception(param, bad_value, err_frag):
         _RAW_OP(x1, x2, gamma, **{param: bad_value})
 
 
-def test_valid_scalars_pass_type_gate(monkeypatch):
-    """Valid Python-native scalars must get past the gate and reach JIT load
-    (mocked with a sentinel so the test stays device- and build-free)."""
-    import importlib
-
-    op_submod = importlib.import_module(
-        "cann_ops_nn.ops.norm.add_rms_norm_dynamic_quant.add_rms_norm_dynamic_quant"
+def test_valid_scalars_pass_type_gate():
+    """Valid Python-native scalars must get past the gate and complete the
+    public-entry path (gate -> dispatcher -> Meta kernel) on meta tensors."""
+    x1, x2, gamma = _meta_inputs()
+    y, x_out, mxscale, rstd = _RAW_OP(
+        x1,
+        x2,
+        gamma,
+        beta=None,
+        x3=None,
+        epsilon=1e-6,
+        scale_alg=0,
+        round_mode="rint",
+        dst_type=36,
+        output_rstd=True,
     )
-
-    def _boom(*args, **kwargs):
-        raise RuntimeError("PASSED_TYPE_GATE")
-
-    monkeypatch.setattr(op_submod.add_rms_norm_dynamic_quant_builder, "load", _boom)
-    x1, x2, gamma = _cpu_inputs()
-    with pytest.raises(RuntimeError, match="PASSED_TYPE_GATE"):
-        _RAW_OP(
-            x1,
-            x2,
-            gamma,
-            beta=None,
-            x3=None,
-            epsilon=1e-6,
-            scale_alg=0,
-            round_mode="rint",
-            dst_type=36,
-            output_rstd=True,
-        )
+    assert y.dtype == torch.float8_e4m3fn
+    assert list(y.shape) == [4, 64]
 
 
-def test_intenum_passes_type_gate(monkeypatch):
+def test_intenum_passes_type_gate():
     """enum.IntEnum is a Python-native int subclass and must stay accepted —
     the int slots deliberately use isinstance() rather than an exact type check
     so this ergonomic pattern keeps working."""
-    import importlib
-
-    op_submod = importlib.import_module(
-        "cann_ops_nn.ops.norm.add_rms_norm_dynamic_quant.add_rms_norm_dynamic_quant"
-    )
-
-    def _boom(*args, **kwargs):
-        raise RuntimeError("PASSED_TYPE_GATE")
-
-    monkeypatch.setattr(op_submod.add_rms_norm_dynamic_quant_builder, "load", _boom)
-    x1, x2, gamma = _cpu_inputs()
-    with pytest.raises(RuntimeError, match="PASSED_TYPE_GATE"):
-        _RAW_OP(x1, x2, gamma, dst_type=_DstType.FP8_E4M3FN)
+    x1, x2, gamma = _meta_inputs()
+    y, _, _, _ = _RAW_OP(x1, x2, gamma, dst_type=_DstType.FP8_E4M3FN)
+    assert y.dtype == torch.float8_e4m3fn
 
 
 def test_raw_entry_is_python_function():
-    """cann_ops_nn.ops.<op> must stay the raw @impl function (not the
+    """cann_ops_nn.ops.<op> must stay a plain Python function (not the
     dispatcher OpOverloadPacket) — the type gate depends on it."""
     assert isinstance(_RAW_OP, types.FunctionType)
 
@@ -304,24 +286,29 @@ def test_meta_valid_full_call():
 
 
 # ---------------------------------------------------------------------------
-# 3. Framework behavior lock: top-level entry + dispatcher dtype coercion
+# 3. Entry structure lock: top-level public entry + dispatcher dtype coercion
 # ---------------------------------------------------------------------------
 
 
-def test_toplevel_entry_is_dispatcher_packet():
-    """cann_ops_nn.<op> resolves via the package __getattr__ to the dispatcher
-    OpOverloadPacket — NOT the raw function. Scalar args are schema-converted
-    before any op code runs, so the Python type gate does not fire there."""
-    assert not isinstance(cann_ops_nn.add_rms_norm_dynamic_quant, types.FunctionType)
+def test_toplevel_entry_is_validating_wrapper():
+    """cann_ops_nn.<op> must resolve (package __getattr__) to the validating
+    public entry, NOT the dispatcher OpOverloadPacket — a bare packet would let
+    the dispatcher coerce scalars per schema (e.g. torch.int4 -> 40, a valid
+    dst_type) and silently bypass the type gate on the documented eager path.
+    Identity with _RAW_OP means the scalar/tensor interception tests above
+    cover the top-level entry as well."""
+    entry = cann_ops_nn.add_rms_norm_dynamic_quant
+    assert isinstance(entry, types.FunctionType)
+    assert getattr(entry, "_cann_ops_nn_public_entry_", False)
+    assert entry is _RAW_OP
 
 
 def test_dispatcher_coerces_torch_dtype_to_ordinal():
-    """torch.dtype passed to an `int` schema slot is silently converted by the
-    torch dispatcher to its ScalarType ordinal (float8_e5m2 -> 23); the op can
-    only guard this via the dst_type domain check. Pins the framework behavior
-    so accidental "fixes" that silently change semantics get noticed."""
+    """Direct torch.ops call (bypassing the public entry): torch.dtype passed
+    to an `int` schema slot is silently converted by the torch dispatcher to
+    its ScalarType ordinal (float8_e5m2 -> 23); the op can only guard this via
+    the dst_type domain check. Pins the framework behavior so accidental
+    "fixes" that silently change semantics get noticed."""
     x1, x2, gamma = _meta_inputs()
     with pytest.raises(RuntimeError, match="invalid dst_type 23"):
-        cann_ops_nn.add_rms_norm_dynamic_quant(
-            x1, x2, gamma, dst_type=torch.float8_e5m2
-        )
+        _OP(x1, x2, gamma, dst_type=torch.float8_e5m2)
