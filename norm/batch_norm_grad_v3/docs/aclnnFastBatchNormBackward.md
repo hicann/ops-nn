@@ -443,7 +443,7 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor, aclFormat format = aclFormat::ACL_FORMAT_ND) {
   auto size = GetShapeSize(shape) * sizeof(T);
   // 调用aclrtMalloc申请Device侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -460,8 +460,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   }
 
   // 调用aclCreateTensor接口创建aclTensor
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
+  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format, shape.data(),
+                            shape.size(), *deviceAddr);
   return 0;
 }
 
@@ -520,10 +520,12 @@ int main() {
   bool training = true;
   double eps = 1e-5;
   // 创建gradOut aclTensor
-  ret = CreateAclTensor(gradOutHostData, gradOutShape, &gradOutDeviceAddr, aclDataType::ACL_FLOAT, &gradOut);
+  ret = CreateAclTensor(gradOutHostData, gradOutShape, &gradOutDeviceAddr, aclDataType::ACL_FLOAT, &gradOut,
+                        aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建self aclTensor
-  ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+  ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self,
+                        aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建weight aclTensor
   ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
@@ -544,7 +546,8 @@ int main() {
   bool maskData[3] = {true, true, true};
   outMask = aclCreateBoolArray(&(maskData[0]), 3);
   // 创建gradIn aclTensor
-  ret = CreateAclTensor(gradInHostData, gradInShape, &gradInDeviceAddr, aclDataType::ACL_FLOAT, &gradIn);
+  ret = CreateAclTensor(gradInHostData, gradInShape, &gradInDeviceAddr, aclDataType::ACL_FLOAT, &gradIn,
+                        aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建gradWeight aclTensor
   ret = CreateAclTensor(gradWeightHostData, gradWeightShape, &gradWeightDeviceAddr, aclDataType::ACL_FLOAT, &gradWeight);

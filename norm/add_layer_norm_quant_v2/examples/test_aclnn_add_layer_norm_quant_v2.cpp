@@ -127,7 +127,7 @@ int main()
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造，本示例中将各调用一次不带bias可选输入的和带bias输入的用例
     float eps = 1e-6;
-    bool additionalOut = true;
+    bool additionalOut = false;
     bool divMode = false;
     const char* quantMode = "static";
 

@@ -164,7 +164,7 @@ int main()
     ret = aclrtMemcpy(resultDataMean.data(), resultDataMean.size() * sizeof(resultDataMean[0]), outputMeanDeviceAddr,
                       outputMeanSize * sizeof(resultDataMean[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("== pdx output");
+    LOG_PRINT("== mean output");
     for (int64_t i = 0; i < outputMeanSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataMean[i]);
     }
@@ -174,7 +174,7 @@ int main()
     ret = aclrtMemcpy(resultDataRstd.data(), resultDataRstd.size() * sizeof(resultDataRstd[0]), outputRstdDeviceAddr,
                       outputRstdSize * sizeof(resultDataRstd[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("== pdx output");
+    LOG_PRINT("== rstd output");
     for (int64_t i = 0; i < outputRstdSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataRstd[i]);
     }
@@ -184,7 +184,7 @@ int main()
     ret = aclrtMemcpy(resultDataY.data(), resultDataY.size() * sizeof(resultDataY[0]), outputYDeviceAddr,
                       outputYSize * sizeof(resultDataY[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("== pdx output");
+    LOG_PRINT("== y output");
     for (int64_t i = 0; i < outputYSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataY[i]);
     }

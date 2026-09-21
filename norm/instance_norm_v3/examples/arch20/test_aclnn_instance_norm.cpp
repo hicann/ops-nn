@@ -84,7 +84,7 @@ int main()
     int64_t H = 4;
     int64_t W = 4;
 
-    // 2. 构造输入与输出，需要根据API的接口自定义构造，本示例中将各调用一次不带bias可选输入的和带bias输入的用例
+    // 2. 构造输入与输出，需要根据API的接口自定义构造，本示例调用一次带gamma和beta输入的用例
     std::vector<int64_t> xShape = {N, C, H, W};
     std::vector<int64_t> weightShape = {C};
     std::vector<int64_t> yShape = {N, C, H, W};
@@ -131,7 +131,7 @@ int main()
     // 调用aclnnInstanceNorm第一段接口
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
-    LOG_PRINT("\nUse aclnnInstanceNorm Non-Bias Port.");
+    LOG_PRINT("\nUse aclnnInstanceNorm Port with gamma and beta.");
     ret = aclnnInstanceNormGetWorkspaceSize(x, gamma, beta, dataFormat, eps, y, mean, variance, &workspaceSize,
                                             &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInstanceNormGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
@@ -153,13 +153,13 @@ int main()
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
 
-    // 5.1 拷贝出不带bias的输出
+    // 5.1 拷贝出带gamma和beta的输出
     auto size = GetShapeSize(yShape);
     std::vector<float> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr,
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("==== InstanceNorm non-bias: y output");
+    LOG_PRINT("==== InstanceNorm with gamma and beta: y output");
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
@@ -169,7 +169,7 @@ int main()
     ret = aclrtMemcpy(resultDataMean.data(), resultDataMean.size() * sizeof(resultDataMean[0]), meanDeviceAddr,
                       outputMeanSize * sizeof(resultDataMean[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("==== InstanceNorm non-bias: mean output");
+    LOG_PRINT("==== InstanceNorm with gamma and beta: mean output");
     for (int64_t i = 0; i < outputMeanSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataMean[i]);
     }
@@ -179,7 +179,7 @@ int main()
     ret = aclrtMemcpy(resultDataVar.data(), resultDataVar.size() * sizeof(resultDataVar[0]), varianceDeviceAddr,
                       outputVarSize * sizeof(resultDataVar[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    LOG_PRINT("==== InstanceNorm non-bias: rstd output");
+    LOG_PRINT("==== InstanceNorm with gamma and beta: rstd output");
     for (int64_t i = 0; i < outputVarSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataVar[i]);
     }

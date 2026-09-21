@@ -317,8 +317,8 @@ int main() {
   aclTensor* indices = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<int> indicesHostData = {1, 1, 1, 1, 0, 0, 0, 0};
-  float normType = 1.0f;
-  float maxNorm = 2.0f;
+  double normType = 1.0;
+  double maxNorm = 2.0;
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(indicesHostData, indicesShape, &indicesDeviceAddr, aclDataType::ACL_INT32, &indices);

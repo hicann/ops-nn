@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include <iostream>
+#include <cstdio>
 #include <vector>
 #include <cstring>
 #include "acl/acl.h"
@@ -26,9 +26,9 @@
         }                            \
     } while (0)
 
-#define LOG_PRINT(message, ...)         \
-    do {                                \
-        printf(message, ##__VA_ARGS__); \
+#define LOG_PRINT(message, ...)              \
+    do {                                     \
+        std::printf(message, ##__VA_ARGS__); \
     } while (0)
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)

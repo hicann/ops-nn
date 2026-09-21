@@ -439,7 +439,7 @@ int main()
     std::vector<int8_t> offsetHostData(1, 1);
     std::vector<int8_t> yHostData(15, 0);
     double epsilon = 1e-6;
-    // 创建self aclTensor
+    // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT16, &gamma);

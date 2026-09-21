@@ -517,7 +517,7 @@ aclnnStatus aclnnAddLayerNormQuant(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
-#include <iostream>
+#include <cstdio>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_add_layer_norm_quant.h"
@@ -531,7 +531,7 @@ do {                                \
 
 #define LOG_PRINT(message, ...)   \
     do {                          \
-  printf(message, ##__VA_ARGS__); \
+  std::printf(message, ##__VA_ARGS__); \
 } while (0)
 
 int64_t GetShapeSize(const std::vector<int64_t> &shape) {

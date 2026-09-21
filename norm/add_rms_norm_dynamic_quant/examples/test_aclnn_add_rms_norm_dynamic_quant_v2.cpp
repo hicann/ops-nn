@@ -128,8 +128,8 @@ int main()
     std::vector<short> y1HostData(xShapeSize, 0);
     std::vector<short> y2HostData(xShapeSize, 0);
     std::vector<short> xHostData(xShapeSize, 0);
-    std::vector<short> scale1HostData(reduceShapeSize, 0);
-    std::vector<short> scale2HostData(reduceShapeSize, 0);
+    std::vector<float> scale1HostData(reduceShapeSize, 0);
+    std::vector<float> scale2HostData(reduceShapeSize, 0);
 
     float epsilon = 1e-6;
 

@@ -81,7 +81,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    float alpha = 0.3;
+    double alpha = 0.3;
     std::vector<int64_t> dyShape = {3, 1, 4};
     std::vector<int64_t> xShape = {3, 1, 4};
     std::vector<int64_t> gxShape = {3, 1, 4};
@@ -164,7 +164,7 @@ int main()
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnDeepNormGrad第二段接口
     ret = aclnnDeepNormGrad(workspaceAddr, workspaceSize, executor, stream);
