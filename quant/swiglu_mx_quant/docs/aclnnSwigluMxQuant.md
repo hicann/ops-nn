@@ -212,7 +212,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过7维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li></ul></td>
+      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过7维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-7</td>
@@ -222,7 +222,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。</li><li>可选参数，支持传空指针。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
+      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor（shape[0]=0会被拒绝，与不传该参数不同）。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -352,7 +352,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输入x量化后的对应结果，对应公式中的Pi和di。</td>
-      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...Xn,H]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,2H]。</li><li>当yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。</li></ul></td>
+      <td><ul><li>当activateDim对应的x的尾轴时，shape为[X1,X2,...Xn,H]。</li><li>当activateDim对应的不是x的尾轴时，shape为[X1,X2,...,XactivateDim / 2,...,2H]。</li><li>当yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
       <td>2-7</td>
@@ -362,7 +362,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb</td>
-      <td><ul><li>shape在axis轴上为yOut对应轴的值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>当axis为非尾轴且groupIndexOptional存在时，shape在axis轴上为yOut对应轴的值整除64再加groupNum。</li><li>当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td><ul><li>shape在axis轴上为yOut对应轴的值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>当axis为非尾轴且groupIndexOptional存在时，shape在axis轴上为yOut对应轴的值整除64再加groupNum。</li><li>当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3-8</td>
@@ -502,9 +502,13 @@ aclnnStatus aclnnSwigluMxQuant(
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
 - groupIndexOptional的每个元素必须为大于等于0的整数，且所有元素之和不能大于需要量化的x的总行数（即输入x除尾轴之外的剩余轴的乘积）。
-- 输出yOut和mxscaleOut超出groupIndexOptional所有元素之和的部分未进行清理，该部分内存为垃圾数据。
+- 输出yOut/mxscaleOut由调用方按接口推导的形状分配内存，算子将量化结果完整写回输出Tensor；超出groupIndexOptional所有元素之和覆盖范围的输出部分不清理，为垃圾数据。
+- 输入与输出的内存空间不能重叠，不支持原地修改（inplace）场景。
+- 算子执行过程中不修改任何输入数据。
 - 当activateDim为非last轴，或者axis为非last轴，groupIndexOptional存在时，x的输入必须为2维。
 - 当输出yOut的数据类型为FLOAT8_E4M3FN、FLOAT8_E5M2时，roundModeOptional必须为 rint。
+- 不支持空Tensor：x、groupIndexOptional、yOut、mxscaleOut的shape中任一维度为0（元素数为0）时，接口校验失败，返回ACLNN_ERR_PARAM_INVALID。
+- x必须为2-7维，不支持rank=0标量Tensor。
 
 ## 调用示例
 

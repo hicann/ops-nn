@@ -30,7 +30,7 @@ namespace ge {
 * The size of the dimension specified by activate_dim must be divisible by 2.
 * Supports 2-7 dimensional tensors.
 * @li group_index: An optional tensor. Must be one of the following types: int32, int64.
-* If provided, group_index must be 1-dimensional and its shape must be less than or equal to 256.
+* If provided, group_index must be 1-dimensional and its shape must be greater than 0 and less than or equal to 256.
 * Each element must be a non-negative integer, and the sum of all elements must not exceed the
 * total number of rows of x to be quantized.
 
@@ -83,7 +83,8 @@ namespace ge {
 * @li When dst_type is FP8_E4M3FN (36) or FP8_E5M2 (35), round_mode supports "rint".
 * @li When dst_type is FP4_E2M1 (40) or FP4_E1M2 (41), round_mode supports "rint", "floor", "round".
 * @li When activate_dim or axis is not the last axis, if group_index is provided, input x shape must be 2-dimensional.
-* @li If group_index is provided, it must be 1-dimensional and its shape must be less than or equal to 256.
+* @li If group_index is provided, it must be 1-dimensional and its shape must be greater than 0 and less than or
+* equal to 256.
 * Each element must be a non-negative integer, and the sum of all elements must not exceed
 * the total number of rows of x to be quantized.
 * @li When dst_type is FP4 (40 or 41), scale_alg must be 0.
