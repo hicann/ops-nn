@@ -17,7 +17,7 @@
 // Coverage (DESIGN-BRANCH-8.md §2 切分公式 主块/尾块/非对齐/边界/各 rank 档):
 //   - 5D [8,8,8,8,8]            (主块: axis=0, a_i=4, a_o=2, aligned tail)
 //   - 5D [2,4,8,16,32]          (Transformer 注意力: axis=0, a_i=1, a_o=2)
-//   - 6D [4,4,4,4,4,4]          (全量装入 fallback: 4096 ≤ 16384 -> a_i=d_0=4)
+//   - 6D [4,4,4,4,4,4]          (全量装入 fallback: 4096 ≤ 16336 -> a_i=d_0=4)
 //   - 6D [16,8,8,8,8,8]         (主块: axis=1, a_i=4, a_o=2, total_tiles=32)
 //   - 8D [2,2,2,2,2,2,2,2]      (rank 上界边界: 全量装入 fallback -> a_i=d_0=2)
 //   - 8D [4,4,4,4,4,4,4,4]      (主块: axis=0, a_i=1, a_o=4, total_tiles=4)
@@ -45,15 +45,15 @@
 #include <vector>
 #include <gtest/gtest.h>
 
-#include "lars_v2_update_tiling_data.h" // TilingData8, SplitResult, MultiCoreResult, kPhysNodes, kMaxInputSlots, kMaxOutputSlots
+#include "lars_v2_update_tiling_data.h" // TilingData8, SplitResult, MultiCoreResult, PHYS_NODES, MAX_INPUT_SLOTS, MAX_OUTPUT_SLOTS
 #include "lars_v2_update_tiling.h" // optiling::ComputeBranch8Tiling, Branch8Inputs, LarsAttrs
 
 namespace {
 // DESIGN §5.3 / DESIGN-BRANCH-8.md §2 constants (hand-copied; oracle must NOT
 // call optiling:: functions).
-constexpr int64_t kPhysNodesOracle = 3; // DESIGN §5.3 P conclusion (kPhysNodes)
-constexpr int64_t kUb192K = 196608;     // Ascend950DT typical UB = 192 KiB
-constexpr int64_t kUb256K = 262144;     // 256 KiB variant
+constexpr int64_t PHYS_NODES_ORACLE = 3; // DESIGN §5.3 P conclusion (PHYS_NODES)
+constexpr int64_t UB_192K = 196608;      // Ascend950DT typical UB = 192 KiB
+constexpr int64_t UB_256K = 262144;      // 256 KiB variant
 
 inline int64_t CeilDiv(int64_t a, int64_t b) { return (a + b - 1) / b; }
 
@@ -143,7 +143,7 @@ bool OraCheckBroadcast(const std::vector<std::vector<int64_t>>& pin, const std::
 }
 
 // ===== Independent oracle: per_buf (DESIGN §5.3 / DESIGN-BRANCH-8.md §2, P=3) =====
-int64_t OraPerBufBytes(int64_t ub, int64_t P) { return (ub / P) & ~31LL; }
+int64_t OraPerBufBytes(int64_t ub, int64_t P) { return ((ub - SCALAR_BUF_BYTES) / P) & ~31LL; }
 int64_t OraPerBufElems(int64_t bytes) { return bytes / 4; } // cast.md §Tile: always /4
 
 // ===== Independent oracle: FindSplitAxis (DESIGN-BRANCH-8.md §2) =====
@@ -237,8 +237,8 @@ void OraFillTilingData8(TilingData8& td, const OraSplit& sp, const OraMc& mc, in
     td.multicore.cores_tail = mc.cores_tail;
     td.rank = eff_rank;
     td.per_buf_bytes = per_buf_bytes;
-    td.num_inputs = kMaxInputSlots;   // 6
-    td.num_outputs = kMaxOutputSlots; // 1
+    td.num_inputs = MAX_INPUT_SLOTS;   // 6
+    td.num_outputs = MAX_OUTPUT_SLOTS; // 1
     td.hyperpara = attrs.hyperpara;
     td.epsilon = attrs.epsilon;
     td.use_clip = attrs.use_clip;
@@ -246,7 +246,7 @@ void OraFillTilingData8(TilingData8& td, const OraSplit& sp, const OraMc& mc, in
     for (int64_t d = 0; d < 8; d++) {
         td.max_bro_shape[d] = (d < eff_rank) ? max_bro[d] : 1;
     }
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 8; d++) {
             td.input_shapes[i][d] = (d < eff_rank) ? normal_in[i][d] : 1;
             td.input_strides[i][d] = 0;
@@ -257,7 +257,7 @@ void OraFillTilingData8(TilingData8& td, const OraSplit& sp, const OraMc& mc, in
                 td.input_strides[i][d] = st[d];
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 8; d++) {
             td.output_shapes[o][d] = (d < eff_rank) ? normal_out[o][d] : 1;
             td.output_strides[o][d] = 0;
@@ -281,9 +281,9 @@ bool OraComputeBranch8(const optiling::Branch8Inputs& in, TilingData8& exp)
     if (!OraCheckBroadcast(ps.normal_input_shapes, ps.normal_output_shapes, eff_rank)) {
         return false;
     }
-    OraSplit sp = OraFindSplit(ps.maximum_bro_shape, in.ub_per_core, kPhysNodesOracle);
+    OraSplit sp = OraFindSplit(ps.maximum_bro_shape, in.ub_per_core, PHYS_NODES_ORACLE);
     OraMc mc = OraMultiCore(ps.maximum_bro_shape, sp, in.max_cores);
-    int64_t per_buf_bytes = OraPerBufBytes(in.ub_per_core, kPhysNodesOracle);
+    int64_t per_buf_bytes = OraPerBufBytes(in.ub_per_core, PHYS_NODES_ORACLE);
     OraFillTilingData8(exp, sp, mc, eff_rank, per_buf_bytes, ps.maximum_bro_shape, ps.normal_input_shapes,
                        ps.normal_output_shapes, in.attrs);
     return true;
@@ -308,13 +308,13 @@ void PoisonTilingData8(TilingData8& td)
     td.num_outputs = INT64_MIN;
     for (int64_t d = 0; d < 8; d++)
         td.max_bro_shape[d] = INT64_MIN;
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 8; d++) {
             td.input_shapes[i][d] = INT64_MIN;
             td.input_strides[i][d] = INT64_MIN;
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 8; d++) {
             td.output_shapes[o][d] = INT64_MIN;
             td.output_strides[o][d] = INT64_MIN;
@@ -345,7 +345,7 @@ TEST_P(Branch8TilingTest, Formula)
 {
     const auto& p = GetParam();
     // Build the 6 in / 1 out shapes (w,g share shape; 4 scalars share scalar shape).
-    std::vector<std::vector<int64_t>> in_shapes(kMaxInputSlots);
+    std::vector<std::vector<int64_t>> in_shapes(MAX_INPUT_SLOTS);
     in_shapes[0] = p.w;
     in_shapes[1] = p.w; // w, g
     in_shapes[2] = p.scalar;
@@ -395,14 +395,14 @@ TEST_P(Branch8TilingTest, Formula)
         EXPECT_EQ(act.max_bro_shape[d], exp.max_bro_shape[d]) << "dim " << d;
     }
     // input_shapes[6][8] + input_strides[6][8]
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 8; d++) {
             EXPECT_EQ(act.input_shapes[i][d], exp.input_shapes[i][d]) << "in " << i << " dim " << d;
             EXPECT_EQ(act.input_strides[i][d], exp.input_strides[i][d]) << "in " << i << " dim " << d;
         }
     }
     // output_shapes[1][8] + output_strides[1][8]
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 8; d++) {
             EXPECT_EQ(act.output_shapes[o][d], exp.output_shapes[o][d]) << "out " << o << " dim " << d;
             EXPECT_EQ(act.output_strides[o][d], exp.output_strides[o][d]) << "out " << o << " dim " << d;
@@ -417,35 +417,35 @@ TEST_P(Branch8TilingTest, Formula)
 INSTANTIATE_TEST_SUITE_P(
     LarsV2UpdateBranch8, Branch8TilingTest,
     testing::Values(
-        // --- 5D 主块 [8,8,8,8,8]: axis=0, a_i=16384/4096=4, a_o=2, a_i_tail=4 (aligned) ---
-        Branch8Case{"5d_8_mainblock", {8, 8, 8, 8, 8}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 5D Transformer 注意力 [2,4,8,16,32]: axis=0, a_i=16384/16384=1, a_o=2, a_i_tail=1 ---
-        Branch8Case{"5d_transformer", {2, 4, 8, 16, 32}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 6D 全量装入 [4,4,4,4,4,4]: 4096 ≤ 16384 -> fallback axis=0, a_i=d_0=4, a_o=1 ---
-        Branch8Case{"6d_4_fullfit", {4, 4, 4, 4, 4, 4}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 6D 主块 [16,8,8,8,8,8]: axis=1, a_i=16384/4096=4, a_o=2, total_tiles=16*2=32 ---
-        Branch8Case{"6d_16_mainblock", {16, 8, 8, 8, 8, 8}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 8D rank 上界边界 [2,2,2,2,2,2,2,2]: 256 ≤ 16384 -> fallback axis=0, a_i=d_0=2, a_o=1 ---
-        Branch8Case{"8d_2_boundary", {2, 2, 2, 2, 2, 2, 2, 2}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 8D 主块 [4,4,4,4,4,4,4,4]: axis=0, a_i=16384/16384=1, a_o=4, total_tiles=4 ---
-        Branch8Case{"8d_4_mainblock", {4, 4, 4, 4, 4, 4, 4, 4}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 5D 非对齐元素数 [2,3,5,7,11]: 2310 ≤ 16384 -> fallback, non-aligned count ---
-        Branch8Case{"5d_nonalign_235711", {2, 3, 5, 7, 11}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 5D 尾块 non-aligned [6,8,8,8,8]: axis=0, a_i=4, a_o=2, a_i_tail=6%4=2 (≠a_i) ---
-        Branch8Case{"5d_6_tailblock", {6, 8, 8, 8, 8}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 7D rank 档 [2,2,2,2,2,2,2]: 128 ≤ 16384 -> fallback axis=0, a_i=d_0=2, a_o=1 ---
-        Branch8Case{"7d_2_rank7", {2, 2, 2, 2, 2, 2, 2}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-        // --- 单核变体 [8,8,8,8,8] cores=1: total_tiles=2, num_cores=1, tiles_main=2, cores_tail=0 ---
-        Branch8Case{"5d_8_cores1", {8, 8, 8, 8, 8}, {}, 4, kUb192K, 1, {0.001f, 1e-5f, 0}},
-        // --- 尾核 cores_tail=1 [4,4,4,4,4,4,4,4] cores=3: total_tiles=4, num_cores=3, tiles_main=1, cores_tail=1 ---
-        Branch8Case{"8d_4_cores3_tailcore", {4, 4, 4, 4, 4, 4, 4, 4}, {}, 4, kUb192K, 3, {0.001f, 1e-5f, 0}},
-        // --- 尾核 cores_tail=2 [16,8,8,8,8,8] cores=30: total_tiles=32, num_cores=30, tiles_main=1, cores_tail=2 ---
-        Branch8Case{"6d_16_cores30_tailcore", {16, 8, 8, 8, 8, 8}, {}, 4, kUb192K, 30, {0.001f, 1e-5f, 0}},
-        // --- UB=256K + 尾块 [8,8,8,8,8]: per_buf_elems=21840, a_i=21840/4096=5, a_o=2, a_i_tail=8%5=3 ---
-        Branch8Case{"5d_8_ub256k_tailblock", {8, 8, 8, 8, 8}, {}, 4, kUb256K, 32, {0.001f, 1e-5f, 0}},
+        // --- 5D 主块 [8,8,8,8,8]: axis=0, a_i=16336/4096=3, a_o=3, a_i_tail=8%3=2 ---
+        Branch8Case{"5d_8_mainblock", {8, 8, 8, 8, 8}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 5D Transformer 注意力 [2,4,8,16,32]: axis=1, a_i=16336/4096=3, a_o=2, a_i_tail=4%3=1 ---
+        Branch8Case{"5d_transformer", {2, 4, 8, 16, 32}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 6D 全量装入 [4,4,4,4,4,4]: 4096 ≤ 16336 -> fallback axis=0, a_i=d_0=4, a_o=1 ---
+        Branch8Case{"6d_4_fullfit", {4, 4, 4, 4, 4, 4}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 6D 主块 [16,8,8,8,8,8]: axis=1, a_i=16336/4096=3, a_o=3, total_tiles=16*3=48 ---
+        Branch8Case{"6d_16_mainblock", {16, 8, 8, 8, 8, 8}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 8D rank 上界边界 [2,2,2,2,2,2,2,2]: 256 ≤ 16336 -> fallback axis=0, a_i=d_0=2, a_o=1 ---
+        Branch8Case{"8d_2_boundary", {2, 2, 2, 2, 2, 2, 2, 2}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 8D 主块 [4,4,4,4,4,4,4,4]: axis=1, a_i=16336/4096=3, a_o=2, total_tiles=4*2=8 ---
+        Branch8Case{"8d_4_mainblock", {4, 4, 4, 4, 4, 4, 4, 4}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 5D 非对齐元素数 [2,3,5,7,11]: 2310 ≤ 16336 -> fallback, non-aligned count ---
+        Branch8Case{"5d_nonalign_235711", {2, 3, 5, 7, 11}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 5D 尾块 non-aligned [6,8,8,8,8]: axis=0, a_i=3, a_o=2, a_i_tail=6%3=0 (=a_i) ---
+        Branch8Case{"5d_6_tailblock", {6, 8, 8, 8, 8}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 7D rank 档 [2,2,2,2,2,2,2]: 128 ≤ 16336 -> fallback axis=0, a_i=d_0=2, a_o=1 ---
+        Branch8Case{"7d_2_rank7", {2, 2, 2, 2, 2, 2, 2}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+        // --- 单核变体 [8,8,8,8,8] cores=1: total_tiles=3, num_cores=1, tiles_main=3, cores_tail=0 ---
+        Branch8Case{"5d_8_cores1", {8, 8, 8, 8, 8}, {}, 4, UB_192K, 1, {0.001f, 1e-5f, 0}},
+        // --- 尾核 cores_tail=1 [4,4,4,4,4,4,4,4] cores=3: total_tiles=8, num_cores=3, tiles_main=2, cores_tail=2 ---
+        Branch8Case{"8d_4_cores3_tailcore", {4, 4, 4, 4, 4, 4, 4, 4}, {}, 4, UB_192K, 3, {0.001f, 1e-5f, 0}},
+        // --- 尾核 cores_tail=2 [16,8,8,8,8,8] cores=30: total_tiles=48, num_cores=30, tiles_main=1, cores_tail=18 ---
+        Branch8Case{"6d_16_cores30_tailcore", {16, 8, 8, 8, 8, 8}, {}, 4, UB_192K, 30, {0.001f, 1e-5f, 0}},
+        // --- UB=256K + 尾块 [8,8,8,8,8]: per_buf_elems=21800, a_i=21800/4096=5, a_o=2, a_i_tail=8%5=3 ---
+        Branch8Case{"5d_8_ub256k_tailblock", {8, 8, 8, 8, 8}, {}, 4, UB_256K, 32, {0.001f, 1e-5f, 0}},
         // --- fp16 dtype 变体: tiling dtype-independent (/4 basis), same split as 5d_8_mainblock ---
-        Branch8Case{"5d_8_fp16", {8, 8, 8, 8, 8}, {}, 2, kUb192K, 32, {0.001f, 1e-5f, 0}},
+        Branch8Case{"5d_8_fp16", {8, 8, 8, 8, 8}, {}, 2, UB_192K, 32, {0.001f, 1e-5f, 0}},
         // --- use_clip attr 变体: attr pass-through (use_clip=1) ---
-        Branch8Case{"5d_8_useclip", {8, 8, 8, 8, 8}, {}, 4, kUb192K, 32, {0.01f, 1e-6f, 1}},
+        Branch8Case{"5d_8_useclip", {8, 8, 8, 8, 8}, {}, 4, UB_192K, 32, {0.01f, 1e-6f, 1}},
         // --- 标量输入 size-1 广播: scalars given as [1] instead of [] ---
-        Branch8Case{"5d_8_scalar_s1", {8, 8, 8, 8, 8}, {1}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}}));
+        Branch8Case{"5d_8_scalar_s1", {8, 8, 8, 8, 8}, {1}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}}));

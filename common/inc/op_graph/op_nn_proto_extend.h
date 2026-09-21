@@ -2727,41 +2727,6 @@ currently supported.
     .OP_END_FACTORY_REG(FusedMulApplyKerasMomentum)
 
     /**
-    *@brief Update "g" according to the LARS algorithm . \n
-
-    *@par Inputs:
-    *Six inputs, including:
-    * @li w: A ND Tensor. Must be of type float32
-    * @li g: A ND Tensor of the same type and shape as "w".
-    * @li w_square_sum: A 1D Tensor of  square_sum(w), has the same type as "w",  Must be a scalar or 1D tensor.
-    * @li g_square_sum: A 1D Tensor of  square(g), has the same type as "w", Must be a scalar or 1D tensor.
-    * @li weight_decay: A 1D Tensor of the same type as "w",  Must be a scalar or 1D tensor.
-    * @li learning_rate: A 1D Tensor of the same type as "w", Must be a scalar or 1D tensor. \n
-
-    *@par Attributes:
-    *Three Attributes, including:
-    * @li hyperpara: An optional float. Default value is 0.001.
-    * @li epsilon: An optional float. Default value is 1e-5.Avoid denominator is 0.
-    * @li use_clip: An optional bool. Defaults to "False".
-    *     If "True", updating learning rate . \n
-
-    *@par Outputs:
-    *g_new: a ND Tensor of the same type as "w".
-    */
-    REG_OP(LarsV2Update)
-    .INPUT(w, TensorType(DT_FLOAT))
-    .INPUT(g, TensorType(DT_FLOAT))
-    .INPUT(w_square_sum, TensorType(DT_FLOAT))
-    .INPUT(g_square_sum, TensorType(DT_FLOAT))
-    .INPUT(weight_decay, TensorType(DT_FLOAT))
-    .INPUT(learning_rate, TensorType(DT_FLOAT))
-    .OUTPUT(g_new, TensorType(DT_FLOAT))
-    .ATTR(hyperpara, Float, 0.001)
-    .ATTR(epsilon, Float, 0.00001)
-    .ATTR(use_clip, Bool, false)
-    .OP_END_FACTORY_REG(LarsV2Update)
-
-    /**
     *@brief Finds unique elements in a 1D tensor. \n
 
     *@par Inputs:

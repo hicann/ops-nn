@@ -21,6 +21,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <cmath>
+#include <algorithm>
 #include "assert.h"
 #include "graph.h"
 #include "types.h"
@@ -129,6 +131,37 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     return SUCCESS;
 }
 
+// CPU golden: LarsV2Update 语义 (README / proto).
+//   coeff = (hyperpara * sqrt(wss)) / (wd * sqrt(wss) + sqrt(gss) + epsilon)
+//   use_clip: coeff = max(0, min(coeff / lr, 1))
+//   g_new = (w * wd + g) * coeff
+// 静态用例输入全为 value (GenOnesDataFloat32), 标量同为 value.
+static bool VerifyStaticOutput(const float* actual, int64_t elemNum, float value, float hyperpara, float epsilon,
+                               bool useClip)
+{
+    const double wNorm = sqrt(static_cast<double>(value));
+    const double gNorm = sqrt(static_cast<double>(value));
+    const double wd = static_cast<double>(value);
+    const double lr = static_cast<double>(value);
+    const double denom = wd * wNorm + gNorm + static_cast<double>(epsilon);
+    double coeff = static_cast<double>(hyperpara) * wNorm / denom;
+    if (useClip) {
+        coeff = std::max(0.0, std::min(coeff / lr, 1.0));
+    }
+    const double gradWeight = static_cast<double>(value) * wd + static_cast<double>(value);
+    const double expected = gradWeight * coeff;
+    for (int64_t j = 0; j < elemNum; ++j) {
+        const double error = fabs(static_cast<double>(actual[j]) - expected);
+        const double tolerance = 1.0e-4 + 1.0e-4 * fabs(expected);
+        if (!std::isfinite(actual[j]) || error > tolerance) {
+            printf("g_new value mismatch at index %ld: actual=%f, expected=%f\n", static_cast<long>(j), actual[j],
+                   expected);
+            return false;
+        }
+    }
+    return true;
+}
+
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
                      std::vector<Operator>& outputs, Graph& graph)
 {
@@ -217,6 +250,7 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
     int output_num = output.size();
+    bool allVerified = true;
     for (int i = 0; i < output_num; i++) {
         std::cout << "output " << i << " dtype :  " << output[i].GetTensorDesc().GetDataType() << std::endl;
         uint8_t* output_data_i = output[i].GetData();
@@ -226,10 +260,29 @@ int main(int argc, char* argv[])
         string output_file = "./tc_ge_irrun_test_npu_output_" + std::to_string(i) + ".bin";
         WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
         float* resultData = (float*)output_data_i;
+        // 校验输出 dtype / shape / 逐元素数值 (CPU golden)
+        if (output[i].GetTensorDesc().GetDataType() != DT_FLOAT ||
+            output[i].GetTensorDesc().GetShape().GetDim(0) != 2 ||
+            output[i].GetTensorDesc().GetShape().GetDim(1) != 2) {
+            printf("%s - ERROR - [XIR]: output dtype or shape mismatch\n", GetTime().c_str());
+            allVerified = false;
+            break;
+        }
+        if (!VerifyStaticOutput(resultData, output_shape, 2.0f, 0.001f, 0.00001f, false)) {
+            printf("%s - ERROR - [XIR]: output value verification failed\n", GetTime().c_str());
+            allVerified = false;
+            break;
+        }
         for (int64_t j = 0; j < output_shape; j++) {
             LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
         }
     }
+    if (!allVerified) {
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
+    printf("Shape, dtype and values PASSED for [2,2]\n");
 
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     ret = ge::GEFinalize();
@@ -238,5 +291,6 @@ int main(int argc, char* argv[])
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
+    printf("LarsV2Update static GEIR verification PASSED\n");
     return SUCCESS;
 }

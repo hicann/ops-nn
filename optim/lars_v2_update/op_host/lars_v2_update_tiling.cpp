@@ -26,12 +26,11 @@
 
 namespace optiling {
 
-constexpr float kDefaultHyperpara = 0.001f;
-constexpr float kDefaultEpsilon = 0.00001f;
-constexpr int64_t kRankThreshold4 = 4;
-constexpr int64_t kRankThreshold8 = 8;
-constexpr int64_t kUbAlignMask = 31LL;
-constexpr int64_t kFp32Bytes = 4;
+constexpr float DEFAULT_HYPERPARA = 0.001f;
+constexpr float DEFAULT_EPSILON = 0.00001f;
+constexpr int64_t RANK_THRESHOLD_4 = 4;
+constexpr int64_t RANK_THRESHOLD_8 = 8;
+// UB_ALIGN_MASK / FP32_BYTES / SCALAR_BUF_BYTES 定义于 op_kernel/arch35/lars_v2_update_tiling_data.h
 
 // PadAndSqueeze: 1-prepending pad to max_rank, then squeeze dims
 // where every input/output is 1. 6 inputs / 1 output.
@@ -40,17 +39,17 @@ bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
                    std::vector<std::vector<int64_t>>& normal_input_shapes,
                    std::vector<std::vector<int64_t>>& normal_output_shapes)
 {
-    int64_t num_inputs = (int64_t)input_shapes.size();
-    int64_t num_outputs = (int64_t)output_shapes.size();
+    int64_t num_inputs = static_cast<int64_t>(input_shapes.size());
+    int64_t num_outputs = static_cast<int64_t>(output_shapes.size());
     int64_t max_rank = 0;
     for (const auto& s : input_shapes)
-        max_rank = std::max(max_rank, (int64_t)s.size());
+        max_rank = std::max(max_rank, static_cast<int64_t>(s.size()));
     for (const auto& s : output_shapes)
-        max_rank = std::max(max_rank, (int64_t)s.size());
+        max_rank = std::max(max_rank, static_cast<int64_t>(s.size()));
 
     auto pad = [&](const std::vector<int64_t>& s) {
         std::vector<int64_t> p;
-        p.assign(max_rank - (int64_t)s.size(), 1);
+        p.assign(max_rank - static_cast<int64_t>(s.size()), 1);
         p.insert(p.end(), s.begin(), s.end());
         return p;
     };
@@ -97,17 +96,19 @@ bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
 
 // CheckBroadcastShape: per-dim, the first non-1 size is the ref;
 // every other non-1 size (in/out) must equal ref. bad_dim = first incompatible
-// dim, -1 if compatible.
+// dim, -1 if compatible. 使用独立 bool 哨兵, 避免与 -1 维值歧义.
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank, int64_t* bad_dim)
 {
     for (int64_t d = 0; d < max_rank; d++) {
+        bool hasRef = false;
         int64_t ref = -1;
         for (size_t i = 0; i < padded_in.size(); i++) {
             if (padded_in[i][d] != 1) {
-                if (ref == -1)
+                if (!hasRef) {
+                    hasRef = true;
                     ref = padded_in[i][d];
-                else if (padded_in[i][d] != ref) {
+                } else if (padded_in[i][d] != ref) {
                     if (bad_dim)
                         *bad_dim = d;
                     return false;
@@ -116,9 +117,10 @@ bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
         }
         for (size_t i = 0; i < padded_out.size(); i++) {
             if (padded_out[i][d] != 1) {
-                if (ref == -1)
+                if (!hasRef) {
+                    hasRef = true;
                     ref = padded_out[i][d];
-                else if (padded_out[i][d] != ref) {
+                } else if (padded_out[i][d] != ref) {
                     if (bad_dim)
                         *bad_dim = d;
                     return false;
@@ -131,15 +133,17 @@ bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
     return true;
 }
 
-// P=3: per_buf_bytes = (ub_per_core / phys_nodes) & ~31
-// (32B align, TBuf hardware requirement).
+// P=3: per_buf_bytes = ((ub_per_core - SCALAR_BUF_BYTES) / phys_nodes) & ~31
+// (32B align, TBuf hardware requirement). SCALAR_BUF_BYTES 预留给 Kernel 侧
+// 标量暂存 TBuf, 保证 3×per_buf + SCALAR_BUF_BYTES ≤ ub_per_core 恒成立.
 int64_t ComputePerBufBytes(int64_t ub_per_core, int64_t phys_nodes)
 {
-    return (ub_per_core / phys_nodes) & ~kUbAlignMask;
+    int64_t ubForVec = ub_per_core - SCALAR_BUF_BYTES;
+    return (ubForVec / phys_nodes) & ~UB_ALIGN_MASK;
 }
 
 // per_buf_elems = per_buf_bytes / 4 (FP32 basis, independent of dtype).
-int64_t ComputePerBufElems(int64_t per_buf_bytes) { return per_buf_bytes / kFp32Bytes; }
+int64_t ComputePerBufElems(int64_t per_buf_bytes) { return per_buf_bytes / FP32_BYTES; }
 
 // FindSplitAxis: pick the UB split axis. Walk dims from innermost
 // outward accumulating `inner`; the first dim whose full slice exceeds
@@ -153,7 +157,7 @@ bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, int64_t /*dtype_si
     if (per_buf_elems <= 0) {
         return false;
     }
-    int64_t rank = (int64_t)max_bro_shape.size();
+    int64_t rank = static_cast<int64_t>(max_bro_shape.size());
     int64_t inner = 1;
     for (int64_t k = rank - 1; k >= 0; k--) {
         if (max_bro_shape[k] * inner > per_buf_elems) {
@@ -198,10 +202,10 @@ bool MultiCoreSplit(const std::vector<int64_t>& max_bro_shape, const SplitResult
 // TilingKey dispatch: effective rank -> 4 / 8 / -1.
 int64_t ChooseTilingKey(int64_t effective_rank)
 {
-    if (effective_rank <= kRankThreshold4)
-        return kRankThreshold4;
-    if (effective_rank <= kRankThreshold8)
-        return kRankThreshold8;
+    if (effective_rank <= RANK_THRESHOLD_4)
+        return RANK_THRESHOLD_4;
+    if (effective_rank <= RANK_THRESHOLD_8)
+        return RANK_THRESHOLD_8;
     return -1;
 }
 
@@ -209,8 +213,8 @@ int64_t ChooseTilingKey(int64_t effective_rank)
 //   hyperpara nullptr -> 0.001; epsilon nullptr -> 1e-5; use_clip nullptr/false -> 0.
 void ResolveAttrs(const float* hyperpara, const float* epsilon, const bool* use_clip, LarsAttrs& out)
 {
-    out.hyperpara = hyperpara ? *hyperpara : kDefaultHyperpara;
-    out.epsilon = epsilon ? *epsilon : kDefaultEpsilon;
+    out.hyperpara = hyperpara ? *hyperpara : DEFAULT_HYPERPARA;
+    out.epsilon = epsilon ? *epsilon : DEFAULT_EPSILON;
     out.use_clip = (use_clip && *use_clip) ? 1LL : 0LL;
 }
 
@@ -229,7 +233,7 @@ namespace {
 // product of higher dims of the input's own normal shape.
 std::vector<int64_t> ComputeStridesLocal(const std::vector<int64_t>& normal, const std::vector<int64_t>& bro)
 {
-    int64_t rank = (int64_t)normal.size();
+    int64_t rank = static_cast<int64_t>(normal.size());
     std::vector<int64_t> strides(rank, 0);
     int64_t acc = 1;
     for (int64_t d = rank - 1; d >= 0; d--) {
@@ -255,34 +259,34 @@ void FillTilingData4(TilingData4& td, const SplitResult& split, const MultiCoreR
     td.multicore = mc;
     td.rank = eff_rank;
     td.per_buf_bytes = per_buf_bytes;
-    td.num_inputs = kMaxInputSlots;   // 6
-    td.num_outputs = kMaxOutputSlots; // 1
+    td.num_inputs = MAX_INPUT_SLOTS;   // 6
+    td.num_outputs = MAX_OUTPUT_SLOTS; // 1
     td.hyperpara = attrs.hyperpara;
     td.epsilon = attrs.epsilon;
     td.use_clip = attrs.use_clip;
 
-    for (int64_t d = 0; d < kRankThreshold4; d++) {
+    for (int64_t d = 0; d < RANK_THRESHOLD_4; d++) {
         td.max_bro_shape[d] = (d < eff_rank) ? max_bro[d] : 1;
     }
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
-        for (int64_t d = 0; d < kRankThreshold4; d++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
+        for (int64_t d = 0; d < RANK_THRESHOLD_4; d++) {
             td.input_shapes[i][d] = (d < eff_rank) ? normal_in[i][d] : 1;
             td.input_strides[i][d] = 0;
         }
-        if (i < (int64_t)normal_in.size() && (int64_t)normal_in[i].size() == eff_rank) {
+        if (i < static_cast<int64_t>(normal_in.size()) && static_cast<int64_t>(normal_in[i].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStridesLocal(normal_in[i], max_bro);
-            for (int64_t d = 0; d < eff_rank && d < kRankThreshold4; d++)
+            for (int64_t d = 0; d < eff_rank && d < RANK_THRESHOLD_4; d++)
                 td.input_strides[i][d] = st[d];
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
-        for (int64_t d = 0; d < kRankThreshold4; d++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
+        for (int64_t d = 0; d < RANK_THRESHOLD_4; d++) {
             td.output_shapes[o][d] = (d < eff_rank) ? normal_out[o][d] : 1;
             td.output_strides[o][d] = 0;
         }
-        if (o < (int64_t)normal_out.size() && (int64_t)normal_out[o].size() == eff_rank) {
+        if (o < static_cast<int64_t>(normal_out.size()) && static_cast<int64_t>(normal_out[o].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStridesLocal(normal_out[o], max_bro);
-            for (int64_t d = 0; d < eff_rank && d < kRankThreshold4; d++)
+            for (int64_t d = 0; d < eff_rank && d < RANK_THRESHOLD_4; d++)
                 td.output_strides[o][d] = st[d];
         }
     }
@@ -304,34 +308,34 @@ void FillTilingData8(TilingData8& td, const SplitResult& split, const MultiCoreR
     td.multicore = mc;
     td.rank = eff_rank;
     td.per_buf_bytes = per_buf_bytes;
-    td.num_inputs = kMaxInputSlots;   // 6
-    td.num_outputs = kMaxOutputSlots; // 1
+    td.num_inputs = MAX_INPUT_SLOTS;   // 6
+    td.num_outputs = MAX_OUTPUT_SLOTS; // 1
     td.hyperpara = attrs.hyperpara;
     td.epsilon = attrs.epsilon;
     td.use_clip = attrs.use_clip;
 
-    for (int64_t d = 0; d < kRankThreshold8; d++) {
+    for (int64_t d = 0; d < RANK_THRESHOLD_8; d++) {
         td.max_bro_shape[d] = (d < eff_rank) ? max_bro[d] : 1;
     }
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
-        for (int64_t d = 0; d < kRankThreshold8; d++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
+        for (int64_t d = 0; d < RANK_THRESHOLD_8; d++) {
             td.input_shapes[i][d] = (d < eff_rank) ? normal_in[i][d] : 1;
             td.input_strides[i][d] = 0;
         }
-        if (i < (int64_t)normal_in.size() && (int64_t)normal_in[i].size() == eff_rank) {
+        if (i < static_cast<int64_t>(normal_in.size()) && static_cast<int64_t>(normal_in[i].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStridesLocal(normal_in[i], max_bro);
-            for (int64_t d = 0; d < eff_rank && d < kRankThreshold8; d++)
+            for (int64_t d = 0; d < eff_rank && d < RANK_THRESHOLD_8; d++)
                 td.input_strides[i][d] = st[d];
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
-        for (int64_t d = 0; d < kRankThreshold8; d++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
+        for (int64_t d = 0; d < RANK_THRESHOLD_8; d++) {
             td.output_shapes[o][d] = (d < eff_rank) ? normal_out[o][d] : 1;
             td.output_strides[o][d] = 0;
         }
-        if (o < (int64_t)normal_out.size() && (int64_t)normal_out[o].size() == eff_rank) {
+        if (o < static_cast<int64_t>(normal_out.size()) && static_cast<int64_t>(normal_out[o].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStridesLocal(normal_out[o], max_bro);
-            for (int64_t d = 0; d < eff_rank && d < kRankThreshold8; d++)
+            for (int64_t d = 0; d < eff_rank && d < RANK_THRESHOLD_8; d++)
                 td.output_strides[o][d] = st[d];
         }
     }
@@ -348,8 +352,8 @@ bool ComputeBranch4Tiling(const Branch4Inputs& in, TilingData4& out)
     if (!PadAndSqueeze(in.input_shapes, in.output_shapes, max_bro, normal_in, normal_out)) {
         return false;
     }
-    int64_t eff_rank = (int64_t)max_bro.size();
-    if (eff_rank > kRankThreshold4) {
+    int64_t eff_rank = static_cast<int64_t>(max_bro.size());
+    if (eff_rank > RANK_THRESHOLD_4) {
         return false; // Branch-4 dispatch invariant: eff rank ≤ 4
     }
     if (!CheckBroadcastShape(normal_in, normal_out, eff_rank, nullptr)) {
@@ -358,14 +362,14 @@ bool ComputeBranch4Tiling(const Branch4Inputs& in, TilingData4& out)
 
     // --- step 2: UB split (FindSplitAxis) + multi-core split + per_buf ---
     SplitResult split{};
-    if (!FindSplitAxis(max_bro, in.dtype_size, in.ub_per_core, kPhysNodes, split)) {
+    if (!FindSplitAxis(max_bro, in.dtype_size, in.ub_per_core, PHYS_NODES, split)) {
         return false;
     }
     MultiCoreResult mc{};
     if (!MultiCoreSplit(max_bro, split, in.max_cores, mc)) {
         return false;
     }
-    int64_t per_buf_bytes = ComputePerBufBytes(in.ub_per_core, kPhysNodes);
+    int64_t per_buf_bytes = ComputePerBufBytes(in.ub_per_core, PHYS_NODES);
 
     // --- step 3: pack TilingData4 ---
     FillTilingData4(out, split, mc, eff_rank, per_buf_bytes, max_bro, normal_in, normal_out, in.attrs);
@@ -390,10 +394,10 @@ bool ComputeBranch8Tiling(const Branch8Inputs& in, TilingData8& out)
     if (!PadAndSqueeze(in.input_shapes, in.output_shapes, max_bro, normal_in, normal_out)) {
         return false;
     }
-    int64_t eff_rank = (int64_t)max_bro.size();
+    int64_t eff_rank = static_cast<int64_t>(max_bro.size());
     // Branch-8 dispatch invariant:
     // 4 < effective rank ≤ 8 (PadAndSqueeze result >4 enters Branch-8).
-    if (eff_rank <= kRankThreshold4 || eff_rank > kRankThreshold8) {
+    if (eff_rank <= RANK_THRESHOLD_4 || eff_rank > RANK_THRESHOLD_8) {
         return false;
     }
     if (!CheckBroadcastShape(normal_in, normal_out, eff_rank, nullptr)) {
@@ -404,14 +408,14 @@ bool ComputeBranch8Tiling(const Branch8Inputs& in, TilingData8& out)
     // dtype_size is signature-only (element count always /4,
     // FP32 basis, independent of dtype); identical formulas to Branch-4.
     SplitResult split{};
-    if (!FindSplitAxis(max_bro, in.dtype_size, in.ub_per_core, kPhysNodes, split)) {
+    if (!FindSplitAxis(max_bro, in.dtype_size, in.ub_per_core, PHYS_NODES, split)) {
         return false;
     }
     MultiCoreResult mc{};
     if (!MultiCoreSplit(max_bro, split, in.max_cores, mc)) {
         return false;
     }
-    int64_t per_buf_bytes = ComputePerBufBytes(in.ub_per_core, kPhysNodes);
+    int64_t per_buf_bytes = ComputePerBufBytes(in.ub_per_core, PHYS_NODES);
 
     // --- step 3: pack TilingData8 ---
     FillTilingData8(out, split, mc, eff_rank, per_buf_bytes, max_bro, normal_in, normal_out, in.attrs);

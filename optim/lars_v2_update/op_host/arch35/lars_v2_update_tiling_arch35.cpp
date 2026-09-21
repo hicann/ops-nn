@@ -52,7 +52,7 @@ std::vector<int64_t> ShapeToVector(const gert::StorageShape* shp)
 // product of higher dims of the input's own shape.
 std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& normal, const std::vector<int64_t>& bro)
 {
-    int64_t rank = (int64_t)normal.size();
+    int64_t rank = static_cast<int64_t>(normal.size());
     std::vector<int64_t> strides(rank, 0);
     int64_t acc = 1;
     for (int64_t d = rank - 1; d >= 0; d--) {
@@ -79,8 +79,8 @@ void FillTilingData(LarsV2UpdateTilingData<kRank>* td, const SplitResult& split,
     td->multicore = mc;
     td->rank = eff_rank;
     td->per_buf_bytes = per_buf_bytes;
-    td->num_inputs = kMaxInputSlots;
-    td->num_outputs = kMaxOutputSlots;
+    td->num_inputs = MAX_INPUT_SLOTS;
+    td->num_outputs = MAX_OUTPUT_SLOTS;
     td->hyperpara = attrs.hyperpara;
     td->epsilon = attrs.epsilon;
     td->use_clip = attrs.use_clip;
@@ -88,24 +88,24 @@ void FillTilingData(LarsV2UpdateTilingData<kRank>* td, const SplitResult& split,
     for (int64_t d = 0; d < kRank; d++) {
         td->max_bro_shape[d] = (d < eff_rank) ? max_bro[d] : 1;
     }
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < kRank; d++) {
             td->input_shapes[i][d] = (d < eff_rank) ? normal_in[i][d] : 1;
             td->input_strides[i][d] = 0;
         }
-        if (i < (int64_t)normal_in.size() && (int64_t)normal_in[i].size() == eff_rank) {
+        if (i < static_cast<int64_t>(normal_in.size()) && static_cast<int64_t>(normal_in[i].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStrides(normal_in[i], max_bro);
             for (int64_t d = 0; d < eff_rank && d < kRank; d++) {
                 td->input_strides[i][d] = st[d];
             }
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < kRank; d++) {
             td->output_shapes[o][d] = (d < eff_rank) ? normal_out[o][d] : 1;
             td->output_strides[o][d] = 0;
         }
-        if (o < (int64_t)normal_out.size() && (int64_t)normal_out[o].size() == eff_rank) {
+        if (o < static_cast<int64_t>(normal_out.size()) && static_cast<int64_t>(normal_out[o].size()) == eff_rank) {
             std::vector<int64_t> st = ComputeStrides(normal_out[o], max_bro);
             for (int64_t d = 0; d < eff_rank && d < kRank; d++) {
                 td->output_strides[o][d] = st[d];
@@ -124,10 +124,10 @@ void FillTilingData(LarsV2UpdateTilingData<kRank>* td, const SplitResult& split,
 // key=4 -> TilingData4 (RANK=4 template), key=8 -> TilingData8 (RANK=8 template).
 static ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter LarsV2UpdateTilingFunc");
     // --- step 0: platform info ---
     auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     platform_ascendc::PlatformAscendC plat(platformInfo);
     uint32_t coreNum = plat.GetCoreNumAiv();
     OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
@@ -137,28 +137,60 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
 
     // --- step 1: collect 6 in / 1 out shapes + dtype_size + attrs ---
     // dtype check: all 6 inputs must be DT_FLOAT (def.cpp:26-31)
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
-        auto inputDesc = context->GetInputDesc((size_t)i);
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
+        auto inputDesc = context->GetInputDesc(static_cast<size_t>(i));
         OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
         auto dt = inputDesc->GetDataType();
         OP_CHECK_IF(SUPPORTED_DTYPES.count(dt) == 0,
                     OP_LOGE(context, "LarsV2Update: input%d has incorrect dtype %s. It should be DT_FLOAT.",
                             static_cast<int32_t>(i), ToString(dt).c_str()),
                     return ge::GRAPH_FAILED);
+        // format check: all 6 inputs must be FORMAT_ND (def.cpp:26-31)
+        OP_CHECK_IF(inputDesc->GetStorageFormat() != ge::FORMAT_ND,
+                    OP_LOGE(context, "LarsV2Update: input%d format is not ND.", static_cast<int32_t>(i)),
+                    return ge::GRAPH_FAILED);
     }
 
-    std::vector<std::vector<int64_t>> in_shapes(kMaxInputSlots);
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
-        in_shapes[i] = ShapeToVector(context->GetInputShape((size_t)i));
+    std::vector<std::vector<int64_t>> in_shapes(MAX_INPUT_SLOTS);
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
+        in_shapes[i] = ShapeToVector(context->GetInputShape(static_cast<size_t>(i)));
         OP_CHECK_IF(in_shapes[i].size() > MAX_DIM_NUM,
                     OP_LOGE(context, "LarsV2Update: input%d dim num %zu must be less than or equal to 8.",
                             static_cast<int32_t>(i), in_shapes[i].size()),
                     return ge::GRAPH_FAILED);
+        for (size_t d = 0; d < in_shapes[i].size(); d++) {
+            OP_CHECK_IF(in_shapes[i][d] < 0,
+                        OP_LOGE(context, "LarsV2Update: input%d dim%zu is negative (%lld).", static_cast<int32_t>(i), d,
+                                static_cast<long long>(in_shapes[i][d])),
+                        return ge::GRAPH_FAILED);
+        }
     }
-    std::vector<std::vector<int64_t>> out_shapes(kMaxOutputSlots);
+    std::vector<std::vector<int64_t>> out_shapes(MAX_OUTPUT_SLOTS);
     out_shapes[0] = ShapeToVector(context->GetOutputShape(0));
 
-    int64_t dtypeSize = 4; // 固定 FP32
+    // --- step 1a: shape constraints (README 约束的代码实现) ---
+    // 约束1: w 和 g 必须具有相同的形状 (kernel 按 max_bro 共享布局读写 w/g/g_new).
+    OP_CHECK_IF(in_shapes[0] != in_shapes[1], OP_LOGE(context, "LarsV2Update: w and g must have the same shape."),
+                return ge::GRAPH_FAILED);
+    // 约束2: 输出 g_new 与 w 同形 (InferShape 为 broadcast(w, g), w==g 时等价; 此处兜底校验).
+    if (!out_shapes[0].empty()) {
+        OP_CHECK_IF(out_shapes[0] != in_shapes[0],
+                    OP_LOGE(context, "LarsV2Update: output g_new must have the same shape as w."),
+                    return ge::GRAPH_FAILED);
+    }
+    // 约束3: w_square_sum / g_square_sum / weight_decay / learning_rate 必须为标量 (元素数 1).
+    for (int64_t i = 2; i < MAX_INPUT_SLOTS; i++) {
+        int64_t numel = 1;
+        for (size_t d = 0; d < in_shapes[i].size(); d++) {
+            numel *= in_shapes[i][d];
+        }
+        OP_CHECK_IF(numel != 1,
+                    OP_LOGE(context, "LarsV2Update: input%d must be a scalar (1 element), got %lld elements.",
+                            static_cast<int32_t>(i), static_cast<long long>(numel)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    int64_t dtypeSize = FP32_BYTES; // 固定 FP32
 
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
     const float* hpAttr = (attrs != nullptr) ? attrs->GetFloat(0) : nullptr;
@@ -173,7 +205,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     if (!PadAndSqueeze(in_shapes, out_shapes, max_bro, normal_in, normal_out)) {
         return ge::GRAPH_FAILED;
     }
-    int64_t eff_rank = (int64_t)max_bro.size();
+    int64_t eff_rank = static_cast<int64_t>(max_bro.size());
     int64_t bad_dim = -1;
     if (!CheckBroadcastShape(normal_in, normal_out, eff_rank, &bad_dim)) {
         return ge::GRAPH_FAILED;
@@ -187,28 +219,26 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
 
     // --- step 3: UB split + multi-core split + per_buf ---
     SplitResult split{};
-    if (!FindSplitAxis(max_bro, dtypeSize, (int64_t)ubSize, kPhysNodes, split)) {
+    if (!FindSplitAxis(max_bro, dtypeSize, static_cast<int64_t>(ubSize), PHYS_NODES, split)) {
         return ge::GRAPH_FAILED;
     }
     MultiCoreResult mc{};
-    if (!MultiCoreSplit(max_bro, split, (int64_t)coreNum, mc)) {
+    if (!MultiCoreSplit(max_bro, split, static_cast<int64_t>(coreNum), mc)) {
         return ge::GRAPH_FAILED;
     }
-    int64_t perBufBytes = ComputePerBufBytes((int64_t)ubSize, kPhysNodes);
+    int64_t perBufBytes = ComputePerBufBytes(static_cast<int64_t>(ubSize), PHYS_NODES);
 
     // --- step 4: fill TilingData + set key/block-dim/workspace ---
     // key=4 -> TilingData4 (RANK=4 template), key=8 -> TilingData8 (RANK=8 template).
     if (tilingKey == LARS_V2_UPDATE_RANK_8) {
         TilingData8* td = context->GetTilingData<TilingData8>();
-        if (td != nullptr) {
-            FillTilingData<8>(td, split, mc, eff_rank, perBufBytes, max_bro, normal_in, normal_out, larsAttrs);
-        }
+        OP_CHECK_NULL_WITH_CONTEXT(context, td);
+        FillTilingData<8>(td, split, mc, eff_rank, perBufBytes, max_bro, normal_in, normal_out, larsAttrs);
         context->SetTilingKey(GET_TPL_TILING_KEY(LARS_V2_UPDATE_RANK_8));
     } else {
         TilingData4* td = context->GetTilingData<TilingData4>();
-        if (td != nullptr) {
-            FillTilingData<4>(td, split, mc, eff_rank, perBufBytes, max_bro, normal_in, normal_out, larsAttrs);
-        }
+        OP_CHECK_NULL_WITH_CONTEXT(context, td);
+        FillTilingData<4>(td, split, mc, eff_rank, perBufBytes, max_bro, normal_in, normal_out, larsAttrs);
         context->SetTilingKey(GET_TPL_TILING_KEY(LARS_V2_UPDATE_RANK_4));
     }
 

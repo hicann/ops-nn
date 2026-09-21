@@ -45,12 +45,12 @@ using namespace AscendC;
 template <typename T>
 __simd_vf__ inline void LarsMulAddVF(__ubuf__ T* gAddr, __ubuf__ T* wAddr, __ubuf__ T* wdAddr, uint32_t count)
 {
-    constexpr uint32_t oneRepElm = static_cast<uint32_t>(AscendC::GetVecLen() / sizeof(T));
-    uint16_t repTimes = static_cast<uint16_t>((count + oneRepElm - 1) / oneRepElm);
+    constexpr uint32_t ONE_REP_ELM = static_cast<uint32_t>(AscendC::GetVecLen() / sizeof(T));
+    uint16_t repTimes = static_cast<uint16_t>((count + ONE_REP_ELM - 1) / ONE_REP_ELM);
     AscendC::Reg::RegTensor<T> wReg, wdReg, gReg;
     AscendC::Reg::MaskReg mask;
     for (uint16_t i = 0; i < repTimes; ++i) {
-        uint32_t off = i * oneRepElm;
+        uint32_t off = i * ONE_REP_ELM;
         uint32_t rem = count - off;
         mask = AscendC::Reg::UpdateMask<T>(rem);
         AscendC::Reg::LoadAlign(wReg, wAddr + off);
@@ -65,12 +65,12 @@ __simd_vf__ inline void LarsMulAddVF(__ubuf__ T* gAddr, __ubuf__ T* wAddr, __ubu
 template <typename T>
 __simd_vf__ inline void LarsMulsVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, T scalarValue, uint32_t count)
 {
-    constexpr uint32_t oneRepElm = static_cast<uint32_t>(AscendC::GetVecLen() / sizeof(T));
-    uint16_t repTimes = static_cast<uint16_t>((count + oneRepElm - 1) / oneRepElm);
+    constexpr uint32_t ONE_REP_ELM = static_cast<uint32_t>(AscendC::GetVecLen() / sizeof(T));
+    uint16_t repTimes = static_cast<uint16_t>((count + ONE_REP_ELM - 1) / ONE_REP_ELM);
     AscendC::Reg::RegTensor<T> srcReg, dstReg;
     AscendC::Reg::MaskReg mask;
     for (uint16_t i = 0; i < repTimes; ++i) {
-        uint32_t off = i * oneRepElm;
+        uint32_t off = i * ONE_REP_ELM;
         uint32_t rem = count - off;
         mask = AscendC::Reg::UpdateMask<T>(rem);
         AscendC::Reg::LoadAlign(srcReg, srcAddr + off);
@@ -94,17 +94,18 @@ constexpr uint32_t SLOT_NUM = 256;
 constexpr uint32_t SLOT_WDWN = 288;
 constexpr uint32_t SLOT_DENOM = 320;
 constexpr uint32_t SLOT_COEFF = 352;
-constexpr uint32_t SCALAR_BUF_SIZE = 512; // 12 × 32B aligned slots = 384B, rounded to 512B
-constexpr uint32_t SCALAR_ELEM_COUNT = 1; // each scalar slot holds 1 element
-constexpr uint32_t SCALAR_BYTE_SIZE = 4;  // sizeof(float)
-constexpr uint32_t NDDMA_MAX_DIMS = 5;    // NDDMA hardware dimension limit
+constexpr uint32_t SCALAR_BUF_SIZE = static_cast<uint32_t>(SCALAR_BUF_BYTES); // 12 × 32B slots = 384B, rounded to 512B
+constexpr uint32_t SCALAR_ELEM_COUNT = 1;                                     // each scalar slot holds 1 element
+constexpr uint32_t SCALAR_BYTE_SIZE = 4;                                      // sizeof(float)
+constexpr uint32_t NDDMA_MAX_DIMS = 5;                                        // NDDMA hardware dimension limit
+constexpr uint32_t SEG_ALIGN_MASK = 31U; // DataCopyPad sub-buffer 32B alignment mask
 constexpr float CLIP_UPPER = 1.0f;
 constexpr float CLIP_LOWER = 0.0f;
 
 template <typename T, int64_t RANK>
 class LarsV2UpdateKernel {
 public:
-    __aicore__ inline LarsV2UpdateKernel(AscendC::TPipe* pipe) : pipe_(pipe) {}
+    __aicore__ inline explicit LarsV2UpdateKernel(AscendC::TPipe* pipe) : pipe_(pipe) {}
 
     __aicore__ inline void Init(GM_ADDR w, GM_ADDR g, GM_ADDR wSquareSum, GM_ADDR gSquareSum, GM_ADDR weightDecay,
                                 GM_ADDR learningRate, GM_ADDR gNew, const LarsV2UpdateTilingData<RANK>* td)
@@ -247,7 +248,7 @@ private:
             // 退化为单次扁平拷贝 (ST 用例 w/g 连续, 单次拷贝结果等价).
             uint32_t segElems = static_cast<uint32_t>(innerSegCount);
             uint32_t segBytes = static_cast<uint32_t>(innerSegCount * sizeof(T));
-            if (outerIters > 1 && (segBytes & 31U) == 0) {
+            if (outerIters > 1 && (segBytes & SEG_ALIGN_MASK) == 0) {
                 AscendC::DataCopyExtParams cpSeg{1, segBytes, 0, 0, 0};
                 for (int64_t oi = 0; oi < outerIters; oi++) {
                     uint32_t byteOff = static_cast<uint32_t>(oi * innerSegCount * sizeof(T));
@@ -287,7 +288,6 @@ private:
         int64_t offset = outerIdx * axisStride + aoOff * tileStride;
 
         uint32_t cnt = static_cast<uint32_t>(count);
-        uint32_t off = static_cast<uint32_t>(offset);
         uint32_t blkLen = cnt * static_cast<uint32_t>(sizeof(T));
 
         AscendC::DataCopyExtParams cp{1, blkLen, 0, 0, 0};
@@ -305,10 +305,10 @@ private:
         asc_vf_call<LarsMulAddVF<float>>((__ubuf__ float*)b1.GetPhyAddr(), (__ubuf__ float*)b0.GetPhyAddr(),
                                          (__ubuf__ float*)b2.GetPhyAddr(), cnt); // grad_weight = w*wd+g (in-place B1)
         asc_vf_call<LarsMulsVF<float>>((__ubuf__ float*)b0.GetPhyAddr(), (__ubuf__ float*)b1.GetPhyAddr(), coeff_,
-                                       cnt);        // g_new = grad_weight*coeff (B0)
-        AscendC::PipeBarrier<PIPE_ALL>();           // V_MTE3: VF 毕 → CopyOut 读
-        AscendC::DataCopyPad(gNewGm_[off], b0, cp); // MTE3, DataCopyPad 尾块安全
-        AscendC::PipeBarrier<PIPE_ALL>();           // MTE3_MTE2: B0 复用 WAR
+                                       cnt);           // g_new = grad_weight*coeff (B0)
+        AscendC::PipeBarrier<PIPE_ALL>();              // V_MTE3: VF 毕 → CopyOut 读
+        AscendC::DataCopyPad(gNewGm_[offset], b0, cp); // MTE3, DataCopyPad 尾块安全 (int64 GM 偏移)
+        AscendC::PipeBarrier<PIPE_ALL>();              // MTE3_MTE2: B0 复用 WAR
     }
 
     AscendC::TPipe* pipe_;

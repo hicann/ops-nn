@@ -23,14 +23,14 @@
 #include <vector>
 #include <gtest/gtest.h>
 
-#include "lars_v2_update_tiling_data.h" // SplitResult, MultiCoreResult, kPhysNodes
+#include "lars_v2_update_tiling_data.h" // SplitResult, MultiCoreResult, PHYS_NODES
 #include "lars_v2_update_tiling.h"      // optiling:: public tiling functions
 
 namespace {
 // DESIGN §5.3 constants (hand-copied; oracle must NOT call optiling:: functions).
-constexpr int64_t kPhysNodesOracle = 3; // DESIGN §5.3 P conclusion (kPhysNodes)
-constexpr int64_t kUb192K = 196608;     // Ascend950DT typical UB = 192 KiB
-constexpr int64_t kUb256K = 262144;     // 256 KiB variant
+constexpr int64_t PHYS_NODES_ORACLE = 3; // DESIGN §5.3 P conclusion (PHYS_NODES)
+constexpr int64_t UB_192K = 196608;      // Ascend950DT typical UB = 192 KiB
+constexpr int64_t UB_256K = 262144;      // 256 KiB variant
 
 inline int64_t CeilDiv(int64_t a, int64_t b) { return (a + b - 1) / b; }
 
@@ -131,7 +131,7 @@ OraBcast OraCheckBroadcast(const std::vector<std::vector<int64_t>>& pin, const s
 }
 
 // ===== Independent oracle: per_buf (DESIGN §5.3, P=3) =====
-int64_t OraPerBufBytes(int64_t ub, int64_t P) { return (ub / P) & ~31LL; }
+int64_t OraPerBufBytes(int64_t ub, int64_t P) { return ((ub - SCALAR_BUF_BYTES) / P) & ~31LL; }
 int64_t OraPerBufElems(int64_t bytes) { return bytes / 4; }
 
 // ===== Independent oracle: FindSplitAxis (DESIGN §5.3) =====
@@ -301,13 +301,13 @@ class FindSplitAxisTest : public testing::TestWithParam<SplitCase> {};
 TEST_P(FindSplitAxisTest, Formula)
 {
     const auto& p = GetParam();
-    OraSplit exp = OraFindSplit(p.shape, p.ub, kPhysNodesOracle);
+    OraSplit exp = OraFindSplit(p.shape, p.ub, PHYS_NODES_ORACLE);
     SplitResult act;
     act.axis = INT64_MIN;
     act.a_i = INT64_MIN;
     act.a_o = INT64_MIN;
     act.a_i_tail = INT64_MIN;
-    bool ret = optiling::FindSplitAxis(p.shape, /*dtype_size=*/4, p.ub, kPhysNodesOracle, act);
+    bool ret = optiling::FindSplitAxis(p.shape, /*dtype_size=*/4, p.ub, PHYS_NODES_ORACLE, act);
     EXPECT_TRUE(ret);
     EXPECT_EQ(act.axis, exp.axis);
     EXPECT_EQ(act.a_i, exp.a_i);
@@ -317,14 +317,14 @@ TEST_P(FindSplitAxisTest, Formula)
 
 INSTANTIATE_TEST_SUITE_P(
     LarsV2Update, FindSplitAxisTest,
-    testing::Values(SplitCase{"1d_256_ub192", {256}, kUb192K}, SplitCase{"1d_4096_ub192", {4096}, kUb192K},
-                    SplitCase{"1d_16385_ub192", {16385}, kUb192K}, SplitCase{"2d_1024_ub192", {1024, 1024}, kUb192K},
-                    SplitCase{"4d_conv_ub192", {64, 3, 7, 7}, kUb192K},
-                    SplitCase{"4d_conv2_ub192", {128, 128, 3, 3}, kUb192K}, SplitCase{"2d_4_7_ub192", {4, 7}, kUb192K},
-                    SplitCase{"8d_max_ub192", {2, 2, 2, 2, 2, 2, 2, 2}, kUb192K},
-                    SplitCase{"5d_ub192", {8, 8, 8, 8, 8}, kUb192K},
-                    SplitCase{"5d_mix_ub192", {2, 4, 8, 16, 32}, kUb192K},
-                    SplitCase{"2d_1024_ub256", {1024, 1024}, kUb256K}, SplitCase{"1d_big_ub256", {100000}, kUb256K}));
+    testing::Values(SplitCase{"1d_256_ub192", {256}, UB_192K}, SplitCase{"1d_4096_ub192", {4096}, UB_192K},
+                    SplitCase{"1d_16385_ub192", {16385}, UB_192K}, SplitCase{"2d_1024_ub192", {1024, 1024}, UB_192K},
+                    SplitCase{"4d_conv_ub192", {64, 3, 7, 7}, UB_192K},
+                    SplitCase{"4d_conv2_ub192", {128, 128, 3, 3}, UB_192K}, SplitCase{"2d_4_7_ub192", {4, 7}, UB_192K},
+                    SplitCase{"8d_max_ub192", {2, 2, 2, 2, 2, 2, 2, 2}, UB_192K},
+                    SplitCase{"5d_ub192", {8, 8, 8, 8, 8}, UB_192K},
+                    SplitCase{"5d_mix_ub192", {2, 4, 8, 16, 32}, UB_192K},
+                    SplitCase{"2d_1024_ub256", {1024, 1024}, UB_256K}, SplitCase{"1d_big_ub256", {100000}, UB_256K}));
 
 // =====================================================================
 // MultiCoreSplit
@@ -425,9 +425,9 @@ TEST_P(PerBufTest, Formula)
 }
 
 INSTANTIATE_TEST_SUITE_P(LarsV2Update, PerBufTest,
-                         testing::Values(PbCase{"ub192_p3", 196608, 3},      // bytes=65536, elems=16384
-                                         PbCase{"ub256_p3", 262144, 3},      // bytes=87360, elems=21840
-                                         PbCase{"ub192off_p3", 196611, 3},   // (65537)&~31=65536 -> mask exercised
+                         testing::Values(PbCase{"ub192_p3", 196608, 3},      // bytes=65344, elems=16336
+                                         PbCase{"ub256_p3", 262144, 3},      // bytes=87200, elems=21800
+                                         PbCase{"ub192off_p3", 196611, 3},   // (65366)&~31=65344 -> mask exercised
                                          PbCase{"ub200k_p3", 200000, 3},     // bytes=66656, elems=16664
                                          PbCase{"ub192_p3_align", 196704, 3} // bytes=65568, elems=16392
                                          ));

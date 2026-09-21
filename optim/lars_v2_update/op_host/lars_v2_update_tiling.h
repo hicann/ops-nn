@@ -46,7 +46,7 @@ bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank,
                          int64_t* bad_dim = nullptr);
 
-// per_buf helpers (P = kPhysNodes = 3).
+// per_buf helpers (P = PHYS_NODES = 3).
 // per_buf_bytes = (ub_per_core / phys_nodes) & ~31  (32B align, TBuf hw requirement)
 int64_t ComputePerBufBytes(int64_t ub_per_core, int64_t phys_nodes);
 // per_buf_elems = per_buf_bytes / 4  (always /4, FP32 basis)
@@ -77,7 +77,7 @@ void ResolveAttrs(const float* hyperpara, const float* epsilon, const bool* use_
 // rank ≤ 4 after PadAndSqueeze). Runs the full Branch-4 pipeline
 // (PadAndSqueeze → CheckBroadcastShape → FindSplitAxis → MultiCoreSplit → fill
 // TilingData4) and produces a complete TilingData4 ready for SetTilingData.
-// Constants: P = kPhysNodes = 3,
+// Constants: P = PHYS_NODES = 3,
 // per_buf_bytes = (ub_per_core / 3) & ~31, per_buf_elems = per_buf_bytes / 4.
 struct Branch4Inputs {
     std::vector<std::vector<int64_t>> input_shapes;  // 6 inputs (w,g,wss,gss,wd,lr)
@@ -98,7 +98,7 @@ bool ComputeBranch4Tiling(const Branch4Inputs& in, TilingData4& out);
 // (PadAndSqueeze → CheckBroadcastShape → FindSplitAxis → MultiCoreSplit → fill
 // TilingData8) and produces a complete TilingData8 ready for SetTilingData.
 // Constants: identical to Branch-4 — P =
-// kPhysNodes = 3, per_buf_bytes = (ub_per_core / 3) & ~31, per_buf_elems =
+// PHYS_NODES = 3, per_buf_bytes = (ub_per_core / 3) & ~31, per_buf_elems =
 // per_buf_bytes / 4. Split formulas are identical with Branch-4;
 // the only differences are the RANK=8 array dims (max_bro_shape[8] /
 // input_strides[6][8] / output_strides[1][8]) and the kernel-side NDDMA outer

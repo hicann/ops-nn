@@ -31,10 +31,10 @@ public:
         this->Input("learning_rate").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
         this->Output("g_new").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
 
-        constexpr float kDefaultHyperpara = 0.001f;
-        constexpr float kDefaultEpsilon = 0.00001f;
-        this->Attr("hyperpara").AttrType(OPTIONAL).Float(kDefaultHyperpara);
-        this->Attr("epsilon").AttrType(OPTIONAL).Float(kDefaultEpsilon);
+        constexpr float DEFAULT_HYPERPARA = 0.001f;
+        constexpr float DEFAULT_EPSILON = 0.00001f;
+        this->Attr("hyperpara").AttrType(OPTIONAL).Float(DEFAULT_HYPERPARA);
+        this->Attr("epsilon").AttrType(OPTIONAL).Float(DEFAULT_EPSILON);
         this->Attr("use_clip").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aiCoreConfig;

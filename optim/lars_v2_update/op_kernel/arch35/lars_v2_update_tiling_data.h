@@ -16,11 +16,18 @@
 
 // === 算子特定常量 ===
 // 6 入: w, g, w_square_sum, g_square_sum, weight_decay, learning_rate
-constexpr int64_t kMaxInputSlots = 6;
+constexpr int64_t MAX_INPUT_SLOTS = 6;
 // 1 出: g_new
-constexpr int64_t kMaxOutputSlots = 1;
+constexpr int64_t MAX_OUTPUT_SLOTS = 1;
 // 物理存活节点 P (= TBuf 槽位数)
-constexpr int64_t kPhysNodes = 3;
+constexpr int64_t PHYS_NODES = 3;
+// Kernel 侧标量计算暂存 buffer 大小 (12 × 32B slot = 384B, 向上取 512B).
+// Host 侧 ComputePerBufBytes 需从 UB 容量中扣除本值, 保证 3×per_buf + 512 ≤ ubSize.
+constexpr int64_t SCALAR_BUF_BYTES = 512;
+// TBuf 32B 对齐掩码 (硬件要求)
+constexpr int64_t UB_ALIGN_MASK = 31LL;
+// FP32 元素字节数 (dtype 固定 FP32)
+constexpr int64_t FP32_BYTES = 4;
 
 // UB 切分结果 (来源: FindSplitAxis)
 struct SplitResult {
@@ -45,17 +52,17 @@ struct MultiCoreResult {
 // dtype 不入 TilingData (走模板参数 T).
 template <int64_t kRank>
 struct LarsV2UpdateTilingData {
-    SplitResult split;                             // UB 切分结果 (来源: FindSplitAxis)
-    MultiCoreResult multicore;                     // 多核切分结果 (来源: MultiCoreSplit)
-    int64_t rank;                                  // 实际有效 rank (去 1 补 1 后)
-    int64_t per_buf_bytes;                         // 单 buffer 字节数 = (ubSize / P) & ~31
-    int64_t max_bro_shape[kRank];                  // 广播后各维大小 (坐标系)
-    int64_t num_inputs;                            // = 6
-    int64_t num_outputs;                           // = 1
-    int64_t input_shapes[kMaxInputSlots][kRank];   // 各输入补 1 后 shape (标量输入全 1)
-    int64_t input_strides[kMaxInputSlots][kRank];  // 各输入 GM stride (broadcast 轴 = 0)
-    int64_t output_shapes[kMaxOutputSlots][kRank]; // g_new 补 1 后 shape = max_bro_shape
-    int64_t output_strides[kMaxOutputSlots][kRank];
+    SplitResult split;                              // UB 切分结果 (来源: FindSplitAxis)
+    MultiCoreResult multicore;                      // 多核切分结果 (来源: MultiCoreSplit)
+    int64_t rank;                                   // 实际有效 rank (去 1 补 1 后)
+    int64_t per_buf_bytes;                          // 单 buffer 字节数 = (ubSize / P) & ~31
+    int64_t max_bro_shape[kRank];                   // 广播后各维大小 (坐标系)
+    int64_t num_inputs;                             // = 6
+    int64_t num_outputs;                            // = 1
+    int64_t input_shapes[MAX_INPUT_SLOTS][kRank];   // 各输入补 1 后 shape (标量输入全 1)
+    int64_t input_strides[MAX_INPUT_SLOTS][kRank];  // 各输入 GM stride (broadcast 轴 = 0)
+    int64_t output_shapes[MAX_OUTPUT_SLOTS][kRank]; // g_new 补 1 后 shape = max_bro_shape
+    int64_t output_strides[MAX_OUTPUT_SLOTS][kRank];
     // --- attrs (bool->int64_t, 不决定分发) ---
     float hyperpara;  // LARS η, 默认 0.001
     float epsilon;    // 防除零 ε, 默认 1e-5

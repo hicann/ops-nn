@@ -18,7 +18,7 @@
 //   - 标量 []  -> max_bro [1]   (rank=0 normalisation, single-tile boundary)
 //   - 1D [256] / [4096]         (全量装入 fallback: axis=0, a_o=1)
 //   - 2D [1024,1024]            (主块: axis=0, a_i=16, a_o=64, aligned tail)
-//   - 4D [64,3,7,7]             (全量装入: 9408 ≤ 16384 -> a_i=64, a_o=1)
+//   - 4D [64,3,7,7]             (全量装入: 9408 ≤ 16336 -> a_i=64, a_o=1)
 //   - 4D [128,128,3,3]          (尾块: a_i=14, a_o=10, a_i_tail=2 non-aligned)
 //   - 非对齐 [4,7]              (28 elems, whole-fits, non-aligned count)
 //   - cores variants            (尾核 cores_tail>0 via non-divisible total_tiles)
@@ -40,15 +40,15 @@
 #include <vector>
 #include <gtest/gtest.h>
 
-#include "lars_v2_update_tiling_data.h" // TilingData4, SplitResult, MultiCoreResult, kPhysNodes, kMaxInputSlots, kMaxOutputSlots
+#include "lars_v2_update_tiling_data.h" // TilingData4, SplitResult, MultiCoreResult, PHYS_NODES, MAX_INPUT_SLOTS, MAX_OUTPUT_SLOTS
 #include "lars_v2_update_tiling.h" // optiling::ComputeBranch4Tiling, Branch4Inputs, LarsAttrs
 
 namespace {
 // DESIGN §5.3 / DESIGN-BRANCH-4.md §2 constants (hand-copied; oracle must NOT
 // call optiling:: functions).
-constexpr int64_t kPhysNodesOracle = 3; // DESIGN §5.3 P conclusion (kPhysNodes)
-constexpr int64_t kUb192K = 196608;     // Ascend950DT typical UB = 192 KiB
-constexpr int64_t kUb256K = 262144;     // 256 KiB variant
+constexpr int64_t PHYS_NODES_ORACLE = 3; // DESIGN §5.3 P conclusion (PHYS_NODES)
+constexpr int64_t UB_192K = 196608;      // Ascend950DT typical UB = 192 KiB
+constexpr int64_t UB_256K = 262144;      // 256 KiB variant
 
 inline int64_t CeilDiv(int64_t a, int64_t b) { return (a + b - 1) / b; }
 
@@ -138,7 +138,7 @@ bool OraCheckBroadcast(const std::vector<std::vector<int64_t>>& pin, const std::
 }
 
 // ===== Independent oracle: per_buf (DESIGN §5.3 / DESIGN-BRANCH-4.md §2, P=3) =====
-int64_t OraPerBufBytes(int64_t ub, int64_t P) { return (ub / P) & ~31LL; }
+int64_t OraPerBufBytes(int64_t ub, int64_t P) { return ((ub - SCALAR_BUF_BYTES) / P) & ~31LL; }
 int64_t OraPerBufElems(int64_t bytes) { return bytes / 4; } // cast.md §Tile: always /4
 
 // ===== Independent oracle: FindSplitAxis (DESIGN-BRANCH-4.md §2) =====
@@ -226,8 +226,8 @@ void OraFillTilingData4(TilingData4& td, const OraSplit& sp, const OraMc& mc, in
     td.multicore.cores_tail = mc.cores_tail;
     td.rank = eff_rank;
     td.per_buf_bytes = per_buf_bytes;
-    td.num_inputs = kMaxInputSlots;   // 6
-    td.num_outputs = kMaxOutputSlots; // 1
+    td.num_inputs = MAX_INPUT_SLOTS;   // 6
+    td.num_outputs = MAX_OUTPUT_SLOTS; // 1
     td.hyperpara = attrs.hyperpara;
     td.epsilon = attrs.epsilon;
     td.use_clip = attrs.use_clip;
@@ -235,7 +235,7 @@ void OraFillTilingData4(TilingData4& td, const OraSplit& sp, const OraMc& mc, in
     for (int64_t d = 0; d < 4; d++) {
         td.max_bro_shape[d] = (d < eff_rank) ? max_bro[d] : 1;
     }
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 4; d++) {
             td.input_shapes[i][d] = (d < eff_rank) ? normal_in[i][d] : 1;
             td.input_strides[i][d] = 0;
@@ -246,7 +246,7 @@ void OraFillTilingData4(TilingData4& td, const OraSplit& sp, const OraMc& mc, in
                 td.input_strides[i][d] = st[d];
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 4; d++) {
             td.output_shapes[o][d] = (d < eff_rank) ? normal_out[o][d] : 1;
             td.output_strides[o][d] = 0;
@@ -270,9 +270,9 @@ bool OraComputeBranch4(const optiling::Branch4Inputs& in, TilingData4& exp)
     if (!OraCheckBroadcast(ps.normal_input_shapes, ps.normal_output_shapes, eff_rank)) {
         return false;
     }
-    OraSplit sp = OraFindSplit(ps.maximum_bro_shape, in.ub_per_core, kPhysNodesOracle);
+    OraSplit sp = OraFindSplit(ps.maximum_bro_shape, in.ub_per_core, PHYS_NODES_ORACLE);
     OraMc mc = OraMultiCore(ps.maximum_bro_shape, sp, in.max_cores);
-    int64_t per_buf_bytes = OraPerBufBytes(in.ub_per_core, kPhysNodesOracle);
+    int64_t per_buf_bytes = OraPerBufBytes(in.ub_per_core, PHYS_NODES_ORACLE);
     OraFillTilingData4(exp, sp, mc, eff_rank, per_buf_bytes, ps.maximum_bro_shape, ps.normal_input_shapes,
                        ps.normal_output_shapes, in.attrs);
     return true;
@@ -297,13 +297,13 @@ void PoisonTilingData4(TilingData4& td)
     td.num_outputs = INT64_MIN;
     for (int64_t d = 0; d < 4; d++)
         td.max_bro_shape[d] = INT64_MIN;
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 4; d++) {
             td.input_shapes[i][d] = INT64_MIN;
             td.input_strides[i][d] = INT64_MIN;
         }
     }
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 4; d++) {
             td.output_shapes[o][d] = INT64_MIN;
             td.output_strides[o][d] = INT64_MIN;
@@ -334,7 +334,7 @@ TEST_P(Branch4TilingTest, Formula)
 {
     const auto& p = GetParam();
     // Build the 6 in / 1 out shapes (w,g share shape; 4 scalars share scalar shape).
-    std::vector<std::vector<int64_t>> in_shapes(kMaxInputSlots);
+    std::vector<std::vector<int64_t>> in_shapes(MAX_INPUT_SLOTS);
     in_shapes[0] = p.w;
     in_shapes[1] = p.w; // w, g
     in_shapes[2] = p.scalar;
@@ -384,14 +384,14 @@ TEST_P(Branch4TilingTest, Formula)
         EXPECT_EQ(act.max_bro_shape[d], exp.max_bro_shape[d]) << "dim " << d;
     }
     // input_shapes[6][4] + input_strides[6][4]
-    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+    for (int64_t i = 0; i < MAX_INPUT_SLOTS; i++) {
         for (int64_t d = 0; d < 4; d++) {
             EXPECT_EQ(act.input_shapes[i][d], exp.input_shapes[i][d]) << "in " << i << " dim " << d;
             EXPECT_EQ(act.input_strides[i][d], exp.input_strides[i][d]) << "in " << i << " dim " << d;
         }
     }
     // output_shapes[1][4] + output_strides[1][4]
-    for (int64_t o = 0; o < kMaxOutputSlots; o++) {
+    for (int64_t o = 0; o < MAX_OUTPUT_SLOTS; o++) {
         for (int64_t d = 0; d < 4; d++) {
             EXPECT_EQ(act.output_shapes[o][d], exp.output_shapes[o][d]) << "out " << o << " dim " << d;
             EXPECT_EQ(act.output_strides[o][d], exp.output_strides[o][d]) << "out " << o << " dim " << d;
@@ -406,28 +406,28 @@ TEST_P(Branch4TilingTest, Formula)
 INSTANTIATE_TEST_SUITE_P(LarsV2UpdateBranch4, Branch4TilingTest,
                          testing::Values(
                              // --- 边界: 标量 [] -> max_bro [1] (rank=0 normalisation, single tile) ---
-                             Branch4Case{"scalar_[1]", {}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"scalar_[1]", {}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- 1D 全量装入 (axis=0, a_o=1, fallback branch) ---
-                             Branch4Case{"1d_256_fullfit", {256}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-                             Branch4Case{"1d_4096_fullfit", {4096}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"1d_256_fullfit", {256}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"1d_4096_fullfit", {4096}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- 2D 主块 [1024,1024]: axis=0, a_i=16, a_o=64, a_i_tail=16 (aligned) ---
-                             Branch4Case{"2d_1024_mainblock", {1024, 1024}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"2d_1024_mainblock", {1024, 1024}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- 2D 主块 + 尾核 (cores_tail>0): total_tiles=64, 30 cores -> main=2, tail=4 ---
-                             Branch4Case{"2d_1024_cores30", {1024, 1024}, {}, 4, kUb192K, 30, {0.001f, 1e-5f, 0}},
-                             // --- 4D [64,3,7,7] 全量装入: 9408 ≤ 16384 -> axis=0, a_i=64, a_o=1 ---
-                             Branch4Case{"4d_conv_fullfit", {64, 3, 7, 7}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"2d_1024_cores30", {1024, 1024}, {}, 4, UB_192K, 30, {0.001f, 1e-5f, 0}},
+                             // --- 4D [64,3,7,7] 全量装入: 9408 ≤ 16336 -> axis=0, a_i=64, a_o=1 ---
+                             Branch4Case{"4d_conv_fullfit", {64, 3, 7, 7}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- 4D [128,128,3,3] 尾块: axis=0, a_i=14, a_o=10, a_i_tail=2 (non-aligned) ---
                              Branch4Case{
-                                 "4d_conv2_tailblock", {128, 128, 3, 3}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                                 "4d_conv2_tailblock", {128, 128, 3, 3}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- 4D 尾块 + 尾核: total_tiles=10, 8 cores -> main=1, tail=2 ---
-                             Branch4Case{"4d_conv2_cores8", {128, 128, 3, 3}, {}, 4, kUb192K, 8, {0.001f, 1e-5f, 0}},
-                             // --- 非对齐 [4,7]: 28 elems, whole-fits (28 ≤ 16384), non-aligned count ---
-                             Branch4Case{"nonalign_4_7", {4, 7}, {}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}},
-                             // --- UB=256K 变体: per_buf_elems=21840, [1024,1024] -> a_i=21, a_o=49, tail=16 ---
-                             Branch4Case{"2d_1024_ub256k", {1024, 1024}, {}, 4, kUb256K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"4d_conv2_cores8", {128, 128, 3, 3}, {}, 4, UB_192K, 8, {0.001f, 1e-5f, 0}},
+                             // --- 非对齐 [4,7]: 28 elems, whole-fits (28 ≤ 16336), non-aligned count ---
+                             Branch4Case{"nonalign_4_7", {4, 7}, {}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}},
+                             // --- UB=256K 变体: per_buf_elems=21800, [1024,1024] -> a_i=21, a_o=49, tail=16 ---
+                             Branch4Case{"2d_1024_ub256k", {1024, 1024}, {}, 4, UB_256K, 32, {0.001f, 1e-5f, 0}},
                              // --- fp16 dtype 变体: tiling dtype-independent (/4 basis), same as fp32 ---
-                             Branch4Case{"2d_1024_fp16", {1024, 1024}, {}, 2, kUb192K, 32, {0.001f, 1e-5f, 0}},
+                             Branch4Case{"2d_1024_fp16", {1024, 1024}, {}, 2, UB_192K, 32, {0.001f, 1e-5f, 0}},
                              // --- use_clip attr 变体: attr pass-through (use_clip=1) ---
-                             Branch4Case{"2d_1024_useclip", {1024, 1024}, {}, 4, kUb192K, 32, {0.01f, 1e-6f, 1}},
+                             Branch4Case{"2d_1024_useclip", {1024, 1024}, {}, 4, UB_192K, 32, {0.01f, 1e-6f, 1}},
                              // --- 标量输入 size-1 广播: scalars given as [1] instead of [] ---
-                             Branch4Case{"2d_1024_scalar_s1", {1024, 1024}, {1}, 4, kUb192K, 32, {0.001f, 1e-5f, 0}}));
+                             Branch4Case{"2d_1024_scalar_s1", {1024, 1024}, {1}, 4, UB_192K, 32, {0.001f, 1e-5f, 0}}));

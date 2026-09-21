@@ -15,7 +15,6 @@
  * \brief LarsV2Update 算子形状推导（g_new shape = w shape）
  */
 
-#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "log/log.h"
@@ -38,7 +37,7 @@ static ge::graphStatus InferShape4LarsV2Update(gert::InferShapeContext* context)
     }
     *gNewShape = *wShape;
 
-    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*gNewShape).c_str());
+    OP_LOGD(context->GetNodeName(), "End to do InferShape4LarsV2Update");
     return ge::GRAPH_SUCCESS;
 }
 

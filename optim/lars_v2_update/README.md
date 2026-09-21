@@ -135,11 +135,12 @@
 
 ## 约束说明
 
-- 输入w和g必须具有相同的形状和数据类型。
-- 输出g_new与w同型同形同dtype。
-- w_square_sum、g_square_sum、weight_decay、learning_rate恒为FLOAT类型标量。
-- 支持维度1~8维。
-- 支持动态shape和动态rank。
+- 输入w和g必须具有相同的形状和数据类型（Tiling阶段校验dtype为DT_FLOAT且shape完全一致，见`op_host/arch35/lars_v2_update_tiling_arch35.cpp`）。
+- 输出g_new与w同型同形同dtype（InferShape由CANN runtime广播推导，Tiling阶段兜底校验g_new与w同形）。
+- w_square_sum、g_square_sum、weight_decay、learning_rate恒为FLOAT类型标量（元素数为1，广播到w的shape参与计算；Tiling阶段校验dtype与元素数）。
+- 支持维度0~8维（0维标量按1维处理，Tiling阶段校验维数不超过8）。
+- 支持空Tensor（元素数为0，如shape含0维，输出为空Tensor不报错，Kernel侧totalTiles==0短路跳过计算）。
+- 输入数据中的NaN按IEEE 754语义传播（硬件向量指令对NaN的裁剪语义与框架参考实现可能存在差异，NaN输入场景需上层框架保证，算子侧不做NaN拦截）。
 
 ## 调用说明
 
