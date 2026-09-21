@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term> ：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term> ：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -29,7 +29,7 @@
 
     <!-- npu="950,A3,910b,310p" id7 -->
     <details>
-    <summary><term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
+    <summary><term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term> </summary>
 
     - 无x1Scale、无bias：
 
@@ -66,7 +66,7 @@
 
     <!-- npu="950,A3,910b" id8 -->
     <details>
-    <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
+    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term> </summary>
 
     - bias BFLOAT16/FLOAT32（此场景无x2Offset）：
 
@@ -103,7 +103,7 @@
 
     <!-- npu="950" id9 -->
     <details>
-    <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
+    <summary><term>Ascend 950PR&950DT系列产品</term> </summary>
 
     - G-B && B-B && MX量化模式：
 
@@ -373,7 +373,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <!-- npu="310p" id16 -->
     <details>
 
-    <summary><term>Atlas 推理系列产品</term></summary>
+    <summary><term>Atlas推理系列产品</term></summary>
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
     - x2不支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。
@@ -384,7 +384,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <!-- npu="A3,910b" id17 -->
     <details>
 
-    <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></summary>
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
     - x2不支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。
@@ -395,7 +395,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <!-- npu="950" id18 -->
     <details>
 
-    <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
+    <summary><term>Ascend 950PR&950DT系列产品</term> </summary>
 
     - 上表数据类型列中的角标“3”代表该系列不支持的数据类型。
     - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
@@ -496,7 +496,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- npu="A3,910b" id10 -->
 <details>
-<summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+<summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></summary>
 
   - x1的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
   - x2的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
@@ -527,7 +527,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- npu="310p" id11 -->
 <details>
-<summary><term>Atlas 推理系列产品</term></summary>
+<summary><term>Atlas推理系列产品</term></summary>
 
   - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
   - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
@@ -550,7 +550,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- npu="950" id12 -->
 <details>
-<summary><term>Ascend 950PR/Ascend 950DT</term></summary>
+<summary><term>Ascend 950PR&950DT系列产品</term> </summary>
 
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式，在使用时必须使用0来填充以防引入脏数据。
 
@@ -659,7 +659,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 <!-- npu="950" id19 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term> ：
   MM_MX_A8W4场景下，先调用`aclnnWeightQuantPreprocess`同步预处理weight和weightScale，再调用本接口完成矩阵乘。
 
   ```cpp
@@ -927,7 +927,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
   int main()
   {
-      // WeightQuantPreprocess当前仅支持Ascend 950PR/Ascend 950DT。
+      // WeightQuantPreprocess当前仅支持<term>Ascend 950PR&950DT系列产品</term> 。
       int32_t deviceId = 0;
       auto ret = AclnnQuantMatmulWeightNzA8W4PreprocessTest(deviceId);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulWeightNzA8W4PreprocessTest failed. ERROR: %d\n", ret);
@@ -939,7 +939,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <!-- end id19 -->
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
   x2为NZ格式场景下的示例代码如下(transposeX2=false)。
 
@@ -1223,7 +1223,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- end id13 -->
 <!-- npu="310p" id14 -->
-- <term>Atlas 推理系列产品</term>：
+- <term>Atlas推理系列产品</term>：
   x2为NZ格式场景下的示例代码如下(transposeX2=true)。
 
   ```cpp
@@ -1536,7 +1536,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- end id14 -->
 <!-- npu="950" id15 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term> ：
   x2为NZ格式场景下的示例代码如下(transposeX2=true)。
 
   ```cpp

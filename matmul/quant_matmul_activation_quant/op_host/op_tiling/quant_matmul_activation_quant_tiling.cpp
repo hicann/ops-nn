@@ -57,7 +57,7 @@ static ge::graphStatus QuantMatmulActivationQuantTilingFunc(gert::TilingContext*
     OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The compileInfoPtr is null!");
     if (!compileInfoPtr->supportL12BtBf16) {
         OP_LOGD("QuantMatmulActivationQuantTilingFunc",
-                "Do op tiling failed, only supports on Ascend 950PR/Ascend 950DT for now.");
+                "Do op tiling failed, only supports on <term>Ascend 950PR&950DT系列产品</term>  for now.");
         return ge::GRAPH_FAILED;
     }
 

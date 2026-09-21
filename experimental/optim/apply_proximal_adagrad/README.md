@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
-| <term>Atlas 训练系列产品</term> | × |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | × |
+| <term>Atlas A2系列产品</term>  | × |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -114,7 +114,7 @@
 
 ## 约束说明
 
-- 仅支持 <term>Ascend 950PR/Ascend 950DT</term>（arch35 / DAV_3510），不适配其他芯片代际。
+- 仅支持 <term>Ascend 950PR&950DT系列产品</term>（arch35 / DAV_3510），不适配其他芯片代际。
 - 仅支持 `float32` 数据类型。
 - `var`、`accum`、`grad` 三者 shape 必须完全一致，且均为连续排布的 ND Tensor。
 - `lr`、`l1`、`l2` 必须为 0-D 或 1 元素 1-D 的标量 Tensor。

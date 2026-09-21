@@ -4,7 +4,7 @@
 
 | 产品                                         | 是否支持 |
 | -------------------------------------------- | :------: |
-| Atlas A2 训练系列产品/Atlas 800I A2 推理产品 |    √    |
+| Atlas A2系列产品 |    √    |
 
 ## 功能说明
 
@@ -39,14 +39,14 @@ $$
       <td>指定的归约轴</td>
       <td>ListInt</td>
       <td>/</td>
-    </tr>    
+    </tr>
     <tr>
       <td>input</td>
       <td>输入</td>
       <td>待进行归约的tensor</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>out</td>
       <td>输出</td>

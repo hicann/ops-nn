@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品|√|
+|Atlas A2系列产品|√|
 
 ## 功能说明
 
@@ -17,7 +17,7 @@
   $$
 
   $$
-  grad\_self_{i} = 
+  grad\_self_{i} =
   \begin{cases}
     0,\ \ \ \ \ \ \ if \ \ self_{i}>max \\
     0,\ \ \ \ \ \ \  if\ \ self_{i}<min \\
@@ -49,21 +49,21 @@
       <td>待进行hardtanh_grad计算的入参，公式中的gradOutput。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>self</td>
       <td>输入</td>
       <td>待进行hardtanh_grad计算的入参，公式中的self。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>min</td>
       <td>输入属性</td>
       <td>待进行hardtanh_grad计算的入参，公式中的min。</td>
       <td>FLOAT</td>
       <td>-</td>
-    </tr>  
+    </tr>
     <tr>
       <td>max</td>
       <td>输入属性</td>

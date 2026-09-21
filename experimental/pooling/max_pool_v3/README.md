@@ -6,7 +6,7 @@ MaxPoolV3 算子实现了二维最大池化（Max Pooling 2D）操作。在输�
 
 ## 支持的产品
 
-- Atlas 训练系列产品（Ascend 910B）
+- Atlas训练系列产品（Ascend 910B）
 
 ## 约束说明
 

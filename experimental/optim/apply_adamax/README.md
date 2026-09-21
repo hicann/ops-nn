@@ -30,12 +30,12 @@ $$
 
 | 产品 | 是否支持 |
 |------|:------:|
-| Ascend 950PR / Ascend 950DT（Atlas A5 推理系列，DAV_3510） | √ |
-| Atlas A3 训练系列 / Atlas A3 推理系列 | × |
-| Atlas A2 训练系列 / Atlas A2 推理系列 | × |
-| Atlas 200I/500 A2 推理产品 | × |
-| Atlas 推理系列 | × |
-| Atlas 训练系列 | × |
+| Ascend 950PR&950DT系列产品 | √ |
+| Atlas A3系列产品 | × |
+| Atlas A2系列产品 | × |
+| Atlas 200I/500 A2推理产品 | × |
+| Atlas推理系列产品 | × |
+| Atlas训练系列产品 | × |
 
 ## 调用方式支持
 

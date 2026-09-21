@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
-| <term>Atlas 推理系列产品</term>                              |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                       |    √     |
+| <term>Atlas A3系列产品</term>    |    √     |
+| <term>Atlas A2系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    √     |
+| <term>Atlas推理系列产品</term>                              |    √     |
+| <term>Atlas训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -55,7 +55,7 @@
 - target、weight的shape必须与pred一致，target的数据类型固定为INT32。
 - pred各维长度必须大于0，不支持空Tensor。
 - target应为one-hot编码：本算子不校验target的取值，非one-hot时其数值会作为权重直接参与行内求和，结果不再是Focal Loss的定义值。
-- 归约轴固定为最后一维：pred的最后一维为类别维，其余维为样本维。<term>Ascend 950PR/Ascend 950DT</term>支持任意rank≥1的pred，其余产品仅支持二维形式(batch_size, num_classes)。
+- 归约轴固定为最后一维：pred的最后一维为类别维，其余维为样本维。<term>Ascend 950PR&950DT系列产品</term>支持任意rank≥1的pred，其余产品仅支持二维形式(batch_size, num_classes)。
 - reduction属性当前仅支持"none"：本算子的输出shape恒等于pred，无法承载"mean"/"sum"所需的标量结果，故传入"none"以外的取值（大小写不敏感）直接报错。缺省值取"none"，不显式传入该属性时按"none"处理。
 
 ## 调用说明

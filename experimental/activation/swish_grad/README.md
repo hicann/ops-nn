@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品|√|
+|Atlas A2系列产品|√|
 
 ## 功能说明
 
@@ -43,7 +43,7 @@ $$
       <td>待进行SwishGrad计算的入参，公式中的grad。</td>
       <td>fp16、fp32、bf16</td>
       <td>ND,FRACTAL_NZ,NC1HWC0</td>
-    </tr>  
+    </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
@@ -57,7 +57,7 @@ $$
       <td>待进行SwishGrad计算的入参，公式中的scale。</td>
       <td>fp32</td>
       <td>1</td>
-    </tr>  
+    </tr>
     <tr>
       <td>y</td>
       <td>输入</td>

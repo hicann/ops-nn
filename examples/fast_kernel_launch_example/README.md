@@ -30,7 +30,7 @@
 3. 构建Wheel包 | Build the Wheel:
 
     ```sh
-    # NPU_SOC_VERSION设置编译款型, Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"
+    # NPU_SOC_VERSION设置编译款型, Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR&950DT系列产品使用"ascend950"
     export NPU_SOC_VERSION=ascend910b
     # -n: non-isolated build (uses existing environment)
     python3 -m build --wheel -n
@@ -80,7 +80,7 @@ print("Verification successful!")
 
 为了实现一个新算子(如`add`)，您只需要提供一个C++实现即可。
 
-1. 首先您需要在csrc目录下使用算子名`add`建立一个文件夹，在此文件夹内使用你当前想要开发的soc名建立一个子文件夹。Atlas A2系列产品使用`ascend910b`，Atlas A3系列产品使用`ascend910_93`，Ascend 950PR/Ascend 950DT产品使用`ascend950`。
+1. 首先您需要在csrc目录下使用算子名`add`建立一个文件夹，在此文件夹内使用你当前想要开发的soc名建立一个子文件夹。Atlas A2系列产品使用`ascend910b`，Atlas A3系列产品使用`ascend910_93`，Ascend 950PR&950DT系列产品使用`ascend950`。
 
 2. 在soc目录下新建一个`CMakeLists.txt`
 

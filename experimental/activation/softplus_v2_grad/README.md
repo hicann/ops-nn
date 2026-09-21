@@ -1,4 +1,4 @@
-## `SoftplusV2Grad`自定义算子样例说明 
+## `SoftplusV2Grad`自定义算子样例说明
 
 本样例通过`Ascend C`编程语言实现了`SoftplusV2Grad`算子。
 
@@ -20,7 +20,7 @@
 
 本样例支持如下产品型号：
 
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品
+- Atlas A2系列产品
 
 ### 目录结构介绍
 
@@ -83,7 +83,7 @@ Abs：[ops-math/math/abs/README.md · CANN/ops-math - GitCode]
 
 参考：
 ## 贡献说明
- 	 
+
  	 | 贡献者 | 贡献方 | 贡献算子 | 贡献时间 | 贡献内容 |
  	 | ---- | ---- | ---- | ---- | ---- |
  	 | ilovescrapy | 个人开发者 | ReluGrad | 2025/12/26 | ReluGrad算子适配开源仓 |

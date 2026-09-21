@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品|√|
+|Atlas A2系列产品|√|
 
 ## 功能说明
 
@@ -87,33 +87,33 @@ $$
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
     </tr>
-    <tr> 
-      <td>blank</td> 
-      <td>属性</td> 
-      <td>blank的索引位置，默认为-1</td> 
-      <td>INT</td> 
-      <td>-</td> 
+    <tr>
+      <td>blank</td>
+      <td>属性</td>
+      <td>blank的索引位置，默认为-1</td>
+      <td>INT</td>
+      <td>-</td>
     </tr>
-    <tr> 
-      <td>clamp</td> 
-      <td>属性</td> 
-      <td>梯度的范围，默认为-1表示不限制梯度</td> 
-      <td>DOUBLE</td> 
-      <td>-</td> 
+    <tr>
+      <td>clamp</td>
+      <td>属性</td>
+      <td>梯度的范围，默认为-1表示不限制梯度</td>
+      <td>DOUBLE</td>
+      <td>-</td>
     </tr>
-    <tr> 
-      <td>fused_log_softmax</td> 
-      <td>属性</td> 
-      <td>输入是否经过log_softmax，默认为true</td> 
-      <td>BOOL</td> 
-      <td>-</td> 
+    <tr>
+      <td>fused_log_softmax</td>
+      <td>属性</td>
+      <td>输入是否经过log_softmax，默认为true</td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
-    <tr> 
-      <td>requires_grad</td> 
-      <td>属性</td> 
-      <td>是否需要计算梯度，默认为true</td> 
-      <td>BOOL</td> 
-      <td>-</td> 
+    <tr>
+      <td>requires_grad</td>
+      <td>属性</td>
+      <td>是否需要计算梯度，默认为true</td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 

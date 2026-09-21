@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
-|  <term>Atlas 推理系列产品</term>     |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     √    |
+|  <term>Atlas推理系列产品</term>     |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
-> 上表写的是SGD在各产品形态上的**可得性**，不是本次交付的架构范围。本仓的Ascend C实现只适配 <term>Ascend 950PR/Ascend 950DT</term>（`sgd_def.cpp`中仅`AddConfig("ascend950")`）；其余产品形态上的SGD由CANN内置的TBE实现提供，语义一致，但不由本算子承载。
+> 上表写的是SGD在各产品形态上的**可得性**，不是本次交付的架构范围。本仓的Ascend C实现只适配 <term>Ascend 950PR&950DT系列产品</term>（`sgd_def.cpp`中仅`AddConfig("ascend950")`）；其余产品形态上的SGD由CANN内置的TBE实现提供，语义一致，但不由本算子承载。
 
 ## 功能说明
 

@@ -16,7 +16,7 @@
 ![](../../../docs/zh/figures/QuantBatchMatmulV4TransposeFusionPass_3.png)
 
 >[!NOTE]说明
->该图融合仅支持Ascend 950PR/Ascend 950DT，不支持其他芯片型号。
+>该图融合仅支持<term>Ascend 950PR&950DT系列产品</term> ，不支持其他芯片型号。
 <!-- end id1 -->
 
 ## 使用约束

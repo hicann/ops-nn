@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>     |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>     |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -26,9 +26,9 @@
 ## 参数说明
 
 - x (aclTensor*，计算输入)：公式中的输入`x`，Device侧的aclTensor。支持[非连续的Tensor](../../docs/zh/context/non_contiguous_tensor.md)，[数据格式](../../docs/zh/context/data_format.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
 - y (aclTensor*，计算输出)：公式中的输出`y`，Device侧的aclTensor。数据类型与x一致。shape为0维（标量）。支持[非连续的Tensor](../../docs/zh/context/non_contiguous_tensor.md)，[数据格式](../../docs/zh/context/data_format.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
 
 ## 约束说明
 

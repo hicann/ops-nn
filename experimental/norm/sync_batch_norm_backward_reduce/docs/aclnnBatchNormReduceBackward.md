@@ -4,8 +4,8 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列 / Atlas A3 推理系列</term>   |     √    |
-|  <term>Atlas A2 训练系列 / Atlas A2 推理系列</term>     |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -233,7 +233,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
   </tbody>
   </table>
 
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：参数`gradOut`、`input`、`mean`、`invstd`、`weight`、`sumDy`、`sumDyXmu`、`gradWeight`、`gradBias`的数据类型不支持BFLOAT16。
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：参数`gradOut`、`input`、`mean`、`invstd`、`weight`、`sumDy`、`sumDyXmu`、`gradWeight`、`gradBias`的数据类型不支持BFLOAT16。
 
 - **返回值**
 

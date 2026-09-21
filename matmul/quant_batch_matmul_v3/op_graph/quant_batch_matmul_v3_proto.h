@@ -123,8 +123,8 @@ values in x1 along the k-dimension. \n
 * @li If input type of x1 and x2 is int4, transpose_x1 should be false, the size of the last dimension of x1 or x2
 should
 * be an even number.
-* @li On the Ascend 950PR/Ascend 950DT platforms, when x2 is ND format, the output is an empty tensor if input x1 has
-m=0 or x2 has n=0.
+* @li On the <term>Ascend 950PR&950DT系列产品</term>  platforms, when x2 is ND format, the output is an empty tensor if
+input x1 has m=0 or x2 has n=0.
 * When x2 is NZ format, the output is an empty tensor if input x1 has m=0.
 * In all other cases, inputs does not support tensor with dimension size 0.
 * @li If input type of x1 and x2 is int4, transpose_x1 should be false.

@@ -12,7 +12,7 @@
 
 | 产品 | 是否支持 |
 |:-----|:--------:|
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>（ascend910b，DAV_2201） | √ |
+| <term>Atlas A2系列产品</term> | √ |
 
 > 本 `experimental` 任务新增并验证的是 **ascend910b（Atlas A2 系列）** 原生开源 AscendC kernel；
 > 其余产品（Ascend 950PR/950DT、Atlas A3、Atlas 推理/训练系列等）由仓内既有实现（`optim/apply_adam_d` arch35 路径）支持，不在本任务范围。

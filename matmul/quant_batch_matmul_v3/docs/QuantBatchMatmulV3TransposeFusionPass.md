@@ -102,8 +102,8 @@
 
 | 产品 | 普通规则 | Limit补充规则 |
 | ---- | ---- | ---- |
-| Ascend 950PR/Ascend 950DT | `x1`、`x2`均不受本节65535维度阈值限制，满足其他使用约束时执行转置融合 | 跳过本补充规则，转置融合由普通规则处理 |
-| Atlas A2训练系列产品/Atlas A2推理系列产品、Atlas A3训练系列产品/Atlas A3推理系列产品 | `x1`要求`outer` ≤ 65535；`x2`要求`outer` ≤ 65535或格式为`FRACTAL_NZ` | 分别检查`x1`、`x2`；仅处理满足0 < `outer` ≤ 65535且`inner` > 65535的支路 |
+| <term>Ascend 950PR&950DT系列产品</term>  | `x1`、`x2`均不受本节65535维度阈值限制，满足其他使用约束时执行转置融合 | 跳过本补充规则，转置融合由普通规则处理 |
+| Atlas A2系列产品、Atlas A3系列产品 | `x1`要求`outer` ≤ 65535；`x2`要求`outer` ≤ 65535或格式为`FRACTAL_NZ` | 分别检查`x1`、`x2`；仅处理满足0 < `outer` ≤ 65535且`inner` > 65535的支路 |
 
 Limit规则的维度条件同样适用于`FRACTAL_NZ`格式，不因格式而放宽。参与判断的`outer`或`inner`为未知值`-1`时，该支路不满足Limit规则的维度条件。
 
@@ -117,13 +117,13 @@ Limit规则的维度条件同样适用于`FRACTAL_NZ`格式，不因格式而放
 产品的数据类型与格式支持范围参见[QuantBatchMatmulV3算子说明](../README.md)。本规则按平台指令能力判断融合条件，算子支持某产品并不表示该产品支持本规则的全部融合模式。
 
 <!-- npu="910b" id1 -->
-Atlas A2训练系列产品/Atlas A2推理系列产品
+Atlas A2系列产品
 <!-- end id1 -->
 
 <!-- npu="A3" id2 -->
-Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A3系列产品
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR/Ascend 950DT
+<term>Ascend 950PR&950DT系列产品</term>
 <!-- end id3 -->

@@ -6,17 +6,17 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-| <term>Atlas 推理系列产品</term>    |     ×    |
-| <term>Atlas 训练系列产品</term>    |     ×    |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    ×     |
+| <term>Atlas A3系列产品</term>     |    ×     |
+| <term>Atlas A2系列产品</term>  |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+| <term>Atlas推理系列产品</term>    |     ×    |
+| <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 对输入张量做量化：`y = round(x / scales + zero_points)`，再按 `dtype` 属性饱和转换为定点输出。
-本实现为 <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>（ascend910b，DAV_2201 标准编程模型）的原生
+本实现为 <term>Atlas A2系列产品</term> （ascend910b，DAV_2201 标准编程模型）的原生
 AscendC kernel，落在 `experimental/`，复用源仓 `quant/quantize` 的 SoC 无关 aclnn/L0 接口层（`aclnnQuantize`）。
 
 ## 支持范围（首版）

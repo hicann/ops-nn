@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>     |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>     |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -19,7 +19,7 @@
 
 $$
 dx_i=
-\begin{cases} 
+\begin{cases}
 NaN, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
 0, & \text{if } x < \text{eps} \text{ or } x > 1 - \text{eps},eps \geq 0 \\
 \frac{dy_i}{x_i \cdot (1 - x_i)}, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\

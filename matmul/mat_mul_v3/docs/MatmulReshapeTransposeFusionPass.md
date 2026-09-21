@@ -21,17 +21,17 @@
 ## 支持的型号
 
 <!-- npu="310b" id1 -->
-Atlas 200I/500 A2 推理产品
+Atlas 200I/500 A2推理产品
 <!-- end id1 -->
 
 <!-- npu="910b" id2 -->
-Atlas A2 训练系列产品/Atlas A2 推理系列产品
+Atlas A2系列产品
 <!-- end id2 -->
 
 <!-- npu="A3" id3 -->
-Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A3系列产品
 <!-- end id3 -->
 
 <!-- npu="950" id4 -->
-Ascend 950PR/Ascend 950DT
+<term>Ascend 950PR&950DT系列产品</term>
 <!-- end id4 -->

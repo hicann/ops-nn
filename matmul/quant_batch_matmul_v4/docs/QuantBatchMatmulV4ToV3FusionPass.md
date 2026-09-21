@@ -50,13 +50,13 @@ V4特有的`compute_type`属性不传递给V3。
 产品支持范围需同时满足[QuantBatchMatmulV4算子说明](../README.md)和[QuantBatchMatmulV3算子说明](../../quant_batch_matmul_v3/README.md)。该pass自身没有按芯片型号进行分支判断，是否转换由上述输入条件决定。
 
 <!-- npu="910b" id1 -->
-Atlas A2训练系列产品/Atlas A2推理系列产品
+Atlas A2系列产品
 <!-- end id1 -->
 
 <!-- npu="A3" id2 -->
-Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A3系列产品
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR/Ascend 950DT
+<term>Ascend 950PR&950DT系列产品</term>
 <!-- end id3 -->

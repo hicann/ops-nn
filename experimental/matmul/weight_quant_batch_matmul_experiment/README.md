@@ -8,8 +8,8 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
+|Atlas A3系列产品|√|
+|Atlas A2系列产品|√|
 
 ## 目录结构介绍
 
@@ -114,9 +114,9 @@ $$Y^{i} = Y_{group} + Y^{i-1}$$
 
 ```bash
 # 切换到工程根目录
-cd ${git_clone_path}  
+cd ${git_clone_path}
 # 编译样例算子run包
-bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=weight_quant_batch_matmul_experiment --experimental 
+bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=weight_quant_batch_matmul_experiment --experimental
 # 安装自定义算子run包
 ./build_out/cann-ops-nn-${vendor_name}-${arch}_linux.run
 ```

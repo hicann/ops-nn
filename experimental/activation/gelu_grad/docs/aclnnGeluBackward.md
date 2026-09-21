@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas A2系列产品</term>      |     √    |
 
 ## 功能说明
 
@@ -136,7 +136,7 @@ aclnnStatus aclnnGeluBackward(
   </tbody>
   </table>
 
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
+  - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
 

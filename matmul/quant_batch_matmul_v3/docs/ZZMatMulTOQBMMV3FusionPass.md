@@ -11,11 +11,11 @@
 - MatMul类型包括BatchMatMul/BatchMatMulV2/MatMul/MatMulV2。
 - 输入的数据类型支持HIFLOAT8。
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持输入为INT8且输出为INT32的组合。
+- <term>Ascend 950PR&950DT系列产品</term> ：支持输入为INT8且输出为INT32的组合。
 <!-- end id1 -->
 
 ## 支持的型号
 
 <!-- npu="950" id2 -->
-Ascend 950PR/Ascend 950DT
+<term>Ascend 950PR&950DT系列产品</term>
 <!-- end id2 -->

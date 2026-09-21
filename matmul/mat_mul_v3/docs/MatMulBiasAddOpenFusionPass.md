@@ -19,6 +19,6 @@
 
 <!-- npu="950" id1 -->
 
-Ascend 950PR/Ascend 950DT
+<term>Ascend 950PR&950DT系列产品</term>
 
 <!-- end id1 -->

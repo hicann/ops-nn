@@ -272,7 +272,7 @@ int AclnnQuantMatmulWeightNzA8W4PreprocessTest(int32_t deviceId)
 
 int main()
 {
-    // WeightQuantPreprocess当前仅支持Ascend 950PR/Ascend 950DT。
+    // WeightQuantPreprocess当前仅支持<term>Ascend 950PR&950DT系列产品</term> 。
     int32_t deviceId = 0;
     auto ret = AclnnQuantMatmulWeightNzA8W4PreprocessTest(deviceId);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulWeightNzA8W4PreprocessTest failed. ERROR: %d\n", ret);

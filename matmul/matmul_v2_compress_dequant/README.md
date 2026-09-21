@@ -4,23 +4,23 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Ascend 950PR/Ascend 950DT|×|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|×|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|×|
-|Atlas 200I/500 A2 推理产品|×|
-|Atlas 推理系列产品|√|
-|Atlas 训练系列产品|×|
+|<term>Ascend 950PR&950DT系列产品</term> |×|
+|Atlas A3系列产品|×|
+|Atlas A2系列产品|×|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas推理系列产品|√|
+|Atlas训练系列产品|×|
 
 ## 功能说明
 
 - **算子功能**：进行矩阵乘计算时，可先通过msModelSlim工具对右矩阵进行无损压缩，减少内存占用，然后通过本接口完成无损解压缩、矩阵乘和反量化计算。
 - **计算公式**：
-  
+
   ```text
   x2_unzip = unzip(x2, compressIndex, compressInfo)
   result = (x1 @ x2_unzip + bias) * deqScale
   ```
-  
+
   其中x2表示右矩阵经过msModelSlim工具压缩后的一维数据，x2_unzip是接口内部进行无损解压缩后的数据（与原始右矩阵数据一致）。
 
 ## 参数说明

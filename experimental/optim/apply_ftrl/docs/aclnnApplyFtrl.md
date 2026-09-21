@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term>  | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 > **本任务（experimental）范围**：仅新增 **ascend910b（Atlas A2/A3，DAV_2201）** 原生 AscendC kernel。ascend950（arch35）路径由 mainline `optim/apply_ftrl` 已提供。上表反映 `ApplyFtrl` 算子整体（mainline + 本扩展）的产品支持。
 
@@ -225,7 +225,7 @@ aclnnStatus aclnnApplyFtrl(
     </tr>
   </tbody></table>
 
-  - <term>Atlas 训练系列产品</term>：是否支持 BFLOAT16 以最终实现及配套为准。
+  - <term>Atlas训练系列产品</term>：是否支持 BFLOAT16 以最终实现及配套为准。
 
 - **返回值**
 

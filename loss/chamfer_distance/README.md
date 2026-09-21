@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                              |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                       |    √     |
+| <term>Atlas A3系列产品</term>    |    √     |
+| <term>Atlas A2系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                              |    ×     |
+| <term>Atlas训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
@@ -53,7 +53,7 @@
 - xyz2的shape与数据类型必须与xyz1一致，即两组点集的batch数与点数相同。
 - dist1、dist2的数据类型与xyz1一致；idx1、idx2的数据类型固定为INT32。
 - 输出的shape由xyz1的第1、2维决定，即$(B, N)$。
-- BFLOAT16仅<term>Ascend 950PR/Ascend 950DT</term>支持，其余产品的数据类型支持FLOAT16、FLOAT。
+- BFLOAT16仅<term>Ascend 950PR&950DT系列产品</term>支持，其余产品的数据类型支持FLOAT16、FLOAT。
 - xyz1的$B$或$N$为0时（两组点集同时为空），dist1、dist2、idx1、idx2输出对应的空Tensor，算子正常返回。
 - 坐标取值含inf或nan时，按IEEE规则参与比较与传播，不做拦截。
 
