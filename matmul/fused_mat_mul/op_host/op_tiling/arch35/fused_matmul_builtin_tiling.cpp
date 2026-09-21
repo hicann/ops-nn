@@ -412,10 +412,10 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateDtype()
     return ge::GRAPH_FAILED;
 }
 
-// ====== Phase 8: ValidateMatrixBatchInfo (no broadcast on non-DAV_RESV) ======
+// ====== Phase 8: ValidateMatrixBatchInfo (A5 Relu supports merging all x1 batch axes into M) ======
 ge::graphStatus FusedMatMulBuiltInTiling::ValidateMatrixBatchInfo()
 {
-    if (arch_ != NpuArch::DAV_RESV) {
+    if (arch_ != NpuArch::DAV_RESV && !(arch_ == NpuArch::DAV_3510 && CanReluMergeBatchAndMAxis(context_))) {
         const auto& aShape = context_->GetInputShape(0)->GetOriginShape();
         const auto& bShape = context_->GetInputShape(1)->GetOriginShape();
         if (IsBatchBroadcast(aShape, bShape)) {

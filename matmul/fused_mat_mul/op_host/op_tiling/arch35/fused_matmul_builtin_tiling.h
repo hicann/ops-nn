@@ -46,7 +46,7 @@ protected:
     ge::graphStatus ValidateBias() override;
     ge::graphStatus ValidateDtype() override;
 
-    // ====== Phase 8 sub-steps (no batch bias, no broadcast on non-DAV_RESV) ======
+    // ====== Phase 8 sub-steps (no batch bias; A5 Relu can merge all x1 batch axes into M) ======
     ge::graphStatus ValidateMatrixBatchInfo() override;
     ge::graphStatus ExtractOptionalBatchInfo() override;
 

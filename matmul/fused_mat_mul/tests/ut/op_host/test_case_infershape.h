@@ -28,6 +28,24 @@ ge::op::FusedMatMul CreateFusedMatmulOp(OP_TUPLE x1, OP_TUPLE x2, OP_TUPLE bias,
 
 // x1 x2 bias x3 transpose_x1 transpose_x2 enable_hf32 fused_op_type
 const static std::vector<CASE_TUPLE> testcase_fusedmatmul_runtime = {
+    CASE_TUPLE{OP_TUPLE{{50, 1, 448}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{448, 896}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{896}, ge::DT_FLOAT, {}},
+               {},
+               false,
+               false,
+               true,
+               "relu",
+               RES_TUPLE{{50, 1, 896}, {}, ge::DT_FLOAT, true}},
+    CASE_TUPLE{OP_TUPLE{{-1, 1, 448}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{448, 896}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{896}, ge::DT_FLOAT, {}},
+               {},
+               false,
+               false,
+               true,
+               "relu",
+               RES_TUPLE{{-1, 1, 896}, {}, ge::DT_FLOAT, true}},
     // static shape
     //   pass cases
     // f16 +bias_f16 relu

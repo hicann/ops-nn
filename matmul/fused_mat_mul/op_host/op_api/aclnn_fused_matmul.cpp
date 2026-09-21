@@ -9,6 +9,7 @@
  */
 
 #include "aclnn_fused_matmul.h"
+#include <climits>
 #include <cstdio>
 #include <cstring>
 
@@ -208,6 +209,42 @@ static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, 
     return true;
 }
 
+static bool CanReluMergeBatchAndMAxis(const aclTensor* x, const aclTensor* x2, const aclTensor* y,
+                                      const char* fusedOpType)
+{
+    if (strcmp(fusedOpType, "relu") != 0 || IsTransposeLastTwoDims(x)) {
+        return false;
+    }
+    const auto& xShape = x->GetViewShape();
+    const auto& x2Shape = x2->GetViewShape();
+    const auto& yShape = y->GetViewShape();
+    const size_t xDimNum = xShape.GetDimNum();
+    const size_t x2DimNum = x2Shape.GetDimNum();
+    if (xDimNum <= DIM_LEN_MIN || x2DimNum < DIM_LEN_MIN || yShape.GetDimNum() != xDimNum) {
+        return false;
+    }
+    for (size_t i = 0; i + DIM_LEN_MIN < x2DimNum; ++i) {
+        if (x2Shape[i] != 1) {
+            return false;
+        }
+    }
+
+    const int64_t m = xShape[xDimNum - DIM_LEN_MIN];
+    if (m <= 0) {
+        return false;
+    }
+    uint64_t mergedM = static_cast<uint64_t>(m);
+    const uint64_t maxMergedM = static_cast<uint64_t>(INT32_MAX);
+    for (size_t i = 0; i + DIM_LEN_MIN < xDimNum; ++i) {
+        const int64_t batchDim = xShape[i];
+        if (batchDim <= 0 || batchDim != yShape[i] || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
+            return false;
+        }
+        mergedM *= static_cast<uint64_t>(batchDim);
+    }
+    return true;
+}
+
 static bool CheckGeluBatchShape(const aclTensor* x)
 {
     const auto& xShape = x->GetViewShape();
@@ -304,8 +341,10 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
     OP_CHECK_MAX_DIM(x2, dimLenMax, return false);
     OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
 
-    // check dimensions of x and x2 must be same
-    if (x2->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum()) {
+    const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x, x2, y, fusedOpType);
+
+    // Relu can use a shared x2 by merging all x1 batch axes into M; other rank mismatches remain unsupported.
+    if (x2->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum() && !canMergeBatch) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "x dimension and x2 dimension should be the same, but x dimension is %d, x2 dimension is %d.",
                 x->GetViewShape().GetDimNum(), x2->GetViewShape().GetDimNum());
@@ -332,7 +371,9 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
         return false;
     }
 
-    CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y, fusedOpType), false);
+    if (!canMergeBatch) {
+        CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y, fusedOpType), false);
+    }
     if (isGelu) {
         CHECK_RET(CheckGeluBatchShape(x), false);
     }

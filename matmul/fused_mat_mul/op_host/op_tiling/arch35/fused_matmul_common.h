@@ -13,6 +13,7 @@
  * \brief
  */
 #pragma once
+#include <climits>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -98,6 +99,45 @@ inline bool IsBatchBroadcast(const gert::Shape& aShape, const gert::Shape& bShap
         }
     }
     return false;
+}
+
+// When x2 has no effective batch, all x1 batch axes can be merged into M.
+inline bool CanReluMergeBatchAndMAxis(const gert::TilingContext* context)
+{
+    const auto* attrs = context->GetAttrs();
+    if (attrs == nullptr || attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX) == nullptr ||
+        std::string(attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX)) != "relu" ||
+        attrs->GetAttrPointer<bool>(ATTR_TRANS_X1_IDX) == nullptr || *attrs->GetAttrPointer<bool>(ATTR_TRANS_X1_IDX)) {
+        return false;
+    }
+    const auto& a = context->GetInputShape(INPUT_X1_IDX)->GetOriginShape();
+    const auto& b = context->GetInputShape(INPUT_X2_IDX)->GetOriginShape();
+    const auto& c = context->GetOutputShape(0)->GetOriginShape();
+    const size_t aDimNum = a.GetDimNum();
+    const size_t bDimNum = b.GetDimNum();
+    if (aDimNum <= FUSED_MATMUL_MATMUL_DIM_NUM || bDimNum < FUSED_MATMUL_MATMUL_DIM_NUM || c.GetDimNum() != aDimNum) {
+        return false;
+    }
+    for (size_t i = 0; i + FUSED_MATMUL_MATMUL_DIM_NUM < bDimNum; ++i) {
+        if (b.GetDim(i) != 1) {
+            return false;
+        }
+    }
+
+    const int64_t m = a.GetDim(aDimNum - FUSED_MATMUL_MATMUL_DIM_NUM);
+    if (m <= 0) {
+        return false;
+    }
+    uint64_t mergedM = static_cast<uint64_t>(m);
+    const uint64_t maxMergedM = static_cast<uint64_t>(INT32_MAX);
+    for (size_t i = 0; i + FUSED_MATMUL_MATMUL_DIM_NUM < aDimNum; ++i) {
+        const int64_t batchDim = a.GetDim(i);
+        if (batchDim <= 0 || batchDim != c.GetDim(i) || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
+            return false;
+        }
+        mergedM *= static_cast<uint64_t>(batchDim);
+    }
+    return true;
 }
 
 inline bool IsFusedMatMulBmmShape(const gert::TilingContext* context)

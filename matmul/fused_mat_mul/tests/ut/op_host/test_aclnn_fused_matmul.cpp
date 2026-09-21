@@ -541,7 +541,7 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_nz_format_invalid)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend950_test_dim_mismatch_x1_x2)
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_3d_2d_fp16_success)
 {
     SocVersionManager versionManager(SocVersion::ASCEND950);
     TensorDesc x1_desc = TensorDesc({2, 4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -550,7 +550,7 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_dim_mismatch_x1_x2)
     auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "relu", 0),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
-    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fusedmatmul_test, ascend950_test_dim_mismatch_x_y)
@@ -565,13 +565,64 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_dim_mismatch_x_y)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend950_test_relu_batch_broadcast_failed)
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_shared_x2_batch_success)
 {
     SocVersionManager versionManager(SocVersion::ASCEND950);
     TensorDesc x1_desc = TensorDesc({2, 4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({1, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({2, 4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_3d_2d_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({50, 1, 448}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({50, 1, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::USE_HF32),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend910b_test_relu_3d_2d_failed)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({50, 1, 448}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({50, 1, 896}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_4d_2d_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({2, 25, 1, 448}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 25, 1, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::USE_HF32),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_shared_x2_y_batch_mismatch_failed)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({50, 1, 448}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({49, 1, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::USE_HF32),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);

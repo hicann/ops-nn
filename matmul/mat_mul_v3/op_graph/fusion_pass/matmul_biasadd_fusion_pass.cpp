@@ -129,6 +129,35 @@ bool HasOffsetWInput(const AscendString& opTypeStr)
     return opTypeStr == kOpTypeMatMulV2 || opTypeStr == kOpTypeBatchMatMulV2;
 }
 
+bool Check2DBiasShape(const GNode& matmulOpNode, const GNode& addOpNode)
+{
+    fe::PlatFormInfos platformInfo;
+    fe::OptionalInfos optionalInfo;
+    std::string npuArch;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
+        GRAPH_SUCCESS) {
+        return false;
+    }
+    platformInfo.GetPlatformRes("version", "NpuArch", npuArch);
+    if (npuArch != "3510") {
+        return false;
+    }
+    const int32_t biasIdx = IsMatMulType(addOpNode.GetInDataNodesAndPortIndexs(0).first) ? 1 : 0;
+    TensorDesc biasDesc;
+    TensorDesc matmulDesc;
+    if (addOpNode.GetInputDesc(biasIdx, biasDesc) != GRAPH_SUCCESS ||
+        matmulOpNode.GetOutputDesc(0, matmulDesc) != GRAPH_SUCCESS) {
+        return false;
+    }
+    const auto biasShape = biasDesc.GetShape().GetDims();
+    const auto outputShape = matmulDesc.GetShape().GetDims();
+    if (biasShape.size() != k2D || biasShape[0] != 1 || outputShape.empty() || biasShape[1] != outputShape.back()) {
+        OPS_LOG_I(kPassName, "2D bias must be [1, N] with N matching the matmul output.");
+        return false;
+    }
+    return true;
+}
+
 bool CheckAddDtype(const GNode& matmulOpNode, const GNode& addOpNode)
 {
     TensorDesc input0Desc;
@@ -141,8 +170,7 @@ bool CheckAddDtype(const GNode& matmulOpNode, const GNode& addOpNode)
     auto firstShape = input0Desc.GetShape().GetDims();
     auto secondShape = input1Desc.GetShape().GetDims();
     if (firstShape.size() != 1 && secondShape.size() != 1) {
-        OPS_LOG_I(kPassName, "Added input is not equaled to 1");
-        return false;
+        return Check2DBiasShape(matmulOpNode, addOpNode);
     }
 
     int64_t biasDim = 0;
