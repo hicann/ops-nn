@@ -339,7 +339,7 @@ static int32_t InitPlatformInfo(optiling::conv_ops_tiling::ConvAscendcPlatformIn
 /*!
  * \brief 初始化节点信息
  *
- * 该函数设置计算图节点的名称和类型，用于调试和日志记录。
+ * 该函数设置计算图节点的名称和类型，用于验证和日志记录。
  *
  * @param nodeInfo 输出参数，节点信息结构体
  * @return DEMO_RET_SUC表示成功，DEMO_RET_FAIL表示失败
