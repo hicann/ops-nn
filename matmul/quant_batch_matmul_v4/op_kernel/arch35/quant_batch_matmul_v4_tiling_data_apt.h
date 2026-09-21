@@ -174,7 +174,8 @@ struct QuantBatchMatmulV4TilingDataParams {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct alignas(8) QuantBatchMatmulV4WeightQuantMxSwatTilingData {
+// tiling data 整体需满足 8 字节对齐（与 host 侧 tilingDataSize_ 按 sizeof(uint64_t) 对齐校验保持一致）
+struct alignas(sizeof(uint64_t)) QuantBatchMatmulV4WeightQuantMxSwatTilingData {
     uint32_t m = 0;
     uint32_t n = 0;
     uint32_t k = 0;

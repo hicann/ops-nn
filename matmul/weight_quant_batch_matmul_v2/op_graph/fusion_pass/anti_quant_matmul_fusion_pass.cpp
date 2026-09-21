@@ -100,6 +100,8 @@ constexpr int64_t kWeightPort = 1;
 constexpr int64_t kAntiQuantScalePort = 2;
 constexpr int64_t kAntiQuantOffsetPort = 3;
 constexpr int64_t kBiasPort = 6;
+constexpr int64_t kBiasSubgraphInputIdx = 2; // Replacement subgraph input index: 0=x, 1=weight, 2=bias
+constexpr int32_t kBinaryOpInputNum = 2;     // Add/Mul are binary ops with two input ports
 
 struct FusionCtx {
     ge::GNodePtr nodeAntiquant;
@@ -403,9 +405,13 @@ static bool CalAntiQuantPara(const FusionCtx& ctx, uint16_t* antiquantScale, uin
         OP_LOGW(kFusedOpType, "Failed to get attr offset of AscendAntiQuant.");
         return false;
     }
-    std::unique_ptr<float[]> offsetData(new (std::nothrow) float[offsetN]());
-    std::unique_ptr<float[]> scaleData(new (std::nothrow) float[scaleN]());
-    if (offsetData == nullptr || scaleData == nullptr) {
+    std::unique_ptr<float[]> offsetData;
+    std::unique_ptr<float[]> scaleData;
+    try {
+        // make_unique不会返回空指针，只会返回异常，无需在后面加空指针校验
+        offsetData = std::make_unique<float[]>(offsetN);
+        scaleData = std::make_unique<float[]>(scaleN);
+    } catch (const std::bad_alloc&) {
         OP_LOGW(kFusedOpType, "Failed to allocate memory for offset_data and scale_data");
         return false;
     }
@@ -533,7 +539,7 @@ static bool MatchPattern(const ge::GNode& matmulNode, FusionCtx& ctx)
         // Mul has two inputs: one from the AntiQuant(->Add) chain, the other is a const scale.
         ge::GNodePtr mulChainNode = nullptr;
         int32_t mulChainPort = -1;
-        for (int32_t port = 0; port < 2; port++) {
+        for (int32_t port = 0; port < kBinaryOpInputNum; port++) {
             auto inNode = GetInputNode(*ctx.nodeMul, port);
             if (inNode == nullptr) {
                 continue;
@@ -564,7 +570,7 @@ static bool MatchPattern(const ge::GNode& matmulNode, FusionCtx& ctx)
             // Add has two inputs: one from AntiQuant, the other is a const offset.
             ge::GNodePtr antiNode = nullptr;
             int32_t addChainPort = -1;
-            for (int32_t port = 0; port < 2; port++) {
+            for (int32_t port = 0; port < kBinaryOpInputNum; port++) {
                 auto inNode = GetInputNode(*ctx.nodeAdd, port);
                 if (inNode == nullptr) {
                     continue;
@@ -685,7 +691,7 @@ static ge::fusion::GraphUniqPtr BuildReplacementGraph(const FusionCtx& ctx, cons
             OP_LOGW(kFusedOpType, "Failed to get input bias desc of matmul node");
             return nullptr;
         }
-        rBias = builder.CreateInput(2, "bias", biasDesc.GetDataType(), biasDesc.GetFormat(),
+        rBias = builder.CreateInput(kBiasSubgraphInputIdx, "bias", biasDesc.GetDataType(), biasDesc.GetFormat(),
                                     biasDesc.GetShape().GetDims());
     }
 
@@ -745,7 +751,7 @@ static std::unique_ptr<ge::fusion::SubgraphBoundary> BuildBoundary(const FusionC
     if (hasBias) {
         ge::fusion::SubgraphInput input2;
         input2.AddInput({*ctx.nodeMatmul, kBiasIndex - 1});
-        if (boundary->AddInput(2, std::move(input2)) != ge::SUCCESS) {
+        if (boundary->AddInput(kBiasSubgraphInputIdx, std::move(input2)) != ge::SUCCESS) {
             OP_LOGW(kFusedOpType, "Failed to add subgraph input 2");
             return nullptr;
         }
@@ -762,10 +768,10 @@ static std::unique_ptr<ge::fusion::SubgraphBoundary> BuildBoundary(const FusionC
 
 // Collect old nodes to remove after fusion: matmul, antiquant, add, mul, and their const inputs.
 // Const nodes are only removed if they have no other consumers.
-static bool CollectNodesToRemove(const ge::GraphPtr& graph, const FusionCtx& ctx,
-                                 std::vector<ge::GNode>& nodesBeforeFuse, std::vector<ge::GNodePtr>& nodesToRemove)
+static bool CollectNodesToRemove(const FusionCtx& ctx, std::vector<ge::GNode>& nodesBeforeFuse,
+                                 std::vector<ge::GNodePtr>& nodesToRemove)
 {
-    auto addNode = [&](const ge::GNodePtr& node) {
+    auto addNode = [&nodesToRemove, &nodesBeforeFuse](const ge::GNodePtr& node) {
         if (node == nullptr) {
             return;
         }
@@ -844,9 +850,13 @@ static ge::Status ProcessSingleNodeFusion(const ge::GraphPtr& graph, const ge::G
         }
     }
 
-    std::unique_ptr<uint16_t[]> antiquantScale(new (std::nothrow) uint16_t[scaleN]());
-    std::unique_ptr<uint16_t[]> antiquantOffset(new (std::nothrow) uint16_t[offsetN]());
-    if (antiquantScale == nullptr || antiquantOffset == nullptr) {
+    std::unique_ptr<uint16_t[]> antiquantScale;
+    std::unique_ptr<uint16_t[]> antiquantOffset;
+    try {
+        // make_unique不会返回空指针，只会返回异常，无需在后面加空指针校验
+        antiquantScale = std::make_unique<uint16_t[]>(scaleN);
+        antiquantOffset = std::make_unique<uint16_t[]>(offsetN);
+    } catch (const std::bad_alloc&) {
         OP_LOGW(kFusedOpType, "Failed to allocate memory for antiquant_scale/offset");
         return ge::GRAPH_NOT_CHANGED;
     }
@@ -863,7 +873,7 @@ static ge::Status ProcessSingleNodeFusion(const ge::GraphPtr& graph, const ge::G
 
     std::vector<ge::GNode> nodesBeforeFuse;
     std::vector<ge::GNodePtr> nodesToRemove;
-    if (!CollectNodesToRemove(graph, ctx, nodesBeforeFuse, nodesToRemove)) {
+    if (!CollectNodesToRemove(ctx, nodesBeforeFuse, nodesToRemove)) {
         OP_LOGW(kFusedOpType, "Failed to collect nodes to remove");
         return ge::GRAPH_NOT_CHANGED;
     }

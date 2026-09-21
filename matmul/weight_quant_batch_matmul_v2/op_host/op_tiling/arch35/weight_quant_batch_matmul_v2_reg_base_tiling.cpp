@@ -171,7 +171,7 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::PostTiling()
     workspaces[0] = workspaceSize_;
 
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(tilingData_.get()), tilingDataSize_);
+                           static_cast<const void*>(tilingData_.get()), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
