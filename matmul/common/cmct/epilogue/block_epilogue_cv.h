@@ -63,8 +63,9 @@ public:
 
     // GM ADDR
     AscendC::LocalTensor<DataTypeIn> cLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
-    // vector核一次最多计算多少个元素
-    int64_t stageSize_ = 0;
+    // AF会融合where、compare等算子, 其数据位宽比matmul输出类型小,
+    // 若stage仍按元素个数切分会无法统一vector核UB数据计算, 因此统一到矩阵行: M轴一次最多处理的行数
+    int64_t cubeMStageRows_ = 0;
     // attribute
     FusionOp fusionOp_;
     ProblemShape problemShape_;
@@ -73,8 +74,8 @@ public:
     {
         int64_t l1NAlign = AlignBlock<DataTypeOut>(l1N);
         int64_t ubOffset = l1M * l1NAlign;
-        // 基于剩余UB可用大小确定stageSize_
-        fusionOp_.Init(params.fusionParams, cLocal_, l1M, l1NAlign, ubOffset, stageSize_);
+        // 基于剩余UB可用大小确定cubeMStageRows_(元素个数)
+        fusionOp_.Init(params.fusionParams, cLocal_, l1M, l1NAlign, ubOffset, cubeMStageRows_);
         problemShape_ = problemShape;
     }
 
@@ -90,8 +91,9 @@ public:
         int64_t blockShapeNAlign = AlignBlock<DataTypeOut>(blockShapeN); // 对齐16
         int64_t inputSize = blockShapeM * blockShapeNAlign;
 
-        // 一次计算最多取Min(baseM/2 * baseN, stageSize_)
-        int64_t stageSize = AscendC::Std::min(stageSize_, inputSize) / blockShapeNAlign * blockShapeNAlign;
+        // 每个stage统一按矩阵行处理: stageM取Min(cubeMStageRows_, blockShapeM), stageSize = stageM * blockShapeNAlign
+        const int64_t stageM = AscendC::Std::min(cubeMStageRows_, blockShapeM);
+        int64_t stageSize = stageM * blockShapeNAlign;
         // m轴为1场景第二个vec直接返回
         if (stageSize <= 0) {
             AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
