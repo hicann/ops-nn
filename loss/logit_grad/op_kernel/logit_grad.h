@@ -15,6 +15,7 @@
 #ifndef LOGIT_GRAD_H
 #define LOGIT_GRAD_H
 
+#include <cfloat>
 #include <type_traits>
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
@@ -35,6 +36,8 @@ constexpr AscendC::Reg::CastTrait G5_FP16_TO_FP32_CAST_TRAIT = {
     AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
+// 2^23：次正规归一化因子，见 ComputeFusedFp32Bf16 内注释
+constexpr float SUBNORMAL_NORM_SCALE = 8388608.0F;
 #endif
 
 template <typename T>
@@ -52,7 +55,7 @@ private:
     __aicore__ inline void ComputeStepTwo(int64_t dataCount);
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
     __aicore__ inline void ComputeFusedFp16(int64_t dataCount);
-    __aicore__ inline void ComputeFusedBf16(int64_t dataCount);
+    __aicore__ inline void ComputeFusedFp32Bf16(int64_t dataCount);
 #endif
     __aicore__ inline void CastAndCopyOut(int64_t outputOffset, int64_t dataCount);
 
@@ -159,11 +162,10 @@ __aicore__ inline void LogitGradND<T>::Process()
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
         if constexpr (std::is_same_v<T, half>) {
             ComputeFusedFp16(calNum);
-        } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-            ComputeFusedBf16(calNum);
         } else {
-            ComputeStepOne(calNum);
-            ComputeStepTwo(calNum);
+            // bf16 与 fp32 在 UB 中同为 fp32 布局，共用融合路径；fp16 输入最小值为 2^-24，
+            // 在 fp32 中恒为正规数，不存在次正规问题，维持原融合路径
+            ComputeFusedFp32Bf16(calNum);
         }
 #else
         ComputeStepOne(calNum);
@@ -299,7 +301,7 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
 
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
 template <typename T>
-__aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
+__aicore__ inline void LogitGradND<T>::ComputeFusedFp32Bf16(int64_t dataCount)
 {
     float lo = epslion;
     float hi = static_cast<float>(1.0) - epslion;
@@ -309,6 +311,12 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
         AscendC::Reg::RegTensor<float> regX;
         AscendC::Reg::RegTensor<float> regDy;
         AscendC::Reg::RegTensor<float> regTmp;
+        AscendC::Reg::RegTensor<float> regOmx;
+        AscendC::Reg::RegTensor<float> regDen;
+        AscendC::Reg::RegTensor<float> regXS;
+        AscendC::Reg::RegTensor<float> regDyS;
+        AscendC::Reg::RegTensor<float> regScale;
+        AscendC::Reg::RegTensor<float> regMinNormal;
         AscendC::Reg::RegTensor<float> regOut;
         AscendC::Reg::RegTensor<float> regLo;
         AscendC::Reg::RegTensor<float> regHi;
@@ -317,6 +325,7 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
         AscendC::Reg::MaskReg maskGE;
         AscendC::Reg::MaskReg maskLE;
         AscendC::Reg::MaskReg maskValid;
+        AscendC::Reg::MaskReg maskSub;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
         uint16_t vfLoopNum = static_cast<uint16_t>((count + vfLen - 1) / vfLen);
@@ -326,6 +335,13 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
         AscendC::Reg::Duplicate<float>(regLo, lo);
         AscendC::Reg::Duplicate<float>(regHi, hi);
         AscendC::Reg::Duplicate<float>(regInvalid, selectValue);
+        // 次正规修复：dx = dy/(x*(1-x))，A5 对次正规中间值做 FTZ，x 为次正规时
+        // 分母被冲刷为 0，dy/0 = ±inf。对 x < FLT_MIN 的 lane 改用
+        // (dy*2^23) / ((x*2^23)*(1-x))：除法两侧同乘 2 的幂，商与未冲刷时逐位
+        // 一致；其余 lane 走原算式，结果逐位不变。负值 lane 亦被该 mask 覆盖，
+        // 缩放在实数域精确抵消，且最终被 clamp 置为 selectValue
+        AscendC::Reg::Duplicate<float>(regScale, SUBNORMAL_NORM_SCALE);
+        AscendC::Reg::Duplicate<float>(regMinNormal, FLT_MIN);
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
@@ -334,10 +350,18 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
             AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(regDy, dyAddr + i * vfLen);
             AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX,
                                                                                    static_cast<float>(-1.0), preg0);
-            AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regTmp,
+            AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regOmx, regTmp,
                                                                                    static_cast<float>(1.0), preg0);
-            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX, regTmp, preg0);
-            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(regDy, regDy, regTmp, preg0);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(regDen, regX, regOmx, preg0);
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regXS, regX, SUBNORMAL_NORM_SCALE,
+                                                                                   preg0);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(regXS, regXS, regOmx, preg0);
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regDyS, regDy, SUBNORMAL_NORM_SCALE,
+                                                                                   preg0);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::LT>(maskSub, regX, regMinNormal, preg0);
+            AscendC::Reg::Select<float>(regDen, regXS, regDen, maskSub);
+            AscendC::Reg::Select<float>(regDy, regDyS, regDy, maskSub);
+            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(regDy, regDy, regDen, preg0);
             AscendC::Reg::Compare<float, AscendC::CMPMODE::GE>(maskGE, regX, regLo, preg0);
             AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
             AscendC::Reg::MaskAnd(maskValid, maskGE, maskLE, preg0);
