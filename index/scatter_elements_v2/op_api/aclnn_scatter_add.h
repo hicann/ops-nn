@@ -37,7 +37,7 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] src: npu
  * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16，dim反向的维度数量需要与src相同。
+ * Atlas训练系列产品数据类型不支持BFLOAT16，dim反向的维度数量需要与src相同。
  * 支持非连续的Tensor，数据格式支持ND，且数据类型与self保持一致。
  * @param [in] out: npu device侧的aclTensor,
  * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128, Atlas

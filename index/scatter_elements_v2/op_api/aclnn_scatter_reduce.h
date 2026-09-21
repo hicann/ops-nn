@@ -55,7 +55,7 @@ extern "C" {
  * false：不参与规约。
  * @param [in] out: npu
  * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与self一致。
+ * Atlas训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与self一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
@@ -85,7 +85,7 @@ ACLNN_API aclnnStatus aclnnScatterReduce(void* workspace, uint64_t workspaceSize
  * 算子功能： 对输入Tensor完成带规约语义的inplace scatter操作
  * @param [in] selfRef:
  * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。
+ * Atlas训练系列产品数据类型不支持BFLOAT16。
  * selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor，
  * 支持非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
