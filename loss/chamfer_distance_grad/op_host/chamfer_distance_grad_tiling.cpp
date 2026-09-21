@@ -82,7 +82,8 @@ ge::graphStatus ChamferDistanceGradTiling::Init()
     auto dtype_str = TilingContext->GetInputDesc(0)->GetDataType();
     SetTilingKeyMode(dtype_str);
     task_per_core = (batch_size * num - 1) / core_num + 1;
-    core_used = (batch_size * num - 1) / task_per_core + 1;
+    auto ret = TilingContext->GetDeterministic();
+    core_used = (ret == 0) ? ((batch_size * num - 1) / task_per_core + 1) : 1;
     task_tail_core = batch_size * num - (core_used - 1) * task_per_core;
     OP_LOGD(TilingContext, "Tiling inited.");
     return ge::GRAPH_SUCCESS;
