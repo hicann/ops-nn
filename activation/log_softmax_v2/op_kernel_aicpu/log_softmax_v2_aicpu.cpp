@@ -217,7 +217,6 @@ KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Compute(const CpuKernelContext& 
     auto input = static_cast<T*>(ctx.Input(0)->GetData());
     auto output = static_cast<T*>(ctx.Output(0)->GetData());
     std::int64_t total = ctx.Input(0)->NumElements();
-
     if (ctx.Input(0)->GetTensorShape()->GetDims() == 0 && total == 1) {
         output[0] = static_cast<T>(std::log(std::exp(input[0]) / std::exp(input[0])));
         KERNEL_LOG_DEBUG("LogSoftmaxV2 handling scalar scenarios.");
