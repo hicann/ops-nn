@@ -95,7 +95,25 @@ public:
                         (self_->ctx.mStartPos + self_->ctx.mAL1Iter * self_->ctx.mAL1) %
                             self_->ctx.convTilingData->orgWo;
         xm_.bf.mExtension_ = currentML0_ & MASK_16;
-        xm_.bf.mStartPt_ = posM & MASK_16;
+        if constexpr (!Intf::isNoPad && !Intf::isInnerBatchFlag) {
+            uint64_t currentM = self_->ctx.mStartPos + self_->ctx.mAL1Iter * self_->ctx.mAL1;
+            uint64_t currentML1 = (self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter) ? self_->ctx.mAL1Tail :
+                                                                                    self_->ctx.mAL1;
+            uint64_t hoStartIdx = currentM / self_->ctx.convTilingData->orgWo;
+            uint64_t hoEndIdx = CeilDiv(currentM + currentML1, self_->ctx.convTilingData->orgWo);
+            uint64_t hiLoadL1 = ((hoEndIdx - hoStartIdx) - 1) * self_->ctx.convTilingData->strideH +
+                                self_->ctx.dilatedKernelH;
+            uint64_t hiStartIdxWithPad = hoStartIdx * self_->ctx.convTilingData->strideH;
+            uint64_t hiEndIdxWithPad = hiStartIdxWithPad + hiLoadL1;
+            if (hiEndIdxWithPad <= self_->ctx.convTilingData->padTop ||
+                hiStartIdxWithPad >= self_->ctx.convTilingData->orgHi + self_->ctx.convTilingData->padTop) {
+                xm_.bf.mStartPt_ = 0;
+            } else {
+                xm_.bf.mStartPt_ = posM & MASK_16;
+            }
+        } else {
+            xm_.bf.mStartPt_ = posM & MASK_16;
+        }
 
         xt_.n = static_cast<uint64_t>(self_->ctx.convTilingData->unionDataXt);
         xt_.bf.channelSize = channelSize_;
