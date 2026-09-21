@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (c) 2025 Huawei Technologies Co., Ltd.
+       This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+       CANN Open Software License Agreement Version 2.0 (the "License").
+       Please refer to the License for details. You may not use this file except in compliance with the License.
+       THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+       INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+       See LICENSE in the root of the software repository for the full text of the License.
+-->
 <block name="OpsNNInfO" copy_type="delivery" src_path="lib/" dst_path="" install_path="" install_own="$username:$usergroup" install_mod="550" install_type="all">
-    
+
     <file_info value="aclnn_api" copy_type="delivery" src_path="built-in/op_api" dst_path="$(TARGET_ENV)/lib64" install_path="$(TARGET_ENV)/lib64">
         <file value="libopapi_nn.so" optional="true" install_mod="555"/>
     </file_info>
@@ -15,6 +23,17 @@
 
     <file_info value="ops_info" src_path="op_host" dst_path="opp/built-in/op_impl/ai_core/tbe" install_path="opp/built-in/op_impl/ai_core/tbe">
         <file value="config" install_mod="555"/>
+    </file_info>
+
+    <!-- allow_hf32_matmul_*_conv_*.ini为canndev仓迁移文件，canndev仓后续会删除这四个文件，
+         存量环境仍带有canndev安装的同名文件，过渡期安装时不覆盖、卸载时不删除，
+         过渡期后应删除本说明及卸载侧对这四个文件的保护逻辑 -->
+    <file_info value="impl_mode" copy_type="delivery" src_path="" dst_path="opp/built-in/op_impl/ai_core/tbe/impl_mode" install_path="opp/built-in/op_impl/ai_core/tbe/impl_mode">
+        <file value="ops_allow_hf32_nn.ini" optional="true" install_mod="555"/>
+        <file value="allow_hf32_matmul_f_conv_f.ini" optional="true" configurable="true" install_mod="555"/>
+        <file value="allow_hf32_matmul_f_conv_t.ini" optional="true" configurable="true" install_mod="555"/>
+        <file value="allow_hf32_matmul_t_conv_f.ini" optional="true" configurable="true" install_mod="555"/>
+        <file value="allow_hf32_matmul_t_conv_t.ini" optional="true" configurable="true" install_mod="555"/>
     </file_info>
 
     <file_info value="rtkb" copy_type="source" src_path="" dst_path="opp/built-in/data" install_path="opp/built-in/data">
@@ -75,6 +94,7 @@
         <path value="opp/built-in/op_impl" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/impl_mode" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe/impl" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe/op_host" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib" install_mod="550"/>

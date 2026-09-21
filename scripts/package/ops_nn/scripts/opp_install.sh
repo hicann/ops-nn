@@ -352,6 +352,21 @@ install_es_whl()
  	fi
 }
 
+# 背景：allow_hf32_matmul_*_conv_*.ini四个文件从canndev仓迁移至本仓，canndev仓后续会删除这四个文件，
+# 存量环境中仍带有canndev安装的同名文件。过渡期保护存量文件：目标已存在则不覆盖、卸载时不删除；
+# 过渡期后存量环境消化完毕，应删除本段不覆盖逻辑及OpsNNInfo.xml中对应说明
+skip_existing_legacy_hf32_ini() {
+    local payload_impl_dir="${CURR_PATH}/../../../../opp/built-in/op_impl/ai_core/tbe/impl_mode"
+    local target_impl_dir="${TARGET_VERSION_DIR}/opp/built-in/op_impl/ai_core/tbe/impl_mode"
+    local f
+    for f in allow_hf32_matmul_f_conv_f allow_hf32_matmul_f_conv_t allow_hf32_matmul_t_conv_f allow_hf32_matmul_t_conv_t; do
+        if [ -f "${target_impl_dir}/${f}.ini" ]; then
+            rm -f "${payload_impl_dir}/${f}.ini" 2>/dev/null
+            logandprint "[INFO]: ${f}.ini already exists in target env, skip installing."
+        fi
+    done
+}
+
 install_cann_ops_nn_whl() {
   local whl_dir="${CURR_PATH}/../../../../python/site-packages"
   local target_python_dir="${TARGET_VERSION_DIR}/python/site-packages"
@@ -416,6 +431,9 @@ install_opp() {
 
   # 先安装 whl 包，再通过 install_common_parser.sh 统一安装权限
   install_cann_ops_nn_whl
+
+  # legacy hf32 ini已在目标环境存在时不覆盖：从payload中剔除副本，copy_all整树拷贝即不会覆盖
+  skip_existing_legacy_hf32_ini
 
   bash "${COMMON_PARSER_FILE}" --copy_all --package="${OPP_PLATFORM_DIR}" --install --username="${TARGET_USERNAME}" \
     --usergroup="${TARGET_USERGROUP}" --set-cann-uninstall --version=$RUN_PKG_VERSION \

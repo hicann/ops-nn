@@ -11,6 +11,7 @@
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
     DEPENDENCIES batch_mat_mul_v3 mat_mul_v3
+    ALLOW_HF32 enable_float_32_execution
 )
 
 add_kernel_sources(

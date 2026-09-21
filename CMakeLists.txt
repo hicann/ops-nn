@@ -182,6 +182,10 @@ endif()
 
 add_category_subdirectory()
 
+gen_allow_hf32_ini()
+
+install_allow_hf32_legacy_ini()
+
 if(ENABLE_TEST)
   if(UT_TEST_ALL OR OP_GRAPH_UT)
     include(cmake/gen_ops_info.cmake)

@@ -44,6 +44,7 @@ set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
 # global variables
 set(COMPILED_OPS CACHE STRING "Compiled Ops" FORCE)
 set(COMPILED_OP_DIRS CACHE STRING "Compiled Ops Dirs" FORCE)
+set(ALLOW_HF32_NN_OPS "" CACHE INTERNAL "ops which allow hf32" FORCE)
 set(AICPU_HOST_OBJ_TARGETS)
 
 # kernel source and compile options

@@ -501,15 +501,17 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   endif()
 endfunction()
 
-# usage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
+# usage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP ALLOW_HF32) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
 # COMPUTE_UNIT 设置支持芯片版本号，必须与TILING_DIR一一对应，示例：ascend910b ascend950
 # TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，示例：arch22 arch35
 # DISABLE_IN_OPP 设置是否在opp包中编译tiling文件，布尔类型：TRUE，FALSE
+# ALLOW_HF32 配置算子允许HF32执行，取值：enable_hi_float_32_execution / enable_float_32_execution，
+#            配置后记录OPTYPE对应的算子并按OPTYPE去重，用于生成ops_allow_hf32_nn.ini
 # 需一一对应
 function(add_modules_sources)
   set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DIR)
-  set(oneValueArgs DISABLE_IN_OPP HOSTCPU)
+  set(oneValueArgs DISABLE_IN_OPP ALLOW_HF32 HOSTCPU)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   if(MODULE_DIR)
@@ -616,6 +618,9 @@ function(add_modules_sources)
             file(GLOB OPDEF_EXT_SRCS ${MODULE_EXT}/${op_category}/${OP_NAME}/op_host/${OpType}*_def*.cpp)
             list(APPEND OPDEF_SRCS ${OPDEF_EXT_SRCS})
         endif()
+        if(MODULE_ALLOW_HF32)
+          record_allow_hf32_ops("${OpType}" "${MODULE_ALLOW_HF32}" "${OPDEF_SRCS}")
+        endif()
         if(OPDEF_SRCS)
           target_sources(${OPHOST_NAME}_opdef_${AclnnType}_obj INTERFACE ${OPDEF_SRCS})
         endif()
@@ -638,6 +643,85 @@ function(add_modules_sources)
   endif()
 endfunction()
 
+# 记录配置了ALLOW_HF32的算子，以注册的OpType（从*_def.cpp的OP_ADD解析，大写驼峰）为键去重，用于生成ops_allow_hf32_nn.ini
+# usage: record_allow_hf32_ops(op_type allow_hf32_value def_files) op_type 为add_modules_sources传入的OPTYPE（snake_case算子目录名），def_files 为对应*_def.cpp文件列表
+function(record_allow_hf32_ops op_type allow_hf32_value def_files)
+  if(NOT allow_hf32_value MATCHES "^enable_(hi_)?float_32_execution$")
+    message(FATAL_ERROR "ALLOW_HF32 only supports enable_hi_float_32_execution or enable_float_32_execution, but got: ${allow_hf32_value}")
+  endif()
+  get_op_type_from_def_files("${def_files}" registered_type)
+  if(NOT registered_type)
+    message(WARNING "record_allow_hf32_ops: cannot resolve registered op type from def files of ${op_type}, skip recording")
+    return()
+  endif()
+  set(recorded FALSE)
+  foreach(entry ${ALLOW_HF32_NN_OPS})
+    if(entry MATCHES "^${registered_type}=")
+      set(recorded TRUE)
+      break()
+    endif()
+  endforeach()
+  if(NOT recorded)
+    list(APPEND ALLOW_HF32_NN_OPS "${registered_type}=${allow_hf32_value}")
+    set(ALLOW_HF32_NN_OPS "${ALLOW_HF32_NN_OPS}" CACHE INTERNAL "ops which allow hf32" FORCE)
+  endif()
+endfunction()
+
+# 安装待迁移的legacy impl_mode ini文件（scripts/package/legacy）到opp/built-in/op_impl/ai_core/tbe/impl_mode，与生成的ops_allow_hf32_nn.ini同目录
+# 背景：allow_hf32_matmul_*_conv_*.ini从canndev仓迁移至此，canndev仓后续会删除这四个文件；
+# 存量环境带有canndev安装的同名文件，安装时不覆盖、卸载时不删除（见OpsNNInfo.xml与opp_install.sh），
+# 过渡期后随存量环境消化删除相应保护逻辑
+function(install_allow_hf32_legacy_ini)
+  if(ENABLE_CUSTOM)
+    return()
+  endif()
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/scripts/package/legacy/"
+      DESTINATION ${OPP_PREFIX}/built-in/op_impl/ai_core/tbe/impl_mode
+  )
+endfunction()
+
+# 汇总ALLOW_HF32配置，生成ops_allow_hf32_nn.ini并安装到opp/built-in/op_impl/ai_core/tbe/impl_mode，在顶层CMakeLists的add_category_subdirectory之后调用
+# ops_allow_hf32_nn.ini为本仓新增的默认读取文件（替代canndev迁移来的allow_hf32_matmul_*_conv_*.ini四个文件）
+# ini一定会生成：未通过ALLOW_HF32配置的算子从默认legacy文件allow_hf32_matmul_f_conv_t.ini补充
+function(gen_allow_hf32_ini)
+  if(ENABLE_CUSTOM)
+    return()
+  endif()
+  set(allow_hf32_ops ${ALLOW_HF32_NN_OPS})
+  set(legacy_ini "${CMAKE_CURRENT_SOURCE_DIR}/scripts/package/legacy/allow_hf32_matmul_f_conv_t.ini")
+  if(EXISTS "${legacy_ini}")
+    file(STRINGS "${legacy_ini}" legacy_lines)
+    foreach(line ${legacy_lines})
+      if(line MATCHES "^([A-Za-z0-9_]+)=(.+)$")
+        set(type "${CMAKE_MATCH_1}")
+        set(value "${CMAKE_MATCH_2}")
+        set(recorded FALSE)
+        foreach(entry ${allow_hf32_ops})
+          if(entry MATCHES "^${type}=")
+            set(recorded TRUE)
+            break()
+          endif()
+        endforeach()
+        if(NOT recorded)
+          list(APPEND allow_hf32_ops "${type}=${value}")
+        endif()
+      endif()
+    endforeach()
+  else()
+    message(WARNING "gen_allow_hf32_ini: legacy ini ${legacy_ini} not found, ops_allow_hf32_nn.ini only contains ALLOW_HF32 configured ops")
+  endif()
+  if(NOT allow_hf32_ops)
+    return()
+  endif()
+  list(REMOVE_DUPLICATES allow_hf32_ops)
+  list(SORT allow_hf32_ops)
+  string(JOIN "\n" allow_hf32_content ${allow_hf32_ops})
+  file(WRITE "${ASCEND_KERNEL_CONF_DST}/ops_allow_hf32_nn.ini" "${allow_hf32_content}\n")
+  install(FILES "${ASCEND_KERNEL_CONF_DST}/ops_allow_hf32_nn.ini"
+      DESTINATION ${OPP_PREFIX}/built-in/op_impl/ai_core/tbe/impl_mode
+  )
+endfunction()
+
 # ######################################################################################################################
 # get op_type from *_def.cpp
 # ######################################################################################################################
@@ -657,6 +741,21 @@ function(get_op_type_from_op_name OP_NAME OP_TYPE)
       ${op_type}
       PARENT_SCOPE
     )
+endfunction()
+
+# 从def文件列表解析注册的OpType（OP_ADD参数，大写驼峰），解析失败输出空串
+function(get_op_type_from_def_files DEF_FILES OP_TYPE)
+  set(registered_type "")
+  foreach(def_file ${DEF_FILES})
+    if(EXISTS "${def_file}")
+      file(READ "${def_file}" def_content)
+      if(def_content MATCHES "OP_ADD\\([ \t\r\n]*([A-Za-z0-9_]+)")
+        set(registered_type "${CMAKE_MATCH_1}")
+        break()
+      endif()
+    endif()
+  endforeach()
+  set(${OP_TYPE} "${registered_type}" PARENT_SCOPE)
 endfunction()
 
 # usage: add_kernel_sources(OPTYPE)
@@ -1304,8 +1403,9 @@ endmacro()
 # [COMPUTE_UNIT ascendxx...]    支持的芯片版本号，必须与TILING_DIR一一对应，缺省为配置所有的soc
 # [TILING_DIR archxx...]        每种芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，缺省为空
 # [DISABLE_IN_OPP TRUE/FALSE]   是否在opp包中编译tiling文件，缺省为FALSE
+# [ALLOW_HF32 xxx]              配置算子允许HF32执行，取值：enable_hi_float_32_execution / enable_float_32_execution
 macro(add_all_modules_sources)
-  set(oneValueArgs DISABLE_IN_OPP HOSTCPU)
+  set(oneValueArgs DISABLE_IN_OPP HOSTCPU ALLOW_HF32)
   set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -1327,7 +1427,8 @@ macro(add_all_modules_sources)
   add_modules_sources(DIR ${_HOST_DIR} OPTYPE ${MODULE_OPTYPE} ACLNNTYPE ${MODULE_ACLNNTYPE}
       DEPENDENCIES ${MODULE_DEPENDENCIES} COMPUTE_UNIT ${MODULE_COMPUTE_UNIT}
       TILING_DIR ${MODULE_TILING_DIR} DISABLE_IN_OPP ${MODULE_DISABLE_IN_OPP}
-      HOSTCPU ${MODULE_HOSTCPU})
+      HOSTCPU ${MODULE_HOSTCPU}
+      ALLOW_HF32 ${MODULE_ALLOW_HF32})
 
   add_all_ut_sources(OP_NAME ${_OP_NAME})
   unset(_HOST_DIR)
