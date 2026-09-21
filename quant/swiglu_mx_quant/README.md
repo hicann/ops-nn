@@ -33,12 +33,28 @@
 
   **阶段2：动态块量化**
 
+  沿axis维度按blocksize=32分块进行动态量化。scale_alg=0（OCP）时，每个块内的元素 {V_i} 按以下公式量化：
+
   <p style="text-align: center">
-  scale[block_idx] = max(abs(block))
+  shared_exp = floor(log2(max_i(|V_i|))) - emax
   </p>
   <p style="text-align: center">
-  y[block_idx] = Cast(block / scale[block_idx])
+  mxscale = 2^shared_exp
   </p>
+  <p style="text-align: center">
+  y_i = cast_to_dst_type(V_i / mxscale, round_mode)
+  </p>
+
+  其中，emax为目标数据类型最大正则数的指数位，取值如下：
+
+  | 数据类型 | emax |
+  | :------: | :--: |
+  | FLOAT4_E2M1 | 2 |
+  | FLOAT4_E1M2 | 0 |
+  | FLOAT8_E4M3FN | 8 |
+  | FLOAT8_E5M2 | 15 |
+
+  scale_alg=1（cuBLAS，仅FP8类型）时采用块缩放因子推导，公式详见[aclnnSwigluMxQuant](./docs/aclnnSwigluMxQuant.md)。
 
 ## 参数说明
 
@@ -73,9 +89,23 @@
       <td>ND</td>
     </tr>
     <tr>
+      <td>y</td>
+      <td>输出</td>
+      <td>量化后的输出张量，形状与x相同，activate_dim维度为x的一半。</td>
+      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>mxscale</td>
+      <td>输出</td>
+      <td>每个量化块（32个元素一组）的缩放因子。shape在axis轴上为y对应轴除以32向上取整后按偶数对齐，最后一维固定为2，存放相邻两个量化块的scale；当axis=-2且group_index存在时，shape在axis轴上为y对应轴的值整除64再加group_num。</td>
+      <td>FLOAT8_E8M0</td>
+      <td>ND</td>
+    </tr>
+    <tr>
       <td>activate_dim</td>
       <td>属性</td>
-      <td>SwiGLU的分割维度，取值范围为[-1, -2]。</td>
+      <td>SwiGLU的分割维度，取值范围为[-1, -2, xDim-2, xDim-1]（xDim为输入x的维度，即最后两维）。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -124,7 +154,7 @@
     <tr>
       <td>axis</td>
       <td>属性</td>
-      <td>量化轴，沿此维度进行分块量化，取值范围为[-1, -2]。</td>
+      <td>量化轴，沿此维度进行分块量化，取值范围为[-1, -2, xDim-2, xDim-1]（xDim为输入x的维度，即最后两维）。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -156,26 +186,12 @@
       <td>FLOAT</td>
       <td>-</td>
     </tr>
-    <tr>
-      <td>y</td>
-      <td>输出</td>
-      <td>量化后的输出张量，形状与x相同，activate_dim维度为x的一半。</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>mxscale</td>
-      <td>输出</td>
-      <td>每个量化块（32个元素一组）的缩放因子。shape在axis轴上为y对应轴除以32向上取整后按偶数对齐，最后一维固定为2，存放相邻两个量化块的scale；当axis=-2且group_index存在时，shape在axis轴上为y对应轴的值整除64再加group_num。</td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND</td>
-    </tr>
   </tbody></table>
 
 ## 约束说明
 
 - 输入x支持2-7维张量，在activate_dim指定维度上的尺寸必须能被2整除。
-- activate_dim和axis的值必须为-1或-2。
+- activate_dim和axis必须取输入x的最后两维，取值范围为[-1, -2, xDim-2, xDim-1]（xDim为输入x的维度）。
 - activate_dim为-2时，swiglu_mode必须为0。
 - swiglu_mode为2或3时，axis必须为-1。
 - 当activate_dim = -2 或者axis = -2, group_index存在时，输入x必须为2维。
@@ -183,6 +199,11 @@
 - 当dst_type为FP4类型时，scale_alg必须为0。
 - group_index存在时，必须为1维，且shape[0]大于0且小于等于256；data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。
 - FP8输出类型仅支持"rint"舍入模式。
+- 不支持空Tensor：输入x、可选输入group_index及输出y、mxscale的shape中任一维度为0（元素数为0）时，算子校验失败并报错。
+- 输入x必须为2-7维，不支持rank=0标量Tensor。
+- 输出y/mxscale由调用方按接口推导的形状分配内存，算子将量化结果完整写回输出Tensor；超出group_index所有元素之和覆盖范围的输出部分不清理，为垃圾数据。
+- 输入与输出的内存空间不能重叠，不支持原地修改（inplace）场景。
+- 算子执行过程中不修改任何输入数据。
 
 ## 调用说明
 
