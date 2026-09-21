@@ -20,7 +20,7 @@
  */
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/smooth_l1_loss.h"
+#include "arch35/smooth_l1_loss_arch35.h"
 
 using namespace AscendC;
 using namespace SmoothL1Loss;

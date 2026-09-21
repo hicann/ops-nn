@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef SMOOTH_L1_LOSS_H
-#define SMOOTH_L1_LOSS_H
+#ifndef SMOOTH_L1_LOSS_ARCH35_H
+#define SMOOTH_L1_LOSS_ARCH35_H
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
@@ -220,4 +220,4 @@ __aicore__ inline void KernelSmoothL1Loss<T>::CopyOut(int64_t progress, int64_t 
 
 } // namespace SmoothL1Loss
 
-#endif // SMOOTH_L1_LOSS_H
+#endif // SMOOTH_L1_LOSS_ARCH35_H
