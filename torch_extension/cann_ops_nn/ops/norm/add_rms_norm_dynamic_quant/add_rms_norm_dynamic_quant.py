@@ -210,7 +210,7 @@ def _validate_arg_types(
 
     注意：经 torch.ops dispatcher 调用时本函数仍会执行（@impl 即 PrivateUse1
     kernel），但参数此时已被 schema 归一化为原生类型，类型拦截在该路径不生效，
-    仅由值域校验兜底。
+    仅由值域校验兜底；原始类型拦截由公开入口在委托 dispatcher 之前完成。
     """
     for name, value in (("x1", x1), ("x2", x2), ("gamma", gamma)):
         if not isinstance(value, torch.Tensor):
@@ -251,6 +251,37 @@ def _validate_arg_types(
 
 
 @impl(get_as_library(), add_rms_norm_dynamic_quant_builder.name, "PrivateUse1")
+def _add_rms_norm_dynamic_quant_npu(
+    x1: torch.Tensor,
+    x2: torch.Tensor,
+    gamma: torch.Tensor,
+    beta: Optional[torch.Tensor] = None,
+    x3: Optional[torch.Tensor] = None,
+    epsilon: float = 1e-6,
+    scale_alg: int = 0,
+    round_mode: str = "rint",
+    dst_type: int = 40,
+    output_rstd: bool = False,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    # PrivateUse1 kernel：dispatcher 回调时标量已按 schema 归一化，原始类型拦截见公开入口
+    _validate_arg_types(
+        x1, x2, gamma, beta, x3, epsilon, scale_alg, round_mode, dst_type, output_rstd
+    )
+    op_module = add_rms_norm_dynamic_quant_builder.load()
+    return op_module.add_rms_norm_dynamic_quant(
+        x1,
+        x2,
+        gamma,
+        beta,
+        x3,
+        epsilon,
+        scale_alg,
+        round_mode,
+        dst_type,
+        output_rstd,
+    )
+
+
 def add_rms_norm_dynamic_quant(
     x1: torch.Tensor,
     x2: torch.Tensor,
@@ -274,20 +305,27 @@ def add_rms_norm_dynamic_quant(
     round_mode: str，output_rstd: bool，epsilon: int/float），bool 与
     numpy/torch 等第三方类型（含 np.float64、np.str_ 这类内建类型子类）在入口
     直接抛 TypeError。
+
+    先校验原始参数、再委托 torch.ops（而非直调 C++ 模块）：dispatcher 会按
+    schema 归一化标量（torch.int4 -> 40 等），校验必须在其之前；委托调用使
+    图模式（torch.compile）下 Dynamo 内联本函数后仍以 torch.ops 调用为图节点。
     """
     _validate_arg_types(
         x1, x2, gamma, beta, x3, epsilon, scale_alg, round_mode, dst_type, output_rstd
     )
-    op_module = add_rms_norm_dynamic_quant_builder.load()
-    return op_module.add_rms_norm_dynamic_quant(
+    return torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant(
         x1,
         x2,
         gamma,
-        beta,
-        x3,
-        epsilon,
-        scale_alg,
-        round_mode,
-        dst_type,
-        output_rstd,
+        beta=beta,
+        x3=x3,
+        epsilon=epsilon,
+        scale_alg=scale_alg,
+        round_mode=round_mode,
+        dst_type=dst_type,
+        output_rstd=output_rstd,
     )
+
+
+# cann_ops_nn/__init__.py 顶层属性解析依据该标记优先导出本函数（而非 dispatcher 句柄）
+add_rms_norm_dynamic_quant._cann_ops_nn_public_entry_ = True

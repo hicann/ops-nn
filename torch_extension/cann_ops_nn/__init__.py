@@ -30,6 +30,12 @@ del _name
 
 
 def __getattr__(name):
+    # 带标记的算子公开入口（校验原始参数后委托 torch.ops）优先于 dispatcher 句柄导出，
+    # 否则 dispatcher 按 schema 归一化标量（如 torch.int4 -> 40）会使入口类型拦截失效
+    attr = getattr(ops, name, None)
+    if callable(attr) and getattr(attr, "_cann_ops_nn_public_entry_", False):
+        globals()[name] = attr
+        return attr
     if hasattr(_op_namespace, name):
         handle = getattr(_op_namespace, name)
         globals()[name] = handle
