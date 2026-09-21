@@ -57,6 +57,10 @@ static ge::graphStatus InferShape4SeluGrad(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gradShape) && gradShape->GetDimNum() == 0,
+                OP_LOGE(context, "The rank of gradients must be at least 1"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*outShape) && outShape->GetDimNum() == 0,
+                OP_LOGE(context, "The rank of outputs must be at least 1"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gradShape) && gradShape->GetDimNum() > MAX_SUPPORTED_RANK,
                 OP_LOGE(context, "The rank of gradients must not exceed %zu", MAX_SUPPORTED_RANK),
                 return ge::GRAPH_FAILED);

@@ -23,7 +23,6 @@
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "aclnn_kernels/reshape.h"
 #include "selugrad.h"
 #include "aclnn_kernels/transdata.h"
 
@@ -76,45 +75,35 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* resu
     return true;
 }
 
+static inline bool CheckRank(const aclTensor* gradOutput, const aclTensor* result, const aclTensor* gradInput)
+{
+    OP_CHECK_MIN_DIM(gradOutput, 1, return false);
+    OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MIN_DIM(result, 1, return false);
+    OP_CHECK_MAX_DIM(result, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MIN_DIM(gradInput, 1, return false);
+    OP_CHECK_MAX_DIM(gradInput, MAX_SUPPORT_DIMS_NUMS, return false);
+    return true;
+}
+
 static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
 {
     CHECK_RET(CheckNotNull(gradOutput, result, gradInput), ACLNN_ERR_PARAM_NULLPTR);
 
     CHECK_RET(CheckDtypeValid(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
 
+    CHECK_RET(CheckRank(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
+
     CHECK_RET(CheckShape(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-static inline aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
-{
-    auto shape = x->GetViewShape();
-    int64_t dimSize = x->GetViewShape().GetDimNum();
-
-    std::vector<int64_t> valuePerm(dimSize);
-    for (int i = 0; i < dimSize; i++) {
-        valuePerm[i] = shape[i];
-    }
-    auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
-    return perm;
-}
-
-static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, int originalDimSize,
-                                          aclIntArray* valuePerm = nullptr)
-{
-    int64_t dimSize = x->GetViewShape().GetDimNum();
-    if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
-        return x;
-    }
-
-    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-    return reshapeSelf;
-}
-
 aclnnStatus ExecSeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput,
                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
@@ -133,25 +122,11 @@ aclnnStatus ExecSeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const 
     auto resultContiguous = l0op::Contiguous(result, uniqueExecutor.get());
     CHECK_RET(resultContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    size_t dimSize = gradOutput->GetViewShape().GetDimNum();
-    auto shapeOriDetail = GetTensorShape(gradOutputContiguous, uniqueExecutor.get());
-
-    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-        auto allDimValue = gradOutput->Size();
-        int64_t allDim[1] = {allDimValue};
-        auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
-        gradOutputContiguous = ReshapeLongTensor(gradOutputContiguous, uniqueExecutor.get(), dimSize, shape1d);
-        resultContiguous = ReshapeLongTensor(resultContiguous, uniqueExecutor.get(), dimSize, shape1d);
-    }
-
     auto seluGradOut = l0op::SeluGrad(gradOutputContiguous, resultContiguous, uniqueExecutor.get());
     CHECK_RET(seluGradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-        seluGradOut = ReshapeLongTensor(seluGradOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
-    }
-
     auto castSeluGradOut = l0op::Cast(seluGradOut, gradInput->GetDataType(), uniqueExecutor.get());
+    CHECK_RET(castSeluGradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyOut = l0op::ViewCopy(castSeluGradOut, gradInput, uniqueExecutor.get());
     CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

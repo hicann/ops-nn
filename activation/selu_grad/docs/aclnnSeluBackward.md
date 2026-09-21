@@ -105,7 +105,7 @@ aclnnStatus aclnnSeluBackward(
       <td>result（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu计算的正向输出，公式中的y。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、shape需要与gradOutput，gradInput一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、shape需要与gradOutput，gradInput一致。</li></ul></td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

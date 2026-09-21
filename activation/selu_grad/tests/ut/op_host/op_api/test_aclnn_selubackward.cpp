@@ -238,6 +238,26 @@ TEST_F(selu_backward_test, test_selubackward_larger_than_8_dim)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceout = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceout, ACLNN_SUCCESS);
-    // ut.TestPrecision();
+    EXPECT_EQ(getWorkspaceout, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(selu_backward_test, test_selubackward_scalar_rejected)
+{
+    auto gradoutput = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto result = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradinput = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnSeluBackward, INPUT(gradoutput, result), OUTPUT(gradinput));
+
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(selu_backward_test, test_selubackward_workspace_size_nullptr)
+{
+    auto gradoutput = TensorDesc({2, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto result = TensorDesc({2, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradinput = TensorDesc({2, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnSeluBackward, INPUT(gradoutput, result), OUTPUT(gradinput));
+
+    EXPECT_EQ(ut.TestGetWorkspaceSize(nullptr), ACLNN_ERR_PARAM_NULLPTR);
 }

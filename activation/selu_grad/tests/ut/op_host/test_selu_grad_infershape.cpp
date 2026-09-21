@@ -108,3 +108,20 @@ TEST_F(SeluGradInferShapeTest, UnknownGradientsRankDoesNotBypassOutputsRankLimit
 
     EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
+
+TEST_F(SeluGradInferShapeTest, ScalarShapeFails)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SeluGrad")->infer_shape;
+    gert::Shape gradientsShape = {};
+    gert::Shape outputsShape = {};
+    gert::Shape yShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradientsShape, &outputsShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}

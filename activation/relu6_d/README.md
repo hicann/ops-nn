@@ -7,9 +7,9 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>     |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
+|  <term>Atlas 推理系列产品</term>     |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -35,6 +35,7 @@ $$
 - 输入x和输出y的shape必须相同。
 - 最高支持8维张量。
 - 支持动态shape与动态rank。
+- 空Tensor直接成功返回：Tiling将 `blockNum` 设为0且不分配数据处理资源，Kernel Init/Process均提前返回，不发起GM读写。
 - scale约束：上界阈值为`6*scale`；`scale = 0`时上界为0，输出恒为0；`scale < 0`时上界`6*scale < 0`，输出恒等于`6*scale`（均为数学上合法的边界语义）。int32下阈值按截断向零。
 
 ## 调用说明

@@ -55,23 +55,17 @@ using namespace ge;
 
 class TestApplyCenteredRMSPropTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyCenteredRMSPropTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyCenteredRMSPropTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyCenteredRMSPropTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyCenteredRMSPropTiling TearDown" << std::endl; }
 };
 
 // ASCENDC framework dtype codes: no longer used — dtype dispatch is via
 // DTYPE_VAR, no tilingKey is set.
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -139,15 +133,15 @@ static ApplyCenteredRMSPropTilingResult DoTilingCase(const ApplyCenteredRMSPropT
         return result;
     }
 
-    gert::StorageShape varStorage      = {args.varShape, args.varShape};
-    gert::StorageShape mgStorage       = {args.mgShape, args.mgShape};
-    gert::StorageShape msStorage       = {args.msShape, args.msShape};
-    gert::StorageShape momStorage      = {args.momShape, args.momShape};
-    gert::StorageShape lrStorage       = {args.lrShape, args.lrShape};
-    gert::StorageShape rhoStorage      = {args.rhoShape, args.rhoShape};
+    gert::StorageShape varStorage = {args.varShape, args.varShape};
+    gert::StorageShape mgStorage = {args.mgShape, args.mgShape};
+    gert::StorageShape msStorage = {args.msShape, args.msShape};
+    gert::StorageShape momStorage = {args.momShape, args.momShape};
+    gert::StorageShape lrStorage = {args.lrShape, args.lrShape};
+    gert::StorageShape rhoStorage = {args.rhoShape, args.rhoShape};
     gert::StorageShape momentumStorage = {args.momentumShape, args.momentumShape};
-    gert::StorageShape epsilonStorage  = {args.epsilonShape, args.epsilonShape};
-    gert::StorageShape gradStorage     = {args.gradShape, args.gradShape};
+    gert::StorageShape epsilonStorage = {args.epsilonShape, args.epsilonShape};
+    gert::StorageShape gradStorage = {args.gradShape, args.gradShape};
 
     ApplyCenteredRMSPropUtCompileInfo compileInfo;
 
@@ -155,10 +149,8 @@ static ApplyCenteredRMSPropTilingResult DoTilingCase(const ApplyCenteredRMSPropT
                       .SetOpType(opType)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &mgStorage, &msStorage, &momStorage,
-                           &lrStorage, &rhoStorage, &momentumStorage,
-                           &epsilonStorage, &gradStorage})
+                      .InputShapes({&varStorage, &mgStorage, &msStorage, &momStorage, &lrStorage, &rhoStorage,
+                                    &momentumStorage, &epsilonStorage, &gradStorage})
                       .OutputShapes({&varStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -187,32 +179,27 @@ static ApplyCenteredRMSPropTilingResult DoTilingCase(const ApplyCenteredRMSPropT
     result.status = tiling_func(tiling_context);
     if (result.status == ge::GRAPH_SUCCESS) {
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyCenteredRMSPropTilingData)) {
-            const auto* td = reinterpret_cast<const ApplyCenteredRMSPropTilingData*>(
-                rawTilingData->GetData());
-            result.totalNum     = td->totalNum;
-            result.blockFactor  = td->blockFactor;
-            result.ubFactor     = td->ubFactor;
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyCenteredRMSPropTilingData)) {
+            const auto* td = reinterpret_cast<const ApplyCenteredRMSPropTilingData*>(rawTilingData->GetData());
+            result.totalNum = td->totalNum;
+            result.blockFactor = td->blockFactor;
+            result.ubFactor = td->ubFactor;
             result.scalarsValid = td->scalarsValid;
         }
     }
     return result;
 }
 
-// Build a "valid" context: var/mg/ms/mom/grad share shape, scalars are {1}.
-static ApplyCenteredRMSPropTilingResult DoValidCase(
-    const std::initializer_list<int64_t>& tensorShape, ge::DataType tensorDtype)
+// Build a "valid" context: var/mg/ms/mom/grad share shape, scalars are 0-D.
+static ApplyCenteredRMSPropTilingResult DoValidCase(const std::initializer_list<int64_t>& tensorShape,
+                                                    ge::DataType tensorDtype)
 {
-    ApplyCenteredRMSPropTilingArgs args{
-        tensorShape, tensorShape, tensorShape, tensorShape,
-        {1}, {1}, {1}, {1},
-        tensorShape,
-        tensorDtype, ge::FORMAT_ND};
+    ApplyCenteredRMSPropTilingArgs args{tensorShape, tensorShape, tensorShape, tensorShape, {},           {},
+                                        {},          {},          tensorShape, tensorDtype, ge::FORMAT_ND};
     return DoTilingCase(args);
 }
 
-// T01 FP32 small shape 
+// T01 FP32 small shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp32_small)
 {
     auto r = DoValidCase({256}, ge::DT_FLOAT);
@@ -220,7 +207,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp32_small)
     EXPECT_EQ(r.totalNum, 256);
 }
 
-// T02 FP32 large shape 
+// T02 FP32 large shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp32_large)
 {
     auto r = DoValidCase({64, 10, 10, 32}, ge::DT_FLOAT);
@@ -228,7 +215,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp32_large)
     EXPECT_EQ(r.totalNum, 64L * 10 * 10 * 32);
 }
 
-// T03 FP16 small shape 
+// T03 FP16 small shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp16_small)
 {
     auto r = DoValidCase({256}, ge::DT_FLOAT16);
@@ -236,7 +223,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp16_small)
     EXPECT_EQ(r.totalNum, 256);
 }
 
-// T04 FP16 large shape 
+// T04 FP16 large shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp16_large)
 {
     auto r = DoValidCase({64, 10, 10, 32}, ge::DT_FLOAT16);
@@ -244,7 +231,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_fp16_large)
     EXPECT_EQ(r.totalNum, 64L * 10 * 10 * 32);
 }
 
-// T05 BF16 small shape 
+// T05 BF16 small shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_bf16_small)
 {
     auto r = DoValidCase({256}, ge::DT_BF16);
@@ -252,7 +239,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_bf16_small)
     EXPECT_EQ(r.totalNum, 256);
 }
 
-// T06 BF16 large shape 
+// T06 BF16 large shape
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_bf16_large)
 {
     auto r = DoValidCase({64, 10, 10, 32}, ge::DT_BF16);
@@ -286,32 +273,32 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_empty_bf16)
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_mg_mismatch)
 {
     ApplyCenteredRMSPropTilingArgs args{
-        /*var=*/{2048}, /*mg=*/{1024}, /*ms=*/{2048}, /*mom=*/{2048},
-        {1}, {1}, {1}, {1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND};
+        /*var=*/{2048},  /*mg=*/{1024}, /*ms=*/{2048}, /*mom=*/{2048}, {}, {}, {}, {},
+        /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND};
     EXPECT_EQ(DoTilingCase(args).status, ge::GRAPH_FAILED);
 }
 
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_ms_mismatch)
 {
     ApplyCenteredRMSPropTilingArgs args{
-        /*var=*/{2048}, /*mg=*/{2048}, /*ms=*/{1024}, /*mom=*/{2048},
-        {1}, {1}, {1}, {1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND};
+        /*var=*/{2048},  /*mg=*/{2048}, /*ms=*/{1024}, /*mom=*/{2048}, {}, {}, {}, {},
+        /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND};
     EXPECT_EQ(DoTilingCase(args).status, ge::GRAPH_FAILED);
 }
 
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_mom_mismatch)
 {
     ApplyCenteredRMSPropTilingArgs args{
-        /*var=*/{2048}, /*mg=*/{2048}, /*ms=*/{2048}, /*mom=*/{1024},
-        {1}, {1}, {1}, {1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND};
+        /*var=*/{2048},  /*mg=*/{2048}, /*ms=*/{2048}, /*mom=*/{1024}, {}, {}, {}, {},
+        /*grad=*/{2048}, ge::DT_FLOAT,  ge::FORMAT_ND};
     EXPECT_EQ(DoTilingCase(args).status, ge::GRAPH_FAILED);
 }
 
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_grad_mismatch)
 {
     ApplyCenteredRMSPropTilingArgs args{
-        /*var=*/{2048}, /*mg=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048},
-        {1}, {1}, {1}, {1}, /*grad=*/{1024}, ge::DT_FLOAT, ge::FORMAT_ND};
+        /*var=*/{2048},  /*mg=*/{2048}, /*ms=*/{2048}, /*mom=*/{2048}, {}, {}, {}, {},
+        /*grad=*/{1024}, ge::DT_FLOAT,  ge::FORMAT_ND};
     EXPECT_EQ(DoTilingCase(args).status, ge::GRAPH_FAILED);
 }
 
@@ -332,7 +319,7 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_ub_factor_alignme
     EXPECT_GT(r.blockFactor, 0);
 }
 
-// T16 Large shape (>1M elements) 
+// T16 Large shape (>1M elements)
 TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_large_shape_total_num)
 {
     auto r = DoValidCase({2048, 1024}, ge::DT_FLOAT);

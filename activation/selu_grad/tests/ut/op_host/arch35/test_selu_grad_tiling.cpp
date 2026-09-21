@@ -143,3 +143,21 @@ TEST(SeluGradTilingTest, OutputShapeMismatchFails)
 
     ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
 }
+
+TEST(SeluGradTilingTest, ScalarShapeFails)
+{
+    const gert::StorageShape gradientsShape({}, {});
+    const gert::StorageShape outputsShape({}, {});
+    const gert::StorageShape yShape({}, {});
+
+    ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
+}
+
+TEST(SeluGradTilingTest, RankLargerThanEightFails)
+{
+    const gert::StorageShape gradientsShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
+    const gert::StorageShape outputsShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
+    const gert::StorageShape yShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
+
+    ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
+}

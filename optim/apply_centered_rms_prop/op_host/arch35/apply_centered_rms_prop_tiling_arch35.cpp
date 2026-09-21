@@ -20,6 +20,7 @@
  *              (FP32 queues are allocated but unused for fp32 path; simplifies kernel code)
  */
 #include <string>
+#include <cmath>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -77,12 +78,20 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
 
-    // Verify all ND inputs have same shape
+    // Verify all ND inputs have identical shape and dtype.
+    auto varDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    *dataType = varDesc->GetDataType();
     for (int idx : {1, 2, 3, 8}) { // mg=1, ms=2, mom=3, grad=8
         auto inputShape = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
         auto shape = EnsureNotScalar(inputShape->GetStorageShape());
-        if (varShape.GetShapeSize() != shape.GetShapeSize()) {
+        auto desc = context->GetInputDesc(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        OP_CHECK_IF(desc->GetDataType() != *dataType || shape != varShape,
+                    OP_LOGE(context, "var and input[%d] must have identical dtype and shape", idx),
+                    return ge::GRAPH_FAILED);
+        if (shape != varShape) {
             const std::string paramName = std::string("var and ") + inputNames[idx];
             const std::string shapeMsg = Ops::Base::ToString(varShape) + ", " + Ops::Base::ToString(shape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), paramName.c_str(), shapeMsg.c_str(),
@@ -105,13 +114,30 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         auto desc = context->GetInputDesc(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
         ge::DataType dt = desc->GetDataType();
-        OP_CHECK_IF(supportedDtype.count(dt) == 0,
+        OP_CHECK_IF(supportedDtype.count(dt) == 0 || dt != *dataType,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), inputNames[idx],
                                                           Ops::Base::ToString(dt).c_str(),
-                                                          "The dtype must be one of DT_FLOAT16, DT_FLOAT or DT_BF16"),
+                                                          "All inputs must use the same supported dtype"),
                     return ge::GRAPH_FAILED);
     }
 
+    for (int idx : {4, 5, 6, 7}) {
+        auto scalarShape = context->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        OP_CHECK_IF(scalarShape->GetStorageShape().GetDimNum() != 0,
+                    OP_LOGE(context, "scalar input[%d] must be a 0-D tensor", idx), return ge::GRAPH_FAILED);
+    }
+    auto outputDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+    OP_CHECK_IF(outputDesc->GetDataType() != *dataType,
+                OP_LOGE(context, "output var must have the same dtype as all inputs"), return ge::GRAPH_FAILED);
+    const auto* attrs = context->GetAttrs();
+    if (attrs != nullptr) {
+        const bool* locking = attrs->GetBool(0);
+        OP_CHECK_IF(locking != nullptr && *locking,
+                    OP_LOGE(context, "use_locking=true is unsupported by this implementation"),
+                    return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -191,17 +217,23 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
     int64_t typeSize = (dataType == ge::DT_FLOAT) ? 4 : 2;
 
     // Total bytes per element = T_QUEUE_COUNT * typeSize + FP32_QUEUE_COUNT * 4
-    int64_t bytesPerElem = T_QUEUE_COUNT * typeSize + FP32_QUEUE_COUNT * 4;
-    int64_t tileElements = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem), ubBlockSize);
+    const int64_t bytesPerElem = T_QUEUE_COUNT * typeSize + FP32_QUEUE_COUNT * 4;
+    OP_CHECK_IF(bytesPerElem <= 0, OP_LOGE(context, "invalid UB bytes per element"), return ge::GRAPH_FAILED);
 
-    // Ensure tileElements >= 1
-    if (tileElements < 1) {
-        tileElements = 1;
-    }
+    // ubBlockSize is measured in bytes while tileElements is measured in elements.
+    // Convert the hardware alignment before rounding; otherwise small UB values can
+    // round to zero and the fallback tile would under-allocate the queues.
+    const int64_t elemAlign = std::max<int64_t>(1, ubBlockSize / typeSize);
+    const int64_t maxElements = FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem);
+    const int64_t tileElements = FloorAlign(maxElements, elemAlign);
+    OP_CHECK_IF(tileElements <= 0,
+                OP_LOGE(context, "UB size %lu is insufficient for one aligned tile: bytesPerElem=%ld elemAlign=%ld",
+                        ubSize, bytesPerElem, elemAlign),
+                return ge::GRAPH_FAILED);
 
     // 6. Multi-core split
     tiling->totalNum = totalIdx;
-    tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
+    tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), elemAlign);
     tiling->ubFactor = tileElements;
 
     int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);

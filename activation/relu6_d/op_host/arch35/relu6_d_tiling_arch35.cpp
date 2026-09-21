@@ -37,6 +37,7 @@
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include <set>
+#include <cmath>
 #include "../../op_kernel/arch35/relu6_d_tiling_data.h"
 
 namespace optiling {
@@ -127,6 +128,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     } else {
         *scale = DEFAULT_SCALE;
     }
+    OP_CHECK_IF(!std::isfinite(*scale), OP_LOGE(context, "Relu6D: scale must be finite"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

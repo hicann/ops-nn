@@ -41,6 +41,7 @@ constexpr size_t WORKSPACE_NUM = 1;
 // Buffer 数量常量
 constexpr int64_t SELECT_UB_RESERVE = 8192;    // Select 8K 预留
 constexpr int64_t DEFAULT_BYTES_PER_ELEM = 40; // 默认每元素 UB 字节数（兜底）
+constexpr size_t MAX_SUPPORTED_RANK = 8;
 
 // 获取平台信息
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
@@ -69,6 +70,13 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto outputY = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputY);
     auto yShape = outputY->GetStorageShape();
+
+    OP_CHECK_IF(gradShape.GetDimNum() == 0 || gradShape.GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "gradients rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outShape.GetDimNum() == 0 || outShape.GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "outputs rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yShape.GetDimNum() == 0 || yShape.GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "y rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(gradShape != outShape || gradShape != yShape,
                 OP_LOGE(context, "gradients, outputs and y must have the same shape"), return ge::GRAPH_FAILED);
