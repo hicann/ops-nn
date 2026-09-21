@@ -153,7 +153,7 @@ private:
 
     constexpr static uint32_t C0_SIZE = IsSameType<xType, int8_t>::value ? C0_SIZE_B8 : BLOCK_CUBE;
 
-    constexpr static uint64_t UB_AVAILABLE_SIZE = ASC_UB_SIZE;
+    constexpr static uint64_t UB_AVAILABLE_SIZE = 248 * GetKBUnit<int8_t>();
 
     constexpr static uint64_t ANTI_QUANT_Y_PER_TOKEN_SCALE_TOTAL_BUFFER_SIZE = 2 * GetKBUnit<float>();
     constexpr static uint64_t ANTI_QUANT_Y_PER_CHANNEL_SCALE_TOTAL_BUFFER_SIZE = 2 * GetKBUnit<float>();

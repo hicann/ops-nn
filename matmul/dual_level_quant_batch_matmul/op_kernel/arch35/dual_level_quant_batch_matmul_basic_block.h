@@ -87,7 +87,7 @@ protected:
     static constexpr uint64_t INT4_ONE_BLK_SIZE = 64;
     static constexpr uint64_t CV_LOOP_NUM = 2;
     static constexpr uint64_t C_TMP_FP32_UB_OFFSET = 64 * 128;
-    LocalTensor<float> cTmpFp32Ub_{TPosition::VECIN, 0, ASC_UB_SIZE};
+    LocalTensor<float> cTmpFp32Ub_{TPosition::VECIN, 0, 248 * 1024};
 
     DualLevelQuantBatchMatmulVectorCompute<x1Level0ScaleType, x2Level0ScaleType, biasType, yType, hasBias> vecCompute_;
     DualLevelQuantBatchMatmulCubeCompute<x1Type, x2Type, x1Level1ScaleType, x2Level1ScaleType, float> cubeCompute_;
