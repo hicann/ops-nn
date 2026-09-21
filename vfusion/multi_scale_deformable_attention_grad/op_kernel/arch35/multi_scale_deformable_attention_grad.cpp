@@ -13,6 +13,7 @@
  * \brief
  */
 #include "multi_scale_deformable_attention_grad.h"
+#include "multi_scale_deformable_attention_grad_impl.h"
 
 using namespace AscendC;
 // core func

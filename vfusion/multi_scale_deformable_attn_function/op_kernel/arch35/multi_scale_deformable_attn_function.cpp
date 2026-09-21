@@ -19,6 +19,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "ms_deform_attn_generic.h"
+#include "ms_deform_attn_generic_impl.h"
 #include "ms_deform_attn_simt.h"
 #include "multi_scale_deformable_attn_function_tiling_key.h"
 #include "multi_scale_deformable_attn_function_tiling_data.h"
