@@ -49,6 +49,26 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/cla_gate_quant/README.md">cla_gate_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>融合CLA两路head-wise gate加权与MX动态块量化，支持FP8/FP4单轴或双轴量化输出。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/cla_gate_backward/README.md">cla_gate_backward</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>对应ClaGateQuant反向算子，不做梯度量化。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/clipped_swiglu/README.md">clipped_swiglu</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -95,6 +95,8 @@
 | [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md) | 根据给定的边界数组（boundaries）确定输入张量中每个元素所属的区间索引。 | - | 默认确定性实现 |
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnClaGateQuant](../../activation/cla_gate_quant/docs/aclnnClaGateQuant.md) | 融合CLA两路head-wise gate加权与MX动态块量化，支持FP8/FP4单轴或双轴量化输出。 | - | 默认确定性实现 |
+| [aclnnClaGateBackward](../../activation/cla_gate_backward/docs/aclnnClaGateBackward.md) | aclnnClaGateQuant反向算子，不做梯度量化。 | - | 默认确定性实现 |
 | [aclnnClippedSwiglu](../../activation/clipped_swiglu/docs/aclnnClippedSwiglu.md) | 带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnClippedSwigluV2](../../activation/clipped_swiglu/docs/aclnnClippedSwigluV2.md) | 带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算，新增clamp_mode用于控制clamp和silu计算的顺序。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnClippedSwigluGrad](../../activation/clipped_swiglu_grad/docs/aclnnClippedSwigluGrad.md) | aclnnClippedSwiglu的反向算子，计算输入x的梯度gradXOut。 | 默认确定性实现 | 默认确定性实现 |
