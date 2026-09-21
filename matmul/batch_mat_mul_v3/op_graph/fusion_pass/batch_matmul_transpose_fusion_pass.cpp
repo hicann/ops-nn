@@ -306,8 +306,7 @@ void ReportTransposeFusion(const std::vector<GNode>& nodesBeforeFuse, const GNod
     }
 }
 
-Status ProcessNode(const GraphPtr& graph, GNode& matmulNode, CustomPassContext& passContext,
-                   const PlatformInfo& platformInfo)
+Status ProcessNode(const GraphPtr& graph, GNode& matmulNode, CustomPassContext& passContext)
 {
     TensorDesc inputDesc1;
     if (matmulNode.GetInputDesc(1, inputDesc1) != GRAPH_SUCCESS) {
@@ -411,7 +410,7 @@ Status BatchMatMulTransposeFusionPass::Run(GraphPtr& graph, CustomPassContext& p
     passContext.SetPassName(kPassName);
     bool changed = false;
     for (auto& node : targetNodes) {
-        auto status = ProcessNode(graph, node, passContext, platformInfo);
+        auto status = ProcessNode(graph, node, passContext);
         if (status == SUCCESS) {
             changed = true;
         } else if (status != GRAPH_NOT_CHANGED) {

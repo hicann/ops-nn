@@ -71,10 +71,13 @@ enum class SparseEnum {
 
 constexpr uint64_t RecursiveSum() { return 0; }
 
+// tiling key 按十进制位组装：每个枚举参数占一个十进制位，DECIMAL_BASE 为进位基数
+constexpr uint64_t DECIMAL_BASE = 10UL;
+
 template <typename T, typename... Args>
 constexpr uint64_t RecursiveSum(T templateId, Args... templateIds)
 {
-    return static_cast<uint64_t>(templateId) + 10 * RecursiveSum(templateIds...);
+    return static_cast<uint64_t>(templateId) + DECIMAL_BASE * RecursiveSum(templateIds...);
 }
 
 // TilingKey 的生成规则：

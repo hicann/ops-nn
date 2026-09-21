@@ -796,7 +796,6 @@ Status ProcessBatchSplitPattern1(const GraphPtr& graph, GNode& tbmmNode, const G
     auto reshapeNode1 = GetOutputNode(*transNode3, 0);
     auto reshapeNode2 = (reshapeNode1 != nullptr) ? GetOutputNode(*reshapeNode1, 0) : nullptr;
     auto transNode4 = (reshapeNode2 != nullptr) ? GetOutputNode(*reshapeNode2, 0) : nullptr;
-
     if (transNode4 != nullptr) {
         TensorDesc transNode4OutDesc;
         FUSION_PASS_CHECK(transNode4->GetOutputDesc(0, transNode4OutDesc) != GRAPH_SUCCESS,

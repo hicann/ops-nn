@@ -36,6 +36,8 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
 private:
+    // 显式引入基类GetTilingDataProcess重载族，新增FusedMatMulTilingData重载时避免同名隐藏告警
+    using BatchMatMulV3AswBasicTiling::GetTilingDataProcess;
     ge::graphStatus GetTilingDataProcess(FusedMatMulTilingData& tilingData) const;
 };
 } // namespace fused_matmul
