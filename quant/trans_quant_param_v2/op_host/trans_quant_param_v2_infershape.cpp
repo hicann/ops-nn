@@ -25,7 +25,7 @@ static constexpr int GRID_SAMPLER2D_GRAD_SHAPE_LIMIT = 4;
 using namespace ge;
 namespace ops {
 
-static std::set<std::string> QbmmDavidSupportSoc = {"Ascend950"};
+static std::set<std::string> QbmmDavidSupportSoc = {"Ascend950", "Ascend350"};
 
 static bool IsDavidSupported()
 {

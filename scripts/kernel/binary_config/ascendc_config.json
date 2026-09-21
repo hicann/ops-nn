@@ -510,7 +510,7 @@
     {"name":"WeightQuantBatchMatmulV2", "compute_units": ["ascend910b", "ascend910_93", "ascend310p", "ascend950"], "auto_sync": false, "compile_options": {"ascend950":["--cce-no-dcache-flush", "-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
     {"name":"WeightQuantBatchMatmulExperiment", "compute_units": ["ascend910b"], "auto_sync": false, "impl_mode" : ""},
     {"name": "MatmulCompress", "compute_units": ["ascend310p"], "auto_sync" : false},
-    {"name":"TransQuantParamV2", "compute_units": ["ascend910b", "ascend310p", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
+    {"name":"TransQuantParamV2", "compute_units": ["ascend910b", "ascend310p", "ascend910_93", "kirinx90", "kirin9030", "ascend350"], "auto_sync" : false},
     {"name":"ThreeInterpolateBackward", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"GroupedMatMulAllReduce", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"GroupedMatMulAlltoAllv", "compute_units": ["ascend910_93", "ascend950"], "auto_sync": false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
