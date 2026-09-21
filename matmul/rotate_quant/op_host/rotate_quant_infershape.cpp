@@ -45,7 +45,7 @@ constexpr int64_t ALPHA_DIM_SIZE = 1;
 
 const std::initializer_list<ge::DataType> INT_OUT_TYPE_LIST = {ge::DT_INT8, ge::DT_INT4};
 
-static std::set<std::string> RotateQuant950SupportSoc = {"Ascend950"};
+static std::set<std::string> RotateQuant950SupportSoc = {"Ascend950", "Ascend350"};
 
 static bool IsRotateQuant950Support()
 {

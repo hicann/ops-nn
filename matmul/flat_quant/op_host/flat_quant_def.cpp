@@ -96,6 +96,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", aicConfig);
+        this->AICore().AddConfig("ascend350", aicConfig);
     }
 };
 OP_ADD(FlatQuant);

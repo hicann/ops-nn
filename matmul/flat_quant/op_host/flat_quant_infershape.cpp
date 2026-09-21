@@ -20,7 +20,7 @@
 
 using namespace ge;
 namespace ops {
-static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950"};
+static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950", "Ascend350"};
 static const int32_t DTYPE_FLOAT4_E2M1 = 40;
 static constexpr size_t FLATQUANT_K_IDX = 0;
 static constexpr size_t FLATQUANT_M_IDX = 1;
