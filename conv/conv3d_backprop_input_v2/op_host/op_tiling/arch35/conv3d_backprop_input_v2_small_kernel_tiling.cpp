@@ -397,7 +397,6 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelComputationBudget() const
     uint64_t cinCnt = static_cast<uint64_t>(runInfo_.dedx_cin_g);
     uint64_t gCnt = 1;
     if (IsLoadB1FractalZ()) {
-        // A16W8 fractal_z 按full load B1计算
         coutCnt = Ops::Base::CeilAlign(coutCnt, static_cast<uint64_t>(tilingRunInfo_.k0));
         cinCnt = Ops::Base::CeilAlign(cinCnt, static_cast<uint64_t>(tilingRunInfo_.n0));
         gCnt = static_cast<uint64_t>(runInfo_.real_g);
@@ -409,11 +408,7 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelComputationBudget() const
     if (isFp16Fp16) {
         return computation < SMALL_KERNEL_COMPUTE_THRESHOLD;
     }
-    bool isA16W8 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
-                   static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_INT8);
-    if (isA16W8) {
-        return computation < SMALL_KERNEL_COMPUTE_THRESHOLD * TWO;
-    }
+
     return true;
 }
 

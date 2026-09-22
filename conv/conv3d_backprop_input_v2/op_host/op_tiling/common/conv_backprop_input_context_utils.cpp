@@ -702,7 +702,7 @@ static bool ValidateOriginShapeDims(const gert::TilingContext* context, const ge
 
 static bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filter_input_index,
                                  size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo& runInfoV2,
-                                 const optiling::OpTypeV2 opType, OtherParams& otherParams)
+                                 OtherParams& otherParams)
 {
     auto filter_desc = context->GetInputDesc(filter_input_index);
     auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
@@ -837,9 +837,8 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
         }
     }
 
-    OP_CHECK_IF(
-        !CalShapeInfoFromDesc(context, filter_input_index, out_backprop_input_index, runInfoV2, op_type, otherParams),
-        OP_LOGE(op_name, "Cal Shape Info From Desc fail."), return false);
+    OP_CHECK_IF(!CalShapeInfoFromDesc(context, filter_input_index, out_backprop_input_index, runInfoV2, otherParams),
+                OP_LOGE(op_name, "Cal Shape Info From Desc fail."), return false);
     return true;
 }
 
