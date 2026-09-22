@@ -214,6 +214,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
                 inQueue_.EnQue(updateLocal);
                 updateLocal = inQueue_.DeQue<PARAMS_T>();
                 CopyOutUpdate(updateLocal, varOutOffset);
+                // 确定性语义要求重复索引同地址"后写覆盖先写"，需显式等待MTE3写落盘.
+                AscendC::PipeBarrier<PIPE_MTE3>();
                 inQueue_.template FreeTensor(updateLocal);
             }
         }

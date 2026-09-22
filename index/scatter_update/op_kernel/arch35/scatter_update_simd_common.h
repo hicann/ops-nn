@@ -149,8 +149,19 @@ __aicore__ inline void ScatterUpdateSimdCommon<T, U, updatesIsScalar>::CopyInUpd
                                                                                      uint32_t colLen)
 {
     if constexpr (updatesIsScalar) {
-        T updatesValue = updatesGm_.GetValue(0);
-        // todo:下面这个同步是updatesValue这个标量和vector之间的，因为vector使用的update
+        T updatesValue;
+        if (tilingData_.isPcieThrough) {
+            LocalTensor<T> tmpLocal = updateInQueue_.AllocTensor<T>();
+            DataCopyExtParams scalarParams{1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
+            DataCopyPadExtParams<T> scalarPadParams{false, 0, 0, 0};
+            DataCopyPad(tmpLocal, updatesGm_[0], scalarParams, scalarPadParams);
+            updateInQueue_.EnQue(tmpLocal);
+            tmpLocal = updateInQueue_.DeQue<T>();
+            updatesValue = tmpLocal.GetValue(0);
+            updateInQueue_.FreeTensor(tmpLocal);
+        } else {
+            updatesValue = updatesGm_.GetValue(0);
+        }
         SyncStoV();
         LocalTensor<T> updatesLocal = updateInQueue_.AllocTensor<T>();
         Duplicate(updatesLocal, updatesValue, updateUbSize_ / sizeof(T));
