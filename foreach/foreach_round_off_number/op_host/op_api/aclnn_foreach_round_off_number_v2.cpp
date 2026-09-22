@@ -31,10 +31,10 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32, DataType::DT_INT16};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16};
 
 static const std::initializer_list<DataType> ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 static const std::initializer_list<DataType> FOREACH_ROUND_SCALAR_SUPPORT_LIST = {DataType::DT_INT8,
                                                                                   DataType::DT_INT64};
