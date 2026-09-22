@@ -118,7 +118,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>√</td>
     </tr>
     <tr>
-      <td>x1Scale（aclTensor*）</td>
+      <td>x1ScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化参数中的由x1量化引入的缩放因子。</td>
       <td>
@@ -239,16 +239,16 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>x1、x2、x1Scale、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</td>
+      <td>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>x1、x2、x1Scale、x2Scale、yRef的shape不满足校验条件。</td>
+      <td>x1、x2、x1ScaleOptional、x2Scale、yRef的shape不满足校验条件。</td>
     </tr>
     <tr>
       <td>x1、x2的K维度为0。</td>
     </tr>
     <tr>
-      <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1Scale，x2Scale的shape关系无法推断groupSize。</td>
+      <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</td>
     </tr>
   </tbody></table>
 
@@ -291,7 +291,9 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
       | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
       |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
-      |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 32 |
+      |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
+
+  - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
 
 - HIFLOAT8 T-T场景约束：
   - 输入和输出支持以下数据类型组合：
