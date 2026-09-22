@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file group_norm_grad.h
+ * \file group_norm_grad_kernel.h
  * \brief
  */
-#ifndef GROUP_NORM_GRAD_H
-#define GROUP_NORM_GRAD_H
+#ifndef GROUP_NORM_GRAD_KERNEL_H
+#define GROUP_NORM_GRAD_KERNEL_H
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
@@ -1109,7 +1109,7 @@ private:
     __aicore__ inline void Custom_DataCopy_Out(LocalTensor<float>& _out, const uint64_t gm_offset,
                                                TBuf<TPosition::VECCALC>& tbuf, const uint32_t count)
     {
-        DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(dx_gm[gm_offset], _out, copyParams);
         } else {
@@ -1127,7 +1127,7 @@ private:
                                                const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
                                                const uint32_t count)
     {
-        DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(dx_gm[gm_offset], _out[ub_offset], copyParams);
         } else {
@@ -1145,7 +1145,7 @@ private:
                                                const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
                                                const uint32_t count)
     {
-        DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(gm_out[gm_offset], _out, copyParams);
         } else {
@@ -1167,7 +1167,7 @@ private:
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         SetAtomicAdd<float>();
-        DataCopyParams copyParams{1, (uint16_t)(this->C_G * sizeof(float)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(this->C_G * sizeof(float)), 0, 0, 0};
         if (dbeta_is_require) {
             DataCopyPad(dbeta_out[channel_idx], dbeta_ub, copyParams);
             event_t eventIDMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
@@ -1192,7 +1192,7 @@ private:
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
-        DataCopyParams copyParams{1, (uint16_t)(this->C_G * sizeof(T)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(this->C_G * sizeof(T)), 0, 0, 0};
         if (dbeta_is_require) {
             LocalTensor<T> dbeta_temp = dbeta_tbuf.Get<T>(this->C_G);
             Cast(dbeta_temp, dbeta_ub, RoundMode::CAST_ROUND, this->C_G);
@@ -1352,8 +1352,8 @@ private:
 
     __aicore__ inline void cast_dgamma_dbeta_WSP2GM(uint64_t channel_idx, uint32_t count)
     {
-        DataCopyExtParams copyParams_fp16{1, (uint16_t)(count * sizeof(half)), 0, 0, 0};
-        DataCopyExtParams copyParams_fp32{1, (uint16_t)(count * sizeof(float)), 0, 0, 0};
+        DataCopyExtParams copyParams_fp16{1, static_cast<uint32_t>(count * sizeof(half)), 0, 0, 0};
+        DataCopyExtParams copyParams_fp32{1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0};
         DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
         if (dgamma_is_require) {
             LocalTensor<float> dgamma_Local = in_queue_dgamma_channel.AllocTensor<float>();
@@ -1390,9 +1390,9 @@ private:
                                                 uint64_t repeatTime, uint32_t count, const LocalTensor<float>& dstLocal)
     {
         LocalTensor<float> vecInLocal = vecInQue.AllocTensor<float>();
-        DataCopyExtParams copyParams_in{(uint16_t)repeatTime, (uint16_t)(count * sizeof(float)),
-                                        (uint16_t)((C - count) * sizeof(float)),
-                                        (uint16_t)((castEleNum - count) / float_per_block), 0};
+        DataCopyExtParams copyParams_in{static_cast<uint16_t>(repeatTime), static_cast<uint32_t>(count * sizeof(float)),
+                                        static_cast<uint32_t>((C - count) * sizeof(float)),
+                                        static_cast<uint32_t>((castEleNum - count) / float_per_block), 0};
         DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
         DataCopyPad(vecInLocal, workspace[workSpaceOffset], copyParams_in, padParams);
         event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -1442,7 +1442,7 @@ private:
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-        DataCopyExtParams copyParams_out{1, (uint16_t)(count * sizeof(float)), 0, 0, 0};
+        DataCopyExtParams copyParams_out{1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0};
         if (dgamma_is_require) {
             SetAtomicAdd<float>();
             DataCopyPad(dgamma_gm[channel_idx], dgamma_sum_Local, copyParams_out);
@@ -1483,7 +1483,7 @@ private:
             }
         }
         PipeBarrier<PIPE_ALL>();
-        DataCopyExtParams copyParams_out{1, (uint16_t)(count * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams_out{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         if (dgamma_is_require) {
             Custom_DataCopy_Out(dgamma_sum_Local, dgamma_gm, channel_idx, out_tbuf_dgamma_channel_T, count);
         }
@@ -1494,4 +1494,4 @@ private:
         cal_queue_dbeta_reduce.FreeTensor(dbeta_sum_Local);
     }
 };
-#endif // GROUP_NORM_GRAD
+#endif // GROUP_NORM_GRAD_KERNEL_H

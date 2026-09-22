@@ -21,7 +21,7 @@ namespace ge {
 /**
  * @brief backward operator for group normalization. \n
  * @par Inputs:
- * Five input, including:
+ * Five inputs, including:
  * @li dy: A tensor. Group grad. Datatype support float32, float16, bfloat16. Format support ND.
  * "dy" supports 2-8 dimensions (N, C, *), the calculation logic only cares about the first two dimensions (N and C),
  * and the rest can all be combined into one dimension.
@@ -30,21 +30,22 @@ namespace ge {
  * @li rstd: A tensor. Reciprocal standard deviation of each group. Datatype support float32, float16, bfloat16. Format
  support ND.
  * Must be 2D (N, num_groups).
- * @li x: A Tensor. Specifies the offset. Datatype support float32, float16, bfloat16. Format support ND.
+ * @li x: A Tensor. The input tensor for group normalization. Datatype support float32, float16, bfloat16. Format
+ support ND.
  * "x" supports 2-8 dimensions (N, C, *), the calculation logic only cares about the first two dimensions (N and C),
  * and the rest can all be combined into one dimension.
  * @li gamma: A tensor. Specifies the scaling factor. Datatype support float32, float16, bfloat16. Format support ND.
  * Must be 1D. The value of "gamma" needs to be consistent with the C-axis value of "x".
 
  * @par Attributes:
- * @li num_groups: Int. Number specifying the number of group.
+ * @li num_groups: Int. Number specifying the number of groups.
  * @li data_format: An optional string. Defaults to NCHW.
  * @li dx_is_require: An optional bool, controls whether to return dx. Defaults to true.
  * @li dgamma_is_require: An optional bool, controls whether to return dgamma. Defaults to true.
  * @li dbeta_is_require: An optional bool, controls whether to return dbeta. Defaults to true.
 
  * @par Outputs:
- * Three output, including:
+ * Three outputs, including:
  * @li dx: A tensor. x factor grad. Datatype is the same as the input datatype. Has the same format and shape as "x".
  * @li dgamma: A tensor. Scale factor grad. Has the same datatype, format and shape as "gamma".
  * @li dbeta: A tensor. Offset factor grad. Has the same datatype, format and shape as "gamma".

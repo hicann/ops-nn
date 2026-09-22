@@ -14,7 +14,7 @@
  */
 
 #include "kernel_operator.h"
-#include "rms_norm_quant.h"
+#include "rms_norm_quant_kernel.h"
 
 namespace {                                     // 匿名命名空间
 static constexpr uint32_t BUF_FACTOR = 3;       // 1(g) + 1(sqx) + 1(sum) = 3

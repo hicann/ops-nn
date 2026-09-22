@@ -185,12 +185,12 @@ struct GroupNormGradCompileInfo {
 
 struct TilingCalculationParameters {
     uint32_t tilingKey = -1;
-    uint32_t n = 0;
-    uint32_t c = 0;
-    uint32_t hxw = 0;
-    uint32_t g = 0;
-    uint32_t nxg = 0;
-    uint32_t channelPerGroup = 0;
+    uint64_t n = 0;
+    uint64_t c = 0;
+    uint64_t hxw = 0;
+    uint64_t g = 0;
+    uint64_t nxg = 0;
+    uint64_t channelPerGroup = 0;
     uint32_t taskNumPerCore = 0;
     uint32_t taskNumPerTailCore = 0;
     uint32_t tailCore = 0;
@@ -201,13 +201,13 @@ struct TilingCalculationParameters {
     uint32_t mode2UbCapacityEle = 0;
     uint32_t mode2UbIterationNum = 0;
     uint32_t mode2UbTailNum = 0;
-    uint32_t workSpaceSize = 0;
+    uint64_t workSpaceSize = 0;
     uint32_t stage2CoreUsed = 0;
     uint32_t castEleNum = 0;
     uint32_t tailCastNum = 0;
     uint32_t coreBatchParts = 0;
     uint32_t coreBatchPartsTailRepeat = 0;
-    uint32_t repeatTime4Stage2 = 0;
+    uint64_t repeatTime4Stage2 = 0;
     uint32_t coreNumUsed = 0;
     bool dxIsRequire = true;
     bool dgammaIsRequire = true;

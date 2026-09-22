@@ -17,7 +17,7 @@
 #include "arch35/add_rms_norm_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_quant_regbase_split_reduce.h"
 #else
-#include "add_rms_norm_quant.h"
+#include "add_rms_norm_quant_kernel.h"
 #include "add_rms_norm_quant_split_d.h"
 #include "add_rms_norm_quant_single_n.h"
 #endif

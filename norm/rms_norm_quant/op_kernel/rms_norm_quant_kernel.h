@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file kernel_common.h
+ * \file rms_norm_quant_kernel.h
  * \brief
  */
 
-#ifndef RMS_NORM_QUANT_KERNEL_COMMON_H
-#define RMS_NORM_QUANT_KERNEL_COMMON_H
+#ifndef RMS_NORM_QUANT_KERNEL_H
+#define RMS_NORM_QUANT_KERNEL_H
 #include "kernel_operator.h"
 #include "../rms_norm/rms_norm_base.h"
 
