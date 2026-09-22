@@ -96,7 +96,7 @@
     </tr>
   </tbody></table>
 
-- <term>Ascend 950PR&950DT系列产品 </term>：数据类型支持FLOAT32、FLOAT16。
+- <term>Ascend 950PR&950DT系列产品</term>：数据类型支持FLOAT32、FLOAT16。
 
 ## 约束说明
 

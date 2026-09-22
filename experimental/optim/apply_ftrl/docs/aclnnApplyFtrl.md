@@ -291,7 +291,7 @@ aclnnStatus aclnnApplyFtrl(
 
 ## 调用示例
 
-> **标准 CANN OPP 未部署 ApplyFtrl 的 aclnn 接口**（ACLNNTYPE=`aclnn_exclude`），也无 PyTorch 等价；但本实验扩展通过手写 op_api 提供了派生 aclnn 封装，安装本算子的自定义算子包（`cann-ops-nn-custom_*.run`）后，`aclnnApplyFtrl` / `aclnnApplyFtrlGetWorkspaceSize` 符号即在 `libcust_opapi.so` 中可链接调用（ATK pyaclnn 测试经此使能）。本节给出本实验算子目录 `examples/` 下**真实可运行**的两种调用样例，以及上文「派生 aclnn 两段式接口」的调用骨架。
+> **标准 CANN OPP 未部署 ApplyFtrl 的 aclnn 接口**（ACLNNTYPE=`aclnn_exclude`），也无 PyTorch 等价；但本实验扩展通过手写 op_api 提供了派生 aclnn 封装，安装本算子的自定义算子包（`cann-ops-nn-custom_*.run`）后，`aclnnApplyFtrl` / `aclnnApplyFtrlGetWorkspaceSize` 符号即在 `libcust_opapi.so` 中可链接调用（ATK pyaclnn 测试经此开启）。本节给出本实验算子目录 `examples/` 下**真实可运行**的两种调用样例，以及上文「派生 aclnn 两段式接口」的调用骨架。
 
 ### 可运行样例（指向 examples/）
 

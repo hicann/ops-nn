@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品</term>     |     √    |
+|  <term>Atlas A2训练系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -211,7 +211,7 @@ aclnnStatus aclnnHuberLoss(
 - `reduction=1/2` 需要算子自身的 workspace，并启用 `BATCH_MODE` 调度以保证参与跨核归约的各核共驻；`reduction=0` 不需要，但第一段接口返回的大小仍包含框架保留的系统 workspace。
 - 空张量：`sum` 返回 `0`，`mean` 返回 `NaN`（`0/0`），与 PyTorch 一致。
 - 半精度累加在 `FLOAT` 域完成，仅在写出时舍入一次。因此 `FLOAT16`/`BFLOAT16` 的结果可能与 PyTorch CPU 实现不逐位相同——后者在原生数据类型下逐步舍入。
-- 仅支持 Atlas A2 训练系列产品。
+- 仅支持 Atlas A2训练系列产品。
 
 ## 调用示例
 

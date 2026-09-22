@@ -235,7 +235,7 @@
   </tr>
   </table>
 
-- Ascend 950PR/Ascend 950DT：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCDHW`。
   - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
   - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。

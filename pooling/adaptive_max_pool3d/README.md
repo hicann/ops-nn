@@ -4,14 +4,14 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Ascend 950PR/Ascend 950DT|×|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2 推理产品|×|
-|Atlas 推理系列产品|×|
-|Atlas 训练系列产品|×|
-|Kirin X90 处理器系列产品|√|
-|Kirin 9030 处理器系列产品|√|
+|<term>Ascend 950PR&950DT系列产品</term>|×|
+|Atlas A3系列产品|√|
+|Atlas A2系列产品|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas推理系列产品|×|
+|Atlas训练系列产品|×|
+|Kirin X90处理器系列产品|√|
+|Kirin 9030处理器系列产品|√|
 
 ## 功能说明
 
@@ -19,35 +19,35 @@
 
 - 计算公式：
   y tensor中对于DHW轴上每个位置为$(l,m,n)$的元素来说，其计算公式为：
-  
+
   $$
   D^{l}_{left} = floor((l*D)/D_o)
   $$
-  
+
   $$
   D^{l}_{right} = ceil(((l+1)*D)/D_o)
   $$
-  
+
   $$
   H^{m}_{left} = floor((m*H)/H_o)
   $$
-  
+
   $$
   H^{m}_{right} = ceil(((m+1)*H)/H_o)
   $$
-  
+
   $$
   W^{n}_{left} = floor((n*W)/W_o)
   $$
-  
+
   $$
   W^{n}_{right} = ceil(((n+1)*W)/W_o)
   $$
-  
+
   $$
   y(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{max} input(N,C,i,j,k)
   $$
-  
+
   $$
   indices(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{argmax} input(N,C,i,j,k)
   $$
@@ -100,7 +100,7 @@
     </tr>
   </tbody></table>
 
- - Kirin X90/Kirin 9030 处理器系列产品: 不支持BFLOAT16。
+ - Kirin X90/Kirin 9030处理器系列产品: 不支持BFLOAT16。
 
 ## 约束说明
 

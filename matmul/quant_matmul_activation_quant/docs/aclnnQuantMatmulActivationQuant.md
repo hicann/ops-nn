@@ -359,7 +359,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
         <td>
           <ul>
-            <li>当yDtype为FLOAT4_E2M1时，支持取值0和2。取值为0代表场景1，为2代表场景3（使能dstTypeMax）。</li>
+            <li>当yDtype为FLOAT4_E2M1时，支持取值0和2。取值为0代表场景1，为2代表场景3（开启dstTypeMax）。</li>
             <li>当yDtype为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1。取值为0代表场景1，为1代表场景2。</li>
           </ul>
         </td>

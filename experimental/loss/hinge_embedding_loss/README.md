@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品</term>     |     √    |
+|  <term>Atlas A2训练系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -40,7 +40,7 @@ $$
 - `none`、`sum`、`mean` 分别使用独立 tiling key；Kernel 在编译期选择直写、求和或均值路径。
 - `sum`、`mean` 多核执行需要第一段 ACLNN 接口返回的 workspace。
 - 支持动态 rank 和动态 shape；运行时 tiling 使用已确定的 storage shape。
-- 仅支持 Atlas A2 训练系列产品。
+- 仅支持 Atlas A2训练系列产品。
 
 ## 调用说明
 

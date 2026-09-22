@@ -175,7 +175,7 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - `x`的数据类型必须与`filter`一致。
   - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
   - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。

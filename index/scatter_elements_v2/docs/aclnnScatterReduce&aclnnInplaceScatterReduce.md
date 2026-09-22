@@ -529,7 +529,7 @@ aclnnStatus aclnnInplaceScatterReduce(
 - 确定性计算：
   - 是否进入确定性路径取决于底层后端能力与上层 deterministic 配置。
   - 在 `Atlas A2/Atlas A3` 上，当 `TilingContext::GetDeterministic()` 为真时，`none/add` 不会因此强制单核，仍保留多核调度能力；`mul/min/max/mean` 会禁用 `cache-op/low-memory`，收敛到 `ScatterElementsV2` legacy kernel 的单核调度路径。
-  - 在 `Ascend 950PR/Ascend 950DT` 上，deterministic 能力由独立的 tiling / kernel 分支承接，AICORE 路径当前支持的 reduction 范围为 `none/add/mul`。
+  - 在 `<term>Ascend 950PR&950DT系列产品</term>` 上，deterministic 能力由独立的 tiling / kernel 分支承接，AICORE 路径当前支持的 reduction 范围为 `none/add/mul`。
 - 接口边界约束：
   - 本页接口显式透传 `includeSelf`，是规约 scatter 的统一公共入口。
   - 在 `Atlas A2/Atlas A3` 上，本页接口当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合。

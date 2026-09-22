@@ -44,5 +44,5 @@
 ## 支持的型号
 
 <!-- npu="950" id2 -->
-Ascend 950PR&950DT系列产品
+<term>Ascend 950PR&950DT系列产品</term>
 <!-- end id2 -->

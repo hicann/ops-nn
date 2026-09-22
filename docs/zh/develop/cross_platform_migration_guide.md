@@ -383,7 +383,7 @@ Ascend 950引入集合通信加速器CCU1.0，降低了访存需求，减少了�
 
 在aclnn两段式接口中的第二段接口中，为算子执行器aclOpExecutor指定集合通信类型。
 
-以[MatmulAllReduce](https://gitcode.com/cann/ops-transformer/tree/master/mc2/matmul_all_reduce)算子迁移适配为例：
+以[MatmulAllReduce](https://gitcode.com/cann/ops-transformer/tree/9.2.0/mc2/matmul_all_reduce)算子迁移适配为例：
 设置NnopbaseSetHcclServerType枚举值，A2为NNOPBASE_HCCL_SERVER_AICPU，950为NNOPBASE_HCCL_SERVER_TYPE_CCU。
 
 ```cpp

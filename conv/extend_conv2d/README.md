@@ -235,7 +235,7 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - `x`的数据类型必须与`filter`一致。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
   - `x`、`filter`、`bias`、`scale0/1`、`relu_weight0/1`、`clip_value0/1`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。

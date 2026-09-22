@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品</term>     |     √    |
+|  <term>Atlas A2训练系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -108,7 +108,7 @@ aclnnStatus aclnnHingeEmbeddingLoss(
 - `target` 元素应为 `1` 或 `-1`，该 Device 数据值域由调用者保证。
 - reduction 仅支持 `none`、`sum`、`mean`。
 - 支持动态 rank 和动态 shape。
-- 仅支持 Atlas A2 训练系列产品。
+- 仅支持 Atlas A2训练系列产品。
 
 ## 调用示例
 

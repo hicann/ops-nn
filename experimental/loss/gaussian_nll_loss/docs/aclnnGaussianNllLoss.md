@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品</term>     |     √    |
+|  <term>Atlas A2训练系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -120,7 +120,7 @@ aclnnStatus aclnnGaussianNllLoss(
 - `eps` 必须为有限正数；reduction 仅支持 `none`、`sum`、`mean`。
 - `sum`、`mean` 多核执行需要第一段接口返回的 workspace。
 - 支持动态 rank 和动态 shape。
-- 仅支持 Atlas A2 训练系列产品。
+- 仅支持 Atlas A2训练系列产品。
 
 ## 调用示例
 

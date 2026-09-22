@@ -57,7 +57,7 @@
 - 当`indices` shape为二维时，shape的1轴需要等于2。
 - `indices`数据类型为INT32时，DtypeSize=4，为INT64时，DtypeSize=8，IndicesShapeSize为`indices`的shape乘积，需要使用的ub = IndicesShapeSize * DtypeSize + 224，当ub大于对应可以获取到的AI处理器版本总ub大小时，不支持。
 - 当`indices`有重复时，重复位置的结果不保证。
-- 确定性计算：当`indices`存在重复值时，结果将是不确定的。若开启了确定性计算，可保证结果的确定性（仅Ascend 950PR/Ascend 950DT需要显式开启，其余支持型号默认确定性）。
+- 确定性计算：当`indices`存在重复值时，结果将是不确定的。若开启了确定性计算，可保证结果的确定性（仅<term>Ascend 950PR&950DT系列产品</term>需要显式开启，其余支持型号默认确定性）。
 
 ## 调用说明
 

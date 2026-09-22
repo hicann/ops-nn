@@ -41,13 +41,13 @@
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 |--------|--------------|------|---------|---------|
-| cycles | 输入 | 休眠的时钟周期数，必须为正整数（cycles > 0）。受AICore超时限制，Ascend 950PR/Ascend 950DT主频1.65GHz下最大约1.782e12（约18分钟）。 | INT64 | ND |
+| cycles | 输入 | 休眠的时钟周期数，必须为正整数（cycles > 0）。受AICore超时限制，<term>Ascend 950PR&950DT系列产品</term>主频1.65GHz下最大约1.782e12（约18分钟）。 | INT64 | ND |
 
 ## 约束说明
 
 - cycles参数必须为正整数（cycles > 0）。
 - cycles以aclIntArray*传入，数组包含1个元素即休眠周期数。
-- AICore默认执行超时时间为18分钟。Ascend 950PR/Ascend 950DT主频1.65GHz下，cycles最大值约1.782e12。如需更长时间，可通过`aclrtSetOpExecuteTimeOut`接口修改AICore超时配置。
+- AICore默认执行超时时间为18分钟。<term>Ascend 950PR&950DT系列产品</term>主频1.65GHz下，cycles最大值约1.782e12。如需更长时间，可通过`aclrtSetOpExecuteTimeOut`接口修改AICore超时配置。
 
 ## 调用说明
 
