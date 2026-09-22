@@ -99,10 +99,12 @@ uint64_t Pool3DNcdhwBigKernelTiling::GetTilingKey() const { return POOL_3D_TILIN
 
 ge::graphStatus Pool3DNcdhwBigKernelTiling::GetWorkspaceSize()
 {
-    uint32_t sysWorkspace = WS_SYS_SIZE;
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sysWorkspace;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    currentWorkspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

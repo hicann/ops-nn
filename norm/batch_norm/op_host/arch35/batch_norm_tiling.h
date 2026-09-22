@@ -266,9 +266,6 @@ constexpr int64_t CONST_SIX = 6;
 constexpr int64_t INPUT_MEAN_INDEX = 3;
 constexpr int64_t INPUT_VAR_INDEX = 4;
 
-// 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
-
 const std::vector<ge::DataType> DTYPE_LIST = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT};
 
 class BatchNormTilingBase : public Ops::NN::Optiling::TilingBaseClass {
@@ -292,7 +289,10 @@ protected:
     ge::graphStatus GetWorkspaceSize() override
     {
         // 计算workspace大小
-        workspaceSize_ = MINIMAL_WORKSPACE;
+        auto platformInfo = context_->GetPlatformInfo();
+        OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+        workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
         return ge::GRAPH_SUCCESS;
     }
     // 7、保存Tiling数据

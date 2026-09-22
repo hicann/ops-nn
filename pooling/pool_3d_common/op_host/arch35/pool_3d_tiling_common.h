@@ -43,7 +43,6 @@ const uint32_t TOP_PAD_INDEX = 2;
 const uint32_t BOTTOM_PAD_INDEX = 3;
 const uint32_t LEFT_PAD_INDEX = 4;
 const uint32_t RIGHT_PAD_INDEX = 5;
-const uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U;
 const int64_t OP_TYPE_MAX_POOL_3D = 0;
 const int64_t OP_TYPE_AVG_POOL_3D = 1;
 struct Pool3DInputInfo {

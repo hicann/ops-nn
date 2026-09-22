@@ -146,7 +146,6 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
-    static constexpr uint64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
     static constexpr int64_t SMALL_CASE_THREAD_NUM = 512;
     static constexpr int64_t MAX_DIM_LEN_EIGHT = 8;
     static constexpr int64_t NUM_TWO = 2;

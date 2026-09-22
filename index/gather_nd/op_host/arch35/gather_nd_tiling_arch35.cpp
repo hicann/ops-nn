@@ -56,7 +56,6 @@ constexpr uint32_t SINGLE_CORE_MIN_NUM = 128;
 #else
 constexpr uint32_t SINGLE_CORE_MIN_NUM = 1024;
 #endif
-constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216;
 
 const static int32_t MIN_OUT_UB_SIZE = 16 * 1024;
 const static int64_t NUM_TWO = 2;
@@ -606,7 +605,10 @@ uint64_t GatherNdSimtTiling::GetTilingKey() const
 ge::graphStatus GatherNdSimtTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = ASCENDC_TOOLS_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaces[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 

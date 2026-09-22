@@ -32,7 +32,6 @@ constexpr int64_t RUNNING_MEAN_INPUT_IDX = 3;
 constexpr int64_t BINARY_ADD_COEF = 2;
 constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
 constexpr int64_t RA_BINARY_ADD_THRESHOLD = 4;
-constexpr int64_t WSP_RESERVED_SIZE = 16L * 1024L * 1024L;
 constexpr int64_t CACHE_LINE_SIZE = 256;
 constexpr int64_t SPLIT_R_TEMPLATE_A_THRESHOLD = 512;
 
@@ -210,8 +209,12 @@ ge::graphStatus BatchNormBlockSplitRTiling::PostTiling()
     context_->SetBlockDim(usedCoreNums_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = WSP_RESERVED_SIZE + usedCoreNums_ * MEAN_AND_VAR_NODE_NUM *
-                                                  batchNormTilingData.get_patternAAlign() * FLOAT32_BYTES;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    size_t sysWorkSpaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    currentWorkspace[0] = sysWorkSpaceSize + usedCoreNums_ * MEAN_AND_VAR_NODE_NUM *
+                                                 batchNormTilingData.get_patternAAlign() * FLOAT32_BYTES;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormTilingData.GetDataSize() > rawTilingData->GetCapacity(),
                 OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
