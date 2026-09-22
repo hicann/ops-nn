@@ -32,15 +32,15 @@ static const aclTensor* FusedMatMulCommon(const aclTensor* x1, const aclTensor* 
     auto mm_out = executor->AllocTensor(output_dtype, output_format, output_ori_format);
     OP_CHECK_NULL(mm_out, return nullptr);
     auto ret = INFER_SHAPE(FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
-                           OP_ATTR(transposeX1, transposeX2, enableHf32, fusedOpType, innerPrecise));
+                           OP_ATTR(transposeX1, transposeX2, enableHf32, fusedOpType, innerPrecise, 1.0F, 1.0F));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
         return nullptr;
     }
     uint32_t execMode = enableHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
-                                      OP_ATTR(transposeX1, transposeX2, enableHf32, fusedOpType, innerPrecise),
-                                      OP_MODE(execMode));
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
+        OP_ATTR(transposeX1, transposeX2, enableHf32, fusedOpType, innerPrecise, 1.0F, 1.0F), OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr, "Add to launcher list aicore failed.");
     return mm_out;
 }
