@@ -18,7 +18,7 @@
 
 #include "conv3d_bp_config_base.h"
 #include "conv3d_bp_func.h"
-#include "conv3d_bp_util.h"
+#include "conv3d_bp_input_util.h"
 #include "kernel_operator.h"
 #include "../conv3d_backprop_input_v2_tiling_data.h"
 

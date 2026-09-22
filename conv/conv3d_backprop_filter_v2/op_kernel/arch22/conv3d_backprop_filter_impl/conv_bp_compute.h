@@ -21,7 +21,7 @@
 #include "kernel_operator.h"
 #include "../conv3d_backprop_filter_v2_tiling_data.h"
 #if __CCE_AICORE__ == 220
-#include "conv_bp_sub_func.h"
+#include "conv_bp_filter_sub_func.h"
 #endif
 namespace ConvolutionBackpropFunc {
 

@@ -18,11 +18,11 @@
 
 #include "../conv3d_backprop_input_v2_tiling_data.h"
 #include "conv3d_bp_compute.h"
-#include "conv3d_bp_util.h"
+#include "conv3d_bp_input_util.h"
 #include "kernel_operator.h"
 
 #if __CCE_AICORE__ == 220
-#include "conv_bp_sub_func.h"
+#include "conv_bp_input_sub_func.h"
 #include "conv3d_bp_kernel_split.h"
 #endif
 

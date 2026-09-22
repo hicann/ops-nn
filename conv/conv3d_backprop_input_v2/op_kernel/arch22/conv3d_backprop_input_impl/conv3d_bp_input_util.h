@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file conv3d_bp_util.h
+ * \file conv3d_bp_input_util.h
  * \brief
  */
 
-#ifndef CONV3D_BP_UTIL_H
-#define CONV3D_BP_UTIL_H
+#ifndef CONV3D_BP_INPUT_UTIL_H
+#define CONV3D_BP_INPUT_UTIL_H
 
 #include "kernel_common.h"
 

@@ -16,7 +16,7 @@
 #ifndef CONV3D_BP_CONFIG_H
 #define CONV3D_BP_CONFIG_H
 
-#include "conv3d_bp_util.h"
+#include "conv3d_bp_input_util.h"
 
 using namespace AscendC;
 

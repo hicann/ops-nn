@@ -18,7 +18,7 @@
 
 #include "./conv3d_backprop_input_impl/conv3d_bp_func.h"
 #include "./conv3d_backprop_input_impl/conv3d_bp_impl_base.h"
-#include "./conv3d_backprop_input_impl/conv3d_bp_util.h"
+#include "./conv3d_backprop_input_impl/conv3d_bp_input_util.h"
 #include "conv3d_bp_input_config.h"
 #include "kernel_common.h"
 

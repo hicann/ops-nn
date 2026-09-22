@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_bp_sub_func.h
+ * \file conv_bp_filter_sub_func.h
  * \brief
  */
 
