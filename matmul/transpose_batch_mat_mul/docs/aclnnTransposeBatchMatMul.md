@@ -211,7 +211,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>用于指定矩阵乘输出矩阵中B维的切分大小，Host侧的整型。</td>
         <td>
         <ul>
-          <li>取值范围为[1, B]且能被B整除。</li>
+          <li>取值范围为[1, B]且B能被batchSplitFactor整除。</li>
           <li>当scale不为空时，batchSplitFactor只能等于1。</li>
         </ul>
         </td>

@@ -568,7 +568,7 @@ A16W8调用示例。
     aclTensor* x = nullptr;
     aclTensor* weight = nullptr;
     aclTensor* y = nullptr;
-    int32_t innerPrecise = 1;
+    int32_t innerPrecise = 0;
     std::vector<float> xHostData(512, 1);
     std::vector<int8_t> weightHostData(512, 1);
     std::vector<float> yHostData(256, 0);
