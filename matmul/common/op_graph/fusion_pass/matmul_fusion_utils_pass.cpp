@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -111,6 +112,18 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
         return false;
     }
     return std::find(iter->second.begin(), iter->second.end(), "bf16") != iter->second.end();
+}
+
+// 判断当前ARCH是否为DAV_3510或后续兼容版本，后续新增兼容ARCH在此函数内追加
+bool IsNpuArch3510Series()
+{
+    static const std::set<std::string> arch35SocList = {"Ascend950", "Ascend350"};
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        return false;
+    }
+    return arch35SocList.count(platformInfo.str_info.short_soc_version) > 0;
 }
 
 constexpr int32_t kGeCompilerVersion900 = 90000000;

@@ -89,6 +89,7 @@ constexpr int64_t kPattern2InnerAxisLimit = 65536;
 constexpr char kPlatAscend910B[] = "Ascend910B";
 constexpr char kPlatAscend910_93[] = "Ascend910_93";
 constexpr char kPlatAscend950[] = "Ascend950";
+constexpr char kPlatAscend350[] = "Ascend350";
 
 // 3D shape 索引：x1=[batch, M, K], x2=[batch, K, N]，K 和 N 都在 index 2，
 // kKDimIdx 用于 x1，kNDimIdx 用于 x2，语义不同但值相同。
@@ -177,7 +178,8 @@ std::string GetPlatform()
     FUSION_PASS_CHECK(
         fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
         OPS_LOG_E(kPassName, "Get platform info failed."), return "");
-    static const std::set<std::string> supportPlatList = {kPlatAscend910B, kPlatAscend910_93, kPlatAscend950};
+    static const std::set<std::string> supportPlatList = {kPlatAscend910B, kPlatAscend910_93, kPlatAscend950,
+                                                          kPlatAscend350};
     const std::string currentPlat = platformInfo.str_info.short_soc_version;
     FUSION_PASS_CHECK(supportPlatList.count(currentPlat) == 0,
                       OPS_LOG_W(kPassName, "Fusion TransposeBatchMatMul not supported on this platform."), return "");
@@ -490,8 +492,7 @@ bool RemoveNodeFully(const GraphPtr& graph, const GNodePtr& node)
 
 // ==================== Pattern1 Check ====================
 
-bool CheckBatchMatMulNodePattern1(const GNode& bmmNode, GNodePtr& transNode1, const std::string& currentPlat,
-                                  int64_t& batchSplitFactor, int64_t& batch)
+bool CheckBatchMatMulNodePattern1(const GNode& bmmNode, GNodePtr& transNode1, int64_t& batchSplitFactor, int64_t& batch)
 {
     bool x1TransFlag = false;
     bool x2TransFlag = false;
@@ -531,7 +532,7 @@ bool CheckBatchMatMulNodePattern1(const GNode& bmmNode, GNodePtr& transNode1, co
     FUSION_PASS_CHECK(bmmNode.GetInputsSize() > kInputSizeWithoutBias,
                       OPS_LOG_W(kPassName, "tbmm does not support bias"), return false);
 
-    if (currentPlat != kPlatAscend950) {
+    if (!IsNpuArch3510Series()) {
         int64_t inputK = inputShapeX2[1];
         int64_t inputN = inputShapeX2[kNDimIdx];
         bool isFp32 = x1Desc.GetDataType() == ge::DT_FLOAT && x1Desc.GetDataType() == x2Desc.GetDataType() &&
@@ -553,8 +554,8 @@ bool CheckBatchMatMulNodePattern1(const GNode& bmmNode, GNodePtr& transNode1, co
         FUSION_PASS_CHECK(!(supportTransNode1 || notSupportTransNode1),
                           OPS_LOG_W(kPassName, "bmm node's shape does not support fusion"), return false);
     } else {
-        // 950 平台不需要 KN 对齐检查，而是走 CheckOptimizedBatch 判断是否可走 matmultomul 或 iterbatch 优化模板。
-        // transNode1 必须为 null（950 上 A 的 transpose 由 TBE 内部处理，不需要外挂 transpose 节点）。
+        // 950/350 平台不需要 KN 对齐检查，而是走 CheckOptimizedBatch 判断是否可走 matmultomul 或 iterbatch 优化模板。
+        // transNode1 必须为 null（950/350 上 A 的 transpose 由 TBE 内部处理，不需要外挂 transpose 节点）。
         FUSION_PASS_CHECK(transNode1 == nullptr && CheckOptimizedBatch(bmmNode),
                           OPS_LOG_W(kPassName, "bmm node's shape does not support fusion."), return false);
     }
@@ -587,8 +588,7 @@ bool CheckBatchMatMulNodePattern2(const GNode& bmmNode, TensorDesc& x1Desc, Tens
     auto inputShapeX1 = x1Desc.GetShape().GetDims();
     auto inputShapeX2 = x2Desc.GetShape().GetDims();
 
-    const std::string currentPlat = GetPlatform();
-    bool supportInnerAxis = (currentPlat == kPlatAscend950 ||
+    bool supportInnerAxis = (IsNpuArch3510Series() ||
                              inputShapeX1[kPattern2B1DimIdx] * inputShapeX1[kPattern2LastDimIdx] <
                                  kPattern2InnerAxisLimit);
     FUSION_PASS_CHECK(!supportInnerAxis, OPS_LOG_W(kPassName, "inner axis must be less than 65536"), return false);
@@ -652,17 +652,17 @@ bool CheckBmmTransposePattern1(GNodePtr& transNode1, GNodePtr& transNode2)
 }
 
 // 收集 Pattern1 周围的 Transpose 节点：
-// transNode2 仅在 950 平台保留（B 的 transpose 在非 950 上不融合）；
+// transNode2 仅在 950/350 平台保留（B 的 transpose 在非 950/350 上不融合）；
 // transNode1 输出有多个消费者时丢弃（不能安全移除）。
-Status CollectTransposeNodesPattern1(const GNode& bmmNode, const std::string& currentPlat, GNodePtr& transNode1,
-                                     GNodePtr& transNode2, GNodePtr& transNode3)
+Status CollectTransposeNodesPattern1(const GNode& bmmNode, GNodePtr& transNode1, GNodePtr& transNode2,
+                                     GNodePtr& transNode3)
 {
     transNode1 = GetInputNode(bmmNode, 0);
     transNode2 = GetInputNode(bmmNode, 1);
     if (!CheckTransposeNode(transNode1, kPerm102)) {
         transNode1 = nullptr;
     }
-    if (currentPlat != kPlatAscend950) {
+    if (!IsNpuArch3510Series()) {
         transNode2 = nullptr;
     } else {
         FUSION_PASS_CHECK(!CheckBmmTransposePattern1(transNode1, transNode2),
@@ -864,21 +864,19 @@ Status RemoveOldNodesPattern1(const GraphPtr& graph, GNode& bmmNode, GNodePtr& t
     return SUCCESS;
 }
 
-Status DoFusionPattern1(const GraphPtr& graph, GNode& bmmNode, const std::string& currentPlat,
-                        CustomPassContext& passContext)
+Status DoFusionPattern1(const GraphPtr& graph, GNode& bmmNode, CustomPassContext& passContext)
 {
     OPS_LOG_I(kPassName, "Begin DoFusionPattern1.");
 
     GNodePtr transNode1;
     GNodePtr transNode2;
     GNodePtr transNode3;
-    FUSION_PASS_CHECK(
-        CollectTransposeNodesPattern1(bmmNode, currentPlat, transNode1, transNode2, transNode3) != SUCCESS,
-        OPS_LOG_W(kPassName, "Collect transpose nodes failed."), return GRAPH_NOT_CHANGED);
+    FUSION_PASS_CHECK(CollectTransposeNodesPattern1(bmmNode, transNode1, transNode2, transNode3) != SUCCESS,
+                      OPS_LOG_W(kPassName, "Collect transpose nodes failed."), return GRAPH_NOT_CHANGED);
 
     int64_t batchSplitFactor = 1;
     int64_t batch = 1;
-    FUSION_PASS_CHECK(!CheckBatchMatMulNodePattern1(bmmNode, transNode1, currentPlat, batchSplitFactor, batch),
+    FUSION_PASS_CHECK(!CheckBatchMatMulNodePattern1(bmmNode, transNode1, batchSplitFactor, batch),
                       OPS_LOG_W(kPassName, "Parameter[bmm_node] should not be changed."), return GRAPH_NOT_CHANGED);
 
     GNode tbmmNode;
@@ -1102,7 +1100,7 @@ Status ProcessBatchMatMulNode(const GraphPtr& graph, GNode& bmmNode, CustomPassC
         return status;
     }
     OPS_LOG_I(kPassName, "Match pattern1, begin DoFusionPattern1.");
-    auto status = DoFusionPattern1(graph, bmmNode, currentPlat, passContext);
+    auto status = DoFusionPattern1(graph, bmmNode, passContext);
     if (status != SUCCESS) {
         OPS_LOG_W(kPassName, "Bmm Node in Pattern 1 does not satisfy condition.");
     }

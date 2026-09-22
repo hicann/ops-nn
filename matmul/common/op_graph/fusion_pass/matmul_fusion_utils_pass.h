@@ -52,6 +52,8 @@ constexpr int32_t kTargetGeCompilerVersion = 90100000;
 
 bool IsSupportL12BtBf16(const fe::PlatformInfo& platformInfo);
 
+bool IsNpuArch3510Series();
+
 int32_t GetGeCompilerVersionNum();
 
 ge::CustomPassStage GetCompatPassStage();
