@@ -354,8 +354,9 @@ KernelStatus SoftmaxV2ExtraCheck(const CpuKernelContext& ctx)
 
 uint32_t SoftmaxV2Check(CpuKernelContext& ctx)
 {
-    return NormalCheck(ctx, kSoftmaxV2InputNum, kSoftmaxV2OutputNum, kSoftmaxV2Attr) ? KERNEL_STATUS_PARAM_INVALID :
-                                                                                       SoftmaxV2ExtraCheck(ctx);
+    return NormalCheck(ctx, kSoftmaxV2InputNum, kSoftmaxV2OutputNum, kSoftmaxV2Attr) != KERNEL_STATUS_OK ?
+               KERNEL_STATUS_PARAM_INVALID :
+               SoftmaxV2ExtraCheck(ctx);
 }
 
 // DT_FLOAT16, DT_FLOAT, DT_DOUBLE
@@ -385,7 +386,8 @@ uint32_t SoftmaxV2Compute(const CpuKernelContext& ctx)
 
 uint32_t SoftmaxV2CpuKernel::Compute(CpuKernelContext& ctx)
 {
-    return detail::SoftmaxV2Check(ctx) ? KERNEL_STATUS_PARAM_INVALID : detail::SoftmaxV2Compute(ctx);
+    return detail::SoftmaxV2Check(ctx) != KERNEL_STATUS_OK ? KERNEL_STATUS_PARAM_INVALID :
+                                                             detail::SoftmaxV2Compute(ctx);
 }
 
 OPS_NN_REGISTER_CPU_KERNELV2(kSoftmaxV2, SoftmaxV2CpuKernel);

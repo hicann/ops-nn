@@ -21,9 +21,9 @@ public:
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 protected:
-    KernelStatus ValidParam(const CpuKernelContext& ctx);
+    KernelStatus ValidParam(const CpuKernelContext& ctx) const;
     uint32_t ParallelSetDefaultValue(const CpuKernelContext& ctx, const Tensor* defaultValueTensor,
-                                     const Tensor* outputTensor, int64_t outputSize);
+                                     const Tensor* outputTensor, int64_t outputSize) const;
     uint32_t SetDefaultValue(const CpuKernelContext& ctx, const Tensor* defaultValueTensor, const Tensor* outputTensor,
                              int64_t outputSize);
 };

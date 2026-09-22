@@ -84,7 +84,7 @@ uint32_t SparseSegmentMeanCpuKernel::Compute(CpuKernelContext& ctx)
 }
 
 template <typename T, typename T1, typename T2>
-KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx)
+KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx) const
 {
     auto xShape = ctx.Input(0)->GetTensorShape();
     T1 xDim0 = static_cast<T1>(xShape->GetDimSize(0));
@@ -173,7 +173,7 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelCo
 }
 
 template <typename T>
-KernelStatus SparseSegmentMeanCpuKernel::ComputeKernel(const CpuKernelContext& ctx)
+KernelStatus SparseSegmentMeanCpuKernel::ComputeKernel(const CpuKernelContext& ctx) const
 {
     auto indicesDataType = ctx.Input(1)->GetDataType();
     auto segmentIdsDtype = ctx.Input(2)->GetDataType();

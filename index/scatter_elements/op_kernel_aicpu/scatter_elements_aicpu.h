@@ -25,13 +25,13 @@ public:
 
 private:
     template <typename TI>
-    uint32_t DispatchByDataType(CpuKernelContext& ctx);
+    uint32_t DispatchByDataType(CpuKernelContext& ctx) const;
 
     template <typename T>
-    uint32_t UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num);
+    uint32_t UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num) const;
 
     template <typename T, typename TI>
-    uint32_t DoCompute(const CpuKernelContext& ctx);
+    uint32_t DoCompute(const CpuKernelContext& ctx) const;
 };
 } // namespace aicpu
 

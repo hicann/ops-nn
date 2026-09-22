@@ -419,7 +419,7 @@ uint32_t SparseToDense(const CpuKernelContext& ctx, SparseTensor& st, const Tens
     }
 }
 
-KernelStatus SparseToDenseCpuKernel::ValidParam(const CpuKernelContext& ctx)
+KernelStatus SparseToDenseCpuKernel::ValidParam(const CpuKernelContext& ctx) const
 {
     KERNEL_LOG_INFO("Start to execute ValidParam");
     Tensor* indicesTensor = ctx.Input(0);
@@ -497,7 +497,7 @@ KernelStatus SparseToDenseCpuKernel::ValidParam(const CpuKernelContext& ctx)
 }
 
 uint32_t SparseToDenseCpuKernel::ParallelSetDefaultValue(const CpuKernelContext& ctx, const Tensor* defaultValueTensor,
-                                                         const Tensor* outputTensor, int64_t outputSize)
+                                                         const Tensor* outputTensor, int64_t outputSize) const
 {
     auto typeSize = GetSizeByDataType(static_cast<DataType>(outputTensor->GetDataType()));
     char* defaultValueAddr = PtrToPtr<void, char>(defaultValueTensor->GetData());

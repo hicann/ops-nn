@@ -50,7 +50,7 @@ public:
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:
-    uint32_t GetInputAndCheck(const CpuKernelContextInfo& info);
+    uint32_t GetInputAndCheck(const CpuKernelContextInfo& info) const;
 };
 } // namespace aicpu
 

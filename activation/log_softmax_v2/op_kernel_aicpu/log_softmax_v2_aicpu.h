@@ -24,10 +24,10 @@ public:
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:
-    KernelStatus LogSoftmaxV2Check(const CpuKernelContext& ctx);
+    KernelStatus LogSoftmaxV2Check(const CpuKernelContext& ctx) const;
 
     template <typename T>
-    KernelStatus LogSoftmaxV2Compute(const CpuKernelContext& ctx);
+    KernelStatus LogSoftmaxV2Compute(const CpuKernelContext& ctx) const;
 };
 } // namespace aicpu
 

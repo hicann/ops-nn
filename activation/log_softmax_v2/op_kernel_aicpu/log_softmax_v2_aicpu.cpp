@@ -190,7 +190,7 @@ uint32_t LogSoftmaxV2CpuKernel::Compute(CpuKernelContext& ctx)
     return result;
 }
 
-KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Check(const CpuKernelContext& ctx)
+KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Check(const CpuKernelContext& ctx) const
 {
     KERNEL_CHECK_NULLPTR(ctx.Input(0)->GetData(), KERNEL_STATUS_PARAM_INVALID, "get input failed.");
     KERNEL_CHECK_NULLPTR(ctx.Input(0)->GetTensorShape(), KERNEL_STATUS_PARAM_INVALID, "Get input tensor shape failed.");
@@ -213,7 +213,7 @@ KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Check(const CpuKernelContext& ct
 }
 
 template <typename T>
-KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Compute(const CpuKernelContext& ctx)
+KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Compute(const CpuKernelContext& ctx) const
 {
     auto input = static_cast<T*>(ctx.Input(0)->GetData());
     auto output = static_cast<T*>(ctx.Output(0)->GetData());

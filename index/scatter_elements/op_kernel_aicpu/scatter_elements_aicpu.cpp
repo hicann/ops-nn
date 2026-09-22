@@ -234,7 +234,7 @@ uint32_t ScatterElementsCpuKernel::Compute(CpuKernelContext& ctx)
 }
 
 template <typename T>
-uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num)
+uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int64_t total_value_num) const
 {
     auto* input_data = PtrToPtr<void, T>(ctx.Input(0)->GetData());
     auto* output_data = PtrToPtr<void, T>(ctx.Output(0)->GetData());
@@ -275,7 +275,7 @@ uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int
 }
 
 template <typename TI>
-uint32_t ScatterElementsCpuKernel::DispatchByDataType(CpuKernelContext& ctx)
+uint32_t ScatterElementsCpuKernel::DispatchByDataType(CpuKernelContext& ctx) const
 {
     switch (ctx.Input(0)->GetDataType()) {
         case DT_FLOAT16:
@@ -315,7 +315,7 @@ uint32_t ScatterElementsCpuKernel::DispatchByDataType(CpuKernelContext& ctx)
 }
 
 template <typename T, typename TI>
-uint32_t ScatterElementsCpuKernel::DoCompute(const CpuKernelContext& ctx)
+uint32_t ScatterElementsCpuKernel::DoCompute(const CpuKernelContext& ctx) const
 {
     ScatterElementsComputeInfo info;
     auto ret = InitScatterElementsInfo(ctx, info);

@@ -25,10 +25,10 @@ private:
     KernelStatus SparseSegmentCheck(const CpuKernelContext& ctx) const;
 
     template <typename T>
-    KernelStatus ComputeKernel(const CpuKernelContext& ctx);
+    KernelStatus ComputeKernel(const CpuKernelContext& ctx) const;
 
     template <typename T, typename T1, typename T2>
-    KernelStatus ComputeKernelWithType(const CpuKernelContext& ctx);
+    KernelStatus ComputeKernelWithType(const CpuKernelContext& ctx) const;
 };
 } // namespace aicpu
 #endif // OPS_BUILT_IN_OP_KERNEL_AICPU_SPARSE_SEGMENT_MEAN_AICPU_H_

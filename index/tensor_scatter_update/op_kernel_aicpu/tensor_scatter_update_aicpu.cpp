@@ -62,7 +62,7 @@ inline void GetOuterShape(const CpuKernelContextInfo& info, uint64_t* x_outer_sh
     }
 }
 
-inline void GetBatchStrides(uint64_t* outer_shape, uint64_t index_depth, uint64_t* batch_strides)
+inline void GetBatchStrides(const uint64_t* outer_shape, uint64_t index_depth, uint64_t* batch_strides)
 {
     batch_strides[index_depth - 1] = 1;
     for (int64_t i = static_cast<int64_t>(index_depth) - 2; i >= 0; --i) {
@@ -297,7 +297,7 @@ uint32_t IndicesCompute(const CpuKernelContextInfo& info)
     }
 }
 
-uint32_t TensorScatterUpdateCpukernel::GetInputAndCheck(const CpuKernelContextInfo& info)
+uint32_t TensorScatterUpdateCpukernel::GetInputAndCheck(const CpuKernelContextInfo& info) const
 {
     KERNEL_CHECK_FALSE((info.indices_dims >= kMinIndicesDims), KERNEL_STATUS_PARAM_INVALID,
                        "indices must be at least rank %u but is rank %lu", kMinIndicesDims, info.indices_dims);

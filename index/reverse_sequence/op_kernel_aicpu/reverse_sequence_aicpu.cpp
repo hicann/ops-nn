@@ -88,7 +88,7 @@ KernelStatus CalReverseSequence(const std::vector<void*>& ioAddrs, std::vector<i
                 output[i * seqStep + offset] = input[((reverseNum - i) - 1) * seqStep + offset];
                 output[((reverseNum - i) - 1) * seqStep + offset] = input[i * seqStep + offset];
             }
-            if ((i >= reverseNum) || (i == reverseNum / kEven && reverseNum % kEven)) {
+            if ((i >= reverseNum) || (i == reverseNum / kEven && (reverseNum % kEven) != 0)) {
                 output[i * seqStep + offset] = input[i * seqStep + offset];
             }
         }

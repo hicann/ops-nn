@@ -30,10 +30,10 @@ private:
     KernelStatus ComputeWithType(const CpuKernelContext& ctx);
 
     template <typename T>
-    KernelStatus ComputeKernel(const CpuKernelContext& ctx);
+    KernelStatus ComputeKernel(const CpuKernelContext& ctx) const;
 
     template <typename T, typename T1, typename T2>
-    KernelStatus ComputeKernelWithType(const CpuKernelContext& ctx);
+    KernelStatus ComputeKernelWithType(const CpuKernelContext& ctx) const;
 };
 } // namespace aicpu
 #endif

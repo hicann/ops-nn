@@ -173,7 +173,7 @@ uint32_t SparseSegmentSumCpuKernel::Compute(CpuKernelContext& ctx)
 }
 
 template <typename T, typename T1, typename T2>
-KernelStatus SparseSegmentSumCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx)
+KernelStatus SparseSegmentSumCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx) const
 {
     size_t n = ctx.Input(0)->GetTensorShape()->NumElements() / ctx.Input(0)->GetTensorShape()->GetDimSize(0);
     size_t num_indices = ctx.Input(2)->GetTensorShape()->NumElements();
@@ -232,7 +232,7 @@ KernelStatus SparseSegmentSumCpuKernel::ComputeKernelWithType(const CpuKernelCon
     return KERNEL_STATUS_OK;
 };
 template <typename T>
-KernelStatus SparseSegmentSumCpuKernel::ComputeKernel(const CpuKernelContext& ctx)
+KernelStatus SparseSegmentSumCpuKernel::ComputeKernel(const CpuKernelContext& ctx) const
 {
     auto indices_data_type = ctx.Input(1)->GetDataType();
     auto segment_ids_dtype = ctx.Input(2)->GetDataType();
