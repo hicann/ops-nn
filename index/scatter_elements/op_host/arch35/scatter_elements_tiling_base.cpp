@@ -156,7 +156,8 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
     bool isSortDetermDtype = (reduction_ == REDUCTION_ADD &&
                               SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end()) ||
                              (reduction_ == REDUCTION_NONE &&
-                              (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                              (dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16 ||
+                               dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
                                dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
     if (context_->GetDeterministic() && isSortDetermDtype) {
         isSortDeterministic_ = 1;
@@ -467,7 +468,8 @@ bool ScatterElementsTiling::IsSortTemplateAdmitted(int64_t aAxisCoreNum) const
 {
     bool sortDtypeOk = SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end() ||
                        (reduction_ == REDUCTION_NONE &&
-                        (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                        (dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16 ||
+                         dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
                          dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
     if (!sortDtypeOk || !IsScatterAxisDominant()) {
         return false;
