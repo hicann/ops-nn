@@ -1,0 +1,254 @@
+name: kirin_pre_smoke_action
+
+on:
+  workflow_call:
+    inputs:
+      device_type:
+        required: true
+        type: string
+      rdv_script:
+        required: true
+        type: string
+      chip_version:
+        required: true
+        type: string
+      repo_name:
+        required: false
+        type: string
+        default: 'ops-nn'
+      cases_pool:
+        required: false
+        type: string
+        default: 'nn_all.json'  # 增量池：算子名->用例名归档，key 与 pr_filelist 提取的算子名全等匹配
+      cases_baseline:
+        required: false
+        type: string
+        default: 'nn.json'  # 基线兜底：全量用例文件，增量无匹配/不涉及算子/池缺失时执行
+      op_categories:
+        required: false
+        type: string
+        default: 'control conv foreach hash index loss matmul norm optim pooling quant rnn'
+
+env:
+  org_name: ${{ vars.ORG_NAME }}
+  MERGE_ID: ${{atomgit.event.pull_request.number}}
+  TARGET_BRANCH: ${{atomgit.ref_name}}
+  SOURCE_BRANCH: ${{atomgit.head_ref}}
+  obs_path: "${{ env.org_name }}/${{ atomgit.event.repository.name }}/ci/package/${{ env.MERGE_ID }}"
+
+jobs:
+  JOB_kirin_pre_smoke:
+    name: Kirin_PreSmoke
+    if: "${{ default() }}"
+    runs-on:
+      - self-hosted
+      - arch=x64
+      - os=ubuntu
+      - type=${{ inputs.device_type }}
+    steps:
+      -
+        name: Checkout
+        identifier: process_checkout
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
+      -
+        name: download_pr_filelist
+        uses: obs-download
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          key: |
+            ${{ env.obs_path }}/pr_filelist.txt
+          path: ${{ steps.process_checkout.outputs.path }}
+      -
+        name: check_target_branch
+        identifier: check_branch
+        run: |
+          if [[ "${{ env.TARGET_BRANCH }}" != "master" ]]; then
+            echo "need_run=no" >> "$ATOMGIT_OUTPUT"
+            echo "Skip kirin presmoke: target branch '${{ env.TARGET_BRANCH }}' is not master"
+            exit 0
+          fi
+          echo "need_run=yes" >> "$ATOMGIT_OUTPUT"
+      -
+        name: clone_kirin_cann_test
+        if: ${{ steps.check_branch.outputs.need_run == 'yes' }}
+        run: |
+          set -e
+          cd ${{ steps.process_checkout.outputs.path }}
+          echo "#########################打印SN号#########################"
+          hdc list targets
+          echo "#########################下载kirin_cann_test代码仓#########################"
+          rm -rf kirin_cann_test
+          git clone https://gitcode.com/funna2000/kirin_cann_test.git
+          cd kirin_cann_test/harmony-infer-chs
+          cp ../entry-default-signed.hap ./
+      -
+        name: filter_cases_by_pr_filelist
+        identifier: filter_cases
+        if: ${{ steps.check_branch.outputs.need_run == 'yes' }}
+        run: |
+          cd ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs
+          echo "[${{ inputs.device_type }}] === filter_cases begin ==="
+          echo "[${{ inputs.device_type }}] pr_filelist source: ${obs_path}/pr_filelist.txt, MERGE_ID=${MERGE_ID}"
+          CASES_POOL="${{ inputs.cases_pool }}"
+          if [[ -z "${CASES_POOL}" ]]; then
+            CASES_POOL="nn_all.json"
+          fi
+          CASES_BASELINE="${{ inputs.cases_baseline }}"
+          if [[ -z "${CASES_BASELINE}" ]]; then
+            CASES_BASELINE="nn.json"  # 运行时回退：调用方未传 cases_baseline 时与默认值一致
+          fi
+          OP_CATEGORIES="${{ inputs.op_categories }}"
+          if [[ -z "${OP_CATEGORIES}" ]]; then
+            OP_CATEGORIES="control conv foreach hash index loss matmul norm optim pooling quant rnn"
+          fi
+          echo "[${{ inputs.device_type }}] Params: cases_pool=${CASES_POOL}, cases_baseline=${CASES_BASELINE}, op_categories='${OP_CATEGORIES}'"
+          CASES_FILE="${CASES_BASELINE}"
+          FILELIST="${{ steps.process_checkout.outputs.path }}/pr_filelist.txt"
+          if [[ -f "${FILELIST}" ]]; then
+            echo "[${{ inputs.device_type }}] pr_filelist: $(wc -l < "${FILELIST}") lines, md5=$(md5sum "${FILELIST}" | cut -d" " -f1)"
+            op_categories="${OP_CATEGORIES}"
+            changed_ops=$(awk -v cats="${op_categories}" -v skip_stat="kirin_pr_skip_stat.txt" '
+              BEGIN {
+                n = split(cats, a, /[ \t]+/)
+                for (i = 1; i <= n; i++) { if (a[i] != "") { cat[a[i]] = 1 } }
+                total = 0
+                skipped = 0
+              }
+              {
+                line = $0
+                sub(/^[MADRC]\t/, "", line)
+                sub(/^[ \t]+/, "", line)
+                sub(/[ \t\r]+$/, "", line)
+                if (line == "" || line ~ /^#/) { next }
+                total++
+                if (line ~ /\.md$/ || line ~ /(^|\/)experimental(\/|$)/ || line ~ /(^|\/)tests(\/|$)/) { skipped++; next }
+                m = split(line, p, "/")
+                if (m < 2) { next }
+                if (p[1] in cat) {
+                  op = p[2]
+                  if (op == "common") { op = p[1] ".common" }
+                  print op
+                }
+              }
+              END { printf "%d %d\n", total, skipped > skip_stat }' "${FILELIST}" | sort -u)
+            changed_ops_show="${changed_ops}"
+            if [[ -z "${changed_ops_show}" ]]; then
+              changed_ops_show="<none>"
+            fi
+            echo "[${{ inputs.device_type }}] Changed ops: ${changed_ops_show}"
+            fl_total=0
+            fl_skipped=0
+            if [[ -f "kirin_pr_skip_stat.txt" ]]; then
+              read -r fl_total fl_skipped < kirin_pr_skip_stat.txt
+            fi
+            echo "[${{ inputs.device_type }}] pr_filelist valid lines: ${fl_total}, filtered by .md/experimental/tests: ${fl_skipped}"
+            if [[ -n "${changed_ops}" ]]; then
+              ops_json=$(printf '%s\n' ${changed_ops} | jq -R . | jq -s .)
+              if [[ -f "${CASES_POOL}" ]]; then
+                jq --argjson ops "${ops_json}" 'with_entries(.key as $k | select($ops | index($k)) | select(.value | length > 0))' "${CASES_POOL}" > filtered_cases.json
+                if [[ -s filtered_cases.json ]] && [[ "$(jq '[.[] | length] | add // 0' filtered_cases.json)" -gt 0 ]]; then
+                  echo "[${{ inputs.device_type }}] Filtered ${CASES_POOL} by op-key exact match to $(jq '[.[] | length] | add // 0' filtered_cases.json) case(s) for incremental run"
+                  CASES_FILE="filtered_cases.json"
+                else
+                  echo "[${{ inputs.device_type }}] No op key in ${CASES_POOL} matches changed ops, fallback to baseline ${CASES_BASELINE}"
+                  rm -f filtered_cases.json
+                fi
+              else
+                echo "[${{ inputs.device_type }}] Cases pool ${CASES_POOL} not found, fallback to baseline ${CASES_BASELINE}"
+              fi
+            else
+              if [[ "${fl_total}" -gt 0 && "${fl_skipped}" -eq "${fl_total}" ]]; then
+                echo "[${{ inputs.device_type }}] pr_filelist only contains .md/experimental/tests changes, skip kirin smoke"
+                echo "skip_smoke=true" >> "$ATOMGIT_OUTPUT"
+              else
+                echo "[${{ inputs.device_type }}] No op dir found in pr_filelist, run baseline ${CASES_BASELINE}"
+              fi
+            fi
+          else
+            echo "[${{ inputs.device_type }}] pr_filelist.txt not found, run baseline ${CASES_BASELINE}"
+          fi
+          if [[ "${CASES_FILE}" == "filtered_cases.json" ]]; then
+            CASES_TYPE="incremental (filtered from pool ${CASES_POOL})"
+          elif [[ "${CASES_FILE}" == "${CASES_POOL}" ]]; then
+            CASES_TYPE="full (pool file)"
+          else
+            CASES_TYPE="baseline"
+          fi
+          echo "cases_file=${CASES_FILE}" >> "$ATOMGIT_OUTPUT"
+          echo "cases_type=${CASES_TYPE}" >> "$ATOMGIT_OUTPUT"
+          echo "[${{ inputs.device_type }}] Selected cases file: ${CASES_FILE} [${CASES_TYPE}]"
+      -
+        name: run_kirin_smoke
+        identifier: kirin_smoke
+        if: ${{ steps.check_branch.outputs.need_run == 'yes' && steps.filter_cases.outputs.skip_smoke != 'true' }}
+        run: |
+          set -e
+          cd ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs
+          CASES_FILE="${{ steps.filter_cases.outputs.cases_file }}"
+          if [[ -z "${CASES_FILE}" ]]; then
+            CASES_FILE="${{ inputs.cases_baseline }}"
+          fi
+          if [[ -z "${CASES_FILE}" ]]; then
+            CASES_FILE="nn.json"  # 末级保险：cases_baseline 也为空时按 ops-nn 基线执行
+          fi
+          if [[ "${CASES_FILE}" == "filtered_cases.json" ]]; then
+            echo "#########################执行 增量用例 ${CASES_FILE} (filtered from pool)#########################"
+          elif [[ "${CASES_FILE}" == "${{ inputs.cases_pool }}" ]]; then
+            echo "#########################执行 全量用例 ${CASES_FILE}#########################"
+          else
+            echo "#########################执行 基准用例 ${CASES_FILE}#########################"
+          fi
+          export repo_name="${{ inputs.repo_name }}"
+          export MERGE_ID="${{ env.MERGE_ID }}"
+          export obs_path="${{ env.obs_path }}"
+          echo "repo_name=${{ inputs.repo_name }}, MERGE_ID=${MERGE_ID}, obs_path=${obs_path}"
+          bash ${{ inputs.rdv_script }} $(hdc list targets) "${CASES_FILE}" ${{ inputs.chip_version }} ${{ inputs.repo_name }} ${MERGE_ID} ${obs_path}
+          echo "#########################查看用例执行结果#########################"
+          cat result.txt
+          echo "#########################打印SN号#########################"
+          hdc list targets
+      -
+        name: package_smoke_results
+        identifier: package_results
+        if: ${{ always() && steps.check_branch.outputs.need_run == 'yes' }}
+        run: |
+          cd ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs
+          rm -f kirin_smoke_log*.tar.gz
+          tar_args=()
+          [[ -d log ]] && tar_args+=(log)
+          [[ -f result.txt ]] && tar_args+=(result.txt)
+          if [[ ${#tar_args[@]} -gt 0 ]]; then
+            tar_name="kirin_smoke_log_$(date +%Y%m%d%H%M%S).tar.gz"  # 对象 key 唯一化：同 PR 重复运行时避免 OBS 旧对象冒充新产物
+            tar -zcf "$tar_name" "${tar_args[@]}"
+            echo "has_results=yes" >> "$ATOMGIT_OUTPUT"
+            echo "tar_name=$tar_name" >> "$ATOMGIT_OUTPUT"
+          else
+            echo "has_results=no" >> "$ATOMGIT_OUTPUT"
+          fi
+      -
+        name: upload_results
+        if: ${{ always() && steps.package_results.outputs.has_results == 'yes' }}
+        uses: obs-upload
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          artifact-path: |
+            ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs/${{ steps.package_results.outputs.tar_name }}
+          object-prefix: ${{ env.obs_path }}/presmoke_kirin/${{ inputs.device_type }}/
+      -
+        name: clean_workspace
+        if: ${{ always() && steps.check_branch.outputs.need_run == 'yes' }}
+        run: |
+          if [[ -d ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs ]]; then
+            cd ${{ steps.process_checkout.outputs.path }}/kirin_cann_test/harmony-infer-chs
+            echo "#########################清空工作目录#########################"
+            rm -rf ../../../ops-nn*
+          fi
+          rm -rf ${{ steps.process_checkout.outputs.path }}/kirin_cann_test
