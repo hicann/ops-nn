@@ -79,6 +79,7 @@ public:
     int32_t colFormerNum;
     bool coreNeedSplitRow[CORE_TYPE];
     bool isIndicesSizeInt64;
+    bool isPcieThrough;
 };
 
 #endif

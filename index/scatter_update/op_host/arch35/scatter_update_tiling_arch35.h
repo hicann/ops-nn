@@ -168,6 +168,8 @@ private:
     uint64_t colTileNum_{0}; // 列切片数量
     ge::DataType dataType_{ge::DataType::DT_FLOAT};
 
+    bool isPcieThrough_ = false;
+
     void AutoTiling();
     std::set<uint64_t> FindUniqueCut();
 };

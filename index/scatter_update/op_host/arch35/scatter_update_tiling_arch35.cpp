@@ -391,6 +391,7 @@ void ScatterUpdateTiling::SetTilingData()
     tilingData->maskNormBlockLen = maskNormBlockLen_;
     tilingData->maskTailBlockLen = maskTailBlockLen_;
     tilingData->isIndicesSizeInt64 = isIndicesSizeInt64_;
+    tilingData->isPcieThrough = isPcieThrough_;
     tilingData->indicesCastMode = indicesCastMode_;
     tilingData->rowFormerNum = rowFormerNum_;
     tilingData->colFormerNum = colFormerNum_;
@@ -668,8 +669,8 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
         return ge::GRAPH_SUCCESS;
     }
 
-    bool isPcieThrough = ops::IsPcieThrough(context_);
-    if (isPcieThrough && isDeterministic_) {
+    isPcieThrough_ = ops::IsPcieThrough(context_);
+    if (isPcieThrough_ && isDeterministic_) {
         isDeterministicSplitCol_ = 1;
     }
 
@@ -683,7 +684,7 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
     }
 
     CalcMask();
-    if (!isPcieThrough && isMask_ == 1UL) {
+    if (!isPcieThrough_ && isMask_ == 1UL) {
         DoMaskSimdTiling();
         SetTilingData();
         return ge::GRAPH_SUCCESS;
@@ -692,7 +693,7 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
     isSort_ = indicesSize_ > varShape_[0] ? 1 : 0;
     isSort_ = indicesSize_ >= MIN_SIZE_SORT_INDICES_64 ? isSort_ : 0;
 
-    if (isPcieThrough) {
+    if (isPcieThrough_) {
         isSimt_ = false;
         isSort_ = 0;
     }
