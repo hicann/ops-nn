@@ -38,8 +38,8 @@
 - predict、label、dout三者的数据类型必须一致，且均为FLOAT16、FLOAT、BFLOAT16之一；gradient的数据类型与predict一致。
 - predict、label、dout、gradient四者的shape必须一致（当前不支持broadcast），支持0-8维。
 - sigma取值必须大于0（默认1.0），不实现sigma≤0降级为L1 Loss backward的语义。
-- 支持空Tensor；空Tensor 在Tiling阶段短路成功，Kernel不发起GM读写。
-- ACLNN接口对非连续输入执行 `AutoContiguous()` 连续化；GE图通路按注册约束使用ND格式。
+- 支持空Tensor；空Tensor在Tiling阶段短路成功，Kernel不发起GM读写。
+- ACLNN接口对非连续输入执行`AutoContiguous()`连续化；GE图通路按注册约束使用ND格式。
 
 ## 调用说明
 
