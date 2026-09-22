@@ -474,7 +474,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         const uint64_t hwIn = static_cast<uint64_t>(t.hin) * t.win;
         const uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;
         const uint32_t batchCount = static_cast<uint32_t>(GCeilDiv(t.batch, t.batchDim));
-        const uint32_t mAL1 = t.hoL1;
+        const uint32_t mAL1 = t.hoL1 < t.singleCoreHo ? t.hoL1 : static_cast<uint32_t>(t.singleCoreHo);
         const uint32_t coutOpt = t.coutOpt;
         const uint32_t cinOpt = t.cinOpt;
         const uint32_t nL0 = t.nL0;
