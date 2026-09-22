@@ -4,14 +4,14 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Kirin X90 处理器系列产品</term> | √ |
-| <term>Kirin 9030 处理器系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
+| <term>Atlas A3系列产品</term>     |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                             |    ×     |
+| <term>Atlas训练系列产品</term>                              |    ×     |
+| <term>Kirin X90处理器系列产品</term> | √ |
+| <term>Kirin 9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -21,71 +21,71 @@
   $$
   x = x1 + x2 + bias
   $$
-  
+
   $$
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
-  
+
   - 当quantMode输入为"static"时，输出outScales1和outScales2无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
-  
+
       $$
       y1 = round(y / scales1 + zeroPoints1)
       $$
-  
+
       $$
       y2 = round(y / scales2 + zeroPoints2), \quad \text{当且仅当scales2存在}
       $$
-  
+
     - 当divMode输入为false时，融合的量化算子为AscendQuantV2，计算公式如下所示：
-  
+
       $$
       y1 = round(y * scales1 + zeroPoints1)
       $$
-  
+
       $$
       y2 = round(y * scales2 + zeroPoints2), \quad \text{当且仅当scales2存在}
       $$
-  
+
   - 当quantMode输入为"dynamic"时，输入zeroPoints1和zeroPoints2无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
     - 若scales1和scales2均无输入，则y2和scale2输出无实际意义，可忽略。计算公式如下所示：
-  
+
       $$
       outScales1 = row\_max(abs(y))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1)
       $$
-  
+
     - 若仅输入scales1，则y2和scale2输出无实际意义，可忽略。计算公式如下所示：
-  
+
       $$
       tmp1 = y * scales1
       $$
-  
+
       $$
       outScales1 = row\_max(abs(tmp1))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1)
       $$
-  
+
     - 若scales1和scales2均存在，则y2和scale2输出有效。计算公式如下所示：
-  
+
       $$
       tmp1 = y * scales1, \quad tmp2 = y * scales2
       $$
-  
+
       $$
       outScales1 = row\_max(abs(tmp1))/127, \quad outScales2 = row\_max(abs(tmp2))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1),\quad y2 = round(y / outScales2)
       $$
-  
+
     其中row\_max代表对每行求最大值。
 
 ## 参数说明
@@ -234,7 +234,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

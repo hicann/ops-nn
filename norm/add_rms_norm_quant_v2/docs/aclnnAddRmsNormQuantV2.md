@@ -1,26 +1,26 @@
 # aclnnAddRmsNormQuantV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_quant_v2)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/norm/add_rms_norm_quant_v2)
 
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -296,7 +296,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   </table>
 
   <!-- npu="310p" id7 -->
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`、`rmsNormOut`仅支持FLOAT16。
       - 入参`scales1`、`scales2Optional`仅支持FLOAT32。
@@ -307,7 +307,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   <!-- end id7 -->
 
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`、`rmsNormOut`仅支持FLOAT16、BFLOAT16。
       - 入参`scales1`、`scales2Optional`仅支持FLOAT32、BFLOAT16。
@@ -402,15 +402,15 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
 <!-- npu="950" id13 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持`scales2Optional`传入空指针且`zeroPoints2Optional`非空。此时第二路量化的`scales2`按1处理，即无论`divMode`取值为True还是False，均有$y2Out=round(y+zero\_points2)$，且`y2Out`的shape与`x1`保持一致。
+- <term>Ascend 950PR&950DT系列产品</term>：支持`scales2Optional`传入空指针且`zeroPoints2Optional`非空。此时第二路量化的`scales2`按1处理，即无论`divMode`取值为True还是False，均有$y2Out=round(y+zero\_points2)$，且`y2Out`的shape与`x1`保持一致。
 <!-- end id13 -->
 
 <!-- npu="A3,910b,310p" id14 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>：不支持仅传入`zeroPoints2Optional`而不传入`scales2Optional`；当`zeroPoints2Optional`非空时，`scales2Optional`必须同时非空。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>：不支持仅传入`zeroPoints2Optional`而不传入`scales2Optional`；当`zeroPoints2Optional`非空时，`scales2Optional`必须同时非空。
 <!-- end id14 -->
 
 <!-- npu="310p" id9 -->
-- <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`的长度必须大于等于32 Bytes。
+- <term>Atlas推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`的长度必须大于等于32 Bytes。
 <!-- end id9 -->
 
 - `betaOptional`与`rmsNormOut`相互独立：
@@ -425,7 +425,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 - 各产品型号支持数据类型说明：
 
   <!-- npu="A3,910b" id10 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - | - | - |
@@ -434,7 +434,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   <!-- end id10 -->
 
   <!-- npu="310p" id11 -->
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - | - | - |
@@ -442,7 +442,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   <!-- end id11 -->
 
   <!-- npu="950" id12 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - | - | - |

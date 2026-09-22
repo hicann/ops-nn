@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -147,7 +147,7 @@
 
 ## 约束说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 当`x`的数据类型为FLOAT32时，`scales1`、`scales2`和`zero_points1`、`zero_points2`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scales1`、`scales2`的数据类型为FLOAT32时，`zero_points1`、`zero_points2`的数据类型只能是FLOAT32或者INT32，否则`scales1`、`scales2`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`zero_points1`、`zero_points2`的数据类型也需要与`x`的数据类型保持一致或者为INT8。
   - 当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
   - `zero_points2`必须在`scales2`存在的情况下，才能作为可选输入。

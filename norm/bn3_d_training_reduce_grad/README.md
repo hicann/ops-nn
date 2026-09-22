@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     √    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -114,19 +114,19 @@
     </tr>
   </tbody></table>
 
-- <term>Ascend 950PR/Ascend 950DT</term>：数据格式不支持NDC1HWC0。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据格式不支持NDHWC。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据格式不支持NDHWC。
-- <term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
-- <term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NDHWC。
-- <term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
+- <term>Ascend 950PR&950DT系列产品</term>：数据格式不支持NDC1HWC0。
+- <term>Atlas A3系列产品</term>：数据格式不支持NDHWC。
+- <term>Atlas A2系列产品</term>：数据格式不支持NDHWC。
+- <term>Atlas 200I/500 A2推理产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
+- <term>Atlas推理系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NDHWC。
+- <term>Atlas训练系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
 
 ## 约束说明
 
-  - grads、x和y的shape、数据格式、数据类型须完全一致。
-  - diff_scale、diff_offset、scale、batch_mean、batch_variance必须为1维，长度等于通道数C，数据类型必须为FLOAT。
-  - batch_variance必须使用有偏方差口径（E[x²]−E[x]²）。
-- **Ascend 950（A5/arch35）侧约束**：
+- grads、x和y的shape、数据格式、数据类型须完全一致。
+- diff_scale、diff_offset、scale、batch_mean、batch_variance必须为1维，长度等于通数C，数据类型必须为FLOAT。
+- batch_variance必须使用有偏方差口径（E[x²]−E[x]²）。
+- <term>Ascend 950PR&950DT系列产品</term>：
   - grads、x、y必须同为5维；数据格式支持NCDHW与NDHWC（通道轴分别位于dim1与dim4）。
   - grads、x、y不支持空Tensor（任一维为0时返回错误）。
   - epsilon必须大于0。

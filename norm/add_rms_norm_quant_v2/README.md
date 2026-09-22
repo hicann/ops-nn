@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :--- | :---: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | × |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -196,19 +196,19 @@
 
 | 产品 | x类参数/scale参数/zero point参数合法组合 | `y1`、`y2`数据类型（`dst_type`） | `div_mode` |
 | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | FLOAT16/FLOAT32/INT32、BFLOAT16/FLOAT32/INT32、FLOAT32/FLOAT32/FLOAT32、FLOAT16/FLOAT16/FLOAT16、BFLOAT16/BFLOAT16/BFLOAT16、FLOAT16/FLOAT32/FLOAT32、BFLOAT16/FLOAT32/FLOAT32 | INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN；`y1`与`y2`的数据类型保持一致 | True、False |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | FLOAT16/FLOAT32/INT32、BFLOAT16/BFLOAT16/BFLOAT16、BFLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
-| <term>Atlas 推理系列产品</term> | FLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
+| <term>Ascend 950PR&950DT系列产品</term> | FLOAT16/FLOAT32/INT32、BFLOAT16/FLOAT32/INT32、FLOAT32/FLOAT32/FLOAT32、FLOAT16/FLOAT16/FLOAT16、BFLOAT16/BFLOAT16/BFLOAT16、FLOAT16/FLOAT32/FLOAT32、BFLOAT16/FLOAT32/FLOAT32 | INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN；`y1`与`y2`的数据类型保持一致 | True、False |
+| <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> | FLOAT16/FLOAT32/INT32、BFLOAT16/BFLOAT16/BFLOAT16、BFLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
+| <term>Atlas推理系列产品</term> | FLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
 
-对于Atlas A3训练系列产品/Atlas A3推理系列产品、Atlas A2训练系列产品/Atlas A2推理系列产品和Atlas推理系列产品，通过aclnn API调用且`div_mode`为False时，接口不进入原生V2路径。当输出`x`、不输出`resOut`且其他参数满足V1回退路径约束时，接口回退到V1路径并按乘法模式执行。GE图模式不适用该回退机制，`div_mode`仅支持True。
+对于<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>和<term>Atlas推理系列产品</term>，通过aclnn API调用且`div_mode`为False时，接口不进入原生V2路径。当输出`x`、不输出`resOut`且其他参数满足V1回退路径约束时，接口回退到V1路径并按乘法模式执行。GE图模式不适用该回退机制，`div_mode`仅支持True。
 
 #### shape与参数组合差异
 
 | 产品 | 静态shape能力 | 动态shape能力 | 第二路量化 | 其他用户可观察限制 |
 | --- | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `scales2`或`zero_points2`任一非空时，`y2`为有效输出。仅`zero_points2`非空时，`scales2`按1处理，$y2=round(y+zero\_points2)$ | - |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `y2`仅在`scales2`非空时有效；`zero_points2`非空时，`scales2`必须同时非空 | 输入为inf时，输出为inf；输入为NaN时，输出为NaN |
-| <term>Atlas 推理系列产品</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `y2`仅在`scales2`非空时有效；`zero_points2`非空时，`scales2`必须同时非空 | 输入不支持inf和NaN；`gamma`包含的归一化元素个数不能小于32 |
+| <term>Ascend 950PR&950DT系列产品</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `scales2`或`zero_points2`任一非空时，`y2`为有效输出。仅`zero_points2`非空时，`scales2`按1处理，$y2=round(y+zero\_points2)$ | - |
+| <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `y2`仅在`scales2`非空时有效；`zero_points2`非空时，`scales2`必须同时非空 | 输入为inf时，输出为inf；输入为NaN时，输出为NaN |
+| <term>Atlas推理系列产品</term> | 输入、输出均支持ND格式 | 输入、输出均支持ND格式 | `y2`仅在`scales2`非空时有效；`zero_points2`非空时，`scales2`必须同时非空 | 输入不支持inf和NaN；`gamma`包含的归一化元素个数不能小于32 |
 
 ## 约束说明
 

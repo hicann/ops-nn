@@ -1,26 +1,26 @@
 # aclnnRmsNormQuant
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/rms_norm_quant)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/norm/rms_norm_quant)
 
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：支持
+- <term>Atlas 200I/500 A2推理产品</term>：支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -180,10 +180,10 @@ aclnnStatus aclnnRmsNormQuant(
   </table>
 
   <!-- npu="310p,310b" id7 -->
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
+  - <term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
   <!-- end id8 -->
 
 - **返回值**
@@ -268,18 +268,18 @@ aclnnStatus aclnnRmsNormQuant(
 - 当输入参数scale或offset的值为NaN，或者RmsNorm的计算结果（对应计算公式中的$quant\_in_i$）为NaN时，该接口的最终输出结果为0。
 
 <!-- npu="310p" id9 -->
-- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32 Byte。
+- <term>Atlas推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32 Byte。
 <!-- end id9 -->
 <!-- npu="950" id10 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
+- <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
 <!-- end id10 -->
 <!-- npu="950" id11 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
+- <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
 <!-- end id11 -->
 - 各产品型号支持数据类型说明：
 
   <!-- npu="A3,910b" id12 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
@@ -290,7 +290,7 @@ aclnnStatus aclnnRmsNormQuant(
   <!-- end id12 -->
 
   <!-- npu="310p,310b" id13 -->
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：
+  - <term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
@@ -299,7 +299,7 @@ aclnnStatus aclnnRmsNormQuant(
   <!-- end id13 -->
 
   <!-- npu="950" id14 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |

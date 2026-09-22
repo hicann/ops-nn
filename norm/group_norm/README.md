@@ -6,12 +6,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
-| <term>Atlas 训练系列产品</term> | × |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | × |
+| <term>Atlas A2系列产品</term> | × |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 <!-- markdownlint-enable MD033 -->
 
@@ -47,8 +47,9 @@
 ## 约束说明
 
 - GE图模式下，所有输入和输出的数据类型必须一致。
-- Ascend 950的GE图模式要求`C`大于0；当`N=0`时三个输出均为空且不下发Kernel。
-- Ascend 950的GE图模式在`N`大于0时不支持包含零维的空Tensor，Host校验失败后不下发Kernel。
+- <term>Ascend 950PR&950DT系列产品</term>：
+  - GE图模式要求`C`大于0；当`N=0`时三个输出均为空且不下发Kernel。
+  - GE图模式在`N`大于0时不支持包含零维的空Tensor，Host校验失败后不下发Kernel。
 
 ## 调用说明
 
