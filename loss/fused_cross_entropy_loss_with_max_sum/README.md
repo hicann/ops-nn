@@ -46,21 +46,21 @@
       <td>logitsMax</td>
       <td>输入</td>
       <td>matmul计算后各行的最大值，公式中的logitsMax。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>sumExpLogits</td>
       <td>输入</td>
       <td>matmul计算结果与其各行的最大值作差后exp的结果。公式中的sumExpLogits。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>predictedLogits</td>
       <td>输入</td>
       <td>表示matmul计算结果与其各行的最大值作差后maskedTargetOut筛选后的结果。公式中的predictedLogits。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

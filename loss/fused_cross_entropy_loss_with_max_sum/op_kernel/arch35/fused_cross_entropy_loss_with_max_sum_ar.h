@@ -33,6 +33,18 @@ constexpr static AscendC::Reg::CastTrait castTraitB16ToFp32 = {
     AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
+// log(次正规) / 1÷次正规 需显式走 PRECISION_1ULP_FTZ_FALSE 补偿路径：
+// 默认 INTRINSIC 是裸 vln/vdiv，对 fp32 次正规数(<1.175e-38)下溢为 -inf/inf，
+// 与 torch golden 的 log(1e-38)=-87.5 不一致（910b 传统 Log 默认已补偿，950 regbase 需显式指定）。
+constexpr static AscendC::Reg::LogSpecificMode castLogFt32False = {
+    AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::LogAlgo::PRECISION_1ULP_FTZ_FALSE,
+};
+constexpr static AscendC::Reg::DivSpecificMode castDivFt32False = {
+    AscendC::Reg::MaskMergeMode::ZEROING,
+    false,
+    AscendC::DivAlgo::PRECISION_1ULP_FTZ_FALSE,
+};
 
 template <typename T, bool fullPath>
 class FusedCrossEntropyLossWithMaxSumRegBase {
@@ -249,11 +261,11 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
         AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
         AscendC::Reg::DataCopy(sumReg, sumAddr);
         AscendC::Reg::DataCopy(predReg, predAddr);
-        AscendC::Reg::Log(logReg, sumReg, pMask);
+        AscendC::Reg::Log<float, &castLogFt32False>(logReg, sumReg, pMask);
         AscendC::Reg::Sub(logReg, logReg, predReg, pMask);
         AscendC::Reg::DataCopy(lossAddr, logReg, pMask);
         AscendC::Reg::Duplicate(oneReg, 1.0f, pMask);
-        AscendC::Reg::Div(invReg, oneReg, sumReg, pMask);
+        AscendC::Reg::Div<float, &castDivFt32False>(invReg, oneReg, sumReg, pMask);
         AscendC::Reg::DataCopy(invAddr, invReg, pMask);
     }
 }
@@ -401,7 +413,7 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
         for (uint16_t i = 0; i < fullLoops; i++) {
             AscendC::Reg::DataCopy(sumReg, sumAddr + offset);
             AscendC::Reg::DataCopy(predReg, predAddr + offset);
-            AscendC::Reg::Log(logReg, sumReg, fullMask);
+            AscendC::Reg::Log<float, &castLogFt32False>(logReg, sumReg, fullMask);
             AscendC::Reg::Sub(logReg, logReg, predReg, fullMask);
             AscendC::Reg::DataCopy(lossAddr + offset, logReg, fullMask);
             offset += VL_FP32;
@@ -411,7 +423,7 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
             AscendC::Reg::MaskReg tailMask = AscendC::Reg::UpdateMask<float>(tail);
             AscendC::Reg::DataCopy(sumReg, sumAddr + offset);
             AscendC::Reg::DataCopy(predReg, predAddr + offset);
-            AscendC::Reg::Log(logReg, sumReg, tailMask);
+            AscendC::Reg::Log<float, &castLogFt32False>(logReg, sumReg, tailMask);
             AscendC::Reg::Sub(logReg, logReg, predReg, tailMask);
             AscendC::Reg::DataCopy(lossAddr + offset, logReg, tailMask);
         }
