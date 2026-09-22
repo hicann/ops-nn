@@ -233,7 +233,7 @@ TEST(ScatterElementsWithSortedTiling, EqualIndexAndAxisParallelismKeepsOriginalR
     EXPECT_EQ(result.workspaceSize, ASCENDC_TOOLS_WORKSPACE);
 }
 
-TEST(ScatterElementsWithSortedTiling, FloatNoneKeepsOriginalRoute)
+TEST(ScatterElementsWithSortedTiling, FloatNoneUsesSortedRoute)
 {
     gert::StorageShape dataShape = {{100000}, {100000}};
     gert::StorageShape indicesShape = {{100000}, {100000}};
@@ -241,8 +241,25 @@ TEST(ScatterElementsWithSortedTiling, FloatNoneKeepsOriginalRoute)
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "none", 1, result);
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.tilingKey, 1000004UL);
-    EXPECT_EQ(result.workspaceSize, ASCENDC_TOOLS_WORKSPACE);
+    EXPECT_EQ(result.tilingKey, 2000004UL);
+    EXPECT_GT(result.workspaceSize, ASCENDC_TOOLS_WORKSPACE);
+}
+
+TEST(ScatterElementsWithSortedTiling, Float16AndBfloat16NoneUseSortedRoute)
+{
+    gert::StorageShape dataShape = {{100000}, {100000}};
+    gert::StorageShape indicesShape = {{100000}, {100000}};
+    WithSortedTilingResult float16Result;
+    RunWithSortedTilingCase(ge::DT_FLOAT16, ge::DT_INT64, dataShape, indicesShape, 0, "none", 1, float16Result);
+    EXPECT_EQ(float16Result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(float16Result.tilingKey, 2001002UL);
+    EXPECT_GT(float16Result.workspaceSize, ASCENDC_TOOLS_WORKSPACE);
+
+    WithSortedTilingResult bfloat16Result;
+    RunWithSortedTilingCase(ge::DT_BF16, ge::DT_INT32, dataShape, indicesShape, 0, "none", 1, bfloat16Result);
+    EXPECT_EQ(bfloat16Result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(bfloat16Result.tilingKey, 2000002UL);
+    EXPECT_GT(bfloat16Result.workspaceSize, ASCENDC_TOOLS_WORKSPACE);
 }
 
 TEST(ScatterElementsWithSortedTiling, MoreIndexParallelismUsesSortedRoute)
