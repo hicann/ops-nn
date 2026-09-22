@@ -71,12 +71,12 @@ public:
 
 private:
     ge::graphStatus SetTilingKeyMode(ge::DataType dtypeStr, uint32_t isDeterministicKey) const;
-    ge::graphStatus ComputeAllocUBStage2(uint32_t coreBatchCounts, uint32_t availableSpace);
+    ge::graphStatus ComputeAllocUBStage2(uint64_t coreBatchCounts, uint32_t availableSpace);
     uint32_t GetDataTypeSize(ge::DataType dtypeStr) const;
     uint32_t GetElePerBlock(uint32_t dtypeBytes) const;
-    uint32_t Ceil(uint32_t a, uint32_t b) const;
-    uint32_t DivCeil(uint32_t a, uint32_t b) const;
-    uint32_t Floor(uint32_t a, uint32_t b) const;
+    int64_t Ceil(int64_t a, int64_t b) const;
+    int64_t DivCeil(int64_t a, int64_t b) const;
+    int64_t Floor(int64_t a, int64_t b) const;
     ge::graphStatus CalStage2TilingInfo(uint64_t UB_size, ge::DataType dtypeStr, uint32_t isDeterministicKey,
                                         size_t sysWorkspaceSize);
     ge::graphStatus CalStage1TilingInfo(uint32_t reserveSpace);
@@ -188,20 +188,20 @@ bool GroupNormGradTiling::CheckInputShape()
     attrs = tilingContext->GetAttrs();
     OP_TILING_CHECK((attrs == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get attrs Failed."), return false);
     if (attrs->GetAttrPointer<int64_t>(0) != nullptr) {
-        tilingParams->g = *(attrs->GetAttrPointer<int64_t>(0));
+        tilingParams->g = static_cast<uint64_t>(*(attrs->GetAttrPointer<int64_t>(0)));
     } else {
         OP_LOGE(tilingContext->GetNodeName(), "group is nullptr");
         return false;
     }
 
-    OP_TILING_CHECK(meanShape.GetDim(DIM1) != tilingParams->g,
+    OP_TILING_CHECK(meanShape.GetDim(DIM1) != static_cast<int64_t>(tilingParams->g),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "mean",
                                                           Ops::Base::ToString(meanShape).c_str(),
                                                           "The second dim of mean should be same as group_num"),
                     return false);
-    tilingParams->n = dyShape.GetDim(DIM0);
-    tilingParams->c = dyShape.GetDim(DIM1);
-    OP_TILING_CHECK(meanShape.GetDim(DIM0) != tilingParams->n,
+    tilingParams->n = static_cast<uint64_t>(dyShape.GetDim(DIM0));
+    tilingParams->c = static_cast<uint64_t>(dyShape.GetDim(DIM1));
+    OP_TILING_CHECK(meanShape.GetDim(DIM0) != static_cast<int64_t>(tilingParams->n),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                         tilingContext->GetNodeName(), "mean", Ops::Base::ToString(meanShape).c_str(),
                         "The first dim of mean should be same with the first dim of x"),
@@ -219,7 +219,7 @@ bool GroupNormGradTiling::CheckInputShape()
             (std::to_string(meanShape.GetDimNum()) + " and " + std::to_string(rstdShape.GetDimNum())).c_str(),
             "The shape dims of mean and rstd must be 2D"),
         return false);
-    OP_TILING_CHECK((gammaShape.GetDimNum() != 1 || gammaShape.GetDim(DIM0) != tilingParams->c),
+    OP_TILING_CHECK((gammaShape.GetDimNum() != 1 || gammaShape.GetDim(DIM0) != static_cast<int64_t>(tilingParams->c)),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                         tilingContext->GetNodeName(), "gamma", Ops::Base::ToString(gammaShape).c_str(),
                         ("The shape of gamma should be (C), where C is dim[1] of input x, got C = " +
@@ -246,14 +246,14 @@ bool GroupNormGradTiling::CheckInputShape()
                                               reasonMsg.c_str());
         return false;
     }
-    OP_TILING_CHECK((tilingParams->c > MAX_C_SIZE),
+    OP_TILING_CHECK((tilingParams->c > static_cast<uint64_t>(MAX_C_SIZE)),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                         tilingContext->GetNodeName(), "x", Ops::Base::ToString(dyShape).c_str(),
                         ("C(C is dim[1] of input x) should not exceed " + std::to_string(MAX_C_SIZE)).c_str()),
                     return false);
     tilingParams->hxw = 1;
     for (uint32_t dimIdx = 2; dimIdx < dimNum; dimIdx++) {
-        tilingParams->hxw *= dyShape.GetDim(dimIdx);
+        tilingParams->hxw *= static_cast<uint64_t>(dyShape.GetDim(dimIdx));
     }
     OP_TILING_CHECK(
         tilingParams->hxw == 0,
@@ -264,19 +264,19 @@ bool GroupNormGradTiling::CheckInputShape()
     return true;
 }
 
-ge::graphStatus GroupNormGradTiling::ComputeAllocUBStage2(uint32_t coreBatchCounts, uint32_t availableSpace)
+ge::graphStatus GroupNormGradTiling::ComputeAllocUBStage2(uint64_t coreBatchCounts, uint32_t availableSpace)
 {
     OP_TILING_CHECK(tilingParams->castEleNum == 0,
                     OP_LOGE(tilingContext->GetNodeName(), "Error:[ComputeAllocUBStage2] castEleNum is zero!"),
                     return ge::GRAPH_FAILED);
-    tilingParams->coreBatchParts = std::min(availableSpace / (tilingParams->castEleNum * FLOAT_DTYPE_BYTES),
-                                            coreBatchCounts);
+    tilingParams->coreBatchParts = static_cast<uint32_t>(
+        std::min<uint64_t>(availableSpace / (tilingParams->castEleNum * FLOAT_DTYPE_BYTES), coreBatchCounts));
     OP_TILING_CHECK(tilingParams->coreBatchParts == 0,
                     OP_LOGE(tilingContext->GetNodeName(), "Error:[ComputeAllocUBStage2] coreBatchCounts is zero!"),
                     return ge::GRAPH_FAILED);
     tilingParams->coreBatchPartsTailRepeat = (coreBatchCounts % tilingParams->coreBatchParts == 0) ?
                                                  tilingParams->coreBatchParts :
-                                                 coreBatchCounts % tilingParams->coreBatchParts;
+                                                 static_cast<uint32_t>(coreBatchCounts % tilingParams->coreBatchParts);
     tilingParams->repeatTime4Stage2 = DivCeil(coreBatchCounts, tilingParams->coreBatchParts);
     return ge::GRAPH_SUCCESS;
 }
@@ -289,20 +289,20 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
     OP_TILING_CHECK((currentWorkSpace == nullptr),
                     OP_LOGE(tilingContext->GetNodeName(), "currentWorkSpace is nullptr."), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
-    uint32_t coreBatchCounts = 0;
+    uint64_t coreBatchCounts = 0;
     size_t usrWorkspaceSize = 0;
     if (isDeterministicKey == 1) {
         tilingParams->workSpaceSize = DivCeil(tilingParams->n, SPLIT_COUNT) * tilingParams->c;
         usrWorkspaceSize = WORKSPACE_COPIES * static_cast<int64_t>(tilingParams->workSpaceSize) * FLOAT_DTYPE_BYTES;
         if (dtypeStr == ge::DT_FLOAT) {
             // task ReduceSum
-            tilingParams->castEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed / SPLIT_COUNT),
-                                            STEP_SIZE);
-            tilingParams->stage2CoreUsed = DivCeil(tilingParams->c, tilingParams->castEleNum);
+            tilingParams->castEleNum = static_cast<uint32_t>(
+                Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed / SPLIT_COUNT), STEP_SIZE));
+            tilingParams->stage2CoreUsed = static_cast<uint32_t>(DivCeil(tilingParams->c, tilingParams->castEleNum));
             tilingParams->tailCastNum = (tilingParams->stage2CoreUsed == 1) ?
-                                            tilingParams->c :
-                                            tilingParams->c -
-                                                (tilingParams->stage2CoreUsed - 1) * tilingParams->castEleNum;
+                                            static_cast<uint32_t>(tilingParams->c) :
+                                            static_cast<uint32_t>(tilingParams->c - (tilingParams->stage2CoreUsed - 1) *
+                                                                                        tilingParams->castEleNum);
             // UB allocation
             availableSpace = availableSpace > tilingParams->castEleNum * FLOAT_DTYPE_BYTES ?
                                  availableSpace - tilingParams->castEleNum * FLOAT_DTYPE_BYTES :
@@ -313,12 +313,13 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
                             return ge::GRAPH_FAILED);
         } else {
             // task ReduceSum and Cast
-            tilingParams->castEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE);
-            tilingParams->stage2CoreUsed = DivCeil(tilingParams->c, tilingParams->castEleNum);
+            tilingParams->castEleNum = static_cast<uint32_t>(
+                Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE));
+            tilingParams->stage2CoreUsed = static_cast<uint32_t>(DivCeil(tilingParams->c, tilingParams->castEleNum));
             tilingParams->tailCastNum = (tilingParams->stage2CoreUsed == 1) ?
-                                            tilingParams->c :
-                                            tilingParams->c -
-                                                (tilingParams->stage2CoreUsed - 1) * tilingParams->castEleNum;
+                                            static_cast<uint32_t>(tilingParams->c) :
+                                            static_cast<uint32_t>(tilingParams->c - (tilingParams->stage2CoreUsed - 1) *
+                                                                                        tilingParams->castEleNum);
             // UB allocation
             availableSpace = availableSpace - tilingParams->castEleNum * (FLOAT_DTYPE_BYTES + FLOAT16_DTYPE_BYTES);
             coreBatchCounts = DivCeil(tilingParams->n, SPLIT_COUNT);
@@ -332,14 +333,15 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
             usrWorkspaceSize = 0;
         } else {
             // task Cast
-            tilingParams->castEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE);
+            tilingParams->castEleNum = static_cast<uint32_t>(
+                Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE));
             tilingParams->workSpaceSize = tilingParams->c;
             usrWorkspaceSize = WORKSPACE_COPIES * static_cast<int64_t>(tilingParams->workSpaceSize) * FLOAT_DTYPE_BYTES;
-            tilingParams->stage2CoreUsed = DivCeil(tilingParams->c, tilingParams->castEleNum);
+            tilingParams->stage2CoreUsed = static_cast<uint32_t>(DivCeil(tilingParams->c, tilingParams->castEleNum));
             tilingParams->tailCastNum = (tilingParams->stage2CoreUsed == 1) ?
-                                            tilingParams->c :
-                                            tilingParams->c -
-                                                (tilingParams->stage2CoreUsed - 1) * tilingParams->castEleNum;
+                                            static_cast<uint32_t>(tilingParams->c) :
+                                            static_cast<uint32_t>(tilingParams->c - (tilingParams->stage2CoreUsed - 1) *
+                                                                                        tilingParams->castEleNum);
         }
     }
     currentWorkSpace[0] = sysWorkspaceSize + usrWorkspaceSize;
@@ -348,26 +350,34 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
 
 ge::graphStatus GroupNormGradTiling::CalStage1TilingInfo(uint32_t reserveSpace)
 {
-    uint32_t unalignedExtraSpace = (tilingParams->hxw % EIGHT_BLOCK == 0 || tilingParams->channelPerGroup == 1) ?
+    uint64_t unalignedExtraSpace = (tilingParams->hxw % EIGHT_BLOCK == 0 || tilingParams->channelPerGroup == 1) ?
                                        0 :
-                                       UB_COPIES_2 * Ceil(tilingParams->hxw, elePerBlock) * FLOAT_DTYPE_BYTES;
+                                       static_cast<uint64_t>(UB_COPIES_2) * Ceil(tilingParams->hxw, elePerBlock) *
+                                           FLOAT_DTYPE_BYTES;
     // Prevent wrapping errors in uint32 subtraction
-    tilingParams->mode0UbCapGNum = (compileInfo->ubSizePlatForm < reserveSpace + unalignedExtraSpace) ?
+    tilingParams->mode0UbCapGNum = (static_cast<uint64_t>(compileInfo->ubSizePlatForm) <
+                                    static_cast<uint64_t>(reserveSpace) + unalignedExtraSpace) ?
                                        0 :
-                                       (compileInfo->ubSizePlatForm - reserveSpace - unalignedExtraSpace) /
-                                           (Ceil(tilingParams->channelPerGroup * tilingParams->hxw, elePerBlock) *
-                                            dtypeBytes * UB_COPIES_1);
-    tilingParams->mode1UbCapCNum = (compileInfo->ubSizePlatForm - reserveSpace) /
-                                   (Ceil(tilingParams->hxw, elePerBlock) * dtypeBytes * UB_COPIES_1);
+                                       static_cast<uint32_t>(
+                                           (compileInfo->ubSizePlatForm - static_cast<int64_t>(reserveSpace) -
+                                            static_cast<int64_t>(unalignedExtraSpace)) /
+                                           (Ceil(
+                                                static_cast<int64_t>(tilingParams->channelPerGroup * tilingParams->hxw),
+                                                elePerBlock) *
+                                            static_cast<int64_t>(dtypeBytes) * UB_COPIES_1));
+    tilingParams->mode1UbCapCNum = static_cast<uint32_t>(
+        (compileInfo->ubSizePlatForm - reserveSpace) /
+        (Ceil(tilingParams->hxw, elePerBlock) * dtypeBytes * UB_COPIES_1));
     if (tilingParams->mode1UbCapCNum > 0) {
-        tilingParams->mode1UbIterCNum = Ceil(tilingParams->channelPerGroup, tilingParams->mode1UbCapCNum) /
-                                        tilingParams->mode1UbCapCNum;
+        tilingParams->mode1UbIterCNum = static_cast<uint32_t>(
+            Ceil(tilingParams->channelPerGroup, tilingParams->mode1UbCapCNum) / tilingParams->mode1UbCapCNum);
         tilingParams->mode1UbTailCNum = (tilingParams->mode1UbIterCNum * tilingParams->mode1UbCapCNum -
                                              tilingParams->channelPerGroup ==
                                          0) ?
                                             tilingParams->mode1UbCapCNum :
-                                            (tilingParams->channelPerGroup -
-                                             ((tilingParams->mode1UbIterCNum - 1) * tilingParams->mode1UbCapCNum));
+                                            static_cast<uint32_t>(
+                                                tilingParams->channelPerGroup -
+                                                ((tilingParams->mode1UbIterCNum - 1) * tilingParams->mode1UbCapCNum));
     }
     if (tilingParams->hxw == 1) {
         tilingParams->tilingKey = MODE_5;
@@ -379,19 +389,20 @@ ge::graphStatus GroupNormGradTiling::CalStage1TilingInfo(uint32_t reserveSpace)
         tilingParams->tilingKey = MODE_2;
     } else if (tilingParams->mode1UbCapCNum <= 0) {
         tilingParams->tilingKey = MODE_3;
-        tilingParams->mode2UbCapacityEle = Floor(
-            (compileInfo->ubSizePlatForm - reserveSpace) / (dtypeBytes * UB_COPIES_1), elePerBlock * EIGHT_BLOCK);
+        tilingParams->mode2UbCapacityEle = static_cast<uint32_t>(Floor(
+            (compileInfo->ubSizePlatForm - reserveSpace) / (dtypeBytes * UB_COPIES_1), elePerBlock * EIGHT_BLOCK));
         OP_TILING_CHECK(tilingParams->mode2UbCapacityEle == 0,
                         OP_LOGE(tilingContext->GetNodeName(), "tilingParams->mode2UbCapacityEle should not be zero!"),
                         return ge::GRAPH_FAILED);
-        tilingParams->mode2UbIterationNum = Ceil(tilingParams->hxw, tilingParams->mode2UbCapacityEle) /
-                                            tilingParams->mode2UbCapacityEle;
+        tilingParams->mode2UbIterationNum = static_cast<uint32_t>(
+            Ceil(tilingParams->hxw, tilingParams->mode2UbCapacityEle) / tilingParams->mode2UbCapacityEle);
         tilingParams->mode2UbTailNum = (tilingParams->hxw -
                                             tilingParams->mode2UbIterationNum * tilingParams->mode2UbCapacityEle ==
                                         0) ?
                                            tilingParams->mode2UbCapacityEle :
-                                           (tilingParams->hxw -
-                                            (tilingParams->mode2UbIterationNum - 1) * tilingParams->mode2UbCapacityEle);
+                                           static_cast<uint32_t>(tilingParams->hxw -
+                                                                 (tilingParams->mode2UbIterationNum - 1) *
+                                                                     tilingParams->mode2UbCapacityEle);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -445,19 +456,19 @@ uint32_t GroupNormGradTiling::GetElePerBlock(uint32_t dtypeBytes) const
     }
 }
 
-uint32_t GroupNormGradTiling::Ceil(uint32_t a, uint32_t b) const
+int64_t GroupNormGradTiling::Ceil(int64_t a, int64_t b) const
 {
     OP_TILING_CHECK(b == 0, OP_LOGE(tilingContext->GetNodeName(), "Error:[Ceil] Division by zero!"), return 0);
     return ((a - 1) / b + 1) * b;
 }
 
-uint32_t GroupNormGradTiling::DivCeil(uint32_t a, uint32_t b) const
+int64_t GroupNormGradTiling::DivCeil(int64_t a, int64_t b) const
 {
     OP_TILING_CHECK(b == 0, OP_LOGE(tilingContext->GetNodeName(), "Error:[DivCeil] Division by zero!"), return 0);
     return (a - 1) / b + 1;
 }
 
-uint32_t GroupNormGradTiling::Floor(uint32_t a, uint32_t b) const
+int64_t GroupNormGradTiling::Floor(int64_t a, int64_t b) const
 {
     OP_TILING_CHECK(b == 0, OP_LOGE(tilingContext->GetNodeName(), "Error:[Floor] Division by zero!"), return 0);
     return a / b * b;
@@ -465,15 +476,16 @@ uint32_t GroupNormGradTiling::Floor(uint32_t a, uint32_t b) const
 
 bool GroupNormGradTiling::PlanStepCoreUsage()
 {
-    tilingParams->taskNumPerCore = Ceil(tilingParams->nxg, compileInfo->totalCoreNum) / compileInfo->totalCoreNum;
-    tilingParams->coreNumUsed = (tilingParams->nxg - 1) / tilingParams->taskNumPerCore + 1;
+    tilingParams->taskNumPerCore = static_cast<uint32_t>(Ceil(tilingParams->nxg, compileInfo->totalCoreNum) /
+                                                         compileInfo->totalCoreNum);
+    tilingParams->coreNumUsed = static_cast<uint32_t>((tilingParams->nxg - 1) / tilingParams->taskNumPerCore + 1);
     OP_TILING_CHECK(tilingParams->coreNumUsed == 0, OP_LOGE(tilingContext->GetNodeName(), "coreNumUsed cannot be 0."),
                     return false);
     tilingParams->taskNumPerTailCore = tilingParams->taskNumPerCore;
     tilingParams->tailCore = tilingParams->coreNumUsed;
     if (tilingParams->nxg % tilingParams->coreNumUsed != 0) {
         tilingParams->taskNumPerTailCore = tilingParams->taskNumPerCore - 1;
-        tilingParams->tailCore = tilingParams->nxg % tilingParams->coreNumUsed;
+        tilingParams->tailCore = static_cast<uint32_t>(tilingParams->nxg % tilingParams->coreNumUsed);
     }
     return true;
 }
@@ -500,11 +512,11 @@ ge::graphStatus GroupNormGradTiling::Init()
     OP_TILING_CHECK(!CheckInputShape(), OP_LOGE(tilingContext->GetNodeName(), "InputShape Check Failed."),
                     return ge::GRAPH_FAILED);
     // Allocate computing core
-    uint32_t channelPerGroupOnceProcess = Ceil(tilingParams->channelPerGroup, elePerBlock);
+    uint32_t channelPerGroupOnceProcess = static_cast<uint32_t>(Ceil(tilingParams->channelPerGroup, elePerBlock));
     // Check channelPerGroup not exceeding the operator's current carrying capacity.
     OP_TILING_CHECK((channelPerGroupOnceProcess > UPPER_CARRYING_LIMIT),
                     OP_LOGE(tilingContext->GetNodeName(),
-                            "channelPerGroup is %u over the operator's current carrying capacity %ld.",
+                            "channelPerGroup is %lu over the operator's current carrying capacity %ld.",
                             tilingParams->channelPerGroup, UPPER_CARRYING_LIMIT),
                     return ge::GRAPH_FAILED);
     uint32_t reserveSpace = RESERVE_SAPCE + channelPerGroupOnceProcess * this->dtypeBytes * UB_COPIES_1;
@@ -576,12 +588,12 @@ ge::graphStatus GroupNormGradTiling::SetKernelTiling()
 void GroupNormGradTiling::TilingDataPrint() const
 {
     OP_LOGD(tilingContext->GetNodeName(), "tilingKey:               %d.", tilingParams->tilingKey);
-    OP_LOGD(tilingContext->GetNodeName(), "N:                       %d.", tilingParams->n);
-    OP_LOGD(tilingContext->GetNodeName(), "C:                       %d.", tilingParams->c);
-    OP_LOGD(tilingContext->GetNodeName(), "HXW:                     %d.", tilingParams->hxw);
-    OP_LOGD(tilingContext->GetNodeName(), "G:                       %d.", tilingParams->g);
-    OP_LOGD(tilingContext->GetNodeName(), "NXG:                     %d.", tilingParams->nxg);
-    OP_LOGD(tilingContext->GetNodeName(), "channelPerGroup:         %d.", tilingParams->channelPerGroup);
+    OP_LOGD(tilingContext->GetNodeName(), "N:                       %lu.", tilingParams->n);
+    OP_LOGD(tilingContext->GetNodeName(), "C:                       %lu.", tilingParams->c);
+    OP_LOGD(tilingContext->GetNodeName(), "HXW:                     %lu.", tilingParams->hxw);
+    OP_LOGD(tilingContext->GetNodeName(), "G:                       %lu.", tilingParams->g);
+    OP_LOGD(tilingContext->GetNodeName(), "NXG:                     %lu.", tilingParams->nxg);
+    OP_LOGD(tilingContext->GetNodeName(), "channelPerGroup:         %lu.", tilingParams->channelPerGroup);
     OP_LOGD(tilingContext->GetNodeName(), "taskNumPerCore:          %d.", tilingParams->taskNumPerCore);
     OP_LOGD(tilingContext->GetNodeName(), "taskNumPerTailCore:      %d.", tilingParams->taskNumPerTailCore);
     OP_LOGD(tilingContext->GetNodeName(), "tailCore:                %d.", tilingParams->tailCore);
@@ -591,13 +603,13 @@ void GroupNormGradTiling::TilingDataPrint() const
     OP_LOGD(tilingContext->GetNodeName(), "mode2UbCapacityEle:      %d.", tilingParams->mode2UbCapacityEle);
     OP_LOGD(tilingContext->GetNodeName(), "mode2UbIterationNum:     %d.", tilingParams->mode2UbIterationNum);
     OP_LOGD(tilingContext->GetNodeName(), "mode2UbTailNum:          %d.", tilingParams->mode2UbTailNum);
-    OP_LOGD(tilingContext->GetNodeName(), "workSpaceSize:           %d.", tilingParams->workSpaceSize);
+    OP_LOGD(tilingContext->GetNodeName(), "workSpaceSize:           %lu.", tilingParams->workSpaceSize);
     OP_LOGD(tilingContext->GetNodeName(), "stage2CoreUsed:          %d.", tilingParams->stage2CoreUsed);
     OP_LOGD(tilingContext->GetNodeName(), "castEleNum:              %d.", tilingParams->castEleNum);
     OP_LOGD(tilingContext->GetNodeName(), "tailCastNum:             %d.", tilingParams->tailCastNum);
     OP_LOGD(tilingContext->GetNodeName(), "coreBatchParts:          %d.", tilingParams->coreBatchParts);
     OP_LOGD(tilingContext->GetNodeName(), "coreBatchPartsTailRepeat:%d.", tilingParams->coreBatchPartsTailRepeat);
-    OP_LOGD(tilingContext->GetNodeName(), "repeatTime4Stage2        %d.", tilingParams->repeatTime4Stage2);
+    OP_LOGD(tilingContext->GetNodeName(), "repeatTime4Stage2        %lu.", tilingParams->repeatTime4Stage2);
     OP_LOGD(tilingContext->GetNodeName(), "dxIsRequire:             %d.", tilingParams->dxIsRequire);
     OP_LOGD(tilingContext->GetNodeName(), "dgammaIsRequire:         %d.", tilingParams->dgammaIsRequire);
     OP_LOGD(tilingContext->GetNodeName(), "dbetaIsRequire:          %d.", tilingParams->dbetaIsRequire);
