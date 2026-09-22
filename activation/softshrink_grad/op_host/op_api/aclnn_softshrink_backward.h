@@ -31,7 +31,7 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSoftshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-                                                              const aclScalar* lambda, aclTensor* gradInput,
+                                                              const aclScalar* lambd, aclTensor* gradInput,
                                                               uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
