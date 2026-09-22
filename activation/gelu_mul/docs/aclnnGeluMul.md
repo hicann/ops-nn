@@ -136,7 +136,7 @@ aclnnStatus aclnnGeluMul(
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
        <tr>
       <td>workspaceSize（uint64_t*）</td>
