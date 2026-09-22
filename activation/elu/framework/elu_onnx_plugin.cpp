@@ -24,11 +24,15 @@ static Status ParseParamsElu(const ge::Operator& op_src, ge::Operator& op_dest)
             json attrs = json::parse(attrs_string.GetString());
             if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
                 for (json& attr : attrs["attribute"]) {
-                    if (attr.value("name", "") == "alpha" && attr.contains("f")) {
-                        std::string alpha_str = attr["f"];
-                        if (!StrToFloat(alpha_str, alpha_value)) {
-                            OP_LOGE(GetOpName(op_dest).c_str(), "invalid alpha value: %s", alpha_str.c_str());
-                            return FAILED;
+                    if (attr.value("name", "") == "alpha") {
+                        if (attr.contains("f")) {
+                            std::string alpha_str = attr["f"];
+                            if (!StrToFloat(alpha_str, alpha_value)) {
+                                OP_LOGE(GetOpName(op_dest).c_str(), "invalid alpha value: %s", alpha_str.c_str());
+                                return FAILED;
+                            }
+                        } else {
+                            alpha_value = 0.0f;
                         }
                     }
                 }

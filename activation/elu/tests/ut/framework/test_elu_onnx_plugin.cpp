@@ -44,3 +44,14 @@ TEST(OnnxEluPluginTest, KeepsDefaultWithoutAttributeArray)
     EXPECT_EQ(op_dest.GetAttr("alpha", alpha), ge::GRAPH_SUCCESS);
     EXPECT_FLOAT_EQ(alpha, 1.0f);
 }
+
+TEST(OnnxEluPluginTest, ParseZeroAlphaWithoutFField)
+{
+    ge::Operator op_src = CreateSourceOperator(R"({"attribute":[{"name":"alpha","type":1}]})");
+    ge::Operator op_dest = CreateOperator("elu");
+    float alpha = -1.0f;
+
+    EXPECT_EQ(domi::ParseParamsElu(op_src, op_dest), domi::SUCCESS);
+    EXPECT_EQ(op_dest.GetAttr("alpha", alpha), ge::GRAPH_SUCCESS);
+    EXPECT_FLOAT_EQ(alpha, 0.0f);
+}

@@ -24,8 +24,8 @@ static Status parse_params_hard_max(const ge::Operator& op_src, ge::Operator& op
             json attrs = json::parse(attrs_string.GetString());
             if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
                 for (json& attr : attrs["attribute"]) {
-                    if (attr.value("name", "") == "axis" && attr.contains("i")) {
-                        axis = attr["i"].get<int>();
+                    if (attr.value("name", "") == "axis") {
+                        axis = attr.contains("i") ? attr["i"].get<int>() : 0;
                     }
                 }
             }

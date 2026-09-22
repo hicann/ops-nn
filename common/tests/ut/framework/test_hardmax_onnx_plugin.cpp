@@ -44,3 +44,14 @@ TEST(OnnxHardMaxPluginTest, KeepsDefaultWithoutAttributes)
     EXPECT_EQ(op_dest.GetAttr("axis", axis), ge::GRAPH_SUCCESS);
     EXPECT_EQ(axis, -1);
 }
+
+TEST(OnnxHardMaxPluginTest, ParseZeroAxisWithoutIField)
+{
+    ge::Operator op_src = CreateSourceOperator(R"({"attribute":[{"name":"axis","type":2}]})");
+    ge::Operator op_dest = CreateOperator("hardmax");
+    int64_t axis = -1;
+
+    EXPECT_EQ(domi::parse_params_hard_max(op_src, op_dest), domi::SUCCESS);
+    EXPECT_EQ(op_dest.GetAttr("axis", axis), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(axis, 0);
+}

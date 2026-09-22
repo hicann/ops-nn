@@ -44,3 +44,14 @@ TEST(OnnxLeakyReluPluginTest, KeepsDefaultWhenAttributeMissing)
     EXPECT_EQ(op_dest.GetAttr("negative_slope", negative_slope), ge::GRAPH_SUCCESS);
     EXPECT_FLOAT_EQ(negative_slope, 0.01f);
 }
+
+TEST(OnnxLeakyReluPluginTest, ParseZeroAlphaWithoutFField)
+{
+    ge::Operator op_src = CreateSourceOperator(R"({"attribute":[{"name":"alpha","type":1}]})");
+    ge::Operator op_dest = CreateOperator("leaky_relu");
+    float negative_slope = -1.0f;
+
+    EXPECT_EQ(domi::ParseParamsLeakyRelu(op_src, op_dest), domi::SUCCESS);
+    EXPECT_EQ(op_dest.GetAttr("negative_slope", negative_slope), ge::GRAPH_SUCCESS);
+    EXPECT_FLOAT_EQ(negative_slope, 0.0f);
+}
