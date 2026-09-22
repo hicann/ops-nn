@@ -770,10 +770,12 @@ int main() {
   aclrtFree(batch1DeviceAddr);
   aclrtFree(batch2DeviceAddr);
   aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
+  if (workspaceAddr != nullptr) {
     aclrtFree(workspaceAddr);
   }
-  aclrtFree(inplaceWorkspaceAddr);
+  if (inplaceWorkspaceAddr != nullptr){
+    aclrtFree(inplaceWorkspaceAddr);
+  }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();

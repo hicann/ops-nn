@@ -706,12 +706,13 @@ int main() {
   ret = aclnnInplaceAddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, cubeMathType, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddbmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
+  void* inplaceWorkspaceAddr = nullptr;
   if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    ret = aclrtMalloc(&inplaceWorkspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnInplaceAddbmm第二段接口
-  ret = aclnnInplaceAddbmm(workspaceAddr, workspaceSize, executor, stream);
+  ret = aclnnInplaceAddbmm(inplaceWorkspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddbmm failed. ERROR: %d\n", ret); return ret);
 
   // step4（固定写法）同步等待任务执行结束
@@ -739,8 +740,11 @@ int main() {
   aclrtFree(batch1DeviceAddr);
   aclrtFree(batch2DeviceAddr);
   aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
+  if (workspaceAddr != nullptr) {
     aclrtFree(workspaceAddr);
+  }
+  if (inplaceWorkspaceAddr != nullptr){
+    aclrtFree(inplaceWorkspaceAddr);
   }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
