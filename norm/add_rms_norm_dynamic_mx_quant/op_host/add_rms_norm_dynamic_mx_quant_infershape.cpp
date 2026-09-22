@@ -28,6 +28,7 @@ static constexpr int RSTD_IDX = 3;
 static constexpr int ATTR_OUTPUT_RSTD_IDX = 4;
 
 static constexpr int ATTR_INDEX_OF_DST_TYPE = 3;
+static constexpr size_t INPUT_MAX_DIM_NUM = 7;
 static constexpr int64_t MX_BLOCK_SIZE = 32;
 static constexpr int64_t ALIGN_NUM = 2;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1;
@@ -46,6 +47,9 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
 
     const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+    OP_CHECK_IF(x1Shape->GetDimNum() < 1 || x1Shape->GetDimNum() > INPUT_MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "Input x1 rank[%lu] should be in [1, 7].", x1Shape->GetDimNum()),
+                return ge::GRAPH_FAILED);
     const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
 
@@ -135,18 +139,11 @@ static graphStatus InferDataType4AddRmsNormDynamicMxQuant(gert::InferDataTypeCon
                     "attr dst_type only support 35(float8_e5m2), 36(float8_e4m3fn), 40(float4_e2m1), 41(float4_e1m2)"),
                 return ge::GRAPH_FAILED);
         }
-        const bool* output_rstd = attrs->GetAttrPointer<bool>(ATTR_OUTPUT_RSTD_IDX);
-        bool rstd_enable = false;
-        if (output_rstd != nullptr) {
-            rstd_enable = *output_rstd;
-        }
-        if (rstd_enable) {
-            context->SetOutputDataType(RSTD_IDX, ge::DT_FLOAT);
-        }
     }
     context->SetOutputDataType(Y_IDX, yDtype);
     context->SetOutputDataType(X_IDX, context->GetInputDataType(X1_IDX));
     context->SetOutputDataType(MXSCALE_IDX, ge::DT_FLOAT8_E8M0);
+    context->SetOutputDataType(RSTD_IDX, ge::DT_FLOAT);
 
     OP_LOGD(context, "End InferDataType4AddRmsNormDynamicMxQuant");
     return GRAPH_SUCCESS;

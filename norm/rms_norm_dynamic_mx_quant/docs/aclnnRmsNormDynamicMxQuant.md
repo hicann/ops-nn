@@ -522,6 +522,7 @@ int main() {
   std::vector<float> rstdHostData(rstdShapeSize, 0);
 
   float epsilon = 1e-6;
+  char roundMode[] = "rint";
   bool outputRstd = true;  // 设置为true，输出有效的rstdOut
 
   // 创建x aclTensor
@@ -546,7 +547,7 @@ int main() {
   aclOpExecutor* executor;
   // 调用aclnnRmsNormDynamicMxQuant第一段接口
   ret = aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-      x, gamma, nullptr, epsilon, 0, nullptr, 36, outputRstd, y, mxscale, rstd, &workspaceSize, &executor);
+      x, gamma, nullptr, epsilon, 0, roundMode, 36, outputRstd, y, mxscale, rstd, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS,
       LOG_PRINT("aclnnRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
