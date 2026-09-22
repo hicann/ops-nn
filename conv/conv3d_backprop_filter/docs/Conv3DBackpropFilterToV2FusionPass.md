@@ -6,8 +6,6 @@
 
 融合前：
 
-融合前：
-
 ![](../../../docs/zh/figures/conv3d_backprop_filter_to_v2_fusion_pass_1.png)
 
 融合后：
@@ -24,5 +22,5 @@
 ## 支持的型号
 
 <!-- npu="950" id1 -->
-Ascend 950PR/Ascend 950DT
+Ascend 950PR&950DT系列产品
 <!-- end id1 -->
