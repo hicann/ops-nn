@@ -36,6 +36,8 @@ constexpr int IDX_2 = 2;
 constexpr int IDX_3 = 3;
 constexpr int IDX_4 = 4;
 constexpr int OUTPUT_MASK_LEN = 2;
+constexpr size_t MIN_X_DIM_NUM = 2;
+constexpr size_t MAX_X_DIM_NUM = 8;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE = {
@@ -174,6 +176,35 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* y1Out, const a
         }
     }
 
+    return true;
+}
+
+static bool CheckDimNumValid(const aclTensor* x1, const aclTensor* y1Out, const aclTensor* y2Out, bool processOut1,
+                             bool processOut2)
+{
+    auto x1DimNum = x1->GetViewShape().GetDimNum();
+    OP_CHECK(x1DimNum >= MIN_X_DIM_NUM && x1DimNum <= MAX_X_DIM_NUM,
+             OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "x1 dim num should be between %zu and %zu, but got %zu.",
+                     MIN_X_DIM_NUM, MAX_X_DIM_NUM, x1DimNum),
+             return false);
+
+    if (processOut1) {
+        auto y1DimNum = y1Out->GetViewShape().GetDimNum();
+        OP_CHECK(y1DimNum >= MIN_X_DIM_NUM && y1DimNum <= MAX_X_DIM_NUM,
+                 OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR,
+                         "The active y1Out dim num should be between %zu and %zu, but got %zu.", MIN_X_DIM_NUM,
+                         MAX_X_DIM_NUM, y1DimNum),
+                 return false);
+    }
+
+    if (processOut2) {
+        auto y2DimNum = y2Out->GetViewShape().GetDimNum();
+        OP_CHECK(y2DimNum >= MIN_X_DIM_NUM && y2DimNum <= MAX_X_DIM_NUM,
+                 OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR,
+                         "The active y2Out dim num should be between %zu and %zu, but got %zu.", MIN_X_DIM_NUM,
+                         MAX_X_DIM_NUM, y2DimNum),
+                 return false);
+    }
     return true;
 }
 
@@ -335,6 +366,9 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     const bool processOut2 = (outputMask == nullptr) ?
                                  (smoothScale1Optional != nullptr && smoothScale2Optional != nullptr) :
                                  (*outputMask)[1];
+
+    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckDimNumValid(x1, y1Out, y2Out, processOut1, processOut2),
+              ACLNN_ERR_INNER_TILING_ERROR);
 
     bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
     if (isRegbase && gamma->IsEmpty()) {

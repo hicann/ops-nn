@@ -53,6 +53,8 @@ constexpr int IDX_1 = 1;
 constexpr int IDX_2 = 2;
 constexpr int IDX_3 = 3;
 constexpr int IDX_4 = 4;
+constexpr size_t MIN_X_DIM_NUM = 2;
+constexpr size_t MAX_X_DIM_NUM = 8;
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {op::DataType::DT_FLOAT16,
                                                                                           op::DataType::DT_BF16};
@@ -111,6 +113,12 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
         return false;
     }
 
+    auto x1DimNum = x1Shape.GetDimNum();
+    OP_CHECK(x1DimNum >= MIN_X_DIM_NUM && x1DimNum <= MAX_X_DIM_NUM,
+             OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "x1 dim num should be between %zu and %zu, but got %zu.",
+                     MIN_X_DIM_NUM, MAX_X_DIM_NUM, x1DimNum),
+             return false);
+
     // 检查 gamma shape 是否为1维
     auto gammaShape = gamma->GetViewShape();
     if (gammaShape.GetDimNum() != 1) {
@@ -119,7 +127,6 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     }
 
     // 检查 gammaShape 是否与 x1 最后一维一致
-    auto x1DimNum = x1Shape.GetDimNum();
     if (x1Shape.GetDim(x1DimNum - 1) != gammaShape.GetDim(0)) {
         OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "gammaShape isn't consistent with the last dimension of x1.");
         return false;

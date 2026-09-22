@@ -540,3 +540,45 @@ TEST_F(l2_add_rms_norm_dynamic_quant_v2_test, ascend910b_inactive_output_null_re
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_NULLPTR);
 }
+
+TEST_F(l2_add_rms_norm_dynamic_quant_v2_test, ascend950_rank_zero_x_rejected)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_y1 = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensor_desc_y2 = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensor_desc_x = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_scale1 = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_scale2 = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 1e-5, nullptr),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
+
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_INNER_TILING_ERROR);
+}
+
+TEST_F(l2_add_rms_norm_dynamic_quant_v2_test, ascend950_rank_zero_active_int32_output_rejected)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({2, 8}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({2, 8}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_y1 = TensorDesc({}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensor_desc_y2 = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensor_desc_x = TensorDesc({2, 8}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_scale1 = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_scale2 = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 1e-5, nullptr),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
+
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_INNER_TILING_ERROR);
+}
