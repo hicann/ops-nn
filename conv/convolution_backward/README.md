@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。  
+- 算子功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。
 
 - 计算公式
 
@@ -30,25 +30,25 @@
   $$
     W_{out}=\lfloor \frac{W_{in}+2*padding[2]-dilation[2] * (kernelSize[2] -1) -1}{stride[2]}+1 \rfloor
   $$
-  
-  卷积反向传播需要计算对卷积正向的输入张量 $x$、卷积核权重张量 $w$ 和偏置 $b$ 的梯度。  
+
+  卷积反向传播需要计算对卷积正向的输入张量 $x$、卷积核权重张量 $w$ 和偏置 $b$ 的梯度。
 
   - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$：
-  
+
     $$
     \frac{\partial L}{\partial x_{n, c_{in}, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}\cdot w_{c_{out}, c_{in}, p, q}
     $$
-  
-    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度。  
-  
+
+    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度。
+
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$：
-  
+
     $$
     \frac{\partial L}{\partial w_{c_{out}, c_{in}, p, q}} = \sum_{n=1}^{N} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} x_{n, c_{in}, i \cdot s_H + p, j \cdot s_W + q} \cdot \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
-  
+
   - 对于 $b$ 的梯度 $\frac{\partial L}{\partial b}$：
-  
+
     $$
     \frac{\partial L}{\partial b_{c_{out}}} = \sum_{n=1}^{N}       \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
@@ -66,7 +66,7 @@
 | dilation | 输入 | <ul><li>反向传播过程中的膨胀参数，相当于公式中的dilation[0]、dilation[1]、dilation[2]。</li><li>数组长度可以为weight维度减2。数值必须大于0。</li></ul> | INT64 | - |
 | transposed | 输入 | <ul><li>转置卷积开启标志位,当其值为True时开启转置卷积。</li></ul> | - | - |
 | outputPadding | 输入 | <ul><li>反向传播过程中对于输出填充，数组长度可以为weight维度减2，各维度的数值范围满足[0, stride对应维度数值)。transposed为False场景下，要求每个元素值为0。</li></ul> | INT64 | - |
-| groups | 输入 | <ul><li>反向传播过程中输入通道的分组数。</li><li>需满足groups*weight的C维度=input的C维度，groups取值范围为[1,65535]。</li></ul> | INT32 | - |
+| groups | 输入 | <ul><li>反向传播过程中输入通道的分组数。</li><li>需满足groups*weight的C维度=input的C维度，groups取值范围为[1,65535]。</li><li>需满足gradOutput的C维度大于等于groups且能被groups整除。</li></ul> | INT32 | - |
 | gradInput | 输出 | <ul><li>输入张量$x$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial x}$。</li><li>数据类型与'input'保持一致。</li><li>数据格式需要与'input'、'gradOutput'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | NCL、NCHW、NCDHW |
 | gradWeight | 输出 | <ul><li>卷积核权重张量$w$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial w}$。</li><li>数据格式需要与'weight'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | NCL、NCHW、NCDHW |
 | gradBias | 输出 | <ul><li>偏置$b$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial b}$。</li><li>数据类型与'gradOutput'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
@@ -79,7 +79,7 @@
 * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 不支持HIFLOAT8、FLOAT8_E4M3FN。
 
-## 约束说明  
+## 约束说明
 
 * <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。
 * 更详细的约束说明可查看[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口资料。
