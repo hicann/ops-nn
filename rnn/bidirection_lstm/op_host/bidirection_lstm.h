@@ -14,7 +14,7 @@
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H
-#include "dynamic_rnn/op_host/dynamic_rnn_common.h"
+#include "dynamic_rnn/op_host/dynamic_rnn_tiling_common.h"
 #include "log/log.h"                           // 如果涉及LOG日志打印
 #include "register/op_impl_registry.h"         // 必需
 #include "register/tilingdata_base.h"          // 必需
