@@ -383,6 +383,10 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyOutGradWeight(LocalTensor<fl
     for (uint32_t t = 0; t < currentTileTokens; t++) {
         DataCopyPad(gradWeightGm[tokenIdx + t], gradWeightAccumLocalTensor[t * tileH], copyParams);
     }
+    event_t mte3ToV = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
+    SetFlag<HardEvent::MTE3_V>(mte3ToV);
+    WaitFlag<HardEvent::MTE3_V>(mte3ToV);
+    GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::MTE3_V>(mte3ToV);
     GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::V_MTE3>(vToMte3);
 }
 
@@ -466,6 +470,10 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyOutGradX(LocalTensor<float>&
         DataCopyPad(gradXGm[gmOffset0], x0TLocalTensor, outCopyParams);
         DataCopyPad(gradXGm[gmOffset1], x1TLocalTensor, outCopyParams);
     }
+    event_t mte3ToMte2 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_MTE2>());
+    SetFlag<HardEvent::MTE3_MTE2>(mte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(mte3ToMte2);
+    GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::MTE3_MTE2>(mte3ToMte2);
     GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::V_MTE3>(vToMte3);
 }
 
