@@ -14,11 +14,6 @@
 #include "graph/graph.h"
 #include "platform/platform_info.h"
 #include "register/register_custom_pass.h"
-#include "version/ge-compiler_version.h"
-
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
 
 namespace Ops {
 using namespace NN;
@@ -300,12 +295,7 @@ bool QuantUnsqueezeConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNod
         nodesBeforeFuse.emplace_back(*broadcastNode);
     }
 
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK(!UpdateQuantUnsqueezeDesc(),
                       OP_LOGE(convDescInfo.nodeNameStr, "Update quant/unsqueeze desc failed."), return false);
@@ -315,11 +305,7 @@ bool QuantUnsqueezeConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNod
                       OP_LOGE(convDescInfo.nodeNameStr, "Update squeeze/dequant desc failed."), return false);
     FUSION_PASS_CHECK(RelinkSqueezeDequantEdges(*graph, convNode) != SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Relink squeeze/dequant edges failed."), return false);
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesBeforeFuse, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesBeforeFuse, passContext), return false);
     return true;
 }
 } // namespace Ops

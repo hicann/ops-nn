@@ -16,10 +16,6 @@
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
-
 namespace Ops {
 using namespace NN;
 using namespace Conv;
@@ -144,11 +140,7 @@ bool Conv2DSqueezeBiasaddFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNod
                       return false);
     FUSION_PASS_CHECK(RelinkEdges(*graph, matchNode) != SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Relink edges failed."), return false);
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesBeforeFuse, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesBeforeFuse, passContext), return false);
     return true;
 }
 

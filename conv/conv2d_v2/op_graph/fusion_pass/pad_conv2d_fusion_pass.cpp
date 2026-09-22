@@ -16,10 +16,6 @@
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
-
 namespace Ops {
 using namespace NN;
 using namespace Conv;
@@ -472,22 +468,13 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     FUSION_PASS_CHECK(graph == nullptr, OP_LOGE(convDescInfo.nodeNameStr, "Graph is nullptr."), return false);
 
     std::vector<GNode> nodesBeforeFuse = {convNode, *padNode};
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK_NOLOG(!HandleBackwardPath(*graph), return false);
     FUSION_PASS_CHECK_NOLOG(!UpdateCubeNodes(*graph, convNode), return false);
 
     std::vector<GNode> nodesAfterFuse = {convNode};
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesAfterFuse, passContext), return false);
 
     if (sliceNode != nullptr) {
         FUSION_PASS_CHECK(graph->RemoveNode(*sliceNode) != GRAPH_SUCCESS,

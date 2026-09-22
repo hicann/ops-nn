@@ -11,8 +11,20 @@
 #include "conv_fusion_base_pass.h"
 
 #include "es_nn_ops.h"
-#include "ge/fusion/graph_rewriter.h"
 #include "version/ge-compiler_version.h"
+
+namespace ge {
+namespace fusion {
+class SubgraphRewriter {
+public:
+    static Status Replace(const SubgraphBoundary& subgraph, const Graph& replacement);
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    static Status Replace(const SubgraphBoundary& subgraph, const Graph& replacement, CustomPassContext& ctx)
+        __attribute__((weak));
+#endif
+};
+} // namespace fusion
+} // namespace ge
 
 namespace Ops {
 namespace NN {
@@ -20,6 +32,36 @@ namespace Conv {
 using namespace ConvFusionUtils;
 using namespace ge;
 using namespace fusion;
+
+bool ConvFusionBasePass::CanFuseNodes(const std::vector<GNode>& nodesBeforeFuse)
+{
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    if (ge::fusion::GraphFuseInspectorUtils::CanFuse == nullptr) {
+        return true;
+    }
+    AscendString failedReason;
+    if (!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString());
+        return false;
+    }
+#endif
+    return true;
+}
+
+bool ConvFusionBasePass::ReportFuseNodes(const std::vector<GNode>& nodesBeforeFuse,
+                                         const std::vector<GNode>& nodesAfterFuse, CustomPassContext& passContext)
+{
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    if (ge::fusion::GraphFuseInspectorUtils::ReportFuse == nullptr) {
+        return true;
+    }
+    if (ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS) {
+        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed.");
+        return false;
+    }
+#endif
+    return true;
+}
 
 bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode, CustomPassContext& passContext)
 {
@@ -35,10 +77,19 @@ bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode, Cus
         OP_LOGE("ConvFusionBasePass", "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
 #if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement, passContext) != SUCCESS,
+    using ReplaceWithCtxFn = Status (*)(const SubgraphBoundary&, const Graph&, CustomPassContext&);
+    auto replaceWithCtx = static_cast<ReplaceWithCtxFn>(&ge::fusion::SubgraphRewriter::Replace);
+    if (replaceWithCtx != nullptr) {
+        FUSION_PASS_CHECK(replaceWithCtx(*boundary, *replacement, passContext) != SUCCESS,
+                          OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()),
+                          return false);
+        return true;
+    }
+#endif
+
+    FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS,
                       OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
-#endif
 
     return true;
 }

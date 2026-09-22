@@ -15,10 +15,6 @@
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
-
 namespace Ops {
 using namespace NN;
 using namespace Conv;
@@ -291,12 +287,7 @@ bool PadDepthwiseConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode&
                       OP_LOGE(convDescInfo.nodeNameStr, "Get Pad input desc failed."), return false);
 
     std::vector<GNode> nodesBeforeFuse = {convNode, *padNode};
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK(convNode.UpdateInputDesc(CONV_FMAP_INPUT_INDEX, padXDesc) != GRAPH_SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Update DepthwiseConv2D input desc failed."), return false);
@@ -314,11 +305,7 @@ bool PadDepthwiseConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode&
     FUSION_PASS_CHECK(convNode.SetAttr(PADDING, samePadding) != GRAPH_SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Set padding attr failed."), return false);
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesBeforeFuse, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesBeforeFuse, passContext), return false);
 
     auto remainingConsumers = padNode->GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     for (const auto& consumerPair : remainingConsumers) {

@@ -12,11 +12,13 @@
 #define NN_CONV_FUSION_BASE_PASS_H
 
 #include <memory>
+#include <vector>
 
 #include "conv_fusion_utils_pass.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "ge/ge_api_error_codes.h"
+#include "graph_fuse_inspector_utils.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {
@@ -60,6 +62,12 @@ protected:
 
     // ConstructBoundary -> Replacement -> SubgraphRewriter::Replace.
     bool DefaultConvFusionReplaceImpl(const ge::GNode& convNode, ge::CustomPassContext& passContext);
+
+    // Weak-symbol guarded graph fuse inspector entries: no-op (return true) when the GE runtime does
+    // not export GraphFuseInspectorUtils; return false on CanFuse rejection or ReportFuse failure.
+    bool CanFuseNodes(const std::vector<ge::GNode>& nodesBeforeFuse);
+    bool ReportFuseNodes(const std::vector<ge::GNode>& nodesBeforeFuse, const std::vector<ge::GNode>& nodesAfterFuse,
+                         ge::CustomPassContext& passContext);
 
 protected:
     NpuArch npuArch = NpuArch::DAV_RESV;

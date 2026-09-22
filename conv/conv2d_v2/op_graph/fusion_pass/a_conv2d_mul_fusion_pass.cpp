@@ -16,10 +16,6 @@
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
-
 namespace Ops {
 using namespace NN;
 using namespace Conv;
@@ -301,12 +297,7 @@ bool AConv2dMulFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode, C
                       return false);
 
     std::vector<GNode> nodesBeforeFuse = {convNode, *mulNode};
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK(!RelinkConvOutputToMulConsumers(*graph, convNode),
                       OP_LOGE(convDescInfo.nodeNameStr, "relink conv output to mul's consumers failed."), return false);
@@ -317,13 +308,9 @@ bool AConv2dMulFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode, C
                           OP_LOGE(convDescInfo.nodeNameStr, "insert biasMul failed."), return false);
     }
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
     std::vector<GNode> nodesAfterFuse = {convNode};
     nodesAfterFuse.insert(nodesAfterFuse.end(), insertedMulNodes.begin(), insertedMulNodes.end());
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesAfterFuse, passContext), return false);
 
     FUSION_PASS_CHECK(graph->RemoveNode(*mulNode) != GRAPH_SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "remove original mul node failed."), return false);
