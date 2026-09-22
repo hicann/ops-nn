@@ -37,7 +37,8 @@ static void DoTilingTest(std::initializer_list<int64_t> predictDims, std::initia
                          ge::graphStatus expectedStatus, ge::DataType labelDtype = ge::DT_UNDEFINED,
                          ge::DataType doutDtype = ge::DT_UNDEFINED, ge::Format predictFormat = ge::FORMAT_ND,
                          ge::Format labelFormat = ge::FORMAT_ND, ge::Format doutFormat = ge::FORMAT_ND,
-                         ge::Format outputFormat = ge::FORMAT_ND)
+                         ge::Format outputFormat = ge::FORMAT_ND, ge::DataType outputDtype = ge::DT_UNDEFINED,
+                         std::initializer_list<int64_t> outputDims = {}, uint64_t ubSize = 245760)
 {
     std::string opType("SmoothL1LossGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
@@ -47,7 +48,8 @@ static void DoTilingTest(std::initializer_list<int64_t> predictDims, std::initia
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "UB_SIZE": )" +
+                                 std::to_string(ubSize) + R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64}
     })";
     std::map<std::string, std::string> socInfos, aicoreSpec, intrinsics;
@@ -64,21 +66,24 @@ static void DoTilingTest(std::initializer_list<int64_t> predictDims, std::initia
     gert::StorageShape predictShape = {predictDims, predictDims};
     gert::StorageShape labelShape = {labelDims, labelDims};
     gert::StorageShape doutShape = {doutDims, doutDims};
+    const auto effectiveOutputDims = outputDims.size() == 0 ? predictDims : outputDims;
+    gert::StorageShape outputShape = {effectiveOutputDims, effectiveOutputDims};
     ge::DataType effectiveLabelDtype = labelDtype == ge::DT_UNDEFINED ? predictDtype : labelDtype;
     ge::DataType effectiveDoutDtype = doutDtype == ge::DT_UNDEFINED ? predictDtype : doutDtype;
+    ge::DataType effectiveOutputDtype = outputDtype == ge::DT_UNDEFINED ? predictDtype : outputDtype;
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&predictShape, &labelShape, &doutShape})
-                      .OutputShapes({&predictShape})
+                      .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, predictDtype, predictFormat, predictFormat)
                       .NodeInputTd(1, effectiveLabelDtype, labelFormat, labelFormat)
                       .NodeInputTd(2, effectiveDoutDtype, doutFormat, doutFormat)
-                      .NodeOutputTd(0, predictDtype, outputFormat, outputFormat)
+                      .NodeOutputTd(0, effectiveOutputDtype, outputFormat, outputFormat)
                       .NodeAttrs({{"sigma", Ops::NN::AnyValue::CreateFrom<float>(sigma)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
@@ -168,4 +173,22 @@ TEST_F(SmoothL1LossGradTilingTest, tiling_output_unsupported_format_rejected)
 TEST_F(SmoothL1LossGradTilingTest, tiling_dout_shape_mismatch_rejected)
 {
     DoTilingTest({4}, {4}, {2, 2}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED);
+}
+
+TEST_F(SmoothL1LossGradTilingTest, tiling_output_shape_mismatch_rejected)
+{
+    DoTilingTest({4, 8}, {4, 8}, {4, 8}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED, ge::DT_UNDEFINED, ge::DT_UNDEFINED,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::DT_UNDEFINED, {2, 16});
+}
+
+TEST_F(SmoothL1LossGradTilingTest, tiling_output_dtype_mismatch_rejected)
+{
+    DoTilingTest({4, 8}, {4, 8}, {4, 8}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED, ge::DT_UNDEFINED, ge::DT_UNDEFINED,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::DT_FLOAT16);
+}
+
+TEST_F(SmoothL1LossGradTilingTest, tiling_insufficient_ub_rejected)
+{
+    DoTilingTest({4, 8}, {4, 8}, {4, 8}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED, ge::DT_UNDEFINED, ge::DT_UNDEFINED,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::DT_UNDEFINED, {}, 512);
 }

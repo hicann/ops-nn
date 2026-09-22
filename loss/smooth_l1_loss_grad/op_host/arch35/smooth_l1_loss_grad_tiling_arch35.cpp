@@ -36,6 +36,7 @@
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include <set>
+#include <cmath>
 #include "../../op_kernel/arch35/smooth_l1_loss_grad_tiling_data.h"
 
 namespace optiling {
@@ -178,6 +179,22 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     auto outputDesc = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+    auto outputShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+    OP_CHECK_IF(outputShape->GetStorageShape() != inputPredict->GetStorageShape(),
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: shape mismatch between predict and gradient; actual predict shape=%s, "
+                        "actual gradient shape=%s, legal relation=gradient shape must equal predict shape",
+                        Ops::Base::ToString(inputPredict->GetStorageShape()).c_str(),
+                        Ops::Base::ToString(outputShape->GetStorageShape()).c_str()),
+                return ge::GRAPH_FAILED);
+    const auto outputDtype = outputDesc->GetDataType();
+    OP_CHECK_IF(outputDtype != *dataType,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: dtype mismatch between predict and gradient; actual predict dtype=%d, "
+                        "actual gradient dtype=%d, legal relation=gradient dtype must equal predict dtype",
+                        static_cast<int>(*dataType), static_cast<int>(outputDtype)),
+                return ge::GRAPH_FAILED);
     const auto outputFormat = outputDesc->GetFormat().GetStorageFormat();
     OP_CHECK_IF(
         outputFormat != ge::FORMAT_ND,
@@ -196,7 +213,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     // sigma > 0 校验
     OP_CHECK_IF(
-        *sigma <= 0.0f,
+        !std::isfinite(*sigma) || *sigma <= 0.0f,
         OP_LOGE(context, "SmoothL1LossGrad: sigma must be > 0, got %f; attribute name=sigma, legal range=(0, +inf)",
                 *sigma),
         return ge::GRAPH_FAILED);
@@ -269,9 +286,16 @@ static ge::graphStatus SmoothL1LossGradTilingFunc(gert::TilingContext* context)
     }
 
     // 4. 多核 + UB 切分
+    OP_CHECK_IF(
+        ubSize <= static_cast<uint64_t>(ALIGN_256),
+        OP_LOGE(context, "SmoothL1LossGrad: UB size %lu is too small, must be greater than %ld", ubSize, ALIGN_256),
+        return ge::GRAPH_FAILED);
     int64_t coreNum, blockFormer, blockNum, blockTail, ubFormer;
     ComputeTilingParams(totalLength, dataType, ubSize, availableCoreNum, &coreNum, &blockFormer, &blockNum, &blockTail,
                         &ubFormer);
+    OP_CHECK_IF(ubFormer <= 0,
+                OP_LOGE(context, "SmoothL1LossGrad: available UB cannot hold one aligned tile, ubSize=%lu", ubSize),
+                return ge::GRAPH_FAILED);
 
     // 5. 填充 TilingData + BlockDim + TilingKey
     tiling->coreNum = static_cast<int32_t>(coreNum);

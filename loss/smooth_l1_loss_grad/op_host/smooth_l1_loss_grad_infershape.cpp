@@ -18,9 +18,6 @@
  *   gradient.shape = predict.shape
  *   gradient.dtype = predict.dtype
  *
- * 显式注册 InferDataType 保证
- *   gradient.dtype=predict.dtype（多 dtype 入图场景下比仅依赖 def.cpp 输入输出列表
- *   按位对应更稳健，与同仓 relu6_d / cosh 范式一致）。
  */
 
 #include "util/shape_util.h"
@@ -57,16 +54,6 @@ static ge::graphStatus InferShape4SmoothL1LossGrad(gert::InferShapeContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
-// 类型推导：gradient.dtype = predict.dtype（无类型提升）
-static ge::graphStatus InferDataType4SmoothL1LossGrad(gert::InferDataTypeContext* context)
-{
-    const ge::DataType predictDtype = context->GetInputDataType(0);
-    context->SetOutputDataType(0, predictDtype);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(SmoothL1LossGrad)
-    .InferShape(InferShape4SmoothL1LossGrad)
-    .InferDataType(InferDataType4SmoothL1LossGrad);
+IMPL_OP_INFERSHAPE(SmoothL1LossGrad).InferShape(InferShape4SmoothL1LossGrad);
 
 } // namespace ops
