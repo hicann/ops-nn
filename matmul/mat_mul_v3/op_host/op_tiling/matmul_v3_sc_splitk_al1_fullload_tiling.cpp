@@ -24,6 +24,7 @@ namespace {
 constexpr uint64_t kL1RpcReserve = 256UL;
 constexpr uint64_t kBaseKAlign = BASIC_ALIGN_32;
 constexpr uint64_t kMinBaseK = kBaseKAlign;
+constexpr uint64_t kPrefBaseK = BASIC_BLOCK_SIZE_64;
 constexpr uint64_t kMaxBaseK = BASIC_BLOCK_SIZE_256;
 constexpr uint64_t kL1AdjustMax = 3UL;
 constexpr uint64_t kBaseNCandidates[] = {
@@ -79,6 +80,11 @@ inline uint64_t CalcBkTileAlignScore(uint64_t bkTileBytes)
 inline bool IsPerfectNTileSplit(uint64_t nTileCnt, uint64_t usedCoreNum)
 {
     return usedCoreNum > 0 && nTileCnt % usedCoreNum == 0;
+}
+
+inline uint64_t HeadTailImbalance(uint64_t headCoreNum, uint64_t tailCoreNum)
+{
+    return (headCoreNum > tailCoreNum) ? (headCoreNum - tailCoreNum) : (tailCoreNum - headCoreNum);
 }
 
 inline uint64_t CalcBlockRoundCount(uint64_t singleCoreN, uint64_t singleCoreK, uint64_t baseN, uint64_t baseK)
@@ -308,35 +314,47 @@ bool IsBetterBaseN(uint64_t baseM, uint64_t stepM, uint64_t kValue, uint64_t tot
     if (bestBaseN == 0) {
         return true;
     }
+    // 1) 优先打满核
+    if (curUsedCoreNum != bestUsedCoreNum) {
+        return curUsedCoreNum > bestUsedCoreNum;
+    }
+    // 2) 避免 baseK 过小导致 L0A/MTE2 效率塌缩
+    const bool curBaseKPref = curBaseK >= kPrefBaseK;
+    const bool bestBaseKPref = bestBaseK >= kPrefBaseK;
+    if (curBaseKPref != bestBaseKPref) {
+        return curBaseKPref;
+    }
+    // 3) 优先抬高 L0C 占用 (baseM * baseN)
+    const uint64_t curL0C = baseM * curBaseN;
+    const uint64_t bestL0C = baseM * bestBaseN;
+    if (curL0C != bestL0C) {
+        return curL0C > bestL0C;
+    }
+    // 4) 同 L0C 下取更大 baseK
+    if (curBaseK != bestBaseK) {
+        return curBaseK > bestBaseK;
+    }
+    // 5) N 切分整齐度 / B 转置对齐只作弱约束
     if (!isBTrans) {
         bool curPerfect = IsPerfectNTileSplit(curNTileCnt, curUsedCoreNum);
         bool bestPerfect = IsPerfectNTileSplit(bestNTileCnt, bestUsedCoreNum);
         if (curPerfect != bestPerfect) {
             return curPerfect;
         }
-    }
-    if (curUsedCoreNum != bestUsedCoreNum) {
-        return curUsedCoreNum > bestUsedCoreNum;
-    }
-    if (!isBTrans) {
-        bool curPerfect = IsPerfectNTileSplit(curNTileCnt, curUsedCoreNum);
-        if (!curPerfect && curHeadCoreNum - curTailCoreNum != bestHeadCoreNum - bestTailCoreNum) {
-            return curHeadCoreNum - curTailCoreNum < bestHeadCoreNum - bestTailCoreNum;
+        uint64_t curImb = HeadTailImbalance(curHeadCoreNum, curTailCoreNum);
+        uint64_t bestImb = HeadTailImbalance(bestHeadCoreNum, bestTailCoreNum);
+        if (curImb != bestImb) {
+            return curImb < bestImb;
         }
     }
     if (isBTrans && curBkAlignScore != bestBkAlignScore) {
         return curBkAlignScore > bestBkAlignScore;
     }
+    // 6) block 轮次与 AL1 循环
     int blockRoundCmp = CompareBlockRounds(curSingleCoreN, curBaseN, curBaseK, bestSingleCoreN, bestBaseN, bestBaseK,
                                            kValue);
     if (blockRoundCmp != 0) {
         return blockRoundCmp > 0;
-    }
-    if (curBaseN != bestBaseN) {
-        return curBaseN > bestBaseN;
-    }
-    if (curBaseK != bestBaseK) {
-        return curBaseK > bestBaseK;
     }
     uint64_t curLoops = EstMinAL1LoopCount(totalL1Size, baseM, stepM, curBaseN, curBaseK, kValue, aDtypeSize,
                                            bDtypeSize, hasBias);
@@ -447,7 +465,7 @@ void SearchBaseBlockCandidates(const MatmulV3CompileInfo& compileInfo, uint64_t 
         uint64_t headCoreNum = 0;
         uint64_t tailCoreNum = 0;
         CalcNTileSplit(nValue, tryBaseN, compileInfo.aicNum, nTileCnt, usedCoreNum, headCoreNum, tailCoreNum);
-        if (usedCoreNum == 0 || (tailCoreNum > 0 && headCoreNum < tailCoreNum)) {
+        if (usedCoreNum == 0) {
             continue;
         }
         uint64_t policyBaseK = CalcPolicyBaseK(compileInfo, baseM, tryBaseN, aDtypeSize, bDtypeSize, dbL0c);

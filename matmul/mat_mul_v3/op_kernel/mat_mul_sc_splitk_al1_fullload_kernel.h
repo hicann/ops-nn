@@ -53,6 +53,7 @@ protected:
 
 private:
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR workspaceGM, GM_ADDR biasGM);
+    __aicore__ inline void ApplyL2CacheHint();
     __aicore__ inline void SetOrgShape();
     __aicore__ inline void CopyInAL1();
     __aicore__ inline void CastCurrentNBaseTile(GM_ADDR cGM, GM_ADDR srcAddr, TBuf<TPosition::VECCALC>& ubBuf);
@@ -105,12 +106,34 @@ __aicore__ inline void MatMulBaseKernelSCSplitKAL1FullLoad<A_TYPE, B_TYPE, L0C_T
                                                    block_.matmulTilingData_->matmulTiling.Ka);
     bGlobal_.SetGlobalBuffer((__gm__ B_T*)bGM, static_cast<uint64_t>(block_.matmulTilingData_->matmulTiling.Kb) *
                                                    block_.matmulTilingData_->matmulTiling.N);
-    aGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
-    bGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
     cOutGlobal_.SetGlobalBuffer(
         (__gm__ L0C_T*)workspaceGM,
         static_cast<uint64_t>(block_.matmulTilingData_->matmulTiling.M) * block_.matmulTilingData_->matmulTiling.N);
     biasGlobal_.SetGlobalBuffer((__gm__ BiasT*)biasGM, block_.matmulTilingData_->matmulTiling.N);
+    ApplyL2CacheHint();
+}
+
+template <class A_TYPE, class B_TYPE, class L0C_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE,
+          const MatmulConfig& MM_CFG>
+__aicore__ inline void
+MatMulBaseKernelSCSplitKAL1FullLoad<A_TYPE, B_TYPE, L0C_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::ApplyL2CacheHint()
+{
+    const uint32_t l2Flag = block_.matmulTilingData_->l2cacheUseInfo.l2CacheFlag;
+    if ((l2Flag & ALL_L2_CACHE_ENABLE) != 0) {
+        return;
+    }
+    if ((l2Flag & A_L2_DISABLE) != 0) {
+        aGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
+    }
+    if ((l2Flag & B_L2_DISABLE) != 0) {
+        bGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
+    }
+    if ((l2Flag & C_L2_DISABLE) != 0) {
+        cOutGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
+    }
+    if ((l2Flag & BIAS_L2_DISABLE) != 0) {
+        biasGlobal_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
+    }
 }
 
 template <class A_TYPE, class B_TYPE, class L0C_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE,

@@ -53,6 +53,9 @@ const uint32_t COL_FIRST = 2;
 
 const uint32_t CONTROL_DB = 1;
 const uint32_t ALL_L2_CACHE_ENABLE = 1;
+const uint32_t A_L2_DISABLE = 2;
+const uint32_t B_L2_DISABLE = 4;
+const uint32_t BIAS_L2_DISABLE = 8;
 const uint32_t C_L2_DISABLE = 16;
 
 const uint64_t AIV_SYNC_AIC_FLAG = 4;
