@@ -116,6 +116,7 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
           <ul>
             <li>不支持空Tensor。</li>
             <li>仅支持转置。</li>
+            <li>要求使用INT8数据类型传入，一个int8数据包含2个float4_e2m1数据。</li>
           </ul>
         </td>
         <td>FLOAT4_E2M1</td>
@@ -139,21 +140,6 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
         <td>-</td>
       </tr>
       <tr>
-        <td>x1Level1Scale(aclTensor*)</td>
-        <td>输入</td>
-        <td>x1的二级量化参数的缩放因子，对应公式的x1Level1Scale。</td>
-        <td>
-          <ul>
-            <li>不支持空Tensor。</li>
-            <li>仅支持非转置。</li>
-          </ul>
-        </td>
-        <td>FLOAT8_E8M0</td>
-        <td>ND</td>
-        <td>3</td>
-        <td>-</td>
-      </tr>
-      <tr>
         <td>x2Level0Scale(aclTensor*)</td>
         <td>输入</td>
         <td>x2的一级量化参数的缩放因子，对应公式的x2Level0Scale。</td>
@@ -169,6 +155,21 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
         <td>-</td>
       </tr>
       <tr>
+        <td>x1Level1Scale(aclTensor*)</td>
+        <td>输入</td>
+        <td>x1的二级量化参数的缩放因子，对应公式的x1Level1Scale。</td>
+        <td>
+          <ul>
+            <li>不支持空Tensor。</li>
+            <li>仅支持非转置。</li>
+          </ul>
+        </td>
+        <td>FLOAT8_E8M0</td>
+        <td>ND、NCL</td>
+        <td>3</td>
+        <td>-</td>
+      </tr>
+      <tr>
         <td>x2Level1Scale(aclTensor*)</td>
         <td>输入</td>
         <td>x2的二级量化参数的缩放因子，对应公式的x2Level1Scale。</td>
@@ -179,7 +180,7 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
          </ul>
         </td>
         <td>FLOAT8_E8M0</td>
-        <td>ND</td>
+        <td>ND、NCL</td>
         <td>3</td>
         <td>-</td>
       </tr>
@@ -307,13 +308,13 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
       <tr>
         <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="5">161002</td>
-        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale、level0GroupSize、level1GroupSize是空tensor。</td>
+        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale是空tensor。</td>
       </tr>
       <tr>
-        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale、level0GroupSize、level1GroupSize或out的数据类型和数据格式不在支持的范围之内。</td>
+        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale或out的数据类型和数据格式不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale、level0GroupSize、level1GroupSize或out的shape不满足校验条件。</td>
+        <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale或out的shape不满足校验条件。</td>
       </tr>
       <tr>
         <td>传入的level0GroupSize或level1GroupSize不满足校验条件。</td>
