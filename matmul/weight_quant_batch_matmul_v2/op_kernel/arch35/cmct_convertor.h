@@ -19,6 +19,10 @@
 #include "cmct/utils/integral_constant.h"
 #include "cmct/utils/gemm_type.h"
 #include "cmct/utils/constant.h"
+#if defined(WEIGHT_ND) && (defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT))
+#include "weight_quant_batch_matmul_v2_blaze.h"
+#define WQBMMV2_BLAZE_B8_AVAILABLE
+#endif
 
 using AscendC::int4b_t;
 
@@ -466,9 +470,9 @@ struct ScmcKernel {
 
 template <int TemplateCustom, bool TransA, bool TransB, int AntiquantType, bool HasAntiquantOffset, bool IsBiasFp32,
           bool IsWeightNz>
-__aicore__ inline void InvokeKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
-                                    GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-                                    GM_ADDR tiling)
+__aicore__ inline void InvokeCmctKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                        GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y,
+                                        GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     static constexpr Cmct::Gemm::QuantType ANTIQUANT_TYPE = static_cast<Cmct::Gemm::QuantType>(AntiquantType);
@@ -489,6 +493,39 @@ __aicore__ inline void InvokeKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquant
                IsWeightNz>{}(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace,
                              tiling);
 }
+
+template <int TemplateCustom, bool TransA, bool TransB, int AntiquantType, bool HasAntiquantOffset, bool IsBiasFp32,
+          bool IsWeightNz>
+__aicore__ inline void InvokeKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                    GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                    GM_ADDR tiling)
+{
+#if defined(WQBMMV2_BLAZE_B8_AVAILABLE)
+    static constexpr bool ANTIQUANT_SUPPORTED = AntiquantType == static_cast<int>(Cmct::Gemm::QuantType::PER_TENSOR) ||
+                                                AntiquantType == static_cast<int>(Cmct::Gemm::QuantType::PER_CHANNEL);
+    static constexpr bool USE_BLAZE = ANTIQUANT_SUPPORTED &&
+                                      (IsSameType<DTYPE_X, half>::value || IsSameType<DTYPE_X, bfloat16_t>::value) &&
+                                      (IsSameType<DTYPE_WEIGHT, int8_t>::value ||
+                                       IsSameType<DTYPE_WEIGHT, float8_e4m3_t>::value ||
+                                       IsSameType<DTYPE_WEIGHT, hifloat8_t>::value) &&
+                                      (IsSameType<DTYPE_Y, half>::value || IsSameType<DTYPE_Y, bfloat16_t>::value);
+
+    if constexpr (USE_BLAZE) {
+        InvokeBlazeB8Kernel<TemplateCustom, TransA, TransB, AntiquantType, HasAntiquantOffset, IsBiasFp32, IsWeightNz>(
+            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
+    } else {
+        InvokeCmctKernel<TemplateCustom, TransA, TransB, AntiquantType, HasAntiquantOffset, IsBiasFp32, IsWeightNz>(
+            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
+    }
+#else
+    InvokeCmctKernel<TemplateCustom, TransA, TransB, AntiquantType, HasAntiquantOffset, IsBiasFp32, IsWeightNz>(
+        x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
+#endif
+}
 } // namespace WeightQuantBatchMatmulV2
+
+#if defined(WQBMMV2_BLAZE_B8_AVAILABLE)
+#undef WQBMMV2_BLAZE_B8_AVAILABLE
+#endif
 
 #define KERNEL_PARAMS x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling
