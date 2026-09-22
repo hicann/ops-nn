@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file test_geir_layer_norm.cpp
- * \brief GE graph construction sample for LayerNorm.
+ * \file test_geir_layer_norm_grad_v3.cpp
+ * \brief GE graph construction sample for LayerNormGradV3.
  */
 
 #include <cmath>
@@ -28,7 +28,7 @@
 #include "graph.h"
 #include "tensor.h"
 #include "types.h"
-#include "../op_graph/layer_norm_proto.h"
+#include "../op_graph/layer_norm_grad_v3_proto.h"
 
 #define FAILED (-1)
 #define SUCCESS 0
@@ -117,31 +117,41 @@ int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc&
 
 int32_t BuildGraph(Graph& graph, vector<Tensor>& inputTensors, vector<Operator>& inputOps, vector<Operator>& outputOps)
 {
-    auto node = op::LayerNorm("layer_norm");
+    auto node = op::LayerNormGradV3("layer_norm_grad_v3");
     vector<int64_t> xShape = {2, 3, 4};
-    vector<int64_t> parameterShape = {4};
     vector<int64_t> statisticShape = {2, 3, 1};
+    vector<int64_t> parameterShape = {4};
 
-    ADD_INPUT(1, x, xShape, 1.0f);
-    // Six identical rows [1, 1, 3, 3]: mean=2, variance=1.
-    const float row[] = {1.0f, 1.0f, 3.0f, 3.0f};
-    vector<float> xValues(24);
-    for (size_t i = 0; i < xValues.size(); ++i) {
-        xValues[i] = row[i % 4];
+    ADD_INPUT(1, dy, xShape, 1.0f);
+    ADD_INPUT(2, x, xShape, 0.0f);
+    ADD_INPUT(3, rstd, statisticShape, 0.5f);
+    ADD_INPUT(4, mean, statisticShape, 0.0f);
+    ADD_INPUT(5, gamma, parameterShape, 4.0f);
+    vector<bool> outputMask = {true, true, true};
+    node.set_attr_output_mask(outputMask);
+
+    // Six rows: x=[-2,2,-2,2], dy=[1,2,3,4], mean=0, variance=4.
+    const float xRow[] = {-2.0f, 2.0f, -2.0f, 2.0f};
+    const float dyRow[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    const size_t count = inputTensors[0].GetSize() / sizeof(float);
+    vector<float> xValues(count);
+    vector<float> dyValues(count);
+    for (size_t i = 0; i < count; ++i) {
+        xValues[i] = xRow[i % 4];
+        dyValues[i] = dyRow[i % 4];
     }
-    auto ret = inputTensors[0].SetData(reinterpret_cast<uint8_t*>(xValues.data()), xValues.size() * sizeof(float));
+    auto ret = inputTensors[0].SetData(reinterpret_cast<uint8_t*>(dyValues.data()), dyValues.size() * sizeof(float));
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetData(dy) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+    ret = inputTensors[1].SetData(reinterpret_cast<uint8_t*>(xValues.data()), xValues.size() * sizeof(float));
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Tensor::SetData(x) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               return FAILED);
-    ADD_INPUT(2, gamma, parameterShape, 2.0f);
-    ADD_INPUT(3, beta, parameterShape, 3.0f);
-    node.set_attr_begin_norm_axis(2);
-    node.set_attr_begin_params_axis(2);
-    node.set_attr_epsilon(3.0f);
 
-    SET_OUTPUT(y, xShape);
-    SET_OUTPUT(mean, statisticShape);
-    SET_OUTPUT(variance, statisticShape);
+    SET_OUTPUT(pd_x, xShape);
+    SET_OUTPUT(pd_gamma, parameterShape);
+    SET_OUTPUT(pd_beta, parameterShape);
     outputOps.push_back(node);
     return SUCCESS;
 }
@@ -194,11 +204,11 @@ int32_t ValidateOutputs(const vector<Tensor>& outputs)
     CHECK_RET(outputs.size() == 3, LOG_PRINT("[CHECK] FAIL: expected 3 outputs, got %zu\n", outputs.size());
               return FAILED);
     bool ok = true;
-    // mean=2, variance=1; sqrt(variance+epsilon)=sqrt(1+3)=2.
-    // gamma=2, beta=3 -> y=(x-2)/2*2+3=[2,2,4,4] per row.
-    ok = CheckOutput(outputs[0], "y", {2, 3, 4}, {2.0f, 2.0f, 4.0f, 4.0f}) && ok;
-    ok = CheckOutput(outputs[1], "mean", {2, 3, 1}, {2.0f}) && ok;
-    ok = CheckOutput(outputs[2], "variance", {2, 3, 1}, {1.0f}) && ok;
+    // xhat=[-1,1,-1,1], gamma*rstd=2, mean(dy)=2.5, mean(dy*xhat)=0.5.
+    // dx=2*(dy-2.5-xhat*0.5); dgamma=6*dy*xhat; dbeta=6*dy.
+    ok = CheckOutput(outputs[0], "dx", {2, 3, 4}, {-2.0f, -2.0f, 2.0f, 2.0f}) && ok;
+    ok = CheckOutput(outputs[1], "dgamma", {4}, {-6.0f, 12.0f, -18.0f, 24.0f}) && ok;
+    ok = CheckOutput(outputs[2], "dbeta", {4}, {6.0f, 12.0f, 18.0f, 24.0f}) && ok;
     LOG_PRINT("[CHECK] total: %s\n", ok ? "PASS" : "FAIL");
     return ok ? SUCCESS : FAILED;
 }
@@ -221,7 +231,7 @@ int32_t RunGraph(Graph& graph, const vector<Tensor>& inputTensors)
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Session::RunGraph failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               delete session; return FAILED);
-    LOG_PRINT("LayerNorm graph run success, output count: %zu\n", outputTensors.size());
+    LOG_PRINT("LayerNormGradV3 graph run success, output count: %zu\n", outputTensors.size());
     const int32_t result = ValidateOutputs(outputTensors);
     delete session;
     return result;
@@ -236,7 +246,7 @@ int main()
               LOG_PRINT("[ERROR] GEInitialize failed, status=%u, error=%s\n", status, GetGeError().c_str());
               return FAILED);
 
-    Graph graph("layer_norm_graph");
+    Graph graph("layer_norm_grad_v3_graph");
     vector<Tensor> inputTensors;
     vector<Operator> inputOps;
     vector<Operator> outputOps;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file test_geir_layer_norm.cpp
- * \brief GE graph construction sample for LayerNorm.
+ * \file test_geir_layer_norm_v4.cpp
+ * \brief GE graph construction sample for LayerNormV4.
  */
 
 #include <cmath>
@@ -28,7 +28,7 @@
 #include "graph.h"
 #include "tensor.h"
 #include "types.h"
-#include "../op_graph/layer_norm_proto.h"
+#include "../op_graph/layer_norm_v4_proto.h"
 
 #define FAILED (-1)
 #define SUCCESS 0
@@ -55,7 +55,7 @@ std::string GetGeError()
     return errorMessage.GetString() == nullptr ? "" : errorMessage.GetString();
 }
 
-int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc& desc, Tensor& tensor)
+int32_t GenerateData(const vector<int64_t>& shape, DataType dtype, double value, TensorDesc& desc, Tensor& tensor)
 {
     int64_t elementCount = 1;
     for (const int64_t dim : shape) {
@@ -67,21 +67,33 @@ int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc&
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Tensor::SetTensorDesc failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               return FAILED);
-    vector<float> data(elementCount, static_cast<float>(value));
-    ret = tensor.SetData(reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(float));
-    CHECK_RET(ret == GRAPH_SUCCESS,
-              LOG_PRINT("[ERROR] Tensor::SetData failed, status=%u, error=%s\n", ret, GetGeError().c_str());
-              return FAILED);
-    return SUCCESS;
+    if (dtype == DT_FLOAT) {
+        vector<float> data(elementCount, static_cast<float>(value));
+        ret = tensor.SetData(reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(float));
+        CHECK_RET(ret == GRAPH_SUCCESS,
+                  LOG_PRINT("[ERROR] Tensor::SetData failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+                  return FAILED);
+        return SUCCESS;
+    }
+    if (dtype == DT_INT32) {
+        vector<int32_t> data(elementCount, static_cast<int32_t>(value));
+        ret = tensor.SetData(reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(int32_t));
+        CHECK_RET(ret == GRAPH_SUCCESS,
+                  LOG_PRINT("[ERROR] Tensor::SetData failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+                  return FAILED);
+        return SUCCESS;
+    }
+    LOG_PRINT("[ERROR] Unsupported input dtype: %d\n", static_cast<int>(dtype));
+    return FAILED;
 }
 
-#define ADD_INPUT(index, inputName, inputShape, inputValue)                                                           \
+#define ADD_INPUT(index, inputName, inputDtype, inputShape, inputValue)                                               \
     do {                                                                                                              \
         auto inputOp = op::Data("input_" #index).set_attr_index((index) - 1);                                         \
-        TensorDesc inputDesc(Shape(inputShape), FORMAT_ND, DT_FLOAT);                                                 \
+        TensorDesc inputDesc(Shape(inputShape), FORMAT_ND, inputDtype);                                               \
         inputDesc.SetPlacement(kPlacementHost);                                                                       \
         Tensor inputTensor;                                                                                           \
-        auto dataRet = GenerateFloatData(inputShape, inputValue, inputDesc, inputTensor);                             \
+        auto dataRet = GenerateData(inputShape, inputDtype, inputValue, inputDesc, inputTensor);                      \
         CHECK_RET(dataRet == SUCCESS, return FAILED);                                                                 \
         auto ret = inputOp.update_input_desc_x(inputDesc);                                                            \
         CHECK_RET(ret == GRAPH_SUCCESS, LOG_PRINT("[ERROR] Data::update_input_desc_x failed, status=%u, error=%s\n",  \
@@ -105,9 +117,9 @@ int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc&
                   return FAILED);                                                                                     \
     } while (0)
 
-#define SET_OUTPUT(outputName, outputShape)                                                                            \
+#define SET_OUTPUT(outputName, outputDtype, outputShape)                                                               \
     do {                                                                                                               \
-        TensorDesc outputDesc(Shape(outputShape), FORMAT_ND, DT_FLOAT);                                                \
+        TensorDesc outputDesc(Shape(outputShape), FORMAT_ND, outputDtype);                                             \
         auto ret = node.update_output_desc_##outputName(outputDesc);                                                   \
         CHECK_RET(ret == GRAPH_SUCCESS,                                                                                \
                   LOG_PRINT("[ERROR] Operator::update_output_desc_" #outputName " failed, status=%u, error=%s\n", ret, \
@@ -117,14 +129,15 @@ int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc&
 
 int32_t BuildGraph(Graph& graph, vector<Tensor>& inputTensors, vector<Operator>& inputOps, vector<Operator>& outputOps)
 {
-    auto node = op::LayerNorm("layer_norm");
+    auto node = op::LayerNormV4("layer_norm_v4");
     vector<int64_t> xShape = {2, 3, 4};
+    vector<int64_t> normalizedShapeTensorShape = {1};
     vector<int64_t> parameterShape = {4};
     vector<int64_t> statisticShape = {2, 3, 1};
 
-    ADD_INPUT(1, x, xShape, 1.0f);
-    // Six identical rows [1, 1, 3, 3]: mean=2, variance=1.
-    const float row[] = {1.0f, 1.0f, 3.0f, 3.0f};
+    ADD_INPUT(1, x, DT_FLOAT, xShape, 1.0);
+    // Six identical rows [1, 2, 2, 3]: mean=2, variance=0.5.
+    const float row[] = {1.0f, 2.0f, 2.0f, 3.0f};
     vector<float> xValues(24);
     for (size_t i = 0; i < xValues.size(); ++i) {
         xValues[i] = row[i % 4];
@@ -133,15 +146,15 @@ int32_t BuildGraph(Graph& graph, vector<Tensor>& inputTensors, vector<Operator>&
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Tensor::SetData(x) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               return FAILED);
-    ADD_INPUT(2, gamma, parameterShape, 2.0f);
-    ADD_INPUT(3, beta, parameterShape, 3.0f);
-    node.set_attr_begin_norm_axis(2);
-    node.set_attr_begin_params_axis(2);
-    node.set_attr_epsilon(3.0f);
+    // normalized_shape is a one-element Tensor whose value is 4.
+    ADD_INPUT(2, normalized_shape, DT_INT32, normalizedShapeTensorShape, 4);
+    ADD_INPUT(3, gamma, DT_FLOAT, parameterShape, 2.0);
+    ADD_INPUT(4, beta, DT_FLOAT, parameterShape, 3.0);
+    node.set_attr_epsilon(0.5f);
 
-    SET_OUTPUT(y, xShape);
-    SET_OUTPUT(mean, statisticShape);
-    SET_OUTPUT(variance, statisticShape);
+    SET_OUTPUT(y, DT_FLOAT, xShape);
+    SET_OUTPUT(mean, DT_FLOAT, statisticShape);
+    SET_OUTPUT(rstd, DT_FLOAT, statisticShape);
     outputOps.push_back(node);
     return SUCCESS;
 }
@@ -194,11 +207,11 @@ int32_t ValidateOutputs(const vector<Tensor>& outputs)
     CHECK_RET(outputs.size() == 3, LOG_PRINT("[CHECK] FAIL: expected 3 outputs, got %zu\n", outputs.size());
               return FAILED);
     bool ok = true;
-    // mean=2, variance=1; sqrt(variance+epsilon)=sqrt(1+3)=2.
-    // gamma=2, beta=3 -> y=(x-2)/2*2+3=[2,2,4,4] per row.
-    ok = CheckOutput(outputs[0], "y", {2, 3, 4}, {2.0f, 2.0f, 4.0f, 4.0f}) && ok;
+    // mean=2, variance=0.5, epsilon=0.5 -> rstd=1.
+    // gamma=2, beta=3 -> y=(x-2)*2+3=[1,3,3,5] per row.
+    ok = CheckOutput(outputs[0], "y", {2, 3, 4}, {1.0f, 3.0f, 3.0f, 5.0f}) && ok;
     ok = CheckOutput(outputs[1], "mean", {2, 3, 1}, {2.0f}) && ok;
-    ok = CheckOutput(outputs[2], "variance", {2, 3, 1}, {1.0f}) && ok;
+    ok = CheckOutput(outputs[2], "rstd", {2, 3, 1}, {1.0f}) && ok;
     LOG_PRINT("[CHECK] total: %s\n", ok ? "PASS" : "FAIL");
     return ok ? SUCCESS : FAILED;
 }
@@ -221,7 +234,7 @@ int32_t RunGraph(Graph& graph, const vector<Tensor>& inputTensors)
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Session::RunGraph failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               delete session; return FAILED);
-    LOG_PRINT("LayerNorm graph run success, output count: %zu\n", outputTensors.size());
+    LOG_PRINT("LayerNormV4 graph run success, output count: %zu\n", outputTensors.size());
     const int32_t result = ValidateOutputs(outputTensors);
     delete session;
     return result;
@@ -236,7 +249,7 @@ int main()
               LOG_PRINT("[ERROR] GEInitialize failed, status=%u, error=%s\n", status, GetGeError().c_str());
               return FAILED);
 
-    Graph graph("layer_norm_graph");
+    Graph graph("layer_norm_v4_graph");
     vector<Tensor> inputTensors;
     vector<Operator> inputOps;
     vector<Operator> outputOps;

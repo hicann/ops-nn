@@ -1,5 +1,105 @@
+# LayerNormGradV3
+
+## 产品支持情况
+
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR&950DT系列产品</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas训练系列产品</term>：不支持
+<!-- end id6 -->
+
+## 功能说明
+
+- 算子功能：[LayerNormV4](../../layer_norm_v4/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
+- 计算公式：
+
+  $$
+  res\_for\_gamma = (input - mean) \times rstd
+  $$
+
+  $$
+  dy\_g = gradOut \times weight
+  $$
+
+  $$
+  temp_1 = 1/N \times \sum_{reduce\_axis\_1} gradOut \times weight
+  $$
+
+  $$
+  temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_1}(gradOut \times weight \times (input - mean) \times rstd)
+  $$
+
+  $$
+  gradInputOut = (gradOut \times weight - (temp_1 + temp_2)) \times rstd
+  $$
+
+  $$
+  gradWeightOut =  \sum_{reduce\_axis\_0}gradOut \times (input - mean) \times rstd
+  $$
+
+  $$
+  gradBiasOut = \sum_{reduce\_axis\_0}gradOut
+  $$
+
+  其中，N为进行归一化计算的轴的维度，即归一化轴维度的大小。
+
+## Ascend IR定义
+
+Ascend IR定义所在头文件路径：[layer_norm_grad_v3_proto.h](../op_graph/layer_norm_grad_v3_proto.h)
+
+```c++
+REG_OP(LayerNormGradV3)
+    .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(rstd, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(mean, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .ATTR(output_mask, ListBool, {true, true, true})
+    .OP_END_FACTORY_REG(LayerNormGradV3)
+```
+
+## 参数说明
+
+| 参数名 | 输入/属性/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度(shape) |
+| --- | --- | --- | --- | --- | --- | --- |
+| dy (Tensor) | 必选输入 | 正向输出的梯度，对应公式中的`gradOut`。 | 不支持空Tensor；至少为1维，各维度大小必须大于0。 | float32、float16、bfloat16 | ND | 至少1维，形状为[A1,...,Ai,R1,...,Rj] |
+| x (Tensor) | 必选输入 | 正向层归一化的输入，对应公式中的`input`。 | 不支持空Tensor；数据类型和shape必须与`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
+| rstd (Tensor) | 必选输入 | 正向计算得到的标准差倒数，对应公式中的`rstd`。 | 不支持空Tensor；shape必须与`mean`一致。 | float32、float16、bfloat16 | ND | 与`x`同维，形状为[A1,...,Ai,1,...,1] |
+| mean (Tensor) | 必选输入 | 正向计算得到的均值，对应公式中的`mean`。 | 不支持空Tensor；shape必须与`rstd`一致。 | float32、float16、bfloat16 | ND | 与`rstd`一致 |
+| gamma (Tensor) | 必选输入 | 正向计算使用的缩放权重，对应公式中的`weight`。 | 不支持空Tensor；至少为1维，shape必须与`dy`的末尾若干维一致。 | float32、float16、bfloat16 | ND | 至少1维，形状为[R1,...,Rj] |
+| output_mask (list bool) | 可选属性 | 标记`pd_x`、`pd_gamma`和`pd_beta`三个输出是否有效，列表元素按上述输出顺序一一对应。 | 长度必须为3，默认值为{true, true, true}；元素为false时，对应输出中的数据无意义。 | - | - | - |
+| pd_x (Tensor) | 必选输出 | 输入`x`的梯度，对应公式中的`gradInputOut`。 | 由`output_mask[0]`标记是否有效；数据类型和shape必须与`x`、`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
+| pd_gamma (Tensor) | 必选输出 | 缩放权重`gamma`的梯度，对应公式中的`gradWeightOut`。 | 由`output_mask[1]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
+| pd_beta (Tensor) | 必选输出 | 偏置的梯度，对应公式中的`gradBiasOut`。 | 由`output_mask[2]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
+
+## 约束说明
+
+- `dy`、`x`和`pd_x`的数据类型及shape必须相同；`rstd`和`mean`的shape必须相同。
+- `gamma`至少为1维，需满足`rank(gamma) <= rank(dy)`，且`gamma`的各维度必须与`dy`的末尾对应维度相等；`rstd`和`mean`的非归一化维度与`x`一致，归一化维度大小均为1。
+
+## 调用示例
+
+示例代码如下，仅供参考。GE图模式的编译和执行过程请参考[算子调用](../../../docs/zh/invocation/quick_op_invocation.md#ge图模式)。
+
+```c++
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,8 +109,8 @@
  */
 
 /*!
- * \file test_geir_layer_norm.cpp
- * \brief GE graph construction sample for LayerNorm.
+ * \file test_geir_layer_norm_grad_v3.cpp
+ * \brief GE graph construction sample for LayerNormGradV3.
  */
 
 #include <cmath>
@@ -28,7 +128,7 @@
 #include "graph.h"
 #include "tensor.h"
 #include "types.h"
-#include "../op_graph/layer_norm_proto.h"
+#include "../op_graph/layer_norm_grad_v3_proto.h"
 
 #define FAILED (-1)
 #define SUCCESS 0
@@ -117,31 +217,41 @@ int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc&
 
 int32_t BuildGraph(Graph& graph, vector<Tensor>& inputTensors, vector<Operator>& inputOps, vector<Operator>& outputOps)
 {
-    auto node = op::LayerNorm("layer_norm");
+    auto node = op::LayerNormGradV3("layer_norm_grad_v3");
     vector<int64_t> xShape = {2, 3, 4};
-    vector<int64_t> parameterShape = {4};
     vector<int64_t> statisticShape = {2, 3, 1};
+    vector<int64_t> parameterShape = {4};
 
-    ADD_INPUT(1, x, xShape, 1.0f);
-    // Six identical rows [1, 1, 3, 3]: mean=2, variance=1.
-    const float row[] = {1.0f, 1.0f, 3.0f, 3.0f};
-    vector<float> xValues(24);
-    for (size_t i = 0; i < xValues.size(); ++i) {
-        xValues[i] = row[i % 4];
+    ADD_INPUT(1, dy, xShape, 1.0f);
+    ADD_INPUT(2, x, xShape, 0.0f);
+    ADD_INPUT(3, rstd, statisticShape, 0.5f);
+    ADD_INPUT(4, mean, statisticShape, 0.0f);
+    ADD_INPUT(5, gamma, parameterShape, 4.0f);
+    vector<bool> outputMask = {true, true, true};
+    node.set_attr_output_mask(outputMask);
+
+    // Six rows: x=[-2,2,-2,2], dy=[1,2,3,4], mean=0, variance=4.
+    const float xRow[] = {-2.0f, 2.0f, -2.0f, 2.0f};
+    const float dyRow[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    const size_t count = inputTensors[0].GetSize() / sizeof(float);
+    vector<float> xValues(count);
+    vector<float> dyValues(count);
+    for (size_t i = 0; i < count; ++i) {
+        xValues[i] = xRow[i % 4];
+        dyValues[i] = dyRow[i % 4];
     }
-    auto ret = inputTensors[0].SetData(reinterpret_cast<uint8_t*>(xValues.data()), xValues.size() * sizeof(float));
+    auto ret = inputTensors[0].SetData(reinterpret_cast<uint8_t*>(dyValues.data()), dyValues.size() * sizeof(float));
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetData(dy) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+    ret = inputTensors[1].SetData(reinterpret_cast<uint8_t*>(xValues.data()), xValues.size() * sizeof(float));
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Tensor::SetData(x) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               return FAILED);
-    ADD_INPUT(2, gamma, parameterShape, 2.0f);
-    ADD_INPUT(3, beta, parameterShape, 3.0f);
-    node.set_attr_begin_norm_axis(2);
-    node.set_attr_begin_params_axis(2);
-    node.set_attr_epsilon(3.0f);
 
-    SET_OUTPUT(y, xShape);
-    SET_OUTPUT(mean, statisticShape);
-    SET_OUTPUT(variance, statisticShape);
+    SET_OUTPUT(pd_x, xShape);
+    SET_OUTPUT(pd_gamma, parameterShape);
+    SET_OUTPUT(pd_beta, parameterShape);
     outputOps.push_back(node);
     return SUCCESS;
 }
@@ -194,11 +304,11 @@ int32_t ValidateOutputs(const vector<Tensor>& outputs)
     CHECK_RET(outputs.size() == 3, LOG_PRINT("[CHECK] FAIL: expected 3 outputs, got %zu\n", outputs.size());
               return FAILED);
     bool ok = true;
-    // mean=2, variance=1; sqrt(variance+epsilon)=sqrt(1+3)=2.
-    // gamma=2, beta=3 -> y=(x-2)/2*2+3=[2,2,4,4] per row.
-    ok = CheckOutput(outputs[0], "y", {2, 3, 4}, {2.0f, 2.0f, 4.0f, 4.0f}) && ok;
-    ok = CheckOutput(outputs[1], "mean", {2, 3, 1}, {2.0f}) && ok;
-    ok = CheckOutput(outputs[2], "variance", {2, 3, 1}, {1.0f}) && ok;
+    // xhat=[-1,1,-1,1], gamma*rstd=2, mean(dy)=2.5, mean(dy*xhat)=0.5.
+    // dx=2*(dy-2.5-xhat*0.5); dgamma=6*dy*xhat; dbeta=6*dy.
+    ok = CheckOutput(outputs[0], "dx", {2, 3, 4}, {-2.0f, -2.0f, 2.0f, 2.0f}) && ok;
+    ok = CheckOutput(outputs[1], "dgamma", {4}, {-6.0f, 12.0f, -18.0f, 24.0f}) && ok;
+    ok = CheckOutput(outputs[2], "dbeta", {4}, {6.0f, 12.0f, 18.0f, 24.0f}) && ok;
     LOG_PRINT("[CHECK] total: %s\n", ok ? "PASS" : "FAIL");
     return ok ? SUCCESS : FAILED;
 }
@@ -221,7 +331,7 @@ int32_t RunGraph(Graph& graph, const vector<Tensor>& inputTensors)
     CHECK_RET(ret == GRAPH_SUCCESS,
               LOG_PRINT("[ERROR] Session::RunGraph failed, status=%u, error=%s\n", ret, GetGeError().c_str());
               delete session; return FAILED);
-    LOG_PRINT("LayerNorm graph run success, output count: %zu\n", outputTensors.size());
+    LOG_PRINT("LayerNormGradV3 graph run success, output count: %zu\n", outputTensors.size());
     const int32_t result = ValidateOutputs(outputTensors);
     delete session;
     return result;
@@ -236,7 +346,7 @@ int main()
               LOG_PRINT("[ERROR] GEInitialize failed, status=%u, error=%s\n", status, GetGeError().c_str());
               return FAILED);
 
-    Graph graph("layer_norm_graph");
+    Graph graph("layer_norm_grad_v3_graph");
     vector<Tensor> inputTensors;
     vector<Operator> inputOps;
     vector<Operator> outputOps;
@@ -252,3 +362,4 @@ int main()
               return FAILED);
     return ret;
 }
+```

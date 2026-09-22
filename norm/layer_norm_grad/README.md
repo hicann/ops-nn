@@ -4,18 +4,18 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 算子功能：LayerNorm的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-  
+
   $$
   rstd = \frac{1}{\sqrt{variance + epsilon}}
   $$
@@ -23,27 +23,27 @@
   $$
   res\_for\_gamma = (input - mean) \times rstd
   $$
-  
+
   $$
   dy\_g = gradOut \times weight
   $$
-  
+
   $$
   temp_1 = 1/N \times \sum_{reduce\_axis\_1} gradOut \times weight
   $$
-  
+
   $$
   temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_1}(gradOut \times weight \times (input - mean) \times rstd)
   $$
- 
+
   $$
   gradInputOut = (gradOut \times weight - (temp_1 + temp_2)) \times rstd
   $$
-  
+
   $$
   gradWeightOut =  \sum_{reduce\_axis\_0}gradOut \times (input - mean) \times rstd
   $$
-  
+
   $$
   gradBiasOut = \sum_{reduce\_axis\_0}gradOut
   $$
@@ -85,15 +85,15 @@
     <tr>
       <td>variance</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`</li>。<li>与输入mean的数据类型相同且位宽不低于输入`x`的数据类型位宽。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td><ul><li>不支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`</li>。<li>与输入`mean`的数据类型相同，仅支持FLOAT32。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。</li><li>与输入`variance`的数据类型相同且位宽不低于输入`x`的数据类型位宽。</li><li>shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td><ul><li>不支持空Tensor。</li><li>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。</li><li>与输入`variance`的数据类型相同，仅支持FLOAT32。</li><li>shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -113,14 +113,14 @@
     <tr>
       <td>pd_gamma</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</li><li>与输入`gamma`的数据类型相同，shape与`pd_beta`的shape相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</li><li>与输出`pd_beta`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_beta`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_beta</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</li><li>与输入`gamma`的数据类型相同，shape与`pd_gamma`的shape相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</li><li>与输出`pd_gamma`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_gamma`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -134,4 +134,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | -  | 通过[算子IR](op_graph/layer_norm_grad_proto.h)构图方式调用LayerNormGrad算子。         |
+| 图模式 | [test_geir_layer_norm_grad](examples/test_geir_layer_norm_grad.cpp) | 通过[Ascend IR](docs/ascendirLayerNormGrad.md)构图方式调用LayerNormGrad算子。 |

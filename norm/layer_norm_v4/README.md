@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×   |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×   |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 |  <term>Kirin X90 处理器系列产品</term> | √ |
 |  <term>Kirin 9030 处理器系列产品</term> | √ |
 
@@ -28,7 +28,7 @@
   $$
 
   $$
-  rstd = \frac{1}{ \sqrt{\mathrm{Var}[x] + eps}} 
+  rstd = \frac{1}{ \sqrt{\mathrm{Var}[x] + eps}}
   $$
 
   $$
@@ -130,4 +130,4 @@
 | aclnn接口  | [test_aclnn_fast_layer_norm](examples/test_aclnn_fast_layer_norm.cpp) | 通过[aclnnFastLayerNorm](docs/aclnnFastLayerNorm.md)接口方式调用LayerNormV4算子。 |
 | aclnn接口  | [test_aclnn_layer_norm_v4](examples/test_aclnn_layer_norm_v4.cpp) | 通过[aclnnLayerNorm](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | aclnn接口  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
-| 图模式 | - | 通过[算子IR](op_graph/layer_norm_v4_proto.h)构图方式调用LayerNormV4算子。         |
+| 图模式 | [test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp) | 通过[Ascend IR](docs/ascendirLayerNormV4.md)构图方式调用LayerNormV4算子。 |
