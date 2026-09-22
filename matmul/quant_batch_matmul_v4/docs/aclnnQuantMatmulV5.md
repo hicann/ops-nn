@@ -838,7 +838,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1的约束：
     - 当数据类型为INT4时，transposeX1为false。维度为：（m，k），要求k为偶数。
     - 当数据类型为INT32时，transposeX1为false。每个INT32数据存放8个INT4数据，对应维度表示：（m，ceil(k / 8)），要求k为8的倍数。
-    - 当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数。
+
   - x2的约束：
     - 数据类型为INT4时：
       - 当前仅支持2维ND格式。
