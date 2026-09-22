@@ -34,8 +34,8 @@ extern "C" {
  * @param [in] batch2: npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16类型，且数据类型需要与batch1保持一致，shape需要与batch1满足bmm输入约束关系。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] beta: host侧的aclScalar，默认为1
- * @param [in] alpha: host侧的aclScalar，默认为1
+ * @param [in] beta: host侧的aclScalar，必须显式传入，接口无默认值机制
+ * @param [in] alpha: host侧的aclScalar，必须显式传入，接口无默认值机制
  * @param [in] cubeMathType:
  * INT8类型的枚举值，用于判断Cube单元应该使用哪种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
  * @param [in] out: npu
@@ -83,8 +83,8 @@ ACLNN_API aclnnStatus aclnnBaddbmm(void* workspace, uint64_t workspaceSize, aclO
  * @param [in] batch2: npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16类型，且数据类型需要与batch1保持一致，shape需要与batch1满足bmm输入约束关系。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] beta: host侧的aclScalar，默认为1
- * @param [in] alpha: host侧的aclScalar，默认为1
+ * @param [in] beta: host侧的aclScalar，必须显式传入，接口无默认值机制
+ * @param [in] alpha: host侧的aclScalar，必须显式传入，接口无默认值机制
  * @param [in] cubeMathType:
  * INT8类型的枚举值，用于判断Cube单元应该使用哪种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
