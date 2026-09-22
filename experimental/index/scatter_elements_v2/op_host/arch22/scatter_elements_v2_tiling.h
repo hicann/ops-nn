@@ -1,0 +1,73 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License")
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file scatter_elements_v2_tiling.h
+ * \brief
+ */
+#ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_ELEMENTS_V2_H
+#define OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_ELEMENTS_V2_H
+
+#include "register/tilingdata_base.h"
+
+namespace optiling {
+BEGIN_TILING_DATA_DEF(ScatterElementsV2TilingData)
+TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(uint64_t, eachNum);
+TILING_DATA_FIELD_DEF(uint64_t, extraTaskCore);
+TILING_DATA_FIELD_DEF(uint64_t, eachPiece);
+TILING_DATA_FIELD_DEF(uint64_t, inputOnePiece);
+TILING_DATA_FIELD_DEF(uint64_t, inputCount);
+TILING_DATA_FIELD_DEF(uint64_t, indicesCount);
+TILING_DATA_FIELD_DEF(uint64_t, updatesCount);
+TILING_DATA_FIELD_DEF(uint64_t, inputOneTime);
+TILING_DATA_FIELD_DEF(uint64_t, indicesOneTime);
+TILING_DATA_FIELD_DEF(uint64_t, updatesOneTime);
+TILING_DATA_FIELD_DEF(uint64_t, inputEach);
+TILING_DATA_FIELD_DEF(uint64_t, indicesEach);
+TILING_DATA_FIELD_DEF(uint64_t, inputLast);
+TILING_DATA_FIELD_DEF(uint64_t, indicesLast);
+TILING_DATA_FIELD_DEF(uint64_t, inputLoop);
+TILING_DATA_FIELD_DEF(uint64_t, indicesLoop);
+TILING_DATA_FIELD_DEF(uint64_t, inputAlign);
+TILING_DATA_FIELD_DEF(uint64_t, indicesAlign);
+TILING_DATA_FIELD_DEF(uint64_t, updatesAlign);
+TILING_DATA_FIELD_DEF(uint64_t, lastIndicesLoop);
+TILING_DATA_FIELD_DEF(uint64_t, lastIndicesEach);
+TILING_DATA_FIELD_DEF(uint64_t, lastIndicesLast);
+TILING_DATA_FIELD_DEF(uint64_t, oneTime);
+TILING_DATA_FIELD_DEF(uint64_t, lastOneTime);
+TILING_DATA_FIELD_DEF(uint64_t, modeFlag);
+TILING_DATA_FIELD_DEF(uint64_t, includeSelf);
+TILING_DATA_FIELD_DEF(uint64_t, mode);
+// Execution plan selector shared by the legacy and cache kernels.
+TILING_DATA_FIELD_DEF(uint64_t, M);
+// 低内存分支参数
+TILING_DATA_FIELD_DEF(int32_t, coreNums);
+TILING_DATA_FIELD_DEF(uint64_t, xDim0);
+TILING_DATA_FIELD_DEF(uint64_t, xDim1);
+TILING_DATA_FIELD_DEF(uint64_t, indicesDim0);
+TILING_DATA_FIELD_DEF(uint64_t, indicesDim1);
+TILING_DATA_FIELD_DEF(uint64_t, updatesDim0);
+TILING_DATA_FIELD_DEF(uint64_t, updatesDim1);
+TILING_DATA_FIELD_DEF(uint64_t, batchSize);
+TILING_DATA_FIELD_DEF(uint64_t, realDim);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2TilingData)
+struct ScatterElementsV2CompileInfo {
+    int32_t totalCoreNum = 30;
+    uint64_t ubSizePlatForm = 0;
+    uint64_t workspaceSize = 0;
+    bool is_regbase = false;
+};
+} // namespace optiling
+
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_ELEMENTS_V2_H
