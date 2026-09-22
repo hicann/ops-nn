@@ -373,6 +373,7 @@ public:
 
         uint64_t multiKAL1 = 1;
         uint64_t multiKBL1 = 1;
+        uint32_t biasL1BlockStride = 0; // biasL1 全量预载的块步长
         uint64_t maxKAL1Iter = 0;
         uint64_t maxKBL1Iter = 0;
         uint64_t maxNBL1Iter = 0;

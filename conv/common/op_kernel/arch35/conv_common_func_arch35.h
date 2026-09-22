@@ -208,6 +208,8 @@ struct ConvPreProcess {
                 if (self->ctx.convTilingData->biasFullLoadFlag && self->ctx.enableBias) {
                     self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
                     uint64_t biasLoadNum = self->ctx.singleCoreCo;
+                    self->ctx.biasL1BlockStride = static_cast<uint32_t>(
+                        AlignB(biasLoadNum * Intf::sizeOfBias, PADDING_ALIGN_SIZE) / Intf::sizeOfBias);
                     self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm, biasLoadNum,
                                                                       0);
                     self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
