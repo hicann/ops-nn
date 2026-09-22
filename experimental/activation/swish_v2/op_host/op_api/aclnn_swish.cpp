@@ -14,7 +14,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "swish.h"
 #include "op_api/aclnn_util.h"
-#include "op_api/level2_base.h"
+#include "op_api/level2_base_nn.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
