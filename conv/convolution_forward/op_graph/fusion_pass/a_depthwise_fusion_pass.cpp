@@ -14,11 +14,6 @@
 #include "ge/es_graph_builder.h"
 #include "graph/graph.h"
 #include "register/register_custom_pass.h"
-#include "version/ge-compiler_version.h"
-
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-#include "ge/fusion/graph_fuse_inspector_utils.h"
-#endif
 
 namespace Ops {
 using namespace NN;
@@ -79,12 +74,7 @@ bool ADepthwiseFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& depthwi
                       return false);
 
     std::vector<GNode> nodesBeforeFuse = {depthwiseNode};
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     GNodePtr filterProducer = depthwiseNode.GetInDataNodesAndPortIndexs(FILTER_INPUT_INDEX).first;
     FUSION_PASS_CHECK(filterProducer == nullptr,
@@ -102,11 +92,7 @@ bool ADepthwiseFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& depthwi
         FUSION_PASS_CHECK_NOLOG(!InsertReshapeForConsumers(*graph, *filterProducer, TARGET_TYPES), return false);
     }
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(
-        ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, insertedReshapeNodes, passContext) != SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "ReportFuse failed."), return false);
-#endif
+    FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, insertedReshapeNodes, passContext), return false);
     return true;
 }
 
