@@ -5,6 +5,8 @@
 - [situ_glu](../../activation/situ_glu/docs/torchapi_situ_glu.md)
 - [situ_glu_grad](../../activation/situ_glu_grad/docs/torchapi_situ_glu_grad.md)
 - [swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)
+- [cla_gate_quant](../../activation/cla_gate_quant/docs/torchapi_cla_gate_quant.md)
+- [cla_gate_backward](../../activation/cla_gate_backward/docs/torchapi_cla_gate_backward.md)
 - [clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)
 - [clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)
 - [swiglu_group_backward](../../activation/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)

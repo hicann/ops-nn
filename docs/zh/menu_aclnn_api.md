@@ -68,6 +68,8 @@
 - [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md)
 - [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md)
 - [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md)
+- [aclnnClaGateQuant](../../activation/cla_gate_quant/docs/aclnnClaGateQuant.md)
+- [aclnnClaGateBackward](../../activation/cla_gate_backward/docs/aclnnClaGateBackward.md)
 - [aclnnClippedSwiglu](../../activation/clipped_swiglu/docs/aclnnClippedSwiglu.md)
 - [aclnnClippedSwigluV2](../../activation/clipped_swiglu/docs/aclnnClippedSwigluV2.md)
 - [aclnnClippedSwigluGrad](../../activation/clipped_swiglu_grad/docs/aclnnClippedSwigluGrad.md)

@@ -8,19 +8,12 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = [
-    "situ_glu",
-    "situ_glu_grad",
-    "swiglu_group",
-    "swiglu_group_backward",
-    "swiglu_group_grad",
-    "cla_gate_quant",
-    "swiglu_group_quant",
-]
-
-from .situ_glu import situ_glu
-from .situ_glu_grad import situ_glu_grad
-from .swiglu_group import swiglu_group
-from .swiglu_group_grad import swiglu_group_backward, swiglu_group_grad
 from .cla_gate_quant import cla_gate_quant
-from .swiglu_group_quant import swiglu_group_quant
+from .graph_convert_cla_gate_quant import (
+    convert_cla_gate_quant,
+)
+
+__all__ = [
+    "cla_gate_quant",
+    "convert_cla_gate_quant",
+]
