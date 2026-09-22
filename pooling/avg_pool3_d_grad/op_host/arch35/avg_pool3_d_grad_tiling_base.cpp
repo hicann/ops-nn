@@ -13,6 +13,7 @@
  * \brief 3D average pooling backward shared tiling base (arch35/runtime2.0).
  */
 
+#include <algorithm>
 #include <cstdint>
 
 #include "op_host/tiling_templates_registry.h"
@@ -58,6 +59,7 @@ static const int32_t DHWC_W_DIM = 2;
 static const int32_t DHWC_C_DIM = 3;
 
 static const int32_t ONE = 1;
+static const int32_t PADS_PER_DIM = 2; // front/back pads per dim
 
 static inline bool IsInvalidType(const ge::DataType& dtype)
 {
@@ -349,6 +351,39 @@ void AvgPool3DGradTilingBase::SetPadInfo(const gert::RuntimeAttrs* runtimeAttrs)
     inputData.pad = {frontPad, backendPad, topPad, bottomPad, leftPad, rightPad};
 }
 
+// -1 in the pads attr is the placeholder written by the built-in op_proto infershape for
+// "padding=SAME + orig_input_shape const unresolved" (family protocol, same as
+// Conv3DBackpropInput). Derive pads from the grads shape so they are self-consistent:
+//   padTotal = max(0, (gradDim - 1) * stride + kernel - inputDim), front = padTotal / 2.
+// Explicit non-negative pads are never touched; derived results still go through CheckGradValid.
+void AvgPool3DGradTilingBase::ResolveUnsetPads()
+{
+    bool needsResolve = false;
+    for (const int64_t padValue : inputData.pad) {
+        if (padValue < 0) {
+            needsResolve = true; // unresolved placeholder
+            break;
+        }
+    }
+    if (!needsResolve) {
+        return;
+    }
+    for (int32_t dim = 0; dim < DHW_DIMS_; ++dim) {
+        const int64_t inputDim = inputData.inputShape[dim];
+        const int64_t gradDim = inputData.gradShape[dim];
+        const int64_t kernelDim = inputData.kernelSize[dim];
+        const int64_t strideDim = inputData.stride[dim];
+        if (inputDim <= 0 || gradDim <= 0 || kernelDim <= 0 || strideDim <= 0) {
+            return; // dims invalid, let CheckGradValid report it
+        }
+        const int64_t padTotal = std::max((gradDim - ONE) * strideDim + kernelDim - inputDim, static_cast<int64_t>(0));
+        const size_t frontIdx = static_cast<size_t>(dim) * PADS_PER_DIM; // pads layout: [dF, dB, hT, hB, wL, wR]
+        const size_t backIdx = frontIdx + 1;
+        inputData.pad[frontIdx] = padTotal / 2;
+        inputData.pad[backIdx] = padTotal - padTotal / 2;
+    }
+}
+
 void AvgPool3DGradTilingBase::SetMiscAttrs(const gert::RuntimeAttrs* runtimeAttrs)
 {
     inputData.ceilMode = false;
@@ -508,6 +543,7 @@ ge::graphStatus AvgPool3DGradTilingBase::GetShapeAttrsInfo()
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input params failed."),
                 return ge::GRAPH_FAILED);
+    ResolveUnsetPads();
     OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckGradValid(), OP_LOGE(context_->GetNodeName(), "The grad shape is invalid."),
                 return ge::GRAPH_FAILED);
     SetOtherInputParams();

@@ -86,6 +86,7 @@ private:
     void SetKernelSizeInfo(const gert::RuntimeAttrs* runtimeAttrs, const AvgPool3DCommon& commInfo);
     void SetStrideInfo(const gert::RuntimeAttrs* runtimeAttrs, const AvgPool3DCommon& commInfo);
     void SetPadInfo(const gert::RuntimeAttrs* runtimeAttrs);
+    void ResolveUnsetPads();
     void SetMiscAttrs(const gert::RuntimeAttrs* runtimeAttrs);
     bool IsKernelStrideValid() const;
     bool IsPadValid() const;
