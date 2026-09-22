@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -114,7 +114,7 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - 参数`x`、`y`、`scale`的shape仅支持2维
     - 参数`round_mode`只支持rint。
     - 参数`dst_type`仅支持取值2，代表INT8。
@@ -123,7 +123,7 @@
     - 参数`dst_type_max`仅支持取值0。
     - 参数`y`的数据类型仅支持INT8。
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
     - 参数`x`、`y`、`scale`的shape仅支持2维或3维。
     - 参数`round_mode`的取值与参数`y`的数据类型存在对应关系：
       - 当输出`y`的数据类型是HIFLOAT8时，参数`round_mode`支持设置为round。
@@ -142,4 +142,4 @@
 | aclnn接口  | [test_aclnn_dynamic_block_quant](examples/test_aclnn_dynamic_block_quant.cpp) | 通过[aclnnDynamicBlockQuant](docs/aclnnDynamicBlockQuant.md)接口方式调用DynamicBlockQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_block_quant_proto.h)构图方式调用DynamicBlockQuant算子。         |
 
-<!--图模式仅支持Ascend 950PR/Ascend 950DT-->
+<!--图模式仅支持Ascend 950PR&950DT系列产品-->

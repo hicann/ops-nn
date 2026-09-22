@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>     |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas Kirin X90 处理器系列产品</term>    |     √    |
-|  <term>Atlas Kirin 9030 处理器系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>     |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
+|  <term>kirin X90处理器系列产品</term>    |     √    |
+|  <term>kirin 9030 处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -147,7 +147,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas Kirin X90 处理器系列产品</term>、<term>Atlas Kirin 9030 处理器系列产品</term>：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
+- <term>kirin X90处理器系列产品</term>、<term>kirin 9030 处理器系列产品</term>：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
 
 ## 约束说明
 

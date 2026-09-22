@@ -4,25 +4,25 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 算子功能：对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为:
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrtMode为true时，计算公式为:
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -96,7 +96,7 @@
     </tr>
   </tbody></table>
 
-- <term>Ascend 950PR/Ascend 950DT </term>：数据类型支持FLOAT32、FLOAT16。
+- <term>Ascend 950PR&950DT系列产品 </term>：数据类型支持FLOAT32、FLOAT16。
 
 ## 约束说明
 

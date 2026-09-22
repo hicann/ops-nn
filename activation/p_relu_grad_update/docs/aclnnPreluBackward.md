@@ -1,26 +1,26 @@
 # aclnnPreluBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/p_relu_grad_update)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/p_relu_grad_update)
 
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：支持
+- <term>Atlas训练系列产品</term>：支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -100,7 +100,7 @@ aclnnStatus aclnnPreluBackward(
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播的梯度值。公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>，且Broadcast后shape与self的shape相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor，输入不支持包含±inf或nan。</li><li>dtype需要与self相同。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>，且Broadcast后shape与self的shape相等。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnPreluBackward(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>prelu的正向输入值。公式中的self。</td>
-      <td>支持空Tensor。</td>
+      <td>不支持空Tensor，输入不支持包含±inf或nan。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnPreluBackward(
       <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>prelu的权重，公式中的weight。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>当self的shape维度大于1维时，weight的shape维度可以与self的shape维度相同且第2维度的值保持一致，同时weight的shape其他维度的值为1；或者weight是1维Tensor，元素个数为self的shape的第2维度。</li><li>否则，weight元素个数为1。</li></ul></td>
+      <td><ul><li>不支持空Tensor，输入不支持包含±inf或nan。</li><li>dtype需要与self相同。</li><li>当self的shape维度大于1维时，weight的shape维度可以与self的shape维度相同且第2维度的值保持一致，同时weight的shape其他维度的值为1；或者weight是1维Tensor，元素个数为self的shape的第2维度。</li><li>否则，weight元素个数为1。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -170,7 +170,7 @@ aclnnStatus aclnnPreluBackward(
   </table>
 
    <!-- npu="910" id7 -->
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
+   - <term>Atlas训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
    <!-- end id7 -->
 
 - **返回值：**

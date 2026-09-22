@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                              |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                       |    √     |
+| <term>Atlas A3系列产品</term>     |    √     |
+| <term>Atlas A2系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                              |    ×     |
+| <term>Atlas训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
@@ -91,7 +91,7 @@
   </tbody>
 </table>
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 支持的(输入`x`dtype，输出`y`dtype)组合：
     - (INT8, FLOAT16)、(INT8, FLOAT32)
     - (HIFLOAT8, FLOAT16)、(HIFLOAT8, FLOAT32)
@@ -103,7 +103,7 @@
 - `scale`、`offset`为标量属性，仅支持per-tensor反量化。
 - 输入`x`与输出`y`的shape必须完全一致，不支持空Tensor，每个维度大小须大于0。
 - `dtype`属性仅支持FLOAT16、FLOAT32，且必须与输出`y`的实际dtype一致。
-- 仅支持 <term>Ascend 950PR/Ascend 950DT</term>；其他产品形态不支持。
+- 仅支持 <term>Ascend 950PR&950DT系列产品</term>；其他产品形态不支持。
 - 当前不提供aclnn接口，仅支持图模式调用。
 
 ## 调用说明

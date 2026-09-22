@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
+| <term>Atlas A3系列产品</term>     |    ×     |
+| <term>Atlas A2系列产品</term> |    ×     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                             |    ×     |
+| <term>Atlas训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
@@ -65,7 +65,7 @@
 
 ## 参数说明
 
-  | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |  
+  | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
   | ----- | ----- |----- |----- |----- |
   | x | 输入 | 表示输入x，对应公式中$V_i$。<br>当dst_type为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。 | FLOAT16、BFLOAT16 | ND |
   | round_mode  | 可选属性 | 表示数据转换的模式，对应公式中的round_mode。<br>当dst_type为40/41，对应输出y的数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}；<br>当dst_type为35/36，对应输出y的数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；<br>传入空指针时，采用"rint"模式。 | STRING | - |
