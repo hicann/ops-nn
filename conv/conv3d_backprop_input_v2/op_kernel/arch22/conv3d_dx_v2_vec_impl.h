@@ -28,6 +28,9 @@ constexpr int32_t VEC_BLOCK_BYTES = 32;
 constexpr int32_t DATACOPY_PAD_MAX_ELEMS = 255;
 } // namespace
 
+constexpr uint64_t FP32_VEC_ROW_BYTES = 20ULL;
+constexpr uint64_t FP32_ROW_UB_LIMIT = 64ULL * 1024ULL;
+
 template <typename T>
 __aicore__ inline float VecToFloat(T value)
 {
@@ -150,16 +153,54 @@ private:
             dataPerBlock == 0) {
             return false;
         }
-        // DataCopyPad 左右填充按字节计不能超过 32B（bf16/fp16 元素上限不够）
-        if (static_cast<int64_t>(padLDx) * sizeof(T) > VEC_BLOCK_BYTES) {
-            return false;
-        }
-        const int64_t rightPadMax = static_cast<int64_t>(gradInW) - static_cast<int64_t>(gradOutW) +
-                                    (static_cast<int64_t>(kernelW) - 1) * dilationW - padLDx;
-        if (rightPadMax > 0 && rightPadMax * sizeof(T) > VEC_BLOCK_BYTES) {
-            return false;
+        if constexpr (!std::is_same<T, float>::value) {
+            // BF16/FP16 维持既有 32B 填充约束
+            if (static_cast<int64_t>(padLDx) * sizeof(T) > VEC_BLOCK_BYTES) {
+                return false;
+            }
+            const int64_t rightPadMax = Fp32RightPadMax();
+            if (rightPadMax > 0 && rightPadMax * sizeof(T) > VEC_BLOCK_BYTES) {
+                return false;
+            }
         }
         return alignedWi <= 0xFFFFU;
+    }
+
+    __aicore__ inline int64_t Fp32RightPadMax() const
+    {
+        return static_cast<int64_t>(gradInW) - static_cast<int64_t>(gradOutW) +
+               (static_cast<int64_t>(kernelW) - 1) * static_cast<int64_t>(dilationW) - static_cast<int64_t>(padLDx);
+    }
+
+    __aicore__ inline bool Fp32PadExceedsVecLimit() const
+    {
+        if (static_cast<int64_t>(padLDx) * static_cast<int64_t>(sizeof(float)) > VEC_BLOCK_BYTES) {
+            return true;
+        }
+        const int64_t rightPadMax = Fp32RightPadMax();
+        return rightPadMax > 0 && rightPadMax * static_cast<int64_t>(sizeof(float)) > VEC_BLOCK_BYTES;
+    }
+
+    __aicore__ inline bool CanUseFp32VecRow() const
+    {
+        if (!CanUseBf16VecRow()) {
+            return false;
+        }
+        return !Fp32PadExceedsVecLimit() || UseDhBlockedAcc();
+    }
+
+    __aicore__ inline bool UseDhBlockedAcc() const
+    {
+        if constexpr (!std::is_same<T, float>::value) {
+            return false;
+        } else {
+            if (!Fp32PadExceedsVecLimit()) {
+                return false;
+            }
+            const uint64_t need = static_cast<uint64_t>(alignedWi) * (FP32_VEC_ROW_BYTES + sizeof(float)) +
+                                  static_cast<uint64_t>(dilatedHk) * alignedDilatedW * sizeof(T);
+            return need <= FP32_ROW_UB_LIMIT;
+        }
     }
 
     // 仅 BF16：strideW>1 按相位分解向量化，每相位 tap 仍是一条连续 DataCopyPad
@@ -260,7 +301,19 @@ private:
         Muls(prod, prod, wv, alignedWi);
         SetFlag<HardEvent::V_S>(evtVToS_); // V->S 屏障：Muls 完成后 Add 才能读 prod
         WaitFlag<HardEvent::V_S>(evtVToS_);
-        Add(rowAcc, rowAcc, prod, alignedWi);
+        if constexpr (std::is_same<T, float>::value) {
+            // FP32 用 Kahan 补偿累加，抑制长链舍入漂移
+            LocalTensor<float> tmpT = gradRow;
+            LocalTensor<float> tmpE = tmpBufOutH.Get<float>();
+            LocalTensor<float> comp = tmpBufRowComp.Get<float>();
+            Add(tmpT, rowAcc, prod, alignedWi);
+            Sub(tmpE, rowAcc, tmpT, alignedWi);
+            Add(tmpE, tmpE, prod, alignedWi);
+            Add(comp, comp, tmpE, alignedWi);
+            Adds(rowAcc, tmpT, 0.0f, alignedWi);
+        } else {
+            Add(rowAcc, rowAcc, prod, alignedWi);
+        }
     }
 
     // FP32 下 Cast 同型不被支持，用 Adds+0 等价拷贝
@@ -271,6 +324,54 @@ private:
         } else {
             Cast(outH, rowAcc, RoundMode::CAST_RINT, len);
         }
+    }
+
+    __aicore__ inline void AccumulateBf16TapBlocked(uint64_t goRowBase, uint32_t dw, float wv,
+                                                    LocalTensor<float>& rowAcc, LocalTensor<float>& prod,
+                                                    LocalTensor<T>& gradRow)
+    {
+        const int32_t delta = static_cast<int32_t>(dw) - padLDx;
+        const uint32_t pFirst = delta < 0 ? static_cast<uint32_t>(-delta) : 0U;
+        const uint32_t m0 = delta > 0 ? static_cast<uint32_t>(delta) : 0U;
+        if (m0 >= gradOutW || pFirst >= gradInW) {
+            return;
+        }
+        const uint32_t availOut = static_cast<uint32_t>(gradOutW) - m0;
+        const uint32_t availIn = static_cast<uint32_t>(gradInW) - pFirst;
+        const uint32_t validLen = (availOut < availIn) ? availOut : availIn;
+        if (validLen == 0) {
+            return;
+        }
+        const uint32_t dstOffset = (pFirst / dataPerBlock) * dataPerBlock;
+        const uint32_t leftPad = pFirst - dstOffset;
+        const uint32_t written = pFirst + validLen;
+        const uint32_t writtenAligned = ((written + dataPerBlock - 1) / dataPerBlock) * dataPerBlock;
+        uint32_t rightPad = writtenAligned - written;
+        if (rightPad > dataPerBlock) {
+            rightPad = dataPerBlock;
+        }
+
+        Duplicate(gradRow, static_cast<T>(0), alignedWi);
+        SetFlag<HardEvent::V_MTE2>(evtVToMte2_);
+        WaitFlag<HardEvent::V_MTE2>(evtVToMte2_);
+        DataCopyExtParams tapParams(1, validLen * sizeof(T), 0, 0, 0);
+        DataCopyPadExtParams<T> tapPad(true, static_cast<uint8_t>(leftPad), static_cast<uint8_t>(rightPad),
+                                       static_cast<T>(0));
+        DataCopyPad<T>(gradRow[dstOffset], gradOutputGm[goRowBase + m0], tapParams, tapPad);
+        SetFlag<HardEvent::MTE2_V>(evtMte2ToV_);
+        WaitFlag<HardEvent::MTE2_V>(evtMte2ToV_);
+
+        if constexpr (std::is_same<T, float>::value) {
+            Adds(prod, gradRow, 0.0f, alignedWi);
+        } else {
+            Cast(prod, gradRow, RoundMode::CAST_NONE, alignedWi);
+        }
+        SetFlag<HardEvent::V_S>(evtVToS_);
+        WaitFlag<HardEvent::V_S>(evtVToS_);
+        Muls(prod, prod, wv, alignedWi);
+        SetFlag<HardEvent::V_S>(evtVToS_);
+        WaitFlag<HardEvent::V_S>(evtVToS_);
+        Add(rowAcc, rowAcc, prod, alignedWi);
     }
 
     // 相位分解 tap 累加：与 AccumulateBf16Tap 同构，作用于紧凑类缓冲
@@ -336,6 +437,9 @@ private:
     __aicore__ inline void AccumulateBf16VecRowTaps(uint64_t goPlaneBase, uint32_t hi, LocalTensor<float>& rowAcc,
                                                     LocalTensor<float>& prod, LocalTensor<T>& gradRow,
                                                     LocalTensor<T>& weightDilated);
+    __aicore__ inline void AccumulateBf16VecRowTapsBlocked(uint64_t goPlaneBase, uint32_t hi,
+                                                           LocalTensor<float>& rowAcc, LocalTensor<float>& prod,
+                                                           LocalTensor<T>& gradRow, LocalTensor<T>& weightDilated);
     __aicore__ inline void AccumulateBf16VecStridedTaps(uint32_t ciLocal, uint32_t coStart, uint32_t coEnd, uint32_t n,
                                                         uint32_t diRow, uint32_t hi, uint32_t kMax, uint32_t kAligned,
                                                         int32_t dw0, int32_t c0, uint32_t sW,
@@ -349,6 +453,7 @@ private:
     __aicore__ inline void AccumulateScalarRowTaps(uint64_t goPlaneBase, uint32_t hi, uint64_t rowBase,
                                                    LocalTensor<float>& rowAcc, LocalTensor<T>& weightDilated);
     __aicore__ inline void ComputeRowBf16Vec(uint64_t r);
+    __aicore__ inline void ComputeRowBf16VecPlain(uint64_t r);
     __aicore__ inline void ComputeRowBf16VecStrided(uint64_t r);
     __aicore__ inline void ComputeRowScalarAcc(uint64_t r);
     __aicore__ inline void ComputeRow(uint64_t r);
@@ -364,11 +469,15 @@ private:
     uint32_t dataPerBlock, alignedWi, classAlignedWi;
     uint32_t vecScalarOnly = 0;
     uint32_t useScalarAcc = 0;
+    uint32_t dhBlocked = 0;
+    // 标量 UB 累加（UseUbAcc=true）在 T=float 时使用的补偿数组（复用 outH，行末折回 rowAcc）
+    LocalTensor<float> scalarComp;
     uint32_t blockDim;
 
     TPipe pipe;
     TBuf<QuePosition::VECCALC> tmpBufWeightDilated;
     TBuf<QuePosition::VECCALC> tmpBufRowAcc;
+    TBuf<QuePosition::VECCALC> tmpBufRowComp; // FP32 补偿缓冲
     TBuf<QuePosition::VECCALC> tmpBufProd;
     TBuf<QuePosition::VECCALC> tmpBufGradRow;
     TBuf<QuePosition::VECCALC> tmpBufOutH;

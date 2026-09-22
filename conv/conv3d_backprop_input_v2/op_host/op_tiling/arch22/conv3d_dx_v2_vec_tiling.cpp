@@ -32,6 +32,7 @@ constexpr uint32_t FP32_BITS = 3;
 constexpr uint32_t UB_BUDGET_DIVISOR = 2;        // UB 总容量按 2 分配，留一半给其他缓冲
 constexpr uint32_t KB_UNIT = 1024;               // 日志中 KB 换算单位
 constexpr uint32_t SCALAR_ACC_ROW_BYTES = 8;     // rowAcc(FP32) + outH(保守按 FP32) 每元素字节
+constexpr uint32_t FP32_VEC_ROW_BYTES = 20;      // rowAcc/prod/gradRow/outH/rowComp 各 4B 每元素字节
 constexpr uint32_t DATACOPY_PAD_MAX_ELEMS = 255; // DataCopyPad 单侧填充元素上限（uint8_t）
 const size_t FILTER_INDEX = 1;
 const size_t OUT_BACKPROP_INDEX = 2;
@@ -242,10 +243,10 @@ void Conv3DDXV2VecTiling::CalcFp32UbBudget(uint64_t ubSize)
 {
     auto& dx = tilingData_.conv3DDxTiling;
     const uint64_t ubBudget = ubSize / UB_BUDGET_DIVISOR;
-    // FP32 vector path UB budget check（与 kernel InitBuffer 一致的口径）：
-    //   向量快路径（CanUseBf16VecRow 同款条件）行缓冲 rowAcc/prod/gradRow/outH = alignedWi*16B；
-    //   strideW>1 或 pad 超限时降级 ComputeRowScalarAcc，只需 rowAcc/outH = alignedWi*8B；
-    //   weightDilated 按 dilatedHk*alignedDilatedW*4B。超限降级为纯标量 ComputeRow。
+    // FP32 行缓冲 UB 预算（与 kernel InitBuffer 口径一致）：
+    //   向量快路径行缓冲 rowAcc/prod/gradRow/outH/rowComp = alignedWi*20B；
+    //   降级 ComputeRowScalarAcc 只需 rowAcc/outH = alignedWi*8B；
+    //   再加 weightDilated（dilatedHk*alignedDilatedW*4B）。超限则降级为纯标量 ComputeRow。
     if (vecDtype_ == ge::DT_FLOAT) {
         const uint32_t alignedWi = ((static_cast<uint32_t>(dx.wi) + dx.dataPerBlock - 1) / dx.dataPerBlock) *
                                    dx.dataPerBlock;
@@ -256,7 +257,8 @@ void Conv3DDXV2VecTiling::CalcFp32UbBudget(uint64_t ubSize)
                                dx.dilatedWk <= static_cast<uint32_t>(DATACOPY_PAD_MAX_ELEMS) && dx.wi > 0 &&
                                dx.wo > 0 && static_cast<int64_t>(dx.padLDx) * sizeof(float) <= BYTE_BLOCK &&
                                (rightPadMax <= 0 || rightPadMax * sizeof(float) <= BYTE_BLOCK) && alignedWi <= 0xFFFFU;
-        uint64_t fp32UbNeed = static_cast<uint64_t>(alignedWi) * (canVecRow ? 16 : 8) +
+        uint64_t fp32UbNeed = static_cast<uint64_t>(alignedWi) *
+                                  (canVecRow ? FP32_VEC_ROW_BYTES : SCALAR_ACC_ROW_BYTES) +
                               static_cast<uint64_t>(dx.dilatedHk) * dx.alignedDilatedW * sizeof(float);
         if (fp32UbNeed > ubBudget) {
             OP_LOGI(opName_,
