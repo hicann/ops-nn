@@ -14,6 +14,7 @@
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_TILING_COMMON_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_RNN_TILING_COMMON_H
+#include <cstdio>
 #include <cstdint>
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -28,12 +29,12 @@
 #include "dynamic_lstm_tiling.h"
 
 namespace {
-#define OPS_CHECK_NULL_WITH_CONTEXT_RET(context, ptr, ret)                                           \
-    if ((ptr) == nullptr) {                                                                          \
-        const char* name = ((context)->GetNodeName() == nullptr) ? "nil" : (context)->GetNodeName(); \
-        std::printf("EZ9999 op[%s], %s is nullptr!", name, #ptr);                                    \
-        return ret;                                                                                  \
-    }
+template <typename ContextType>
+void ReportNullPtrWithContext(const ContextType* context, const char* ptrName)
+{
+    const char* name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
+    std::printf("EZ9999 op[%s], %s is nullptr!", name, ptrName);
+}
 const gert::Shape g_vec_1_shape = {1};
 
 } // namespace
@@ -47,7 +48,7 @@ namespace optiling {
 inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context)
 {
     auto json_str = context->GetCompiledJson();
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, json_str, nullptr);
+    OP_CHECK_IF(json_str == nullptr, ReportNullPtrWithContext(context, "json_str"), return nullptr);
     std::unique_ptr<nlohmann::json> parsed_object_cinfo = std::make_unique<nlohmann::json>(
         nlohmann::json::parse(json_str));
     return parsed_object_cinfo;

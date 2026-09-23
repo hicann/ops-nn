@@ -22,7 +22,7 @@ namespace optiling {
 bool AddWorkspace_lstm(gert::TilingContext* context, const size_t workspace)
 {
     size_t* workspace_size = context->GetWorkspaceSizes(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, workspace_size, false);
+    OP_CHECK_IF(workspace_size == nullptr, ReportNullPtrWithContext(context, "workspace_size"), return false);
     *workspace_size = workspace;
     return true;
 }
@@ -48,7 +48,7 @@ bool BidirectionLSTMTiling::CheckTensorShape(gert::TilingContext* context, gert:
 bool BidirectionLSTMTiling::CheckInputShapes(gert::TilingContext* context)
 {
     auto x = context->GetInputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, x, false);
+    OP_CHECK_IF(x == nullptr, ReportNullPtrWithContext(context, "x"), return false);
     auto shape = x->GetStorageShape();
     if (!_Params.packed) {
         OP_CHECK_IF(
@@ -57,7 +57,7 @@ bool BidirectionLSTMTiling::CheckInputShapes(gert::TilingContext* context)
     }
 
     auto init_h = context->GetInputShape(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, init_h, false);
+    OP_CHECK_IF(init_h == nullptr, ReportNullPtrWithContext(context, "init_h"), return false);
     shape = init_h->GetStorageShape();
     OP_CHECK_IF(
         !CheckTensorShape(context, shape, 3,
@@ -65,7 +65,7 @@ bool BidirectionLSTMTiling::CheckInputShapes(gert::TilingContext* context)
         OP_LOGE(context->GetNodeName(), "BidirectionLSTM get init_h shape wrong, please check."), return false);
 
     auto init_c = context->GetInputShape(2);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, init_c, false);
+    OP_CHECK_IF(init_c == nullptr, ReportNullPtrWithContext(context, "init_c"), return false);
     shape = init_c->GetStorageShape();
     OP_CHECK_IF(
         !CheckTensorShape(context, shape, 3,
@@ -73,13 +73,13 @@ bool BidirectionLSTMTiling::CheckInputShapes(gert::TilingContext* context)
         OP_LOGE(context->GetNodeName(), "BidirectionLSTM get init_h shape wrong, please check."), return false);
 
     auto w_ih = context->GetInputShape(3);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, w_ih, false);
+    OP_CHECK_IF(w_ih == nullptr, ReportNullPtrWithContext(context, "w_ih"), return false);
     shape = w_ih->GetStorageShape();
     OP_CHECK_IF(!CheckTensorShape(context, shape, 2, {NUM_OF_GATE * _Params.hiddenSize, _Params.inputSize}),
                 OP_LOGE(context->GetNodeName(), "BidirectionLSTM get w_ih shape wrong, please check."), return false);
 
     auto w_hh = context->GetInputShape(4);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, w_hh, false);
+    OP_CHECK_IF(w_hh == nullptr, ReportNullPtrWithContext(context, "w_hh"), return false);
     shape = w_hh->GetStorageShape();
     OP_CHECK_IF(!CheckTensorShape(context, shape, 2, {NUM_OF_GATE * _Params.hiddenSize, _Params.hiddenSize}),
                 OP_LOGE(context->GetNodeName(), "BidirectionLSTM get w_hh shape wrong, please check."), return false);
@@ -91,14 +91,14 @@ bool BidirectionLSTMTiling::CheckOptionalInputShapes(gert::TilingContext* contex
 {
     if (_Params.isBias) {
         auto b_ih = context->GetOptionalInputShape(5);
-        OPS_CHECK_NULL_WITH_CONTEXT_RET(context, b_ih, false);
+        OP_CHECK_IF(b_ih == nullptr, ReportNullPtrWithContext(context, "b_ih"), return false);
         auto shape = b_ih->GetStorageShape();
         OP_CHECK_IF(!CheckTensorShape(context, shape, 1, {NUM_OF_GATE * _Params.hiddenSize}),
                     OP_LOGE(context->GetNodeName(), "BidirectionLSTM get b_ih shape wrong, please check."),
                     return false);
 
         auto b_hh = context->GetOptionalInputShape(6);
-        OPS_CHECK_NULL_WITH_CONTEXT_RET(context, b_hh, false);
+        OP_CHECK_IF(b_hh == nullptr, ReportNullPtrWithContext(context, "b_hh"), return false);
         shape = b_hh->GetStorageShape();
         OP_CHECK_IF(!CheckTensorShape(context, shape, 1, {NUM_OF_GATE * _Params.hiddenSize}),
                     OP_LOGE(context->GetNodeName(), "BidirectionLSTM get b_hh shape wrong, please check."),
@@ -107,14 +107,14 @@ bool BidirectionLSTMTiling::CheckOptionalInputShapes(gert::TilingContext* contex
 
     if (_Params.bidirection) {
         auto w_ih_reverse = context->GetOptionalInputShape(7);
-        OPS_CHECK_NULL_WITH_CONTEXT_RET(context, w_ih_reverse, false);
+        OP_CHECK_IF(w_ih_reverse == nullptr, ReportNullPtrWithContext(context, "w_ih_reverse"), return false);
         auto shape = w_ih_reverse->GetStorageShape();
         OP_CHECK_IF(!CheckTensorShape(context, shape, 2, {NUM_OF_GATE * _Params.hiddenSize, _Params.inputSize}),
                     OP_LOGE(context->GetNodeName(), "BidirectionLSTM get w_ih_reverse shape wrong, please check."),
                     return false);
 
         auto w_hh_reverse = context->GetOptionalInputShape(8);
-        OPS_CHECK_NULL_WITH_CONTEXT_RET(context, w_hh_reverse, false);
+        OP_CHECK_IF(w_hh_reverse == nullptr, ReportNullPtrWithContext(context, "w_hh_reverse"), return false);
         shape = w_hh_reverse->GetStorageShape();
         OP_CHECK_IF(!CheckTensorShape(context, shape, 2, {NUM_OF_GATE * _Params.hiddenSize, _Params.hiddenSize}),
                     OP_LOGE(context->GetNodeName(), "BidirectionLSTM get w_hh_reverse shape wrong, please check."),
@@ -122,14 +122,14 @@ bool BidirectionLSTMTiling::CheckOptionalInputShapes(gert::TilingContext* contex
 
         if (_Params.isBias) {
             auto b_ih_reverse = context->GetOptionalInputShape(9);
-            OPS_CHECK_NULL_WITH_CONTEXT_RET(context, b_ih_reverse, false);
+            OP_CHECK_IF(b_ih_reverse == nullptr, ReportNullPtrWithContext(context, "b_ih_reverse"), return false);
             shape = b_ih_reverse->GetStorageShape();
             OP_CHECK_IF(!CheckTensorShape(context, shape, 1, {NUM_OF_GATE * _Params.hiddenSize}),
                         OP_LOGE(context->GetNodeName(), "BidirectionLSTM get b_ih_reverse shape wrong, please check."),
                         return false);
 
             auto b_hh_reverse = context->GetOptionalInputShape(10);
-            OPS_CHECK_NULL_WITH_CONTEXT_RET(context, b_hh_reverse, false);
+            OP_CHECK_IF(b_hh_reverse == nullptr, ReportNullPtrWithContext(context, "b_hh_reverse"), return false);
             shape = b_hh_reverse->GetStorageShape();
             OP_CHECK_IF(!CheckTensorShape(context, shape, 1, {NUM_OF_GATE * _Params.hiddenSize}),
                         OP_LOGE(context->GetNodeName(), "BidirectionLSTM get b_hh_reverse shape wrong, please check."),
@@ -142,7 +142,7 @@ bool BidirectionLSTMTiling::CheckOptionalInputShapes(gert::TilingContext* contex
 bool BidirectionLSTMTiling::CheckOutputShapes(gert::TilingContext* context)
 {
     auto output = context->GetOutputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, output, false);
+    OP_CHECK_IF(output == nullptr, ReportNullPtrWithContext(context, "output"), return false);
     auto shape = output->GetStorageShape();
     if (!_Params.packed) {
         OP_CHECK_IF(
@@ -158,7 +158,7 @@ bool BidirectionLSTMTiling::CheckOutputShapes(gert::TilingContext* context)
     }
 
     auto output_h = context->GetOutputShape(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, output_h, false);
+    OP_CHECK_IF(output_h == nullptr, ReportNullPtrWithContext(context, "output_h"), return false);
     shape = output_h->GetStorageShape();
     OP_CHECK_IF(
         !CheckTensorShape(context, shape, 3,
@@ -166,7 +166,7 @@ bool BidirectionLSTMTiling::CheckOutputShapes(gert::TilingContext* context)
         OP_LOGE(context->GetNodeName(), "BidirectionLSTM get output_h shape wrong, please check."), return false);
 
     auto output_c = context->GetOutputShape(2);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, output_c, false);
+    OP_CHECK_IF(output_c == nullptr, ReportNullPtrWithContext(context, "output_c"), return false);
     shape = output_c->GetStorageShape();
     OP_CHECK_IF(
         !CheckTensorShape(context, shape, 3,
@@ -201,7 +201,7 @@ bool BidirectionLSTMTiling::CheckBatchSizeShape(gert::TilingContext* context)
 bool BidirectionLSTMTiling::CheckXInputShape(gert::TilingContext* context)
 {
     auto x = context->GetInputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, x, false);
+    OP_CHECK_IF(x == nullptr, ReportNullPtrWithContext(context, "x"), return false);
     auto shape = x->GetStorageShape();
     if (!_Params.packed) {
         OP_CHECK_IF(shape.GetDimNum() != NUMBER_THREE,
@@ -224,7 +224,7 @@ bool BidirectionLSTMTiling::CheckXInputShape(gert::TilingContext* context)
 bool BidirectionLSTMTiling::CheckInitHInputShape(gert::TilingContext* context)
 {
     auto init_h = context->GetInputShape(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, init_h, false);
+    OP_CHECK_IF(init_h == nullptr, ReportNullPtrWithContext(context, "init_h"), return false);
     auto shape = init_h->GetStorageShape();
     OP_CHECK_IF(shape.GetDimNum() != NUMBER_THREE,
                 OP_LOGE(context->GetNodeName(), "BidirectionLSTM get init_h shape ndim is not 3, please check."),
@@ -263,7 +263,7 @@ bool BidirectionLSTMTiling::CheckInOutShapes(gert::TilingContext* context)
 bool BidirectionLSTMTiling::GetCheckAttr(gert::TilingContext* context)
 {
     auto attrs = context->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, attrs, false);
+    OP_CHECK_IF(attrs == nullptr, ReportNullPtrWithContext(context, "attrs"), return false);
     //  optional
     const int64_t* num_layers = attrs->GetAttrPointer<int64_t>(0);
     const bool* isbias = attrs->GetAttrPointer<bool>(1);
