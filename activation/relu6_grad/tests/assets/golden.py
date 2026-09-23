@@ -66,10 +66,10 @@ _TOL_KERNEL = {
 # (framework/relu6_grad_tf_plugin.cpp: OriginOpType("Relu6Grad")), 故 tf 通路的对标标杆
 # 就是 TF 自己那个算子——按交付规范"tf 通路 → 对标 tf, 别拿 torch 顶替 tf 语义"。
 #
-# 语义已实测坐实(A100 xpu-server, tf 2.21.0): 对 x ∈ {-1, 0, 1e-7, 3, 6-1e-6, 6, 7,
-# NaN, +inf, -inf} 与含 inf/NaN 的 dy, tf.raw_ops.Relu6Grad 的输出与本文件 golden
-# **逐位相等**——两端点 0/6 都判 0(严格开区间)、NaN 判 0、带内原样透传 dy 的 inf/NaN。
-# 这正是 torch 腿要手写拼接的原因(hardtanh_backward 在 NaN 上分叉), tf 侧不存在该分叉。
+# TensorFlow 的有限值语义与本算子一致；其原生内核实现为
+# gradients * cast((features > 0) & (features < 6))。因此 dy 在带外为 NaN/Inf 时，
+# TensorFlow 会按 IEEE-754 产生 NaN，而 CANN kernel/golden 的 Select 语义输出 0。
+# kernel 的 tf 三方腿用于有限值交叉验证；TensorFlow E2E golden 则严格遵循 TF 公式。
 #
 # ⚠️ 为何包一层类, 不写成 third_party={"tf": "tf.raw_ops.Relu6Grad"} 的 API 直调:
 # 用例 CSV 带 input_formats 时, 服务端会把逐输入 format 并进调用 kwargs
@@ -108,18 +108,61 @@ class Relu6GradKernelSpec:
     tolerance = _TOL_KERNEL
 
 
-__spec__ = {"relu6_grad": "Relu6GradKernelSpec"}
+def _to_numpy_array(value):
+    """Convert a NumPy or framework tensor to an independent host array."""
+    if isinstance(value, np.ndarray):
+        return np.array(value, copy=True)
+    if isinstance(value, torch.Tensor):
+        tensor = value.detach().cpu()
+        if tensor.dtype == torch.bfloat16:
+            from ml_dtypes import bfloat16
+
+            return tensor.view(torch.int16).numpy().view(dtype=bfloat16).copy()
+        return tensor.numpy().copy()
+    if hasattr(value, "numpy"):
+        return np.array(value.numpy(), copy=True)
+    return np.array(value, copy=True)
+
+
+def _promote_reference_array(array):
+    """Promote floating inputs so cross-check uses an independent CPU truth."""
+    target_dtype = {
+        "float16": np.float32,
+        "bfloat16": np.float32,
+        "float32": np.float64,
+    }.get(array.dtype.name)
+    return array.astype(target_dtype) if target_dtype is not None else array
+
+
+def tensorflow_relu6_grad_golden(gradients, features, name=None, **kwargs):
+    """CPU golden for ``tf.raw_ops.Relu6Grad``."""
+    del name, kwargs
+    dy = _promote_reference_array(_to_numpy_array(gradients))
+    x = _promote_reference_array(_to_numpy_array(features))
+    mask = ((x > 0) & (x < 6)).astype(dy.dtype, copy=False)
+    with np.errstate(invalid="ignore"):
+        return [dy * mask]
+
+
+class Relu6GradTensorFlowSpec:
+    """TensorFlow E2E spec registered by the CSV ``api_name``."""
+
+    golden = staticmethod(tensorflow_relu6_grad_golden)
+    third_party = {"tf": _Relu6GradTfCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {
+    "relu6_grad": "Relu6GradKernelSpec",
+    "tf.raw_ops.Relu6Grad": "Relu6GradTensorFlowSpec",
+}
 
 
 # 通路交付情况
 # 已注册: kernel + GEIR(复用 kernel spec)
+# TensorFlow E2E: framework 中已注册 OriginOpType "Relu6Grad"；TTK 用
+# tf.raw_ops.Relu6Grad 作为 CSV api_name，通过 Relu6GradTensorFlowSpec
+# 取得 golden、third_party 和 tolerance。
 # 未在 __spec__ 中注册:
 # aclnn: 未交付——算子目录下无 docs/aclnn*.md。
-# TensorFlow: 有 framework 的 tf_plugin(OriginOpType "Relu6Grad")。
-#   三方标杆(精度/性能)已补: third_party["tf"] = tf.raw_ops.Relu6Grad, 跑 --provider tf。
-#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
-#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
-#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
-#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
-#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
-# e2e / ONNX / 融合 pass: 均未交付。
+# Torch E2E / ONNX / 融合 pass: 均未交付。
