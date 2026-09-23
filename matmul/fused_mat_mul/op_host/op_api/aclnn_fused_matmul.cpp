@@ -73,18 +73,18 @@ bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*
 }
 
 // inner_precise默认为1；2D MatMul和3D BatchMatMul在cubeMathType为USE_FP32_ADD，且fusedOpType为add/mul，
-// x/x2/x3均为同一种fp16或bf16类型时，inner_precise取0。
-static int64_t GetInnerPrecise(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
+// x1/x2/x3均为同一种fp16或bf16类型时，inner_precise取0。
+static int64_t GetInnerPrecise(const aclTensor* x1, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                                int8_t cubeMathType)
 {
-    int64_t xDimNum = x->GetViewShape().GetDimNum();
+    int64_t xDimNum = x1->GetViewShape().GetDimNum();
     int64_t x2DimNum = x2->GetViewShape().GetDimNum();
     bool isMatmulOrBatchMatmul = (xDimNum == DIM_LEN_MIN && x2DimNum == DIM_LEN_MIN) ||
                                  (xDimNum == DIM_LEN_MAX && x2DimNum == DIM_LEN_MAX);
     if (isMatmulOrBatchMatmul && cubeMathType == USE_FP32_ADD &&
         IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
-        (x->GetDataType() == DataType::DT_FLOAT16 || x->GetDataType() == DataType::DT_BF16) &&
-        x->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x->GetDataType()) {
+        (x1->GetDataType() == DataType::DT_FLOAT16 || x1->GetDataType() == DataType::DT_BF16) &&
+        x1->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x1->GetDataType()) {
         return INNER_PRECISE_HIGH_PRECISION;
     }
     return INNER_PRECISE_HIGH_PERFORMANCE;
@@ -95,17 +95,17 @@ bool CheckFusedOpType(const char* fusedOpType)
 {
     if (!IsInSupportedOpTypes(fusedOpType, kAllSupportedOpTypes)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "fusedOpType must be in the type of /16cast32/add/mul/gelu_erf/gelu_tanh/relu");
+                "fusedOpType must be in the type of ''/16cast32/add/mul/gelu_erf/gelu_tanh/relu");
         return false;
     }
     return true;
 }
 
 // 校验是否为空指针
-bool CheckNotNull(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
+bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                   const char* fusedOpType, const aclTensor* y)
 {
-    OP_CHECK_NULL(x, return false);
+    OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
     if (bias != nullptr && !IsInSupportedOpTypes(fusedOpType, kSupportedBiasOpTypes)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "bias is not supported for the current fusedOpType");
@@ -131,10 +131,10 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 }
 
 // 校验是否包含不支持的FRACTAL_NZ格式
-static bool CheckFormat(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
+static bool CheckFormat(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                         const aclTensor* y)
 {
-    if (x->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ || x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
+    if (x1->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ || x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
         y->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1, x2 and y do not support FRACTAL_NZ format");
         return false;
@@ -156,17 +156,17 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* x2, const aclTensor
     return true;
 }
 // 校验数据类型是否合法
-static bool CheckDtypeValid(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
+static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                             const char* fusedOpType, const aclTensor* y)
 {
     auto dtypeSupportList = IsInSupportedOpTypes(fusedOpType, kSupportedFp32OpTypes) ? DTYPE_SUPPORT_LIST_BUILT_IN :
                                                                                        DTYPE_SUPPORT_LIST;
     // 检查x的数据类型是否在fusedmatmul算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(x, dtypeSupportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1, dtypeSupportList, return false);
     // 检查x2的数据类型是否在fusedmatmul算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, dtypeSupportList, return false);
     // x和x2数据类型必须一样
-    OP_CHECK_DTYPE_NOT_MATCH(x2, x->GetDataType(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(x2, x1->GetDataType(), return false);
     if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
         // y fp32 x1=x2=fp16|bf16
         std::initializer_list<op::DataType> yDtypeSupportList{op::DataType::DT_FLOAT};
@@ -175,24 +175,24 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* x2, const aclTe
         // 检查y的数据类型是否在fusedmatmul算子的支持列表内
         OP_CHECK_DTYPE_NOT_SUPPORT(y, dtypeSupportList, return false);
         // x和y数据类型必须一样
-        OP_CHECK_DTYPE_NOT_MATCH(y, x->GetDataType(), return false);
+        OP_CHECK_DTYPE_NOT_MATCH(y, x1->GetDataType(), return false);
     }
     if (bias != nullptr) {
-        std::initializer_list<op::DataType> biasDtypeSupportList{x->GetDataType(), op::DataType::DT_FLOAT};
+        std::initializer_list<op::DataType> biasDtypeSupportList{x1->GetDataType(), op::DataType::DT_FLOAT};
         OP_CHECK_DTYPE_NOT_SUPPORT(bias, biasDtypeSupportList, return false);
     }
     if (x3 != nullptr) {
         // 检查x3的数据类型是否在fusedmatmul算子的支持列表内
         OP_CHECK_DTYPE_NOT_SUPPORT(x3, dtypeSupportList, return false);
-        OP_CHECK_DTYPE_NOT_MATCH(x3, x->GetDataType(), return false);
+        OP_CHECK_DTYPE_NOT_MATCH(x3, x1->GetDataType(), return false);
     }
     return true;
 }
 
-static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, const aclTensor* y,
+static bool CheckNoBroadcastBatchShape(const aclTensor* x1, const aclTensor* x2, const aclTensor* y,
                                        const char* fusedOpType)
 {
-    const auto& xShape = x->GetViewShape();
+    const auto& xShape = x1->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
     const auto& yShape = y->GetViewShape();
     const char* opTypeForLog = strcmp(fusedOpType, "") == 0 ? "empty" : fusedOpType;
@@ -200,7 +200,7 @@ static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, 
     for (size_t i = 0; i < batchDimNum; ++i) {
         if (xShape[i] != x2Shape[i] || xShape[i] != yShape[i]) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "%s op type only supports no-broadcast batch shape, but x batch dim[%zu] is %ld, "
+                    "%s op type only supports no-broadcast batch shape, but x1 batch dim[%zu] is %ld, "
                     "x2 batch dim[%zu] is %ld, y batch dim[%zu] is %ld.",
                     opTypeForLog, i, xShape[i], i, x2Shape[i], i, yShape[i]);
             return false;
@@ -209,13 +209,13 @@ static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, 
     return true;
 }
 
-static bool CanReluMergeBatchAndMAxis(const aclTensor* x, const aclTensor* x2, const aclTensor* y,
+static bool CanReluMergeBatchAndMAxis(const aclTensor* x1, const aclTensor* x2, const aclTensor* y,
                                       const char* fusedOpType)
 {
-    if (strcmp(fusedOpType, "relu") != 0 || IsTransposeLastTwoDims(x)) {
+    if (strcmp(fusedOpType, "relu") != 0 || IsTransposeLastTwoDims(x1)) {
         return false;
     }
-    const auto& xShape = x->GetViewShape();
+    const auto& xShape = x1->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
     const auto& yShape = y->GetViewShape();
     const size_t xDimNum = xShape.GetDimNum();
@@ -252,8 +252,8 @@ static bool CheckGeluBatchShape(const aclTensor* x)
         return true;
     }
     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-        "aclnnFusedMatmul", "x1", FormatString("%zuD", xShape.GetDimNum()).c_str(),
-        FormatString("The shape dim of %s must be %zuD for gelu op type", "x1", DIM_LEN_MIN).c_str());
+        "aclnnFusedMatmul", "x", FormatString("%zuD", xShape.GetDimNum()).c_str(),
+        FormatString("The shape dim of %s must be %zuD for gelu op type", "x", DIM_LEN_MIN).c_str());
     return false;
 }
 
@@ -311,12 +311,12 @@ static bool CheckBiasShape(const aclTensor* bias)
     return true;
 }
 
-static bool CheckKZeroBias(const aclTensor* x, const aclTensor* bias)
+static bool CheckKZeroBias(const aclTensor* x1, const aclTensor* bias)
 {
     if (bias == nullptr) {
         return true;
     }
-    const auto& xShape = x->GetViewShape();
+    const auto& xShape = x1->GetViewShape();
     const size_t xDimNum = xShape.GetDimNum();
     if (xDimNum == 0 || xShape[xDimNum - 1] != 0) {
         return true;
@@ -327,39 +327,39 @@ static bool CheckKZeroBias(const aclTensor* x, const aclTensor* bias)
     return false;
 }
 
-static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
+static inline bool CheckShape(const aclTensor* x1, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                               const aclTensor* y)
 {
     bool isReluOrEmpty = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
     bool isGelu = (strcmp(fusedOpType, "gelu_erf") == 0 || strcmp(fusedOpType, "gelu_tanh") == 0);
     size_t dimLenMax = isReluOrEmpty ? DIM_LEN_MAX_RELU : DIM_LEN_MAX;
-    // check x dims number
-    OP_CHECK_MAX_DIM(x, dimLenMax, return false);
-    OP_CHECK_MIN_DIM(x, DIM_LEN_MIN, return false);
+    // check x1 dims number
+    OP_CHECK_MAX_DIM(x1, dimLenMax, return false);
+    OP_CHECK_MIN_DIM(x1, DIM_LEN_MIN, return false);
 
     // check x2 dims number
     OP_CHECK_MAX_DIM(x2, dimLenMax, return false);
     OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
 
-    const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x, x2, y, fusedOpType);
+    const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x1, x2, y, fusedOpType);
 
     // Relu can use a shared x2 by merging all x1 batch axes into M; other rank mismatches remain unsupported.
-    if (x2->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum() && !canMergeBatch) {
+    if (x2->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum() && !canMergeBatch) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x dimension and x2 dimension should be the same, but x dimension is %d, x2 dimension is %d.",
-                x->GetViewShape().GetDimNum(), x2->GetViewShape().GetDimNum());
+                "x1 dimension and x2 dimension should be the same, but x1 dimension is %d, x2 dimension is %d.",
+                x1->GetViewShape().GetDimNum(), x2->GetViewShape().GetDimNum());
         return false;
     }
 
-    // check dimensions of x and y must be same
-    if (y->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum()) {
+    // check dimensions of x1 and y must be same
+    if (y->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x dimension and y dimension should be the same, but x dimension is %d, y dimension is %d.",
-                x->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
+                "x1 dimension and y dimension should be the same, but x1 dimension is %d, y dimension is %d.",
+                x1->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
         return false;
     }
 
-    const auto& xShape = x->GetViewShape();
+    const auto& xShape = x1->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
     const int64_t xDimNum = xShape.GetDimNum();
     const int64_t x2DimNum = x2Shape.GetDimNum();
@@ -372,10 +372,10 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
     }
 
     if (!canMergeBatch) {
-        CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y, fusedOpType), false);
+        CHECK_RET(CheckNoBroadcastBatchShape(x1, x2, y, fusedOpType), false);
     }
     if (isGelu) {
-        CHECK_RET(CheckGeluBatchShape(x), false);
+        CHECK_RET(CheckGeluBatchShape(x1), false);
     }
     if (x3 != nullptr) {
         CHECK_RET(CheckX3Shape(x3, y), false);
@@ -406,7 +406,7 @@ static bool CheckScaleParams(const aclScalar* alphaOptional, const aclScalar* be
     return CheckScaleParam(alphaOptional, "alphaOptional") && CheckScaleParam(betaOptional, "betaOptional");
 }
 
-static bool CheckFmmWithScaleAddScenario(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static bool CheckFmmWithScaleAddScenario(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                          const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
 {
     if (std::strcmp(fusedOpType, "add") != 0) {
@@ -425,27 +425,27 @@ static bool CheckFmmWithScaleAddScenario(const aclTensor* x, const aclTensor* x2
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario requires x3.");
         return false;
     }
-    auto dataType = x->GetDataType();
+    auto dataType = x1->GetDataType();
     if ((dataType != DataType::DT_FLOAT16 && dataType != DataType::DT_BF16) || x2->GetDataType() != dataType ||
         x3->GetDataType() != dataType || y->GetDataType() != dataType) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The scale_add scenario requires x, x2, x3 and y to have the same FP16 or BF16 dtype.");
+                "The scale_add scenario requires x1, x2, x3 and y to have the same FP16 or BF16 dtype.");
         return false;
     }
-    if (IsTransposeLastTwoDims(x) || IsTransposeLastTwoDims(x2)) {
+    if (IsTransposeLastTwoDims(x1) || IsTransposeLastTwoDims(x2)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The scale_add scenario does not support transposed x or x2; expected x[B,M,K] and "
+                "The scale_add scenario does not support transposed x1 or x2; expected x1[B,M,K] and "
                 "x2[B,K,N].");
         return false;
     }
 
-    const auto& xShape = x->GetViewShape();
+    const auto& xShape = x1->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
     const auto& x3Shape = x3->GetViewShape();
     const auto& yShape = y->GetViewShape();
     if (xShape.GetDimNum() != DIM_LEN_MAX || x2Shape.GetDimNum() != DIM_LEN_MAX || x3Shape.GetDimNum() != DIM_LEN_MAX ||
         yShape.GetDimNum() != DIM_LEN_MAX) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario requires 3D x, x2, x3 and y.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario requires 3D x1, x2, x3 and y.");
         return false;
     }
 
@@ -456,51 +456,51 @@ static bool CheckFmmWithScaleAddScenario(const aclTensor* x, const aclTensor* x2
     bool positiveShape = xShape[0] > 0 && xShape[1] > 0 && xShape[2] > 0 && x2Shape[2] > 0;
     if (!batchMatched || !matmulMatched || !outputMatched || !positiveShape) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The scale_add scenario requires x[B,M,K] * x2[B,K,N] + x3[B,M,N] -> y[B,M,N], and B, M, N "
+                "The scale_add scenario requires x1[B,M,K] * x2[B,K,N] + x3[B,M,N] -> y[B,M,N], and B, M, N "
                 "and K must be greater than 0.");
         return false;
     }
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
+static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                                const aclScalar* alphaOptional, const aclScalar* betaOptional, const char* fusedOpType,
                                int8_t cubeMathType, const aclTensor* y)
 {
     // 检验fusedOpType类型是否合法
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x1, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
-    CHECK_RET(CheckShape(x, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckKZeroBias(x, bias), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(x1, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckKZeroBias(x1, bias), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckBiasShape(bias), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在支持的数据类型之内
-    CHECK_RET(CheckDtypeValid(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(x1, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查Format是否支持
-    CHECK_RET(CheckFormat(x, x2, bias, x3, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(x1, x2, bias, x3, y), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查cubeMathType
-    CHECK_RET(CheckMathType(x, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckScaleParams(alphaOptional, betaOptional), ACLNN_ERR_PARAM_INVALID);
     if (HasNonDefaultScale(alphaOptional) || HasNonDefaultScale(betaOptional)) {
-        CHECK_RET(CheckFmmWithScaleAddScenario(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckFmmWithScaleAddScenario(x1, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
     }
 
     return ACLNN_SUCCESS;
 }
 
 static constexpr int64_t SMALL_THRESHOLD = 16;
-static bool IsX3NoBatch(const aclTensor* x, const aclTensor* x2, const aclTensor* x3)
+static bool IsX3NoBatch(const aclTensor* x1, const aclTensor* x2, const aclTensor* x3)
 {
     if (x3 == nullptr) {
         return false;
     }
-    if (x->GetViewShape().GetDimNum() != static_cast<int64_t>(DIM_LEN_MAX) ||
+    if (x1->GetViewShape().GetDimNum() != static_cast<int64_t>(DIM_LEN_MAX) ||
         x2->GetViewShape().GetDimNum() != static_cast<int64_t>(DIM_LEN_MAX)) {
         return false;
     }
@@ -514,16 +514,16 @@ static bool IsX3NoBatch(const aclTensor* x, const aclTensor* x2, const aclTensor
     return false;
 }
 
-static const aclTensor* BuildSplitMatmulOp(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static const aclTensor* BuildSplitMatmulOp(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                            const aclTensor* y, bool is2D, int8_t cubeMathType, aclOpExecutor* executor)
 {
     if (is2D) {
         OP_LOGI("FusedMatMul split to MatmulCommonProcess.");
         MmOpInfo splitMmOpInfo;
-        return MatmulCommonProcess(x, x2, bias, y, cubeMathType, splitMmOpInfo, executor, false, true);
+        return MatmulCommonProcess(x1, x2, bias, y, cubeMathType, splitMmOpInfo, executor, false, true);
     }
     OP_LOGI("FusedMatMul split to ExecBmmOpWithBiasV2.");
-    return ExecBmmOpWithBiasV2(x, x2, bias, y, cubeMathType, executor);
+    return ExecBmmOpWithBiasV2(x1, x2, bias, y, cubeMathType, executor);
 }
 
 static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const aclTensor* contiguousX3,
@@ -568,7 +568,7 @@ static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const 
 }
 
 /*
-                 x               x2
+                 x1               x2
                  |               |
             contiguous       contiguous
                  |               |
@@ -581,19 +581,19 @@ static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const 
                           |
                        output
 */
-static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                                    const aclTensor* x3, const aclTensor* y, const MmOpInfo& mmOpInfo,
                                                    const char* fusedOpType, int8_t cubeMathType, bool isHighPrecision,
                                                    aclOpExecutor* executor)
 {
-    bool is2D = (x->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN) &&
+    bool is2D = (x1->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN) &&
                  x2->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN));
     const aclTensor* splitMmDesc = y;
     if (isHighPrecision) {
         splitMmDesc = executor->AllocTensor(y->GetViewShape(), DataType::DT_FLOAT, Format::FORMAT_ND);
         CHECK_RET(splitMmDesc != nullptr, nullptr);
     }
-    auto splitMmOut = BuildSplitMatmulOp(x, x2, bias, splitMmDesc, is2D, cubeMathType, executor);
+    auto splitMmOut = BuildSplitMatmulOp(x1, x2, bias, splitMmDesc, is2D, cubeMathType, executor);
     CHECK_RET(splitMmOut != nullptr, nullptr);
     auto contiguousX3 = x3;
     if (contiguousX3 != nullptr) {
@@ -605,22 +605,22 @@ static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x, const acl
     return BuildSplitEpilogueOp(splitMmOut, contiguousX3, y, mmOpInfo, fusedOpType, executor);
 }
 
-static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                                      const aclTensor* x3, float alpha, float beta, const aclTensor* y,
                                                      const MmOpInfo& mmOpInfo, const char* fusedOpType,
                                                      int64_t innerPrecise, aclOpExecutor* executor)
 {
     const aclTensor* mmOut = nullptr;
     if (std::strcmp(fusedOpType, "scale_add") == 0) {
-        mmOut = l0op::FusedMatMulWithScaleAddNd(x, x2, bias, x3, alpha, beta, mmOpInfo.shapeInfo.transposeX1,
+        mmOut = l0op::FusedMatMulWithScaleAddNd(x1, x2, bias, x3, alpha, beta, mmOpInfo.shapeInfo.transposeX1,
                                                 mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, innerPrecise,
                                                 executor);
     } else if (std::strcmp(fusedOpType, "16cast32") == 0) {
-        mmOut = l0op::FusedMatMul16Cast32(x, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1,
+        mmOut = l0op::FusedMatMul16Cast32(x1, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1,
                                           mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType,
                                           innerPrecise, executor);
     } else {
-        mmOut = l0op::FusedMatMulNd(x, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2,
+        mmOut = l0op::FusedMatMulNd(x1, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2,
                                     mmOpInfo.enableHf32, fusedOpType, innerPrecise, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
@@ -633,13 +633,13 @@ static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x, const a
     return matReshape;
 }
 
-static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                                     const aclTensor* x3, float alpha, float beta, const aclTensor* y,
                                                     MmOpInfo mmOpInfo, const char* fusedOpType, int8_t cubeMathType,
                                                     bool hasScaleInput, aclOpExecutor* executor)
 {
-    auto selfCastOut = x;
-    bool selfCastRes = ContiguousAndCast(x, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
+    auto selfCastOut = x1;
+    bool selfCastRes = ContiguousAndCast(x1, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
                                          mmOpInfo.support_info.self_dtype, executor);
     CHECK_RET(selfCastRes, nullptr);
     // 右输入非连续转连续
@@ -650,13 +650,13 @@ static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const ac
     // bias非连续转连续以及转换dtype
     auto contiguousBias = bias;
     if (contiguousBias != nullptr) {
-        contiguousBias = ContiguousBias(x, bias, executor);
+        contiguousBias = ContiguousBias(x1, bias, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
     }
     auto selfReshapeOutput = selfCastOut;
     auto mat2ReshapeOutput = mat2CastOut;
     bool ifKEqual1 = false;
-    if (x->GetViewShape().GetDimNum() > DIM_LEN_MIN) {
+    if (x1->GetViewShape().GetDimNum() > DIM_LEN_MIN) {
         // scale_add tiling currently does not support transposed x2. Keep the original x2 layout when N=1.
         const bool enableNEqual1Transpose = !hasScaleInput;
         CHECK_RET(ProcessEqual1Cases(selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, mmOpInfo.shapeInfo.transposeX1,
@@ -681,49 +681,50 @@ static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const ac
         contiguousX3 = l0op::ReFormat(contiguousX3, op::Format::FORMAT_ND);
         CHECK_RET(contiguousX3 != nullptr, nullptr);
     }
-    int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
+    int64_t innerPrecise = GetInnerPrecise(x1, x2, x3, fusedOpType, cubeMathType);
     const char* internalFusedOpType = hasScaleInput ? "scale_add" : fusedOpType;
     return BuildDirectFusedMatMulOutput(selfCastOut, mat2CastOut, contiguousBias, contiguousX3, alpha, beta, y,
                                         mmOpInfo, internalFusedOpType, innerPrecise, executor);
 }
 
-static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                               const aclTensor* x3, float alpha, float beta, const aclTensor* y,
                                               const char* fusedOpType, int8_t cubeMathType, bool hasScaleInput,
                                               aclOpExecutor* executor)
 {
     // 空tensor 处理，对于非16Cast32放开空tensor
     bool allowEmptyTensor = IsInSupportedOpTypes(fusedOpType, kSupportedEmptyTensorOpTypes);
-    if (!allowEmptyTensor && (x->IsEmpty() || x2->IsEmpty())) {
+    if (!allowEmptyTensor && (x1->IsEmpty() || x2->IsEmpty())) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FusedMatmul does not support empty tensor for this fusedOpType");
         return nullptr;
     }
     // 解析当前规格matmulop支持的dtype、format能力
-    MmOpInfo mmOpInfo = GetMatmulOpInfo(x, x2, nullptr, nullptr, cubeMathType);
+    MmOpInfo mmOpInfo = GetMatmulOpInfo(x1, x2, nullptr, nullptr, cubeMathType);
     // 输出fp32
     if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
         mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;
     }
-    int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
+    int64_t innerPrecise = GetInnerPrecise(x1, x2, x3, fusedOpType, cubeMathType);
     // Split small cases through common MatMul/BMM graph builders.
-    int64_t selfDimNum = x->GetViewShape().GetDimNum();
+    int64_t selfDimNum = x1->GetViewShape().GetDimNum();
     int64_t mat2DimNum = x2->GetViewShape().GetDimNum();
     bool isHighPrecisionBmm = innerPrecise == INNER_PRECISE_HIGH_PRECISION && selfDimNum == DIM_LEN_MAX &&
                               mat2DimNum == DIM_LEN_MAX;
     if (!hasScaleInput && IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
         (innerPrecise == INNER_PRECISE_HIGH_PERFORMANCE || isHighPrecisionBmm)) {
-        const auto& selfShape = x->GetViewShape();
+        const auto& selfShape = x1->GetViewShape();
         const auto& mat2Shape = x2->GetViewShape();
         int64_t realM = selfShape[selfDimNum - 2];
         int64_t realK = selfShape[selfDimNum - 1];
         int64_t realN = mat2Shape[mat2DimNum - 1];
-        bool needSplit = (realK == 1) || (realN < SMALL_THRESHOLD || realM < SMALL_THRESHOLD) || IsX3NoBatch(x, x2, x3);
+        bool needSplit = (realK == 1) || (realN < SMALL_THRESHOLD || realM < SMALL_THRESHOLD) ||
+                         IsX3NoBatch(x1, x2, x3);
         if (needSplit) {
-            return BuildSplitFusedMatMulGraph(x, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType,
+            return BuildSplitFusedMatMulGraph(x1, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType,
                                               isHighPrecisionBmm, executor);
         }
     }
-    return BuildDirectFusedMatMulGraph(x, x2, bias, x3, alpha, beta, y, mmOpInfo, fusedOpType, cubeMathType,
+    return BuildDirectFusedMatMulGraph(x1, x2, bias, x3, alpha, beta, y, mmOpInfo, fusedOpType, cubeMathType,
                                        hasScaleInput, executor);
 }
 
