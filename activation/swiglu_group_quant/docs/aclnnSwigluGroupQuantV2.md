@@ -1,6 +1,6 @@
 # aclnnSwigluGroupQuantV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/swiglu_group_quant)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/swiglu_group_quant)
 
 ## 产品支持情况
 
