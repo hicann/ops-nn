@@ -5440,6 +5440,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/dynamic_gru/README.md">dynamic_gru</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>单层单向GRU（门控循环单元）前向整段循环算子，一次调用完成全部时间步的双门GEMM、候选门GEMM与门控逐元素更新；吸收变长序列掩码能力（seq_length传入即激活冻结式掩码）。仅支持GEIR/GE图模式调用，不提供aclnn接口。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>
     <td>✓</td>
     <td>✓</td>
