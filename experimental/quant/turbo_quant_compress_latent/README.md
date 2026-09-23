@@ -116,7 +116,7 @@
 
 ## 性能
 
-测试环境：Atlas A2 训练系列产品（910B4，40 个 Vector 核，UB 192 KB），CANN 9.0.1。耗时取 `torch_npu.profiler` 落盘的 `kernel_details.csv` 中 `Duration(us)` 的最小值（warmup 5 次、active 10~15 次）。`headDim` 固定为 512。
+测试环境：Atlas A2训练系列产品（910B4，40 个 Vector 核，UB 192 KB），CANN 9.0.1。耗时取 `torch_npu.profiler` 落盘的 `kernel_details.csv` 中 `Duration(us)` 的最小值（warmup 5 次、active 10~15 次）。`headDim` 固定为 512。
 
 > 以下为既有 `output_mode=0`（320B slot）实测数据，不代表本次新增的
 > `output_mode=1`（258B compact corrected slot）性能；模式1需按 `TEST_GUIDE.md` 单独补测。

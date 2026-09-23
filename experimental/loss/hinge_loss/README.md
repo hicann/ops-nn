@@ -43,7 +43,7 @@ $$
 
 ## 本地编译运行 UT
 
-环境准备请参考项目环境部署文档。Atlas A2 系列产品使用 `ascend910b`；其他可选 SoC 为 `ascend910_93` 和 `ascend950`。
+环境准备请参考项目环境部署文档。Atlas A2系列产品使用 `ascend910b`；其他可选 SoC 为 `ascend910_93` 和 `ascend950`。
 
 ```bash
 # Host UT：注册、shape/type 推导和 tiling
