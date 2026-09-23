@@ -3599,6 +3599,26 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/in_training_update_v2/README.md">in_training_update_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实例归一化训练更新算子。根据前级输出的sum和square_sum计算实例统计量，对x进行归一化，并可选执行gamma/beta仿射变换和滑动统计量更新。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/in_training_update_grad_gamma_beta/README.md">in_training_update_grad_gamma_beta</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>InstanceNorm训练反向的第二阶段。分别将res_gamma与res_beta沿第0轴求和并保留规约轴，得到pd_gamma与pd_beta。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_grad/README.md">in_training_reduce_grad</a></td>
     <td>✓</td>
     <td>✓</td>
