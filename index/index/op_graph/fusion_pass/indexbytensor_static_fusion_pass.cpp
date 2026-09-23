@@ -32,11 +32,20 @@
 #include "ge/fusion/pass/decompose_pass.h"
 #include "common/inc/error_util.h"
 #include "indexbytensor_static_fusion_pass.h"
-#include "version/ge-compiler_version.h"
 
 using namespace ge;
 using namespace ge::fusion;
 using namespace fe;
+
+// GE 9.2+ 的 SubgraphRewriter::Replace 新增三参重载（携带 CustomPassContext），
+// 低版本 CANN 的 libge_compiler.so 中不存在该符号，编译期按头文件直接调用会产生强引用，
+// 导致 so 在旧版本环境加载时因 undefined symbol 失败。
+// 这里通过 asm label 对该符号做弱镜像声明，运行时判空：
+// 存在则走三参版本，否则回退到新老版本都有的两参版本。
+extern ge::Status SubgraphRewriterReplaceWithCtx(
+    const ge::fusion::SubgraphBoundary& subgraph, const ge::Graph& replacement,
+    ge::CustomPassContext& ctx) __asm__("_ZN2ge6fusion16SubgraphRewriter7ReplaceERKNS0_16SubgraphBoundaryERKNS_"
+                                        "5GraphERNS_17CustomPassContextE") __attribute__((weak));
 
 namespace ops {
 
@@ -248,11 +257,14 @@ static bool ReplaceIndexByTensor(const GNode& node, CustomPassContext& passConte
         return false;
     }
 
-#if GE_COMPILER_VERSION_NUM >= 90200000
-    if (SubgraphRewriter::Replace(*boundary, *replacement, passContext) != SUCCESS) {
-#else
-    if (SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS) {
-#endif
+    Status ret = FAILED;
+    if (SubgraphRewriterReplaceWithCtx != nullptr) {
+        ret = SubgraphRewriterReplaceWithCtx(*boundary, *replacement, passContext);
+    } else {
+        OPS_LOG_D(kPassName.c_str(), "Three-arg Replace is unavailable, fallback to two-arg version.");
+        ret = SubgraphRewriter::Replace(*boundary, *replacement);
+    }
+    if (ret != SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "SubgraphRewriter::Replace failed.");
         return false;
     }

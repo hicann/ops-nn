@@ -112,6 +112,40 @@ TEST_F(IndexTest, index_infershape_success_03)
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
 
+TEST_F(IndexTest, index_infershape_compile_time_sizes_no_data)
+{
+    // 编译期 indexed_sizes 无 const 数据（GetData 为 nullptr），
+    // 应返回成功并将输出置为 unknown rank，等待执行期数据就绪后重新推导
+    gert::InfershapeContextPara::TensorDescription x_shape({{24572, 7500}, {24572, 7500}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{24572}, {24572}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01}, {y}, {1, 1, 1, 1}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(IndexTest, index_infershape_no_indexed_dim)
+{
+    // indexed_sizes 全 0（无索引维），输出与 x 相同
+    vector<int64_t> indexed_sizes_data{0, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{10, 20}, {10, 20}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara("Index", {x_shape, indexed_sizes_shape, indexed_strides_shape},
+                                                      {y}, {1, 1, 1, 0}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {10, 20},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
 TEST_F(IndexTest, index_infershape_dynamic_shape_01)
 {
     vector<int64_t> indexed_sizes_data{1, 0, 0};

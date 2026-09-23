@@ -231,7 +231,15 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
     auto sizes_tensor = context->GetInputTensor(IDX_SIZES);
     OP_CHECK_NULL_WITH_CONTEXT(context, sizes_tensor);
     const int64_t* indexed_sizes = sizes_tensor->GetData<int64_t>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, indexed_sizes);
+    if (indexed_sizes == nullptr) {
+        // 编译期 indexed_sizes 数据未就绪（ValueDepend(OPTIONAL)），而输出 rank 依赖其取值，
+        // 这里置 unknown rank 并返回成功；已注册 InputsDataDependency({IDX_SIZES})，
+        // 执行期数据就绪后 GE 会重新执行 InferShape 推导出真实 shape。
+        OP_LOGD(context->GetNodeName(),
+                "indexed_sizes data is null at compile time, set y to unknown rank and defer to runtime infershape.");
+        Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
+    }
     vector<int64_t> indexed_sizes_vec(xDimNum, 0);
     int64_t indexed_sizes_num = sizes_tensor->GetShapeSize();
     OP_CHECK_IF(
@@ -264,9 +272,13 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
     if (CanBroadcast(context->GetNodeName(), indicesShapeList) == GRAPH_FAILED) {
         return GRAPH_FAILED;
     }
-    auto broadShapeList = BroadcastAllShapes(indicesShapeList);
-    OP_LOGD(context->GetNodeName(), "calculate broadShape = %s", VectorToString(broadShapeList[0]).c_str());
-    auto outputShape = ComputeOutputShape(xShape, indexed_sizes_vec, broadShapeList[0]);
+    vector<int64_t> broadShape;
+    if (!indicesShapeList.empty()) {
+        auto broadShapeList = BroadcastAllShapes(indicesShapeList);
+        broadShape = broadShapeList[0];
+    }
+    OP_LOGD(context->GetNodeName(), "calculate broadShape = %s", VectorToString(broadShape).c_str());
+    auto outputShape = ComputeOutputShape(xShape, indexed_sizes_vec, broadShape);
     OP_LOGD(context->GetNodeName(), "calculate outputShape = %s", VectorToString(outputShape).c_str());
 
     yShape->SetDimNum(static_cast<size_t>(outputShape.size()));
