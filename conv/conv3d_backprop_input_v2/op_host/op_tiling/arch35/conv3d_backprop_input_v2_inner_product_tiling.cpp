@@ -39,6 +39,7 @@ constexpr uint8_t ENABLE_C04 = 1;
 constexpr uint8_t ENABLE_TILING_HK = 2;
 constexpr uint8_t ENABLE_TILING_HK_WK = 3;
 constexpr uint8_t ENABLE_SMALL_KERNEL = 4;
+constexpr uint8_t ENABLE_LOCAL_W = 5;
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 constexpr uint32_t USE_UB_SIZE = 32 * 1024;
 constexpr uint32_t F8_C0_BITS = 5;
@@ -54,11 +55,98 @@ const int32_t groupIndex = 3;
 constexpr uint8_t SINGLE_CORE_DIN_SIZE = 1;
 constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL = 42;
 constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL_A16W8 = 13;
+constexpr uint32_t NO_SPLIT_KERNEL = 0;
+struct MSplitChoice {
+    bool enabled = false;
+    uint64_t tileW = 0;
+    uint64_t mCnt = 0;
+    uint64_t criticalWork = 0;
+};
+
+MSplitChoice EvaluateMSplit(uint64_t width, uint64_t baseM, uint64_t parallelWork, uint64_t coreNum, uint64_t tileW)
+{
+    MSplitChoice choice;
+    choice.tileW = tileW;
+    choice.mCnt = Ops::Base::CeilDiv(width, tileW);
+    const uint64_t rounds = Ops::Base::CeilDiv(parallelWork * choice.mCnt, coreNum);
+    // tileW < baseM 时仍只算一个基本块；localW 会将实际 baseM 收缩到 tileW。
+    choice.criticalWork = rounds * Ops::Base::CeilDiv(tileW, baseM);
+    return choice;
+}
+
+MSplitChoice SelectMSplit(uint64_t width, uint64_t baseM, uint64_t m0, uint64_t parallelWork, uint64_t coreNum,
+                          uint64_t currentTileM, uint64_t minTileM)
+{
+    if (width == 0 || baseM == 0 || m0 == 0 || parallelWork == 0 || coreNum == 0 || currentTileM == 0 ||
+        minTileM == 0) {
+        return {};
+    }
+    MSplitChoice best = EvaluateMSplit(width, baseM, parallelWork, coreNum, currentTileM);
+    const uint64_t qLimit = std::min(Ops::Base::CeilDiv(width, minTileM), coreNum);
+    for (uint64_t q = 2; q <= qLimit; ++q) {
+        const uint64_t tileW = Ops::Base::CeilAlign(Ops::Base::CeilDiv(width, q), m0);
+        if (tileW < minTileM || tileW >= width) {
+            continue;
+        }
+        MSplitChoice candidate = EvaluateMSplit(width, baseM, parallelWork, coreNum, tileW);
+        // 仅接受严格改善；相同代价保留较早的候选，避免无收益地增加任务数。
+        if (candidate.criticalWork < best.criticalWork) {
+            candidate.enabled = true;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
+MSplitChoice SelectLocalWSplit(uint64_t width, uint64_t baseM, uint64_t m0, uint64_t parallelWork, uint64_t coreNum)
+{
+    if (m0 == 0) {
+        return {};
+    }
+    constexpr uint64_t LOCAL_W_SPLIT_TILE_MIN = 256;
+    const uint64_t minTileM = std::min(baseM, LOCAL_W_SPLIT_TILE_MIN);
+    const uint64_t fullTileW = Ops::Base::CeilAlign(width, m0);
+    MSplitChoice best = SelectMSplit(width, baseM, m0, parallelWork, coreNum, fullTileW, minTileM);
+    // 即使不切 W，局部 A1 窗口和完整 Kw 合入 K 仍生效，整 W 基线可以提交。
+    best.enabled = best.tileW != 0;
+    return best;
+}
 } // namespace
 
 namespace Ops {
 namespace NN {
 namespace Conv {
+namespace {
+
+bool IsStrictOneDimShape(const Conv3dBpInputV2RunInfo& runInfo)
+{
+    return runInfo.dedx_d == 1 && runInfo.dedy_d == 1 && runInfo.kernel_d == 1 && runInfo.stride_d == 1 &&
+           runInfo.dilation_d == 1 && runInfo.backprop_pad_h == 0 && runInfo.backprop_pad_t == 0 &&
+           runInfo.dedx_h == 1 && runInfo.dedy_h == 1 && runInfo.kernel_h == 1 && runInfo.stride_h == 1 &&
+           runInfo.dilation_h == 1 && runInfo.backprop_pad_u == 0 && runInfo.backprop_pad_d == 0;
+}
+
+bool IsNcdhwOnly(const Conv3dBpInputV2RunInfo& runInfo)
+{
+    return runInfo.outBackpropFormat == ge::FORMAT_NCDHW && runInfo.filterFormat == ge::FORMAT_NCDHW &&
+           runInfo.yFormat == ge::FORMAT_NCDHW;
+}
+
+bool IsExclusiveProviderActive(const TilingRunInfo& tilingRunInfo, uint8_t kernelSplitMode)
+{
+    return tilingRunInfo.enableC04Flag || tilingRunInfo.enableFullLoadTiling || tilingRunInfo.enableVecTransFlag ||
+           tilingRunInfo.enableSplitKernelFlag || tilingRunInfo.enableSplitK ||
+           kernelSplitMode != static_cast<uint8_t>(NO_SPLIT_KERNEL);
+}
+
+// localW g1 分支：提供者每 n 块重扫一次 A1 窗口，大 cin
+// shape 需要较小的 n 块数，或足够宽的 W 来摊销重载开销（每轮重扫
+// 对应两个 baseM 块的 W）。
+constexpr uint32_t LOCAL_W_G1_MAX_N_BLOCK = 6;
+constexpr uint32_t LOCAL_W_G1_MAX_N_BLOCK_WIDE = 48;
+constexpr int32_t LOCAL_W_G1_WIDE_MIN_W = 2 * 1024;
+constexpr uint32_t LOCAL_W_BASE_N_CAP = 128;
+} // namespace
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
@@ -66,6 +154,10 @@ void Conv3DDXV2InnerProductTiling::Reset()
 {
     hasBiasFlag_ = false;
     hasDualOutput_ = false;
+    isGetTilingFromRepo = false;
+    enableLocalWSplit_ = false;
+    localWSplitTileW_ = 0;
+
     OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 1,
                              context_->GetRawTilingData()->GetCapacity()) != EOK,
                     CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
@@ -671,6 +763,274 @@ bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
     return true;
 }
 
+uint64_t Conv3DDXV2InnerProductTiling::GetLocalWSplitL1Width(uint64_t baseM) const
+{
+    if (baseM == 0 || runInfo_.kernel_w <= 0 || runInfo_.dilation_w <= 0) {
+        return 0;
+    }
+    uint64_t kwDilation = static_cast<uint64_t>(runInfo_.kernel_w - 1) * static_cast<uint64_t>(runInfo_.dilation_w);
+    ++kwDilation;
+    // localW 加载baseM和Kw
+    return baseM + kwDilation - 1;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsLocalWWAxisBoundsValid() const
+{
+    const uint64_t kwDilation = static_cast<uint64_t>(runInfo_.kernel_w - 1) * runInfo_.dilation_w + 1;
+    const int64_t bpPadRight = static_cast<int64_t>(runInfo_.dedx_w) -
+                               (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
+                               static_cast<int64_t>(kwDilation - 1) - runInfo_.backprop_pad_l;
+    return runInfo_.backprop_pad_l >= 0 && runInfo_.backprop_pad_l <= PAD_DIM_UP && bpPadRight >= 0 &&
+           bpPadRight <= PAD_DIM_UP && static_cast<uint64_t>(runInfo_.backprop_pad_l) < kwDilation &&
+           static_cast<uint64_t>(bpPadRight) < kwDilation && kwDilation <= PAD_DIM_UP &&
+           kwDilation >= static_cast<uint64_t>(runInfo_.stride_w);
+}
+
+bool Conv3DDXV2InnerProductTiling::IsLocalWDepthwiseAdmitted() const
+{
+    return runInfo_.groups > 1 && runInfo_.real_g == runInfo_.groups && runInfo_.dedy_cout == runInfo_.groups &&
+           runInfo_.dedy_cout_g == 1 && !hasBiasFlag_;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsOneDimSplitInputAdmitted() const
+{
+    if (runInfo_.batch_n != 1) {
+        return false;
+    }
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510) {
+        return false;
+    }
+    const auto* outputBackpropDesc = context_->GetInputDesc(OUTPUT_BP_INDEX);
+    const auto* filterDesc = context_->GetInputDesc(FILTER_INDEX);
+    const auto* yDesc = context_->GetOutputDesc(Y_INDEX);
+    const bool isBf16 = outputBackpropDesc != nullptr && filterDesc != nullptr && yDesc != nullptr &&
+                        outputBackpropDesc->GetDataType() == ge::DT_BF16 && filterDesc->GetDataType() == ge::DT_BF16 &&
+                        yDesc->GetDataType() == ge::DT_BF16;
+    if (!isBf16 || !hasBiasFlag_) {
+        return isBf16;
+    }
+    const auto* biasDesc = context_->GetOptionalInputDesc(BAIS_INDEX);
+    return biasDesc != nullptr && biasDesc->GetDataType() == ge::DT_FLOAT;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsLocalWGroupOneAdmitted() const
+{
+    const uint32_t g1NBlock = static_cast<uint32_t>(
+        Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_cin_g), static_cast<uint64_t>(tilingRunInfo_.n0)));
+    const bool nBlockAdmitted = g1NBlock <= LOCAL_W_G1_MAX_N_BLOCK ||
+                                (g1NBlock <= LOCAL_W_G1_MAX_N_BLOCK_WIDE && runInfo_.dedx_w > LOCAL_W_G1_WIDE_MIN_W);
+    return runInfo_.groups == 1 && runInfo_.real_g == 1 && runInfo_.enlarge == 1 &&
+           runInfo_.dedx_cin_g == runInfo_.dedx_cin && runInfo_.dedy_cout_g == runInfo_.dedy_cout &&
+           runInfo_.dilation_w == 1 && nBlockAdmitted;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsJointLocalWSplitCapable() const
+{
+    if (!IsOneDimSplitInputAdmitted() || runInfo_.kernel_w <= 1 || runInfo_.stride_w <= 0 || runInfo_.dilation_w <= 0 ||
+        runInfo_.stride_w > PAD_DIM_UP || runInfo_.dedx_w <= static_cast<int32_t>(MAX_BASE_MN) ||
+        runInfo_.dedy_w <= 0 || blockSize_ != BLOCK_CUBE || !IsLocalWWAxisBoundsValid()) {
+        return false;
+    }
+
+    const bool isLegalInitialHkWkMode = tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK ||
+                                        tilingRunInfo_.tilingHkWkMode == TILING_HK ||
+                                        tilingRunInfo_.tilingHkWkMode == TILING_HK_WK;
+    if (!IsStrictOneDimShape(runInfo_) || !IsNcdhwOnly(runInfo_) || !isLegalInitialHkWkMode ||
+        IsExclusiveProviderActive(tilingRunInfo_, kernelSplitMode_) || groupConvMode_ != TILING_GROUP_MODE_ORIGIN ||
+        runInfo_.offsetX != 0) {
+        return false;
+    }
+    return IsLocalWDepthwiseAdmitted() || IsLocalWGroupOneAdmitted();
+}
+
+bool Conv3DDXV2InnerProductTiling::ChooseLocalWTile(const L0TilingParams& l0Params)
+{
+    if (l0Params.baseM == 0 || l0Params.baseN == 0) {
+        return false;
+    }
+    const uint64_t nCnt = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_cin_g),
+                                             static_cast<uint64_t>(l0Params.baseN));
+    const uint64_t parallelWork = static_cast<uint64_t>(runInfo_.batch_n) * static_cast<uint64_t>(runInfo_.real_g) *
+                                  nCnt;
+    MSplitChoice choice = SelectLocalWSplit(static_cast<uint64_t>(runInfo_.dedx_w), l0Params.baseM, tilingRunInfo_.m0,
+                                            parallelWork, static_cast<uint64_t>(coreNum_));
+    if (!choice.enabled || GetLocalWSplitL1Width(l0Params.baseM) == 0) {
+        return false;
+    }
+    localWSplitTileW_ = choice.tileW;
+    return true;
+}
+
+bool Conv3DDXV2InnerProductTiling::RunLocalWRecompute(L0TilingParams& l0Params, L1TilingParams& l1Params,
+                                                      CoreTilingParams& coreParams)
+{
+    (void)CalcKSegment();
+    InitBaseMNK(l0Params);
+    if (!ChooseLocalWTile(l0Params)) {
+        return false;
+    }
+    if (!InitL1Params(l1Params, l0Params)) {
+        return false;
+    }
+    SetSingleCoreInfo(coreParams, l0Params);
+    CalStepK(l1Params, l0Params);
+    const uint32_t baseMBeforeProtection = l0Params.baseM;
+    const uint32_t baseNBeforeProtection = l0Params.baseN;
+    if (!IsL1ParamsValid(l1Params, l0Params)) {
+        LegalProtection(l1Params, l0Params);
+    }
+    if (!IsL1ParamsValid(l1Params, l0Params)) {
+        return false;
+    }
+
+    if (l0Params.baseM != baseMBeforeProtection || l0Params.baseN != baseNBeforeProtection) {
+        if (!ChooseLocalWTile(l0Params)) {
+            return false;
+        }
+        SetSingleCoreInfo(coreParams, l0Params);
+        CalStepK(l1Params, l0Params);
+        if (!IsL1ParamsValid(l1Params, l0Params)) {
+            return false;
+        }
+    }
+    SetTilingCondition(coreParams, l1Params, l0Params);
+    return loadB1Condition_ == ENABLE_LOCAL_W &&
+           (loadB2Condition_ == B2_TRANSPOSE_AND_REVERSE || loadB2Condition_ == B2_REVERSE_ONLY);
+}
+
+Conv3DDXV2InnerProductTiling::LocalWAttemptState Conv3DDXV2InnerProductTiling::SnapshotLocalWAttempt() const
+{
+    LocalWAttemptState state;
+    state.tilingRunInfo = tilingRunInfo_;
+    state.initOutputFlag = runInfo_.initOutputFlag;
+    state.loadB1Condition = loadB1Condition_;
+    state.loadB2Condition = loadB2Condition_;
+    state.kernelSplitMode = kernelSplitMode_;
+    state.groupConvMode = groupConvMode_;
+    state.a1DbFlag = a1DbFlag_;
+    state.b1DbFlag = b1DbFlag_;
+    state.isBiasFullLoad = isBiasFullLoad_;
+    state.singleIterateDk = singleIterateDk_;
+    state.enableLocalWSplit = enableLocalWSplit_;
+    state.localWSplitTileW = localWSplitTileW_;
+    return state;
+}
+
+void Conv3DDXV2InnerProductTiling::RestoreLocalWAttempt(const LocalWAttemptState& state)
+{
+    tilingRunInfo_ = state.tilingRunInfo;
+    runInfo_.initOutputFlag = state.initOutputFlag;
+    loadB1Condition_ = state.loadB1Condition;
+    loadB2Condition_ = state.loadB2Condition;
+    kernelSplitMode_ = state.kernelSplitMode;
+    groupConvMode_ = state.groupConvMode;
+    a1DbFlag_ = state.a1DbFlag;
+    b1DbFlag_ = state.b1DbFlag;
+    isBiasFullLoad_ = state.isBiasFullLoad;
+    singleIterateDk_ = state.singleIterateDk;
+    enableLocalWSplit_ = state.enableLocalWSplit;
+    localWSplitTileW_ = state.localWSplitTileW;
+}
+
+bool Conv3DDXV2InnerProductTiling::TryJointLocalWSplit()
+{
+    if (!IsJointLocalWSplitCapable()) {
+        return false;
+    }
+
+    const LocalWAttemptState saved = SnapshotLocalWAttempt();
+    auto restore = [&]() { RestoreLocalWAttempt(saved); };
+
+    enableLocalWSplit_ = true;
+    tilingRunInfo_.tilingHkWkMode = NO_TILING_HWK;
+    tilingRunInfo_.lenHkWkC0 = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * tilingRunInfo_.k0;
+    tilingRunInfo_.kValue = static_cast<uint64_t>(runInfo_.dedy_cout1_g) * tilingRunInfo_.lenHkWkC0;
+    tilingRunInfo_.enableSplitK = 0;
+    tilingRunInfo_.useUbAccumForSplitK = false;
+    runInfo_.initOutputFlag = 0;
+
+    L0TilingParams l0Params;
+    L1TilingParams l1Params;
+    CoreTilingParams coreParams;
+    if (!RunLocalWRecompute(l0Params, l1Params, coreParams)) {
+        restore();
+        return false;
+    }
+    SetTilingData(coreParams, l1Params, l0Params);
+    const uint64_t mCnt = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_w), localWSplitTileW_);
+    OP_LOGW(
+        context_->GetNodeName(),
+        "Enable joint local-W tiling: W=%ld, mCnt=%ld, tileW=%ld, baseM=%u, baseN=%u, baseK=%u, stepKa=%u, stepKb=%u, "
+        "localL1W=%ld, coreNum=%ld",
+        static_cast<int64_t>(runInfo_.dedx_w), static_cast<int64_t>(mCnt), static_cast<int64_t>(localWSplitTileW_),
+        l0Params.baseM, l0Params.baseN, l0Params.baseK, l1Params.stepKa, l1Params.stepKb,
+        static_cast<int64_t>(GetLocalWSplitL1Width(l0Params.baseM)), static_cast<int64_t>(tilingData_.get_coreNum()));
+    return true;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsBalancedMBusinessAdmitted() const
+{
+    // 支持可选 bias 的 origin g=1，以及无 bias 的 depthwise 组扩维。
+    const bool isOriginGroupOne = groupConvMode_ == TILING_GROUP_MODE_ORIGIN &&
+                                  loadB2Condition_ == B2_TRANSPOSE_AND_REVERSE && runInfo_.groups == 1 &&
+                                  runInfo_.real_g == 1 && runInfo_.enlarge == 1;
+    const bool validEnlargedGroups = runInfo_.real_g > 0 && runInfo_.enlarge > 1 &&
+                                     runInfo_.real_g == (runInfo_.groups + runInfo_.enlarge - 1) / runInfo_.enlarge;
+    const bool isEnlargedDepthwise = groupConvMode_ == TILING_GROUP_MODE_ENLARGE &&
+                                     loadB2Condition_ == B2_REVERSE_ONLY && runInfo_.groups > 1 &&
+                                     runInfo_.real_g < runInfo_.groups && validEnlargedGroups &&
+                                     runInfo_.dedx_cin == runInfo_.groups && runInfo_.dedy_cout == runInfo_.groups &&
+                                     runInfo_.dedx_cin_g == runInfo_.enlarge &&
+                                     runInfo_.dedy_cout_g == runInfo_.enlarge && !hasBiasFlag_;
+    return isOriginGroupOne || isEnlargedDepthwise;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsBalancedMSplitCapable()
+{
+    const bool isNormalRowCMode = (tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK &&
+                                   loadB1Condition_ == TPL_GM_TO_L1) ||
+                                  (tilingRunInfo_.tilingHkWkMode == TILING_HK &&
+                                   loadB1Condition_ == ENABLE_TILING_HK) ||
+                                  (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK &&
+                                   loadB1Condition_ == ENABLE_TILING_HK_WK);
+    if (!IsOneDimSplitInputAdmitted() || runInfo_.dedx_w <= 0 || !IsStrictOneDimShape(runInfo_) ||
+        !IsNcdhwOnly(runInfo_) || !isNormalRowCMode || IsExclusiveProviderActive(tilingRunInfo_, kernelSplitMode_) ||
+        runInfo_.offsetX != 0) {
+        return false;
+    }
+    return IsBalancedMBusinessAdmitted();
+}
+
+bool Conv3DDXV2InnerProductTiling::ApplyBalancedMSplit(CoreTilingParams& coreParams, const L0TilingParams& l0Params)
+{
+    if (!IsBalancedMSplitCapable() || coreParams.singleCoreM == 0 || coreParams.singleCoreCin == 0 ||
+        l0Params.baseM == 0) {
+        return false;
+    }
+
+    uint64_t nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, coreParams.singleCoreCin);
+    uint64_t parallelWork = static_cast<uint64_t>(runInfo_.batch_n) * static_cast<uint64_t>(runInfo_.real_g);
+    parallelWork *= nCnt;
+
+    MSplitChoice choice = SelectMSplit(static_cast<uint64_t>(runInfo_.dedx_w), l0Params.baseM, tilingRunInfo_.m0,
+                                       parallelWork, static_cast<uint64_t>(coreNum_), coreParams.singleCoreM,
+                                       l0Params.baseM);
+    if (!choice.enabled) {
+        return false;
+    }
+
+    const uint64_t oldTileM = coreParams.singleCoreM;
+    coreParams.singleCoreM = choice.tileW;
+    OP_LOGW(context_->GetNodeName(),
+            "Enable balanced M split for %s: W=%ld, oldTileM=%ld, tileM=%ld, mCnt=%ld, P=%ld, baseM=%u, "
+            "criticalWork=%ld",
+            groupConvMode_ == TILING_GROUP_MODE_ENLARGE ? "group-enlarge" : "origin-group-one",
+            static_cast<int64_t>(runInfo_.dedx_w), static_cast<int64_t>(oldTileM), static_cast<int64_t>(choice.tileW),
+            static_cast<int64_t>(choice.mCnt), static_cast<int64_t>(parallelWork), l0Params.baseM,
+            static_cast<int64_t>(choice.criticalWork));
+    return true;
+}
+
 bool Conv3DDXV2InnerProductTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
@@ -783,7 +1143,9 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(const CoreTilingParams& c
 
 uint32_t Conv3DDXV2InnerProductTiling::GetLoadB1Condition()
 {
-    if (tilingRunInfo_.enableC04Flag) {
+    if (enableLocalWSplit_) {
+        return ENABLE_LOCAL_W;
+    } else if (tilingRunInfo_.enableC04Flag) {
         return ENABLE_C04;
     } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
         return ENABLE_TILING_HK; // 表示load2b1时只加载wk
@@ -878,7 +1240,10 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(const CoreTilingParams& c
     dxt.set_enableVecTrans(tilingRunInfo_.enableVecTransFlag);
     dxt.set_enableFullLoad(tilingRunInfo_.enableFullLoadTiling);
     dxt.set_loadB1FractalZ(IsLoadB1FractalZ());
-    if (tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK || runInfo_.stride_d > runInfo_.kernel_d) {
+    dxt.set_enableLocalW(static_cast<uint8_t>(enableLocalWSplit_));
+    uint8_t reserved[4] = {0};
+    dxt.set_reserved(reserved);
+    if (enableLocalWSplit_ || tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK || runInfo_.stride_d > runInfo_.kernel_d) {
         dxt.set_initOutputFlag(runInfo_.initOutputFlag);
     }
     dxt.set_isBiasFullLoad(l1Params.isBiasFullLoad);
@@ -931,8 +1296,10 @@ bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
     TranslateRunInfoData();
     TranslateTilingData(tunerTiling);
     TranslateTilingRunInfo(tunerTiling);
-    // repo 不含 fractal_z 直搬场景，标志清零防残留。
     tilingData_.set_loadB1FractalZ(0);
+    tilingData_.set_enableLocalW(static_cast<uint8_t>(loadB1Condition_ == ENABLE_LOCAL_W));
+    uint8_t reserved[4] = {0};
+    tilingData_.set_reserved(reserved);
     if (tilingData_.get_enlarge() == 1) {
         groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     } else {
@@ -1143,6 +1510,11 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
         return ge::GRAPH_SUCCESS;
     }
 
+    if (TryJointLocalWSplit()) {
+        PrintTilingSummary();
+        return ge::GRAPH_SUCCESS;
+    }
+
     // 计算K轴分段大小实现Cout轴切分，判断是否需要切分
     if (CalcKSegment() == ge::GRAPH_SUCCESS && tilingRunInfo_.enableSplitK) {
         OP_LOGD(opName_, "Enable Split K.");
@@ -1180,6 +1552,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
         return ge::GRAPH_FAILED;
     }
+    ApplyBalancedMSplit(coreParams, l0Params);
     SetTilingData(coreParams, l1Params, l0Params);
     PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
@@ -1239,7 +1612,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, loadB1Condition_);
+    const uint8_t keyLoadB1 = loadB1Condition_ == ENABLE_LOCAL_W ? TPL_GM_TO_L1 : loadB1Condition_;
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, keyLoadB1);
     OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]",
             loadB2Condition_, loadB1Condition_, kernelSplitMode_);
     return tilingKey;
@@ -1360,9 +1734,15 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     const uint64_t coutNum = std::max(static_cast<uint64_t>(l1Params.stepKa) * l0Params.baseK / kernelHW, ONE_U64);
     uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l0Params.baseM, isL1SplitHk)) * runInfo_.dedy_w *
                           runInfo_.stride_w * coutNum;
-    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
-        // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
-        a1PixelNum = BASIC_BLOCK_SIZE_256 * coutNum;
+    if (enableLocalWSplit_) {
+        const uint64_t localL1W = GetLocalWSplitL1Width(l0Params.baseM);
+        if (localL1W == 0) {
+            return false;
+        }
+        a1PixelNum = localL1W * coutNum;
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        a1PixelNum = BASIC_BLOCK_SIZE_256 *
+                     coutNum; // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
     }
     uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
 
@@ -1391,6 +1771,20 @@ void Conv3DDXV2InnerProductTiling::CloseL0PingPong(L0TilingParams& l0Params)
     l0Params.cl0Pbuffer = DB_OFF;
 }
 
+void Conv3DDXV2InnerProductTiling::InitLocalWBaseMNK(L0TilingParams& l0Params)
+{
+    // 局部 A1 窗口解除了整行 W 的 L1 限制，M 块取满足 L0A/L0C 的最大值。
+    const uint64_t widenedBaseN = Ops::Base::CeilAlign(tilingRunInfo_.nValue, static_cast<uint64_t>(tilingRunInfo_.n0));
+    l0Params.baseM = MAX_BASE_MN;
+    l0Params.baseN = static_cast<uint32_t>(std::min(widenedBaseN, static_cast<uint64_t>(LOCAL_W_BASE_N_CAP)));
+    uint32_t l0cMaxNum = platformInfo_.l0_c_size / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint32_t maxL0CBaseM = std::max(l0cMaxNum / l0Params.baseN / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
+    l0Params.baseM = std::min(l0Params.baseM, maxL0CBaseM);
+    l0Params.baseK = tilingRunInfo_.k0;
+    AdjustBaseMNK(l0Params, tilingRunInfo_);
+    UpdateL0CBufferMode(l0Params);
+}
+
 void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
 {
     l0Params.al0Pbuffer = DB_ON;
@@ -1398,6 +1792,11 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.cl0Pbuffer = DB_OFF;
     if (IsSocVersionFuse(context_)) {
         CloseL0PingPong(l0Params); // 耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
+    }
+
+    if (enableLocalWSplit_) {
+        InitLocalWBaseMNK(l0Params);
+        return;
     }
 
     // Kernel大于1时格式转换Bound, baseM大，baseN小, 方便掩盖右矩阵转换
@@ -1444,6 +1843,9 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
 
 uint32_t Conv3DDXV2InnerProductTiling::CalculateMaxBaseM(uint32_t baseN)
 {
+    if (enableLocalWSplit_) {
+        return MAX_BASE_MN;
+    }
     if (IsSocVersionFuse(context_) && tilingRunInfo_.enableSplitKernelFlag) {
         return Ops::Base::CeilDiv(USE_UB_SIZE, baseN);
     }
@@ -1742,8 +2144,13 @@ void Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params,
     uint32_t hoCal = CalFmapH(l0Params.baseM, isL1SplitHk); // 此处默认stepM=1
     uint64_t curHiWiSize = static_cast<uint64_t>(dtypeByteL0a_) * hoCal * runInfo_.dedy_w * runInfo_.stride_w *
                            tilingRunInfo_.m0;
-    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK ||
-        (tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w == 1)) {
+    if (enableLocalWSplit_) {
+        const uint64_t localL1W = GetLocalWSplitL1Width(l0Params.baseM);
+        if (localL1W != 0) {
+            curHiWiSize = static_cast<uint64_t>(dtypeByteL0a_) * localL1W * tilingRunInfo_.m0;
+        }
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK ||
+               (tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w == 1)) {
         curHiWiSize = static_cast<uint64_t>(dtypeByteL0a_) *
                       BASIC_BLOCK_SIZE_256; // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256
     }
@@ -1842,7 +2249,9 @@ bool Conv3DDXV2InnerProductTiling::ShrinkBaseMN(L1TilingParams& l1Params, L0Tili
     uint32_t baseNStart = l0Params.baseN;
     l0Params.baseK = tilingRunInfo_.k0; // 先将basek降到最小, 找到能够小于L1 Size的baseM和baseN
 
-    uint32_t minBaseM = std::max(static_cast<uint32_t>(runInfo_.dedx_w), static_cast<uint32_t>(tilingRunInfo_.m0));
+    uint32_t minBaseM = enableLocalWSplit_ ?
+                            static_cast<uint32_t>(tilingRunInfo_.m0) :
+                            std::max(static_cast<uint32_t>(runInfo_.dedx_w), static_cast<uint32_t>(tilingRunInfo_.m0));
     while (baseMStart > minBaseM || baseNStart > static_cast<uint32_t>(tilingRunInfo_.m0)) {
         if (baseMStart > minBaseM && baseMStart > baseNStart) {
             baseMStart = std::max(baseMStart - tilingRunInfo_.m0, static_cast<uint32_t>(tilingRunInfo_.m0));
@@ -1933,6 +2342,15 @@ void Conv3DDXV2InnerProductTiling::LegalProtection(L1TilingParams& l1Params, L0T
 void Conv3DDXV2InnerProductTiling::SetSingleCoreInfoCore(CoreTilingParams& coreParams, L0TilingParams& l0Params,
                                                          uint64_t hwI, uint32_t kernelDHW, uint64_t kSCnt)
 {
+    if (enableLocalWSplit_) {
+        coreParams.singleCoreCin = l0Params.baseN;
+        coreParams.singleCoreM = localWSplitTileW_;
+        if (coreParams.singleCoreM < l0Params.baseM) {
+            l0Params.baseM = Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
+        }
+        return;
+    }
+
     uint64_t batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
     uint64_t groupCnt = static_cast<uint64_t>(runInfo_.real_g);
     uint64_t mCnt = Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(l0Params.baseM));

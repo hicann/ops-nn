@@ -90,6 +90,16 @@ static __aicore__ inline uint32_t DivHkWk(Intf* self, uint32_t a)
 }
 
 template <class Intf>
+static __aicore__ inline bool UseLocalWWindow(const Intf* self)
+{
+    if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1) {
+        return self->ctx.isLocalW_;
+    } else {
+        return false;
+    }
+}
+
+template <class Intf>
 static __aicore__ inline uint32_t DivCeilHkWk(Intf* self, uint32_t a)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {

@@ -159,6 +159,11 @@ __aicore__ inline void InitFullLoadFlag(Intf* self)
         self->ctx.isA1FullLoadFlag_ = false;
         return;
     }
+    if (UseLocalWWindow<Intf>(self)) {
+        self->ctx.isB1FullLoadFlag_ = false;
+        self->ctx.isA1FullLoadFlag_ = false;
+        return;
+    }
     bool isDoutDkFullLoad = self->ctx.tiling_->dk == 1 || self->ctx.tiling_->dout == 1;
     bool baseB1Cond = self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin && self->ctx.tiling_->enlarge == 1;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
@@ -212,6 +217,10 @@ __aicore__ inline void InitParamsPart3(Intf* self)
     self->ctx.midHi_ = 0;
     self->ctx.tailWi_ = 0;
     self->ctx.curBackPropPadUp_ = 0;
+    self->ctx.localWoStart_ = 0;
+    self->ctx.localL1W_ = 0;
+    self->ctx.localPadLeft_ = 0;
+    self->ctx.localPadRight_ = 0;
 #endif
     if (EnableVecGroupEnlarge(self)) {
         self->ctx.groupIterIdx_ = 0;
@@ -371,6 +380,10 @@ __aicore__ inline void CalcMatrixByteSize(Intf* self, uint32_t& aMatrixByteSize,
             // 不加载L1不加载完整的hkwk时, wo无需搬一整行
             aMatrixByteSize = self->ctx.tiling_->baseM *
                               DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
+                              sizeof(typename Intf::SrcAT);
+        } else if (UseLocalWWindow<Intf>(self)) {
+            uint32_t localL1W = self->ctx.tiling_->baseM + self->ctx.tiling_->kwDilation - 1;
+            aMatrixByteSize = localL1W * DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                               sizeof(typename Intf::SrcAT);
         } else {
             aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
@@ -586,6 +599,36 @@ static __aicore__ inline void Compute(Intf* self)
 }
 
 template <class Intf>
+static __aicore__ inline void UpdateLocalWLoadInfo(Intf* self, uint64_t globalMStart)
+{
+    const int64_t strideW = self->ctx.tiling_->strideW;
+    const int64_t wo = self->ctx.tiling_->wo;
+    const int64_t expandedW = (wo - 1) * strideW + 1;
+    const int64_t needStart = static_cast<int64_t>(globalMStart) - self->ctx.tiling_->backpropPadLeft;
+    const int64_t needEnd = static_cast<int64_t>(globalMStart) + self->ctx.baseUseM_ -
+                            self->ctx.tiling_->backpropPadLeft + self->ctx.tiling_->kwDilation - 1;
+    const int64_t clippedStart = needStart > 0 ? needStart : 0;
+    const int64_t clippedEnd = needEnd < expandedW ? needEnd : expandedW;
+    int64_t firstWo = (clippedStart + strideW - 1) / strideW;
+    int64_t lastWo = (clippedEnd + strideW - 1) / strideW;
+    firstWo = firstWo < wo ? firstWo : wo - 1;
+    lastWo = lastWo <= wo ? lastWo : wo;
+    lastWo = lastWo > firstWo ? lastWo : firstWo + 1;
+
+    const int64_t realWo = lastWo - firstWo;
+    const int64_t expandedOrigin = firstWo * strideW;
+    const int64_t localL1W = (realWo - 1) * strideW + 1;
+    const int64_t localPadLeft = expandedOrigin - needStart;
+    const int64_t localPadRight = needEnd - expandedOrigin - localL1W;
+    self->ctx.localWoStart_ = static_cast<uint32_t>(firstWo);
+    self->ctx.realWoSize_ = static_cast<uint32_t>(realWo);
+    self->ctx.localL1W_ = static_cast<uint32_t>(localL1W);
+    self->ctx.localPadLeft_ = static_cast<uint32_t>(localPadLeft > 0 ? localPadLeft : 0);
+    self->ctx.localPadRight_ = static_cast<uint32_t>(localPadRight > 0 ? localPadRight : 0);
+    self->ctx.load3d_.mStartPt = 0;
+}
+
+template <class Intf>
 static __aicore__ inline void UpdateCurHoSize(Intf* self)
 {
     // 要从当前核hoStartIdx开始算，普通场景可以跨行，要从GM起点开始计算
@@ -616,6 +659,9 @@ static __aicore__ inline void UpdateCurHoSize(Intf* self)
                    (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->dilationH);
     }
     UpdateCurHoSizeCore<Intf>(self, endHoIdx);
+    if (UseLocalWWindow<Intf>(self)) {
+        UpdateLocalWLoadInfo<Intf>(self, curMIdx);
+    }
 }
 
 template <class Intf>
@@ -827,6 +873,7 @@ struct Init {
 #endif
         // kernel侧通过ctx持有tiling指针，供后续全流程访问，避免向kernel内部逐层传递引用
         self->ctx.tiling_ = &(tiling);
+        self->ctx.isLocalW_ = self->ctx.tiling_->enableLocalW == 1;
         self->ctx.curEnableFullLoad_ = self->ctx.tiling_->enableFullLoad;
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(true);

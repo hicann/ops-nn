@@ -76,7 +76,11 @@ static __aicore__ inline void CalcSetFmatrixParams(Intf* self, uint32_t fmapH, u
             self->ctx.load3d_.padList[2] = 0;
         }
 
-        if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
+        if (UseLocalWWindow<Intf>(self)) {
+            self->ctx.load3d_.padList[0] = self->ctx.localPadLeft_;
+            self->ctx.load3d_.padList[1] = self->ctx.localPadRight_;
+            self->ctx.load3d_.padList[2] = 0;
+        } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
             self->ctx.load3d_.padList[0] = self->ctx.curWoLeftIdx_ < 0 ? abs(self->ctx.curWoLeftIdx_) : 0;
             self->ctx.load3d_.padList[1] = self->ctx.curWoRightIdx_ > 0 ? abs(self->ctx.curWoRightIdx_) : 0;
         }
@@ -255,7 +259,11 @@ static __aicore__ inline void CalcOutToA1DstAddr(Intf* self, const uint32_t stri
         out2A1DstAddrOffset = static_cast<uint64_t>(hDstDataSkipLine) * woExpand << self->ctx.tiling_->c0BitsA;
     }
 
-    if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
+    if (UseLocalWWindow<Intf>(self)) {
+        loadToA1HLoop = 1;
+        out2A1DstAddrOffset = 0;
+        woExpand = self->ctx.localL1W_;
+    } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         loadToA1HLoop = 1; // 此时只需加载一行
         uint32_t allWoExpand = woExpand;
         woExpand = ((self->ctx.realWoSize_ - 1) * self->ctx.tiling_->strideW) + 1;
@@ -435,7 +443,9 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf* self, LocalTensor<typename Intf::S
         }
     }
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo;
-    if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
+    if (UseLocalWWindow<Intf>(self)) {
+        woOffset += self->ctx.localWoStart_;
+    } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset += (self->ctx.curWoLeftIdx_ <= 0 ? 0 : DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW));
     } else if (self->ctx.tiling_->backpropPadLeft < 0) {
         // HW-split 已按 subPadLeft 处理，避免重复叠加全局左偏移。
@@ -494,7 +504,9 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf* self, LocalTensor<typename Intf::S
     }
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo * self->ctx.tiling_->cout;
     uint64_t woOffset = 0;
-    if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
+    if (UseLocalWWindow<Intf>(self)) {
+        woOffset = static_cast<uint64_t>(self->ctx.localWoStart_) * self->ctx.tiling_->cout;
+    } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset = (self->ctx.curWoLeftIdx_ <= 0 ?
                         0 :
                         DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW) * self->ctx.tiling_->cout);

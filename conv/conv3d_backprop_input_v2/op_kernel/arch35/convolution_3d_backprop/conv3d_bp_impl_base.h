@@ -226,6 +226,11 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, l0aPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, l0bPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, realWoSize_);
+        DEFINE_STUCT_FIELD(uint32_t, localWoStart_);
+        DEFINE_STUCT_FIELD(uint32_t, localL1W_);
+        DEFINE_STUCT_FIELD(uint32_t, localPadLeft_);
+        DEFINE_STUCT_FIELD(uint32_t, localPadRight_);
+        DEFINE_STUCT_FIELD(bool, isLocalW_);
 #endif
     };
 };

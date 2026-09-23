@@ -80,6 +80,7 @@ constexpr int64_t N2H_W_IN_FORTY = 40;
 constexpr uint64_t N2H_NO_HKWK_BASE_M = 1024;
 constexpr uint64_t N2H_NO_HKWK_BASE_N = 16;
 constexpr uint64_t N2H_CUBE_BLOCK_BYTES = 32;
+constexpr uint64_t N2H_HO_MARGIN = 2;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 32;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
@@ -1221,9 +1222,9 @@ static bool CheckN2HNoHkWkL1Probe(const aclTensor* input, const aclTensor* weigh
     if (N2H_NO_HKWK_BASE_M % wo == 0 || wo % N2H_NO_HKWK_BASE_M == 0) {
         calHo = N2H_NO_HKWK_BASE_M / wo + static_cast<uint64_t>(N2H_NO_HKWK_BASE_M % wo != 0);
     } else if (N2H_NO_HKWK_BASE_M > wo) {
-        calHo = N2H_NO_HKWK_BASE_M / wo + 2;
+        calHo = N2H_NO_HKWK_BASE_M / wo + N2H_HO_MARGIN;
     } else {
-        calHo = 2;
+        calHo = N2H_HO_MARGIN;
     }
     const uint64_t curHo = std::min(static_cast<uint64_t>(batch), calHo);
     const uint64_t aProbe = curHo * static_cast<uint64_t>(wi) * static_cast<uint64_t>(strideW) * N2H_CUBE_BLOCK_BYTES;

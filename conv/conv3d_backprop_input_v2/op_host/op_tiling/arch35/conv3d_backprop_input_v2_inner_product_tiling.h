@@ -162,6 +162,35 @@ protected:
     size_t GetSysWorkspaceSize();
 
     bool GetTilingFromRepo();
+    struct LocalWAttemptState {
+        TilingRunInfo tilingRunInfo;
+        int32_t initOutputFlag;
+        uint8_t loadB1Condition;
+        uint8_t loadB2Condition;
+        uint8_t kernelSplitMode;
+        uint8_t groupConvMode;
+        bool a1DbFlag;
+        bool b1DbFlag;
+        int32_t isBiasFullLoad;
+        uint32_t singleIterateDk;
+        bool enableLocalWSplit;
+        uint64_t localWSplitTileW;
+    };
+    LocalWAttemptState SnapshotLocalWAttempt() const;
+    void RestoreLocalWAttempt(const LocalWAttemptState& state);
+    bool IsOneDimSplitInputAdmitted() const;
+    bool IsJointLocalWSplitCapable() const;
+    bool IsLocalWWAxisBoundsValid() const;
+    bool IsLocalWDepthwiseAdmitted() const;
+    bool IsLocalWGroupOneAdmitted() const;
+    bool ChooseLocalWTile(const L0TilingParams& l0Params);
+    bool RunLocalWRecompute(L0TilingParams& l0Params, L1TilingParams& l1Params, CoreTilingParams& coreParams);
+    bool TryJointLocalWSplit();
+    uint64_t GetLocalWSplitL1Width(uint64_t baseM) const;
+    bool IsBalancedMSplitCapable();
+    bool IsBalancedMBusinessAdmitted() const;
+    void InitLocalWBaseMNK(L0TilingParams& l0Params);
+    bool ApplyBalancedMSplit(CoreTilingParams& coreParams, const L0TilingParams& l0Params);
     std::shared_ptr<tuningtiling::TuningTilingDef> GetKnowledgeTiling();
     bool GetTilingInputArgs(std::shared_ptr<void>& inputArgs, std::size_t& inputArgsSize);
     void TranslateRunInfoData();
@@ -191,6 +220,8 @@ protected:
     uint8_t loadB1Condition_ = 0;
     uint8_t kernelSplitMode_ = 0;
     uint8_t groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
+    bool enableLocalWSplit_ = false;
+    uint64_t localWSplitTileW_ = 0;
     int32_t coreNum_ = 1;
     int32_t isBiasFullLoad_ = 0;
     uint32_t singleIterateDk_ = 1;
