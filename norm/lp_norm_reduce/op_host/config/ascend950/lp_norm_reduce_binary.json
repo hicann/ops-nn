@@ -1,0 +1,98 @@
+{
+  "op_type": "LpNormReduce",
+  "op_list": [
+    {
+      "bin_filename": "LpNormReduce_6a062d0be76cc055f50bc771a23555e5",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {"name": "p", "dtype": "int", "value": null},
+        {"name": "axes", "dtype": "list_int", "value": null},
+        {"name": "keepdim", "dtype": "bool", "value": null},
+        {"name": "epsilon", "dtype": "float", "value": null}
+      ]
+    },
+    {
+      "bin_filename": "LpNormReduce_5d9db20e89b37b3abc9847ff4450ce3d",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {"name": "p", "dtype": "int", "value": null},
+        {"name": "axes", "dtype": "list_int", "value": null},
+        {"name": "keepdim", "dtype": "bool", "value": null},
+        {"name": "epsilon", "dtype": "float", "value": null}
+      ]
+    },
+    {
+      "bin_filename": "LpNormReduce_8dc2c84d5fb811f910cf96ff9f7bd40a",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {"name": "p", "dtype": "int", "value": null},
+        {"name": "axes", "dtype": "list_int", "value": null},
+        {"name": "keepdim", "dtype": "bool", "value": null},
+        {"name": "epsilon", "dtype": "float", "value": null}
+      ]
+    }
+  ]
+}

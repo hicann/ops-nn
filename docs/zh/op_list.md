@@ -3899,6 +3899,16 @@
    </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/lp_norm_reduce/README.md">lp_norm_reduce</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算Lp范数的归约阶段，按axes对|x|执行计数、求和、幂和、最大值或最小值归约，不执行1/p次开方。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/lp_norm_update/README.md">lp_norm_update</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4007,6 +4017,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>InstanceNorm的反向计算。计算输入x、缩放gamma、偏移beta的梯度pd_x、pd_gamma、pd_beta。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/l2_normalize/README.md">l2_normalize</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>沿指定轴计算输入张量的L2归一化，输出shape和数据类型与输入一致。</td>
   </tr>
   <tr>
     <td>norm</td>
