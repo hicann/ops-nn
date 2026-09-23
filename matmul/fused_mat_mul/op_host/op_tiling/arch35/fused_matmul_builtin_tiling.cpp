@@ -170,6 +170,15 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateOpSpecific()
     const auto& aShape = context_->GetInputShape(0)->GetOriginShape();
     const auto& bShape = context_->GetInputShape(1)->GetOriginShape();
 
+    if (opType_ == "16cast32" && args_.kValue == 0UL) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args_.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            "The K-axis of x1 and x2 must be greater than 0 for 16cast32 op type");
+        return ge::GRAPH_FAILED;
+    }
+
     // gelu: input dims must be 2
     if (IsGeluOpType(opType_)) {
         const size_t aDimNum = aShape.GetDimNum();
