@@ -144,7 +144,6 @@ function(gen_opgraph_symbol)
             c_sec
             -Wl,--no-as-needed
             register
-            acl_rt
             -Wl,--as-needed
             -Wl,--whole-archive
             rt2_registry_static
@@ -186,19 +185,6 @@ function(gen_opgraph_symbol)
   set_target_properties(${OPGRAPH_NAME} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/opp/built-in/op_proto
   )
-
-  # POST_BUILD: 本库以新版本头文件编译，会引用旧版本运行时（如 8.5.0）不存在的
-  # 新接口符号，导致旧版本运行时 dlopen 失败、所有融合 pass 无法注册。
-  # 此处将这类未定义符号从 GLOBAL 弱化为 WEAK，使旧版本运行时加载成功，
-  # 具体调用由 pass 内的运行时版本守卫控制。
-  add_custom_command(TARGET ${OPGRAPH_NAME} POST_BUILD
-    COMMAND bash ${CMAKE_SOURCE_DIR}/cmake/weaken_compat_symbols.sh
-            $<TARGET_FILE:${OPGRAPH_NAME}>
-            ${ASCEND_PYTHON_EXECUTABLE}
-    COMMENT "Weakening compat symbols in ${OPGRAPH_NAME}"
-    VERBATIM
-  )
-
   install(
     TARGETS ${OPGRAPH_NAME}
     LIBRARY DESTINATION ${OPGRAPH_LIB_INSTALL_DIR}
