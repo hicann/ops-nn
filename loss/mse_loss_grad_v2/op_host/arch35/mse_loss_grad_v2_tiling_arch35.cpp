@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "securec.h"                                            // memset_s, EOK
+#include "graph/types.h"                                        // ge::GetPrimaryFormat
 #include "register/op_def_registry.h"                           // IMPL_OP_OPTILING
 #include "op_common/log/log.h"                                  // OP_LOGE/OP_LOGI/OP_CHECK_*
 #include "op_common/op_host/util/platform_util.h"               // PlatformAscendC, CoreMemType
@@ -77,8 +78,35 @@ std::string FormatToString(ge::Format f)
             return "NCHW";
         case ge::FORMAT_NHWC:
             return "NHWC";
+        case ge::FORMAT_NCL:
+            return "NCL";
+        case ge::FORMAT_NCDHW:
+            return "NCDHW";
+        case ge::FORMAT_DHWCN:
+            return "DHWCN";
         default:
             return "format(" + std::to_string(static_cast<int32_t>(f)) + ")";
+    }
+}
+
+// IsNdLikeFormat — ND 及与 ND 行主序等价的格式集合（主格式判定）。
+// 与 opbase nnopbase::FormatsLikeND 对齐（该集合不含 FORMAT_ND 本身，故需显式并入）；
+// GetPrimaryFormat 先剥离 bit8-23 的 subformat / bit24-27 的 C0，避免把
+// “ND + subformat” 或框架标记的 NCHW/NHWC 误判为非法。A2(arch22) 与旧 V1 路径
+// 均不校验 format，此处保留 gate 仅拦截真非 ND-like（如 FRACTAL_NZ）。
+bool IsNdLikeFormat(ge::Format format)
+{
+    const ge::Format primary = static_cast<ge::Format>(ge::GetPrimaryFormat(static_cast<int32_t>(format)));
+    switch (primary) {
+        case ge::FORMAT_ND:
+        case ge::FORMAT_NCHW:
+        case ge::FORMAT_NHWC:
+        case ge::FORMAT_NCL:
+        case ge::FORMAT_NCDHW:
+        case ge::FORMAT_DHWCN:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -467,18 +495,20 @@ ge::graphStatus MseLossGradV2Tiling::CheckDtypeSupport()
 
 ge::graphStatus MseLossGradV2Tiling::CheckFormatSupport()
 {
-    // Interface.md「数据 Format 支持」: every input and output must be FORMAT_ND.
-    if (out_format_ != ge::FORMAT_ND) {
+    // 数据 format 支持: ND 及与 ND 行主序等价的 ND-like 格式(NCHW/NHWC/NCL/NCDHW/DHWCN)。
+    // 以主格式判定(剥离 subformat)，与 A2(arch22) / 旧 V1 路径的宽容契约对齐；保留 gate
+    // 仅拦截真非 ND-like(如 FRACTAL_NZ)。错误日志打印原始 format 便于定位。
+    if (!IsNdLikeFormat(out_format_)) {
         OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(NodeName(), "predict/label/dout/y", FormatToString(out_format_).c_str(),
-                                               "only FORMAT_ND is supported for every input and output");
+                                               "only ND and ND-like formats are supported for every input and output");
         return ge::GRAPH_FAILED;
     }
     for (int64_t i = 0; i < NUM_INPUTS; i++) {
         const size_t idx = static_cast<size_t>(i);
-        if (in_formats_[idx] != ge::FORMAT_ND) {
-            OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(NodeName(), "predict/label/dout/y",
-                                                   FormatToString(in_formats_[idx]).c_str(),
-                                                   "only FORMAT_ND is supported for every input and output");
+        if (!IsNdLikeFormat(in_formats_[idx])) {
+            OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+                NodeName(), "predict/label/dout/y", FormatToString(in_formats_[idx]).c_str(),
+                "only ND and ND-like formats are supported for every input and output");
             return ge::GRAPH_FAILED;
         }
     }
