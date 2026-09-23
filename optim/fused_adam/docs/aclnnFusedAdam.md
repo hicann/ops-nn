@@ -320,8 +320,8 @@ aclnnStatus aclnnFusedAdam(
       <td>传入的paramsRef、gradsRef、expAvgsRef、expAvgSqsRef、stateSteps是空指针时。</td>
       </tr>
       <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>paramsRef、gradsRef、expAvgsRef、expAvgSqsRef、maxExpAvgSqsRef的数据类型不在支持的范围内时。</td>
       </tr>
       <tr>
@@ -329,9 +329,6 @@ aclnnStatus aclnnFusedAdam(
       </tr>
       <tr>
       <td>gradsRef、expAvgsRef、expAvgSqsRef和paramsRef的shape不一致时。</td>
-      </tr>
-      <tr>
-      <td>当amsgrad为true时，maxExpAvgSqsRef和paramsRef的shape不一致时。</td>
       </tr>
       <tr>
       <td>stateSteps的tensor个数和paramsRef不一致时。</td>
