@@ -323,7 +323,7 @@ static uint64_t GetOptionalInputTensorSize(const gert::TilingContext* context,
     if (hwNum <= NDDMA_MAX_SIZE && useNddma) {
         int32_t xDtype = ge::GetSizeByDataType(context->GetInputDesc(INPUT_IDX_X)->GetDataType());
         if (xDtype == 0) {
-            OP_LOGE(context, "Division by zero!");
+            OP_LOGE(context, "GetOptionalInputTensorSize: xDtype is zero.");
             return 0;
         }
         int64_t eleNumAlign = RoundUp(tilingData.get_elemNum(), blockSize / xDtype);
@@ -396,7 +396,7 @@ static void SetTilingKey4Regbase(const gert::TilingContext* context, uint64_t& m
 
     ubRemain = ubSize <= otherUbSize ? 0 : ubSize - otherUbSize;
     if (xDtypeSize == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetTilingKey4Regbase: xDtypeSize is zero.");
         return;
     }
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
@@ -495,7 +495,7 @@ static void SetWelfordParallelN(const gert::TilingContext* context, uint64_t xDt
                                 GroupNormSiluRegbaseTilingData& tilingData)
 {
     if (xDtypeSize == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetWelfordParallelN: xDtypeSize is zero.");
         return;
     }
     auto compileInfo = context->GetCompileInfo<GroupNormSiluCompileInfo>();
@@ -539,13 +539,13 @@ static void SetUbTiling4TwoPass(const gert::TilingContext* context, GroupNormSil
     uint32_t blockSize = compileInfo->blockSizePlatform;
     uint64_t elemNum = tilingData.get_elemNum();
     if (xDtypeSize == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4TwoPass: xDtypeSize is zero.");
         return;
     }
     uint64_t elemNumAlign = RoundUp(elemNum, blockSize / xDtypeSize);
     SetDichotomyAddParams(context, tilingData);
     if (elemNumAlign == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4TwoPass: elemNumAlign is zero.");
         return;
     }
     uint64_t count = maxReduceCount / elemNumAlign;
@@ -566,12 +566,12 @@ static void SetUbTiling4WelfordPerf(const gert::TilingContext* context, GroupNor
     uint64_t innerLoopTail = 0;
     uint64_t hwNum = tilingData.get_hwNum();
     if (xDtypeSize == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4WelfordPerf: xDtypeSize is zero.");
         return;
     }
     uint64_t hwNumAlign = RoundUp(hwNum, blockSize / xDtypeSize);
     if (hwNumAlign == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4WelfordPerf: hwNumAlign is zero.");
         return;
     }
     uint64_t count = maxReduceCount / hwNumAlign;
@@ -607,13 +607,13 @@ static void SetUbTiling4WelfordGeneralized(const gert::TilingContext* context,
     uint64_t innerLoopTail = 0;
     uint64_t hwNum = tilingData.get_hwNum();
     if (xDtypeSize == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4WelfordGeneralized: xDtypeSize is zero.");
         return;
     }
     uint64_t hwNumAlign = RoundUp(hwNum, blockSize / xDtypeSize);
     uint64_t maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
     if (hwNumAlign == 0) {
-        OP_LOGE(context, "Division by zero!");
+        OP_LOGE(context, "SetUbTiling4WelfordGeneralized: hwNumAlign is zero.");
         return;
     }
     uint64_t count = maxReduceCount / hwNumAlign;
