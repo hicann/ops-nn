@@ -438,6 +438,7 @@
 - [aclnnTransposeBatchMatMulWeightNZ](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNZ.md)
 - [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md)
 - [aclnnTransposeQuantBatchMatMulWeightNz](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMulWeightNz.md)
+- [aclnnTurboQuant](../../quant/turbo_quant/docs/aclnnTurboQuant.md)
 - [aclnnUnique](../../index/unique/docs/aclnnUnique.md)
 - [aclnnUnique2](../../index/unique/docs/aclnnUnique2.md)
 - [aclnnUniqueConsecutive](../../index/unique_consecutive/docs/aclnnUniqueConsecutive.md)
