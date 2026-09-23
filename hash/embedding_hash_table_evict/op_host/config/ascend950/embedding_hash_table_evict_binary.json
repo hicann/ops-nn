@@ -1,0 +1,63 @@
+{
+  "op_type": "EmbeddingHashTableEvict",
+  "op_list": [
+    {
+      "bin_filename": "EmbeddingHashTableEvict_float",
+      "inputs": [
+        {
+          "name": "table_handle",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "keys",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "sampled_values",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "table_cap",
+          "dtype": "int64",
+          "value": null
+        },
+        {
+          "name": "embedding_dim",
+          "dtype": "int64",
+          "value": null
+        },
+        {
+          "name": "init_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "const_val",
+          "dtype": "float32",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

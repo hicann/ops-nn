@@ -1,0 +1,53 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file embedding_hash_table_evict_def.cpp
+ * \brief embedding_hash_table_evict
+ */
+
+#include "register/op_def_registry.h"
+
+namespace ops {
+class EmbeddingHashTableEvict : public OpDef {
+public:
+    explicit EmbeddingHashTableEvict(const char* name) : OpDef(name)
+    {
+        this->Input("table_handle")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("keys")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("sampled_values")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Attr("table_cap").AttrType(REQUIRED).Int();
+        this->Attr("embedding_dim").AttrType(REQUIRED).Int();
+        this->Attr("init_mode").AttrType(OPTIONAL).String("constant");
+        this->Attr("const_val").AttrType(OPTIONAL).Float(0.0);
+
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
+
+OP_ADD(EmbeddingHashTableEvict);
+} // namespace ops
