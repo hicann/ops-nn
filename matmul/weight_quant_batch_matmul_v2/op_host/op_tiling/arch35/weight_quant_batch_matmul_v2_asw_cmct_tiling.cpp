@@ -445,7 +445,7 @@ bool WeightQuantBatchMatmulV2TilingAswCmct::IsValidWeightNzTailSplit(uint64_t sp
     return tailN % GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfoPtr_->bDtype) == 0;
 }
 
-// L1 预算额外为 per-channel scale 和 bias 按双缓冲预留（kernel 中均为双缓冲）
+// L1 预算额外为 bias（双缓冲）和 per-channel scale 预留；scale 缓冲级数与 l1BufferNum 一致，按最深的 4 级预留
 void WeightQuantBatchMatmulV2TilingAswCmct::CalL1Tiling()
 {
     bool isKInner = !matmulInfoPtr_->transA || matmulInfoPtr_->transB;
@@ -453,7 +453,7 @@ void WeightQuantBatchMatmulV2TilingAswCmct::CalL1Tiling()
     uint64_t totalL1Size = compileInfoPtr_->l1Size -
                            (matmulInfoPtr_->hasBias ? runInfo_.baseN * biasDtypeSize * DB_SIZE : 0UL);
     totalL1Size -= matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL ?
-                       runInfo_.baseN * sizeof(uint64_t) * DB_SIZE :
+                       runInfo_.baseN * sizeof(uint64_t) * NUM_FOUR :
                        0UL;
     // Shape约束 && issue queue约束
     uint64_t maxStepK = std::min(ops::CeilDiv(matmulInfoPtr_->kSize, runInfo_.baseK), MAX_STEP_K);
@@ -497,13 +497,13 @@ void WeightQuantBatchMatmulV2TilingAswCmct::CalL1BufferNum()
     uint64_t abL1TensorSize = GetSizeWithDataType(runInfo_.baseK * runInfo_.stepKa * runInfo_.baseM,
                                                   matmulInfoPtr_->aDtype) +
                               GetSizeWithDataType(bL1Elems, matmulInfoPtr_->bDtype);
-    // scale/bias 为固定双缓冲区域，不随 l1BufferNum 翻倍
+    // bias 为固定双缓冲区域，不随 l1BufferNum 翻倍；scale 缓冲级数与 l1BufferNum 一致，按 4 级预留
     uint64_t fixedL1Size = (matmulInfoPtr_->hasBias ?
                                 runInfo_.baseN * ge::GetSizeByDataType(matmulInfoPtr_->biasDtype) :
                                 0UL) *
                            DB_SIZE;
     fixedL1Size += matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL ?
-                       runInfo_.baseN * sizeof(uint64_t) * DB_SIZE :
+                       runInfo_.baseN * sizeof(uint64_t) * NUM_FOUR :
                        0UL;
     runInfo_.l1BufferNum = abL1TensorSize * NUM_FOUR + fixedL1Size <= compileInfoPtr_->l1Size ? NUM_FOUR : DB_SIZE;
 }

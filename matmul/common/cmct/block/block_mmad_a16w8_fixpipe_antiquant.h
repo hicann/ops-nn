@@ -12,8 +12,9 @@
  * \file block_mmad_a16w8_fixpipe_antiquant.h
  * \brief wqbmmv2 ASW 路径的 pingpong without que block mmad，原生内建 antiquant。
  *        A=fp16 x W=int8 混合 Mmad，int32 累加，Fixpipe 随路反量化；
- *        per-channel 用 scale 向量（L1 双缓冲），per-tensor 用 deqScalar 标量；bias 经 L1->BT 随 Mmad 加载。
- *        L1 布局（字节）：A x l1BufNum | B x l1BufNum | scale x 2 | bias x 2。
+ *        per-channel 用 scale 向量（L1 缓冲级数与 l1BufNum 一致），per-tensor 用 deqScalar 标量；bias 经 L1->BT 随 Mmad
+ *        加载。 L1 布局按 l1BufNum 区分： 2 buffer：半区0: A0|B0|scale0|bias0，半区1: A1|B1|scale1|bias1（单 buffer
+ * 不跨 L1 半区）； 4 buffer：A0A1A2A3 | B0B1B2B3 | scale x 4 | bias x 2。
  */
 #pragma once
 
@@ -93,15 +94,20 @@ public:
     constexpr static uint64_t HALF_L0A_ELEMS = L0A_SIZE / DOUBLE_BUFFER_COUNT / sizeof(A_T);
     constexpr static uint64_t HALF_L0B_ELEMS = L0B_SIZE / DOUBLE_BUFFER_COUNT / sizeof(B_T);
     constexpr static uint64_t HALF_L0C_ELEMS = AscendC::TOTAL_L0C_SIZE / DOUBLE_BUFFER_COUNT / sizeof(L0cType);
+    // L1 半区字节数：2 buffer 时单 buffer（A|B|scale|bias）独占一个半区，不跨半区边界
+    constexpr static uint64_t HALF_L1_BYTES = AscendC::TOTAL_L1_SIZE / DOUBLE_BUFFER_COUNT;
     constexpr static int32_t C0_SIZE_A = AscendC::AuxGetC0Size<A_T>();
     constexpr static int32_t C0_SIZE_W = AscendC::AuxGetC0Size<B_T>();
     constexpr static int32_t C0_SIZE_BIAS = AscendC::AuxGetC0Size<Bias_T>();
     // 硬事件 flag id
-    constexpr static uint16_t L1_BUF_FLAG_BASE = 0;    // MTE1_MTE2 / MTE2_MTE1: 0~3 为 A/B L1 buffer
-    constexpr static uint16_t BIAS_L1_FLAG_BASE = 4;   // MTE1_MTE2: 4/5 为 bias L1 双缓冲
-    constexpr static uint16_t L0_M_MTE1_FLAG = 6;      // M_MTE1: 6/7 为 L0 双缓冲
-    constexpr static uint16_t L0_MTE1_M_FLAG = 6;      // MTE1_M: 6/7 为 L0 双缓冲
-    constexpr static uint16_t SCALE_FIX_MTE2_FLAG = 0; // FIX_MTE2 / MTE2_FIX: 0/1 为 scale L1 双缓冲
+    constexpr static uint16_t L1_BUF_FLAG_BASE = 0;  // MTE1_MTE2 / MTE2_MTE1: 0~3 为 A/B L1 buffer
+    constexpr static uint16_t BIAS_L1_FLAG_BASE = 4; // MTE1_MTE2: 4/5 为 bias L1 双缓冲
+    constexpr static uint16_t L0_M_MTE1_FLAG = 6;    // M_MTE1: 6/7 为 L0 双缓冲
+    constexpr static uint16_t L0_MTE1_M_FLAG = 6;    // MTE1_M: 6/7 为 L0 双缓冲
+    constexpr static uint16_t SCALE_FIX_MTE2_FLAG = 0; // FIX_MTE2 / MTE2_FIX: 0~3 为 scale L1 缓冲（级数同 l1BufNum）
+    // unitflag 取值：3 = 最后一次累加，2 = 非最后一次累加（非 L0C pingpong 时替代 M_FIX/FIX_M 显式同步）
+    constexpr static uint32_t FINAL_ACCUMULATION = 3;
+    constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W8 = 29;
 #endif
@@ -122,6 +128,8 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(1);
             AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG);
             AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 1);
+            AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 2);
+            AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 3);
         }
     }
 
@@ -140,6 +148,8 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(1);
             AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 1);
+            AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 2);
+            AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 3);
         }
     }
 
@@ -163,7 +173,10 @@ public:
         shiftValue_ = shiftValue;
 #endif
         kL1Iter_ = CeilDiv(k_, kL1_);
-        // L1 静态布局（字节）：A x l1BufNum | B x l1BufNum | scale x 2 | bias x 2
+        // L1 静态布局（字节），2/4 buffer 共用以下单 buffer 尺寸与基址：
+        // 4 buffer：A x l1BufNum | B x l1BufNum | scale x l1BufNum | bias x 2，直接使用
+        // bL1Base_/scaleL1Base_/biasL1Base_； 2 buffer：按半区紧凑排布（半区: A|B|scale|bias），使用处另按
+        // HALF_L1_BYTES 偏移
         aL1Bytes_ = mL1_ * kL1_ * sizeof(A_T);
         // NZ 格式下 C0 内轴须按 C0 对齐分配：transB 时 B 为 (N, K)（K 为内轴），否则为 (K, N)（N 为内轴）
         bL1Bytes_ = transB ? nL1_ * Align(kL1_, static_cast<uint64_t>(C0_SIZE_W)) * sizeof(B_T) :
@@ -172,7 +185,8 @@ public:
         scaleL1BufBytes_ = perChannelScale ? nL1_ * sizeof(uint64_t) : 0;
         scaleL1Base_ = bL1Base_ + bL1Bytes_ * l1BufNum_;
         biasL1BufBytes_ = isBias_ ? nL1_ * sizeof(Bias_T) : 0;
-        biasL1Base_ = scaleL1Base_ + scaleL1BufBytes_ * DOUBLE_BUFFER_COUNT;
+        // scale 缓冲级数与 l1BufNum 一致，bias 固定双缓冲
+        biasL1Base_ = scaleL1Base_ + scaleL1BufBytes_ * l1BufNum_;
     }
 
     __aicore__ inline void CacheQuantScalar(uint64_t quantScalar) { quantScalar_ = quantScalar; }
@@ -189,12 +203,14 @@ public:
         uint64_t curNL1 = static_cast<uint64_t>(Get<MNK_N>(tileShape));
         uint64_t curML0 = static_cast<uint64_t>(Get<MNK_M0>(tileShape));
         uint64_t curNL0 = static_cast<uint64_t>(Get<MNK_N0>(tileShape));
-        // 等待上一轮该半区 L0C 的 fixpipe 完成，L0C 可复用
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_ELEMS;
         uint16_t l0cFlag = enableL0cPingPong_ ? static_cast<uint16_t>(l0cPingPong_ & 0x1) : 0;
-        AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(l0cFlag);
-        // per-channel scale：随 tile 的 nOffset 滚动加载（GM 地址已带 nOffset），双缓冲
-        uint16_t scaleBufId = scaleLoopCnt_ & 0x1;
+        if (enableL0cPingPong_) {
+            // pingpong 场景显式等待上一轮该半区 L0C 的 fixpipe 完成；非 pingpong 由 fixpipe unitflag 隐式同步
+            AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(l0cFlag);
+        }
+        // per-channel scale：随 tile 的 nOffset 滚动加载（GM 地址已带 nOffset），缓冲级数与 l1BufNum 一致
+        uint16_t scaleBufId = static_cast<uint16_t>(scaleLoopCnt_ & (l1BufNum_ - 1));
         if constexpr (perChannelScale) {
             AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + scaleBufId);
             CopyScaleL1(scaleGlobal, curNL1, scaleBufId);
@@ -229,8 +245,10 @@ public:
                 }
             }
             uint64_t l1BufId = abL1LoopCnt_ & (l1BufNum_ - 1);
-            uint64_t aL1ByteOffset = aL1Bytes_ * l1BufId;
-            uint64_t bL1ByteOffset = bL1Base_ + bL1Bytes_ * l1BufId;
+            bool isL1DoubleBuf = (l1BufNum_ == DOUBLE_BUFFER_COUNT);
+            uint64_t aL1ByteOffset = isL1DoubleBuf ? (HALF_L1_BYTES * l1BufId) : (aL1Bytes_ * l1BufId);
+            uint64_t bL1ByteOffset = isL1DoubleBuf ? (HALF_L1_BYTES * l1BufId + aL1Bytes_) :
+                                                     (bL1Base_ + bL1Bytes_ * l1BufId);
             // GM -> L1（Nd2Nz），l1BufNum 级 buffer
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_BUF_FLAG_BASE + l1BufId);
             uint64_t offsetA = transA ? kL1OffsetLength * m_ : kL1OffsetLength;
@@ -263,7 +281,11 @@ public:
                 mmadParams.n = curNL0;
                 mmadParams.k = curK0;
                 mmadParams.disableGemv = true;
-                mmadParams.unitFlag = 0; // 不使用 unitflag，通过 M_FIX 显式同步
+                // 非 pingpong 用 unitflag 隐式同步 M/FIX：末次累加置 3，其余置 2；pingpong 置 0 走 M_FIX 显式同步
+                mmadParams.unitFlag = enableL0cPingPong_ ?
+                                          0 :
+                                          ((iter0 + 1 == curKL1Iter && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION :
+                                                                                               NON_FINAL_ACCUMULATION);
                 mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
                 mmadParams.cmatrixSource = needBias;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
@@ -279,9 +301,11 @@ public:
             abL1LoopCnt_++;
             kL1OffsetLength += curKL1;
         }
-        // 等待全部 Mmad 完成
-        AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cFlag);
-        AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cFlag);
+        if (enableL0cPingPong_) {
+            // pingpong 场景显式等待全部 Mmad 完成；非 pingpong 由 mmad unitflag=3 隐式同步
+            AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cFlag);
+            AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cFlag);
+        }
         // Fixpipe L0C -> GM，随路反量化
         CopyOut(cGlobal, l0cOffset, curML0, curNL0, scaleBufId);
         if constexpr (perChannelScale) {
@@ -289,9 +313,9 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + scaleBufId);
             scaleLoopCnt_++;
         }
-        // 标记该半区 L0C 空闲
-        AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cFlag);
         if (enableL0cPingPong_) {
+            // 标记该半区 L0C 空闲（非 pingpong 由 fixpipe unitflag=3 隐式释放）
+            AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cFlag);
             l0cPingPong_++;
         }
         if (isBias_) {
@@ -300,6 +324,21 @@ public:
     }
 
 private:
+    // scale L1 偏移：2 buffer 时 ping/pong 各随半区（A|B|scale|bias），4 buffer 时在 B 区后顺序 4 级缓冲
+    __aicore__ inline uint64_t GetScaleL1ByteOffset(uint16_t scaleBufId) const
+    {
+        return (l1BufNum_ == DOUBLE_BUFFER_COUNT) ? (HALF_L1_BYTES * scaleBufId + aL1Bytes_ + bL1Bytes_) :
+                                                    (scaleL1Base_ + scaleL1BufBytes_ * scaleBufId);
+    }
+
+    // bias L1 偏移：2 buffer 时 ping/pong 各随半区（A|B|scale|bias），4 buffer 时在 scale 区后顺序双缓冲
+    __aicore__ inline uint64_t GetBiasL1ByteOffset(uint16_t biasBufId) const
+    {
+        return (l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
+                   (HALF_L1_BYTES * biasBufId + aL1Bytes_ + bL1Bytes_ + scaleL1BufBytes_) :
+                   (biasL1Base_ + biasL1BufBytes_ * biasBufId);
+    }
+
     __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal, uint64_t aL1ByteOffset, uint64_t curML1,
                                     uint64_t curKL1)
     {
@@ -339,7 +378,7 @@ private:
     {
         AscendC::DataCopyPadParams padParams;
         AscendC::DataCopyParams scaleParam{1, static_cast<uint16_t>(curNL1 * sizeof(uint64_t)), 0, 0};
-        uint64_t scaleL1ByteOffset = scaleL1Base_ + scaleBufId * scaleL1BufBytes_;
+        uint64_t scaleL1ByteOffset = GetScaleL1ByteOffset(scaleBufId);
         AscendC::DataCopyPad(scaleL1Local_[scaleL1ByteOffset / sizeof(uint64_t)], scaleGlobal, scaleParam, padParams);
     }
 
@@ -349,7 +388,7 @@ private:
         AscendC::DataCopyPadParams padParams;
         // blockLen 单位为 Byte
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(curNL1 * sizeof(Bias_T)), 0, 0};
-        uint64_t biasL1ByteOffset = biasL1Base_ + biasBufId * biasL1BufBytes_;
+        uint64_t biasL1ByteOffset = GetBiasL1ByteOffset(biasBufId);
         AscendC::DataCopyPad(biasL1Local_[biasL1ByteOffset / sizeof(Bias_T)], biasGlobal, biasParam, padParams);
     }
 
@@ -438,7 +477,7 @@ private:
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
         biasParam.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W8 - shiftValue_;
 #endif
-        uint64_t biasL1ByteOffset = biasL1Base_ + biasBufId * biasL1BufBytes_;
+        uint64_t biasL1ByteOffset = GetBiasL1ByteOffset(biasBufId);
         AscendC::DataCopy(biasBtLocal_[baseN_ * biasBufId], biasL1Local_[biasL1ByteOffset / sizeof(Bias_T)], biasParam);
     }
 
@@ -466,7 +505,8 @@ private:
         if constexpr (!perChannelScale) {
             fixpipeParams.deqScalar = quantScalar_;
         }
-        fixpipeParams.unitFlag = 0;
+        // 非 pingpong 场景 unitflag=3：硬件隐式保证下一次 mmad 写 L0C 前本次 fixpipe 已完成
+        fixpipeParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION;
         fixpipeParams.params = {1, 1, 1};
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
         if constexpr (AscendC::IsSameType<A_T, half>::value && AscendC::IsSameType<B_T, half>::value) {
@@ -474,7 +514,7 @@ private:
         }
 #endif
         if constexpr (perChannelScale) {
-            uint64_t scaleL1ByteOffset = scaleL1Base_ + scaleBufId * scaleL1BufBytes_;
+            uint64_t scaleL1ByteOffset = GetScaleL1ByteOffset(scaleBufId);
             AscendC::Fixpipe(cGlobal, cL0Local_[l0cOffset], scaleL1Local_[scaleL1ByteOffset / sizeof(uint64_t)],
                              fixpipeParams);
         } else {
