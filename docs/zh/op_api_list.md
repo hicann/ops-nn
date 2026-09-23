@@ -435,6 +435,7 @@
 | [aclnnSwigluGroupQuant](../../activation/swiglu_group_quant/docs/aclnnSwigluGroupQuant.md) | 在Swish门控线性单元激活函数后执行分组低比特量化，支持FP8量化输出。 | - | 默认确定性实现 |
 | [aclnnSwigluGroupGrad](../../activation/swiglu_group_grad/docs/aclnnSwigluGroupGrad.md) | 完成ClampedSwiglu激活函数的反向梯度计算，从上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight，支持MoE场景的group_index动态分组和weight权重梯度计算。 | - | 默认确定性实现 |
 | [aclnnSwigluGroupQuantGrad](../../activation/swiglu_group_quant_grad/docs/aclnnSwigluGroupQuantGrad.md) | 完成SwiGLU激活函数分组量化的反向梯度计算。 | - | 默认确定性实现 |
+| [aclnnSwigluBackwardGroupQuantWithDualAxis](../../activation/swiglu_backward_group_quant_with_dual_axis/docs/aclnnSwigluBackwardGroupQuantWithDualAxis.md) | 融合带Clamp和weight的SwiGLU反向计算与双轴动态MX量化，输出FP8量化结果及E8M0缩放因子。 | - | 默认确定性实现 |
 | [aclnnSwiGluQuant](../../quant/swi_glu_quant/docs/aclnnSwiGluQuant.md) | 在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGluQuantV2](../../quant/swi_glu_quant/docs/aclnnSwiGluQuantV2.md) | 在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwish](../../activation/swish/docs/aclnnSwish.md) | Swish激活函数，对输入Tensor逐元素进行Swish函数运算并输出结果Tensor。 | 默认确定性实现 | 默认确定性实现 |

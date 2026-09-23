@@ -839,6 +839,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_backward_group_quant_with_dual_axis/README.md">swiglu_backward_group_quant_with_dual_axis</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>融合带Clamp和weight的SwiGLU反向计算与双轴MX量化，支持FP16/BF16输入、FP16/BF16/FP32 weight和FP8 E4M3FN/E5M2输出，仅支持Ascend 950。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swish/README.md">swish</a></td>
     <td>✓</td>
     <td>✓</td>
