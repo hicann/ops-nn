@@ -1066,7 +1066,6 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_isBiasFullLoad(tunerTiling->isBiasFullLoad);
     dxt.set_enableVecTrans(tunerTiling->enableVecTrans);
     dxt.set_enableFullLoad(tunerTiling->enableFullLoad);
-    dxt.set_quantMode0(tunerTiling->quantMode0);
     dxt.set_cinG(tunerTiling->cinG);
     dxt.set_coutG(tunerTiling->coutG);
     dxt.set_cout1(tunerTiling->cout1);
@@ -1090,7 +1089,6 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_singleIterateDk(tunerTiling->singleIterateDk);
     dxt.set_singleCoreBatch(tunerTiling->singleCoreBatch);
     dxt.set_singleCoreM(tunerTiling->singleCoreM);
-    dxt.set_enRelu0(tunerTiling->enRelu0);
     dxt.set_kSegment(tunerTiling->kSegment);
     dxt.set_kSegmentTail(tunerTiling->kSegmentTail);
     dxt.set_kValueSegment(tunerTiling->kValueSegment);
@@ -1107,6 +1105,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingRunInfo(
     loadB1Condition_ = tunerTiling->loadB1Condition;
     loadB2Condition_ = tunerTiling->loadB2Condition;
     kernelSplitMode_ = tunerTiling->kernelSplitMode;
+    usrSpaceSize = tunerTiling->usrSpaceSize;
     tilingRunInfo_.enableC04Flag = tunerTiling->enableC04Flag;
     tilingRunInfo_.enableFullLoadTiling = tunerTiling->enableFullLoadTiling;
     tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
@@ -1174,6 +1173,12 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     // 框架预留16M
     workspaces[0] = static_cast<size_t>(WORKSIZE);
+
+    if (isGetTilingFromRepo) {
+        workspaces[0] = usrSpaceSize;
+        return ge::GRAPH_SUCCESS;
+    }
+
     // 前置transpose暂时与 kernel拆分、splitK 互斥
     if (tilingRunInfo_.enableVecTransFlag) {
         uint64_t usrSpaceSizeForVecTrans = static_cast<uint64_t>(runInfo_.dedy_cout) * runInfo_.kernel_d *
@@ -1201,6 +1206,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
         workspaces[0] += usrSpaceSizeForSplitK;
         OP_LOGD(opName_, "SplitK non-fp32 workspace size = %ld", usrSpaceSizeForSplitK);
     }
+    OP_LOGD(opName_, "workspaces[0] = %ld", workspaces[0]);
 
     return ge::GRAPH_SUCCESS;
 }
