@@ -88,8 +88,8 @@ static inline bool CheckShape(const aclTensor* self, const aclTensor* out)
 
 static inline bool CheckLambdValue(const aclScalar* lambd)
 {
-    // 检查lambd是否在[0, +∞]范围内
-    if (lambd->ToFloat() < 0.0f) {
+    // 检查lambd是否在[0, +∞]范围内（!(x >= 0) 同时拦截负值与 nan）
+    if (!(lambd->ToFloat() >= 0.0f)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd should be greater or equal to 0, but found to be [%f].",
                 lambd->ToFloat());
         return false;
@@ -126,7 +126,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, co
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecSoftshrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, aclTensor* out,
+static aclnnStatus ExecSoftshrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, const aclTensor* out,
                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 创建OpExecutor

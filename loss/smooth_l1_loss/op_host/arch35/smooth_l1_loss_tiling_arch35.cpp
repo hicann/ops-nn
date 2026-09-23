@@ -10,8 +10,6 @@
 
 #include "register/op_impl_registry.h"
 #include <cmath>
-#include <graph/utils/type_utils.h>
-#include "tiling/tiling_api.h"
 #include "platform/platform_ascendc.h"
 #include "log/log.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -29,19 +27,21 @@ using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t COMPUTE_TYPE_SIZE = 4;
-constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+constexpr int64_t FP16_TYPE_SIZE = 2;  // fp16/bf16 单元素字节数
+constexpr int64_t FP32_BUFFER_NUM = 6; // fp32 粒度 UB 预算的 buffer 数量上界（含掩码余量）
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
+// 预留给双缓冲迭代（PERF-3：队列 BUFFER_NUM=2 时的 UB 预算 buffer 数），当前单缓冲使用 BUFFER_NUM_SB
 constexpr int64_t BUFFER_NUM_DB = 9;
 constexpr int64_t BUFFER_NUM_SB = 7;
 constexpr float NEGTIVE_CONST_HALF = -0.5f;
+constexpr float CONST_HALF = 0.5f;     // 二次项系数 0.5（与 NEGTIVE_CONST_HALF 对偶）
+constexpr float SIGMA_EPSILON = 1e-6f; // sigma 判零阈值，|sigma| 小于该值时按 0 处理规避除零
 constexpr size_t MAX_DIM_NUM = 8;
-
-static const gert::Shape g_vec_1_shape = {1};
 
 static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
 {
     if (inShape.GetDimNum() == 0) {
-        return g_vec_1_shape;
+        return gert::Shape{1};
     }
     return inShape;
 }
@@ -103,7 +103,7 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     OP_CHECK_IF(supportedDtypes.count(dataType) == 0,
-                OP_LOGE(context, "predict only support FP16/FP32/BF16, got %d", static_cast<int32_t>(dataType)),
+                OP_LOGE(context, "predict only supports FP16/FP32/BF16, got %d", static_cast<int32_t>(dataType)),
                 return ge::GRAPH_FAILED);
 
     auto labelDesc = context->GetInputDesc(1);
@@ -124,27 +124,24 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* sigmaPtr = attrs->GetAttrPointer<float>(0);
     float sigma = (sigmaPtr == nullptr) ? 1.0f : *sigmaPtr;
-    OP_CHECK_IF(
-        sigma < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "sigma", std::to_string(sigma).c_str(), "non-negative"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sigma < 0, OP_LOGE(context, "sigma must be non-negative, got %f", sigma), return ge::GRAPH_FAILED);
 
     tiling->Sigma = sigma;
-    tiling->MultiplyValue = fabsf(sigma) < 1e-6f ? 0.0f : 0.5f / sigma;
+    tiling->MultiplyValue = fabsf(sigma) < SIGMA_EPSILON ? 0.0f : CONST_HALF / sigma;
     tiling->AddsValue = NEGTIVE_CONST_HALF * sigma;
 
     int64_t usedCoreNum = 1;
 
     if (totalIdx > 0) {
         int64_t ubBlockSize = GetUbBlockSize(context);
-        int64_t inputTypeSize = (dataType == ge::DT_FLOAT) ? 4 : 2;
+        int64_t inputTypeSize = (dataType == ge::DT_FLOAT) ? COMPUTE_TYPE_SIZE : FP16_TYPE_SIZE;
         tiling->totalNum = totalIdx;
         tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
         usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
         int64_t bufferNum = BUFFER_NUM_SB;
         int64_t alignUnit = (ubBlockSize > COMPARE_ALIGN_ELEMENTS) ? ubBlockSize : COMPARE_ALIGN_ELEMENTS;
         tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / inputTypeSize, bufferNum), alignUnit);
-        int64_t maxUbElems = static_cast<int64_t>(ubSize) / 4 / 6;
+        int64_t maxUbElems = static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE / FP32_BUFFER_NUM;
         if (tiling->ubFactor > maxUbElems) {
             tiling->ubFactor = FloorAlign(maxUbElems, alignUnit);
         }

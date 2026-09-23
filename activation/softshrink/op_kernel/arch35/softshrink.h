@@ -52,6 +52,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include <climits>
 #include "softshrink_tiling_data.h"
 #include "softshrink_tiling_key.h"
 
@@ -96,7 +97,7 @@ private:
 
     int64_t blockLength_ = 0;
     int64_t ubLength_ = 0;
-    float lambd_ = 0.5f;
+    float lambd_ = SOFTSHRINK_DEFAULT_LAMBD;
 };
 
 template <typename T, int BUFFER_MODE, int NEED_UPCAST>
@@ -125,7 +126,7 @@ __aicore__ inline void SoftShrink<T, BUFFER_MODE, NEED_UPCAST>::Init(GM_ADDR x, 
         pipe.InitBuffer(floatInBuf, ubLength_ * sizeof(COMPUTE_T));
     }
     // cmpMask 大小 = ubLength / 8 字节，向上 32B 对齐
-    int64_t maskBytes = ((ubLength_ / 8) + 31) / 32 * 32;
+    int64_t maskBytes = ((ubLength_ / CHAR_BIT) + BYTE_ALIGN_BYTES - 1) / BYTE_ALIGN_BYTES * BYTE_ALIGN_BYTES;
     pipe.InitBuffer(cmpMaskBuf, maskBytes);
 
     // 一次性填充 lambd / -lambd 常量
@@ -165,7 +166,7 @@ __aicore__ inline void SoftShrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(int64_t 
     // 对齐 currentNum 到 256B 边界用于 Compare/Select（硬件要求 count 所占空间 256B 对齐）
     // 升精路径 (fp16/bf16 NEED_UPCAST=1)：COMPUTE_T=float(4B)，对齐粒度 = 256/4 = 64
     // 直通路径 (fp32 NEED_UPCAST=0)：     COMPUTE_T=float(4B)，对齐粒度 = 256/4 = 64
-    int64_t alignElems = 256 / static_cast<int64_t>(sizeof(COMPUTE_T));
+    int64_t alignElems = VEC_ALIGN_BYTES / static_cast<int64_t>(sizeof(COMPUTE_T));
     int64_t alignedNum = (currentNum + alignElems - 1) / alignElems * alignElems;
     if (alignedNum > ubLength_) {
         alignedNum = ubLength_;

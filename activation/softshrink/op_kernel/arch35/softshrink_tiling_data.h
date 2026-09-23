@@ -26,11 +26,15 @@
 
 #include <cstdint>
 
+constexpr int64_t VEC_ALIGN_BYTES = 256;
+constexpr int64_t BYTE_ALIGN_BYTES = 32;
+constexpr float SOFTSHRINK_DEFAULT_LAMBD = 0.5f;
+
 struct SoftShrinkTilingData {
-    int64_t totalNum = 0;    // 总元素数量
-    int64_t blockFactor = 0; // 每个核处理的元素数量
-    int64_t ubFactor = 0;    // 每次 UB 循环处理的元素数量（已256B对齐）
-    float lambd = 0.5f;      // 阈值参数 λ
+    int64_t totalNum;    // 总元素数量
+    int64_t blockFactor; // 每个核处理的元素数量
+    int64_t ubFactor;    // 每次 UB 循环处理的元素数量（已256B对齐）
+    float lambd;         // 阈值参数 λ
 };
 
 #endif

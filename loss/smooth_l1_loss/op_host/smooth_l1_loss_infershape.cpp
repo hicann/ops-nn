@@ -52,6 +52,7 @@ static ge::graphStatus SmoothL1LossInferShapeFunc(gert::InferShapeContext* conte
     }
 
     auto loss = context->GetOutputShape(INDEX_LOSS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, loss);
     *loss = *predict;
 
     OP_LOGD(context->GetNodeName(), "SmoothL1LossInferShapeFunc end.");
@@ -65,7 +66,7 @@ graphStatus SmoothL1LossInferDtypeFunc(gert::InferDataTypeContext* context)
 
     auto predictDtype = context->GetInputDataType(INDEX_PREDICT);
     OP_CHECK_IF((predictDtype != ge::DT_FLOAT) && (predictDtype != ge::DT_FLOAT16) && (predictDtype != ge::DT_BF16),
-                OP_LOGE(context->GetNodeName(), "predict only support float, float16 and bfloat16"),
+                OP_LOGE(context->GetNodeName(), "predict only supports float, float16 and bfloat16"),
                 return GRAPH_FAILED);
 
     context->SetOutputDataType(INDEX_LOSS, predictDtype);

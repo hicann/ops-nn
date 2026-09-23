@@ -9,9 +9,7 @@
  */
 
 #include "softshrink.h"
-#include "opdev/aicpu/aicpu_task.h"
 #include "opdev/make_op_executor.h"
-#include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
@@ -32,7 +30,7 @@ static inline bool IsAiCoreSupport(DataType inputDtype)
 }
 
 // AICORE算子kernel
-static inline const aclTensor* SoftShrinkAiCore(const aclTensor* input, float lambd, aclTensor* output,
+static inline const aclTensor* SoftShrinkAiCore(const aclTensor* input, float lambd, const aclTensor* output,
                                                 aclOpExecutor* executor)
 {
     L0_DFX(SoftShrinkAiCore, input, lambd, output);
@@ -46,6 +44,7 @@ static inline const aclTensor* SoftShrinkAiCore(const aclTensor* input, float la
 const aclTensor* SoftShrink(const aclTensor* input, float lambd, aclOpExecutor* executor)
 {
     auto output = executor->AllocTensor(input->GetViewShape(), input->GetDataType());
+    CHECK_RET(output != nullptr, nullptr);
 
     if (IsAiCoreSupport(input->GetDataType())) {
         return SoftShrinkAiCore(input, lambd, output, executor);

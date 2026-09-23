@@ -295,7 +295,11 @@ aclnnStatus aclnnModulateBackward(
   - aclnnModulateBackward默认确定性实现。
 
 - scale和shift是二维向量，第一维需要和input的第一维shape相同，第二维需要和input的第三维shape相同。
-- 输入grad_output的shape需要和输入input的shape保持一致。
+- 输入grad_output的shape需要和输入input的shape保持一致，均为3维 [B, L, D]。
+- 数据格式仅支持ND；各tensor的dtype必须一致（FLOAT16/FLOAT/BFLOAT16）。
+- scale和shift为可选输入：未提供scale/shift时，对应的grad_scale/grad_shift不输出。
+- 支持空Tensor（B/L/D任一为0）：直接返回对应shape的空输出；此时scale和shift必须为空或缺失。
+- 支持动态shape（含-1维度）：tiling在运行期按实际shape计算多核与UB切分，无需重新编译；rank固定为3。
 
 ## 调用示例
 

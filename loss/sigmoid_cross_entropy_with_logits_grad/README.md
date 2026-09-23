@@ -55,7 +55,7 @@
   <tr>
     <td class="tg-0lax">d_out</td>
     <td class="tg-0lax">输入</td>
-    <td class="tg-0lax">网络反向传播前一步的梯度值，shape可broadcast到predict的shape。</td>
+    <td class="tg-0lax">网络反向传播前一步的梯度值，shape与predict保持一致（元素总数与predict相等，不支持广播）。</td>
     <td class="tg-0lax">与predict保持一致</td>
     <td class="tg-0lax">ND</td>
   </tr>
@@ -70,6 +70,12 @@
 
 ## 约束说明
 
+- predict、target、dout 的数据类型必须一致，仅支持 FLOAT16、FLOAT、BFLOAT16。
+- predict、target、dout 的维度个数（rank）不超过 8，超过时算子编译报错。
+- target 的 shape 必须与 predict 完全一致；dout 的元素总数必须与 predict 相等（按元素总数等值校验，非广播推导，不支持广播语义）。
+- 支持空 Tensor（任一维度为 0）：零元素时算子零迭代直接执行成功，不产生越界访问。
+- 支持动态 shape（含动态分档），shape 中含 -1 的场景按实际输入推导。
+- 数据格式仅支持 ND。
 - 确定性计算：SigmoidCrossEntropyWithLogitsGrad默认确定性实现。
 
 ## 调用说明

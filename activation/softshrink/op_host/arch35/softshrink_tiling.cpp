@@ -110,9 +110,9 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context, SoftShrinkInpu
     return ge::GRAPH_SUCCESS;
 }
 
-static float GetLambdAttr(gert::TilingContext* context)
+static ge::graphStatus GetLambdAttr(gert::TilingContext* context, float& lambd)
 {
-    float lambd = 0.5f;
+    lambd = SOFTSHRINK_DEFAULT_LAMBD;
     auto attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const float* lambdPtr = attrs->GetFloat(0);
@@ -120,10 +120,10 @@ static float GetLambdAttr(gert::TilingContext* context)
             lambd = *lambdPtr;
         }
     }
-    if (std::isnan(lambd) || std::isinf(lambd)) {
-        OP_LOGW(context, "lambd is special value (nan/inf): %f, output may be all zeros", lambd);
-    }
-    return lambd;
+    OP_CHECK_IF(lambd < 0.0f || std::isnan(lambd),
+                OP_LOGE(context, "lambd must be in [0, +inf) and must not be nan, got %f", lambd),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 static uint64_t GetSchModeFromDtype(ge::DataType dataType)
@@ -193,7 +193,11 @@ static ge::graphStatus SoftShrinkTilingFunc(gert::TilingContext* context)
         return ret;
     }
 
-    float lambd = GetLambdAttr(context);
+    float lambd = SOFTSHRINK_DEFAULT_LAMBD;
+    ret = GetLambdAttr(context, lambd);
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     if (inputInfo.totalNum == 0) {
         return HandleEmptyTensor(context, inputInfo.dataType);
@@ -208,7 +212,7 @@ static ge::graphStatus SoftShrinkTilingFunc(gert::TilingContext* context)
     //   bf16 升精到 fp32 计算 → alignElems=256/4=64
     //   fp32 直通                → alignElems=256/4=64
     // 三路径 alignElems 统一为 64，与 kernel 内 sizeof(COMPUTE_T)=4 一致
-    int64_t alignElems = 256 / static_cast<int64_t>(sizeof(float));
+    int64_t alignElems = VEC_ALIGN_BYTES / static_cast<int64_t>(sizeof(float));
 
     SoftShrinkTilingData* tiling = context->GetTilingData<SoftShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);

@@ -23,6 +23,8 @@ template <typename T>
 class KernelSmoothL1Loss {
     static constexpr int32_t BUFFER_NUM = 1;
     static constexpr bool NEED_CAST = !std::is_same<T, float>::value;
+    static constexpr int32_t ALIGN_BYTES = 256; // Compare API 掩码 buffer 的 256B 对齐粒度
+    static constexpr int32_t BITS_PER_BYTE = 8; // 掩码位宽（1 bit / 元素）
 
 public:
     __aicore__ inline KernelSmoothL1Loss() {}
@@ -80,16 +82,16 @@ __aicore__ inline void KernelSmoothL1Loss<T>::Init(GM_ADDR predict, GM_ADDR labe
 
     int64_t typeSize = sizeof(T);
     int64_t computeTypeSize = sizeof(float);
-    int64_t alignElements = 256 / typeSize;
+    int64_t alignElements = ALIGN_BYTES / typeSize;
 
     if (ubLength_ < alignElements) {
         ubLength_ = alignElements;
     }
 
     int64_t allocElems = ubLength_;
-    int64_t cmpBufSize = ((allocElems / 8 + 255) / 256) * 256;
-    if (cmpBufSize < 256) {
-        cmpBufSize = 256;
+    int64_t cmpBufSize = ((allocElems / BITS_PER_BYTE + ALIGN_BYTES - 1) / ALIGN_BYTES) * ALIGN_BYTES;
+    if (cmpBufSize < ALIGN_BYTES) {
+        cmpBufSize = ALIGN_BYTES;
     }
 
     pipe_.InitBuffer(inQueuePredict_, 1, allocElems * typeSize);
@@ -174,7 +176,8 @@ __aicore__ inline void KernelSmoothL1Loss<T>::Compute(int64_t currentNum)
         if constexpr (std::is_same<T, bfloat16_t>::value) {
             Cast(lossLocal, resultFp32, RoundMode::CAST_RINT, elemCount);
         } else {
-            Cast(lossLocal, resultFp32, RoundMode::CAST_NONE, elemCount);
+            // fp16：fp32→fp16 窄化转换需舍入（CAST_NONE 截尾会造成逐元素系统性精度损失）
+            Cast(lossLocal, resultFp32, RoundMode::CAST_RINT, elemCount);
         }
     } else {
         LocalTensor<float> predictFp32 = predictLocal.template ReinterpretCast<float>();

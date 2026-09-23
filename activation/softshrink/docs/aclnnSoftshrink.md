@@ -229,6 +229,12 @@ aclnnStatus aclnnSoftshrink(
 - 确定性计算：
   - aclnnSoftshrink默认确定性实现。
 
+- 数据格式仅支持ND；out的dtype与self一致。
+- self支持0~8维输入；0维标量输入会被视作shape为(1,)的1维tensor处理。
+- lambd取值范围为[0, +∞)，不允许为负数或nan。
+- 支持空Tensor（元素个数为0），直接返回同shape的空输出。
+- 支持动态shape（含-1维度）：tiling在运行期按实际shape计算切分，无需重新编译。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。

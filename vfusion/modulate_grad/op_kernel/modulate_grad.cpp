@@ -463,9 +463,6 @@ extern "C" __global__ __aicore__ void modulate_grad(GM_ADDR grad_Output, GM_ADDR
                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
-    if (TILING_KEY_IS(0)) {
-    }
-
     using namespace AscendC;
     ModulateGradKernel<float> kernel;
     PipeBarrier<PIPE_ALL>();
