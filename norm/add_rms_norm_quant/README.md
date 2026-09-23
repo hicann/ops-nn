@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
+|  <term>Kirin X90处理器系列产品</term> | √ |
+|  <term>Kirin 9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -165,11 +165,11 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>：x1、x2、gamma、scales1、scales2、zero_points1、zero_points2、beta、x的数据类型不支持BFLOAT16，输出参数y1、y2的数据类型仅支持INT8。
+  - <term>Atlas推理系列产品</term>：x1、x2、gamma、scales1、scales2、zero_points1、zero_points2、beta、x的数据类型不支持BFLOAT16，输出参数y1、y2的数据类型仅支持INT8。
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32，输出参数y1、y2的数据类型仅支持INT8。
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32，输出参数y1、y2的数据类型仅支持INT8。
 
-  - Kirin X90/Kirin 9030处理器系列产品：
+  - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：
     - x1、x2、gamma、beta和x的数据类型只支持FLOAT16。
     - scales1和scales2的数据类型只支持FLOAT32。
     - zero_points1和zero_points2的数据类型只支持INT32。
@@ -177,7 +177,7 @@
 
 ## 约束说明
 
-<term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`beta`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。
+<term>Atlas推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`beta`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。
 
 ## 调用说明
 

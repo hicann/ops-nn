@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
 | <term>Atlas A3训练系列产品/Atlas A3推理系列产品</term> | × |
 | <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term> | × |
 | <term>Atlas 200I/500 A2推理产品</term> | × |
@@ -75,6 +75,7 @@
 | GE图模式 | [test_geir_gn_training_update.cpp](examples/arch35/test_geir_gn_training_update.cpp) | 通过[GNTrainingUpdate IR](op_graph/gn_training_update_proto.h)构图调用。 |
 
 样例的构建与运行依赖CANN开发环境与自定义算子包安装（详见仓库根README的环境准备章节）：
+
 1. 完成CANN Toolkit安装并`source`其`set_env`环境脚本；
 2. 在本仓执行`bash build.sh --pkg --soc=ascend950 --ops=gn_training_update`构建自定义算子包并安装（`--install-path`指定安装路径），`source`安装后包内`bin/set_env.bash`；
 3. 构建并运行样例：`bash build.sh --run_example gn_training_update graph cust --soc=ascend950`（cust表示使用自定义算子包）；

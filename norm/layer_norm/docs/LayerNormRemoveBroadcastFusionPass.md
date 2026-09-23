@@ -3,7 +3,7 @@
 ## 融合模式
 
 <!-- npu="950" id1 -->
-融合模式一：Ascend 950PR/Ascend 950DT场景下，将LayerNorm算子gamma和beta输入前的BroadcastTo从图中删除，将gamma和beta直接作为LayerNorm算子的输入，并将begin_norm_axis和begin_params_axis统一设置为归一化维度的起始轴。如下图所示。
+融合模式一：Ascend 950PR&950DT系列产品场景下，将LayerNorm算子gamma和beta输入前的BroadcastTo从图中删除，将gamma和beta直接作为LayerNorm算子的输入，并将begin_norm_axis和begin_params_axis统一设置为归一化维度的起始轴。如下图所示。
 
 ![](../../../docs/zh/figures/layer_norm_remove_broadcast_fusion_pass_1.png)
 

@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | × |
-|  <term>Kirin 9030 处理器系列产品</term> | × |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
+|  <term>Kirin X90处理器系列产品</term> | × |
+|  <term>Kirin 9030处理器系列产品</term> | × |
 
 ## 功能说明
 
@@ -23,10 +23,10 @@
   $$
 
   当scale_alg为0时：
-  
+
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
-    shared\_exp = floor(log_2(max_i(|V_i|))) - emax 
+    shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$
 
     $$
@@ -48,13 +48,13 @@
   当scale_alg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值：
-      
+
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
 
     - 将FP32映射到目标数据类型FP8可表示的范围内：
-      
+
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
@@ -62,15 +62,15 @@
     - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
     - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
     - 为保证量化时不溢出，对指数进行向上取整：
-      
+
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
       $$
-      
+
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$
-    
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -170,8 +170,8 @@
 
 ## 约束说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
-  
+- <term>Ascend 950PR&950DT系列产品</term>：
+
   mxscale的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
   - mxscale.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2。

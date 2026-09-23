@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                  |    √     |
-| <term>Atlas 推理系列产品</term>                          |    √     |
-| <term>Atlas 训练系列产品</term>                          |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                   |    √     |
+| <term>Atlas A3系列产品</term> |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                  |    √     |
+| <term>Atlas推理系列产品</term>                          |    √     |
+| <term>Atlas训练系列产品</term>                          |    √     |
 
 ## 功能说明
 
@@ -96,17 +96,17 @@
 
 - 参数表中的数据格式为各产品及shape模式所支持格式的并集，具体支持范围以本节的产品说明为准。
 - scale、offset、mean和variance的数据类型必须为FLOAT，且均为shape为[C]的一维张量，其中C为x的通道数。
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - x和y支持ND、NCHW、NCDHW、NHWC和NDHWC格式，不支持NC1HWC0格式。
   - scale、offset、mean和variance仅支持ND格式。
   - ND格式下，x的rank不小于2，通道维为第1维；NCHW和NCDHW格式下，通道维为C维；NHWC和NDHWC格式下，通道维为最后一维。
   - NCHW和NHWC格式下，x必须为4维；NCDHW和NDHWC格式下，x必须为5维。
   - 不支持空Tensor，x的所有维度大小均必须大于0。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - 静态shape场景下，x、scale、offset、mean、variance和y支持NC1HWC0和NCDHW格式。
   - 动态shape场景下，x、scale、offset、mean、variance和y支持NC1HWC0、NCHW、NHWC和NCDHW格式。
   - x和y不支持ND和NDHWC格式。
-- <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
+- <term>Atlas 200I/500 A2推理产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：
   - x和y不支持BFLOAT16。
 - 本算子支持GE图模式和TensorFlow Parser调用，不提供公开的aclnn接口。
 

@@ -4,16 +4,16 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
-- 算子功能：保留输入的C轴并归约其余所有轴，输出每个通道的元素和与平方和。Ascend 950 支持
+- 算子功能：保留输入的C轴并归约其余所有轴，输出每个通道的元素和与平方和。<term>Ascend 950PR&950DT系列产品</term>支持
   NCHW 2~4维、NHWC 4维和NCDHW 5维。
 - 计算公式：
 
@@ -70,11 +70,12 @@
 
 ## 约束说明
 
-- Ascend 950 支持NCHW 2~4维、NHWC 4维和NCDHW 5维，不支持NDC1HWC0；输出格式与x相同。
+- <term>Ascend 950PR&950DT系列产品</term>：
+  - 支持NCHW 2~4维、NHWC 4维和NCDHW 5维，不支持NDC1HWC0；输出格式与x相同。
+  - 图模式支持动态Shape（-1未知维）和动态Rank（-2未知秩）。
 - sum和square_sum的逻辑shape均为一维[C]，长度等于x的C维，数据类型固定为FLOAT。
 - FLOAT16和BFLOAT16输入按FLOAT精度执行平方与累加。
 - 算子无属性，支持空Tensor；归约集合为空时输出为零或空向量。
-- Ascend 950图模式支持动态Shape（-1未知维）和动态Rank（-2未知秩）。
 
 ## 调用说明
 

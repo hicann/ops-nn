@@ -4,88 +4,88 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    ×     |
+| <term>Atlas A3系列产品</term>     |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                             |    √     |
+| <term>Atlas训练系列产品</term>                              |    ×     |
 
 ## 功能说明
 
 - 接口功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致，当前仅支持下游有1个AscendQuantV2量化算子。
 - 计算公式：
-  
+
   $$
   x = x1 + x2 + biasOptional
   $$
-  
+
   $$
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
-  
+
   - 当quantMode输入为"static"时，输出outScales1Out和outScales2Out无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
-    
+
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
-      
+
       $$
       y1Out = round(y / scales1Optional + zeroPoints1Optional)
       $$
-      
+
       $$
       y2Out = round(y / scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
       $$
 
     - 当divMode输入为false时，融合的量化算子为AscendQuantV2，计算公式如下所示：
-      
+
       $$
       y1Out = round(y * scales1Optional + zeroPoints1Optional)
       $$
-      
+
       $$
       y2Out = round(y * scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
       $$
 
   - 当quantMode输入为"dynamic"时，输入zeroPoints1Optional和zeroPoints2Optional无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
-    
+
     - 若scales1Optional和scales2Optional均无输入，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-      
+
       $$
       outScales1Out = row\_max(abs(y))/127
       $$
-      
+
       $$
       y1Out = round(y / outScales1Out)
       $$
 
     - 若仅输入scales1Optional，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-      
+
       $$
       tmp1 = y * scales1Optional
       $$
-      
+
       $$
       outScales1Out = row\_max(abs(tmp1))/127
       $$
-      
+
       $$
       y1Out = round(tmp1 / outScales1Out)
       $$
 
     - 若scales1Optional和scales2Optional均存在，则y2Out和scale2Out输出有效。计算公式如下所示：
-      
+
       $$
       tmp1 = y * scales1Optional, \quad tmp2 = y * scales2Optional
       $$
-      
+
       $$
       outScales1Out = row\_max(abs(tmp1))/127, \quad outScales2Out = row\_max(abs(tmp2))/127
       $$
-      
+
       $$
       y1Out = round(tmp1 / outScales1Out),\quad y2Out = round(tmp2 / outScales2Out)
       $$
-      
+
       其中row\_max代表对每行求最大值。
 
 ## 参数说明
@@ -241,7 +241,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
+- <term>Atlas推理系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

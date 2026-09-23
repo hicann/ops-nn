@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     √    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -52,7 +52,7 @@
     <tr>
       <td>grads</td>
       <td>输入</td>
-      <td><ul><li>表示上游梯度（损失函数对批归一化输出y的梯度），对应公式中的<code>grads</code>。</li><li>Ascend 950PR/Ascend 950DT：ND布局shape为[N, C, R...]（支持≥2维，dim0为N、dim1为C、后导维展平为归一化轴R；NCDHW为5D标签，内存布局与ND相同）；NHWC布局C为最后一维（shape任意rank≥2，前导维展平为归一化轴）。其余产品rank由输入格式固定（4D/5D/6D），通道轴随格式。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算。</li></ul></td>
+      <td><ul><li>表示上游梯度（损失函数对批归一化输出y的梯度），对应公式中的<code>grads</code>。</li><li>Ascend 950PR&950DT系列产品：ND布局shape为[N, C, R...]（支持≥2维，dim0为N、dim1为C、后导维展平为归一化轴R；NCDHW为5D标签，内存布局与ND相同）；NHWC布局C为最后一维（shape任意rank≥2，前导维展平为归一化轴）。其余产品rank由输入格式固定（4D/5D/6D），通道轴随格式。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NCDHW、NHWC</td>
     </tr>
@@ -102,12 +102,12 @@
 
 ## 约束说明
 
-- **Ascend 950PR/Ascend 950DT**：支持ND（dim0=N、dim1=C、后导维为归一化轴R；图模式下NCHW/NCDHW标签会被框架归一化下发或直接透传，NCDHW为5D标签、内存布局与ND相同，布局一致）与NHWC（C=最后一维，前导维N·H·W展平为归一化轴，任意rank≥2、C无上限）两类布局。
-- **其余产品（Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品 等）：grads/x支持NCHW/NHWC/NC1HWC0/NCDHW（5D场景NDC1HWC0），rank由格式固定（4D/5D/6D），通道轴随格式；统计量与输出和grads同format。其中 Atlas A2 训练系列产品/Atlas A2 推理系列产品 及 Atlas A3 训练系列产品/Atlas A3 推理系列产品支持BFLOAT16；Atlas 200I/500 A2 推理产品仅支持NC1HWC0/NCHW（4D，不支持NHWC/NCDHW/NDC1HWC0与BFLOAT16），Atlas 推理系列产品不支持BFLOAT16。
+- **Ascend 950PR&950DT系列产品**：支持ND（dim0=N、dim1=C、后导维为归一化轴R；图模式下NCHW/NCDHW标签会被框架归一化下发或直接透传，NCDHW为5D标签、内存布局与ND相同，布局一致）与NHWC（C=最后一维，前导维N·H·W展平为归一化轴，任意rank≥2、C无上限）两类布局。
+- **其余产品（Atlas A2系列产品、Atlas A3系列产品、Atlas推理系列产品、Atlas 200I/500 A2推理产品 等）：grads/x支持NCHW/NHWC/NC1HWC0/NCDHW（5D场景NDC1HWC0），rank由格式固定（4D/5D/6D），通道轴随格式；统计量与输出和grads同format。其中 Atlas A2系列产品 及 Atlas A3系列产品支持BFLOAT16；Atlas 200I/500 A2推理产品仅支持NC1HWC0/NCHW（4D，不支持NHWC/NCDHW/NDC1HWC0与BFLOAT16），Atlas推理系列产品不支持BFLOAT16。
 - x的shape、数据类型与布局格式必须与grads一致。
 - batch_mean/batch_variance恒为FLOAT32，元素数必须等于grads的通道数C（ND为dim1，NHWC为最后一维）。
-- 不支持空tensor：grads任一维为0时算子拒绝执行。归约轴（N与R维）为空时和数虽在数学上可定义为0，但通道轴C=0时输出元素数与统计量均无定义，且num（N·R）作为运算分母不可为空——与 Atlas A2 训练系列产品/Atlas A2 推理系列产品 同族算子（BNTrainingReduce/BNTrainingUpdate/BNTrainingUpdateV3）proto的"Empty tensors are not supported"统一口径（该产品侧 BNTrainingUpdateGrad的proto注释未附此句属其文档遗漏，非行为差异）。
-- Ascend 950PR/Ascend 950DT 的ND布局下C==1且总元素数≥2^20、或R==1且C>2048时，内部按NHWC同构布局多核切分（语义不变）；NHWC小C多行场景的跨核部分和以浮点原子加合并，输出为各核部分和之浮点和（顺序不定，浮点原子加的舍入误差为机器精度量级O(eps)，部分和个数=核数≤64）。
+- 不支持空tensor：grads任一维为0时算子拒绝执行。归约轴（N与R维）为空时和数虽在数学上可定义为0，但通道轴C=0时输出元素数与统计量均无定义，且num（N·R）作为运算分母不可为空——与 Atlas A2系列产品 同族算子（BNTrainingReduce/BNTrainingUpdate/BNTrainingUpdateV3）proto的"Empty tensors are not supported"统一口径（该产品侧 BNTrainingUpdateGrad的proto注释未附此句属其文档遗漏，非行为差异）。
+- Ascend 950PR&950DT系列产品 的ND布局下C==1且总元素数≥2^20、或R==1且C>2048时，内部按NHWC同构布局多核切分（语义不变）；NHWC小C多行场景的跨核部分和以浮点原子加合并，输出为各核部分和之浮点和（顺序不定，浮点原子加的舍入误差为机器精度量级O(eps)，部分和个数=核数≤64）。
 
 ## 调用说明
 

@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -49,8 +49,8 @@
 
 | 产品 | 静态shape能力 | 动态shape能力 | 可选参数 | shape/rank及组合限制 |
 | --- | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`注册为可选输入，但调用时必须提供；`batch_mean`和`batch_variance`为可选输出 | `x`的rank为2～8，shape为`[N, C, R...]`；`gamma`、`beta`、`mean`、`variance`的元素数均为`N*C`；支持空Tensor |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 各输入、输出均为NC1HWC0 | 不支持 | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`为必选输入；`batch_mean`和`batch_variance`为可选输出 | `x`为5维`[N, C1, H, W, C0]`；`gamma`、`beta`、`mean`、`variance`为`[N, C1, 1, 1, C0]`；不支持空Tensor |
+| <term>Ascend 950PR&950DT系列产品</term> | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`注册为可选输入，但调用时必须提供；`batch_mean`和`batch_variance`为可选输出 | `x`的rank为2～8，shape为`[N, C, R...]`；`gamma`、`beta`、`mean`、`variance`的元素数均为`N*C`；支持空Tensor |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 各输入、输出均为NC1HWC0 | 不支持 | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`为必选输入；`batch_mean`和`batch_variance`为可选输出 | `x`为5维`[N, C1, H, W, C0]`；`gamma`、`beta`、`mean`、`variance`为`[N, C1, 1, 1, C0]`；不支持空Tensor |
 
 ## 约束说明
 

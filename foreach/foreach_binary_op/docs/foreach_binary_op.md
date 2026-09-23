@@ -8,7 +8,7 @@
 
 | 产品 | 是否支持 |
 |:---|:---:|
-| <term>Ascend 950PR/Ascend 950DT</term>（arch35/ascend950） | √ |
+| <term>Ascend 950PR&950DT系列产品</term>（arch35/ascend950） | √ |
 | 其它产品 | × |
 
 ## 功能说明
@@ -61,7 +61,7 @@ REG_OP(ForeachBinaryOp)，详见 [op_graph/foreach_binary_op_proto.h](../op_grap
 
 ## 约束说明
 
-- 仅支持 <term>Ascend 950PR/Ascend 950DT</term>（arch35/ascend950），SIMT kernel 实现。
+- 仅支持 <term>Ascend 950PR&950DT系列产品</term>（arch35/ascend950），SIMT kernel 实现。
 - `x1`、`x2`、`y` 三个列表长度（Tensor 个数）一致，且一一对应的 Tensor shape 一致。
 - 列表 Tensor 个数上限为 256（`MAX_TENSOR_NUM_FOREACH_BINARY_OP`）。
 - `x1`、`x2`、`y` 中每个 Tensor 的数据类型一致，且属于 FLOAT16/FLOAT/INT32/BFLOAT16。

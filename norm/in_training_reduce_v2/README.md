@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -40,8 +40,8 @@
 
 | 产品 | 静态shape能力 | 动态shape能力 | shape/rank及格式映射 |
 | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | `x`支持NCHW、NCDHW、ND，`sum`和`square_sum`为ND | 支持动态shape和动态rank，输入、输出均为ND | NCHW输入为4维，NCDHW输入为5维；ND输入的rank为2～8，dim0和dim1分别为实例维和通道维 |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 4维NCHW/NHWC原始格式映射为NC1HWC0，5维NCDHW/NDHWC原始格式映射为NDC1HWC0；输入、输出格式一致 | 支持动态shape和动态rank，输入、输出均为NC1HWC0或NDC1HWC0 | 实际执行时，原始输入为4维或5维 |
+| <term>Ascend 950PR&950DT系列产品</term> | `x`支持NCHW、NCDHW、ND，`sum`和`square_sum`为ND | 支持动态shape和动态rank，输入、输出均为ND | NCHW输入为4维，NCDHW输入为5维；ND输入的rank为2～8，dim0和dim1分别为实例维和通道维 |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 4维NCHW/NHWC原始格式映射为NC1HWC0，5维NCDHW/NDHWC原始格式映射为NDC1HWC0；输入、输出格式一致 | 支持动态shape和动态rank，输入、输出均为NC1HWC0或NDC1HWC0 | 实际执行时，原始输入为4维或5维 |
 
 ## 约束说明
 

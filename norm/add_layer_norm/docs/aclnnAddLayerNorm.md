@@ -5,22 +5,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -231,7 +231,7 @@ aclnnStatus aclnnAddLayerNorm(
   </table>
 
   <!-- npu="310p" id7 -->
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
     - 参数`x1`、`x2`、`beta`、`gamma`、`biasOptional`、`yOut`、`xOut`的数据类型不支持BFLOAT16。
     - 参数`meanOut`、`rstdOut`在当前产品使用场景下无效。
   <!-- end id7 -->
@@ -345,16 +345,16 @@ aclnnStatus aclnnAddLayerNorm(
   - 数据类型支持
 
     <!-- npu="310p" id8 -->
-    - <term>Atlas 推理系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16。
+    - <term>Atlas推理系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16。
     <!-- end id8 -->
     <!-- npu="A3,910b" id9 -->
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16、BFLOAT16。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16、BFLOAT16。
     <!-- end id9 -->
     - rstdOut、meanOut支持：FLOAT32。
   - 数据格式支持：ND。
 
   <!-- npu="310p" id10 -->
-  - <term>Atlas 推理系列产品</term>：x1、x2、beta、gamma、biasOptional五个输入的尾轴长度必须大于等于32 Bytes。
+  - <term>Atlas推理系列产品</term>：x1、x2、beta、gamma、biasOptional五个输入的尾轴长度必须大于等于32 Bytes。
   <!-- end id10 -->
 
 - **未支持类型说明**
@@ -365,7 +365,7 @@ aclnnStatus aclnnAddLayerNorm(
 - **各产品支持数据类型说明**
 
   <!-- npu="A3,910b" id11 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | biasOptional数据类型 | yOut数据类型 | meanOut数据类型 | rstdOut数据类型 | xOut数据类型 |
     | -------- | -------- | ------------- | ------------- | ----------- | --------- | --------- | --------- | :-------- |
@@ -381,7 +381,7 @@ aclnnStatus aclnnAddLayerNorm(
   <!-- end id11 -->
 
   <!-- npu="310p" id12 -->
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | biasOptional数据类型 | yOut数据类型 | meanOut数据类型 | rstdOut数据类型 | xOut数据类型 |
     | -------- | -------- | ------------- | ------------- | ----------- | --------- | --------- | --------- | :-------- |

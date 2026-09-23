@@ -4,16 +4,16 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
-- 算子功能：对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
+- 算子功能：对一个批次的数据做批量归一化处理，归一化之后生成的数据的统计结果为0均值、1标准差。
 
 - 计算公式：
 
@@ -67,15 +67,15 @@
     </tr>
     <tr>
       <td>running_mean</td>
-      <td>输入</td>
-      <td><ul><li>训练场景：训练期间动量更新前的均值；推理场景：推理期间使用的均值，对应公式中的`E(x)`。</li><li>一个1D张量，shape与输入x的维度C相同，数据类型与x的数据类型支持以下组合：[x: float16, running_mean: float16/float32], [x: bfloat16, running_mean: bfloat16/float32], [x: float32, running_mean: float32]。</li></ul></td>
+      <td>输入/输出</td>
+      <td><ul><li>训练场景：训练期间动量更新前后的均值；推理场景：推理期间使用的均值，对应公式中的`E(x)`。</li><li>一个1D张量，shape与输入x的维度C相同，数据类型与x的数据类型支持以下组合：[x: float16, running_mean: float16/float32], [x: bfloat16, running_mean: bfloat16/float32], [x: float32, running_mean: float32]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>running_var</td>
-      <td>输入</td>
-      <td>训练场景：训练期间动量更新前的方差；推理场景：推理期间使用的方差，对应公式中的`Var(x)`。</td>
+      <td>输入/输出</td>
+      <td>训练场景：训练期间动量更新前后的方差；推理场景：推理期间使用的方差，对应公式中的`Var(x)`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -137,27 +137,27 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - 输入x和输出y的数据格式不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
-  
-  - <term>Atlas 训练系列产品</term>：
+
+  - <term>Atlas训练系列产品</term>：
     - 数据类型：所有的输入和输出不支持BFLOAT16。
     - 数据格式：输入x和输出y不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
-  
-  - <term>Atlas 推理系列产品</term>：
+
+  - <term>Atlas推理系列产品</term>：
     - 数据类型：所有的输入和输出不支持BFLOAT16。
     - 数据格式：输入x和输出y不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
-  
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-  
+
+  - <term>Ascend 950PR&950DT系列产品</term>：
+
     输出参数`save_rstd`保存的是x标准差的倒数。
-  
+
 ## 约束说明
 
-<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持训练场景。
+<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：仅支持训练场景。
 
 ## 调用说明
 

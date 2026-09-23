@@ -10,8 +10,8 @@
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×   |
 |  <term>Atlas推理系列产品</term>    |     √    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+|  <term>Kirin X90处理器系列产品</term> | √ |
+|  <term>Kirin 9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -113,9 +113,9 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>：输入参数（除了normalized_shape）和所有输出参数的数据类型不支持BFLOAT16。
+  - <term>Atlas推理系列产品</term>：输入参数（除了normalized_shape）和所有输出参数的数据类型不支持BFLOAT16。
 
-  - Kirin X90/Kirin 9030处理器系列产品：
+  - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：
     - 所有输入、输出的数据类型不支持BFLOAT16。
     - normalized_shape的数据类型不支持INT64。
 

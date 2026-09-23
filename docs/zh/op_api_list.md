@@ -77,7 +77,7 @@
 | [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) | 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
 | [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
+| [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，归一化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md) | 将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormElemtBackward](../../norm/sync_batch_norm_backward_elemt/docs/aclnnBatchNormElemtBackward.md) | aclnnBatchNormElemt的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |

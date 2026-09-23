@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>   |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     √    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
-> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅FLOAT16/FLOAT32。
+> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR&950DT系列产品 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型BFLOAT16仅Ascend 950PR&950DT系列产品、Atlas A2系列产品、Atlas A3系列产品支持；Atlas训练系列产品、Atlas推理系列产品、Atlas 200I/500 A2推理产品仅FLOAT16/FLOAT32。
 
 ## 功能说明
 
@@ -54,37 +54,37 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>表示待归一化的输入张量，对应公式中的<code>x</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[N, C, R...]，支持2~8维，dim0为N、dim1为C、后导维展平为归一化轴R。</li><li>其余产品：4/5/6维（5HD/6HD内部布局，或4维NCHW特例[N,C,1,W]走动态分支）。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算、单次舍入写回。</li></ul></td>
-      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</td>
-      <td>Ascend 950PR/Ascend 950DT：ND（含NCDHW标签，5D时布局相同）；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0）</td>
+      <td><ul><li>表示待归一化的输入张量，对应公式中的<code>x</code>。</li><li>Ascend 950PR&950DT系列产品：shape为[N, C, R...]，支持2~8维，dim0为N、dim1为C、后导维展平为归一化轴R。</li><li>其余产品：4/5/6维（5HD/6HD内部布局，或4维NCHW特例[N,C,1,W]走动态分支）。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算、单次舍入写回。</li></ul></td>
+      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR&950DT系列产品、Atlas A2系列产品、Atlas A3系列产品</td>
+      <td>Ascend 950PR&950DT系列产品：ND（含NCDHW标签，5D时布局相同）；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas推理系列产品仅NC1HWC0/NDC1HWC0）</td>
     </tr>
     <tr>
       <td>sum</td>
       <td>输入</td>
-      <td><ul><li>表示x在N与R维上的逐通道求和结果，即BNTrainingReduce的sum输出，对应公式中的<code>sum</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
+      <td><ul><li>表示x在N与R维上的逐通道求和结果，即BNTrainingReduce的sum输出，对应公式中的<code>sum</code>。</li><li>Ascend 950PR&950DT系列产品：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
     <tr>
       <td>square_sum</td>
       <td>输入</td>
-      <td><ul><li>表示x在N与R维上的逐通道平方求和结果，即BNTrainingReduce的square_sum输出，对应公式中的<code>square_sum</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
+      <td><ul><li>表示x在N与R维上的逐通道平方求和结果，即BNTrainingReduce的square_sum输出，对应公式中的<code>square_sum</code>。</li><li>Ascend 950PR&950DT系列产品：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
     <tr>
       <td>scale</td>
       <td>输入</td>
-      <td><ul><li>表示逐通道缩放因子，对应公式中的<code>scale</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
+      <td><ul><li>表示逐通道缩放因子，对应公式中的<code>scale</code>。</li><li>Ascend 950PR&950DT系列产品：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
     <tr>
       <td>offset</td>
       <td>输入</td>
-      <td><ul><li>表示逐通道缩放偏置，对应公式中的<code>offset</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
+      <td><ul><li>表示逐通道缩放偏置，对应公式中的<code>offset</code>。</li><li>Ascend 950PR&950DT系列产品：shape为[C]（推荐；按元素数校验，[1,C]等元素数相同的形态同样放行），元素数必须等于x的dim1（C）。</li><li>其余产品：shape与x同rank（如NC1HWC0下为[1,C1,1,1,C0]，元素数等于C1*C0）。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
     <tr>
       <td>epsilon</td>
@@ -103,22 +103,22 @@
     <tr>
       <td>batch_mean</td>
       <td>输出</td>
-      <td><ul><li>表示本batch的逐通道均值，对应公式中的<code>batch_mean</code>。</li><li>Ascend 950PR/Ascend 950DT：shape与scale一致（scale为[C]时即[C]）。</li><li>其余产品：与x同rank。</li></ul></td>
+      <td><ul><li>表示本batch的逐通道均值，对应公式中的<code>batch_mean</code>。</li><li>Ascend 950PR&950DT系列产品：shape与scale一致（scale为[C]时即[C]）。</li><li>其余产品：与x同rank。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
     <tr>
       <td>batch_variance</td>
       <td>输出</td>
-      <td><ul><li>表示本batch的逐通道方差，对应公式中的<code>batch_variance</code>。</li><li>Ascend 950PR/Ascend 950DT：shape与scale一致（scale为[C]时即[C]）。</li><li>其余产品：与x同rank。</li></ul></td>
+      <td><ul><li>表示本batch的逐通道方差，对应公式中的<code>batch_variance</code>。</li><li>Ascend 950PR&950DT系列产品：shape与scale一致（scale为[C]时即[C]）。</li><li>其余产品：与x同rank。</li></ul></td>
       <td>FLOAT32</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：与x同布局</td>
+      <td>Ascend 950PR&950DT系列产品：ND；其余产品：与x同布局</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
 
-**Ascend 950PR/Ascend 950DT：**
+**Ascend 950PR&950DT系列产品：**
 
 - 仅支持ND格式（dim0=N、dim1=C、后导维为归一化轴R，rank 2~8；图模式下NCHW/NCDHW标签会被框架归一化下发或直接透传，NCDHW为5D标签、内存布局与ND相同）。
 - x维度数须≥2；x为FLOAT16/FLOAT32/BFLOAT16。
@@ -126,9 +126,9 @@
 - batch_mean/batch_variance的shape与scale一致。
 - 不支持空tensor：x任一维为0时算子拒绝执行（num=N*R作为分母无法定义）。
 
-**其余产品（Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas 训练系列产品、Atlas 推理系列产品）：**
+**其余产品（Atlas A2系列产品、Atlas A3系列产品、Atlas训练系列产品、Atlas推理系列产品）：**
 
-- 数据格式为NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0），x为4/5/6维（或4维NCHW特例[N,C,1,W]）。
+- 数据格式为NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas推理系列产品仅NC1HWC0/NDC1HWC0），x为4/5/6维（或4维NCHW特例[N,C,1,W]）。
 - 统计量sum/square_sum/scale/offset与x同rank、恒为FLOAT32；NC1HWC0/NDC1HWC0下C按C0=16对齐，统计量元素数等于C1*C0。
 - 不支持空tensor（各产品proto同声明）。
 

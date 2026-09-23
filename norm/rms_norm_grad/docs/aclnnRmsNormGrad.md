@@ -5,22 +5,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -178,7 +178,7 @@ aclnnStatus aclnnRmsNormGrad(
   </table>
 
   <!-- npu="310p" id7 -->
-  - <term>Atlas 推理系列产品</term>：参数`dy`、`x`、`gamma`、`dxOut`的数据类型不支持BFLOAT16。
+  - <term>Atlas推理系列产品</term>：参数`dy`、`x`、`gamma`、`dxOut`的数据类型不支持BFLOAT16。
   <!-- end id7 -->
 
 - **返回值**
@@ -263,13 +263,13 @@ aclnnStatus aclnnRmsNormGrad(
 ## 约束说明
 
 <!-- npu="310p" id8 -->
-- <term>Atlas 推理系列产品</term>：归一化维的总数据量（即`gamma`各维度大小之积×单个元素字节数）必须大于等于32 Bytes。
+- <term>Atlas推理系列产品</term>：归一化维的总数据量（即`gamma`各维度大小之积×单个元素字节数）必须大于等于32 Bytes。
 <!-- end id8 -->
 
 - 各产品支持数据类型说明：
 
   <!-- npu="950,A3,910b" id9 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：
 
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
@@ -281,7 +281,7 @@ aclnnStatus aclnnRmsNormGrad(
   <!-- end id9 -->
 
   <!-- npu="310p" id10 -->
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
 
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
@@ -292,10 +292,10 @@ aclnnStatus aclnnRmsNormGrad(
 - 确定性计算：
 
   <!-- npu="A3,910b,310p" id11 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnRmsNormGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>：aclnnRmsNormGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   <!-- end id11 -->
   <!-- npu="950" id12 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnRmsNormGrad默认确定性实现。
+  - <term>Ascend 950PR&950DT系列产品</term>：aclnnRmsNormGrad默认确定性实现。
   <!-- end id12 -->
 
 ## 调用示例
