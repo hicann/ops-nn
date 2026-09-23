@@ -2792,6 +2792,12 @@ ge::graphStatus MatmulV3BaseTiling::DoLibApiTiling()
     DoTilingKey();
     L2Cache l2Cache(args_, tilingData_);
     l2Cache.SetL2CacheFlag(tilingEnable_, compileInfo_.l2Size, l2CacheFlag_);
+    // SetL2CacheFlag 写的是成员 l2CacheFlag_，需回写 tilingData 供 kernel 按 flag 开关 L2。
+    // 仅本模板消费该回写，避免改变其它模板对历史 flag=0 行为的依赖。
+    if (tilingEnable_.tilingEnableFullLoad == TilingEnableFullLoad::AL1_FULL_LOAD &&
+        tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_SPLIT_K) {
+        tilingData_.l2cacheUseInfo.l2CacheFlag = l2CacheFlag_;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
