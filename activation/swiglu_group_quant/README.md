@@ -17,12 +17,13 @@
 
 ### 接口功能
 
-SwigluGroupQuant算子实现SwiGLU激活函数与分组量化融合计算。支持四种量化模式：
+SwigluGroupQuant算子实现SwiGLU激活函数与分组量化融合计算。支持五种量化模式：
 
 - **quant_mode=0**: Block Quant（FP8块量化，固定128元素分组）
 - **quant_mode=1**: MX Quant（FP8 MX量化，固定32元素分组）
 - **quant_mode=2**: HiFp8 Static Quant（HiFp8静态量化）
 - **quant_mode=3**: HiFp8 Dynamic Quant（HiFp8动态量化）
+- **quant_mode=5**: MX Quant V2（变体Clipped SwiGLU + CuBALS MX FP8量化，固定32元素分组）
 
 ### 计算公式
 
@@ -32,7 +33,7 @@ SwigluGroupQuant算子实现SwiGLU激活函数与分组量化融合计算。支�
 步骤一：GroupIndex处理（可选）→ 计算real_bs
 步骤二：输入切分（仅处理前real_bs行）
 步骤三：Clamp处理（可选，仅处理前real_bs行）
-步骤四：SwiGLU激活（仅处理前real_bs行）
+步骤四：SwiGLU激活 / 变体SwiGLU激活（仅处理前real_bs行）
 步骤五：Weight加权（可选，仅处理前real_bs行）
 步骤六：量化计算（仅处理前real_bs行）
 ```
@@ -78,7 +79,7 @@ $$
 <details>
 <summary><strong>步骤三：Clamp处理（可选）</strong></summary>
 
-当 `clamp_limit > 0` 时，对输入进行限制：
+当`clamp_limit > 0`时，对输入进行限制：
 
 $$
 \mathbf{x}_0'[n, d] = \min(\mathbf{x}_0[n, d], c)
@@ -98,34 +99,63 @@ $$
 </details>
 
 <details>
-<summary><strong>步骤四：SwiGLU激活</strong></summary>
+<summary><strong>步骤四：SwiGLU激活 / 变体SwiGLU激活</strong></summary>
 
-SwiGLU激活函数定义（逐元素计算）：
+### 1. 标准SwiGLU（quant_mode=0/1/2/3）
 
-$$
-\mathbf{y}_{\text{swiglu}}[n, d] = \text{Swish}(\mathbf{x}_0'[n, d]) \cdot \mathbf{x}_1'[n, d]
-$$
-
-其中Swish函数：
+逐元素计算：
 
 $$
-\text{Swish}(z) = z \cdot \sigma(z) = z \cdot \frac{1}{1 + e^{-z}}
+\mathbf{y}_{\text{origin}}[t,h]
+=\operatorname{SiLU}(\mathbf{x}_0'[t,h])\cdot\mathbf{x}_1'[t,h]
 $$
 
-**完整计算步骤分解**：
+其中：
+
+$$
+\operatorname{SiLU}(z)=z\cdot\sigma(z)=\frac{z}{1+e^{-z}}
+$$
+
+因此：
+
+$$
+\mathbf{y}_{\text{origin}}[t,h]
+=\frac{\mathbf{x}_0'[t,h]}{1+e^{-\mathbf{x}_0'[t,h]}}\cdot\mathbf{x}_1'[t,h]
+$$
+
+### 2. 变体Clipped SwiGLU（quant_mode=5）
+
+`quant_mode=5`支持`alpha`和`bias`，激活公式为：
+
+$$
+\mathbf{y}_{\text{origin}}[t,h]
+=\mathbf{x}_0'[t,h]\cdot
+\sigma\!\left(\alpha\mathbf{x}_0'[t,h]\right)\cdot
+\left(\mathbf{x}_1'[t,h]+\beta\right)
+$$
+
+其中：
+
+- $\alpha$对应属性`alpha`，默认值为$1.0$；
+- $\beta$对应属性`bias`，默认值为$0.0$；
+- Clamp在`alpha`和`bias`参与激活计算之前执行。
+
+等价的分步计算为：
 
 $$
 \begin{aligned}
-t_1[n, d] &= -\mathbf{x}_0'[n, d] \quad \text{(neg)} \\
-t_2[n, d] &= e^{t_1[n, d]} = e^{-\mathbf{x}_0'[n, d]} \quad \text{(exp)} \\
-t_3[n, d] &= t_2[n, d] + 1 = 1 + e^{-\mathbf{x}_0'[n, d]} \quad \text{(add)} \\
-t_4[n, d] &= \frac{\mathbf{x}_0'[n, d]}{t_3[n, d]} = \text{Swish}(\mathbf{x}_0'[n, d]) \quad \text{(div)} \\
-\mathbf{y}_{\text{swiglu}}[n, d] &= t_4[n, d] \cdot \mathbf{x}_1'[n, d] \quad \text{(mul)}
+t_1[t,h]&=-\alpha\mathbf{x}_0'[t,h] \\
+t_2[t,h]&=e^{t_1[t,h]} \\
+t_3[t,h]&=1+t_2[t,h] \\
+t_4[t,h]&=\frac{\mathbf{x}_0'[t,h]}{t_3[t,h]} \\
+t_5[t,h]&=\mathbf{x}_1'[t,h]+\beta \\
+\mathbf{y}_{\text{origin}}[t,h]&=t_4[t,h]\cdot t_5[t,h]
 \end{aligned}
 $$
 
-**yOrigin输出**：
-outputOrigin设置为True时，`yOrigin`输出SwiGLU的结果$\mathbf{y}_{\text{swiglu}}$。
+当$\alpha=1.0$、$\beta=0.0$时，变体公式退化为标准SwiGLU。
+
+**yOrigin输出**：当`output_origin=true`时，`yOrigin`保存上述激活结果，即**Weight加权前**的SwiGLU结果；对于`quant_mode=5`，其中已包含Clamp、`alpha`和`bias`的作用。
 
 </details>
 
@@ -197,13 +227,13 @@ $$
 
 **Scale输出与InvScale计算**：
 
-当 `round_scale=false` 时：
+当`round_scale=false`时：
 
 $$
 s_i = s_i^{\text{raw}}, \quad \text{InvScale}_i = \frac{M_{\text{fp8}}}{\hat{a}_i} = \frac{1}{s_i}
 $$
 
-当 `round_scale=true` 时，将scale向上取整到2的幂：
+当`round_scale=true`时，将scale向上取整到2的幂：
 
 $$
 e_i = \lceil \log_2(s_i^{\text{raw}}) \rceil
@@ -235,7 +265,7 @@ $$
 \mathbf{y}_{\text{quant}}[n, j] = \text{cast\_fp8\_rint}(\mathbf{y}_{\text{cast\_in}}[n, j])
 $$
 
-其中 `cast_fp8_rint` 为FP32到FP8的类型转换，采用**RINT（就近舍入）**模式。
+其中`cast_fp8_rint`为FP32到FP8的类型转换，采用**RINT（就近舍入）**模式。
 
 </details>
 
@@ -407,6 +437,69 @@ $$
 
 </details>
 
+<details>
+<summary><strong>quant_mode=5 (MxQuant CuBALS)</strong></summary>
+
+**MX量化原理**：采用**E8M0 Scale** + **FP8 Data**的组合。
+
+**分组方式**：每**32元素**为一组，不足32的元素补0参与计算：
+
+$$
+\mathbf{y} = [\mathbf{g}_0, \mathbf{g}_1, \ldots, \mathbf{g}_K], \quad \mathbf{g}_i \in \mathbb{R}^{32}
+$$
+
+**Amax计算**（CuBALS无下限）：
+
+$$
+a_i = \max_{j=0}^{31} |\mathbf{g}_i[j]|
+$$
+
+**原始Scale计算**：
+
+$$
+s_i^{\text{raw}} = \frac{a_i}{M_{\text{fp8}}}
+$$
+
+其中 $M_{\text{fp8}}$ 取值：
+
+- FP8 E4M3FN：$M_{\text{fp8}} = 448.0$
+- FP8 E5M2：$M_{\text{fp8}} = 57344.0$
+
+**指数向上取整（CuBALS）**：从 $s_i^{\text{raw}}$ 提取无偏指数 $E_i$ 与尾数 $M_i$，
+为保证量化不溢出对指数向上取整：
+
+$$
+E_i^{*} =
+\begin{cases}
+E_i + 1, & s_i^{\text{raw}} \text{为正规数，且 } E_i < 254 \text{ 且 } M_i > 0 \\
+E_i + 1, & s_i^{\text{raw}} \text{为非正规数，且 } M_i > 0.5 \\
+E_i, & \text{否则}
+\end{cases}
+$$
+
+$$
+s_i = 2^{E_i^{*}}
+$$
+
+**E8M0 Scale编码**：$s_i$ 以无偏指数形式存入FLOAT8_E8M0：
+
+$$
+s_i^{\text{e8m0}} = E_i^{*} + 127
+$$
+
+**全零块处理**：$a_i = 0$ 时 $s_i^{\text{e8m0}} = 0$（无amax下限，与双轴算子一致）。
+
+**量化计算**：
+
+$$
+\mathbf{y}_{\text{quant}}[t, j] = \text{cast\_fp8\_rint}\!\left(\mathbf{y}_{\text{weighted}}[t, j] \cdot \frac{1}{s_i}\right),
+\quad j \in \text{group } i
+$$
+
+其中`cast_fp8_rint`为FP32到FP8的类型转换，采用**RINT（就近舍入）**模式。
+
+</details>
+
 </details>
 
 ## 参数说明
@@ -430,15 +523,15 @@ $$
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>SwiGLU输入。shape为[...,D]，维度为2-8维（quantMode为1时为2-7维），尾轴D须能被256整除。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</td>
+      <td>SwiGLU输入。quantMode为5时shape仅支持[T,D]二维；其他模式shape为[...,D]，维度为2-8维（quantMode为1时为2-7维）。quantMode为5时D必须大于等于64且能被64整除；其他模式的非空输入D必须大于等于256且能被256整除。quantMode为0或1时支持空Tensor；quantMode为2、3或5时不支持空Tensor。quantMode为0、1或5时仅支持FLOAT16、BFLOAT16；quantMode为2或3时支持FLOAT、FLOAT16、BFLOAT16。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>输入（可选）</td>
-      <td>MOE权重张量，用于SwiGLU输出的加权计算。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。不为空时，数据类型为FLOAT32，维度为1-8维，元素个数需等于x除最后一维外的元素个数之积。</td>
-      <td>FLOAT32</td>
+      <td>MOE权重张量，用于SwiGLU输出的加权计算。quantMode为0或1时支持空Tensor；quantMode为2、3或5时不支持空Tensor。不为空时，quantMode=5支持FLOAT16、BFLOAT16、FLOAT32，其他模式仅支持FLOAT32；维度为1-8维，元素个数需等于x除最后一维外的元素个数之积。</td>
+      <td>quantMode=5：FLOAT16、BFLOAT16、FLOAT32；其他模式：FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -458,28 +551,28 @@ $$
     <tr>
       <td>dst_type</td>
       <td>属性</td>
-      <td>目标量化类型。仅quantMode为0或1时，该参数生效。支持取值35、36，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
+      <td>目标量化类型。quantMode为0、1或5时生效。支持取值35、36，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>quant_mode</td>
       <td>属性</td>
-      <td>量化模式。支持取值0、1、2、3。0表示Block FP8模式。1表示MX模式。2表示HIFP8静态量化模式。3表示HIFP8动态量化模式。</td>
+      <td>量化模式。支持取值0、1、2、3、5。0表示Block FP8模式。1表示原MX模式。2表示HIFP8静态量化模式。3表示HIFP8动态量化模式。5表示MX V2模式。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>block_size</td>
       <td>属性</td>
-      <td>量化块大小。0表示使用当前量化模式的默认block大小。quantMode为0时，支持0或128。quantMode为1时，支持0或32。quantMode为2或3时，该参数不生效，默认0。</td>
+      <td>量化块大小。0表示使用当前量化模式的默认block大小。quantMode为0时支持0或128；quantMode为1或5时支持0或32；quantMode为2或3时该参数不生效。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>round_scale</td>
       <td>属性</td>
-      <td>是否将scale取整为2的幂。quantMode为1时，roundScale必须为true。quantMode为2或3时，该参数不生效。</td>
+      <td>是否将scale取整为2的幂。quantMode为1或5时必须为true。quantMode为2或3时该参数不生效。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -507,14 +600,14 @@ $$
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
+      <td>量化输出。quantMode为0、1或5时数据类型与dstType一致；quantMode为2或3时数据类型为HIFLOAT8。shape均为[...,D/2]。quantMode为0或1时支持空Tensor；quantMode为2、3或5时不支持空Tensor。</td>
       <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y_scale</td>
       <td>输出</td>
-      <td>量化scale输出。quantMode为0时，shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。quantMode为1时，shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。quantMode为2或3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
+      <td>量化scale输出。quantMode为0时shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。quantMode为1或5时shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。quantMode为2或3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。quantMode为0或1时支持空Tensor；quantMode为2、3或5时不支持空Tensor。</td>
       <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
@@ -532,6 +625,8 @@ $$
 - 确定性计算：aclnnSwigluGroupQuant默认确定性实现。
 - quantMode为0时，仅支持FP8输出，blockSize支持0或128。
 - quantMode为1时，支持FP8输出，blockSize支持0或32，roundScale必须为true。
+- quantMode为5时，x仅支持二维[T,D]；支持FP8输出，blockSize支持0或32，roundScale必须为true；不支持groupIndex和scale。
+  clampLimit必须为有限值，取-1.0表示关闭Clamp，否则必须大于0。
 - quantMode为2或3时，支持HIFP8量化输出，dstType, blockSize和roundScale不生效。输入x的维度为[T, D]或[B, S, D]，需满足以下规格约束：
 
   | 规格项 | 规格 | 规格说明 |
@@ -549,4 +644,5 @@ $$
 |调用方式|调用样例|说明|
 |:-------|:-------|:---|
 |aclnn调用|[test_aclnn_swiglu_group_quant](./examples/test_aclnn_swiglu_group_quant.cpp)|通过[aclnnSwigluGroupQuant](./docs/aclnnSwigluGroupQuant.md)接口调用SwigluGroupQuant算子。|
+|aclnn V2调用|[test_aclnn_swiglu_group_quant_v2](./examples/test_aclnn_swiglu_group_quant_v2.cpp)|通过[aclnnSwigluGroupQuantV2](./docs/aclnnSwigluGroupQuantV2.md)接口调用SwigluGroupQuant算子的quant_mode=5。|
 |图模式调用|-|通过[算子IR](./op_graph/swiglu_group_quant_proto.h)构图方式调用SwigluGroupQuant算子。|

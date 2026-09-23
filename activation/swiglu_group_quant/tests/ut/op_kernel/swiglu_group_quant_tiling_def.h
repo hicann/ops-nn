@@ -49,6 +49,19 @@ struct SwigluGroupQuantTilingData {
     int64_t coreNum;
 };
 
+struct SwigluGroupQuantMxExtendTilingData {
+    uint32_t flags;
+    uint32_t weightType;
+    int64_t dimM;
+    int64_t dimN;
+    int64_t usedCoreNum;
+    int64_t dimNBlockNum;
+    int64_t dimNTail;
+    float alpha;
+    float bias;
+    float clampLimit;
+};
+
 struct SwigluGroupQuantHifp8TilingData {
     int64_t totalTokens;
     int64_t dim2H;

@@ -36,13 +36,22 @@ BLOCK_FP8_QUANT_MODE = 0
 MX_QUANT_MODE = 1
 STATIC_HIFP8_QUANT_MODE = 2
 DYNAMIC_HIFP8_QUANT_MODE = 3
+MX_QUANT_V2_MODE = 5
 FLOAT8_E5M2 = 291
 GE_DTYPE_FLOAT8_E4M3FN = 36
 
 
 def _resolve_dst_type(dst_type, quant_mode):
-    if quant_mode < BLOCK_FP8_QUANT_MODE or quant_mode > DYNAMIC_HIFP8_QUANT_MODE:
-        raise RuntimeError(f"quant_mode should be 0, 1, 2 or 3, but got {quant_mode}")
+    if quant_mode not in (
+        BLOCK_FP8_QUANT_MODE,
+        MX_QUANT_MODE,
+        STATIC_HIFP8_QUANT_MODE,
+        DYNAMIC_HIFP8_QUANT_MODE,
+        MX_QUANT_V2_MODE,
+    ):
+        raise RuntimeError(
+            f"quant_mode should be 0, 1, 2, 3 or 5, but got {quant_mode}"
+        )
     if quant_mode in (STATIC_HIFP8_QUANT_MODE, DYNAMIC_HIFP8_QUANT_MODE):
         return DataType.DT_HIFLOAT8
 
@@ -110,8 +119,16 @@ if _TORCHAIR_AVAILABLE:
         clamp_limit: float = -1.0,
         dst_type_max: float = 15.0,
         output_origin: bool = False,
+        alpha: float = 1.0,
+        bias: float = 0.0,
         meta_outputs: TensorSpec = None,
     ):
+        if quant_mode in (STATIC_HIFP8_QUANT_MODE, DYNAMIC_HIFP8_QUANT_MODE) and (
+            alpha != 1.0 or bias != 0.0
+        ):
+            raise RuntimeError(
+                "alpha/bias only support quant_mode=5, got " + str(quant_mode)
+            )
         y_dtype = _resolve_dst_type(dst_type, quant_mode)
 
         inputs = {"x": x}
@@ -133,11 +150,13 @@ if _TORCHAIR_AVAILABLE:
                 "clamp_limit": attr.Float(clamp_limit),
                 "dst_type_max": attr.Float(dst_type_max),
                 "output_origin": attr.Bool(output_origin),
+                "alpha": attr.Float(alpha),
+                "bias": attr.Float(bias),
             },
             outputs=["y", "y_scale", "y_origin"],
             ir=IrDef("SwigluGroupQuant")
             .input("x", "DT_FLOAT16, DT_BF16, DT_FLOAT")
-            .optional_input("weight", "DT_FLOAT")
+            .optional_input("weight", "DT_FLOAT16, DT_BF16, DT_FLOAT")
             .optional_input("group_index", "DT_INT64")
             .optional_input("scale", "DT_FLOAT")
             .attr("dst_type", attr.Int(GE_DTYPE_FLOAT8_E4M3FN))
@@ -147,6 +166,8 @@ if _TORCHAIR_AVAILABLE:
             .attr("clamp_limit", attr.Float(-1.0))
             .attr("dst_type_max", attr.Float(15.0))
             .attr("output_origin", attr.Bool(False))
+            .attr("alpha", attr.Float(1.0))
+            .attr("bias", attr.Float(0.0))
             .output(
                 "y",
                 "DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_HIFLOAT8",
@@ -158,7 +179,7 @@ if _TORCHAIR_AVAILABLE:
         y.desc.dtype = _resolve_output_proto_dtype(dst_type, y_dtype)
         y_scale_dtype = (
             DataType.DT_FLOAT8_E8M0
-            if quant_mode == MX_QUANT_MODE
+            if quant_mode in (MX_QUANT_MODE, MX_QUANT_V2_MODE)
             else DataType.DT_FLOAT
         )
         y_scale.desc.dtype = _ge_dtype_to_ge_proto_dtype(y_scale_dtype)
@@ -169,6 +190,7 @@ if _TORCHAIR_AVAILABLE:
         if _is_fp4_dtype(y_dtype):
             y = _pack_fp4_output_to_uint8(y, x.rank)
         return y, y_scale, y_origin
+
 else:
 
     def convert_swiglu_group_quant(*args, **kwargs):

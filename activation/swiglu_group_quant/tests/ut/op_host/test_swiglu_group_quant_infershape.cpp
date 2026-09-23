@@ -20,8 +20,8 @@
 #include "../../../op_graph/swiglu_group_quant_proto.h"
 
 namespace {
-const Runtime2TestParam kRuntimeParam{
-    {"dst_type", "quant_mode", "block_size", "round_scale", "clamp_limit", "dst_type_max", "output_origin"}};
+const Runtime2TestParam kRuntimeParam{{"dst_type", "quant_mode", "block_size", "round_scale", "clamp_limit",
+                                       "dst_type_max", "output_origin", "alpha", "bias"}};
 
 void UpdateInputX(ge::op::SwigluGroupQuant& op, const std::vector<int64_t>& dims, ge::DataType dtype)
 {
@@ -134,5 +134,84 @@ TEST_F(SwigluGroupQuantInferShapeTest, infer_dtype_error_invalid_dst_type)
     op.SetAttr("dst_type", static_cast<int64_t>(ge::DT_FLOAT));
 
     EXPECT_EQ(InferDataTypeTest(op, kRuntimeParam), ge::GRAPH_FAILED);
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_v2_origin)
+{
+    const std::vector<std::vector<int64_t>> shapes = {{8, 64}, {8, 128}, {8, -1}, {-2}};
+    for (const auto& shape : shapes) {
+        for (int trigger = 0; trigger < 4; ++trigger) {
+            for (bool outputOrigin : {false, true}) {
+                ge::op::SwigluGroupQuant op;
+                UpdateInputX(op, shape, ge::DT_FLOAT16);
+                op.SetAttr("quant_mode", static_cast<int64_t>(5));
+                op.SetAttr("round_scale", true);
+                op.SetAttr("alpha", trigger == 0 ? 1.702f : 1.0f);
+                op.SetAttr("bias", trigger == 1 ? 1.0f : 0.0f);
+                op.SetAttr("output_origin", outputOrigin);
+                if (trigger >= 2) {
+                    ge::TensorDesc weightDesc;
+                    weightDesc.SetDataType(trigger == 2 ? ge::DT_FLOAT16 : ge::DT_BF16);
+                    weightDesc.SetShape(ge::Shape({8}));
+                    weightDesc.SetOriginShape(ge::Shape({8}));
+                    op.UpdateInputDesc("weight", weightDesc);
+                }
+                EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+                auto expected = outputOrigin ? shape : std::vector<int64_t>{0};
+                if (outputOrigin && expected.back() > 0) {
+                    expected.back() /= 2;
+                }
+                EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected);
+                if (shape == std::vector<int64_t>({8, 64})) {
+                    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({8, 1, 2}));
+                } else if (shape == std::vector<int64_t>({8, 128})) {
+                    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({8, 1, 2}));
+                } else if (shape == std::vector<int64_t>({8, -1})) {
+                    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({8, -1, 2}));
+                }
+            }
+        }
+    }
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_v2_rejects_scalar_weight)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {8, 64}, ge::DT_FLOAT16);
+    ge::TensorDesc weightDesc;
+    weightDesc.SetDataType(ge::DT_FLOAT);
+    weightDesc.SetShape(ge::Shape(std::vector<int64_t>{}));
+    weightDesc.SetOriginShape(ge::Shape(std::vector<int64_t>{}));
+    op.UpdateInputDesc("weight", weightDesc);
+    op.SetAttr("quant_mode", static_cast<int64_t>(5));
+    op.SetAttr("round_scale", true);
+
+    EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_FAILED);
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_v2_rejects_rank_three)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {2, 3, 128}, ge::DT_FLOAT16);
+    op.SetAttr("quant_mode", static_cast<int64_t>(5));
+    op.SetAttr("round_scale", true);
+
+    EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_FAILED);
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_legacy_float_weight_origin)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {8, 128}, ge::DT_FLOAT16);
+    ge::TensorDesc weightDesc;
+    weightDesc.SetDataType(ge::DT_FLOAT);
+    weightDesc.SetShape(ge::Shape({8}));
+    weightDesc.SetOriginShape(ge::Shape({8}));
+    op.UpdateInputDesc("weight", weightDesc);
+    op.SetAttr("alpha", 1.0f);
+    op.SetAttr("bias", 0.0f);
+    op.SetAttr("output_origin", false);
+    EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({8, 64}));
 }
 } // namespace

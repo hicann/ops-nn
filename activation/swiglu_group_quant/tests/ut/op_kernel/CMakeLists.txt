@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(swiglu_group_quant "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_Y=fp8_e4m3fn_t -DDTYPE_Y_SCALE=float")
+    AddOpTestCase(swiglu_group_quant "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_Y=fp8_e4m3fn_t -DDTYPE_Y_SCALE=float" swiglu_group_quant_with_dual_axis)
 endif()

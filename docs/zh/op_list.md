@@ -829,6 +829,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_group_quant_with_dual_axis/README.md">swiglu_group_quant_with_dual_axis</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>融合ClippedSwiGLU与两个方向的MX量化，输出最后一轴和倒数第二轴的FP8结果及E8M0缩放因子。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant_grad/README.md">swiglu_group_quant_grad</a></td>
     <td>✓</td>
     <td>✓</td>

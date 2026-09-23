@@ -77,6 +77,23 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SwigluGroupQuant, SwigluGroupQuantTilingData)
 
+BEGIN_TILING_DATA_DEF(SwigluGroupQuantMxExtendTilingData)
+TILING_DATA_FIELD_DEF(uint32_t, flags);
+TILING_DATA_FIELD_DEF(uint32_t, weightType);
+TILING_DATA_FIELD_DEF(int64_t, dimM);
+TILING_DATA_FIELD_DEF(int64_t, dimN);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, dimNBlockNum);
+TILING_DATA_FIELD_DEF(int64_t, dimNTail);
+TILING_DATA_FIELD_DEF(float, alpha);
+TILING_DATA_FIELD_DEF(float, bias);
+TILING_DATA_FIELD_DEF(float, clampLimit);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_5000, SwigluGroupQuantMxExtendTilingData)
+
+REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_5100, SwigluGroupQuantMxExtendTilingData)
+
 BEGIN_TILING_DATA_DEF(SwigluGroupQuantHifp8TilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalTokens);
 TILING_DATA_FIELD_DEF(int64_t, dim2H);

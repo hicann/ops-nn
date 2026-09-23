@@ -17,6 +17,7 @@ BLOCK_FP8_QUANT_MODE = 0
 MX_QUANT_MODE = 1
 STATIC_HIFP8_QUANT_MODE = 2
 DYNAMIC_HIFP8_QUANT_MODE = 3
+MX_QUANT_V2_MODE = 5
 BLOCK_FP8_BLOCK_SIZE = 128
 MX_BLOCK_SIZE = 32
 MX_SCALE_ALIGN = 2
@@ -36,8 +37,6 @@ def _swiglu_shape(x):
     if x.dim() < 1:
         raise RuntimeError("x rank should be greater than 0")
     last_dim = x.size(x.dim() - 1)
-    if last_dim % 2 != 0:
-        raise RuntimeError("x last dim size should be even")
     shape = list(x.shape)
     shape[-1] = last_dim // 2
     return shape
@@ -78,7 +77,7 @@ def _scale_shape(x, group_index, quant_mode):
         return [1]
 
     shape = list(x.shape[:-1])
-    if quant_mode == MX_QUANT_MODE:
+    if quant_mode in (MX_QUANT_MODE, MX_QUANT_V2_MODE):
         tail_dim = _ceil_div(swiglu_last_dim, MX_BLOCK_SIZE)
         tail_dim = _ceil_div(tail_dim, MX_SCALE_ALIGN)
         shape.extend([tail_dim, MX_SCALE_ALIGN])
@@ -98,7 +97,8 @@ class SwigluGroupQuantOpBuilder(OpBuilder):
         return (
             "swiglu_group_quant(Tensor x, Tensor? weight=None, Tensor? group_index=None, Tensor? scale=None, *, "
             "int dst_type=291, int quant_mode=0, int block_size=0, bool round_scale=False, "
-            "float clamp_limit=-1.0, float dst_type_max=15.0, bool output_origin=False) -> (Tensor, Tensor, Tensor)"
+            "float clamp_limit=-1.0, float dst_type_max=15.0, bool output_origin=False, "
+            "float alpha=1.0, float bias=0.0) -> (Tensor, Tensor, Tensor)"
         )
 
     def register_meta(self):
@@ -116,13 +116,17 @@ class SwigluGroupQuantOpBuilder(OpBuilder):
             clamp_limit=-1.0,
             dst_type_max=15.0,
             output_origin=False,
+            alpha=1.0,
+            bias=0.0,
         ):
             y = x.new_empty(
                 _quant_output_shape(x, dst_type, quant_mode),
                 dtype=_quant_output_dtype(dst_type, quant_mode),
             )
             y_scale_dtype = (
-                torch.float8_e8m0fnu if quant_mode == MX_QUANT_MODE else torch.float32
+                torch.float8_e8m0fnu
+                if quant_mode in (MX_QUANT_MODE, MX_QUANT_V2_MODE)
+                else torch.float32
             )
             y_scale = x.new_empty(
                 _scale_shape(x, group_index, quant_mode), dtype=y_scale_dtype
@@ -136,6 +140,48 @@ builder._ensure_initialized()
 
 
 @impl(get_as_library(), builder.name, "PrivateUse1")
+def _swiglu_group_quant_npu(
+    x,
+    weight=None,
+    group_index=None,
+    scale=None,
+    *,
+    dst_type=291,
+    quant_mode=0,
+    block_size=0,
+    round_scale=False,
+    clamp_limit=-1.0,
+    dst_type_max=15.0,
+    output_origin=False,
+    alpha=1.0,
+    bias=0.0,
+):
+    use_v2 = quant_mode == MX_QUANT_V2_MODE
+    if use_v2 and (x.requires_grad or (weight is not None and weight.requires_grad)):
+        raise RuntimeError(
+            "SwigluGroupQuant ACLNN V2 is forward-only and does not support autograd"
+        )
+    outputs = builder.load().swiglu_group_quant(
+        x,
+        weight,
+        group_index,
+        scale,
+        dst_type,
+        quant_mode,
+        block_size,
+        round_scale,
+        clamp_limit,
+        dst_type_max,
+        output_origin,
+        alpha,
+        bias,
+    )
+    if use_v2:
+        return tuple(output.detach() for output in outputs)
+    y, y_scale, y_origin = outputs
+    return y.detach(), y_scale.detach(), y_origin
+
+
 def swiglu_group_quant(
     x,
     weight=None,
@@ -149,24 +195,24 @@ def swiglu_group_quant(
     clamp_limit=-1.0,
     dst_type_max=15.0,
     output_origin=False,
+    alpha=1.0,
+    bias=0.0,
 ):
-    op_module = builder.load()
-    y, y_scale, y_origin = op_module.swiglu_group_quant(
+    return torch.ops.cann_ops_nn.swiglu_group_quant.default(
         x,
         weight,
         group_index,
         scale,
-        dst_type,
-        quant_mode,
-        block_size,
-        round_scale,
-        clamp_limit,
-        dst_type_max,
-        output_origin,
+        dst_type=dst_type,
+        quant_mode=quant_mode,
+        block_size=block_size,
+        round_scale=round_scale,
+        clamp_limit=clamp_limit,
+        dst_type_max=dst_type_max,
+        output_origin=output_origin,
+        alpha=alpha,
+        bias=bias,
     )
-    y = y.detach()
-    y_scale = y_scale.detach()
-    return y, y_scale, y_origin
 
 
 def _swiglu_group_quant_backward_autograd(ctx, grad_y, grad_y_scale, grad_y_origin):

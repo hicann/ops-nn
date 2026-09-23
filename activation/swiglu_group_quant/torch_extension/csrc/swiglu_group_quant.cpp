@@ -19,6 +19,7 @@ constexpr int64_t kBlockFp8QuantMode = 0;
 constexpr int64_t kMxQuantMode = 1;
 constexpr int64_t kStaticHifp8QuantMode = 2;
 constexpr int64_t kDynamicHifp8QuantMode = 3;
+constexpr int64_t kMxQuantV2Mode = 5;
 constexpr int64_t kBlockFp8BlockSize = 128;
 constexpr int64_t kMxBlockSize = 32;
 constexpr int64_t kMxScaleAlign = 2;
@@ -37,10 +38,11 @@ void CheckOptionalNpuTensor(const c10::optional<at::Tensor>& tensor, const char*
     }
 }
 
-int64_t CeilDiv(int64_t value, int64_t factor)
+c10::SymInt CeilDiv(const c10::SymInt& value, int64_t factor)
 {
-    TORCH_CHECK(factor > 0, "factor must be positive");
-    return (value + factor - 1) / factor;
+    const c10::SymInt divisor(factor);
+    const c10::SymInt remainder = value % divisor;
+    return value / divisor + (remainder + c10::SymInt(factor - 1)) / divisor;
 }
 
 bool IsFp4Dtype(aclDataType dtype) { return dtype == ACL_FLOAT4_E2M1 || dtype == ACL_FLOAT4_E1M2; }
@@ -76,19 +78,17 @@ bool IsHifp8QuantMode(int64_t quantMode)
     return quantMode == kStaticHifp8QuantMode || quantMode == kDynamicHifp8QuantMode;
 }
 
-c10::SmallVector<int64_t, op_infer::SIZE> GetSwigluShape(const at::Tensor& x)
+c10::SymDimVector GetSwigluShape(const at::Tensor& x)
 {
     TORCH_CHECK(x.dim() > 0, "x rank should be greater than 0");
-    const int64_t lastDim = x.size(x.dim() - 1);
-    TORCH_CHECK(lastDim % kSplitFactor == 0, "x last dim size should be even");
+    const c10::SymInt lastDim = x.sym_size(x.dim() - 1);
 
-    auto shape = op_infer::array_to_small_vector(x.sizes());
+    c10::SymDimVector shape(x.sym_sizes());
     shape[x.dim() - 1] = lastDim / kSplitFactor;
     return shape;
 }
 
-c10::SmallVector<int64_t, op_infer::SIZE> GetQuantOutputShape(const at::Tensor& x, aclDataType yAclType,
-                                                              int64_t quantMode)
+c10::SymDimVector GetQuantOutputShape(const at::Tensor& x, aclDataType yAclType, int64_t quantMode)
 {
     auto yShape = GetSwigluShape(x);
     if (quantMode == kMxQuantMode && IsFp4Dtype(yAclType)) {
@@ -97,11 +97,10 @@ c10::SmallVector<int64_t, op_infer::SIZE> GetQuantOutputShape(const at::Tensor& 
     return yShape;
 }
 
-c10::SmallVector<int64_t, op_infer::SIZE> GetScaleShape(const at::Tensor& x,
-                                                        const c10::optional<at::Tensor>& groupIndex, int64_t quantMode)
+c10::SymDimVector GetScaleShape(const at::Tensor& x, const c10::optional<at::Tensor>& groupIndex, int64_t quantMode)
 {
-    const int64_t swigluLastDim = x.size(x.dim() - 1) / kSplitFactor;
-    c10::SmallVector<int64_t, op_infer::SIZE> scaleShape;
+    const c10::SymInt swigluLastDim = x.sym_size(x.dim() - 1) / kSplitFactor;
+    c10::SymDimVector scaleShape;
 
     if (quantMode == kStaticHifp8QuantMode) {
         scaleShape.emplace_back(0);
@@ -109,17 +108,17 @@ c10::SmallVector<int64_t, op_infer::SIZE> GetScaleShape(const at::Tensor& x,
     }
     if (quantMode == kDynamicHifp8QuantMode) {
         if (groupIndex.has_value() && groupIndex.value().defined()) {
-            return op_infer::array_to_small_vector(groupIndex.value().sizes());
+            return c10::SymDimVector(groupIndex.value().sym_sizes());
         }
         scaleShape.emplace_back(1);
         return scaleShape;
     }
 
     for (int64_t i = 0; i < x.dim() - 1; ++i) {
-        scaleShape.emplace_back(x.size(i));
+        scaleShape.emplace_back(x.sym_size(i));
     }
-    if (quantMode == kMxQuantMode) {
-        int64_t tailDim = CeilDiv(swigluLastDim, kMxBlockSize);
+    if (quantMode == kMxQuantMode || quantMode == kMxQuantV2Mode) {
+        c10::SymInt tailDim = CeilDiv(swigluLastDim, kMxBlockSize);
         tailDim = CeilDiv(tailDim, kMxScaleAlign);
         scaleShape.emplace_back(tailDim);
         scaleShape.emplace_back(kMxScaleAlign);
@@ -145,35 +144,55 @@ aclDataType GetOutputAclType(int64_t dstType, int64_t quantMode)
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> swiglu_group_quant(
     const at::Tensor& x, const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& group_index,
-    const c10::optional<at::Tensor>& scale, int64_t dst_type, int64_t quant_mode, int64_t block_size, bool round_scale,
-    double clamp_limit, double dst_type_max, bool output_origin)
+    const c10::optional<at::Tensor>& scale, int64_t dst_type, const c10::optional<int64_t>& quant_mode,
+    const c10::optional<int64_t>& block_size, const c10::optional<bool>& round_scale, double clamp_limit,
+    double dst_type_max, bool output_origin, double alpha, double bias)
 {
     CheckNpuTensor(x, "x");
     CheckOptionalNpuTensor(weight, "weight");
     CheckOptionalNpuTensor(group_index, "group_index");
     CheckOptionalNpuTensor(scale, "scale");
-    TORCH_CHECK(quant_mode >= kBlockFp8QuantMode && quant_mode <= kDynamicHifp8QuantMode,
-                "quant_mode should be 0, 1, 2 or 3, but got ", quant_mode);
 
-    const aclDataType yAclType = GetOutputAclType(dst_type, quant_mode);
-    at::Tensor y = at::empty(GetQuantOutputShape(x, yAclType, quant_mode),
-                             x.options().dtype(GetQuantOutputScalarType(yAclType)));
+    const double resolvedAlpha = alpha;
+    const double resolvedBias = bias;
 
-    const bool isMxQuant = quant_mode == kMxQuantMode;
+    const int64_t resolvedQuantMode = quant_mode.value_or(kBlockFp8QuantMode);
+    const int64_t resolvedBlockSize = block_size.value_or(0);
+    const bool resolvedRoundScale = round_scale.value_or(false);
+    const bool useV2 = resolvedQuantMode == kMxQuantV2Mode;
+
+    // The legacy ACLNN entry has no alpha/bias arguments; do not silently discard them.
+    TORCH_CHECK(useV2 || (resolvedAlpha == 1.0 && resolvedBias == 0.0),
+                "alpha/bias only support quant_mode=5, got quant_mode ", resolvedQuantMode);
+
+    const aclDataType yAclType = GetOutputAclType(dst_type, resolvedQuantMode);
+    at::Tensor y = at::empty_symint(GetQuantOutputShape(x, yAclType, resolvedQuantMode),
+                                    x.options().dtype(GetQuantOutputScalarType(yAclType)));
+
+    const bool isMxQuant = resolvedQuantMode == kMxQuantMode || resolvedQuantMode == kMxQuantV2Mode;
     const aclDataType yScaleAclType = isMxQuant ? ACL_FLOAT8_E8M0 : ACL_FLOAT;
     const at::ScalarType yScaleScalarType = isMxQuant ? GetFp8ScalarType(ACL_FLOAT8_E8M0) : at::ScalarType::Float;
-    at::Tensor yScale = at::empty(GetScaleShape(x, group_index, quant_mode), x.options().dtype(yScaleScalarType));
+    at::Tensor yScale = at::empty_symint(GetScaleShape(x, group_index, resolvedQuantMode),
+                                         x.options().dtype(yScaleScalarType));
 
-    at::Tensor yOrigin = at::empty({0}, x.options());
+    const c10::SymDimVector emptyShape{0};
+    at::Tensor yOrigin = at::empty_symint(emptyShape, x.options());
     if (output_origin) {
-        yOrigin = at::empty(GetSwigluShape(x), x.options());
+        yOrigin = at::empty_symint(GetSwigluShape(x), x.options());
     }
 
     TensorWrapper yWrapper{y, yAclType};
     TensorWrapper yScaleWrapper{yScale, yScaleAclType};
     TensorWrapper yOriginWrapper{yOrigin, ConvertToAclDataType(yOrigin.scalar_type())};
-    ACLNN_CMD(aclnnSwigluGroupQuant, x, weight, group_index, scale, yAclType, quant_mode, block_size, round_scale,
-              clamp_limit, dst_type_max, output_origin, yWrapper, yScaleWrapper, yOriginWrapper);
+    if (useV2) {
+        ACLNN_CMD(aclnnSwigluGroupQuantV2, x, weight, group_index, scale, yAclType, resolvedQuantMode,
+                  resolvedBlockSize, resolvedRoundScale, clamp_limit, dst_type_max, output_origin, resolvedAlpha,
+                  resolvedBias, yWrapper, yScaleWrapper, yOriginWrapper);
+    } else {
+        ACLNN_CMD(aclnnSwigluGroupQuant, x, weight, group_index, scale, yAclType, resolvedQuantMode, resolvedBlockSize,
+                  resolvedRoundScale, clamp_limit, dst_type_max, output_origin, yWrapper, yScaleWrapper,
+                  yOriginWrapper);
+    }
     return std::make_tuple(y, yScale, yOrigin);
 }
 
