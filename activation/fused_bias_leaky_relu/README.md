@@ -103,14 +103,17 @@
 
 ## 约束说明
 
-- x、bias、y三者的数据类型（dtype）必须一致，仅支持FLOAT16和FLOAT。
-- x和bias的shape必须完全相同，不支持广播。
-- negative_slope和scale为float类型可选属性，带默认值（negative_slope=0.2，scale=1.414213562373）。
-- 支持的数据格式为ND。
-- 张量最高支持8维。
+- x、bias、y三者的数据类型（dtype）必须一致，仅支持FLOAT16和FLOAT（Tiling侧对x、bias的dtype做白名单及一致性校验）。
+- x和bias的shape必须逐维完全相同，y的shape与x相同，不支持广播（Tiling侧做逐维shape一致性校验）。
+- negative_slope和scale为float类型可选属性，带默认值（negative_slope=0.2，scale=1.414213562373），未设置时Tiling侧按默认值下发。
+- 支持的数据格式为ND（Tiling侧对x、bias的format做ND校验）。
+- 张量最高支持8维，支持rank 0（标量）输入（Tiling侧做维数校验，标量按单元素处理）。
+- 支持空Tensor（元素数为0，Tiling侧直接返回，不启动计算核）。
+- 支持动态shape（图描述shape含-1，未知维）与动态rank（图描述shape为[-2]，未知维数），同一张图可连续以多组具体shape运行。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式(GEIR)调用 | [test_geir_fused_bias_leaky_relu](./examples/test_geir_fused_bias_leaky_relu.cpp) | 通过 GE IR 图模式（REG_OP 注册）调用 FusedBiasLeakyRelu 算子。 |
+| 图模式(GEIR)调用 | [test_geir_fused_bias_leaky_relu](./examples/arch35/test_geir_fused_bias_leaky_relu.cpp) | 通过 GE IR 图模式（REG_OP 注册）调用 FusedBiasLeakyRelu 算子。 |
+| 图模式(GEIR)动态shape调用 | [test_geir_fused_bias_leaky_relu_dynamic](./examples/arch35/test_geir_fused_bias_leaky_relu_dynamic.cpp) | 覆盖-1未知维与-2未知rank两类动态场景的GE IR调用样例。 |

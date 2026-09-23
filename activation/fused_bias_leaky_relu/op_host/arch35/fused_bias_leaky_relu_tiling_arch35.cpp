@@ -58,15 +58,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
                                          float& negativeSlope, float& scale)
 {
     constexpr int64_t MAX_DIM_NUM = 8;
+    const std::string maxDimNumStr = std::to_string(MAX_DIM_NUM);
 
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
 
     OP_CHECK_IF(inputShapeX.GetDimNum() > MAX_DIM_NUM,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-                                                         std::to_string(inputShapeX.GetDimNum()).c_str(),
-                                                         "The dim num of x must be less than or equal to 8"),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context->GetNodeName(), "x", std::to_string(inputShapeX.GetDimNum()).c_str(),
+                    ("The dim num of x must be less than or equal to " + maxDimNumStr).c_str()),
                 return ge::GRAPH_FAILED);
 
     auto inputBias = context->GetInputShape(1);
@@ -74,19 +75,27 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto inputShapeBias = EnsureNotScalar(inputBias->GetStorageShape());
 
     OP_CHECK_IF(inputShapeBias.GetDimNum() > MAX_DIM_NUM,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "bias",
-                                                         std::to_string(inputShapeBias.GetDimNum()).c_str(),
-                                                         "The dim num of bias must be less than or equal to 8"),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context->GetNodeName(), "bias", std::to_string(inputShapeBias.GetDimNum()).c_str(),
+                    ("The dim num of bias must be less than or equal to " + maxDimNumStr).c_str()),
                 return ge::GRAPH_FAILED);
 
     auto outY = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outY);
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
-    OP_CHECK_IF(inputShapeX.GetShapeSize() != inputShapeBias.GetShapeSize() ||
-                    inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-                OP_LOGE(context, "FusedBiasLeakyRelu: shape size mismatch: x=%ld, bias=%ld, y=%ld",
-                        inputShapeX.GetShapeSize(), inputShapeBias.GetShapeSize(), outShapeY.GetShapeSize()),
+    OP_CHECK_IF(inputShapeX != inputShapeBias,
+                OP_LOGE(context,
+                        "FusedBiasLeakyRelu: bias shape must be identical to x shape, x dim num is %ld, "
+                        "bias dim num is %ld",
+                        inputShapeX.GetDimNum(), inputShapeBias.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(inputShapeX != outShapeY,
+                OP_LOGE(context,
+                        "FusedBiasLeakyRelu: y shape must be identical to x shape, x dim num is %ld, "
+                        "y dim num is %ld",
+                        inputShapeX.GetDimNum(), outShapeY.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
     totalNum = inputShapeX.GetShapeSize();
@@ -111,6 +120,18 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
                 OP_LOGE(context->GetNodeName(), "bias dtype %s must be same as x dtype %s",
                         Ops::Base::ToString(biasDtype).c_str(), Ops::Base::ToString(dataType).c_str()),
                 return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        inputDescX->GetFormat().GetStorageFormat() != ge::FORMAT_ND,
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
+                                   Ops::Base::ToString(inputDescX->GetFormat().GetStorageFormat()).c_str(), "ND"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        inputDescBias->GetFormat().GetStorageFormat() != ge::FORMAT_ND,
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "bias",
+                                   Ops::Base::ToString(inputDescBias->GetFormat().GetStorageFormat()).c_str(), "ND"),
+        return ge::GRAPH_FAILED);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);

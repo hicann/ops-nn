@@ -38,9 +38,24 @@ protected:
 };
 
 static void FusedBiasLeakyReluTilingTestCase(std::initializer_list<int64_t> inputShape, ge::DataType dtype,
-                                             float negativeSlope, float scale, ge::graphStatus expectedStatus)
+                                             float negativeSlope, float scale, ge::graphStatus expectedStatus,
+                                             std::initializer_list<int64_t> biasShape = {},
+                                             std::initializer_list<int64_t> outShape = {},
+                                             ge::Format xFormat = ge::FORMAT_ND, ge::Format biasFormat = ge::FORMAT_ND,
+                                             ge::DataType biasDtype = ge::DT_UNDEFINED)
 {
     gert::StorageShape shape = {inputShape, inputShape};
+    gert::StorageShape biasShapeTensor = {biasShape, biasShape};
+    gert::StorageShape outShapeTensor = {outShape, outShape};
+    if (biasShape.size() == 0) {
+        biasShapeTensor = shape;
+    }
+    if (outShape.size() == 0) {
+        outShapeTensor = shape;
+    }
+    if (biasDtype == ge::DT_UNDEFINED) {
+        biasDtype = dtype;
+    }
 
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -93,12 +108,12 @@ static void FusedBiasLeakyReluTilingTestCase(std::initializer_list<int64_t> inpu
                       .SetOpType(op_type)
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&shape, &shape})
-                      .OutputShapes({&shape})
+                      .InputShapes({&shape, &biasShapeTensor})
+                      .OutputShapes({&outShapeTensor})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, dtype, xFormat, xFormat)
+                      .NodeInputTd(1, biasDtype, biasFormat, biasFormat)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"negative_slope", Ops::NN::AnyValue::CreateFrom<float>(negativeSlope)},
                                   {"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)}})
@@ -171,4 +186,53 @@ TEST_F(FusedBiasLeakyReluTilingTest, negative_slope_large)
 TEST_F(FusedBiasLeakyReluTilingTest, empty_tensor)
 {
     FusedBiasLeakyReluTilingTestCase({0}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, rank0_scalar)
+{
+    FusedBiasLeakyReluTilingTestCase({}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, bias_shape_mismatch_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({2, 6}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {3, 4});
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, bias_shape_same_numel_different_dim_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({4, 4}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {2, 8});
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, y_shape_mismatch_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({2, 6}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {}, {3, 4});
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, format_not_nd_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({8}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {}, {},
+                                     ge::FORMAT_NCHW);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, bias_format_not_nd_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({8}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {}, {}, ge::FORMAT_ND,
+                                     ge::FORMAT_NHWC);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, dim_exceed_max_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, 0.2f, 1.414213562373f,
+                                     ge::GRAPH_FAILED);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, dtype_mismatch_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({8}, ge::DT_FLOAT, 0.2f, 1.414213562373f, ge::GRAPH_FAILED, {}, {}, ge::FORMAT_ND,
+                                     ge::FORMAT_ND, ge::DT_FLOAT16);
+}
+
+TEST_F(FusedBiasLeakyReluTilingTest, dtype_unsupported_rejected)
+{
+    FusedBiasLeakyReluTilingTestCase({8}, ge::DT_INT32, 0.2f, 1.414213562373f, ge::GRAPH_FAILED);
 }

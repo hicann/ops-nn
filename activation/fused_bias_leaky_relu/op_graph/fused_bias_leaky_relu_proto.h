@@ -14,8 +14,8 @@
  * \file fused_bias_leaky_relu_proto.h
  * \brief FusedBiasLeakyRelu GEIR operator registration (REG_OP)
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_OPS_H_
+#ifndef OPS_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_H_
+#define OPS_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_H_
 
 #include "graph/operator_reg.h"
 
@@ -51,4 +51,4 @@ REG_OP(FusedBiasLeakyRelu)
 
 } // namespace ge
 
-#endif // OPS_BUILT_IN_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_OPS_H_
+#endif // OPS_OP_PROTO_INC_FUSED_BIAS_LEAKY_RELU_H_
