@@ -434,7 +434,8 @@ static bool CheckBasicInputDtypes(const aclTensor* x1, const aclTensor* x2, cons
     return true;
 }
 
-static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias, const aclTensor* yScale)
+static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias, const aclTensor* yScale,
+                                const aclTensor* out)
 {
     if (bias != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "bias", "non-null bias",
@@ -452,6 +453,12 @@ static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             kOpName, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
             std::string("The dtype of x2Scale must be within the range ") + op::ToString(Y_SUPPORT_LIST).GetString());
+        return false;
+    }
+    if (x2Scale->GetDataType() != out->GetDataType()) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
+            "x2Scale and output tensor must share the same dtype when using A8W4 T-CG quantization");
         return false;
     }
     if (!CheckType(yScale->GetDataType(), Y_SCALE_SUPPORT_LIST)) {
@@ -505,7 +512,7 @@ static bool CheckDtype(const TupleInput& inputTensors, const TupleQuant& quantTe
     }
 
     if (x1Scale == nullptr) {
-        return CheckA8W4FloatDtype(x2Scale, bias, yScale);
+        return CheckA8W4FloatDtype(x2Scale, bias, yScale, out);
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         return CheckMxA8W4Dtype(bias, yScale, out);
     } else {

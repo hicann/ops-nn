@@ -71,8 +71,7 @@
 #include "../quant_batch_matmul_v4_constant.h"
 #include "quant_batch_matmul_v4_pertoken_pergroup.h"
 #else
-#include "quant_batch_matmul_v4_constant.h"
-#include "quant_batch_matmul_v4_perchannel.h"
+#include "quant_batch_matmul_v4_weight_quant_pergroup_blaze.h"
 #include "quant_batch_matmul_v4_weight_quant_mx_blaze.h"
 #include "../../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
 #endif
@@ -86,34 +85,12 @@ using namespace AscendC;
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if !CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
 using namespace QuantBatchMatmulV4;
-namespace QuantBatchMatmulV4 {
-namespace Arch35 {
-template <class TemplateClass>
-__aicore__ inline void InvokeWeightQuantBmmOpImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
-                                                  GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-                                                  GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR y, GM_ADDR workspace,
-                                                  GM_ADDR tiling)
-{
-    GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
-    AscendC::TPipe tPipe;
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
-    GET_TILING_DATA_WITH_STRUCT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams, tilingDataIn, tiling);
-    TemplateClass op;
-    op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn,
-            &tPipe);
-    op.Process();
-}
-} // namespace Arch35
-} // namespace QuantBatchMatmulV4
 #endif
 #endif
 
 #define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                       \
     do {                                                                                                          \
-        TPipe tPipe;                                                                                              \
+        AscendC::TPipe tPipe;                                                                                     \
         GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);                                                    \
         GET_TILING_DATA(tilingData, tiling);                                                                      \
         QbmmCmctPertileKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, float, float, DTYPE_Y, xLayout, wLayout, yLayout,   \
@@ -178,11 +155,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
 #else
     REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
     if constexpr (QUANT_TYPE == QBMMV4_PER_GROUP) {
-        constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
-        constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;
-        QuantBatchMatmulV4::Arch35::InvokeWeightQuantBmmOpImpl<
-            QuantBatchMatmulV4PerChannelKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false,
-                                               QuantType::PER_GROUP, DTYPE_Y, WEIGHTNZ> >(
+        QuantBatchMatmulV4::Arch35::InvokeWeightQuantPergroupBlaze<WEIGHTNZ>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
     } else if constexpr (QUANT_TYPE == QBMMV4_MX) {
         QuantBatchMatmulV4::Arch35::InvokeWeightQuantMxBlazeSwat<WEIGHTNZ>(

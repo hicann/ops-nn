@@ -498,7 +498,7 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W4F_TCG_fp16_ok)
     SocVersionManager versionManager(SocVersion::ASCEND950);
     TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({16, 2}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({16, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc yscale_desc = TensorDesc({1, 16}, ACL_UINT64, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnQuantMatmulV5,
