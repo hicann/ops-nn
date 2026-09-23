@@ -194,6 +194,7 @@ protected:
     int32_t coreNum_ = 1;
     int32_t isBiasFullLoad_ = 0;
     uint32_t singleIterateDk_ = 1;
+    uint64_t usrSpaceSize = 0;
 
     int32_t blockSize_ = 16;
     uint32_t dtypeByteL0a_ = 2;

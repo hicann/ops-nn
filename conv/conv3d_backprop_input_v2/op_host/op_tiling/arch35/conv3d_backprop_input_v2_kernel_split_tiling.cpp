@@ -579,7 +579,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
     workspaces[0] = GetSysWorkspaceSize();
 
     if (isGetTilingFromRepo) {
-        workspaces[0] += usrSpaceSizeForKernelSplit_;
+        workspaces[0] = usrSpaceSize;
         return ge::GRAPH_SUCCESS;
     }
 
@@ -598,6 +598,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
         workspaces[0] += usrSpaceSizeForKernelSplit_;
         OP_LOGD(opName_, "Enable kernel split, usrSpaceSize = %ld", usrSpaceSizeForKernelSplit_);
     }
+    OP_LOGD(opName_, "workspaces[0] = %ld", workspaces[0]);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -923,7 +924,7 @@ void Conv3DDXV2KernelSplitTiling::TranslateTilingRunInfo(
     loadB1Condition_ = tunerTiling->loadB1Condition;
     loadB2Condition_ = tunerTiling->loadB2Condition;
     kernelSplitMode_ = tunerTiling->kernelSplitMode;
-    usrSpaceSizeForKernelSplit_ = tunerTiling->usrSpaceSizeForKernelSplit;
+    usrSpaceSize = tunerTiling->usrSpaceSize;
     tilingRunInfo_.enableC04Flag = tunerTiling->enableC04Flag;
     tilingRunInfo_.enableFullLoadTiling = tunerTiling->enableFullLoadTiling;
     tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
@@ -939,8 +940,7 @@ void Conv3DDXV2KernelSplitTiling::PrintTilingRunInfo()
        << " enableFullLoadTiling: " << tilingRunInfo_.enableFullLoadTiling
        << " enableVecTransFlag: " << tilingRunInfo_.enableVecTransFlag
        << " enableSplitKernelFlag: " << tilingRunInfo_.enableSplitKernelFlag
-       << " tilingHkWkMode: " << static_cast<uint32_t>(tilingRunInfo_.tilingHkWkMode)
-       << " usrSpaceSizeForKernelSplit: " << usrSpaceSizeForKernelSplit_;
+       << " tilingHkWkMode: " << static_cast<uint32_t>(tilingRunInfo_.tilingHkWkMode);
     OP_LOGD(opName_, "TilingRunInfo: %s", ss.str().c_str());
 }
 
