@@ -331,7 +331,12 @@ ge::graphStatus InferDataTypeForConvTransposeV2(gert::InferDataTypeContext* cont
 {
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConvTransposeV2 enter");
     auto xDataType = context->GetInputDataType(1);
-    ge::graphStatus ret = context->SetOutputDataType(0, xDataType);
+    ge::graphStatus ret;
+    if (xDataType == ge::DT_INT8) {
+        ret = context->SetOutputDataType(0, ge::DT_INT32);
+    } else {
+        ret = context->SetOutputDataType(0, xDataType);
+    }
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "[InferDataType] Failed."),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InferDataTypeForConvTransposeV2 end");
