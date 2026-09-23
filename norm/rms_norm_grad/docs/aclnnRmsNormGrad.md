@@ -263,7 +263,7 @@ aclnnStatus aclnnRmsNormGrad(
 ## 约束说明
 
 <!-- npu="310p" id8 -->
-- <term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32 Bytes。
+- <term>Atlas 推理系列产品</term>：归一化维的总数据量（即`gamma`各维度大小之积×单个元素字节数）必须大于等于32 Bytes。
 <!-- end id8 -->
 
 - 各产品支持数据类型说明：
