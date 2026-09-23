@@ -49,6 +49,20 @@ _TOL = {
 _CHUNK = 512
 
 
+def _widen(t):
+    """只把 fp16/bf16 抬到 fp32, fp32/fp64 一律不动。
+
+    内核计算类型 U = fp32(TIK/regbase 均在 fp32 上算距离与比较), 故窄类型要补齐
+    "跨算子不落回"这一点; 但**不能写成"所有浮点一律 to(float32)"** ——
+    三方活动下 TTK 开 Promote, golden 收到的是抬高一档的 dtype(fp16/bf16→fp32,
+    fp32→fp64), 砍回 fp32 就撤销了 Promote, 双标杆塌成单标杆, 比值失去判别力
+    (ttk_golden_logic.md §三/§五 四格 + §八 第一条误区; 实测 fp32 档两腿逐位相同)。
+    这一条同时满足四格: 三方档收到 fp32/fp64 都不命中窄类型、原样不动(零 cast);
+    两方档收到 fp16/bf16 则抬到 fp32、与 NPU 的加宽行为一致。
+    """
+    return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
 def _min_with_index(x1, y1, x2, y2):
     """对每个查询点求到另一组的最小平方距离与最小下标。
 
@@ -56,7 +70,8 @@ def _min_with_index(x1, y1, x2, y2):
     并列时 torch.min 返回首个命中位置, 与内核"取最小下标"一致。
     """
     b, n = x1.shape
-    dist = torch.empty((b, n), dtype=torch.float32)
+    # 累加器跟随入参的计算精度(Promote 后可能是 fp64), 写死 fp32 会把真值砍回三方档精度
+    dist = torch.empty((b, n), dtype=x1.dtype)
     idx = torch.empty((b, n), dtype=torch.int32)
     for beg in range(0, n, _CHUNK):
         end = min(beg + _CHUNK, n)
@@ -76,18 +91,37 @@ def _compute(xyz1, xyz2, **kwargs):
         d(b, i, j) = (x1[b][i] - x2[b][j])^2 + (y1[b][i] - y2[b][j])^2
         dist1/idx1 = min/argmin over j;  dist2/idx2 = min/argmin over i
 
-    精度决策契约(来自 01 §6.3 的算法规格, 不是照抄被测内核): 距离与比较统一 fp32,
-    最后按输出 dtype 转回; fp16 / bf16 输入同走这一条。该契约的依据是 ascend910b 的
-    tbe(TIK)参考实现——它是本算子的行为基准, A5 要对齐的就是它。
+    精度决策按 ttk_golden_logic.md §三的四格规则, 浮点输出与整型输出**各按各的规则**:
+
+    - 浮点输出 dist1/dist2(判据含 cross_check): 零 cast —— 入参是 TTK Promote 抬上来的
+      高精度真值, 动它就撤销了 Promote。窄类型(fp16/bf16)由 _widen 抬到 fp32, 与内核
+      计算类型 U = fp32 一致。
+    - 整型输出 idx1/idx2(判据 binary_equal): §三 "整型没有三方一说", 它比的是
+      NPU vs golden, 规则是**按 NPU 的加宽行为决定是否 cast, NPU 不宽 -> 也不宽**。
+      本算子 U = fp32, fp32 输入时内核不加宽, 故下标必须在 **fp32** 上求 argmin。
+      跟着 Promote 在 fp64 上求会选出不同的最近点: 坐标差的平方在 fp32 下会下溢成 0
+      (非规格化输入)或上溢成 +inf(极值输入), 判别信息被抹掉, 而 fp64 仍可区分 ——
+      实测非规格化档 82/96、极值档 81/96 的下标不同, 正常值域对照档 0 不同。
+      该现象**只在 fp32 声明档出现**(fp16/bf16 被 Promote 抬到 fp32 恰好等于 U)。
+
+    出口按 §八 取**下发**的 var.dtype(即入参 xyz1.dtype), 不按算子声明的 dtype。
     """
     dt = xyz1.dtype
-    p1 = xyz1.to(torch.float32)
-    p2 = xyz2.to(torch.float32)
+    p1 = _widen(xyz1)
+    p2 = _widen(xyz2)
     x1, y1 = p1[0], p1[1]
     x2, y2 = p2[0], p2[1]
 
-    dist1, idx1 = _min_with_index(x1, y1, x2, y2)
-    dist2, idx2 = _min_with_index(x2, y2, x1, y1)
+    dist1, _ = _min_with_index(x1, y1, x2, y2)
+    dist2, _ = _min_with_index(x2, y2, x1, y1)
+
+    # 下标另在内核的计算类型 U(fp32)上求; 入参已是 fp32 时 .float() 是恒等操作,
+    # 两方活动(不开 Promote)下本行不改变任何结果。
+    q1 = p1 if p1.dtype == torch.float32 else p1.float()
+    q2 = p2 if p2.dtype == torch.float32 else p2.float()
+    _, idx1 = _min_with_index(q1[0], q1[1], q2[0], q2[1])
+    _, idx2 = _min_with_index(q2[0], q2[1], q1[0], q1[1])
+
     return [
         dist1.to(dt).contiguous(),
         dist2.to(dt).contiguous(),
@@ -166,13 +200,23 @@ class ChamferDistanceKernelSpec:
     """
 
     def golden(*inputs, **kwargs):
+        # 出口 dtype 取**下发**的 var.dtype, 不取 kwargs["output_dtypes"](算子声明的 dtype)。
+        # 三方活动下 TTK 开 Promote, 下发的是抬高一档的 dtype(fp16/bf16→fp32, fp32→fp64);
+        # 按声明 dtype 砍回去就撤销了 Promote, 双标杆塌成单标杆 —— 实测 fp16 声明档两腿
+        # 逐位相同、判别力归零(ttk_golden_logic.md §八 第一条误区 + V1/V4)。
+        # 两方活动下不开 Promote, 下发即声明 dtype, 这条规则自然退化成"等于声明 dtype"。
+        sent = inputs[0].dtype
         t = [_as_torch(a) for a in inputs]
         outs = _compute(*t, **kwargs)
-        od = kwargs.get("output_dtypes") or []
-        od = [d[0] if isinstance(d, (list, tuple)) else str(d) for d in od]
+        # _compute 已按下发 dtype 收口, 这里唯一要做的是 bf16 的**载体**还原:
+        # torch 读不了 ml_dtypes.bfloat16, _as_torch 把它抬成了 fp32, 出口落回 bf16。
+        # 这是载体转换, 不是精度决策 —— 其余各档一律不动, 保证三方活动下 golden 零 cast。
+        need_bf16 = sent.name == "bfloat16"
         return [
-            o.numpy().astype(od[i]) if i < len(od) else o.numpy()
-            for i, o in enumerate(outs)
+            o.numpy().astype(sent)
+            if (need_bf16 and o.dtype.is_floating_point)
+            else o.numpy()
+            for o in outs
         ]
 
     third_party = {"torch": _Compose}

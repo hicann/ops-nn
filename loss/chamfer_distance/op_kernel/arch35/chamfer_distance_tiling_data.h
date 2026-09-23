@@ -25,6 +25,7 @@ struct ChamferDistanceArch35TilingData {
     int64_t tailTasks = 0;    // 尾核负责的查询点数
     int64_t colsPerChunk = 0; // 被查集合一次驻留 UB 的点数(VL 对齐)
     int64_t chunkNum = 0;     // 被查集合的分段数
+    int64_t queryTile = 0;    // 查询点一次驻留 UB 的个数(host 下发, kernel 据此开缓冲)
 };
 
 #endif // CHAMFER_DISTANCE_TILING_DATA_H

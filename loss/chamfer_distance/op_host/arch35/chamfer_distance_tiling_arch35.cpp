@@ -38,11 +38,14 @@ constexpr size_t DIM_N = 2;
 constexpr int64_t COORD_NUM = 2;
 
 // 被查集合每个点在 UB 里的占用: 原始 x/y(输入 dtype, fp16/bf16 在 VF 内随路转 fp32, 不另占缓冲)
-// + 距离缓冲 + ReduceMin 的 work 缓冲, 两者均为 fp32
+// + 距离缓冲(fp32)。归约在 VF 内用寄存器完成, 不需要与段等长的 work 缓冲。
 constexpr int64_t DIST_BUF_PER_POINT = DTYPE_LEN_FP32; // 段内平方距离
-constexpr int64_t WORK_BUF_PER_POINT = DTYPE_LEN_FP32; // ReduceMin work tensor
-// 每个查询点的跨段累加器: bestVal | bestIdx, 各按一个向量宽度驻留
-constexpr int64_t ACC_BUF_NUM = 2;
+// 归约结果缓冲的个数: 最小值、下标各占一个独立 UB block
+constexpr int64_t RED_BUF_NUM = 2;
+// 查询点一次驻留 UB 的个数。kernel 的 queryX/queryY/best/bestIdx/输出队列都按它开缓冲,
+// 这里是唯一定义处, 经 tilingData 下发, kernel 不再自带常量。
+constexpr int64_t QUERY_TILE = 64;
+constexpr int64_t DTYPE_LEN_INT32 = 4;
 // SIMD/SIMT 共用的 dcache, 与参照算子一致预留
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 } // namespace
@@ -66,6 +69,7 @@ private:
     int64_t coreNum_ = 0;
     uint64_t ubSize_ = 0;
     int64_t vlFp32_ = 0;
+    int64_t ubBlockSize_ = 0;
     int64_t xyzDtypeLen_ = DTYPE_LEN_FP32;
     size_t sysWorkspaceSize_ = 0;
 };
@@ -136,25 +140,36 @@ ge::graphStatus ChamferDistanceTiling::CalUbSplit()
     if (tilingData_->taskNum <= 0 || n <= 0) {
         tilingData_->colsPerChunk = vlFp32_;
         tilingData_->chunkNum = 0;
+        tilingData_->queryTile = QUERY_TILE;
         return ge::GRAPH_SUCCESS;
     }
 
-    // 每个被查点的 UB 占用 + 每个查询点的跨段累加器(按向量宽度常驻)
-    int64_t bytesPerPoint = COORD_NUM * xyzDtypeLen_ + DIST_BUF_PER_POINT + WORK_BUF_PER_POINT;
-    int64_t reserve = ACC_BUF_NUM * vlFp32_ * DTYPE_LEN_FP32;
-    int64_t usable = static_cast<int64_t>(ubSize_) - reserve;
-    OP_CHECK_IF((usable <= bytesPerPoint * vlFp32_),
-                OP_LOGE(context_->GetNodeName(), "ub size %lu is too small for one vector of points", ubSize_),
-                return ge::GRAPH_FAILED);
+    // 随被查点数线性增长的部分: 原始 x/y(输入 dtype) + 距离缓冲
+    int64_t bytesPerPoint = COORD_NUM * xyzDtypeLen_ + DIST_BUF_PER_POINT;
+    // 与被查点数无关的固定缓冲, 逐项对应 kernel 的 InitBuffer, 不留 kernel 自行决定的部分:
+    //   queryXBuf + queryYBuf : QUERY_TILE * 输入 dtype 各一份
+    //   outDistQue            : QUERY_TILE * 输入 dtype
+    //   bestBuf               : QUERY_TILE * fp32
+    //   bestIdxBuf + outIdxQue: QUERY_TILE * int32 各一份
+    //   redMinBuf + redIdxBuf : 各一个 UB block
+    int64_t fixedBuf = QUERY_TILE * ((COORD_NUM + 1) * xyzDtypeLen_ + DTYPE_LEN_FP32 + 2 * DTYPE_LEN_INT32) +
+                       RED_BUF_NUM * static_cast<int64_t>(ubBlockSize_);
+    int64_t usable = static_cast<int64_t>(ubSize_) - fixedBuf;
 
+    // 分块点数由 UB 反解, 不做"先定缓冲再与 UB 比大小"的判断。
+    // 解出来不足一个向量宽度时取向量宽度作保底粒度 —— 继续按 N 轴切更多段, 不拒收。
     int64_t budget = usable / bytesPerPoint;
     int64_t colsPerChunk = budget / vlFp32_ * vlFp32_; // 向下取 VL 对齐
+    if (colsPerChunk < vlFp32_) {
+        colsPerChunk = vlFp32_;
+    }
     int64_t alignN = Ops::Base::CeilAlign(n, vlFp32_);
     if (colsPerChunk >= alignN) {
         colsPerChunk = alignN; // 单段全载
     }
     tilingData_->colsPerChunk = colsPerChunk;
     tilingData_->chunkNum = Ops::Base::CeilDiv(n, colsPerChunk);
+    tilingData_->queryTile = QUERY_TILE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -179,6 +194,9 @@ ge::graphStatus ChamferDistanceTiling::Init()
                 OP_LOGE(context_->GetNodeName(), "GetHardwareInfo failed, ubSize %lu", ubSize_),
                 return ge::GRAPH_FAILED);
     ubSize_ -= SIMD_SIMT_DCACHE_SIZE;
+    ubBlockSize_ = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    OP_CHECK_IF((ubBlockSize_ <= 0), OP_LOGE(context_->GetNodeName(), "GetUbBlockSize failed"),
+                return ge::GRAPH_FAILED);
     vlFp32_ = static_cast<int64_t>(Ops::Base::GetVRegSize(context_)) / DTYPE_LEN_FP32;
     OP_CHECK_IF((vlFp32_ <= 0), OP_LOGE(context_->GetNodeName(), "GetVRegSize failed"), return ge::GRAPH_FAILED);
 

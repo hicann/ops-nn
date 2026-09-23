@@ -11,7 +11,7 @@
 """
 TTK custom golden for foreach_binary_op.
 
-Compute formula (foreach_binary_op_proto.h:21; op_kernel/arch35/foreach_binary_op_simt.h:52):
+Compute formula (算子原型 op_graph/foreach_binary_op_proto.h 与 docs/foreach_binary_op.md):
     y[t][i] = x1[t][i] <op> x2[t][i]   (t = 0..n-1 list elements, i over numel)
 where <op> is selected by REQUIRED attr op_code:
     0 = add, 1 = sub, 2 = mul, 3 = div.
@@ -19,13 +19,17 @@ where <op> is selected by REQUIRED attr op_code:
 Non-inplace: output y is a separate TensorList of n sub-tensors, same per-tensor shape/dtype
 as x1 (and x2). Output order == x1 sub-tensor order.
 
-dtype handling mirrors the kernel (simt.h):
+dtype 决策按 ttk_golden_logic.md §三: 窄类型(fp16/bf16)抬到内核计算类型 U = fp32
+算完窄回; fp32/int32 不加宽(int32 过 fp32 会丢 >2^24 的低位)。U 由内核形态判定
+(SIMT: __half2float -> BinaryApply<float> -> __float2half_rn), 非照抄实现:
   * float32      : direct compute.
   * float16/bf16 : cast up to float32, compute, cast back (BinaryApply on T=fp32 after Cast*).
-  * int32        : native integer ops with 2's-complement wraparound (NO saturation) for
-                   add/sub/mul. For div: b == 0 -> 0 (device guard, simt.h:65), otherwise
-                   integer division truncated toward zero (C semantics).
-  * float div b == 0 -> IEEE inf/nan, left as-is (simt.h:67).
+  * int32        : native integer ops (2's-complement, as in torch int32). For div:
+                   b == 0 -> 0, per the contract declared in docs/foreach_binary_op.md
+                   ("整型(INT32)除法对除数为 0 的元素结果置 0")——与 CANN 家族中
+                   DivNoNan 的语义一致("Returns 0 if the denominator is zero, else,
+                   like Div")；否则向零截断(C 语义)。
+  * float div b == 0 -> IEEE inf/nan, 按 docs 声明不做干预。
 
 Positional args (TTK passes context.input_arrays unflattened, in CSV input_shapes order):
     x1_list : list of numpy arrays  (DYNAMIC TensorList x1, n sub-tensors)
@@ -34,7 +38,8 @@ op_code is delivered via **kwargs (TTK passes parsed `attributes` entries as kwa
 
 计算实现改用竞品 torch._foreach_* (红线 R3: golden 只能是竞品接口实现或竞品算子拼接实现,
 禁 numpy 纯公式), numpy 仅保留 I/O 与 dtype 转换; 数值与改造前逐位一致。整型除法用
-torch.div(rounding_mode="trunc") 并保留 b == 0 -> 0 的设备守卫(torch 整除 0 会抛异常)。
+torch.div(rounding_mode="trunc"); b == 0 -> 0 依据 docs 声明的契约(等价 DivNoNan 语义),
+不依据内核实现——torch 整除 0 会抛 ZeroDivisionError, 无法直接作参照。
 """
 
 import numpy as np
@@ -113,7 +118,8 @@ def _int_binary(a, b, op_code, dt):
         return torch._foreach_sub([aw], [bw])[0].to(narrow).numpy()
     if op_code == OP_MUL:
         return torch._foreach_mul([aw], [bw])[0].to(narrow).numpy()
-    # OP_DIV: b == 0 -> 0, else truncate toward zero (integer-only, exact, no float rounding).
+    # OP_DIV: b == 0 -> 0(docs 声明的契约, 等价 DivNoNan), 否则向零截断;
+    # 全程整型, 不经浮点(int32 过 fp32 会丢 >2^24 的低位)。
     zero = bw == 0
     safe = torch.where(zero, torch.ones_like(bw), bw)
     q = torch.div(aw, safe, rounding_mode="trunc")
@@ -166,6 +172,11 @@ _TOL_KERNEL = {
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
+    # int32 必须显式声明: 键缺失会落到 TTK 默认 mix_tolerance(ttk_golden_logic.md §七)。
+    # 整型不进 DTYPE_PROMOTE_MAP、也不跑 GPU 腿, 组不成双标杆(§三 "整型没有三方"),
+    # 实测 add/sub/mul/div 四路 golden 与三方腿逐位相同 —— cross_check 在这里必然退化,
+    # 正确判据是逐位相等。
+    "int32": {"standard": "binary_equal"},
 }
 
 
@@ -251,7 +262,12 @@ class _ForeachBinaryOpCompose:
             aw = [_tp_int64(a) for a in x1]
             bw = [_tp_int64(b) for b in x2]
             if op_code == OP_DIV:
-                # 整型除法: b == 0 取 0, 否则向零截断(纯整数, 不经浮点)
+                # 整型除法: 向零截断(对标 torch.div(rounding_mode="trunc"));
+                # b == 0 取 0 依据 docs 声明的契约。
+                # 注: 整型输出走 binary_equal(§三 "整型没有三方一说", 不提升、不跑 GPU 腿),
+                # 本分支不参与判定, 也不代表竞品行为 —— 竞品在该点无可对标值:
+                # CPU 的 torch.div(trunc) 除零抛 ZeroDivisionError, CUDA 上返回 -1(硬件
+                # 未定义行为的产物)。本算子按契约取 0。
                 outs = []
                 for a_, b_ in zip(aw, bw):
                     zero = b_ == 0

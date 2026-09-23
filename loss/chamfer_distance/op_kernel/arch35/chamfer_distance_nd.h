@@ -12,8 +12,8 @@
  * \brief ChamferDistance arch35 内核: 逐查询点对另一点集做最小平方距离 + argmin 归约
  *
  * 输入布局 (2, B, N): xyz[0] 为全部 x 坐标、xyz[1] 为全部 y 坐标(见 01 §6.1)。
- * 调度: B*N 个查询点摊平分核; 每个查询点内, 被查集合按段过 UB, 段内一次
- *       ReduceMin(calIndex=true) 出(最小值, 段内下标), 跨段用标量严格小于更新。
+ * 调度: B*N 个查询点摊平分核; 每个查询点内, 被查集合按段过 UB, 段内在 VF 里归约出
+ *       (最小值, 段内下标), 跨段用标量严格小于更新。
  */
 
 #ifndef CHAMFER_DISTANCE_ND_H
@@ -75,6 +75,104 @@ __simd_vf__ inline void ChamferDistVF(__ubuf__ float* distAddr, __ubuf__ T* xAdd
     }
 }
 
+// 段内 (最小值, 下标) 的归约: 中性值放寄存器, 尾部由 UpdateMask 关掉, 全程不动 UB。
+// 范式对齐 activation/softmax_cross_entropy_with_logits 的 VfReduceMax 与
+// activation/log_softmax_v2 的跨道 Reduce 取回方式。
+//
+// 不要改回库的 ReduceMin(dst, src, work, count, calIndex): 它需要一块与段等长的 work
+// tensor 常驻 UB; 以 FLT_MAX 作累加初值会把整段 +inf 截断成 FLT_MAX 而需事后补偿; 且
+// NaN 时给回的下标不是首个 NaN, 要再补一趟按 AlignUp(len, VL) 的比较扫描 —— 那趟必须
+// 先把 [len, AlignUp(len, VL)) 的上段残留写成中性值, 而从 distBuf[len] 起的向量写在
+// len 非 32B 整数倍时是非对齐 UB 地址, 真机报 AIC_ERROR 340(VEC_ERR_UB_ADDR_OVERFLOW_T0)。
+
+// 距离的初值/中性元素: +inf 表示"还没有候选", 也是取 MIN 的单位元
+constexpr float DIST_INIT_VALUE = __builtin_inff();
+// 下标哨兵。取输出 dtype(int32)的上界: 归约取 MIN, 哨兵恒不胜出; 且有效下标恒
+// < len <= colsPerChunk, 而 colsPerChunk 由 UB 反解得来, 远小于该上界, 撞不上。
+// 不用 NumericLimits<int32_t>::Max(): 它不是常量表达式, 无法作 constexpr 初值。
+constexpr int32_t IDX_SENTINEL = INT32_MAX;
+
+// 第一趟: 非 NaN 元素的最小值 + 首个 NaN 的下标(段内无 NaN 时给回哨兵)
+__simd_vf__ inline void MinScanVF(__ubuf__ float* distAddr, uint32_t count, uint32_t fp32Lane, uint16_t repeatTimes,
+                                  __ubuf__ float* outMin, __ubuf__ int32_t* outNanIdx)
+{
+    AscendC::Reg::RegTensor<float> loaded;
+    AscendC::Reg::RegTensor<float> d;
+    AscendC::Reg::RegTensor<float> minVal;
+    AscendC::Reg::RegTensor<float> infReg;
+    AscendC::Reg::RegTensor<int32_t> idx;
+    AscendC::Reg::RegTensor<int32_t> idxOrSent;
+    AscendC::Reg::RegTensor<int32_t> nanIdx;
+    AscendC::Reg::RegTensor<int32_t> sentReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::MaskReg isNan;
+    AscendC::Reg::MaskReg allF = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg oneF = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
+    AscendC::Reg::MaskReg allI = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg oneI = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::VL1>();
+
+    AscendC::Reg::Duplicate(infReg, DIST_INIT_VALUE);
+    AscendC::Reg::Duplicate(minVal, DIST_INIT_VALUE);
+    AscendC::Reg::Duplicate(sentReg, IDX_SENTINEL);
+    AscendC::Reg::Duplicate(nanIdx, IDX_SENTINEL);
+
+    uint32_t remain = count;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        mask = AscendC::Reg::UpdateMask<float>(remain);
+        AscendC::Reg::LoadAlign(loaded, distAddr + i * fp32Lane);
+        // 无效道立刻换成中性值: 之后一律按全道计算, 无需再关心 mask 的 merge 语义。
+        // +inf 只有在整段真实值都是 +inf 时才可能"胜出", 那时最小值本就是 +inf;
+        // 下标另由无效道置哨兵解决, 不会指到尾部。
+        AscendC::Reg::Select(d, loaded, infReg, mask);
+        AscendC::Reg::Arange(idx, static_cast<int32_t>(i * fp32Lane));
+        // 自比不等即 NaN(arch35 这条编译链没有 isnan(), AscendC 也未提供 NaN 判定 API)
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::NE>(isNan, d, d, allF);
+        // NaN 不必先剔除再求最小值: 段内一旦有 NaN, ReduceChunk 会走哨兵分支提前返回,
+        // minVal 不参与结果。省掉每轮一次 Select。
+        AscendC::Reg::Min(minVal, minVal, d, allF);
+        AscendC::Reg::Select(idxOrSent, idx, sentReg, isNan);
+        AscendC::Reg::Min(nanIdx, nanIdx, idxOrSent, allI); // MIN 天然取首个 NaN
+    }
+    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MIN>(minVal, minVal, allF);
+    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MIN>(nanIdx, nanIdx, allI);
+    AscendC::Reg::StoreAlign(outMin, minVal, oneF);
+    AscendC::Reg::StoreAlign(outNanIdx, nanIdx, oneI);
+}
+
+// 第二趟: 段内首个等于 target 的下标(段内无 NaN 时才需要)
+__simd_vf__ inline void FirstEqIdxVF(__ubuf__ float* distAddr, uint32_t count, uint32_t fp32Lane, uint16_t repeatTimes,
+                                     float target, __ubuf__ int32_t* outIdx)
+{
+    AscendC::Reg::RegTensor<float> d;
+    AscendC::Reg::RegTensor<int32_t> idx;
+    AscendC::Reg::RegTensor<int32_t> idxSafe;
+    AscendC::Reg::RegTensor<int32_t> idxOrSent;
+    AscendC::Reg::RegTensor<int32_t> best;
+    AscendC::Reg::RegTensor<int32_t> sentReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::MaskReg eq;
+    AscendC::Reg::MaskReg allF = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg allI = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg oneI = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::VL1>();
+
+    AscendC::Reg::Duplicate(sentReg, IDX_SENTINEL);
+    AscendC::Reg::Duplicate(best, IDX_SENTINEL);
+
+    uint32_t remain = count;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        mask = AscendC::Reg::UpdateMask<float>(remain);
+        AscendC::Reg::LoadAlign(d, distAddr + i * fp32Lane);
+        AscendC::Reg::Arange(idx, static_cast<int32_t>(i * fp32Lane));
+        // 无效道的下标置哨兵: 即便它的值恰好等于 target 也不会被选中
+        AscendC::Reg::Select(idxSafe, idx, sentReg, mask);
+        AscendC::Reg::Compares<float, AscendC::CMPMODE::EQ>(eq, d, target, allF);
+        AscendC::Reg::Select(idxOrSent, idxSafe, sentReg, eq);
+        AscendC::Reg::Min(best, best, idxOrSent, allI); // MIN 天然取首个
+    }
+    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MIN>(best, best, allI);
+    AscendC::Reg::StoreAlign(outIdx, best, oneI);
+}
+
 // 标量转换: half 有到/自 float 的转换, bfloat16_t 没有, 必须走 ToFloat/ToBfloat16
 template <typename T>
 __aicore__ inline float ScalarToFloat(const T& v)
@@ -121,7 +219,6 @@ private:
                                             const LocalTensor<int32_t>& bestIdxBuf, int64_t bIdx, int64_t k0,
                                             int64_t k1);
     __aicore__ inline void ReduceChunk(int64_t len, float& segMin, int32_t& segIdx);
-    __aicore__ inline int32_t FirstNanIndex(const LocalTensor<float>& distBuf, int64_t len);
     __aicore__ inline void FlushOut(const GlobalTensor<T>& distGm, const GlobalTensor<int32_t>& idxGm, int64_t taskBase,
                                     int64_t count);
 
@@ -144,8 +241,9 @@ private:
     TBuf<TPosition::VECCALC> queryXBuf_;
     TBuf<TPosition::VECCALC> queryYBuf_; // 当前输出块的查询点 x/y(原始 dtype)
     TBuf<TPosition::VECCALC> distBuf_;   // 段内距离(fp32)
-    TBuf<TPosition::VECCALC> workBuf_;   // ReduceMin 的 work tensor
-    TBuf<TPosition::VECCALC> redBuf_;    // ReduceMin 的输出(值 + 下标)
+    // 归约结果各占一个独立 UB block: 起始地址天然 32B 对齐, 不做块内偏移
+    TBuf<TPosition::VECCALC> redMinBuf_; // 段内最小值
+    TBuf<TPosition::VECCALC> redIdxBuf_; // 段内下标(首个 NaN 或首个最小值)
     LocalTensor<T> scanX_;               // 当前候选块(tile 内复用, 用完再 FreeScan)
     LocalTensor<T> scanY_;
     TBuf<TPosition::VECCALC> bestBuf_;    // 查询 tile 内每点的跨段最小值
@@ -168,9 +266,7 @@ protected:
     constexpr static int64_t BITS_PER_BYTE = 8;
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
     // 查询点分块大小(32B 的整数倍; 决定候选块的复用次数)
-    constexpr static int64_t QUERY_TILE = 64;
     // 跨段最小值的初值为 +inf。
-    constexpr static float DIST_INIT_VALUE = __builtin_inff();
 };
 
 template <typename T>
@@ -201,15 +297,15 @@ __aicore__ inline void ChamferDistanceND<T>::Init(GM_ADDR xyz1, GM_ADDR xyz2, GM
     // 查询点分块: 候选块从 GM 搬一次要服务整个查询 tile(见 Process 的循环次序),
     // tile 越大 GM 访存越省 —— 原实现每个查询点都重搬一遍全部候选, 访存量是 O(查询数×候选数)。
     // 仍保持 32B 的整数倍, 输出按整块落盘。
-    outTileLen_ = static_cast<int64_t>(QUERY_TILE);
-    int64_t chunkAlign = AlignUp(colsPerChunk_, static_cast<int64_t>(VL_FP32));
+    outTileLen_ = tiling->queryTile;    // host 下发, kernel 不自带缓冲尺寸常量
+    int64_t chunkAlign = colsPerChunk_; // host 保证已按 VL 对齐, kernel 不再自算
     pipe_->InitBuffer(scanXQue_, 1, static_cast<uint32_t>(chunkAlign * sizeof(T)));
     pipe_->InitBuffer(scanYQue_, 1, static_cast<uint32_t>(chunkAlign * sizeof(T)));
     pipe_->InitBuffer(distBuf_, static_cast<uint32_t>(chunkAlign * sizeof(float)));
-    pipe_->InitBuffer(workBuf_, static_cast<uint32_t>(chunkAlign * sizeof(float)));
     pipe_->InitBuffer(queryXBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(T)));
     pipe_->InitBuffer(queryYBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(T)));
-    pipe_->InitBuffer(redBuf_, BLOCK_SIZE);
+    pipe_->InitBuffer(redMinBuf_, BLOCK_SIZE);
+    pipe_->InitBuffer(redIdxBuf_, BLOCK_SIZE);
     // 跨候选块的逐查询点最小值/下标累加器(tile 内每个查询点各一份)
     pipe_->InitBuffer(bestBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(float)));
     pipe_->InitBuffer(bestIdxBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(int32_t)));
@@ -314,84 +410,35 @@ template <typename T>
 __aicore__ inline void ChamferDistanceND<T>::ReduceChunk(int64_t len, float& segMin, int32_t& segIdx)
 {
     LocalTensor<float> distBuf = distBuf_.template Get<float>();
-    LocalTensor<float> workBuf = workBuf_.template Get<float>();
-    LocalTensor<float> redBuf = redBuf_.template Get<float>();
+    LocalTensor<float> redMin = redMinBuf_.template Get<float>();
+    LocalTensor<int32_t> redIdx = redIdxBuf_.template Get<int32_t>();
+    uint32_t fp32Lane = VL_FP32;
+    uint16_t repeatTimes = static_cast<uint16_t>((len + fp32Lane - 1) / fp32Lane);
 
-    // calIndex=true: redBuf[0] 为最小值, redBuf[1] 为其下标(按位存放, 需重解释为整数)
-    AscendC::ReduceMin<float>(redBuf, distBuf, workBuf, static_cast<int32_t>(len), true);
-    // 归约结果由标量读出, 是 S 等 V, 不是 V 等 V
-    event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    AscendC::SetFlag<HardEvent::V_S>(eventVToS);
-    AscendC::WaitFlag<HardEvent::V_S>(eventVToS);
-    segMin = redBuf.GetValue(0);
-    segIdx = static_cast<int32_t>(redBuf.template ReinterpretCast<uint32_t>().GetValue(1));
+    MinScanVF((__ubuf__ float*)distBuf.GetPhyAddr(), static_cast<uint32_t>(len), fp32Lane, repeatTimes,
+              (__ubuf__ float*)redMin.GetPhyAddr(), (__ubuf__ int32_t*)redIdx.GetPhyAddr());
+    // 归约结果由标量读出, 是 S 等 V
+    event_t ev1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    AscendC::SetFlag<HardEvent::V_S>(ev1);
+    AscendC::WaitFlag<HardEvent::V_S>(ev1);
+    const float minVal = redMin.GetValue(0);
+    const int32_t nanIdx = redIdx.GetValue(0);
 
-    // ── 归约结果的两处还原 ──────────────────────────────────
-    // ① NaN: AscendC::ReduceMin 会被段内任一 NaN 污染成 NaN, 但它给回的下标不是"首个
-    //    NaN"。torch.min(golden 用的就是它)的语义是 NaN 传播且取首个 NaN 的下标, 故这里
-    //    自行扫出首个 NaN。该分支只在段内出现 NaN 时进入, 正常数据的热路径不受影响。
-    // NaN 判定用 IEEE 自比不等: arch35 这条编译链没有 isnan(), AscendC 也未提供 NaN 判定
-    // API —— 仓内用 isnan 的算子(foreach_minimum 家族、max_pool*_argmax、adaptive_max_pool*)
-    // 走的都是 SIMT 或 arch22 路径, 本文件走不到。语义与 isnan 完全一致。
-    if (segMin != segMin) {
-        segIdx = FirstNanIndex(distBuf, len);
+    // 段内有 NaN: torch.min(golden 用的就是它)的语义是 NaN 传播且取**首个** NaN 的下标。
+    // 值直接从 distBuf 取回, 不做构造。
+    if (nanIdx != IDX_SENTINEL) {
+        segIdx = nanIdx;
+        segMin = distBuf.GetValue(nanIdx);
         return;
     }
-    // ② +inf 被截断成 FLT_MAX: ReduceMin 内部以 GetMaxValue<float>() = FLT_MAX 作累加器
-    //    初值(dav_3510/kernel_operator_vec_reduce_impl.h 的 ReduceIndexTemplate),
-    //    Min(FLT_MAX, +inf) = FLT_MAX。于是整段距离全为 +inf 时归约出 FLT_MAX 而非 +inf,
-    //    再被跨段"严格小于"顶掉 +inf 哨兵, 最终输出 3.4028235e38。
-    //    真机实测: 坐标取 [2e19,3e19] 与 [-3e19,-2e19] 时 64/64 个输出恰为 FLT_MAX、
-    //    inf 计数为 0, 而竞品(torch 与 pytorch3d)和 A2 在同一输入下都给 +inf。
-    //    segMin == FLT_MAX 只可能来自"整段全 +inf"或"恰好等于 FLT_MAX 的真实距离"
-    //    (后者是零测集, 且本身已在溢出边界), 统一还原成 +inf。
-    if (segMin == AscendC::NumericLimits<float>::Max()) {
-        segMin = DIST_INIT_VALUE;
-    }
-}
 
-// 段内**首个** NaN 的下标, 向量实现。
-// 做法与仓内同类算子一致(adaptive_max_pool3d 的 GetMask + GetIndexWithLastNan):
-//   ① Compare(EQ) 自比得掩码 —— NaN 是唯一不等于自己的值, 故掩码为 1 的位置是非 NaN;
-//   ② Select 把 NaN 位置换成 -inf(非 NaN 位置保留原距离), 一次 ReduceMin(calIndex=true)
-//      即得 -inf 及其下标, 也就是首个 NaN 的下标(ReduceMin 并列取先出现者)。
-// 与该算子的差别: 它取**最后一个** NaN(GetIndexWithLastNan, 用 Select+ReduceMax);
-// 本算子的 golden 是 torch.min, 实测 torch 的 min/max 在 NaN 时都返回**首个** NaN 的
-// 下标, 故这里用 ReduceMin 取首个。
-// 尾部对齐区先填 0(非 NaN), 否则 padding 会被 Compare 当成有效元素参与判定。
-template <typename T>
-__aicore__ inline int32_t ChamferDistanceND<T>::FirstNanIndex(const LocalTensor<float>& distBuf, int64_t len)
-{
-    // 掩码复用 workBuf_(ReduceMin 的 work tensor): 掩码在 Select 之后即失效, 而 workBuf
-    // 要到随后的 ReduceMin 才被写, 两者生命周期不重叠。**不新开 buffer** 是有意为之 ——
-    // 新增 UB 会改变 host 侧 bytesPerPoint 的预算, 一旦 host/kernel 两边没同步就会把
-    // 正常形状挤出分块(实测: 只改 kernel 不改 host 时, bf16 直接 INVALID_TILING)。
-    // arch35 的 Compare 只接受 uint8_t/int8_t 掩码(arch22 才是 uint16_t)。
-    // 容量不变式(恒成立, 与 dtype/shape 无关): 掩码需 cmpLen/8 字节, 而
-    //   cmpLen = AlignUp(len, VL) <= AlignUp(colsPerChunk_, VL) = chunkAlign  (len <= colsPerChunk_),
-    //   workBuf_ = chunkAlign * sizeof(float) = 4 * chunkAlign 字节,
-    // 故余量恒为 32 倍; 最小分块(colsPerChunk_ = VL = 64)时是 256B 对 8B。
-    // 若日后有人缩小 workBuf_ 或改变 chunkAlign 的定义, 需重核这条不变式。
-    LocalTensor<uint8_t> nanMask = workBuf_.template Get<uint8_t>();
-    LocalTensor<float> workBuf = workBuf_.template Get<float>();
-    LocalTensor<float> redBuf = redBuf_.template Get<float>();
-
-    const int64_t cmpLen = AlignUp(len, static_cast<int64_t>(VL_FP32));
-    if (cmpLen > len) {
-        AscendC::Duplicate(distBuf[len], 0.0f, static_cast<int32_t>(cmpLen - len));
-        AscendC::PipeBarrier<PIPE_V>();
-    }
-    AscendC::Compare(nanMask, distBuf, distBuf, AscendC::CMPMODE::EQ, static_cast<int32_t>(cmpLen));
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Select(distBuf, nanMask, distBuf, AscendC::NumericLimits<float>::NegativeInfinity(),
-                    AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, static_cast<int32_t>(cmpLen));
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::ReduceMin<float>(redBuf, distBuf, workBuf, static_cast<int32_t>(cmpLen), true);
-
-    event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    AscendC::SetFlag<HardEvent::V_S>(eventVToS);
-    AscendC::WaitFlag<HardEvent::V_S>(eventVToS);
-    return static_cast<int32_t>(redBuf.template ReinterpretCast<uint32_t>().GetValue(1));
+    FirstEqIdxVF((__ubuf__ float*)distBuf.GetPhyAddr(), static_cast<uint32_t>(len), fp32Lane, repeatTimes, minVal,
+                 (__ubuf__ int32_t*)redIdx.GetPhyAddr());
+    event_t ev2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    AscendC::SetFlag<HardEvent::V_S>(ev2);
+    AscendC::WaitFlag<HardEvent::V_S>(ev2);
+    segMin = minVal;
+    segIdx = redIdx.GetValue(0);
 }
 
 template <typename T>

@@ -64,6 +64,28 @@ __simt_callee__ inline T BinaryApply(T a, T b)
         if constexpr (std::is_integral_v<T>) {
             return (b == static_cast<T>(0)) ? static_cast<T>(0) : (a / b);
         } else {
+            // 除法路径会把 fp32 非规格数操作数冲零(input FTZ), 实测:
+            //   非规格/非规格 -> nan(0/0)、正常/非规格 -> ±inf(x/0)、非规格/正常 -> ±0(0/y)
+            // 而加减乘是单条硬件指令、按 IEEE 处理非规格数, 不受影响。
+            //
+            // 解法取 CANN SIMT 数学库自身的范式(impl/simt_api/math_functions_impl.h):
+            //   __internal_fp32_scale_2p24 = 2^24  "used to lift subnormal inputs into the normal range"
+            // 该库在 log/exp 路径上即以此把非规格输入抬进正规范围再算。
+            // 2^24 来自 fp32 格式本身: 最小非规格数 1.4e-45 * 2^24 = 2.35e-38, 恰好越过
+            // 最小正规格数 1.17549435e-38 —— 一次缩放即覆盖全部非规格数, 非经验取值。
+            //
+            // 除法比库内 log 路径更简洁: 两个操作数**同乘**同一因子时商恒等不变
+            // ((a*s)/(b*s) == a/b), 故无需库内那样的指数修正。
+            // 边界自洽: 大数/非规格 -> 缩放后 inf/正常 = inf(真值本就溢出);
+            //   非规格/大数 -> 正常/inf = 0(真值本就下溢); 含 0 -> 0/x、0/0 语义不变;
+            //   含 inf/nan -> fabs 比较为假, 不触发缩放, 原路径不变。
+            constexpr T kSubnormalBound = static_cast<T>(1.17549435e-38f);
+            constexpr T kScale2p24 = static_cast<T>(16777216.0f);
+            const T absA = a < static_cast<T>(0) ? -a : a;
+            const T absB = b < static_cast<T>(0) ? -b : b;
+            if (absA < kSubnormalBound || absB < kSubnormalBound) {
+                return (a * kScale2p24) / (b * kScale2p24);
+            }
             return a / b;
         }
     }
