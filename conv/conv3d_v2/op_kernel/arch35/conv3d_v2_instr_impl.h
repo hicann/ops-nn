@@ -112,6 +112,7 @@ private:
             this->allPadFlag = true;
             return;
         }
+        this->allPadFlag = false;
 
         if (hiStartIdxWithPad < self_->ctx.convTilingData->padTop) {
             hiIdx = 0;
@@ -245,6 +246,7 @@ public:
         this->SetLoad3dFMatrix(padLeftL1, padRightL1, padTopL1, hiLoadL1, wiLoadL1);
         if (this->allPadFlag) {
             this->SetPadData();
+            this->allPadFlag = false;
             return;
         }
         LoadAl1Data();
