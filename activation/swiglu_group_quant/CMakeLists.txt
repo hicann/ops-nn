@@ -12,5 +12,6 @@ set(SUPPORT_COMPUTE_UNIT "ascend950")
 set(SUPPORT_TILING_DIR "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
                     OPTYPE swiglu_group_quant ACLNNTYPE aclnn
+                    DEPENDENCIES swiglu_group_quant_with_dual_axis
                     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR}
                     DISABLE_IN_OPP TRUE)

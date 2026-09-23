@@ -16,8 +16,12 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <limits>
 #include <graph/utils/type_utils.h>
+#include "../../../swiglu_group_quant_with_dual_axis/op_host/arch35/swiglu_group_quant_mx_tiling.h"
+#include "../../../swiglu_group_quant_with_dual_axis/op_host/arch35/swiglu_group_quant_with_dual_axis_policy.h"
 #include "swiglu_group_quant_tiling.h"
+#include "../../../swiglu_group_quant_with_dual_axis/op_kernel/arch35/swiglu_group_quant_flags.h"
 
 using namespace ge;
 namespace optiling {
@@ -42,6 +46,7 @@ int64_t RoundUp(int64_t x, int64_t y) { return CeilDiv(x, y) * y; }
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t REPEAT_SIZE = 256;
 constexpr int64_t D_LIMIT = 256;
+constexpr int64_t MX_QUANT_EXTEND_D_LIMIT = 64;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t FP8_BYTES = 1;
 constexpr int64_t B16_BYTES = 2;
@@ -58,26 +63,34 @@ constexpr size_t MIN_X_DIM_NUM = 2;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr int64_t BLOCK_QUANT = 0;
 constexpr int64_t MX_QUANT = 1;
+constexpr int64_t MX_QUANT_EXTEND = 5;
 constexpr size_t ATTR_INDEX_DST_TYPE = 0;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
 constexpr size_t ATTR_INDEX_BLOCK_SIZE = 2;
 constexpr size_t ATTR_INDEX_ROUND_SCALE = 3;
 constexpr size_t ATTR_INDEX_CLAMP_LIMIT = 4;
 constexpr size_t ATTR_INDEX_OUTPUT_ORIGIN = 6;
+constexpr size_t ATTR_INDEX_ALPHA = 7;
+constexpr size_t ATTR_INDEX_BIAS = 8;
 constexpr size_t INPUT_INDEX_X = 0;
 constexpr size_t INPUT_INDEX_WEIGHT = 1;
 constexpr size_t INPUT_INDEX_GROUP_INDEX = 2;
+constexpr size_t INPUT_INDEX_SCALE = 3;
 constexpr size_t OUTPUT_INDEX_Y = 0;
 constexpr size_t OUTPUT_INDEX_Y_SCALE = 1;
 constexpr size_t OUTPUT_INDEX_Y_ORIGIN = 2;
 constexpr size_t CACHE_LINE_SIZE = 128;
 constexpr float DEFAULT_CLAMP_LIMIT = -1.0f;
 constexpr float FLOAT_COMPARE_EPSILON = 1e-6f;
+constexpr float DEFAULT_ALPHA = 1.0f;
+constexpr float DEFAULT_BIAS = 0.0f;
 constexpr int64_t BLOCK_QUANT_TILING_KEY = 1000;
 constexpr int64_t BLOCK_QUANT_YORIGIN_TILING_KEY = 1100;
 constexpr int64_t MX_QUANT_TILING_KEY = 2000;
 constexpr int64_t MX_QUANT_YORIGIN_TILING_KEY = 2100;
 constexpr int64_t MXFP4_QUANT_TILING_KEY = 3000;
+constexpr int64_t MX_QUANT_EXTEND_TILING_KEY = 5000;
+constexpr int64_t MX_QUANT_EXTEND_YORIGIN_TILING_KEY = 5100;
 constexpr int64_t MXFP4_QUANT_YORIGIN_TILING_KEY = 3100;
 
 int64_t ShapeElementNum(const gert::Shape& shape)
@@ -87,6 +100,15 @@ int64_t ShapeElementNum(const gert::Shape& shape)
         elementNum *= shape.GetDim(i);
     }
     return elementNum;
+}
+
+bool CheckedMul(int64_t lhs, int64_t rhs, int64_t& out)
+{
+    if (lhs <= 0 || rhs <= 0 || lhs > std::numeric_limits<int64_t>::max() / rhs) {
+        return false;
+    }
+    out = lhs * rhs;
+    return true;
 }
 } // namespace
 
@@ -130,6 +152,10 @@ ge::graphStatus SwigluGroupQuantTiling::GetClampLimitAttr(const gert::RuntimeAtt
 {
     auto clampLimitAttr = attrs->GetAttrPointer<float>(ATTR_INDEX_CLAMP_LIMIT);
     if (clampLimitAttr != nullptr) {
+        OP_CHECK_IF(quantMode_ == MX_QUANT_EXTEND && !std::isfinite(*clampLimitAttr),
+                    OP_LOGE(context_->GetNodeName(), "attr clamp_limit should be finite when quant_mode is 5, got %f.",
+                            *clampLimitAttr),
+                    return ge::GRAPH_FAILED);
         // DEFAULT_CLAMP_LIMIT means user did not pass clamp_limit.
         if (std::fabs(*clampLimitAttr - DEFAULT_CLAMP_LIMIT) > FLOAT_COMPARE_EPSILON) {
             OP_CHECK_IF(!(*clampLimitAttr > 0.0f),
@@ -160,10 +186,11 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
 
     auto quantModeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     quantMode_ = quantModeAttr == nullptr ? BLOCK_QUANT : *quantModeAttr;
-    OP_CHECK_IF((quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT),
-                OP_LOGE(context_->GetNodeName(),
-                        "attr quant_mode only supports 0(block_quant) or 1(mx_quant), got %ld.", quantMode_),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT && quantMode_ != MX_QUANT_EXTEND),
+        OP_LOGE(context_->GetNodeName(),
+                "attr quant_mode only supports 0(block_quant), 1(mx_quant) or 5(mx_quant_v2), got %ld.", quantMode_),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (isMxFp4Quant_ && quantMode_ != MX_QUANT),
         OP_LOGE(context_->GetNodeName(),
@@ -172,7 +199,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
 
     auto blockSizeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_BLOCK_SIZE);
     int64_t blockSize = blockSizeAttr == nullptr ? 0 : *blockSizeAttr;
-    int64_t expectedBlockSize = quantMode_ == MX_QUANT ? PER_MX_FP16 : PER_BLOCK_FP16;
+    const bool isMxQuant = quantMode_ == MX_QUANT || quantMode_ == MX_QUANT_EXTEND;
+    int64_t expectedBlockSize = isMxQuant ? PER_MX_FP16 : PER_BLOCK_FP16;
     OP_CHECK_IF((blockSize != 0 && blockSize != expectedBlockSize),
                 OP_LOGE(context_->GetNodeName(), "attr block_size should be 0 or %ld when quant_mode is %ld, got %ld.",
                         expectedBlockSize, quantMode_, blockSize),
@@ -184,8 +212,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
     if (roundScaleAttr != nullptr) {
         roundScale_ = (*roundScaleAttr) ? 1 : 0;
     }
-    OP_CHECK_IF((quantMode_ == MX_QUANT && roundScale_ != 1),
-                OP_LOGE(context_->GetNodeName(), "attr round_scale should be true when quant_mode is 1."),
+    OP_CHECK_IF((isMxQuant && roundScale_ != 1),
+                OP_LOGE(context_->GetNodeName(), "attr round_scale should be true when quant_mode is %ld.", quantMode_),
                 return ge::GRAPH_FAILED);
 
     auto outputOriginAttr = attrs->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
@@ -197,6 +225,25 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
         return ge::GRAPH_FAILED;
     }
 
+    auto alphaAttr = attrs->GetAttrPointer<float>(ATTR_INDEX_ALPHA);
+    auto biasAttr = attrs->GetAttrPointer<float>(ATTR_INDEX_BIAS);
+    alpha_ = alphaAttr == nullptr ? DEFAULT_ALPHA : *alphaAttr;
+    bias_ = biasAttr == nullptr ? DEFAULT_BIAS : *biasAttr;
+    if (quantMode_ == MX_QUANT_EXTEND) {
+        OP_CHECK_IF(!std::isfinite(alpha_) || alpha_ <= 0.0f || !std::isfinite(bias_),
+                    OP_LOGE(context_->GetNodeName(),
+                            "attr alpha should be finite and greater than 0.0 and bias should be finite, got alpha %f, "
+                            "bias %f.",
+                            alpha_, bias_),
+                    return ge::GRAPH_FAILED);
+    } else {
+        OP_CHECK_IF(alpha_ != DEFAULT_ALPHA || bias_ != DEFAULT_BIAS,
+                    OP_LOGE(context_->GetNodeName(),
+                            "attr alpha/bias only support quant_mode=5, got quant_mode %ld, alpha %f, bias %f.",
+                            quantMode_, alpha_, bias_),
+                    return ge::GRAPH_FAILED);
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -205,10 +252,11 @@ ge::graphStatus SwigluGroupQuantTiling::CheckWeightInfo()
     auto weightDesc = context_->GetOptionalInputDesc(INPUT_INDEX_WEIGHT);
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
-        OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
-                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %s.",
-                            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str()),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (weightDtype != ge::DT_FLOAT16 && weightDtype != ge::DT_BF16 && weightDtype != ge::DT_FLOAT),
+            OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT16, BFLOAT16 or FLOAT32, got %s.",
+                    ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str()),
+            return ge::GRAPH_FAILED);
         auto weightShape = context_->GetOptionalInputShape(INPUT_INDEX_WEIGHT);
         if (weightShape != nullptr) {
             auto weightStorageShape = weightShape->GetStorageShape();
@@ -224,6 +272,13 @@ ge::graphStatus SwigluGroupQuantTiling::CheckWeightInfo()
                                 "last one, got %ld, expected %ld.",
                                 weightElementNum, bs_),
                         return ge::GRAPH_FAILED);
+            weightType_ = weightDtype;
+            if (weightDtype != ge::DT_FLOAT) {
+                OP_CHECK_IF(quantMode_ != MX_QUANT_EXTEND,
+                            OP_LOGE(context_->GetNodeName(),
+                                    "input low-precision weight only supports quant_mode=5, got %ld.", quantMode_),
+                            return ge::GRAPH_FAILED);
+            }
             hasWeight_ = true;
         }
     }
@@ -234,6 +289,9 @@ ge::graphStatus SwigluGroupQuantTiling::CheckGroupIndexInfo()
 {
     auto groupIndexDesc = context_->GetOptionalInputDesc(INPUT_INDEX_GROUP_INDEX);
     if (groupIndexDesc != nullptr) {
+        OP_CHECK_IF(quantMode_ == MX_QUANT_EXTEND,
+                    OP_LOGE(context_->GetNodeName(), "input group_index is not supported when quant_mode is 5."),
+                    return ge::GRAPH_FAILED);
         auto groupIndexDtype = groupIndexDesc->GetDataType();
         OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
                     OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %s.",
@@ -274,7 +332,8 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, con
     auto yScaleDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yScaleDesc);
     auto yScaleDtype = yScaleDesc->GetDataType();
-    auto expectedYScaleDtype = quantMode_ == MX_QUANT ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
+    const bool isMxQuant = quantMode_ == MX_QUANT || quantMode_ == MX_QUANT_EXTEND;
+    auto expectedYScaleDtype = isMxQuant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
     OP_CHECK_IF((yScaleDtype != expectedYScaleDtype),
                 OP_LOGE(context_->GetNodeName(), "output y_scale dtype should be %s when quant_mode is %ld, got %s.",
                         ge::TypeUtils::DataTypeToSerialString(expectedYScaleDtype).c_str(), quantMode_,
@@ -322,13 +381,13 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, con
     auto yScaleShape = context_->GetOutputShape(OUTPUT_INDEX_Y_SCALE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yScaleShape);
     auto yScaleStorageShape = yScaleShape->GetStorageShape();
-    if (quantMode_ == MX_QUANT) {
+    if (isMxQuant) {
         // [..., ceil(ceil((D/2)/32)/2), 2]
         OP_CHECK_IF((yScaleStorageShape.GetDimNum() != static_cast<size_t>(xDimNum + 1)),
                     OP_LOGE(context_->GetNodeName(),
-                            "output y_scale dim num should be %ld when quant_mode is 1, "
+                            "output y_scale dim num should be %ld when quant_mode is %ld, "
                             "got %zu.",
-                            xDimNum + 1, yScaleStorageShape.GetDimNum()),
+                            xDimNum + 1, quantMode_, yScaleStorageShape.GetDimNum()),
                     return ge::GRAPH_FAILED);
         for (int64_t i = 0; i < xDimNum - 1; ++i) {
             OP_CHECK_IF((yScaleStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
@@ -343,9 +402,9 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, con
                      yScaleStorageShape.GetDim(xDimNum) != MX_SCALE_ALIGN_FACTOR),
                     OP_LOGE(context_->GetNodeName(),
                             "output y_scale last two dims should be [%ld, %ld] when "
-                            "quant_mode is 1, got [%ld, %ld].",
-                            expectedMxTailDim, MX_SCALE_ALIGN_FACTOR, yScaleStorageShape.GetDim(xDimNum - 1),
-                            yScaleStorageShape.GetDim(xDimNum)),
+                            "quant_mode is %ld, got [%ld, %ld].",
+                            expectedMxTailDim, MX_SCALE_ALIGN_FACTOR, quantMode_,
+                            yScaleStorageShape.GetDim(xDimNum - 1), yScaleStorageShape.GetDim(xDimNum)),
                     return ge::GRAPH_FAILED);
     } else {
         // [..., ceil((D/2)/128)]
@@ -417,9 +476,34 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
                 OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu], got %zu.", MIN_X_DIM_NUM,
                         MAX_DIM_NUM, xDimNum),
                 return ge::GRAPH_FAILED);
+
+    // Get Attrs
+    // Resolve the mode before applying geometry rules. Legacy modes retain the
+    // existing 256-element contract; mode 5 shares the dual-axis route-1
+    // contract and therefore accepts D = 2H in 64-element units.
+    if (GetAttr() == ge::GRAPH_FAILED) {
+        OP_LOGE(context_->GetNodeName(), "Get attr failed.");
+        return ge::GRAPH_FAILED;
+    }
+    OP_CHECK_IF((quantMode_ == MX_QUANT_EXTEND && xDimNum != MIN_X_DIM_NUM),
+                OP_LOGE(context_->GetNodeName(), "input x dim num should be %zu when quant_mode is 5, got %zu.",
+                        MIN_X_DIM_NUM, xDimNum),
+                return ge::GRAPH_FAILED);
     bs_ = 1;
     for (size_t i = 0; i < xDimNum - 1; i++) {
-        bs_ = bs_ * xStorageShape.GetDim(i);
+        const int64_t extent = xStorageShape.GetDim(i);
+        if (quantMode_ == MX_QUANT_EXTEND) {
+            int64_t next = 0;
+            OP_CHECK_IF(!CheckedMul(bs_, extent, next),
+                        OP_LOGE(context_->GetNodeName(),
+                                "input x shape exceeds int64 range or contains a non-positive dim[%zu] %ld with "
+                                "accumulated product %ld when quant_mode is 5.",
+                                i, extent, bs_),
+                        return ge::GRAPH_FAILED);
+            bs_ = next;
+        } else {
+            bs_ = bs_ * extent;
+        }
     }
     // Empty tensor is supported: when bs is 0 the input and outputs are all empty and no data
     // needs to be processed, so only negative dims (unknown dim leaked in) are rejected here.
@@ -428,22 +512,22 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
                         "the product of input x dims except the last one should be non-negative, but is %ld.", bs_),
                 return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
-    // An empty x (last dim 0) is supported; otherwise the last dim must be >= D_LIMIT and
-    // divisible by D_LIMIT.
-    OP_CHECK_IF((d_ != 0 && (d_ < D_LIMIT || d_ % D_LIMIT != 0)),
+    // An empty x (last dim 0) is supported by legacy block/MX modes; otherwise the last dim must be
+    // greater than or equal to and divisible by the mode-specific D limit. Mode 5 does not support empty x.
+    const int64_t dLimit = quantMode_ == MX_QUANT_EXTEND ? MX_QUANT_EXTEND_D_LIMIT : D_LIMIT;
+    const bool supportsEmpty = quantMode_ == BLOCK_QUANT || quantMode_ == MX_QUANT;
+    OP_CHECK_IF(((d_ == 0 && !supportsEmpty) || (d_ != 0 && (d_ < dLimit || d_ % dLimit != 0))),
                 OP_LOGE(context_->GetNodeName(),
-                        "input x last dim should be 0(empty) or greater than or equal to %ld and divisible by %ld, "
-                        "got %ld.",
-                        D_LIMIT, D_LIMIT, d_),
+                        "input x last dim should be 0 for an empty supported mode or greater than or equal to %ld "
+                        "and divisible by %ld, got %ld.",
+                        dLimit, dLimit, d_),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(quantMode_ == MX_QUANT_EXTEND && context_->GetOptionalInputDesc(INPUT_INDEX_SCALE) != nullptr,
+                OP_LOGE(context_->GetNodeName(), "input scale is not supported when quant_mode is 5."),
                 return ge::GRAPH_FAILED);
 
     if (CheckWeightInfo() == ge::GRAPH_FAILED || CheckGroupIndexInfo() == ge::GRAPH_FAILED) {
-        return ge::GRAPH_FAILED;
-    }
-
-    // Get Attrs
-    if (GetAttr() == ge::GRAPH_FAILED) {
-        OP_LOGE(context_->GetNodeName(), "Get attr failed.");
         return ge::GRAPH_FAILED;
     }
 
@@ -452,8 +536,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
     if (quantMode_ == MX_QUANT) {
         OP_CHECK_IF(
             (xDimNum > MAX_DIM_NUM - 1),
-            OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu] when quant_mode is 1, got %zu.",
-                    MIN_X_DIM_NUM, MAX_DIM_NUM - 1, xDimNum),
+            OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu] when quant_mode is %ld, got %zu.",
+                    MIN_X_DIM_NUM, MAX_DIM_NUM - 1, quantMode_, xDimNum),
             return ge::GRAPH_FAILED);
     }
 
@@ -639,6 +723,39 @@ ge::graphStatus SwigluGroupQuantTiling::CalcMxQuantOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus SwigluGroupQuantTiling::CalcMxQuantExtendOpTiling()
+{
+    const auto geometry = SwigluGroupQuantMxTiling::MakeGeometry(splitD_, static_cast<int64_t>(coreNum_));
+    usedCoreNums_ = geometry.usedCoreNum;
+
+    // Conservative budget: the common unweighted 64x384 packed path uses
+    // 180224 bytes for single-axis, within the 203776-byte allocation below.
+    constexpr int64_t activationInputs = 2;
+    constexpr int64_t scalePair = 2;
+    constexpr int64_t inputBytes = DOUBLE_BUFFER * activationInputs * SwigluGroupQuantMxTiling::TILE_ROWS *
+                                   SwigluGroupQuantMxTiling::TILE_COLS * B16_BYTES;
+    constexpr int64_t activationBytes = SwigluGroupQuantMxTiling::TILE_ROWS * SwigluGroupQuantMxTiling::TILE_COLS *
+                                        B16_BYTES;
+    const bool shareOrigin = SwigluDualAxisPolicy::ShareOrigin(hasWeight_, outputOrigin_ != 0);
+    const int64_t outputDepth = (hasWeight_ || outputOrigin_ != 0) && !shareOrigin ? 1 : DOUBLE_BUFFER;
+    const int64_t yBytes = outputDepth * SwigluGroupQuantMxTiling::TILE_ROWS * SwigluGroupQuantMxTiling::TILE_COLS *
+                           FP8_BYTES;
+    const int64_t scaleBytes = outputDepth * SwigluGroupQuantMxTiling::TILE_ROWS * BLOCK_SIZE;
+    constexpr int64_t reciprocalBytes = SwigluGroupQuantMxTiling::TILE_ROWS * BLOCK_SIZE;
+    constexpr int64_t scratchBytes = SwigluGroupQuantMxTiling::TILE_COLS * scalePair * B16_BYTES;
+    const int64_t weightBytes = hasWeight_ ? SwigluGroupQuantMxTiling::TILE_ROWS * B32_BYTES : 0;
+    const int64_t originBytes = outputOrigin_ != 0 && !shareOrigin ? activationBytes : 0;
+    const int64_t plannedBytes = inputBytes + activationBytes + yBytes + scaleBytes + reciprocalBytes + scratchBytes +
+                                 weightBytes + originBytes;
+    OP_CHECK_IF(plannedBytes > static_cast<int64_t>(ubSize_),
+                OP_LOGE(context_->GetNodeName(),
+                        "quant_mode=5 planned UB bytes should not exceed available UB size, got %ld, %lu.",
+                        plannedBytes, ubSize_),
+                return ge::GRAPH_FAILED);
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus SwigluGroupQuantTiling::CalcBlockQuantOpTiling()
 {
     InitCoreTiling();
@@ -678,51 +795,77 @@ void SwigluGroupQuantTiling::SetEmptyTiling()
     usedCoreNums_ = 1;
 }
 
+template <typename TilingDataType>
+void SwigluGroupQuantTiling::SetBaseTilingData(TilingDataType& tilingData)
+{
+    tilingData.set_bs(bs_);
+    tilingData.set_d(d_);
+    tilingData.set_splitD(splitD_);
+    tilingData.set_scaleCol(scaleCol_);
+    tilingData.set_rowOfFormerBlock(rowOfFormerBlock_);
+    tilingData.set_rowOfTailBlock(rowOfTailBlock_);
+    tilingData.set_rowLoopOfFormerBlock(rowLoopOfFormerBlock_);
+    tilingData.set_rowLoopOfTailBlock(rowLoopOfTailBlock_);
+    tilingData.set_rowFactor(rowFactor_);
+    tilingData.set_tailRowFactorOfFormerBlock(tailRowFactorOfFormerBlock_);
+    tilingData.set_tailRowFactorOfTailBlock(tailRowFactorOfTailBlock_);
+    tilingData.set_dLoop(dLoop_);
+    tilingData.set_dFactor(dFactor_);
+    tilingData.set_tailDFactor(tailDFactor_);
+    tilingData.set_roundScale(roundScale_);
+    tilingData.set_outputOrigin(outputOrigin_);
+    tilingData.set_clampLimit(clampLimit_);
+    tilingData.set_hasClampLimit(hasClampLimit_);
+    tilingData.set_g(g_);
+    tilingData.set_ubSize(ubSize_);
+    tilingData.set_gLoop(gLoop_);
+    tilingData.set_gFactor(gFactor_);
+    tilingData.set_tailGFactor(tailGFactor_);
+    tilingData.set_coreNum(coreNum_);
+}
+
 void SwigluGroupQuantTiling::SetTilingData()
 {
-    tilingData_.set_bs(bs_);
-    tilingData_.set_d(d_);
-    tilingData_.set_splitD(splitD_);
-    tilingData_.set_scaleCol(scaleCol_);
-    tilingData_.set_rowOfFormerBlock(rowOfFormerBlock_);
-    tilingData_.set_rowOfTailBlock(rowOfTailBlock_);
-    tilingData_.set_rowLoopOfFormerBlock(rowLoopOfFormerBlock_);
-    tilingData_.set_rowLoopOfTailBlock(rowLoopOfTailBlock_);
-    tilingData_.set_rowFactor(rowFactor_);
-    tilingData_.set_tailRowFactorOfFormerBlock(tailRowFactorOfFormerBlock_);
-    tilingData_.set_tailRowFactorOfTailBlock(tailRowFactorOfTailBlock_);
-    tilingData_.set_dLoop(dLoop_);
-    tilingData_.set_dFactor(dFactor_);
-    tilingData_.set_tailDFactor(tailDFactor_);
-    tilingData_.set_roundScale(roundScale_);
-    tilingData_.set_outputOrigin(outputOrigin_);
-    tilingData_.set_clampLimit(clampLimit_);
-    tilingData_.set_g(g_);
-    tilingData_.set_ubSize(ubSize_);
-    tilingData_.set_gLoop(gLoop_);
-    tilingData_.set_gFactor(gFactor_);
-    tilingData_.set_tailGFactor(tailGFactor_);
-    tilingData_.set_coreNum(coreNum_);
-    tilingData_.set_hasClampLimit(hasClampLimit_);
+    if (quantMode_ == MX_QUANT_EXTEND) {
+        const auto geometry = SwigluGroupQuantMxTiling::MakeGeometry(splitD_, static_cast<int64_t>(coreNum_));
+        uint32_t flags = 0U;
+        flags |= hasWeight_ ? MX_HAS_WEIGHT : 0U;
+        flags |= hasClampLimit_ != 0 ? MX_HAS_CLAMP : 0U;
+        flags |= outputOrigin_ != 0 ? MX_OUTPUT_ORIGIN : 0U;
+        flags |= SwigluDualAxisPolicy::ShareOrigin(hasWeight_, outputOrigin_ != 0) ? MX_SHARE_ORIGIN : 0U;
+        mxExtendTilingData_.set_flags(flags);
+        mxExtendTilingData_.set_weightType(weightType_ == ge::DT_FLOAT16 ? 0 : (weightType_ == ge::DT_BF16 ? 1 : 2));
+        mxExtendTilingData_.set_dimM(bs_);
+        mxExtendTilingData_.set_dimN(splitD_);
+        mxExtendTilingData_.set_usedCoreNum(geometry.usedCoreNum);
+        mxExtendTilingData_.set_dimNBlockNum(geometry.dimNBlockNum);
+        mxExtendTilingData_.set_dimNTail(geometry.dimNTail);
+        mxExtendTilingData_.set_alpha(alpha_);
+        mxExtendTilingData_.set_bias(bias_);
+        mxExtendTilingData_.set_clampLimit(static_cast<float>(clampLimit_));
+    } else {
+        SetBaseTilingData(tilingData_);
 
-    OP_LOGD(context_->GetNodeName(),
-            "SwigluGroupQuantTiling shape: bs:%ld, d:%ld, splitD:%ld, scaleCol:%ld, g:%ld, hasGroupIndex:%d, "
-            "hasWeight:%d.",
-            bs_, d_, splitD_, scaleCol_, g_, static_cast<int32_t>(hasGroupIndex_), static_cast<int32_t>(hasWeight_));
-    OP_LOGD(context_->GetNodeName(),
-            "SwigluGroupQuantTiling rowTiling: rowOfFormerBlock:%ld, rowOfTailBlock:%ld, rowLoopOfFormerBlock:%ld, "
-            "rowLoopOfTailBlock:%ld, rowFactor:%ld, tailRowFactorOfFormerBlock:%ld, tailRowFactorOfTailBlock:%ld.",
-            rowOfFormerBlock_, rowOfTailBlock_, rowLoopOfFormerBlock_, rowLoopOfTailBlock_, rowFactor_,
-            tailRowFactorOfFormerBlock_, tailRowFactorOfTailBlock_);
-    OP_LOGD(context_->GetNodeName(),
-            "SwigluGroupQuantTiling dTiling: dLoop:%ld, dFactor:%ld, tailDFactor:%ld, clampLimit:%f, "
-            "hasClampLimit:%ld, roundScale:%ld, outputOrigin:%d.",
-            dLoop_, dFactor_, tailDFactor_, clampLimit_, hasClampLimit_, roundScale_,
-            static_cast<int32_t>(outputOrigin_));
-    OP_LOGD(context_->GetNodeName(),
-            "SwigluGroupQuantTiling groupIndexTiling: gLoop:%ld, gFactor:%ld, tailGFactor:%ld, coreNum:%ld, "
-            "ubSize:%luB.",
-            gLoop_, gFactor_, tailGFactor_, coreNum_, ubSize_);
+        OP_LOGD(context_->GetNodeName(),
+                "SwigluGroupQuantTiling shape: bs:%ld, d:%ld, splitD:%ld, scaleCol:%ld, g:%ld, hasGroupIndex:%d, "
+                "hasWeight:%d.",
+                bs_, d_, splitD_, scaleCol_, g_, static_cast<int32_t>(hasGroupIndex_),
+                static_cast<int32_t>(hasWeight_));
+        OP_LOGD(context_->GetNodeName(),
+                "SwigluGroupQuantTiling rowTiling: rowOfFormerBlock:%ld, rowOfTailBlock:%ld, rowLoopOfFormerBlock:%ld, "
+                "rowLoopOfTailBlock:%ld, rowFactor:%ld, tailRowFactorOfFormerBlock:%ld, tailRowFactorOfTailBlock:%ld.",
+                rowOfFormerBlock_, rowOfTailBlock_, rowLoopOfFormerBlock_, rowLoopOfTailBlock_, rowFactor_,
+                tailRowFactorOfFormerBlock_, tailRowFactorOfTailBlock_);
+        OP_LOGD(context_->GetNodeName(),
+                "SwigluGroupQuantTiling dTiling: dLoop:%ld, dFactor:%ld, tailDFactor:%ld, clampLimit:%f, "
+                "hasClampLimit:%ld, roundScale:%ld, outputOrigin:%d.",
+                dLoop_, dFactor_, tailDFactor_, clampLimit_, hasClampLimit_, roundScale_,
+                static_cast<int32_t>(outputOrigin_));
+        OP_LOGD(context_->GetNodeName(),
+                "SwigluGroupQuantTiling groupIndexTiling: gLoop:%ld, gFactor:%ld, tailGFactor:%ld, coreNum:%ld, "
+                "ubSize:%luB.",
+                gLoop_, gFactor_, tailGFactor_, coreNum_, ubSize_);
+    }
 }
 
 ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
@@ -736,7 +879,9 @@ ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
         SetTilingData();
         return ge::GRAPH_SUCCESS;
     }
-    if (quantMode_ == BLOCK_QUANT) {
+    if (quantMode_ == MX_QUANT_EXTEND) {
+        status = CalcMxQuantExtendOpTiling();
+    } else if (quantMode_ == BLOCK_QUANT) {
         status = CalcBlockQuantOpTiling();
     } else if (quantMode_ == MX_QUANT) {
         if (isMxFp4Quant_) {
@@ -748,12 +893,11 @@ ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
     return status;
 }
 
-void SwigluGroupQuantTiling::SetTilingKey()
+ge::graphStatus SwigluGroupQuantTiling::SetTilingKey()
 {
     if (quantMode_ == BLOCK_QUANT) {
         tilingKey_ = outputOrigin_ ? BLOCK_QUANT_YORIGIN_TILING_KEY : BLOCK_QUANT_TILING_KEY;
-        context_->SetTilingKey(tilingKey_);
-        return;
+        return context_->SetTilingKey(tilingKey_);
     }
     if (quantMode_ == MX_QUANT) {
         if (isMxFp4Quant_) {
@@ -763,10 +907,13 @@ void SwigluGroupQuantTiling::SetTilingKey()
         } else {
             tilingKey_ = MX_QUANT_TILING_KEY;
         }
-        context_->SetTilingKey(tilingKey_);
-        return;
+        return context_->SetTilingKey(tilingKey_);
     }
-    context_->SetTilingKey(tilingKey_);
+    if (quantMode_ == MX_QUANT_EXTEND) {
+        tilingKey_ = outputOrigin_ ? MX_QUANT_EXTEND_YORIGIN_TILING_KEY : MX_QUANT_EXTEND_TILING_KEY;
+        return context_->SetTilingKey(tilingKey_);
+    }
+    return context_->SetTilingKey(tilingKey_);
 }
 
 ge::graphStatus SwigluGroupQuantTiling::DoOpTiling()
@@ -790,7 +937,9 @@ ge::graphStatus SwigluGroupQuantTiling::DoOpTiling()
     if (PostTiling() == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
-    SetTilingKey();
+    if (SetTilingKey() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     OP_LOGD(context_->GetNodeName(),
             "SwigluGroupQuantTiling done: quantMode:%ld, dstType:%s, tilingKey:%lu, blockDim:%lu, "
@@ -809,14 +958,24 @@ ge::graphStatus SwigluGroupQuantTiling::GetWorkspaceSize()
 ge::graphStatus SwigluGroupQuantTiling::PostTiling()
 {
     if (hasGroupIndex_) {
-        context_->SetBlockDim(coreNum_);
+        if (context_->SetBlockDim(coreNum_) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
     } else {
-        context_->SetBlockDim(usedCoreNums_);
+        if (context_->SetBlockDim(usedCoreNums_) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
     }
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     workspaces[0] = workspaceSize_;
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    if (quantMode_ == MX_QUANT_EXTEND) {
+        mxExtendTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                         context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(mxExtendTilingData_.GetDataSize());
+    } else {
+        tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    }
     return ge::GRAPH_SUCCESS;
 }
 

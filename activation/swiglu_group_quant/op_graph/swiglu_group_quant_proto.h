@@ -24,13 +24,16 @@ namespace ge {
  * @brief Performs SwiGLU activation followed by Block FP8, MX FP8, MX FP4, or HiFloat8 quantization.
  *
  * @par Inputs:
- * @li x: Required tensor. float16 or bfloat16 for quant_mode 0/1; float16, bfloat16 or float32 for
- * quant_mode 2/3. The rank must be in [2, 8] ([2, 7] for quant_mode 1), empty tensors are supported for
- * quant_mode 0/1 and not supported for quant_mode 2/3, and the last dimension is split into two equal parts
- * for SwiGLU and must be greater than or equal to 256 and divisible by 256.
- * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result before
- * quantization. The rank must be in [1, 8], empty tensors are supported for quant_mode 0/1 and not supported
- * for quant_mode 2/3, and the element count must equal the product of all x dims except the last one.
+ * @li x: Required tensor. float16 or bfloat16 for quant_mode 0/1/5; float16, bfloat16 or float32 for
+ * quant_mode 2/3. The rank must be in [2, 8] ([2, 7] for quant_mode 1); quant_mode 5 only supports a
+ * two-dimensional [T, 2H] tensor. Empty tensors are supported for quant_mode 0/1 and not supported for
+ * quant_mode 2/3/5. The last dimension is split into two equal parts for SwiGLU. For non-empty tensors,
+ * quant_mode 5 requires the last dimension to be at least 64 and divisible by 64; legacy modes require it
+ * to be at least 256 and divisible by 256.
+ * @li weight: Optional float32 tensor for quant_mode 0/1/2/3 and optional float16, bfloat16 or float32 tensor
+ * for quant_mode 5. Per-token weight multiplied into the SwiGLU result before quantization. The rank must be
+ * in [1, 8], empty tensors are supported for quant_mode 0/1 and not supported for quant_mode 2/3/5, and the
+ * element count must equal the product of all x dims except the last one.
  * @li group_index: Optional int64 tensor. Count-mode group token numbers. It must be 1D, its element
  * values must be greater than or equal to 0, group_index cannot be an empty tensor on its own for
  * quant_mode 0/1, and empty tensors are not supported for quant_mode 2/3.
@@ -38,21 +41,23 @@ namespace ge {
  * shape must be [G] when group_index is present and [1] otherwise, and empty tensors are not supported.
  *
  * @par Attributes:
- * @li dst_type: Optional int. Target quantized dtype. It is only effective for quant_mode 0/1, and
+ * @li dst_type: Optional int. Target quantized dtype. It is only effective for quant_mode 0/1/5, and
  * supports 35 (FLOAT8_E5M2), 36 (FLOAT8_E4M3FN), 40 (FLOAT4_E2M1) and 41 (FLOAT4_E1M2). quant_mode 1
  * is required when dst_type is 40 or 41. quant_mode 2/3 always quantize to HIFLOAT8 and ignore this
  * attribute. Defaults to FLOAT8_E4M3FN.
- * @li quant_mode: Optional int. 0 means Block FP8 quantization, 1 means MX quantization, 2 means
- * HiFloat8 static quantization, 3 means HiFloat8 dynamic quantization. Defaults to 0.
+ * @li quant_mode: Optional int. 0 means Block FP8 quantization, 1 means legacy MX quantization, 2 means
+ * HiFloat8 static quantization, 3 means HiFloat8 dynamic quantization, and 5 means MX V2 quantization. Defaults to 0.
  * @li block_size: Optional int. 0 selects the mode default. Supports 128 for Block FP8 and 32 for MX.
  * Defaults to 0.
- * @li round_scale: Optional bool. MX quantization requires true. Defaults to false.
+ * @li round_scale: Optional bool. quant_mode 1/5 require true. Defaults to false.
  * @li clamp_limit: Optional float. Defaults to -1.0, which disables clamp. If set to a positive value,
- * clamps SwiGLU inputs before activation.
+ * clamps SwiGLU inputs before activation. quant_mode 5 requires a finite value.
  * @li dst_type_max: Optional float. Maximum finite value used by quant_mode=3 scale calculation.
  * Defaults to 15.0.
- * @li output_origin: Optional bool. Writes the SwiGLU result before the weight multiplication to
- * y_origin. Defaults to false.
+ * @li output_origin: Optional bool. Writes the SwiGLU result before the weight multiplication to y_origin.
+ * Defaults to false.
+ * @li alpha: Optional float. Sigmoid input coefficient used by quant_mode 5. Defaults to 1.0.
+ * @li bias: Optional float. Second SwiGLU branch bias used by quant_mode 5. Defaults to 0.0.
  *
  * @par Outputs:
  * @li y: Quantized output tensor. The shape is the input x shape with the last dimension halved for all
@@ -69,7 +74,7 @@ namespace ge {
  */
 REG_OP(SwigluGroupQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
-    .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT}))
+    .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
     .OPTIONAL_INPUT(scale, TensorType({DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_HIFLOAT8}))
@@ -82,6 +87,8 @@ REG_OP(SwigluGroupQuant)
     .ATTR(clamp_limit, Float, -1.0f)
     .ATTR(dst_type_max, Float, 15.0f)
     .ATTR(output_origin, Bool, false)
+    .ATTR(alpha, Float, 1.0f)
+    .ATTR(bias, Float, 0.0f)
     .OP_END_FACTORY_REG(SwigluGroupQuant)
 
 } // namespace ge

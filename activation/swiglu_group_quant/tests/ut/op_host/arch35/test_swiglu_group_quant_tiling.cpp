@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <limits>
 #include <map>
 #include <string>
 #include "exe_graph/runtime/storage_format.h"
@@ -46,11 +47,23 @@ struct TilingCase {
     float clampLimit = DEFAULT_CLAMP_LIMIT;
     float dstTypeMax = 448.0f;
     bool outputOrigin = false;
+    float alpha = 1.0f;
+    float bias = 0.0f;
+    uint64_t tilingKey = 0;
     bool hasWeight = false;
     bool hasGroupIndex = false;
     bool hasScale = false;
     ge::graphStatus status = ge::GRAPH_SUCCESS;
 };
+
+void SetMxV2Shapes(TilingCase& tc)
+{
+    tc.xShape = {{1024, 8192}, {1024, 8192}};
+    tc.weightShape = {{1024}, {1024}};
+    tc.yShape = {{1024, 4096}, {1024, 4096}};
+    tc.scaleShape = {{1024, 64, 2}, {1024, 64, 2}};
+    tc.yOriginShape = {{1024, 4096}, {1024, 4096}};
+}
 
 class SwigluGroupQuantTilingTest : public testing::Test {
 protected:
@@ -86,10 +99,11 @@ void ExecuteTilingCase(const TilingCase& tc)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
 
+    std::vector<char> compileInfoBuffer(compileInfoString.begin(), compileInfoString.end());
+    compileInfoBuffer.push_back('\0');
     auto kernelHolder = gert::KernelRunContextFaker()
                             .KernelIONum(2, 1)
-                            .Inputs(
-                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Inputs({compileInfoBuffer.data(), reinterpret_cast<void*>(&platformInfo)})
                             .Outputs({&compileInfo})
                             .Build();
 
@@ -136,7 +150,9 @@ void ExecuteTilingCase(const TilingCase& tc)
                     {"round_scale", Ops::NN::AnyValue::CreateFrom<bool>(tc.roundScale)},
                     {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(tc.clampLimit)},
                     {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(tc.dstTypeMax)},
-                    {"output_origin", Ops::NN::AnyValue::CreateFrom<bool>(tc.outputOrigin)}})
+                    {"output_origin", Ops::NN::AnyValue::CreateFrom<bool>(tc.outputOrigin)},
+                    {"alpha", Ops::NN::AnyValue::CreateFrom<float>(tc.alpha)},
+                    {"bias", Ops::NN::AnyValue::CreateFrom<float>(tc.bias)}})
         .TilingData(tilingData.get())
         .Workspace(workspaceSizes);
     if (tc.hasWeight) {
@@ -160,7 +176,11 @@ void ExecuteTilingCase(const TilingCase& tc)
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", socVersions);
 
-    EXPECT_EQ(tilingFunc(tilingContext), tc.status);
+    auto status = tilingFunc(tilingContext);
+    EXPECT_EQ(status, tc.status);
+    if (status == ge::GRAPH_SUCCESS && tc.tilingKey != 0) {
+        EXPECT_EQ(tilingContext->GetTilingKey(), tc.tilingKey);
+    }
 }
 
 TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8)
@@ -191,6 +211,137 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8)
     tc.dstType = ge::DT_FLOAT8_E5M2;
     tc.quantMode = 1;
     tc.roundScale = true;
+    tc.tilingKey = 2000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_v2_fp8)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.alpha = 1.702f;
+    tc.bias = 1.0f;
+    tc.tilingKey = 5000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_v2_dual_axis_geometry_domain)
+{
+    for (const int64_t d : {64, 128, 192}) {
+        const int64_t h = d / 2;
+        TilingCase tc;
+        tc.xShape = {{3, d}, {3, d}};
+        tc.yShape = {{3, h}, {3, h}};
+        tc.scaleShape = {{3, (h + 63) / 64, 2}, {3, (h + 63) / 64, 2}};
+        tc.yOriginShape = {{3, h}, {3, h}};
+        tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+        tc.quantMode = 5;
+        tc.roundScale = true;
+        tc.tilingKey = 5000;
+        ExecuteTilingCase(tc);
+    }
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_v2_rank_3)
+{
+    TilingCase tc;
+    tc.xShape = {{1, 3, 64}, {1, 3, 64}};
+    tc.yShape = {{1, 3, 32}, {1, 3, 32}};
+    tc.scaleShape = {{1, 3, 1, 2}, {1, 3, 1, 2}};
+    tc.yOriginShape = {{1, 3, 32}, {1, 3, 32}};
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_v2_non_finite_clamp_limit)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.clampLimit = std::numeric_limits<float>::infinity();
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_legacy_mode_keeps_256_geometry)
+{
+    TilingCase tc;
+    tc.xShape = {{3, 64}, {3, 64}};
+    tc.yShape = {{3, 32}, {3, 32}};
+    tc.scaleShape = {{3, 1}, {3, 1}};
+    tc.yOriginShape = {{3, 32}, {3, 32}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_v2_fp8_low_precision_weight)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.alpha = 1.702f;
+    tc.bias = 1.0f;
+    tc.hasWeight = true;
+    tc.weightDtype = ge::DT_BF16;
+    tc.tilingKey = 5000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_v2_fp8_y_origin)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.outputOrigin = true;
+    tc.tilingKey = 5100;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_v2_group_index)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.hasGroupIndex = true;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_v2_scale)
+{
+    TilingCase tc;
+    SetMxV2Shapes(tc);
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.quantMode = 5;
+    tc.roundScale = true;
+    tc.hasScale = true;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_legacy_mx_non_default_alpha)
+{
+    TilingCase tc;
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.scaleShape = {{8, 128, 64, 2}, {8, 128, 64, 2}};
+    tc.quantMode = 1;
+    tc.roundScale = true;
+    tc.alpha = 1.702f;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 

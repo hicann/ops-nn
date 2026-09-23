@@ -36,12 +36,13 @@ public:
     ge::graphStatus GetShapeAttrsInfoInner();
     ge::graphStatus CalcOpTiling();
     ge::graphStatus CalcMxQuantOpTiling();
+    ge::graphStatus CalcMxQuantExtendOpTiling();
     ge::graphStatus CalcMxFp4QuantOpTiling();
     ge::graphStatus CalcBlockQuantOpTiling();
     ge::graphStatus CalcGroupIndexTiling();
     void SetEmptyTiling();
     void SetTilingData();
-    void SetTilingKey();
+    ge::graphStatus SetTilingKey();
 
 private:
     using TotalSizeFunc = int64_t (SwigluGroupQuantTiling::*)(int64_t, int64_t) const;
@@ -50,6 +51,8 @@ private:
     ge::graphStatus CheckWeightInfo();
     ge::graphStatus CheckGroupIndexInfo();
     ge::graphStatus CheckOutputInfo(ge::DataType xDtype, const gert::Shape& xStorageShape);
+    template <typename TilingDataType>
+    void SetBaseTilingData(TilingDataType& tilingData);
     void InitCoreTiling();
     void CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize);
     void SetFullDTiling();
@@ -64,6 +67,7 @@ private:
     gert::TilingContext* context_ = nullptr;
     uint64_t tilingKey_ = 0;
     SwigluGroupQuantTilingData tilingData_;
+    SwigluGroupQuantMxExtendTilingData mxExtendTilingData_;
     uint64_t coreNum_ = 0;
     uint64_t workspaceSize_ = 0;
     uint64_t usedCoreNums_ = 0;
@@ -96,6 +100,9 @@ private:
     int64_t gFactor_ = 0;
     int64_t tailGFactor_ = 0;
     bool hasGroupIndex_ = false;
+    ge::DataType weightType_ = ge::DT_FLOAT;
+    float alpha_ = 1.0f;
+    float bias_ = 0.0f;
     platform_ascendc::SocVersion socVersion_ = platform_ascendc::SocVersion::ASCEND910B;
 };
 

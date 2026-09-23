@@ -37,6 +37,7 @@
 |[clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)|ClippedSwiglu的反向梯度算子，根据上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x。|-|默认支持确定性计算|
 |[swiglu_group_backward](../../activation/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)|ClampedSwiglu激活函数的反向梯度算子，从上游梯度grad_output和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight。|-|-|
 |[swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)|融合SwiGLU分组激活与量化的算子，在SwiGLU计算基础上支持FP8等多种量化模式输出。|-|默认支持确定性计算|
+|[swiglu_group_quant_with_dual_axis](../../activation/swiglu_group_quant_with_dual_axis/docs/torchapi_swiglu_group_quant_with_dual_axis.md)|融合ClippedSwiGLU与两个方向的MX量化，支持可选分组、权重和激活原值输出。|-|默认支持确定性计算|
 |[rms_norm_dynamic_quant](../../norm/rms_norm_dynamic_quant/docs/torchapi_rms_norm_dynamic_quant.md)|融合RMS Normalization与INT8动态量化，输出量化后的张量及缩放因子。|默认支持确定性计算|-|
 |[swiglu_backward_group_quant_with_dual_axis](../../activation/swiglu_backward_group_quant_with_dual_axis/docs/torchapi_swiglu_backward_group_quant_with_dual_axis.md)|融合带Clamp和weight的SwiGLU反向计算与双轴动态MX量化，支持group场景和FP8 E4M3FN/E5M2输出。|-|默认确定性实现|
 |[grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)|根据`group_index`描述的行分组，对二维输入`x`同时沿最后一维和倒数第二维进行动态MX量化，输出两个方向的FP8量化结果及对应的FLOAT8_E8M0缩放因子。|-|默认确定性实现|

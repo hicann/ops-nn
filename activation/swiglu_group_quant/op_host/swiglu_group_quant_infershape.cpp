@@ -14,6 +14,7 @@
  */
 
 #include <algorithm>
+#include <limits>
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
@@ -23,12 +24,14 @@ using namespace ge;
 namespace ops {
 namespace {
 constexpr size_t INPUT_IDX_X = 0;
+constexpr size_t INPUT_IDX_WEIGHT = 1;
 constexpr size_t INPUT_IDX_GROUP_INDEX = 2;
 constexpr size_t OUTPUT_IDX_Y = 0;
 constexpr size_t OUTPUT_IDX_Y_SCALE = 1;
 constexpr size_t OUTPUT_IDX_Y_ORIGIN = 2;
 constexpr size_t ATTR_INDEX_DST_TYPE = 0;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
+constexpr size_t ATTR_INDEX_OUTPUT_ORIGIN = 6;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t PER_BLOCK_FP16 = 128;
@@ -37,10 +40,26 @@ constexpr int64_t BLOCK_QUANT_MODE = 0;
 constexpr int64_t MX_QUANT_MODE = 1;
 constexpr int64_t STATIC_HIFP8_QUANT_MODE = 2;
 constexpr int64_t DYNAMIC_HIFP8_QUANT_MODE = 3;
+constexpr int64_t MX_QUANT_V2_MODE = 5;
 constexpr int64_t MX_SCALE_ALIGN_FACTOR = 2;
 
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_HIFLOAT8};
+
+bool CheckedMul(int64_t lhs, int64_t rhs, int64_t& out)
+{
+    if (lhs <= 0 || rhs <= 0 || lhs > std::numeric_limits<int64_t>::max() / rhs) {
+        return false;
+    }
+    out = lhs * rhs;
+    return true;
+}
+
+void SetEmpty(gert::Shape& shape)
+{
+    shape.SetDimNum(0);
+    shape.AppendDim(0);
+}
 } // namespace
 
 graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
@@ -55,10 +74,22 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     gert::Shape* yOriginShape = context->GetOutputShape(OUTPUT_IDX_Y_ORIGIN);
     OP_CHECK_NULL_WITH_CONTEXT(context, yOriginShape);
 
+    auto attrsPtr = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
+    const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
+    const int64_t quantMode = quantModeAttr == nullptr ? BLOCK_QUANT_MODE : *quantModeAttr;
+    const bool isMxQuantV2 = quantMode == MX_QUANT_V2_MODE;
+    const bool* outputOriginAttr = attrsPtr->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
+    const bool outputOrigin = outputOriginAttr != nullptr && *outputOriginAttr;
+
     if (Ops::Base::IsUnknownRank(*xShape)) {
         Ops::Base::SetUnknownRank(*yShape);
         Ops::Base::SetUnknownRank(*yScaleShape);
-        Ops::Base::SetUnknownRank(*yOriginShape);
+        if (isMxQuantV2 && !outputOrigin) {
+            SetEmpty(*yOriginShape);
+        } else {
+            Ops::Base::SetUnknownRank(*yOriginShape);
+        }
         return ge::GRAPH_SUCCESS;
     }
 
@@ -66,16 +97,51 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     OP_CHECK_IF(xRank < 1,
                 OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isMxQuantV2 && xRank != 2,
+                OP_LOGE(context->GetNodeName(), "The rank of x should be 2 when quant_mode is 5, but is %ld.", xRank),
+                return ge::GRAPH_FAILED);
+    if (isMxQuantV2) {
+        const gert::Shape* weightShape = context->GetOptionalInputShape(INPUT_IDX_WEIGHT);
+        if (weightShape != nullptr) {
+            const size_t weightRank = weightShape->GetDimNum();
+            OP_CHECK_IF(weightRank < 1 || weightRank > 8,
+                        OP_LOGE(context->GetNodeName(),
+                                "The rank of weight should be in [1, 8] when quant_mode is 5, but is %zu.", weightRank),
+                        return ge::GRAPH_FAILED);
+        }
+        int64_t rows = 1;
+        for (int64_t i = 0; i + 1 < xRank; ++i) {
+            const int64_t extent = xShape->GetDim(i);
+            if (extent == UNKNOWN_DIM_VALUE) {
+                continue;
+            }
+            int64_t next = 0;
+            OP_CHECK_IF(!CheckedMul(rows, extent, next),
+                        OP_LOGE(context->GetNodeName(),
+                                "The shape of x exceeds int64 range or contains a non-positive dim[%ld] %ld with "
+                                "accumulated product %ld when quant_mode is 5.",
+                                i, extent, rows),
+                        return ge::GRAPH_FAILED);
+            rows = next;
+        }
+    }
     int64_t splitDim = xRank - 1;
 
     if (xShape->GetDim(splitDim) == UNKNOWN_DIM_VALUE) {
         *yShape = *xShape;
-        *yOriginShape = *xShape;
+        if (isMxQuantV2 && !outputOrigin) {
+            SetEmpty(*yOriginShape);
+        } else {
+            *yOriginShape = *xShape;
+        }
         yScaleShape->SetDimNum(0);
         for (int64_t i = 0; i < xRank - 1; ++i) {
             yScaleShape->AppendDim(xShape->GetDim(i));
         }
         yScaleShape->AppendDim(UNKNOWN_DIM_VALUE);
+        if (isMxQuantV2) {
+            yScaleShape->AppendDim(MX_SCALE_ALIGN_FACTOR);
+        }
         return ge::GRAPH_SUCCESS;
     }
 
@@ -84,12 +150,15 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
                         "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
                         xShape->GetDim(splitDim)),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isMxQuantV2 && (xShape->GetDim(splitDim) < 64 || xShape->GetDim(splitDim) % 64 != 0),
+                OP_LOGE(context->GetNodeName(),
+                        "The last dimension of x should be at least 64 and divisible by 64 when quant_mode is 5, "
+                        "but got %ld.",
+                        xShape->GetDim(splitDim)),
+                return ge::GRAPH_FAILED);
 
-    auto attrsPtr = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-
-    const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
-    bool isMxQuant = quantModeAttr != nullptr && *quantModeAttr == MX_QUANT_MODE;
+    bool isMxQuant = quantModeAttr != nullptr &&
+                     (*quantModeAttr == MX_QUANT_MODE || *quantModeAttr == MX_QUANT_V2_MODE);
     bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
@@ -97,8 +166,12 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     int64_t swigluLastDim = xShape->GetDim(splitDim) / NUM_TWO;
     yShape->SetDim(splitDim, swigluLastDim);
 
-    *yOriginShape = *xShape;
-    yOriginShape->SetDim(splitDim, swigluLastDim);
+    if (isMxQuantV2 && !outputOrigin) {
+        SetEmpty(*yOriginShape);
+    } else {
+        *yOriginShape = *xShape;
+        yOriginShape->SetDim(splitDim, swigluLastDim);
+    }
 
     yScaleShape->SetDimNum(0);
     if (isStaticHif8Quant) {
@@ -132,7 +205,8 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
 
     const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
-    bool isMxQuant = quantModeAttr != nullptr && *quantModeAttr == MX_QUANT_MODE;
+    bool isMxQuant = quantModeAttr != nullptr &&
+                     (*quantModeAttr == MX_QUANT_MODE || *quantModeAttr == MX_QUANT_V2_MODE);
     bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
@@ -147,13 +221,20 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
                 "but got %d(%s).",
                 static_cast<int32_t>(dstType), ge::TypeUtils::DataTypeToAscendString(dstType).GetString()),
         return ge::GRAPH_FAILED);
-    context->SetOutputDataType(OUTPUT_IDX_Y, dstType);
+    if (context->SetOutputDataType(OUTPUT_IDX_Y, dstType) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    context->SetOutputDataType(OUTPUT_IDX_Y_SCALE,
-                               isMxQuant && !isDynamicHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT);
+    if (context->SetOutputDataType(OUTPUT_IDX_Y_SCALE,
+                                   isMxQuant && !isDynamicHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT) !=
+        ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     auto xDtype = context->GetInputDataType(INPUT_IDX_X);
-    context->SetOutputDataType(OUTPUT_IDX_Y_ORIGIN, xDtype);
+    if (context->SetOutputDataType(OUTPUT_IDX_Y_ORIGIN, xDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     OP_LOGD(context->GetNodeName(), "End to do InferDtype4SwigluGroupQuant.");
     return GRAPH_SUCCESS;

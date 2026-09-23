@@ -12,6 +12,7 @@
 - [swiglu_group_backward](../../activation/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)
 - [swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)
 - [swiglu_backward_group_quant_with_dual_axis](../../activation/swiglu_backward_group_quant_with_dual_axis/docs/torchapi_swiglu_backward_group_quant_with_dual_axis.md)
+- [swiglu_group_quant_with_dual_axis](../../activation/swiglu_group_quant_with_dual_axis/docs/torchapi_swiglu_group_quant_with_dual_axis.md)
 - [rms_norm_dynamic_quant](../../norm/rms_norm_dynamic_quant/docs/torchapi_rms_norm_dynamic_quant.md)
 - [grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)
 - [quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)
