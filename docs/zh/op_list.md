@@ -5470,6 +5470,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/gru_block_cell_grad/README.md">gru_block_cell_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算GRU单时间步反向梯度，输出输入、上一时刻隐状态及门预激活梯度。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/gru_grad/README.md">gru_grad</a></td>
     <td>✓</td>
     <td>✓</td>
