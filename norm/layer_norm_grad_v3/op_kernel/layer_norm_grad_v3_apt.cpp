@@ -19,6 +19,7 @@
 #include "arch35/layer_norm_grad_v3_grouped_reduce_big_n_impl.h"
 #include "arch35/layer_norm_grad_v3_transpose_backward_impl.h"
 #include "arch35/layer_norm_grad_v3_transpose_gamma_beta_impl.h"
+#include "arch35/layer_norm_grad_v3_empty_regbase.h"
 
 using namespace LayerNormGradV3;
 
@@ -29,6 +30,8 @@ using namespace LayerNormGradV3;
 #define GROUPED_REDUCE_BIG_N 700
 
 #define TRANSPOSE_REGBASE_KEY 800
+
+#define EMPTY_REGBASE_KEY 900
 
 template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
 __aicore__ inline void InvokeLayerNormGradV3RecomputeImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
@@ -131,6 +134,22 @@ __aicore__ inline void InvokeLayerNormGradV3TransposeRegBaseImpl(GM_ADDR dy, GM_
     }
 }
 
+template <typename PD_GAMMA_TYPE>
+__aicore__ inline void InvokeLayerNormGradV3EmptyRegBaseImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                             GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma,
+                                                             GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
+{
+    GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataEmptyRegBase, tiling_data_in, tiling);
+    const LayerNormGradV3TilingDataEmptyRegBase* __restrict tilingData = &tiling_data_in;
+
+    // 空tensor场景pd_x恒为空无需计算, 仅需对pd_gamma/pd_beta填0
+    PRELOAD(4);
+    TPipe pipeIn;
+    LayerNormGradV3EmptyRegBase<PD_GAMMA_TYPE> opEmpty;
+    opEmpty.Init(pd_gamma, pd_beta, workspace, tilingData, &pipeIn);
+    opEmpty.Process();
+}
+
 extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
                                                          GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
                                                          GM_ADDR workspace, GM_ADDR tiling)
@@ -158,6 +177,12 @@ extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, 
     if (TILING_KEY_IS(TRANSPOSE_REGBASE_KEY)) {
         InvokeLayerNormGradV3TransposeRegBaseImpl<DTYPE_DY, DTYPE_GAMMA, DTYPE_PD_GAMMA>(
             dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, tiling);
+        return;
+    }
+
+    if (TILING_KEY_IS(EMPTY_REGBASE_KEY)) {
+        InvokeLayerNormGradV3EmptyRegBaseImpl<DTYPE_PD_GAMMA>(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta,
+                                                              usrWorkspace, tiling);
         return;
     }
 

@@ -71,60 +71,62 @@
     <tr>
       <td>dy</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向计算的梯度张量，对应计算公式中的`gradOut`。</li><li>与输入`x`的数据类型相同。</li><li>shape与`x`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示反向计算的梯度张量，对应计算公式中的`gradOut`。</li><li>与输入`x`的数据类型相同。</li><li>shape与`x`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的首个输入，对应计算公式中的`input`。</li><li>与输入`dy`的数据类型相同。</li><li>shape与`dy`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>正向计算的首个输入，对应计算公式中的`input`。</li><li>与输入`dy`的数据类型相同。</li><li>shape与`dy`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>variance</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`</li>。<li>与输入`mean`的数据类型相同，仅支持FLOAT32。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>正向计算的第三个输出，表示`x`的方差，对应计算公式中的`variance`</li>。<li>与输入`mean`的数据类型相同，仅支持FLOAT32。</li><li>shape与`mean`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。</li><li>与输入`variance`的数据类型相同，仅支持FLOAT32。</li><li>shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>正向计算的第二个输出，表示`x`的均值，对应计算公式中的`mean`。</li><li>与输入`variance`的数据类型相同，仅支持FLOAT32。</li><li>shape与`variance`的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示权重张量，对应公式中的`weight`。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示权重张量，对应公式中的`weight`。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_x</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。</li><li>与输入`x`的数据类型相同，shape与`x`的shape相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。</li><li>与输入`x`的数据类型相同，shape与`x`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_gamma</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</li><li>与输出`pd_beta`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_beta`的shape相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</li><li>与输出`pd_beta`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_beta`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>pd_beta</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</li><li>与输出`pd_gamma`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_gamma`的shape相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</li><li>与输出`pd_gamma`的数据类型相同；数据类型为FLOAT32或与输入`gamma`相同。shape与`pd_gamma`的shape相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
+
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：不支持空Tensor。
 
 ## 约束说明
 

@@ -78,15 +78,17 @@ REG_OP(LayerNormGradV3)
 
 | 参数名 | 输入/属性/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- | --- |
-| dy (Tensor) | 必选输入 | 正向输出的梯度，对应公式中的`gradOut`。 | 不支持空Tensor；至少为1维，各维度大小必须大于0。 | float32、float16、bfloat16 | ND | 至少1维，形状为[A1,...,Ai,R1,...,Rj] |
-| x (Tensor) | 必选输入 | 正向层归一化的输入，对应公式中的`input`。 | 不支持空Tensor；数据类型和shape必须与`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
-| rstd (Tensor) | 必选输入 | 正向计算得到的标准差倒数，对应公式中的`rstd`。 | 不支持空Tensor；shape必须与`mean`一致。 | float32、float16、bfloat16 | ND | 与`x`同维，形状为[A1,...,Ai,1,...,1] |
-| mean (Tensor) | 必选输入 | 正向计算得到的均值，对应公式中的`mean`。 | 不支持空Tensor；shape必须与`rstd`一致。 | float32、float16、bfloat16 | ND | 与`rstd`一致 |
-| gamma (Tensor) | 必选输入 | 正向计算使用的缩放权重，对应公式中的`weight`。 | 不支持空Tensor；至少为1维，shape必须与`dy`的末尾若干维一致。 | float32、float16、bfloat16 | ND | 至少1维，形状为[R1,...,Rj] |
+| dy (Tensor) | 必选输入 | 正向输出的梯度，对应公式中的`gradOut`。 | 支持空Tensor；至少为1维。 | float32、float16、bfloat16 | ND | 至少1维，形状为[A1,...,Ai,R1,...,Rj] |
+| x (Tensor) | 必选输入 | 正向层归一化的输入，对应公式中的`input`。 | 支持空Tensor；数据类型和shape必须与`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
+| rstd (Tensor) | 必选输入 | 正向计算得到的标准差倒数，对应公式中的`rstd`。 | 支持空Tensor；shape必须与`mean`一致。 | float32、float16、bfloat16 | ND | 与`x`同维，形状为[A1,...,Ai,1,...,1] |
+| mean (Tensor) | 必选输入 | 正向计算得到的均值，对应公式中的`mean`。 | 支持空Tensor；shape必须与`rstd`一致。 | float32、float16、bfloat16 | ND | 与`rstd`一致 |
+| gamma (Tensor) | 必选输入 | 正向计算使用的缩放权重，对应公式中的`weight`。 | 支持空Tensor；至少为1维，shape必须与`dy`的末尾若干维一致。 | float32、float16、bfloat16 | ND | 至少1维，形状为[R1,...,Rj] |
 | output_mask (list bool) | 可选属性 | 标记`pd_x`、`pd_gamma`和`pd_beta`三个输出是否有效，列表元素按上述输出顺序一一对应。 | 长度必须为3，默认值为{true, true, true}；元素为false时，对应输出中的数据无意义。 | - | - | - |
-| pd_x (Tensor) | 必选输出 | 输入`x`的梯度，对应公式中的`gradInputOut`。 | 由`output_mask[0]`标记是否有效；数据类型和shape必须与`x`、`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
-| pd_gamma (Tensor) | 必选输出 | 缩放权重`gamma`的梯度，对应公式中的`gradWeightOut`。 | 由`output_mask[1]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
-| pd_beta (Tensor) | 必选输出 | 偏置的梯度，对应公式中的`gradBiasOut`。 | 由`output_mask[2]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
+| pd_x (Tensor) | 必选输出 | 输入`x`的梯度，对应公式中的`gradInputOut`。 | 支持空Tensor；由`output_mask[0]`标记是否有效；数据类型和shape必须与`x`、`dy`一致。 | float32、float16、bfloat16 | ND | 与`dy`一致 |
+| pd_gamma (Tensor) | 必选输出 | 缩放权重`gamma`的梯度，对应公式中的`gradWeightOut`。 | 支持空Tensor；由`output_mask[1]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
+| pd_beta (Tensor) | 必选输出 | 偏置的梯度，对应公式中的`gradBiasOut`。 | 支持空Tensor；由`output_mask[2]`标记是否有效；shape与`gamma`一致；数据类型与`gamma`相同。 | float32、float16、bfloat16 | ND | 与`gamma`一致 |
+
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：不支持空Tensor。
 
 ## 约束说明
 

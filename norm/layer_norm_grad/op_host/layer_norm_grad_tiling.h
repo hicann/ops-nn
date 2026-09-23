@@ -211,6 +211,20 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormGrad_700, LayerNormGradTilingDataGroupedReduceBigN)
 
+// LayerNormGradTilingDataEmptyRegBase
+BEGIN_TILING_DATA_DEF(LayerNormGradTilingDataEmptyRegBase)
+TILING_DATA_FIELD_DEF(int64_t, col);         // 输入tensor的列，即reduce的轴
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum); // 实际使用的core数量
+TILING_DATA_FIELD_DEF(int64_t, nPerCore);    // 主核处理的col大小
+TILING_DATA_FIELD_DEF(int64_t, nTailCore);   // 尾核处理的col大小
+TILING_DATA_FIELD_DEF(int64_t, nAlign);      // UB内单次处理的col大小
+TILING_DATA_FIELD_DEF(int32_t, pdxIsRequire);
+TILING_DATA_FIELD_DEF(int32_t, pdgammaIsRequire);
+TILING_DATA_FIELD_DEF(int32_t, pdbetaIsRequire);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormGrad_900, LayerNormGradTilingDataEmptyRegBase) // TilingKey=900
+
 // TilingKey生成方式：LNGTemplateKey * 100 + isDeterministicKey * 10 + dtypeKey
 enum class LNGDtypeKey : int {
     FLOAT_FLOAT = 1,
@@ -224,7 +238,8 @@ enum class LNGTemplateKey : int {
     RECOMPUTE = 5,
     GROUPED_REDUCE_BIG_M = 6,
     GROUPED_REDUCE_BIG_N = 7,
-    TRANSPOSE_REGBASE = 8
+    TRANSPOSE_REGBASE = 8,
+    EMPTY_REGBASE = 9
 };
 
 struct ParamsLayerNormGrad {
@@ -354,6 +369,21 @@ private:
     ge::graphStatus GammaBetaKernelTiling();
     ge::graphStatus BackwardKernelTiling();
     int64_t CalcGammaBetaMMax(int64_t mFactorAlign, int64_t mPerCore, int64_t nAlign, int64_t ubSize);
+};
+
+class LayerNormGradEmptyRegBaseTiling : public LayerNormGradTilingBase {
+public:
+    explicit LayerNormGradEmptyRegBaseTiling(gert::TilingContext* context) : LayerNormGradTilingBase(context) {}
+    ~LayerNormGradEmptyRegBaseTiling() override = default;
+    LayerNormGradTilingDataEmptyRegBase td_;
+
+protected:
+    ge::graphStatus GetShapeAttrsInfo() override;
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
 };
 
 } // namespace optiling
