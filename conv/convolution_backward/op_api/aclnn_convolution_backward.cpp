@@ -63,6 +63,7 @@ constexpr int64_t MIN_KL0_FP32 = 2;
 constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
 constexpr int64_t PAD_DIM_SIMPLE = 2;
 constexpr int64_t REDUCE_SUM_THRESHOLD = 4000000;
+constexpr int64_t DW1X1_MM_COUT_ALIGN = 16;
 
 enum class Dw1x1TransToMmMode {
     NONE,    // 不满足1x1 dw转matmul条件
@@ -2629,11 +2630,22 @@ static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTe
         OP_LOGD("Dw1x1TransToMm return BATCH_1: batch=1, 1x1 dw trans to matmul");
         return Dw1x1TransToMmMode::BATCH_1;
     }
+    // fp32输入时容易性能劣化，回退到dw计算路径(降精度/HF32模式除外)
+    if (CalcPromoteType(inputTensor) == DataType::DT_FLOAT && params.cubeMathType != ALLOW_FP32_DOWN_PRECISION &&
+        params.cubeMathType != USE_HF32) {
+        OP_LOGD("Dw1x1TransToMm return NONE: not support fp32 input");
+        return Dw1x1TransToMmMode::NONE;
+    }
     // N*Co*Cin过大时ReduceSum开销显著，跳过batchN matmul路径
     int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
     int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
     if (batchDim * cOutDim * cInDim > REDUCE_SUM_THRESHOLD) {
         OP_LOGD("Dw1x1TransToMm return NONE: ReduceSum input size exceeds threshold");
+        return Dw1x1TransToMmMode::NONE;
+    }
+    // Co非16对齐时容易性能劣化，回退到dw计算路径
+    if (cOutDim % DW1X1_MM_COUT_ALIGN != 0) {
+        OP_LOGD("Dw1x1TransToMm return NONE: only support 16-aligned cOutDim");
         return Dw1x1TransToMmMode::NONE;
     }
     OP_LOGD("Dw1x1TransToMm return BATCH_N: batch=%ld, 1x1 dw trans to batch matmul", batchDim);
