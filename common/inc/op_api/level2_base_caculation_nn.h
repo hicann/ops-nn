@@ -81,8 +81,7 @@ static inline aclIntArray* GetTensorShapeActivation(const aclTensor* x, aclOpExe
 
 static inline bool CheckSocVersionIsSupportBf16Activation(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static inline bool CheckDtypeValidActivation(const aclTensor* self, const aclTensor* out,
