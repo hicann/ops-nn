@@ -431,7 +431,7 @@
   - aclnnAddRelu&aclnnInplaceAddRelu默认确定性实现。
 
 - 针对selfRef数据类型为INT8，other数据类型为INT32的场景：
-    由于cast算子将INT32转换成INT8类型时存在精度问题（具体参见[aclnnCast](https://gitcode.com/cann/ops-math/blob/master/math/cast/docs/aclnnCast.md)），该场景下输出结果精度无法保证。
+    由于cast算子将INT32转换成INT8类型时存在精度问题（具体参见[aclnnCast](https://gitcode.com/cann/ops-math/blob/9.2.0/math/cast/docs/aclnnCast.md)），该场景下输出结果精度无法保证。
 
 ## 调用示例
 
