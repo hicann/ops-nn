@@ -346,7 +346,7 @@ public:
     __aicore__ inline void Init(GM_ADDR tableIn, GM_ADDR keys, GM_ADDR m, GM_ADDR v, GM_ADDR beta1Power,
                                 GM_ADDR beta2Power, GM_ADDR lr, GM_ADDR weightDecay, GM_ADDR beta1, GM_ADDR beta2,
                                 GM_ADDR epsilon, GM_ADDR grad, GM_ADDR maxGradNorm, GM_ADDR mOut, GM_ADDR vOut,
-                                GM_ADDR beta1PowerOut, GM_ADDR beta2PowerOut, GM_ADDR maxGradNormOut, GM_ADDR workspace,
+                                GM_ADDR beta1PowerOut, GM_ADDR beta2PowerOut, GM_ADDR maxGradNormOut,
                                 EmbeddingHashTableApplyAdamWTilingData tilingData)
     {
         blockIdx_ = GetBlockIdx();

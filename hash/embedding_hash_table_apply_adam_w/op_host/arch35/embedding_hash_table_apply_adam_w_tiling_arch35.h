@@ -68,7 +68,7 @@ private:
     static constexpr uint32_t MIN_THREAD = 32;
     static constexpr uint32_t MAX_THREAD = 512;
     static constexpr uint32_t DCACHE_SIZE = 32 * 1024;
-    static constexpr uint32_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
+    static constexpr uint32_t DEFAULT_WORKSPACE_SIZE = 0;
 
     uint32_t coreNum_ = 0;
     uint32_t bitWidth_ = 0;

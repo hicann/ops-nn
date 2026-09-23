@@ -58,7 +58,7 @@ constexpr uint32_t INPUT_FILTER_KEY_FLAG_IDX = 7;
 constexpr uint32_t INPUT_filter_KEY_IDX = 8;
 
 // 框架配置
-constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16 * 1024 * 1024;
+constexpr uint32_t DEFAULT_WORKSPACE_SIZE = 0;
 
 // TilingKey
 constexpr uint32_t EMBEDDING_HASH_TABLE_LOOKUP_OR_INSERT_TILING_KEY_GENERAL = 1001;
@@ -222,7 +222,7 @@ ge::graphStatus Tiling4LookupOrInsert(gert::TilingContext* context)
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     // 设置Workspace大小
     size_t* workspace = context->GetWorkspaceSizes(1);
-    workspace[0] = ASCENDC_TOOLS_WORKSPACE;
+    workspace[0] = DEFAULT_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 

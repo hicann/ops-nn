@@ -63,7 +63,6 @@ private:
     static constexpr int64_t MAX_THREAD = 512;
     static constexpr int64_t BLOCK_SIZE_BYTES = 32;
     static constexpr uint64_t REGBASE_CCEC_CACHE_SIZE = 8 * 1024;
-    static constexpr uint64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
     static constexpr uint64_t TILINGKEY_INIT_VALUE = 100;
     ge::graphStatus GetInputInfo();
     ge::graphStatus GetInputInfoOfTensorList();

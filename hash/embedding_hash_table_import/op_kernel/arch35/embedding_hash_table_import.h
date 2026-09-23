@@ -79,7 +79,7 @@ class EmbeddingHashTableImport {
 public:
     __aicore__ inline EmbeddingHashTableImport(){};
     __aicore__ inline void Init(GM_ADDR tableHandles, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
-                                GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
+                                GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values,
                                 const EmbeddingHashTableImportTilingData* __restrict tilingData);
     __aicore__ inline void ParseTilingData(const EmbeddingHashTableImportTilingData* __restrict tilingData);
     __aicore__ inline int64_t AlignUpByte8(const int64_t x) const;
@@ -138,8 +138,7 @@ __aicore__ inline void EmbeddingHashTableImport<T>::ParseTilingData(
 template <typename T>
 __aicore__ inline void EmbeddingHashTableImport<T>::Init(
     GM_ADDR tableHandles, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys, GM_ADDR counters,
-    GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
-    const EmbeddingHashTableImportTilingData* __restrict tilingData)
+    GM_ADDR filterFlags, GM_ADDR values, const EmbeddingHashTableImportTilingData* __restrict tilingData)
 {
     // parse tiling
     ParseTilingData(tilingData);

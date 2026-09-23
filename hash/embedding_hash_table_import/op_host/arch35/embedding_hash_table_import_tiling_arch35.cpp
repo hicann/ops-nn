@@ -26,6 +26,7 @@ static constexpr uint64_t IN_COUNTERS_IDX = 4;
 static constexpr uint64_t IN_FILTER_FLAGS_IDX = 5;
 static constexpr uint64_t IN_VALUES_IDX = 6;
 static constexpr int64_t SIMT_DCACHE_SIZE = static_cast<int64_t>(32 * 1024);
+constexpr uint64_t DEFAULT_WORKSPACE_SIZE = 0;
 
 ge::graphStatus EmbeddingHashTableImportTiling::GetPlatformInfo()
 {

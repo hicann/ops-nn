@@ -19,20 +19,11 @@ extern "C" __global__ __aicore__ void embedding_hash_table_import(GM_ADDR tableH
                                                                   GM_ADDR filterFlags, GM_ADDR values,
                                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-    SetSysWorkspace(workspace);
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
-
     GET_TILING_DATA(tilingData, tiling);
 
     if (TILING_KEY_IS(FP32_TILING_KEY)) {
         EmbeddingHashTable::EmbeddingHashTableImport<float> op;
-        op.Init(tableHandles, embeddingDims, bucketSizes, keys, counters, filterFlags, values, workspace, &tilingData);
+        op.Init(tableHandles, embeddingDims, bucketSizes, keys, counters, filterFlags, values, &tilingData);
         op.Process();
     }
 }

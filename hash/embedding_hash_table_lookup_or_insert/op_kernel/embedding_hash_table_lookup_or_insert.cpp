@@ -25,14 +25,6 @@ extern "C" __global__ __aicore__ void embedding_hash_table_lookup_or_insert(GM_A
                                                                             GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if (workspace == nullptr) {
-        return;
-    }
-    SetSysWorkspace(workspace);
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
 
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
