@@ -19,6 +19,8 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/batch_norm_v3/op_host/batch_norm_v3_tiling_welford_arch35.cpp
                 - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_apt.cpp
                 - ops/ops-nn/norm/batch_norm_v3/op_kernel/arch35/
+                - ops/ops-nn/norm/batch_norm_v3/docs/
+                - ops/ops-nn/norm/batch_norm_v3/README.md
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling_infer_base.cpp
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling_infer_channel_last.cpp
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling_infer.cpp
@@ -60,9 +62,12 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/layer_norm_grad_v3/op_kernel/arch35/
                 - ops/ops-nn/norm/layer_norm_grad_v3/op_kernel/layer_norm_grad_v3_apt.cpp
                 - ops/ops-nn/norm/layer_norm/CMakeLists.txt
+                - ops/ops-nn/norm/add_layer_norm/docs/
+                - ops/ops-nn/norm/add_layer_norm/README.md
                 - ops/ops-nn/norm/add_layer_norm/op_host/add_layer_norm_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_layer_norm/op_host/config/ascend950/
                 - ops/ops-nn/norm/add_layer_norm/op_kernel/arch35/
+                - ops/ops-nn/norm/add_layer_norm/op_kernel/CMakeLists.txt
                 - ops/ops-nn/norm/add_layer_norm/op_kernel/add_layer_norm_apt.cpp
                 - ops/ops-nn/norm/rms_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/rms_norm_grad/op_host/rms_norm_grad_regbase_tiling.cpp
@@ -1357,18 +1362,10 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_kernel/add_rms_norm_dynamic_quant_normal_kernel.h
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_kernel/add_rms_norm_dynamic_quant_single_row_kernel.h
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_kernel/reduce_common.h
+        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/README.md
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_graph/add_rms_norm_dynamic_quant_v2_proto.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_host/add_rms_norm_dynamic_quant_v2_def.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_host/add_rms_norm_dynamic_quant_v2_infershape.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_host/add_rms_norm_dynamic_quant_v2_tiling.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_host/add_rms_norm_dynamic_quant_v2_tiling.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2_base.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2_cut_d_kernel.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2_helper.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2_normal_kernel.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/add_rms_norm_dynamic_quant_v2_single_row_kernel.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/reduce_common.h
+        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_host/
+        - ops/ops-nn/norm/add_rms_norm_dynamic_quant_v2/op_kernel/
         - ops/ops-nn/norm/add_rms_norm_quant/op_graph/add_rms_norm_quant_proto.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/add_rms_norm_quant_def.cpp
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/add_rms_norm_quant_infershape.cpp
@@ -1431,6 +1428,10 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_base.h
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_full_reduce.h
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_welford.h
+        - ops/ops-nn/norm/batch_norm/README.md
+        - ops/ops-nn/norm/batch_norm/op_graph/batch_norm_proto.h
+        - ops/ops-nn/norm/batch_norm/op_host/
+        - ops/ops-nn/norm/batch_norm/op_kernel/
         - ops/ops-nn/norm/batch_norm/CMakeLists.txt
         - ops/ops-nn/norm/bn_training_reduce/
         - ops/ops-nn/norm/deep_norm/
@@ -1513,6 +1514,8 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/layer_norm_v4/op_kernel/subblock/sub_block_layer_norm_copy_out.h
         - ops/ops-nn/norm/layer_norm_v4/op_kernel/tile/tile_copy.h
         - ops/ops-nn/norm/layer_norm_v4/op_kernel/tile/tile_copy_out.h
+        - ops/ops-nn/norm/lp_norm_v2/docs/
+        - ops/ops-nn/norm/lp_norm_v2/README.md
         - ops/ops-nn/norm/lp_norm_v2/op_api/aclnn_linalg_vector_norm.cpp
         - ops/ops-nn/norm/lp_norm_v2/op_api/aclnn_linalg_vector_norm.h
         - ops/ops-nn/norm/lp_norm_v2/op_api/aclnn_norm.cpp
