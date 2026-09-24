@@ -12,6 +12,7 @@
  * \brief Shared utilities for aclnnUnique and aclnnUnique2
  */
 #include "unique_common.h"
+#include <limits>
 
 #include "level0/adjacent_difference.h"
 #include "level0/cumsum.h"
@@ -25,6 +26,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
 #include "op_api/level2_base_nn.h"
 
@@ -47,6 +49,8 @@ static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND_RE
     op::DataType::DT_INT64,  op::DataType::DT_INT32,   op::DataType::DT_INT16,  op::DataType::DT_INT8,
     op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
     op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+
+constexpr int64_t MIN_ELEMENTS = 1;
 
 int64_t GetTensorElementsNum(const aclTensor* tensor)
 {
@@ -83,6 +87,38 @@ bool SupportAicore4Unique(const aclTensor* self, const std::string& opName)
     OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND_REGBASE),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
     return true;
+}
+
+// Input/output prerequisites for the Regbase values-only fast path. Callers must separately reject
+// returnInverse/returnCounts. False selects the existing fallback, not an ACLNN parameter error.
+bool CanUseUniqueWithCountsAndSortingAicore(const aclTensor* self, const aclTensor* valueOut)
+{
+    if (!Ops::NN::AclnnUtil::IsRegbase() || self == nullptr || valueOut == nullptr) {
+        return false;
+    }
+    const auto dtype = self->GetDataType();
+    const bool supported = CheckType(dtype, XY_DTYPE_SUPPORT_LIST_ASCEND_REGBASE);
+    const int64_t elements = self->GetViewShape().GetShapeSize();
+    // Tiling selects 32/64-bit radix counters from N; input dtype does not determine counter width.
+    // Contiguous, zero-offset storage is required: input spans exactly N elements; output needs capacity
+    // for N elements (not just the final unique count), since it is borrowed during sorting.
+    if (!supported || valueOut->GetDataType() != dtype || elements < MIN_ELEMENTS || !op::IsContiguous(self) ||
+        !op::IsContiguous(valueOut) || self->GetViewOffset() != 0 || valueOut->GetViewOffset() != 0 ||
+        self->GetStorageShape().GetShapeSize() != elements || valueOut->GetStorageShape().GetShapeSize() < elements) {
+        return false;
+    }
+    auto input = reinterpret_cast<uintptr_t>(self->GetData());
+    auto output = reinterpret_cast<uintptr_t>(valueOut->GetData());
+    const auto elementBytes = op::TypeSize(dtype);
+    if (elementBytes <= 0 ||
+        static_cast<uint64_t>(elements) > std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(elementBytes)) {
+        return false;
+    }
+    const uint64_t bytes = static_cast<uint64_t>(elements) * elementBytes;
+    // Known addresses must not overlap over the full N-element range. An unresolved address is allowed
+    // for executor-owned intermediates: callers allocate distinct tensors and rely on the executor to
+    // keep simultaneously live input/output storage separate until execution.
+    return input == 0 || output == 0 || (input <= output ? output - input >= bytes : input - output >= bytes);
 }
 
 aclnnStatus FlattenAndSort(const aclTensor* selfContiguous, op::DataType indicesType, aclOpExecutor* executor,

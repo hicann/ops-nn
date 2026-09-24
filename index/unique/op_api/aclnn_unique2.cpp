@@ -13,7 +13,7 @@
  */
 #include "aclnn_unique2.h"
 #include "unique_common.h"
-#include "index/common/op_api/unique_with_counts_and_sorting.h"
+#include "index/unique_with_counts_and_sorting/op_api/unique_with_counts_and_sorting.h"
 #include "index/unique_consecutive/op_api/unique_consecutive.h"
 
 #include "aclnn_kernels/cast.h"
@@ -161,7 +161,12 @@ aclnnStatus aclnnUnique2GetWorkspaceSize(const aclTensor* self, bool sorted, boo
         inverseOut->SetOriginalShape(inverseViewShape);
     }
 
-    if (UniqueCommon::SupportAicore4Unique(selfContiguous, "Unique2")) {
+    if (!returnInverse && !returnCounts &&
+        UniqueCommon::CanUseUniqueWithCountsAndSortingAicore(selfContiguous, valueOut)) {
+        auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, returnCounts, valueOut,
+                                                      inverseOut, countsOut, uniqueExecutor.get());
+        CHECK_RET(opRet == ACLNN_SUCCESS, opRet);
+    } else if (UniqueCommon::SupportAicore4Unique(selfContiguous, "Unique2")) {
         auto opRet = ComputeUnique2ViaAicore(selfContiguous, returnInverse, returnCounts, valueOut, inverseOut,
                                              countsOut, uniqueExecutor.get());
         CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);

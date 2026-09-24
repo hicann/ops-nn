@@ -23,6 +23,7 @@ int64_t GetTensorElementsNum(const aclTensor* tensor);
 const aclIntArray* GetFlattenShape(const aclTensor* self, aclOpExecutor* executor);
 bool CheckSelfDtypeValid(const aclTensor* self);
 bool SupportAicore4Unique(const aclTensor* self, const std::string& opName);
+bool CanUseUniqueWithCountsAndSortingAicore(const aclTensor* self, const aclTensor* valueOut);
 
 struct SortResult {
     const aclTensor* sortedValues;

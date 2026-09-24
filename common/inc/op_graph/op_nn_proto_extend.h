@@ -1564,39 +1564,6 @@ currently supported.
     .OP_END_FACTORY_REG(AxpyWithSoftmaxAndDropOutDoMask)
 #endif
 
-    /**
-    * @brief Return the unique elements of the input tensor with counts and sorted elements. \n
-
-    * @par Inputs:
-    * x: A tensor. Input "x" is a k-dimensional tensor. \n
-
-    * @par Attributes:
-    * @li return_inverse: An optional DType from: "bool". Defaults to False.
-    * @li return_counts: An optional DType from: "bool". Defaults to False.
-    * @li sorted: An optional DType from "bool". Defaults to True. \n
-    * @li out_idx: Output index/count's datatype. Defaults to DT_INT64.
-
-    * @par Outputs:
-    * @li y: A Tensor. The output list of unique scalar elements. Has the same type as "x".
-    * @li indices: A tensor of type DT_INT32, DT_INT64.
-    *              Representing the indices for where elements in the original input map to in the output.
-    * @li counts: A tensor of type DT_INT32, DT_INT64.
-                    Representing the number of occurrences for each unique value or tensor. \n
-
-    * @par Third-party framework compatibility
-    * Compatible with Pytorch operator _unique2.
-    */
-    REG_OP(UniqueWithCountsAndSorting)
-    .INPUT(x, TensorType({BasicType(), DT_BF16}))
-    .OUTPUT(y, TensorType({BasicType(), DT_BF16}))
-    .OUTPUT(indices, TensorType({DT_INT32, DT_INT64}))
-    .OUTPUT(counts, TensorType({DT_INT32, DT_INT64}))
-    .ATTR(return_inverse, Bool, false)
-    .ATTR(return_counts, Bool, false)
-    .ATTR(sorted, Bool, true)
-    .ATTR(out_idx, Type, DT_INT64)
-    .OP_END_FACTORY_REG(UniqueWithCountsAndSorting)
-
 /**
 *@brief Creates a tensor with the given "shape" and "dtype". \n
 

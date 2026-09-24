@@ -1553,4 +1553,11 @@ bool SelectSortNonLastSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoute
     return SelectNonLastSmallAxisRouteImpl(info, plan, true);
 }
 
+// Full-sort adapter: explicit family selection for template coverage tests.
+bool PlanExplicitSmallAxis(const SortKthTileInfo& info, bool twoStage, SmallAxisRoutePlan& plan)
+{
+    auto batches = [&info](uint32_t size, uint32_t& number) { return CeilDivUint32(info.unsortedDim, size, number); };
+    return twoStage ? EstimateSmallAxisTwoStageBatching(info, 1, batches, false, plan) :
+                      EstimateSmallAxisInsertionBatching(info, 1, batches, plan);
+}
 } // namespace optiling

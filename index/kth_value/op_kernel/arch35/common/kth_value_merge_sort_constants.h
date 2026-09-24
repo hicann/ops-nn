@@ -16,6 +16,9 @@
 
 namespace MergeSortConstants {
 
+constexpr uint32_t SORT_RECORD_BYTES = sizeof(float) + sizeof(uint32_t);
+constexpr uint32_t MERGE_TEMP_SCALE = 8;
+
 constexpr uint32_t FP32_DTYPE_BYTES = 4;
 constexpr uint32_t UB_BLOCK_BYTES = Ops::Base::GetUbBlockSize();
 

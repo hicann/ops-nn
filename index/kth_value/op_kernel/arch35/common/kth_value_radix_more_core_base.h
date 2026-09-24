@@ -385,7 +385,7 @@ __simt_vf__ LAUNCH_BOUND(RADIX_SORT_NUM) __aicore__
 }
 
 template <typename T>
-__aicore__ inline void CopyGlobalDataIn(GlobalTensor<T> inputX, LocalTensor<T>& xLocal, uint32_t tileOffset,
+__aicore__ inline void CopyGlobalDataIn(GlobalTensor<T> inputX, LocalTensor<T>& xLocal, uint64_t tileOffset,
                                         uint32_t currTileSize)
 {
     uint32_t currTileSizeAlign = ROUND_UP_AGLIN(currTileSize * sizeof(T)) / sizeof(T);
@@ -411,7 +411,7 @@ __aicore__ inline void CopyIndexDataIn(GlobalTensor<uint32_t> inputIndex, LocalT
     DataCopyPad(xLocal, inputIndex[tileOffset], dataCopyParam, padParams);
 }
 
-template <typename T1, typename T2, typename T3, typename IdxT, int32_t round>
+template <typename T1, typename T2, typename T3, typename IdxT, int32_t round, bool WITH_INDICES = true>
 __simt_vf__ LAUNCH_BOUND(THREAD_DIM_NUM) __aicore__
     void CopyOutGm(T3 tileDataStart, uint32_t cureTileSize, uint64_t outputXUnsortedAxisOffset, uint64_t unSortIdOffset,
                    __ubuf__ uint16_t* blockExcusiveSumAddr, __gm__ volatile T3* excusiveBinsGmAddr,
@@ -444,16 +444,18 @@ __simt_vf__ LAUNCH_BOUND(THREAD_DIM_NUM) __aicore__
     for (int i = threadIdx.x; i < cureTileSize; i += THREAD_DIM_NUM) {
         T3 localDataIndex = static_cast<T3>(sortedIndexLocalAddr[i]);
         T3 dataInitIndex = 0;
-        // Round 0 starts from the original tile-local index. Later rounds carry the original index through the
-        // double-buffered index workspace.
-        if constexpr (round != 0) {
-            dataInitIndex = xInputIndexLocalAddr[localDataIndex];
-        } else {
-            dataInitIndex = tileDataStart + localDataIndex;
+        if constexpr (WITH_INDICES) {
+            if constexpr (round != 0) {
+                dataInitIndex = xInputIndexLocalAddr[localDataIndex];
+            } else {
+                dataInitIndex = tileDataStart + localDataIndex;
+            }
         }
         T3 dataFinalGlobalPos = blockDataInGlobalPosAddr[sortedValueLocalAddr[i]] + i;
         inputXDoubleBufferAddr[dataFinalGlobalPos + outputXUnsortedAxisOffset] = xInputValueLocalAddr[localDataIndex];
-        indexDoubleBufferGmAddr[dataFinalGlobalPos + outputXUnsortedAxisOffset] = static_cast<IdxT>(dataInitIndex);
+        if constexpr (WITH_INDICES) {
+            indexDoubleBufferGmAddr[dataFinalGlobalPos + outputXUnsortedAxisOffset] = static_cast<IdxT>(dataInitIndex);
+        }
     }
 }
 
@@ -470,9 +472,15 @@ __simt_vf__ LAUNCH_BOUND(THREAD_DIM_NUM) __aicore__
  * @tparam UT Unsigned/key representation used by radix preprocessing
  * @tparam T3 Workspace counter type for histogram and exclusive-prefix data
  * @tparam isDescend Sort order flag: 1 for descending, 0 for ascending
+ * @tparam WITH_INDICES Track original indices through radix rounds; defaults to true.
+ * @tparam RECOMPUTE_METADATA Recompute byte keys and tile histogram/prefix before scatter instead of
+ *         caching them in GM; defaults to false and is only supported when WITH_INDICES is false.
  */
-template <typename Derived, typename T1, typename T2, typename UT, typename T3, uint64_t isDescend>
+template <typename Derived, typename T1, typename T2, typename UT, typename T3, uint64_t isDescend,
+          bool WITH_INDICES = true, bool RECOMPUTE_METADATA = false>
 class RadixMoreCoreBase {
+    static_assert(!RECOMPUTE_METADATA || !WITH_INDICES, "Metadata recomputation is restricted to values-only sorting");
+
 public:
     GlobalTensor<T1> inputXGm_;
     GlobalTensor<T1> outValueGm_;
@@ -663,7 +671,9 @@ public:
                 this->copyParams.blockLen = currTileSize * sizeof(uint8_t);
                 this->copyParams.srcStride = 0;
                 this->copyParams.dstStride = 0;
-                DataCopyPad(this->xB8GmWk_[xUnsortOffset + tileOffset], inputB8Ub, this->copyParams);
+                if constexpr (!RECOMPUTE_METADATA) {
+                    DataCopyPad(this->xB8GmWk_[xUnsortOffset + tileOffset], inputB8Ub, this->copyParams);
+                }
                 this->inputB8Que_.FreeTensor(inputB8Ub);
 
                 this->outIdxQueue_.EnQue(histUb);
@@ -673,19 +683,23 @@ public:
                 this->copyParams.blockLen = RADIX_SORT_NUM * sizeof(uint16_t);
                 this->copyParams.srcStride = 0;
                 this->copyParams.dstStride = 0;
-                DataCopyPad(
-                    this->histTileGmWk_[static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * this->lastDimTileNum_ +
-                                        static_cast<uint64_t>(tileId) * RADIX_SORT_NUM],
-                    histUb, this->copyParams);
+                if constexpr (!RECOMPUTE_METADATA) {
+                    DataCopyPad(
+                        this->histTileGmWk_[static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * this->lastDimTileNum_ +
+                                            static_cast<uint64_t>(tileId) * RADIX_SORT_NUM],
+                        histUb, this->copyParams);
+                }
                 this->outIdxQueue_.FreeTensor(histUb);
 
                 this->outValueQueue_.EnQue(histCumsumUb);
                 histCumsumUb = this->outValueQueue_.template DeQue<uint16_t>();
                 // Save each tile's intra-tile exclusive cumsum for the final scatter address calculation.
-                DataCopyPad(
-                    this->histCumsumTileGmWk_[static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * this->lastDimTileNum_ +
-                                              static_cast<uint64_t>(tileId) * RADIX_SORT_NUM],
-                    histCumsumUb, this->copyParams);
+                if constexpr (!RECOMPUTE_METADATA) {
+                    DataCopyPad(this->histCumsumTileGmWk_[static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM *
+                                                              this->lastDimTileNum_ +
+                                                          static_cast<uint64_t>(tileId) * RADIX_SORT_NUM],
+                                histCumsumUb, this->copyParams);
+                }
                 this->outValueQueue_.FreeTensor(histCumsumUb);
             }
             this->blockUbFlagQue_.EnQue(blockExcusiveUb);
@@ -816,7 +830,8 @@ public:
             dataCopyParam.srcStride = 0;
             dataCopyParam.dstStride = 0;
             // The last tile has no successor to look back from, so only non-last tiles publish their histogram state.
-            DataCopyPad(allblockHistToGm[unSortIdOffset + RADIX_SORT_NUM * tileId], blockHistWithFlag, dataCopyParam);
+            DataCopyPad(allblockHistToGm[unSortIdOffset + static_cast<uint64_t>(RADIX_SORT_NUM) * tileId],
+                        blockHistWithFlag, dataCopyParam);
         }
         this->blockHistFlagUbQue_.FreeTensor(blockHistWithFlag);
     }
@@ -838,9 +853,9 @@ public:
 
         // Look back over prior tiles. Aggregate-ready tiles contribute their local histograms and keep scanning.
         // Prefix-ready tiles already include all earlier tiles, so add them and stop.
-        for (int i = tileId - 1; i >= 0; --i) {
+        for (int64_t i = static_cast<int64_t>(tileId) - 1; i >= 0; --i) {
             int mode = -1;
-            uint32_t histTileOffset = RADIX_SORT_NUM * i;
+            uint64_t histTileOffset = static_cast<uint64_t>(RADIX_SORT_NUM) * i;
             __ubuf__ uint32_t* ubFlagTensorPtr = (__ubuf__ uint32_t*)ubFlagTensor.GetPhyAddr();
             __ubuf__ T3* tilePrevHistValuePtrCopy = nullptr;
             while (true) {
@@ -1034,7 +1049,8 @@ public:
         dataCopyParam.blockLen = RADIX_SORT_NUM * sizeof(T3);
         dataCopyParam.srcStride = 0;
         dataCopyParam.dstStride = 0;
-        DataCopyPad(blockHistToGm[unSortIdOffset + RADIX_SORT_NUM * tileId], blockHistWithFlag, dataCopyParam);
+        DataCopyPad(blockHistToGm[unSortIdOffset + static_cast<uint64_t>(RADIX_SORT_NUM) * tileId], blockHistWithFlag,
+                    dataCopyParam);
     }
 
     __aicore__ inline void DataCopyWorkSpaceToUb(LocalTensor<uint8_t> inputX8Ub, LocalTensor<uint16_t> blockExcusiveUb,
@@ -1062,6 +1078,26 @@ public:
                     this->xB8GmWk_[static_cast<uint64_t>(unSortId) * this->totalDataNum_ +
                                    static_cast<uint64_t>(tileId) * this->numTileData_],
                     dataCopyParam1, padParamsB8);
+    }
+
+    __aicore__ inline void RecomputeTileMetadata(LocalTensor<T1> xLocal, LocalTensor<uint8_t> inputX8Ub,
+                                                 LocalTensor<uint16_t> blockExcusiveUb,
+                                                 LocalTensor<uint16_t> blockHistUb, uint32_t currTileSize,
+                                                 uint32_t round, uint32_t tileId)
+    {
+        // Preserve raw values for scatter: PreProcess twiddles its input in place.
+        // tmpUb is idle until the following byte Sort; Tiling checks it holds a full value tile.
+        auto keyCopy = this->tmpUb_.template Get<T1>();
+        // UB-to-UB DataCopy and PreProcess both run on V; same-pipeline ordering applies.
+        DataCopy(keyCopy, xLocal, this->numTileData_);
+        auto keys = PreProcess(keyCopy, currTileSize, round, tileId);
+        auto totalScratch = this->blockUbFlagQue_.template AllocTensor<uint32_t>();
+        Duplicate(totalScratch, static_cast<uint32_t>(0), RADIX_SORT_NUM * this->factor_);
+        auto totals = totalScratch.template ReinterpretCast<T3>();
+        PreGlobalExcusiveSum(keys, totals, blockHistUb, blockExcusiveUb, inputX8Ub, currTileSize, round, tileId);
+        // Subsequent scratch payload users also run on V. FreeTensor only releases queue bookkeeping;
+        // the actual Vector-to-Scalar flag read in LookbackGlobal has its own V_S handoff.
+        this->blockUbFlagQue_.FreeTensor(totalScratch);
     }
 
     __aicore__ inline void ComputeOnePass(uint32_t round, uint32_t sortLoopRound, GlobalTensor<T1> inputXGm)
@@ -1092,7 +1128,11 @@ public:
                 LocalTensor<uint8_t> inputX8Ub = this->inputB8Que_.template AllocTensor<uint8_t>();
                 LocalTensor<uint16_t> blockExcusiveUb = this->blockExcusiveInQue_.template AllocTensor<uint16_t>();
                 LocalTensor<uint16_t> blockHistUb = this->blockHistInQue_.template AllocTensor<uint16_t>();
-                DataCopyWorkSpaceToUb(inputX8Ub, blockExcusiveUb, blockHistUb, unSortId, tileId, currTileSize);
+                if constexpr (RECOMPUTE_METADATA) {
+                    RecomputeTileMetadata(xLocal, inputX8Ub, blockExcusiveUb, blockHistUb, currTileSize, round, tileId);
+                } else {
+                    DataCopyWorkSpaceToUb(inputX8Ub, blockExcusiveUb, blockHistUb, unSortId, tileId, currTileSize);
+                }
                 this->blockHistInQue_.EnQue(blockHistUb);
                 this->blockExcusiveInQue_.EnQue(blockExcusiveUb);
                 this->inputB8Que_.template EnQue<QuePosition::VECIN, QuePosition::VECCALC>(inputX8Ub);
@@ -1123,12 +1163,14 @@ public:
                 }
                 this->blockHistFlagUbQue_.FreeTensor(blockHistFlagUb1);
                 LocalTensor<uint32_t> xIndexLocal;
-                if (round != 0) {
-                    xIndexLocal = this->inQueueIndex_.template AllocTensor<uint32_t>();
-                    CopyIndexDataIn<T3>(this->idxDbGm_.Current()[xUnsortOffset * this->factor_], xIndexLocal,
-                                        tileOffset * this->factor_, currTileSize);
-                    this->inQueueIndex_.EnQue(xIndexLocal);
-                    xIndexLocal = this->inQueueIndex_.template DeQue<uint32_t>();
+                if constexpr (WITH_INDICES) {
+                    if (round != 0) {
+                        xIndexLocal = this->inQueueIndex_.template AllocTensor<uint32_t>();
+                        CopyIndexDataIn<T3>(this->idxDbGm_.Current()[xUnsortOffset * this->factor_], xIndexLocal,
+                                            tileOffset * this->factor_, currTileSize);
+                        this->inQueueIndex_.EnQue(xIndexLocal);
+                        xIndexLocal = this->inQueueIndex_.template DeQue<uint32_t>();
+                    }
                 }
                 sortedValueIndexLocal = this->outIdxQueue_.template DeQue<uint32_t>();
                 sortedValueLocal = this->outValueQueue_.template DeQue<uint8_t>();
@@ -1138,8 +1180,10 @@ public:
                 static_cast<Derived*>(this)->ScatterKeysGlobal(
                     xLocal, sortedValueIndexLocal, xIndexLocal, sortedValueLocal, blockExcusiveUb, blockDataInGlobalPos,
                     blockHistFlagUb2, blockHistUb, round, tileDataStart, currTileSize, sortLoopRound);
-                if (round != 0) {
-                    this->inQueueIndex_.FreeTensor(xIndexLocal);
+                if constexpr (WITH_INDICES) {
+                    if (round != 0) {
+                        this->inQueueIndex_.FreeTensor(xIndexLocal);
+                    }
                 }
                 this->blockHistFlagUbQue_.FreeTensor(blockHistFlagUb2);
                 this->inQueueX_.FreeTensor(xLocal);
@@ -1149,7 +1193,9 @@ public:
                 this->outIdxQueue_.FreeTensor(sortedValueIndexLocal);
                 this->outValueQueue_.FreeTensor(sortedValueLocal);
             }
-            this->idxDbGm_.selector_ ^= 1;
+            if constexpr (WITH_INDICES) {
+                this->idxDbGm_.selector_ ^= 1;
+            }
             this->inputXDbGm_.selector_ ^= 1;
         }
     }
@@ -1162,18 +1208,26 @@ public:
         if constexpr (sizeof(T2) == sizeof(uint32_t)) {
             if constexpr (sizeof(T1) == sizeof(int8_t)) {
                 this->inputXDbGm_.SetDoubleBuffer(this->outValueDbWK_, this->outValueGm_[gmOffset]);
-                this->idxDbGm_.SetDoubleBuffer(this->outIdxDbWK_, this->outIdxGm_[gmOffset]);
+                if constexpr (WITH_INDICES) {
+                    this->idxDbGm_.SetDoubleBuffer(this->outIdxDbWK_, this->outIdxGm_[gmOffset]);
+                }
             } else {
                 this->inputXDbGm_.SetDoubleBuffer(this->outValueGm_[gmOffset], this->outValueDbWK_);
-                this->idxDbGm_.SetDoubleBuffer(this->outIdxGm_[gmOffset], this->outIdxDbWK_);
+                if constexpr (WITH_INDICES) {
+                    this->idxDbGm_.SetDoubleBuffer(this->outIdxGm_[gmOffset], this->outIdxDbWK_);
+                }
             }
         } else {
             if constexpr (sizeof(T1) == sizeof(int8_t)) {
                 this->inputXDbGm_.SetDoubleBuffer(this->outValueDbWK_, this->outValueGm_[gmOffset]);
-                this->idxDbGm_.SetDoubleBuffer(this->outIdxDbWK_, this->outIdxGm_[gmOffset * INT64_INDEX_SCALE]);
+                if constexpr (WITH_INDICES) {
+                    this->idxDbGm_.SetDoubleBuffer(this->outIdxDbWK_, this->outIdxGm_[gmOffset * INT64_INDEX_SCALE]);
+                }
             } else {
                 this->inputXDbGm_.SetDoubleBuffer(this->outValueGm_[gmOffset], this->outValueDbWK_);
-                this->idxDbGm_.SetDoubleBuffer(this->outIdxGm_[gmOffset * INT64_INDEX_SCALE], this->outIdxDbWK_);
+                if constexpr (WITH_INDICES) {
+                    this->idxDbGm_.SetDoubleBuffer(this->outIdxGm_[gmOffset * INT64_INDEX_SCALE], this->outIdxDbWK_);
+                }
             }
         }
         for (uint32_t round = 0; round < static_cast<uint32_t>(sizeof(T1)); round++) {

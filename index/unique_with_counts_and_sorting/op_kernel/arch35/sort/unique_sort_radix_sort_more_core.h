@@ -1,0 +1,374 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/* !
+ * \file unique_sort_radix_sort_more_core.h
+ * \brief
+ */
+
+#ifndef UNIQUE_SORT_RADIX_SORT_MORE_CORE_H
+#define UNIQUE_SORT_RADIX_SORT_MORE_CORE_H
+
+#include <cmath>
+#include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
+#include "kernel_tiling/kernel_tiling.h"
+#include "../../../kth_value/arch35/common/kth_value_util_type_simd.h"
+#include "unique_sort_tiling_data.h"
+#include "simt_api/asc_simt.h"
+#include "../../../kth_value/arch35/common/kth_value_radix_more_core_base.h"
+
+namespace UniqueSort {
+using namespace AscendC;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
+using namespace RadixSortCommon;
+using RadixSortCommon::THREAD_DIM_NUM;
+
+// T1输入x dtype T2输出Idx dtype UT无符号的数据类型
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES = true,
+          bool RECOMPUTE_METADATA = false, bool EXTERNAL_VALUES = false>
+class SortRadixMoreCore
+    : public RadixSortCommon::RadixMoreCoreBase<
+          SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>, T1, T2, UT,
+          T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA> {
+    using Base = RadixSortCommon::RadixMoreCoreBase<
+        SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>, T1, T2, UT, T3,
+        isDescend, WITH_INDICES, RECOMPUTE_METADATA>;
+    friend Base;
+    static_assert(!EXTERNAL_VALUES || !WITH_INDICES, "External scratch requires values-only sorting");
+    static_assert(!RECOMPUTE_METADATA || !WITH_INDICES, "Metadata recomputation requires values-only sorting");
+
+public:
+    __aicore__ inline SortRadixMoreCore(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR value, GM_ADDR sortIndex, GM_ADDR workspace,
+                                const UniqueSortRegBaseTilingData* __restrict tilingData, TPipe* pipe);
+
+protected:
+    __aicore__ inline void InitUbBuffers();
+    __aicore__ inline bool ShouldCanonicalizeMedianNan(uint32_t) const { return false; }
+    __aicore__ inline void OnRadixInputLoaded(LocalTensor<T1>, uint32_t, uint32_t, uint32_t, LocalTensor<uint16_t>) {}
+    __aicore__ inline void OnRadixRoundComplete(uint32_t, uint32_t, LocalTensor<uint32_t>) {}
+    __aicore__ inline void ParserTilingData();
+    __aicore__ inline void ScatterKeysGlobal(LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal,
+                                             LocalTensor<uint32_t> xInputIndexLocal,
+                                             LocalTensor<uint8_t> sortedValueLocal,
+                                             LocalTensor<uint16_t> blockExcusiveSum,
+                                             LocalTensor<T3> blockDataInGlobalPos, LocalTensor<uint32_t> blockHistFlag,
+                                             LocalTensor<uint16_t> blockHist, uint32_t round, T3 tileDataStart,
+                                             uint32_t cureTileSize, uint32_t sortLoopRound);
+    __aicore__ inline void ScatterOutInt32(LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal,
+                                           LocalTensor<uint32_t> xInputIndexLocal,
+                                           LocalTensor<uint8_t> sortedValueLocal,
+                                           LocalTensor<uint16_t> blockExcusiveSum, LocalTensor<T3> blockDataInGlobalPos,
+                                           LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist,
+                                           uint32_t round, T3 tileDataStart, uint32_t cureTileSize);
+    __aicore__ inline void ScatterOutInt32ToInt64(LocalTensor<T1> xInputValueLocal,
+                                                  LocalTensor<uint32_t> sortedIndexLocal,
+                                                  LocalTensor<uint32_t> xInputIndexLocal,
+                                                  LocalTensor<uint8_t> sortedValueLocal,
+                                                  LocalTensor<uint16_t> blockExcusiveSum,
+                                                  LocalTensor<uint32_t> blockDataInGlobalPos,
+                                                  LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist,
+                                                  uint32_t round, T3 tileDataStart, uint32_t cureTileSize);
+    __aicore__ inline void ScatterOutInt64(LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal,
+                                           LocalTensor<uint32_t> xInputIndexLocal,
+                                           LocalTensor<uint8_t> sortedValueLocal,
+                                           LocalTensor<uint16_t> blockExcusiveSum, LocalTensor<T3> blockDataInGlobalPos,
+                                           LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist,
+                                           uint32_t round, T3 tileDataStart, uint32_t cureTileSize);
+
+    const UniqueSortRegBaseTilingData* tilingData_;
+};
+
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::Init(
+    GM_ADDR x, GM_ADDR value, GM_ADDR sortIndex, GM_ADDR workspace,
+    const UniqueSortRegBaseTilingData* __restrict tilingData, TPipe* pipe)
+{
+    this->blockIdx_ = GetBlockIdx();
+    this->pipe_ = pipe;
+    tilingData_ = tilingData;
+    ParserTilingData();
+    this->realCoreNum_ = GetBlockNum();
+    if constexpr (sizeof(T3) == sizeof(int64_t)) {
+        this->factor_ = INT64_INDEX_SCALE;
+    }
+
+    this->inputXGm_.SetGlobalBuffer((__gm__ T1*)x);
+    this->outValueGm_.SetGlobalBuffer((__gm__ T1*)value);
+    if constexpr (WITH_INDICES) {
+        this->outIdxGm_.SetGlobalBuffer((__gm__ uint32_t*)sortIndex);
+    }
+    uint64_t wkOffset = static_cast<uint64_t>(this->clearCoreSize0_) * this->clearCore0_;
+    uint64_t oneBlockNumB32 = this->oneBlock_ / sizeof(int32_t);
+    if constexpr (sizeof(T3) == sizeof(int64_t)) {
+        wkOffset = wkOffset * INT64_INDEX_SCALE;
+    }
+    wkOffset = Ops::Base::CeilAlign(wkOffset, oneBlockNumB32);
+    this->excusiveBinsGmWk_.SetGlobalBuffer((__gm__ uint32_t*)workspace, wkOffset);
+    wkOffset = wkOffset * sizeof(uint32_t);
+
+    uint64_t histOffset = static_cast<uint64_t>(this->clearCout_) * this->clearSize_ * this->clearCore1_;
+    if constexpr (sizeof(T3) == sizeof(int64_t)) {
+        histOffset = histOffset * INT64_INDEX_SCALE;
+    }
+    histOffset = Ops::Base::CeilAlign(histOffset, oneBlockNumB32);
+    this->globalHistGmWk_.SetGlobalBuffer((__gm__ uint32_t*)(workspace + wkOffset), histOffset);
+    wkOffset = wkOffset + histOffset * sizeof(uint32_t);
+
+    uint64_t dbOffset = 0;
+    if constexpr (WITH_INDICES) {
+        dbOffset = this->totalDataNum_ * this->unsortedDimParallel_;
+        if constexpr (sizeof(T3) == sizeof(int64_t)) {
+            dbOffset = dbOffset * INT64_INDEX_SCALE;
+        }
+        dbOffset = Ops::Base::CeilAlign(dbOffset, oneBlockNumB32);
+        this->outIdxDbWK_.SetGlobalBuffer((__gm__ uint32_t*)(workspace + wkOffset), dbOffset);
+        wkOffset = wkOffset + dbOffset * sizeof(uint32_t);
+    }
+
+    if constexpr (!RECOMPUTE_METADATA) {
+        uint64_t histTileOffset = static_cast<uint64_t>(this->lastDimTileNum_) * RADIX_SORT_NUM *
+                                  this->unsortedDimParallel_;
+        this->histTileGmWk_.SetGlobalBuffer((__gm__ uint16_t*)(workspace + wkOffset), histTileOffset);
+        wkOffset = wkOffset + histTileOffset * sizeof(uint16_t);
+        this->histCumsumTileGmWk_.SetGlobalBuffer((__gm__ uint16_t*)(workspace + wkOffset), histTileOffset);
+        wkOffset = wkOffset + histTileOffset * sizeof(uint16_t);
+
+        uint64_t xB8Offset = static_cast<uint64_t>(this->lastDimTileNum_) * this->numTileData_ *
+                             this->unsortedDimParallel_;
+        xB8Offset = Ops::Base::CeilAlign(xB8Offset, this->oneBlock_);
+        this->xB8GmWk_.SetGlobalBuffer((__gm__ uint8_t*)(workspace + wkOffset), xB8Offset);
+        wkOffset = wkOffset + xB8Offset * sizeof(uint8_t);
+    }
+    dbOffset = this->totalDataNum_ * this->unsortedDimParallel_;
+    dbOffset = Ops::Base::CeilAlign(dbOffset * sizeof(T1), this->oneBlock_) / sizeof(T1);
+    if constexpr (EXTERNAL_VALUES) {
+        // The caller owns this full-size scratch until all radix rounds have completed.
+        this->outValueDbWK_.SetGlobalBuffer((__gm__ T1*)sortIndex, dbOffset);
+    } else {
+        this->outValueDbWK_.SetGlobalBuffer((__gm__ T1*)(workspace + wkOffset), dbOffset);
+    }
+
+    InitUbBuffers();
+
+    this->globalHistGmWkTmp_ = this->globalHistGmWk_.template ReinterpretCast<T3>();
+    this->excusiveBinsGmWkTmp_ = this->excusiveBinsGmWk_.template ReinterpretCast<T3>();
+}
+
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::InitUbBuffers()
+{
+    this->pipe_->InitBuffer(this->inQueueX_, 1, this->numTileData_ * sizeof(T1));
+    if constexpr (WITH_INDICES) {
+        this->pipe_->InitBuffer(this->inQueueIndex_, 1, this->numTileData_ * sizeof(T3));
+    }
+    this->pipe_->InitBuffer(this->inQueueGlobalHist_, 1, RADIX_SORT_NUM * sizeof(T3));
+    this->pipe_->InitBuffer(this->outValueQueue_, 1, this->numTileData_);
+    this->pipe_->InitBuffer(this->blockExcusiveInQue_, 1, RADIX_SORT_NUM * sizeof(uint16_t));
+    this->pipe_->InitBuffer(this->blockHistInQue_, 1, RADIX_SORT_NUM * sizeof(uint16_t));
+    this->pipe_->InitBuffer(this->blockUbFlagQue_, 1, RADIX_SORT_NUM * sizeof(T3));
+    this->pipe_->InitBuffer(this->inputB8Que_, 1, this->numTileData_);
+    this->pipe_->InitBuffer(this->outIdxQueue_, 1, this->numTileData_ * sizeof(uint32_t));
+    this->pipe_->InitBuffer(this->tmpUb_, this->tmpUbSize_);
+    this->pipe_->InitBuffer(this->blockHistFlagUbQue_, 1, RADIX_SORT_NUM * sizeof(T3));
+}
+
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::ParserTilingData()
+{
+    this->totalDataNum_ = tilingData_->lastAxisNum;                // h轴大小
+    this->numTileData_ = tilingData_->numTileDataSize;             // ub循环块大小
+    this->unsortedDimNum_ = tilingData_->unsortedDimNum;           // b轴大小
+    this->unsortedDimParallel_ = tilingData_->unsortedDimParallel; // b轴使用的核数
+    this->lastDimTileNum_ = tilingData_->lastDimTileNum;           // h轴循环次数
+    this->sortLoopTimes_ = tilingData_->sortLoopTimes;             // b轴循环次数
+    this->lastDimRealCore_ = tilingData_->lastDimNeedCore;         // h轴需要的核数
+    this->tmpUbSize_ = tilingData_->tmpUbSize;                     // 高级api需要用的ub大小
+
+    this->clearCore1_ = tilingData_->keyParams0;     // 用于清零的globalHistGmWk_的核
+    this->clearCore0_ = tilingData_->keyParams1;     // 用于清零excusiveBinsGmWk_的核
+    this->clearSize_ = tilingData_->keyParams2;      // 每次清零的ub大小，按照大的globalHistGmWk_所需ub算
+    this->clearCout_ = tilingData_->keyParams3;      // 清零globalHistGmWk_ ub循环次数
+    this->clearCoreSize0_ = tilingData_->keyParams4; // 清零excusiveBinsGmWk_,每个核处理多少个数
+    this->clearCoreSize1_ = tilingData_->keyParams5; // 清零globalHistGmWk_，每个核处理多少
+}
+
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::ScatterOutInt32(
+    LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal, LocalTensor<uint32_t> xInputIndexLocal,
+    LocalTensor<uint8_t> sortedValueLocal, LocalTensor<uint16_t> blockExcusiveSum, LocalTensor<T3> blockDataInGlobalPos,
+    LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist, uint32_t round, T3 tileDataStart,
+    uint32_t cureTileSize)
+{
+    uint32_t unSortId = this->blockIdx_ / this->lastDimRealCore_;
+    uint64_t outputXUnsortedAxisOffset = static_cast<uint64_t>(unSortId) * this->totalDataNum_;
+    uint64_t unSortIdOffset = static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * sizeof(T1) + round * RADIX_SORT_NUM;
+    if (round == 0) {
+        asc_vf_call<CopyOutGm<T1, uint32_t, T3, uint32_t, 0>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ T3*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ T3*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ uint32_t*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    } else {
+        asc_vf_call<CopyOutGm<T1, uint32_t, T3, uint32_t, 1>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ T3*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ T3*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ uint32_t*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    }
+}
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::ScatterOutInt32ToInt64(
+    LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal, LocalTensor<uint32_t> xInputIndexLocal,
+    LocalTensor<uint8_t> sortedValueLocal, LocalTensor<uint16_t> blockExcusiveSum,
+    LocalTensor<uint32_t> blockDataInGlobalPos, LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist,
+    uint32_t round, T3 tileDataStart, uint32_t cureTileSize)
+{
+    uint32_t unSortId = this->blockIdx_ / this->lastDimRealCore_;
+    uint64_t outputXUnsortedAxisOffset = static_cast<uint64_t>(unSortId) * this->totalDataNum_;
+    uint64_t unSortIdOffset = static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * sizeof(T1) + round * RADIX_SORT_NUM;
+    if (round == 0) {
+        asc_vf_call<CopyOutGm<T1, uint32_t, T3, uint32_t, 0>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ uint32_t*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ uint32_t*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ uint32_t*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    } else if (round < static_cast<uint32_t>(sizeof(T1) - 1)) {
+        asc_vf_call<CopyOutGm<T1, uint32_t, T3, uint32_t, 1>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ uint32_t*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ uint32_t*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ uint32_t*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    } else {
+        GlobalTensor<T2> outIdxT2 = (this->idxDbGm_.Alternate()).template ReinterpretCast<T2>();
+        asc_vf_call<CopyOutGm<T1, T2, T3, T2, 1>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ uint32_t*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ uint32_t*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ T2*)(outIdxT2.GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    }
+}
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::ScatterOutInt64(
+    LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal, LocalTensor<uint32_t> xInputIndexLocal,
+    LocalTensor<uint8_t> sortedValueLocal, LocalTensor<uint16_t> blockExcusiveSum, LocalTensor<T3> blockDataInGlobalPos,
+    LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist, uint32_t round, T3 tileDataStart,
+    uint32_t cureTileSize)
+{
+    uint32_t unSortId = this->blockIdx_ / this->lastDimRealCore_;
+    uint64_t outputXUnsortedAxisOffset = static_cast<uint64_t>(unSortId) * this->totalDataNum_;
+    uint64_t unSortIdOffset = static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * sizeof(T1) + round * RADIX_SORT_NUM;
+
+    if (round == 0) {
+        asc_vf_call<CopyOutGm<T1, T2, T3, T2, 0>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ T3*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ T3*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ T2*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    } else {
+        asc_vf_call<CopyOutGm<T1, T2, T3, T2, 1>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ T3*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ T3*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ T2*)(this->idxDbGm_.Alternate().GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    }
+}
+template <typename T1, typename T2, typename UT, typename T3, uint64_t isDescend, bool WITH_INDICES,
+          bool RECOMPUTE_METADATA, bool EXTERNAL_VALUES>
+__aicore__ inline void
+SortRadixMoreCore<T1, T2, UT, T3, isDescend, WITH_INDICES, RECOMPUTE_METADATA, EXTERNAL_VALUES>::ScatterKeysGlobal(
+    LocalTensor<T1> xInputValueLocal, LocalTensor<uint32_t> sortedIndexLocal, LocalTensor<uint32_t> xInputIndexLocal,
+    LocalTensor<uint8_t> sortedValueLocal, LocalTensor<uint16_t> blockExcusiveSum, LocalTensor<T3> blockDataInGlobalPos,
+    LocalTensor<uint32_t> blockHistFlag, LocalTensor<uint16_t> blockHist, uint32_t round, T3 tileDataStart,
+    uint32_t cureTileSize, uint32_t sortLoopRound)
+{
+    (void)sortLoopRound;
+    if constexpr (!WITH_INDICES) {
+        // Local permutation still gathers complete values; no original-index payload is carried between passes.
+        uint32_t unSortId = this->blockIdx_ / this->lastDimRealCore_;
+        uint64_t rowOffset = static_cast<uint64_t>(unSortId) * this->totalDataNum_;
+        uint64_t binOffset = static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * sizeof(T1) + round * RADIX_SORT_NUM;
+        asc_vf_call<CopyOutGm<T1, T2, T3, T2, 0, false>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, rowOffset, binOffset,
+            (__ubuf__ uint16_t*)blockExcusiveSum.GetPhyAddr(), (__gm__ T3*)this->excusiveBinsGmWk_.GetPhyAddr(),
+            (__ubuf__ T3*)blockDataInGlobalPos.GetPhyAddr(), (__ubuf__ uint32_t*)sortedIndexLocal.GetPhyAddr(),
+            (__ubuf__ T3*)nullptr, (__ubuf__ uint8_t*)sortedValueLocal.GetPhyAddr(),
+            (__ubuf__ T1*)xInputValueLocal.GetPhyAddr(), (__ubuf__ T3*)blockHistFlag.GetPhyAddr(),
+            (__ubuf__ uint16_t*)blockHist.GetPhyAddr(), (__gm__ T2*)nullptr,
+            (__gm__ T1*)this->inputXDbGm_.Alternate().GetPhyAddr());
+    } else if constexpr (sizeof(T1) == sizeof(int8_t)) {
+        // int8时只循环一次,所以scatter时肯定要按照输出数据类型
+        uint32_t unSortId = this->blockIdx_ / this->lastDimRealCore_;
+        uint64_t outputXUnsortedAxisOffset = static_cast<uint64_t>(unSortId) * this->totalDataNum_;
+        uint64_t unSortIdOffset = static_cast<uint64_t>(unSortId) * RADIX_SORT_NUM * sizeof(T1) +
+                                  round * RADIX_SORT_NUM;
+        GlobalTensor<T2> outIdxT2 = (this->idxDbGm_.Alternate()).template ReinterpretCast<T2>();
+        asc_vf_call<CopyOutGm<T1, T2, T3, T2, 0>>(
+            dim3(THREAD_DIM_NUM), tileDataStart, cureTileSize, outputXUnsortedAxisOffset, unSortIdOffset,
+            (__ubuf__ uint16_t*)(blockExcusiveSum.GetPhyAddr()), (__gm__ T3*)(this->excusiveBinsGmWk_.GetPhyAddr()),
+            (__ubuf__ T3*)(blockDataInGlobalPos.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIndexLocal.GetPhyAddr()),
+            (__ubuf__ T3*)(xInputIndexLocal.GetPhyAddr()), (__ubuf__ uint8_t*)(sortedValueLocal.GetPhyAddr()),
+            (__ubuf__ T1*)(xInputValueLocal.GetPhyAddr()), (__ubuf__ T3*)(blockHistFlag.GetPhyAddr()),
+            (__ubuf__ uint16_t*)(blockHist.GetPhyAddr()), (__gm__ T2*)(outIdxT2.GetPhyAddr()),
+            (__gm__ T1*)(this->inputXDbGm_.Alternate().GetPhyAddr()));
+    } else if constexpr (sizeof(T2) == sizeof(int32_t)) {
+        // 输出idx本省就是int32，无需cast
+        ScatterOutInt32(xInputValueLocal, sortedIndexLocal, xInputIndexLocal, sortedValueLocal, blockExcusiveSum,
+                        blockDataInGlobalPos, blockHistFlag, blockHist, round, tileDataStart, cureTileSize);
+    } else if constexpr (IsSameType<T3, uint32_t>::value) {
+        // 输出idx是int64，需要在最后一次scatter时cast为int64
+        ScatterOutInt32ToInt64(xInputValueLocal, sortedIndexLocal, xInputIndexLocal, sortedValueLocal, blockExcusiveSum,
+                               blockDataInGlobalPos, blockHistFlag, blockHist, round, tileDataStart, cureTileSize);
+    } else {
+        // 计算过程中idx使用int64
+        ScatterOutInt64(xInputValueLocal, sortedIndexLocal, xInputIndexLocal, sortedValueLocal, blockExcusiveSum,
+                        blockDataInGlobalPos, blockHistFlag, blockHist, round, tileDataStart, cureTileSize);
+    }
+}
+} // namespace UniqueSort
+#endif // UNIQUE_SORT_RADIX_SORT_MORE_CORE_H

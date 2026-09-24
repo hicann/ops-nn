@@ -97,7 +97,7 @@
 #include "level0/tensor_move.h"
 #include "activation/common/op_api/threshold.h"
 #include "level0/topk.h"
-#include "index/common/op_api/unique_with_counts_and_sorting.h"
+#include "index/unique_with_counts_and_sorting/op_api/unique_with_counts_and_sorting.h"
 #include "level0/unsqueeze.h"
 #include "level0/zero_op.h"
 namespace l0op {

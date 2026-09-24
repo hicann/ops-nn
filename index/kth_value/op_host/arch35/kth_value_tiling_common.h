@@ -218,6 +218,8 @@ bool SearchNonLastSmallAxisPlan(
     std::function<bool(SortKthTileInfo&, uint32_t, uint64_t&, NonLastSmallAxisCandidate&)> estimateUb,
     NonLastSmallAxisCandidate& best, SortKthTileInfo* selectedInfo = nullptr);
 
+bool PlanExplicitSmallAxis(const SortKthTileInfo& info, bool twoStage, SmallAxisRoutePlan& plan);
+
 bool SelectSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan,
                           const SmallAxisRule* ruleOverride = nullptr);
 bool SelectNonLastSmallAxisRoute(const SortKthTileInfo& info, SmallAxisRoutePlan& plan);

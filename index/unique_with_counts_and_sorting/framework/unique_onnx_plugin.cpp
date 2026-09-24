@@ -16,6 +16,7 @@
  */
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
+#include "../op_graph/unique_with_counts_and_sorting_proto.h"
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
