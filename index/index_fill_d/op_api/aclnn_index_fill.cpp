@@ -182,8 +182,10 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, co
         return ACLNN_SUCCESS;
     }
 
-    if (index->Size() == 0) {
-        auto viewCopyResult = l0op::ViewCopy(self, out, uniqueExecutor.get());
+    if (index->IsEmpty()) {
+        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
