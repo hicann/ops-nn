@@ -126,6 +126,7 @@
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
     - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR&950DT系列产品</term> ：
+    - 不支持空tensor。
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
     - bias为预留参数，当前暂不支持。
 
