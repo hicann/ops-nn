@@ -14,7 +14,6 @@
 #include "ge/compliant_node_builder.h"
 #include "platform/platform_info.h"
 #include "ge/ge_utils.h"
-#include "version/cann_version.h"
 
 using namespace ge;
 using namespace fe;
@@ -184,31 +183,12 @@ Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<SubgraphI
     return GeUtils::InferShape(*replace_graph, input_shapes);
 }
 
-// V2 IR definition APIs (IrDefInputsV2/IrDefOutputsV2/IrDefAttrsV2) use pimpl (IrInputDefV2)
-// with strings constructed inside the GE library, avoiding ABI mismatch issues that V1 APIs
-// (IrDefInputs/IrDefOutputs/IrDefAttrs) have due to std::string layout differences across
-// _GLIBCXX_USE_CXX11_ABI settings. V2 is available since CANN 9.2.0.
-#if defined(CANN_MAJOR) && defined(CANN_MINOR)
-#define NN_HAS_V2_IR_API ((CANN_MAJOR > 9) || (CANN_MAJOR == 9 && CANN_MINOR >= 1))
-#else
-#define NN_HAS_V2_IR_API 0
-#endif
-
 // Build a two-input one-output element-wise node (Mul/Sub) with CompliantNodeBuilder.
 es::EsTensorHolder BuildBinaryNode(es::EsGraphBuilder& graph_builder, const es::EsTensorHolder& input0,
                                    const es::EsTensorHolder& input1, const char* op_type)
 {
     auto* c_builder = graph_builder.GetCGraphBuilder();
     auto* graph = c_builder->GetGraph();
-#if NN_HAS_V2_IR_API
-    GNode node = es::CompliantNodeBuilder(graph)
-                     .OpType(op_type)
-                     .Name(c_builder->GenerateNodeName(op_type).GetString())
-                     .IrDefInputsV2({{"x1", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                     {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                     .IrDefOutputsV2({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                     .Build();
-#else
     GNode node = es::CompliantNodeBuilder(graph)
                      .OpType(op_type)
                      .Name(c_builder->GenerateNodeName(op_type).GetString())
@@ -216,7 +196,6 @@ es::EsTensorHolder BuildBinaryNode(es::EsGraphBuilder& graph_builder, const es::
                                    {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                      .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                      .Build();
-#endif
     ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input0.GetProducer(), input0.GetProducerOutIndex(),
                                                          node, kBinaryInputX1Idx));
     ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input1.GetProducer(), input1.GetProducerOutIndex(),
@@ -230,19 +209,6 @@ es::EsTensorHolder BuildPatternReduceSum(es::EsGraphBuilder& graph_builder, cons
     auto axes = graph_builder.CreateConst(std::vector<int64_t>{kReduceLastAxis}, std::vector<int64_t>{kAxesShapeDim});
     auto* c_builder = graph_builder.GetCGraphBuilder();
     auto* graph = c_builder->GetGraph();
-#if NN_HAS_V2_IR_API
-    GNode node = es::CompliantNodeBuilder(graph)
-                     .OpType("ReduceSum")
-                     .Name(c_builder->GenerateNodeName("ReduceSum").GetString())
-                     .IrDefInputsV2({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                     {"axes", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                     .IrDefOutputsV2({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                     .IrDefAttrsV2(
-                         {{"keep_dims", es::CompliantNodeBuilder::kEsAttrOptional, "Bool", es::CreateFrom(true)},
-                          {"noop_with_empty_axes", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
-                           es::CreateFrom(true)}})
-                     .Build();
-#else
     GNode node = es::CompliantNodeBuilder(graph)
                      .OpType("ReduceSum")
                      .Name(c_builder->GenerateNodeName("ReduceSum").GetString())
@@ -254,7 +220,6 @@ es::EsTensorHolder BuildPatternReduceSum(es::EsGraphBuilder& graph_builder, cons
                           {"noop_with_empty_axes", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
                            es::CreateFrom(true)}})
                      .Build();
-#endif
     ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input.GetProducer(), input.GetProducerOutIndex(),
                                                          node, kReduceSumInputXIdx));
     ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *axes.GetProducer(), axes.GetProducerOutIndex(), node,
