@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :--- | :---: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -81,16 +81,16 @@
 
 | 产品 | 实现与调用通路 | 静态shape能力 | 动态shape能力 | shape/rank及扩展场景 |
 | :--- | :--- | :--- | :--- | :--- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 由本仓库的Ascend 950实现提供能力，通过GE图模式调用。 | FLOAT16、FLOAT32，ND→ND；支持1-8维具体shape，输出与输入同shape、同dtype。 | ND→ND；图推导支持未知维（`-1`）和未知rank（`{-2}`），执行前需解析为1-8维具体shape。 | 不支持0维标量；支持某维为0的空Tensor及非连续Tensor。 |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 由CANN存量实现提供能力，通过GE图模式调用。 | FLOAT16、FLOAT32，ND→ND；支持1-8维具体shape，输出与输入同shape、同dtype。 | ND→ND；CANN存量注册支持动态shape，运行时实际rank仍需满足1-8维的公开契约。 | 不支持0维标量；存量公开契约未明确承诺空Tensor、未知rank和非连续Tensor，本文档不将这些场景作为该类产品的对外能力。 |
+| <term>Ascend 950PR&950DT系列产品</term> | 由本仓库的<term>Ascend 950PR&950DT系列产品</term>实现提供能力，通过GE图模式调用。 | FLOAT16、FLOAT32，ND→ND；支持1-8维具体shape，输出与输入同shape、同dtype。 | ND→ND；图推导支持未知维（`-1`）和未知rank（`{-2}`），执行前需解析为1-8维具体shape。 | 不支持0维标量；支持某维为0的空Tensor及非连续Tensor。 |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 由CANN存量实现提供能力，通过GE图模式调用。 | FLOAT16、FLOAT32，ND→ND；支持1-8维具体shape，输出与输入同shape、同dtype。 | ND→ND；CANN存量注册支持动态shape，运行时实际rank仍需满足1-8维的公开契约。 | 不支持0维标量；存量公开契约未明确承诺空Tensor、未知rank和非连续Tensor，本文档不将这些场景作为该类产品的对外能力。 |
 
 ## 约束说明
 
 - `x`、`y`仅支持FLOAT16、FLOAT32（数据类型一致），数据格式仅支持ND，维度为1-8，`y.shape = x.shape`，不支持0维标量输入。
 - `axis`省略或为空列表时不归约，此时逐元素计算`y = x / sqrt(max(x * x, eps))`；非空时每个元素的取值范围为`[-rank(x), rank(x))`，支持负索引折算，折算到同一维的重复项按一个归约轴处理。
-- 在<term>Ascend 950PR/Ascend 950DT</term>上，支持空Tensor（某维为0时输出为同维空Tensor）、动态shape（某维为`-1`）、未知维度数（shape的dims为`{-2}`，由图编译阶段推导实际rank）与非连续Tensor。
-- 在<term>Ascend 950PR/Ascend 950DT</term>上，本算子为非原地实现，执行后输入`x`保持不变；调用方应保证`y`与`x`底层内存不重叠。
-- 在<term>Ascend 950PR/Ascend 950DT</term>上，FLOAT16输入在算子内部提升为FLOAT32计算后回转FLOAT16输出。
+- 在<term>Ascend 950PR&950DT系列产品</term>上，支持空Tensor（某维为0时输出为同维空Tensor）、动态shape（某维为`-1`）、未知维度数（shape的dims为`{-2}`，由图编译阶段推导实际rank）与非连续Tensor。
+- 在<term>Ascend 950PR&950DT系列产品</term>上，本算子为非原地实现，执行后输入`x`保持不变；调用方应保证`y`与`x`底层内存不重叠。
+- 在<term>Ascend 950PR&950DT系列产品</term>上，FLOAT16输入在算子内部提升为FLOAT32计算后回转FLOAT16输出。
 
 ## 调用说明
 

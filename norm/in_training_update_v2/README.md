@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :--- | :---: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -86,8 +86,8 @@
 
 ### 产品差异说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：支持4维NCHW、NHWC；支持固定4维下的动态维度，不支持动态秩。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>和<term>Atlas 训练系列产品</term>：支持4维NCHW、NHWC。
+- <term>Ascend 950PR&950DT系列产品</term>：支持4维NCHW、NHWC；支持固定4维下的动态维度，不支持动态秩。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>、<term>Atlas推理系列产品</term>和<term>Atlas训练系列产品</term>：支持4维NCHW、NHWC。
 
 ## 约束说明
 
@@ -96,7 +96,7 @@
 - 所有输入均为4维张量，仅支持NCHW和NHWC公开逻辑格式。`x`和`y`的数据类型为FLOAT16或FLOAT，其余输入和输出为FLOAT。
 - `sum`、`square_sum`、`gamma`、`beta`、`mean`、`variance`以及两个统计输出的H、W均为1；四个可选输入在公开原型中分别为可选。
 
-### 仅<term>Ascend 950PR/Ascend 950DT</term>的补充约束
+### 仅<term>Ascend 950PR&950DT系列产品</term>的补充约束
 
 - 固定4维下支持动态维度，不支持动态秩。
 - NCHW下空间维为`x`的H、W轴；NHWC下规则等价。
@@ -113,6 +113,6 @@
 
 | 调用方式 | 调用样例 | 说明 |
 | --- | --- | --- |
-| GE图模式 | [test_geir_in_training_update_v2](./examples/arch35/test_geir_in_training_update_v2.cpp) | 通过[算子IR](./op_graph/in_training_update_v2_proto.h)构图，在Ascend 950上执行。 |
+| GE图模式 | [test_geir_in_training_update_v2](./examples/arch35/test_geir_in_training_update_v2.cpp) | 通过[算子IR](./op_graph/in_training_update_v2_proto.h)构图，在<term>Ascend 950PR&950DT系列产品</term>上执行。 |
 
 本算子是实例归一化训练融合流程的内部图节点，不提供同名aclnn单算子接口。

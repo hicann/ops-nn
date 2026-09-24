@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                  |    √     |
-| <term>Atlas 推理系列产品</term>                          |    √     |
-| <term>Atlas 训练系列产品</term>                          |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                   |    √     |
+| <term>Atlas A3系列产品</term> |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                  |    √     |
+| <term>Atlas推理系列产品</term>                          |    √     |
+| <term>Atlas训练系列产品</term>                          |    √     |
 
 ## 功能说明
 
@@ -61,14 +61,14 @@
 
 | 产品 | 实现与数据类型 | shape/rank能力及限制 |
 | ---- | -------------- | -------------------- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 使用本仓Ascend C实现；支持FLOAT16、FLOAT、BFLOAT16和ND格式。 | 支持静态shape、动态shape和动态rank，rank范围为0到8。除两个无穷哨兵外，支持完整的非负INT64 `p`范围，有限阶幂运算保持整数原值。BFLOAT16只适用于LpNormReduce单节点；当前旧链LpNormUpdate不支持BFLOAT16。 |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 使用CANN内置TBE实现；支持FLOAT16、FLOAT和ND格式，不支持BFLOAT16。 | 支持静态shape、动态shape和动态rank，rank范围为0到8。 |
+| <term>Ascend 950PR&950DT系列产品</term> | 使用本仓Ascend C实现；支持FLOAT16、FLOAT、BFLOAT16和ND格式。 | 支持静态shape、动态shape和动态rank，rank范围为0到8。除两个无穷哨兵外，支持完整的非负INT64 `p`范围，有限阶幂运算保持整数原值。BFLOAT16只适用于LpNormReduce单节点；当前旧链LpNormUpdate不支持BFLOAT16。 |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 使用CANN内置TBE实现；支持FLOAT16、FLOAT和ND格式，不支持BFLOAT16。 | 支持静态shape、动态shape和动态rank，rank范围为0到8。 |
 
 ## 约束说明
 
 - 本算子是面向旧GEIR固化图的兼容算子，新增场景请使用LpNormReduceV2算子。
 - 本算子只输出Lp范数的归约结果，不做$\frac{1}{p}$次开方；FLOAT16/FLOAT完整范数可再串联匹配的LpNormUpdate算子。当前旧链LpNormUpdate不支持BFLOAT16。
-- 以下输入边界描述<term>Ascend 950PR/Ascend 950DT</term>实现。
+- 以下输入边界描述<term>Ascend 950PR&950DT系列产品</term>实现。
 - 输入rank范围为0到8。rank-0输入只允许空`axes`；已知rank下越界轴会报错，重复轴按首次出现去重。
 - 图推导阶段允许unknown rank和取值为-1的动态维，其他负维非法。执行期`x`的逻辑shape与storage shape都必须具体；非标量的rank及每一维必须完全相同，rank-0标量允许storage shape为`[]`或`[1]`。执行期`y`的逻辑shape与storage shape必须与`axes`、`keepdim`推导结果逐维一致且具体；标量输出的逻辑/storage shape兼容`[]`和`[1]`两种物化形式。为保证归约分段规模可表示，`x`所有非零维度的乘积不得超过INT64_MAX（含空Tensor）。
 - 有限`p`的归约域为空时输出0；若零长度维仅位于非归约轴，输出为空Tensor。正负无穷哨兵遇到空归约域时因`max`/`min`无定义而报错。
