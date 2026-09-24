@@ -1642,6 +1642,8 @@ bool MultiMulTranspose(const aclTensor*& self, const aclTensor*& mat2, bool& tra
     }
 
     if (!isBTrans) {
+        mat2 = l0op::Contiguous(mat2, executor);
+        CHECK_RET(mat2 != nullptr, false);
         int64_t dimSize = mat2->GetViewShape().GetDimNum();
         std::vector<int64_t> permVec(dimSize);
         for (int64_t i = 0; i < dimSize; i++) {

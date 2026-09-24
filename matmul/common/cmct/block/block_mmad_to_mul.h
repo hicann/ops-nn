@@ -199,6 +199,7 @@ public:
             currentK_ = (j + 1 == loopK_) ? tailK_ : baseK_;
             if (j == loopK_ - 1) {
                 // 尾轮不允许脏数据污染
+                AscendC::Duplicate<float>(ubLocal_[ubOffsetA[j & 0x1]], 0, static_cast<int32_t>(baseMN_ * baseK_));
                 AscendC::Duplicate<float>(ubLocal_[ubOffsetB[j & 0x1]], 0, static_cast<int32_t>(baseMN_ * baseK_));
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(SYNC_FLAG1);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(SYNC_FLAG1);
