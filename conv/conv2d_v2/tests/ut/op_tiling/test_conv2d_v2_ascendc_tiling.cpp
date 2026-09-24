@@ -277,7 +277,7 @@ bool CheckC04L1SizeLimitsInMsplitMode(TilingParam& tilingData, DtypeSize dtypeSi
     return true;
 }
 
-// M split mode return 1, HW split mode retun 0, M and HW split mode both fail return -1
+// M split mode return 1, HW split mode return 0, M and HW split mode both fail return -1
 int32_t GetSplitMode(TilingParam& tilingData, uint32_t featuremapDtyeSize, uint32_t weightDtypeSize, bool hasScale,
                      bool isC04Mode)
 {
@@ -895,7 +895,7 @@ void Conv2DTestCase(const Conv2DParams& params)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
     // Set compile info
-    string compile_info_string = R"({"hardware_info": 
+    string compile_info_string = R"({"hardware_info":
         {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false,
         "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true,
         "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,

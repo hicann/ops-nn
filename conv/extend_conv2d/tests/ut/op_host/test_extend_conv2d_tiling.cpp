@@ -374,7 +374,7 @@ bool CheckC04L1SizeLimitsInMsplitMode(TilingParam& tilingData, DtypeSize dtypeSi
     return true;
 }
 
-// M split mode return 1, HW split mode retun 0, M and HW split mode both fail return -1
+// M split mode return 1, HW split mode return 0, M and HW split mode both fail return -1
 int32_t GetSplitMode(TilingParam& tilingData, uint32_t featuremapDtyeSize, uint32_t weightDtypeSize, bool hasScale,
                      bool isC04Mode)
 {

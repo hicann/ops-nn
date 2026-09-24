@@ -206,7 +206,7 @@ REG_OP(ApplyAdamWithAmsgradV2)
  * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
  * Has the same format as x. \n
  * @par Attributes:
- * @li dual_output: An optional bool, specifying whether to perform dual ouput,
+ * @li dual_output: An optional bool, specifying whether to perform dual output,
  * either "True" or "False". Defaults to "False".
  * @li relu_flag: An optional bool, specifying whether to perform ReLU,
  * either "True" or "False". Defaults to "False" . \n
@@ -1437,7 +1437,7 @@ Reserved.
     * For Non-Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0 and
     * smaller than 64. \n
     * For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
-    * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
+    * @li The output "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
     output
     * shape at the H and W dimensions is calculated by below formula: \n
     * @code{.c}

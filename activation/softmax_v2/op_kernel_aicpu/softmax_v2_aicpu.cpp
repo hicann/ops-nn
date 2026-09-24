@@ -310,7 +310,7 @@ uint32_t ComputeSoftmaxV2(const CpuKernelContext& ctx)
 KernelStatus SoftmaxV2ExtraCheck(const CpuKernelContext& ctx)
 {
     if (ctx.Input(0)->GetDataType() != ctx.Output(0)->GetDataType()) {
-        KERNEL_LOG_ERROR("The data type of the input [%s] need be the same as the ouput [%s].",
+        KERNEL_LOG_ERROR("The data type of the input [%s] need be the same as the output [%s].",
                          DTypeStr(ctx.Input(0)->GetDataType()).c_str(), DTypeStr(ctx.Output(0)->GetDataType()).c_str());
         return KERNEL_STATUS_PARAM_INVALID;
     }

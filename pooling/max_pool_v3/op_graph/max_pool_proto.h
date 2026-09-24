@@ -47,7 +47,7 @@ namespace ge {
 * For Non-Ascend950PR/Ascend950DT: The stride of the H and W dimensions should be greater than 0 and
 * smaller than 64. \n
 * For Ascend950PR/Ascend950DT: The stride of the H and W dimensions should be greater than 0.
-* @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
+* @li The output "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the H and W dimensions is calculated by below formula: \n
 * @code{.c}
     when "padding" is "SAME":
