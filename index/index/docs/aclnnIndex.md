@@ -5,13 +5,13 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 推理产品</term>：支持
@@ -135,7 +135,7 @@ aclnnStatus aclnnIndex(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16、COMPLEX64。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持COMPLEX64。
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：不支持COMPLEX64。
 
   <!-- end id8 -->
 
@@ -221,7 +221,13 @@ aclnnStatus aclnnIndex(
 - 确定性计算：
   - aclnnIndex默认确定性实现。
 - self非0维Tensor时，indices中tensor的个数需要小于等于self的维度数，self为0维Tensor时，indices中只能有1个tensor。
-- indices中的各个tensor之间shape需相同或满足broadcast关系，且各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
+- indices中的各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
+<!-- npu="950" id9 -->
+- <term>Ascend 950PR&950DT系列产品</term>：indices各tensor之间shape需相同或满足broadcast关系。
+<!-- end id9 -->
+<!-- npu="A3,910b,310b,310p,910" id10 -->
+- 其他芯片：indices各tensor之间shape需完全相同。
+<!-- end id10 -->
 - indices为bool类型时，indices中各个tensor的形状必须和self对应维度的形状完全一样，并且各个tensor通过自身布尔索引过滤生成的新tensor之间shape需满足broadcast关系。
 
 ## 调用示例

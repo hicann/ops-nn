@@ -51,7 +51,7 @@ static constexpr int64_t INDEXPUT_INDEX_IDX = 4;
 static constexpr int32_t NUM_FOUR = 4;
 static constexpr int32_t NUM_EIGHT = 8;
 
-inline bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType& x)
+bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType& x)
 {
     std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,     ge::DT_INT8,
                                              ge::DT_UINT8, ge::DT_INT32,   ge::DT_INT64, ge::DT_COMPLEX64};
@@ -60,6 +60,9 @@ inline bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType& x)
 
 bool IndexNonContinuousTiling::IsCapable()
 {
+    if (IndicesNeedBroadcast(context_, paramIndicesIdx_, static_cast<uint32_t>(tensorNum_))) {
+        return false;
+    }
     if (indexShape_.GetDimNum() > MAX_SUPPORT_DIM_NUM || xShape_.GetDimNum() > MAX_SUPPORT_DIM_NUM) {
         return false;
     } else {
@@ -80,7 +83,7 @@ bool IndexNonContinuousTiling::IsCapable()
     return false;
 }
 
-inline bool IndexNonContinuousTiling::IsContinuous(const gert::Shape& xShape, const gert::Stride& xStride)
+bool IndexNonContinuousTiling::IsContinuous(const gert::Shape& xShape, const gert::Stride& xStride)
 {
     int64_t validStride = 1;
     for (int64_t i = static_cast<int64_t>(xShape.GetDimNum()) - 1; i >= 0; i--) {
@@ -490,7 +493,7 @@ uint64_t IndexNonContinuousTiling::GetTilingKey() const
         isPerf = inputDimNum_ == tensorNum_ && inputDimNum_ != 1;
         xDtype = GenXDtype();
     }
-    return GET_TPL_TILING_KEY(xDtype, 0, isPerf, 0, 1, isAccumulate, isOverlength);
+    return GET_TPL_TILING_KEY(xDtype, 0, isPerf, 0, 1, isAccumulate, isOverlength, 0);
 }
 
 ge::graphStatus IndexNonContinuousTiling::PostTiling()

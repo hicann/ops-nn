@@ -93,6 +93,39 @@ struct IndexSimdTilingData {
     int32_t isZeroOneZero = 0;
 };
 
+struct IndexBroadcastTilingData {
+    uint64_t inputLength = 0;
+    uint64_t outputLength = 0;
+    uint64_t indexSize = 0;
+    uint32_t inputDimNum = 0;
+    uint32_t indexedDimNum = 0;
+    uint32_t indexedSizesNum = 0;
+    uint32_t broadcastDimNum = 0;
+    uint64_t inputShape[8] = {0};
+    uint64_t broadcastShape[8] = {0};
+    uint64_t indexBcStride[8][8] = {{0}};
+};
+
+struct IndexNoConBroadcastTilingData {
+    uint64_t inputLength = 0;
+    uint64_t outputLength = 0;
+    uint64_t indexSize = 0;
+    uint32_t inputDimNum = 0;
+    uint32_t indexedDimNum = 0;
+    uint32_t indexedSizesNum = 0;
+    uint32_t accumulateMode = 0;
+    uint32_t valueDimNum = 0;
+    int64_t xShape[4] = {0};
+    int64_t xStride[4] = {0};
+    int64_t yStride[4] = {0};
+    int64_t valueShape[8] = {0};
+    int64_t valueStride[8] = {0};
+    uint32_t broadcastDimNum = 0;
+    int64_t broadcastShape[4] = {0};
+    int64_t indexBcStride[4][4] = {{0}};
+    int64_t indexInputShape[4] = {0};
+};
+
 } // namespace Index
 
 #endif

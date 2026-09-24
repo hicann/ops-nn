@@ -257,7 +257,7 @@ ge::graphStatus IndexTilingSimd::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t IndexTilingSimd::GetTilingKey() const { return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, 0, 0); }
+uint64_t IndexTilingSimd::GetTilingKey() const { return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, 0, 0, 0); }
 
 ge::graphStatus IndexTilingSimd::PostTiling()
 {

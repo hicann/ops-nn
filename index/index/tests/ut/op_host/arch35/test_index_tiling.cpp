@@ -846,7 +846,98 @@ TEST_F(IndexTiling, Index_AC_tiling_dim2_int32_2)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(IndexTiling, Index_AC_tiling_full_load)
+// TTK ttk_round=1 调试复现：index_bc_a01 场景（indices (3,1)x(1,4) 广播，B=(3,4)）
+// 预期命中 broadcast 模板（priority 7，IS_BROADCAST=1），实际观测穿透到 simt(30)，tiling key=4
+// 注：strided+broadcast 被 bc_cont IsCapable 连续性检查拒绝的断言无法构造——
+// TilingContextFaker 不支持 input stride/view 设置，该场景由 TTK 上板测试覆盖
+TEST_F(IndexTiling, Index_AC_tiling_broadcast_a01_repro)
+{
+    string compile_info_string = R"({
+                                        "hardware_info": {
+                                            "BT_SIZE": 0,
+                                            "load3d_constraints": "1",
+                                            "Intrinsic_fix_pipe_l0c2out": false,
+                                            "Intrinsic_data_move_l12ub": true,
+                                            "Intrinsic_data_move_l0c2ub": true,
+                                            "Intrinsic_data_move_out2l1_nd2nz": false,
+                                            "UB_SIZE": 196608,
+                                            "L2_SIZE": 33554432,
+                                            "L1_SIZE": 524288,
+                                            "L0A_SIZE": 65536,
+                                            "L0B_SIZE": 65536,
+                                            "L0C_SIZE": 131072,
+                                            "CORE_NUM": 64
+                                        }
+                                    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    // platform info
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    // compile info
+    optiling::IndexCompileInfo compile_info;
+
+    std::string op_type("Index");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    // tilingFunc simulate
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    gert::StorageShape x = {{4, 6, 8, 5}, {4, 6, 8, 5}};
+    gert::StorageShape indexedSizes = {{4}, {4}};
+    gert::StorageShape indexedStrides = {{4}, {4}};
+    gert::StorageShape indices0 = {{3, 1}, {3, 1}};
+    gert::StorageShape indices1 = {{1, 4}, {1, 4}};
+    gert::StorageShape y = {{4, 3, 4, 5}, {4, 3, 4, 5}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+
+    int64_t mask[4] = {0, 1, 1, 0};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput(1, DT_INT64, mask, 4, const_tensors);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 2})
+                      .InputShapes({&x, &indexedSizes, &indexedStrides, &indices0, &indices1})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({})
+                      .ConstInput(const_tensors)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    std::cout << "[BC-REPRO] tiling key = " << tiling_context->GetTilingKey() << std::endl;
+    std::cout << "[BC-REPRO] tiling data = " << TilingData2Str(tiling_context->GetRawTilingData()) << std::endl;
+    // 预期命中 broadcast 模板（priority 7）：X_DTYPE=B32(4) + IS_BROADCAST=1 -> 0x200004
+    // 若穿透到 simt(30) 模板则 key=4（ttk_round=1 实际观测到的缺陷形态）
+    std::cout << "[BC-REPRO] final tiling key = " << tiling_context->GetTilingKey() << std::endl;
+}
+
+TEST_F(IndexTiling, Index_AC_tiling_int32_large_index)
 {
     string compile_info_string = R"({
                                         "hardware_info": {

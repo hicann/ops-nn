@@ -41,14 +41,13 @@ def index_golden(x, mask, out, indices, **kwargs):
         x = x.astype(np.float32)
 
     x_torch = torch.from_numpy(x)  # noqa: F841
-    indices_list = [arr.astype(np.int64) for arr in indices]
-    indices_torch = torch.from_numpy(np.array(indices_list))  # noqa: F841
+    indices_list = [torch.from_numpy(arr.astype(np.int64)) for arr in indices]  # noqa: F841
 
     cmd = "x_torch["
     idx = 0
     for i in range(mask.size):
         if mask[i]:
-            cmd += "indices_torch[{}]".format(idx)
+            cmd += "indices_list[{}]".format(idx)
             idx += 1
         else:
             cmd += ":"

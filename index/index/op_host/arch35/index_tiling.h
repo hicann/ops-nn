@@ -32,6 +32,28 @@ struct IndexCompileInfo {
     uint64_t ubSize;
 };
 
+inline bool IndicesNeedBroadcast(gert::TilingContext* context, size_t indicesIdx, uint32_t indicesNum)
+{
+    if (indicesNum <= 1) {
+        return false;
+    }
+    auto firstShape = context->GetDynamicInputShape(indicesIdx, 0);
+    if (firstShape == nullptr) {
+        return false;
+    }
+    const auto& first = firstShape->GetShape();
+    for (uint32_t j = 1; j < indicesNum; ++j) {
+        auto curShape = context->GetDynamicInputShape(indicesIdx, j);
+        if (curShape == nullptr) {
+            return false;
+        }
+        if (curShape->GetShape() != first) {
+            return true;
+        }
+    }
+    return false;
+}
+
 class IndexTilingCommon : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit IndexTilingCommon(gert::TilingContext* context) : TilingBaseClass(context) {}

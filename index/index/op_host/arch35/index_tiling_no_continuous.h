@@ -44,13 +44,10 @@ protected:
         std::vector<int64_t> stride;
     };
 
+    // protected 供 IndexNoConBroadcastTiling（bc_nocon 模板）复用 stride 提取/连续性判定，行为不变
 private:
     ge::graphStatus GetContinuousTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut);
-    ge::graphStatus GetTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut = false);
-    void GetIndexStrideInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, int64_t i);
     void GetContinuousStrideInfo(gert::Shape& shape, gert::Stride& stride);
-    bool IsContinuous(const gert::Shape& xShape, const gert::Stride& xStride);
-    bool ParamTypeIsInvalid(ge::DataType& x);
     bool isDimCanKeep(int64_t dim_idx, const TensorMeta& tensor);
     bool IsAllIndexStrideEqual();
     void InitVector(std::vector<int64_t>& tempIndexShape, std::vector<int64_t>& tempIndexStride);
@@ -60,7 +57,13 @@ private:
     void SetTilingData();
     void PrintTilingData();
 
-private:
+protected:
+    ge::graphStatus GetTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut = false);
+    void GetIndexStrideInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, int64_t i);
+    bool IsContinuous(const gert::Shape& xShape, const gert::Stride& xStride);
+    bool ParamTypeIsInvalid(ge::DataType& x);
+
+protected:
     bool isCoalesced_ = false;
     uint64_t inputLength_ = 0;
     uint64_t outputLength_ = 0;

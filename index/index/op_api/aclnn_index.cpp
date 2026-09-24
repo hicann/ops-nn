@@ -246,6 +246,44 @@ static const inline std::initializer_list<DataType>& GetAicoreSupportDtypeList()
     return AICORE_DTYPE_SUPPORT_LIST;
 }
 
+static bool IndicesBroadcastable(const FVector<const aclTensor*, 8>& indices)
+{
+    size_t maxRank = 0;
+    for (size_t idx = 0; idx < indices.size(); idx++) {
+        maxRank = std::max(maxRank, indices[idx]->GetViewShape().GetDimNum());
+    }
+    if (maxRank > MAX_DIM_LEN) {
+        return false;
+    }
+    for (size_t d = 0; d < maxRank; d++) {
+        int64_t target = -1;
+        for (size_t idx = 0; idx < indices.size(); idx++) {
+            size_t rank = indices[idx]->GetViewShape().GetDimNum();
+            int64_t alignedDim = static_cast<int64_t>(d) + static_cast<int64_t>(rank) - static_cast<int64_t>(maxRank);
+            int64_t dim = (alignedDim < 0) ? 1 : indices[idx]->GetViewShape().GetDim(alignedDim);
+            if (dim == 1) {
+                continue;
+            }
+            if (target == -1) {
+                target = dim;
+            } else if (dim != target) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool IndicesAllSameShape(const FVector<const aclTensor*, 8>& indices)
+{
+    for (size_t idx = 1; idx < indices.size(); idx++) {
+        if (indices[idx]->GetViewShape() != indices[idx - 1]->GetViewShape()) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool check_index_aicore(const aclTensor* self, const FVector<const aclTensor*, 8>& indices,
                         const FVector<int64_t, 8>& masks)
 {
@@ -256,9 +294,11 @@ bool check_index_aicore(const aclTensor* self, const FVector<const aclTensor*, 8
         }
     }
 
-    // indices must have same shape
-    for (size_t idx = 1; idx < indices.size(); idx++) {
-        if (indices[idx]->GetViewShape() != indices[idx - 1]->GetViewShape()) {
+    if (!IndicesAllSameShape(indices)) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
+            return false;
+        }
+        if (!IndicesBroadcastable(indices)) {
             return false;
         }
     }
@@ -333,6 +373,18 @@ static bool IsUseNonContiguous(const aclTensor* self, const aclTensorList* indic
     if (allDefinedIndices.size() <= 1) {
         return false;
     }
+    // broadcast + non-continuous view: dim<=4 -> nocon_broadcast (view passthrough); dim>4 -> Contiguous then broadcast
+    if (!IndicesAllSameShape(allDefinedIndices)) {
+        size_t maxRank = 0;
+        for (auto* t : allDefinedIndices) {
+            maxRank = std::max(maxRank, t->GetViewShape().GetDimNum());
+        }
+        bool dimsOk = self->GetViewShape().GetDimNum() <= DIM_BOUND_NON_CONTIGUOUS &&
+                      maxRank <= DIM_BOUND_NON_CONTIGUOUS && allDefinedIndices.size() <= DIM_BOUND_NON_CONTIGUOUS;
+        if (!dimsOk) {
+            return false;
+        }
+    }
     bool selfIsNonContiguous = !IsContiguous(self);
     bool isContiguous = !selfIsNonContiguous && !existIndicesNonContiguous;
     if (isContiguous) {
@@ -367,9 +419,12 @@ IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* 
         indicesInfo.masksNum += 1;
     }
 
-    indicesInfo.indicesDim = indicesInfo.indicesNum > 0 ? indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum() :
-                                                          0UL;
-    OP_LOGI("masksNum is %ld, indicesNum is %ld", indicesInfo.masksNum, indicesInfo.indicesNum);
+    indicesInfo.indicesDim = 0;
+    for (size_t i = 0; i < indicesInfo.allDefinedIndices.size(); i++) {
+        indicesInfo.indicesDim = std::max(indicesInfo.indicesDim,
+                                          indicesInfo.allDefinedIndices[i]->GetViewShape().GetDimNum());
+    }
+    OP_LOGI("masksNum is %zu, indicesNum is %zu", indicesInfo.masksNum, indicesInfo.indicesNum);
     return indicesInfo;
 }
 
@@ -404,7 +459,8 @@ ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesIn
     // small tail size will use transpose
     bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
     chooseInfo.isNeedTranspose = chooseInfo.isAicore && indicesInfo.masksNum > indicesInfo.indicesNum &&
-                                 chooseInfo.tailSize < TAIL_SIZE_LIMIT && !isRegbase;
+                                 chooseInfo.tailSize < TAIL_SIZE_LIMIT && !isRegbase &&
+                                 IndicesAllSameShape(indicesInfo.allDefinedIndices);
     if (chooseInfo.isNeedTranspose) {
         indicesInfo.masks.clear();
         for (int64_t i = 0; i < indicesInfo.indicesNum; i++) {

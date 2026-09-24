@@ -252,7 +252,7 @@ uint64_t IndexFullLoadTiling::GetTilingKey() const
     } else if (inputShape_.GetDimNum() == DIM_NUM_TWO && maskMode_ == MASK_MODE_1) {
         fullLoadMode = INDEX_FULL_LOAD_2D_MASK_1;
     }
-    return GET_TPL_TILING_KEY(GenXDtype(), fullLoadMode, 0, 0, 0, 0, 0);
+    return GET_TPL_TILING_KEY(GenXDtype(), fullLoadMode, 0, 0, 0, 0, 0, 0);
 }
 
 ge::graphStatus IndexFullLoadTiling::PostTiling()

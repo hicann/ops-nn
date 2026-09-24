@@ -197,7 +197,7 @@ ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
 uint64_t IndexSimtTiling::GetTilingKey() const
 {
     uint32_t isOverlength = inputLength_ > UINT32_MAX || outputLength_ > UINT32_MAX;
-    return GET_TPL_TILING_KEY(xDtype_, 0, isPerfTemplate_, 0, 0, accumulateMode_, isOverlength);
+    return GET_TPL_TILING_KEY(xDtype_, 0, isPerfTemplate_, 0, 0, accumulateMode_, isOverlength, 0);
 }
 
 ge::graphStatus IndexSimtTiling::PostTiling()

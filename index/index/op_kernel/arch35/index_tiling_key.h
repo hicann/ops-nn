@@ -41,7 +41,7 @@ ASCENDC_TPL_ARGS_DECL(Index,
                                              INDEX_FULL_LOAD_2D_MASK_0, INDEX_FULL_LOAD_2D_MASK_1),
                       ASCENDC_TPL_BOOL_DECL(IS_PERF, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_SIMD, 0, 1),
                       ASCENDC_TPL_BOOL_DECL(IS_NOCON, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_ACCUMULATE, 0),
-                      ASCENDC_TPL_BOOL_DECL(IS_OVERLENGTH, 0, 1));
+                      ASCENDC_TPL_BOOL_DECL(IS_OVERLENGTH, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_BROADCAST, 0, 1));
 
 // 模板选择器
 ASCENDC_TPL_SEL(
@@ -52,7 +52,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD), ASCENDC_TPL_BOOL_SEL(IS_PERF, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1),
-                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexSimtTilingData)),
+                         ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0), ASCENDC_TPL_TILING_STRUCT_SEL(IndexSimtTilingData)),
 
     // index_tiling_arch35.cpp: Perf SIMT 模板
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
@@ -60,7 +60,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD), ASCENDC_TPL_BOOL_SEL(IS_PERF, 1),
                          ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1),
-                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexPerfSimtTilingData)),
+                         ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0), ASCENDC_TPL_TILING_STRUCT_SEL(IndexPerfSimtTilingData)),
 
     // index_tiling_simd.cpp: SIMD 模板
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
@@ -68,7 +68,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD), ASCENDC_TPL_BOOL_SEL(IS_PERF, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_SIMD, 1), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0),
-                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexSimdTilingData)),
+                         ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0), ASCENDC_TPL_TILING_STRUCT_SEL(IndexSimdTilingData)),
 
     // index_tiling_full_load.cpp: Full load 模板
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
@@ -77,7 +77,7 @@ ASCENDC_TPL_SEL(
                                                INDEX_FULL_LOAD_2D_MASK_1),
                          ASCENDC_TPL_BOOL_SEL(IS_PERF, 0), ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0), ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0),
-                         ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0), ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0),
                          ASCENDC_TPL_TILING_STRUCT_SEL(IndexFullLoadTilingData)),
 
     // index_tiling_no_continuous.cpp: 非连续模板
@@ -86,8 +86,27 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD),
                          ASCENDC_TPL_BOOL_SEL(IS_PERF, 0, 1), ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_NOCON, 1), ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0),
-                         ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1),
-                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexNonContinuousTilingData)));
+                         ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1), ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexNonContinuousTilingData)),
+
+    // index_tiling_broadcast.cpp: 连续广播模板
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_DTYPE_SEL(X_DTYPE, INDEX_TPL_B8, INDEX_TPL_B16, INDEX_TPL_B32, INDEX_TPL_B64,
+                                               INDEX_TPL_B128),
+                         ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD), ASCENDC_TPL_BOOL_SEL(IS_PERF, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1),
+                         ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 1),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexBroadcastTilingData)),
+
+    // index_tiling_nocon_broadcast.cpp: 非连续广播模板
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_DTYPE_SEL(X_DTYPE, INDEX_TPL_B8, INDEX_TPL_B16, INDEX_TPL_B32, INDEX_TPL_B64),
+                         ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD), ASCENDC_TPL_BOOL_SEL(IS_PERF, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 1),
+                         ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0, 1),
+                         ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 1),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexNoConBroadcastTilingData)));
 
 } // namespace Index
 #endif // INDEX_TILING_KEY_H

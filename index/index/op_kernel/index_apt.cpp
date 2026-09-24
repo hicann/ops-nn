@@ -19,6 +19,8 @@
 #include "arch35/index_full_load.h"
 #include "arch35/index_no_continuous.h"
 #include "arch35/index_perf_no_continuous.h"
+#include "arch35/index_broadcast.h"
+#include "arch35/index_nocon_broadcast.h"
 #include "arch35/index_tiling_key.h"
 #include "arch35/index_tiling_data.h"
 
@@ -53,7 +55,7 @@ struct ComputeTypeBySize<INDEX_TPL_B128> {
 };
 
 template <uint32_t X_DTYPE, uint32_t FULL_LOAD_TYPE, bool IS_PERF, bool IS_SIMD, bool IS_NOCON, bool IS_ACCUMULATE,
-          bool IS_OVERLENGTH>
+          bool IS_OVERLENGTH, bool IS_BROADCAST>
 __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
                                  GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -72,8 +74,26 @@ __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR i
     using inputComputeType = typename ComputeTypeBySize<X_DTYPE>::type;
     using indexOffsetType = std::conditional_t<IS_OVERLENGTH, uint64_t, uint32_t>;
 
-    // ---------------- SIMT -------------------------
-    if constexpr (FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && !IS_NOCON && !IS_PERF && !IS_SIMD) {
+    // ---------------- Broadcast SIMT (continuous) -----------------
+    if constexpr (IS_BROADCAST && !IS_NOCON) {
+        REGISTER_TILING_FOR_TILINGKEY("IS_BROADCAST == true && IS_NOCON == false", IndexBroadcastTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexBroadcastTilingData, tilingData, tiling);
+        KernelIndexBroadcast<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>, DTYPE_INDICES,
+                             indexOffsetType>
+            op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData);
+        op.Process();
+        // ---------------- Broadcast SIMT (non-continuous view) -----------------
+    } else if constexpr (IS_BROADCAST && IS_NOCON) {
+        REGISTER_TILING_FOR_TILINGKEY("IS_BROADCAST == true && IS_NOCON == true", IndexNoConBroadcastTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexNoConBroadcastTilingData, tilingData, tiling);
+        KernelIndexNoConBroadcast<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>, DTYPE_INDICES,
+                                  indexOffsetType>
+            op;
+        op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData);
+        op.Process();
+        // ---------------- SIMT -------------------------
+    } else if constexpr (FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && !IS_NOCON && !IS_PERF && !IS_SIMD) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON == false && IS_PERF == false && IS_SIMD == false",
             IndexSimtTilingData);
