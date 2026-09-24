@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | × |
 | <term>Atlas A3系列产品</term> | × |
 | <term>Atlas A2系列产品</term> | √ |
 | <term>kirin X90处理器系列产品</term> | √ |
