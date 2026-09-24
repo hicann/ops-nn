@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file swi_glu_grad_tiling_regbase.h
+ * \file dequant_swiglu_quant_tiling_regbase.h
  * \brief
  */
 #pragma once
