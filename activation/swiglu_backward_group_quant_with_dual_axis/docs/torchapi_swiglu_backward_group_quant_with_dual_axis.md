@@ -1,38 +1,36 @@
 # swiglu_backward_group_quant_with_dual_axis
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/swiglu_backward_group_quant_with_dual_axis)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3系列产品推理系列产品</term>：不支持
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2系列产品</term>：不支持
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2推理产品</term>：不支持
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas推理系列产品</term>：不支持
+- <term>Atlas 推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas训练系列产品</term>：不支持
+- <term>Atlas 训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：
 
-  `swiglu_backward_group_quant_with_dual_axis` 是融合算子的 PyTorch 接口，完成带可选 Clamp 和 weight 的 SwiGLU 反向计算，以及沿最后一维和倒数第二维的动态 MX 量化。底层封装 `aclnnSwigluBackwardGroupQuantWithDualAxis`。
+  `swiglu_backward_group_quant_with_dual_axis`是融合算子的PyTorch接口，完成带可选Clamp和weight的SwiGLU反向计算，以及沿最后一维和倒数第二维的动态MX量化。底层封装`aclnnSwigluBackwardGroupQuantWithDualAxis`。
 
 - 返回值：
 
-  - 非 group 场景返回 `y1`、`scale1`、`y2` 和 `scale2`。
-  - group 场景传入 `weight` 和 `y_origin` 时额外返回 `grad_weight`。
+  - 非group场景和不带weight的group场景返回`y1`、`scale1`、`y2`和`scale2`。
+  - group场景成对传入`weight`和`y_origin`时，额外返回`grad_weight`。
 
 - 计算约定：
 
@@ -92,7 +90,7 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
 
 ## 约束说明
 
-- 该接口支持单算子模式和 TorchAir 图模式调用。
+- 该接口支持单算子模式和ACLGraph图模式调用。
 - `grad_y` 和 `x` 必须为 NPU Tensor，且分别为二维 `[T, H]` 和 `[T, 2H]`；`x` 的最后一维必须为 64 的整数倍。
 - 非 group 场景不传入 `group_index`、`weight` 和 `y_origin`；group 场景必须传入 `group_index`。
 - `group_index` 采用 cumsum 模式，必须严格递增且最后一个值等于 `T`。
@@ -113,7 +111,7 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
   ```python
   import torch
   import torch_npu
-  import cann_ops_nn.ops
+  import cann_ops_nn_custom.ops
 
   torch.npu.set_device(0)
   grad_y = torch.randn(10240, 3072, dtype=torch.float16).npu()
@@ -136,27 +134,26 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
   )
   ```
 
-- 图模式（TorchAir）调用：
+- 图模式调用：
 
   ```python
   import torch
   import torch_npu
-  import torchair
-  import cann_ops_nn.ops
+  import cann_ops_nn_custom.ops
 
   class Model(torch.nn.Module):
       def forward(self, grad_y, x):
-          return torch.ops.cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
-              grad_y,
-              x,
-              clamp_limit=-1.0,
-              quant_mode=1,
-              dst_type=36,
-          )
+          return torch.ops.cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(grad_y, x, quant_mode=1, dst_type=36)
 
   torch.npu.set_device(0)
-  model = torch.compile(Model().npu(), backend=torchair.get_npu_backend(), dynamic=False)
-  grad_y = torch.randn(10240, 3072, dtype=torch.float16).npu()
-  x = torch.randn(10240, 6144, dtype=torch.float16).npu()
-  outputs = model(grad_y, x)
+  model = torch.compile(
+      Model().npu(),
+      backend="npugraph_ex",
+      dynamic=False,
+      fullgraph=True,
+      options={"force_eager": True},
+  )
+  grad_y = torch.randn(128, 32, dtype=torch.float16).npu()
+  x = torch.randn(128, 64, dtype=torch.float16).npu()
+  y1, scale1, y2, scale2 = model(grad_y, x)
   ```

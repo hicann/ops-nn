@@ -1,27 +1,25 @@
 # SwigluBackwardGroupQuantWithDualAxis
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/swiglu_backward_group_quant_with_dual_axis)
-
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------- | ------|
-| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
-| <term>Atlas A3系列产品</term>     |    x     |
-| <term>Atlas A2系列产品</term> |    x     |
-| <term>Atlas 200I/500 A2推理产品</term>                      |    ×    |
-| <term>Atlas推理系列产品</term>                             |    ×     |
-| <term>Atlas训练系列产品</term>                              |    x    |
+| 产品 | 是否支持 |
+| :--- | :---: |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | × |
+| <term>Atlas A2系列产品</term> | × |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
 ### 接口功能
 
-SwigluBackwardGroupQuantWithDualAxis 融合带可选 Clamp 和 weight 的 SwiGLU 反向计算，以及沿最后一维和倒数第二维的动态 MX 量化。当前仅支持 `quant_mode=1`，输出 FP8 数据和 E8M0 缩放因子。
+SwigluBackwardGroupQuantWithDualAxis融合带可选Clamp和weight的SwiGLU反向计算，以及沿最后一维和倒数第二维的动态MX量化。当前仅支持`quantMode=1`，输出FP8数据和E8M0缩放因子。
 
 - 非 group 场景：不传入 `group_index`、`weight` 和 `y_origin`，返回 `y1`、`scale1`、`y2` 和 `scale2`。
 - group 场景：传入 cumsum 模式的 `group_index`，可选成对传入 `weight` 和 `y_origin`；传入二者时额外返回 `grad_weight`。
-- 算子仅支持二维输入：`x` 的 shape 为 `[T, 2H]`，`grad_y` 的 shape 为 `[T, H]`。
+- 算子仅支持二维输入：`x`的shape为`[T, 2H]`，`gradY`的shape为`[T, H]`。
 
 ### 计算公式
 
@@ -48,7 +46,7 @@ $$
 grad_b = g \times a_c \times s \times mask_b
 $$
 
-最终 `grad_x` 为 `grad_a` 和 `grad_b` 沿最后一维的拼接结果。仅当同时传入 `weight` 和 `y_origin` 时计算：
+其中，未启用Clamp时`mask_a`和`mask_b`均为1；启用时分别表示对应输入未被截断。最终`grad_x`为`grad_a`和`grad_b`沿最后一维的拼接结果。仅当同时传入`weight`和`y_origin`时计算：
 
 $$
 grad\_weight[t] = \sum_{h=0}^{H-1} grad_y[t,h] \times y_origin[t,h]
@@ -65,23 +63,23 @@ $$
 
 ## 参数说明
 
-|参数名|输入/输出/属性|描述|数据类型|数据格式|
-|:---|:---|:---|:---|:---|
-|grad_y|输入|SwiGLU 输出的反向梯度，shape 为 `[T, H]`。|FLOAT16、BFLOAT16|ND|
-|x|输入|SwiGLU 前向输入，shape 为 `[T, 2H]`，最后一维必须为 64 的整数倍。|FLOAT16、BFLOAT16|ND|
-|weight|可选输入|每个 token 的权重，shape 为 `[T]`；仅 group 场景支持。|FLOAT16、BFLOAT16、FLOAT|ND|
-|y_origin|可选输入|SwiGLU 前向输出的原始值，shape 为 `[T, H]`；与 `weight` 成对传入时用于计算 `grad_weight`。|FLOAT16、BFLOAT16|ND|
-|group_index|可选输入|group 的累计终点，shape 为 `[G]`，采用 cumsum 模式。|INT64|ND|
-|clamp_limit|可选属性|Clamp 阈值，默认值为 `-1.0`；`-1.0` 表示不启用 Clamp，启用时必须大于 0。|FLOAT|—|
-|alpha|可选属性|SwiGLU 反向计算中的 alpha 系数，默认值为 `1.0`。|FLOAT|—|
-|bias|可选属性|SwiGLU 反向计算中的 bias 系数，默认值为 `0.0`。|FLOAT|—|
-|quant_mode|可选属性|量化模式，当前仅支持 `1`，表示动态 MX 量化。|INT64|—|
-|dst_type|可选属性|FP8 输出类型，`35` 表示 FLOAT8_E5M2，`36` 表示 FLOAT8_E4M3FN，默认值为 `36`。|INT64|—|
-|y1|输出|沿最后一维量化后的结果，shape 与 `x` 相同。|FLOAT8_E4M3FN、FLOAT8_E5M2|ND|
-|scale1|输出|沿最后一维的 E8M0 缩放因子，shape 为 `[T, ceil(2H/64), 2]`。|FLOAT8_E8M0|ND|
-|y2|输出|沿倒数第二维量化后的结果，shape 与 `x` 相同。|FLOAT8_E4M3FN、FLOAT8_E5M2|ND|
-|scale2|输出|沿倒数第二维的 E8M0 缩放因子；非 group 为 `[ceil(T/64), 2H, 2]`，group 为 `[floor(T/64)+G, 2H, 2]`。|FLOAT8_E8M0|ND|
-|grad_weight|可选输出|`weight` 的梯度，仅在同时传入 `weight` 和 `y_origin` 时输出，shape 和数据类型与 `weight` 相同。|FLOAT16、BFLOAT16、FLOAT|ND|
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| :--- | :--- | :--- | :--- | :--- |
+| gradY | 输入 | SwiGLU输出的反向梯度，shape为`[T, H]`。 | FLOAT16、BFLOAT16 | ND |
+| x | 输入 | SwiGLU前向输入，shape为`[T, 2H]`。 | FLOAT16、BFLOAT16 | ND |
+| weightOptional | 可选输入 | 每个token的权重，shape为`[T]`；仅group场景支持。 | FLOAT16、BFLOAT16、FLOAT | ND |
+| yOriginOptional | 可选输入 | SwiGLU前向输出的原始值，shape为`[T, H]`；与weight成对传入。 | FLOAT16、BFLOAT16 | ND |
+| groupIndexOptional | 可选输入 | group累计终点，shape为`[G]`，采用cumsum模式。 | INT64 | ND |
+| clampLimit | 属性 | Clamp阈值；`-1.0`表示不启用，启用时大于0。 | DOUBLE | - |
+| alpha | 属性 | SwiGLU反向计算中的alpha系数，必须大于0。 | DOUBLE | - |
+| bias | 属性 | SwiGLU反向计算中的bias系数。 | DOUBLE | - |
+| quantMode | 属性 | 量化模式，仅支持`1`。 | INT64 | - |
+| dstType | 属性 | FP8类型：`35`为FLOAT8_E5M2，`36`为FLOAT8_E4M3FN。 | INT64 | - |
+| y1Out | 输出 | -1轴量化结果，shape与x相同。 | FLOAT8_E4M3FN、FLOAT8_E5M2 | ND |
+| scale1Out | 输出 | -1轴E8M0缩放因子，shape为`[T, ceil(2H/64), 2]`。 | FLOAT8_E8M0 | ND |
+| y2Out | 输出 | -2轴量化结果，shape与x相同。 | FLOAT8_E4M3FN、FLOAT8_E5M2 | ND |
+| scale2Out | 输出 | -2轴E8M0缩放因子；非group为`[ceil(T/64), 2H, 2]`，group为`[floor(T/64)+G, 2H, 2]`。 | FLOAT8_E8M0 | ND |
+| gradWeightOutOptional | 可选输出 | weight梯度，仅与weight、yOrigin成对使用，shape和类型与weight相同。 | FLOAT16、BFLOAT16、FLOAT | ND |
 
 ## 约束说明
 
@@ -97,11 +95,11 @@ $$
 
 ## 调用说明
 
-|调用方式|调用样例|说明|
-|:---|:---|:---|
-|aclnn 调用|[test_aclnn_swiglu_backward_group_quant_with_dual_axis](./examples/arch35/test_aclnn_swiglu_backward_group_quant_with_dual_axis.cpp)|通过 [aclnnSwigluBackwardGroupQuantWithDualAxis](./docs/aclnnSwigluBackwardGroupQuantWithDualAxis.md) 接口调用算子。|
-|图模式调用|—|通过[算子 IR](./op_graph/swiglu_backward_group_quant_with_dual_axis_proto.h)定义算子图节点。|
-|PyTorch API|—|通过 [swiglu_backward_group_quant_with_dual_axis](./docs/torchapi_swiglu_backward_group_quant_with_dual_axis.md) 接口调用算子。|
+| 调用方式 | 调用样例 | 说明 |
+| :--- | :--- | :--- |
+| aclnn调用 | [test_aclnn_swiglu_backward_group_quant_with_dual_axis](./examples/arch35/test_aclnn_swiglu_backward_group_quant_with_dual_axis.cpp) | 通过[aclnnSwigluBackwardGroupQuantWithDualAxis](./docs/aclnnSwigluBackwardGroupQuantWithDualAxis.md)接口调用算子。 |
+| 图模式调用 | - | 通过[算子IR](./op_graph/swiglu_backward_group_quant_with_dual_axis_proto.h)定义算子图节点。 |
+| PyTorch API | - | 通过[swiglu_backward_group_quant_with_dual_axis](./docs/torchapi_swiglu_backward_group_quant_with_dual_axis.md)接口调用算子。 |
 
 ## 参考资源
 

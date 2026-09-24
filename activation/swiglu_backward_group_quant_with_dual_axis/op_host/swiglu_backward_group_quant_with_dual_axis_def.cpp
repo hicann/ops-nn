@@ -8,6 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+/*!
+ * \file swiglu_backward_group_quant_with_dual_axis_def.cpp
+ * \brief SwigluBackwardGroupQuantWithDualAxis operator definition
+ */
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -18,459 +22,121 @@ public:
     {
         this->Input("grad_y")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("x")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("weight")
             .ParamType(OPTIONAL)
-            .DataType({
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT,
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .DataTypeForBinQuery({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                  ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("y_origin")
             .ParamType(OPTIONAL)
-            .DataType({
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-                ge::DT_BF16,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("group_index")
             .ParamType(OPTIONAL)
-            .DataType({
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-                ge::DT_INT64,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
+            .DataType({ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Output("y1")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            });
+            .DataType({ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+                       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
+                       ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("scale1")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            });
+            .DataType({ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
+                       ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
+                       ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y2")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E4M3FN,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-                ge::DT_FLOAT8_E5M2,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            });
+            .DataType({ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+                       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
+                       ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("scale2")
             .ParamType(REQUIRED)
-            .DataType({
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-                ge::DT_FLOAT8_E8M0,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            });
+            .DataType({ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
+                       ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
+                       ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("grad_weight")
             .ParamType(OPTIONAL)
-            .DataType({
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-                ge::DT_FLOAT16,
-                ge::DT_BF16,
-                ge::DT_FLOAT,
-            })
-            .Format({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            })
-            .UnknownShapeFormat({
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-                ge::FORMAT_ND,
-            });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT,
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .DataTypeForBinQuery({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                  ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("clamp_limit").AttrType(OPTIONAL).Float(-1.0f);
         this->Attr("alpha").AttrType(OPTIONAL).Float(1.0f);
         this->Attr("bias").AttrType(OPTIONAL).Float(0.0f);
         this->Attr("quant_mode").AttrType(OPTIONAL).Int(1);
         this->Attr("dst_type").AttrType(OPTIONAL).Int(36);
 
-        OpAICoreConfig config;
-        config.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(false).DynamicShapeSupportFlag(true).ExtendCfgInfo(
-            "opFile.value", "swiglu_backward_group_quant_with_dual_axis");
-        this->AICore().AddConfig("ascend950", config);
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(false)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "swiglu_backward_group_quant_with_dual_axis");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 

@@ -23,74 +23,37 @@ constexpr size_t OUTPUT_SCALE1 = 1;
 constexpr size_t OUTPUT_Y2 = 2;
 constexpr size_t OUTPUT_SCALE2 = 3;
 constexpr size_t OUTPUT_GRAD_WEIGHT = 4;
-constexpr size_t ATTR_QUANT_MODE = 3;
 constexpr size_t ATTR_DST_TYPE = 4;
-constexpr int64_t QUANT_MX = 1;
 constexpr int64_t FP8_E5M2 = 35;
 constexpr int64_t FP8_E4M3FN = 36;
 constexpr int64_t UNKNOWN_DIM = -1;
 constexpr int64_t SCALE_PAIR = 2;
 constexpr int64_t SCALE_PACK = 64;
-constexpr int64_t SUPPORTED_RANK = 2;
+constexpr int64_t MIN_RANK = 2;
 } // namespace
 
 namespace ops {
-static ge::graphStatus CheckInputShapes(const gert::Shape* gradY, const gert::Shape* x)
-{
-    const int64_t rank = x->GetDimNum();
-    if (rank != SUPPORTED_RANK || gradY->GetDimNum() != SUPPORTED_RANK) {
-        return ge::GRAPH_FAILED;
-    }
-    for (int64_t i = 0; i < rank - 1; ++i) {
-        if (gradY->GetDim(i) != x->GetDim(i)) {
-            return ge::GRAPH_FAILED;
-        }
-    }
-    const int64_t width = x->GetDim(rank - 1);
-    const int64_t hidden = gradY->GetDim(rank - 1);
-    if (width != UNKNOWN_DIM && (width <= 0 || width % SCALE_PACK != 0)) {
-        return ge::GRAPH_FAILED;
-    }
-    if (width != UNKNOWN_DIM && hidden != UNKNOWN_DIM && width != SCALE_PAIR * hidden) {
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
 
 static ge::graphStatus InferShape(gert::InferShapeContext* context)
 {
-    auto gradY = context->GetInputShape(INPUT_GRAD_Y);
     auto x = context->GetInputShape(INPUT_X);
     auto y1 = context->GetOutputShape(OUTPUT_Y1);
     auto scale1 = context->GetOutputShape(OUTPUT_SCALE1);
     auto y2 = context->GetOutputShape(OUTPUT_Y2);
     auto scale2 = context->GetOutputShape(OUTPUT_SCALE2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradY);
     OP_CHECK_NULL_WITH_CONTEXT(context, x);
     OP_CHECK_NULL_WITH_CONTEXT(context, y1);
     OP_CHECK_NULL_WITH_CONTEXT(context, scale1);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2);
     OP_CHECK_NULL_WITH_CONTEXT(context, scale2);
-    if (CheckInputShapes(gradY, x) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-
-    auto attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    auto quantMode = attrs->GetAttrPointer<int64_t>(ATTR_QUANT_MODE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, quantMode);
-    if (*quantMode != QUANT_MX) {
+    const int64_t rank = x->GetDimNum();
+    // InferShape needs at least two axes to derive the MX output dimensions.
+    // Data-shape constraints are checked once by the tiling function.
+    if (rank < MIN_RANK) {
         return ge::GRAPH_FAILED;
     }
 
     auto weight = context->GetOptionalInputShape(INPUT_WEIGHT);
-    auto yOrigin = context->GetOptionalInputShape(INPUT_Y_ORIGIN);
-    if ((weight == nullptr) != (yOrigin == nullptr)) {
-        return ge::GRAPH_FAILED;
-    }
-    if (yOrigin != nullptr && *yOrigin != *gradY) {
-        return ge::GRAPH_FAILED;
-    }
     auto gradWeight = context->GetOutputShape(OUTPUT_GRAD_WEIGHT);
     if (weight != nullptr) {
         OP_CHECK_NULL_WITH_CONTEXT(context, gradWeight);
@@ -99,23 +62,24 @@ static ge::graphStatus InferShape(gert::InferShapeContext* context)
 
     *y1 = *x;
     *y2 = *x;
-    const int64_t rank = x->GetDimNum();
     scale1->SetDimNum(rank + 1);
     for (int64_t i = 0; i < rank - 1; ++i) {
         scale1->SetDim(i, x->GetDim(i));
     }
     const int64_t width = x->GetDim(rank - 1);
-    scale1->SetDim(rank - 1, width == UNKNOWN_DIM ? UNKNOWN_DIM : Ops::Base::CeilDiv(width, SCALE_PACK));
+    scale1->SetDim(rank - 1, width > 0 ? Ops::Base::CeilDiv(width, SCALE_PACK) : UNKNOWN_DIM);
     scale1->SetDim(rank, SCALE_PAIR);
 
     auto groupIndex = context->GetOptionalInputShape(INPUT_GROUP_INDEX);
-    if (groupIndex != nullptr && (groupIndex->GetDimNum() != 1 || groupIndex->GetDim(0) <= 0)) {
-        return ge::GRAPH_FAILED;
+    int64_t groupCount = UNKNOWN_DIM;
+    if (groupIndex != nullptr && groupIndex->GetDimNum() == 1) {
+        const int64_t dim = groupIndex->GetDim(0);
+        groupCount = dim > 0 ? dim : UNKNOWN_DIM;
     }
     if (groupIndex != nullptr) {
         int64_t rows = 1;
         for (int64_t i = 0; i < rank - 1; ++i) {
-            if (x->GetDim(i) == UNKNOWN_DIM) {
+            if (x->GetDim(i) <= 0) {
                 rows = UNKNOWN_DIM;
                 break;
             }
@@ -123,7 +87,9 @@ static ge::graphStatus InferShape(gert::InferShapeContext* context)
         }
         // Group场景，scale2固定为三维
         scale2->SetDimNum(3);
-        scale2->SetDim(0, rows == UNKNOWN_DIM ? UNKNOWN_DIM : rows / SCALE_PACK + groupIndex->GetDim(0));
+        const int64_t scale2Rows = rows == UNKNOWN_DIM || groupCount == UNKNOWN_DIM ? UNKNOWN_DIM :
+                                                                                      rows / SCALE_PACK + groupCount;
+        scale2->SetDim(0, scale2Rows);
         scale2->SetDim(1, width);
         scale2->SetDim(2, SCALE_PAIR);
     } else {
@@ -132,7 +98,7 @@ static ge::graphStatus InferShape(gert::InferShapeContext* context)
             scale2->SetDim(i, x->GetDim(i));
         }
         const int64_t dimM = x->GetDim(rank - 2);
-        scale2->SetDim(rank - 2, dimM == UNKNOWN_DIM ? UNKNOWN_DIM : Ops::Base::CeilDiv(dimM, SCALE_PACK));
+        scale2->SetDim(rank - 2, dimM > 0 ? Ops::Base::CeilDiv(dimM, SCALE_PACK) : UNKNOWN_DIM);
         scale2->SetDim(rank - 1, width);
         scale2->SetDim(rank, SCALE_PAIR);
     }
