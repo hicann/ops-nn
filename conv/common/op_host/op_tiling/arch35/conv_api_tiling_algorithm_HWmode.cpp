@@ -167,7 +167,7 @@ void ConvTilingAlgorithmHWmode::GetKhKwL1Tiling()
     CalcCommFactor(tilingIns_->shapeInfo.singlekW, tilingIns_->shapeInfo.singlekW, this->l1TilingRange.kwL1Range);
     CalcCommFactor(tilingIns_->shapeInfo.singlekH, tilingIns_->shapeInfo.singlekH, this->l1TilingRange.khL1Range);
     this->l1Params.kwL1 = IterKwL1();
-    this->l1Params.khL1 = IterKhL1(this->l1Params.kwL1);
+    this->l1Params.khL1 = this->l1Params.kwL1 == 0 ? 0 : IterKhL1(this->l1Params.kwL1);
     this->l1Flags.isDMAKernelSplit = tilingIns_->isDmaFlag &&
                                      (this->l1Params.kwL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekW) ||
                                       this->l1Params.khL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH));
@@ -316,6 +316,14 @@ uint64_t ConvTilingAlgorithmHWmode::CalcL1SizeForL0Tiling(uint64_t currHoL0, uin
         aL1Size = AlignB(hiL1 * wiL1, C0_SIZE / (this->fMapDTypeSize * C04_CIN_SIZE)) * C04_CIN_SIZE *
                   this->fMapDTypeSize;
         bL1Size = AlignB(tmpKhL1 * tmpKwL1 * C04_CIN_SIZE, tilingIns_->cubeInfo.k0) * currNL0 * this->weightDTypeSize;
+    }
+    // In khkw split mode, InitPingPong has already fixed the AL1/BL1 ping-pong state (the big-kernel template keeps
+    // it on), and the khkw split search checks the L1 size with these double buffers via CalcCurL1Size. The L0 tiling
+    // decision must count them in as well, otherwise hoL0/woL0/nL0 may be oversized and even the minimum kwL1 fails
+    // the later search. For other modes the ping-pong state is still undetermined at this stage, so keep it out.
+    if (tilingIns_->isKernelSplit) {
+        aL1Size *= this->dbValue.pbAL1;
+        bL1Size *= this->dbValue.pbBL1;
     }
     uint64_t usedL1Size = aL1Size + bL1Size + biasSize + scaleSize;
     return usedL1Size;

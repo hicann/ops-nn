@@ -188,6 +188,7 @@ public:
             .ExtendCfgInfo("jitCompile.flag", "false");
 
         SetAscendConfig(aicoreConfig95, "ascend950");
+        this->AICore().AddConfig("ascend350", aicoreConfig95);
     }
 
 private:

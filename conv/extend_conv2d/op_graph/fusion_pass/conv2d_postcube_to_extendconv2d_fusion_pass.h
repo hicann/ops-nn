@@ -39,7 +39,8 @@ const ge::AscendString SCALE_1 = "scale1";
 const ge::AscendString RELU_WEIGHT_0 = "relu_weight0";
 const ge::AscendString RELU_WEIGHT_1 = "relu_weight1";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
+                                                         {"Ascend350", NpuArch::DAV_3510}};
 const std::string FUSION_NAME = "Conv2DPostCubeToExtendConv2DFusionPass";
 
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_0_INDEX = 4;

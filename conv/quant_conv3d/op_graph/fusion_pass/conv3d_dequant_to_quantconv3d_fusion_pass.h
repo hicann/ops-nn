@@ -31,6 +31,7 @@ const ge::AscendString RINT = "rint";
 
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
     {"Ascend950", NpuArch::DAV_3510},
+    {"Ascend350", NpuArch::DAV_3510},
 };
 const std::string FUSION_NAME = "Conv3DDequantToQuantConv3DFusionPass";
 

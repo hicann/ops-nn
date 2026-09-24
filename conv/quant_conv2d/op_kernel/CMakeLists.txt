@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC quant_conv2d.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

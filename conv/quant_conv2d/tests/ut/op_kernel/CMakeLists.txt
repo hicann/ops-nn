@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(quant_conv2d "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_FILTER=half -DDTYPE_Y=half" conv2d_v2)
+    AddOpTestCase(quant_conv2d "ascend950pr_9599;ascend350_355e" "-DDTYPE_X=half -DDTYPE_FILTER=half -DDTYPE_Y=half" conv2d_v2)
 endif()

@@ -16,7 +16,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC conv3d_v2.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

@@ -56,7 +56,7 @@ def simulate_hf32_precision(data, short_soc_version=None):
 
 def is_ascend950(short_soc_version):
     """Check if the target is Ascend 950PR/950DT"""
-    return short_soc_version == "Ascend950"
+    return short_soc_version in ("Ascend950", "Ascend350")
 
 
 def process_formats(x, filter, input_formats):

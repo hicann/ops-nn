@@ -130,7 +130,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
 
 def is_ascend950(short_soc_version):
     """Check if target SoC is Ascend 950PR/950DT."""
-    return short_soc_version == "Ascend950"
+    return short_soc_version in ("Ascend950", "Ascend350")
 
 
 def process_input_format(x, filter, input_formats):

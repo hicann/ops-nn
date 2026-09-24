@@ -179,7 +179,7 @@ def to_NDC1HWC0(data, ori_format, target_shape):
 
 def is_ascend950(short_soc_version):
     """Check if the target is Ascend 950PR/950DT"""
-    return short_soc_version == "Ascend950"
+    return short_soc_version in ("Ascend950", "Ascend350")
 
 
 def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
