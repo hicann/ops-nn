@@ -367,4 +367,160 @@ REG_OP(Mul)
  */
 REG_OP(Rsqrt).INPUT(x, TensorType::UnaryDataType()).OUTPUT(y, TensorType::UnaryDataType()).OP_END_FACTORY_REG(Rsqrt);
 
+/**
+* @brief Computes the power of "x1" to "x2". Support broadcasting operations.
+
+* @par Inputs:
+* Two inputs, including:
+* @li x1: A ND Tensor. Must be one of the following types:
+*     bfloat16, float16, float32, int32, int64, int8, int16, uint8, double, complex64, complex128.
+* @li x2: A ND Tensor of the same dtype as "x1". \n
+
+* @par Outputs:
+* y: A ND Tensor. Has the same dtype as "x1". \n
+
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator Pow.
+*/
+REG_OP(Pow)
+    .INPUT(x1, "T1")
+    .INPUT(x2, "T2")
+    .OUTPUT(y, "T3")
+    .DATATYPE(T1, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT64, DT_INT8, DT_INT16, DT_UINT8, DT_DOUBLE,
+                              DT_COMPLEX64, DT_COMPLEX128}))
+    .DATATYPE(T2, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT64, DT_INT8, DT_INT16, DT_UINT8, DT_DOUBLE,
+                              DT_COMPLEX64, DT_COMPLEX128}))
+    .DATATYPE(T3, Promote({"T1", "T2"}))
+    .OP_END_FACTORY_REG(Pow);
+
+/**
+*@brief Computes square of "x" element-wise.
+
+*@par Inputs:
+*One input:
+* x: A ND Tensor. Must be one of the following types: float16, bfloat16, float32, float64, int32, int64, complex64,
+*    complex128.
+
+*@par Outputs:
+*y: An ND or 5HD tensor. Support 1D ~ 8D. Shape and dtype of output, should be same shape and type as input.
+
+*@par Third-party framework compatibility
+* Compatible with TensorFlow operator Square.
+*/
+REG_OP(Square)
+    .INPUT(x, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT32, DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .OUTPUT(y, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT32, DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .OP_END_FACTORY_REG(Square);
+
+/**
+*@brief Computes square root of x element-wise.
+
+*@par Inputs:
+*  x: A ND Tensor. Must be one of the following types:bfloat16 float16, float32, complex128, complex64, float64. \n
+
+*@par Outputs:
+*y: A ND Tensor. Has the same dtype as "x".
+*@par Third-party framework compatibility
+*Compatible with the TensorFlow operator Sqrt.
+*/
+REG_OP(Sqrt)
+    .INPUT(x, TensorType{(DT_BF16, DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128)})
+    .OUTPUT(y, TensorType{(DT_BF16, DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128)})
+    .OP_END_FACTORY_REG(Sqrt);
+
+/**
+*@brief Returns the max of "x1" and "x2" (i.e. x1 > x2 ? x1: x2) element-wise. Support broadcasting operations. \n
+
+*@par Inputs:
+*Two inputs, including:
+* @li x1: A ND Tensor. Must be one of the following types: float16, float32, double, int32, int64, bfloat16, int8,
+uint8.
+* @li x2: A ND Tensor of the same dtype as "x1". \n
+
+*@par Outputs:
+*y: A ND Tensor. Has the same dtype as "x1". \n
+
+*@par Third-party framework compatibility
+*Compatible with the TensorFlow operator Maximum.
+*/
+REG_OP(Maximum)
+    .INPUT(x1, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_BF16, DT_INT8, DT_UINT8}))
+    .INPUT(x2, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_BF16, DT_INT8, DT_UINT8}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_BF16, DT_INT8, DT_UINT8}))
+    .OP_END_FACTORY_REG(Maximum);
+
+/**
+* @brief Returns the min of "x1" and "x2" (i.e. x1 < x2 ? x1: x2) element-wise. Support broadcasting operations. \n
+
+* @par Inputs:
+* Two inputs, include:
+* @li x1: A ND Tensor. Must be one of the following types: bfloat16, float32, float16, double, int32, int64, int8,
+uint8.
+* @li x2: A ND Tensor of the same dtype as "x1". \n
+
+* @par Outputs:
+* y: A ND Tensor of the same dtype as "x1". \n
+
+* @par Third-party framework compatibility:
+* Compatible with the TensorFlow operator Minimum.
+*/
+REG_OP(Minimum)
+    .INPUT(x1, TensorType({DT_BF16, DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT32, DT_INT64, DT_INT8, DT_UINT8}))
+    .INPUT(x2, TensorType({DT_BF16, DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT32, DT_INT64, DT_INT8, DT_UINT8}))
+    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT32, DT_INT64, DT_INT8, DT_UINT8}))
+    .OP_END_FACTORY_REG(Minimum);
+
+/**
+* @brief Returns x1/x2 element-wise for real types. Support broadcasting operations.
+
+* @par Inputs:
+* Two inputs, including:
+* @li x1: A ND Tensor.
+* Must be one of the following types: bfloat16, float16, float32, double, uint16,
+* int8, uint8, int16, int32, int64, complex64, complex128, bool.
+* @li x2: A ND Tensor.
+* Must be one of the following types: bfloat16, float16, float32, double, uint16,
+* int8, uint8, int16, int32, int64, complex64, complex128, bool. \n
+
+* @par Outputs:
+* y: A ND Tensor. Has the same dtype and format as input "x1" if the type of "x1" is not bool.
+     If the type of "x1" is bool, y is float type. \n
+
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator RealDiv.
+*/
+REG_OP(RealDiv)
+    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32,
+                           DT_INT64, DT_BOOL, DT_COMPLEX64, DT_COMPLEX128}))
+    .INPUT(x2, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32,
+                           DT_INT64, DT_BOOL, DT_COMPLEX64, DT_COMPLEX128}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32,
+                           DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .OP_END_FACTORY_REG(RealDiv);
+
+/**
+* @brief Returns x1/x2 element-wise. Support broadcasting operations.
+
+* @par Inputs:
+* Two inputs, including:
+* @li x1: A ND Tensor. Must be one of the following types:
+*    float16, float32, int32, int8, uint8, float64, int64, uint16, int16,
+*    complex32, complex64, complex128, bfloat16, the format can be [NCHW,NHWC,ND].
+* @li x2: A ND Tensor. Has the same dtype and format as input "x1". \n
+
+* @par Outputs:
+* y: A ND Tensor. Has the same dtype and format as input "x1". \n
+
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator Div.
+*/
+REG_OP(Div)
+    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT32, DT_DOUBLE, DT_INT64, DT_UINT16, DT_INT16,
+                           DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT32, DT_DOUBLE, DT_INT64, DT_UINT16, DT_INT16,
+                           DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT32, DT_DOUBLE, DT_INT64, DT_UINT16, DT_INT16,
+                           DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .OP_END_FACTORY_REG(Div);
+
 } // namespace ge
