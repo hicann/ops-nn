@@ -146,7 +146,7 @@ aclnnStatus aclnnRmsNormGradQuant(
       <td>scalesX（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入梯度量化缩放因子，对应公式中的scales_x。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[1]，维度为1。</li><li>dtype与dy相同或为FLOAT32。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[1]，维度为1。</li><li>dtype与dy相同或为FLOAT32。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnRmsNormGradQuant(
       <td>offsetXOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入梯度量化零点，对应公式中的offset_x。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[1]，维度为1。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>支持空指针传入。</li><li>不为空时，shape为[1]，维度为1。</li></ul></td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>
