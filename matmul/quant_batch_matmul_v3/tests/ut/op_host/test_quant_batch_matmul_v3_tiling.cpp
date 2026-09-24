@@ -749,13 +749,13 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
 
         size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
-        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) &&
-                                          actualTilingDataSize ==
-                                              sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
+        bool useWithoutBatchTilingData = tensorApiCapable &&
+                                         actualTilingDataSize ==
+                                             sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
         bool useBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
         bool useStreamKBasicApiTilingData = actualTilingDataSize ==
                                             sizeof(DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData);
-        if (isMxWithoutBatchTilingData) {
+        if (useWithoutBatchTilingData) {
             DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData&
                 actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
                     tilingContext->GetRawTilingData()->GetData());
@@ -962,6 +962,141 @@ static BaseBlockRes ComputeStreamKBaseBlock(bool isMxPerGroup, bool transA, bool
     BaseBlockCalculator calculator(inputParams, compileInfo);
     EXPECT_TRUE(calculator.Compute(BaseBlockMode::STREAMK));
     return calculator.GetOutput();
+}
+
+static BaseBlockRes ComputeCubeBasicBaseBlock(bool transA, bool transB, uint64_t mSize, uint64_t nSize, uint64_t kSize)
+{
+    QuantBatchMatmulInfo inputParams{};
+    inputParams.opName = "QuantBatchMatmulV3CubeBasicBaseBlockUt";
+    inputParams.mSize = mSize;
+    inputParams.nSize = nSize;
+    inputParams.kSize = kSize;
+    inputParams.batchC = 1UL;
+    inputParams.transA = transA;
+    inputParams.transB = transB;
+    inputParams.aDtype = ge::DT_INT8;
+    inputParams.bDtype = ge::DT_INT8;
+    inputParams.isPerChannel = true;
+
+    QuantBatchMatmulV3CompileInfo compileInfo{};
+    compileInfo.aicNum = 32U;
+    compileInfo.l0aSize = 65536UL;
+    compileInfo.l0bSize = 65536UL;
+    compileInfo.npuArch = NpuArch::DAV_3510;
+
+    BaseBlockCalculator calculator(inputParams, compileInfo);
+    EXPECT_TRUE(calculator.Compute(BaseBlockMode::CUBE_BASIC));
+    return calculator.GetOutput();
+}
+
+static BaseBlockRes ComputeMxBaseBlock(bool transA, bool transB, uint64_t mSize, uint64_t nSize, uint64_t kSize)
+{
+    QuantBatchMatmulInfo inputParams{};
+    inputParams.opName = "QuantBatchMatmulV3MxBaseBlockUt";
+    inputParams.mSize = mSize;
+    inputParams.nSize = nSize;
+    inputParams.kSize = kSize;
+    inputParams.batchC = 1UL;
+    inputParams.transA = transA;
+    inputParams.transB = transB;
+    inputParams.aDtype = ge::DT_FLOAT8_E4M3FN;
+    inputParams.bDtype = ge::DT_FLOAT8_E4M3FN;
+    inputParams.isMxPerGroup = true;
+
+    QuantBatchMatmulV3CompileInfo compileInfo{};
+    compileInfo.aicNum = 32U;
+    compileInfo.l0aSize = 65536UL;
+    compileInfo.l0bSize = 65536UL;
+    compileInfo.npuArch = NpuArch::DAV_3510;
+
+    BaseBlockCalculator calculator(inputParams, compileInfo);
+    EXPECT_TRUE(calculator.Compute(BaseBlockMode::DEFAULT));
+    return calculator.GetOutput();
+}
+
+TEST(QuantBatchMatmulV3CubeBasicBaseBlock, RejectsZeroShapeBeforeBaseBlockScoring)
+{
+    QuantBatchMatmulInfo inputParams{};
+    inputParams.opName = "QuantBatchMatmulV3CubeBasicZeroShapeUt";
+    inputParams.mSize = 0UL;
+    inputParams.nSize = 128UL;
+    inputParams.kSize = 128UL;
+    inputParams.batchC = 1UL;
+    inputParams.aDtype = ge::DT_INT8;
+    inputParams.bDtype = ge::DT_INT8;
+
+    QuantBatchMatmulV3CompileInfo compileInfo{};
+    compileInfo.aicNum = 32U;
+    compileInfo.l0aSize = 65536UL;
+    compileInfo.l0bSize = 65536UL;
+    compileInfo.npuArch = NpuArch::DAV_3510;
+
+    BaseBlockCalculator calculator(inputParams, compileInfo);
+    EXPECT_FALSE(calculator.Compute(BaseBlockMode::CUBE_BASIC));
+}
+
+TEST(QuantBatchMatmulV3CubeBasicBaseBlock, SearchesBeyondThreeRoundsWhenTailCoreUseImproves)
+{
+    // 15 x 7 logical blocks take four rounds and leave nine blocks in the final round.  A 224-wide M base changes
+    // the grid to 18 x 7 without adding a round, allowing 30 rather than 27 tail-split cores to do useful work.
+    const auto result = ComputeCubeBasicBaseBlock(false, false, 3840UL, 1792UL, 4096UL);
+
+    EXPECT_EQ(result.baseM, 224UL);
+    EXPECT_EQ(result.baseN, 256UL);
+}
+
+TEST(QuantBatchMatmulV3CubeBasicBaseBlock, KeepsExactTailSplitWhenMoreLogicalBlocksDoNotAddCoreUse)
+{
+    // The 7 x 16 grid already splits its 16-block tail exactly across 32 cores.  Reducing baseM would only replace
+    // those split tiles with more full tiles, so the memory/compute tie-breaker must retain the original base.
+    const auto result = ComputeCubeBasicBaseBlock(false, false, 1792UL, 4096UL, 1024UL);
+
+    EXPECT_EQ(result.baseM, 256UL);
+    EXPECT_EQ(result.baseN, 256UL);
+}
+
+TEST(QuantBatchMatmulV3CubeBasicBaseBlock, RejectsMarginalMultiRoundGainThatLosesNAlignment)
+{
+    // Changing N from 256 to 240 fills the last wave, but its geometry-only gain is just 6.67%.  Beyond three waves
+    // that is insufficient headroom for the unmodeled N-path and L1-pipeline costs of losing 128-wide alignment.
+    const auto result = ComputeCubeBasicBaseBlock(false, true, 4608UL, 3840UL, 4096UL);
+
+    EXPECT_EQ(result.baseM, 256UL);
+    EXPECT_EQ(result.baseN, 256UL);
+}
+
+TEST(QuantBatchMatmulV3MxBaseBlock, ScoresOversizedSearchPointAsAppliedBlock)
+{
+    // The L2-aligned virtual candidate is 192 x 128, but N=65 makes the applied block 192 x 96.  Scoring the
+    // virtual N=128 would spuriously replace the original 256 x 96 block even though the applied geometry does not
+    // improve final-wave utilization.
+    const auto result = ComputeMxBaseBlock(false, false, 12288UL, 65UL, 8192UL);
+
+    EXPECT_EQ(result.baseM, 256UL);
+    EXPECT_EQ(result.baseN, 96UL);
+}
+
+TEST(QuantBatchMatmulV3MxBaseBlock, KeepsOriginForSmallKUnalignedNCandidate)
+{
+    // The same 160 x 224 load-balance candidate is legal for large K, while the common small-K alignment rule keeps
+    // the original 256 x 256 block when N-path fixed costs dominate.
+    const auto smallKResult = ComputeMxBaseBlock(false, true, 320UL, 7168UL, 1024UL);
+    const auto largeKResult = ComputeMxBaseBlock(false, true, 320UL, 7168UL, 8192UL);
+
+    EXPECT_EQ(smallKResult.baseM, 256UL);
+    EXPECT_EQ(smallKResult.baseN, 256UL);
+    EXPECT_EQ(largeKResult.baseM, 160UL);
+    EXPECT_EQ(largeKResult.baseN, 224UL);
+}
+
+TEST(QuantBatchMatmulV3MxBaseBlock, RejectsMarginalExtendedSearchGainThatLosesNAlignment)
+{
+    // The original grid needs nine waves.  N=240 fills the final wave but improves modeled balance by only 6.67%,
+    // so the common extended-search guard retains the 128-aligned N base.
+    const auto result = ComputeMxBaseBlock(false, true, 4608UL, 3840UL, 4096UL);
+
+    EXPECT_EQ(result.baseM, 256UL);
+    EXPECT_EQ(result.baseN, 256UL);
 }
 
 TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, CubeStreamKAlignsEveryTransposeTo256Bytes)

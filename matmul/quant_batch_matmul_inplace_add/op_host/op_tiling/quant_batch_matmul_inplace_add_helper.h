@@ -39,6 +39,7 @@ public:
 protected:
     using BaseT::BaseT;
 
+    bool IsTensorApiEnabled() const override { return true; }
     ge::graphStatus GetShapeAttrsInfo() override;
     bool AnalyzeAttrs() override;
     bool AnalyzeDtype() override;
@@ -58,7 +59,9 @@ protected:
     template <typename TilingData>
     void ResetInplaceTilingData(TilingData& tilingData);
     void CopyV3BasicApiTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src,
-                                  QMMIA::QuantBatchMatmulInplaceAddTilingData& dst);
+                                  QMMIA::QbmmiaTilingData& dst);
+    void CopyV3WithoutBatchTilingData(const DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData& src,
+                                      QMMIA::QbmmiaWithoutBatchTilingData& dst);
 };
 
 template <typename BaseT>
@@ -70,7 +73,7 @@ const char* QuantBatchMatmulInplaceAddHelper<BaseT>::GetDefaultOpName() const
 template <typename BaseT>
 ge::graphStatus QuantBatchMatmulInplaceAddHelper<BaseT>::GetShapeAttrsInfo()
 {
-    this->tilingDataSize_ = sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+    this->tilingDataSize_ = sizeof(QMMIA::QbmmiaTilingData);
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
@@ -414,13 +417,24 @@ void QuantBatchMatmulInplaceAddHelper<BaseT>::ResetInplaceTilingData(TilingData&
 
 template <typename BaseT>
 void QuantBatchMatmulInplaceAddHelper<BaseT>::CopyV3BasicApiTilingData(
-    const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src, QMMIA::QuantBatchMatmulInplaceAddTilingData& dst)
+    const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src, QMMIA::QbmmiaTilingData& dst)
 {
     static_assert(
-        sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData) == sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData),
+        sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData) == sizeof(QMMIA::QbmmiaTilingData),
         "QuantBatchMatmulInplaceAdd basic-api tiling data must stay layout-compatible with QuantBatchMatmulV3.");
     OP_TILING_CHECK(memcpy_s(&dst, sizeof(dst), &src, sizeof(src)) != EOK,
                     CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to copy basic-api tiling data"), return);
+}
+
+template <typename BaseT>
+void QuantBatchMatmulInplaceAddHelper<BaseT>::CopyV3WithoutBatchTilingData(
+    const DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData& src, QMMIA::QbmmiaWithoutBatchTilingData& dst)
+{
+    static_assert(sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData) == sizeof(dst),
+                  "QuantBatchMatmulInplaceAdd without-batch tiling data must stay layout-compatible with "
+                  "QuantBatchMatmulV3.");
+    OP_TILING_CHECK(memcpy_s(&dst, sizeof(dst), &src, sizeof(src)) != EOK,
+                    CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to copy without-batch tiling data"), return);
 }
 
 } // namespace optiling

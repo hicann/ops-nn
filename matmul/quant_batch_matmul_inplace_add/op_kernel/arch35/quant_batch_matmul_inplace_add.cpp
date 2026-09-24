@@ -12,12 +12,6 @@
  * \file quant_batch_matmul_inplace_add.cpp
  * \brief
  */
-#if defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
-#define IS_BLAZE true
-#else
-#define IS_BLAZE false
-#endif
-
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -41,23 +35,17 @@
 #define QBMMIA_IS_HIF8 false
 #endif
 
-#include "lib/matmul_intf.h"
+#include "tensor_api/tensor.h"
 #if QBMMIA_IS_HIF8
-#include "qbmmia_cube_basic_api_cmct.h"
+#include "qbmmia_cube_without_batch_tensor_api_blaze.h"
 #endif
 #if QBMMIA_IS_MX
-#if IS_BLAZE
-#include "qbmmia_mx_tensor_api_blaze.h"
 #include "qbmmia_mx_without_batch_tensor_api_blaze.h"
-#else
-#include "qbmmia_mx_basic_api_cmct.h"
-#endif
 #endif
 
 using namespace AscendC;
-using namespace matmul;
 
-#if IS_BLAZE && QBMMIA_IS_MX
+#if QBMMIA_IS_MX
 #define QBMMIA_MX_WITHOUT_BATCH_DISPATCH(aLayout, bLayout, fullLoadMode)                                           \
     QbmmiaMxWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, asc::te::nd_ext_layout_ptn, \
                                         fullLoadMode>(x1, x2, x2_scale, x1_scale, y, &tilingData)
@@ -76,49 +64,15 @@ using namespace matmul;
     } while (0)
 #endif
 
-#if IS_BLAZE && QBMMIA_IS_MX
-#define QBMMIA_MX_BLAZE_DISPATCH(aLayout, bLayout, fullLoadMode)                                                      \
-    QbmmiaMxTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, asc::te::nd_ext_layout_ptn, fullLoadMode>( \
-        x1, x2, x2_scale, x1_scale, y, &tilingData)
-
-#define QBMMIA_MX_BLAZE_LAYOUT_DISPATCH(fullLoadMode)                                                       \
-    do {                                                                                                    \
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                 \
-            QBMMIA_MX_BLAZE_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                          \
-            QBMMIA_MX_BLAZE_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                          \
-            QBMMIA_MX_BLAZE_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                          \
-            QBMMIA_MX_BLAZE_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
-        }                                                                                                   \
-    } while (0)
-#endif
-
-#if QBMMIA_IS_MX && !IS_BLAZE
-#define QBMMIA_MX_DISPATCH(aLayout, bLayout, fullLoadMode)                                                   \
-    QbmmiaMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, Cmct::Gemm::layout::RowMajorAlign, \
-                           fullLoadMode>(x1, x2, x2_scale, x1_scale, y, &tilingData)
-
-#define QBMMIA_MX_CMCT_LAYOUT_DISPATCH(fullLoadMode)                                                            \
-    do {                                                                                                        \
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                     \
-            QBMMIA_MX_DISPATCH(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, fullLoadMode);       \
-        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                              \
-            QBMMIA_MX_DISPATCH(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor, fullLoadMode);    \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                              \
-            QBMMIA_MX_DISPATCH(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor, fullLoadMode);    \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                              \
-            QBMMIA_MX_DISPATCH(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor, fullLoadMode); \
-        }                                                                                                       \
-    } while (0)
-#endif
-
 #if QBMMIA_IS_HIF8
-#define QBMMIA_CUBE_DISPATCH(aLayout, bLayout, fullLoadMode)                                                 \
-    QbmmiaCubeBasicApiKernel<DTYPE_X1, DTYPE_X2, float, DTYPE_Y, float, aLayout, bLayout,                    \
-                             Cmct::Gemm::layout::RowMajorAlign, fullLoadMode>(x1, x2, x2_scale, x1_scale, y, \
-                                                                              &tilingData)
+#define QBMMIA_CUBE_WITHOUT_BATCH_LAYOUT_DISPATCH(fullLoadMode)                                              \
+    do {                                                                                                     \
+        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                                  \
+            QbmmiaCubeWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, asc::te::dn_ext_layout_ptn,   \
+                                                  asc::te::nd_ext_layout_ptn, asc::te::nd_ext_layout_ptn,    \
+                                                  fullLoadMode>(x1, x2, x2_scale, x1_scale, y, &tilingData); \
+        }                                                                                                    \
+    } while (0)
 #endif
 
 template <int TPL_ATRANS, int TPL_BTRANS, int TPL_KERNEL_TYPE>
@@ -126,45 +80,22 @@ __global__ __aicore__ void quant_batch_matmul_inplace_add(GM_ADDR x1, GM_ADDR x2
                                                           GM_ADDR x1_scale, GM_ADDR y, GM_ADDR workspace,
                                                           GM_ADDR tiling)
 {
-    TPipe tPipe;
     REGISTER_NONE_TILING;
-#if QBMMIA_IS_MX && IS_BLAZE
+#if QBMMIA_IS_MX || QBMMIA_IS_HIF8
     if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData, tilingData,
-                                    tiling);
+        GET_TILING_DATA_WITH_STRUCT(QMMIA::QbmmiaWithoutBatchTilingData, tilingData, tiling);
+#if QBMMIA_IS_MX
         QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(0);
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData, tilingData,
-                                    tiling);
-        QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(Blaze::Gemm::A_FULL_LOAD_MODE);
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        QBMMIA_MX_BLAZE_LAYOUT_DISPATCH(0);
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        QBMMIA_MX_BLAZE_LAYOUT_DISPATCH(Blaze::Gemm::A_FULL_LOAD_MODE);
-    }
-#elif QBMMIA_IS_MX
-    if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        QBMMIA_MX_CMCT_LAYOUT_DISPATCH(0);
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        QBMMIA_MX_CMCT_LAYOUT_DISPATCH(Cmct::Gemm::A_FULL_LOAD_MODE);
-    }
+#else
+        QBMMIA_CUBE_WITHOUT_BATCH_LAYOUT_DISPATCH(0);
 #endif
-#if QBMMIA_IS_HIF8
-    if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-            QBMMIA_CUBE_DISPATCH(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor, 0);
-        }
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
-        GET_TILING_DATA_WITH_STRUCT(QMMIA::QuantBatchMatmulInplaceAddTilingData, tilingData, tiling);
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-            QBMMIA_CUBE_DISPATCH(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                 Cmct::Gemm::A_FULL_LOAD_MODE);
-        }
+    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(QMMIA::QbmmiaWithoutBatchTilingData, tilingData, tiling);
+#if QBMMIA_IS_MX
+        QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(Blaze::Gemm::A_FULL_LOAD_MODE);
+#else
+        QBMMIA_CUBE_WITHOUT_BATCH_LAYOUT_DISPATCH(Blaze::Gemm::A_FULL_LOAD_MODE);
+#endif
     }
 #endif
 }

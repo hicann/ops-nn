@@ -10,14 +10,16 @@
 
 /* !
  * \file qbmm_cube_tensor_api_blaze.h
- * \brief Blaze tensor API entry for quant batch matmul cube kernels (ND / WeightNz)
+ * \brief Blaze tensor API entries for quant batch matmul cube kernels with and without batch (ND / WeightNz).
  */
 #pragma once
 #include "quant_batch_matmul_v3_tiling_data.h"
 #include "blaze/gemm/block/block_scheduler_qbmm.h"
 #include "blaze/epilogue/block/block_epilogue_empty.h"
 #include "blaze/gemm/block/block_mmad_a8w8_fixpipe_quant.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/kernel/kernel_qbmm_cube.h"
+#include "blaze/gemm/kernel/kernel_qbmm_cube_without_batch.h"
 
 template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
           class cLayout, uint64_t FULL_LOAD_MODE = 0>
@@ -79,4 +81,43 @@ __aicore__ inline void QbmmCubeTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
         qbmmParams};
     MatmulKernel qbmm;
     qbmm(params);
+}
+
+template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
+          class cLayout, uint64_t FULL_LOAD_MODE = 0>
+__aicore__ inline void QbmmCubeWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias,
+                                                           GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
+{
+    using AType = A_TYPE;
+    using BType = B_TYPE;
+    using BiasType = BIAS_TYPE;
+    using X2ScaleType = SCALE_TYPE;
+    using OutType = C_TYPE;
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
+                                                                                bLayout, AType>;
+    using DispatchPolicy = Blaze::Gemm::MatmulWithScaleFixpipeQuant<
+        FULL_LOAD_MODE, false, Blaze::Gemm::KernelMmadWithScaleFixpipeQuantWithoutBatch>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, aLayout,
+                                                    AscendC::Std::tuple<BType, X2ScaleType>, bLayout, OutType, cLayout,
+                                                    BiasType, cLayout>;
+    using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using Params = typename MatmulKernel::Params;
+
+    const auto& quantBmmTilingData = *static_cast<const DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
+        tilingData);
+    using QBMMTiling = typename MatmulKernel::QBMMTiling;
+    const QBMMTiling qbmmParams{
+        quantBmmTilingData.x1QuantMode, quantBmmTilingData.x2QuantMode,    quantBmmTilingData.kAL1,
+        quantBmmTilingData.kBL1,        quantBmmTilingData.nBufferNum,     quantBmmTilingData.baseM,
+        quantBmmTilingData.baseN,       quantBmmTilingData.baseK,          quantBmmTilingData.isBias,
+        quantBmmTilingData.dbL0C,       quantBmmTilingData.weightMustHitL2};
+    MatmulKernel{}(
+        Params{{quantBmmTilingData.m, quantBmmTilingData.n, quantBmmTilingData.k, 1L},
+               {aGM, bGM, cGM, bias, perTokenScale, scale},
+               {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.mTailTile,
+                quantBmmTilingData.nTailTile, quantBmmTilingData.mBaseTailSplitCnt,
+                quantBmmTilingData.nBaseTailSplitCnt, quantBmmTilingData.mTailMain, quantBmmTilingData.nTailMain},
+               qbmmParams});
 }

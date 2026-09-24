@@ -41,9 +41,8 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
 
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    const QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData&
-        qbmmiaTilingData = *static_cast<const QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData*>(
-            tilingData);
+    const QMMIA::QbmmiaWithoutBatchTilingData&
+        qbmmiaTilingData = *static_cast<const QMMIA::QbmmiaWithoutBatchTilingData*>(tilingData);
 
     MatmulKernel{}(Params{{qbmmiaTilingData.m, qbmmiaTilingData.n, qbmmiaTilingData.k, 1L},
                           {aGM, bGM, cGM, nullptr, perTokenScale, scale},

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -159,6 +159,15 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL false
 #endif
 
+#if IS_BLAZE && !defined(IS_A4W4I)
+#define SUPPORT_CUBE_WITHOUT_BATCH_TILING_KEY (QBMMV3_IS_NON_MX_CUBE_ND_TPL || QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL)
+#else
+#define SUPPORT_CUBE_WITHOUT_BATCH_TILING_KEY false
+#endif
+
+#define SUPPORT_NO_VEC_WITHOUT_BATCH_TILING_KEY \
+    (SUPPORT_MX_WITHOUT_BATCH_TILING_KEY || SUPPORT_CUBE_WITHOUT_BATCH_TILING_KEY)
+
 // Kernel type 11 is shared by the original MX StreamK path and the non-MX per-tensor StreamK path above.
 #define SUPPORT_STREAMK_TILING_KEY (SUPPORT_MX_WITHOUT_BATCH_TILING_KEY || SUPPORT_NON_MX_STREAMK_TILING_KEY)
 
@@ -228,7 +237,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_WITH_CUSTOM_MM),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
-#if ((!defined(__CCE_AICORE__)) || (SUPPORT_MX_WITHOUT_BATCH_TILING_KEY))
+#if ((!defined(__CCE_AICORE__)) || (SUPPORT_NO_VEC_WITHOUT_BATCH_TILING_KEY))
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1} * batch mode {1} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),

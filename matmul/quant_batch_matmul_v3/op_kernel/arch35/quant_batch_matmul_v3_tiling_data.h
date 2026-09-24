@@ -176,7 +176,7 @@ static_assert(sizeof(QuantBatchMatmulV3StreamKBasicAPITilingData) % 8U == 0U,
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
+struct alignas(8) QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
     uint32_t m = 0;
     uint32_t n = 0;
     uint32_t k = 0;
@@ -202,9 +202,6 @@ struct QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
     uint8_t nBufferNum = 0;
     uint8_t dbL0C = 0;
     uint8_t weightMustHitL2 = 1U;
-    uint8_t reserved0 = 0;
-    uint32_t reserved1 = 0;
-    uint32_t reserved2 = 0;
 };
 #pragma pack(pop)
 } // namespace DequantBmm

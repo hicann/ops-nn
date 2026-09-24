@@ -76,7 +76,7 @@ struct SlidingWindowParams {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct QuantBatchMatmulInplaceAddTilingData {
+struct QbmmiaTilingData {
     QuantBatchMatmulV3BasicAPIDataParams params;
     BasicAPICubeTiling matmulTiling;
     SlidingWindowParams adaptiveSlidingWin;
@@ -84,7 +84,7 @@ struct QuantBatchMatmulInplaceAddTilingData {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
+struct alignas(8) QbmmiaWithoutBatchTilingData {
     uint32_t m = 0;
     uint32_t n = 0;
     uint32_t k = 0;
@@ -110,9 +110,6 @@ struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
     uint8_t nBufferNum = 0;
     uint8_t dbL0C = 0;
     uint8_t weightMustHitL2 = 1U;
-    uint8_t reserved0 = 0;
-    uint32_t reserved1 = 0;
-    uint32_t reserved2 = 0;
 };
 #pragma pack(pop)
 } // namespace QMMIA

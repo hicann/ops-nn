@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #include "exe_graph/runtime/tiling_context.h"
 #include "graph/types.h"
 
+#include "../quant_batch_matmul_v3_compile_info.h"
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
@@ -42,6 +43,8 @@ constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
 constexpr uint64_t PER_BLOCK_SIZE = 128UL;
+// Minimum axis size for load balancing with an unaligned K-inner dimension.
+constexpr uint64_t LOAD_BALANCE_THRESHOLD = 1792UL;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2U;
 constexpr uint32_t DATA_SIZE_L0C = 4U;
 constexpr uint8_t L1_TWO_BUFFER = 2U;
@@ -58,13 +61,14 @@ constexpr uint64_t AFULLLOAD_SINGLE_CORE_B_SCALER = 2UL;
 constexpr uint64_t ESTIMATED_SCALE_K = 4096UL;
 constexpr uint32_t SCALER_FACTOR_MAX = 127U;
 constexpr uint32_t SCALER_FACTOR_MIN = 1U;
-// Fixed Ascend 950 theoretical parameters used by the DAV_3510 MX performance model.
+// Fixed Ascend 950 theoretical parameters used by the DAV_3510 performance models.
 constexpr double ASCEND_950_MAX_HBM_BW_TBPS = 4.0;
 constexpr double ASCEND_950_MAX_L2_BW_TBPS = 5.2;
+constexpr double MTE2_BW_UTILIZATION = 0.9;
 // One TB/s transfers 10^6 bytes per microsecond.
 constexpr double BYTES_PER_US_PER_TBPS = 1000.0 * 1000.0;
 constexpr double ASCEND_950_CUBE_FREQ_MHZ = 1650.0;
-constexpr uint64_t MXFP8_CUBE_MACS_PER_CYCLE = 16UL * 32UL * 16UL;
+constexpr uint64_t B8_CUBE_MACS_PER_CYCLE = 16UL * 32UL * 16UL;
 } // namespace qmmv3_tiling_const
 
 struct BasicRunInfoTiling {

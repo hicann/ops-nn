@@ -14,6 +14,8 @@
  */
 #include "adaptive_sliding_window_tiling.h"
 
+#include <algorithm>
+
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "error_util.h"
@@ -39,8 +41,6 @@ constexpr uint32_t SCALER_FACTOR_M_BIT = 16;
 constexpr uint32_t SCALER_FACTOR_N_BIT = 24;
 
 constexpr uint32_t VEC_CORE_GROUP_NUM = 2;
-
-constexpr uint64_t LOAD_BALANCE_THRESHOLD = 1792; // Minimum M/N size to enable outer-axis load balancing.
 } // namespace
 
 namespace optiling {
@@ -451,6 +451,66 @@ uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum() const
     return static_cast<uint32_t>(adaptiveWin_.tailWinBlockCnt * adaptiveWin_.mTailTile * adaptiveWin_.nTailTile);
 }
 
+bool AdaptiveSlidingWindowTiling::AreOperandInnerAxesAligned() const
+{
+    const uint64_t aInnerAxis = inputParams_.transA ? inputParams_.mSize : inputParams_.kSize;
+    const uint64_t bInnerAxis = inputParams_.transB ? inputParams_.kSize : inputParams_.nSize;
+    const uint64_t aInnerAxisBytes = GetSizeWithDataType(aInnerAxis, inputParams_.aDtype);
+    const uint64_t bInnerAxisBytes = GetSizeWithDataType(bInnerAxis, inputParams_.bDtype);
+    return aInnerAxisBytes % qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL &&
+           bInnerAxisBytes % qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL;
+}
+
+bool AdaptiveSlidingWindowTiling::AreKInnerAxesAligned() const
+{
+    const uint64_t aKBytes = GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype);
+    const uint64_t bKBytes = GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype);
+    const bool isAInnerKAligned = inputParams_.transA || aKBytes % qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL;
+    const bool isBInnerKAligned = !inputParams_.transB || bKBytes % qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL;
+    return isAInnerKAligned && isBInnerKAligned;
+}
+
+bool AdaptiveSlidingWindowTiling::IsKInnerKL1AlignedTo256Bytes(uint64_t kL1) const
+{
+    const uint64_t aKL1Bytes = GetSizeWithDataType(kL1, inputParams_.aDtype);
+    const uint64_t bKL1Bytes = GetSizeWithDataType(kL1, inputParams_.bDtype);
+    const bool isAInnerKAligned = inputParams_.transA || aKL1Bytes % qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 == 0UL;
+    const bool isBInnerKAligned = !inputParams_.transB || bKL1Bytes % qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 == 0UL;
+    return isAInnerKAligned && isBInnerKAligned;
+}
+
+double AdaptiveSlidingWindowTiling::EstimateMte2LoadTimeUs(const Mte2LoadEstimate& estimate, double gmBandwidthTbps,
+                                                           double l2BandwidthTbps) const
+{
+    const uint64_t aGmLoadCount = std::min<uint64_t>(estimate.aLoadCount, std::max<uint64_t>(1UL, inputParams_.batchA));
+    const uint64_t bGmLoadCount = std::min<uint64_t>(estimate.bLoadCount, std::max<uint64_t>(1UL, inputParams_.batchB));
+    const uint64_t biasGmLoadCount = std::min<uint64_t>(estimate.biasLoadCount,
+                                                        std::max<uint64_t>(1UL, inputParams_.batchBias));
+    const double gmLoadBytes = estimate.singleRoundABytes * static_cast<double>(aGmLoadCount) +
+                               estimate.singleRoundBBytes * static_cast<double>(bGmLoadCount) +
+                               estimate.singleRoundBiasBytes * static_cast<double>(biasGmLoadCount);
+    const double l2LoadBytes = estimate.singleRoundABytes * static_cast<double>(estimate.aLoadCount - aGmLoadCount) +
+                               estimate.singleRoundBBytes * static_cast<double>(estimate.bLoadCount - bGmLoadCount) +
+                               estimate.singleRoundBiasBytes *
+                                   static_cast<double>(estimate.biasLoadCount - biasGmLoadCount);
+    return gmLoadBytes / (gmBandwidthTbps * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS) +
+           l2LoadBytes / (l2BandwidthTbps * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS);
+}
+
+double AdaptiveSlidingWindowTiling::EstimateMatmulMacTimeUs(uint64_t kAlignSize) const
+{
+    const uint64_t alignedM = ops::CeilAlign(inputParams_.mSize, qmmv3_tiling_const::CUBE_BLOCK);
+    const uint64_t alignedN = ops::CeilAlign(inputParams_.nSize, qmmv3_tiling_const::CUBE_BLOCK);
+    const uint64_t alignedK = ops::CeilAlign(inputParams_.kSize, kAlignSize);
+    const uint64_t batchCount = std::max<uint64_t>(1UL, inputParams_.batchC);
+    const double totalMacs = static_cast<double>(batchCount) * static_cast<double>(alignedM) *
+                             static_cast<double>(alignedN) * static_cast<double>(alignedK);
+    const double macsPerCycle = static_cast<double>(
+        GetShapeWithDataType(qmmv3_tiling_const::B8_CUBE_MACS_PER_CYCLE, inputParams_.aDtype));
+    return totalMacs / static_cast<double>(CalUsedCoreNum()) / macsPerCycle /
+           qmmv3_tiling_const::ASCEND_950_CUBE_FREQ_MHZ;
+}
+
 uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum(uint32_t mTile, uint32_t nTile)
 {
     return mTile * nTile * static_cast<uint32_t>(adaptiveWin_.tailWinBlockCnt);
@@ -780,11 +840,11 @@ void AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
                                 qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
                             0UL;
     if (mBaseTail > 0UL && !inputParams_.transA &&
-        (isInnerAxisAlign || (inputParams_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
+        (isInnerAxisAlign || (inputParams_.mSize >= qmmv3_tiling_const::LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain);
     }
     if (nBaseTail > 0UL && inputParams_.transB && !balanceAfterFixp && !inputParams_.isPerBlock && !isMxfp4 &&
-        (isInnerAxisAlign || (inputParams_.nSize >= LOAD_BALANCE_THRESHOLD))) {
+        (isInnerAxisAlign || (inputParams_.nSize >= qmmv3_tiling_const::LOAD_BALANCE_THRESHOLD))) {
         GetOuterNAxisTailCnt(adaptiveWin_.nBaseTailSplitCnt, adaptiveWin_.nTailMain);
     }
 }

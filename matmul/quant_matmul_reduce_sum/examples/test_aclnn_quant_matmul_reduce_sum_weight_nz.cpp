@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -12,9 +12,10 @@
  * \file test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp
  * \brief
  */
+#include <cmath>
 #include <cstdint>
-#include <cstring>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -53,11 +54,26 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 
 float Bfloat16ToFloat(uint16_t value)
 {
-    // BF16是FP32的高16位，低16位补0后即可得到对应的FP32位表示。
-    const uint32_t bits = static_cast<uint32_t>(value) << 16U;
+    constexpr uint16_t SIGN_MASK = 0x8000U;
+    constexpr uint16_t EXPONENT_MASK = 0x7F80U;
+    constexpr uint16_t MANTISSA_MASK = 0x007FU;
+    constexpr int32_t EXPONENT_BIAS = 127;
+    constexpr int32_t MANTISSA_BITS = 7;
+
+    const bool isNegative = (value & SIGN_MASK) != 0U;
+    const uint16_t exponent = (value & EXPONENT_MASK) >> MANTISSA_BITS;
+    const uint16_t mantissa = value & MANTISSA_MASK;
     float result = 0.0F;
-    std::memcpy(&result, &bits, sizeof(result));
-    return result;
+    if (exponent == 0xFFU) {
+        result = mantissa == 0U ? std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();
+    } else if (exponent == 0U) {
+        // BF16 subnormal: mantissa * 2^(1 - bias - mantissa_bits).
+        result = std::ldexp(static_cast<float>(mantissa), 1 - EXPONENT_BIAS - MANTISSA_BITS);
+    } else {
+        const float significand = 1.0F + static_cast<float>(mantissa) / (1U << MANTISSA_BITS);
+        result = std::ldexp(significand, static_cast<int32_t>(exponent) - EXPONENT_BIAS);
+    }
+    return isNegative ? -result : result;
 }
 
 int Init(int32_t deviceId, aclrtStream* stream)

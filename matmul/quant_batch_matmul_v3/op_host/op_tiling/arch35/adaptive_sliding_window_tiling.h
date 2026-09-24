@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 #include "exe_graph/runtime/shape.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "exe_graph/runtime/tiling_context.h"
-#include "graph/types.h"
+#include "graph/ge_error_codes.h"
 #include "platform/soc_spec.h"
 
 #include "../quant_batch_matmul_v3_tiling_base.h"
@@ -74,6 +74,16 @@ public:
     ge::graphStatus PostTiling() override;
 
 protected:
+    struct Mte2LoadEstimate {
+        double singleRoundABytes;
+        double singleRoundBBytes;
+        double singleRoundBiasBytes;
+        uint64_t aLoadCount;
+        uint64_t bLoadCount;
+        uint64_t biasLoadCount;
+    };
+
+    virtual bool IsTensorApiEnabled() const { return IsTensorapiCapable(); }
     virtual void ResetTilingData();
     ge::graphStatus CheckContext() override;
     ge::graphStatus CalcUbTiling() override;
@@ -90,6 +100,12 @@ protected:
     void SetBf16Compat();
     virtual void SetTilingData();
     uint32_t CalUsedCoreNum() const;
+    bool AreOperandInnerAxesAligned() const;
+    bool AreKInnerAxesAligned() const;
+    bool IsKInnerKL1AlignedTo256Bytes(uint64_t kL1) const;
+    double EstimateMte2LoadTimeUs(const Mte2LoadEstimate& estimate, double gmBandwidthTbps,
+                                  double l2BandwidthTbps) const;
+    double EstimateMatmulMacTimeUs(uint64_t kAlignSize) const;
     virtual bool CalcBasicBlock();
     virtual void CalcTailBasicBlock();
     virtual void CalcTailBasicBlockAfullLoad();

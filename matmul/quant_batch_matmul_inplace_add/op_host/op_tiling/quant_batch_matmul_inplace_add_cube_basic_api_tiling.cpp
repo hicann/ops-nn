@@ -27,24 +27,28 @@ const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV
 namespace optiling {
 
 QuantBatchMatmulInplaceAddCubeBasicAPITiling::QuantBatchMatmulInplaceAddCubeBasicAPITiling(gert::TilingContext* context)
-    : QuantBatchMatmulInplaceAddHelper<AdaptiveSlidingWindowCubeBasicAPITiling>(context), tilingData_(tilingDataSelf_)
+    : QuantBatchMatmulInplaceAddHelper<AdaptiveSlidingWindowCubeBasicAPITiling>(context)
 {
     Reset();
 }
 
-void QuantBatchMatmulInplaceAddCubeBasicAPITiling::Reset() { ResetInplaceTilingData(tilingData_); }
+void QuantBatchMatmulInplaceAddCubeBasicAPITiling::Reset()
+{
+    ResetInplaceTilingData(withoutBatchTilingData_);
+    tilingDataSize_ = sizeof(QMMIA::QbmmiaWithoutBatchTilingData);
+}
 
 bool QuantBatchMatmulInplaceAddCubeBasicAPITiling::IsCapable()
 {
     return IsHiFloat8TTQuant() && AdaptiveSlidingWindowCubeBasicAPITiling::IsCapable();
 }
 
-const void* QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingData() const { return &tilingData_; }
+const void* QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingData() const { return &withoutBatchTilingData_; }
 
 void QuantBatchMatmulInplaceAddCubeBasicAPITiling::SetTilingData()
 {
     AdaptiveSlidingWindowCubeBasicAPITiling::SetTilingData();
-    CopyV3BasicApiTilingData(AdaptiveSlidingWindowCubeBasicAPITiling::tilingData_, tilingData_);
+    UpdateTilingData();
 }
 
 ge::graphStatus QuantBatchMatmulInplaceAddCubeBasicAPITiling::DoLibApiTiling()
@@ -53,13 +57,21 @@ ge::graphStatus QuantBatchMatmulInplaceAddCubeBasicAPITiling::DoLibApiTiling()
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
-    CopyV3BasicApiTilingData(AdaptiveSlidingWindowCubeBasicAPITiling::tilingData_, tilingData_);
+    UpdateTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetKernelType() const
 {
-    return isAFullLoad_ ? TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI : TPL_NO_VEC_EPILOGUE_WITH_MMAPI;
+    return isAFullLoad_ ? TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH :
+                          TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH;
+}
+
+void QuantBatchMatmulInplaceAddCubeBasicAPITiling::UpdateTilingData()
+{
+    CopyV3WithoutBatchTilingData(AdaptiveSlidingWindowCubeBasicAPITiling::withoutBatchTilingData_,
+                                 withoutBatchTilingData_);
+    tilingDataSize_ = sizeof(QMMIA::QbmmiaWithoutBatchTilingData);
 }
 
 uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingKey() const

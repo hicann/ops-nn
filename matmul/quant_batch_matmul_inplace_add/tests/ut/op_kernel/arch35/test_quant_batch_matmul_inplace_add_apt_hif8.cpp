@@ -38,10 +38,7 @@ protected:
 TEST_P(QBMIIA_950_hif8, generalTest)
 {
     QuantBatchMatmulInplaceAddTestParam param = GetParam();
-    auto it = s_funcMapApt.find(param.tilingKey);
-    ASSERT_NE(it, s_funcMapApt.end());
-    ASSERT_NE(it->second, nullptr);
-    ASSERT_GT(sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData), 0UL);
+    QuantBatchMatmulInplaceAddTestUtils::TestOneParamCase950(param, s_funcMapApt);
 }
 
 INSTANTIATE_TEST_CASE_P(QBMIIA950, QBMIIA_950_hif8,

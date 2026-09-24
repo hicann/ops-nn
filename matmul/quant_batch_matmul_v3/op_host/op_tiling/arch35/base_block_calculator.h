@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ struct BaseBlockRes {
     bool useTailWinLogic = true;
 };
 
-enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK };
+enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK, CUBE_BASIC };
 
 uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype);
 
@@ -70,12 +70,13 @@ private:
     uint64_t GetBaseMAlignSize() const;
     uint64_t GetBaseKAlignSize() const;
     bool OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode);
-    void OptimizeBaseBlockForLoadBalance();
+    void OptimizeBaseBlockForLoadBalance(BaseBlockMode mode);
     void SearchLoadBalanceBaseBlock(uint64_t roundLimit, uint64_t originLastRoundUsedCore,
                                     double originMemoryComputeScore, uint64_t& bestBaseM, uint64_t& bestBaseN) const;
-    bool ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint64_t curBaseN, uint64_t originLastRoundUsedCore,
-                                        double originMemoryComputeScore) const;
-    void TryApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN);
+    bool ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint64_t curBaseN, uint64_t roundLimit,
+                                        uint64_t originLastRoundUsedCore, double originMemoryComputeScore) const;
+    bool ShouldKeepOriginForRoofline(uint64_t curBaseM, uint64_t curBaseN) const;
+    void ApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN);
     bool AdjustBaseBlockDefault();
     void TrySwapBaseMNForMxFalseTrue(uint64_t& baseM, uint64_t& baseN) const;
     bool AdjustBaseBlockPerblock();

@@ -37,11 +37,8 @@ protected:
 private:
     void Reset();
     void UpdateTilingData();
-    void SetWithoutBatchTilingData();
 
-    QMMIA::QuantBatchMatmulInplaceAddTilingData basicTilingData_;
-    QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData withoutBatchTilingData_;
-    bool useWithoutBatchTilingData_ = false;
+    QMMIA::QbmmiaWithoutBatchTilingData withoutBatchTilingData_;
 };
 
 } // namespace optiling

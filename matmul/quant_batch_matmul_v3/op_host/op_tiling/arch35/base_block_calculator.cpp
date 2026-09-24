@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@
 
 namespace {
 constexpr uint64_t PER_BLOCK_BASE_SIZE_256 = 256UL;
-// If adjusted baseN loses 128B alignment and K is below this threshold, keep the original base block.
+// Reject candidates whose baseN is not 128-wide when K is below this byte-scaled threshold.
 constexpr uint64_t LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD = 2560UL;
+// Two/three-round grids use the original search; larger grids require stricter transfer alignment.
+constexpr uint64_t LOAD_BALANCE_SMALL_ROUND_LIMIT = 3UL;
 // Rebalance M/N split when one base dimension is at least twice the other.
 constexpr uint64_t BASEM_BASEN_RATIO = 2UL;
 // Oversized baseK candidates are halved above this supported tiling range.
@@ -33,6 +35,9 @@ constexpr uint32_t DOUBLE_CORE_NUM = 2U;
 // Epsilon for comparing score ratios during base-block search.
 constexpr double SCORE_COMPARE_EPS = 1e-12;
 constexpr uint32_t SMALL_MN_EXPAND_RATIO = 3U;
+// Do not switch a Cube/MX tile across the compute/memory roofline on a marginal estimate.  The margin absorbs
+// cache/pipeline effects that are not represented by the per-K tile arithmetic-intensity model.
+constexpr double LOAD_BALANCE_ROOFLINE_MARGIN = 0.05;
 
 uint64_t GetNextLoadBalanceBase(uint64_t curBase, uint64_t baseAlign)
 {
@@ -55,6 +60,23 @@ double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
     // This is (baseM + baseN) / (baseM * baseN); lower means smaller baseM + baseN for the same output area.
     return (static_cast<double>(baseM) + baseN) / (static_cast<double>(baseM) * baseN);
 }
+
+double GetDtypeBytes(ge::DataType dtype)
+{
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+        return 0.5;
+    }
+    return static_cast<double>(ge::GetSizeByDataType(dtype));
+}
+
+double GetTileArithmeticIntensity(uint64_t baseM, uint64_t baseN, ge::DataType aDtype, ge::DataType bDtype)
+{
+    const double aBytesPerK = static_cast<double>(baseM) * GetDtypeBytes(aDtype);
+    const double bBytesPerK = static_cast<double>(baseN) * GetDtypeBytes(bDtype);
+    const double bytesPerK = aBytesPerK + bBytesPerK;
+    return bytesPerK > 0.0 ? static_cast<double>(baseM) * baseN / bytesPerK : 0.0;
+}
+
 } // namespace
 
 namespace optiling {
@@ -101,7 +123,7 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
             OP_LOGE(inputParams_.opName, "Failed to adjust base block.");
             return false;
         }
-        OptimizeBaseBlockForLoadBalance();
+        OptimizeBaseBlockForLoadBalance(mode);
     }
     return ValidateBaseBlock();
 }
@@ -110,6 +132,12 @@ const BaseBlockRes& BaseBlockCalculator::GetOutput() const { return baseBlockRes
 
 bool BaseBlockCalculator::ValidateInput() const
 {
+    OP_TILING_CHECK(
+        inputParams_.mSize == 0UL || inputParams_.nSize == 0UL || inputParams_.kSize == 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Invalid BaseBlockCalculator shape: M(%lu), N(%lu) and K(%lu) should be greater than 0.",
+                              inputParams_.mSize, inputParams_.nSize, inputParams_.kSize),
+        return false);
     OP_TILING_CHECK(
         compileInfo_.aicNum == 0UL || batchCoreCnt_ == 0UL,
         CUBE_INNER_ERR_REPORT(
@@ -328,14 +356,21 @@ bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode
     }
 }
 
-void BaseBlockCalculator::OptimizeBaseBlockForLoadBalance()
+void BaseBlockCalculator::OptimizeBaseBlockForLoadBalance(BaseBlockMode mode)
 {
-    if (!inputParams_.isMxPerGroup || compileInfo_.npuArch != NpuArch::DAV_3510) {
+    const bool enableLoadBalance = inputParams_.isMxPerGroup || mode == BaseBlockMode::CUBE_BASIC;
+    if (!enableLoadBalance || compileInfo_.npuArch != NpuArch::DAV_3510) {
+        return;
+    }
+    // For pure Cube K-inner operands, conservatively keep the original base below the unscaled K threshold.
+    // This initial guard compares K elements directly, without converting them to bytes.
+    if (mode == BaseBlockMode::CUBE_BASIC && (!inputParams_.transA || inputParams_.transB) &&
+        inputParams_.kSize < qmmv3_tiling_const::L2_ALIGN_SIZE) {
         return;
     }
     uint64_t roundLimit = GetSingleCoreMaxRound(baseBlockRes_.baseM, baseBlockRes_.baseN);
-    // Rebalance only two- or three-round cases; keep the default block otherwise.
-    if (roundLimit == 1UL || roundLimit > 3UL) {
+    // Keep single-round grids unchanged; candidates beyond the original two/three-round window are guarded below.
+    if (roundLimit == 1UL) {
         return;
     }
     uint64_t originLastRoundBlockCnt = GetLastRoundBlockCnt(baseBlockRes_.baseM, baseBlockRes_.baseN);
@@ -348,54 +383,92 @@ void BaseBlockCalculator::OptimizeBaseBlockForLoadBalance()
     uint64_t bestBaseM = baseBlockRes_.baseM;
     uint64_t bestBaseN = baseBlockRes_.baseN;
     SearchLoadBalanceBaseBlock(roundLimit, originLastRoundUsedCore, originMemoryComputeScore, bestBaseM, bestBaseN);
-    TryApplyLoadBalanceBase(bestBaseM, bestBaseN);
+    ApplyLoadBalanceBase(bestBaseM, bestBaseN);
 }
 
 void BaseBlockCalculator::SearchLoadBalanceBaseBlock(uint64_t roundLimit, uint64_t originLastRoundUsedCore,
                                                      double originMemoryComputeScore, uint64_t& bestBaseM,
                                                      uint64_t& bestBaseN) const
 {
-    double balanceRate = 0.0;
-    double memoryComputeScore = 0.0;
+    // Treat the current physical block as the baseline for every supported template.  A candidate must improve
+    // balance, or improve the memory/compute tie-breaker at equal balance.
+    double balanceRate = GetBalanceRate(baseBlockRes_.baseM, baseBlockRes_.baseN);
+    double memoryComputeScore = originMemoryComputeScore;
     uint64_t baseMAlignNum = inputParams_.transA ?
                                  GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype) :
                                  qmmv3_tiling_const::CUBE_BLOCK;
     uint64_t baseNAlignNum = GetBaseNAlignSize(qmmv3_tiling_const::L2_ALIGN_SIZE);
     uint64_t searchBaseM = ops::CeilAlign(baseBlockRes_.baseM, baseMAlignNum);
     uint64_t searchBaseN = ops::CeilAlign(baseBlockRes_.baseN, baseNAlignNum);
-    bool hasCandidate = false;
     for (uint64_t curBaseM = searchBaseM; curBaseM != 0UL; curBaseM = GetNextLoadBalanceBase(curBaseM, baseMAlignNum)) {
         for (uint64_t curBaseN = searchBaseN; curBaseN != 0UL;
              curBaseN = GetNextLoadBalanceBase(curBaseN, baseNAlignNum)) {
-            uint64_t curRound = GetSingleCoreMaxRound(curBaseM, curBaseN);
+            // The kernel uses the real-axis aligned block when an L2-aligned search point exceeds M/N.  Score that
+            // effective block directly so selection and application do not evaluate different geometries.
+            const uint64_t effectiveBaseM = curBaseM > inputParams_.mSize ?
+                                                ops::CeilAlign(inputParams_.mSize, GetBaseMAlignSize()) :
+                                                curBaseM;
+            const uint64_t effectiveBaseN = curBaseN > inputParams_.nSize ?
+                                                ops::CeilAlign(inputParams_.nSize,
+                                                               GetBaseNAlignSize(qmmv3_tiling_const::L1_ALIGN_SIZE)) :
+                                                curBaseN;
+            uint64_t curRound = GetSingleCoreMaxRound(effectiveBaseM, effectiveBaseN);
             // Decreasing baseN only increases tile count in this loop, so later candidates will not recover.
             if (curRound > roundLimit) {
                 break;
             }
-            if (ShouldSkipLoadBalanceCandidate(curBaseM, curBaseN, originLastRoundUsedCore, originMemoryComputeScore)) {
+            if (ShouldSkipLoadBalanceCandidate(effectiveBaseM, effectiveBaseN, roundLimit, originLastRoundUsedCore,
+                                               originMemoryComputeScore)) {
                 continue;
             }
-            double curBalanceRate = GetBalanceRate(curBaseM, curBaseN);
-            double curMemoryComputeScore = GetMemoryComputeScore(curBaseM, curBaseN);
+            double curBalanceRate = GetBalanceRate(effectiveBaseM, effectiveBaseN);
+            double curMemoryComputeScore = GetMemoryComputeScore(effectiveBaseM, effectiveBaseN);
             // Pick higher curBalanceRate first; use memory-compute score only as a tie-breaker.
             bool balanceBetter = curBalanceRate > balanceRate + SCORE_COMPARE_EPS;
             bool memoryComputeBetter = IsScoreEqual(curBalanceRate, balanceRate) &&
                                        curMemoryComputeScore + SCORE_COMPARE_EPS < memoryComputeScore;
-            if (!hasCandidate || balanceBetter || memoryComputeBetter) {
-                bestBaseM = curBaseM;
-                bestBaseN = curBaseN;
+            if (balanceBetter || memoryComputeBetter) {
+                bestBaseM = effectiveBaseM;
+                bestBaseN = effectiveBaseN;
                 balanceRate = curBalanceRate;
                 memoryComputeScore = curMemoryComputeScore;
-                hasCandidate = true;
             }
         }
     }
 }
 
-bool BaseBlockCalculator::ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint64_t curBaseN,
+bool BaseBlockCalculator::ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint64_t curBaseN, uint64_t roundLimit,
                                                          uint64_t originLastRoundUsedCore,
                                                          double originMemoryComputeScore) const
 {
+    if (curBaseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 != 0UL &&
+        inputParams_.kSize < GetShapeWithDataType(LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD, inputParams_.aDtype)) {
+        return true;
+    }
+    if (roundLimit > LOAD_BALANCE_SMALL_ROUND_LIMIT) {
+        // Larger-round adjustments must retain a 128-column-aligned baseN for Fixpipe writeback.
+        if (curBaseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 != 0UL) {
+            return true;
+        }
+        const bool isKInnerAxisUnaligned = (!inputParams_.transA &&
+                                            GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) %
+                                                    qmmv3_tiling_const::L2_ALIGN_SIZE !=
+                                                0UL) ||
+                                           (inputParams_.transB &&
+                                            GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype) %
+                                                    qmmv3_tiling_const::L2_ALIGN_SIZE !=
+                                                0UL);
+        // The K threshold is in elements; reject M changes only, leaving N-only candidates eligible.
+        if (curBaseM != baseBlockRes_.baseM && isKInnerAxisUnaligned &&
+            inputParams_.kSize < qmmv3_tiling_const::LOAD_BALANCE_THRESHOLD) {
+            return true;
+        }
+    }
+    // Keep a candidate from crossing the compute/MTE2 roofline while load-balance changes the logical block grid.
+    // Use the common Cube/MX arithmetic-intensity model with the effective L2 bandwidth below.
+    if (ShouldKeepOriginForRoofline(curBaseM, curBaseN)) {
+        return true;
+    }
     bool isOriginBase = curBaseM == baseBlockRes_.baseM && curBaseN == baseBlockRes_.baseN;
     uint64_t curLastRoundBlockCnt = GetLastRoundBlockCnt(curBaseM, curBaseN);
     double curMemoryComputeScore = GetMemoryComputeScore(curBaseM, curBaseN);
@@ -405,16 +478,48 @@ bool BaseBlockCalculator::ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint
     return isOriginBase || lastRoundBlockCntLess || memoryComputeWorseWithoutCoreGain;
 }
 
-void BaseBlockCalculator::TryApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN)
+bool BaseBlockCalculator::ShouldKeepOriginForRoofline(uint64_t curBaseM, uint64_t curBaseN) const
 {
-    uint64_t baseN128AlignFallbackKThreshold = GetShapeWithDataType(LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD,
-                                                                    inputParams_.aDtype);
-    // For small K, keep the original base if the candidate baseN is not 128-aligned.
-    bool shouldFallbackToOriginBase = bestBaseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 != 0UL &&
-                                      inputParams_.kSize < baseN128AlignFallbackKThreshold;
-    if (shouldFallbackToOriginBase) {
-        return;
+    if (curBaseM == baseBlockRes_.baseM && curBaseN == baseBlockRes_.baseN) {
+        return false;
     }
+
+    // This guard targets the load-balance trade-off only: if a candidate removes a whole wave, keep it eligible even
+    // when its per-tile intensity is lower.  For the same number of waves, require that it really adds logical work
+    // before trading the original compute-bound tile for a memory-bound one.
+    const uint64_t originBlockCnt = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, baseBlockRes_.baseM) *
+                                    ops::CeilDiv(inputParams_.nSize, baseBlockRes_.baseN);
+    const uint64_t candidateBlockCnt = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, curBaseM) *
+                                       ops::CeilDiv(inputParams_.nSize, curBaseN);
+    if (GetSingleCoreMaxRound(curBaseM, curBaseN) != GetSingleCoreMaxRound(baseBlockRes_.baseM, baseBlockRes_.baseN) ||
+        candidateBlockCnt <= originBlockCnt) {
+        return false;
+    }
+
+    const double originIntensity = GetTileArithmeticIntensity(baseBlockRes_.baseM, baseBlockRes_.baseN,
+                                                              inputParams_.aDtype, inputParams_.bDtype);
+    const double candidateIntensity = GetTileArithmeticIntensity(curBaseM, curBaseN, inputParams_.aDtype,
+                                                                 inputParams_.bDtype);
+    const double dtypeBytes = GetDtypeBytes(inputParams_.aDtype);
+    if (dtypeBytes <= 0.0 || compileInfo_.aicNum == 0U) {
+        return false;
+    }
+
+    // Match EstimateMatmulMacTimeUs: B8 peak is scaled by input element size and replicated over active AICs.
+    const double macsPerCycle = static_cast<double>(qmmv3_tiling_const::B8_CUBE_MACS_PER_CYCLE) / dtypeBytes;
+    const double cubeMacsPerUs = macsPerCycle * qmmv3_tiling_const::ASCEND_950_CUBE_FREQ_MHZ *
+                                 static_cast<double>(compileInfo_.aicNum);
+    // Use effective L2 bandwidth here to avoid over-constraining MX candidates at the early base-block stage.
+    const double l2BytesPerUs = qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS *
+                                qmmv3_tiling_const::MTE2_BW_UTILIZATION * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS;
+    const double rooflineIntensity = cubeMacsPerUs / l2BytesPerUs;
+    const double originComputeBoundLimit = rooflineIntensity * (1.0 + LOAD_BALANCE_ROOFLINE_MARGIN);
+    const double candidateMte2BoundLimit = rooflineIntensity * (1.0 - LOAD_BALANCE_ROOFLINE_MARGIN);
+    return originIntensity > originComputeBoundLimit && candidateIntensity < candidateMte2BoundLimit;
+}
+
+void BaseBlockCalculator::ApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN)
+{
     baseBlockRes_.baseM = bestBaseM;
     baseBlockRes_.baseN = bestBaseN;
     if (baseBlockRes_.baseM > inputParams_.mSize) {

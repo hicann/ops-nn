@@ -33,7 +33,6 @@ constexpr uint64_t MX_L0C_PINGPONG_SCALE_KL1_TARGET = 2048UL;
 constexpr uint64_t MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT = 128UL * 1024UL * 1024UL;
 // Keep A full-load if repeated A reads exceed this share of non-full-load GM traffic.
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
-constexpr double MTE2_BW_UTILIZATION = 0.9;
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_BASIC_API_ASW;
@@ -82,7 +81,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
-    return IsTensorapiCapable() && inputParams_.batchC == 1UL;
+    return IsTensorApiEnabled() && inputParams_.batchC == 1UL;
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step,
@@ -109,7 +108,7 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
-    return IsTensorapiCapable() ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+    return IsTensorApiEnabled() ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
@@ -197,19 +196,11 @@ ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
     tilingData_.matmulTiling.isBias = inputParams_.hasBias ? 1UL : 0UL;
     tilingData_.matmulTiling.dbL0C = static_cast<uint8_t>(basicTiling_.dbL0c);
 
-    uint64_t scaleKL1 = std::min(
-        static_cast<uint64_t>(basicTiling_.scaleFactorA) * basicTiling_.stepKa * basicTiling_.baseK,
-        static_cast<uint64_t>(basicTiling_.scaleFactorB) * basicTiling_.stepKb * basicTiling_.baseK);
-    uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
-    if (IsMxL0CPingpong(inputParams_) && outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT &&
-        scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
-        AdjustScaleFactorForL0CPingpong(basicTiling_.scaleFactorA, basicTiling_.stepKa, basicTiling_.baseK);
-        AdjustScaleFactorForL0CPingpong(basicTiling_.scaleFactorB, basicTiling_.stepKb, basicTiling_.baseK);
-        scaleKL1 = std::min(
-            static_cast<uint64_t>(basicTiling_.scaleFactorA) * basicTiling_.stepKa * basicTiling_.baseK,
-            static_cast<uint64_t>(basicTiling_.scaleFactorB) * basicTiling_.stepKb * basicTiling_.baseK);
-    }
-    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1);
+    // DeriveScaleKL1 shrinks basicTiling_.scaleFactorA/B in place when the L0C ping-pong template fires; those
+    // adjusted factors flow into mxTypePara later, so the in-place write-back must be preserved.
+    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(
+        DeriveScaleKL1(basicTiling_.scaleFactorA, basicTiling_.stepKa, basicTiling_.scaleFactorB, basicTiling_.stepKb,
+                       basicTiling_.baseK));
     CalculateNBufferNum();
     if (useWithoutBatchTilingData_) {
         SetWithoutBatchTilingData();
@@ -221,91 +212,101 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum()
 {
     const uint32_t stepK = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
     const uint64_t currentKL1 = static_cast<uint64_t>(stepK) * tilingData_.matmulTiling.baseK;
-    const MxL1EstimateParams currentParams = BuildL1EstimateParams(currentKL1);
+    const MxL1EstimateParams currentParams = BuildL1EstimateParams(currentKL1, tilingData_.matmulTiling.scaleKL1,
+                                                                   tilingData_.matmulTiling.baseM,
+                                                                   tilingData_.matmulTiling.baseN, isAFullLoad_);
+    const MxL1Plan plan = SelectMxL1Plan(currentParams, tilingData_.matmulTiling.baseK,
+                                         tilingData_.matmulTiling.scaleKL1);
+    tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(plan.kL1);
+    tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
+    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(plan.scaleKL1);
+    tilingData_.matmulTiling.nBufferNum = static_cast<uint8_t>(plan.l1BufferNum);
+}
+
+AdaptiveSlidingWindowMXBasicAPITiling::MxL1EstimateParams AdaptiveSlidingWindowMXBasicAPITiling::BuildL1EstimateParams(
+    uint64_t kL1, uint64_t baseScaleKL1, uint64_t baseM, uint64_t baseN, bool isAFullLoad) const
+{
+    return {kL1, GetHalfKFallbackScaleKL1(baseScaleKL1, kL1), baseM, baseN, isAFullLoad};
+}
+
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::DeriveScaleKL1(uint32_t& scaleFactorA, uint64_t stepKa,
+                                                               uint32_t& scaleFactorB, uint64_t stepKb,
+                                                               uint64_t baseK) const
+{
+    uint64_t scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
+                                 static_cast<uint64_t>(scaleFactorB) * stepKb * baseK);
+    const uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
+    if (IsMxL0CPingpong(inputParams_) && outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT &&
+        scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
+        AdjustScaleFactorForL0CPingpong(scaleFactorA, static_cast<uint32_t>(stepKa), static_cast<uint32_t>(baseK));
+        AdjustScaleFactorForL0CPingpong(scaleFactorB, static_cast<uint32_t>(stepKb), static_cast<uint32_t>(baseK));
+        scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
+                            static_cast<uint64_t>(scaleFactorB) * stepKb * baseK);
+    }
+    return scaleKL1;
+}
+
+AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPITiling::MakeMxL1Plan(
+    const MxL1EstimateParams& params, uint32_t l1BufferNum) const
+{
+    // Two-buffer keeps the (possibly half-K fallback) scaleKL1; multi-buffer tries to widen scale to full-K coverage.
+    const uint64_t scaleKL1 = l1BufferNum == qmmv3_tiling_const::L1_TWO_BUFFER ?
+                                  params.scaleKL1 :
+                                  GetFullCoverScaleKL1IfPossible(params, l1BufferNum);
+    return {params.kL1, scaleKL1, l1BufferNum};
+}
+
+AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPITiling::SelectMxL1Plan(
+    const MxL1EstimateParams& currentParams, uint64_t baseK, uint64_t baseScaleKL1) const
+{
+    const uint64_t currentKL1 = currentParams.kL1;
+    const uint64_t stepK = currentKL1 / baseK;
     // Restrict the smaller stepK=2 candidates to cases where the current double buffer cannot cover K.
     const bool isCurrentTwoBufferNotOverK = currentKL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize;
     if (CanFitL1BufferNum(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER)) {
-        ApplyMultiBufferL1Tiling(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
-        return;
+        return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
     }
 
     // If stepK 3/4 blocks four-buffer from fitting L1 while two-buffer still cannot cover K,
     // try stepK 2 to reduce per-round L1 usage and leave room for four-buffer.
-    const uint64_t stepKTwoKL1 = static_cast<uint64_t>(STEP_K_TWO) * tilingData_.matmulTiling.baseK;
-    const bool canReduceStepK = isCurrentTwoBufferNotOverK && (stepK == 3U || stepK == 4U) &&
+    const uint64_t stepKTwoKL1 = static_cast<uint64_t>(STEP_K_TWO) * baseK;
+    const bool canReduceStepK = isCurrentTwoBufferNotOverK && (stepK == 3UL || stepK == 4UL) &&
                                 CanReduceStepKToTwo(stepKTwoKL1);
     MxL1EstimateParams stepKTwoParams = currentParams;
     if (canReduceStepK) {
-        stepKTwoParams = BuildL1EstimateParams(stepKTwoKL1);
+        stepKTwoParams = BuildL1EstimateParams(stepKTwoKL1, baseScaleKL1, currentParams.baseM, currentParams.baseN,
+                                               currentParams.isAFullLoad);
         // Prefer four buffers globally, even when it requires a smaller stepK.
         if (CanFitL1BufferNum(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER)) {
-            ApplyMultiBufferL1Tiling(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
-            return;
+            return MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
         }
     }
 
     // A full-load uses the third buffer only for the B-side pipeline. Otherwise, keep the current stepK and enable
     // triple-buffer only when the current double buffer cannot cover K and MTE2 is expected to dominate.
-    const bool canUseCurrentThreeBuffer = isAFullLoad_ ||
+    const bool canUseCurrentThreeBuffer = currentParams.isAFullLoad ||
                                           (isCurrentTwoBufferNotOverK &&
-                                           IsMxMte2Bound(
-                                               qmmv3_tiling_const::ASCEND_950_MAX_HBM_BW_TBPS * MTE2_BW_UTILIZATION,
-                                               qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS * MTE2_BW_UTILIZATION));
+                                           IsMte2Bound(qmmv3_tiling_const::ASCEND_950_MAX_HBM_BW_TBPS *
+                                                           qmmv3_tiling_const::MTE2_BW_UTILIZATION,
+                                                       qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS *
+                                                           qmmv3_tiling_const::MTE2_BW_UTILIZATION));
     if (canUseCurrentThreeBuffer && CanFitL1BufferNum(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER)) {
-        ApplyMultiBufferL1Tiling(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER);
-        return;
+        return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER);
     }
     if (canReduceStepK && canUseCurrentThreeBuffer &&
         CanFitL1BufferNum(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER)) {
-        ApplyMultiBufferL1Tiling(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER);
-        return;
+        return MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER);
     }
-
-    tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(currentParams.kL1);
-    tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
-    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(currentParams.scaleKL1);
-    tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_TWO_BUFFER;
-}
-
-AdaptiveSlidingWindowMXBasicAPITiling::MxL1EstimateParams AdaptiveSlidingWindowMXBasicAPITiling::BuildL1EstimateParams(
-    uint64_t kL1) const
-{
-    return {kL1, GetHalfKFallbackScaleKL1(kL1), tilingData_.matmulTiling.baseM, tilingData_.matmulTiling.baseN,
-            isAFullLoad_};
-}
-
-void AdaptiveSlidingWindowMXBasicAPITiling::ApplyMultiBufferL1Tiling(const MxL1EstimateParams& params,
-                                                                     uint32_t l1BufferNum)
-{
-    tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(params.kL1);
-    tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
-    tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(GetFullCoverScaleKL1IfPossible(params, l1BufferNum));
-    tilingData_.matmulTiling.nBufferNum = static_cast<uint8_t>(l1BufferNum);
+    return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_TWO_BUFFER);
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::CanReduceStepKToTwo(uint64_t stepKTwoKL1) const
 {
-    const bool isAInnerKAligned = inputParams_.transA || GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) %
-                                                                 qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                                             0UL;
-    const bool isBInnerKAligned = !inputParams_.transB || GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype) %
-                                                                  qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                                              0UL;
-
-    const bool isStepKTwoAInnerKAligned = inputParams_.transA || GetSizeWithDataType(stepKTwoKL1, inputParams_.aDtype) %
-                                                                         qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 ==
-                                                                     0UL;
-    const bool isStepKTwoBInnerKAligned = !inputParams_.transB ||
-                                          GetSizeWithDataType(stepKTwoKL1, inputParams_.bDtype) %
-                                                  qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 ==
-                                              0UL;
-
-    return isAInnerKAligned && isBInnerKAligned && isStepKTwoAInnerKAligned && isStepKTwoBInnerKAligned;
+    return AreKInnerAxesAligned() && IsKInnerKL1AlignedTo256Bytes(stepKTwoKL1);
 }
 
-uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetHalfKFallbackScaleKL1(uint64_t kL1) const
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetHalfKFallbackScaleKL1(uint64_t scaleKL1, uint64_t kL1) const
 {
-    uint64_t scaleKL1 = tilingData_.matmulTiling.scaleKL1;
     if (scaleKL1 % qmmv3_tiling_const::ESTIMATED_SCALE_K == 0UL) {
         return scaleKL1;
     }
@@ -341,25 +342,10 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcMxFullKLoadSize(uint64_t out
     return GetSizeWithDataType(outerSize * kAligned, dataDtype) + GetSizeWithDataType(outerSize * scaleK, scaleDtype);
 }
 
-uint32_t AdaptiveSlidingWindowMXBasicAPITiling::SelectL1BufferNum(const MxL1EstimateParams& params) const
-{
-    if (CanFitL1BufferNum(params, qmmv3_tiling_const::L1_FOUR_BUFFER)) {
-        return qmmv3_tiling_const::L1_FOUR_BUFFER;
-    }
-    const bool canUseThreeBuffer = params.isAFullLoad ||
-                                   (params.kL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize &&
-                                    IsMxMte2Bound(qmmv3_tiling_const::ASCEND_950_MAX_HBM_BW_TBPS * MTE2_BW_UTILIZATION,
-                                                  qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS * MTE2_BW_UTILIZATION));
-    if (canUseThreeBuffer && CanFitL1BufferNum(params, qmmv3_tiling_const::L1_THREE_BUFFER)) {
-        return qmmv3_tiling_const::L1_THREE_BUFFER;
-    }
-    return qmmv3_tiling_const::L1_TWO_BUFFER;
-}
-
 bool AdaptiveSlidingWindowMXBasicAPITiling::CanFitL1BufferNum(const MxL1EstimateParams& params,
                                                               uint32_t l1BufferNum) const
 {
-    if (l1BufferNum == qmmv3_tiling_const::L1_THREE_BUFFER && !IsTensorapiCapable()) {
+    if (l1BufferNum == qmmv3_tiling_const::L1_THREE_BUFFER && !IsTensorApiEnabled()) {
         return false;
     }
     return CalcUsedL1Size(params, l1BufferNum) <= aicoreParams_.l1Size;
@@ -388,32 +374,25 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcUsedL1Size(const MxL1Estimat
     return usedL1Size;
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::CanOpenMultiBufferByL1Estimate(bool isAFullLoad, uint64_t baseM,
-                                                                           uint64_t baseN) const
+bool AdaptiveSlidingWindowMXBasicAPITiling::CanSelectMultiBufferByL1Plan(bool isAFullLoad, uint64_t baseM,
+                                                                         uint64_t baseN) const
 {
-    if (!isAFullLoad) {
-        const bool isAInnerKAligned = inputParams_.transA ||
-                                      GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) %
-                                              qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                          0UL;
-        const bool isBInnerKAligned = !inputParams_.transB ||
-                                      GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype) %
-                                              qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                          0UL;
-        // Use max stepK=4 for a conservative two-buffer K-coverage estimate.
-        const bool isEstimatedTwoBufferNotOverK = 4UL * adaptiveWin_.baseK * qmmv3_tiling_const::L1_TWO_BUFFER <
-                                                  inputParams_.kSize;
-        if (!isEstimatedTwoBufferNotOverK || !isAInnerKAligned || !isBInnerKAligned) {
-            return false;
-        }
+    // Faithful dry-run of the final L1 tiling + N-buffer selection for this candidate, mirroring the cube path.
+    const L1TilingMode mode = isAFullLoad ? L1TilingMode::A_L1_FULL_LOAD : L1TilingMode::DEFAULT;
+    L1TilingDataCalculator calculator(inputParams_, compileInfo_, baseM, baseN, adaptiveWin_.baseK);
+    if (!calculator.Compute(mode)) {
+        return false;
     }
-    // This runs before final L1 tiling. Estimate with stepK=2 and capped scaleKL1. Apply the same three-buffer
-    // eligibility as the final selection so an MTE2-bound non-full-load candidate can still replace A full-load.
-    uint64_t estimatedKL1 = static_cast<uint64_t>(STEP_K_TWO) * adaptiveWin_.baseK;
-    uint64_t estimatedScaleKL1 = ops::CeilAlign(std::min(inputParams_.kSize, qmmv3_tiling_const::ESTIMATED_SCALE_K),
-                                                estimatedKL1);
-    MxL1EstimateParams estimateParams = {estimatedKL1, estimatedScaleKL1, baseM, baseN, isAFullLoad};
-    return SelectL1BufferNum(estimateParams) != qmmv3_tiling_const::L1_TWO_BUFFER;
+    const L1TilingData& l1Tiling = calculator.GetOutput();
+    const uint64_t baseK = adaptiveWin_.baseK;
+    const uint64_t currentKL1 = std::min(l1Tiling.stepKa_, l1Tiling.stepKb_) * baseK;
+    // Run on local copies of the scale factors: the dry-run must not mutate the real basicTiling_/tilingData_ state.
+    uint32_t scaleFactorA = static_cast<uint32_t>(l1Tiling.scaleFactorA_);
+    uint32_t scaleFactorB = static_cast<uint32_t>(l1Tiling.scaleFactorB_);
+    const uint64_t baseScaleKL1 = DeriveScaleKL1(scaleFactorA, l1Tiling.stepKa_, scaleFactorB, l1Tiling.stepKb_, baseK);
+    const MxL1EstimateParams currentParams = BuildL1EstimateParams(currentKL1, baseScaleKL1, baseM, baseN, isAFullLoad);
+    const MxL1Plan plan = SelectMxL1Plan(currentParams, baseK, baseScaleKL1);
+    return plan.l1BufferNum > qmmv3_tiling_const::L1_TWO_BUFFER;
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::ShouldKeepAFullLoadByRepeatLoadRatio() const
@@ -435,7 +414,7 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::ShouldKeepAFullLoadByRepeatLoadRatio
     return repeatABytes / totalLoadBytes > REPEAT_A_LOAD_RATIO_THRESHOLD;
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsMxMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const
 {
     const uint64_t usedCoreNum = CalUsedCoreNum();
     if (gmBandwidthTbps <= 0.0 || l2BandwidthTbps <= 0.0 || adaptiveWin_.baseM == 0UL || adaptiveWin_.baseN == 0UL ||
@@ -443,22 +422,14 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::IsMxMte2Bound(double gmBandwidthTbps
         return false;
     }
 
-    const uint64_t aInnerAxis = inputParams_.transA ? inputParams_.mSize : inputParams_.kSize;
-    const uint64_t bInnerAxis = inputParams_.transB ? inputParams_.kSize : inputParams_.nSize;
-    const bool isInnerAxisAligned = GetSizeWithDataType(aInnerAxis, inputParams_.aDtype) %
-                                            qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                        0UL &&
-                                    GetSizeWithDataType(bInnerAxis, inputParams_.bDtype) %
-                                            qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE ==
-                                        0UL;
-    if (!isInnerAxisAligned) {
+    if (!AreOperandInnerAxesAligned()) {
         return true;
     }
 
-    return EstimateMxMte2TimeUs(gmBandwidthTbps, l2BandwidthTbps) > EstimateMxCubeTimeUs();
+    return EstimateMte2TimeUs(gmBandwidthTbps, l2BandwidthTbps) > EstimateMacTimeUs();
 }
 
-double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMxMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const
+double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const
 {
     const double singleRoundABytes = static_cast<double>(
         CalcMxFullKLoadSize(inputParams_.mSize, inputParams_.aDtype, inputParams_.perTokenScaleDtype));
@@ -470,34 +441,18 @@ double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMxMte2TimeUs(double gmBand
     const uint64_t mBlockCnt = ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM);
     const uint64_t nBlockCnt = ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
     const uint64_t batchCount = std::max<uint64_t>(1UL, inputParams_.batchC);
-    const uint64_t aLoadCount = batchCount * (isAFullLoad_ ? 1UL : nBlockCnt);
+    // IsMte2Bound is reached only by a non-full plan, so A is loaded once for every N block.
+    const uint64_t aLoadCount = batchCount * nBlockCnt;
     const uint64_t bLoadCount = batchCount * mBlockCnt;
     const uint64_t biasLoadCount = inputParams_.hasBias ? batchCount * mBlockCnt : 0UL;
-    const uint64_t aGmLoadCount = std::min<uint64_t>(aLoadCount, std::max<uint64_t>(1UL, inputParams_.batchA));
-    const uint64_t bGmLoadCount = std::min<uint64_t>(bLoadCount, std::max<uint64_t>(1UL, inputParams_.batchB));
-    const uint64_t biasGmLoadCount = std::min<uint64_t>(biasLoadCount, std::max<uint64_t>(1UL, inputParams_.batchBias));
-    const double gmLoadBytes = singleRoundABytes * static_cast<double>(aGmLoadCount) +
-                               singleRoundBBytes * static_cast<double>(bGmLoadCount) +
-                               singleRoundBiasBytes * static_cast<double>(biasGmLoadCount);
-    const double l2LoadBytes = singleRoundABytes * static_cast<double>(aLoadCount - aGmLoadCount) +
-                               singleRoundBBytes * static_cast<double>(bLoadCount - bGmLoadCount) +
-                               singleRoundBiasBytes * static_cast<double>(biasLoadCount - biasGmLoadCount);
-    return gmLoadBytes / (gmBandwidthTbps * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS) +
-           l2LoadBytes / (l2BandwidthTbps * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS);
+    const Mte2LoadEstimate estimate = {singleRoundABytes, singleRoundBBytes, singleRoundBiasBytes,
+                                       aLoadCount,        bLoadCount,        biasLoadCount};
+    return EstimateMte2LoadTimeUs(estimate, gmBandwidthTbps, l2BandwidthTbps);
 }
 
-double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMxCubeTimeUs() const
+double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMacTimeUs() const
 {
-    const uint64_t alignedM = ops::CeilAlign(inputParams_.mSize, qmmv3_tiling_const::CUBE_BLOCK);
-    const uint64_t alignedN = ops::CeilAlign(inputParams_.nSize, qmmv3_tiling_const::CUBE_BLOCK);
-    const uint64_t alignedK = ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
-    const uint64_t batchCount = std::max<uint64_t>(1UL, inputParams_.batchC);
-    const double totalCubeMacs = static_cast<double>(batchCount) * static_cast<double>(alignedM) *
-                                 static_cast<double>(alignedN) * static_cast<double>(alignedK);
-    const double cubeMacsPerCycle = static_cast<double>(
-        GetShapeWithDataType(qmmv3_tiling_const::MXFP8_CUBE_MACS_PER_CYCLE, inputParams_.aDtype));
-    return totalCubeMacs / static_cast<double>(CalUsedCoreNum()) / cubeMacsPerCycle /
-           qmmv3_tiling_const::ASCEND_950_CUBE_FREQ_MHZ;
+    return EstimateMatmulMacTimeUs(qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
@@ -515,9 +470,9 @@ void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
         return;
     }
     // Prefer A full-load when it still leaves enough L1 to enable 4-buffer or 3-buffer.
-    if (CanOpenMultiBufferByL1Estimate(true, realBaseMSize, adaptiveWin_.baseN)) {
+    if (CanSelectMultiBufferByL1Plan(true, realBaseMSize, adaptiveWin_.baseN)) {
         isAFullLoad_ = true;
-    } else if (CanOpenMultiBufferByL1Estimate(false, adaptiveWin_.baseM, adaptiveWin_.baseN) &&
+    } else if (CanSelectMultiBufferByL1Plan(false, adaptiveWin_.baseM, adaptiveWin_.baseN) &&
                !ShouldKeepAFullLoadByRepeatLoadRatio()) {
         // Keep A full-load disabled only when repeated A load is a small part of non-full-load GM traffic.
         return;

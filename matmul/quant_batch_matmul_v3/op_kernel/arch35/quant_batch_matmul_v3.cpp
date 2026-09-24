@@ -50,11 +50,9 @@
 #include "tensor_api/tensor.h"
 #include "qbmm_cube_tensor_api_blaze.h"
 #include "qbmm_mix_tensor_api_blaze.h"
-#include "qbmm_mix_without_batch_tensor_api_blaze.h"
 #include "qbmm_pertensor_streamk_tensor_api_blaze.h"
 #if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #include "qbmm_mx_tensor_api_blaze.h"
-#include "qbmm_mx_without_batch_tensor_api_blaze.h"
 #include "qbmm_mx_l0c_pingpong.h"
 #include "qbmm_mx_streamk_tensor_api_blaze.h"
 #endif
@@ -227,6 +225,16 @@ constexpr CubeFormat format_y = CubeFormat::ND;
             QbmmCubeTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, \
                                     fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, &tilingData);               \
         }                                                                                                            \
+    } while (0)
+#define QUANT_BMMV3_CUBE_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                  \
+    do {                                                                                                               \
+        if ASCEND_IS_AIC {                                                                                             \
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, tilingData,     \
+                                        tiling);                                                                       \
+            QbmmCubeWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout,         \
+                                                bLayout, cLayout, fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, \
+                                                                                &tilingData);                          \
+        }                                                                                                              \
     } while (0)
 #define QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                          \
     do {                                                                                                        \
@@ -524,6 +532,26 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
             QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
 #elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
             QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
+#endif
+        }
+#endif
+#if IS_BLAZE
+        if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
+                      TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+#if CUBE_TEMPLATE_ND
+            QUANT_BMMV3_CUBE_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
+#elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+            QUANT_BMMV3_CUBE_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
+#endif
+        } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
+                             TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
+                             TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+#if CUBE_TEMPLATE_ND
+            QUANT_BMMV3_CUBE_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
+                                                                 Blaze::Gemm::A_FULL_LOAD_MODE);
+#elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+            QUANT_BMMV3_CUBE_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
+                                                                 Blaze::Gemm::A_FULL_LOAD_MODE);
 #endif
         }
 #endif

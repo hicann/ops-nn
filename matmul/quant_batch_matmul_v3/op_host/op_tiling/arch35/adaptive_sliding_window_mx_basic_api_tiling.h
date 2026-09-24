@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -43,22 +43,31 @@ private:
         bool isAFullLoad;
     };
 
+    struct MxL1Plan {
+        uint64_t kL1;
+        uint64_t scaleKL1;
+        uint32_t l1BufferNum;
+    };
+
     void CalculateNBufferNum();
-    MxL1EstimateParams BuildL1EstimateParams(uint64_t kL1) const;
-    void ApplyMultiBufferL1Tiling(const MxL1EstimateParams& params, uint32_t l1BufferNum);
-    uint64_t GetHalfKFallbackScaleKL1(uint64_t kL1) const;
+    uint64_t DeriveScaleKL1(uint32_t& scaleFactorA, uint64_t stepKa, uint32_t& scaleFactorB, uint64_t stepKb,
+                            uint64_t baseK) const;
+    MxL1EstimateParams BuildL1EstimateParams(uint64_t kL1, uint64_t baseScaleKL1, uint64_t baseM, uint64_t baseN,
+                                             bool isAFullLoad) const;
+    MxL1Plan SelectMxL1Plan(const MxL1EstimateParams& currentParams, uint64_t baseK, uint64_t baseScaleKL1) const;
+    MxL1Plan MakeMxL1Plan(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
+    uint64_t GetHalfKFallbackScaleKL1(uint64_t scaleKL1, uint64_t kL1) const;
     uint64_t GetFullCoverScaleKL1IfPossible(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
     bool CanReduceStepKToTwo(uint64_t stepKTwoKL1) const;
     bool CanFitL1BufferNum(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
-    uint32_t SelectL1BufferNum(const MxL1EstimateParams& params) const;
     uint64_t CalcUsedL1Size(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
     uint64_t CalcMxFullKLoadSize(uint64_t outerSize, ge::DataType dataDtype, ge::DataType scaleDtype) const;
     bool ShouldKeepAFullLoadByRepeatLoadRatio() const;
-    bool IsMxMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const;
-    double EstimateMxMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const;
-    double EstimateMxCubeTimeUs() const;
+    bool IsMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const;
+    double EstimateMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const;
+    double EstimateMacTimeUs() const;
     void UpdateAFullLoadStatus();
-    bool CanOpenMultiBufferByL1Estimate(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
+    bool CanSelectMultiBufferByL1Plan(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
     bool IsWithoutBatchTilingData() const;
     void SetWithoutBatchTilingData();
     void NormalizeSingleRoundTailSplitBasicBlock();
