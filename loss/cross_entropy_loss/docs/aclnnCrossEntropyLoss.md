@@ -532,7 +532,7 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy logProb result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("logprob is: \n [");
     for (int64_t i = 0; i < size2; i++) {
-        LOG_PRINT("%f,", i, resultData2[i]);
+        LOG_PRINT("%f,", resultData2[i]);
     }
     LOG_PRINT("]\n");
 
