@@ -200,7 +200,7 @@
 | <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> | FLOAT16/FLOAT32/INT32、BFLOAT16/BFLOAT16/BFLOAT16、BFLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
 | <term>Atlas推理系列产品</term> | FLOAT16/FLOAT32/INT32 | INT8 | 原生V2路径仅支持True；aclnn API满足V1回退条件时支持False |
 
-对于Atlas A3训练系列产品/Atlas A3推理系列产品、Atlas A2训练系列产品/Atlas A2推理系列产品和Atlas推理系列产品，通过aclnn API调用且`div_mode`为False时，接口不进入原生V2路径。当输出`x`、不输出`resOut`且其他参数满足V1回退路径约束时，接口回退到V1路径并按乘法模式执行。GE图模式不适用该回退机制，`div_mode`仅支持True。
+对于<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>和<term>Atlas推理系列产品</term>，通过aclnn API调用且`div_mode`为False时，接口不进入原生V2路径。当输出`x`、不输出`resOut`且其他参数满足V1回退路径约束时，接口回退到V1路径并按乘法模式执行。GE图模式不适用该回退机制，`div_mode`仅支持True。
 
 #### shape与参数组合差异
 

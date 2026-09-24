@@ -20,8 +20,8 @@
 <!-- npu="910" id6 -->
 - <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
-- <term>Kirin X90 处理器系列产品</term>：支持
-- <term>Kirin 9030 处理器系列产品</term>：支持
+- <term>Kirin X90处理器系列产品</term>：支持
+- <term>Kirin 9030处理器系列产品</term>：支持
 
 ## 功能说明
 
@@ -69,7 +69,7 @@ REG_OP(RmsNorm)
 | y (Tensor) | 必选输出 | 归一化并缩放后的结果，对应公式中的$y$。 | shape和数据类型与`x`相同。 | float32、float16、bfloat16 | ND | 与`x`一致 |
 | rstd (Tensor) | 必选输出 | 均方根的倒数，对应公式中的$rstd$。 | 数据类型固定为float32；与`gamma`对应的末尾各维大小均为1，其余维度与`x`相同。 | float32 | ND | 与`x`同维，形状为[A1,...,Ai,1,...,1]，末尾共`j`个1 |
 
-- <term>Atlas推理系列产品</term>、<term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：`x`、`gamma`和`y`不支持bfloat16。
+- <term>Atlas推理系列产品</term>、<term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：`x`、`gamma`和`y`不支持bfloat16。
 
 ## 约束说明
 
@@ -87,7 +87,7 @@ REG_OP(RmsNorm)
     | bfloat16 | bfloat16 | bfloat16 | float32 |
     | float32 | float32 | float32 | float32 |
 
-  - <term>Atlas推理系列产品</term>、<term>Kirin X90 处理器系列产品</term>、<term>Kirin 9030 处理器系列产品</term>：
+  - <term>Atlas推理系列产品</term>、<term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：
 
     | `x`数据类型 | `gamma`数据类型 | `y`数据类型 | `rstd`数据类型 |
     | --- | --- | --- | --- |

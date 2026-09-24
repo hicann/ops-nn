@@ -20,8 +20,8 @@
 <!-- npu="910" id6 -->
 - <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
-- <term>Kirin X90 处理器系列产品</term>：支持
-- <term>Kirin 9030 处理器系列产品</term>：支持
+- <term>Kirin X90处理器系列产品</term>：支持
+- <term>Kirin 9030处理器系列产品</term>：支持
 
 ## 功能说明
 
