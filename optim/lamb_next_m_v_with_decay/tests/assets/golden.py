@@ -62,6 +62,29 @@ def _t(x):
     return torch.from_numpy(a if a.dtype == np.float64 else a.astype("float32"))
 
 
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    return np.broadcast_shapes(*shapes)
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定每个输出都取**全体输入**的广播结果; 而逐输出的自然形状可能更小
+    —— 某个输出的参与输入整组退化成标量时就会这样。值完全相同(同一个数铺开), 但形状
+    必须对齐声明: TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py
+    的 alloc_shape = golden_shape), golden 少铺一层, 内核就会按满格写进只有 1 个元素
+    的 buffer, 大规模下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
+
+
+def _tp_to_decl(outs, shape):
+    """三方腿同理, 广播到声明形状。"""
+    return [torch.broadcast_to(o, shape).contiguous() for o in outs]
+
+
 def lamb_next_mv_with_decay_golden(
     input_mul3,
     input_mul2,
@@ -107,12 +130,30 @@ def lamb_next_mv_with_decay_golden(
     pw = param * wd
     y1 = pw + m_unb / torch.sqrt(v_unb + eps)
     y4 = pw + m_unb / (torch.sqrt(v_unb) + eps)
-    return [
-        y1.numpy().astype(dt),
-        next_m.numpy().astype(dt),
-        next_v.numpy().astype(dt),
-        y4.numpy().astype(dt),
-    ]
+    _shape = _decl_shape(
+        input_mul3,
+        input_mul2,
+        input_realdiv1,
+        input_mul1,
+        input_mul0,
+        input_realdiv0,
+        input_mul4,
+        mul0_x,
+        mul1_sub,
+        mul2_x,
+        mul3_sub1,
+        mul4_x,
+        add2_y,
+    )
+    return _to_decl(
+        [
+            y1.numpy().astype(dt),
+            next_m.numpy().astype(dt),
+            next_v.numpy().astype(dt),
+            y4.numpy().astype(dt),
+        ],
+        _shape,
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -226,7 +267,22 @@ class _LambNextMVWithDecayCompose:
         pw = param * wd
         y1 = pw + m_unb / torch.sqrt(v_unb + eps)
         y4 = pw + m_unb / (torch.sqrt(v_unb) + eps)
-        return [y1, next_m, next_v, y4]
+        _shape = _decl_shape(
+            input_mul3,
+            input_mul2,
+            input_realdiv1,
+            input_mul1,
+            input_mul0,
+            input_realdiv0,
+            input_mul4,
+            mul0_x,
+            mul1_sub,
+            mul2_x,
+            mul3_sub1,
+            mul4_x,
+            add2_y,
+        )
+        return _tp_to_decl([y1, next_m, next_v, y4], _shape)
 
 
 # ---------------------------------------------------------------------------

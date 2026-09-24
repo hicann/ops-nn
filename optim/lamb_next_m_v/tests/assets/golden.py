@@ -55,6 +55,27 @@ def _t(x):
     return torch.from_numpy(a if a.dtype == np.float64 else a.astype("float32"))
 
 
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    # 用 getattr 取 shape, 不能走 np.asarray: 三方腿的入参是 cuda tensor,
+    # np.asarray 会抛 "can't convert cuda:0 device type tensor to numpy"。
+    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    return np.broadcast_shapes(*shapes)
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定四个输出**一律**取全体输入的广播结果; 而逐输出的自然形状可能更小
+    —— 例如 next_v 只由 input_mul2/mul2_x/input_mul3/mul3_sub1 决定, 这四个整组退化成
+    标量时自然形状就是 (1,)。值完全相同(同一个数铺开), 但形状必须对齐声明:
+    TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py 的 alloc_shape
+    = golden_shape), golden 少铺一层就会让内核按满格写进只有 1 个元素的 buffer, 大规模
+    下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
+
+
 def lamb_next_mv_golden(
     input_mul3,
     input_mul2,
@@ -99,12 +120,30 @@ def lamb_next_mv_golden(
     v_unb, m_unb = next_v / rd1, next_m / rd0
     y1 = param * wd + m_unb / torch.sqrt(v_unb + eps)
     y4 = m_unb / (torch.sqrt(v_unb) + eps)
-    return [
-        y1.numpy().astype(dt),
-        next_m.numpy().astype(dt),
-        next_v.numpy().astype(dt),
-        y4.numpy().astype(dt),
-    ]
+    shape = _decl_shape(
+        input_mul3,
+        input_mul2,
+        input_realdiv1,
+        input_mul1,
+        input_mul0,
+        input_realdiv0,
+        input_mul4,
+        mul0_x,
+        mul1_sub,
+        mul2_x,
+        mul3_sub1,
+        mul4_x,
+        add2_y,
+    )
+    return _to_decl(
+        [
+            y1.numpy().astype(dt),
+            next_m.numpy().astype(dt),
+            next_v.numpy().astype(dt),
+            y4.numpy().astype(dt),
+        ],
+        shape,
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -208,7 +247,25 @@ class _LambNextMVCompose:
         v_unb, m_unb = next_v / rd1, next_m / rd0
         y1 = param * wd + m_unb / torch.sqrt(v_unb + eps)
         y4 = m_unb / (torch.sqrt(v_unb) + eps)
-        return _tp_narrow([y1, next_m, next_v, y4], _dt)
+        shape = _decl_shape(
+            input_mul3,
+            input_mul2,
+            input_realdiv1,
+            input_mul1,
+            input_mul0,
+            input_realdiv0,
+            input_mul4,
+            mul0_x,
+            mul1_sub,
+            mul2_x,
+            mul3_sub1,
+            mul4_x,
+            add2_y,
+        )
+        outs = [
+            torch.broadcast_to(o, shape).contiguous() for o in (y1, next_m, next_v, y4)
+        ]
+        return _tp_narrow(outs, _dt)
 
 
 class LambNextMVKernelSpec:

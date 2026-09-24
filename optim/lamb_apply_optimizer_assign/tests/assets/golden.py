@@ -56,6 +56,29 @@ def _t(x):
     return torch.from_numpy(a if a.dtype == np.float64 else a.astype("float32"))
 
 
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    return np.broadcast_shapes(*shapes)
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定每个输出都取**全体输入**的广播结果; 而逐输出的自然形状可能更小
+    —— 某个输出的参与输入整组退化成标量时就会这样。值完全相同(同一个数铺开), 但形状
+    必须对齐声明: TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py
+    的 alloc_shape = golden_shape), golden 少铺一层, 内核就会按满格写进只有 1 个元素
+    的 buffer, 大规模下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
+
+
+def _tp_to_decl(outs, shape):
+    """三方腿同理, 广播到声明形状。"""
+    return [torch.broadcast_to(o, shape).contiguous() for o in outs]
+
+
 def lamb_apply_optimizer_assign_golden(
     grad,
     inputv,
@@ -98,11 +121,28 @@ def lamb_apply_optimizer_assign_golden(
     b1_corr = (-torch.expm1(torch.log(b1.to(_hi)) * t.to(_hi))).to(b1.dtype)
     b2_corr = (-torch.expm1(torch.log(b2.to(_hi)) * t.to(_hi))).to(b2.dtype)
     update = (next_m / b1_corr) / (torch.sqrt(next_v / b2_corr) + eps) + w * wd * du
-    return [
-        update.numpy().astype(dt),
-        next_v.numpy().astype(dt),
-        next_m.numpy().astype(dt),
-    ]
+    _shape = _decl_shape(
+        grad,
+        inputv,
+        inputm,
+        input3,
+        mul0_x,
+        mul1_x,
+        mul2_x,
+        mul3_x,
+        add2_y,
+        steps,
+        do_use_weight,
+        weight_decay_rate,
+    )
+    return _to_decl(
+        [
+            update.numpy().astype(dt),
+            next_v.numpy().astype(dt),
+            next_m.numpy().astype(dt),
+        ],
+        _shape,
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -201,7 +241,21 @@ class _LambApplyOptimizerAssignCompose:
         b1_corr = -torch.expm1(torch.log(b1) * t)
         b2_corr = -torch.expm1(torch.log(b2) * t)
         update = (next_m / b1_corr) / (torch.sqrt(next_v / b2_corr) + eps) + w * wd * du
-        return [update, next_v, next_m]
+        _shape = _decl_shape(
+            grad,
+            inputv,
+            inputm,
+            input3,
+            mul0_x,
+            mul1_x,
+            mul2_x,
+            mul3_x,
+            add2_y,
+            steps,
+            do_use_weight,
+            weight_decay_rate,
+        )
+        return _tp_to_decl([update, next_v, next_m], _shape)
 
 
 # ---------------------------------------------------------------------------

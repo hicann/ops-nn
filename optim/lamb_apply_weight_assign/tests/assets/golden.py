@@ -77,6 +77,29 @@ def _t(x):
     return torch.from_numpy(a if a.dtype == np.float64 else a.astype("float32"))
 
 
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    return np.broadcast_shapes(*shapes)
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定每个输出都取**全体输入**的广播结果; 而逐输出的自然形状可能更小
+    —— 某个输出的参与输入整组退化成标量时就会这样。值完全相同(同一个数铺开), 但形状
+    必须对齐声明: TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py
+    的 alloc_shape = golden_shape), golden 少铺一层, 内核就会按满格写进只有 1 个元素
+    的 buffer, 大规模下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
+
+
+def _tp_to_decl(outs, shape):
+    """三方腿同理, 广播到声明形状。"""
+    return [torch.broadcast_to(o, shape).contiguous() for o in outs]
+
+
 def lamb_apply_weight_assign_golden(
     input0, input1, input2, input3, input_param, **kwargs
 ):
@@ -103,7 +126,8 @@ def lamb_apply_weight_assign_golden(
     # (UpdLr = Update*Lr; RatioUpdLr = Ratio*UpdLr) 都是先算 update*lr。按 README 原先的
     # 字面顺序写成 (lr*ratio)*upd 在浮点下不等价：update 与 lr 同时较大时实现会先溢出成 inf，
     # 而 (lr*ratio) 往往是正常量级、再乘 update 不溢出，两者可以差出 inf 与有限值。
-    return [(param - ratio * (upd * lr)).numpy().astype(dt)]
+    _shape = _decl_shape(input0, input1, input2, input3, input_param)
+    return _to_decl([(param - ratio * (upd * lr)).numpy().astype(dt)], _shape)
 
 
 # ----------------------------------------------------------------------------
@@ -183,7 +207,8 @@ class _LambApplyWeightAssignCompose:
         safe_gn = torch.where(gn > 0, gn, torch.ones_like(gn))
         inner = torch.where(gn > 0, torch.div(wn, safe_gn), one)
         ratio = torch.where(wn > 0, inner, one)
-        return [param - ratio * (upd * lr)]
+        _shape = _decl_shape(input0, input1, input2, input3, input_param)
+        return _tp_to_decl([param - ratio * (upd * lr)], _shape)
 
 
 # ---------------------------------------------------------------------------

@@ -70,6 +70,29 @@ def _fp32_div(a, b):
     return torch.div(a, b)
 
 
+def _decl_shape(*xs):
+    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
+    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    return np.broadcast_shapes(*shapes)
+
+
+def _to_decl(outs, shape):
+    """把各输出广播到算子声明的输出形状。
+
+    infershape 规定每个输出都取**全体输入**的广播结果; 而逐输出的自然形状可能更小
+    —— 某个输出的参与输入整组退化成标量时就会这样。值完全相同(同一个数铺开), 但形状
+    必须对齐声明: TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py
+    的 alloc_shape = golden_shape), golden 少铺一层, 内核就会按满格写进只有 1 个元素
+    的 buffer, 大规模下直接 VEC_ERROR。
+    """
+    return [np.broadcast_to(o, shape).copy() for o in outs]
+
+
+def _tp_to_decl(outs, shape):
+    """三方腿同理, 广播到声明形状。"""
+    return [torch.broadcast_to(o, shape).contiguous() for o in outs]
+
+
 def lamb_update_with_lr_golden(
     input_greater1,
     input_greater_realdiv,
@@ -114,7 +137,18 @@ def lamb_update_with_lr_golden(
     # greater_y / minimum_y 为 NaN 时内核整片输出 NaN，用内置版本会给出有限值而全盘对不上。
     # 不能 .item(): 会把逐元素的 clip 塌成一个标量
     clip = torch.maximum(torch.minimum(select1, miny), gy)
-    return [(param - clip * lr * upd).numpy().astype(dt)]
+    _shape = _decl_shape(
+        input_greater1,
+        input_greater_realdiv,
+        input_realdiv,
+        input_mul0,
+        input_mul1,
+        input_sub,
+        greater_y,
+        select_e,
+        minimum_y,
+    )
+    return _to_decl([(param - clip * lr * upd).numpy().astype(dt)], _shape)
 
 
 # ----------------------------------------------------------------------------
@@ -204,7 +238,18 @@ class _LambUpdateWithLrCompose:
         select0 = torch.where(g1 > gy, realdiv0, se)
         select1 = torch.where(grd > gy, select0, se)
         clip = torch.maximum(torch.minimum(select1, miny), gy)
-        return [param - (clip * lr) * upd]
+        _shape = _decl_shape(
+            input_greater1,
+            input_greater_realdiv,
+            input_realdiv,
+            input_mul0,
+            input_mul1,
+            input_sub,
+            greater_y,
+            select_e,
+            minimum_y,
+        )
+        return _tp_to_decl([param - (clip * lr) * upd], _shape)
 
 
 # ---------------------------------------------------------------------------

@@ -218,6 +218,41 @@ TEST_F(LambApplyOptimizerAssignProtoTest, coefficient_larger_than_moment_is_reje
     ASSERT_EQ(RunInferShape({1, 1024}, {1, 1024}, {1, 1024}, {1, 1024}, &o0, &o1, &o2, {512, 1024}), ge::GRAPH_FAILED);
 }
 
+// 全部输入均为 0 维标量: 广播结果仍是 0 维, infershape 须归一为 (1,)。
+// 跑批只能证明"声明 0 维输入能跑通、输出是 (1,)": TTK 在 kernel 通路会把 0 维输入
+// 规整成 (1,), 区分不出这层归一是本算子做的还是上游先做掉的 —— 直接调 infershape
+// 才能把这条分支钉死。
+TEST_F(LambApplyOptimizerAssignProtoTest, all_rank0_inputs_normalize_to_one_dim)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    gert::Shape rank0 = {};
+    gert::Shape expect = {1};
+    ASSERT_EQ(RunInferShape(rank0, rank0, rank0, rank0, &o0, &o1, &o2, rank0), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
+    ASSERT_EQ(Ops::Base::ToString(o1), Ops::Base::ToString(expect));
+    ASSERT_EQ(Ops::Base::ToString(o2), Ops::Base::ToString(expect));
+}
+
+// 0 维标量与张量混用: 0 维按长度 1 参与广播, 结果取张量形状。
+TEST_F(LambApplyOptimizerAssignProtoTest, rank0_coefficient_broadcasts_into_tensor)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    gert::Shape rank0 = {};
+    gert::Shape expect = {512, 1024};
+    ASSERT_EQ(RunInferShape({512, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2, rank0),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
+}
+
+// grad 本身为 0 维标量: 广播进动量形状, 须放行。
+TEST_F(LambApplyOptimizerAssignProtoTest, rank0_grad_broadcasts_into_moment)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    gert::Shape expect = {512, 1024};
+    ASSERT_EQ(RunInferShape({}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
+}
+
 TEST_F(LambApplyOptimizerAssignProtoTest, lambapplyoptimizerassign_infer_datatype)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LambApplyOptimizerAssign"), nullptr);

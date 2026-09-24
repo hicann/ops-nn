@@ -48,7 +48,7 @@
     <tr>
       <td>input_mul3</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul3（g^2），主张量，shape需与其他输入满足broadcast关系。</td>
+      <td>支持空Tensor。公式中的input_mul3（g^2），主张量，shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -97,42 +97,42 @@
     <tr>
       <td>mul0_x</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的mul0_x（beta1），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的mul0_x（beta1），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul1_sub</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的mul1_sub（1-beta1），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的mul1_sub（1-beta1），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul2_x</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的mul2_x（beta2），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的mul2_x（beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul3_sub1</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的mul3_sub1（1-beta2），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的mul3_sub1（1-beta2），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mul4_x</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的mul4_x（权重衰减系数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的mul4_x（权重衰减系数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>add2_y</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的add2_y（epsilon），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的add2_y（epsilon），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -168,8 +168,8 @@
 
 ## 约束说明
 
-- 所有输入的shape需两两满足broadcast规则（右对齐，对应维相等或为1），输出shape为全部输入的broadcast结果。
-- 所有输入及输出的维度数不超过8。
+- 所有输入的shape需两两满足broadcast规则，输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数为0~8。当全部输入均为0维时，y1、y2、y3、y4的shape为(1,)。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 - 各输出y1/y2/y3/y4的shape均取全部输入的broadcast结果。
 

@@ -46,28 +46,28 @@
     <tr>
       <td>input_greater1</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_greater1（权重范数），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的input_greater1（权重范数），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_greater_realdiv</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_greater_realdiv（信任比分子），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的input_greater_realdiv（信任比分子），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_realdiv</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_realdiv（信任比分母），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的input_realdiv（信任比分母），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul0</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input_mul0（学习率），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的input_mul0（学习率），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -88,21 +88,21 @@
     <tr>
       <td>greater_y</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的greater_y（阈值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的greater_y（阈值），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>select_e</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的select_e（回退值），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的select_e（回退值），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>minimum_y</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的minimum_y（裁剪上界），shape支持1-8维，需与其他输入满足broadcast规则（右对齐，对应维相等或为1）。</td>
+      <td>支持空Tensor。公式中的minimum_y（裁剪上界），shape支持0-8维，需与其他输入满足broadcast规则。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -117,8 +117,8 @@
 
 ## 约束说明
 
-- 所有输入的shape需两两满足broadcast规则（右对齐，对应维相等或为1），输出shape为全部输入的broadcast结果。
-- 所有输入及输出的维度数不超过8。
+- 所有输入的shape需两两满足broadcast规则，输出shape为全部输入的broadcast结果。
+- 所有输入及输出的维度数为0~8。当全部输入均为0维时，输出的shape为(1,)。
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明
