@@ -34,7 +34,7 @@ inline bool ConvTbcBackwardChecker::CheckTbcNotNull()
 bool ConvTbcBackwardChecker::CheckTbcDtypeValid(const aclTensor* inputTensor) const
 {
     // 检查输入aclTensor的数据类型是否在ConvolutionBackward支持列表内
-    if (npuArch_ == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase(npuArch_)) {
         auto dtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
     } else {
@@ -200,7 +200,7 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams()
     // 6. 检查cubeMathType
     CHECK_RET(CheckTbcCubeMathType(), ACLNN_ERR_PARAM_INVALID);
 
-    if (npuArch_ == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase(npuArch_)) {
         // 检查输入输出是否类型一致
         OP_CHECK(outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
                  OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

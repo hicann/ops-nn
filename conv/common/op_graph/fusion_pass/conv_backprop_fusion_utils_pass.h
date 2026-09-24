@@ -83,7 +83,8 @@ struct UnsqueezeNodeInfo {
 };
 
 // 支持的SOC列表
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
+                                                         {"Ascend350", NpuArch::DAV_3510}};
 
 // Transpose排列常量
 const std::vector<int32_t> FILTER_TRANSPOSE_PERM = {4, 3, 0, 1, 2}; // DHWCN -> NCDHW

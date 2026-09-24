@@ -303,10 +303,10 @@ bool DeformableConv2dBackwardChecker::CheckShape()
 
 aclnnStatus DeformableConv2dBackwardChecker::CheckParams()
 {
-    OP_CHECK(npuArch_ == NpuArch::DAV_3510,
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(npuArch_),
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "npuarch",
                                                    std::to_string(static_cast<uint32_t>(npuArch_)).c_str(),
-                                                   "npuarch must be 3510"),
+                                                   "npuarch must be 3510 or 5102"),
              return ACLNN_ERR_PARAM_INVALID);
 
     CHECK_COND(CheckNotNull(), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");

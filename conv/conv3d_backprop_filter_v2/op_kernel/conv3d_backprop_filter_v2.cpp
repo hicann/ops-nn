@@ -14,7 +14,7 @@
  */
 #if __CCE_AICORE__ == 310
 #include "arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102)
 #include "arch35/conv3d_backprop_filter_v2_arch35.h"
 #endif
 #else
@@ -35,7 +35,7 @@ template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge, 
 __global__ __aicore__ void conv3d_backprop_filter_v2(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y,
                                                      GM_ADDR workSpace, GM_ADDR tiling)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102)
     conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId, isSplitKernelHW, groupEnlarge, winogradTilingFlag,
                                      winogradResidentFlag>(x, filter_size, out_backprop, y, workSpace, tiling);
     return;

@@ -206,6 +206,7 @@ public:
                                  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC});
 
         this->AICore().AddConfig("ascend950", aicore_config_950);
+        this->AICore().AddConfig("ascend350", aicore_config_950);
     }
 };
 

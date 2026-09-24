@@ -3782,14 +3782,15 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
     inputTensor.weight = weightContiguous;
 
     // 检查conv3ddw确定性计算
-    if ((*outputMask)[1] && (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
-                             (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && npuArch == NpuArch::DAV_3510))) {
+    if ((*outputMask)[1] &&
+        (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
+         (input->GetViewShape().GetDimNum() == CONV2DINPUTDIM && Ops::NN::AclnnUtil::IsRegbase(npuArch)))) {
         int64_t deterministicValue = 0;
         aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
         if (aclRet != ACL_SUCCESS) {
             deterministicValue = 0;
         }
-        if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_2201) {
+        if (!Ops::NN::AclnnUtil::IsRegbase(npuArch) && npuArch != NpuArch::DAV_2201) {
             CHECK_RET(CheckDeterministic(deterministicValue, groups), ACLNN_ERR_PARAM_INVALID);
         }
     }
@@ -4064,7 +4065,7 @@ static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& ten
              return ACLNN_ERR_INNER_NULLPTR);
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_3510 || tensorName != "weight") {
+    if (!Ops::NN::AclnnUtil::IsRegbase(curArch) || tensorName != "weight") {
         std::vector<int64_t> valuePerm;
         if (isInput) {
             valuePerm = {0, 2, 3, 1};
@@ -4080,7 +4081,7 @@ static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& ten
                  return ACLNN_ERR_INNER_NULLPTR);
     }
 
-    if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch) && tensorName != "weight") {
         // l0op返回const指针，此处仅需修改tensor的format元数据
         aclTensor* mutableTensor = const_cast<aclTensor*>(inputTensor);
         if (isInput) {

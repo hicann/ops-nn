@@ -1140,7 +1140,7 @@ bool CheckWeightPreTransposeEnable(const aclTensor* weight, const aclTensor* inp
                                    int groups)
 {
     OP_LOGD("Enter CheckWeightPreTransposeEnable.");
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW ||

@@ -71,6 +71,7 @@ public:
             .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
             .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW});
         this->AICore().AddConfig("ascend950", aicore_config_950);
+        this->AICore().AddConfig("ascend350", aicore_config_950);
     }
 };
 OP_ADD(ExtendConvTranspose);
