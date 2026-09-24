@@ -36,7 +36,6 @@ constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t PER_BLOCK_FP16 = 128;
 constexpr int64_t PER_MX_FP16 = 32;
-constexpr int64_t BLOCK_QUANT_MODE = 0;
 constexpr int64_t MX_QUANT_MODE = 1;
 constexpr int64_t STATIC_HIFP8_QUANT_MODE = 2;
 constexpr int64_t DYNAMIC_HIFP8_QUANT_MODE = 3;
@@ -60,6 +59,77 @@ void SetEmpty(gert::Shape& shape)
     shape.SetDimNum(0);
     shape.AppendDim(0);
 }
+
+bool IsMxQuantV2Mode(const int64_t* quantModeAttr)
+{
+    return quantModeAttr != nullptr && *quantModeAttr == MX_QUANT_V2_MODE;
+}
+
+bool IsMxQuantV2OriginEmpty(bool isMxQuantV2, const bool* outputOriginAttr)
+{
+    return isMxQuantV2 && (outputOriginAttr == nullptr || !*outputOriginAttr);
+}
+
+bool IsMxQuantMode(const int64_t* quantModeAttr)
+{
+    return quantModeAttr != nullptr && (*quantModeAttr == MX_QUANT_MODE || *quantModeAttr == MX_QUANT_V2_MODE);
+}
+
+graphStatus CheckMxQuantV2InputShape(gert::InferShapeContext* context, const gert::Shape& xShape, int64_t xRank,
+                                     bool isMxQuantV2)
+{
+    if (!isMxQuantV2) {
+        return ge::GRAPH_SUCCESS;
+    }
+    OP_CHECK_IF(xRank != 2,
+                OP_LOGE(context->GetNodeName(), "The rank of x should be 2 when quant_mode is 5, but is %ld.", xRank),
+                return ge::GRAPH_FAILED);
+    const gert::Shape* weightShape = context->GetOptionalInputShape(INPUT_IDX_WEIGHT);
+    if (weightShape != nullptr) {
+        const size_t weightRank = weightShape->GetDimNum();
+        OP_CHECK_IF(weightRank < 1 || weightRank > 8,
+                    OP_LOGE(context->GetNodeName(),
+                            "The rank of weight should be in [1, 8] when quant_mode is 5, but is %zu.", weightRank),
+                    return ge::GRAPH_FAILED);
+    }
+    int64_t rows = 1;
+    for (int64_t i = 0; i + 1 < xRank; ++i) {
+        const int64_t extent = xShape.GetDim(i);
+        if (extent == UNKNOWN_DIM_VALUE) {
+            continue;
+        }
+        int64_t next = 0;
+        OP_CHECK_IF(!CheckedMul(rows, extent, next),
+                    OP_LOGE(context->GetNodeName(),
+                            "The shape of x exceeds int64 range or contains a non-positive dim[%ld] %ld with "
+                            "accumulated product %ld when quant_mode is 5.",
+                            i, extent, rows),
+                    return ge::GRAPH_FAILED);
+        rows = next;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+graphStatus CheckMxQuantV2LastDim(gert::InferShapeContext* context, int64_t lastDim, bool isMxQuantV2)
+{
+    if (!isMxQuantV2) {
+        return ge::GRAPH_SUCCESS;
+    }
+    OP_CHECK_IF(lastDim < 64 || lastDim % 64 != 0,
+                OP_LOGE(context->GetNodeName(),
+                        "The last dimension of x should be at least 64 and divisible by 64 when quant_mode is 5, "
+                        "but got %ld.",
+                        lastDim),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+void AppendMxQuantV2ScaleAlign(gert::Shape& yScaleShape, bool isMxQuantV2)
+{
+    if (isMxQuantV2) {
+        yScaleShape.AppendDim(MX_SCALE_ALIGN_FACTOR);
+    }
+}
 } // namespace
 
 graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
@@ -77,15 +147,13 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
     const int64_t* quantModeAttr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
-    const int64_t quantMode = quantModeAttr == nullptr ? BLOCK_QUANT_MODE : *quantModeAttr;
-    const bool isMxQuantV2 = quantMode == MX_QUANT_V2_MODE;
+    const bool isMxQuantV2 = IsMxQuantV2Mode(quantModeAttr);
     const bool* outputOriginAttr = attrsPtr->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
-    const bool outputOrigin = outputOriginAttr != nullptr && *outputOriginAttr;
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         Ops::Base::SetUnknownRank(*yShape);
         Ops::Base::SetUnknownRank(*yScaleShape);
-        if (isMxQuantV2 && !outputOrigin) {
+        if (IsMxQuantV2OriginEmpty(isMxQuantV2, outputOriginAttr)) {
             SetEmpty(*yOriginShape);
         } else {
             Ops::Base::SetUnknownRank(*yOriginShape);
@@ -97,39 +165,14 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     OP_CHECK_IF(xRank < 1,
                 OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(isMxQuantV2 && xRank != 2,
-                OP_LOGE(context->GetNodeName(), "The rank of x should be 2 when quant_mode is 5, but is %ld.", xRank),
-                return ge::GRAPH_FAILED);
-    if (isMxQuantV2) {
-        const gert::Shape* weightShape = context->GetOptionalInputShape(INPUT_IDX_WEIGHT);
-        if (weightShape != nullptr) {
-            const size_t weightRank = weightShape->GetDimNum();
-            OP_CHECK_IF(weightRank < 1 || weightRank > 8,
-                        OP_LOGE(context->GetNodeName(),
-                                "The rank of weight should be in [1, 8] when quant_mode is 5, but is %zu.", weightRank),
-                        return ge::GRAPH_FAILED);
-        }
-        int64_t rows = 1;
-        for (int64_t i = 0; i + 1 < xRank; ++i) {
-            const int64_t extent = xShape->GetDim(i);
-            if (extent == UNKNOWN_DIM_VALUE) {
-                continue;
-            }
-            int64_t next = 0;
-            OP_CHECK_IF(!CheckedMul(rows, extent, next),
-                        OP_LOGE(context->GetNodeName(),
-                                "The shape of x exceeds int64 range or contains a non-positive dim[%ld] %ld with "
-                                "accumulated product %ld when quant_mode is 5.",
-                                i, extent, rows),
-                        return ge::GRAPH_FAILED);
-            rows = next;
-        }
+    if (CheckMxQuantV2InputShape(context, *xShape, xRank, isMxQuantV2) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
     int64_t splitDim = xRank - 1;
 
     if (xShape->GetDim(splitDim) == UNKNOWN_DIM_VALUE) {
         *yShape = *xShape;
-        if (isMxQuantV2 && !outputOrigin) {
+        if (IsMxQuantV2OriginEmpty(isMxQuantV2, outputOriginAttr)) {
             SetEmpty(*yOriginShape);
         } else {
             *yOriginShape = *xShape;
@@ -139,9 +182,7 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
             yScaleShape->AppendDim(xShape->GetDim(i));
         }
         yScaleShape->AppendDim(UNKNOWN_DIM_VALUE);
-        if (isMxQuantV2) {
-            yScaleShape->AppendDim(MX_SCALE_ALIGN_FACTOR);
-        }
+        AppendMxQuantV2ScaleAlign(*yScaleShape, isMxQuantV2);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -150,15 +191,11 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
                         "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
                         xShape->GetDim(splitDim)),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(isMxQuantV2 && (xShape->GetDim(splitDim) < 64 || xShape->GetDim(splitDim) % 64 != 0),
-                OP_LOGE(context->GetNodeName(),
-                        "The last dimension of x should be at least 64 and divisible by 64 when quant_mode is 5, "
-                        "but got %ld.",
-                        xShape->GetDim(splitDim)),
-                return ge::GRAPH_FAILED);
+    if (CheckMxQuantV2LastDim(context, xShape->GetDim(splitDim), isMxQuantV2) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    bool isMxQuant = quantModeAttr != nullptr &&
-                     (*quantModeAttr == MX_QUANT_MODE || *quantModeAttr == MX_QUANT_V2_MODE);
+    bool isMxQuant = IsMxQuantMode(quantModeAttr);
     bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
@@ -166,7 +203,7 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     int64_t swigluLastDim = xShape->GetDim(splitDim) / NUM_TWO;
     yShape->SetDim(splitDim, swigluLastDim);
 
-    if (isMxQuantV2 && !outputOrigin) {
+    if (IsMxQuantV2OriginEmpty(isMxQuantV2, outputOriginAttr)) {
         SetEmpty(*yOriginShape);
     } else {
         *yOriginShape = *xShape;
