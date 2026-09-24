@@ -426,6 +426,7 @@
 - [aclnnSyncBatchNormGatherStats](../../norm/sync_batch_norm_gather_stats/docs/aclnnSyncBatchNormGatherStats.md)
 - [aclnnTake](../../index/gather_v2/docs/aclnnTake.md)
 - [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md)
+- [aclnnThnnFusedGruCell](../../rnn/thnn_fused_gru_cell/docs/aclnnThnnFusedGruCell.md)
 - [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md)
 - [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md)
 - [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)

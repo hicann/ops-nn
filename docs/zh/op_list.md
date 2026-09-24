@@ -5560,6 +5560,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/thnn_fused_gru_cell/README.md">thnn_fused_gru_cell</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对GRU（Gated Recurrent Unit）的单个时间步执行门控融合计算，输入两路门控预激活（输入侧与隐层侧）、上一步隐状态及可选的两路bias，一次计算产出新隐状态hy与反向计算复用的中间量storage。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/thnn_fused_lstm_cell/README.md">thnn_fused_lstm_cell</a></td>
     <td>✓</td>
     <td>✓</td>
