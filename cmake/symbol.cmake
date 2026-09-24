@@ -58,27 +58,29 @@ function(gen_es_nn_lib_ready)
     )
   target_link_directories(proto_${PKG_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
-  # 生成 es_nn
-  add_es_library_and_whl(
-    ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
-    OPP_PROTO_TARGET proto_${PKG_NAME}
-    OUTPUT_PATH ${CMAKE_BINARY_DIR}/es_packages
-  )
-  install(
-    FILES ${CMAKE_BINARY_DIR}/es_packages/lib64/libes_nn.so
-    DESTINATION ${VERSION_INFO_INSTALL_DIR}/lib64
-    OPTIONAL
-  )
-  install(
-    DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/include/es_nn
-    DESTINATION ${VERSION_INFO_INSTALL_DIR}/include/es
-    OPTIONAL
+  if(NOT ENABLE_OP_KERNEL)
+    # 生成 es_nn
+    add_es_library_and_whl(
+      ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
+      OPP_PROTO_TARGET proto_${PKG_NAME}
+      OUTPUT_PATH ${CMAKE_BINARY_DIR}/es_packages
     )
+    install(
+      FILES ${CMAKE_BINARY_DIR}/es_packages/lib64/libes_nn.so
+      DESTINATION ${VERSION_INFO_INSTALL_DIR}/lib64
+      OPTIONAL
+    )
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/include/es_nn
+      DESTINATION ${VERSION_INFO_INSTALL_DIR}/include/es
+      OPTIONAL
+      )
  	install(
     DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/whl/
     DESTINATION ${WHL_INSTALL_DIR}/es_packages/whl
     OPTIONAL
     )
+  endif()
 
 endfunction()
 
@@ -101,22 +103,24 @@ function(gen_es_nn_lib_ready_cust)
     )
   target_link_directories(proto_${PKG_NAME}_cust PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
-  # 生成 es_nn
-  add_es_library(
-    ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
-    OPP_PROTO_TARGET proto_${PKG_NAME}_cust
-    OUTPUT_PATH ${CMAKE_BINARY_DIR}/es_packages
-  )
-  install(
-    DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/include/es_${PKG_NAME}/
-    DESTINATION ${ES_INC_INSTALL_DIR}
-    OPTIONAL
-  )
-  install(
-    FILES ${CMAKE_BINARY_DIR}/es_packages/lib64/libes_${PKG_NAME}.so
-    DESTINATION ${ES_LIB_INSTALL_DIR}
-    OPTIONAL
-  )
+  if(NOT ENABLE_OP_KERNEL)
+    # 生成 es_nn
+    add_es_library(
+      ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
+      OPP_PROTO_TARGET proto_${PKG_NAME}_cust
+      OUTPUT_PATH ${CMAKE_BINARY_DIR}/es_packages
+    )
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/es_packages/include/es_${PKG_NAME}/
+      DESTINATION ${ES_INC_INSTALL_DIR}
+      OPTIONAL
+    )
+    install(
+      FILES ${CMAKE_BINARY_DIR}/es_packages/lib64/libes_${PKG_NAME}.so
+      DESTINATION ${ES_LIB_INSTALL_DIR}
+      OPTIONAL
+    )
+  endif()
 endfunction()
 
 # graph_plugin shared
@@ -158,27 +162,29 @@ function(gen_opgraph_symbol)
     ${CMAKE_BINARY_DIR}/es_packages/lib64
   )
 
-  if(TARGET ${GRAPH_PLUGIN_NAME}_obj)
-    unset(GRAPH_SOURCE)
-    get_target_property(GRAPH_SOURCE ${GRAPH_PLUGIN_NAME}_obj SOURCES)
-    if(GRAPH_SOURCE)
-      add_dependencies(${GRAPH_PLUGIN_NAME}_obj
-        build_es_math
-        build_es_nn
-      )
-      target_link_libraries(${GRAPH_PLUGIN_NAME}_obj
-        PRIVATE
-        es_math
-        es_nn
-      )
-      target_link_libraries(
-        ${OPGRAPH_NAME}
-        PRIVATE
-                -Wl,--no-as-needed
-                es_math
-                es_nn
-                -Wl,--as-needed
+  if(NOT ENABLE_OP_KERNEL)
+    if(TARGET ${GRAPH_PLUGIN_NAME}_obj)
+      unset(GRAPH_SOURCE)
+      get_target_property(GRAPH_SOURCE ${GRAPH_PLUGIN_NAME}_obj SOURCES)
+      if(GRAPH_SOURCE)
+        add_dependencies(${GRAPH_PLUGIN_NAME}_obj
+          build_es_math
+          build_es_nn
         )
+        target_link_libraries(${GRAPH_PLUGIN_NAME}_obj
+          PRIVATE
+          es_math
+          es_nn
+        )
+        target_link_libraries(
+          ${OPGRAPH_NAME}
+          PRIVATE
+                  -Wl,--no-as-needed
+                  es_math
+                  es_nn
+                  -Wl,--as-needed
+          )
+      endif()
     endif()
   endif()
 
@@ -285,20 +291,22 @@ function(gen_cust_proto_symbol)
   npu_op_library(cust_proto GRAPH)
 
   gen_es_nn_lib_ready_cust()
-  if(TARGET ${GRAPH_PLUGIN_NAME}_obj)
-    unset(GRAPH_SOURCE)
-    get_target_property(GRAPH_SOURCE ${GRAPH_PLUGIN_NAME}_obj SOURCES)
-    if(GRAPH_SOURCE)
-      # 添加obj依赖es
-      add_dependencies(${GRAPH_PLUGIN_NAME}_obj
-        build_es_math
-        build_es_nn
-      )
-      target_link_libraries(${GRAPH_PLUGIN_NAME}_obj
-        PRIVATE
-        es_math
-        es_nn
-      )
+  if(NOT ENABLE_OP_KERNEL)
+    if(TARGET ${GRAPH_PLUGIN_NAME}_obj)
+      unset(GRAPH_SOURCE)
+      get_target_property(GRAPH_SOURCE ${GRAPH_PLUGIN_NAME}_obj SOURCES)
+      if(GRAPH_SOURCE)
+        # 添加obj依赖es
+        add_dependencies(${GRAPH_PLUGIN_NAME}_obj
+          build_es_math
+          build_es_nn
+        )
+        target_link_libraries(${GRAPH_PLUGIN_NAME}_obj
+          PRIVATE
+          es_math
+          es_nn
+        )
+      endif()
     endif()
   endif()
   add_dependencies(cust_proto merge_ops_proto_${PKG_NAME}_cust)
@@ -319,20 +327,22 @@ function(gen_cust_proto_symbol)
     ge_compiler
     )
 
-  add_dependencies(cust_proto build_es_math build_es_nn)
+  if(NOT ENABLE_OP_KERNEL)
+    add_dependencies(cust_proto build_es_math build_es_nn)
 
-  target_link_directories(cust_proto
-    PRIVATE
-      ${CMAKE_BINARY_DIR}/es_packages/lib64
-      ${ES_LIB_INSTALL_DIR}
-  )
-  target_link_libraries(cust_proto
-    PRIVATE
-      -Wl,--no-as-needed
-      es_math
-      es_nn
-      -Wl,--as-needed
-  )
+    target_link_directories(cust_proto
+      PRIVATE
+        ${CMAKE_BINARY_DIR}/es_packages/lib64
+        ${ES_LIB_INSTALL_DIR}
+    )
+    target_link_libraries(cust_proto
+      PRIVATE
+        -Wl,--no-as-needed
+        es_math
+        es_nn
+        -Wl,--as-needed
+    )
+  endif()
   file(GLOB_RECURSE proto_headers ${ASCEND_AUTOGEN_PATH}/*_proto.h)
   install(
     FILES ${proto_headers}
