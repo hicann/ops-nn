@@ -67,6 +67,11 @@ __global__ __aicore__ void cla_gate_quant(GM_ADDR global_attn, GM_ADDR local_att
                                           GM_ADDR col_data, GM_ADDR col_scale, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+#endif
+
     REGISTER_TILING_DEFAULT(ClaGateQuantTilingData);
     GET_TILING_DATA_WITH_STRUCT(ClaGateQuantTilingData, tilingData, tiling);
     TPipe pipe;
@@ -76,4 +81,8 @@ __global__ __aicore__ void cla_gate_quant(GM_ADDR global_attn, GM_ADDR local_att
     OpType op(&tilingData, &pipe);
     op.Init(global_attn, local_attn, global_gate_logits, local_gate_logits, row_data, row_scale, col_data, col_scale);
     op.Process();
+
+#if (__NPU_ARCH__ == 3510)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+#endif
 }

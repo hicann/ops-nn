@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file compute.h
+ * \file cla_gate_quant_vf.h
  * \brief Register-level vector functions for ClaGateQuant on Ascend 950.
  *
  * These __simd_vf__ functions operate on UB addresses and scalar arguments.
  * GM transfers, synchronization, and dispatch are handled by the caller.
  */
-#ifndef OPS_NN_CLA_GATE_QUANT_ARCH35_VF_COMPUTE_H
-#define OPS_NN_CLA_GATE_QUANT_ARCH35_VF_COMPUTE_H
+#ifndef OPS_NN_CLA_GATE_QUANT_VF_H
+#define OPS_NN_CLA_GATE_QUANT_VF_H
 
 #include "kernel_operator.h"
 #include "../cla_gate_quant_common.h"
@@ -1649,4 +1649,4 @@ __simd_vf__ inline void ComputeRowScaleCuBLASSingleAxisVF(uint16_t dataLen, uint
 
 } // namespace ClaGateQuant
 
-#endif // OPS_NN_CLA_GATE_QUANT_ARCH35_VF_COMPUTE_H
+#endif // OPS_NN_CLA_GATE_QUANT_VF_H

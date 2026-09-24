@@ -155,7 +155,7 @@ static constexpr AscendC::Reg::CastTrait CAST_32_TO_83 = {AscendC::Reg::RegLayou
 } // namespace ClaGateQuant
 
 // VF definitions depend on the constants and traits declared above.
-#include "vf/compute.h"
+#include "vf/cla_gate_quant_vf.h"
 
 namespace ClaGateQuant {
 
@@ -200,8 +200,8 @@ protected:
     TPipe* pipe_;
     // Double-buffered input queues: activation halves and gate scalars are split
     // so their lifetimes/synchronization can be managed independently.
-    TQue<QuePosition::VECIN, DB_BUFFER> activationInQueue_;
-    TQue<QuePosition::VECIN, DB_BUFFER> gateInQueue_;
+    TQue<QuePosition::VECIN, 1> activationInQueue_;
+    TQue<QuePosition::VECIN, 1> gateInQueue_;
     TBuf<TPosition::VECCALC> mergedClaGateBuf_;
     // One full FP32 register slot per row. Sigmoid is calculated only in lane 0;
     // StoreAlign + LoadAlign(DIST_BRC_B32) expands that scalar for the D lanes.
@@ -212,8 +212,8 @@ protected:
     //   rowScaleQueue_ : row_scale bytes, then col_scale bytes (dual axis)
     // This keeps the two double-buffered input and output queues within the
     // eight available event IDs.
-    TQue<QuePosition::VECOUT, DB_BUFFER> rowDataQueue_;
-    TQue<QuePosition::VECOUT, DB_BUFFER> rowScaleQueue_;
+    TQue<QuePosition::VECOUT, 1> rowDataQueue_;
+    TQue<QuePosition::VECOUT, 1> rowScaleQueue_;
     TBuf<TPosition::VECCALC> rowScaleReciprocalBuf_;
     TBuf<TPosition::VECCALC> colScaleReciprocalBuf_;
 
