@@ -51,7 +51,6 @@
 #include <vector>
 
 #include "ge/fusion/pass/pattern_fusion_pass.h"
-#include "ge/fusion/graph_rewriter.h"
 #include "ge/es_graph_builder.h"
 #include "es_nn_ops.h"
 #include "log/log.h"
@@ -886,14 +885,27 @@ static ge::Status ProcessSingleNodeFusion(const ge::GraphPtr& graph, const ge::G
 
     passContext.SetPassName(ge::AscendString(kFusedOpType));
 #if GE_COMPILER_VERSION_NUM >= 90100000
-    auto replaceStatus = ge::fusion::SubgraphRewriter::Replace(*boundary, std::move(*replacement), passContext);
-#else
-    auto replaceStatus = ge::fusion::SubgraphRewriter::Replace(*boundary, std::move(*replacement));
-#endif
-    if (replaceStatus != ge::SUCCESS) {
+    // GE 9.1.0+ 运行时存在带 CustomPassContext 的 Replace 强符号（替换时自动执行融合
+    // 检查与上报），优先使用；旧运行时（如 9.0.1 toolkit）无该符号，弱引用解析为空，
+    // 回退到 2 参数版本。
+    using ReplaceWithCtxFn = ge::Status (*)(const ge::fusion::SubgraphBoundary&, const ge::Graph&,
+                                            ge::CustomPassContext&);
+    auto replaceWithCtx = static_cast<ReplaceWithCtxFn>(&ge::fusion::SubgraphRewriter::Replace);
+    if (replaceWithCtx != nullptr) {
+        if (replaceWithCtx(*boundary, *replacement, passContext) != ge::SUCCESS) {
+            OP_LOGW(kFusedOpType, "SubgraphRewriter::Replace failed");
+            return ge::GRAPH_NOT_CHANGED;
+        }
+    } else if (ge::fusion::SubgraphRewriter::Replace(*boundary, *replacement) != ge::SUCCESS) {
         OP_LOGW(kFusedOpType, "SubgraphRewriter::Replace failed");
         return ge::GRAPH_NOT_CHANGED;
     }
+#else
+    if (ge::fusion::SubgraphRewriter::Replace(*boundary, *replacement) != ge::SUCCESS) {
+        OP_LOGW(kFusedOpType, "SubgraphRewriter::Replace failed");
+        return ge::GRAPH_NOT_CHANGED;
+    }
+#endif
 
     for (auto& node : nodesToRemove) {
         if (graph->RemoveNode(*node) != ge::GRAPH_SUCCESS) {
