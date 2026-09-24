@@ -23,28 +23,34 @@
 <table>
   <tr>
     <th colspan="2" style="width: 25%;">规格项</th>
-    <th style="width:37.5%;">Atlas A2</th>
-    <th style="width:37.5%;">Ascend 950</th>
+    <th style="width:37.5%;">Atlas A2（以 Ascend910B2 为例）</th>
+    <th style="width:37.5%;">Ascend 950（以 Ascend950PR Server 档为例）</th>
   </tr>
   <tr>
     <td rowspan="4">AICore</td>
-    <td>核数</td>
+    <td>Cube核数</td>
     <td>24</td>
     <td>32</td>
   </tr>
   <tr>
-    <td>频率</td>
+    <td>Vector核数</td>
+    <td>48</td>
+    <td>64</td>
+  </tr>
+  <tr>
+    <td>频率(GHz)</td>
     <td>1.8</td>
     <td>1.65</td>
   </tr>
   <tr>
     <td>Cube算力规格</td>
-    <td>353T/376T @BF16,FP16</td>
-    <td>426T@BF16,FP16 757T@FP8,HIFP8,MXFP8,INT8 1514T@MXFP4</td>
+    <td>353T @BF16,FP16</td>
+    <td>432T @BF16,FP16；865T @FP8,HiF8,MXFP8；1730T @MXFP4</td>
   </tr>
   <tr>
+    <td>Vector</td>
     <td>Vector算力规格(FP16)</td>
-    <td>23.5T</td>
+    <td>22T</td>
     <td>54T</td>
   </tr>
   <tr>
@@ -59,6 +65,13 @@
     <td>1.6TB/s</td>
   </tr>
 </table>
+
+> 注：
+>
+> - 总算力 = Cube + Vector：910B2 BF16/FP16 约376T（353T+22T）；Ascend950PR Server档 486T（432T+54T），详见《昇腾950 NPU架构白皮书》表3-1。
+> - Ascend950PR PCIE档：Cube 28核/Vector 56核、Memory 112GB @ 1.4TB/s、Cube BF16 378T、FP8族 756T、MXFP4 1513T、Vector 47T；Ascend950DT：Cube 36/32/28核三档、Memory 144/96GB @ 4TB/s，详见白皮书表3-1。
+> - INT8/TF32算力在白皮书表3-1中单独列出，此处未展开；本表算力均为纯Cube口径。
+> - 上表为典型SKU示例；算子代码中核数与Buffer容量应通过 `PlatformAscendC` 接口（`GetCoreNumAic`/`GetCoreNumAiv`/`GetCoreMemSize`）运行时获取，避免硬编码。
 
 ## 二、硬件能力变更引入适配点
 
@@ -95,8 +108,8 @@
     <td>原依赖Membase的访存pattern、对齐方式、寄存器数量假设等需要重新审查；模板/tiling可能需要更新到Regbase版本</td>
   </tr>
   <tr>
-    <td>Cube不再支持int4_t</td>
-    <td>所有使用int4_t的算子需要切换到支持的数据类型（如int8），并更新量化解算逻辑</td>
+    <td>Cube MMAD不再支持INT4矩阵计算（int4b_t及打包类型int4x2_t仍为合法内置类型，可用于Vector计算与权重存储）</td>
+    <td>依赖Cube MMAD计算INT4的算子需要切换到支持的数据类型（如int8），并更新量化解算逻辑</td>
   </tr>
   <tr>
     <td>不支持4：2稀疏矩阵计算</td>
@@ -104,8 +117,8 @@
   </tr>
   <tr>
     <td rowspan="1">存储单元</td>
-    <td>Local Buffer内存改进：Cube L0C 256KB、Vector UB 256KB</td>
-    <td>更大L0C/UB允许增大基本块与双缓冲容量，减少切K/切块轮次；需重新评估L1/L0/UB配比与tile尺寸</td>
+    <td>Local Buffer内存改进：Cube L0C扩至256KB（A2为128KB）；UB每AIV物理256KB、用户可用248KB（A2为192KB）</td>
+    <td>更大L0C/UB允许增大基本块与双缓冲容量，减少切K/切块轮次；需重新评估L1/L0/UB配比与tile尺寸，UB等Buffer容量tiling一律以 <code>GetCoreMemSize</code> 返回值为准</td>
   </tr>
   <tr>
     <td rowspan="2">其他</td>
