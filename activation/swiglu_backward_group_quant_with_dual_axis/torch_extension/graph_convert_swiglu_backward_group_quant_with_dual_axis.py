@@ -51,10 +51,8 @@ if _TORCHAIR_AVAILABLE:
         if group_index is not None:
             inputs["group_index"] = group_index
 
-        output_names = ["y1", "scale1", "y2", "scale2"]
-        if weight is not None:
-            output_names.append("grad_weight")
-        outputs = list(
+        output_names = ["y1", "scale1", "y2", "scale2", "grad_weight"]
+        ge_outputs = list(
             ge_op(
                 op_type="SwigluBackwardGroupQuantWithDualAxis",
                 inputs=inputs,
@@ -87,10 +85,12 @@ if _TORCHAIR_AVAILABLE:
         specs = (
             meta_outputs if isinstance(meta_outputs, (list, tuple)) else [meta_outputs]
         )
-        for output, spec in zip(outputs, specs):
+        for output, spec in zip(ge_outputs, specs):
             if spec is not None:
                 output.desc.dtype = _ge_dtype_to_ge_proto_dtype(spec.dtype)
-        return outputs
+        # Keep GE's five-output ABI stable; grad_weight is optional at the
+        # PyTorch boundary and is hidden when no weight was supplied.
+        return ge_outputs if weight is not None else ge_outputs[:4]
 
 else:
 

@@ -5,7 +5,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&Ascend 950DT系列产品</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3系列产品</term>：不支持
@@ -95,7 +95,7 @@
   \left(\frac{\mathbf{gradX}}{\text{scale}}\right)
   $$
 
-  dstType=36时使用FLOAT8_E4M3FN的fp8_max，dstType=35时使用FLOAT8_E5M2的fp8_max；两种类型的量化流程一致，仅目标类型的最大值不同。
+  dstType=36时使用FLOAT8_E4M3FN对应的fp8_max并转换为该格式；dstType=35时使用FLOAT8_E5M2对应的fp8_max并转换为该格式。
 
   - -1轴量化结果为y1Out和scale1Out。
   - -2轴量化结果为y2Out和scale2Out。
@@ -325,7 +325,7 @@ aclnnStatus aclnnSwigluBackwardGroupQuantWithDualAxis(
     <tr>
       <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
-      <td>返回Device侧所需workspace大小。</td>
+      <td>返回算子执行所需的Device侧workspace大小，单位为字节。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -335,7 +335,7 @@ aclnnStatus aclnnSwigluBackwardGroupQuantWithDualAxis(
     <tr>
       <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
-      <td>返回包含算子执行流程的op执行器。</td>
+      <td>返回包含算子执行流程的执行器，用于第二段接口。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -407,12 +407,12 @@ aclnnStatus aclnnSwigluBackwardGroupQuantWithDualAxis(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnSwigluBackwardGroupQuantWithDualAxisGetWorkspaceSize获取。</td>
+      <td>Device侧workspace的大小，单位为字节，传入第一段接口aclnnSwigluBackwardGroupQuantWithDualAxisGetWorkspaceSize返回的值。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>包含算子执行流程的op执行器。</td>
+      <td>第一段接口返回的算子执行器。</td>
     </tr>
     <tr>
       <td>stream</td>
@@ -428,8 +428,8 @@ aclnnStatus aclnnSwigluBackwardGroupQuantWithDualAxis(
 
 ## 约束说明
 
-- aclnnSwigluBackwardGroupQuantWithDualAxis默认确定性实现。
-- aclnnSwigluBackwardGroupQuantWithDualAxis默认非Batch一致性实现，不支持通过aclrtSetSysParamOpt开启Batch一致性。
+- 默认支持确定性计算。
+- 不支持Batch一致性。
 
 ## 调用示例
 
