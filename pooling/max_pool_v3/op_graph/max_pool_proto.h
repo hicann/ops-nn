@@ -41,12 +41,12 @@ namespace ge {
 * @li "ksize" is a list that has length 4. The ksize of the H and W dimensions should be greater than 0.
 * The ksize of the N and C dimensions should be 1. e.g. For "data_format" is "NCHW", ksize[0] = 1 and ksize[1] = 1.
 * For "data_format" is "NHWC", ksize[0] = 1 and ksize[3] = 1. \n
-* For Non-Ascend950PR/Ascend950DT: The produce of the ksize in H and W dimensions
+* For products other than Ascend 950PR&950DT products: The produce of the ksize in H and W dimensions
 * should be less than or equal to 255. e.g. For "data_format" is "NCHW", ksize[2] * ksize[3] <= 255. \n
 * @li "strides" is a list that has length 4. The stride of the N and C dimensions should be 1. \n
-* For Non-Ascend950PR/Ascend950DT: The stride of the H and W dimensions should be greater than 0 and
+* For products other than Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0 and
 * smaller than 64. \n
-* For Ascend950PR/Ascend950DT: The stride of the H and W dimensions should be greater than 0.
+* For Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0.
 * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the H and W dimensions is calculated by below formula: \n
 * @code{.c}

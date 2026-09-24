@@ -31,10 +31,10 @@ namespace ge {
 *     uint32, int64, uint64, bool. \n
 
 * @par Attributes:
-* @li transpose: An optional bool. Defaults to false. On <term>Ascend 950</term> (arch35) only
+* @li transpose: An optional bool. Defaults to false. On Ascend 950PR&950DT products (arch35) only
 *     transpose=true (coordinate-major index layout) is supported; false is not delivered.
 * @li dtype: An optional attribute specifying the output index data type. Defaults to DT_INT32.
-*     On <term>Ascend 950</term> (arch35) only int32 is supported. \n
+*     On Ascend 950PR&950DT products (arch35) only int32 is supported. \n
 
 * @par Outputs:
 * @li value: A Tensor. Has the same type as "x". Shape is [row*col] (static max-size);

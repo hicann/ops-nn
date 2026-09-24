@@ -43,7 +43,7 @@ namespace ge {
 * @li dim: An optional int. The dimension to be split, default is -1.
 * @li approximate: An optional int. Which formula used for the activation computation.
 * The gelu approximation algorithm to use: 'none'(0) or 'tanh'(1), default is 'tanh'(1).
-* Atlas Inference Series Product only support 'tanh'(1).
+* Atlas inference products only support 'tanh'(1).
 * @li activate_left: An optional bool.
 * The gelu activate_left algorithm to use:
 *     'false'(activate right) or 'true'(activate left), defalut is 'false'(activate right).

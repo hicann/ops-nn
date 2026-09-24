@@ -60,13 +60,13 @@ REG_OP(Add)
  *     If the input data contains -inf, -inf is converted into the minimum value of int16. \n
  * @li In the scenarios where the data type is converted from INT32 to INT8: \n
  *     It can only guarantee that the input data has no precision errors within the range of (-2048, 1920).
- * @li Atlas Inference Series Product in the scenarios where the data type is converted from FLOAT32 to INT8: \n
+ * @li Atlas inference products in the scenarios where the data type is converted from FLOAT32 to INT8: \n
  *     It can only guarantee that the input data has no precision errors within the range of (-2048, 1920).
- * @li Atlas Inference Series Product in the scenarios where the data type is converted from FLOAT32 to INT64 and
+ * @li Atlas inference products in the scenarios where the data type is converted from FLOAT32 to INT64 and
  from FLOAT32 to UINT8: \n
  *     It can only guarantee that the input data has no precision errors within the range of (-2147483648,
  2147483583).
- * @li Atlas Inference Series Product in the scenarios where the data type is converted from INT64 to FLOAT32: \n
+ * @li Atlas inference products in the scenarios where the data type is converted from INT64 to FLOAT32: \n
  *     It can only guarantee that the input data has no precision errors within the range of (-2147483648,
  2147483647).
  */

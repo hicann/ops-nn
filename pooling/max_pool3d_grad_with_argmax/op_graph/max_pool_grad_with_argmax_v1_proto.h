@@ -22,7 +22,7 @@ namespace ge {
 * @li x: A tensor of type float16,float32, support format: [NC1HWC0, NCHW].
 * @li grad: A tensor of type float16,float32, support format: [NC1HWC0, NCHW].
 * @li argmax: A tensor of type uint16,int32, support format: [NC1HWC0, NCHW]. \n
-* For Ascend950PR/Ascend950DT: The uint16 data type is not supported.
+* For Ascend 950PR&950DT products: The uint16 data type is not supported.
 
 * @par Attributes:
 * @li ksize: A required list of int8, int16, int32, or int64 values,

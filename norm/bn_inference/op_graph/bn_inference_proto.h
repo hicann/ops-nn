@@ -22,23 +22,23 @@ namespace ge {
  * @brief Performs inference batch normalization on a 4-D or 5-D tensor.
  *
  * @par Inputs:
- * @li x: The feature tensor. On Ascend 950PR/Ascend 950DT, NCHW/NHWC use four dimensions, NCDHW/NDHWC use five
+ * @li x: The feature tensor. On Ascend 950PR&950DT products, NCHW/NHWC use four dimensions, NCDHW/NDHWC use five
  *     dimensions, and ND uses four or five dimensions. NCHW/NCDHW use channel axis 1, NHWC/NDHWC use the last axis,
  *     and ND storage follows its public origin format or uses axis 1 when the origin format is ND.
- * @li mean: A one-dimensional tensor of length C. On Ascend 950PR/Ascend 950DT, it is the original mean when mode is
+ * @li mean: A one-dimensional tensor of length C. On Ascend 950PR&950DT products, it is the original mean when mode is
  *     nonzero and the pre-folded alpha when mode is 0.
- * @li variance: A one-dimensional tensor of length C. On Ascend 950PR/Ascend 950DT, it is the original variance when
+ * @li variance: A one-dimensional tensor of length C. On Ascend 950PR&950DT products, it is the original variance when
  *     mode is nonzero and the pre-folded beta when mode is 0.
- * @li momentum: The momentum tensor. On Ascend 950PR/Ascend 950DT, its shape is [], [1], or [C]. Its first element is
+ * @li momentum: The momentum tensor. On Ascend 950PR&950DT products, its shape is [], [1], or [C]. Its first element is
  *     used only when mode is nonzero and both optional inputs are absent.
- * @li scale: Optional one-dimensional tensor of length C. On Ascend 950PR/Ascend 950DT, scale-only is supported.
- * @li offset: Optional one-dimensional tensor of length C. On Ascend 950PR/Ascend 950DT, offset-only is supported
+ * @li scale: Optional one-dimensional tensor of length C. On Ascend 950PR&950DT products, scale-only is supported.
+ * @li offset: Optional one-dimensional tensor of length C. On Ascend 950PR&950DT products, offset-only is supported
  *     when mode is nonzero; mode 0 requires scale when offset is present.
  *
  * @par Attributes:
  * @li epsilon: An optional float. The default value is 1e-5.
  * @li use_global_stats: An optional bool. The default value is true.
- * @li mode: An optional integer. The default value is 1. On Ascend 950PR/Ascend 950DT, 0 selects the pre-folded
+ * @li mode: An optional integer. The default value is 1. On Ascend 950PR&950DT products, 0 selects the pre-folded
  *     expression and every nonzero integer selects complete BNInference behavior. On other products, mode does not
  *     change the complete BNInference behavior.
  *

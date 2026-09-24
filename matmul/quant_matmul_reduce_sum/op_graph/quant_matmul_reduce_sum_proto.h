@@ -48,7 +48,7 @@ namespace ge {
 * @par Outputs:
 * y: A matrix tensor. The data type is bfloat16. The format supports ND. \n
 
-* Atlas A2 Trainging Series Product/Atlas 800I A2 Inference Product or Atlas A3 Training Series Product: \n
+* Atlas A2 products or Atlas A3 training products: \n
 * | x1   | x2   | x1Scale  | x2Scale  | yScale | x1Offset | x2Offset | yOffset | bias  | out     |
 * |------|------|----------|----------|--------|----------|----------|---------|-------|---------|
 * | INT8 | INT8 | FLOAT32  | BFLOAT16 | null   | null     | null     | null    | null  |BFLOAT16 |

@@ -27,16 +27,16 @@ namespace ge {
 * @par Attributes:
 * @li ksize: A required tuple or list of ints,
 * specifying the size of the window for each dimension of the input tensor.
-* For Ascend 950PR/Ascend 950DT AI Processor: "ksize" length is 1, 2 or 4, must be greater than 0. \n
+* For Ascend 950PR&950DT products: "ksize" length is 1, 2 or 4, must be greater than 0. \n
 * @li strides: A required tuple or list of ints,
 * specifying the stride of the sliding window for each dimension of the input tensor.
-* For Ascend 950PR/Ascend 950DT AI Processor: "strides" length is 1, 2 or 4, must be greater than 0. \n
+* For Ascend 950PR&950DT products: "strides" length is 1, 2 or 4, must be greater than 0. \n
 * @li padding: An optional string, specifying the type of the padding algorithm to use,
 * either "VALID", "SAME".
 * With "SAME" means that the outputs will have the same spatial dimensions as its inputs.
 * With "VALID" means no padding.
 * @li data_format: An optional string. Defaults to "NHWC". \n
-* For Ascend 950PR/Ascend 950DT AI Processor: support "NCHW" or "NHWC". \n
+* For Ascend 950PR&950DT products: support "NCHW" or "NHWC". \n
 
 * @par Outputs:
 * @li out_grad: A mutable tensor with the same shape as "orig_input_shape" and the same type as "input_grad". \n

@@ -41,8 +41,8 @@ namespace ge {
 * @attention Constraints:
 * @li In non-last axis scenarios, you are advised to convert x, indices, and updates to the last axes,
 * use ScatterElementsV2 for calculation, and then convert them to the original axes.
-* @li Only Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product support ScatterElementsV2. \n
+* @li Only Atlas A2 products and
+* Atlas A3 products support ScatterElementsV2. \n
 
 * @par Outputs:
 * var: A Tensor. Has the same type and format as input "var" . \n

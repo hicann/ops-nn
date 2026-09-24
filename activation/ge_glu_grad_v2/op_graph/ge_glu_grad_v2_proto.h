@@ -40,7 +40,7 @@ namespace ge {
 * @li dim: An optional Int. The dimension to be split, default is -1.
 * @li approximate: An optional Int. Determines which formula to use for the activation computation.
 * The gelu grad approximation algorithm to use: 0('none') or 1('tanh'), default is 1('tanh').
-* Atlas Inference Series Product only supports 'tanh'(1).
+* Atlas inference products only supports 'tanh'(1).
 * @li activate_left: An optional Bool.
 * Whether the left side of x is used as an input parameter to the activation function,
 * default is false, use the right side.

@@ -50,8 +50,6 @@ is used for training or inference. Defaults to "True" . \n
 *@attention Constraints:
 *@li If the operation is used for inference, then output "reserve_space_1"
 has the same value as "mean" and output "reserve_space_2" has the same value as "variance".
-*@li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1‰ due to the square root instruction .
-
 *@par Third-party framework compatibility
 * Compatible with the TensorFlow operator fused_batch_norm_v2.
 */

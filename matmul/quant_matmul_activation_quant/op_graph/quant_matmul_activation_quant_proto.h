@@ -110,12 +110,12 @@ even.
  *      - scale_alg only supports 0 and 2. When scale_alg is 2, dst_type_max supports 0.0 and 6.0-12.0.
  *      - round_mode supports "rint", "floor", "round".
  *      - When x2 is NZ format, x1 does not support transpose, i.e. transpose_x1 cannot be true.
- * @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support
+ * @li Only weight supports ND and NZ format on Ascend 950PR&950DT products. All other inputs and outputs only support
 ND
 format.
 * @li The following are the supported data type combinations by platform.
 
-* - Ascend 950 AI Processor:
+* - Ascend 950PR&950DT products:
 *\n
 | x1                        | x2            | bias         | x1_scale   | x2_scale   | out                       |
 y_scale    | | :-----------------------: | :-----------: | :----------: | :---------: | :---------: |
@@ -127,7 +127,7 @@ float8_e4m3fn | null/float32 | float8_e8m0 | float8_e8m0 | float8_e5m2          
 float4_e2m1   | null/float32 | float8_e8m0 | float8_e8m0 | float4_e2m1               | float8_e8m0 |
 *\n
 
-* - Ascend 950 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
+* - Ascend 950PR&950DT products with group_sizes scenarios, supported data type and shapes combinations:
 *\n
 | quantization      | x1 type                            | x1_scale type  | x1 shape      | x2 shape      | x2_scale
 shape                           | x1_scale shape                        | group_size      |

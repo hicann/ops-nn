@@ -933,7 +933,7 @@ following types: float16.
 * The data is stored in the order of: [out_channels].
 * @li offset_w: An optional quantitative offset tensor. Reserved.
 *\n
-* The following are the supported data types and data formats (except IPV350 and Ascend 950 AI Processor):
+* The following are the supported data types and data formats (except IPV350 and Ascend 950PR&950DT products):
 *\n
 | Tensor    | x        | filter   | bias     | y        |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -956,7 +956,7 @@ following types: float16.
 | Format    | NCHW    | NCHW    | ND      | NCHW    |\n
 |           | NHWC    | HWCN    | ND      | NHWC    |\n
 *\n
-* The following are the supported data types and data formats for Ascend 950 AI Processor:
+* The following are the supported data types and data formats for Ascend 950PR&950DT products:
 *\n
 | Tensor    | x        | filter   | bias     | y        |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -1026,7 +1026,7 @@ following types: float16.
 * int32(2147483647), the product of each dimension of x/filter/bias/offset_w/y
 * shape exceeds max int32(2147483647) or the value of strides/pads/dilations/offset_x
 * exceeds the range in the above table, the correctness of the operator cannot be guaranteed. \n
-* In Ascend 950 AI Processor: If any dimension of x/filter/bias/offset_w/y shape exceeds max
+* In Ascend 950PR&950DT products: If any dimension of x/filter/bias/offset_w/y shape exceeds max
 * 1000000, the product of each dimension of x/filter/bias/offset_w/y
 * shape exceeds max int32(2147483647) or the value of strides/pads/dilations/offset_x
 * exceeds the range in the above table, the correctness of the operator cannot be guaranteed.
@@ -1068,8 +1068,8 @@ following types: float16.
     * @li x: A required 5D tensor of input image.
             The format of x is NCDHW or NDHWC.
             The data is stored in the order of: [n, in_channels, d, h, w] or [n, d, h, w, in_channels]. \n
-            Any dimension of x shape must be in [1, 2147483646] except Ascend 950 AI Processor. \n
-            In Ascend 950 AI Processor, any dimension of x shape must be in [1, 1000000].
+            Any dimension of x shape must be in [1, 2147483646] except Ascend 950PR&950DT products. \n
+            In Ascend 950PR&950DT products, any dimension of x shape must be in [1, 1000000].
     * @li filter: A required 5D tensor of convolution kernel.
                 Must have the same type as "x".
                 The format support NCDHW or DHWCN.
@@ -1080,17 +1080,17 @@ following types: float16.
                 The kernel_h and kernel_w dimensions must be in [1, 511]. \n
                 The other values of filter_size must be in [1, 2147483646]. \n
                 When format is DHWCN and type is float32,
-                filter should be a constants except Ascend 950 AI Processor. \n
-                In Ascend 950 AI Processor, the kernel_h and kernel_w dimensions must be in [1, 255],
+                filter should be a constants except Ascend 950PR&950DT products. \n
+                In Ascend 950PR&950DT products, the kernel_h and kernel_w dimensions must be in [1, 255],
                 And the other values of filter_size must be in [1, 1000000].
     * @li bias: An optional 1D tensor of additive biases to the outputs.
                 The data is stored in the order of: [out_channels].
                 "out_channels" must equals to the "out_channels" of output y. \n
-                In Ascend 950 AI Processor, the out_channels dimension must be in [1, 1000000]
+                In Ascend 950PR&950DT products, the out_channels dimension must be in [1, 1000000]
     * @li offset_w: An optional quantitative offset tensor. Reserved.
 *\n
 *\n
-* The following are the supported data types and data formats for Ascend 950 AI Processor:
+* The following are the supported data types and data formats for Ascend 950PR&950DT products:
 *\n
 | Tensor    | x        | filter   | bias     |   y      |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -1116,19 +1116,19 @@ following types: float16.
                 sliding window for each dimension of "x". The dimension order is determined by the data format of
 "x". The n and in_channels dimensions must be 1. \n When the format is "NDHWC", its shape is [1, stride_d, stride_h,
 stride_w, 1], when the format is "NCDHW", its shape is [1, 1, stride_d, stride_h, stride_w]. \n The stride_h and
-stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] except Ascend 950 AI Processor.
-\n In Ascend 950 AI Processor the stride_d must be in [1, 1000000].
+stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] except Ascend 950PR&950DT products.
+\n In Ascend 950PR&950DT products the stride_d must be in [1, 1000000].
     * @li pads: Required. A list of 6 integers. Supports only padding along the d, h and w dimensions in sequence of
                 pad_head, pad_tail, pad_top, pad_bottom, pad_left and pad_right. \n
                 The pad_top, pad_bottom, pad_left and pad_right must be in [0, 255].
-                The pad_head and pad_tail must be in [0, 2147483646] except Ascend 950 AI Processor. \n
-                In Ascend 950 AI Processor the pad_head and pad_tail must be in [1, 1000000].
+                The pad_head and pad_tail must be in [0, 2147483646] except Ascend 950PR&950DT products. \n
+                In Ascend 950PR&950DT products the pad_head and pad_tail must be in [1, 1000000].
     * @li dilations: Optional. A list of 5 integers. Specifies the dilation
                     factor for each dimension of "x". The dimension order is determined by the data format of "x".
 \n When the format is "NDHWC", its shape is [1, dilation_d, dilation_h, dilation_w, 1], when the format is "NCDHW",
 its shape is [1, 1, dilation_d, dilation_h, dilation_w]. \n Default value is [1, 1, 1, 1, 1]. \n The dilation_h and
-dilation_w dimensions must be in [1, 255]. The dilation_d dimensions must be in [0, 2147483646] except Ascend 950 AI
-Processor. \n In Ascend 950 AI Processor the dilation_d dimensions must be in [1, 1000000].
+dilation_w dimensions must be in [1, 255]. The dilation_d dimensions must be in [0, 2147483646] except Ascend
+950PR&950DT products. \n In Ascend 950PR&950DT products the dilation_d dimensions must be in [1, 1000000].
     * @li groups: Optional. An integer of type int32. The number of groups
                 in group convolution. In_channels and out_channels must both be divisible by "groups".
                 The value of groups must be in [1, 65535]. Default value is 1.
@@ -1154,8 +1154,8 @@ Processor. \n In Ascend 950 AI Processor the dilation_d dimensions must be in [1
 *                  (dilation_w * (kernel_w - 1) + 1))
 *                 / stride_w + 1
 *\n
-        Any dimension of y shape must be in [1, 2147483646] except Ascend 950 AI Processor. \n
-        In Ascend 950 AI Processor, any dimension of y shape must be in [1, 1000000].
+        Any dimension of y shape must be in [1, 2147483646] except Ascend 950PR&950DT products. \n
+        In Ascend 950PR&950DT products, any dimension of y shape must be in [1, 1000000].
 * @attention Constraints:
     * @li The input x size after padding should be greater than the filter size.
     * @li The w dimension of the input x supports cases exceeding 4096, but it may
@@ -1164,7 +1164,7 @@ Processor. \n In Ascend 950 AI Processor the dilation_d dimensions must be in [1
     * the product of each dimension of x/filter/bias/y shape exceeds max int32 minus one (2147483646) or
     * the value of strides/pads/dilations/offset_x exceeds the range which is described in Attributes,
     * the correctness of the operator cannot be guaranteed. \n
-    * In Ascend 950 AI Processor: If any dimension of x/filter/bias/y shape exceeds max
+    * In Ascend 950PR&950DT products: If any dimension of x/filter/bias/y shape exceeds max
     * 1000000, the product of each dimension of x/filter/bias/y
     * shape exceeds max int32(2147483647) or the value of stride/padding/dilation/offset_x
     * exceeds the range in the above table, the correctness of the operator cannot be guaranteed.
@@ -1281,7 +1281,7 @@ Processor. \n In Ascend 950 AI Processor the dilation_d dimensions must be in [1
     |                  | W        | [0, 4096]    |\n
     | Offset_x         |          | [-128, 127]  |\n
     *\n
-    * In Atlas Training Series Product, fmap or out_backprop's H and W not support 1 when\n
+    * In Atlas training products, fmap or out_backprop's H and W not support 1 when\n
     * fmap_h + pad_top + pad_bottom != (filter_height - 1) * dilation_h + 1
     * and filter_width > fmap_width.
     * If filter_h = 1 and filter_w = 1, out_backprop_w * stride_h * stride_w
@@ -1336,11 +1336,11 @@ Processor. \n In Ascend 950 AI Processor the dilation_d dimensions must be in [1
     * @li bias: Optional. An optional 1D tensor of type float16 and float32. When x
     * is float16, bias is float16. When x is bfloat16, bias is float32.
     * Currently bias is not supported on Atlas 200/500 A2 Inference Product and
-    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+    * Atlas A2 products.
 Reserved.
     * @li offset_w: Optional. An optional 1D tensor for quantized deconvolution.
     * Currently offset_w is not supported on Atlas 200/500 A2 Inference Product and
-    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+    * Atlas A2 products.
 Reserved.
 
 *@par Attributes:
@@ -1367,11 +1367,11 @@ Reserved.
     * @li output_padding: Optional. The size will be added in the output shape.
     * Defaults to [0, 0, 0, 0, 0].
     * Currently output_padding is not supported on Atlas 200/500 A2 Inference Product and
-    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+    * Atlas A2 products.
     * In graph mode, only configuration to [0, 0, 0, 0, 0] is supported.
     * @li offset_x: Optional. Input offset_x value. Defaults to 0.
     * Currently offset_x is not supported on Atlas 200/500 A2 Inference Product and
-    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+    * Atlas A2 products.
 Reserved.
 
 *@par Outputs:
@@ -1431,12 +1431,13 @@ Reserved.
     * @li "ksize" is a list that has length 4. The ksize of the H and W dimensions should be greater than 0.
     * The ksize of the N and C dimensions should be 1. e.g. For "data_format" is "NCHW", ksize[0] = 1 and ksize[1] = 1.
     * For "data_format" is "NHWC", ksize[0] = 1 and ksize[3] = 1. \n
-    * For Non-Ascend 950 AI Processor: The produce of the ksize in H and W dimensions
+    * For products other than Ascend 950PR&950DT products: The produce of the ksize in H and W dimensions
     * should be less than or equal to 255. e.g. For "data_format" is "NCHW", ksize[2] * ksize[3] <= 255. \n
     * @li "strides" is a list that has length 4. The stride of the N and C dimensions should be 1. \n
-    * For Non-Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0 and
+    * For products other than Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0
+    and
     * smaller than 64. \n
-    * For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
+    * For Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0.
     * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
     output
     * shape at the H and W dimensions is calculated by below formula: \n
@@ -2316,7 +2317,7 @@ currently supported.
     * Format of the original input, either NCHW or NHWC. Defaults to NHWC . \n
 
     * @attention Constraints:
-    * @li Only Atlas Training Series Product is supported.
+    * @li Only Atlas training products are supported.
     * @li "x1" and "grads" must have the same shape.
     * @li "x2" and "y" must have the same shape. Otherwise, an error is reported.
     * @li "x1", "x2", "grads", and "y" must be 5D tensors.
@@ -2434,7 +2435,7 @@ currently supported.
     * Must set the format, supported format list ["NC1HWC0"]
     * @li argmax: An 5hd tensor of type uint16 or int64.
     * Must set the format, supported format list ["NC1HWC0"] \n
-    * For Ascend 950 AI Processor: The uint16 data type is not supported.
+    * For Ascend 950PR&950DT products: The uint16 data type is not supported.
 
     * @par Attributes:
     * @li ksize: A required list of int8, int16, int32, or int64 values,
@@ -2778,7 +2779,7 @@ currently supported.
 
     *@attention Constraints:
     *@li UniqueWithCounts runs on the Ascend AI CPU, which delivers poor performance. \n
-    *@li Dtype bfloat16, uint32, uint64 only support Ascend 950 AI Processor. \n
+    *@li Dtype bfloat16, uint32, uint64 only support Ascend 950PR&950DT products. \n
 
     *@par Third-party framework compatibility
     *Compatible with the TensorFlow operator UniqueWithCounts.
@@ -2809,7 +2810,7 @@ currently supported.
 
     *@attention Constraints:
     *@li Unique runs on the Ascend AI CPU, which delivers poor performance. \n
-    *@li Dtype bfloat16, uint32, uint64 only support Ascend 950 AI Processor. \n
+    *@li Dtype bfloat16, uint32, uint64 only support Ascend 950PR&950DT products. \n
 
     *@par Third-party framework compatibility
     *Compatible with the TensorFlow operator Unique.
@@ -2917,8 +2918,6 @@ currently supported.
     * @li This operator is a BatchNorm fusion operator for updating the moving
     * averages for training. This operator is used in conjunction with
     * BNTrainingUpdate.
-    * @li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the
-    * square root instruction.
     */
     REG_OP(BNTrainingUpdate)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
@@ -3099,8 +3098,6 @@ currently supported.
     *@attention Constraints:
     *@li This operator is a InstanceNorm fusion operator for updating the moving averages for training.
     * This operator is used in conjunction with GNTrainingUpdate.
-    *@li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the square root
-    instruction.
     */
     REG_OP(GNTrainingUpdate)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))

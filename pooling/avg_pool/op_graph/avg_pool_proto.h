@@ -43,19 +43,19 @@ namespace ge {
 * @attention Constraints:
 * @li This operator applies only to a TensorFlow network.
 * @li Only single input and single output are supported.
-* @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: "ksize_H" and "ksize_W" are positive integers within the range [1, 255].
+* @li For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: "ksize_H" and "ksize_W" are positive integers within the range [1, 255].
 * ksize_H * ksize_W < 256. \n
-* For Ascend 950 AI Processor: The ksize of the H and W dimensions should be greater than 0.
-* @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: the values of "strides_h" and "strides_w" are positive integers within
+* For Ascend 950PR&950DT products: The ksize of the H and W dimensions should be greater than 0.
+* @li For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: the values of "strides_h" and "strides_w" are positive integers within
 * the range [1, 63]. \n
-* For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
+* For Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0.
 * @li When the C axis is greater than 1, if points with the same H and W dimensions in x contain one INF input
 * on the C axis, the output of the INF input covered by the sliding window on this C axis is INF, and the
 * outputs of other C axis without INF input covered by the sliding window are Nan. If points with the same
 * H and W dimensions in x contain more than one INF input on the C axis, the outputs of all INF input data
-* covered by the sliding window on the C axis are Nan. this constraints not for Ascend 950 AI Processor.
+* covered by the sliding window on the C axis are Nan. this constraints not for Ascend 950PR&950DT products.
 * @li The output "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the H and W dimensions is calculated by below formula: \n
 * @code{.c}

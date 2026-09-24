@@ -28,7 +28,7 @@ namespace ge {
 * @li weight: A matrix tensor of quantized weight. Shape supports (n,k)/(k,n),
 * Format supports ND/NZ. The type support int8, int4, int32, float8_e4m3fn, hifloat8, float4_e2m1. \n
 * Format must be ND when the type is float8_e4m3fn or hifloat8.
-* For Ascend 950 AI Processor, transpose_weight must be false when format is NZ. \n
+* For Ascend 950PR&950DT products, transpose_weight must be false when format is NZ. \n
 * The k, n value must be at least 1.
 * The k value must be even when type is int4/float4_e2m1 and transpose_weight
 * is true, and the n value must be even when type is int4/float4_e2m1 and transpose_weight
@@ -91,10 +91,9 @@ namespace ge {
 * The type should be the same with x when quant_scale not exits.
 
 * @attention Constraints:
-* @li It is not recommended to use weight NZ format on Atlas A2 Training Series Product/Atlas 800I A2 Inference
-Product/A200I A2 Box Heterogeneous Component,
+* @li It is not recommended to use weight NZ format on Atlas A2 products,
 * because its performance may not be better than ND format.
-* @li All of these conditions must be met on Atlas Inference Series Product: weight type is int8,
+* @li All of these conditions must be met on Atlas inference products: weight type is int8,
 * weight format is NZ, transpose_weight is true, x type is float16, antiquant_scale only support the per_channel mode,
 * quant_scale not exists, quant_offset not exists, antiquant_group_size is 0.
 * @li Per_channel mode: To improve performance, it is recommended to use the

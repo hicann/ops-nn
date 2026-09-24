@@ -34,8 +34,8 @@ namespace ge {
 * y: A Tensor. Has the same type as "grads". \n
 
 * @attention Constraints:
-* @li In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* @li In Atlas A2 products and
+* Atlas A3 products,
 * broadcasting is not allowed between input grads, input predict and input label, the three inputs must have the same
 shape. \n
 

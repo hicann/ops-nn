@@ -54,8 +54,6 @@ format as "x". \n
 
 * @attention Constraints:
 * @li This operator is used in conjunction with BNTrainingReduce.
-* @li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to
-* the square root instruction.
 */
 #ifndef OPS_PROTO_DEF_BNTRAININGUPDATEV2
 #define OPS_PROTO_DEF_BNTRAININGUPDATEV2

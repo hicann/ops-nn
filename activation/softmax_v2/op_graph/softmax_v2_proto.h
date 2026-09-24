@@ -33,7 +33,7 @@ data types: float16, float32, bfloat16,
 * @par Attributes:
 * @li axes: An optional list of int. Specifies on which dimensions of input x the Softmax operation is performed.
 * Multi-axis reduction is supported. Defaults to "{-1}".
-* In Ascend 950 AI Processor, only single-axis reduction is supported. \n
+* In Ascend 950PR&950DT products, only single-axis reduction is supported. \n
 * @li half_to_float: An optional bool.
 * This parameter determines whether to convert the output data type to float32 when the input data type is float16.
 * Defaults to "false".

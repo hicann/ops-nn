@@ -20,9 +20,9 @@ namespace ge {
 
 * @par Inputs:
 * One input:
-* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 950 AI Processor.
+* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 950PR&950DT products.
 * The double type is reserved but currently unsupported. Support format: NDHWC, NCDHW. Additional support for ND in
-Ascend 950 AI Processor.
+Ascend 950PR&950DT products.
 
 * @par Attributes:
 * @li ksize: A required list of int8, int16, int32, or int64 values,
@@ -50,12 +50,12 @@ Ascend 950 AI Processor.
 * @li "ksize" is a list that has length 1, 3, or 5. The ksize of the H and W dimensions should be greater than 0.
 * The ksize of the N and C dimensions should be 1. e.g. For "data_format" is "NCDHW", ksize[0] = 1 and ksize[1] = 1.
 * For "data_format" is "NDHWC", ksize[0] = 1 and ksize[4] = 1.  \n
-* For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: The product of the ksize in D, H and W dimensions
+* For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: The product of the ksize in D, H and W dimensions
 * should be less than or equal to 255. e.g. For "data_format" is "NCDHW", ksize[2] * ksize[3] * ksize[4] <= 255. \n
 * @li "strides" is a list that has length 1, 3, or 5. The stride of the N and C dimensions should be 1.  \n
-* For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: The stride of the D, H and W dimensions should be greater than 0 and
+* For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: The stride of the D, H and W dimensions should be greater than 0 and
 * smaller than 64.  \n
 * The stride of the D, H and W dimensions should be greater than 0.
 * @li "data_format" only support "NCDHW" and "NDHWC". \n
