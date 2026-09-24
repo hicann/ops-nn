@@ -86,16 +86,16 @@ protected:
     __aicore__ inline void LoadWeightL1ForGroup(GM_ADDR filter, uint32_t groupIter);
     __aicore__ inline void LoadBiasScaleL1(GM_ADDR bias, const ExtendParams* extendParams);
     __aicore__ inline void LoadBiasScaleL1ForGroup(GM_ADDR bias, const ExtendParams* extendParams, uint32_t groupIter);
-    __aicore__ inline void LoadBiasToBT();
+    __aicore__ inline void LoadBiasToBT(uint32_t nOff, uint32_t curN);
     __aicore__ inline void SetupLoad3DBase();
     __aicore__ inline void ComputeHiPadRange(uint32_t hiStart, uint32_t hiEnd);
     __aicore__ inline void MmadAccumulateTile(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
                                               LocalTensor<L0cT>& cl0, uint32_t curMAlign, uint32_t mmadN,
-                                              uint32_t kL0MaxIter, bool& needLoadBias);
+                                              uint32_t kL0MaxIter, bool& needLoadBias, uint32_t nOff);
     __aicore__ inline void InitMmadParams(MmadParams& mp, uint32_t m, uint32_t n);
     __aicore__ inline void CopyOutResult(LocalTensor<L0cT>& cl0, GM_ADDR y, const ExtendParams* extendParams,
                                          uint32_t outOff, uint32_t fpMSize, uint32_t curMAlign, uint32_t fpDnNum,
-                                         uint32_t fpDstDnStride);
+                                         uint32_t fpDstDnStride, uint32_t nOff, uint32_t curN);
     __aicore__ inline void ComputeGroupIterParams();
     __aicore__ inline uint32_t CalcActualCoForGroupIter(uint32_t groupIter);
     __aicore__ inline void ProcessHwMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
@@ -109,11 +109,12 @@ protected:
                                         uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
                                         const ExtendParams* extendParams, GM_ADDR x, GM_ADDR filter, GM_ADDR bias);
     __aicore__ inline void DoLoadAL0(LocalTensor<FmapT>& al1, LocalTensor<FmapT>& al0, uint32_t kOff, uint32_t curK);
-    __aicore__ inline void DoLoadBL0(LocalTensor<WeightT>& bl0, LocalTensor<WeightT>& bl1, uint32_t kOff,
-                                     uint32_t curK);
+    __aicore__ inline void DoLoadBL0(LocalTensor<WeightT>& bl0, LocalTensor<WeightT>& bl1, uint32_t kOff, uint32_t curK,
+                                     uint32_t nOff, uint32_t curN);
     template <typename OutputT, uint64_t FixpipeIdx, const FixpipeConfig& config, const FixpipeConfig& configFp>
     __aicore__ inline void DoCopyOut(GM_ADDR yAddr, LocalTensor<L0cT>& cl0, uint32_t outOffset, uint32_t curM,
-                                     uint32_t curMAlign, uint32_t actualCo, uint32_t fpDnNum, uint32_t fpDstDnStride);
+                                     uint32_t curMAlign, uint32_t actualCo, uint32_t fpDnNum, uint32_t fpDstDnStride,
+                                     uint32_t nOff);
     template <typename OutputT, uint64_t FixpipeIdx>
     __aicore__ inline QuantMode_t GetQuantPreInt32();
     template <typename OutputT, uint64_t FixpipeIdx>
@@ -404,11 +405,12 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                                   LocalTensor<L0cT>& cl0,
                                                                                   uint32_t curMAlign, uint32_t mmadN,
                                                                                   uint32_t kL0MaxIter,
-                                                                                  bool& needLoadBias)
+                                                                                  bool& needLoadBias, uint32_t nOff)
 {
     MmadParams mp;
     InitMmadParams(mp, curMAlign, mmadN);
 
+    const bool isNSplit = tiling_->nL0 < tiling_->nBL1;
     for (uint32_t kl0Iter = 0; kl0Iter < kL0MaxIter; kl0Iter++) {
         uint32_t kOff = kl0Iter * tiling_->kL0;
         uint32_t curK = tiling_->kL0;
@@ -427,17 +429,21 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         WaitFlag<HardEvent::M_MTE1>(ev);
 
         DoLoadAL0(al1, al0, kOff, curKAL0);
-        DoLoadBL0(bl0, bl1, kOff, curK);
-        if (needLoadBias) {
-            if (tiling_->hasBias) {
+        DoLoadBL0(bl0, bl1, kOff, curK, nOff, mmadN);
+        if (tiling_->hasBias) {
+            if (needLoadBias) {
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
-                LoadBiasToBT();
+            }
+            if (kl0Iter == 0 && (needLoadBias || isNSplit)) {
+                LoadBiasToBT(nOff, tiling_->nL0 < actualCo_ - nOff ? tiling_->nL0 : actualCo_ - nOff);
                 if constexpr (!IsHwMode) {
-                    SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+                    if (needLoadBias && !isNSplit) {
+                        SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+                    }
                 }
             }
-            needLoadBias = false;
         }
+        needLoadBias = false;
         SetFlag<HardEvent::MTE1_M>(ev);
         WaitFlag<HardEvent::MTE1_M>(ev);
 
@@ -1020,20 +1026,25 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
-                                         WeightFmt, IsHwMode>::LoadBiasToBT()
+                                         WeightFmt, IsHwMode>::LoadBiasToBT(uint32_t nOff, uint32_t curN)
 {
     constexpr uint32_t BT_ALIGN = 64;
-    uint32_t btElemNum = AlignB(tiling_->singleCoreCo * sizeof(L0cT), BT_ALIGN) / sizeof(L0cT);
+    // N tiles reuse BT address zero; finish the preceding MMAD before replacing bias.
+    if (tiling_->nL0 < tiling_->nBL1) {
+        SetFlag<HardEvent::M_MTE1>(EVT_BIAS_DONE);
+        WaitFlag<HardEvent::M_MTE1>(EVT_BIAS_DONE);
+    }
+    uint32_t btElemNum = AlignB(curN * sizeof(L0cT), BT_ALIGN) / sizeof(L0cT);
     LocalTensor<L0cT> biasBT(TPosition::C2, 0, btElemNum);
     LocalTensor<BiasT> biasL1src(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
-    uint32_t blkCnt = AlignB(actualCo_ * sizeof(BiasT), BT_ALIGN) / 32;
+    uint32_t blkCnt = AlignB(curN * sizeof(BiasT), BT_ALIGN) / 32;
     DataCopyParams cp(1, static_cast<uint16_t>(blkCnt), 0, 0);
 #if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<weightType, half>::value) {
         cp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;
     }
 #endif
-    DataCopy(biasBT, biasL1src[0], cp);
+    DataCopy(biasBT, biasL1src[nOff], cp);
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -1092,12 +1103,13 @@ template <typename FmapType, typename weightType, typename biasType, typename ou
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::DoLoadBL0(LocalTensor<WeightT>& bl0,
                                                                          LocalTensor<WeightT>& bl1, uint32_t kOff,
-                                                                         uint32_t curK)
+                                                                         uint32_t curK, uint32_t nOff, uint32_t curN)
 {
     uint32_t kStep = CeilDiv(curK, GK0);
-    uint32_t mStep = n1PerCore_;
+    uint32_t nLoad = AlignB(curN, GN0);
+    uint32_t mStep = CeilDiv(nLoad, GN0);
     Load2DBitModeParam param;
-    param.SetMStartPosition(0);
+    param.SetMStartPosition(nOff / GN0);
     param.SetKStartPosition(kOff / GK0);
     param.SetMStep(static_cast<uint16_t>(mStep));
     param.SetKStep(static_cast<uint16_t>(kStep));
@@ -1156,7 +1168,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                          WeightFmt, IsHwMode>::DoCopyOut(GM_ADDR yAddr, LocalTensor<L0cT>& cl0,
                                                                          uint32_t outOffset, uint32_t curM,
                                                                          uint32_t curMAlign, uint32_t actualCo,
-                                                                         uint32_t fpDnNum, uint32_t fpDstDnStride)
+                                                                         uint32_t fpDnNum, uint32_t fpDstDnStride,
+                                                                         uint32_t nOff)
 {
     constexpr bool IsOutput0 = (FixpipeIdx == 0);
     uint8_t reluMode;
@@ -1189,11 +1202,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     uint32_t dstStride;
     uint64_t outOff;
     if constexpr (isNHWCout) {
-        nOutOff = groupCoutOff + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo;
+        nOutOff = groupCoutOff + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo + nOff;
         dstStride = static_cast<uint32_t>(tiling_->cout);
         outOff = static_cast<uint64_t>(outOffset) * tiling_->cout;
     } else {
-        nOutOff = groupCoutOff * hwOut + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo * hwOut;
+        nOutOff = (groupCoutOff + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo + nOff) * hwOut;
         dstStride = static_cast<uint32_t>(hwOut);
         outOff = static_cast<uint64_t>(outOffset);
     }
@@ -1239,12 +1252,12 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         fp.reluScalar = reinterpret_cast<uint64_t&>(m2);
     } else if (reluMode == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
         LocalTensor<float> reluWeightL1(TPosition::A1, reluWeightL1OffBytes, tiling_->singleCoreCo);
-        fp.vectorRelu = reluWeightL1.GetPhyAddr();
+        fp.vectorRelu = reluWeightL1[nOff].GetPhyAddr();
     }
 
     if (quantMode == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         LocalTensor<uint64_t> scaleL1(TPosition::A1, scaleL1OffBytes, tiling_->singleCoreCo);
-        Fixpipe<OutputT, L0cT, config>(outputGm[outOff], cl0, scaleL1, fp);
+        Fixpipe<OutputT, L0cT, config>(outputGm[outOff], cl0, scaleL1[nOff], fp);
     } else if (quantMode == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
         fp.deqScalar = IsOutput0 ? scale0Gm_.GetValue(0) : scale1Gm_.GetValue(0);
         if constexpr (AscendC::IsSameType<WeightT, half>::value) {
@@ -1269,21 +1282,22 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                              const ExtendParams* extendParams,
                                                                              uint32_t outOff, uint32_t fpMSize,
                                                                              uint32_t curMAlign, uint32_t fpDnNum,
-                                                                             uint32_t fpDstDnStride)
+                                                                             uint32_t fpDstDnStride, uint32_t nOff,
+                                                                             uint32_t curN)
 {
     if constexpr (isNHWCout) {
-        DoCopyOut<Output0T, 0, CFG_ROW_MAJOR, CFG_ROW_MAJOR_FIXED_POINT>(y, cl0, outOff, fpMSize, curMAlign, actualCo_,
-                                                                         fpDnNum, fpDstDnStride);
+        DoCopyOut<Output0T, 0, CFG_ROW_MAJOR, CFG_ROW_MAJOR_FIXED_POINT>(y, cl0, outOff, fpMSize, curMAlign, curN,
+                                                                         fpDnNum, fpDstDnStride, nOff);
         if (tiling_->dualOutput) {
             DoCopyOut<Output1T, 1, CFG_ROW_MAJOR, CFG_ROW_MAJOR_FIXED_POINT>(
-                extendParams->y1, cl0, outOff, fpMSize, curMAlign, actualCo_, fpDnNum, fpDstDnStride);
+                extendParams->y1, cl0, outOff, fpMSize, curMAlign, curN, fpDnNum, fpDstDnStride, nOff);
         }
     } else {
-        DoCopyOut<Output0T, 0, CFG_COLUMN_MAJOR, CFG_COLUMN_MAJOR_FIXED_POINT>(y, cl0, outOff, fpMSize, curMAlign,
-                                                                               actualCo_, fpDnNum, fpDstDnStride);
+        DoCopyOut<Output0T, 0, CFG_COLUMN_MAJOR, CFG_COLUMN_MAJOR_FIXED_POINT>(y, cl0, outOff, fpMSize, curMAlign, curN,
+                                                                               fpDnNum, fpDstDnStride, nOff);
         if (tiling_->dualOutput) {
             DoCopyOut<Output1T, 1, CFG_COLUMN_MAJOR, CFG_COLUMN_MAJOR_FIXED_POINT>(
-                extendParams->y1, cl0, outOff, fpMSize, curMAlign, actualCo_, fpDnNum, fpDstDnStride);
+                extendParams->y1, cl0, outOff, fpMSize, curMAlign, curN, fpDnNum, fpDstDnStride, nOff);
         }
     }
 }
@@ -1321,20 +1335,25 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 #else
             SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
 #endif
-
-            LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
             if (needLoadBias) {
                 LoadBiasScaleL1(bias, extendParams);
                 SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
                 WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             }
-            MmadAccumulateTile(al1, bl1, cl0, curMAlign, mmadN, kL0MaxIter, needLoadBias);
-
             uint32_t outOff = (hoIdxStart_ + hoOff) * static_cast<uint32_t>(tiling_->wout) + woIdxStart_ + woOff;
             uint32_t fpMSize = needRowSplit ? curWo : curM;
             uint32_t fpDnNum = needRowSplit ? curHo : 1;
             uint32_t fpDstDnStride = needRowSplit ? static_cast<uint32_t>(tiling_->wout) : static_cast<uint32_t>(hwOut);
-            CopyOutResult(cl0, y, extendParams, outOff, fpMSize, curMAlign, fpDnNum, fpDstDnStride);
+            for (uint32_t nOff = 0; nOff < actualCo_; nOff += tiling_->nL0) {
+                uint32_t curN = tiling_->nL0;
+                if (nOff + curN > actualCo_) {
+                    curN = actualCo_ - nOff;
+                }
+                uint32_t curMmadN = AlignB(curN, GN0);
+                LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
+                MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter, needLoadBias, nOff);
+                CopyOutResult(cl0, y, extendParams, outOff, fpMSize, curMAlign, fpDnNum, fpDstDnStride, nOff, curN);
+            }
         }
     }
 }
@@ -1371,10 +1390,17 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
         }
-        LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
-        MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter, needLoadBias);
-
-        CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+        for (uint32_t nOff = 0; nOff < actualCo_; nOff += tiling_->nL0) {
+            uint32_t curN = tiling_->nL0;
+            if (nOff + curN > actualCo_) {
+                curN = actualCo_ - nOff;
+            }
+            uint32_t curMmadNTile = AlignB(curN, GN0);
+            LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
+            MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadNTile, kL0MaxIter, needLoadBias, nOff);
+            CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut),
+                          nOff, curN);
+        }
     }
 }
 
@@ -1398,6 +1424,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         if (curActualCo == INVALID_GROUP_ITER) {
             continue; // no valid co for this fweight
         }
+        uint32_t curMmadN = AlignB(curActualCo, GN0);
         // Per-iteration output GM offset for this group/fweight.
         curGroupCoutOff_ = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
                            static_cast<uint64_t>(groupCoutStep_);
@@ -1412,7 +1439,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             // Stage 2: Setup Load3D invariant once per group iteration.
             SetupLoad3DBase();
 
-            uint32_t curMmadN = AlignB(curActualCo, GN0);
             ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams, bias, groupIter, needLoadBias);
         } else if (!enableBatchDoubleBuffer_) {
             LoadWeightL1ForGroup(filter, groupIter);
@@ -1421,7 +1447,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
             SetupLoad3DBase();
 
-            uint32_t curMmadN = AlignB(curActualCo, GN0);
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
                 LoadFmapL1MModeForGroup(al1, x, groupIter);
@@ -1441,8 +1466,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
             SetupLoad3DBase();
-
-            uint32_t curMmadN = AlignB(curActualCo, GN0);
 
             innerBatchIter_ = 0;
             curBatchIdx_ = batchStart_;
@@ -1475,6 +1498,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 }
             }
         }
+        // N tiles reread bias L1 across M tiles and batches; release it after the whole group.
+        if (tiling_->hasBias && tiling_->nL0 < tiling_->nBL1) {
+            SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+        }
         needLoadBias = true;
         SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
     }
@@ -1493,10 +1520,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     }
 
     uint32_t kL0MaxIter = CeilDiv(kTotalFmap_, tiling_->kL0);
+    uint32_t mmadN = AlignB(actualCo_, GN0);
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
     LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
-    uint32_t mmadN = AlignB(actualCo_, GN0);
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
     l0Pingpong_ = 0;
@@ -1523,7 +1550,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
 
-                ProcessHwMode(al1, bl1, AlignB(actualCo_, GN0), kL0MaxIter, hwOut, y, extendParams, bias, needLoadBias);
+                ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, bias, needLoadBias);
                 if (innerBatchIter_ + 1 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);

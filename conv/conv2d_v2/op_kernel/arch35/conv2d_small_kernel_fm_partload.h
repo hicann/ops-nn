@@ -20,7 +20,7 @@ constexpr uint32_t FMP_BLOCK_BYTES = 32; // DataCopy block size in bytes
 
 // Entry constraints for this template:
 //   1. FM not fullload L1 (FM is chunked over Cin), Weight fullload L1 (one-shot)
-//   2. N axis fullload L0 (singleCoreCo loaded to L0B at once, no N-axis split)
+//   2. N axis may be split across L0B when nL0 < nBL1
 //   3. pad <= kernel (no pad larger than kernel supported)
 //   4. dtype: FP16*FP16 and INT8*INT8 only (FP16*INT8 not supported)
 // Requirements:
@@ -130,7 +130,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
                                                    isNHWCout, IsHwMode>::LoadWeightL1Full(GM_ADDR filter)
 {
     // Weight one-shot fullload into L1 (after FM pingpong buffers).
-    // N axis fullload L0: singleCoreCo (per-core N partition) is fully loaded; no further N split.
+    // Weight is full-load in L1; L0B may process N in nL0 chunks.
     GlobalTensor<weightType> filterGm;
     filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ weightType*>(filter),
                              this->k1Total_ * this->n1Total_ * GN0 * this->GK0);
@@ -141,7 +141,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
         // Whole weight fits in this core's N partition: direct copy.
         DataCopy(bl1, filterGm[0], this->bl1ElemCount_);
     } else {
-        // N-axis partitioning across cores, but per-core N is fullload L0 (one-shot).
+        // N-axis partitioning across cores; each core's weight is full-load in L1.
         uint32_t n1Start = this->nIdx_ * this->tiling_->singleCoreCo / GN0;
         uint32_t tileBytes = GN0 * this->GK0 * sizeof(weightType);
         uint32_t srcGmOff = n1Start * GN0 * this->GK0;
@@ -163,7 +163,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
         return;
     }
 
-    // kL0 from tiling directly (N axis fullload L0: nl0 = nbl1, no per-chunk recomputation).
+    // kL0 comes from tiling; each N tile completes the full K reduction.
     uint32_t kL0 = this->tiling_->kL0;
     uint32_t kL0Iters = CeilDiv(this->kTotalFmap_, kL0);
     uint32_t kernelHxW = this->tiling_->kh * this->tiling_->kw;
@@ -176,7 +176,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     bool needLoadBias = true;
 
     // Stage 2: Weight fullload L1 (one-shot, no per-K splitting).
-    // N axis fullload L0: per-core singleCoreCo loaded at once.
+    // Each core's weight stays in BL1 across N tiles.
     LoadWeightL1Full(filter);
     SetFlag<HardEvent::MTE2_MTE1>(FMP_EVT_WBS_DONE);
     WaitFlag<HardEvent::MTE2_MTE1>(FMP_EVT_WBS_DONE);
@@ -208,9 +208,8 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
-    // RunKL0Loop signals bias-consumed once when hasBias; no group loop reloads it
-    // here, so drain the event to keep Set/Wait balanced.
-    if (this->tiling_->hasBias) {
+    // Only the unsplit path signals bias-consumed; this path has no group reload.
+    if (this->tiling_->hasBias && this->tiling_->nL0 == this->tiling_->nBL1) {
         WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
     }
 }
@@ -272,33 +271,40 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
             uint32_t wiLoadOff;
             this->CalcChunkFmapW(woOff, curWo, curWi, padLeft, padRight, wiLoadOff);
 
-            LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
-            MmadParams mp;
+            for (uint32_t nOff = 0; nOff < this->actualCo_; nOff += this->tiling_->nL0) {
+                uint32_t curN = this->tiling_->nL0;
+                if (nOff + curN > this->actualCo_) {
+                    curN = this->actualCo_ - nOff;
+                }
+                uint32_t curMmadNTile = AlignB(curN, GN0);
+                LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
+                MmadParams mp;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-            if constexpr (AscendC::IsSameType<FmapType, half>::value) {
-                mp.fixShiftVal = this->tiling_->fixedShiftValue;
-            }
+                if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+                    mp.fixShiftVal = this->tiling_->fixedShiftValue;
+                }
 #endif
-            mp.m = curMAlign;
-            mp.n = mmadN;
-            mp.cmatrixInitVal = !(this->tiling_->hasBias);
-            mp.cmatrixSource = (this->tiling_->hasBias != 0);
+                mp.m = curMAlign;
+                mp.n = curMmadNTile;
+                mp.cmatrixInitVal = !(this->tiling_->hasBias);
+                mp.cmatrixSource = (this->tiling_->hasBias != 0);
 
-            // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
-            // cross-batch); later chunks by the cross-chunk preload inside ProcessCinBlocks.
-            bool chunkPrefetched = firstCinPrefetched || !firstChunk;
-            this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
-                                   curWi, wiLoadOff, curM, hoOff, woOff, padLeft, padRight, false, chunkPrefetched,
-                                   extendParams, bias, 0, needLoadBias, false, curHo, curWo, x);
+                // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
+                // cross-batch); later chunks by the cross-chunk preload inside ProcessCinBlocks.
+                bool chunkPrefetched = firstCinPrefetched || !firstChunk || nOff > 0;
+                this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
+                                       curWi, wiLoadOff, curM, hoOff, woOff, padLeft, padRight, false, chunkPrefetched,
+                                       extendParams, bias, 0, needLoadBias, false, curHo, curWo, x, nOff, curN);
+                uint32_t outOff = (this->hoIdxStart_ + hoOff) * static_cast<uint32_t>(this->tiling_->wout) +
+                                  this->woIdxStart_ + woOff;
+                uint32_t fpMSize = needRowSplit ? curWo : curM;
+                uint32_t fpDnNum = needRowSplit ? curHo : 1;
+                uint32_t fpDstDnStride = needRowSplit ? static_cast<uint32_t>(this->tiling_->wout) :
+                                                        static_cast<uint32_t>(hwOut);
+                this->CopyOutResult(cl0, y, extendParams, outOff, fpMSize, curMAlign, fpDnNum, fpDstDnStride, nOff,
+                                    curN);
+            }
             firstChunk = false;
-
-            uint32_t outOff = (this->hoIdxStart_ + hoOff) * static_cast<uint32_t>(this->tiling_->wout) +
-                              this->woIdxStart_ + woOff;
-            uint32_t fpMSize = needRowSplit ? curWo : curM;
-            uint32_t fpDnNum = needRowSplit ? curHo : 1;
-            uint32_t fpDstDnStride = needRowSplit ? static_cast<uint32_t>(this->tiling_->wout) :
-                                                    static_cast<uint32_t>(hwOut);
-            this->CopyOutResult(cl0, y, extendParams, outOff, fpMSize, curMAlign, fpDnNum, fpDstDnStride);
         }
     }
 }
@@ -319,7 +325,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     // M-mode: M-loop -> CinL1 chunk loop -> KL0 inner loop -> Fixpipe.
     // Weight already fully loaded into L1 (one-shot), so loadWeight = false.
     this->curGroupCoutOff_ = 0;
-    // N axis fullload L0: actualCo_ used in full (no per-group reload).
+    // Each N tile completes all Cin blocks before writing its output channels.
     for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
         uint32_t curM = this->hoL0_;
         if (mOff + curM > this->actualM_) {
@@ -330,31 +336,38 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
         this->CalcChunkFmap(mOff, curM, curHi, padTop, padBottom, hiLoadOff);
 
         uint32_t curMAlign = AlignB(curM, GM0);
-        LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
+        for (uint32_t nOff = 0; nOff < this->actualCo_; nOff += this->tiling_->nL0) {
+            uint32_t curN = this->tiling_->nL0;
+            if (nOff + curN > this->actualCo_) {
+                curN = this->actualCo_ - nOff;
+            }
+            uint32_t curMmadNTile = AlignB(curN, GN0);
+            LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
 
-        MmadParams mp;
+            MmadParams mp;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-        if constexpr (AscendC::IsSameType<FmapType, half>::value) {
-            mp.fixShiftVal = this->tiling_->fixedShiftValue;
-        }
+            if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+                mp.fixShiftVal = this->tiling_->fixedShiftValue;
+            }
 #endif
-        mp.m = curMAlign;
-        mp.n = mmadN; // N axis fullload L0: actualCo_ used in full.
-        mp.cmatrixInitVal = !(this->tiling_->hasBias);
-        mp.cmatrixSource = (this->tiling_->hasBias != 0);
+            mp.m = curMAlign;
+            mp.n = curMmadNTile;
+            mp.cmatrixInitVal = !(this->tiling_->hasBias);
+            mp.cmatrixSource = (this->tiling_->hasBias != 0);
 
-        // ProcessCinBlocks handles the CinL1 chunk loop + KL0 inner loop internally.
-        // loadWeight = false: weight already fully loaded, skip per-chunk LoadWeightL1Block.
-        // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
-        // cross-batch); later chunks by the cross-M preload inside ProcessCinBlocks.
-        bool chunkPrefetched = firstCinPrefetched || (mOff > 0);
-        this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
-                               this->orgWin_, 0, curM, mOff, 0, 0, 0, false, chunkPrefetched, extendParams, bias, 0,
-                               needLoadBias, false, 0, 0, x);
+            // ProcessCinBlocks handles the CinL1 chunk loop + KL0 inner loop internally.
+            // loadWeight = false: weight already fully loaded, skip per-chunk LoadWeightL1Block.
+            // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
+            // cross-batch); later chunks by the cross-M preload inside ProcessCinBlocks.
+            bool chunkPrefetched = firstCinPrefetched || (mOff > 0) || nOff > 0;
+            this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
+                                   this->orgWin_, 0, curM, mOff, 0, 0, 0, false, chunkPrefetched, extendParams, bias, 0,
+                                   needLoadBias, false, 0, 0, x, nOff, curN);
 
-        // Fixpipe out (supports NHWC and NCHW output formats).
-        this->CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
-                            static_cast<uint32_t>(hwOut));
+            // Fixpipe out (supports NHWC and NCHW output formats).
+            this->CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
+                                static_cast<uint32_t>(hwOut), nOff, curN);
+        }
     }
 }
 #endif // CONV2D_SMALL_KERNEL_FM_PARTLOAD_H

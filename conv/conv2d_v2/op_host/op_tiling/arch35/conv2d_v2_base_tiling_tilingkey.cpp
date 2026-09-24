@@ -227,7 +227,8 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
     if (flagInfo_.mSplitModeFlag && descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk &&
-        descInfo_.fMapDtype == descInfo_.weightDtype && tilingData_.get_singleCoreBatch() == 1) {
+        descInfo_.fMapDtype == descInfo_.weightDtype && tilingData_.get_singleCoreBatch() == 1 &&
+        tilingData_.get_nL0() == tilingData_.get_nBL1()) {
         return CONV_SMALL_KERNEL;
     }
     return CONV_NOT_SMALL_KERNEL;
@@ -238,9 +239,8 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
     if (flagInfo_.disContinuousFlag) {
         return true;
     }
-    // Not support weight UB, N-L0 mismatch, or C04.
-    if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) ||
-        tilingData_.get_nL0() != tilingData_.get_nBL1() || flagInfo_.enableC04Flag) {
+    // Not support weight UB or C04.
+    if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) || flagInfo_.enableC04Flag) {
         return true;
     }
 
