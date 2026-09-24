@@ -32,7 +32,6 @@
 using namespace op;
 using namespace QBMMActivationQuant;
 using Ops::NN::FormatString;
-using Ops::NN::StripEnclosingSquareBrackets;
 using Ops::NN::SwapLastTwoDimValue;
 
 namespace {

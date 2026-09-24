@@ -23,7 +23,6 @@
 namespace QBMMActivationQuant {
 using namespace op;
 using Ops::NN::FormatString;
-using Ops::NN::StripEnclosingSquareBrackets;
 using Ops::NN::SwapLastTwoDimValue;
 struct QuantMatmulActivationQuantWeightNzParams {
     const aclTensor* x1 = nullptr;
@@ -543,8 +542,7 @@ static inline aclnnStatus CheckMxScaleLastDim(const QuantMatmulActivationQuantWe
     auto scale2LastDimValue = params.x2Scale->GetViewShape().GetDim(params.x2Scale->GetViewShape().GetDimNum() - 1);
     if (scale1LastDimValue != MXFP_MULTI_BASE_SIZE) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "x1Scale",
-            StripEnclosingSquareBrackets(op::ToString(params.x1Scale->GetViewShape()).GetString()).c_str(),
+            apiName, "x1Scale", op::ToString(params.x1Scale->GetViewShape()).GetString(),
             FormatString("when the quantization mode is mx, the last dimension of x1Scale must be %d",
                          MXFP_MULTI_BASE_SIZE)
                 .c_str());
@@ -552,8 +550,7 @@ static inline aclnnStatus CheckMxScaleLastDim(const QuantMatmulActivationQuantWe
     }
     if (scale2LastDimValue != MXFP_MULTI_BASE_SIZE) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "x2Scale",
-            StripEnclosingSquareBrackets(op::ToString(params.x2Scale->GetViewShape()).GetString()).c_str(),
+            apiName, "x2Scale", op::ToString(params.x2Scale->GetViewShape()).GetString(),
             FormatString("when the quantization mode is mx, the last dimension of x2Scale must be %d",
                          MXFP_MULTI_BASE_SIZE)
                 .c_str());
@@ -592,8 +589,7 @@ static inline aclnnStatus CheckExpectedShapes(const QuantMatmulActivationQuantWe
     int64_t x1M = params.transposeX1 ? x1View.GetDim(x1DimNum - 1) : x1View.GetDim(x1DimNum - 2);
     int64_t x1K = params.transposeX1 ? x1View.GetDim(x1DimNum - 2) : x1View.GetDim(x1DimNum - 1);
     if (x1M != shapeInfo.mDim || x1K != shapeInfo.kDim) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName, "x1",
-                                              StripEnclosingSquareBrackets(op::ToString(x1View).GetString()).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName, "x1", op::ToString(x1View).GetString(),
                                               FormatString("x1 last two dims must be [%ld, %ld], but got [%ld, %ld]",
                                                            params.transposeX1 ? shapeInfo.kDim : shapeInfo.mDim,
                                                            params.transposeX1 ? shapeInfo.mDim : shapeInfo.kDim,
@@ -605,8 +601,7 @@ static inline aclnnStatus CheckExpectedShapes(const QuantMatmulActivationQuantWe
     int64_t x2K = params.transposeX2 ? x2View.GetDim(x2DimNum - 1) : x2View.GetDim(x2DimNum - 2);
     int64_t x2N = params.transposeX2 ? x2View.GetDim(x2DimNum - 2) : x2View.GetDim(x2DimNum - 1);
     if (x2K != shapeInfo.kDim || x2N != shapeInfo.nDim) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName, "x2",
-                                              StripEnclosingSquareBrackets(op::ToString(x2View).GetString()).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName, "x2", op::ToString(x2View).GetString(),
                                               FormatString("x2 last two dims must be [%ld, %ld], but got [%ld, %ld]",
                                                            params.transposeX2 ? shapeInfo.nDim : shapeInfo.kDim,
                                                            params.transposeX2 ? shapeInfo.kDim : shapeInfo.nDim,
@@ -621,15 +616,13 @@ static inline aclnnStatus CheckExpectedShapes(const QuantMatmulActivationQuantWe
 
     if (params.x1Scale->GetViewShape() != x1ScaleExpectShape) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "x1Scale",
-            StripEnclosingSquareBrackets(op::ToString(params.x1Scale->GetViewShape()).GetString()).c_str(),
+            apiName, "x1Scale", op::ToString(params.x1Scale->GetViewShape()).GetString(),
             FormatString("the shape of x1Scale must be %s", op::ToString(x1ScaleExpectShape).GetString()).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2Scale->GetViewShape() != x2ScaleExpectShape) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "x2Scale",
-            StripEnclosingSquareBrackets(op::ToString(params.x2Scale->GetViewShape()).GetString()).c_str(),
+            apiName, "x2Scale", op::ToString(params.x2Scale->GetViewShape()).GetString(),
             FormatString("the shape of x2Scale must be %s", op::ToString(x2ScaleExpectShape).GetString()).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -643,7 +636,7 @@ static inline aclnnStatus CheckOutputShape(const QuantMatmulActivationQuantWeigh
     int64_t yDimNum = yView.GetDimNum();
     if (yView.GetDim(yDimNum - 2) != shapeInfo.mDim || yView.GetDim(yDimNum - 1) != shapeInfo.nDim) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "y", StripEnclosingSquareBrackets(op::ToString(yView).GetString()).c_str(),
+            apiName, "y", op::ToString(yView).GetString(),
             FormatString("y last two dims must be [%ld, %ld], but got [%ld, %ld]", shapeInfo.mDim, shapeInfo.nDim,
                          yView.GetDim(yDimNum - 2), yView.GetDim(yDimNum - 1))
                 .c_str());
@@ -663,7 +656,7 @@ static inline aclnnStatus CheckOutputShape(const QuantMatmulActivationQuantWeigh
         yScaleView.GetDim(yScaleDimNum - 2) != expectedScaleN ||
         yScaleView.GetDim(yScaleDimNum - 1) != MXFP_MULTI_BASE_SIZE) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            apiName, "yScale", StripEnclosingSquareBrackets(op::ToString(yScaleView).GetString()).c_str(),
+            apiName, "yScale", op::ToString(yScaleView).GetString(),
             FormatString("yScale last three dims must be [%ld, %ld, %ld], but got [%ld, %ld, %ld]", shapeInfo.mDim,
                          expectedScaleN, MXFP_MULTI_BASE_SIZE, yScaleView.GetDim(yScaleDimNum - 3),
                          yScaleView.GetDim(yScaleDimNum - 2), yScaleView.GetDim(yScaleDimNum - 1))

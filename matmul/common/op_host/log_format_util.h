@@ -33,16 +33,5 @@ inline std::string FormatString(const char* format, ...)
 
 inline const char* BoolToString(bool value) { return value ? "true" : "false"; }
 
-inline std::string StripEnclosingSquareBrackets(const char* value)
-{
-    if (value == nullptr) {
-        return {};
-    }
-    std::string str(value);
-    if (str.size() >= 2U && str.front() == '[' && str.back() == ']') {
-        return str.substr(1U, str.size() - 2U);
-    }
-    return str;
-}
 } // namespace NN
 } // namespace Ops

@@ -774,7 +774,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
     if (x1MDim_ == 1) {
         if (x1ScaleDim0Size != 1) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                apiName_, GetX1ScaleName().c_str(), std::to_string(x1ScaleDim0Size).c_str(),
+                apiName_, GetX1ScaleName().c_str(), "[" + std::to_string(x1ScaleDim0Size) + "]",
                 FormatString("when %s and %s are 1D and the M dimension of x1 is 1, the shape of %s must be [1]",
                              GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX1ScaleName().c_str())
                     .c_str());
@@ -784,7 +784,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
         if (x1ScaleDim0Size == 1 && !IsInt8Input(x1_, x2_)) { // double scale
             if (x2Scale_->GetViewShape().GetDim(0) != 1 && x2Scale_->GetViewShape().GetDim(0) != x2NDim_) {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    apiName_, GetX2ScaleName().c_str(), std::to_string(x2Scale_->GetViewShape().GetDim(0)).c_str(),
+                    apiName_, GetX2ScaleName().c_str(), "[" + std::to_string(x2Scale_->GetViewShape().GetDim(0)) + "]",
                     FormatString("when the shape of %s is [1], the shape of %s must be [1] or [%ld]",
                                  GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), x2NDim_)
                         .c_str());
@@ -793,7 +793,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
         } else {
             if (x1ScaleDim0Size != x1MDim_) { // pertoken
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    apiName_, GetX1ScaleName().c_str(), std::to_string(x1ScaleDim0Size).c_str(),
+                    apiName_, GetX1ScaleName().c_str(), "[" + std::to_string(x1ScaleDim0Size) + "]",
                     FormatString("when %s and %s are 1D, the shape of %s must be [%ld]", GetX1ScaleName().c_str(),
                                  GetX2ScaleName().c_str(), GetX1ScaleName().c_str(), x1MDim_)
                         .c_str());
@@ -891,7 +891,7 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t>& batchRecord,
     if (biasDimNum == 1) {
         OP_CHECK(
             biasFirstDim == x2NDim_,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_, "bias", std::to_string(biasFirstDim).c_str(),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_, "bias", "[" + std::to_string(biasFirstDim) + "]",
                                                   FormatString("the shape of bias must be [%ld]", x2NDim_).c_str()),
             return false);
         return true;
