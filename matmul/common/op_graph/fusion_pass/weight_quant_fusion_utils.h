@@ -16,7 +16,9 @@
 #include <vector>
 #include "acl/acl_rt.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
+#include "ge/fusion/subgraph_boundary.h"
 #include "log/log.h"
+#include "version/ge-compiler_version.h"
 
 namespace ge {
 namespace fusion {
@@ -24,6 +26,19 @@ class GraphFuseInspectorUtils {
 public:
     static Status ReportFuse(const std::vector<GNode>& nodesBeforeFuse, const std::vector<GNode>& nodesAfterFuse,
                              CustomPassContext& ctx) __attribute__((weak));
+};
+
+// 弱符号兼容声明：2 参数 Replace 自 GE 8.5.0 起存在；带 CustomPassContext 的 3 参数版本
+// 仅在 GE 9.1.0+ 运行时中存在强符号。3 参数版本声明为弱符号，运行时无强定义时其函数
+// 指针为空，调用方需回退到 2 参数版本。注意：包含本头文件的编译单元不可再包含
+// ge/fusion/graph_rewriter.h（会导致类重定义）。
+class SubgraphRewriter {
+public:
+    static Status Replace(const SubgraphBoundary& subgraph, const Graph& replacement);
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    static Status Replace(const SubgraphBoundary& subgraph, const Graph& replacement, CustomPassContext& ctx)
+        __attribute__((weak));
+#endif
 };
 } // namespace fusion
 } // namespace ge
