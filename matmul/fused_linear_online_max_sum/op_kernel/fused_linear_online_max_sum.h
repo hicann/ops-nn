@@ -18,6 +18,10 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#include "arch35/fused_linear_online_max_sum_tiling_data.h"
+#endif
+
 namespace FusedLinearOnlineMaxSum {
 using namespace AscendC;
 
@@ -29,6 +33,7 @@ constexpr uint32_t DATA_PER_BLOCK_B32 = 8;
 constexpr uint32_t DATA_PER_BLOCK_B16 = 16;
 constexpr uint32_t DATA_PER_BLOCK_B8 = 32;
 constexpr uint64_t DOUBLE_BUFFER = 2;
+constexpr uint64_t DOUBLE_COF = 2;
 constexpr uint64_t BASE_M = 128;
 constexpr uint64_t BASE_N = 256;
 constexpr uint64_t BASE_BLOCK_SIZE = 32768;
@@ -47,14 +52,22 @@ constexpr uint64_t DATA_THREE_REPEAT_B32 = 192;
 constexpr uint64_t THRESHOLD_BLOCK_NUM = 8;
 constexpr uint32_t THRESHOLD_DIM_M = 5;
 constexpr uint64_t SYNC_MODE2 = 2;
+constexpr uint64_t
+    SYNC_MODE_CROSS_CORE = 4; // 3510 专用：模板 CrossCore flag 模式（mode 4）；仅在 3510 的 CVProcess 分支被引用
+constexpr uint64_t FLAG_ID_MAX = 16;
 constexpr uint64_t SYNC_AIC_AIV_FLAG_FIVE = 5;
 constexpr uint64_t SYNC_AIV_AIC_FLAG_SIX = 6;
 constexpr uint64_t SYNC_AIV_AIC_FLAG_SEVEN = 7;
 constexpr int32_t FLOAT32_NEG_INF = 0xFF800000;
 constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;
 constexpr uint16_t BF16_NEG_INF = 0xFF80;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+constexpr MatmulConfig matmulCFGUnitFlag = GetMDLConfig(false, false, 0, false, false, false, true, true, false, false,
+                                                        false);
+#else
 constexpr MatmulConfig matmulCFGUnitFlag{false, false, true, 0, 0, 0, false, false, false, false,
                                          false, 0,     0,    0, 0, 0, 0,     0,     true};
+#endif
 
 struct MNConfig {
     uint64_t m = 0;
@@ -115,17 +128,28 @@ protected:
     __aicore__ inline void InitOutputAndWorkspace();
     __aicore__ inline void MatmulInputEmptyProcess();
     __aicore__ inline void MatmulInputEmptyMmOut(uint64_t mLoopNum, uint64_t mOffset);
+    __aicore__ inline void MatmulInputEmptyMmOutArch35(uint64_t mLoopNum, uint64_t mmStartOffset);
+    __aicore__ inline void MatmulInputEmptyMmOutDefault(uint64_t mLoopNum, uint64_t mmStartOffset);
 
     __aicore__ inline void TargetProcess();
     __aicore__ inline void TargetInnerProcess(uint64_t targetGmOffset, uint64_t tasks, uint64_t copyCount);
 
     __aicore__ inline void CVProcess();
+    __aicore__ inline void CVProcessArch35(MNConfig& mnConfig, uint64_t thresholdM_dimN, uint64_t ppCount,
+                                           uint64_t loopCount);
+    __aicore__ inline void CVProcessDefault(MNConfig& mnConfig, uint64_t thresholdM_dimN, uint64_t ppCount,
+                                            uint64_t loopCount);
 
     __aicore__ inline void SetMNConfig(MNConfig& mnConfig);
+    __aicore__ inline void SetMNConfigArch35(MNConfig& mnConfig);
+    __aicore__ inline void SetMNConfigDefault(MNConfig& mnConfig);
     __aicore__ inline void SetMKN(MNConfig& mnConfig);
     __aicore__ inline void MNBlockIdxCompute(MNConfig& mnConfig, const uint64_t curBlock, const uint64_t count,
                                              const uint64_t thresholdM_dimN);
     __aicore__ inline void MMCompute(MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset, bool enSequentialWrite);
+    __aicore__ inline void MMComputeArch35(MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset);
+    __aicore__ inline void MMComputeDefault(MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset,
+                                            bool enSequentialWrite);
 
     __aicore__ inline void OnlineMaxSumInitBuffer();
     __aicore__ inline void OnlineMaxSumProcess(MNConfig& mnConfig, uint64_t baseN, uint64_t tailN, uint64_t outOffset);
@@ -198,6 +222,8 @@ protected:
     GlobalTensor<float> gmPredictedLogitsLocal_;
     GlobalTensor<uint8_t> gmTargetMask_;
     GlobalTensor<targetT> gmMaskedTarget_;
+    GlobalTensor<inputT>
+        gmVocabParallelLogitsOut_; // 3510 专用：mmOut 走 workspace 时 output[5] 独立绑定；未绑定时为空句柄
     GlobalTensor<mmT> mmOutTensor_;
     // gm workspace
     GlobalTensor<float> gmOnlineMax_;
@@ -239,6 +265,8 @@ protected:
 
     LocalTensor<int32_t> vecIndexTensor;
     LocalTensor<float> vocabParallelLogitsOutTensor;
+    LocalTensor<inputT> vocabParallelLogitsOutCastTensor; // 3510 专用：fp32 mmOut Cast 回写 output[5] 的中转；未
+                                                          // GetWithOffset 前不占 UB
     LocalTensor<float> maxTensor;
     LocalTensor<float> brcbMaxTensor;
     LocalTensor<float> brcbSumTensor;
@@ -315,11 +343,18 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     gmPredictedLogitsLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(predictedLogitsLocal));
     gmTargetMask_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(targetMask));
     gmMaskedTarget_.SetGlobalBuffer(reinterpret_cast<__gm__ targetT*>(maskedTarget));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT*>(userWorkspace) + m_ * cubeCoreNum_ * DOUBLE_COF);
+    if constexpr (mmOutFlag) {
+        gmVocabParallelLogitsOut_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT*>(vocabParallelLogitsOut));
+    }
+#else
     if constexpr (mmOutFlag) {
         mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT*>(vocabParallelLogitsOut));
     } else {
         mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT*>(userWorkspace) + m_ * cubeCoreNum_ * NUM_FOUR);
     }
+#endif
 
     gmOnlineMax_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(userWorkspace));
     gmOnlineSum_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(userWorkspace) + m_ * cubeCoreNum_);
@@ -377,9 +412,48 @@ template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyMmOut(
     uint64_t mLoopNum, uint64_t mOffset)
 {
+    uint64_t mmStartOffset = mOffset * n_;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    MatmulInputEmptyMmOutArch35(mLoopNum, mmStartOffset);
+#else
+    MatmulInputEmptyMmOutDefault(mLoopNum, mmStartOffset);
+#endif
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyMmOutArch35(
+    uint64_t mLoopNum, uint64_t mmStartOffset)
+{
+    uint64_t zeroElemsPerCopy = sizeof(float) * initWorkspaceLength_ / sizeof(inputT);
+    uint64_t mnLoopNum = mLoopNum * n_ / zeroElemsPerCopy;
+    uint64_t mnLoopNumTail = mLoopNum * n_ % zeroElemsPerCopy;
+    DataCopyExtParams copyOutParams{1, static_cast<uint32_t>(sizeof(inputT) * zeroElemsPerCopy), 0, 0, 0};
+    for (uint64_t lpMm = 0; lpMm < mnLoopNum; lpMm++) {
+        uint64_t mmOffset = mmStartOffset + lpMm * zeroElemsPerCopy;
+        if constexpr (mmOutFlag) {
+            DataCopyPad(gmVocabParallelLogitsOut_[mmOffset], zeroTensor.template ReinterpretCast<inputT>(),
+                        copyOutParams);
+        }
+    }
+
+    if (mnLoopNumTail > 0) {
+        DataCopyExtParams copyOutTailParams{1, static_cast<uint32_t>(sizeof(inputT) * mnLoopNumTail), 0, 0, 0};
+        uint64_t mmOffset = mmStartOffset + mnLoopNum * zeroElemsPerCopy;
+        if constexpr (mmOutFlag) {
+            DataCopyPad(gmVocabParallelLogitsOut_[mmOffset], zeroTensor.template ReinterpretCast<inputT>(),
+                        copyOutTailParams);
+        }
+    }
+    // 主循环/tail 任一分支执行了 DataCopyPad 都需等待搬出完成后再返回（tail==0 时仅主循环有拷贝）
+    PipeBarrier<PIPE_ALL>();
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyMmOutDefault(
+    uint64_t mLoopNum, uint64_t mmStartOffset)
+{
     uint64_t mnLoopNum = mLoopNum * n_ / (initWorkspaceLength_ * NUM_TWO);
     uint64_t mnLoopNumTail = mLoopNum * n_ % (initWorkspaceLength_ * NUM_TWO);
-    uint64_t mmStartOffset = mOffset * n_;
     DataCopyExtParams copyMmParams{1, static_cast<uint32_t>(sizeof(mmT) * initWorkspaceLength_ * NUM_TWO), 0, 0, 0};
     for (uint64_t lpMm = 0; lpMm < mnLoopNum; lpMm++) {
         uint64_t mmOffset = mmStartOffset + lpMm * initWorkspaceLength_ * NUM_TWO;
@@ -436,11 +510,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     SetMNConfig(mnConfig);
     mm_.DisableBias();
     uint64_t curCount = mnConfig.blockDimM * mnConfig.blockDimN;
-    uint64_t curBlock = coreIdx_;
     uint64_t thresholdM_dimN = THRESHOLD_BLOCK_NUM * mnConfig.blockDimN;
-    uint64_t pp = 0;
-    uint64_t tailN = 0;
-    uint64_t outOffset = 0;
 
     uint64_t ppCount = static_cast<uint64_t>(NUM_TWO);
     uint64_t loopCount = cubeCoreNum_ == 0 ? 1 : curCount / cubeCoreNum_;
@@ -449,6 +519,57 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
         loopCount += 1;
     }
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    CVProcessArch35(mnConfig, thresholdM_dimN, ppCount, loopCount);
+#else
+    CVProcessDefault(mnConfig, thresholdM_dimN, ppCount, loopCount);
+#endif
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::CVProcessArch35(
+    MNConfig& mnConfig, uint64_t thresholdM_dimN, uint64_t ppCount, uint64_t loopCount)
+{
+    uint64_t curBlock = coreIdx_;
+    uint64_t pp = 0;
+    uint64_t tailN = 0;
+    uint64_t outOffset = 0;
+    for (uint64_t count = 0; count < loopCount; count++, curBlock += cubeCoreNum_) {
+        MNBlockIdxCompute(mnConfig, curBlock, 0, thresholdM_dimN);
+        if ASCEND_IS_AIC {
+            if (count >= ppCount) {
+                CrossCoreWaitFlag<SYNC_MODE_CROSS_CORE, PIPE_FIX>(SYNC_AIV_AIC_FLAG_LIST[pp]);
+                CrossCoreWaitFlag<SYNC_MODE_CROSS_CORE, PIPE_FIX>(SYNC_AIV_AIC_FLAG_LIST[pp] + FLAG_ID_MAX);
+            }
+            tailN = mnConfig.nIdx * mnConfig.singleN;
+            outOffset = blockIdx_ * mnConfig.blockDimN * DOUBLE_BASE_BLOCK_SIZE +
+                        mnConfig.nIdx * DOUBLE_BASE_BLOCK_SIZE + BASE_BLOCK_SIZE * pp;
+            MMCompute(mnConfig, tailN, outOffset, true);
+            CrossCoreSetFlag<SYNC_MODE_CROSS_CORE, PIPE_FIX>(SYNC_AIC_AIV_FLAG_FIVE);
+            CrossCoreSetFlag<SYNC_MODE_CROSS_CORE, PIPE_FIX>(SYNC_AIC_AIV_FLAG_FIVE + FLAG_ID_MAX);
+        }
+        if ASCEND_IS_AIV {
+            CrossCoreWaitFlag<SYNC_MODE_CROSS_CORE, PIPE_MTE2>(SYNC_AIC_AIV_FLAG_FIVE);
+            tailN = mnConfig.nIdx * mnConfig.singleN;
+            outOffset = this->blockIdx_ / NUM_TWO * mnConfig.blockDimN * DOUBLE_BASE_BLOCK_SIZE +
+                        mnConfig.nIdx * DOUBLE_BASE_BLOCK_SIZE + BASE_BLOCK_SIZE * pp;
+            OnlineMaxSumProcess(mnConfig, mnConfig.rowSize, tailN, outOffset);
+            if ((count + ppCount < loopCount) && (loopCount > ppCount)) {
+                CrossCoreSetFlag<SYNC_MODE_CROSS_CORE, PIPE_V>(SYNC_AIV_AIC_FLAG_LIST[pp]);
+            }
+        }
+        pp = 1 - pp;
+    }
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::CVProcessDefault(
+    MNConfig& mnConfig, uint64_t thresholdM_dimN, uint64_t ppCount, uint64_t loopCount)
+{
+    uint64_t curBlock = coreIdx_;
+    uint64_t pp = 0;
+    uint64_t tailN = 0;
+    uint64_t outOffset = 0;
     for (uint64_t count = 0; count < loopCount; count++, curBlock += cubeCoreNum_) {
         MNBlockIdxCompute(mnConfig, curBlock, 0, thresholdM_dimN);
         if ASCEND_IS_AIC {
@@ -630,6 +751,23 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     mnConfig.singleN = mnConfig.baseN;
     mnConfig.blockDimM = Ceil(mnConfig.m, mnConfig.singleM);
     mnConfig.blockDimN = Ceil(mnConfig.n, mnConfig.singleN);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    SetMNConfigArch35(mnConfig);
+#else
+    SetMNConfigDefault(mnConfig);
+#endif
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMNConfigArch35(MNConfig& mnConfig)
+{
+    mnConfig.rowSize = mnConfig.baseN;
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMNConfigDefault(
+    MNConfig& mnConfig)
+{
     if constexpr (mmOutFlag) {
         mnConfig.rowSize = mnConfig.n;
     } else {
@@ -677,6 +815,34 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
                                                                                              uint64_t outOffset,
                                                                                              bool enSequentialWrite)
 {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    MMComputeArch35(mnConfig, tailN, outOffset);
+#else
+    MMComputeDefault(mnConfig, tailN, outOffset, enSequentialWrite);
+#endif
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MMComputeArch35(MNConfig& mnConfig,
+                                                                                                   uint64_t tailN,
+                                                                                                   uint64_t outOffset)
+{
+    uint64_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.singleN : mnConfig.n - tailN;
+    uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM :
+                                                                   mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
+    uint64_t xOffset = mnConfig.mIdx * mnConfig.singleM * mnConfig.k;
+    mm_.SetOrgShape(BASE_M, BASE_N, mnConfig.k);
+    mm_.SetSingleShape(curSingleM, curSingleN, mnConfig.k);
+    mm_.SetTensorA(gmInput_[xOffset], false);
+    mm_.SetTensorB(gmWeight_[mnConfig.nIdx * mnConfig.k * mnConfig.baseN], true);
+    mm_.Iterate();
+    mm_.GetTensorC(mmOutTensor_[outOffset]);
+}
+
+template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MMComputeDefault(
+    MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset, bool enSequentialWrite)
+{
     uint64_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.singleN : mnConfig.n - tailN;
     uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM :
                                                                    mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
@@ -704,6 +870,13 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
             uint16_t negInfFp16 = 0xFC00;
             mmT negInfValue = *reinterpret_cast<mmT*>(&negInfFp16);
             padExtParams.paddingValue = negInfValue;
+        } else if constexpr (IsSameType<mmT, float>::value) {
+            Duplicate(tmpTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
+            Duplicate(tmpTensor.template ReinterpretCast<int32_t>()[QUARTER_BASIC_BLOCK_SIZE], FLOAT32_NEG_INF,
+                      QUARTER_BASIC_BLOCK_SIZE);
+            int32_t negInfFp32 = FLOAT32_NEG_INF;
+            mmT negInfValue = *reinterpret_cast<mmT*>(&negInfFp32);
+            padExtParams.paddingValue = negInfValue;
         } else {
             Duplicate(tmpTensor, BF16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
             Duplicate(tmpTensor[QUARTER_BASIC_BLOCK_SIZE], BF16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
@@ -715,9 +888,10 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
 
-        uint32_t curSingleNAligned = (curSingleN + DATA_PER_BLOCK_B16 - 1) / DATA_PER_BLOCK_B16 * DATA_PER_BLOCK_B16;
+        constexpr uint32_t dataPerBlock = IsSameType<mmT, float>::value ? DATA_PER_BLOCK_B32 : DATA_PER_BLOCK_B16;
+        uint32_t curSingleNAligned = (curSingleN + dataPerBlock - 1) / dataPerBlock * dataPerBlock;
         uint8_t rightPadding = curSingleNAligned - curSingleN;
-        uint32_t dstStride = (mnConfig.baseN - curSingleNAligned) / DATA_PER_BLOCK_B16;
+        uint32_t dstStride = (mnConfig.baseN - curSingleNAligned) / dataPerBlock;
         uint32_t srcStride = (mnConfig.rowSize - curSingleN) * sizeof(mmT);
         extParams.srcStride = srcStride;
         extParams.dstStride = dstStride;
@@ -748,13 +922,28 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     uint32_t blockLen = curSingleN * sizeof(mmT);
     extParams.blockLen = blockLen;
     padExtParams.leftPadding = 0;
-    LocalTensor<uint16_t> tmpTensor = vocabParallelLogitsOutTensor.template ReinterpretCast<uint16_t>()[mmOutputOffset];
-    SetDataCopyPadParamsAndInit(tmpTensor, extParams, padExtParams, mnConfig, curSingleN);
-    DataCopyPad(vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset], mmOutTensor_[outOffset],
-                extParams, padExtParams);
-    PIPE_MTE2_V();
-    Cast(vocabParallelLogitsOutTensor, vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
-         RoundMode::CAST_NONE, mmOutputOffset);
+    // float mmT 仅存在于 arch35：直写偏移 0 免 Cast；half/bf16 mmT（A2/A3）走上半拷贝 + Cast 公共路径
+    if constexpr (IsSameType<mmT, float>::value) {
+        // float mmT: DataCopyPad writes directly to offset 0, no Cast needed (float->float is identity).
+        // The original half/bf16 path writes to [mmOutputOffset] then Cast in-place to [0],
+        // which requires 2x buffer (16-bit source + 32-bit dest coexist). For float (32-bit),
+        // source and dest are same size, so write directly to offset 0.
+        LocalTensor<uint16_t> tmpTensor = vocabParallelLogitsOutTensor.template ReinterpretCast<uint16_t>();
+        SetDataCopyPadParamsAndInit(tmpTensor, extParams, padExtParams, mnConfig, curSingleN);
+        DataCopyPad(vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>(), mmOutTensor_[outOffset], extParams,
+                    padExtParams);
+        PIPE_MTE2_V();
+    } else {
+        // half/bf16 mmT: DataCopyPad to upper half of buffer, then Cast (16-bit->32-bit) to lower half.
+        LocalTensor<uint16_t> tmpTensor = vocabParallelLogitsOutTensor
+                                              .template ReinterpretCast<uint16_t>()[mmOutputOffset];
+        SetDataCopyPadParamsAndInit(tmpTensor, extParams, padExtParams, mnConfig, curSingleN);
+        DataCopyPad(vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
+                    mmOutTensor_[outOffset], extParams, padExtParams);
+        PIPE_MTE2_V();
+        Cast(vocabParallelLogitsOutTensor, vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
+             RoundMode::CAST_NONE, mmOutputOffset);
+    }
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
@@ -770,6 +959,13 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     bufOffset += sizeof(int32_t) * baseMDivTwo;
     vocabParallelLogitsOutTensor = calcBuf_.GetWithOffset<float>(mmTilingData_->baseN * baseMDivTwo, bufOffset);
     bufOffset += sizeof(float) * mmTilingData_->baseN * baseMDivTwo;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    if constexpr (mmOutFlag) {
+        vocabParallelLogitsOutCastTensor = calcBuf_.GetWithOffset<inputT>(mmTilingData_->baseN * baseMDivTwo,
+                                                                          bufOffset);
+        bufOffset += sizeof(inputT) * mmTilingData_->baseN * baseMDivTwo;
+    }
+#endif
     preMaxTensor = calcBuf_.GetWithOffset<float>(baseMDivTwo, bufOffset);
     bufOffset += sizeof(float) * baseMDivTwo;
     preSumTensor = calcBuf_.GetWithOffset<float>(baseMDivTwo, bufOffset);
@@ -941,6 +1137,24 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     CreateVecIndex(vecIndexTensor, int32_t(0), loopNum);
     OnlineCopyIn(mnConfig, loopStart, loopNum, curSingleN, outOffset);
     PIPE_MTE2_V();
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    if constexpr (mmOutFlag) {
+        Cast(vocabParallelLogitsOutCastTensor, vocabParallelLogitsOutTensor, RoundMode::CAST_RINT,
+             loopNum * mnConfig.baseN);
+        PipeBarrier<PIPE_V>();
+        PIPE_V_MTE3();
+        uint64_t gmOutOffset = mnConfig.mIdx * mnConfig.baseM * mnConfig.n + loopStart * mnConfig.n +
+                               mnConfig.nIdx * mnConfig.baseN;
+        // srcStride is UB-side (LocalTensor): unit = 32B blocks
+        uint32_t srcStride = static_cast<uint32_t>((mnConfig.baseN - curSingleN) * sizeof(inputT) / BLOCK_BYTES);
+        // dstStride is GM-side (GlobalTensor): unit = bytes (NOT 32B blocks)
+        uint32_t dstStride = static_cast<uint32_t>((mnConfig.n - curSingleN) * sizeof(inputT));
+        DataCopyExtParams copyOutParams{static_cast<uint16_t>(loopNum),
+                                        static_cast<uint32_t>(curSingleN * sizeof(inputT)), srcStride, dstStride, 0};
+        DataCopyPad(gmVocabParallelLogitsOut_[gmOutOffset], vocabParallelLogitsOutCastTensor, copyOutParams);
+        PIPE_MTE3_MTE2();
+    }
+#endif
     OnlineMaxCompute(mnConfig, loopNum);
     PIPE_V_MTE3();
     DataCopyPad(gmOnlineMax_[wsOffset + mnConfig.mIdx * mnConfig.baseM + loopStart], maxTensor,

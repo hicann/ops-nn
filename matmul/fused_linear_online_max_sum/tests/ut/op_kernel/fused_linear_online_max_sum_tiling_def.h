@@ -11,6 +11,8 @@
 #ifndef FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL
 #define FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL
 
+#include <cstring>
+
 #include "kernel_tiling/kernel_tiling.h"
 
 struct FusedLinearOnlineMaxSumTilingData {
@@ -39,4 +41,9 @@ inline void InitFusedLinearOnlineMaxSumTilingData(uint8_t* tiling, FusedLinearOn
 #define GET_TILING_DATA(tiling_data, tiling_arg)   \
     FusedLinearOnlineMaxSumTilingData tiling_data; \
     InitFusedLinearOnlineMaxSumTilingData(tiling_arg, &tiling_data)
+
+// UT（CPU 仿真）环境无框架 GET_TILING_DATA_WITH_STRUCT 实现，按结构体定义从 tiling buffer 拷贝
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
+    tiling_struct tiling_data;                                              \
+    (void)memcpy_s(&tiling_data, sizeof(tiling_struct), tiling_arg, sizeof(tiling_struct))
 #endif // FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL

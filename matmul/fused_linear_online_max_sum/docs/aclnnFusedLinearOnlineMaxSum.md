@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -49,10 +49,10 @@
      $$
      sumExpLogitsLocalOut = sum(exp(subRes), dim=-1)
      $$
-  5. 计算$target$小于$vocabStartIndex$或$target$大于$vocabEndIndex$的mask
+  5. 计算$target$小于$vocabStartIndex$或$target$大于等于$vocabEndIndex$的mask
 
      $$
-     targetMask = (target < vocabStartIndex) | (target > vocabEndIndex)
+     targetMask = (target < vocabStartIndex) | (target >= vocabEndIndex)
      $$
   6. 计算$maskedTargetOut$
 
@@ -78,12 +78,12 @@
      alignNum = (input.size(0) + 7) / 8 * 8\\
      maskBit[p] = \begin{cases}
      uint8(targetMask[p]) & \text{p < input.size(0)}\\
-     1 & \text{input.size(0) <= p < alignNum}
+     uint8((0 < vocabStartIndex) | (0 >= vocabEndIndex)) & \text{input.size(0) <= p < alignNum}
      \end{cases} \\
      targetMaskOut[k] = 0b(maskBit[8*k:8*k+8])
      $$
 
-  其中$0 \le b \lt input.size(0), 0 \le n \lt weight.size(0), 0 \le p \lt alignNum, 0 \le k \lt alignNum / 8$。
+  其中$0 \le b \lt input.size(0), 0 \le n \lt weight.size(0), 0 \le p \lt alignNum, 0 \le k \lt alignNum / 8$。padding 位以 pad target=0 参与与公式5相同的掩码比较：当$vocabStartIndex=0$且$vocabEndIndex>0$时 padding 位为 0，否则为 1。
 
 ## 函数原型
 
@@ -174,7 +174,7 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
       <td>vocabStartIndex</td>
       <td>输入</td>
       <td>表示分到本卡上的开始索引，公式中的vocabStartIndex。</td>
-      <td><ul><li>取值范围为[0, max(target) - 1]。</li></ul></td>
+      <td><ul><li>取值范围为[0, max(target) - 1]，且不超过16777216。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
       <td>vocabEndIndex</td>
       <td>输入</td>
       <td>表示分到本卡上的结束索引，公式中的vocabEndIndex。</td>
-      <td><ul><li>取值范围为[vocabStartIndex, min(vocabStartIndex + weight.size(0) - 1, max(target) - 1)]。</li></ul></td>
+      <td><ul><li>取值范围为[vocabStartIndex, min(vocabStartIndex + weight.size(0) - 1, max(target) - 1)]，且不超过16777216。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -385,6 +385,12 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：aclnnFusedLinearOnlineMaxSum默认确定性实现。
 
   <!-- end id7 -->
+  <!-- npu="950" id8 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnFusedLinearOnlineMaxSum默认确定性实现。
+
+  <!-- end id8 -->
+
+- 词表索引范围说明：vocabStartIndex、vocabEndIndex均不超过16777216（2^24，float32可精确表示的整数上限）。超出该范围时aclnnFusedLinearOnlineMaxSumGetWorkspaceSize返回错误，避免内部float32比较/减法因舍入产生静默错误。
 
 ## 调用示例
 

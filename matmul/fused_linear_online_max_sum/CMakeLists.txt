@@ -23,9 +23,21 @@ add_kernel_sources(
     SIMPLIFIED_KEY 1
 )
 
+add_kernel_sources(
+    KERNEL_SRC arch35/fused_linear_online_max_sum.cpp
+    COMPUTE_UNITS ascend950
+    SIMPLIFIED_KEY 1
+    OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
+)
+
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(
         "ascend910B1"
         "-DDTYPE_INPUT=half -DDTYPE_TARGET=int32_t"
+    )
+    AddOpTestCase(
+        "ascend950pr_9599"
+        "-D__NPU_ARCH__=3510 -DDTYPE_INPUT=half -DDTYPE_TARGET=int32_t"
+        MULTI_KERNEL_TARGET
     )
 endif()

@@ -1,0 +1,917 @@
+{
+  "op_type": "FusedLinearOnlineMaxSum",
+  "op_list": [
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_bf16_int32_hp",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_bf16_int64_hp",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_fp16_int32_hp",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_fp16_int64_hp",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_bf16_int32_lm",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_bf16_int64_lm",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_fp16_int32_lm",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedLinearOnlineMaxSum_fp16_int64_lm",
+      "inputs": [
+        {
+          "name": "input",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "logits_max_local",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "sum_exp_logits_local",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "predicted_logits_local",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "target_mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "masked_target",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+              -2
+          ]
+        },
+        {
+          "name": "vocab_parallel_logits_out",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+              -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "vocab_start_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_end_index",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "vocab_parallel_logits_out_flag",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
 #include "fused_linear_online_max_sum_tiling.h"
+#include "../op_kernel/arch35/fused_linear_online_max_sum_tiling_key.h"
 
 using namespace ge;
 using namespace std;
@@ -55,6 +56,9 @@ constexpr uint64_t MAX_REPEAT_TIMES = 255;
 constexpr uint64_t RESVERD_BUFF_BYTES = 8192;
 constexpr uint64_t SYS_WORKSPACE_BYTES = static_cast<uint64_t>(16 * 1024 * 1024);
 constexpr uint32_t BATCH_MODE = 1;
+// float32 可精确表示的整数上限（2^24）。tiling ABI 与 kernel 比较在 float32 域完成，
+// vocabEndIndex 超出该值时索引比较会因舍入产生静默错误，host 侧直接拒绝。
+constexpr int64_t MAX_FLOAT_EXACT_RANGE = 1LL << 24;
 
 const static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
@@ -67,7 +71,7 @@ const static std::map<ge::DataType, uint64_t> BYTES_MAP = {
 namespace optiling {
 class FusedLinearOnlineMaxSumTiling {
 public:
-    explicit FusedLinearOnlineMaxSumTiling(gert::TilingContext* context) : tilingContext_(context){};
+    explicit FusedLinearOnlineMaxSumTiling(gert::TilingContext* context) : tilingContext_(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
 
@@ -112,6 +116,7 @@ private:
     float vocabStartIndex_ = 0;
     float vocabEndIndex_ = 0;
     uint64_t vocabParallelLogitsOutFlag_ = 1;
+    bool isArch35Soc_ = false;
 };
 
 ge::graphStatus FusedLinearOnlineMaxSumTiling::Init()
@@ -119,6 +124,9 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::Init()
     opName_ = tilingContext_->GetNodeName();
     OP_LOGD(opName_, "FusedLinearOnlineMaxSumTiling init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext_->GetPlatformInfo());
+    auto socVersion = platformInfo.GetSocVersion();
+    isArch35Soc_ = (socVersion == platform_ascendc::SocVersion::ASCEND950) ||
+                   (socVersion == platform_ascendc::SocVersion::ASCEND350);
 
     aiVecNum_ = platformInfo.GetCoreNumAiv();
     aiCubeNum_ = platformInfo.GetCoreNumAic();
@@ -165,19 +173,27 @@ void FusedLinearOnlineMaxSumTiling::InitWorkspaceTiling()
     initWorkspaceLength_ = Ops::Base::FloorAlign(bufSize_ / BYTES_B32 / INIT_TYPE_NUM, BLOCK_DATA_B32);
     uint64_t btSizeAligned = Ops::Base::CeilAlign((btSize_ + 1) / DOUBLE_COF, BLOCK_DATA_B32);
     initWorkspaceLength_ = btSizeAligned < initWorkspaceLength_ ? btSizeAligned : initWorkspaceLength_;
+    if (initWorkspaceLength_ == static_cast<uint64_t>(0)) {
+        initWorkspaceLength_ = BLOCK_DATA_B32;
+    }
 }
 
 void FusedLinearOnlineMaxSumTiling::SetTilingKey()
 {
-    tilingKey_ = vocabParallelLogitsOutFlag_;
+    tilingKey_ = GET_TPL_TILING_KEY(vocabParallelLogitsOutFlag_);
     tilingContext_->SetTilingKey(tilingKey_);
 }
 
 void FusedLinearOnlineMaxSumTiling::TargetTiling()
 {
     uint64_t batchTasks = Ops::Base::CeilDiv(btSize_, BLOCK_DATA_B32);
-    batchTaksPerVecCore_ = batchTasks / aiVecNum_;
-    batchTaksTailVecCore_ = batchTasks % aiVecNum_;
+    if (aiVecNum_ > static_cast<uint64_t>(0)) {
+        batchTaksPerVecCore_ = batchTasks / aiVecNum_;
+        batchTaksTailVecCore_ = batchTasks % aiVecNum_;
+    } else {
+        batchTaksPerVecCore_ = static_cast<uint64_t>(0);
+        batchTaksTailVecCore_ = static_cast<uint64_t>(0);
+    }
 
     uint64_t targetBytes = BYTES_MAP.at(tilingContext_->GetInputDesc(INPUT_TARGET_IDX)->GetDataType());
     uint64_t bytesAligned = Ops::Base::FloorAlign(bufSize_ / NUM_THREE, REPEAT_BYTES);
@@ -192,7 +208,8 @@ bool FusedLinearOnlineMaxSumTiling::GetMatmulTiling()
     matmul_tiling::MatmulApiTiling mmTiling;
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, DTYPE_MAP.at(inputDataType), false);
     mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, DTYPE_MAP.at(inputDataType), true);
-    mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, DTYPE_MAP.at(inputDataType));
+    matmul_tiling::DataType cType = isArch35Soc_ ? matmul_tiling::DataType::DT_FLOAT : DTYPE_MAP.at(inputDataType);
+    mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, cType);
     mmTiling.SetBias(false);
     mmTiling.SetOrgShape(btSize_, vSize_, hSize_); // 设置Matmul计算时的原始完整的形状M、N、K或Ka/Kb，单位均为元素个数。
     mmTiling.SetShape(
@@ -212,15 +229,20 @@ bool FusedLinearOnlineMaxSumTiling::GetAttrAndCheck()
 {
     auto attrs = tilingContext_->GetAttrs();
     OP_TILING_CHECK(attrs == nullptr, OP_LOGE(opName_, "Get attrs Failed."), return false);
-    vocabStartIndex_ = static_cast<float>(*(attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_START_IDX)));
-    OP_TILING_CHECK(vocabStartIndex_ < 0,
-                    OP_LOGE(opName_, "vocabStartIndex %f should not be smaller than 0.", vocabStartIndex_),
+    int64_t vocabStartIdx = *(attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_START_IDX));
+    OP_TILING_CHECK(vocabStartIdx < 0,
+                    OP_LOGE(opName_, "vocabStartIndex %ld should not be smaller than 0.", vocabStartIdx), return false);
+    int64_t vocabEndIdx = *(attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_END_IDX));
+    OP_TILING_CHECK(vocabEndIdx < vocabStartIdx,
+                    OP_LOGE(opName_, "vocabEndIndex %ld should be greater than or equal to vocabStartIndex %ld.",
+                            vocabEndIdx, vocabStartIdx),
                     return false);
-    vocabEndIndex_ = static_cast<float>(*(attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_END_IDX)));
-    OP_TILING_CHECK(vocabEndIndex_ < vocabStartIndex_,
-                    OP_LOGE(opName_, "vocabEndIndex %f should be greater than or equal to vocabStartIndex %f.",
-                            vocabEndIndex_, vocabStartIndex_),
+    OP_TILING_CHECK(vocabEndIdx > MAX_FLOAT_EXACT_RANGE,
+                    OP_LOGE(opName_, "vocabEndIndex %ld exceeds float32 exact integer range %ld.", vocabEndIdx,
+                            MAX_FLOAT_EXACT_RANGE),
                     return false);
+    vocabStartIndex_ = static_cast<float>(vocabStartIdx);
+    vocabEndIndex_ = static_cast<float>(vocabEndIdx);
     vocabParallelLogitsOutFlag_ = static_cast<uint64_t>(
         *(attrs->GetAttrPointer<bool>(ATTR_IS_VOCAB_PARALLEL_LOGITS_OUT_IDX)));
     return true;
@@ -246,11 +268,15 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling()
         aiCubeNum_ = totalTasks;
         aiVecNum_ = aiCubeNum_ * DOUBLE_COF;
     }
+    if (aiCubeNum_ == static_cast<uint64_t>(0)) {
+        aiCubeNum_ = static_cast<uint64_t>(1);
+        aiVecNum_ = DOUBLE_COF;
+    }
     cubeCoreNumAligned_ = Ops::Base::CeilAlign(aiCubeNum_, BLOCK_DATA_B32);
     InitWorkspaceTiling();
     TargetTiling();
 
-    if (hSize_ > static_cast<uint64_t>(0)) {
+    if (hSize_ > static_cast<uint64_t>(0) && btSize_ > static_cast<uint64_t>(0)) {
         matmulInputEmptyFlag_ = static_cast<uint64_t>(0);
         if (!GetMatmulTiling()) {
             return ge::GRAPH_FAILED;
@@ -264,7 +290,9 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling()
     size_t* workspaces = tilingContext_->GetWorkspaceSizes(1);
     workspaces[0] = SYS_WORKSPACE_BYTES;
     workspaces[0] += btSize_ * BYTES_B32 * aiCubeNum_ * DOUBLE_COF; // high_performance
-    if (!static_cast<bool>(vocabParallelLogitsOutFlag_)) {
+    if (isArch35Soc_) {
+        workspaces[0] += BASE_M * BASE_N * BYTES_B32 * aiCubeNum_ * DOUBLE_COF * nBlockNum; // mmOut workspace
+    } else if (!static_cast<bool>(vocabParallelLogitsOutFlag_)) {
         workspaces[0] += BASE_M * BASE_N * BYTES_B16 * aiCubeNum_ * DOUBLE_COF; // low memory
     }
 
