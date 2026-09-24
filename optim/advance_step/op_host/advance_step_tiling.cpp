@@ -90,6 +90,8 @@ bool AdvanceStepTilingHelper::CheckAttrs()
     OP_CHECK_IF(this->numQueries_ < 1, OP_LOGE(context_, "Non-positive attr num_queries, tiling failed."),
                 return false);
     OP_CHECK_IF(this->blockSize_ < 1, OP_LOGE(context_, "Non-positive attr block_size, tiling failed."), return false);
+    OP_CHECK_IF(this->numSeqs_ >= MAX_NUMSEQS,
+                OP_LOGE(context_, "numSeqs %ld should be smaller than 200000000.", this->numSeqs_), return false);
     OP_LOGD(context_, "End CheckAttr");
     return true;
 }
@@ -146,6 +148,9 @@ bool AdvanceStepTilingHelper::CheckOptionalInputs()
 bool AdvanceStepTilingHelper::CheckInputOutputShape()
 {
     OP_LOGD(context_, "Enter CheckInputOutputShape");
+    OP_CHECK_IF(this->numSeqs_ != this->numQueries_,
+                OP_LOGE(context_, "numSeqs %ld should be equal to numQueries %ld.", this->numSeqs_, this->numQueries_),
+                return false);
     OP_CHECK_IF(this->inputTokensShape_->GetDimNum() != 1 ||
                     this->inputTokensShape_->GetDim(0) != this->numSeqs_ * this->tokenEachReqs_,
                 OP_LOGE(context_, "inputTokens shape is not [num_seqs * (1 + spec_num),]."), return false);
@@ -162,7 +167,38 @@ bool AdvanceStepTilingHelper::CheckInputOutputShape()
     OP_CHECK_IF(this->blockTablesShape_->GetDimNum() != 2 || this->blockTablesShape_->GetDim(0) != this->numSeqs_,
                 OP_LOGE(context_, "blockTables shape 1st dim is not num_seqs."), return false);
     this->blockTablesStride_ = this->blockTablesShape_->GetDim(1);
+    OP_CHECK_IF(this->blockTablesStride_ < 1,
+                OP_LOGE(context_, "blockTables shape 2nd dim must be positive, empty tensor is not supported."),
+                return false);
     OP_LOGD(context_, "End CheckInputOutputShape");
+    return true;
+}
+
+bool AdvanceStepTilingHelper::CheckInputOutputFormat() const
+{
+    OP_LOGD(context_, "Enter CheckInputOutputFormat");
+    // need no more null check for InputDesc
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__INPUT_TOKENS)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "inputTokensFormat is not ND."), return false);
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__SAMPLED_TOKEN_IDS)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "sampledTokenIdsFormat is not ND."), return false);
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__INPUT_POSITIONS)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "inputPositionsFormat is not ND."), return false);
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__SEQ_LENS)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "seqLensFormat is not ND."), return false);
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__SLOT_MAPPING)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "slotMappingFormat is not ND."), return false);
+    OP_CHECK_IF(context_->GetInputDesc(IDX_INPUT__BLOCK_TABLES)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "blockTablesFormat is not ND."), return false);
+    // check OptionalInputFormat if exist
+    OP_CHECK_IF(this->specTokenExist &&
+                    context_->GetOptionalInputDesc(IDX_OPTIONAL_INPUT__SPEC_TOKEN)->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE(context_, "specTokenFormat is not ND."), return false);
+    OP_CHECK_IF(
+        this->acceptedNumExist &&
+            context_->GetOptionalInputDesc(IDX_OPTIONAL_INPUT__ACCEPTED_NUM)->GetStorageFormat() != ge::FORMAT_ND,
+        OP_LOGE(context_, "acceptedNumFormat is not ND."), return false);
+    OP_LOGD(context_, "End CheckInputOutputFormat");
     return true;
 }
 
@@ -226,13 +262,15 @@ ge::graphStatus AdvanceStepTilingHelper::DoTiling()
     OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_, "GetBaseInfo falied, return false"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckAttrs(), OP_LOGE(context_, "CheckAttrs falied, return false"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!GetInputsOutputs(), OP_LOGE(context_, "GetInputs falied, return false"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputFormat(), OP_LOGE(context_, "CheckInputOutputFormat falied, return false"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputDType(), OP_LOGE(context_, "CheckInputOutputDType falied, return false"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckOptionalInputs(), OP_LOGE(context_, "CheckOptionalInputs falied, return false"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!(this->specTokenExist && this->acceptedNumExist),
                 OP_LOGI(context_, "No optional inputs, use legacy tiling."), return this->Tiling4AdvanceStepLegacy());
     OP_CHECK_IF(!CheckInputOutputShape(), OP_LOGE(context_, "CheckInputOutputShape falied, return false"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputOutputDType(), OP_LOGE(context_, "CheckInputOutputDType falied, return false"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!Tiling4Seqs(), OP_LOGE(context_, "DoBlockTiling falied, return false"), return ge::GRAPH_FAILED);
     OP_LOGD(context_, "End DoTiling");
@@ -284,9 +322,6 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
     OP_CHECK_IF(this->numSeqs_ <= this->numQueries_,
                 OP_LOGE("CheckAdvTiling", "numSeqs %ld should not be smaller or equal to numQueries %ld ",
                         this->numSeqs_, this->numQueries_),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(this->numSeqs_ >= MAX_NUMSEQS,
-                OP_LOGE("CheckAdvTiling", "numSeqs %ld should be smaller to 200000000", this->numSeqs_),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(input0_storage_shape.GetDim(0) != this->numSeqs_,
                 OP_LOGE("CheckAdvTiling", "numSeqs %ld should equal to inputTokens's dim %ld ", this->numSeqs_,

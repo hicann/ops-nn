@@ -114,7 +114,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>inputTokens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出inputTokens，用于更新vLLM模型中的token值。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]，specNum为specToken第二维长度。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于记录不同blockIdx下block的物理块编号，公式中的输入blockTables。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize且不为0。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>numSeqs（int64_t）</td>
       <td>输入</td>
       <td>记录输入的seq数量，大小与seqLens的长度一致。</td>
-      <td><ul><li>取值范围是大于0的正整数。</li><li>numSeqs的值大于输入numQueries的值。</li></ul></td>
+      <td><ul><li>取值范围是大于0且小于200000000的正整数。</li><li>numSeqs的值与输入numQueries的值一致。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -272,21 +272,27 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td rowspan="5">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
-    <td rowspan="5">561002</td>
-    <td>输入inputTokens、inputPositions、seqLens、slotMapping的shape不是[numSeqs * (1+specNum)]，或者blockTables、specToken、acceptedNum的shape的第一维长度与numSeqs不一致。</td>
+    <td rowspan="7">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
+    <td rowspan="7">561002</td>
+    <td>输入inputTokens、inputPositions、seqLens、slotMapping的shape长度不为numSeqs * (1 + specNum)。</td>
   </tr>
   <tr>
-    <td>输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1+specNum。</td>
+    <td>输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1 + specNum。</td>
   </tr>
   <tr>
-    <td>输入acceptedNum的shape的长度与numSeqs不一致。</td>
+    <td>输入specToken的shape的第一维长度与numSeqs不一致，或者shape的维度不为2。</td>
   </tr>
-    <tr>
-    <td>输入specToken的shape的第二维长度不为specNum。</td>
+  <tr>
+    <td>输入acceptedNum的shape长度与numSeqs不一致。</td>
   </tr>
-    <tr>
+  <tr>
+    <td>输入blockTables的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为正数。</td>
+  </tr>
+  <tr>
     <td>输入numSeqs的值不等于输入numQueries的值。</td>
+  </tr>
+  <tr>
+    <td>numSeqs、numQueries、blockSize不是大于0的正整数，或者numSeqs不小于200000000。</td>
   </tr>
 </tbody>
 </table>

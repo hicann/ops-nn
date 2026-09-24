@@ -54,6 +54,7 @@ private:
     bool GetInputsOutputs();
     bool CheckOptionalInputs();
     bool CheckInputOutputShape();
+    bool CheckInputOutputFormat() const;
     bool CheckInputOutputDType() const;
     bool Tiling4Seqs();
     ge::graphStatus Tiling4AdvanceStepLegacy();

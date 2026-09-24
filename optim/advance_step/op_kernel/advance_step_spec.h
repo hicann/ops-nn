@@ -352,8 +352,11 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeInputTokens(int64_t loop
         SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
         float tempIndex = temp.GetValue(1);
         uint32_t minIndex = *reinterpret_cast<uint32_t*>(&tempIndex);
-        // bufferLocal存放的是lastTokens
-        int64_t lastToken = sampledTokenIdsLocalInt64.GetValue(i * stride + minIndex - 1);
+        // bufferLocal存放的是lastTokens；行首即为-1表示该request无接受token，lastToken为-1
+        int64_t lastToken = -1;
+        if (minIndex != 0) {
+            lastToken = sampledTokenIdsLocalInt64.GetValue(i * stride + minIndex - 1);
+        }
         lastTokensInt64.SetValue(Align(1, sizeof(T)) * i, lastToken);
         PipeBarrier<PIPE_V>();
         ;

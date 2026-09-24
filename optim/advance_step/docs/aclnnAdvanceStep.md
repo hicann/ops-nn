@@ -135,7 +135,7 @@ aclnnStatus aclnnAdvanceStep(
       <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
-      <td>2</td>
+      <td>1</td>
       <td>×</td>
     </tr>
       <tr>
