@@ -19,14 +19,14 @@
 #include "./inplace_apply_ftrl_v2_kernel.h"
 
 extern "C" __global__ __aicore__ void inplace_apply_ftrl_v2(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
-                                                            GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR l2_shrinkage,
-                                                            GM_ADDR lr_power, GM_ADDR varOut, GM_ADDR accumOut,
+                                                            GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR l2Shrinkage,
+                                                            GM_ADDR lrPower, GM_ADDR varOut, GM_ADDR accumOut,
                                                             GM_ADDR linearOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(InplaceApplyFtrlV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(InplaceApplyFtrlV2TilingData, tilingData, tiling);
 
     NsInplaceApplyFtrl::InplaceApplyFtrlV2<DTYPE_VAR> op;
-    op.Init(var, accum, linear, grad, lr, l1, l2, l2_shrinkage, lr_power, varOut, accumOut, linearOut, &tilingData);
+    op.Init(var, accum, linear, grad, lr, l1, l2, l2Shrinkage, lrPower, varOut, accumOut, linearOut, &tilingData);
     op.Process();
 }

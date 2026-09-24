@@ -21,9 +21,7 @@
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
-#include "op_common/op_host/util/platform_util.h"
 #include "graph/utils/type_utils.h"
-#include "op_host/tiling_util.h"
 #include "../../op_kernel/arch35/inplace_apply_ftrl_v2_tiling_data.h"
 
 namespace optiling {
@@ -33,7 +31,9 @@ using Ops::Base::CeilDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr size_t WORKSPACE_NUM = 1;
-constexpr uint32_t ELEM_ALIGN_FACTOR = 512; // 512 elements, vector compute alignment on arch35
+// [general] tiling granularity (tuning choice): keeps block/ub factors multiples
+// of 512 elements for balanced multi-core split; not a hardware-mandated alignment.
+constexpr uint32_t ELEM_ALIGN_FACTOR = 512;
 constexpr uint32_t UB_ALIGN_BITS = 256 * 8; // 256-byte UB alignment, in bits
 constexpr uint32_t UB_USAGE_PERCENT = 90;   // reserve 90% of UB for tiling buffers
 constexpr uint32_t PERCENTAGE_BASE = 100;
@@ -117,7 +117,7 @@ static ge::graphStatus ValidateScalarInputs(gert::TilingContext* context, const 
 
 static ge::graphStatus ValidateInputDtypes(gert::TilingContext* context, const char* opName, ge::DataType* dataType)
 {
-    auto inputDesc = context->GetInputDesc(0);
+    auto inputDesc = context->GetInputDesc(INPUT_INDEX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
 
@@ -182,7 +182,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 {
     const char* opName = context->GetNodeName();
 
-    auto inputVar = context->GetInputShape(0);
+    auto inputVar = context->GetInputShape(INPUT_INDEX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
     auto varShape = inputVar->GetStorageShape();
     *totalElements = varShape.GetShapeSize();
@@ -236,9 +236,14 @@ static void CalcUbTiling(InplaceApplyFtrlV2TilingData* tiling, uint64_t ubSize, 
 static uint32_t CalcBlockTiling(InplaceApplyFtrlV2TilingData* tiling, int64_t totalElements, uint32_t minDtypeBits,
                                 int64_t coreNum)
 {
+    // SetBlockDim 的块数在运行时按 16 位调度：超过 65535 的块不会被任何核执行，
+    // 对应输出区间将保持输入原值。将并行度钳制到 MAX_BLOCK_NUM，超出部分通过
+    // 增大 blockFactor（每块多次 UB 迭代）吸收。
+    constexpr uint32_t MAX_BLOCK_NUM = 65535;
     uint32_t calcCoreNum = static_cast<uint32_t>((totalElements * minDtypeBits + MIN_TILING_BITS - 1) /
                                                  MIN_TILING_BITS);
     calcCoreNum = std::min(calcCoreNum, static_cast<uint32_t>(coreNum));
+    calcCoreNum = std::min(calcCoreNum, MAX_BLOCK_NUM);
     if (calcCoreNum == 0) {
         calcCoreNum = 1;
     }
@@ -254,6 +259,15 @@ static uint32_t CalcBlockTiling(InplaceApplyFtrlV2TilingData* tiling, int64_t to
     }
     uint32_t blockNum = static_cast<uint32_t>(
         CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFactor)));
+    // blockFactor 被 ubFactor 钳制后 blockNum 仍可能超过 MAX_BLOCK_NUM（如超大 shape 小 dtype 场景），
+    // 此时按 MAX_BLOCK_NUM 反推 blockFactor，保证最终 blockNum 不越过 16 位调度上限。
+    if (blockNum > MAX_BLOCK_NUM) {
+        tiling->blockFactor = CeilAlign(
+            static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(MAX_BLOCK_NUM))),
+            static_cast<int64_t>(ELEM_ALIGN_FACTOR));
+        blockNum = static_cast<uint32_t>(
+            CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFactor)));
+    }
     return blockNum;
 }
 

@@ -18,10 +18,6 @@
 
 #include <cstdint>
 
-constexpr int64_t UB_FP32_SLOTS = 24;
-constexpr int64_t UB_FP32_SLOTS_KERNEL = 24;
-static_assert(UB_FP32_SLOTS == UB_FP32_SLOTS_KERNEL, "Host UB_FP32_SLOTS must equal Kernel UB_FP32_SLOTS_KERNEL");
-
 struct InplaceApplyFtrlV2TilingData {
     int64_t totalElements = 0;
     int64_t blockFactor = 0;

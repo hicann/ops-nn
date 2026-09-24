@@ -15,8 +15,6 @@
 #include "../../../op_graph/inplace_apply_ftrl_v2_proto.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "log/log.h"
-#include "platform/platform_info.h"
 
 class InplaceApplyFtrlV2InferShapeTest : public testing::Test {
 protected:
@@ -27,7 +25,9 @@ protected:
 
 static void DoInferShapeTest(gert::StorageShape& inputShape, ge::graphStatus expectedStatus)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyFtrlV2")->infer_shape;
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyFtrlV2");
+    ASSERT_NE(opImpl, nullptr);
+    auto inferShapeFunc = opImpl->infer_shape;
     gert::StorageShape outVarShape = {{}, {}};
     gert::StorageShape outAccumShape = {{}, {}};
     gert::StorageShape outLinearShape = {{}, {}};
@@ -50,7 +50,9 @@ static void DoInferShapeTest(gert::StorageShape& inputShape, ge::graphStatus exp
 
 TEST_F(InplaceApplyFtrlV2InferShapeTest, infershape_1d_fp32_test)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyFtrlV2")->infer_shape;
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyFtrlV2");
+    ASSERT_NE(opImpl, nullptr);
+    auto inferShapeFunc = opImpl->infer_shape;
 
     gert::StorageShape varShape = {{128}, {128}};
     gert::StorageShape outVarShape = {{}, {}};

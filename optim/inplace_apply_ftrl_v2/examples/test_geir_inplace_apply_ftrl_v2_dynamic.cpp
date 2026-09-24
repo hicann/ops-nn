@@ -27,14 +27,13 @@
  */
 
 #include <iostream>
-#include <fstream>
-#include <string.h>
 #include <stdint.h>
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 #include <ctime>
-#include "assert.h"
+#include <cstring>
 
 #include "graph.h"
 #include "types.h"
@@ -43,7 +42,6 @@
 #include "ge_api_types.h"
 #include "ge_api.h"
 #include "array_ops.h"
-#include "ge_ir_build.h"
 
 #include "../op_graph/inplace_apply_ftrl_v2_proto.h"
 
@@ -58,9 +56,17 @@ using std::vector;
 static string GetTime()
 {
     time_t timep;
-    time(&timep);
-    char tmp[64];
-    strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S,000", localtime(&timep));
+    if (time(&timep) == static_cast<time_t>(-1)) {
+        return string("unknown-time");
+    }
+    const struct tm* tmInfo = localtime(&timep);
+    if (tmInfo == nullptr) {
+        return string("unknown-time");
+    }
+    char tmp[64] = {0};
+    if (strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S,000", tmInfo) == 0) {
+        return string("unknown-time");
+    }
     return tmp;
 }
 
@@ -85,8 +91,9 @@ static string ShapeToStr(const vector<int64_t>& shape)
     string s = "[";
     for (size_t i = 0; i < shape.size(); ++i) {
         s += std::to_string(shape[i]);
-        if (i + 1 < shape.size())
+        if (i + 1 < shape.size()) {
             s += ",";
+        }
     }
     s += "]";
     return s;
@@ -111,10 +118,11 @@ static Tensor MakeNdTensor(const vector<int64_t>& shape, DataType dtype, float f
     uint32_t elemSize = GetDataTypeSize(dtype);
     std::vector<uint8_t> buf(n * elemSize, 0);
     if (dtype == DT_FLOAT) {
-        float* p = reinterpret_cast<float*>(buf.data());
+        std::vector<float> fbuf(static_cast<size_t>(n));
         for (int64_t i = 0; i < n; ++i) {
-            p[i] = fillValue + static_cast<float>(i) * 0.01f;
+            fbuf[static_cast<size_t>(i)] = fillValue + static_cast<float>(i) * 0.01f;
         }
+        std::memcpy(buf.data(), fbuf.data(), buf.size());
     }
     return Tensor(desc, buf.data(), buf.size());
 }
@@ -132,17 +140,29 @@ static Tensor MakeScalarTensor(float value, TensorDesc& desc)
 
 static int AddDataInput(int index, const string& name, const vector<int64_t>& shape, DataType dtype, Graph& graph,
                         vector<Operator>& inputs, std::function<void(Operator&)> portSetter,
-                        std::function<void(const TensorDesc&)> descSetter)
+                        std::function<graphStatus(const TensorDesc&)> descSetter)
 {
     auto data = op::Data(name.c_str()).set_attr_index(index);
     TensorDesc desc = TensorDesc(ge::Shape(shape), FORMAT_ND, dtype);
     desc.SetFormat(FORMAT_ND);
     desc.SetRealDimCnt(shape.size());
-    data.update_input_desc_x(desc);
-    data.update_output_desc_y(desc);
-    graph.AddOp(data);
+    if (data.update_input_desc_x(desc) != ge::GRAPH_SUCCESS) {
+        printf("%s - ERROR - [XIR]: update input desc failed for %s\n", GetTime().c_str(), name.c_str());
+        return FAILED;
+    }
+    if (data.update_output_desc_y(desc) != ge::GRAPH_SUCCESS) {
+        printf("%s - ERROR - [XIR]: update output desc failed for %s\n", GetTime().c_str(), name.c_str());
+        return FAILED;
+    }
+    if (graph.AddOp(data) != ge::GRAPH_SUCCESS) {
+        printf("%s - ERROR - [XIR]: AddOp %s failed\n", GetTime().c_str(), name.c_str());
+        return FAILED;
+    }
     portSetter(data);
-    descSetter(desc);
+    if (descSetter(desc) != ge::GRAPH_SUCCESS) {
+        printf("%s - ERROR - [XIR]: desc setter failed for %s\n", GetTime().c_str(), name.c_str());
+        return FAILED;
+    }
     inputs.push_back(data);
     return SUCCESS;
 }
@@ -160,39 +180,47 @@ static int CreateOppInGraph(const vector<int64_t>& tensorShape, DataType dtype, 
     // var(0), accum(1), linear(2), grad(3), lr(4), l1(5), l2(6), l2_shrinkage(7), lr_power(8)
     AddDataInput(
         0, "var", tensorShape, dtype, graph, inputs, [&](Operator& d) { op1.set_input_var(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_var(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_var(d); });
     AddDataInput(
         1, "accum", tensorShape, dtype, graph, inputs, [&](Operator& d) { op1.set_input_accum(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_accum(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_accum(d); });
     AddDataInput(
         2, "linear", tensorShape, dtype, graph, inputs, [&](Operator& d) { op1.set_input_linear(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_linear(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_linear(d); });
     AddDataInput(
         3, "grad", tensorShape, dtype, graph, inputs, [&](Operator& d) { op1.set_input_grad(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_grad(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_grad(d); });
     AddDataInput(
         4, "lr", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_lr(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_lr(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_lr(d); });
     AddDataInput(
         5, "l1", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_l1(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_l1(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_l1(d); });
     AddDataInput(
         6, "l2", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_l2(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_l2(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_l2(d); });
     AddDataInput(
         7, "l2_shrinkage", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_l2_shrinkage(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_l2_shrinkage(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_l2_shrinkage(d); });
     AddDataInput(
         8, "lr_power", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_lr_power(d); },
-        [&](const TensorDesc& d) { op1.update_input_desc_lr_power(d); });
+        [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_lr_power(d); });
 
     // 3 outputs: state-update results; physical input/output buffer reuse is graph-managed.
     TensorDesc outDesc = TensorDesc(ge::Shape(tensorShape), FORMAT_ND, dtype);
     outDesc.SetFormat(FORMAT_ND);
     outDesc.SetRealDimCnt(tensorShape.size());
-    op1.update_output_desc_var(outDesc);
-    op1.update_output_desc_accum(outDesc);
-    op1.update_output_desc_linear(outDesc);
+    if (op1.update_output_desc_var(outDesc) != ge::GRAPH_SUCCESS ||
+        op1.update_output_desc_accum(outDesc) != ge::GRAPH_SUCCESS ||
+        op1.update_output_desc_linear(outDesc) != ge::GRAPH_SUCCESS) {
+        printf("%s - ERROR - [XIR]: update output desc failed\n", GetTime().c_str());
+        return FAILED;
+    }
+
+    if (inputs.size() != 9) {
+        printf("%s - ERROR - [XIR]: AddDataInput failed, got %zu of 9 inputs\n", GetTime().c_str(), inputs.size());
+        return FAILED;
+    }
 
     outputs.push_back(op1);
     return SUCCESS;
@@ -240,8 +268,8 @@ static int RunDynamicScenario(const string& scenarioName, const vector<int64_t>&
            ShapeToStr(graphShape).c_str(), static_cast<int>(dtype));
     printf("%s\n", "============================================================");
 
-    const char* graph_name = "inplace_apply_ftrl_v2_geir_dynamic";
-    Graph graph(graph_name);
+    const char* graphName = "inplace_apply_ftrl_v2_geir_dynamic";
+    Graph graph(graphName);
     vector<Operator> inputs{};
     vector<Operator> outputs{};
 
@@ -251,21 +279,16 @@ static int RunDynamicScenario(const string& scenarioName, const vector<int64_t>&
     }
     graph.SetInputs(inputs).SetOutputs(outputs);
 
-    std::map<AscendString, AscendString> build_options = {};
-    ge::Session* session = new Session(build_options);
-    if (session == nullptr) {
-        printf("%s - ERROR - [XIR]: Create session failed\n", GetTime().c_str());
-        return FAILED;
-    }
+    std::map<AscendString, AscendString> buildOptions = {};
+    auto session = std::make_unique<ge::Session>(buildOptions);
 
-    std::map<AscendString, AscendString> graph_options = {};
-    uint32_t graph_id = 0;
-    Status ret = session->AddGraph(graph_id, graph, graph_options);
+    std::map<AscendString, AscendString> graphOptions = {};
+    uint32_t graphId = 0;
+    Status ret = session->AddGraph(graphId, graph, graphOptions);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: AddGraph failed for %s\n", GetTime().c_str(), scenarioName.c_str());
-        ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-        std::cout << "Error message: " << error_msg.GetString() << std::endl;
-        delete session;
+        ge::AscendString errorMsg = ge::GEGetErrorMsgV2();
+        std::cout << "Error message: " << errorMsg.GetString() << std::endl;
         return FAILED;
     }
     printf("%s - INFO - [XIR]: AddGraph success (%s, shape=%s)\n", GetTime().c_str(), scenarioName.c_str(),
@@ -281,12 +304,12 @@ static int RunDynamicScenario(const string& scenarioName, const vector<int64_t>&
 
         vector<ge::Tensor> feeds = MakeFeeds(shape, dtype);
         vector<ge::Tensor> output;
-        ret = session->RunGraph(graph_id, feeds, output);
+        ret = session->RunGraph(graphId, feeds, output);
         if (ret != SUCCESS) {
             printf("%s - ERROR - [XIR]: [%s] RunGraph failed for shape %s\n", GetTime().c_str(), scenarioName.c_str(),
                    ShapeToStr(shape).c_str());
-            ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-            std::cout << "Error message: " << error_msg.GetString() << std::endl;
+            ge::AscendString errorMsg = ge::GEGetErrorMsgV2();
+            std::cout << "Error message: " << errorMsg.GetString() << std::endl;
             failCount++;
             continue;
         }
@@ -303,8 +326,9 @@ static int RunDynamicScenario(const string& scenarioName, const vector<int64_t>&
         for (int i = 0; i < 3; ++i) {
             auto outShape = output[i].GetTensorDesc().GetShape();
             bool match = VerifyOutputShape(shape, outShape);
-            if (!match)
+            if (!match) {
                 allMatch = false;
+            }
             std::cout << "  output[" << i << "] (" << outNames[i] << ") shape = [";
             for (size_t k = 0; k < outShape.GetDimNum(); ++k) {
                 std::cout << outShape.GetDim(k) << (k + 1 < outShape.GetDimNum() ? "," : "");
@@ -326,7 +350,6 @@ static int RunDynamicScenario(const string& scenarioName, const vector<int64_t>&
     printf("\n%s - INFO - [XIR]: [%s] summary: %d/%d passed\n", GetTime().c_str(), scenarioName.c_str(), passCount,
            static_cast<int>(testShapes.size()));
 
-    delete session;
     return (failCount > 0) ? FAILED : SUCCESS;
 }
 
@@ -337,8 +360,8 @@ int main(int argc, char* argv[])
 
     printf("%s - INFO - [XIR]: InplaceApplyFtrlV2 GE IR Dynamic Shape Example\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to initialize ge\n", GetTime().c_str());
-    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
-    Status ret = ge::GEInitialize(global_options);
+    std::map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
+    Status ret = ge::GEInitialize(globalOptions);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Initialize ge failed\n", GetTime().c_str());
         return FAILED;

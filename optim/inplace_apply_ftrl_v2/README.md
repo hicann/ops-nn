@@ -17,7 +17,7 @@
 
 InplaceApplyFtrlV2是FTRL-Proximal（Follow The Regularized Leader - Proximal）在线学习优化算法的单步参数更新算子，用于推荐系统与CTR预估等大规模稀疏特征训练阶段。算子根据当前batch梯度`grad`与一组超参，原地更新模型参数`var`、梯度平方累积`accumulation`、线性项`linear`三个跨调用持久的状态张量，并显式输出更新后的三者；通过L1正则化将`|linear| ≤ threshold`的权重直接置零，产生稀疏解。
 
-记 `gs = grad + 2.0 * l2_shrinkage * var`，`accumulation_new = accumulation + grad * grad`，`Δpow = accumulation_new^(-lr_power) - accumulation^(-lr_power)`。更新公式为：
+记`gs = grad + 2.0 * l2_shrinkage * var`，`accumulation_new = accumulation + grad * grad`，`Δpow = accumulation_new^(-lr_power) - accumulation^(-lr_power)`。更新公式为：
 
 $$
 linear_{new} = linear + gs - \frac{\Delta pow \cdot var}{lr}
@@ -147,23 +147,18 @@ $$
 
 - 仅支持ND数据格式。
 - 输入和输出均在算子定义中启用自动连续化；非连续张量由框架转换为连续张量后再执行，转换过程可能产生额外的数据拷贝和性能开销。
-- 数据类型约束：
-  - 支持BFLOAT16、FLOAT16、FLOAT三种数据类型。
-  - 全部9路输入（var/accumulation/linear/grad + lr/l1/l2/l2_shrinkage/lr_power）与3路输出的数据类型必须完全相同（以var为准，不支持混合精度）。
-  - 幂运算等中间计算在FLOAT32下进行后回降为输入类型。
-  - 不支持FLOAT64及整型（INT8/INT16/INT32/INT64等）。
-- Shape约束：
-  - var/accumulation/linear/grad四路张量的shape必须完全一致，不支持张量间广播。
-  - 四路张量的rank范围为[0, 8]，仅拒绝rank大于8的输入。
-  - lr/l1/l2/l2_shrinkage/lr_power五路标量输入为rank-0，按numpy规则广播到var.shape。
-  - 支持空Tensor（shape含0维，如[0, N]），短路返回空输出。
-  - 支持动态Shape（-1未知维度）与动态Rank（-2未知秩）。
-- 属性约束：
-  - use_locking：仅支持false（NPU无Ref语义）。
+- 数据类型一致性：全部9路输入（var/accumulation/linear/grad + lr/l1/l2/l2_shrinkage/lr_power）与3路输出的数据类型必须完全相同（以var为准，不支持混合精度）；不支持FLOAT64及整型。
+- Shape约束：var/accumulation/linear/grad四路张量的shape必须完全一致，不支持张量间广播；四路张量的rank范围为[0, 8]。
+- 标量约束：lr/l1/l2/l2_shrinkage/lr_power五路标量输入为rank-0或shape [1]，按numpy规则广播到var.shape。
+- 标量值域：要求lr > 0、l1 >= 0、l2 >= 0、l2_shrinkage >= 0；lr=0等域外取值不做拦截，数值行为与TensorFlow一致。
+- 幂运算等中间计算在FLOAT32下进行后回降为输入类型。
+- 属性约束：use_locking仅支持false（NPU无Ref语义）。
+- 支持空Tensor（shape含0维，如[0, N]），短路返回空输出。
+- 支持动态Shape（-1未知维度）与动态Rank（-2未知秩）。
 - 仅在Ascend 950PR/Ascend 950DT上注册，其他产品不支持。
 
 ## 调用说明
 
 | 调用方式 | 调用样例 | 说明 |
 |:---------|:---------|:-----|
-| 图模式 | [test_geir_inplace_apply_ftrl_v2_dynamic](./examples/test_geir_inplace_apply_ftrl_v2_dynamic.cpp) | 通过 [算子IR](./op_graph/inplace_apply_ftrl_v2_proto.h) 构图方式调用 InplaceApplyFtrlV2 算子，覆盖动态 shape（-1/-2）场景。 |
+| 图模式 | [test_geir_inplace_apply_ftrl_v2_dynamic](./examples/test_geir_inplace_apply_ftrl_v2_dynamic.cpp) | 通过[算子IR](./op_graph/inplace_apply_ftrl_v2_proto.h)构图方式调用InplaceApplyFtrlV2算子，覆盖动态shape（-1/-2）场景。 |

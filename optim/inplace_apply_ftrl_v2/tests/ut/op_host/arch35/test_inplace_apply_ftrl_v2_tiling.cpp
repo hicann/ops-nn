@@ -9,8 +9,6 @@
  */
 
 #include <iostream>
-#include <vector>
-#include "log/log.h"
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
@@ -28,6 +26,7 @@ using namespace ut_util;
 class InplaceApplyFtrlV2TilingTest : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "InplaceApplyFtrlV2TilingTest SetUp" << std::endl; }
+
     static void TearDownTestCase() { std::cout << "InplaceApplyFtrlV2TilingTest TearDown" << std::endl; }
 };
 
@@ -58,7 +57,7 @@ static void DoTilingTest(ge::DataType varDtype, gert::StorageShape& varShape, ge
     auto param = gert::TilingData::CreateCap(8192);
     ASSERT_NE(param, nullptr);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(32);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
     ge::Format fmt = format;
     ge::DataType outDtype = outputDtype == ge::DT_UNDEFINED ? varDtype : outputDtype;
     InplaceApplyFtrlV2UtCompileInfo compileInfo;
@@ -104,6 +103,15 @@ static void DoTilingTest(ge::DataType varDtype, gert::StorageShape& varShape, ge
 TEST_F(InplaceApplyFtrlV2TilingTest, tiling_fp32_1d_std)
 {
     gert::StorageShape varShape = {{128}, {128}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, varShape, scalarShape);
+}
+
+TEST_F(InplaceApplyFtrlV2TilingTest, tiling_fp32_1d_stress_1gib)
+{
+    // 2^28 float32 elements (1 GiB per tensor): blockNum must stay within the
+    // 16-bit block-dim scheduling limit, otherwise tail blocks never execute.
+    gert::StorageShape varShape = {{268435456}, {268435456}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, varShape, scalarShape);
 }
