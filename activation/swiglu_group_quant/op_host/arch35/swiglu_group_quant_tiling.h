@@ -52,7 +52,7 @@ private:
     ge::graphStatus CheckGroupIndexInfo();
     ge::graphStatus CheckOutputInfo(ge::DataType xDtype, const gert::Shape& xStorageShape);
     template <typename TilingDataType>
-    void SetBaseTilingData(TilingDataType& tilingData);
+    void SetBaseTilingData(TilingDataType& tilingData) const;
     void InitCoreTiling();
     void CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize);
     void SetFullDTiling();

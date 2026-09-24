@@ -48,7 +48,7 @@ using namespace Ops::Base;
 
 ge::graphStatus TilingForEvict(gert::TilingContext* context)
 {
-    const auto* compileInfo = reinterpret_cast<const EvictCompileInfo*>(context->GetCompileInfo());
+    const auto* compileInfo = context->GetCompileInfo<EvictCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     auto tiling = EvictTilingData();

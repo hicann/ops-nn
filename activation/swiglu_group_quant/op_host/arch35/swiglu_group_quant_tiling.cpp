@@ -84,6 +84,10 @@ constexpr float DEFAULT_CLAMP_LIMIT = -1.0f;
 constexpr float FLOAT_COMPARE_EPSILON = 1e-6f;
 constexpr float DEFAULT_ALPHA = 1.0f;
 constexpr float DEFAULT_BIAS = 0.0f;
+// Weight type encoding consumed by the shared MX kernel.
+constexpr uint32_t MX_WEIGHT_TYPE_FP16 = 0U;
+constexpr uint32_t MX_WEIGHT_TYPE_BF16 = 1U;
+constexpr uint32_t MX_WEIGHT_TYPE_FP32 = 2U;
 constexpr int64_t BLOCK_QUANT_TILING_KEY = 1000;
 constexpr int64_t BLOCK_QUANT_YORIGIN_TILING_KEY = 1100;
 constexpr int64_t MX_QUANT_TILING_KEY = 2000;
@@ -796,7 +800,7 @@ void SwigluGroupQuantTiling::SetEmptyTiling()
 }
 
 template <typename TilingDataType>
-void SwigluGroupQuantTiling::SetBaseTilingData(TilingDataType& tilingData)
+void SwigluGroupQuantTiling::SetBaseTilingData(TilingDataType& tilingData) const
 {
     tilingData.set_bs(bs_);
     tilingData.set_d(d_);
@@ -834,7 +838,9 @@ void SwigluGroupQuantTiling::SetTilingData()
         flags |= outputOrigin_ != 0 ? MX_OUTPUT_ORIGIN : 0U;
         flags |= SwigluDualAxisPolicy::ShareOrigin(hasWeight_, outputOrigin_ != 0) ? MX_SHARE_ORIGIN : 0U;
         mxExtendTilingData_.set_flags(flags);
-        mxExtendTilingData_.set_weightType(weightType_ == ge::DT_FLOAT16 ? 0 : (weightType_ == ge::DT_BF16 ? 1 : 2));
+        mxExtendTilingData_.set_weightType(
+            weightType_ == ge::DT_FLOAT16 ? MX_WEIGHT_TYPE_FP16 :
+                                            (weightType_ == ge::DT_BF16 ? MX_WEIGHT_TYPE_BF16 : MX_WEIGHT_TYPE_FP32));
         mxExtendTilingData_.set_dimM(bs_);
         mxExtendTilingData_.set_dimN(splitD_);
         mxExtendTilingData_.set_usedCoreNum(geometry.usedCoreNum);
