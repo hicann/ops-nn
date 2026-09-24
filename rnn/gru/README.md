@@ -45,128 +45,23 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 170px">
-  <col style="width: 352px">
-  <col style="width: 213px">
-  <col style="width: 100px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出/属性</th>
-      <th>描述</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>x</td>
-      <td>输入</td>
-      <td>表示输入的序列数据，对应公式中的 $x_t$。定长模式shape为(T, B, I)或(B, T, I)，不定长模式shape为(sum(batch_size), I)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>wi</td>
-      <td>输入</td>
-      <td>表示输入权重矩阵，对应公式中的 $W_{ir}$、$W_{iz}$、$W_{in}$。形状为 $[3H, I]$（首层）或 $[3H, D*H]$（非首层）。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>wh</td>
-      <td>输入</td>
-      <td>表示隐状态权重矩阵，对应公式中的 $W_{hr}$、$W_{hz}$、$W_{hn}$。形状为 $[3H, H]$。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>bi</td>
-      <td>可选输入</td>
-      <td>表示输入偏置，对应公式中的 $b_{ir}$、$b_{iz}$、$b_{in}$。形状为 $[3H]$。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>bh</td>
-      <td>可选输入</td>
-      <td>表示隐状态偏置，对应公式中的 $b_{hr}$、$b_{hz}$、$b_{hn}$。形状为 $[3H]$。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>batch_sizes</td>
-      <td>可选输入</td>
-      <td>表示不定长序列的batch大小数组，对应PackedSequence模式。形状为(T)。</td>
-      <td>INT64</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>init_h</td>
-      <td>可选输入</td>
-      <td>表示初始隐状态，对应公式中的 $h_0$。形状为(L*D, B, H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>y</td>
-      <td>输出</td>
-      <td>表示所有时间步的输出，对应公式中的 $h_t$。定长模式shape为(T, B, D*H)或(B, T, D*H)，不定长模式shape为(sum(batch_size), D*H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>output_h</td>
-      <td>输出</td>
-      <td>表示最后一层所有方向的最终隐状态，对应公式中最后时刻的 $h_t$。形状为(L*D, B, H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>r</td>
-      <td>输出</td>
-      <td>表示重置门输出，对应公式中的 $r_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>z</td>
-      <td>输出</td>
-      <td>表示更新门输出，对应公式中的 $z_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>n</td>
-      <td>输出</td>
-      <td>表示新门输出，对应公式中的 $n_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>n_h</td>
-      <td>输出</td>
-      <td>表示隐状态-新门输出 $W_{hn} h_{(t-1)} + b_{hn}$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。</td>
-      <td>FLOAT32、FLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>direction</td>
-      <td>属性</td>
-      <td>表示GRU方向，取值"UNIDIRECTIONAL"表示单向。</td>
-      <td>STRING</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>is_training</td>
-      <td>属性</td>
-      <td><ul><li>表示是否为训练模式。</li><li>默认值为true。</li></ul></td>
-      <td>BOOL</td>
-      <td>-</td>
-    </tr>
-  </tbody></table>
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| :--- | :--- | :--- | :--- | :--- |
+| x | 输入 | 表示输入的序列数据，对应公式中的 $x_t$。定长模式shape为(T, B, I)或(B, T, I)，不定长模式shape为(sum(batch_size), I)。 | FLOAT32、FLOAT16 | ND |
+| wi | 输入 | 表示输入权重矩阵，对应公式中的 $W_{ir}$、$W_{iz}$、$W_{in}$。形状为 $[3H, I]$（首层）或 $[3H, D*H]$（非首层）。 | FLOAT32、FLOAT16 | ND |
+| wh | 输入 | 表示隐状态权重矩阵，对应公式中的 $W_{hr}$、$W_{hz}$、$W_{hn}$。形状为 $[3H, H]$。 | FLOAT32、FLOAT16 | ND |
+| bi | 可选输入 | 表示输入偏置，对应公式中的 $b_{ir}$、$b_{iz}$、$b_{in}$。形状为 $[3H]$。 | FLOAT32、FLOAT16 | ND |
+| bh | 可选输入 | 表示隐状态偏置，对应公式中的 $b_{hr}$、$b_{hz}$、$b_{hn}$。形状为 $[3H]$。 | FLOAT32、FLOAT16 | ND |
+| batch_sizes | 可选输入 | 表示不定长序列的batch大小数组，对应PackedSequence模式。形状为(T)。 | INT64 | ND |
+| init_h | 可选输入 | 表示初始隐状态，对应公式中的 $h_0$。形状为(L*D, B, H)。 | FLOAT32、FLOAT16 | ND |
+| y | 输出 | 表示所有时间步的输出，对应公式中的 $h_t$。定长模式shape为(T, B, D*H)或(B, T, D*H)，不定长模式shape为(sum(batch_size), D*H)。 | FLOAT32、FLOAT16 | ND |
+| output_h | 输出 | 表示最后一层所有方向的最终隐状态，对应公式中最后时刻的 $h_t$。形状为(L*D, B, H)。 | FLOAT32、FLOAT16 | ND |
+| r | 输出 | 表示重置门输出，对应公式中的 $r_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。 | FLOAT32、FLOAT16 | ND |
+| z | 输出 | 表示更新门输出，对应公式中的 $z_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。 | FLOAT32、FLOAT16 | ND |
+| n | 输出 | 表示新门输出，对应公式中的 $n_t$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。 | FLOAT32、FLOAT16 | ND |
+| n_h | 输出 | 表示隐状态-新门输出 $W_{hn} h_{(t-1)} + b_{hn}$。定长模式shape为(T, B, H)，不定长模式shape为(sum(batch_size), H)。 | FLOAT32、FLOAT16 | ND |
+| direction | 属性 | 表示GRU方向，取值"UNIDIRECTIONAL"表示单向。 | STRING | - |
+| is_training | 属性 | 表示是否为训练模式，默认值为true。 | BOOL | - |
 
 ## 约束说明
 
