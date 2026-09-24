@@ -9,6 +9,7 @@
  */
 
 #include <functional>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <vector>
@@ -87,6 +88,69 @@ void RunSparseSegmentSumKernel(const vector<vector<int64_t>>& shapes, const vect
     EXPECT_TRUE(CompareResult(outputData.get(), expect.get(), outputSize));
 }
 
+template <typename T>
+void RunSparseSegmentSumTailAndGapCase(DataType dataType)
+{
+    constexpr int64_t kRows = 3;
+    constexpr int64_t kColumns = 9;
+    constexpr int64_t kOutputRows = 3;
+    constexpr int64_t kIndexCount = 3;
+    constexpr size_t kSecondRow = 2U;
+    constexpr size_t kValueCycle = 7U;
+    constexpr size_t kInputSize = static_cast<size_t>(kRows * kColumns);
+    constexpr size_t kOutputSize = static_cast<size_t>(kOutputRows * kColumns);
+    vector<T> x(kInputSize);
+    for (size_t i = 0; i < x.size(); ++i) {
+        x[i] = static_cast<T>(i % kValueCycle);
+    }
+    int32_t indices[kIndexCount] = {0, 2, 1};
+    int32_t segmentIds[kIndexCount] = {0, 0, 2};
+    vector<T> expected(kOutputSize, static_cast<T>(0));
+    for (size_t column = 0; column < static_cast<size_t>(kColumns); ++column) {
+        expected[column] = x[column] + x[kSecondRow * static_cast<size_t>(kColumns) + column];
+        expected[kSecondRow * static_cast<size_t>(kColumns) + column] = static_cast<T>(0) +
+                                                                        x[static_cast<size_t>(kColumns) + column];
+    }
+
+    vector<DataType> dataTypes = {dataType, DT_INT32, DT_INT32, dataType};
+    vector<vector<int64_t>> shapes = {{kRows, kColumns}, {kIndexCount}, {kIndexCount}, {kOutputRows, kColumns}};
+    RunSparseSegmentSumKernel(shapes, dataTypes, x.data(), indices, segmentIds, expected.data());
+}
+
+TEST_F(TEST_SPARSE_SEGMENT_SUM_UT, ALL_DTYPES_VECTOR_TAIL_AND_SEGMENT_GAP_SUCC)
+{
+    RunSparseSegmentSumTailAndGapCase<int8_t>(DT_INT8);
+    RunSparseSegmentSumTailAndGapCase<int16_t>(DT_INT16);
+    RunSparseSegmentSumTailAndGapCase<int32_t>(DT_INT32);
+    RunSparseSegmentSumTailAndGapCase<int64_t>(DT_INT64);
+    RunSparseSegmentSumTailAndGapCase<uint8_t>(DT_UINT8);
+    RunSparseSegmentSumTailAndGapCase<uint16_t>(DT_UINT16);
+    RunSparseSegmentSumTailAndGapCase<uint32_t>(DT_UINT32);
+    RunSparseSegmentSumTailAndGapCase<uint64_t>(DT_UINT64);
+    RunSparseSegmentSumTailAndGapCase<Eigen::half>(DT_FLOAT16);
+    RunSparseSegmentSumTailAndGapCase<float>(DT_FLOAT);
+    RunSparseSegmentSumTailAndGapCase<double>(DT_DOUBLE);
+}
+
+TEST_F(TEST_SPARSE_SEGMENT_SUM_UT, SIGNED_OVERFLOW_PACKET_AND_TAIL_SUCC)
+{
+    constexpr int64_t kRows = 2;
+    constexpr int64_t kColumns = 5;
+    constexpr int64_t kIndexCount = 2;
+    constexpr int64_t kOutputRows = 1;
+    constexpr int32_t kOne = 1;
+    constexpr int32_t kTwo = 2;
+    const int32_t max = std::numeric_limits<int32_t>::max();
+    const int32_t min = std::numeric_limits<int32_t>::min();
+    int32_t x[kRows * kColumns] = {max, max, min, min, kOne, 0, kOne, 0, -kOne, kTwo};
+    int32_t indices[kIndexCount] = {0, 1};
+    int32_t segmentIds[kIndexCount] = {0, 0};
+    int32_t expected[kColumns] = {max, min, min, max, kOne + kTwo};
+    vector<DataType> dataTypes = {DT_INT32, DT_INT32, DT_INT32, DT_INT32};
+    vector<vector<int64_t>> shapes = {{kRows, kColumns}, {kIndexCount}, {kIndexCount}, {kOutputRows, kColumns}};
+    RunSparseSegmentSumKernel(shapes, dataTypes, x, indices, segmentIds, expected);
+}
+
 TEST_F(TEST_SPARSE_SEGMENT_SUM_UT, DATA_TYPE_DT_FLOAT_INT32_SUCC)
 {
     vector<DataType> dataTypes = {DT_FLOAT, DT_INT32, DT_INT32, DT_FLOAT};
@@ -159,6 +223,19 @@ TEST_F(TEST_SPARSE_SEGMENT_SUM_UT, FAILED_INPUT_NULL)
     int32_t segmentIds[2] = {0, 0};
     double y[4] = {0.0};
     vector<void*> datas = {static_cast<void*>(x), nullptr, static_cast<void*>(segmentIds), static_cast<void*>(y)};
+    auto nodeDef = CreateSparseSegmentSumNodeDef(shapes, dataTypes, datas);
+    RUN_KERNEL(nodeDef, HOST, KERNEL_STATUS_PARAM_INVALID);
+}
+
+TEST_F(TEST_SPARSE_SEGMENT_SUM_UT, FAILED_NEGATIVE_INDEX)
+{
+    vector<DataType> dataTypes = {DT_FLOAT, DT_INT32, DT_INT32, DT_FLOAT};
+    vector<vector<int64_t>> shapes = {{2, 4}, {2}, {2}, {1, 4}};
+    float x[8] = {1.0F};
+    int32_t indices[2] = {0, -1};
+    int32_t segmentIds[2] = {0, 0};
+    float y[4] = {1.0F};
+    vector<void*> datas = {x, indices, segmentIds, y};
     auto nodeDef = CreateSparseSegmentSumNodeDef(shapes, dataTypes, datas);
     RUN_KERNEL(nodeDef, HOST, KERNEL_STATUS_PARAM_INVALID);
 }

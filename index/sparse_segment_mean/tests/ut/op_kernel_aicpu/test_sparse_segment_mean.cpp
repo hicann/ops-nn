@@ -59,6 +59,49 @@ void RunSuccessCase(DataType xType, DataType indexType, DataType segmentType)
     EXPECT_EQ(CompareResult<XType>(y, expect, 6), true);
 }
 
+template <typename T>
+void RunVectorTailAndGapCase(DataType dataType)
+{
+    constexpr int64_t kRows = 3;
+    constexpr int64_t kColumns = 9;
+    constexpr int64_t kOutputRows = 3;
+    constexpr int64_t kIndexCount = 3;
+    constexpr size_t kSecondRow = 2U;
+    constexpr size_t kValueCycle = 11U;
+    constexpr int32_t kValueOffset = 5;
+    constexpr int32_t kMeanDivisor = 2;
+    constexpr size_t kInputSize = static_cast<size_t>(kRows * kColumns);
+    constexpr size_t kOutputSize = static_cast<size_t>(kOutputRows * kColumns);
+    vector<T> x(kInputSize);
+    for (size_t i = 0; i < x.size(); ++i) {
+        x[i] = static_cast<T>(static_cast<int32_t>(i % kValueCycle) - kValueOffset);
+    }
+    vector<int32_t> indices = {0, 2, 1};
+    vector<int32_t> segmentIds = {0, 0, 2};
+    vector<T> y(kOutputSize, static_cast<T>(1));
+    vector<T> expected(kOutputSize, static_cast<T>(0));
+    for (size_t column = 0; column < static_cast<size_t>(kColumns); ++column) {
+        expected[column] = (x[column] + x[kSecondRow * static_cast<size_t>(kColumns) + column]) /
+                           static_cast<T>(kMeanDivisor);
+        expected[kSecondRow * static_cast<size_t>(kColumns) + column] = static_cast<T>(0) +
+                                                                        x[static_cast<size_t>(kColumns) + column];
+    }
+
+    vector<DataType> dataTypes = {dataType, DT_INT32, DT_INT32, dataType};
+    vector<vector<int64_t>> shapes = {{kRows, kColumns}, {kIndexCount}, {kIndexCount}, {kOutputRows, kColumns}};
+    vector<void*> datas = {x.data(), indices.data(), segmentIds.data(), y.data()};
+    CREATE_NODEDEF(shapes, dataTypes, datas);
+    RUN_KERNEL(nodeDef, HOST, KERNEL_STATUS_OK);
+    EXPECT_TRUE(CompareResult(y.data(), expected.data(), y.size()));
+}
+
+TEST_F(TestSparseSegmentMeanAicpu, vector_tail_and_segment_gap_success)
+{
+    RunVectorTailAndGapCase<float>(DT_FLOAT);
+    RunVectorTailAndGapCase<double>(DT_DOUBLE);
+    RunVectorTailAndGapCase<Eigen::half>(DT_FLOAT16);
+}
+
 TEST_F(TestSparseSegmentMeanAicpu, float_int32_int32_success)
 {
     RunSuccessCase<float, int32_t, int32_t>(DT_FLOAT, DT_INT32, DT_INT32);

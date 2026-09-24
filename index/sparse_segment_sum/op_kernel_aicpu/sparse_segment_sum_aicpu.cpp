@@ -7,19 +7,105 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include "utils/eigen_tensor.h"
-#include "utils/kernel_util.h"
 #include "sparse_segment_sum_aicpu.h"
 #include "aicpu/nn_aicpu_register.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+
+#include "utils/eigen_tensor.h"
+#include "utils/kernel_util.h"
+
 namespace {
-const uint32_t kInputNum = 3;
-const uint32_t kOutputNum = 1;
-const char* const SparseSegmentSum = "SparseSegmentSum";
-const uint32_t dim_2 = 2;
+constexpr uint32_t kInputNum = 3;
+constexpr uint32_t kOutputNum = 1;
+const char* const kSparseSegmentSum = "SparseSegmentSum";
 } // namespace
 
 namespace aicpu {
+namespace {
+constexpr size_t kPacketUnroll = 4;
+constexpr size_t kSecondPacket = 2;
+constexpr size_t kThirdPacket = 3;
+
+template <typename T>
+EIGEN_STRONG_INLINE typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, T>::type AddValue(
+    T lhs, T rhs)
+{
+    T result;
+    static_cast<void>(__builtin_add_overflow(lhs, rhs, &result));
+    return result;
+}
+
+template <typename T>
+EIGEN_STRONG_INLINE typename std::enable_if<!std::is_integral<T>::value || !std::is_signed<T>::value, T>::type AddValue(
+    T lhs, T rhs)
+{
+    return lhs + rhs;
+}
+
+template <typename T>
+struct SumVectorOps {
+    using Packet = typename Eigen::internal::packet_traits<T>::type;
+    static constexpr size_t kLanes = Eigen::internal::packet_traits<T>::Vectorizable ?
+                                         Eigen::internal::unpacket_traits<Packet>::size :
+                                         0;
+
+    static EIGEN_STRONG_INLINE void Init(const T* input, T* output)
+    {
+        const Packet zero = Eigen::internal::pset1<Packet>(static_cast<T>(0));
+        const Packet value = Eigen::internal::ploadu<Packet>(input);
+        Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::padd(zero, value));
+    }
+
+    static EIGEN_STRONG_INLINE void Add(const T* input, T* output)
+    {
+        const Packet lhs = Eigen::internal::ploadu<Packet>(output);
+        const Packet rhs = Eigen::internal::ploadu<Packet>(input);
+        Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::padd(lhs, rhs));
+    }
+};
+
+template <typename T>
+EIGEN_STRONG_INLINE void InitRow(const T* input, T* output, size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = SumVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        for (; i + kLanes <= size; i += kLanes) {
+            SumVectorOps<T>::Init(input + i, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        output[i] = AddValue(static_cast<T>(0), input[i]);
+    }
+}
+
+template <typename T>
+EIGEN_STRONG_INLINE void AddRow(const T* input, T* output, size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = SumVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        constexpr size_t kUnrolledLanes = kLanes * kPacketUnroll;
+        for (; i + kUnrolledLanes <= size; i += kUnrolledLanes) {
+            SumVectorOps<T>::Add(input + i, output + i);
+            SumVectorOps<T>::Add(input + i + kLanes, output + i + kLanes);
+            SumVectorOps<T>::Add(input + i + kLanes * kSecondPacket, output + i + kLanes * kSecondPacket);
+            SumVectorOps<T>::Add(input + i + kLanes * kThirdPacket, output + i + kLanes * kThirdPacket);
+        }
+        for (; i + kLanes <= size; i += kLanes) {
+            SumVectorOps<T>::Add(input + i, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        output[i] = AddValue(output[i], input[i]);
+    }
+}
+} // namespace
+
 KernelStatus SparseSegmentSumCpuKernel::SparseSegmentCheck(const CpuKernelContext& ctx) const
 {
     Tensor* x = ctx.Input(0);
@@ -33,6 +119,11 @@ KernelStatus SparseSegmentSumCpuKernel::SparseSegmentCheck(const CpuKernelContex
 
     if (x_shape->GetDims() < 1) {
         KERNEL_LOG_ERROR("[%s] Tensor x's rank less than 1.", ctx.GetOpType().c_str());
+        return KERNEL_STATUS_PARAM_INVALID;
+    }
+    if (x_shape->GetDimSize(0) <= 0) {
+        KERNEL_LOG_ERROR("[%s] Tensor x's dim 0 must be greater than 0, but got %ld.", ctx.GetOpType().c_str(),
+                         x_shape->GetDimSize(0));
         return KERNEL_STATUS_PARAM_INVALID;
     }
 
@@ -64,7 +155,7 @@ KernelStatus SparseSegmentSumCpuKernel::SparseSegmentDataCheckWithType(const Cpu
             KERNEL_LOG_ERROR("segment ids must be >= 0.");
             return KERNEL_STATUS_PARAM_INVALID;
         }
-        if (indices_ptr[0] >= x_dim0) {
+        if (indices_ptr[0] < 0 || indices_ptr[0] >= x_dim0) {
             KERNEL_LOG_ERROR("indices out of range.");
             return KERNEL_STATUS_PARAM_INVALID;
         }
@@ -79,7 +170,7 @@ KernelStatus SparseSegmentSumCpuKernel::SparseSegmentDataCheckWithType(const Cpu
             KERNEL_LOG_ERROR("segment ids must be >= 0.");
             return KERNEL_STATUS_PARAM_INVALID;
         }
-        if (indices_ptr[i] >= x_dim0) {
+        if (indices_ptr[i] < 0 || indices_ptr[i] >= x_dim0) {
             KERNEL_LOG_ERROR("indices out of range.");
             return KERNEL_STATUS_PARAM_INVALID;
         }
@@ -175,62 +266,57 @@ uint32_t SparseSegmentSumCpuKernel::Compute(CpuKernelContext& ctx)
 template <typename T, typename T1, typename T2>
 KernelStatus SparseSegmentSumCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx) const
 {
-    size_t n = ctx.Input(0)->GetTensorShape()->NumElements() / ctx.Input(0)->GetTensorShape()->GetDimSize(0);
-    size_t num_indices = ctx.Input(2)->GetTensorShape()->NumElements();
+    const auto xShape = ctx.Input(0)->GetTensorShape();
+    const int64_t xDim0 = xShape->GetDimSize(0);
+    const size_t innerSize = xShape->NumElements() / static_cast<size_t>(xDim0);
+    const size_t numIndices = ctx.Input(2)->GetTensorShape()->NumElements();
     auto x_ptr = PtrToPtr<void, T>(ctx.Input(0)->GetData());
     auto indices_ptr = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
     auto segment_ids_ptr = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
     auto y_ptr = PtrToPtr<void, T>(ctx.Output(0)->GetData());
-    if (num_indices == 0) {
+    if (numIndices == 0) {
         return KERNEL_STATUS_OK;
     }
-    int64_t output_rows = segment_ids_ptr[num_indices - 1];
-    Eigen::TensorMap<Eigen::Tensor<T, dim_2, Eigen::RowMajor>> input_flat(
-        x_ptr, ctx.Input(0)->GetTensorShape()->GetDimSize(0), n);
-    Eigen::TensorMap<Eigen::Tensor<T, dim_2, Eigen::RowMajor>> output_flat(y_ptr, output_rows + 1, n);
-    output_flat.setConstant(static_cast<T>(0));
 
     size_t start = 0;
     size_t end = 1;
-    int64_t uninitialized_index = 0;
-    int64_t out_index = segment_ids_ptr[start];
+    size_t uninitializedIndex = 0;
+    int64_t outIndex = segment_ids_ptr[start];
 
     while (true) {
-        int64_t next_index = 0;
-        if (end < num_indices) {
-            next_index = segment_ids_ptr[end];
-            if (out_index == next_index) {
+        int64_t nextIndex = 0;
+        if (end < numIndices) {
+            nextIndex = segment_ids_ptr[end];
+            if (outIndex == nextIndex) {
                 ++end;
                 continue;
             }
         }
-        if (out_index > uninitialized_index) {
-            Eigen::DSizes<Eigen::DenseIndex, dim_2> gap_slice_shape(out_index - uninitialized_index, n);
-            Eigen::TensorMap<Eigen::Tensor<T, dim_2, Eigen::RowMajor>, Eigen::Unaligned> gap_slice(
-                &output_flat(uninitialized_index, 0), gap_slice_shape);
-            gap_slice.setConstant(static_cast<T>(0));
+        const size_t outputIndex = static_cast<size_t>(outIndex);
+        if (outputIndex > uninitializedIndex) {
+            std::fill(y_ptr + uninitializedIndex * innerSize, y_ptr + outputIndex * innerSize, static_cast<T>(0));
         }
 
-        auto out = output_flat.template chip<0>(out_index);
-        for (size_t r = start; r < end; r++) {
-            int64_t index = indices_ptr[r];
-            out = out + input_flat.template chip<0>(index);
+        T* output = y_ptr + outputIndex * innerSize;
+        for (size_t r = start; r < end; ++r) {
+            const size_t inputIndex = static_cast<size_t>(indices_ptr[r]);
+            const T* input = x_ptr + inputIndex * innerSize;
+            if (r == start) {
+                InitRow(input, output, innerSize);
+            } else {
+                AddRow(input, output, innerSize);
+            }
         }
         start = end;
         ++end;
-        uninitialized_index = out_index + 1;
-        out_index = next_index;
-        if (end > num_indices)
+        uninitializedIndex = outputIndex + 1;
+        outIndex = nextIndex;
+        if (end > numIndices) {
             break;
-    }
-    if (uninitialized_index < output_rows) {
-        Eigen::DSizes<Eigen::DenseIndex, dim_2> gap_slice_shape(output_rows - uninitialized_index, n);
-        Eigen::TensorMap<Eigen::Tensor<T, dim_2, Eigen::RowMajor>, Eigen::Unaligned> gap_slice(
-            &output_flat(uninitialized_index, 0), gap_slice_shape);
-        gap_slice.setConstant(static_cast<T>(0));
+        }
     }
     return KERNEL_STATUS_OK;
-};
+}
 template <typename T>
 KernelStatus SparseSegmentSumCpuKernel::ComputeKernel(const CpuKernelContext& ctx) const
 {
@@ -257,5 +343,5 @@ KernelStatus SparseSegmentSumCpuKernel::ComputeKernel(const CpuKernelContext& ct
     }
 }
 
-OPS_NN_REGISTER_CPU_KERNELV2(SparseSegmentSum, SparseSegmentSumCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kSparseSegmentSum, SparseSegmentSumCpuKernel);
 } // namespace aicpu

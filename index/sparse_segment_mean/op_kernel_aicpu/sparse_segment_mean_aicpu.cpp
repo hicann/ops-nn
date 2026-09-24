@@ -11,18 +11,117 @@
 #include "sparse_segment_mean_aicpu.h"
 #include "aicpu/nn_aicpu_register.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+
 #include "cpu_kernel_utils.h"
 #include "utils/eigen_tensor.h"
 #include "utils/kernel_util.h"
 
 namespace {
-const uint32_t kInputNum = 3;
-const uint32_t kOutputNum = 1;
+constexpr uint32_t kInputNum = 3;
+constexpr uint32_t kOutputNum = 1;
 const char* const kSparseSegmentMean = "SparseSegmentMean";
-const uint32_t kDim2 = 2;
 } // namespace
 
 namespace aicpu {
+namespace {
+template <typename T>
+struct MeanVectorOps {
+    using Packet = typename Eigen::internal::packet_traits<T>::type;
+    static constexpr size_t kLanes = Eigen::internal::packet_traits<T>::Vectorizable ?
+                                         Eigen::internal::unpacket_traits<Packet>::size :
+                                         0;
+
+    static EIGEN_STRONG_INLINE void Init(const T* input, T* output)
+    {
+        const Packet zero = Eigen::internal::pset1<Packet>(static_cast<T>(0));
+        const Packet value = Eigen::internal::ploadu<Packet>(input);
+        Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::padd(zero, value));
+    }
+
+    static EIGEN_STRONG_INLINE void Add(const T* input, T* output)
+    {
+        const Packet lhs = Eigen::internal::ploadu<Packet>(output);
+        const Packet rhs = Eigen::internal::ploadu<Packet>(input);
+        Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::padd(lhs, rhs));
+    }
+
+    static EIGEN_STRONG_INLINE void Divide(T divisor, T* output)
+    {
+        const Packet value = Eigen::internal::ploadu<Packet>(output);
+        const Packet divisorPacket = Eigen::internal::pset1<Packet>(divisor);
+        Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::pdiv(value, divisorPacket));
+    }
+};
+
+template <typename T>
+EIGEN_STRONG_INLINE void InitRow(const T* input, T* output, size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = MeanVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        for (; i + kLanes <= size; i += kLanes) {
+            MeanVectorOps<T>::Init(input + i, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        output[i] = static_cast<T>(0) + input[i];
+    }
+}
+
+template <typename T>
+EIGEN_STRONG_INLINE void AddRow(const T* input, T* output, size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = MeanVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        for (; i + kLanes <= size; i += kLanes) {
+            MeanVectorOps<T>::Add(input + i, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        output[i] = output[i] + input[i];
+    }
+}
+
+template <typename T>
+EIGEN_STRONG_INLINE void DivideRow(T divisor, T* output, size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = MeanVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        for (; i + kLanes <= size; i += kLanes) {
+            MeanVectorOps<T>::Divide(divisor, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        output[i] = output[i] / divisor;
+    }
+}
+
+template <typename T>
+EIGEN_STRONG_INLINE KernelStatus InvalidSegmentOrder(T outIndex, T nextIndex)
+{
+    KERNEL_LOG_ERROR("segment ids are not increasing, out_index is %ld, next_index is %ld.",
+                     static_cast<int64_t>(outIndex), static_cast<int64_t>(nextIndex));
+    return KERNEL_STATUS_PARAM_INVALID;
+}
+
+EIGEN_STRONG_INLINE KernelStatus InvalidSegmentId()
+{
+    KERNEL_LOG_ERROR("segment ids must be >= 0");
+    return KERNEL_STATUS_PARAM_INVALID;
+}
+
+EIGEN_STRONG_INLINE KernelStatus InvalidIndex()
+{
+    KERNEL_LOG_ERROR("indices out of range.");
+    return KERNEL_STATUS_PARAM_INVALID;
+}
+} // namespace
+
 KernelStatus SparseSegmentMeanCpuKernel::SparseSegmentCheck(const CpuKernelContext& ctx) const
 {
     Tensor* x = ctx.Input(0);
@@ -86,88 +185,56 @@ uint32_t SparseSegmentMeanCpuKernel::Compute(CpuKernelContext& ctx)
 template <typename T, typename T1, typename T2>
 KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelContext& ctx) const
 {
-    auto xShape = ctx.Input(0)->GetTensorShape();
-    T1 xDim0 = static_cast<T1>(xShape->GetDimSize(0));
-    int64_t innerSize = 1;
-    for (int32_t i = 1; i < xShape->GetDims(); i++) {
-        innerSize *= xShape->GetDimSize(i);
-    }
+    auto shape = ctx.Input(0)->GetTensorShape();
+    const int64_t rows = shape->GetDimSize(0);
+    const size_t n = shape->NumElements() / static_cast<size_t>(rows);
+    const size_t count = ctx.Input(2)->GetTensorShape()->NumElements();
+    auto x = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto indices = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
+    auto ids = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
+    auto y = PtrToPtr<void, T>(ctx.Output(0)->GetData());
 
-    size_t numIndices = ctx.Input(2)->GetTensorShape()->NumElements();
-    auto xPtr = PtrToPtr<void, T>(ctx.Input(0)->GetData());
-    auto indicesPtr = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
-    auto segmentIdsPtr = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
-    auto yPtr = PtrToPtr<void, T>(ctx.Output(0)->GetData());
-    if (numIndices == 0) {
-        return KERNEL_STATUS_OK;
-    }
-
-    T2 outputRows = segmentIdsPtr[numIndices - 1];
-    Eigen::TensorMap<Eigen::Tensor<T, kDim2, Eigen::RowMajor>> inputFlat(xPtr, xShape->GetDimSize(0), innerSize);
-    Eigen::TensorMap<Eigen::Tensor<T, kDim2, Eigen::RowMajor>> outputFlat(yPtr, outputRows + 1, innerSize);
-    outputFlat.setConstant(static_cast<T>(0));
-
-    size_t start = 0;
-    size_t end = 1;
-    T2 uninitializedIndex = 0;
-    T2 outIndex = segmentIdsPtr[start];
-    if (outIndex < 0) {
-        KERNEL_LOG_ERROR("segment ids must be >= 0");
-        return KERNEL_STATUS_PARAM_INVALID;
-    }
+    size_t start = 0, end = 1, done = 0;
+    T2 segment = ids[start];
+    if (segment < 0)
+        return InvalidSegmentId();
 
     while (true) {
-        T2 nextIndex = 0;
-        if (end < numIndices) {
-            nextIndex = segmentIdsPtr[end];
-            if (outIndex == nextIndex) {
+        T2 next = 0;
+        if (end < count) {
+            next = ids[end];
+            if (segment == next) {
                 ++end;
                 continue;
             }
-            if (outIndex >= nextIndex) {
-                KERNEL_LOG_ERROR("segment ids are not increasing, out_index is %ld, next_index is %ld.",
-                                 static_cast<int64_t>(outIndex), static_cast<int64_t>(nextIndex));
-                return KERNEL_STATUS_PARAM_INVALID;
+            if (segment >= next) {
+                return InvalidSegmentOrder(segment, next);
             }
         }
 
-        if (outIndex > outputRows) {
-            KERNEL_LOG_ERROR("segment id %ld out of range [0, %ld], possibly because segment_ids input is not sorted.",
-                             static_cast<int64_t>(outIndex), static_cast<int64_t>(outputRows));
-            return KERNEL_STATUS_PARAM_INVALID;
-        }
+        const size_t row = static_cast<size_t>(segment);
+        if (row > done)
+            std::fill(y + done * n, y + row * n, static_cast<T>(0));
 
-        if (outIndex > uninitializedIndex) {
-            Eigen::DSizes<Eigen::DenseIndex, kDim2> gapSliceShape(outIndex - uninitializedIndex, innerSize);
-            Eigen::TensorMap<Eigen::Tensor<T, kDim2, Eigen::RowMajor>, Eigen::Unaligned> gapSlice(
-                &outputFlat(uninitializedIndex, 0), gapSliceShape);
-            gapSlice.setConstant(static_cast<T>(0));
-        }
-
-        auto out = outputFlat.template chip<0>(outIndex);
-        for (size_t r = start; r < end; r++) {
-            T1 index = indicesPtr[r];
-            if (index < 0 || index >= xDim0) {
-                KERNEL_LOG_ERROR("indices out of range.");
-                return KERNEL_STATUS_PARAM_INVALID;
+        T* output = y + row * n;
+        for (size_t r = start; r < end; ++r) {
+            const T1 index = indices[r];
+            if (index < 0 || index >= rows) {
+                return InvalidIndex();
             }
-            out = out + inputFlat.template chip<0>(index);
+            const T* input = x + static_cast<size_t>(index) * n;
+            if (r == start) {
+                InitRow(input, output, n);
+            } else {
+                AddRow(input, output, n);
+            }
         }
-        out = out / static_cast<T>(end - start);
-        start = end;
-        ++end;
-        uninitializedIndex = outIndex + 1;
-        outIndex = nextIndex;
-        if (end > numIndices) {
+        DivideRow(static_cast<T>(end - start), output, n);
+        done = row + 1;
+        segment = next;
+        start = end++;
+        if (start >= count)
             break;
-        }
-    }
-
-    if (uninitializedIndex < outputRows) {
-        Eigen::DSizes<Eigen::DenseIndex, kDim2> gapSliceShape(outputRows - uninitializedIndex, innerSize);
-        Eigen::TensorMap<Eigen::Tensor<T, kDim2, Eigen::RowMajor>, Eigen::Unaligned> gapSlice(
-            &outputFlat(uninitializedIndex, 0), gapSliceShape);
-        gapSlice.setConstant(static_cast<T>(0));
     }
     return KERNEL_STATUS_OK;
 }

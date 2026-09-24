@@ -12,6 +12,7 @@
 
 #include "cpu_kernel.h"
 #include "utils/bcast.h"
+#include "utils/kernel_util.h"
 
 namespace aicpu {
 class SparseSegmentSumCpuKernel : public CpuKernel {
