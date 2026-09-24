@@ -42,7 +42,7 @@ ge::graphStatus Conv2dBaseTiling::GetDisContinuousFlag()
     auto viewStridePtr = context_->GetInputStride(INPUT_FMAP_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, viewStridePtr);
     // check continuous
-    if (viewStridePtr->GetStride(FORMAT_NCHW_N_INDEX) == 0) {
+    if (viewStridePtr->GetDimNum() == 0 || viewStridePtr->GetStride(FORMAT_NCHW_N_INDEX) == 0) {
         return ge::GRAPH_SUCCESS;
     }
 
