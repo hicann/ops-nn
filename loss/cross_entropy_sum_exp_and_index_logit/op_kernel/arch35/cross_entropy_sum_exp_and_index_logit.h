@@ -28,7 +28,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "cross_entropy_sum_exp_and_index_logit_struct.h"
 #include "cross_entropy_sum_exp_and_index_logit_common.h"
-#include "vf/compute.h"
+#include "vf/cross_entropy_sum_exp_and_index_logit_vf.h"
 
 namespace CrossEntropySumExpAndIndexLogit {
 using namespace AscendC;

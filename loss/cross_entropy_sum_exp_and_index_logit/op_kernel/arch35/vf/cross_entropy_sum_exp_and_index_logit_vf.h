@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file compute.h
+ * \file cross_entropy_sum_exp_and_index_logit_vf.h
  * \brief A5 (ascend950) Vector Functions (__simd_vf__)
  */
-#ifndef CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_COMPUTE_H_
-#define CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_COMPUTE_H_
+#ifndef CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_H_
+#define CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_H_
 
 #include "kernel_operator.h"
 #include "../cross_entropy_sum_exp_and_index_logit_common.h"
@@ -96,4 +96,4 @@ __simd_vf__ inline void ExpSumTileVF(__ubuf__ T* inAddr, __ubuf__ float* expOutA
 
 } // namespace CrossEntropySumExpAndIndexLogit
 
-#endif // CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_COMPUTE_H_
+#endif // CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_VF_H_
