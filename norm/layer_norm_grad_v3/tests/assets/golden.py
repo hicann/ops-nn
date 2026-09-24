@@ -169,17 +169,17 @@ def aclnn_layer_norm_backward_golden(
     # ---- 1. 异常校验 ----
     mask = _check_mask(outputMask)
 
-    # ---- 2. 前处理：统一 cast 到计算精度；weight 为空按算子语义视为全 1 ----
+    # ---- 2. 前处理：cast 到计算精度并加 contiguous 适配非连续输入；weight 为空按算子语义视为全 1 ----
     raw = [gradOut, input, mean, rstd] + (
         [weightOptional] if weightOptional is not None else []
     )
     compute = _compute_dtype(*raw)
-    grad_out_t = gradOut.to(compute)
-    input_t = input.to(compute)
-    mean_t = mean.to(compute)
-    rstd_t = rstd.to(compute)
+    grad_out_t = gradOut.to(compute).contiguous()
+    input_t = input.to(compute).contiguous()
+    mean_t = mean.to(compute).contiguous()
+    rstd_t = rstd.to(compute).contiguous()
     if weightOptional is not None:
-        weight_t = weightOptional.to(compute)
+        weight_t = weightOptional.to(compute).contiguous()
     else:
         weight_t = torch.ones([int(d) for d in normalizedShape], dtype=compute)
 
