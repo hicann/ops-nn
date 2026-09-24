@@ -79,9 +79,10 @@ __aicore__ inline void GluBigShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR worksp
     one_process_in_stride = ny * 2;
     one_process_out_stride = ny;
 
-    pipe.InitBuffer(inQueueX1, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
-    pipe.InitBuffer(inQueueX2, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
-    pipe.InitBuffer(outQueue, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
+    int64_t bufferSize = splitSize * sizeof(T) / sizeof(float);
+    pipe.InitBuffer(inQueueX1, BUFFER_NUM, bufferSize * sizeof(float));
+    pipe.InitBuffer(inQueueX2, BUFFER_NUM, bufferSize * sizeof(float));
+    pipe.InitBuffer(outQueue, BUFFER_NUM, bufferSize * sizeof(float));
 }
 
 template <typename T>

@@ -98,8 +98,9 @@ __aicore__ inline void GluSingleShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR wor
 
     isLastCore = (this->blockIdx == realCoreNum - 1) && (tailLoopNum != 0 || lastTailGroup != 0);
 
-    pipe.InitBuffer(inQueueX, BUFFER_NUM, 2 * BUFFER_SIZE * sizeof(float));
-    pipe.InitBuffer(outQueue, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
+    int64_t bufferSize = group_ub_num * sizeof(T) / sizeof(float);
+    pipe.InitBuffer(inQueueX, BUFFER_NUM, 2 * bufferSize * sizeof(float));
+    pipe.InitBuffer(outQueue, BUFFER_NUM, bufferSize * sizeof(float));
 }
 
 template <typename T>
