@@ -23,7 +23,7 @@ class MatMulV3BasicAswtTiling : public MatMulV3AswTiling {
 public:
     MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg) {};
     ~MatMulV3BasicAswtTiling() override = default;
-    void CheckFp32SplitK();
+    bool CheckFp32SplitK() const;
     void CheckApiLevelAndModel();
 
 protected:

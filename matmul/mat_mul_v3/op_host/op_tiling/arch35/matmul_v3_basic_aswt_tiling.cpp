@@ -44,6 +44,10 @@ void MatMulV3BasicAswtTiling::ResetFullLoadLoadBalance()
 
 bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 {
+    // batch一致性下a全载不支持核内切k
+    if (context_->GetDeterministicLevel() > 1 && CheckFp32SplitK()) {
+        return false;
+    }
     // 非连续slice不支持全载
     if (isSlice_) {
         return false;
@@ -84,13 +88,17 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 
 bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
 {
+    // batch一致性下b全载不支持核内切k
+    if (context_->GetDeterministicLevel() > 1 && CheckFp32SplitK()) {
+        return false;
+    }
     // 非连续slice不支持全载
     if (isSlice_) {
         return false;
     }
     // 不支持CubeBound
     if (runInfo_.cubeBoundParam <= runInfo_.cubeBoundEdge) {
-        OP_LOGD(args_.opName, "The shape already cubebound, no need do al1 full load.");
+        OP_LOGD(args_.opName, "The shape already cubebound, no need do bl1 full load.");
         return false;
     }
     // 不支持搬运量无减少
@@ -293,16 +301,16 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     return;
 }
 
-void MatMulV3BasicAswtTiling::CheckFp32SplitK()
+bool MatMulV3BasicAswtTiling::CheckFp32SplitK() const
 {
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
     // 连续且非全载场景才支持切K
-    if (!isSlice_ && isFp32 && !args_.isHf32 && isNdFormat && (args_.kValue >= FP32_SPLIT_K_THRESHOLD) &&
-        fullLoad_ == MatMulV3FullLoad::NONE_FULL_LOAD) {
-        model_ = MatMulV3Model::BASIC_SPLIT_K;
+    if (!isSlice_ && isFp32 && !args_.isHf32 && isNdFormat && (args_.kValue >= FP32_SPLIT_K_THRESHOLD)) {
+        return true;
     }
+    return false;
 }
 
 void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
@@ -343,7 +351,9 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
         runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
         runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
-        CheckFp32SplitK();
+        if (CheckFp32SplitK()) {
+            model_ = MatMulV3Model::BASIC_SPLIT_K;
+        }
         CheckApiLevelAndModel();
     } else {
         // fixpipe优化场景
