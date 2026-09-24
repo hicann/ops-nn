@@ -88,6 +88,7 @@ private:
     // 准备compare参数
     float epslion;
     float selectValue;
+    float nanValue;
 
     event_t eventId = EVENT_ID0;
     int64_t pingPongFlag = 0;
@@ -103,6 +104,7 @@ __aicore__ inline void LogitGradND<T>::Init(GM_ADDR x, GM_ADDR dy, GM_ADDR dx, G
 
     eps = tilingData->eps;
 
+    nanValue = sqrt(static_cast<float>(-1.0));
     if (eps >= 0) {
         epslion = eps;
         selectValue = 0.0;
@@ -260,10 +262,12 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
         AscendC::Reg::RegTensor<float> regLo;
         AscendC::Reg::RegTensor<float> regHi;
         AscendC::Reg::RegTensor<float> regInvalid;
+        AscendC::Reg::RegTensor<float> regNan;
         AscendC::Reg::MaskReg preg0;
         AscendC::Reg::MaskReg maskGE;
         AscendC::Reg::MaskReg maskLE;
         AscendC::Reg::MaskReg maskValid;
+        AscendC::Reg::MaskReg maskNotNan;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
         uint16_t vfLoopNum = static_cast<uint16_t>((count + vfLen - 1) / vfLen);
@@ -274,6 +278,7 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
         AscendC::Reg::Duplicate<float>(regLo, lo);
         AscendC::Reg::Duplicate<float>(regHi, hi);
         AscendC::Reg::Duplicate<float>(regInvalid, selectValue);
+        AscendC::Reg::Duplicate<float>(regNan, nanValue);
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
@@ -292,6 +297,11 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
             AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
             AscendC::Reg::MaskAnd(maskValid, maskGE, maskLE, preg0);
             AscendC::Reg::Select<float>(regOut, regDy, regInvalid, maskValid);
+            // NaN 输入传播：x 为 NaN 时 GE/LE 比较均为假，落入无效桶被置为
+            // selectValue(0)，与 CPU/GPU 不一致。此处将 NaN lane 强制置为 NaN；
+            // 正常被 clamp 的 lane（x 越界但非 NaN）保持梯度 0 不变
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(maskNotNan, regX, regX, preg0);
+            AscendC::Reg::Select<float>(regOut, regOut, regNan, maskNotNan);
             AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(outAddr + i * vfLen, regOut, preg0);
         }
     }
@@ -321,10 +331,12 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp32Bf16(int64_t dataCount)
         AscendC::Reg::RegTensor<float> regLo;
         AscendC::Reg::RegTensor<float> regHi;
         AscendC::Reg::RegTensor<float> regInvalid;
+        AscendC::Reg::RegTensor<float> regNan;
         AscendC::Reg::MaskReg preg0;
         AscendC::Reg::MaskReg maskGE;
         AscendC::Reg::MaskReg maskLE;
         AscendC::Reg::MaskReg maskValid;
+        AscendC::Reg::MaskReg maskNotNan;
         AscendC::Reg::MaskReg maskSub;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
@@ -335,6 +347,7 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp32Bf16(int64_t dataCount)
         AscendC::Reg::Duplicate<float>(regLo, lo);
         AscendC::Reg::Duplicate<float>(regHi, hi);
         AscendC::Reg::Duplicate<float>(regInvalid, selectValue);
+        AscendC::Reg::Duplicate<float>(regNan, nanValue);
         // 次正规修复：dx = dy/(x*(1-x))，A5 对次正规中间值做 FTZ，x 为次正规时
         // 分母被冲刷为 0，dy/0 = ±inf。对 x < FLT_MIN 的 lane 改用
         // (dy*2^23) / ((x*2^23)*(1-x))：除法两侧同乘 2 的幂，商与未冲刷时逐位
@@ -366,6 +379,11 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp32Bf16(int64_t dataCount)
             AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
             AscendC::Reg::MaskAnd(maskValid, maskGE, maskLE, preg0);
             AscendC::Reg::Select<float>(regOut, regDy, regInvalid, maskValid);
+            // NaN 输入传播：x 为 NaN 时 GE/LE 比较均为假，落入无效桶被置为
+            // selectValue(0)，与 CPU/GPU 不一致。此处将 NaN lane 强制置为 NaN；
+            // 正常被 clamp 的 lane（x 越界但非 NaN）保持梯度 0 不变
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(maskNotNan, regX, regX, preg0);
+            AscendC::Reg::Select<float>(regOut, regOut, regNan, maskNotNan);
             AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(xAddr + i * vfLen, regOut, preg0);
         }
     }
@@ -391,7 +409,14 @@ __aicore__ inline void LogitGradND<T>::ComputeStepTwo(int64_t dataCount)
     And(tmpMaskOne, tmpMaskOne, tmpMaskTwo, tmpDataCount / ALIGN);
     PipeBarrier<PIPE_V>();
 
+    // NaN 输入传播（同 A5 融合路径）：先在 x1 被覆写前记录非 NaN 掩码
+    Compare(selMaskTwo, x1TensorFp32, x1TensorFp32, CMPMODE::EQ, tmpDataCount);
+    PipeBarrier<PIPE_V>();
+
     Select(x1TensorFp32, selMaskOne, x2TensorFp32, (float)selectValue, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
+    PipeBarrier<PIPE_V>();
+
+    Select(x1TensorFp32, selMaskTwo, x1TensorFp32, (float)nanValue, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
     PipeBarrier<PIPE_V>();
 }
 
