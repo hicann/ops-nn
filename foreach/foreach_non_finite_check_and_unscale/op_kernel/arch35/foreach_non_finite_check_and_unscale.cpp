@@ -22,19 +22,11 @@ extern "C" __global__ __aicore__ void foreach_non_finite_check_and_unscale(GM_AD
                                                                            GM_ADDR inv_scale, GM_ADDR workspace,
                                                                            GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
-
     if (TILING_KEY_IS(TILING_KEY_REGBASE)) {
         GET_TILING_DATA_WITH_STRUCT(ForeachNonFiniteCheckAndUnscaleRegbaseTilingData, tilingDataIn, tiling);
         const ForeachNonFiniteCheckAndUnscaleRegbaseTilingData* __restrict tilingData = &tilingDataIn;
         ForeachNonFiniteCheckAndUnscaleNDRegbase<DTYPE_SCALED_GRADS> op;
-        op.Init(scaled_grads, found_inf, inv_scale, userWS, tilingData);
+        op.Init(scaled_grads, found_inf, inv_scale, workspace, tilingData);
         op.Process();
     }
 }

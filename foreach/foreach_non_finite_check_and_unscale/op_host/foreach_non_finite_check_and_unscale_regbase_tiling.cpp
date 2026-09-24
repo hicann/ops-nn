@@ -23,7 +23,7 @@ constexpr int32_t INV_SCALE_INDEX_OFFSET = 1;
 
 constexpr uint32_t NON_DYN_CNT = 2;
 constexpr uint32_t BYTE_REPEAT = 256; // The amount of data that can be processed by a repeat.
-constexpr size_t WORKSPACE_SIZE = 32;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
 constexpr uint8_t DTYPE_SIZE_FLOAT = 4;
 
 constexpr uint64_t TILING_KEY_REGBASE = 100;
@@ -196,7 +196,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::RunBigKernelTiling
     context_->SetBlockDim(needCoreNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = WORKSPACE_SIZE;
+    workspaces[0] = DEFAULT_WORKSPACE_SIZE;
     OP_LOGD(nodeName_, "Success.");
     return ge::GRAPH_SUCCESS;
 }

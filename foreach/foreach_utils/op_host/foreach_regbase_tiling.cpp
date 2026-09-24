@@ -20,7 +20,7 @@
 #include "foreach_regbase_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t WORK_SPACE_SIZE = 32;
+constexpr uint64_t DEFAULT_WORKSPACE_SIZE = 0;
 static constexpr uint64_t TPL_REGISTER_PRIORITY = 30000;
 static constexpr uint64_t SIZE_2 = 2;
 
@@ -324,7 +324,7 @@ ge::graphStatus ForeachRegbaseTiling::PostTiling()
     context_->SetBlockDim(numBlocks_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = WORK_SPACE_SIZE;
+    currentWorkspace[0] = DEFAULT_WORKSPACE_SIZE;
     auto tilingData = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
     foreachSoloTilingData_.SaveToBuffer(tilingData->GetData(), tilingData->GetCapacity());
