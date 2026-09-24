@@ -49,7 +49,7 @@ extern "C" {
  * graph LR
  * A[(logProbs)] -->B([l0op::Contiguous])-->D([l0op::CTCLossV2])
  * A1[(targets)] -->B1([l0op::Contiguous])-->D
- * A2[(targetLengths)] -->B2([ConvertToTensor])-->D
+ * A2[(targetlengths)] -->B2([ConvertToTensor])-->D
  * A3[(inputLengths)] -->B3([ConvertToTensor])-->D
  * A4((blank)) -->D
  * A6((zeroInfinity)) -->D
@@ -61,11 +61,11 @@ extern "C" {
  * $T$为输入长度，$N$为批处理大小，$C$为类别数，必须大于0，包括空白标识，该Tensor表示输出的对数概率，
  * 支持[非连续的Tensor](https://)，数据格式支持ND。
  * @param [in] targets(aclTensor*): 数据类型支持INT64,INT32,BOOL,FLOAT,FLOAT16数据类型，当shape为($N,S$)，
- * $S$为不小于$targetLengths$中的最大值的值；或者shape为(SUM($targetLengths$))，假设$targets$是未填充的而且在1维内级联的；
+ * $S$为不小于$targetlengths$中的最大值的值；或者shape为(SUM($targetlengths$))，假设$targets$是未填充的而且在1维内级联的；
  * 支持[非连续的Tensor](https://)，数据格式支持ND。
  * @param [in] inputLengths(aclIntArray*)：数据类型支持UINT8,INT8,INT16,INT32,INT64，数组长度为$N$，
  * 数组中的每个值必须小于等于$T$。
- * @param [in] targetLengths(aclIntArray*)：数据类型支持UINT8,INT8,INT16,INT32,INT64，数组长度为$N$，
+ * @param [in] targetlengths(aclIntArray*)：数据类型支持UINT8,INT8,INT16,INT32,INT64，数组长度为$N$，
  * 当targets的shape为($N,S$)时，数组中的每个值必须小于等于$S$。
  * @param [in] blank(int)：int整型，空白标识，默认为0，数值必须小于$C$大于等于0。
  * @param [in] zeroInfinity(bool)：bool类型，表示是否将无限损耗和相关梯度归零，默认值为$False$。
