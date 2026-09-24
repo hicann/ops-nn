@@ -95,7 +95,7 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
     ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantMatmulActivationQuant, OP_INPUT(x1, x2, bias, x1Scale, x2Scale),
                                       OP_OUTPUT(yOut, yScaleOut),
                                       OP_ATTR(transposeX1, transposeX2, groupSize, activationType, y_dtype, quantMode,
-                                              roundMode, scaleAlg, dstTypeMax));
+                                              roundMode, scaleAlg, static_cast<float>(dstTypeMax)));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr};
