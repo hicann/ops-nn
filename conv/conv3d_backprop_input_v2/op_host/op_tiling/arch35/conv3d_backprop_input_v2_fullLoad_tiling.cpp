@@ -237,6 +237,16 @@ void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L
     Conv3DDXV2InnerProductTiling::AdjustBaseMNK(l0Params, tilingRunInfo_);
 }
 
+void Conv3DDXV2FullLoadTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params);
+}
+
+void Conv3DDXV2FullLoadTiling::LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params);
+}
+
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DDXV2FullLoadTiling, 100);
 
 } // namespace Conv

@@ -38,6 +38,8 @@ protected:
     void InitBaseMNK(L0TilingParams& l0Params) override;
     void CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params) override;
+    void EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
+    void LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
 
     void AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt, uint64_t& nCnt);
 };
