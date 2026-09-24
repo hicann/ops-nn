@@ -16,8 +16,6 @@
  */
 #include "inplace_add_layer_norm_fusion_pass.h"
 
-#include <dlfcn.h>
-
 #include <cstdlib>
 #include <set>
 #include <string>
@@ -28,33 +26,11 @@
 #include "common/inc/error_util.h"
 #include "graph/operator_factory.h"
 #include "platform/platform_info.h"
-#include "securec.h"
 #include "version/ge-compiler_version.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 
 namespace ops {
 namespace {
-// GetOptionValue @since 9.0.0，按 D4 走 dlsym。
-const char* const kGetOptionValueSymbol = "_ZNK2ge17CustomPassContext14GetOptionValueERKNS_12AscendStringERS1_";
-using GetOptionValueFn = graphStatus (*)(const void*, const AscendString&, AscendString&);
-
-// GE 库以 RTLD_GLOBAL 加载，故查全局符号表；
-GetOptionValueFn ResolveGetOptionValue()
-{
-    static GetOptionValueFn fn = []() -> GetOptionValueFn {
-        void* symbol = dlsym(RTLD_DEFAULT, kGetOptionValueSymbol);
-        GetOptionValueFn resolved = nullptr;
-        if (symbol != nullptr) {
-            auto memRet = memcpy_s(&resolved, sizeof(GetOptionValueFn), &symbol, sizeof(GetOptionValueFn));
-            if (memRet != EOK) {
-                return nullptr;
-            }
-        }
-        return resolved;
-    }();
-    return fn;
-}
-
 const std::string kPassName = "ZInplaceAddLayerNormFusionPass";
 
 const char* const kAddLayerNormType = "AddLayerNorm";
@@ -109,25 +85,19 @@ enum class SceneCheckResult {
     API_UNAVAILABLE // 运行时 < 9.0.0
 };
 
-// 守卫 G1：训练场景不做原地改写；读不到 option 则返回 API_UNAVAILABLE 保持静默。
+// 守卫 G1：训练场景不做原地改写；接口不可用时保持静默。
 SceneCheckResult CheckScene(CustomPassContext& passContext)
 {
-    // 运行期check
+#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90000000)
+    // 高编低跑依赖构建后的公共符号弱化，调用前仍须确认运行时支持。
     int32_t runtimeVersion = 0;
     char geCompilerName[] = "ge_compiler";
-    (void)aclsysGetVersionNum(geCompilerName, &runtimeVersion);
-    if (runtimeVersion > 0 && runtimeVersion < kMinGeCompilerVersion) {
-        return SceneCheckResult::API_UNAVAILABLE;
-    }
-
-    // 符号可达性
-    const GetOptionValueFn getOptionValue = ResolveGetOptionValue();
-    if (getOptionValue == nullptr) {
+    if (aclsysGetVersionNum(geCompilerName, &runtimeVersion) != ACL_SUCCESS || runtimeVersion < kMinGeCompilerVersion) {
         return SceneCheckResult::API_UNAVAILABLE;
     }
 
     AscendString value;
-    if (getOptionValue(&passContext, AscendString(kOptionGraphRunMode), value) != GRAPH_SUCCESS) {
+    if (passContext.GetOptionValue(AscendString(kOptionGraphRunMode), value) != GRAPH_SUCCESS) {
         OPS_LOG_D(kPassName.c_str(), "Option %s is not set, treat as inference scene.", kOptionGraphRunMode);
         return SceneCheckResult::INFERENCE;
     }
@@ -139,6 +109,10 @@ SceneCheckResult CheckScene(CustomPassContext& passContext)
         return SceneCheckResult::TRAIN;
     }
     return SceneCheckResult::INFERENCE;
+#else
+    (void)passContext;
+    return SceneCheckResult::API_UNAVAILABLE;
+#endif
 }
 
 // 守卫 G2：平台check。
