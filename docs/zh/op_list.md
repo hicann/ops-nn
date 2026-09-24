@@ -5480,6 +5480,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/gru_block_cell/README.md">gru_block_cell</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>GRU单步前向全融合算子（reset_before语义），对标TensorFlow的GRUBlockCell：单次调用融合门控GEMM、候选GEMM、sigmoid/tanh门控激活与隐状态更新，输出r/u/c/h四个[B, H]张量。仅支持float32与ND格式，GEIR-only交付。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/gru_block_cell_grad/README.md">gru_block_cell_grad</a></td>
     <td>✓</td>
     <td>✓</td>
