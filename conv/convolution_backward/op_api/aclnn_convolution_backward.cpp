@@ -275,7 +275,9 @@ static Conv3DDxL1Estimate CalcConv3DDxL1Estimate(int64_t aC, int64_t aD, int64_t
     int64_t strideH = (*params.stride)[attr3d ? 1 : 3];
     int64_t strideW = (*params.stride)[attr3d ? 2 : 4];
     int64_t dilationH = (*params.dilation)[attr3d ? 1 : 3];
+    int64_t dilationW = (*params.dilation)[attr3d ? 2 : 4];
     int64_t filterHDilation = (kH - 1) * dilationH + 1;
+    int64_t filterWDilation = (kW - 1) * dilationW + 1;
 
     // filter 转 FRACTAL_Z_3D 后的 co0/ci0（FP32 按字节块近似）
     int64_t aC0 = isFp32 ? kFP32BlockReduce : kBlockSize;
@@ -283,14 +285,14 @@ static Conv3DDxL1Estimate CalcConv3DDxL1Estimate(int64_t aC, int64_t aD, int64_t
     int64_t filterCi0 = kBlockSize;
 
     // w_value 与 h_value_max 对齐 cube tiling 的 CheckL1SizeLimit
-    int64_t wValue = aW * strideW;
+    int64_t wValue = std::max(aW * strideW, filterWDilation);
     int64_t hValueMax = (filterHDilation - 1) + kBlockSize / cW + 2;
     if (kBlockSize < cW) {
         hValueMax = filterHDilation + 1;
     } else if (kBlockSize % cW == 0) {
         hValueMax = (filterHDilation - 1) + kBlockSize / cW;
     }
-    hValueMax = std::min(hValueMax, aH * strideH);
+    hValueMax = std::max(std::min(hValueMax, aH * strideH), filterHDilation);
 
     // aL1D 对齐 GetDfactor 的 estimate_d，保守估计避免漏判超限
     int64_t aC1 = (aC + aC0 - 1) / aC0;
@@ -353,7 +355,10 @@ static bool IsExceedL1For3DDx(const ConvolutionBackwardInputTensor& inputTensor,
 
     OP_LOGD("IsExceedL1For3DDx: aL1=%ld, bL1=%ld, fillZero=%ld, l1=%lu, wLimit=%d", est.aL1Size, est.bL1Size,
             est.fillZeroSize, l1Size, est.wSizeLimit ? 1 : 0);
-    return (static_cast<uint64_t>(est.aL1Size + est.bL1Size + est.fillZeroSize) > l1Size) || !est.wSizeLimit;
+    constexpr uint64_t kL1MarginNumerator = 9;
+    constexpr uint64_t kL1MarginDenominator = 10;
+    uint64_t l1Threshold = l1Size / kL1MarginDenominator * kL1MarginNumerator;
+    return (static_cast<uint64_t>(est.aL1Size + est.bL1Size + est.fillZeroSize) > l1Threshold) || !est.wSizeLimit;
 }
 
 // vec 兜底能力圈：超 L1 且满足 vector 分支约束（dtype/分组/910b/dx 未被 matmul 承接）才启用
@@ -3083,6 +3088,11 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor& input
     if ((*params.outputMask)[0] && !conv3DBp2MatmulMask[0]) {
         aclnnStatus dxStatus = CalculateConv3DBackwardDx(inputTensor, outputTensor, params, executor, useHf32,
                                                          vecModeFlag, useV2Flag, curArch);
+        if (dxStatus != ACLNN_SUCCESS && !vecModeFlag) {
+            OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                    "Conv3dBackpropInput cube path failed while the L1 estimate passed, the shape may be out of the "
+                    "cube capability circle, please check the input shape and filter size.");
+        }
         CHECK_RET(dxStatus == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
 
