@@ -135,6 +135,16 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclI
     return true;
 }
 
+inline static bool CheckDeqScaleValid(const aclTensor* deqScale)
+{
+    if (deqScale->Numel() % DEQUANT_SCALE_ALIGN_SIZE != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dequant Scale numel [%ld] is invalid, it should be a multiple of %d.",
+                static_cast<long>(deqScale->Numel()), DEQUANT_SCALE_ALIGN_SIZE);
+        return false;
+    }
+    return true;
+}
+
 inline static aclnnStatus CheckParam(MatmulUnzipInput matmulUnzipInput, const aclIntArray* compressInfo,
                                      const aclTensor* out)
 {
@@ -144,6 +154,8 @@ inline static aclnnStatus CheckParam(MatmulUnzipInput matmulUnzipInput, const ac
     CHECK_RET(CheckDtypeValid(matmulUnzipInput, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(matmulUnzipInput.x1, matmulUnzipInput.x2, compressInfo), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查deqScale元素数是否满足16对齐，避免非法入参走到填零路径后返回成功
+    CHECK_RET(CheckDeqScaleValid(matmulUnzipInput.deqScale), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -231,8 +243,9 @@ static const aclTensor* BuildMatMulUnzipGraph(MatmulUnzipInput matmulUnzipInput,
     if (matmulUnzipInput.deqScale->Numel() % DEQUANT_SCALE_ALIGN_SIZE == 0) {
         deqScale5HD = TensorReformat(matmulUnzipInput.deqScale, op::Format::FORMAT_NC1HWC0, executor);
     } else {
+        // CheckParam已前置拦截deqScale非16对齐的非法入参，此处兜底返回错误而非填零成功
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dequant Scale is invalid Data.");
-        return ProcessEmptyTensor(matmulUnzipInput.x1, out, executor);
+        return nullptr;
     }
     const aclTensor* x2ReFormatFractalZ = TensorReformat(matmulUnzipInput.x2, op::Format::FORMAT_FRACTAL_Z, executor);
     const aclTensor* matmulOut = l0op::MatMulCompressDequant(

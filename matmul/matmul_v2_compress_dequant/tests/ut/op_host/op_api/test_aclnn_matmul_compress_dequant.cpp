@@ -115,3 +115,19 @@ TEST_F(l2_matmul_compress_dequant_test, ascend310P_invalid_k_mismatch)
     MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
                                     ACLNN_ERR_PARAM_INVALID);
 }
+
+// deqScale元素数不是16的整数倍时，第一段接口应返回参数非法错误码，而非走填零路径返回成功
+TEST_F(l2_matmul_compress_dequant_test, ascend310P_invalid_deq_scale_numel_not_aligned)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc index_desc = TensorDesc({8}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({16, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc deqScale_desc = TensorDesc({4, 10}, ACL_UINT64, ACL_FORMAT_ND);
+    vector<int64_t> compress_info = {8, 8, 32, 16, 1};
+    IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_ERR_PARAM_INVALID);
+}

@@ -232,3 +232,33 @@ TEST_F(l2_matmulWeightNz_test, matmul_NZ_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
     TensorDesc out_desc = TensorDesc({32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
 }
+
+// out数据类型需与self、mat2推导之后的数据类型满足推导规则，FP16×FP16推导为FP16，out为BF16应报错
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_910B_FP16_FP16_out_BF16_invalid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+// out数据类型需与self、mat2推导之后的数据类型满足推导规则，BF16×BF16推导为BF16，out为FP16应报错
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_910B_BF16_BF16_out_FP16_invalid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 16进32出：FP16×FP16推导为FP16，out为FP32属设计允许场景，不应被一致性校验拦截
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_910B_FP16_FP16_out_FP32_valid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
