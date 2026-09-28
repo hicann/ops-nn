@@ -43,17 +43,17 @@ fi
 if [ "$TARGET_BRANCH" = "master" ];then
     case "${ut_type}" in
         ophost)
-            bash build.sh -u --cov --ophost --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
+            bash build.sh -u --cov --asan --ophost --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
             ret=$?
             coverage_save="true"
             ;;
         opapi)
-            bash build.sh -u --cov --opapi --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
+            bash build.sh -u --cov --asan --opapi --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
             ret=$?
             coverage_save="true"
             ;;
         opgraph)
-            bash build.sh -u --opgraph --cov --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
+            bash build.sh -u --opgraph --asan --cov --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
             ret=$?
             coverage_save="true"
             ;;
