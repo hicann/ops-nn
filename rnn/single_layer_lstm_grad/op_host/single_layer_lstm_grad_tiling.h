@@ -89,6 +89,7 @@ TILING_DATA_FIELD_DEF_STRUCT(CutBatchTiling, xhHiddenTiling);
 // matmul params
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, dwMMParam);
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, dgateMMParam);
+TILING_DATA_FIELD_DEF(int64_t, privateBiasComponents);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(SingleLayerLstmGrad, SingleLayerLstmGradTilingData)
 
@@ -140,6 +141,47 @@ struct SingleLayerLstmGradTilingParams {
     int64_t hiddenSizeAligned{0};
     int64_t oneLineAligned{0};
 };
+
+/* CONTEXT-FREE PLANNING ENTRY.
+ *
+ * Everything this tiling computes, except the shape/dtype/attribute checks and the four setters on
+ * the context, is plain arithmetic on SingleLayerLstmGradTilingParams plus two matmul_tiling calls.
+ * This entry runs exactly that -- the same SingleLayerLstmGradTiling::ComputePlan() the framework
+ * path runs -- for a caller that already holds the shapes and has no gert::TilingContext: a direct
+ * launch harness, or a test. The two callers therefore cannot drift apart, because there is one
+ * implementation.
+ *
+ * The caller is responsible for the validity of what it passes; the shape, dtype and attribute
+ * checks are not run here, because they read the context.
+ */
+struct SingleLayerLstmGradPlanRequest {
+    int64_t timeStep{0};
+    int64_t batch{0};
+    int64_t inputSize{0};
+    int64_t hiddenSize{0};
+    int64_t isBias{0};
+    int64_t isSeqLength{0};
+    int64_t gateOrder{1}; // GateOrder::IFJO
+    int64_t direction{0}; // UNIDIRECTIONAL
+    float cellClip{0.0f};
+    float forgetBias{0.0f};
+    int64_t elemBytes{4};        // 4 for float, 2 for half and bfloat16
+    int64_t aicCoreNum{0};       // platform AIC count, before the regbase cap
+    int64_t ubSizePlatForm{0};   // platform UB bytes, before the regbase dcache reserve
+    int64_t sysWorkspaceSize{0}; // platform library workspace, added to workspaceSize
+    bool isRegbase{false};       // Ascend950 and later
+    int64_t biasComponents{1};   // Original same-dtype bias vectors for private 950 replay
+};
+
+struct SingleLayerLstmGradPlanResult {
+    int64_t tilingKey{0};
+    int64_t blockDim{0};
+    size_t workspaceSize{0};  // operator workspace + sysWorkspaceSize
+    size_t tilingDataSize{0}; // bytes written into tilingBuffer
+};
+
+ge::graphStatus PlanSingleLayerLstmGrad(const SingleLayerLstmGradPlanRequest& req, void* tilingBuffer,
+                                        size_t tilingCapacity, SingleLayerLstmGradPlanResult& result);
 
 struct SingleLayerLstmGradCompileInfo {
     uint32_t aicCoreNum{0};

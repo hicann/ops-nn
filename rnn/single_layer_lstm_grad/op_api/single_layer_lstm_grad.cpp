@@ -39,23 +39,29 @@ const std::array<const aclTensor*, 5> SingleLayerLstmGrad(
     auto dxShape = x->GetViewShape();
     auto dhPrevShape = initC->GetViewShape();
 
-    const aclTensor* dw = executor->AllocTensor(dwShape, x->GetDataType(), op::Format::FORMAT_ND);
+    /* All floating inputs and outputs share the declared weight dtype. */
+    const auto opDtype = w->GetDataType();
+    const aclTensor* dw = executor->AllocTensor(dwShape, opDtype, op::Format::FORMAT_ND);
     const aclTensor* dx = executor->AllocTensor(dxShape, x->GetDataType(), op::Format::FORMAT_ND);
-    const aclTensor* dhPrev = executor->AllocTensor(dhPrevShape, x->GetDataType(), op::Format::FORMAT_ND);
-    const aclTensor* dcPrev = executor->AllocTensor(dhPrevShape, x->GetDataType(), op::Format::FORMAT_ND);
+    const aclTensor* dhPrev = executor->AllocTensor(dhPrevShape, opDtype, op::Format::FORMAT_ND);
+    const aclTensor* dcPrev = executor->AllocTensor(dhPrevShape, opDtype, op::Format::FORMAT_ND);
     const aclTensor* db = nullptr;
     if (b == nullptr) {
-        b = executor->AllocTensor(x->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
-        db = executor->AllocTensor(x->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+        b = executor->AllocTensor(opDtype, Format::FORMAT_ND, Format::FORMAT_ND);
+        db = executor->AllocTensor(opDtype, Format::FORMAT_ND, Format::FORMAT_ND);
     } else {
         auto dbShape = b->GetViewShape();
-        db = executor->AllocTensor(dbShape, x->GetDataType(), op::Format::FORMAT_ND);
+        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && opDtype != DataType::DT_FLOAT) {
+            // Both original bias components have the same derivative, [4H].
+            dbShape.SetDim(0, dwShape.GetDim(0));
+        }
+        db = executor->AllocTensor(dbShape, opDtype, op::Format::FORMAT_ND);
     }
     if (seqLength == nullptr) {
-        seqLength = executor->AllocTensor(x->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+        seqLength = executor->AllocTensor(opDtype, Format::FORMAT_ND, Format::FORMAT_ND);
     }
     if (y == nullptr) {
-        y = executor->AllocTensor(x->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+        y = executor->AllocTensor(opDtype, Format::FORMAT_ND, Format::FORMAT_ND);
     }
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(

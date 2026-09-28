@@ -64,6 +64,7 @@ struct SingleLayerLstmGradTilingDataTest {
     // matmul params
     TCubeTiling dwMMParam;
     TCubeTiling dgateMMParam;
+    int64_t privateBiasComponents = 0;
 };
 
 inline void InitSingleLayerLstmGradTilingDataTest(uint8_t* tiling, SingleLayerLstmGradTilingDataTest* data)

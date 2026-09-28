@@ -14,10 +14,12 @@
  *
  * Path S = AIV-only zero-sync kernel, chosen when the whole recurrence working set fits in one
  * AIV's UB (exact same layout formula the kernel uses) and there is no seq_length. Workspace
- * is 0 for this path. Anything else falls back to the legacy pipeline untouched.
+ * includes the framework-reserved prefix and, for narrow weights, FP32 dw/db accumulators.
+ * Narrow calls that this planner declines are rejected rather than entering the FP32 legacy path.
  */
 
 #include <cstring>
+#include <limits>
 #include "register/op_impl_registry.h"
 #include "platform/platform_ascendc.h"
 #include "log/log.h"
@@ -31,10 +33,13 @@ namespace {
 constexpr bool ENABLE_REGBASE_SMALL_PATH = true;
 
 constexpr int64_t SMALL_CHUNK_COLS = 64;
+constexpr int64_t SMALL_MIN_CHUNK_COLS = 8; // narrowest column chunk the search will accept
+constexpr int64_t SMALL_TB_WALK_LIMIT = 8;  // above this the time search jumps instead of stepping
 constexpr int64_t SMALL_M_BLOCK = 64;
 constexpr int64_t SMALL_MAX_CORES = 16;
 constexpr int64_t SMALL_UB_RESERVE = 16 * 1024; // TPipe meta + safety margin
-constexpr int64_t SMALL_MAX_HIDDEN = 64;        // one vector register row per gate
+constexpr int64_t BIAS_COMPONENT_COUNT = 2;
+constexpr int64_t REPLAY_PLANES = 7; // i, j, f, o, tanh(c), c, h
 
 constexpr size_t IDX_X = 0;
 constexpr size_t IDX_W = 1;
@@ -47,6 +52,9 @@ constexpr size_t IDX_DY = 8;
 constexpr size_t IDX_DH = 9;
 constexpr size_t IDX_DC = 10;
 constexpr size_t IDX_I = 11;
+constexpr size_t IDX_J = 12;
+constexpr size_t IDX_F = 13;
+constexpr size_t IDX_O = 14;
 constexpr size_t IDX_TANHC = 15;
 constexpr size_t IDX_SEQ = 16;
 constexpr size_t ATTR_DIRECTION = 0;
@@ -99,14 +107,29 @@ bool ValidateSmallPathShapes(const gert::TilingContext* context, int64_t timeSte
     }
     if (isBias) {
         auto s = context->GetOptionalInputShape(IDX_BIAS);
-        if (s == nullptr || s->GetStorageShape().GetDimNum() != 1 || s->GetStorageShape().GetDim(0) != gates) {
+        if (s == nullptr || s->GetStorageShape().GetDimNum() != 1) {
+            return false;
+        }
+        const auto size = s->GetStorageShape().GetDim(0);
+        const bool narrow = context->GetInputDesc(IDX_W)->GetDataType() != ge::DT_FLOAT;
+        if (size != gates && (!narrow || size != BIAS_COMPONENT_COUNT * gates)) {
             return false;
         }
     }
     auto wDesc = context->GetInputDesc(IDX_W);
-    auto xDesc = context->GetInputDesc(IDX_X);
-    if (wDesc == nullptr || xDesc == nullptr || wDesc->GetDataType() != xDesc->GetDataType()) {
+    if (wDesc == nullptr) {
         return false;
+    }
+    if (isBias && context->GetOptionalInputDesc(IDX_BIAS)->GetDataType() != wDesc->GetDataType()) {
+        return false;
+    }
+    // All floating IO follow w; widening occurs only inside the kernel.
+    for (size_t idx :
+         {IDX_X, IDX_INIT_H, IDX_INIT_C, IDX_H, IDX_C, IDX_DY, IDX_I, IDX_J, IDX_F, IDX_O, IDX_TANHC, IDX_DH, IDX_DC}) {
+        auto desc = context->GetInputDesc(idx);
+        if (desc == nullptr || desc->GetDataType() != wDesc->GetDataType()) {
+            return false;
+        }
     }
     return true;
 }
@@ -118,14 +141,15 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (!ENABLE_REGBASE_SMALL_PATH) {
         return ge::GRAPH_SUCCESS;
     }
-    auto xDesc = context->GetInputDesc(IDX_X);
+    auto wDesc = context->GetInputDesc(IDX_W);
     auto xShapePtr = context->GetInputShape(IDX_X);
     auto initHShapePtr = context->GetInputShape(IDX_INIT_H);
-    if (xDesc == nullptr || xShapePtr == nullptr || initHShapePtr == nullptr) {
+    if (wDesc == nullptr || xShapePtr == nullptr || initHShapePtr == nullptr) {
         return ge::GRAPH_SUCCESS; // legacy path reports the error
     }
-    ge::DataType dtype = xDesc->GetDataType();
-    if (dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16) {
+    /* Use w to select the common floating-point IO dtype. */
+    const ge::DataType dtype = wDesc->GetDataType();
+    if (dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16) {
         return ge::GRAPH_SUCCESS;
     }
     const int64_t dtypeSize = (dtype == ge::DT_FLOAT) ? 4 : 2;
@@ -139,7 +163,9 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     const int64_t batch = xShape.GetDim(1);
     const int64_t inputSize = xShape.GetDim(DIM_2);
     const int64_t hidden = initHShape.GetDim(DIM_2);
-    if (timeStep <= 0 || batch <= 0 || inputSize <= 0 || hidden <= 0 || hidden > SMALL_MAX_HIDDEN) {
+    // I=0 still has recurrent/state/bias gradients. With zero input chunks,
+    // the single tail core runs the recurrence without reading x or writing dx.
+    if (timeStep <= 0 || batch <= 0 || inputSize < 0 || hidden <= 0) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -198,18 +224,71 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (ubSize == 0 || aivNum <= 0) {
         return ge::GRAPH_SUCCESS;
     }
-    const int64_t mAll = timeStep * batch;
-    const int64_t mBlock = (mAll < SMALL_M_BLOCK) ? mAll : SMALL_M_BLOCK;
+    const int64_t budget = static_cast<int64_t>(ubSize) - SMALL_UB_RESERVE;
+
+    /* FOUR KNOBS, AND THEY RELIEVE DIFFERENT REGIONS. The plan has a row-scaled part (the seven
+     * saved planes, dy and dgate, all [tBlock*bBlock, H]), a batch-scaled part (the staged initial
+     * state and the ping-pong) and a column-scaled part (wChunk, dwAcc and outStage, all
+     * 4H x chunkCols). tBlock and bBlock both cut rows but only bBlock cuts the second group, and
+     * chunkCols and gBlock are the levers on the third. Measured over the 482 non-empty backward
+     * cases: column chunking with time blocking alone covers 404, adding batch blocking all 482,
+     * gate blocking instead of batch blocking 408. Gate blocking adds nothing on that set -- it is
+     * what extends the feasible hidden_size beyond it: T=1 B=1 input_size=8 hidden_size=2048 at
+     * float16 does not fit without it and does with it.
+     *
+     * chunkCols descends first because a wider column chunk is fewer DMA bursts; gBlock next,
+     * because a gate chunk only re-stages the weight tile; then bBlock, because a batch block
+     * re-walks the whole sequence; tBlock innermost, because a time block only re-stages planes.
+     * All four are correctness-neutral: the kernel closes a short tail block on every axis.
+     *
+     * THE ELEMENT WIDTH REACHES THE PLAN TOO: LstmGradRegbaseSmall<T> calls Fill with sizeof(T),
+     * so a host that always passed 4 would size for fp32 and the half kernel would read a layout
+     * it did not lay out. */
     LstmGradRegbase::LstmGradRegbaseSmallUbLayout layout;
-    layout.Fill(timeStep, batch, hidden, SMALL_CHUNK_COLS, mBlock, dtypeSize);
-    if (layout.totalBytes > static_cast<int64_t>(ubSize) - SMALL_UB_RESERVE) {
+    int64_t tBlock = 0;
+    int64_t bBlock = 0;
+    int64_t gBlock = 0;
+    int64_t chunkCols = 0;
+    for (int64_t cc = SMALL_CHUNK_COLS; cc >= SMALL_MIN_CHUNK_COLS && tBlock == 0; cc /= 2) {
+        for (int64_t gb = hidden; gb >= 1 && tBlock == 0; gb = (gb > 1) ? ((gb + 1) / 2) : 0) {
+            for (int64_t bb = batch; bb >= 1 && tBlock == 0; bb = (bb > 1) ? ((bb + 1) / 2) : 0) {
+                for (int64_t tb = timeStep; tb >= 1; --tb) {
+                    const int64_t rows = tb * bb;
+                    const int64_t mb = (rows < SMALL_M_BLOCK) ? rows : SMALL_M_BLOCK;
+                    layout.Fill(tb, bb, hidden, cc, mb, dtypeSize, gb);
+                    if (layout.totalBytes <= budget) {
+                        tBlock = tb;
+                        bBlock = bb;
+                        gBlock = gb;
+                        chunkCols = cc;
+                        break;
+                    }
+                    /* The plan is linear in tb, so jump to the largest tb the measured bytes-per-step
+                     * allows rather than walking one step at a time over a long sequence. */
+                    if (tb > SMALL_TB_WALK_LIMIT) {
+                        const int64_t per = layout.totalBytes / tb;
+                        const int64_t guess = (per > 0) ? (budget / per) : 1;
+                        if (guess >= 1 && guess < tb - 1) {
+                            tb = guess + 2; // the decrement then lands on guess+1 and the walk continues
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (tBlock == 0) {
+        layout.Fill(1, 1, hidden, SMALL_MIN_CHUNK_COLS, 1, dtypeSize, 1);
         OP_LOGI(context->GetNodeName(),
-                "SingleLayerLstmGrad regbase small path skipped: need %ld bytes UB, budget %ld.", layout.totalBytes,
-                static_cast<int64_t>(ubSize) - SMALL_UB_RESERVE);
+                "SingleLayerLstmGrad regbase small path skipped: hidden_size %ld does not fit in UB even with one "
+                "timestep, one batch row, one gate row and the narrowest column chunk: need %ld bytes, budget %ld.",
+                hidden, layout.totalBytes, budget);
         return ge::GRAPH_SUCCESS;
     }
+    const int64_t mAll = tBlock * bBlock;
+    const int64_t mBlock = (mAll < SMALL_M_BLOCK) ? mAll : SMALL_M_BLOCK;
+    layout.Fill(tBlock, bBlock, hidden, chunkCols, mBlock, dtypeSize, gBlock);
 
-    const int64_t numIChunks = LstmGradRegbase::CeilDivI64(inputSize, SMALL_CHUNK_COLS);
+    const int64_t numIChunks = LstmGradRegbase::CeilDivI64(inputSize, chunkCols);
     int64_t usedCores = numIChunks + 1;
     usedCores = (usedCores > SMALL_MAX_CORES) ? SMALL_MAX_CORES : usedCores;
     usedCores = (usedCores > aivNum) ? aivNum : usedCores;
@@ -227,10 +306,13 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     tilingData->direction = directionVal;
     tilingData->gateOrder = gateOrderVal;
     tilingData->usedCores = usedCores;
-    tilingData->chunkCols = SMALL_CHUNK_COLS;
+    tilingData->tBlock = tBlock;
+    tilingData->chunkCols = chunkCols;
     tilingData->mBlock = mBlock;
     tilingData->numIChunks = numIChunks;
-    tilingData->reserved0 = 0;
+    tilingData->bBlock = bBlock;
+    tilingData->gBlock = gBlock;
+    tilingData->biasComponents = isBias ? biasShape->GetStorageShape().GetDim(0) / (4 * hidden) : 0;
 
     context->SetTilingKey(LSTM_GRAD_TILING_KEY_REGBASE_SMALL);
     context->SetBlockDim(static_cast<uint32_t>(usedCores));
@@ -238,7 +320,32 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    workspaces[0] = 0;
+    /* dw and db accumulate in fp32 across time blocks, batch blocks and the cores that share a
+     * gate column, and are narrowed to the output width once at the end. At fp32 the outputs ARE
+     * the accumulators and no workspace is needed; otherwise the accumulator is
+     * 4H x (I + H) for dw plus 4H for db, in floats. */
+    const int64_t accFloats = (dtypeSize == static_cast<int64_t>(sizeof(float))) ?
+                                  0 :
+                                  LstmGradRegbase::LstmGradRegbaseSmallUbLayout::GATE_NUM * hidden *
+                                      (inputSize + hidden + 1);
+    uint64_t replayFloats = 0;
+    if (dtypeSize != static_cast<int64_t>(sizeof(float))) {
+        // Each AIV owns a disjoint replay cache, reused across batch blocks.
+        replayFloats = REPLAY_PLANES;
+        for (int64_t extent : {usedCores, timeStep, bBlock, hidden}) {
+            if (replayFloats > std::numeric_limits<size_t>::max() / sizeof(float) / extent) {
+                OP_LOGE(context->GetNodeName(), "Forward replay workspace size overflow.");
+                return ge::GRAPH_FAILED;
+            }
+            replayFloats *= extent;
+        }
+    }
+    const auto reservedBytes = ascendcPlatform.GetLibApiWorkSpaceSize();
+    const uint64_t maxFloats = (std::numeric_limits<size_t>::max() - reservedBytes) / sizeof(float);
+    if (static_cast<uint64_t>(accFloats) > maxFloats || replayFloats > maxFloats - accFloats) {
+        return ge::GRAPH_FAILED;
+    }
+    workspaces[0] = (static_cast<size_t>(accFloats) + replayFloats) * sizeof(float) + reservedBytes;
 
     OP_LOGI(context->GetNodeName(),
             "SingleLayerLstmGrad regbase small path: T=%ld B=%ld I=%ld H=%ld bias=%ld dir=%ld order=%ld cores=%ld "

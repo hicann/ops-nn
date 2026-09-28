@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <array>
+#include <tuple>
 #include "gtest/gtest.h"
 
 #include "opdev/op_log.h"
@@ -19,6 +20,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
+#include "lstm_backward_plan_spy.h"
 
 using namespace op;
 using namespace std;
@@ -29,6 +31,95 @@ protected:
 
     static void TearDownTestCase() { std::cout << "l2_lstm_backward_test TearDown" << std::endl; }
 };
+
+// Public API planning only: device arithmetic is covered by the real-device ST.
+// I=0 must still call the real Grad l0 planner, not return an empty executor.
+class LstmBackward950Plan : public testing::TestWithParam<std::tuple<aclDataType, bool, int64_t>> {};
+
+TEST_P(LstmBackward950Plan, same_dtype_caches_and_nonempty_recurrence)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    const auto [dtype, batchFirst, inputSize] = GetParam();
+    const vector<int64_t> xShape = batchFirst ? vector<int64_t>{2, 3, inputSize} : vector<int64_t>{3, 2, inputSize};
+    const vector<int64_t> yShape = batchFirst ? vector<int64_t>{2, 3, 8} : vector<int64_t>{3, 2, 8};
+    auto x = TensorDesc(xShape, dtype, ACL_FORMAT_NCL);
+    auto state = TensorDesc({1, 2, 8}, dtype, ACL_FORMAT_NCL);
+    auto hx = TensorListDesc({state, state});
+    auto wIh = TensorDesc({32, inputSize}, dtype, ACL_FORMAT_ND);
+    auto wHh = TensorDesc({32, 8}, dtype, ACL_FORMAT_ND);
+    auto bias = TensorDesc({32}, dtype, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wIh, wHh, bias, bias});
+    auto dy = TensorDesc(yShape, dtype, ACL_FORMAT_NCL);
+    auto gate = TensorDesc({3, 2, 8}, dtype, ACL_FORMAT_NCL);
+    auto gates = TensorListDesc({gate});
+    auto mask = BoolArrayDesc({true, true, true, true});
+    auto dparams = TensorListDesc({wIh, wHh, bias, bias});
+    auto ut = OP_API_UT(LstmBackwardPlan,
+                        INPUT(x, hx, params, dy, state, state, gates, gates, gates, gates, gates, gates, gates, nullptr,
+                              true, 1, 0.0, true, false, batchFirst, mask),
+                        OUTPUT(x, state, state, dparams));
+    uint64_t workspaceSize = 0;
+    lstm_test::GradPlanSpy spy;
+    ASSERT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+    EXPECT_EQ(spy.calls, 1U);
+    EXPECT_TRUE(spy.homogeneousInputs);
+    EXPECT_EQ(spy.biasElements, dtype == ACL_FLOAT ? 32 : 64);
+    EXPECT_EQ(spy.biasGradientElements, 32);
+    if (dtype != ACL_FLOAT) {
+        auto wideGate = TensorDesc({3, 2, 8}, ACL_FLOAT, ACL_FORMAT_NCL);
+        auto wideGates = TensorListDesc({wideGate});
+        auto rejected = OP_API_UT(
+            LstmBackwardPlan,
+            INPUT(x, hx, params, dy, state, state, wideGates, wideGates, wideGates, wideGates, wideGates, wideGates,
+                  wideGates, nullptr, true, 1, 0.0, true, false, batchFirst, mask),
+            OUTPUT(x, state, state, dparams));
+        EXPECT_NE(rejected.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+        EXPECT_EQ(spy.calls, 1U); // Rejected before reaching the Grad planner.
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(PublicContract, LstmBackward950Plan,
+                         testing::Combine(testing::Values(ACL_FLOAT, ACL_FLOAT16, ACL_BF16), testing::Bool(),
+                                          testing::Values(int64_t{0}, int64_t{33})));
+
+class LstmBackward950ZeroHidden : public testing::TestWithParam<std::tuple<aclDataType, bool>> {};
+
+TEST_P(LstmBackward950ZeroHidden, returns_zero_dx_without_grad_kernel)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    const auto [dtype, batchFirst] = GetParam();
+    constexpr int64_t batch = 5;
+    constexpr int64_t time = 3;
+    constexpr int64_t inputSize = 33;
+    constexpr int64_t hiddenSize = 0;
+    const vector<int64_t> xShape = batchFirst ? vector<int64_t>{batch, time, inputSize} :
+                                                vector<int64_t>{time, batch, inputSize};
+    const vector<int64_t> yShape = batchFirst ? vector<int64_t>{batch, time, hiddenSize} :
+                                                vector<int64_t>{time, batch, hiddenSize};
+    auto x = TensorDesc(xShape, dtype, ACL_FORMAT_NCL);
+    auto state = TensorDesc({1, batch, hiddenSize}, dtype, ACL_FORMAT_NCL);
+    auto hx = TensorListDesc({state, state});
+    auto wIh = TensorDesc({4 * hiddenSize, inputSize}, dtype, ACL_FORMAT_ND);
+    auto wHh = TensorDesc({4 * hiddenSize, hiddenSize}, dtype, ACL_FORMAT_ND);
+    auto bias = TensorDesc({4 * hiddenSize}, dtype, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wIh, wHh, bias, bias});
+    auto dy = TensorDesc(yShape, dtype, ACL_FORMAT_NCL);
+    auto gate = TensorDesc({time, batch, hiddenSize}, dtype, ACL_FORMAT_NCL);
+    auto gates = TensorListDesc({gate});
+    auto mask = BoolArrayDesc({true, true, true, true});
+    auto dparams = TensorListDesc({wIh, wHh, bias, bias});
+    auto ut = OP_API_UT(LstmBackwardPlan,
+                        INPUT(x, hx, params, dy, state, state, gates, gates, gates, gates, gates, gates, gates, nullptr,
+                              true, 1, 0.0, true, false, batchFirst, mask),
+                        OUTPUT(x, state, state, dparams));
+    uint64_t workspaceSize = 0;
+    lstm_test::GradPlanSpy spy;
+    ASSERT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+    EXPECT_EQ(spy.calls, 0U);
+}
+
+INSTANTIATE_TEST_SUITE_P(PublicContract, LstmBackward950ZeroHidden,
+                         testing::Combine(testing::Values(ACL_FLOAT, ACL_FLOAT16, ACL_BF16), testing::Bool()));
 
 // 正常input场景
 TEST_F(l2_lstm_backward_test, ascend910B2_normal_float)

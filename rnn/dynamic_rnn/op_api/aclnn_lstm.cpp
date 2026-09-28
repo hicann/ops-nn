@@ -10,6 +10,9 @@
 
 #include "aclnn_lstm.h"
 #include "dynamic_rnn.h"
+/* ascend950's implementation of the single-layer, single-direction case. It adds no interface of its
+ * own; it is reached only from LstmSingleLayerDirec below. */
+#include "../../single_layer_lstm/op_api/single_layer_lstm.h"
 #include "level0/zero_op.h"
 #include "level0/add.h"
 #include "level0/arange.h"
@@ -32,6 +35,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "opdev/framework_op.h"
+#include "lstm_single_layer_adapter.h"
 
 using namespace op;
 namespace {
@@ -122,6 +126,8 @@ static const int64_t INDEX_4 = 4;
 static const size_t CONCAT_MAX_NUM = 32;
 static const int64_t BIDIRECTIONAL_NUM = 2;
 static const int64_t PARAM_MULTIPLIER_BIAS = 2;
+static const int64_t PARAM_TENSORS_PER_DIRECTION_WITH_BIAS = 4; // W_ih, W_hh, b_ih, b_hh
+static const int64_t MAX_PARAM_TENSORS_PER_LAYER = BIDIRECTIONAL_NUM * PARAM_TENSORS_PER_DIRECTION_WITH_BIAS;
 static const int64_t FEATURE_DIM = 2;
 static const int64_t HX_TENSOR_COUNT = 2;
 
@@ -209,9 +215,98 @@ LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const 
     if (!PrepareInitHC(hx, direction, bidirectional, num_layers, executor, initH, initC)) {
         return nullptrInner;
     }
-    auto layerResult = l0op::DynamicRNN(input, weightTrans, bias, initH, initC, nullptr, direction, train, yOutDirec,
-                                        iOutDirec, jOutDirec, fOutDirec, oOutDirec, hOutDirec, cOutDirec, tanhCOutDirec,
-                                        executor);
+    /* ascend950 has a narrower, faster implementation of exactly this node. Everything else keeps
+     * going to DynamicRNN, unchanged.
+     *
+     * The choice is made HERE rather than at the entry point because this function is already called
+     * once per (layer, direction): a bidirectional or multi-layer call reaches it one leg at a time,
+     * and each leg is judged on its own shape.
+     *
+     * SingleLayerLstmSupports() is the gate, and it has to be at least as strict as the tiling it
+     * fronts -- the node is chosen while the executor is being built, so a tiling refusal after this
+     * point kills the whole aclnnLSTM call instead of falling back here. */
+    std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+               const aclTensor*, const aclTensor*, const aclTensor*>
+        layerResult;
+    const char* refusal = nullptr;
+    if (l0op::SingleLayerLstmSupports(input, initH, direction, &refusal)) {
+        /* The two operators disagree on the state rank: DynamicRNN takes [1, B, H], SingleLayerLstm
+         * takes [B, H]. */
+        const op::Shape stateShape = {initH->GetViewShape().GetDim(1), initH->GetViewShape().GetDim(2)};
+        auto initH2d = l0op::Reshape(initH, stateShape, executor);
+        OP_CHECK_NULL(initH2d, return nullptrInner);
+        auto initC2d = l0op::Reshape(initC, stateShape, executor);
+        OP_CHECK_NULL(initC2d, return nullptrInner);
+
+        /* They also disagree on the BIAS DTYPE, and only for this operator. SingleLayerLstm takes
+         * `b` as DT_FLOAT in all three of its dtype combinations: the bias reaches the cube through
+         * the bias table, which takes fp32 and nothing else, and [4H] is small enough that one Cast
+         * here costs less than a cross-core widening round inside the kernel's phase A handshake.
+         * DynamicRNN takes it at the caller's width, so the conversion is inside this branch and
+         * `bias` itself is left alone.
+         *
+         * SingleLayerLstmSupports() cannot check this -- it is not given the bias -- so dropping
+         * this Cast does not fall back to DynamicRNN. Tiling refuses the node instead and the whole
+         * aclnnLSTM call fails. */
+        const aclTensor* biasFp32 = bias;
+        if (biasFp32->GetDataType() != op::DataType::DT_FLOAT) {
+            /* CONVERT EACH ADDEND, THEN ADD -- not Cast(b_ih + b_hh). PrepareBias summed the two at
+             * the CALLER's width because that is what DynamicRNN takes, and casting that sum keeps
+             * its rounding: up to half a narrow ulp of error in a value this operator then treats
+             * as exact. Measured with x and the initial state zeroed, where the gates ARE the bias,
+             * that put 17% of the outputs one ulp off the correctly rounded result. `b_ih` and
+             * `b_hh` are [4H] and exactly representable in fp32, so their fp32 sum is exact.
+             *
+             * The `!hasBias` arm never gets here with a narrow dtype -- ZerosLike follows the
+             * weight -- but it is handled anyway rather than assumed. */
+            if (hasBias) {
+                auto bIhF32 = l0op::Cast((*params)[paramsOffsets + 2], op::DataType::DT_FLOAT, executor);
+                OP_CHECK_NULL(bIhF32, return nullptrInner);
+                auto bHhF32 = l0op::Cast((*params)[paramsOffsets + 3], op::DataType::DT_FLOAT, executor);
+                OP_CHECK_NULL(bHhF32, return nullptrInner);
+                biasFp32 = l0op::Add(bIhF32, bHhF32, executor);
+            } else {
+                biasFp32 = l0op::Cast(bias, op::DataType::DT_FLOAT, executor);
+            }
+            OP_CHECK_NULL(biasFp32, return nullptrInner);
+        }
+
+        auto slResult = l0op::SingleLayerLstm(input, weightTrans, biasFp32, initH2d, initC2d, nullptr, direction,
+                                              "ifjo", yOutDirec, hOutDirec, cOutDirec, iOutDirec, jOutDirec, fOutDirec,
+                                              oOutDirec, tanhCOutDirec, executor);
+        /* They also disagree on the OUTPUT ORDER. SingleLayerLstm hands back the OpDef order
+         * (y, output_h, output_c, i, j, f, o, tanhc); l0op::DynamicRNN's wrapper hands back
+         * (y, i, j, f, o, h, c, tanhc). Re-seat the tuple so everything downstream of this function
+         * sees one order regardless of which node ran. */
+        layerResult = std::make_tuple(std::get<0>(slResult), std::get<3>(slResult), std::get<4>(slResult),
+                                      std::get<5>(slResult), std::get<6>(slResult), std::get<1>(slResult),
+                                      std::get<2>(slResult), std::get<7>(slResult));
+    } else {
+        /* ON ascend950 THERE IS NO FALLBACK. DynamicRNN declares ascend950 and ships a binary config
+         * for it, but a call that lands there does not come back: measured on device, a single-layer
+         * fp32 call with input_size = 17 launched and then hung in aclrtSynchronizeStream -- the
+         * compute stream is WEDGED, not faulted, so nothing times out, nothing is reported, and the
+         * card needs a reset. Twenty-five minutes in, the backtrace was still
+         *   rtStreamSynchronize <- aclrtSynchronizeStreamImpl <- the caller.
+         *
+         * Falling through to that is strictly worse than refusing. A refusal costs the user an error
+         * message; the fallback costs them a card and tells them nothing about which argument did
+         * it. So on this SoC the refusal IS the answer, and it names the rule that was broken.
+         *
+         * Every other SoC keeps DynamicRNN untouched -- there it is the real implementation for
+         * these shapes, not a hole to fall into. */
+        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "aclnnLSTM: no implementation on ascend950 for this (layer, direction) -- %s. "
+                    "DynamicRNN is not a fallback on this SoC: a call that reaches it hangs the "
+                    "compute stream rather than returning, so the call is refused here instead.",
+                    refusal != nullptr ? refusal : "reason unavailable");
+            return nullptrInner;
+        }
+        layerResult = l0op::DynamicRNN(input, weightTrans, bias, initH, initC, nullptr, direction, train, yOutDirec,
+                                       iOutDirec, jOutDirec, fOutDirec, oOutDirec, hOutDirec, cOutDirec, tanhCOutDirec,
+                                       executor);
+    }
 
     OP_CHECK_NULL(std::get<0>(layerResult), return nullptrInner);
     OP_CHECK_NULL(std::get<1>(layerResult), return nullptrInner);
@@ -234,6 +329,11 @@ static aclnnStatus ProcessViewCopy(std::tuple<const aclTensor*, const aclTensor*
                                    const char* direction, aclOpExecutor* executor)
 {
     auto paramsNumSingleLayer = bidirectional == true ? 2 : 1;
+    CHECK_RET(std::get<0>(layerResult) != nullptr && std::get<1>(layerResult) != nullptr &&
+                  std::get<2>(layerResult) != nullptr && std::get<3>(layerResult) != nullptr &&
+                  std::get<4>(layerResult) != nullptr && std::get<5>(layerResult) != nullptr &&
+                  std::get<6>(layerResult) != nullptr && std::get<7>(layerResult) != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
     auto directionStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
     auto viewCopyResultI = l0op::ViewCopy(std::get<1>(layerResult),
                                           (*iOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
@@ -266,6 +366,9 @@ static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor*, const aclTensor*
                                    std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector,
                                    const char* direction, aclOpExecutor* executor)
 {
+    CHECK_RET(std::get<0>(layerResult) != nullptr && std::get<5>(layerResult) != nullptr &&
+                  std::get<6>(layerResult) != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
     int64_t numStep = std::get<0>(layerResult)->GetViewShape().GetDim(0);
     int64_t batch = std::get<0>(layerResult)->GetViewShape().GetDim(1);
     int64_t hidden = std::get<0>(layerResult)->GetViewShape().GetDim(2);
@@ -275,11 +378,14 @@ static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor*, const aclTensor*
     aclIntArray* offsets = executor->AllocIntArray(offsetData, 3);
     const int64_t sizeData[] = {1, batch, hidden};
     aclIntArray* size = executor->AllocIntArray(sizeData, 3);
+    CHECK_RET(offsets != nullptr && size != nullptr && numStep > 0, ACLNN_ERR_INNER_NULLPTR);
 
     auto thOutput = l0op::Slice(std::get<5>(layerResult), offsets, size, executor);
+    CHECK_RET(thOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     hyVector.emplace_back(thOutput);
 
     auto tcOutput = l0op::Slice(std::get<6>(layerResult), offsets, size, executor);
+    CHECK_RET(tcOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     cyVector.emplace_back(tcOutput);
 
     return ACLNN_SUCCESS;
@@ -314,7 +420,11 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
                                    const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
                                    const aclTensorList* tanhCOut)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
+    // 仅 Ascend950 的非 packed 输入路径（batchSizes == nullptr）支持 BF16；其他芯片及 packed 路径仅支持 FP32/FP16。
+    if (!(GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+          input->GetDataType() == DataType::DT_BF16)) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
+    }
     auto data_type = input->GetDataType();
 
     for (uint64_t i = 0; i < params->Size(); i++) {
@@ -334,6 +444,7 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
     OP_CHECK_DTYPE_NOT_MATCH(cy, data_type, return false);
 
     if (train) {
+        // Saved states follow the input dtype, including on Ascend950.
         for (uint64_t i = 0; i < iOut->Size(); i++) {
             OP_CHECK_DTYPE_NOT_MATCH((*iOut)[i], data_type, return false);
         }
@@ -616,11 +727,28 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* para
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(input, params, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
               ACLNN_ERR_PARAM_NULLPTR);
+    // A list object can be non-null while a member is null. Check members
+    // before dtype/shape validation dereferences them.
+    for (uint64_t i = 0; i < params->Size(); ++i) {
+        OP_CHECK_NULL((*params)[i], return ACLNN_ERR_PARAM_NULLPTR);
+    }
+    if (hx != nullptr) {
+        for (uint64_t i = 0; i < hx->Size(); ++i) {
+            OP_CHECK_NULL((*hx)[i], return ACLNN_ERR_PARAM_NULLPTR);
+        }
+    }
+    if (train) {
+        for (const auto* list : {iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut}) {
+            for (uint64_t i = 0; i < list->Size(); ++i) {
+                OP_CHECK_NULL((*list)[i], return ACLNN_ERR_PARAM_NULLPTR);
+            }
+        }
+    }
 
-    OP_CHECK(
-        numLayers > 0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLayers should be a positive integer, but %lld was obtained.", numLayers),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(numLayers > 0 && numLayers <= std::numeric_limits<int64_t>::max() / MAX_PARAM_TENSORS_PER_LAYER,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "numLayers must be positive with representable parameter count, got %lld.", numLayers),
+             return ACLNN_ERR_PARAM_INVALID);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(input, params, hx, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
               ACLNN_ERR_PARAM_INVALID);
@@ -1042,9 +1170,11 @@ static aclnnStatus ProcessViewCopyOutputHC(std::vector<const aclTensor*>& hOut, 
                                            aclTensor* hy, aclTensor* cy, aclOpExecutor* executor)
 {
     auto outputHConcat = SplitToConcat(hOut, 0, executor);
+    CHECK_RET(outputHConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResultOutputH = l0op::ViewCopy(outputHConcat, hy, executor);
     CHECK_RET(viewCopyResultOutputH != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto outputCConcat = SplitToConcat(cOut, 0, executor);
+    CHECK_RET(outputCConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResultOutputC = l0op::ViewCopy(outputCConcat, cy, executor);
     CHECK_RET(viewCopyResultOutputC != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -1354,9 +1484,12 @@ const aclTensor* ProcessTrainLayerForward(aclOpExecutor* executor, const op::Sha
                                                    fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward,
                                                    "UNIDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
 
-    ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx, bidirectional,
-                    "UNIDIRECTIONAL", executor);
-    ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor);
+    CHECK_RET(std::get<0>(layerResultForward) != nullptr, nullptr);
+    CHECK_RET(ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx, bidirectional,
+                              "UNIDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
+    CHECK_RET(ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
     return std::get<0>(layerResultForward);
 }
 
@@ -1388,14 +1521,19 @@ const aclTensor* ProcessTrainLayerBackward(
         curInput, params, hx, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward,
         cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
     // ConcatInput
+    CHECK_RET(std::get<0>(layerResultBackward) != nullptr && forwardY != nullptr, nullptr);
     op::FVector<const aclTensor*> inputConcat;
     inputConcat.emplace_back(forwardY);
     inputConcat.emplace_back(std::get<0>(layerResultBackward));
     auto tensorListInput = executor->AllocTensorList(inputConcat.data(), inputConcat.size());
+    CHECK_RET(tensorListInput != nullptr, nullptr);
     auto newInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, executor);
-    ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx, bidirectional,
-                    "REDIRECTIONAL", executor);
-    ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor);
+    CHECK_RET(newInput != nullptr, nullptr);
+    CHECK_RET(ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx,
+                              bidirectional, "REDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
+    CHECK_RET(ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
     return newInput;
 }
 
@@ -1417,7 +1555,9 @@ const aclTensor* ProcessInferLayerForward(aclOpExecutor* executor, const op::Sha
     auto layerResultForward = LstmSingleLayerDirec(curInput, params, hx, yOutForward, iOutForward, jOutForward,
                                                    fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward,
                                                    "UNIDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
-    ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor);
+    CHECK_RET(std::get<0>(layerResultForward) != nullptr, nullptr);
+    CHECK_RET(ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
     return std::get<0>(layerResultForward);
 }
 
@@ -1440,12 +1580,16 @@ const aclTensor* ProcessInferLayerBackward(aclOpExecutor* executor, const op::Sh
         curInput, params, hx, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward,
         cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
     // ConcatInput
+    CHECK_RET(std::get<0>(layerResultBackward) != nullptr && forwardY != nullptr, nullptr);
     op::FVector<const aclTensor*> inputConcat;
     inputConcat.emplace_back(forwardY);
     inputConcat.emplace_back(std::get<0>(layerResultBackward));
     auto tensorListInput = executor->AllocTensorList(inputConcat.data(), inputConcat.size());
+    CHECK_RET(tensorListInput != nullptr, nullptr);
     auto newInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, executor);
-    ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor);
+    CHECK_RET(newInput != nullptr, nullptr);
+    CHECK_RET(ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor) == ACLNN_SUCCESS,
+              nullptr);
     return newInput;
 }
 
@@ -1454,6 +1598,7 @@ bool PrepareLstmWorkspaceInputs(const aclTensor* input, const aclTensorList* par
                                 LstmWorkspacePrepared& prepared)
 {
     auto inputContiguous = l0op::Contiguous(input, executor);
+    CHECK_RET(inputContiguous != nullptr, false);
     prepared.paramsContiguous = ProcessInputContiguous(params, executor);
     if (prepared.paramsContiguous == nullptr) {
         return false;
@@ -1469,7 +1614,9 @@ bool PrepareLstmWorkspaceInputs(const aclTensor* input, const aclTensorList* par
     if (batchFirst == true) {
         std::vector<int64_t> perm = {1, 0, 2};
         auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        CHECK_RET(valuePerm != nullptr, false);
         curInput = l0op::Transpose(inputContiguous, valuePerm, executor);
+        CHECK_RET(curInput != nullptr, false);
     }
     int64_t hiddenSize = output->GetViewShape().GetDim(2);
     hiddenSize = bidirectional == true ? hiddenSize / BIDIRECTIONAL_NUM : hiddenSize;
@@ -1490,22 +1637,25 @@ aclnnStatus ProcessTrainLayers(aclOpExecutor* executor, const op::Shape& outShap
         const aclTensor* layerInput = curInput;
         curInput = ProcessTrainLayerForward(executor, outShape, dtype, layerInput, params, hx, iOut, jOut, fOut, oOut,
                                             hOut, cOut, tanhCOut, i, bidirectional, train, hasBias, hyVector, cyVector);
+        CHECK_RET(curInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         if (bidirectional == true) {
             curInput = ProcessTrainLayerBackward(executor, outShape, dtype, layerInput, params, hx, curInput, iOut,
                                                  jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, train,
                                                  hasBias, hyVector, cyVector);
+            CHECK_RET(curInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
     auto outputY = curInput;
     if (batchFirst) {
         std::vector<int64_t> perm = {1, 0, 2};
         auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        CHECK_RET(valuePerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
         outputY = l0op::Transpose(curInput, valuePerm, executor);
+        CHECK_RET(outputY != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto viewCopyResultInput = l0op::ViewCopy(outputY, output, executor);
     CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
-    return ACLNN_SUCCESS;
+    return ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
 }
 
 aclnnStatus AllocInferBackwardTensors(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
@@ -1559,22 +1709,25 @@ aclnnStatus ProcessInferLayers(aclOpExecutor* executor, const op::Shape& outShap
         curInput = ProcessInferLayerForward(executor, outShape, dtype, layerInput, params, hx, iOutForward, jOutForward,
                                             fOutForward, oOutForward, tanhCOutForward, i, bidirectional, train, hasBias,
                                             hyVector, cyVector);
+        CHECK_RET(curInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         if (bidirectional == true) {
             curInput = ProcessInferLayerBackward(
                 executor, outShape, dtype, layerInput, params, hx, curInput, iOutBackward, jOutBackward, fOutBackward,
                 oOutBackward, tanhCOutBackward, i, bidirectional, train, hasBias, hyVector, cyVector);
+            CHECK_RET(curInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
     auto outputY = curInput;
     if (batchFirst) {
         std::vector<int64_t> perm = {1, 0, 2};
         auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        CHECK_RET(valuePerm != nullptr, ACLNN_ERR_INNER_NULLPTR);
         outputY = l0op::Transpose(curInput, valuePerm, executor);
+        CHECK_RET(outputY != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto viewCopyResultInput = l0op::ViewCopy(outputY, output, executor);
     CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
-    return ACLNN_SUCCESS;
+    return ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
 }
 
 aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
@@ -1604,6 +1757,20 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorLis
     auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirectional, batchFirst, output, hy, cy,
                            iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // Before IsEmpty(): I=0 still has a nonempty recurrent result. All padding
+    // and conversion belongs to this production API, never to the test caller.
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        const lstm_single_layer_adapter::DenseInputs inputs = {input, params,        hx,         numLayers, hasBias,
+                                                               train, bidirectional, batchFirst, dropout};
+        const lstm_single_layer_adapter::DenseOutputs outputs = {
+            output, hy, cy, {iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut}};
+        ret = lstm_single_layer_adapter::BuildSingleLayerLstm(inputs, outputs, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     // 空tensor处理
     if (input->IsEmpty()) {

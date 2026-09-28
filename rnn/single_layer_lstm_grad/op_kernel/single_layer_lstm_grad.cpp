@@ -16,22 +16,11 @@
 #include "lib/matmul_intf.h"
 #include "single_layer_lstm_grad.h"
 #include "matmul_config.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-#include "arch35/single_layer_lstm_grad_regbase_tiling_data.h"
-#include "arch35/single_layer_lstm_grad_regbase_small.h"
-#endif
 using namespace AscendC;
 
-// key 的百位来自 concat 的小 UB 判定(对应 XH_HUGE),千位来自 dxh 拆分的小 UB 判定(对应 DXH_HUGE)。
-// legacy soc 上这两位与模板实参的对应关系是反的,属历史遗留,仅 fp16 且 inputSize+hiddenSize 约
-// 33k~49k 区间可达;此处保持 legacy 现状不变,arch35 采用与 tiling 意图一致的对应。
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-#define LSTM_KEY_CONCAT_SMALL_FLAGS false, true
-#define LSTM_KEY_SPLIT_SMALL_FLAGS true, false
-#else
+// Preserve the legacy tiling-key to template-flag mapping.
 #define LSTM_KEY_CONCAT_SMALL_FLAGS true, false
 #define LSTM_KEY_SPLIT_SMALL_FLAGS false, true
-#endif
 
 #define GENERAL_OP_IMPL(templateClass, ...)                                                                        \
     do {                                                                                                           \
@@ -49,23 +38,6 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
                                                              GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev,
                                                              GM_ADDR workspace, GM_ADDR rnnGradTiling)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
-    KERNEL_TASK_TYPE(20000, KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(20000)) {
-        // Path S: small-shape AIV-only regbase kernel, zero sync, zero workspace
-        if (g_coreType == AscendC::AIC) {
-            return;
-        }
-        GET_TILING_DATA_WITH_STRUCT(LstmGradRegbaseSmallTilingData, tilingDataSmall, rnnGradTiling);
-        TPipe pipeSmall;
-        LstmGradRegbase::LstmGradRegbaseSmall<DTYPE_X> op;
-        op.Init(x, w, init_h, init_c, h, c, dy, dh, dc, i, j, f, o, tanhct, dw, db, dx, dh_prev, dc_prev,
-                &tilingDataSmall, &pipeSmall);
-        op.Process();
-        return;
-    }
-#endif
     GET_TILING_DATA(tiling_data, rnnGradTiling);
     const SingleLayerLstmGradTilingData* __restrict tilingData = &tiling_data;
     const TCubeTiling* __restrict dwMMTiling = &(tilingData->dwMMParam);

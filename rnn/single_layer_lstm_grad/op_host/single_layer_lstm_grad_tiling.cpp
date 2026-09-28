@@ -24,6 +24,8 @@
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
 #include "single_layer_lstm_grad_tiling_arch35.h"
+#include "../op_kernel/arch35/single_layer_lstm_grad_wide_workspace.h"
+#include <limits>
 
 namespace optiling {
 const std::string OP_NAME = "SingleLayerLstmGrad";
@@ -97,7 +99,9 @@ public:
     ge::graphStatus GetMMTilingDataSplit();
     ge::graphStatus GetMMDgateTiling();
     ge::graphStatus GetMMDwTiling();
-    ge::graphStatus GetMMTilingData();
+    /* Shared context-free planning for the framework and standalone tiling tests. */
+    ge::graphStatus ComputePlan();
+    void FillTilingData();
     void SetTilingData();
     void SetScalarTilingData();
     void SetCutBatchTilingData(CutBatchTiling& tiling, const CutBatchTilingParam& param);
@@ -132,11 +136,16 @@ private:
     int64_t alignedPara_ = DEFAULT_ALIGNED_FP32;
     int64_t inputDSize_ = FP32_BYTES;
     int64_t tilingKey_ = 0;
+    int64_t workspaceSize_ = 0;
     bool isRegbase_ = false;
+    int64_t biasComponents_ = 0;
     CutBatchTilingParam dxhInputParam_;
     CutBatchTilingParam dxhHiddenParam_;
     CutBatchTilingParam xhInputParam_;
     CutBatchTilingParam xhHiddenParam_;
+
+    friend ge::graphStatus PlanSingleLayerLstmGrad(const SingleLayerLstmGradPlanRequest& req, void* tilingBuffer,
+                                                   size_t tilingCapacity, SingleLayerLstmGradPlanResult& result);
 };
 
 ge::graphStatus SingleLayerLstmGradTiling::GetMMDgateTiling()
@@ -227,6 +236,9 @@ bool SingleLayerLstmGradTiling::CheckParamsDtype()
 {
     // dtype support list
     std::vector<ge::DataType> supportDtype = {ge::DT_FLOAT, ge::DT_FLOAT16};
+    if (isRegbase_) {
+        supportDtype.push_back(ge::DT_BF16);
+    }
     ge::DataType baseDtype = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
 
     // input check
@@ -391,9 +403,17 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     std::vector<int64_t> inputDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.inputSize};
     std::vector<int64_t> seqDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.hiddenSize};
     bool ret = ValidateInputShapes(weightDim, initDim, hiddenDim) && ValidateOutputShapes(weightDim, inputDim, initDim);
-    ret = rnnParams_.isBias ?
-              ret && ValidateInputShape(INPUT_BIAS_INDEX, biasDim) && ValidateOutputShape(OUTPUT_DB_INDEX, biasDim) :
-              ret;
+    biasComponents_ = 0;
+    if (rnnParams_.isBias) {
+        biasComponents_ = 1;
+        const auto& shape = context_->GetInputShape(INPUT_BIAS_INDEX)->GetStorageShape();
+        if (isRegbase_ && context_->GetInputDesc(INPUT_X_INDEX)->GetDataType() != ge::DT_FLOAT &&
+            shape.GetDimNum() == 1 && shape.GetDim(0) == 2 * biasDim[0]) {
+            biasComponents_ = 2;
+        }
+        ret = ret && ValidateInputShape(INPUT_BIAS_INDEX, {biasComponents_ * biasDim[0]}) &&
+              ValidateOutputShape(OUTPUT_DB_INDEX, biasDim);
+    }
     ret = rnnParams_.isSeqLength ? ret && ValidateInputShape(INPUT_SEQ_LENGTH_INDEX, seqDim) : ret;
     ret = isY ? ret && ValidateInputShape(INPUT_Y_INDEX, hiddenDim) : ret;
     return ret;
@@ -431,16 +451,6 @@ ge::graphStatus SingleLayerLstmGradTiling::CheckAttrOps()
                 return ge::GRAPH_FAILED);
     rnnParams_.direction = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
     return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingData()
-{
-    auto dataType = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
-    inputDSize_ = dataType == ge::DT_FLOAT ? FP32_BYTES : FP32_BYTES / AIV_DOUBLE;
-    alignedPara_ = dataType == ge::DT_FLOAT ? DEFAULT_ALIGNED_FP32 : DEFAULT_ALIGNED_FP16;
-    auto ret = GetMMTilingDataSplit();
-
-    return ret;
 }
 
 void SingleLayerLstmGradTiling::VectorBlockCalculate()
@@ -606,40 +616,72 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     rnnParams_.ubSize = isRegbase_ ? static_cast<int64_t>(ubSizePlatForm) - REGBASE_DCACHE_SIZE :
                                      static_cast<int64_t>(ubSizePlatForm);
     // get matmul tiling data
-    OP_TILING_CHECK(GetMMTilingData() != ge::GRAPH_SUCCESS,
+    auto dataType = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
+    const bool privateReplay = isRegbase_ && dataType != ge::DT_FLOAT;
+    LstmGradWide::Workspace replay;
+    OP_TILING_CHECK(privateReplay && (rnnParams_.isSeqLength ||
+                                      !replay.Fill(rnnParams_.timeStep, rnnParams_.batch, rnnParams_.inputSize,
+                                                   rnnParams_.hiddenSize, biasComponents_)),
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Invalid private replay shape or sequence input."),
+                    return ge::GRAPH_FAILED);
+    inputDSize_ = dataType == ge::DT_FLOAT || privateReplay ? FP32_BYTES : FP32_BYTES / AIV_DOUBLE;
+    alignedPara_ = inputDSize_ == FP32_BYTES ? DEFAULT_ALIGNED_FP32 : DEFAULT_ALIGNED_FP16;
+    OP_TILING_CHECK(ComputePlan() != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "get matmul tiling data fail."),
                     return ge::GRAPH_FAILED);
+
+    if (privateReplay) {
+        workspaceSize_ = static_cast<int64_t>(replay.bytes);
+        tilingData_.set_privateBiasComponents(biasComponents_);
+    }
+    OP_TILING_CHECK(static_cast<uint64_t>(workspaceSize_) > std::numeric_limits<size_t>::max() - sysWorkspaceSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Workspace size overflow."), return ge::GRAPH_FAILED);
+    SetTilingData();
+    context_->SetBlockDim(rnnParams_.sysAicCoreNum);
+    context_->SetTilingKey(tilingKey_);
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    currentWorkspace[0] = static_cast<size_t>(workspaceSize_) + sysWorkspaceSize;
+    PrintTilingData();
+    return ge::GRAPH_SUCCESS;
+}
+
+/* The operator's whole tiling arithmetic, with nothing read from and nothing written to the
+ * context. `sysWorkspaceSize` is deliberately NOT included in workspaceSize_ -- it is a platform
+ * number the caller adds, and the framework path adds it in Init() just as it did before. */
+ge::graphStatus SingleLayerLstmGradTiling::ComputePlan()
+{
+    auto ret = GetMMTilingDataSplit();
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     VectorBlockCalculate();
     ReduceBlockCalculate();
     SplitDxhBlockCalculate();
     ConcatXhBlockCalculate();
+    FillTilingData();
 
-    SetTilingData();
-    context_->SetBlockDim(rnnParams_.sysAicCoreNum);
     int64_t mmGateKeyFlag = rnnParams_.hiddenSize * GATES_NUM > GM2L1_CHECK ? 1 : 0;
     int64_t mmWeightKeyFlag = rnnParams_.timeStep * rnnParams_.batch > GM2L1_CHECK ? MM_WEIGHT_KEY_FACTOR : 0;
     tilingKey_ = tilingKey_ + mmGateKeyFlag + mmWeightKeyFlag;
-    context_->SetTilingKey(tilingKey_);
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+
     // wFp32 + dwFp32 + dhPrevFp32 + dcPrevFp32
     int64_t workspaceFp32 = GATES_NUM * rnnParams_.hiddenSize * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
                                 FP32_BYTES * WORKSPACE_FP32_MULTIPLIER +
                             rnnParams_.batch * rnnParams_.hiddenSize * FP32_BYTES * WORKSPACE_FP32_MULTIPLIER;
 
-    // dgate + xh + dxh + sys
-    currentWorkspace[0] = rnnParams_.timeStep * rnnParams_.batch * GATES_NUM * rnnParams_.hiddenSize * FP32_BYTES +
-                          rnnParams_.timeStep * rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
-                              FP32_BYTES +
-                          rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES +
-                          sysWorkspaceSize;
-    currentWorkspace[0] = inputDSize_ == FP32_BYTES ? currentWorkspace[0] : currentWorkspace[0] + workspaceFp32;
-    PrintTilingData();
+    // dgate + xh + dxh
+    workspaceSize_ = rnnParams_.timeStep * rnnParams_.batch * GATES_NUM * rnnParams_.hiddenSize * FP32_BYTES +
+                     rnnParams_.timeStep * rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
+                         FP32_BYTES +
+                     rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES;
+    workspaceSize_ = inputDSize_ == FP32_BYTES ? workspaceSize_ : workspaceSize_ + workspaceFp32;
     return ge::GRAPH_SUCCESS;
 }
 
 void SingleLayerLstmGradTiling::SetScalarTilingData()
 {
+    tilingData_.set_privateBiasComponents(0);
     tilingData_.set_ubSize(rnnParams_.ubSize);
     tilingData_.set_timeStep(rnnParams_.timeStep);
     tilingData_.set_batch(rnnParams_.batch);
@@ -685,14 +727,19 @@ void SingleLayerLstmGradTiling::SetCutBatchTilingData(CutBatchTiling& tiling, co
     tiling.set_splitPreCore(param.splitPreCore);
 }
 
-void SingleLayerLstmGradTiling::SetTilingData()
+void SingleLayerLstmGradTiling::FillTilingData()
 {
     SetScalarTilingData();
     SetCutBatchTilingData(tilingData_.dxhInputTiling, dxhInputParam_);
     SetCutBatchTilingData(tilingData_.dxhHiddenTiling, dxhHiddenParam_);
     SetCutBatchTilingData(tilingData_.xhInputTiling, xhInputParam_);
     SetCutBatchTilingData(tilingData_.xhHiddenTiling, xhHiddenParam_);
+}
 
+void SingleLayerLstmGradTiling::SetTilingData()
+{
+    // ComputePlan already populated the fields; refilling here would erase the
+    // private replay metadata added by Init before serialization.
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
 }
@@ -748,6 +795,77 @@ void SingleLayerLstmGradTiling::PrintTilingData()
 
     OP_LOGD(nodeName_, "End printing");
     OP_LOGD(nodeName_, "tiling end running");
+}
+
+/* THE CONTEXT-FREE ENTRY. Declared in single_layer_lstm_grad_tiling.h; see the comment there.
+ *
+ * It runs the same ComputePlan() the framework path runs, so the tiling bytes, the key and the
+ * workspace size are the same values by construction. The shape, dtype and attribute CHECKS are
+ * not run here -- they read the context, and a caller of this entry has the shapes in hand and is
+ * responsible for them. */
+ge::graphStatus PlanSingleLayerLstmGrad(const SingleLayerLstmGradPlanRequest& req, void* tilingBuffer,
+                                        size_t tilingCapacity, SingleLayerLstmGradPlanResult& result)
+{
+    SingleLayerLstmGradTiling tiling(nullptr);
+    tiling.rnnParams_.timeStep = req.timeStep;
+    tiling.rnnParams_.batch = req.batch;
+    tiling.rnnParams_.inputSize = req.inputSize;
+    tiling.rnnParams_.hiddenSize = req.hiddenSize;
+    tiling.rnnParams_.isBias = req.isBias;
+    tiling.rnnParams_.isSeqLength = req.isSeqLength;
+    tiling.rnnParams_.gateOrder = req.gateOrder;
+    tiling.rnnParams_.direction = req.direction;
+    tiling.rnnParams_.cellClip = req.cellClip;
+    tiling.rnnParams_.forgetBias = req.forgetBias;
+
+    int64_t aicCoreNum = req.aicCoreNum;
+    if (req.isRegbase && aicCoreNum > static_cast<int64_t>(REGBASE_FALLBACK_AIC_NUM)) {
+        aicCoreNum = static_cast<int64_t>(REGBASE_FALLBACK_AIC_NUM);
+    }
+    if (aicCoreNum <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    tiling.isRegbase_ = req.isRegbase;
+    tiling.rnnParams_.sysAicCoreNum = aicCoreNum;
+    tiling.rnnParams_.sysAivCoreNum = aicCoreNum * AIV_DOUBLE;
+    if (req.isRegbase && req.ubSizePlatForm <= REGBASE_DCACHE_SIZE) {
+        return ge::GRAPH_FAILED;
+    }
+    tiling.rnnParams_.ubSize = req.isRegbase ? req.ubSizePlatForm - REGBASE_DCACHE_SIZE : req.ubSizePlatForm;
+    const bool privateReplay = req.isRegbase && req.elemBytes == FP32_BYTES / AIV_DOUBLE;
+    LstmGradWide::Workspace replay;
+    const int64_t parts = req.isBias ? req.biasComponents : 0;
+    if (privateReplay &&
+        (req.isSeqLength || !replay.Fill(req.timeStep, req.batch, req.inputSize, req.hiddenSize, parts))) {
+        return ge::GRAPH_FAILED;
+    }
+    tiling.inputDSize_ = privateReplay ? FP32_BYTES : req.elemBytes;
+    tiling.alignedPara_ = tiling.inputDSize_ == FP32_BYTES ? DEFAULT_ALIGNED_FP32 : DEFAULT_ALIGNED_FP16;
+
+    auto ret = tiling.ComputePlan();
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+
+    if (privateReplay) {
+        tiling.workspaceSize_ = static_cast<int64_t>(replay.bytes);
+        tiling.tilingData_.set_privateBiasComponents(parts);
+    }
+    if (req.sysWorkspaceSize < 0 ||
+        static_cast<uint64_t>(tiling.workspaceSize_) >
+            std::numeric_limits<size_t>::max() - static_cast<uint64_t>(req.sysWorkspaceSize)) {
+        return ge::GRAPH_FAILED;
+    }
+
+    result.tilingDataSize = tiling.tilingData_.GetDataSize();
+    if (tilingBuffer == nullptr || tilingCapacity < result.tilingDataSize) {
+        return ge::GRAPH_FAILED;
+    }
+    tiling.tilingData_.SaveToBuffer(tilingBuffer, tilingCapacity);
+    result.tilingKey = tiling.tilingKey_;
+    result.blockDim = tiling.rnnParams_.sysAicCoreNum;
+    result.workspaceSize = static_cast<size_t>(tiling.workspaceSize_) + static_cast<size_t>(req.sysWorkspaceSize);
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingFunc4SingleLayerLstmGrad(gert::TilingContext* context)

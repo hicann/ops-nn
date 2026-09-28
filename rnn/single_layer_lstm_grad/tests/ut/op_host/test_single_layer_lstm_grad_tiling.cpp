@@ -240,7 +240,7 @@ TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_tilingkey_seq_0)
 // seq_length or oversized hidden falls back to the legacy pipeline (key 0).
 void TestSingleLayerLstmGradTilingRegbase(int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize,
                                           bool hasSeq, ge::DataType dataType, uint64_t expectTilingKey,
-                                          int64_t expectWorkspace0 = -1)
+                                          bool checkWorkspace = false)
 {
     gert::StorageShape xShape = {{timeStep, batch, inputSize}, {timeStep, batch, inputSize}};
     gert::StorageShape inith0Shape = {{1, batch, hiddenSize}, {1, batch, hiddenSize}};
@@ -323,20 +323,35 @@ void TestSingleLayerLstmGradTilingRegbase(int64_t batch, int64_t timeStep, int64
 
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), expectTilingKey);
-    if (expectWorkspace0 >= 0) {
+    if (checkWorkspace) {
+        /* Every AscendC operator reserves the library's own workspace, so the total is never zero;
+         * what this case pins is the part ON TOP of that reservation. At fp32 dw and db accumulate
+         * into the outputs themselves and the path asks for none. At a narrow dtype the fp32
+         * accumulators and the per-core forward replay cache live there, and the accumulators
+         * alone are 4H x (I + H) floats for dw plus 4H for db -- a floor the case can state from
+         * the shapes, without pinning the core count the tiling happens to choose. */
+        auto platform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+        const auto reserved = static_cast<int64_t>(platform.GetLibApiWorkSpaceSize());
         auto* wsData = reinterpret_cast<const size_t*>(wsSize->GetData());
-        ASSERT_EQ(static_cast<int64_t>(wsData[0]), expectWorkspace0);
+        const int64_t privateBytes = static_cast<int64_t>(wsData[0]) - reserved;
+        if (dataType == ge::DT_FLOAT) {
+            ASSERT_EQ(privateBytes, 0);
+        } else {
+            const int64_t accumulatorBytes = 4 * hiddenSize * (inputSize + hiddenSize + 1) *
+                                             static_cast<int64_t>(sizeof(float));
+            ASSERT_GE(privateBytes, accumulatorBytes);
+        }
     }
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_small_fp32)
 {
-    TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, false, ge::DT_FLOAT, 20000, 0);
+    TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, false, ge::DT_FLOAT, 20000, true);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_small_fp16)
 {
-    TestSingleLayerLstmGradTilingRegbase(49, 2, 998, 10, false, ge::DT_FLOAT16, 20000, 0);
+    TestSingleLayerLstmGradTilingRegbase(49, 2, 998, 10, false, ge::DT_FLOAT16, 20000, true);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_seq_fallback)
@@ -344,7 +359,16 @@ TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_seq_fallback)
     TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, true, ge::DT_FLOAT, 0);
 }
 
+/* hidden_size 128 USED TO FALL BACK and no longer does. The small path now cuts the time, batch
+ * and gate axes, so one timestep of one batch row of one gate row is what has to fit, and at fp32
+ * that is 15872 bytes against a budget of 237568. The refusal it still makes is at a hidden_size
+ * large enough that even that configuration overflows, which for fp32 begins at 1969. */
+TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_blocked_hidden)
+{
+    TestSingleLayerLstmGradTilingRegbase(8, 4, 32, 128, false, ge::DT_FLOAT, 20000);
+}
+
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_big_hidden_fallback)
 {
-    TestSingleLayerLstmGradTilingRegbase(8, 4, 32, 128, false, ge::DT_FLOAT, 0);
+    TestSingleLayerLstmGradTilingRegbase(8, 4, 32, 4096, false, ge::DT_FLOAT, 0);
 }

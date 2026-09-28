@@ -56,6 +56,7 @@ constexpr int64_t GATE_COUNT = 4; // i, j, f, o 四个门
 constexpr int64_t SINGLE_DIRECTION = 1;
 constexpr int64_t BI_DIRECTION = 2;
 constexpr int64_t HC_TENSOR_COUNT = 2; // h和c两个张量
+constexpr int64_t BIAS_COMPONENT_COUNT = 2;
 constexpr int64_t REDUCE_DIM = 1;
 constexpr int64_t CONCAT_DIM_HIDDEN = 2;
 constexpr int64_t CONCAT_DIM_LAYER = 0;
@@ -257,6 +258,20 @@ static const aclTensor* ConcatWeightBackward(const aclTensorList* params, int64_
     return l0op::ConcatD(weightBackwardList, REDUCE_DIM, executor);
 }
 
+static const aclTensor* PrepareBackwardBias(const aclTensor* inputBias, const aclTensor* hiddenBias,
+                                            aclOpExecutor* executor)
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950 ||
+        inputBias->GetDataType() == DataType::DT_FLOAT) {
+        return l0op::Add(inputBias, hiddenBias, executor);
+    }
+    // Preserve the original pair in flat [8H] storage for kernel-private FP32 replay.
+    const aclTensor* components[] = {inputBias, hiddenBias};
+    auto list = executor->AllocTensorList(components, BIAS_COMPONENT_COUNT);
+    CHECK_RET(list != nullptr, nullptr);
+    return l0op::ConcatD(list, DIM_ZERO, executor);
+}
+
 static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* params, bool hasBias, bool bidirectional,
                                                          int64_t paramNumPerLayer, int64_t layerIdx,
                                                          aclOpExecutor* executor)
@@ -271,22 +286,28 @@ static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* pa
     const aclTensorList* weightForwardList = executor->AllocTensorList(weightForwardVector.data(),
                                                                        weightForwardVector.size());
     CHECK_RET(weightForwardList != nullptr, nullptrRes);
-    auto weightForward = l0op::ConcatD(weightForwardList, 1, executor);
+    // An empty input-feature matrix contributes no columns. Avoid scheduling
+    // Concat with an empty operand; the recurrent matrix is already [4H,H].
+    const bool recurrentOnly = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+                               (*params)[layerOffset + WEIGHT_INPUT_INDEX]->GetViewShape().GetDim(1) == 0;
+    auto weightForward = recurrentOnly ? (*params)[layerOffset + WEIGHT_HIDDEN_INDEX] :
+                                         l0op::ConcatD(weightForwardList, 1, executor);
     CHECK_RET(weightForward != nullptr, nullptrRes);
     result.emplace_back(weightForward);
 
     if (hasBias && bidirectional) {
-        auto biasForward = l0op::Add((*params)[layerOffset + BIAS_INPUT_INDEX],
-                                     (*params)[layerOffset + BIAS_HIDDEN_INDEX], executor);
+        auto biasForward = PrepareBackwardBias((*params)[layerOffset + BIAS_INPUT_INDEX],
+                                               (*params)[layerOffset + BIAS_HIDDEN_INDEX], executor);
+        CHECK_RET(biasForward != nullptr, nullptrRes);
         result.emplace_back(biasForward);
         // 后向权重
         auto weightBackward = ConcatWeightBackward(params, layerOffset, NUM_WITH_B_AND_BID / BI_DIRECTION, executor);
         CHECK_RET(weightBackward != nullptr, nullptrRes);
         result.emplace_back(weightBackward);
 
-        auto biasBackward = l0op::Add((*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_INPUT_INDEX],
-                                      (*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_HIDDEN_INDEX],
-                                      executor);
+        auto biasBackward = PrepareBackwardBias(
+            (*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_INPUT_INDEX],
+            (*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + BIAS_HIDDEN_INDEX], executor);
         CHECK_RET(biasBackward != nullptr, nullptrRes);
         result.emplace_back(biasBackward);
     } else if (!hasBias && bidirectional) {
@@ -297,8 +318,8 @@ static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* pa
         result.emplace_back(weightBackward);
         result.emplace_back(emptyTensor);
     } else if (hasBias && !bidirectional) {
-        auto biasForward = l0op::Add((*params)[layerOffset + BIAS_INPUT_INDEX],
-                                     (*params)[layerOffset + BIAS_HIDDEN_INDEX], executor);
+        auto biasForward = PrepareBackwardBias((*params)[layerOffset + BIAS_INPUT_INDEX],
+                                               (*params)[layerOffset + BIAS_HIDDEN_INDEX], executor);
         CHECK_RET(biasForward != nullptr, nullptrRes);
         result.emplace_back(biasForward);
     } else {
@@ -902,7 +923,10 @@ static bool CheckFormatValid(const aclTensor* input, const aclTensorList* hc, co
 static bool CheckSingleTensorDtype(const aclTensor* tensor, const char* tensorName, ge::DataType baseDtype)
 {
     // 检查是否在支持的数据类型列表中
-    OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
+    if (!(GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+          tensor->GetDataType() == DataType::DT_BF16)) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
+    }
 
     // 检查数据类型一致性
     if (tensor->GetDataType() != baseDtype) {
@@ -920,7 +944,10 @@ static bool CheckTensorListDtype(const aclTensorList* tensors, const char* listN
     for (uint64_t idx = 0; idx < tensors->Size(); idx++) {
         const aclTensor* tensor = (*tensors)[idx];
         // 检查是否在支持的数据类型列表中
-        OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
+        if (!(GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+              tensor->GetDataType() == DataType::DT_BF16)) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
+        }
 
         // 检查数据类型一致性
         if (tensor->GetDataType() != baseDtype) {
@@ -942,9 +969,7 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensorList* hc, con
     ge::DataType baseDtype = input->GetDataType();
     const SingleTensorItem singleTensors[] = {{"dy", dy}, {"dh", dh},         {"dc", dc},
                                               {"dx", dx}, {"dhPrev", dhPrev}, {"dcPrev", dcPrev}};
-    const TensorListItem listTensors[] = {
-        {"hc", hc}, {"params", params}, {"i", i}, {"j", j},         {"f", f},
-        {"o", o},   {"h", h},           {"c", c}, {"tanhc", tanhc}, {"dparams", dparams}};
+    const TensorListItem listTensors[] = {{"hc", hc}, {"params", params}, {"dparams", dparams}};
     for (const auto& item : singleTensors) {
         if (item.tensor != nullptr && !CheckSingleTensorDtype(item.tensor, item.name, baseDtype)) {
             return false;
@@ -956,6 +981,12 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensorList* hc, con
         return false;
     }
     for (const auto& item : listTensors) {
+        if (!CheckTensorListDtype(item.list, item.name, baseDtype)) {
+            return false;
+        }
+    }
+    const TensorListItem caches[] = {{"i", i}, {"j", j}, {"f", f}, {"o", o}, {"h", h}, {"c", c}, {"tanhc", tanhc}};
+    for (const auto& item : caches) {
         if (!CheckTensorListDtype(item.list, item.name, baseDtype)) {
             return false;
         }
@@ -1215,6 +1246,21 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* hc, 
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus FillPublicOutputWithZero(aclTensor* output, aclOpExecutor* executor)
+{
+    if (output->IsEmpty()) {
+        return ACLNN_SUCCESS;
+    }
+    // Keep the public output write-only: using it as the ZerosLike input would
+    // introduce a false dependency on uninitialized output storage.
+    auto* descriptor = executor->AllocTensor(output->GetViewShape(), output->GetDataType(), Format::FORMAT_ND);
+    CHECK_RET(descriptor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto* zero = l0op::ZerosLike(descriptor, executor);
+    CHECK_RET(zero != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(l0op::ViewCopy(zero, output, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 static bool EmptyCheck(const aclTensor* input, const aclTensorList* hc, const aclTensorList* params,
                        const aclTensor* dy, const aclTensor* dh, const aclTensor* dc, const aclTensorList* i,
                        const aclTensorList* j, // 修正参数名：j -> g
@@ -1270,7 +1316,15 @@ static void ProcessLstmGradLayer(
     // 前向层的输入权重梯度
     FVector<int64_t> offsetVectorF{DIM_ZERO, DIM_ZERO};
     FVector<int64_t> sizeVectorF{GATE_COUNT * hiddenSize, inputSizeCur};
-    auto dwFInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwFCur, executor);
+    const aclTensor* dwFInputCur = nullptr;
+    if (inputSizeCur == 0 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        gert::Shape emptyWeightShape;
+        emptyWeightShape.AppendDim(GATE_COUNT * hiddenSize);
+        emptyWeightShape.AppendDim(0);
+        dwFInputCur = executor->AllocTensor(emptyWeightShape, dwFCur->GetDataType(), Format::FORMAT_ND);
+    } else {
+        dwFInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwFCur, executor);
+    }
 
     // 前向层的隐藏状态权重梯度
     FVector<int64_t> offsetVectorB{DIM_ZERO, inputSizeCur};
@@ -1439,8 +1493,12 @@ static aclnnStatus CopyLstmBackwardResults(const aclTensor* dx, const aclTensor*
                                            aclTensor* dhPrevOut, aclTensor* dcPrevOut, const aclTensorList* dparamsOut,
                                            int64_t numLayers, int64_t paramNumPerLayer, aclOpExecutor* executor)
 {
-    auto dxCopyResult = l0op::ViewCopy(dx, dxOut, executor);
-    CHECK_RET(dxCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const bool is950 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    if (!is950 || !dxOut->IsEmpty()) {
+        OP_CHECK_DTYPE_NOT_MATCH(dx, dxOut->GetDataType(), return ACLNN_ERR_PARAM_INVALID);
+        auto dxCopyResult = l0op::ViewCopy(dx, dxOut, executor);
+        CHECK_RET(dxCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     auto dhPrevCopyResult = l0op::ViewCopy(dhPrev, dhPrevOut, executor);
     CHECK_RET(dhPrevCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -1449,6 +1507,9 @@ static aclnnStatus CopyLstmBackwardResults(const aclTensor* dx, const aclTensor*
     CHECK_RET(dcPrevCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     for (int64_t idx = 0; idx < numLayers * paramNumPerLayer; idx++) {
+        if (is950 && (*dparamsOut)[idx]->IsEmpty()) {
+            continue;
+        }
         auto dparamsCopyResult = l0op::ViewCopy(dparamsVector[idx], (*dparamsOut)[idx], executor);
         CHECK_RET(dparamsCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -1467,8 +1528,20 @@ static aclnnStatus ExecLstmInputBackward(const LSTMContinuousTensors* allInput, 
     FVector<int64_t> newShapeDims = {1, 0, 2};
     auto perm = executor->AllocIntArray(newShapeDims.data(), newShapeDims.size());
     CHECK_RET(perm != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    auto inputTranspose = batchFirst ? l0op::Transpose(allInput->inputContiguous, perm, executor) :
-                                       allInput->inputContiguous;
+    const aclTensor* inputTranspose = allInput->inputContiguous;
+    if (batchFirst) {
+        if (inputTranspose->IsEmpty()) {
+            // Transpose's arch35 tiling requires every extent to be positive. I=0 has no bytes to
+            // permute, but the Grad node still needs the logical time-first shape [T,B,0].
+            auto timeFirstShape = inputTranspose->GetViewShape();
+            const auto batch = timeFirstShape[0];
+            timeFirstShape[0] = timeFirstShape[1];
+            timeFirstShape[1] = batch;
+            inputTranspose = executor->AllocTensor(timeFirstShape, inputTranspose->GetDataType(), Format::FORMAT_ND);
+        } else {
+            inputTranspose = l0op::Transpose(inputTranspose, perm, executor);
+        }
+    }
     CHECK_RET(inputTranspose != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     auto dyTranspose = batchFirst ? l0op::Transpose(allInput->dyContiguous, perm, executor) : allInput->dyContiguous;
     CHECK_RET(dyTranspose != nullptr, ACLNN_ERR_PARAM_NULLPTR);
@@ -1496,7 +1569,10 @@ static aclnnStatus ExecLstmInputBackward(const LSTMContinuousTensors* allInput, 
     // 输出梯度处理
     std::tie(dhPrev, dcPrev, dparamsVector) = GetLstmGradExceptDx(output, allInput->inputContiguous, dhPrevOut,
                                                                   bidirectional, hasBias, numLayers, executor);
-    auto dx = batchFirst ? l0op::Transpose(std::get<0>(output), perm, executor) : std::get<0>(output);
+    // dx is empty when I=0. CopyLstmBackwardResults deliberately skips that public output, so do
+    // not schedule the same unsupported empty Transpose on the way out.
+    auto dx = batchFirst && !std::get<0>(output)->IsEmpty() ? l0op::Transpose(std::get<0>(output), perm, executor) :
+                                                              std::get<0>(output);
     CHECK_RET(dx != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     return CopyLstmBackwardResults(dx, dhPrev, dcPrev, dparamsVector, dxOut, dhPrevOut, dcPrevOut, dparamsOut,
                                    numLayers, paramNumPerLayer, executor);
@@ -1638,13 +1714,46 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     auto ret = CheckParams(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, dxOut, dhPrevOut, dcPrevOut,
                            dparamsOut, hasBias, numLayers, bidirectional, batchFirst, batchSizesOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        // Do not fall through to legacy packed/dropout/empty success paths:
+        // those do not implement this candidate's forward/backward contract.
+        const int64_t hiddenSize = (*hx)[0]->GetViewShape().GetDim(2);
+        OP_CHECK(batchSizesOptional == nullptr && !bidirectional && dropout == 0.0 && train && numLayers > 0 &&
+                     input->GetViewShape().GetDim(batchFirst ? 1 : 0) > 0 && input->GetViewShape().GetDim(2) >= 0 &&
+                     hiddenSize >= 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "ascend950 LSTM backward requires dense unidirectional train=True, dropout=0, "
+                         "positive T and nonnegative I/H."),
+                 return ACLNN_ERR_PARAM_INVALID);
+        if (hiddenSize == 0) {
+            // With no hidden features every H-dependent gradient is empty. The
+            // only non-empty public result can be dx, and dy/dh/dc contribute
+            // no scalar to it, so its exact value is zero for every dtype.
+            CHECK_RET(FillPublicOutputWithZero(dxOut, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+            *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
+        if (input->GetViewShape().GetDim(batchFirst ? 0 : 1) == 0) {
+            // State/input gradients are empty, but parameter gradients are not.
+            for (uint64_t index = 0; index < dparamsOut->Size(); ++index) {
+                CHECK_RET(FillPublicOutputWithZero((*dparamsOut)[index], uniqueExecutor.get()) == ACLNN_SUCCESS,
+                          ACLNN_ERR_INNER_NULLPTR);
+            }
+            *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
+    }
     const aclTensor* dhInput = nullptr;
     const aclTensor* dcInput = nullptr;
     const aclTensor* dyInput = nullptr;
     ret = PrepareLSTMBackwardNoneInputs(input, hx, dh, dc, dy, bidirectional, uniqueExecutor.get(), dhInput, dcInput,
                                         dyInput);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    if (!EmptyCheck(input, hx, params, dyInput, dhInput, dcInput, i, g, f, o, h, c, tanhc)) {
+    const bool recurrentOnly = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+                               input->GetViewShape().GetDim(2) == 0;
+    if (!recurrentOnly && !EmptyCheck(input, hx, params, dyInput, dhInput, dcInput, i, g, f, o, h, c, tanhc)) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

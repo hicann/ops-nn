@@ -5580,6 +5580,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/single_layer_lstm/README.md">single_layer_lstm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>单层单向LSTM的正向计算，输出隐藏状态序列及供反向传播使用的门值和状态。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
       <td><a href="../../rnn/single_layer_lstm_grad/README.md">single_layer_lstm_grad</a></td>
       <td>✓</td>
       <td>✓</td>
