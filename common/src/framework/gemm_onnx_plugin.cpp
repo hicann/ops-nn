@@ -11,7 +11,7 @@
 #include <cmath>
 #include <limits>
 #include "onnx_common.h"
-#include "op_nn_proto_extend.h"
+#include "matmul/mat_mul_v3/op_graph/mat_mul_proto_extend.h"
 using namespace ge;
 
 namespace domi {

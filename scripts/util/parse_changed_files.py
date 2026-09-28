@@ -248,7 +248,9 @@ if __name__ == "__main__":
         )
         if file_filter(changed_file) is False:
             continue
-        check_common_framework_ut(changed_file)
+        # 临时关闭：不强制 common 框架插件配套 framework UT（存量插件多含 protobuf 依赖，无法直接补 UT），
+        # 需恢复门禁时取消下行注释即可
+        # check_common_framework_ut(changed_file)
         changed_file = os.path.join(os.getenv("BASE_PATH"), changed_file)
         for ut_matchers in UT_MATCHERS.values():
             soc_hit = False

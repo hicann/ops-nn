@@ -19,7 +19,7 @@
 #include "error_util.h"
 #include "graph/operator.h"
 #include "stub_ops.h"
-#include "op_nn_proto_extend.h"
+#include "matmul/batch_mat_mul_v3/op_graph/batch_mat_mul_proto_extend.h"
 
 namespace domi {
 using namespace ge;

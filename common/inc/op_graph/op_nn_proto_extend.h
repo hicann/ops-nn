@@ -234,37 +234,6 @@ REG_OP(ApplyAdamWithAmsgradV2)
 #endif
 
 /**
- * @brief Multiplies matrix "a" by matrix "b", producing "a @ b".
- * @par Inputs:
- * Two inputs, including:
- * @li x1: A matrix Tensor. Must be one of the following types: float16,
- * float32, int32, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC, NCHW].
- * @li x2: A matrix Tensor. Must be one of the following types: float16,
- * float32, int32, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC, NCHW].
- * @par Attributes:
- * @li adj_x1: A bool. If True, changes the shape of "x1" from [B, M, K]
- * to [B, K, M] before multiplication.
- * @li adj_x2: A bool. If True, changes the shape of "x2" from [B, K, N]
- * to [B, N, K] before multiplication.
- * @par Outputs:
- * y: The result matrix Tensor. Must be one of the following types: float16,
- * float32, int32, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC, NCHW]. BatchMatMul supports broadcasting in the
- * batch dimensions.
- * @par Third-party framework compatibility
- * Compatible with the TensorFlow operator BatchMatmul.
- */
-#ifndef OPS_PROTO_DEF_BATCHMATMUL
-#define OPS_PROTO_DEF_BATCHMATMUL
-        REG_OP(BatchMatMul)
-    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_HIFLOAT8}))
-    .INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_HIFLOAT8}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_HIFLOAT8}))
-    .ATTR(adj_x1, Bool, false)
-    .ATTR(adj_x2, Bool, false)
-    .OP_END_FACTORY_REG(BatchMatMul)
-#endif
-
-/**
  * @brief Computes a 2D deformable convolution given 4D "x", "filter" and
  *  "offsets" tensors.
  * @par Inputs:
@@ -664,48 +633,6 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .REQUIRED_ATTR(hidden_size, Int)
     .ATTR(input_forget, Int, 0)
     .OP_END_FACTORY_REG(CommonLSTM)
-#endif
-
-/**
- * @brief Multiplies matrix "a" by matrix "b", producing "a @ b" .
- * @par Inputs:
- * Four inputs, including:
- * @li x1: A matrix Tensor. Must be one of the following types: float16,
- * float32, int32, int8, int4, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC, NCHW].
- * @li x2: A matrix Tensor. Must be one of the following types: float16,
- * float32, int32, int8, int4, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC, NCHW].
- * @li bias: A optional Tensor. Must be one of the following types:
- * float16, float32, int32, bfloat16. Has format [ND, NHWC, NCHW].
- * @li offset_w: A optional Tensor. Must be one of the following types:
- * int8, int4. Has format [ND, NHWC, NCHW].
- * @par Attributes:
- * @li adj_x1: A bool. If True, changes the shape of "x1" from [B, M, K] to
- * [B, K, M] before multiplication.
- * @li adj_x2: A bool. If True, changes the shape of "x2" from [B, K, N] to
- * [B, N, K] before multiplication.
- * @li offset_x: An optional integer for quantized BatchMatMulV2.
- * @par Outputs:
- * y: The result matrix Tensor. Must be one of the following types: float16,
- * float32, int32, bfloat16, hifloat8. 2D-6D. Has format [ND, NHWC]. Has the same shape
- * length as "x1" and "x2".
- * @attention Constraints:
- * if performances better in format NZ, please close
- * "MatmulTransdataFusionPass" in fusion configuration.
- * @par Third-party framework compatibility
- * Compatible with the TensorFlow operator BatchMatmul.
- */
-#ifndef OPS_PROTO_DEF_BATCHMATMULV2
-#define OPS_PROTO_DEF_BATCHMATMULV2
-        REG_OP(BatchMatMulV2)
-    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_INT4, DT_BF16, DT_HIFLOAT8}))
-    .INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_INT4, DT_BF16, DT_HIFLOAT8}))
-    .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
-    .OPTIONAL_INPUT(offset_w, TensorType({DT_INT8, DT_INT4}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_HIFLOAT8}))
-    .ATTR(adj_x1, Bool, false)
-    .ATTR(adj_x2, Bool, false)
-    .ATTR(offset_x, Int, 0)
-    .OP_END_FACTORY_REG(BatchMatMulV2)
 #endif
 
 /**
@@ -1590,53 +1517,6 @@ currently supported.
     .ATTR(dtype, Int, DT_INT32)
     .ATTR(init, Bool, false)
     .OP_END_FACTORY_REG(Empty)
-#endif
-
-/**
-* @brief Multiplies matrix "a" by matrix "b", producing "a @ b".
-* @par Inputs:
-* Four inputs, including:
-* @li x1: A matrix Tensor. 2D. Must be one of the following types: float32,
-* float16, int32, int8, int4, bfloat16, hifloat8. Has format [ND, NHWC, NCHW].
-* @li x2: A matrix Tensor. 2D. Must be one of the following types: float32,
-* float16, int32, int8, int4, bfloat16, hifloat8. Has format [ND, NHWC, NCHW].
-* @li bias: A 1D Tensor. Must be one of the following types: float32,
-* float16, int32, bfloat16. Has format [ND, NHWC, NCHW].
-* @li offset_w: A Optional 1D Tensor for quantized inference. Type is int8, int4, bfloat16.
-* Reserved.
-
-* @par Attributes:
-* @li transpose_x1: A bool. If True, changes the shape of "x1" from [K, M] to
-* [M, K] before multiplication.
-* @li transpose_x2: A bool. If True, changes the shape of "x2" from [N, K] to
-* [K, N] before multiplication.
-* @li offset_x: An optional integer for quantized MatMulV2.
-* The negative offset added to the input x1 for int8 type. Ensure offset_x
-* within the effective range of int8 [-128, 127]. Defaults to "0".
-
-* @par Outputs:
-* y: The result matrix Tensor. 2D. Must be one of the following types: float32,
-* float16, int32, bfloat16, hifloat8. Has format [ND, NHWC, NCHW].
-
-* @attention Constraints:
-* if performances better in format NZ, please close
-* "MatmulTransdataFusionPass" in fusion configuration.
-
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator MatMul.
-*/
-#ifndef OPS_PROTO_DEF_MATMULV2
-#define OPS_PROTO_DEF_MATMULV2
-        REG_OP(MatMulV2)
-    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_INT4, DT_BF16, DT_HIFLOAT8}))
-    .INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_INT4, DT_BF16, DT_HIFLOAT8}))
-    .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_HIFLOAT8}))
-    .OPTIONAL_INPUT(offset_w, TensorType({DT_INT8, DT_INT4}))
-    .ATTR(transpose_x1, Bool, false)
-    .ATTR(transpose_x2, Bool, false)
-    .ATTR(offset_x, Int, 0)
-    .OP_END_FACTORY_REG(MatMulV2)
 #endif
 
     /**
