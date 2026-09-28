@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -338,9 +338,9 @@ aclnnStatus aclnnGRU(
       <td>传入的input、params、output或hy是空指针，或训练模式下rOut、zOut、nOut、hnOut、hOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>input、params中元素、hx、output、hy或训练模式下的门控输出数据类型不在支持范围内（仅支持FLOAT32、FLOAT16）。</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
+      <td>input、params中元素、hx、output、hy或训练模式下的门控输出数据类型不在支持范围内（仅支持FLOAT32、FLOAT16）；batchSizes数据类型不是INT64。</td>
     </tr>
     <tr>
       <td>input、params中元素、hx、output、hy或训练模式下的门控输出数据类型不一致。</td>
@@ -352,7 +352,10 @@ aclnnStatus aclnnGRU(
       <td>训练模式下rOut、zOut、nOut、hnOut、hOut列表长度不正确（应为 dScale * numLayers）。</td>
     </tr>
     <tr>
-      <td>input维度不是2维或3维。</td>
+      <td>input维度与模式不匹配：batchSizes为空指针时input必须为3维，batchSizes非空指针时input必须为2维。</td>
+    </tr>
+    <tr>
+      <td>input的序列长度T小于等于0。</td>
     </tr>
     <tr>
       <td>params中权重维度不是2维，或偏置维度不是1维。</td>
@@ -362,6 +365,9 @@ aclnnStatus aclnnGRU(
     </tr>
     <tr>
       <td>params中权重或偏置的shape不符合预期：$W_{ih}$ 首层应为 $[3H, I]$、非首层 $[3H, D*H]$，$W_{hh}$ 应为 $[3H, H]$，偏置应为 $[3H]$。</td>
+    </tr>
+    <tr>
+      <td>不定长模式下batchSizes为非空指针但元素数为0、batch数不大于0、input第0维sum(batch_size)超过time_step*batch_size，或bidirection为True时output最后一维不是偶数。</td>
     </tr>
   </tbody></table>
 
@@ -412,8 +418,8 @@ aclnnStatus aclnnGRU(
 
 - 确定性计算：
 
-  <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnGRU默认确定性实现。
+  <!-- npu="A3,910b,950" id7 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：aclnnGRU默认确定性实现。
 
   <!-- end id7 -->
 

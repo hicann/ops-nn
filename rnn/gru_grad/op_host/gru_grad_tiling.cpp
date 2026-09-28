@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 #include "tiling/tiling_api.h"
 #include "error_util.h"
@@ -39,6 +40,8 @@ const int64_t DEFAULT_REDUCE_N_LIMIT = 128;
 const int64_t DEFAULT_COPY_FACTOR_FP32 = 4;
 const int64_t DEFAULT_COPY_FACTOR_FP16 = 6;
 const int64_t DEFAULT_ELEMENTS_PER_PART = 4096;
+const int64_t DGATE_MM_K_RESIDENT_ALIGN = 32;
+const int64_t DGATE_MM_STREAMING_DEPTH = 2;
 
 const int64_t INPUT_X = 0, INPUT_WI = 1, INPUT_WH = 2, INPUT_H0 = 3;
 const int64_t INPUT_H = 4, INPUT_R = 5, INPUT_Z = 6, INPUT_N = 7, INPUT_HN = 8, INPUT_DY = 9, INPUT_DH = 10,
@@ -344,6 +347,16 @@ void GruGradTiling::GetDgateMMTiling(matmul_tiling::DataType mmDataType)
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetBufferSpace fail."), return);
     ret = dgateMM.GetTiling(tilingData_.dgateMMParam);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM GetTiling fail."), return);
+
+    //  RegBase 代际（Ascend950 类）下 dgateMM 为"小 M × 巨大 K"形态，KSteps 为合数时 tiling 库走
+    //  K 组驻留调度（stepKa>1），A-tile 超 AIC L1 窗口 → MTE2 越界。仅当 depthA1>2 且 K 非 32 整除时
+    //  归一化为流式调度（depthA1/depthB1=2）。正常 K 驻留配置（K 可被 32 整除）不受影响。
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_) &&
+        tilingData_.dgateMMParam.depthA1 > DGATE_MM_STREAMING_DEPTH &&
+        (tilingData_.dgateMMParam.Ka % DGATE_MM_K_RESIDENT_ALIGN) != 0) {
+        tilingData_.dgateMMParam.depthA1 = DGATE_MM_STREAMING_DEPTH;
+        tilingData_.dgateMMParam.depthB1 = DGATE_MM_STREAMING_DEPTH;
+    }
 }
 
 void GruGradTiling::GetDwIhMMTiling(matmul_tiling::DataType mmDataType)

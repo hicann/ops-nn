@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
+#include "adv_api/math/tanh.h"
 #include "gru_tiling_data.h"
 #include <type_traits>
 using namespace AscendC;
@@ -779,8 +780,9 @@ private:
         }
 
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
-        Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
-        Tanh(ubNewGate, ubNewGate, calcSizeAlign); //  n = tanh(i_n + r * h_n) Ub5
+        Add(this->ubLocal1, ubInputN, ubHiddenN, calcSizeAlign);
+        //  n = tanh(i_n + r * h_n) Ub5 —— 自适应精度版（小值域衰减场景，见 TanhAdaptive 注释）
+        TanhAdaptive(ubNewGate, this->ubLocal1, calcSizeAlign);
         SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNGm, ubNewGate, compactBaseOut, calcM, calcN, outputRowLen);
@@ -809,6 +811,30 @@ private:
         CopyToOutput(this->outputGm.outYGm, ubHt, compactBaseOut, calcM, calcN, outputRowLen);
         PipeBarrier<PIPE_ALL>();
     }
+
+    // --------------------------------------------------------------------------------------------
+    // TanhAdaptive：自适应精度 tanh。3510 代际（Ascend950）使用
+    // adv_api/math TanhConfig{SUBSECTION_COMPENSATION} 分段补偿算法——basic Tanh（INTRINSIC）
+    // 有 ~1e-8 绝对精度底，n 门值衰减到 ~2e-5 时相对误差达 50%，经 (1-z)·δn 注入 h 形成恒定
+    // 输出噪声底，小值域精度不足；补偿版 |x|≤0.55 走 x·P(x²) minimax 拟合，其余走
+    // (e^2x-1)/(e^2x+1)，Compare+Select 硬切换。其余代际（910b/910_93 等）TanhConfig 不可用，
+    // 走通用 Tanh 实现（与 adv_api/math/tanh.h 门控一致）。
+    // ⚠ 补偿版要求 dst 与 src 不重叠（调用点源写 ubLocal1，输出写 ubNewGate）；
+    // AIC 上为空操作（本调用位于 AIV 向量段）。
+    // --------------------------------------------------------------------------------------------
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    static constexpr AscendC::TanhConfig GG_TANH_HP_CFG = {AscendC::TanhAlgo::SUBSECTION_COMPENSATION};
+
+    __aicore__ inline void TanhAdaptive(LocalTensor<float>& dst, LocalTensor<float>& src, int64_t n)
+    {
+        Tanh<float, false, GG_TANH_HP_CFG>(dst, src, static_cast<uint32_t>(n));
+    }
+#else
+    __aicore__ inline void TanhAdaptive(LocalTensor<float>& dst, LocalTensor<float>& src, int64_t n)
+    {
+        Tanh<float, false>(dst, src, static_cast<uint32_t>(n));
+    }
+#endif
 
     __aicore__ inline void ProcessVectorInitH(int64_t mIdx, int64_t nIdx, int64_t vecMIndx, int64_t vecNIndx)
     {
@@ -942,8 +968,8 @@ private:
         }
 
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
-        Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
-        Tanh(ubNewGate, ubNewGate, calcSizeAlign);
+        Add(this->ubLocal1, ubInputN, ubHiddenN, calcSizeAlign);
+        TanhAdaptive(ubNewGate, this->ubLocal1, calcSizeAlign);
         SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNGm, ubNewGate, compactBaseOut, calcM, calcN, outputRowLen);

@@ -292,6 +292,12 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     auto timeStep = batchFirst ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
     auto batchSize = batchFirst ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
     auto inputSize = input->GetViewShape().GetDim(2);
+    //  序列长度（T）必须大于 0：T<=0 返回参数错误；B=0/I=0 为合法空输入，直接返回成功。
+    if (timeStep <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The sequence length (timeStep) of input should be greater than 0, but %ld was obtained.", timeStep);
+        return false;
+    }
     //  W_ih[0] = 3H
     auto hiddenSize = (*params)[0]->GetViewShape().GetDim(0) / GRU_GATE_NUM;
     auto curLayerInputSize = inputSize;
@@ -856,7 +862,8 @@ static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, 
     //  转连续内存
     auto inputCtg = l0op::Contiguous(inputs.input, uniqueExecutor.get());
     auto paramsCtg = ProcessInputContiguous(inputs.params, uniqueExecutor.get());
-    auto hxCtg = l0op::Contiguous(inputs.hx, uniqueExecutor.get());
+    //  packed 路径 hx 判空（对齐定长路径处理；hx 为空指针时跳过连续性转换）
+    auto hxCtg = inputs.hx != nullptr ? l0op::Contiguous(inputs.hx, uniqueExecutor.get()) : nullptr;
     auto batchSizeCtg = l0op::Contiguous(inputs.batchSizes, uniqueExecutor.get());
     inputs.input = inputCtg;
     inputs.params = paramsCtg;

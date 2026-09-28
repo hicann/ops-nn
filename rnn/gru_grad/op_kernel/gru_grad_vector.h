@@ -236,6 +236,9 @@ __aicore__ inline void ProcessVectorHTile(int64_t tIdx, int64_t gateIdx, int64_t
     if (ht == hTiles - 1) {
         hLen = H - hOff;
     }
+    //  hTiles>=2 时跨 tile WAR：本 tile 的 MTE2 装载与上一 tile 在途 V 计算无序
+    //  （V 标志链只护 MTE3 不拦 MTE2 队列），需先同步再装载。
+    SyncVtoM2();
     int64_t hAligned = ((hLen + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
     int64_t blkAligned = bRows * hAligned;
 

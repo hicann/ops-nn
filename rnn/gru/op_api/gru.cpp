@@ -19,6 +19,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 namespace l0op {
@@ -37,7 +38,7 @@ Gru(const aclTensor* input, const aclTensor* weightInput, const aclTensor* weigh
     L0_DFX(Gru, input, weightInput, weightHidden, biasInput, biasHidden, seqLengthOptional, initHOptional, direction,
            train, yOut, outputHOut, rOut, zOut, nOut, nHOut);
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 && !Ops::NN::AclnnUtil::IsRegbase()) {
         return gruNullptrInner;
     }
 

@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品 </term>：不支持
+- <term>Atlas推理系列产品 </term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -35,7 +35,7 @@
   * $\text{候选态梯度：} \quad dh_{\tilde{h}t} = dh_t * (1 - z_t) * (1 - \tilde{h}_t^2)$
   * $\text{重置门梯度：} \quad dr_t = dh_{\tilde{h}t} * lin_{hh}[2*hidden\_size:3*hidden\_size] * r_t * (1 - r_t)$
   * $\text{线性变换梯度拆分：}$
-    $\quad dlin_{ih} = [dz_t; dr_t; dh_{\tilde{h}t}], \quad dlin_{hh} = [dz_t; dr_t; dh_{\tilde{h}t} * r_t]$
+    $\quad dlin_{ih} = [dr_t; dz_t; dh_{\tilde{h}t}], \quad dlin_{hh} = [dr_t; dz_t; dh_{\tilde{h}t} * r_t]$
   * $\text{输入梯度（传给下层）：} \quad dx_t = W_{ih}^T @ dlin_{ih}$
   * $\text{前一时刻隐藏态梯度（传给t-1）：} \quad dh_{prev} = W_{hh}^T @ dlin_{hh} + dh_t * z_t$
   * $\text{权重/偏置梯度累加：}$
@@ -56,7 +56,7 @@
    const aclTensorList *r,
    const aclTensorList *z,
    const aclTensorList *n,
-   const aclTensorList *h_n,
+   const aclTensorList *hn,
    const aclTensorList *h,
    const aclTensor     *batchSizesOptional,
    bool                hasBias,
@@ -121,7 +121,7 @@
        <td>params</td>
        <td>输入</td>
        <td>GRU每层的权重和偏置张量列表，对应公式中的w与b。</td>
-       <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers * 2。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
+       <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBias为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers * 2。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
        <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -201,7 +201,7 @@
        <td>√</td>
      </tr>
      <tr>
-       <td>h_n</td>
+       <td>hn</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻候选隐藏状态的中间值。对应公式中的$W_{hn}h_{t-1} + b_{hn}$。</td>
        <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
@@ -250,7 +250,7 @@
        <td>numLayers</td>
        <td>输入</td>
        <td>表示GRU层数。</td>
-       <td><ul><li>值大于0。</li></ul></td>
+        <td><ul><li>值大于0。</li></ul></td>
        <td>INT64</td>
        <td>-</td>
        <td>-</td>
@@ -303,7 +303,7 @@
        <td>dparamsOut(total_grad_w_ih, total_grad_w_hh)</td>
        <td>输出</td>
        <td>权重和偏置的梯度张量列表。对应公式中的δw和δb。</td>
-       <td><ul><li>列表长度为 D * B * num_layers * 2。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
+        <td><ul><li>列表长度为 D * B * num_layers * 2。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td>dweight_ih: [3*hidden_size, cur_input_size]<br>dweight_hh: [3*hidden_size, hidden_size]<br>dbias: [3*hidden_size]<br>不支持空tensor</td>
@@ -363,7 +363,16 @@
        <td>如果传入参数类型为aclTensor或aclTensorList，数据类型不同。</td>
      </tr>
      <tr>
+       <td>如果传入参数类型为aclTensor或aclTensorList，数据格式不在支持的范围之内（ND/NCL，batchSizesOptional仅支持ND）。</td>
+     </tr>
+     <tr>
        <td>如果传入参数类型为aclTensor或aclTensorList，shape不满足对应的shape要求。</td>
+     </tr>
+     <tr>
+       <td>如果传入的batchSizesOptional为空指针时input不是3维，或batchSizesOptional非空指针时input不是2维。</td>
+     </tr>
+     <tr>
+       <td>time_step、batch_size、input_size、hidden_size任一不大于0。</td>
      </tr>
      <tr>
        <td>numLayers不满足>0。</td>
