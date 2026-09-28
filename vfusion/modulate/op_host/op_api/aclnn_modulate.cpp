@@ -89,14 +89,10 @@ static bool CheckShape(const aclTensor* self, const aclTensor* scaleOptional, co
 {
     op::Shape selfShape = self->GetViewShape();
     size_t selfDimNum = selfShape.GetDimNum();
-    if (scaleOptional == nullptr || shiftOptional == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleOptional and shiftOptional can not be nullptr");
-        return false;
-    }
     // 对非ND数据格式增加warning
     if (self->GetStorageFormat() != op::Format::FORMAT_ND ||
-        scaleOptional->GetStorageFormat() != op::Format::FORMAT_ND ||
-        shiftOptional->GetStorageFormat() != op::Format::FORMAT_ND) {
+        (scaleOptional != nullptr && scaleOptional->GetStorageFormat() != op::Format::FORMAT_ND) ||
+        (shiftOptional != nullptr && shiftOptional->GetStorageFormat() != op::Format::FORMAT_ND)) {
         OP_LOGW("aclnnModulate only support ND format");
     }
     // self的维度必须为3
@@ -105,7 +101,8 @@ static bool CheckShape(const aclTensor* self, const aclTensor* scaleOptional, co
         return false;
     }
     // 拦截self为空，scaleOptional或shiftOptional不为空的情况
-    if (self->IsEmpty() && (!scaleOptional->IsEmpty() || !shiftOptional->IsEmpty())) {
+    if (self->IsEmpty() && ((scaleOptional != nullptr && !scaleOptional->IsEmpty()) ||
+                            (shiftOptional != nullptr && !shiftOptional->IsEmpty()))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when self is empty, scaleOptional and shiftOptional must be empty");
         return false;
     }
