@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file gather_elements.h
+ * \file gather_elements_full_load.h
  * \brief
  */
 #ifndef GATHER_ELEMENTS_FULL_LOAD_H

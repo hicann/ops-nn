@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file gather_elements.h
+ * \file gather_elements_kernel.h
  * \brief
  */
 #ifndef GATHER_ELEMENTS_KERNEL_H_

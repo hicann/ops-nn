@@ -12,7 +12,7 @@
  * \file gather_elements.cpp
  * \brief
  */
-#include "gather_elements.h"
+#include "gather_elements_kernel.h"
 #include "gather_elements_scalar_all.h"
 #include "gather_elements_scalar.h"
 #include "gather_elements_transpose.h"
