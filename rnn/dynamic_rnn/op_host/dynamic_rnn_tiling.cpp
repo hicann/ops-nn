@@ -129,21 +129,21 @@ bool DynamicRNNTiling::CheckParamsShape(gert::TilingContext* context)
 {
     // get input shape
     auto xInput = context->GetInputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, xInput, false);
+    OP_CHECK_IF(xInput == nullptr, ReportNullPtrWithContext(context, "xInput"), return false);
     auto xShape = xInput->GetStorageShape();
     // get wight shape
     auto wInput = context->GetInputShape(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, wInput, false);
+    OP_CHECK_IF(wInput == nullptr, ReportNullPtrWithContext(context, "wInput"), return false);
     auto wShape = wInput->GetStorageShape();
 
     // get bias shape
     auto bInput = context->GetInputShape(2);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, bInput, false);
+    OP_CHECK_IF(bInput == nullptr, ReportNullPtrWithContext(context, "bInput"), return false);
     auto bShape = bInput->GetStorageShape();
 
     // get output y shape
     auto outputY = context->GetOutputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, outputY, false);
+    OP_CHECK_IF(outputY == nullptr, ReportNullPtrWithContext(context, "outputY"), return false);
     auto outputShape = outputY->GetStorageShape();
 
     // check dim num
@@ -185,7 +185,7 @@ bool DynamicRNNTiling::CheckInitParamsShape(gert::TilingContext* context)
 
     // get output y shape
     auto outputY = context->GetOutputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, outputY, false);
+    OP_CHECK_IF(outputY == nullptr, ReportNullPtrWithContext(context, "outputY"), return false);
     auto outputShape = outputY->GetStorageShape();
 
     OP_CHECK_IF(outputShape.GetDimNum() != 3,
@@ -238,19 +238,19 @@ bool DynamicRNNTiling::CheckAttrTiling(gert::TilingContext* context)
 {
     // get attr
     auto attrs = context->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, attrs, false);
+    OP_CHECK_IF(attrs == nullptr, ReportNullPtrWithContext(context, "attrs"), return false);
     const int* numProj = attrs->GetAttrPointer<int>(6);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, numProj, false);
+    OP_CHECK_IF(numProj == nullptr, ReportNullPtrWithContext(context, "numProj"), return false);
     const bool* timeMajor = attrs->GetAttrPointer<bool>(7);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, timeMajor, false);
+    OP_CHECK_IF(timeMajor == nullptr, ReportNullPtrWithContext(context, "timeMajor"), return false);
     const char* activation = attrs->GetAttrPointer<char>(8);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, activation, false);
+    OP_CHECK_IF(activation == nullptr, ReportNullPtrWithContext(context, "activation"), return false);
     const float* forgetBias = attrs->GetAttrPointer<float>(9);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, forgetBias, false);
+    OP_CHECK_IF(forgetBias == nullptr, ReportNullPtrWithContext(context, "forgetBias"), return false);
     const char* gateOrder = attrs->GetAttrPointer<char>(10);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, gateOrder, false);
+    OP_CHECK_IF(gateOrder == nullptr, ReportNullPtrWithContext(context, "gateOrder"), return false);
     const bool* isTraining = attrs->GetAttrPointer<bool>(11);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, isTraining, false);
+    OP_CHECK_IF(isTraining == nullptr, ReportNullPtrWithContext(context, "isTraining"), return false);
 
     OP_CHECK_IF(*numProj != 0,
                 OP_LOGE(context->GetNodeName(), "Dynamicrnn attr num_proj only support 0, please check."),
@@ -275,19 +275,19 @@ bool DynamicRNNTiling::CheckAttrOps(gert::TilingContext* context)
 {
     // get attr
     auto attrs = context->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, attrs, false);
+    OP_CHECK_IF(attrs == nullptr, ReportNullPtrWithContext(context, "attrs"), return false);
     const char* cellType = attrs->GetAttrPointer<char>(0);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, cellType, false);
+    OP_CHECK_IF(cellType == nullptr, ReportNullPtrWithContext(context, "cellType"), return false);
     const char* direction = attrs->GetAttrPointer<char>(1);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, direction, false);
+    OP_CHECK_IF(direction == nullptr, ReportNullPtrWithContext(context, "direction"), return false);
     const int* cellDepth = attrs->GetAttrPointer<int>(2);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, cellDepth, false);
+    OP_CHECK_IF(cellDepth == nullptr, ReportNullPtrWithContext(context, "cellDepth"), return false);
     const bool* usePeephole = attrs->GetAttrPointer<bool>(3);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, usePeephole, false);
+    OP_CHECK_IF(usePeephole == nullptr, ReportNullPtrWithContext(context, "usePeephole"), return false);
     const float* keepProb = attrs->GetAttrPointer<float>(4);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, keepProb, false);
+    OP_CHECK_IF(keepProb == nullptr, ReportNullPtrWithContext(context, "keepProb"), return false);
     const float* cellClip = attrs->GetAttrPointer<float>(5);
-    OPS_CHECK_NULL_WITH_CONTEXT_RET(context, cellClip, false);
+    OP_CHECK_IF(cellClip == nullptr, ReportNullPtrWithContext(context, "cellClip"), return false);
 
     OP_CHECK_IF(*cellDepth != 1,
                 OP_LOGE(context->GetNodeName(), "Dynamicrnn attr cell_depth only support 1, please check."),
