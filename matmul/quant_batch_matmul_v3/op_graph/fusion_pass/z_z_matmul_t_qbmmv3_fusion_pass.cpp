@@ -147,8 +147,7 @@ bool CheckInputDtype(const GNode& matchedNode)
         OPS_LOG_W(kPassName, "Get platform info failed.");
         return false;
     }
-    const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc != "Ascend950") {
+    if (!IsNpuArch3510Series()) {
         return notHif8;
     }
     bool notSupportInt8ToInt32 = !(x1Dtype == DT_INT8 && x2Dtype == DT_INT8 && yDtype == DT_INT32);

@@ -232,7 +232,7 @@ bool CheckSocNeedBatchMatMulToMul(const PlatformInfo& platformInfo, const BatchM
     if (soc == "Ascend910B" || soc == "Ascend910_93") {
         return CheckSocNeedBatchMatMulToMul910B(args, x1Dtype, x2Dtype, outDtype);
     }
-    if (soc == "Ascend950") {
+    if (IsNpuArch3510Series()) {
         return CheckSocNeedBatchMatMulToMul91095(platformInfo, args, x1Dtype, x2Dtype, outDtype, shapeX1, shapeX2);
     }
     // default
