@@ -3530,6 +3530,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_training_update/README.md">bn_training_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>批归一化训练前向的update阶段（含moving average更新）。给定BNTrainingReduce产出的逐通道sum/square_sum，结合缩放因子scale与偏置offset，对输入x做批归一化仿射变换，输出归一化结果y；同时以factor加权更新running mean/variance，并输出本batch统计量batch_mean/batch_variance（有偏方差）。与BNTrainingReduce配套使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_training_update_v2/README.md">bn_training_update_v2</a></td>
     <td>✓</td>
     <td>✓</td>
