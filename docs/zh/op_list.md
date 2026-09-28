@@ -3689,6 +3689,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/gn_training_reduce/README.md">gn_training_reduce</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>GNTrainingReduce是GroupNorm训练前向的统计归约算子，按num_groups将输入x的通道维分组，在每组内求Σx与Σx²两个原始矩并输出为fp32，与配套算子GNTrainingUpdate成对使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/gn_training_update/README.md">gn_training_update</a></td>
     <td>✓</td>
     <td>✓</td>

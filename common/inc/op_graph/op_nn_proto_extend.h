@@ -2848,31 +2848,6 @@ currently supported.
     .OP_END_FACTORY_REG(INTrainingUpdateGradGammaBeta)
 
     /**
-    *@brief Performs reduced group normalization.
-
-    *@par Inputs:
-    *x: A Tensor of type float16 or float32, with format NCHW NHWC . \n
-
-    *@par Outputs:
-    *@li sum: A Tensor of type float32 for SUM reduced "x". shape is [N, G, 1, 1, 1] for NCHW, [N, 1, 1, G, 1] for NHWC.
-    *@li square_sum: A Tensor of type float32 for SUMSQ reduced "x".shape is [N, G, 1, 1, 1] for NCHW, [N, 1, 1, G, 1]
-    for NHWC.
-
-    *@par Attributes:
-    *num_groups: A optional Int, specifying the num of groups. required, same to GNTrainingUpdate, default to 2 . \n
-
-    *@attention Constraints:
-    * This operator is a GroupNorm fusion operator for updating the moving averages for training.
-    * This operator is used in conjunction with GNTrainingUpdate.
-    */
-    REG_OP(GNTrainingReduce)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(sum, TensorType({DT_FLOAT}))
-    .OUTPUT(square_sum, TensorType({DT_FLOAT}))
-    .ATTR(num_groups, Int, 2)
-    .OP_END_FACTORY_REG(GNTrainingReduce)
-
-    /**
     *@brief Performs update group normalization .
 
     *@par Inputs:
