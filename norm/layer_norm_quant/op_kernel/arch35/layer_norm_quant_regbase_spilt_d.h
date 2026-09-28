@@ -112,6 +112,8 @@ private:
             inputScale = 1 /
                          (static_cast<float>(tmpFp32.GetValue(0)) == 0 ? 1 : static_cast<float>(tmpFp32.GetValue(0)));
         }
+        SetFlag<HardEvent::S_MTE2>(EVENT_ID0);
+        WaitFlag<HardEvent::S_MTE2>(EVENT_ID0);
         AscendC::GlobalTensor<int8_t> gm_o;
         gm_o.SetGlobalBuffer((__gm__ int8_t*)offset);
         LocalTensor<int8_t> tmpInt8 = x_buf_fp32.Get<int8_t>();
