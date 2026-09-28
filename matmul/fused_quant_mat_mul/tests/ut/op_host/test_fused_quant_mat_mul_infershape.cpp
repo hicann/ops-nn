@@ -34,6 +34,9 @@ TEST_F(TestFusedQuantMatmulInferShape, InferShape)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
                                     nullptr, nullptr, nullptr})
+                      .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .OutputShapes({&outputShape})
                       .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
                                   {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
@@ -64,6 +67,9 @@ TEST_F(TestFusedQuantMatmulInferShape, dimNumNot3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
                                     nullptr, nullptr, nullptr})
+                      .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .OutputShapes({&outputShape})
                       .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
                                   {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
@@ -92,6 +98,9 @@ TEST_F(TestFusedQuantMatmulInferShape, highestDimNot2)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, nullptr, &x2ScaleShape, nullptr, nullptr, nullptr,
                                     nullptr, nullptr, nullptr})
+                      .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .OutputShapes({&outputShape})
                       .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
                                   {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},

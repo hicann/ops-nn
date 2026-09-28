@@ -71,18 +71,41 @@ InferShapeContextFaker& InferShapeContextFaker::NodeInputTd(int32_t index, ge::D
     return *this;
 }
 
-InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::initializer_list<void*>& inputShapes)
+InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::initializer_list<Shape*>& inputShapes)
 {
-    return InputShapes(std::vector<void*>(inputShapes));
+    return InputShapes(std::vector<Shape*>(inputShapes));
+}
+
+InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::initializer_list<StorageShape*>& inputShapes)
+{
+    return InputShapes(std::vector<StorageShape*>(inputShapes));
 }
 
 InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<void*>& inputShapes)
 {
-    std::vector<Shape*> inputShapesNew;
-    for (auto shape : inputShapes) {
-        inputShapesNew.push_back((Shape*)shape);
+    for (size_t idx = 0; idx < inputShapes.size(); ++idx) {
+        if (inputShapes[idx] == nullptr) {
+            continue;
+        }
+        while (inputTensors_.size() <= idx) {
+            inputTensors_.emplace_back(Tensor());
+        }
+
+        auto* shape = static_cast<Shape*>(inputShapes[idx]);
+        inputTensors_[idx].MutableStorageShape() = *shape;
+        inputTensors_[idx].MutableOriginShape() = *shape;
+
+        // Legacy mixed Tensor*/Shape* calls use this overload. Preserve const Tensor detection for them.
+        auto* tensor = reinterpret_cast<Tensor*>(inputShapes[idx]);
+        ASAN_UNPOISON_TENSOR(tensor);
+        const TensorData& data = tensor->GetTensorData();
+        if (data.GetPlacement() == TensorPlacement::kFollowing && tensor->GetAddr() != nullptr && data.GetSize() > 0) {
+            inputTensors_[idx].SetData(TensorData(tensor->GetAddr()));
+            inputTensors_[idx].SetDataType(tensor->GetDataType());
+        }
     }
-    return InputShapes(inputShapesNew);
+
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<Shape*>& inputShapes)
@@ -93,17 +116,8 @@ InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<Sh
                 inputTensors_.emplace_back(Tensor());
             }
 
-            inputTensors_[idx].MutableStorageShape() = *(inputShapes[idx]);
-            inputTensors_[idx].MutableOriginShape() = *(inputShapes[idx]);
-
-            Tensor* tensor = (Tensor*)inputShapes[idx];
-            ASAN_UNPOISON_TENSOR(tensor);
-            const TensorData& data = tensor->GetTensorData();
-            if (data.GetPlacement() == TensorPlacement::kFollowing && tensor->GetAddr() != nullptr &&
-                data.GetSize() > 0) {
-                inputTensors_[idx].SetData(TensorData(tensor->GetAddr()));
-                inputTensors_[idx].SetDataType(tensor->GetDataType());
-            }
+            inputTensors_[idx].MutableStorageShape() = *inputShapes[idx];
+            inputTensors_[idx].MutableOriginShape() = *inputShapes[idx];
         }
     }
 
@@ -120,15 +134,6 @@ InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<St
 
             inputTensors_[idx].MutableStorageShape() = inputShapes[idx]->MutableStorageShape();
             inputTensors_[idx].MutableOriginShape() = inputShapes[idx]->MutableOriginShape();
-
-            Tensor* tensor = (Tensor*)inputShapes[idx];
-            ASAN_UNPOISON_TENSOR(tensor);
-            const TensorData& data = tensor->GetTensorData();
-            if (data.GetPlacement() == TensorPlacement::kFollowing && tensor->GetAddr() != nullptr &&
-                data.GetSize() > 0) {
-                inputTensors_[idx].SetData(TensorData(tensor->GetAddr()));
-                inputTensors_[idx].SetDataType(tensor->GetDataType());
-            }
         }
     }
 

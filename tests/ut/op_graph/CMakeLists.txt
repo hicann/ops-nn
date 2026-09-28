@@ -89,11 +89,34 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
 
     if(ENABLE_UT_EXEC)
         if(${ENABLE_ASAN} STREQUAL "TRUE")
+            execute_process(
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
+                OUTPUT_VARIABLE LIBASAN_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                RESULT_VARIABLE result
+            )
+            if(NOT result EQUAL 0)
+                message(FATAL_ERROR "compiler not support asan, please disable asan")
+            endif()
+
+            execute_process(
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libstdc++.so
+                OUTPUT_VARIABLE LIBSTDC_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                RESULT_VARIABLE stdc_result
+            )
+            if(NOT stdc_result EQUAL 0)
+                message(FATAL_ERROR "not find libstdc++.so, please confirm.")
+            endif()
             add_custom_command(
-                TARGET ${OP_GRAPH_UT_EXE} POST_BUILD
-                COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/tests/ut/op_host:${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH} && BUILD_PATH=${BUILD_PATH}
-                LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.4:/usr/lib/x86_64-linux-gnu/libstdc++.so.6 ASAN_OPTIONS=detect_leaks=0 ./${OP_GRAPH_UT_EXE}
-                COMMENT "Run ops op_host utest with asan"
+                TARGET ${OP_GRAPH_UT_EXE}
+                POST_BUILD
+                COMMAND
+                    ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/tests/ut/op_host:${CMAKE_BINARY_DIR}/es_packages_math/lib64:${CMAKE_BINARY_DIR}/es_packages/lib64:${LIB_OP_TILING_SO_PATH}:$ENV{LD_LIBRARY_PATH} BUILD_PATH=${BUILD_PATH}
+                    LD_PRELOAD=${LIBASAN_PATH}:${LIBSTDC_PATH}
+                    ASAN_OPTIONS=detect_leaks=0
+                    ./${OP_GRAPH_UT_EXE}
+                    COMMENT "Run ops op_graph utest with asan"
             )
         else()
             add_custom_command(

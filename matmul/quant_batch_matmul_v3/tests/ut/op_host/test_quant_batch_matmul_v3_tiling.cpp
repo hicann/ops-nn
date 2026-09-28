@@ -57,6 +57,18 @@ static string TilingData2Str(const void* tilingData, size_t tilingSize)
     return result;
 }
 
+static void NormalizeTensorApiWithoutBatchPadding(const void* data, size_t dataSize, std::vector<uint8_t>& normalized)
+{
+    normalized.resize(dataSize);
+    std::memcpy(normalized.data(), data, dataSize);
+    constexpr size_t paddingOffset = offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData,
+                                              weightMustHitL2) +
+                                     1;
+    if (dataSize > paddingOffset) {
+        normalized[paddingOffset] = 0;
+    }
+}
+
 template <typename T>
 static void SetExpectedTilingFieldIfPresent(std::vector<int32_t>& tilingDataInt, size_t fieldOffset, const T& value)
 {
@@ -764,9 +776,15 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
                     tilingDataInt, offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, biasDtype),
                     actualTilingData.biasDtype);
             }
-            string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
-                                                        tilingContext->GetRawTilingData()->GetDataSize());
-            string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+            std::vector<uint8_t> actualTilingDataBytes;
+            std::vector<uint8_t> expectTilingDataBytes;
+            NormalizeTensorApiWithoutBatchPadding(tilingContext->GetRawTilingData()->GetData(),
+                                                  tilingContext->GetRawTilingData()->GetDataSize(),
+                                                  actualTilingDataBytes);
+            NormalizeTensorApiWithoutBatchPadding(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t),
+                                                  expectTilingDataBytes);
+            string actualTilingDataStr = TilingData2Str(actualTilingDataBytes.data(), actualTilingDataBytes.size());
+            string expectTilingDataStr = TilingData2Str(expectTilingDataBytes.data(), expectTilingDataBytes.size());
             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
                 << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         } else if (useBasicApiTilingData) {

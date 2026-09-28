@@ -263,7 +263,12 @@ if __name__ == "__main__":
             if soc_hit:
                 break
     for key, matchers in UT_MATCHERS.items():
+        default_matcher = matchers["default"]
         for soc, matcher in matchers.items():
+            if soc == "default":
+                continue
+            if default_matcher.ops:
+                matcher.ops.update(default_matcher.ops)
             if matcher.ops:
                 (_, reverse_op_dependencies) = parser.get_dependencies_by_ops(
                     matcher.ops

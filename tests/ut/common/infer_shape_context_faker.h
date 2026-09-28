@@ -11,8 +11,9 @@
 #ifndef OPS_NN_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
 #define OPS_NN_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
 
-#include <vector>
+#include <initializer_list>
 #include <string>
+#include <vector>
 
 #include "kernel_run_context_holder.h"
 #include "any_value.h"
@@ -109,7 +110,9 @@ public:
 
     InferShapeContextFaker& InputTensors(const std::vector<Tensor*>& inputTensors);
 
-    InferShapeContextFaker& InputShapes(const std::initializer_list<void*>& inputShapes);
+    InferShapeContextFaker& InputShapes(const std::initializer_list<Shape*>& inputShapes);
+
+    InferShapeContextFaker& InputShapes(const std::initializer_list<StorageShape*>& inputShapes);
 
     InferShapeContextFaker& InputShapes(const std::vector<void*>& inputShapes);
 

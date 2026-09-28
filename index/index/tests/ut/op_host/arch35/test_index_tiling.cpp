@@ -978,7 +978,7 @@ TEST_F(IndexTiling, Index_AC_tiling_int32_large_index)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     gert::StorageShape x = {{4}, {4}};
-    gert::StorageShape indexedSizes = {{2, 2}, {2, 2}};
+    gert::StorageShape indexedSizes = {{2}, {2}};
     gert::StorageShape indexedStrides = {{4}, {4}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};

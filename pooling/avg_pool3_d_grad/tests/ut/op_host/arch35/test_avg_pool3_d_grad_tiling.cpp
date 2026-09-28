@@ -28,6 +28,8 @@ using namespace std;
 using namespace ge;
 using namespace AvgPool3DGrad;
 
+using ConstTensorStorage = vector<pair<size_t, unique_ptr<uint8_t[]>>>;
+
 class AvgPool3DGradTiling : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "AvgPool3DGradTiling SetUp" << std::endl; }
@@ -36,7 +38,7 @@ protected:
 
 template <typename T>
 static void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-                          std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+                          ConstTensorStorage& const_tensors)
 {
     std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
         new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
@@ -311,7 +313,8 @@ TEST_F(AvgPool3DGradTiling, base_5d_merged_out_h_mismatch)
 // unresolved" (family protocol, same as Conv3DBackpropInput). The tiling must derive pads from the
 // grads shape instead of rejecting: padTotal = max(0, (grad-1)*stride + kernel - input).
 static auto BuildHolderWithPads(const vector<int64_t>& origInput, const gert::StorageShape& gradsShape,
-                                const gert::StorageShape& outputShape, const vector<int64_t>& pads)
+                                const gert::StorageShape& outputShape, const vector<int64_t>& pads,
+                                ConstTensorStorage& const_tensors)
 {
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -324,7 +327,6 @@ static auto BuildHolderWithPads(const vector<int64_t>& origInput, const gert::St
     for (size_t i = 0; i < origInput.size(); i++) {
         shape_data[i] = static_cast<int32_t>(origInput[i]);
     }
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput(0, DT_INT32, shape_data, static_cast<int64_t>(origInput.size()), const_tensors);
     gert::StorageShape input_0 = {{static_cast<int64_t>(origInput.size())}, {static_cast<int64_t>(origInput.size())}};
     auto param = gert::TilingData::CreateCap(4096);
@@ -357,7 +359,8 @@ TEST_F(AvgPool3DGradTiling, base_unset_pads_placeholder_same_equiv)
     // SAME == VALID here (in % stride == 0): derived pads must be all zero.
     gert::StorageShape gradsShape = {{1, 4, 4, 4, 3}, {1, 4, 4, 4, 3}};
     gert::StorageShape outputShape = {{1, 8, 8, 8, 3}, {1, 8, 8, 8, 3}};
-    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {-1, -1, -1});
+    ConstTensorStorage constTensors;
+    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {-1, -1, -1}, constTensors);
     optiling::AvgPool3DGradTilingBase base(holder.GetContext<gert::TilingContext>());
     EXPECT_EQ(base.GetShapeAttrsInfo(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(base.inputData.pad[0], 0);
@@ -374,7 +377,8 @@ TEST_F(AvgPool3DGradTiling, base_unset_pads_placeholder_same_asymmetric)
     // matching TF SAME; the expected-shape check must pass against grads [1,4,4,4,3].
     gert::StorageShape gradsShape = {{1, 4, 4, 4, 3}, {1, 4, 4, 4, 3}};
     gert::StorageShape outputShape = {{1, 7, 7, 7, 3}, {1, 7, 7, 7, 3}};
-    auto holder = BuildHolderWithPads({1, 7, 7, 7, 3}, gradsShape, outputShape, {-1, -1, -1});
+    ConstTensorStorage constTensors;
+    auto holder = BuildHolderWithPads({1, 7, 7, 7, 3}, gradsShape, outputShape, {-1, -1, -1}, constTensors);
     optiling::AvgPool3DGradTilingBase base(holder.GetContext<gert::TilingContext>());
     EXPECT_EQ(base.GetShapeAttrsInfo(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(base.inputData.pad[0], 0);
@@ -390,7 +394,8 @@ TEST_F(AvgPool3DGradTiling, base_explicit_pads_not_touched)
     // Explicit non-negative pads must pass through untouched (no derivation).
     gert::StorageShape gradsShape = {{1, 4, 4, 4, 3}, {1, 4, 4, 4, 3}};
     gert::StorageShape outputShape = {{1, 8, 8, 8, 3}, {1, 8, 8, 8, 3}};
-    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {0, 0, 0});
+    ConstTensorStorage constTensors;
+    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {0, 0, 0}, constTensors);
     optiling::AvgPool3DGradTilingBase base(holder.GetContext<gert::TilingContext>());
     EXPECT_EQ(base.GetShapeAttrsInfo(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(base.inputData.pad[0], 0);
@@ -406,7 +411,8 @@ TEST_F(AvgPool3DGradTiling, base_explicit_invalid_pads_still_rejected)
     // Explicit pads >= kernel must still be rejected by CheckGradValid (validation preserved).
     gert::StorageShape gradsShape = {{1, 4, 4, 4, 3}, {1, 4, 4, 4, 3}};
     gert::StorageShape outputShape = {{1, 8, 8, 8, 3}, {1, 8, 8, 8, 3}};
-    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {3, 3, 3});
+    ConstTensorStorage constTensors;
+    auto holder = BuildHolderWithPads({1, 8, 8, 8, 3}, gradsShape, outputShape, {3, 3, 3}, constTensors);
     optiling::AvgPool3DGradTilingBase base(holder.GetContext<gert::TilingContext>());
     EXPECT_EQ(base.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
 }
@@ -417,7 +423,8 @@ TEST_F(AvgPool3DGradTiling, base_allzero_pads_inconsistent_grads_rejected)
     // rejected: resolving pads for this case belongs to the upstream (built-in op_proto).
     gert::StorageShape gradsShape = {{1, 4, 4, 4, 3}, {1, 4, 4, 4, 3}};
     gert::StorageShape outputShape = {{1, 7, 7, 7, 3}, {1, 7, 7, 7, 3}};
-    auto holder = BuildHolderWithPads({1, 7, 7, 7, 3}, gradsShape, outputShape, {0, 0, 0});
+    ConstTensorStorage constTensors;
+    auto holder = BuildHolderWithPads({1, 7, 7, 7, 3}, gradsShape, outputShape, {0, 0, 0}, constTensors);
     optiling::AvgPool3DGradTilingBase base(holder.GetContext<gert::TilingContext>());
     EXPECT_EQ(base.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
 }

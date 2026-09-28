@@ -120,11 +120,34 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
 
     if(ENABLE_UT_EXEC)
         if(${ENABLE_ASAN} STREQUAL "TRUE")
+            execute_process(
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
+                OUTPUT_VARIABLE LIBASAN_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                RESULT_VARIABLE result
+            )
+            if(NOT result EQUAL 0)
+                message(FATAL_ERROR "compiler not support asan, please disable asan")
+            endif()
+
+            execute_process(
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libstdc++.so
+                OUTPUT_VARIABLE LIBSTDC_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                RESULT_VARIABLE stdc_result
+            )
+            if(NOT stdc_result EQUAL 0)
+                message(FATAL_ERROR "not find libstdc++.so, please confirm.")
+            endif()
             add_custom_command(
-                TARGET ${OP_HOST_UT_EXE} POST_BUILD
-                COMMAND BUILD_PATH=${BUILD_PATH}
-                LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.4:/usr/lib/x86_64-linux-gnu/libstdc++.so.6 ASAN_OPTIONS=detect_leaks=0 ./${OP_HOST_UT_EXE}
-                COMMENT "Run ops op_host utest with asan"
+                TARGET ${OP_HOST_UT_EXE}
+                POST_BUILD
+                COMMAND
+                    ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} BUILD_PATH=${BUILD_PATH}
+                    LD_PRELOAD=${LIBASAN_PATH}:${LIBSTDC_PATH}
+                    ASAN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0
+                    ./${OP_HOST_UT_EXE}
+                    COMMENT "Run ops op_host utest with asan"
             )
         else()
             add_custom_command(

@@ -61,9 +61,10 @@ bool IsUnknown(const std::vector<int64_t>& shape_vec)
 
 gert::KernelRunContextHolder CreateFusedMatMulHolder(gert::StorageShape& shape_x1, gert::StorageShape& shape_x2,
                                                      gert::StorageShape& shape_bias, gert::StorageShape& shape_x3,
-                                                     gert::StorageShape& shape_y, const bool& transpose_x1,
-                                                     const bool& transpose_x2, const bool& enable_hf32,
-                                                     const std::string& fused_op_type)
+                                                     gert::StorageShape& shape_y, ge::DataType x1Dtype,
+                                                     ge::DataType x2Dtype, ge::DataType biasDtype, ge::DataType x3Dtype,
+                                                     const bool& transpose_x1, const bool& transpose_x2,
+                                                     const bool& enable_hf32, const std::string& fused_op_type)
 {
     gert::KernelRunContextHolder holder;
 
@@ -71,6 +72,10 @@ gert::KernelRunContextHolder CreateFusedMatMulHolder(gert::StorageShape& shape_x
                  .NodeIoNum(4, 1)
                  .IrInstanceNum({1, 1, 1, 1})
                  .InputShapes({&shape_x1, &shape_x2, &shape_bias, &shape_x3})
+                 .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(3, x3Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                  .OutputShapes({&shape_y})
                  .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x1)},
                              {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x2)},
@@ -135,7 +140,8 @@ TEST_P(FusedMatMulRuntimeProtoTest, General)
     auto shape_x3 = CreateStorageShape(vec_shape_x3);
     auto shape_y = CreateStorageShape({});
 
-    auto holder = CreateFusedMatMulHolder(shape_x1, shape_x2, shape_bias, shape_x3, shape_y, get<4>(GetParam()),
+    auto holder = CreateFusedMatMulHolder(shape_x1, shape_x2, shape_bias, shape_x3, shape_y, get<1>(tuple_x1),
+                                          get<1>(tuple_x2), get<1>(tuple_bias), get<1>(tuple_x3), get<4>(GetParam()),
                                           get<5>(GetParam()), get<6>(GetParam()), get<7>(GetParam()));
     auto op = CreateFusedMatmulOp(std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
                                   std::get<3>(GetParam()), std::get<4>(GetParam()), std::get<5>(GetParam()),
