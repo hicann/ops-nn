@@ -32,7 +32,7 @@
 
 ```Cpp
 aclnnStatus aclnnMseLossGradGetWorkspaceSize(
-    onst aclTensor*  gradOutput,
+    const aclTensor*  gradOutput,
     const aclTensor* self,
     const aclTensor* target,
     char*           reduction,

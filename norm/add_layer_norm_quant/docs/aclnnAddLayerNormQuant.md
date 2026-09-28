@@ -203,7 +203,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     <tr>
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占为表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
+      <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占位表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

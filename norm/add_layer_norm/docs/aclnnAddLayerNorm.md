@@ -292,7 +292,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>（meanOut、rstdOut）的shape不是完全相同的shape。</td>
     </tr>
     <tr>
-      <td>gamma的维度和x的需要作norm的维度不相同，或meanOut的维度和x的不需要norm的维度不相同，或meanOut的需要norm的维度不为1。</td>
+      <td>gamma的维度和x的需要做norm的维度不相同，或meanOut的维度和x的不需要norm的维度不相同，或meanOut的需要norm的维度不为1。</td>
     </tr>
   </tbody></table>
 

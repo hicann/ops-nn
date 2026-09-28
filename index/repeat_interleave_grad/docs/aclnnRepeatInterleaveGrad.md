@@ -86,7 +86,7 @@
     <tr>
       <td>yGrad</td>
       <td>输入</td>
-      <td>功能说明中待被ReduceSum的输入tensor。</td>
+      <td>功能说明中待ReduceSum的输入tensor。</td>
       <td>支持空tensor。</td>
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>

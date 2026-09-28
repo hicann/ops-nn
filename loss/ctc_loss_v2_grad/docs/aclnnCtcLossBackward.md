@@ -188,7 +188,7 @@ aclnnStatus aclnnCtcLossBackward(
       <tr>
       <td>zeroInfinity（bool）</td>
       <td>输入</td>
-      <td>表示是否将无限损耗和相关梯度归零。</td>
+      <td>表示是否将无限损失和相关梯度归零。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

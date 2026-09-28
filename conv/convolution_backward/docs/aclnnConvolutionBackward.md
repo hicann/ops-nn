@@ -143,7 +143,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>公式中的x。</td>
       <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据类型与gradOutput、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
+       <li>数据类型与gradOutput、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和gradOutput、weight满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与gradOutput、gradInput一致。</li></ul>
       </td>

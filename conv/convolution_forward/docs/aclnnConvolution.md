@@ -184,7 +184,7 @@ aclnnStatus aclnnConvolution(
   <tr>
   <td>groups（int64_t）</td>
   <td>输入</td>
-  <td>表示从输入通道到输出通道的块链接个数。</td>
+  <td>表示从输入通道到输出通道的块连接个数。</td>
   <td>数值需要在[1,65535]的范围内，且满足groups*weight的C维度=input的C维度。</td>
   <td>INT64</td>
   <td>-</td>

@@ -25,7 +25,7 @@
 
 - 接口功能：实现输入输出维度为**T**（时间或空间维度）、**B**（批次）、**C**（通道）的一维卷积的反向传播。
 
-- 计算公式：假定输入Conv_tbc正向的输入$input$的shape是$(H_{\text{in}},N,C_{\text{in}})$，输出梯度$gradOutput$
+- 计算公式：假定Conv_tbc正向的输入$input$的shape是$(H_{\text{in}},N,C_{\text{in}})$，输出梯度$gradOutput$
   的shape是$(H_{\text{out}},N,C_{\text{out}})$，卷积核$weight$的shape是$(K,C_{\text{in}},C_{\text{out}})$，偏置$bias$
   的shape为$(C_{\text{out}})$，反向传播过程中对于输入的填充为 $pad$，上述参数的关系是：
 

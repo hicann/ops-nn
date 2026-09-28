@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2的矩阵乘计算，仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2的矩阵乘计算，仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
 - 示例：（x2的NZ转换为ND对应的viewshape视角）
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
