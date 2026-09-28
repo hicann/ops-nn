@@ -201,9 +201,9 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            bash build.sh --pkg --soc=kirinx90 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
-            echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+            echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
             mkdir build_out
@@ -213,9 +213,9 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station_ubuntu24)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            bash build.sh --pkg --soc=kirinx90 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
-            echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+            echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
             mkdir build_out
@@ -225,9 +225,9 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station_9030_ubuntu24)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --soc=kirin9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            bash build.sh --pkg --soc=kirin9030 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
-            echo "exec cmd: [bash build.sh --pkg --soc=kirin9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+            echo "exec cmd: [bash build.sh --pkg --soc=kirin9030 -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
             mkdir build_out
