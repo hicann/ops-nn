@@ -77,6 +77,18 @@ struct Arch22TilingResult {
     uint64_t indicesLoop = 0;
     uint64_t modeFlag = 0;
     uint64_t stableBucket = 0;
+    // 分桶散射分支的 tiling 结果；bktMode == 0 表示未走该分支（走既有主路径）
+    uint64_t bktMode = 0;
+    uint64_t bktRows = 0;
+    uint64_t bktVarN = 0;
+    uint64_t bktIndicesN = 0;
+    uint64_t bktTileLen = 0;
+    uint64_t bktNumTiles = 0;
+    uint64_t bktShift = 0;
+    uint64_t bktFifoDepth = 0;
+    uint64_t bktStride = 0;
+    uint64_t bktRowsPerCore = 0;
+    uint64_t bktFrontCore = 0;
 };
 
 static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype, ge::DataType indicesDtype,
@@ -169,6 +181,23 @@ static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype
         result.indicesLoop = fields[16];
         result.modeFlag = fields[25];
         result.stableBucket = fields[28];
+        // 分桶字段追加在 realDim 之后，按同一 uint64 下标口径读取：
+        // 前 29 个 uint64（usedCoreNum..M）占 0..231 字节；int32 coreNums 落在 232，
+        // 其后补 4 字节自然对齐；xDim0 起 8 个 uint64（240..303）止于 realDim(296)。
+        // 因此 bktMode 起始字节 304，即 uint64 下标 38。
+        constexpr size_t BKT_FIELD_BASE = 38U;
+        EXPECT_GE(tiling_context->GetRawTilingData()->GetDataSize(), (BKT_FIELD_BASE + 11U) * sizeof(uint64_t));
+        result.bktMode = fields[BKT_FIELD_BASE + 0U];
+        result.bktRows = fields[BKT_FIELD_BASE + 1U];
+        result.bktVarN = fields[BKT_FIELD_BASE + 2U];
+        result.bktIndicesN = fields[BKT_FIELD_BASE + 3U];
+        result.bktTileLen = fields[BKT_FIELD_BASE + 4U];
+        result.bktNumTiles = fields[BKT_FIELD_BASE + 5U];
+        result.bktShift = fields[BKT_FIELD_BASE + 6U];
+        result.bktFifoDepth = fields[BKT_FIELD_BASE + 7U];
+        result.bktStride = fields[BKT_FIELD_BASE + 8U];
+        result.bktRowsPerCore = fields[BKT_FIELD_BASE + 9U];
+        result.bktFrontCore = fields[BKT_FIELD_BASE + 10U];
     }
     return result;
 }
@@ -1023,4 +1052,103 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_other_error)
 
     // workspaces nullptr return failed
     EXPECT_NE(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+}
+
+// ==================== 分桶散射分支（BFLOAT16 稀疏大 var）====================
+// BucketScatterSupport() 有四道收窄闸：dtype 必须 BFLOAT16、reduction 必须 none、
+// var 末轴 >= BUCKET_MIN_VAR_N(65536)、indicesN * BUCKET_SPARSE_RATIO(8) <= varN。
+// 下面 2 个正向用例断言分桶分支被选中且各 bkt* 字段自洽；4 个反向用例逐条验证四道闸，
+// 用来证明既有 dtype / reduction 的选路未被本次改动影响。
+
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_bf16_int32_2d)
+{
+    gert::StorageShape inputShape = {{4, 131072}, {4, 131072}};
+    gert::StorageShape indicesShape = {{4, 1024}, {4, 1024}};
+    gert::StorageShape updatesShape = {{4, 1024}, {4, 1024}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_BF16, ge::DT_INT32, ge::DT_BF16, inputShape, indicesShape,
+                                                 updatesShape, -1, "none", 0);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    // 分桶分支必须被选中：修复前 xDim1 恒为成员默认值 1，xDim1 < 65536 恒成立，该分支永不生效
+    EXPECT_EQ(result.bktMode, 1UL);
+    EXPECT_EQ(result.bktRows, 4UL);
+    EXPECT_EQ(result.bktVarN, 131072UL);
+    EXPECT_EQ(result.bktIndicesN, 1024UL);
+    // 结构性关系：tileLen 为 2 的幂、numTiles = ceil(varN/tileLen)、fifoDepth 按 16 对齐
+    EXPECT_EQ(result.bktTileLen, 1UL << result.bktShift);
+    EXPECT_EQ(result.bktNumTiles, (result.bktVarN + result.bktTileLen - 1) / result.bktTileLen);
+    EXPECT_EQ(result.bktFifoDepth % 16UL, 0UL);
+    // ★ 桶区容量下界：kernel 侧每桶预留 ceil(cnt,16)*16 + 16 <= cnt + 31，
+    //   故 Σ padded <= bktIndicesN + 31 * bktNumTiles；原实现只给 +16*numTiles，会越界写邻核
+    EXPECT_GE(result.bktStride, result.bktIndicesN + 31UL * result.bktNumTiles);
+    // 行分核：usedCore = min(rows, coreNum)，rows=4 远小于核数，故每核 1 行、无前置核多分
+    EXPECT_EQ(result.blockDim, 4U);
+    EXPECT_EQ(result.bktRowsPerCore, 1UL);
+    EXPECT_EQ(result.bktFrontCore, 0UL);
+}
+
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_bf16_int64_3d)
+{
+    gert::StorageShape inputShape = {{2, 3, 98304}, {2, 3, 98304}};
+    gert::StorageShape indicesShape = {{2, 3, 512}, {2, 3, 512}};
+    gert::StorageShape updatesShape = {{2, 3, 512}, {2, 3, 512}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_BF16, ge::DT_INT64, ge::DT_BF16, inputShape, indicesShape,
+                                                 updatesShape, 2, "none", 0);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.bktMode, 1UL);
+    // 末轴之前的维度折叠为行数：2 * 3 = 6
+    EXPECT_EQ(result.bktRows, 6UL);
+    EXPECT_EQ(result.bktVarN, 98304UL);
+    EXPECT_EQ(result.bktIndicesN, 512UL);
+    EXPECT_EQ(result.bktTileLen, 1UL << result.bktShift);
+    EXPECT_EQ(result.bktNumTiles, (result.bktVarN + result.bktTileLen - 1) / result.bktTileLen);
+    EXPECT_GE(result.bktStride, result.bktIndicesN + 31UL * result.bktNumTiles);
+    EXPECT_EQ(result.blockDim, 6U);
+}
+
+// 反向闸 1：dtype 非 BFLOAT16（FLOAT16 同形状）
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_reject_dtype)
+{
+    gert::StorageShape inputShape = {{4, 131072}, {4, 131072}};
+    gert::StorageShape indicesShape = {{4, 1024}, {4, 1024}};
+    gert::StorageShape updatesShape = {{4, 1024}, {4, 1024}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, inputShape, indicesShape,
+                                                 updatesShape, -1, "none", 0);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.bktMode, 0UL);
+}
+
+// 反向闸 2：reduction 非 none（累积语义不适用"末次写赢"）
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_reject_reduction)
+{
+    gert::StorageShape inputShape = {{4, 131072}, {4, 131072}};
+    gert::StorageShape indicesShape = {{4, 1024}, {4, 1024}};
+    gert::StorageShape updatesShape = {{4, 1024}, {4, 1024}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_BF16, ge::DT_INT32, ge::DT_BF16, inputShape, indicesShape,
+                                                 updatesShape, -1, "add", 0);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.bktMode, 0UL);
+}
+
+// 反向闸 3：var 末轴小于 BUCKET_MIN_VAR_N(65536)
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_reject_small_var)
+{
+    gert::StorageShape inputShape = {{4, 32768}, {4, 32768}};
+    gert::StorageShape indicesShape = {{4, 256}, {4, 256}};
+    gert::StorageShape updatesShape = {{4, 256}, {4, 256}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_BF16, ge::DT_INT32, ge::DT_BF16, inputShape, indicesShape,
+                                                 updatesShape, -1, "none", 0);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.bktMode, 0UL);
+}
+
+// 反向闸 4：不够稀疏（indicesN * 8 > varN）
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_bucket_reject_dense)
+{
+    gert::StorageShape inputShape = {{4, 65536}, {4, 65536}};
+    gert::StorageShape indicesShape = {{4, 16384}, {4, 16384}};
+    gert::StorageShape updatesShape = {{4, 16384}, {4, 16384}};
+    auto result = ExecuteArch22DeterministicCase(ge::DT_BF16, ge::DT_INT32, ge::DT_BF16, inputShape, indicesShape,
+                                                 updatesShape, -1, "none", 0);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.bktMode, 0UL);
 }

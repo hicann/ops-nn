@@ -94,6 +94,24 @@ const uint64_t WORKSPACE_SINGLE_OWNER_OUTPUT_GROUP_WIDTH = 256;
 const uint64_t WORKSPACE_SINGLE_OWNER_MAX_SOURCE_WIDTH = 3 * WORKSPACE_SINGLE_OWNER_SOURCE_GROUP_WIDTH;
 const uint64_t WORKSPACE_SINGLE_OWNER_MIN_OUTPUT_WIDTH = 3 * WORKSPACE_SINGLE_OWNER_OUTPUT_GROUP_WIDTH;
 
+// 分桶散射分支参数（与 op_kernel/scatter_elements_v2_bucket_scatter.h 中的常量保持一致）。
+// 注意与上方 STABLE_BUCKET_* 无关：那组是 legacy kernel 的稳定分桶，此处是稀疏散射分桶。
+const uint64_t BUCKET_MIN_VAR_N = 65536;     // var 末轴长度下限：更小的规模主路径已足够高效
+const uint64_t BUCKET_SPARSE_RATIO = 8;      // 稀疏判据：indicesN * RATIO <= varN 才启用
+const uint64_t BUCKET_UPD_CHUNK_HOST = 8192; // 流式块元素数，须等于 kernel 的 BUCKET_UPD_CHUNK
+// UB 余量：需覆盖 kernel 侧 metaBuf(4*numTiles*sizeof(int32)) 及对齐开销。numTiles 由 tileLen 反算、
+// 与 tileLen 互为依赖，故不精确建模，改用足量固定余量（numTiles 上限约 512 时 metaBuf 约 8KB）。
+const uint64_t BUCKET_UB_MARGIN = 12288;
+const uint64_t BUCKET_FIFO_BUDGET = 24576; // 所有桶 FIFO 合计字节预算
+const uint64_t BUCKET_ALIGN_HOST = 16;     // 桶起点/容量对齐粒度，须等于 kernel 的 BUCKET_ALIGN
+const uint64_t BUCKET_FIFO_MAX = 64;       // 每桶 FIFO 深度上限
+const uint64_t BUCKET_POW2_BASE = 2;       // tileLen 取 2 的幂时的底数
+// 单桶在 GM 桶区的最坏额外开销（条目数）。kernel 侧每桶按
+// padded = ceil(cnt, BUCKET_ALIGN) * BUCKET_ALIGN + BUCKET_ALIGN(guard) 预留，
+// 而 ceil(cnt, 16) * 16 <= cnt + 15，故 padded <= cnt + 31；
+// 取 2 * BUCKET_ALIGN_HOST = 32 作为对齐友好的上界（须 >= 31）。
+const uint64_t BUCKET_PAD_PER_TILE_HOST = 2 * BUCKET_ALIGN_HOST;
+
 } // namespace
 
 namespace optiling {
@@ -134,6 +152,8 @@ public:
     bool CacheOpSupport();
     ge::graphStatus RunCacheOpTiling();
     ge::graphStatus SetCacheOpTiling();
+    bool BucketScatterSupport();
+    ge::graphStatus RunBucketScatterTiling();
 
 private:
     void SetTilingData(ScatterElementsV2TilingData& tiling);
@@ -149,6 +169,8 @@ private:
                             const gert::Shape& updatesShape, size_t inputDimNum);
     void SetDimsByAxisType(const gert::Shape& inputShape, const gert::Shape& indicesShape,
                            const gert::Shape& updatesShape, size_t inputDimNum);
+    // 从 context 重新归约 xDim*/indicesDim*/updatesDim*/batchSize/updatesIsScalar（幂等，可重复调用）
+    bool ResolveScatterDims();
     bool CheckCacheOpShapeLimit(const gert::Shape& xShape, const char* reduce) const;
     bool CheckCacheOpDtype(ge::DataType inputDtype, const char* reduce) const;
     bool CheckLastAxisCacheOp(size_t inputDimNum, ge::DataType inputDtype, const char* reduce) const;
@@ -489,6 +511,8 @@ ge::graphStatus ScatterElementsV2Tiling::RunKernelTiling()
 {
     OP_LOGD(tilingContext, "Tiling start.");
 
+    // kernel 侧以 bktMode != 0 分流到分桶散射；此处显式置 0 走既有主路径，不依赖 tilingData 的默认零值
+    tilingData.set_bktMode(0);
     tilingData.set_usedCoreNum(usedCoreNum);
     tilingData.set_eachNum(eachNum);
     tilingData.set_extraTaskCore(extraTaskCore);
@@ -730,6 +754,8 @@ uint64_t ScatterElementsV2Tiling::GetCacheOpMaxXDim1(ge::DataType inputDtype, co
 
 void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling)
 {
+    // 与 RunKernelTiling() 同理：cache-op 发射路径也显式置 0，确保 kernel 侧分流判据不读到脏值
+    tiling.set_bktMode(0);
     tiling.set_batchSize(batchSize);
     tiling.set_realDim(realDim);
     tiling.set_coreNums(usedCoreNum);
@@ -1031,6 +1057,217 @@ ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling()
     return SetCacheOpTiling();
 }
 
+// 重新归约 xDim*/indicesDim*/updatesDim*/batchSize/updatesIsScalar。这些成员原本只由 cache-op 路径
+// （RunCacheOpTiling）填充；Init() 只计算旧 kernel 需要的切分字段，从不给它们赋值，故非 cache-op
+// 路径下它们恒为默认值 1。分桶分支的形状判据必须先调用本函数补齐，否则判据恒拿默认值比较、
+// 该分支永远不会被选中。SetDimsFor*Axis 内部对这些成员是累乘（*=），故此处先整体复位再重算，
+// 使本函数可重复调用而结果不变（幂等）。
+bool ScatterElementsV2Tiling::ResolveScatterDims()
+{
+    if (tilingContext == nullptr) {
+        return false;
+    }
+    auto inputShapePtr = tilingContext->GetInputShape(INPUT_0);
+    auto indicesShapePtr = tilingContext->GetInputShape(INPUT_1);
+    auto updatesShapePtr = tilingContext->GetInputShape(INPUT_2);
+    auto attrs = tilingContext->GetAttrs();
+    if (inputShapePtr == nullptr || indicesShapePtr == nullptr || updatesShapePtr == nullptr || attrs == nullptr) {
+        return false;
+    }
+    const int64_t* dim = attrs->GetAttrPointer<int64_t>(0);
+    if (dim == nullptr) {
+        return false;
+    }
+
+    auto inputShape = inputShapePtr->GetStorageShape();
+    auto indicesShape = indicesShapePtr->GetStorageShape();
+    auto updatesShape = updatesShapePtr->GetStorageShape();
+    auto inputDimNum = inputShape.GetDimNum();
+    if (inputDimNum == 0 || indicesShape.GetDimNum() != inputDimNum) {
+        return false;
+    }
+    // SetDimsFor*Axis 按 inputDimNum 遍历 updates，故 updates 须与 input 同维，
+    // 或为 ProcessUpdatesShape 可展开成 indices 形状的 scalar 形态
+    auto updatesDimNum = updatesShape.GetDimNum();
+    bool updatesScalarLike = (updatesDimNum == 0) || (updatesDimNum == 1 && updatesShape.GetDim(0) == 1);
+    if (!updatesScalarLike && updatesDimNum != inputDimNum) {
+        return false;
+    }
+    int64_t axis = (*dim < 0) ? (*dim + static_cast<int64_t>(inputDimNum)) : *dim;
+    if (axis < 0 || axis >= static_cast<int64_t>(inputDimNum)) {
+        return false;
+    }
+
+    batchSize = 1;
+    xDim0 = 1;
+    xDim1 = 1;
+    indicesDim0 = 1;
+    indicesDim1 = 1;
+    updatesDim0 = 1;
+    updatesDim1 = 1;
+    updatesIsScalar = 0;
+    realDim = static_cast<uint64_t>(axis);
+
+    // 与 RunCacheOpTiling() 用同一套归约模型：scalar updates 先展开成 indices 形状，
+    // 再按首轴 / 中轴 / 末轴折叠成二维 (xDim0, xDim1)
+    ProcessUpdatesShape(updatesShape, indicesShape);
+    SetDimsByAxisType(inputShape, indicesShape, updatesShape, inputDimNum);
+    return true;
+}
+
+// 分桶散射分支的启用条件。严格收窄：仅 BFLOAT16 末轴 reduction=none 且 var 末轴远大于更新数的
+// 稀疏场景才启用；其余 dtype / 场景的选路与既有实现完全一致，不受影响。
+// 与 legacy kernel 的 ProcessNoneStableBucket（判据 M != 0，用于行内分块搬运）是两套独立机制：
+// 此处的分桶是把稀疏更新点按输出 tile 归桶，把随机散射降为顺序突发写。
+// 注意：本函数内会调用 ResolveScatterDims() 补齐维度成员，故不能声明为 const。
+bool ScatterElementsV2Tiling::BucketScatterSupport()
+{
+    if (tilingContext == nullptr) {
+        return false;
+    }
+    // 仅覆盖语义（none）适用“末次写赢”；带 reduction 的累积语义不适用
+    if (mode != NONE) {
+        return false;
+    }
+    if (includeSelf != 1) {
+        return false;
+    }
+    // 先做 dtype 判定再补齐维度：ResolveScatterDims() 会改写 realDim/xDim* 等成员，
+    // 把它挡在 BFLOAT16 之后可使该副作用面收窄到本分支真正可能命中的场景
+    auto varDesc = tilingContext->GetInputDesc(INPUT_0);
+    auto idxDesc = tilingContext->GetInputDesc(INPUT_1);
+    if (varDesc == nullptr || idxDesc == nullptr) {
+        return false;
+    }
+    // 仅本次新增支持的 BFLOAT16 启用，既有 dtype 行为保持不变
+    if (varDesc->GetDataType() != ge::DT_BF16) {
+        return false;
+    }
+    auto idxType = idxDesc->GetDataType();
+    if (idxType != ge::DT_INT32 && idxType != ge::DT_INT64) {
+        return false;
+    }
+    // ★ Init() 不给 xDim*/indicesDim*/updatesIsScalar 赋值，必须先补齐，
+    //   否则下面的形状判据恒拿默认值 1 比较，本分支永远不会被选中。
+    if (!ResolveScatterDims()) {
+        return false;
+    }
+    if (updatesIsScalar != 0) {
+        return false;
+    }
+    // 末轴无需再判：Init() 已强制 realDim == inputDimNum - 1，否则不会走到这里
+    // 形状约束：var 末轴足够大，且更新数远小于它（稀疏），否则主路径已足够高效
+    if (xDim1 < BUCKET_MIN_VAR_N || indicesDim1 == 0 || xDim0 == 0) {
+        return false;
+    }
+    if (indicesDim1 * BUCKET_SPARSE_RATIO > xDim1) {
+        return false;
+    }
+    // kernel 侧以同一个 bktIndicesN 索引 indices 与 updates，故两者末轴长度必须一致；
+    // 行数也必须与 var 对齐，否则按 r*k 计算的行基址会越界
+    if (updatesDim1 != indicesDim1 || indicesDim0 != xDim0 || updatesDim0 != xDim0) {
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus ScatterElementsV2Tiling::RunBucketScatterTiling()
+{
+    auto platformInfo = tilingContext->GetPlatformInfo();
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    uint64_t ubSize = 0;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    uint64_t coreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(ubSize == 0 || coreNum == 0, OP_LOGE(tilingContext, "invalid platform info for bucket scatter."),
+                return ge::GRAPH_FAILED);
+
+    // ResolveScatterDims() 幂等（内部先复位再重算），此处再调一次以解除对
+    // “必须紧跟在 BucketScatterSupport() 之后被调用” 这一隐式顺序依赖
+    OP_CHECK_IF(!ResolveScatterDims(), OP_LOGE(tilingContext, "failed to resolve dims for bucket scatter."),
+                return ge::GRAPH_FAILED);
+    uint64_t rows = xDim0;
+    uint64_t m = xDim1;
+    uint64_t k = indicesDim1;
+    // var 为 BFLOAT16（2 字节），indices 缓冲按 int32 计
+    const uint64_t vBytes = sizeof(uint16_t);
+    const uint64_t idxBytes = sizeof(int32_t);
+
+    // tileLen：在 UB 预算内取最大的 2 的幂
+    // UB 占用 = tile(tileLen*vBytes) + idxBuf(CHUNK*4) + valBuf(CHUNK*vBytes) + margin
+    uint64_t fixedBytes = BUCKET_UPD_CHUNK_HOST * idxBytes + BUCKET_UPD_CHUNK_HOST * vBytes + BUCKET_UB_MARGIN;
+    uint64_t tileBytesMax = (ubSize > fixedBytes) ? (ubSize - fixedBytes) : vBytes;
+    uint64_t tileLenMax = tileBytesMax / vBytes;
+    if (tileLenMax < 1) {
+        tileLenMax = 1;
+    }
+    uint64_t tileLen = 1;
+    uint64_t shift = 0;
+    while ((tileLen * BUCKET_POW2_BASE) <= tileLenMax) {
+        tileLen *= BUCKET_POW2_BASE;
+        shift++;
+    }
+    uint64_t numTiles = (m + tileLen - 1) / tileLen;
+    OP_CHECK_IF(numTiles == 0, OP_LOGE(tilingContext, "bucket scatter numTiles is 0."), return ge::GRAPH_FAILED);
+
+    // 每桶 FIFO 深度：numTiles*D*(4+2) <= 预算，取 16 的倍数并夹在 [16,64]
+    uint64_t fifoDepth = BUCKET_FIFO_BUDGET / (numTiles * (idxBytes + vBytes));
+    fifoDepth = (fifoDepth / BUCKET_ALIGN_HOST) * BUCKET_ALIGN_HOST;
+    if (fifoDepth < BUCKET_ALIGN_HOST) {
+        fifoDepth = BUCKET_ALIGN_HOST;
+    }
+    if (fifoDepth > BUCKET_FIFO_MAX) {
+        fifoDepth = BUCKET_FIFO_MAX;
+    }
+    // 每核 GM 桶区容量（条目数）。kernel 侧每桶预留 padded = ceil(cnt,16)*16 + 16(guard)，
+    // 由 ceil(cnt,16)*16 <= cnt + 15 得 padded <= cnt + 31，故 Σ_b padded <= k + 31*numTiles。
+    // 取 32*numTiles 作对齐友好的上界：稀疏场景（k < 16*numTiles，正是本分支的启用前提）下
+    // 旧式 k + 16*numTiles 会小于真实占用，导致桶 offset 越过本核桶区、踩写相邻核。
+    uint64_t bktStride = k + BUCKET_PAD_PER_TILE_HOST * numTiles;
+
+    // 行分核
+    uint64_t usedCore = rows < coreNum ? rows : coreNum;
+    if (usedCore < 1) {
+        usedCore = 1;
+    }
+    uint64_t rowsPerCore = rows / usedCore;
+    uint64_t frontCore = rows % usedCore;
+
+    tilingData.set_bktMode(1);
+    tilingData.set_bktRows(rows);
+    tilingData.set_bktVarN(m);
+    tilingData.set_bktIndicesN(k);
+    tilingData.set_bktTileLen(tileLen);
+    tilingData.set_bktNumTiles(numTiles);
+    tilingData.set_bktShift(shift);
+    tilingData.set_bktFifoDepth(fifoDepth);
+    tilingData.set_bktStride(bktStride);
+    tilingData.set_bktRowsPerCore(rowsPerCore);
+    tilingData.set_bktFrontCore(frontCore);
+    tilingData.set_usedCoreNum(usedCore);
+    tilingData.set_includeSelf(includeSelf);
+    tilingData.set_mode(static_cast<uint64_t>(mode));
+
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
+    tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    tilingContext->SetTilingKey(tilingKey);
+    tilingContext->SetBlockDim(usedCore);
+
+    // workspace：系统预留 + 每核 GM 桶区（int32 索引 + var dtype 值）。
+    // workspaceSize 成员已在 TilingPrepare 中被赋为 GetLibApiWorkSpaceSize()，即系统预留部分；
+    // kernel 侧用 GetUserWorkspace() 跳过该段后即为下面的桶区，故此处不可再叠加一次 lib api 大小。
+    size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, workspaces);
+    uint64_t bktBytes = usedCore * bktStride * (idxBytes + vBytes);
+    workspaces[0] = static_cast<size_t>(workspaceSize + bktBytes);
+
+    OP_LOGD(tilingContext,
+            "bucket scatter tiling: rows=%lu, varN=%lu, indicesN=%lu, tileLen=%lu, numTiles=%lu, fifoDepth=%lu, "
+            "bktStride=%lu, usedCore=%lu.",
+            rows, m, k, tileLen, numTiles, fifoDepth, bktStride, usedCore);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
     auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
@@ -1045,6 +1282,10 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
     // to that entry: its legacy loop bounds would be zero.
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
+    }
+    // BFLOAT16 稀疏大 var 的末轴覆盖场景走分桶散射分支；其余场景与既有实现完全一致
+    if (tilingObject.BucketScatterSupport()) {
+        return tilingObject.RunBucketScatterTiling();
     }
     return tilingObject.RunKernelTiling();
 }

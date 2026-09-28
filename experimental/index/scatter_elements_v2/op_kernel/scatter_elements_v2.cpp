@@ -13,6 +13,19 @@
  * \brief
  */
 #include "scatter_elements_v2.h"
+#include "scatter_elements_v2_bucket_scatter.h"
+
+// 分桶散射分支：由 host 侧 BucketScatterSupport() 判定并置 bktMode，仅 BFLOAT16 + reduction=none
+// 的稀疏大 var（varN >> indicesN）场景启用，实现见 scatter_elements_v2_bucket_scatter.h。
+template <typename T, typename U>
+__aicore__ inline void ExecBucketScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                           ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                           GM_ADDR workspace)
+{
+    ScatterElementsV2NS::BucketScatterElements<T, U> op;
+    op.Init(var, indices, updates, tiling_data, pipe, GetUserWorkspace(workspace));
+    op.Process();
+}
 
 template <typename T, typename U>
 __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
@@ -37,13 +50,21 @@ __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR
 
 template <typename T, typename U>
 __aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                     ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe)
+                                     ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe, GM_ADDR workspace)
 {
+    // host 侧 BucketScatterSupport() 只对 BFLOAT16 置 bktMode，故用 if constexpr 收口：其余 dtype
+    // 不实例化分桶 kernel，既省掉无用实例化，也把“脏 bktMode 误入分桶”的风险面限制在 BF16 之内。
+    if constexpr (is_same<T, bfloat16_t>::value) {
+        if (tiling_data->bktMode != 0) {
+            ExecBucketScatterOp<T, U>(var, indices, updates, tiling_data, pipe, workspace);
+            return;
+        }
+    }
     ExecLegacyScatterOp<T, U>(var, indices, updates, tiling_data, pipe);
 }
-#define CALL_OP_IMPL(T, U)                                               \
-    do {                                                                 \
-        ExecScatterOp<T, U>(var, indices, updates, tilingDevice, &pipe); \
+#define CALL_OP_IMPL(T, U)                                                          \
+    do {                                                                            \
+        ExecScatterOp<T, U>(var, indices, updates, tilingDevice, &pipe, workspace); \
     } while (0)
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output,

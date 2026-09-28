@@ -96,3 +96,87 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
+
+TEST_F(scatter_elements_v2_test, test_case_bucket_bf16_int32)
+{
+    constexpr size_t rows = 2;
+    constexpr size_t varN = 196608;
+    constexpr size_t indicesN = 96;
+    constexpr size_t tileLen = 65536;
+    constexpr size_t numTiles = 3;
+    constexpr size_t fifoDepth = 64;
+    // 与 host 侧 BUCKET_PAD_PER_TILE_HOST 一致：kernel 每桶预留 ceil(cnt,16)*16 + 16 <= cnt + 31，
+    // 故每核桶区容量须为 indicesN + 32 * numTiles；用旧式 16 * numTiles 会越界
+    constexpr size_t bucketStride = indicesN + 32 * numTiles;
+    constexpr size_t systemWorkspaceSize = 16 * 1024 * 1024;
+    constexpr size_t bucketWorkspaceSize = rows * bucketStride * (sizeof(int32_t) + sizeof(uint16_t));
+    constexpr size_t dataSize = rows * varN;
+    constexpr size_t updatesSize = rows * indicesN;
+
+    uint8_t* var = static_cast<uint8_t*>(AscendC::GmAlloc(dataSize * sizeof(uint16_t)));
+    uint8_t* indices = static_cast<uint8_t*>(AscendC::GmAlloc(updatesSize * sizeof(int32_t)));
+    uint8_t* updates = static_cast<uint8_t*>(AscendC::GmAlloc(updatesSize * sizeof(uint16_t)));
+    uint8_t* output = static_cast<uint8_t*>(AscendC::GmAlloc(dataSize * sizeof(uint16_t)));
+    uint8_t* workspace = static_cast<uint8_t*>(AscendC::GmAlloc(systemWorkspaceSize + bucketWorkspaceSize));
+    uint8_t* tiling = static_cast<uint8_t*>(AscendC::GmAlloc(sizeof(ScatterElementsV2TilingData)));
+
+    auto* varData = reinterpret_cast<uint16_t*>(var);
+    auto* indicesData = reinterpret_cast<int32_t*>(indices);
+    auto* updatesData = reinterpret_cast<uint16_t*>(updates);
+    vector<uint16_t> expected(dataSize);
+    for (size_t i = 0; i < dataSize; ++i) {
+        varData[i] = static_cast<uint16_t>(0x3F80U + i % 32);
+        expected[i] = varData[i];
+    }
+    // 更新点故意分布在第 0 桶与第 2 桶，覆盖"跨桶 + 同桶内重复下标(末次写赢)"两种情形
+    for (size_t r = 0; r < rows; ++r) {
+        for (size_t i = 0; i < indicesN; ++i) {
+            size_t offset = i < 70 ? i % 24 : 2 * tileLen + (i - 70) % 13;
+            size_t updateOffset = r * indicesN + i;
+            indicesData[updateOffset] = static_cast<int32_t>(offset);
+            updatesData[updateOffset] = static_cast<uint16_t>(0x4000U + updateOffset);
+            expected[r * varN + offset] = updatesData[updateOffset];
+        }
+    }
+
+    memset(tiling, 0, sizeof(ScatterElementsV2TilingData));
+    auto* tilingData = reinterpret_cast<ScatterElementsV2TilingData*>(tiling);
+    tilingData->usedCoreNum = rows;
+    tilingData->bktMode = 1;
+    tilingData->bktRows = rows;
+    tilingData->bktVarN = varN;
+    tilingData->bktIndicesN = indicesN;
+    tilingData->bktTileLen = tileLen;
+    tilingData->bktNumTiles = numTiles;
+    tilingData->bktShift = 16;
+    tilingData->bktFifoDepth = fifoDepth;
+    tilingData->bktStride = bucketStride;
+    tilingData->bktRowsPerCore = 1;
+    tilingData->bktFrontCore = 0;
+
+    ICPU_SET_TILING_KEY(610);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scatter_elements_v2, rows, var, indices, updates, output, workspace, tiling);
+
+    size_t mismatch = dataSize;
+    uint16_t actualValue = 0;
+    uint16_t expectedValue = 0;
+    for (size_t i = 0; i < dataSize; ++i) {
+        if (varData[i] != expected[i]) {
+            mismatch = i;
+            actualValue = varData[i];
+            expectedValue = expected[i];
+            break;
+        }
+    }
+
+    AscendC::GmFree(var);
+    AscendC::GmFree(indices);
+    AscendC::GmFree(updates);
+    AscendC::GmFree(output);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+
+    EXPECT_EQ(mismatch, dataSize) << "first mismatch at offset " << mismatch << ", actual raw bf16=" << actualValue
+                                  << ", expected raw bf16=" << expectedValue;
+}

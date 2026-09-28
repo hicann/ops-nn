@@ -59,6 +59,22 @@ TILING_DATA_FIELD_DEF(uint64_t, updatesDim0);
 TILING_DATA_FIELD_DEF(uint64_t, updatesDim1);
 TILING_DATA_FIELD_DEF(uint64_t, batchSize);
 TILING_DATA_FIELD_DEF(uint64_t, realDim);
+// 分桶散射分支参数（末轴 reduction=none 且 varN >> indicesN 的稀疏大 var 场景）：
+// bktMode 非 0 时启用该分支，其余字段仅在该分支下有效。
+// 这些维度不复用 xDim*/indicesDim*（那几个字段是 cache-op 路径的归约结果，
+// 复用会与该路径相互干扰），故另设独立字段，与既有分支零耦合。
+// 字段一律追加在 realDim 之后，不得插入中间：UT 按 uint64 下标读取序列化 payload。
+TILING_DATA_FIELD_DEF(uint64_t, bktMode);
+TILING_DATA_FIELD_DEF(uint64_t, bktRows);        // 独立散射行数
+TILING_DATA_FIELD_DEF(uint64_t, bktVarN);        // 每行 var 元素数
+TILING_DATA_FIELD_DEF(uint64_t, bktIndicesN);    // 每行更新元素数
+TILING_DATA_FIELD_DEF(uint64_t, bktTileLen);     // 单个输出 tile 元素数（2 的幂）
+TILING_DATA_FIELD_DEF(uint64_t, bktNumTiles);    // ceil(bktVarN / bktTileLen) = 桶数
+TILING_DATA_FIELD_DEF(uint64_t, bktShift);       // log2(bktTileLen)
+TILING_DATA_FIELD_DEF(uint64_t, bktFifoDepth);   // 每桶 UB FIFO 深度（16 的倍数）
+TILING_DATA_FIELD_DEF(uint64_t, bktStride);      // 每核 GM 桶区容量（条目数）
+TILING_DATA_FIELD_DEF(uint64_t, bktRowsPerCore); // 每核基础行数
+TILING_DATA_FIELD_DEF(uint64_t, bktFrontCore);   // 前 bktFrontCore 个核各多处理 1 行
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2TilingData)
