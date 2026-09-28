@@ -215,15 +215,12 @@ aclnnStatus aclnnRmsNormQuant(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>输入或输出的数据类型不在支持的范围之内，输入和输出的数据类型不满足约束说明中的对应关系。</td>
     </tr>
     <tr>
       <td>输入/输出的shape关系不符合预期。</td>
-    </tr>
-    <tr>
-      <td><term>Ascend 950PR/Ascend 950DT</term>：`x`、`gamma`、`beta`、`scale`、`offset`或`y`为空Tensor。</td>
     </tr>
   </tbody></table>
 
