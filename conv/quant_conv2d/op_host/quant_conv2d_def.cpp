@@ -86,7 +86,7 @@ public:
 
         this->Attr("dtype").AttrType(REQUIRED).Int(); // output dtype
         this->Attr("strides").AttrType(REQUIRED).ListInt();
-        this->Attr("pads").AttrType(OPTIONAL).ListInt({0, 0, 0, 0});
+        this->Attr("pads").AttrType(REQUIRED).ListInt();
         this->Attr("dilations").AttrType(OPTIONAL).ListInt({1, 1, 1, 1});
         this->Attr("groups").AttrType(OPTIONAL).Int(1);
         this->Attr("data_format").AttrType(OPTIONAL).String("NCHW");

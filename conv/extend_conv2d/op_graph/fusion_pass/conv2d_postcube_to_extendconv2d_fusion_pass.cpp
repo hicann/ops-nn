@@ -377,7 +377,8 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::GetPostCubeNodes(const GNode& convN
                       return false);
 
     AscendString firstNodeType;
-    convOutputNodes[0].first->GetType(firstNodeType);
+    FUSION_PASS_CHECK(convOutputNodes[0].first->GetType(firstNodeType) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get node type failed."), return false);
     bool isPostCubeFirst = firstNodeType == POST_CUBE_OP;
 
     if ((postCubeNodes.size() > DUAL_OUTPUTNUM) || (!otherNodes.empty() && postCubeNodes.size() == DUAL_OUTPUTNUM)) {

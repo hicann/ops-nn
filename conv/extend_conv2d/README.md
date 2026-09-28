@@ -129,7 +129,7 @@
 <tr>
 <td>y1</td>
 <td>输出</td>
-<td>公式中的输出张量y1。</td>
+<td>公式中的输出张量y1。调用方必须始终提供y1，仅当dual_output为true时y1写入有效结果。</td>
 <td>FLOAT16、FLOAT、BFLOAT16、HIFLOAT8、INT8、FLOAT8_E4M3FN</td>
 <td>NCHW、NHWC</td>
 </tr>

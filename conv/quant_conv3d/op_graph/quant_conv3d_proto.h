@@ -50,8 +50,8 @@ namespace ge {
 * format of "x". The n and in_channels dimensions must be set to 1.
 * When the format is "NDHWC", its shape is [1, stride_d, stride_h, stride_w, 1],
 * when the format is "NCDHW", its shape is [1, 1, stride_d, stride_h, stride_w].
-* @li pads: Required. A list of 6 integers. The number of pixels to add to each
-* (pad_head, pad_tail, pad_top, pad_bottom, pad_left, pad_right) side of the input.
+* @li pads: Optional. A list of 6 integers. The number of pixels to add to each
+* (pad_head, pad_tail, pad_top, pad_bottom, pad_left, pad_right) side of the input. Defaults to [0, 0, 0, 0, 0, 0].
 * @li dilations: Optional. A list of 5 integers. The dilation factor for each
 * dimension of input. The dimension order is determined by the data format of
 * "x". The n and in_channels dimensions must be set to 1.

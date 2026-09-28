@@ -42,7 +42,7 @@
 | y | 输出 | 公式中的输出张量y。 | FLOAT、FLOAT16、BFLOAT16、FLOAT8_E4M3FN、HIFLOAT8 | NCHW |
 | dtype | 属性 | 表示输出y的数据类型。支持的列表包括 [0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。 | INT32 | - |
 | strides | 属性 | 卷积扫描步长，包括stride_h, stride_w。| INT32 | - |
-| pads | 可选属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
+| pads | 必选属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
 | dilations | 可选属性 | 卷积核中元素的间隔，包括dilation_h, dilation_w。| INT32 | - |
 | groups | 可选属性 | 从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。 | INT32 | - |
 | data_format | 可选属性 | 输入数据格式，仅支持"NCHW"。 | STRING | - |

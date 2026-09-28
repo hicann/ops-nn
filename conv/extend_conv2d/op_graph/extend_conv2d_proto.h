@@ -87,8 +87,8 @@ float8        | float32/float16/bfloat16/float8_e4m3 |\n | Format    | NCHW     
 * @li enable_relu1: Optional. Indicates whether relu is enabled for the second output. Defaults to false.
 * If False, relu is disable for the second output. Must be false.
 * @li dual_output: Optional. Indicates whether dual outputs are used. Defaults to false.
-* When dual_output is false, extendConv2D only has output y0. When dual_output is true,
-* extendConv2D has output y0 and y1. Must be false.
+* y1 is a registered output and must always be provided by the caller. When dual_output is false,
+* no valid result is written to y1. When dual_output is true, y1 carries the valid second output. Must be false.
 * @li dtype0: Optional. A integer of type int8. It means the dtype of output y0.
 * Support list is [-1(Default), 0(DT_FLOAT), 1(DT_FLOAT16), 2(DT_INT8), 27(DT_BF16),
 * 34(DT_HIFLOAT8), 36(DT_FLOAT8_E4M3FN)]. Defaults to -1, means the dtype is the same as x.
@@ -100,6 +100,7 @@ float8        | float32/float16/bfloat16/float8_e4m3 |\n | Format    | NCHW     
 * @li y0: The first output of ExtendConv2D. A 4D Tensor of output feature map. Has the same type as "x".
 * With the format "NCHW", the data is stored in the order of: [n, out_channels, out_height, out_width].
 * @li y1: The second output of ExtendConv2D. A 4D Tensor of output feature map. Has the same type as "x".
+* y1 must always be provided by the caller, and carries a valid result only when "dual_output" is true.
 * With the format "NCHW", the data is stored in the order of: [n, out_channels, out_height, out_width].
 *\n
 *     out_height = (h + pad_top + pad_bottom -
