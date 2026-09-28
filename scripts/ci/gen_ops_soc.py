@@ -10,7 +10,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 import os
-import sys
 import re
 
 
@@ -19,8 +18,15 @@ def should_skip_directory(dir_name):
     判断是否应该跳过该目录
     """
     skip_dirs = {
-        'build', 'cmake', 'common', 'docs', 'examples',
-        'experimental', 'scripts', 'tests', 'third_party'
+        "build",
+        "cmake",
+        "common",
+        "docs",
+        "examples",
+        "experimental",
+        "scripts",
+        "tests",
+        "third_party",
     }
     return dir_name in skip_dirs
 
@@ -29,33 +35,21 @@ def parse_foreach_config(config_str):
     """
     解析 FOREACH_OPDEF 中的配置字符串
     """
-    config_mapping = {
-        'A2': 'ascend910b',
-        '910_93': 'ascend910_93',
-        'A5': 'ascend950',
-        '910B': 'ascend910b',
-        '910B_93': 'ascend910_93',
-        '910B_95': 'ascend950',
-        '950': 'ascend950',
-        '350': "ascend350",
-        '910': 'ascend910',
-        '910_55': 'ascend910_55',
-    }
 
     found_configs = []
     config_str_upper = config_str.upper()
 
     priority_checks = [
-        ('A2', 'ascend910b'),
-        ('910_93', 'ascend910_93'),
-        ('A5', 'ascend950'),
-        ('910_55', 'ascend910_55'),
-        ('910B', 'ascend910b'),
-        ('910B_93', 'ascend910_93'),
-        ('910B_95', 'ascend950'),
-        ('950', 'ascend950'),
-        ('350', 'ascend350'),
-        ('910', 'ascend910'),
+        ("A2", "ascend910b"),
+        ("910_93", "ascend910_93"),
+        ("A5", "ascend950"),
+        ("910_55", "ascend910_55"),
+        ("910B", "ascend910b"),
+        ("910B_93", "ascend910_93"),
+        ("910B_95", "ascend950"),
+        ("950", "ascend950"),
+        ("350", "ascend350"),
+        ("910", "ascend910"),
     ]
 
     for key, value in priority_checks:
@@ -72,7 +66,7 @@ def extract_static_map_configs(content):
     configs = []
 
     map_patterns = [
-        r'static\s+const\s+std::map<std::string[^>]*>\s+\w+\s*=\s*\{([^}]+)\}',
+        r"static\s+const\s+std::map<std::string[^>]*>\s+\w+\s*=\s*\{([^}]+)\}",
         r'\{"([a-zA-Z0-9_]+)"[^}]*\}',
     ]
 
@@ -118,13 +112,13 @@ def extract_foreach_opdef_configs(content):
     """
     configs = []
 
-    pattern1 = r'FOREACH_OPDEF\(([^,]+),'
+    pattern1 = r"FOREACH_OPDEF\(([^,]+),"
     matches1 = re.findall(pattern1, content)
     for match in matches1:
         config_str = match.strip()
         configs.extend(parse_foreach_config(config_str))
 
-    pattern2 = r'FOREACH_OPDEF_END_([^(]+)\('
+    pattern2 = r"FOREACH_OPDEF_END_([^(]+)\("
     matches2 = re.findall(pattern2, content)
     for match in matches2:
         config_str = match.strip()
@@ -160,7 +154,7 @@ def extract_ai_core_configs(file_path):
     """
     configs = []
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # 方法1：匹配传统的 AICore 配置
@@ -199,9 +193,10 @@ def split_list_by_num_groups(lst, num_groups):
     last = 0.0
     for _ in range(num_groups):
         val = int(round(last + avg))
-        out.append(lst[int(last):val])
+        out.append(lst[int(last) : val])
         last = val
     return out
+
 
 GROUPING_CONFIGS = {
     "default": {
@@ -210,9 +205,14 @@ GROUPING_CONFIGS = {
         2: ["quant_batch_matmul_v3", "conv3d_v2"],
         3: ["weight_quant_batch_matmul_v2", "batch_mat_mul_v3", "apply_adam_w_v2"],
         4: [
-            "scatter_elements_v2", "add_layer_norm", "layer_norm_grad_v3", 
-            "masked_softmax_with_rel_pos_bias", "group_norm_grad",
-            "group_norm_swish", "scatter_list", "group_norm_swish_grad"
+            "scatter_elements_v2",
+            "add_layer_norm",
+            "layer_norm_grad_v3",
+            "masked_softmax_with_rel_pos_bias",
+            "group_norm_grad",
+            "group_norm_swish",
+            "scatter_list",
+            "group_norm_swish_grad",
         ],
     },
     "ascend950": {
@@ -222,9 +222,19 @@ GROUPING_CONFIGS = {
         3: ["extend_conv2d", "conv3d_v2"],
         4: ["conv2d_v2", "conv3d_transpose_v2"],
         5: ["quant_conv3d", "conv3d_backprop_input_v2", "apply_adam_w_v2"],
-        6: ["batch_norm_grad_v3", "cross_entropy_loss_grad", "ascend_quant_v2", "dequant_swiglu_quant"],
-        7: ["mat_mul_v3", "cross_entropy_loss", "weight_quant_batch_matmul_v2", "group_norm_grad"]
-    }
+        6: [
+            "batch_norm_grad_v3",
+            "cross_entropy_loss_grad",
+            "ascend_quant_v2",
+            "dequant_swiglu_quant",
+        ],
+        7: [
+            "mat_mul_v3",
+            "cross_entropy_loss",
+            "weight_quant_batch_matmul_v2",
+            "group_norm_grad",
+        ],
+    },
 }
 
 
@@ -242,9 +252,9 @@ def grouped(repository_path, soc, group_size):
         dirs[:] = [d for d in dirs if not should_skip_directory(d)]
 
         for file in files:
-            if file.endswith('_def.cpp'):
+            if file.endswith("_def.cpp"):
                 full_path = os.path.join(root, file)
-                op_name = file.replace('_def.cpp', '')
+                op_name = file.replace("_def.cpp", "")
 
                 # 提取 AICore 配置
                 ai_core_configs = extract_ai_core_configs(full_path)
@@ -252,8 +262,6 @@ def grouped(repository_path, soc, group_size):
                 for _ in range(3):
                     current_path = os.path.dirname(current_path)
 
-                # 获取三层父目录的文件名
-                parent_dir_name = os.path.basename(current_path)
                 if soc in ai_core_configs:
                     matched = False
                     for idx, op_list in config.items():
@@ -263,7 +271,7 @@ def grouped(repository_path, soc, group_size):
                             break
                     if not matched:
                         remain.append(op_name)
-    
+
     filtered_result = []
     len_size = len(result)
     for i in range(len_size):
@@ -273,7 +281,7 @@ def grouped(repository_path, soc, group_size):
             filtered_result.append(result[i])
 
     remain = sorted(remain)
-    remain = split_list_by_num_groups(remain, group_size - len_size + zero_tensor_num if group_size > 8 else group_size)
+    remain = split_list_by_num_groups(remain, group_size - len_size + zero_tensor_num)
     result.extend(remain)
     return result
 
