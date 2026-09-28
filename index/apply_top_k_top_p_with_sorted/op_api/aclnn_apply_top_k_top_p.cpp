@@ -48,7 +48,8 @@ static bool CheckNotNull(const aclTensor* logits, const aclTensor* p, const aclT
 {
     OP_CHECK_NULL(logits, return false);
     if (p == nullptr && k == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The inputs, p and k, should not be nullptr at the same time.");
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The inputs, p and k, should not be nullptr at the same time.");
+        return false;
     }
     OP_CHECK_NULL(out, return false);
     return true;
