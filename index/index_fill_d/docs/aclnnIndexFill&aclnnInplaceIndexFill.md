@@ -76,7 +76,7 @@
 
   ```Cpp
   aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(
-   aclTensor*       self,
+   aclTensor*       selfRef,
    int64_t          dim,
    const aclTensor* index,
    const aclScalar* value,
