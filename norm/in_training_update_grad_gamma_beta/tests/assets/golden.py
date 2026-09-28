@@ -11,17 +11,17 @@
 # ----------------------------------------------------------------------------
 """TTK golden and third-party reference for INTrainingUpdateGradGammaBeta."""
 
+import importlib
 import itertools
 import math
-from decimal import Decimal, localcontext
 
 import numpy as np
-import torch
 
 
 def _accurate_sum(value):
     """Use a fast FP64 sum, recovering ill-conditioned finite columns with fsum."""
-    value = np.asarray(value, dtype=np.float32)
+    # TTK Promote supplies FP64 inputs. Never narrow them or the CPU truth.
+    value = np.asarray(value)
     with np.errstate(invalid="ignore", over="ignore"):
         total = np.sum(value, axis=0, keepdims=True, dtype=np.float64)
         if value.size:
@@ -35,45 +35,22 @@ def _accurate_sum(value):
             rows = value.reshape(value.shape[0], total.size)
             for column in np.flatnonzero(risky):
                 total.flat[column] = math.fsum(float(x) for x in rows[:, column])
-        return total.astype(np.float32)
+        return total
 
 
 class _TorchReference:
-    """Torch reduction with independent decimal recovery for cancellation risks."""
+    """Native Torch composition shared by competitor precision and timing."""
 
     def __init__(self, **_):
         pass
 
     @staticmethod
     def _sum(value):
-        wide = value.to(torch.float64)
-        total = wide.sum(dim=0, keepdim=True)
-        if value.numel():
-            magnitude = wide.abs().sum(dim=0, keepdim=True)
-            error_bound = (
-                torch.finfo(torch.float64).eps * max(value.shape[0] - 1, 0) * magnitude
-            )
-            risky = torch.isfinite(magnitude) & (
-                error_bound > total.abs() * torch.finfo(torch.float32).eps / 4
-            )
-            columns = torch.nonzero(risky.reshape(-1), as_tuple=False).reshape(-1)
-            if columns.numel():
-                rows = (
-                    value.reshape(value.shape[0], total.numel())[:, columns]
-                    .detach()
-                    .cpu()
-                )
-                # 256 digits cover exact FP32 decimal values and the row-count
-                # carry. This path deliberately does not reuse the fsum golden.
-                with localcontext() as context:
-                    context.prec = 256
-                    for index, column in enumerate(columns.tolist()):
-                        exact = sum(
-                            (Decimal.from_float(float(x)) for x in rows[:, index]),
-                            Decimal(0),
-                        )
-                        total.reshape(-1)[column] = float(exact)
-        return total.to(torch.float32)
+        # Deferred import: this class only runs on the remote XPU server.
+        # A top-level torch import makes local TTK workers pre-load torch,
+        # which segfaults against the TBE native libraries.
+        torch = importlib.import_module("torch")
+        return torch.sum(value, dim=0, keepdim=True)
 
     def __call__(self, res_gamma, res_beta, **_):
         return [self._sum(res_gamma), self._sum(res_beta)]
@@ -225,6 +202,43 @@ class InTrainingUpdateGradGammaBetaSpec:
             beta_rows[:, 5] = [max_value, max_value, -max_value, -max_value]
             beta_rows[:, 6] = [0.0, 0.0, 0.0, 0.0]
             beta_rows[:, 7] = [1.0, 2.0, 3.0, 4.0]
+            return gamma, beta
+        if "_dfx_" in testcase_name:
+            gamma = np.zeros_like(res_gamma)
+            beta = np.zeros_like(res_beta)
+            if testcase_name.endswith("_dfx_nan"):
+                gamma[0].reshape(-1)[0] = np.nan
+                beta[-1].reshape(-1)[-1] = np.nan
+            elif testcase_name.endswith("_dfx_single_inf"):
+                gamma[0].reshape(-1)[0] = np.inf
+                beta[0].reshape(-1)[1] = -np.inf
+            elif testcase_name.endswith("_dfx_mixed_inf"):
+                gamma[0].reshape(-1)[0] = np.inf
+                gamma[1].reshape(-1)[0] = -np.inf
+                beta[0].reshape(-1)[1] = np.inf
+            elif testcase_name.endswith("_dfx_finite_pattern"):
+                values = np.arange(gamma.size, dtype=np.float32).reshape(gamma.shape)
+                gamma[...] = (values % 17.0 - 8.0) * 0.25
+                beta[...] = ((values * 3.0) % 19.0 - 9.0) * 0.125
+            elif testcase_name.endswith("_dfx_subnormal"):
+                positive = np.nextafter(np.float32(0.0), np.float32(1.0))
+                negative = np.nextafter(np.float32(0.0), np.float32(-1.0))
+                gamma[...] = positive
+                beta[...] = negative
+            elif testcase_name.endswith("_dfx_cancellation"):
+                gamma[0, ...] = np.float32(1.0e8)
+                gamma[1, ...] = np.float32(1.0)
+                gamma[2, ...] = np.float32(-1.0e8)
+                beta[0, ...] = np.float32(-1.0e8)
+                beta[1, ...] = np.float32(-1.0)
+                beta[2, ...] = np.float32(1.0e8)
+            elif testcase_name.endswith("_dfx_gamma_zero_beta_pattern"):
+                values = np.arange(beta.size, dtype=np.float32).reshape(beta.shape)
+                beta[...] = (values % 23.0 - 11.0) * 0.0625
+            elif testcase_name.endswith("_dfx_finite_overflow"):
+                max_finite = np.finfo(np.float32).max
+                gamma[...] = max_finite
+                beta[...] = -max_finite
             return gamma, beta
         return res_gamma, res_beta
 
