@@ -465,6 +465,7 @@
 | [aclnnUnique2](../../index/unique/docs/aclnnUnique2.md) | 对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUniqueConsecutive](../../index/unique_consecutive/docs/aclnnUniqueConsecutive.md) | 去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUniqueDim](../../index/unique_with_counts_ext2/docs/aclnnUniqueDim.md) | 在某一dim轴上，对输入张量self做去重操作。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnUnsortedSegmentSum](../../index/unsorted_segment_sum/docs/aclnnUnsortedSegmentSum.md) | 对一个张量分段求和。 | - | 默认非确定性实现，支持配置开启。 |
 | [aclnnWeightQuantBatchMatmulNz](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulNz.md) | 完成一个输入为伪量化场景的矩阵乘计算，仅支持NZ场景。 | - | 默认确定性实现 |
 | [aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md) | 完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md) | 完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |

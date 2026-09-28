@@ -70,10 +70,12 @@
 
 ## 约束说明
 
-无
+- 确定性计算：
+    - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性计算，可通过`aclrtSetSysParamOpt`开启确定性计算。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn调用 | [test_aclnn_unsorted_segment_sum](examples/test_aclnn_unsorted_segment_sum.cpp) | 通过[aclnnUnsortedSegmentSum](docs/aclnnUnsortedSegmentSum.md)接口方式调用UnsortedSegmentSum算子。 |
 | 图模式调用 | [test_geir_unsorted_segment_sum](examples/test_geir_unsorted_segment_sum.cpp) | 通过[算子IR](op_graph/unsorted_segment_sum_proto.h)构图方式调用UnsortedSegmentSum算子。 |
