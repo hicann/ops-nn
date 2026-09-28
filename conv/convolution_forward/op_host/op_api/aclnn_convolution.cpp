@@ -4287,7 +4287,7 @@ public:
         }
         auto ret = CheckConv2dWithWeightFZ(entityName, input, weight);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
@@ -4410,7 +4410,7 @@ public:
 
         bias = View1dAs4d(bias, executor);
         CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
@@ -4525,7 +4525,7 @@ public:
             CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
@@ -4672,7 +4672,7 @@ public:
         output2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
         CHECK_RET(output2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
         GetConvOpInfo(input, weight, bias, output2d, opInfo, transposed, groups, stride, padding, dilation,
                       cubeMathType);
         OP_LOGD("convolution aclnn op (conv3d->conv2d) inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
@@ -4733,7 +4733,7 @@ public:
                         op::DataType::DT_BF16, op::Format::FORMAT_NCDHW);
         REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWHif8, op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW,
                         op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW);
-        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
         GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType);
 
         // 判断是否是PointWise卷积
