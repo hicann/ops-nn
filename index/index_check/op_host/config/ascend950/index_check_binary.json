@@ -1,0 +1,61 @@
+{
+  "op_type": "IndexCheck",
+  "op_list": [
+    {
+      "bin_filename": "IndexCheck_int32",
+      "inputs": [
+        {
+          "name": "bounds",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -1
+          ]
+        },
+        [
+          {
+            "name": "indices_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ]
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "IndexCheck_int64",
+      "inputs": [
+        {
+          "name": "bounds",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -1
+          ]
+        },
+        [
+          {
+            "name": "indices_list",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ]
+          }
+        ]
+      ],
+      "outputs": []
+    }
+  ]
+}

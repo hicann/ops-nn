@@ -13,20 +13,21 @@
  * \brief
  */
 #include "register/op_impl_registry.h"
-#include "util/math_util.h"
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "index_check_tiling.h"
-#include "op_host/tiling_util.h"
+#include <algorithm>
+#include <limits>
 
 constexpr int64_t SCALE_SPACE = 20480;
 constexpr int64_t MIN_UB_SIZE = 1024;
 constexpr uint64_t BLOCK_BYTES = 32;
-constexpr size_t MAX_TENSOR_NUM = 8;
 constexpr size_t MAX_DIM_NUM = 8;
 
 namespace optiling {
+static bool CheckFormat(ge::Format format) { return format == ge::FORMAT_ND; }
+
 class IndexCheckTiling {
 public:
     explicit IndexCheckTiling(gert::TilingContext* context) : tilingContext_(context) {}
@@ -39,7 +40,7 @@ private:
     gert::TilingContext* tilingContext_ = nullptr;
     IndexCheckTilingData tilingData_;
     uint64_t workspaceSize_ = 0;
-    uint64_t tilingKey_ = 0;
+    ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     uint64_t ubSize_ = 0;
     uint64_t totalCoreNum_ = 0;
     uint64_t usedCoreNum_ = 0;
@@ -60,9 +61,11 @@ ge::graphStatus IndexCheckTiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
     totalCoreNum_ = compileInfo->totalCoreNum;
     workspaceSize_ = compileInfo->workspaceSize;
-    ubSize_ = compileInfo->ubSizePlatform - SCALE_SPACE;
-    OP_CHECK_IF((ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %lu is less than 1024", ubSize_),
+    OP_CHECK_IF(compileInfo->ubSizePlatform < static_cast<uint64_t>(SCALE_SPACE + MIN_UB_SIZE),
+                OP_LOGE(tilingContext_, "platform ub size %lu is less than the minimum %ld",
+                        compileInfo->ubSizePlatform, SCALE_SPACE + MIN_UB_SIZE),
                 return ge::GRAPH_FAILED);
+    ubSize_ = compileInfo->ubSizePlatform - static_cast<uint64_t>(SCALE_SPACE);
     OP_LOGD(tilingContext_, "totalCoreNum: %lu, ubSize: %lu, workspaceSize: %lu", totalCoreNum_, ubSize_,
             workspaceSize_);
 
@@ -72,7 +75,7 @@ ge::graphStatus IndexCheckTiling::Init()
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxInstanceInfoPtr);
     tensorId_ = idxInstanceInfoPtr->GetInstanceNum();
-    OP_CHECK_IF(tensorId_ == 0, OP_LOGE(tilingContext_, "indices can not be a empty tensor list"),
+    OP_CHECK_IF(tensorId_ == 0, OP_LOGE(tilingContext_, "indices cannot be an empty tensor list"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(tensorId_ > MAX_TENSOR_NUM,
                 OP_LOGE(tilingContext_, "indices tensor num %lu exceeds max %lu", tensorId_, MAX_TENSOR_NUM),
@@ -80,31 +83,51 @@ ge::graphStatus IndexCheckTiling::Init()
 
     auto idxTensorDtypePtr = tilingContext_->GetDynamicInputDesc(1, 0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorDtypePtr);
-    auto idxDtype = idxTensorDtypePtr->GetDataType();
-    if (idxDtype != ge::DT_INT32 && idxDtype != ge::DT_INT64) {
+    OP_CHECK_IF(!CheckFormat(idxTensorDtypePtr->GetStorageFormat()),
+                OP_LOGE(tilingContext_, "indices only support ND format"), return ge::GRAPH_FAILED);
+    indicesDtype_ = idxTensorDtypePtr->GetDataType();
+    if (indicesDtype_ != ge::DT_INT32 && indicesDtype_ != ge::DT_INT64) {
         OP_LOGE(tilingContext_, "indices only support int32 or int64");
         return ge::GRAPH_FAILED;
     }
-    tilingKey_ = (idxDtype == ge::DT_INT32) ? 1 : 0;
+
+    auto boundsShapePtr = tilingContext_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, boundsShapePtr);
+    auto boundsDescPtr = tilingContext_->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, boundsDescPtr);
+    OP_CHECK_IF(!CheckFormat(boundsDescPtr->GetStorageFormat()),
+                OP_LOGE(tilingContext_, "bounds only supports ND format"), return ge::GRAPH_FAILED);
+    auto boundsShape = boundsShapePtr->GetStorageShape();
+    OP_CHECK_IF(boundsShape.GetDimNum() != 1 || boundsShape.GetDim(0) != static_cast<int64_t>(tensorId_),
+                OP_LOGE(tilingContext_, "bounds must be a 1-D tensor with %lu elements", tensorId_),
+                return ge::GRAPH_FAILED);
 
     tensorLens_.resize(MAX_TENSOR_NUM, 0);
-    uint64_t maxTensorLen = 0;
     for (uint64_t i = 0; i < tensorId_; i++) {
+        auto idxDescPtr = tilingContext_->GetDynamicInputDesc(1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxDescPtr);
+        OP_CHECK_IF(!CheckFormat(idxDescPtr->GetStorageFormat()),
+                    OP_LOGE(tilingContext_, "indices tensor[%lu] only supports ND format", i), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(idxDescPtr->GetDataType() != indicesDtype_,
+                    OP_LOGE(tilingContext_, "all indices tensors must have the same dtype"), return ge::GRAPH_FAILED);
         auto idxTensorShapePtr = tilingContext_->GetDynamicInputShape(1, i);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
         OP_CHECK_IF(idxTensorShape.GetDimNum() > MAX_DIM_NUM,
-                    OP_LOGE(tilingContext_, "indices tensor[%lu] dim num %u exceeds max %lu", i,
+                    OP_LOGE(tilingContext_, "indices tensor[%lu] dim num %zu exceeds max %lu", i,
                             idxTensorShape.GetDimNum(), MAX_DIM_NUM),
                     return ge::GRAPH_FAILED);
         uint64_t tensorLen = 1;
         for (uint32_t d = 0; d < idxTensorShape.GetDimNum(); d++) {
-            tensorLen *= idxTensorShape.GetDim(d);
+            int64_t dim = idxTensorShape.GetDim(d);
+            OP_CHECK_IF(dim < 0, OP_LOGE(tilingContext_, "indices tensor[%lu] has unresolved dim %ld", i, dim),
+                        return ge::GRAPH_FAILED);
+            OP_CHECK_IF(dim != 0 && tensorLen > std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(dim),
+                        OP_LOGE(tilingContext_, "indices tensor[%lu] element count overflows", i),
+                        return ge::GRAPH_FAILED);
+            tensorLen *= static_cast<uint64_t>(dim);
         }
         tensorLens_[i] = tensorLen;
-        if (tensorLen > maxTensorLen) {
-            maxTensorLen = tensorLen;
-        }
         OP_LOGD(tilingContext_, "tensor[%lu] len: %lu", i, tensorLen);
     }
 
@@ -127,11 +150,14 @@ void IndexCheckTiling::CalcCoreAndBatch()
         usedCoreNum_ = 1;
     }
 
-    uint64_t bytesPerElement = sizeof(int32_t) + sizeof(int32_t) + sizeof(float) + sizeof(float) + sizeof(int32_t);
-    if (tilingKey_ == 0) {
-        bytesPerElement += sizeof(int64_t);
+    uint64_t bytesPerElement;
+    if (indicesDtype_ == ge::DT_INT64) {
+        // int64 path is scalar-only (vector queues not instantiated): the
+        // indices queue is the sole per-element buffer.
+        bytesPerElement = sizeof(int64_t);
     } else {
-        bytesPerElement += sizeof(int32_t);
+        bytesPerElement = sizeof(int32_t) + sizeof(int32_t) + sizeof(float) + sizeof(float) + sizeof(int32_t) +
+                          sizeof(int32_t);
     }
     uint64_t alignUnit = BLOCK_BYTES / sizeof(int32_t);
     uint64_t maxBatch = ubSize_ / bytesPerElement;
@@ -149,12 +175,14 @@ ge::graphStatus IndexCheckTiling::RunKernelTiling()
     tilingData_.params.set_maxBatchSize(maxBatchSize_);
     tilingData_.params.set_tensorLens(tensorLens_.data());
 
-    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
-                             tilingContext_->GetRawTilingData()->GetCapacity());
-    tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
-    tilingContext_->SetTilingKey(tilingKey_);
-    tilingContext_->SetBlockDim(usedCoreNum_);
+    auto rawTilingData = tilingContext_->GetRawTilingData();
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, rawTilingData);
+    tilingData_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
+    rawTilingData->SetDataSize(tilingData_.GetDataSize());
+    OP_CHECK_IF(tilingContext_->SetBlockDim(usedCoreNum_) != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext_, "SetBlockDim failed."), return ge::GRAPH_FAILED);
     size_t* workspaces = tilingContext_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, workspaces);
     workspaces[0] = workspaceSize_;
     TilingDataPrint();
     OP_LOGD(tilingContext_, "set tiling data end.");
@@ -163,7 +191,7 @@ ge::graphStatus IndexCheckTiling::RunKernelTiling()
 
 void IndexCheckTiling::TilingDataPrint() const
 {
-    OP_LOGD(tilingContext_, "tilingKey:              %lu", tilingKey_);
+    OP_LOGD(tilingContext_, "indicesDtype:           %d", static_cast<int32_t>(indicesDtype_));
     OP_LOGD(tilingContext_, "usedCoreNum:            %lu", usedCoreNum_);
     OP_LOGD(tilingContext_, "tensorId:               %lu", tensorId_);
     OP_LOGD(tilingContext_, "maxBatchSize:           %lu", maxBatchSize_);
@@ -174,10 +202,13 @@ void IndexCheckTiling::TilingDataPrint() const
 
 ge::graphStatus TilingIndexCheck(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "IndexCheck tiling begin");
     IndexCheckTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context, "tiling init fail");
+        OP_LOGE(context, "tiling init failed");
         return ge::GRAPH_FAILED;
     }
     return tilingObject.RunKernelTiling();
@@ -185,6 +216,9 @@ ge::graphStatus TilingIndexCheck(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForIndexCheck(gert::TilingParseContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "TilingPrepareForIndexCheck start");
     auto compileInfo = context->GetCompiledInfo<IndexCheckCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -193,10 +227,10 @@ ge::graphStatus TilingPrepareForIndexCheck(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    uint64_t ubSizePlatform;
+    uint64_t ubSizePlatform = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSizePlatform = ubSizePlatform;
-    OP_CHECK_IF((compileInfo->ubSizePlatform <= 0), OP_LOGE(context, "Failed to get ub size."),
+    OP_CHECK_IF((compileInfo->ubSizePlatform == 0), OP_LOGE(context, "Failed to get ub size."),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform: %lu", compileInfo->ubSizePlatform);
     uint64_t totalUbSize = 0;

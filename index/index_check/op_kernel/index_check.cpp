@@ -17,21 +17,9 @@
 namespace AscendC {
 extern "C" __global__ __aicore__ void index_check(GM_ADDR bounds, GM_ADDR indexList, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (workSpace == nullptr) {
-        return;
-    }
-    GM_ADDR user = AscendC::GetUserWorkspace(workSpace);
-    if (user == nullptr) {
-        return;
-    }
     GET_TILING_DATA(tilingData, tiling);
     AscendC::TPipe pipe;
-    if (TILING_KEY_IS(0)) {
-        IndexCheckKernel<int64_t> op(bounds, indexList, workSpace, tilingData, pipe);
-        op.Process();
-    } else if (TILING_KEY_IS(1)) {
-        IndexCheckKernel<int32_t> op(bounds, indexList, workSpace, tilingData, pipe);
-        op.Process();
-    }
+    IndexCheckKernel<DTYPE_INDICES_LIST> op(bounds, indexList, workSpace, tilingData, pipe);
+    op.Process();
 }
 } // namespace AscendC
