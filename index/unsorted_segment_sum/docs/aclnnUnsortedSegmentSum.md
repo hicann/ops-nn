@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+- <term>Atlas A3系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -79,7 +79,7 @@ aclnnStatus aclnnUnsortedSegmentSum(
       </tr></thead>
     <tbody>
       <tr>
-        <td>x（aclTensor*）</td>
+        <td>x（const aclTensor*）</td>
         <td>输入</td>
         <td>输入数据。</td>
         <td>-</td>
@@ -89,7 +89,7 @@ aclnnStatus aclnnUnsortedSegmentSum(
         <td>√</td>
       </tr>
       <tr>
-        <td>segmentIds（aclTensor*）</td>
+        <td>segmentIds（const aclTensor*）</td>
         <td>输入</td>
         <td>分段索引。</td>
         <td>rank不大于x的rank，shape为x.shape的前缀。</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnUnsortedSegmentSum(
         <td>输入</td>
         <td>分段个数。</td>
         <td>取值应大于0。</td>
-        <td>int64_t</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -228,10 +228,10 @@ aclnnStatus aclnnUnsortedSegmentSum(
 
 ## 约束说明
 
-- 确定性计算：
+- 确定性说明：
 
   <!-- npu="950" id9 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性计算，支持通过`aclrtSetSysParamOpt`开启确定性计算。
+  - <term>Ascend 950PR&950DT系列产品</term>：默认非确定性实现，支持通过`aclrtSetSysParamOpt`开启确定性。
   <!-- end id9 -->
 
 ## 调用示例
