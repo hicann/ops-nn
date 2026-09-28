@@ -87,7 +87,7 @@ public:
             .DynamicShapeSupportFlag(true)  // 支持可变 shape（信息库 [-2] ND 动态口径）
             .NeedCheckSupportFlag(false) // 跳过框架 support check（host tiling 入口已全量校验 rank/dtype/shape/p/axes）
             .PrecisionReduceFlag(false) // 禁止降精度：fp16 输入须 fp32 累加（accumulator_dtype）
-            .ExtendCfgInfo("opFile.value", "lp_norm_reduce_apt"); // kernel 文件绑定：op_kernel/lp_norm_reduce_apt.cpp
+            .ExtendCfgInfo("opFile.value", "lp_norm_reduce"); // kernel 文件绑定：op_kernel/lp_norm_reduce.cpp
         // 覆盖 Ascend950PR / Ascend950DT（spec.yaml supported_chips）
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }

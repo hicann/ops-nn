@@ -70,10 +70,11 @@
 - 本算子只输出Lp范数的归约结果，不做$\frac{1}{p}$次开方；FLOAT16/FLOAT完整范数可再串联匹配的LpNormUpdate算子。当前旧链LpNormUpdate不支持BFLOAT16。
 - 以下输入边界描述<term>Ascend 950PR&950DT系列产品</term>实现。
 - 输入rank范围为0到8。rank-0输入只允许空`axes`；已知rank下越界轴会报错，重复轴按首次出现去重。
-- 图推导阶段允许unknown rank和取值为-1的动态维，其他负维非法。执行期`x`的逻辑shape与storage shape都必须具体；非标量的rank及每一维必须完全相同，rank-0标量允许storage shape为`[]`或`[1]`。执行期`y`的逻辑shape与storage shape必须与`axes`、`keepdim`推导结果逐维一致且具体；标量输出的逻辑/storage shape兼容`[]`和`[1]`两种物化形式。为保证归约分段规模可表示，`x`所有非零维度的乘积不得超过INT64_MAX（含空Tensor）。
+- 图推导阶段允许unknown rank和取值为-1的动态维，其他负维非法。执行期`x`的逻辑shape与storage shape都必须具体；非标量的rank及每一维必须完全相同，rank-0标量允许storage shape为`[]`或`[1]`。执行期`y`的逻辑shape与storage shape必须与`axes`、`keepdim`推导结果逐维一致且具体；标量输出的逻辑/storage shape兼容`[]`和`[1]`两种物化形式。为保证字节偏移及对齐计算可表示，`x`所有非零维度的乘积不得超过`floor((INT64_MAX-4096)/4)`（含空Tensor）。实际可运行shape还受设备与主机内存容量限制。
 - 有限`p`的归约域为空时输出0；若零长度维仅位于非归约轴，输出为空Tensor。正负无穷哨兵遇到空归约域时因`max`/`min`无定义而报错。
 - 除-2147483648哨兵外，有限负`p`会报错。2147483648及更大的非负值仍按有限整数阶处理。
 - FLOAT16和BFLOAT16输入的绝对值、幂与归约累加中间过程以FLOAT完成，结束后转换回输入数据类型；输出数据类型始终与输入一致。
+- 归约树各层的对齐输出行总大小不得超过16KiB缓存；超出时Host会拒绝该shape，避免设备侧缓存越界。
 - 当`axes`指定到`x`中长度为1的轴时，计算结果可能存在精度差异。
 - 仅提供GEIR/Kernel兼容路径，不新增aclnn接口。
 
@@ -81,4 +82,4 @@
 
 | 调用方式 | 样例代码 | 说明 |
 | -------- | -------- | ---- |
-| 图模式   | -        | 通过[LpNormReduce算子IR入口](op_graph/lp_norm_reduce_proto.h)构图；该入口转发到仓库公共原型，未提供aclnn接口。 |
+| 图模式   | -        | 通过[LpNormReduce算子IR入口](op_graph/lp_norm_reduce_proto.h)构图；该头文件保留带防重定义宏的REG_OP声明，未提供aclnn接口。 |

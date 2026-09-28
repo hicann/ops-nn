@@ -27,7 +27,7 @@ add_modules_sources(
 target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${ASCEND_GRAPH_CONF_DST})
 
 add_kernel_sources(
-    KERNEL_SRC lp_norm_reduce_apt.cpp
+    KERNEL_SRC lp_norm_reduce.cpp
     COMPUTE_UNITS ascend950
     AUTO_SYNC false
 )

@@ -78,6 +78,10 @@ constexpr int32_t OUTER_LOOP_AXIS_BASE = 4;
 // -2147483647LL-1 避免字面量溢出）
 constexpr int64_t P_INF_SENTINEL = 2147483647;
 constexpr int64_t N_INF_SENTINEL = -2147483647LL - 1;
+// For fp32 (and narrower input types), squaring |x| at least 31 times
+// saturates every representable |x| != 1 to 0 or +Inf. This threshold is
+// above the reserved +Inf sentinel, so only finite p uses the fast path.
+constexpr int64_t HUGE_FINITE_P_THRESHOLD = 2147483648LL;
 
 // ─── Cast trait（Kernel.md §9.1 / §9.6，cast-rules.md 口径） ───
 // 扩位（b16/int32 → fp32）：CAST_NONE 直转
@@ -116,14 +120,15 @@ __aicore__ inline float PadValueOf(int64_t pOrder)
 // =============================================================================
 // §9.1 PreElewise —— pre-elewise Cast + Abs + p 分支预处理（VF 融合链）
 //
-// 公式对应：|x| 及其 p 分支（p=0 的 1[x≠0]、p≥2 的 |x|^p 二进制快速幂——平方-乘，≤63 轮）；
+// 公式对应：|x| 及其 p 分支（p=0 的 1[x≠0]、普通有限 p≥2 的
+// |x|^p 二进制快速幂、极大有限 p 的饱和快捷路径）；
 // p=±inf 哨兵 / p=1 直通 |x|（Reducer 在 ReduceChunk 按 pOrder 分发）。
 // p 分支互斥、pOrder 运行时标量选择（寄存器链不因分支断开）；NaN 按 IEEE-754
 // 传播（|NaN|=NaN、NaN≠0 为真 → p=0 计 1，与 golden (x != 0) 一致）。
 // padded 整 tile 覆盖：R 方向 pad 由清零 VF 在 Reduce 前清为 pad_value，
 // A 方向 garbage 由 lane 隔离（Kernel.md §9.4）。
 // =============================================================================
-template <typename DType>
+template <typename DType, bool HugeFiniteP>
 __simd_vf__ inline void PreElewiseVfImpl(__ubuf__ DType* src, __ubuf__ float* dst, uint32_t totalElems,
                                          uint16_t repeatTime, int64_t pOrder)
 {
@@ -151,7 +156,25 @@ __simd_vf__ inline void PreElewiseVfImpl(__ubuf__ DType* src, __ubuf__ float* ds
 
         AscendC::Reg::Abs(f32Reg, f32Reg, mask); // |x|（fp32 计算域）
 
-        if (pOrder == 0) { // p=0：非零计数 → 0/1
+        if constexpr (HugeFiniteP) {
+            // The nearest fp32 values around 1 are 1-2^-24 and 1+2^-23.
+            // At p>=2^31, their fp32 powers are respectively 0 and +Inf;
+            // all other finite magnitudes are farther from 1. Preserve NaN
+            // by retaining the original absolute value in unordered lanes.
+            AscendC::Reg::RegTensor<float> zeroReg;
+            AscendC::Reg::RegTensor<float> oneReg;
+            AscendC::Reg::RegTensor<float> infReg;
+            AscendC::Reg::RegTensor<float> afterGt;
+            AscendC::Reg::MaskReg gtMask;
+            AscendC::Reg::MaskReg ltMask;
+            AscendC::Reg::Duplicate(zeroReg, 0.0f);
+            AscendC::Reg::Duplicate(oneReg, 1.0f);
+            AscendC::Reg::Duplicate(infReg, __builtin_huge_valf());
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::GT>(gtMask, f32Reg, oneReg, mask);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::LT>(ltMask, f32Reg, oneReg, mask);
+            AscendC::Reg::Select<float>(afterGt, infReg, f32Reg, gtMask);
+            AscendC::Reg::Select<float>(f32Reg, zeroReg, afterGt, ltMask);
+        } else if (pOrder == 0) { // p=0：非零计数 → 0/1
             AscendC::Reg::RegTensor<float> zeroReg;
             AscendC::Reg::RegTensor<float> oneReg;
             AscendC::Reg::MaskReg neMask;
@@ -160,7 +183,7 @@ __simd_vf__ inline void PreElewiseVfImpl(__ubuf__ DType* src, __ubuf__ float* ds
             AscendC::Reg::Compare<float, AscendC::CMPMODE::NE>(neMask, f32Reg, zeroReg, mask);
             AscendC::Reg::Select<float>(f32Reg, oneReg, zeroReg, neMask);
         } else if (pOrder >= 2 && pOrder != P_INF_SENTINEL) {
-            // p≥2（非哨兵）：二进制快速幂 |x|^p（平方-乘，≤63 轮向量 Mul——对齐
+            // 2≤p<2^31（非哨兵）：二进制快速幂 |x|^p（平方-乘，≤31 轮向量 Mul——对齐
             // changwei lp_norm_reduce_dag.h IntegerPowerSimtCompute 的算法；exponent
             // 为运行时标量，轮数由其二进制位数决定，与 tile 元素数无关）。
             // ⛔ +inf 哨兵 2147483647 仍须排除——它按 §9.1 取值表走「直通 |x| +
@@ -934,7 +957,11 @@ __aicore__ inline void LpNormReduceBaseKernel<DType>::PreElewiseVf(__ubuf__ DT* 
                                                       td_->innerRProdAlign);
     const uint16_t repeatTime = static_cast<uint16_t>(
         Ops::Base::CeilDiv(totalElems, static_cast<uint32_t>(REP_F32_U16)));
-    asc_vf_call<PreElewiseVfImpl<DT>>(src, dst, totalElems, repeatTime, td_->pOrder);
+    if (td_->pOrder >= HUGE_FINITE_P_THRESHOLD) {
+        asc_vf_call<PreElewiseVfImpl<DT, true>>(src, dst, totalElems, repeatTime, td_->pOrder);
+    } else {
+        asc_vf_call<PreElewiseVfImpl<DT, false>>(src, dst, totalElems, repeatTime, td_->pOrder);
+    }
 }
 
 // §9.3 ClearChunkExtensionVf wrapper：调用前调用方已保证 rLen < rUbFactor

@@ -1,0 +1,13 @@
+testcase_name,op_name,input_shapes,input_dtypes,output_shapes,output_dtypes,attributes,input_data_ranges
+lpnorm_smoke_p0_f16,lp_norm_reduce,"((2,32),)","('float16',)","((2,),)","('float16',)","{'p':0,'axes':[1]}","((0,0),)"
+lpnorm_smoke_p1_bf16,lp_norm_reduce,"((2,32),)","('bfloat16',)","((2,),)","('bfloat16',)","{'p':1,'axes':[-1]}","((-1,-1),)"
+lpnorm_smoke_p2_f32,lp_norm_reduce,"((3,5),)","('float32',)","((1,5),)","('float32',)","{'p':2,'axes':[0,0],'keepdim':True}","((-2,-2),)"
+lpnorm_smoke_p3_f16,lp_norm_reduce,"((2,32),)","('float16',)","((2,),)","('float16',)","{'p':3,'axes':[1]}","((-2,-2),)"
+lpnorm_smoke_pmax_bf16,lp_norm_reduce,"((2,32),)","('bfloat16',)","((2,),)","('bfloat16',)","{'p':2147483647,'axes':[1]}","((-2,-2),)"
+lpnorm_smoke_pmin_f32,lp_norm_reduce,"((2,32),)","('float32',)","((2,),)","('float32',)","{'p':-2147483648,'axes':[1]}","((-2,-2),)"
+lpnorm_smoke_scalar_f16,lp_norm_reduce,"((),)","('float16',)","((),)","('float16',)","{'p':2,'axes':[],'keepdim':False}","((-2,-2),)"
+lpnorm_smoke_empty_r_f32,lp_norm_reduce,"((2,0,3),)","('float32',)","((2,3),)","('float32',)","{'p':2,'axes':[1]}","((1,1),)"
+lpnorm_smoke_empty_a_bf16,lp_norm_reduce,"((0,3),)","('bfloat16',)","((0,),)","('bfloat16',)","{'p':1,'axes':[1]}","((1,1),)"
+lpnorm_smoke_group_f16,lp_norm_reduce,"((2,131072),)","('float16',)","((2,),)","('float16',)","{'p':2147483647,'axes':[1]}","((1,1),)"
+lpnorm_smoke_group_bf16,lp_norm_reduce,"((2,131072),)","('bfloat16',)","((2,),)","('bfloat16',)","{'p':1,'axes':[1]}","((1,1),)"
+lpnorm_smoke_group_f32,lp_norm_reduce,"((2,131072),)","('float32',)","((2,),)","('float32',)","{'p':2,'axes':[1]}","((1,1),)"

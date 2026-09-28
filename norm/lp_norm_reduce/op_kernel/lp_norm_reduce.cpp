@@ -9,7 +9,7 @@
  */
 
 // =============================================================================
-// LpNormReduce_package/op_kernel/lp_norm_reduce_apt.cpp
+// LpNormReduce_package/op_kernel/lp_norm_reduce.cpp
 // =============================================================================
 //
 // ROLE: Ascend C kernel entry point for LpNormReduce.

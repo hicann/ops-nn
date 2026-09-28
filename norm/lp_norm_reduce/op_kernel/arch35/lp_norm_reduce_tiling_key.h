@@ -19,7 +19,7 @@
 //   - (isGroup=1, isEmptyTensor=1) 互斥不实例化（tilingKey=3 为设计性空位）；
 //   - dtype 不进 key（框架按输入名 x 以 DTYPE_X 编译期实例化 fp16/fp32/bf16 三档）、
 //     p / axisNum / keepdim / epsilon 等纯参数差异不拆 key。
-//   模板参数与 op_kernel/lp_norm_reduce_apt.cpp 的 kernel 入口签名
+//   模板参数与 op_kernel/lp_norm_reduce.cpp 的 kernel 入口签名
 //   template <bool isGroup, bool isEmptyTensor> 一一对应、顺序一致。
 //
 // =============================================================================

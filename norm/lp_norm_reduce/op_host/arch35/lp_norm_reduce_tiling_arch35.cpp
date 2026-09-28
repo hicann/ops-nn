@@ -218,9 +218,11 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, LpNormRedu
     // numel 溢出总闸（codex 审查缺陷 #2；对齐 changwei IsConcreteShape 除法式上界
     // 保护）：非零维连乘超 int64 表示域 → 干净拒绝。该乘积是全部子集乘积（aTotal/
     // TotalAProd/stride 前缀积/outerAProd/outerR/FuseAxis 融合积）的上界，杜绝
-    // signed overflow UB 流入 stride/循环数/workspace/GM 偏移计算；预留 4096 余量
-    // 吸收下游 CeilDiv/CeilAlign 加法边界。
-    constexpr int64_t kNumelLimit = std::numeric_limits<int64_t>::max() - 4096;
+    // signed overflow UB 流入 stride/循环数/workspace/GM 偏移计算。必须同时约束
+    // 字节偏移：kernel 的 GM stride 会乘 sizeof(DT)，最宽 DT 为 fp32。
+    // 仅按元素数留余量仍会放行 [2, (INT64_MAX-4096)/2]，使 stride*4 溢出。
+    // 除以最大元素字节数也为下游 CeilDiv/CeilAlign/尾块端点留下足够余量。
+    constexpr int64_t kNumelLimit = (std::numeric_limits<int64_t>::max() - 4096) / FP32_BYTES;
     int64_t nonZeroDimProduct = 1;
     for (size_t i = 0; i < rank; ++i) {
         const int64_t dim = ctx.xShape[i];
@@ -231,7 +233,7 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, LpNormRedu
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                         context->GetNodeName(), "x", std::to_string(dim),
                         "dim[" + std::to_string(i) +
-                            "] makes the product of nonzero dims exceed the int64 range (tensor too large)"),
+                            "] makes the nonzero-dimension byte span exceed the int64 range (tensor too large)"),
                     return ge::GRAPH_FAILED);
         nonZeroDimProduct *= dim;
     }
@@ -1088,6 +1090,24 @@ static bool ComputeGroupSplit(LpNormReduceCtx& ctx)
 // Buffer 大小计算 + 填 TilingData（范式 §5.1 / [8.1]）
 // ---------------------------------------------------------------------------
 
+// Each binary-tree level stores one block-aligned A row in the fixed cache.
+// Group phase 1 uses the largest local R range, not the global R loop count.
+// Check metadata before launching kernels for shapes too large to allocate here.
+static ge::graphStatus CheckCacheCapacity(gert::TilingContext* context, const LpNormReduceCtx& ctx)
+{
+    const int64_t localRLoops = ctx.isGroup ? Ops::Base::CeilDiv(ctx.rLoopCntTotal, ctx.rGroupCnt) : ctx.rLoopCntTotal;
+    int64_t cacheLevels = 1;
+    for (int64_t remaining = localRLoops - 1; remaining > 1; remaining >>= 1) {
+        ++cacheLevels;
+    }
+    const int64_t levelStride = Ops::Base::CeilAlign(ctx.aUbFactor * ctx.innerAProdAlign, ctx.blockSize / FP32_BYTES);
+    OP_CHECK_IF(levelStride <= 0 || levelStride > CACHE_BUF_BYTES / FP32_BYTES / cacheLevels,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(localRLoops),
+                                                         "reduction tree exceeds the fixed UB cache capacity"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 // 计算 UB buffer 尺寸：preBufSize = aUnit × rPaddedElems × maxDtypeSize
 // （preIn / preRes / preResTail 三个 buffer 同尺寸，统一按 maxDtypeSize 预算，b16 也
 // 按 4B 计）；postBufSize = CeilAlign(aUnit × maxDtypeSize, blockSize)（1D，block 对齐）。
@@ -1224,6 +1244,7 @@ static ge::graphStatus TilingFuncLpNormReduce(gert::TilingContext* context)
         OP_CHECK_IF(context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
                     OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
     }
+    OP_CHECK_IF(CheckCacheCapacity(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     ComputeUbSizes(ctx);
     OP_LOGD(context->GetNodeName(), "UbSizes: preBufSize=%ld postBufSize=%ld", ctx.preBufSize, ctx.postBufSize);
 
