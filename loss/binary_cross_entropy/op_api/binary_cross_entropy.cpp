@@ -29,7 +29,11 @@ const aclTensor* BinaryCrossEntropy(const aclTensor* self, const aclTensor* targ
 {
     L0_DFX(BinaryCrossEntropy, self, target, weight, reduction);
     auto result = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-    INFER_SHAPE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result), OP_ATTR(reduction));
+    auto ret = INFER_SHAPE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result), OP_ATTR(reduction));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "BinaryCrossEntropy InferShape failed.");
+        return nullptr;
+    }
 
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result),
                                                  OP_ATTR(reduction));

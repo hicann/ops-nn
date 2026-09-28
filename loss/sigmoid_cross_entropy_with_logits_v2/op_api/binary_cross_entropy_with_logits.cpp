@@ -32,8 +32,12 @@ const aclTensor* SigmoidCrossEntropyWithLogitsV2(const aclTensor* self, const ac
                            DataType::DT_FLOAT :
                            self->GetDataType();
     auto result = executor->AllocTensor(outType, op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-    INFER_SHAPE(SigmoidCrossEntropyWithLogitsV2, OP_INPUT(self, target, weightOptional, posWeightOptional),
-                OP_OUTPUT(result), OP_ATTR(reduction));
+    auto ret = INFER_SHAPE(SigmoidCrossEntropyWithLogitsV2, OP_INPUT(self, target, weightOptional, posWeightOptional),
+                           OP_OUTPUT(result), OP_ATTR(reduction));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "SigmoidCrossEntropyWithLogitsV2 InferShape failed.");
+        return nullptr;
+    }
 
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SigmoidCrossEntropyWithLogitsV2,
                                                  OP_INPUT(self, target, weightOptional, posWeightOptional),
