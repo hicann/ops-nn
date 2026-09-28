@@ -20,6 +20,7 @@
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "scatter_elements_v2_tiling.h"
+#include "../../common/scatter_elements_v2_low_memory_policy.h"
 
 using namespace std;
 using Ops::NN::Optiling::TilingRegistry;
@@ -763,7 +764,21 @@ bool ScatterElementsV2Tiling::CheckCacheOpXDim1Limit(const gert::Shape& inputSha
     SetDimsByAxisType(inputShape, indicesShape, updatesShapeCopy, inputDimNum);
 
     uint64_t maxXDim1 = GetCacheOpMaxXDim1(inputDtype, reduce);
-    bool supported = xDim1 <= maxXDim1;
+    // First-axis low-memory execution transposes [rows, columns] into
+    // [tileColumns, rows] before ScatterElementsCacheOp consumes one row.
+    // Check that *post-transpose* row, rather than rejecting the total columns.
+    // Restrict the correction to the bounded FP32/int64 sum specialization.
+    auto platform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    const auto includeSelfAttr = tilingContext->GetAttrs()->GetAttrPointer<bool>(2);
+    bool boundedFirstAxis = ScatterElementsV2LowMemory::IsSupportedSoc(platform.GetSocVersion()) &&
+                            inputDtype == ge::DT_FLOAT &&
+                            tilingContext->GetInputDesc(INPUT_1)->GetDataType() == ge::DT_INT64 &&
+                            tilingContext->GetInputDesc(INPUT_2)->GetDataType() == ge::DT_FLOAT && reduce != nullptr &&
+                            strcmp(reduce, "add") == 0 && (includeSelfAttr == nullptr || *includeSelfAttr) &&
+                            ScatterElementsV2LowMemory::IsBoundedFirstAxisShape(inputShape, indicesShape, updatesShape,
+                                                                                savedRealDim, platform.GetCoreNumAiv());
+    const uint64_t scatterRowLength = boundedFirstAxis ? xDim0 : xDim1;
+    bool supported = scatterRowLength <= maxXDim1;
     if (!supported) {
         OP_LOGD(tilingContext, "cache-op disabled because xDim1(%lu) exceeds row UB capacity(%lu).", xDim1, maxXDim1);
     }

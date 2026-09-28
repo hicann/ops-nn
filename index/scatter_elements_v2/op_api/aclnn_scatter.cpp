@@ -18,6 +18,7 @@
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/contiguous.h"
 #include "scatter_elements.h"
+#include "../common/scatter_elements_v2_low_memory_policy.h"
 #include "level0/maximum.h"
 #include "level0/minimum.h"
 #include "level0/squeeze.h"
@@ -814,12 +815,45 @@ static aclnnStatus ExecScatterGetWorkspaceSize(const aclTensor* self, int64_t di
     return ret;
 }
 
+static bool IsBoundedLowMemoryLayout(const aclTensor* tensor)
+{
+    // PyTorch presents contiguous rank-three tensors as NCL. Its physical
+    // layout is the same dense row-major layout consumed by the ND kernel.
+    return tensor->GetStorageFormat() == ge::FORMAT_ND ||
+           (tensor->GetStorageFormat() == ge::FORMAT_NCL && tensor->GetViewShape().GetDimNum() == 3);
+}
+
 static aclnnStatus ExecScatterReduceGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
                                                      const aclTensor* src, int64_t reduce, bool includeSelf,
-                                                     aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+                                                     aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor,
+                                                     bool allowBoundedLowMemory = false)
 {
     CHECK_COND(IsValidScatterReduce(reduce), ACLNN_ERR_PARAM_INVALID,
                "reduce must be one of [0(none), 1(add), 2(mul), 3(max), 4(min), 5(mean)].");
+
+    // Tensor.scatter_reduce clones self before calling ACLNN with self == out.
+    // Specialize only that bounded, contiguous FP32 sum path. Other APIs and
+    // out-of-place/view cases retain their existing dispatch and copy semantics.
+    if (allowBoundedLowMemory && self != nullptr && index != nullptr && src != nullptr && out != nullptr &&
+        ScatterElementsV2LowMemory::IsSupportedSoc(GetCurrentPlatformInfo().GetSocVersion()) && reduce == 1 &&
+        includeSelf && self->GetDataType() == op::DataType::DT_FLOAT && src->GetDataType() == op::DataType::DT_FLOAT &&
+        out->GetDataType() == op::DataType::DT_FLOAT && index->GetDataType() == op::DataType::DT_INT64 &&
+        self->GetData() == out->GetData() && self->GetViewOffset() == out->GetViewOffset() &&
+        self->GetViewShape() == out->GetViewShape() && op::IsContiguous(self) && op::IsContiguous(index) &&
+        op::IsContiguous(src) && op::IsContiguous(out) && IsBoundedLowMemoryLayout(self) &&
+        IsBoundedLowMemoryLayout(index) && IsBoundedLowMemoryLayout(src) && IsBoundedLowMemoryLayout(out) &&
+        ScatterElementsV2LowMemory::IsBoundedFirstAxisShape(self->GetViewShape(), index->GetViewShape(),
+                                                            src->GetViewShape(), dim,
+                                                            GetCurrentPlatformInfo().GetVectorCoreNum())) {
+        auto uniqueExecutor = CREATE_EXECUTOR();
+        CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
+        auto ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        OP_LOGD("ScatterReduce bounded first-axis low-memory workspace: %lu.", *workspaceSize);
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     return ExecScatterGetWorkspaceSize(self, dim, index, src, reduce, out, workspaceSize, executor, includeSelf);
 }
@@ -931,7 +965,8 @@ aclnnStatus aclnnScatterReduceGetWorkspaceSize(const aclTensor* self, int64_t di
         }
     }
 
-    return ExecScatterReduceGetWorkspaceSize(self, dim, index, src, reduce, includeSelf, out, workspaceSize, executor);
+    return ExecScatterReduceGetWorkspaceSize(self, dim, index, src, reduce, includeSelf, out, workspaceSize, executor,
+                                             true);
 }
 
 aclnnStatus aclnnScatterAddGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
@@ -1010,7 +1045,7 @@ aclnnStatus aclnnInplaceScatterReduceGetWorkspaceSize(aclTensor* selfRef, int64_
 
     auto out = const_cast<aclTensor*>(selfRef);
     return ExecScatterReduceGetWorkspaceSize(selfRef, dim, index, src, reduce, includeSelf, out, workspaceSize,
-                                             executor);
+                                             executor, true);
 }
 
 aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
