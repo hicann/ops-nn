@@ -27,7 +27,7 @@ namespace ge {
 
 *@par Attributes:
 * axis: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}".
-* In Ascend 950 AI Processor, only single-axis reduction is supported. \n
+* In Ascend 950PR&950DT products, only single-axis reduction is supported. \n
 
 *@par Outputs:
 * y: An ND tensor. Has the same data type and shape as "grad". \n

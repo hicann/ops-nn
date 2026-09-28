@@ -116,14 +116,14 @@ values in x1 along the k-dimension. \n
 * @li The shape of bias should be 1D when the shape of out is 2D, 4D, 5D or 6D, and the shape of bias should be 1D or 3D
 * when the out shape is 3D.
 * @li The size of the last dimension of x1 and x2 cannot exceed 65535 only on the following computing platforms:
-* Atlas A2 Training Series Product/Atlas A2 Inference Series Product and
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product.
+* Atlas A2 products and
+* Atlas A3 products.
 * The last dimension of x1 refers to m when transpose_x1 is true or k when transpose_x1 is false.
 * The last dimension of x2 refers to k when transpose_x2 is true or n when transpose_x2 is false.
 * @li If input type of x1 and x2 is int4, transpose_x1 should be false, the size of the last dimension of x1 or x2
 should
 * be an even number.
-* @li On the Ascend 950PR/Ascend 950DT platforms, when x2 is ND format, the output is an empty tensor if input x1 has
+* @li On the Ascend 950PR&950DT products platforms, when x2 is ND format, the output is an empty tensor if input x1 has
 m=0 or x2 has n=0.
 * When x2 is NZ format, the output is an empty tensor if input x1 has m=0.
 * In all other cases, inputs does not support tensor with dimension size 0.
@@ -140,21 +140,21 @@ float8_e8m0:
 *      - transpose_x1 must be false.
 *      - when transpose_x2 is false, n must be greater than 2.
 *      - when transpose_x2 is true, n must be greater than 1.
-* @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support ND
+* @li Only weight supports ND and NZ format on Ascend 950PR&950DT products. All other inputs and outputs only support ND
 format.
 * @li When x2 is NZ format and input type of x1 and x2 is hifloat8 or float8_e4m3fn, static quantization supports
 scale uint64/int64, and dynamic quantization supports scale and pertoken_scale both float32.
 * @li The following are the supported data type combinations by platform.
 
-* - Atlas Inference Series Product:
+* - Atlas inference products:
 *\n
 | x1       | x2       | scale        | offset        | bias          | pertoken | out      |
 | :------: | :------: | :----------: | :-----------: | :-----------: | :------: | :------: |
 | int8     | int8     | uint64/int64 | null          | null/int32    | null     | float16  |
 | int8     | int8     | uint64/int64 | null/float32  | null/int32    | null     | int8     |
 *\n
-* - Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product:
+* - Atlas A2 products or
+* Atlas A3 products:
 *\n
 | x1       | x2       | scale            | offset        | bias                        | pertoken     | out      |
 | :------: | :------: | :--------------: | :-----------: | :-------------------------: | :----------: | :------: |
@@ -167,7 +167,7 @@ scale uint64/int64, and dynamic quantization supports scale and pertoken_scale b
 | int4     | int4     | float32/bfloat16 | null          | null/int32/bfloat16/float32 | float32      | bfloat16 |
 | int4     | int4     | float32          | null          | null/int32/float16/float32  | float32      | float16  |
 *\n
-* - Ascend 950 AI Processor:
+* - Ascend 950PR&950DT products:
 *\n
 | x1                        | x2                        | scale                | offset        | bias | pertoken    |
 out                                    | | :-----------------------: | :-----------------------: | :------------------:
@@ -188,7 +188,7 @@ float16/bfloat16/float32               | | float4_e2m1               | float4_e2
 null/float32                | float8_e8m0 | float16/bfloat16/float32               | | int8                      | int8
 | float32/bfloat16     | null          | null/int32                  | null        | int32 |
 *\n
-* - Ascend 950 AI Processor, supported data type and quant mode combinations:
+* - Ascend 950PR&950DT products, supported data type and quant mode combinations:
 *\n
 pertensor-perchannel && pertensor-pertensor:
 *\n
@@ -223,7 +223,7 @@ mx quant：
   | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0      | float8_e8m0      |
   | float4_e2m1               | float4_e2m1               | float8_e8m0      | float8_e8m0      |
 *\n
-* - Ascend 950 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
+* - Ascend 950PR&950DT products with group_sizes scenarios, supported data type and shapes combinations:
 *\n
 | quantization      | x1 type                            | scale type  | x1 shape      | x2 shape      | scale shape |
 pertoken shape                        | group_size      |

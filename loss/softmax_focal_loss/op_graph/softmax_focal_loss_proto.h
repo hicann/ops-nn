@@ -26,7 +26,7 @@ namespace ge {
 *Three inputs, including:
 * @li pred: A Tensor. Must be one of the following types: float16, float32.
 *The probabilities produced by a preceding softmax. The last axis is the class axis and the
-*remaining axes are sample axes. On <term>Ascend 950PR/Ascend 950DT</term> any rank >= 1 is
+*remaining axes are sample axes. On Ascend 950PR&950DT products any rank >= 1 is
 *accepted; the other products only support the two-dimensional form "batch_size * num_classes".
 * @li target: A Tensor of type int32. The one-hot ground truth, same shape as "pred".
 * @li weight: An optional Tensor. Must be one of the following types: float16, float32.

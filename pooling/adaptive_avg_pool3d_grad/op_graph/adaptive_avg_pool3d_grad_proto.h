@@ -37,7 +37,7 @@ namespace ge {
 * @par Attributes
 *     data_format: An optional string, Specify the data format of the input and
 * output data. With the default format "NDHWC". \n
-* For Ascend 950PR/Ascend 950DT, both "NDHWC" and "NCDHW" are supported. All other platforms support only "NDHWC".
+* For Ascend 950PR&950DT products, both "NDHWC" and "NCDHW" are supported. All other platforms support only "NDHWC".
 
 * @par Third-party framework compatibility
 * Compatible with the PyTorch operator AdaptiveAvgPool3dGrad.

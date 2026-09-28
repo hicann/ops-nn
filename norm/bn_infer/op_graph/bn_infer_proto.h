@@ -32,9 +32,6 @@ namespace ge {
  * @par Outputs:
  * y: A tensor of type float16 or float32 or bfloat16 for the normalized "x", with the same format as x. \n
  *
- * @attention Constraints:
- * For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the
- * square root instruction.
  */
 #ifndef OPS_PROTO_DEF_BNINFER
 #define OPS_PROTO_DEF_BNINFER

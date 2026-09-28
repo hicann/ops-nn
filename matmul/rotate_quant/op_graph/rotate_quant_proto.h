@@ -47,16 +47,16 @@ namespace ge {
 * @li trans: An optional bool. Specifies whether to transpose. Defaults to false. \n
 
 * @par Constraints:
-* Atlas A3 supports per-token dynamic quantization.Atlas A5 supports per-group dynamic MX quantization.
-* Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2
-Inference Series Products, Atlas 950 Series Products: \n
+* Atlas A3 supports per-token dynamic quantization.Ascend 950PR&950DT products support per-group dynamic MX
+quantization.
+* Atlas A3 products, Atlas A2 products, Ascend 950PR&950DT products: \n
 * - x shape is [M, N], rot shape is [K, K]. rot must be a square matrix.
 * - N must be a multiple of K, and N must be divisible by 8.
 * - x and rot must have the same data type.
 * - scale output shape must be [M].
 * - N range: [128, 16000], K range: [16, 1024]. \n
 
-* Atlas A5 Series Products:
+* Ascend 950PR&950DT products:
 * - x is 1-D to 7-D, with the last dimension being N.
 * - rot shape is [K, K] or [blockNum, K, K], where blockNum = K/N, and N must divide K.
 * - x and rot must have the same data type.

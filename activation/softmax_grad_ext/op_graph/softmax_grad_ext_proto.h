@@ -25,11 +25,11 @@ namespace ge {
 * @li grad: A tensor dtype of bfloat16, float16, float32.
 * Indicates the reverse input tensor.
 * The format must be FRACTAL_NZ unless specified. Support 2D ~ 6D.
-* In Ascend 950 AI Processor, the format must be ND.
+* In Ascend 950PR&950DT products, the format must be ND.
 
 * @li x1: A tensor dtype of bfloat16, float16, float32. Indicates the inverse gradient.
 * The format must be FRACTAL_NZ unless specified, Support 2D ~ 6D.
-* In Ascend 950 AI Processor, the format must be ND.
+* In Ascend 950PR&950DT products, the format must be ND.
 * Has the same type, format and shape as input grad.
 * @li x2: A scalar dtype of bfloat16, float16, float32. Indicates the inverse scaling factor.
 * The format must be ND. Has the same type as input grad. \n

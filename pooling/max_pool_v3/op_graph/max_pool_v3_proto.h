@@ -56,15 +56,15 @@ namespace ge {
 * @li "ksize" is a list that has length 4. The ksize of the H and W dimensions should be greater than 0.
 * The ksize of the N and C dimensions should be 1. e.g. For "data_format" is "NCHW", ksize[0] = 1 and ksize[1] = 1.
 * For "data_format" is "NHWC", ksize[0] = 1 and ksize[3] = 1.  \n
-* For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: The produce of the ksize in H and W dimensions
+* For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: The produce of the ksize in H and W dimensions
 * should be less than or equal to 255. e.g. For "data_format" is "NCHW", ksize[2] * ksize[3] <= 255. \n
 * @li "strides" is a list that has length 4. The stride of the N and C dimensions should be 1.  \n
-* For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-* Atlas A3 Training Series Product: The stride of the H and W dimensions should be greater than 0 and
+* For Atlas training products, Atlas A2 products,
+* Atlas A3 training products: The stride of the H and W dimensions should be greater than 0 and
 * smaller than 64.  \n
-* For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
-* @li The output "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
+* For Ascend 950PR&950DT products: The stride of the H and W dimensions should be greater than 0.
+* @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the H and W dimensions is calculated by below formula: \n
 * @code{.c}
   When "global_pooling" is True:

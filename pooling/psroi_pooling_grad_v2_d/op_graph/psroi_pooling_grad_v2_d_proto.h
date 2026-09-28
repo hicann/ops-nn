@@ -41,7 +41,7 @@ namespace ge {
  * @li input_size: A required ListInt containing exactly [H, W], both positive.
  *
  * @par Product constraints:
- * @li Ascend 950PR/950DT: this arch35 implementation uses float32, with x and y both ND or both NCHW,
+ * @li Ascend 950PR products/950DT: this arch35 implementation uses float32, with x and y both ND or both NCHW,
  * and rois always ND. Both x/y formats use the contiguous 4D shapes above. The GE graph example uses
  * NCHW for x/y to satisfy the existing graph verifier; the original ND computation entry remains supported.
  * This does not imply that the existing verifier accepts ND graphs. R=0 produces zero gradients.

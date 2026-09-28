@@ -27,7 +27,7 @@ namespace ge {
 * @par Inputs:
 * Three inputs, including:
 * @li x: One dimensional tensor of type int32, specifying queried shape,
-* Format support ND, the max dim is 400 (128 on Lhisi(Hi3796CV300CS, SD3403), 24000 on Ascend 910_95 AI Processor).
+* Format support ND, the max dim is 400 (128 on Lhisi(Hi3796CV300CS, SD3403), 24000 on Ascend 950PR&950DT products).
 * @li data_seq: One dimensional tensor of type int32,
 * Format support ND, specifying the mapped table is queried.
 * The length of data_seq must be multiple of the length of x, and the length of data_seq / x <= 100 (256 on Ascend

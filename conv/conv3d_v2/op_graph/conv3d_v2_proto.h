@@ -22,46 +22,46 @@ namespace ge {
 /**
 * @brief Computes a 3D convolution with 5D "x", "filter" and "bias" tensors.
 * Like this, output = CONV(x, filter) + bias. \n
-* If case with 'int8' dtype appears in Atlas A3 Training Series Product/Atlas A3 Inference Series Product or
-* Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component,
+* If case with 'int8' dtype appears in Atlas A3 products or
+* Atlas A2 products,
 * like this: output = CONV(x, filter) * scale + bias.
 * @par Inputs:
 * @li x: A required 5D tensor of input image. \n
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type bfloat16, float16, float32, int8 and format "NCDHW" is supported. \n
-* In Ascend 950 AI Processor, a tensor of type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
+* In Ascend 950PR&950DT products, a tensor of type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
 * "NDHWC" can be supported.
 * @li filter: A required 5D tensor of convolution kernel. \n
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type bfloat16, float16, float32, int8 and format "NCDHW" is supported.
 * Kernel_h and kernel_w should be both less than 512. \n
-* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
+* In Ascend 950PR&950DT products, a tensor with data type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
 * "DHWCN" can be supported. Kernel_h and kernel_w should be both less than 256.
 * @li bias: An optional 1D tensor of additive biases to the outputs.
 * The data is stored in the order of: [out_channels]. \n
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type float16, float32 and format "ND" is supported. \n
-* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16 or float32 and format "ND" can be supported.
+* In Ascend 950PR&950DT products, a tensor with data type bfloat16, float16 or float32 and format "ND" can be supported.
 * @li scale: A optional 1D tensor of scaling factors.
 * The data is stored in the order of: [out_channels]. \n
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type float32 and format "ND" is supported. \n
-* In Ascend 950 AI Processor, this parameter is not supported.
+* In Ascend 950PR&950DT products, this parameter is not supported.
 * @li offset: An optional 1D tensor of bias.
 * The data is stored in the order of: [out_channels].
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type float32 and format "ND" is supported. \n
-* In Ascend 950 AI Processor, this parameter is not supported.
+* In Ascend 950PR&950DT products, this parameter is not supported.
 * @li offset_w: An optional quantitative offset tensor. A tensor of type int8. Reserved.
 *\n
 * @li The following are the supported data types and data formats for
-* (Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product):
+* (Atlas A2 products and
+* Atlas A3 products):
 \n
 | Tensor    | x        | filter   | bias     | scale   | offset  |    y     |\n
 | :-------: | :------: | :------: | :------: | :-----: | :-----: | :------: |\n
@@ -71,7 +71,7 @@ namespace ge {
 |           | int8     | int8     | float32  | float32 | float32 | bfloat16 |\n
 | Format    | NCDHW    | NCDHW    | ND       | ND      | ND      | NCDHW    |\n
 \n
-* The following are the supported data types and data formats for Ascend 950 AI Processor:
+* The following are the supported data types and data formats for Ascend 950PR&950DT products:
 \n
 | Tensor    | x        | filter   | bias     |    y     |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -97,24 +97,24 @@ namespace ge {
 * when the format is "NCDHW", its shape is [1, 1, dilation_d, dilation_h, dilation_w]. Defaults to [1, 1, 1, 1].
 * @li groups: Optional. An integer of type int32. The number of groups
 * in group convolution. In_channels and out_channels must both be divisible by "groups". Defaults to 1.
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product, groups can only be equal to 1.
+* In Atlas A2 products or
+* Atlas A3 products, groups can only be equal to 1.
 * @li data_format: Optional. It is a string represents input's data format. Defaults to "NCDHW". Reserved.
 * @li offset_x: Optional. An integer of type int32. It means offset in quantization algorithm
 * and is used for filling in pad values. Defaults to 0. It can only be supported in
-* Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product.
+* Atlas A2 products or
+* Atlas A3 products.
 * @li pad_mode: Optional. An optional string parameter, indicating the mode of pad.
 * It must be "SPECIFIC" or "SAME" or "VALID". Defaults to "SPECIFIC".
 * @li enable_hf32: Optional. An optional bool parameter. Used to enable hf32 computation.
 * If true, enable hf32 computation, otherwise, disable hf32 computation. Defaults to false.
 * @par Outputs:
 * y: A 5D tensor of output. \n
-* In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* In Atlas A2 products or
+* Atlas A3 products,
 * a tensor with data type bfloat16,float32,float16 and format "NCDHW" is supported,
 * which the data is stored in [n, out_channels, out_depth, out_height, out_width]. \n
-* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and
+* In Ascend 950PR&950DT products, a tensor with data type bfloat16, float16, float32 or hifloat8 and
 * format "NCDHW" or "NDHWC" can be supported. which the data is stored in
 * [n, out_channels, out_depth, out_height, out_width] or [n, out_depth, out_height, out_width, out_channels].
 *\n

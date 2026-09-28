@@ -20,8 +20,7 @@ namespace ge {
 /**
  * @brief Dynamic Quant V2. Performs pre-token/per-tensor asymmetric dynamic quantization on input tensors.
  * @par Inputs:
- * @li x: A tensor. Type is:DT_FLOAT16 or DT_BF16. For Atlas A2 Training Series Product/Atlas 800I A2 Inference
- * Product/A200I A2 Box Heterogeneous Component and Atlas A3 Training Series Product/Atlas A3 Inference Series Product.
+ * @li x: A tensor. Type is:DT_FLOAT16 or DT_BF16. For Atlas A2 products and Atlas A3 products.
  * Whose shape must be greater than 1. The data format support ND.
  * @li smooth_scales: An optional tensor.
  * When group_index is null, shape is 1 Dims. Dim[0] is the last dimension of x.

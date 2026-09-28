@@ -58,8 +58,7 @@ to "rint".
 * @attention Constraints:
 * @li updates，quant_scales，quant_zero_points dtype should be one of the following
 combinations:[(BFLOAT16，BFLOAT16，BFLOAT16), (FLOAT16，FLOAT32，INT32)]
-* @li Atlas Inference Series Product and Atlas Trainning Series Product and Atlas A2 Training Series Product/Atlas 800I
-A2 Inference Product and Atlas A3 Training Series Product:
+* @li Atlas inference products and Atlas training products and Atlas A2 products and Atlas A3 training products:
 * Output param var last dim should be 32B-aligned.
 * @li When var is DT_INT8, DT_FLOAT8_E5M2 or DT_FLOAT8_E4M3FN, round_mode only supports "rint".
 * @li When var is DT_HIFLOAT8, round_mode supports "round" and "hybrid".

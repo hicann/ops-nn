@@ -32,29 +32,30 @@ namespace ge {
 * @par Attributes:
 * @li ksize: List of ints. Describes the size of the window for each dimension of the input tensor.
 * Restriction: "ksize" value is in the range [1, 255] and <= "orig_input_shape" for DHW dimensions. \n
-* For Atlas Inference Series Product: "ksize" length is 5. \n
-* For Atlas Training Series Product: "ksize" length is 5. \n
-* For Atlas A2 Training Series Product/Atlas A2 Inference Series Product: "ksize"
+* For Atlas inference products: "ksize" length is 5. \n
+* For Atlas training products: "ksize" length is 5. \n
+* For Atlas A2 products: "ksize"
 length is 3. \n
-* For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "ksize" length is 3. \n
-* For Ascend950PR/Ascend950DT: "ksize" length is 1, 3 or 5, without the limit of [1, 255] and must be greater than 0. \n
+* For Atlas A3 products: "ksize" length is 3. \n
+* For Ascend 950PR&950DT products: "ksize" length is 1, 3 or 5, without the limit of [1, 255] and must be greater than
+0. \n
 * @li strides: List of ints. The stride of the sliding window for each dimension of the input tensor.
 * Restriction: "strides" value is in the range [1, 63]. \n
-* For Atlas Inference Series Product: "strides" length is 5. \n
-* For Atlas Training Series Product: "strides" length is 5. \n
-* For Atlas A2 Training Series Product/Atlas A2 Inference Series Product: "strides"
+* For Atlas inference products: "strides" length is 5. \n
+* For Atlas training products: "strides" length is 5. \n
+* For Atlas A2 products: "strides"
 length is 3. \n
-* For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "strides" length is 3. \n
-* For Ascend950PR/Ascend950DT: "strides" length is 1, 3 or 5, without the limit of [1, 63] and must be greater than 0.
-\n
+* For Atlas A3 products: "strides" length is 3. \n
+* For Ascend 950PR&950DT products: "strides" length is 1, 3 or 5, without the limit of [1, 63] and must be greater than
+0. \n
 * @li pads: List of ints, implicit zero paddings on both sides of the input.
 * Restriction: "pads" is in the range [0, ksize/2]. \n
-* For Atlas Inference Series Product: "pads" length is 6. \n
-* For Atlas Training Series Product: "pads" length is 6. \n
-* For Atlas A2 Training Series Product/Atlas A2 Inference Series Product: "pads"
+* For Atlas inference products: "pads" length is 6. \n
+* For Atlas training products: "pads" length is 6. \n
+* For Atlas A2 products: "pads"
 length is 3. \n
-* For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "pads" length is 3. \n
-* For Ascend950PR/Ascend950DT: "pads" length is 1, 3 or 6. \n
+* For Atlas A3 products: "pads" length is 3. \n
+* For Ascend 950PR&950DT products: "pads" length is 1, 3 or 6. \n
 * @li ceil_mode: An optional bool. When true, will use ceil instead of floor in the formula to
 * compute the output shape. Default value false.
 * @li count_include_pad: An optional bool. When true, will include the zero-padding in the
@@ -62,12 +63,12 @@ length is 3. \n
 * @li divisor_override: An optional int, if specified, it will be used as divisor, otherwise
 * size of the pooling region will be used. Default value 0, which means this attribute does not take effect.
 * @li data_format: An optional string, the format of the input "grads". Defaults to "NDHWC".
-* For Atlas Inference Series Product: support "NDHWC" and "NCDHW". \n
-* For Atlas Training Series Product: support "NDHWC" and "NCDHW". \n
-* For Atlas A2 Training Series Product/Atlas A2 Inference Series Product: only
+* For Atlas inference products: support "NDHWC" and "NCDHW". \n
+* For Atlas training products: support "NDHWC" and "NCDHW". \n
+* For Atlas A2 products: only
 support "NDHWC". \n
-* For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: only support "NDHWC". \n
-* For Ascend950PR/Ascend950DT: support "NDHWC" and "NCDHW". \n
+* For Atlas A3 products: only support "NDHWC". \n
+* For Ascend 950PR&950DT products: support "NDHWC" and "NCDHW". \n
 
 * @par Outputs:
 * output: A mutable tensor with the same shape as "orig_input_shape" and same type as "grads".

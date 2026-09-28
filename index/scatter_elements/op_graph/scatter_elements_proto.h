@@ -37,8 +37,8 @@ qint32, qint8, quint8, uint16, uint32, uint64, uint8, bfloat16, complex32.
 * y: A Tensor. Has the same type and format as input "data" . \n
 
 * @attention Constraints:
-* @li In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
+* @li In Atlas A2 products and
+* Atlas A3 products,
 * you are advised to replace ScatterElements with ScatterElementsV2(When there are duplicate indexes, ScatterElementsV2
 provides higher precision). \n
 

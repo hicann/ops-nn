@@ -37,12 +37,12 @@ namespace ge {
 * @attention Constraints:
 * @li The passed scale, y cannot be a null pointer.
 
-* - Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product or Atlas Inference Series Product or
-* Ascend 950 AI Processor: \n
+* - Atlas A2 products or
+* Atlas A3 products or Atlas inference products or
+* Ascend 950PR&950DT products: \n
 * This operator supports use with the matmul operator, such as QuantBatchMatmulV3. \n
-* - Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
-* Atlas A3 Training Series Product/Atlas A3 Inference Series Product or Atlas Inference Series Product: \n
+* - Atlas A2 products or
+* Atlas A3 products or Atlas inference products: \n
 * This operator does not supports use with the grouped matmul operator, such as GroupedMatmul. \n
 * @li When there is no offset, the y shape is consistent with the scale shape: \n
 * - If y is used as matmul input(e.g., QuantBatchMatmulV3), the shape support 1D (t,), with t equal to 1 or n, or 2D(1,

@@ -58,8 +58,6 @@ Specifies the variance of "x" for gradient computation. Pass "None" to skip this
 *@attention Constraints:
 *@li If the operation is used for inference and outputs "reserve_space_1" and "reserve_space_2" are available,
 then "reserve_space_1" has the same value as "mean" and "reserve_space_2" has the same value as "variance".
-*@li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1‰ due to the square root instruction .
-\n
 
 *@par Third-party framework compatibility
 *@li Compatible with the TensorFlow operator fused_batch_norm.

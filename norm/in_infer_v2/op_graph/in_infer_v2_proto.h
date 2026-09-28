@@ -41,8 +41,6 @@ Defaults to "0.00001" . \n
 *@li batch_mean: A Tensor of type float32 for the result mean.
 *@li batch_variance: A Tensor of type float32 for the result variance . \n
 
-*@attention Constraints:
-*For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 0.001 due to the square root instruction.
 */
 #ifndef OPS_PROTO_DEF_ININFERV2
 #define OPS_PROTO_DEF_ININFERV2

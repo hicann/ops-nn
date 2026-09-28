@@ -41,7 +41,7 @@ double.
 * @li validate_indices: An optional bool.
 * If true, indices are checked to make sure they are sorted by ascending, no repeats, and cannot exceed the size of each
 dimension.
-* This param is currently not effective in Ascend950PR/Ascend950DT. \n
+* This param is currently not effective in Ascend 950PR&950DT products. \n
 
 * @par Outputs:
 * y: A Tensor. Has the same type and format as input "values" . \n
