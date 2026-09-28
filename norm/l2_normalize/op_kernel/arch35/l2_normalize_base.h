@@ -74,12 +74,15 @@ constexpr AscendC::Reg::CastTrait CAST_TRAIT_FROM_FP32_FP16{
 //   Sqrt 恒 0-ULP FTZ_FALSE（fp16/fp32 同）：默认 INTRINSIC Sqrt 对 subnormal 输入 FTZ
 //   刷 0，eps<=0 且 x² 落 fp32 subnormal 窗口（|x|<1.08e-19）时 denom 被刷成 0 →
 //   y=±inf，与 golden（numpy IEEE 保留 subnormal）NaN/Inf mismatch（FR-P1-001 L1_094）。
-//   Div 仅 fp16 路径切 0-ULP：默认 Div 对 subnormal 输出 FTZ + 最大 1 ULP，fp16
-//   subnormal 输出区间（|y| < 6.1e-5）1 ULP 位差即被 stat_rel_err mare 放大成超差；
-//   fp32 subnormal 输出（|y| < 1.18e-38）恒小于用例 absolute_precision（1e-8）被
-//   绝对容差吸收，默认 Div 足够。
-constexpr AscendC::Reg::DivSpecificMode DIV_MODE_0ULP{AscendC::Reg::MaskMergeMode::ZEROING, true,
-                                                      AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+//   FP16 division remains 0-ULP but does not need FP32 subnormal normalization:
+//   a nonzero FP16 input cast to FP32 has |x| >= 2^-24; a finite denominator
+//   sqrt(max(sum,eps)) is < 2^64. Hence a finite nonzero quotient is > 2^-88,
+//   well above FP32's 2^-126 normal limit. A positive sqrt result itself is
+//   also normal in FP32. Zero/Inf/NaN keep the division API's IEEE handling.
+//   FP16 subnormal outputs are produced by the final CAST_RINT, not FP32 Div.
+//   Removing only the unreachable FP32-denormal path retains 0-ULP precision.
+constexpr AscendC::Reg::DivSpecificMode DIV_MODE_FP16_0ULP{AscendC::Reg::MaskMergeMode::ZEROING, true,
+                                                           AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
 constexpr AscendC::Reg::SqrtSpecificMode SQRT_MODE_0ULP{AscendC::Reg::MaskMergeMode::ZEROING, true,
                                                         AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 
@@ -246,8 +249,9 @@ __simd_vf__ inline void ZeroRegionVfImpl(__ubuf__ float* base, uint32_t totalEle
 __simd_vf__ inline void KahanRowsVfImpl(__ubuf__ float* tile, __ubuf__ float* sPtr, __ubuf__ float* cPtr,
                                         uint16_t rowCnt, uint32_t laneStride, uint32_t laneN, uint16_t repCnt)
 {
-    AscendC::Reg::RegTensor<float> sReg, cReg, vReg, tReg, ebReg, esReg, errReg;
+    AscendC::Reg::RegTensor<float> sReg, cReg, vReg, tReg, ebReg, esReg, errReg, zeroReg;
     AscendC::Reg::MaskReg mask, pgt;
+    AscendC::Reg::Duplicate(zeroReg, 0.0f);
     for (uint16_t rep = 0; rep < repCnt; ++rep) {
         int32_t repOff = static_cast<int32_t>(rep) * static_cast<int32_t>(REP_F32);
         uint32_t remaining = laneN - static_cast<uint32_t>(repOff);
@@ -264,6 +268,10 @@ __simd_vf__ inline void KahanRowsVfImpl(__ubuf__ float* tile, __ubuf__ float* sP
             AscendC::Reg::Add(esReg, esReg, vReg, mask); // eSml = (s - t) + p（|s|>|p| 精确）
             AscendC::Reg::Compare<float, AscendC::CMPMODE::GT>(pgt, vReg, sReg, mask); // 非负域：p>s ⟺ |p|>|s|
             AscendC::Reg::Select<float>(errReg, ebReg, esReg, pgt);
+            // Inf-Inf is not a rounding residual. Preserve Inf/NaN in s,
+            // but do not let its undefined residual contaminate c.
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pgt, errReg, errReg, mask);
+            AscendC::Reg::Select<float>(errReg, errReg, zeroReg, pgt);
             AscendC::Reg::Add(cReg, cReg, errReg, mask); // c += err
             AscendC::Reg::Move(sReg, tReg);              // s = t
         }
@@ -284,10 +292,11 @@ __simd_vf__ inline void KahanRowsVfImpl(__ubuf__ float* tile, __ubuf__ float* sP
 __simd_vf__ inline void KahanMergeRowsGatherVfImpl(__ubuf__ float* tPtr, __ubuf__ float* sPtr, __ubuf__ float* cPtr,
                                                    uint32_t rPadded, uint32_t laneN, uint16_t repCnt)
 {
-    AscendC::Reg::RegTensor<float> sReg, cReg, pReg, tReg, ebReg, esReg, errReg;
+    AscendC::Reg::RegTensor<float> sReg, cReg, pReg, tReg, ebReg, esReg, errReg, zeroReg;
     AscendC::Reg::RegTensor<uint32_t> idxMul, idx;
     AscendC::Reg::MaskReg mask, pgt;
     AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(zeroReg, 0.0f);
     AscendC::Reg::Arange(reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(idxMul), static_cast<int32_t>(0));
     AscendC::Reg::Muls(idxMul, idxMul, rPadded, allMask); // idxMul[i] = i × rPadded（行距）
     for (uint16_t rep = 0; rep < repCnt; ++rep) {
@@ -307,6 +316,8 @@ __simd_vf__ inline void KahanMergeRowsGatherVfImpl(__ubuf__ float* tPtr, __ubuf_
             AscendC::Reg::Add(esReg, esReg, pReg, mask); // eSml = (s - t) + p（|s|>|p| 精确）
             AscendC::Reg::Compare<float, AscendC::CMPMODE::GT>(pgt, pReg, sReg, mask); // 非负域：p>s ⟺ |p|>|s|
             AscendC::Reg::Select<float>(errReg, ebReg, esReg, pgt);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pgt, errReg, errReg, mask);
+            AscendC::Reg::Select<float>(errReg, errReg, zeroReg, pgt);
             AscendC::Reg::Add(cReg, cReg, errReg, mask); // c += err
             AscendC::Reg::Move(sReg, tReg);              // s = t
         }
@@ -315,7 +326,47 @@ __simd_vf__ inline void KahanMergeRowsGatherVfImpl(__ubuf__ float* tPtr, __ubuf_
     }
 }
 
-// 收尾：s_final = s + c（单次舍入 ⇒ 总和正确舍入值），写回 sPtr 供 PostElewise 消费
+// Long tail-R tiles: accumulate 64 independent compensated sums per A row.
+// scratch layout [A][128] stores all 64 sums, then all 64 corrections. The caller
+// merges these in that order into the persistent (s,c), using the existing VF.
+// Unlike a plain horizontal ReduceSum, both stages retain rounding residuals.
+// Masked Gather avoids reading beyond the final row; inactive lanes add zero.
+__simd_vf__ inline void KahanStripesVfImpl(__ubuf__ float* tile, __ubuf__ float* scratch, uint32_t rPadded,
+                                           uint32_t laneN)
+{
+    AscendC::Reg::RegTensor<float> sReg, cReg, pReg, tReg, ebReg, esReg, errReg, zeroReg;
+    AscendC::Reg::RegTensor<uint32_t> laneIdx, idx;
+    AscendC::Reg::MaskReg valid, pgt;
+    AscendC::Reg::MaskReg all = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Arange(reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(laneIdx), 0);
+    AscendC::Reg::Duplicate(zeroReg, 0.0f);
+    for (uint32_t a = 0; a < laneN; ++a) {
+        AscendC::Reg::Duplicate(sReg, 0.0f);
+        AscendC::Reg::Duplicate(cReg, 0.0f);
+        for (uint32_t r = 0; r < rPadded; r += REP_F32) {
+            uint32_t remaining = rPadded - r;
+            valid = AscendC::Reg::UpdateMask<float>(remaining);
+            AscendC::Reg::Adds(idx, laneIdx, a * rPadded + r, all);
+            AscendC::Reg::Gather(pReg, tile, idx, valid);
+            AscendC::Reg::Select<float>(pReg, pReg, zeroReg, valid);
+            AscendC::Reg::Add(tReg, sReg, pReg, all);
+            AscendC::Reg::Sub(ebReg, pReg, tReg, all);
+            AscendC::Reg::Add(ebReg, ebReg, sReg, all);
+            AscendC::Reg::Sub(esReg, sReg, tReg, all);
+            AscendC::Reg::Add(esReg, esReg, pReg, all);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::GT>(pgt, pReg, sReg, all);
+            AscendC::Reg::Select<float>(errReg, ebReg, esReg, pgt);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pgt, errReg, errReg, all);
+            AscendC::Reg::Select<float>(errReg, errReg, zeroReg, pgt);
+            AscendC::Reg::Add(cReg, cReg, errReg, all);
+            AscendC::Reg::Move(sReg, tReg);
+        }
+        AscendC::Reg::StoreAlign(scratch + a * (2 * REP_F32), sReg, all);
+        AscendC::Reg::StoreAlign(scratch + a * (2 * REP_F32) + REP_F32, cReg, all);
+    }
+}
+
+// 收尾：s_final = s + c（单次舍入），写回 sPtr 供 PostElewise 消费
 __simd_vf__ inline void FinalizeSumVfImpl(__ubuf__ float* sPtr, __ubuf__ float* cPtr, uint32_t laneN, uint16_t repCnt)
 {
     AscendC::Reg::RegTensor<float> sReg, cReg;
@@ -390,7 +441,7 @@ __simd_vf__ inline void BroadcastDenomTailRVfImpl(__ubuf__ float* denomPtr, __ub
 }
 
 // S10+S11 除法遍：y = x / denom_bcast（+ fp16 扩位/缩位 Cast，§9.7）
-// HiPrec：fp16 路径 Div 切 0-ULP（IEEE 正确舍入，见 DIV_MODE_0ULP 注释）。
+// HiPrec：fp16 路径 Div 保持 0-ULP（适用数值范围见 DIV_MODE_FP16_0ULP 注释）。
 template <typename DType, bool HiPrecDiv>
 __simd_vf__ inline void DivCastVfImpl(__ubuf__ DType* xPost, __ubuf__ float* denomBcast, __ubuf__ DType* y,
                                       uint32_t totalElems, uint16_t repeatTime)
@@ -413,7 +464,7 @@ __simd_vf__ inline void DivCastVfImpl(__ubuf__ DType* xPost, __ubuf__ float* den
             AscendC::Reg::LoadAlign<DType, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(xB16, xPost + off);
             AscendC::Reg::Cast<float, DType, CAST_TRAIT_TO_FP32>(xReg, xB16, mask); // x 扩位（同 S2）
             if constexpr (HiPrecDiv) {
-                AscendC::Reg::Div<float, &DIV_MODE_0ULP>(xReg, xReg, dReg, mask); // y = x / denom（0-ULP）
+                AscendC::Reg::Div<float, &DIV_MODE_FP16_0ULP>(xReg, xReg, dReg, mask); // y = x / denom（0-ULP）
             } else {
                 AscendC::Reg::Div(xReg, xReg, dReg, mask); // y = x / denom
             }
@@ -877,9 +928,11 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunk(int64_t outerGm
 //     tail-A（tile [R][A]，R 外层）：KahanRowsVf 逐行并入 (s, c)（A 向量化）；
 //     tail-R（tile [A][R]，R 内层，连续 Load 跨步不可达且尾块 lane 基址 4B 粒度非
 //     32B 对齐）：KahanMergeRowsGatherVf 以 vgather2 逐 R 巷取 64 个 A 值，做与
-//     tail-A 完全同构的 A 向量化 Kahan 并入 (s, c)。
+//     tail-A 完全同构的 A 向量化 Kahan 并入 (s, c)。rPadded >= 512 时先按 R 分成
+//     64 路补偿累加，再依次合并各路的主和与残差，缩短逐元素依赖链。
 //   缓冲：s → cacheBuf[0, laneA)，c → B3（postReduceResult)；cacheBuf 仅用 [0, laneA)。
-//   B0 不参与（x tile 驻留，R 全载单遍除法免二次读）；B2 仅供除法遍 denom_bcast。
+//   B0 不参与（x tile 驻留，R 全载单遍除法免二次读）；B2 在长 tail-R 归约时临时存
+//   [laneA][128] 的条带主和/残差，归约后复用为除法遍 denom_bcast。
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType>
 __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunkFp16Exact(int64_t outerGmOff, int64_t aLen)
@@ -922,9 +975,20 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunkFp16Exact(int64_
         }
 
         if (isTailR_) {
-            // tail-R：逐 R 巷 gather 取 x²（跨步访问 4B 粒度，vgather2）→ A 向量化 Kahan
-            // 并入 (s, c)（与 tail-A 的 KahanRowsVfImpl 同构；B2 不参与）
-            asc_vf_call<KahanMergeRowsGatherVfImpl>(preResPtr, sPtr, cPtr, rPadded, laneA, laneRep);
+            if (rPadded >= 512) {
+                // B2 is unused until DividePass. 128*laneA <= rPadded*laneA
+                // guarantees scratch capacity without changing tiling or workspace.
+                __ubuf__ float* scratch = reinterpret_cast<__ubuf__ float*>(
+                    preReduceResultTail_.Get<float>().GetPhyAddr());
+                asc_vf_call<KahanStripesVfImpl>(preResPtr, scratch, rPadded, laneA);
+                // Merge positive sums before signed corrections: the accumulated
+                // sum then dominates every correction, preserving Fast2Sum's
+                // magnitude precondition in KahanMergeRowsGatherVfImpl.
+                asc_vf_call<KahanMergeRowsGatherVfImpl>(scratch, sPtr, cPtr, static_cast<uint32_t>(2 * REP_F32), laneA,
+                                                        laneRep);
+            } else {
+                asc_vf_call<KahanMergeRowsGatherVfImpl>(preResPtr, sPtr, cPtr, rPadded, laneA, laneRep);
+            }
         } else {
             // tail-A：行式 Kahan 逐行并入 (s, c)（tile [rPadded][laneA] dense，pad 行已清零）
             asc_vf_call<KahanRowsVfImpl>(preResPtr, sPtr, cPtr, static_cast<uint16_t>(rPadded), laneA, laneA, laneRep);

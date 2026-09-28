@@ -21,13 +21,13 @@
 //     局部 rCount 二分缓存树 → cacheBuf[localRoot] → workspace partial 区第
 //     rChunkIdx 行（fp32，跳过 PostElewise——partial 是中间量，eps 钳制只在
 //     Phase 2 做一次）；
-//   Phase 1→2：SyncAll() 全核同步（唯一一次跨核屏障）；
+//   Phase 1→2：SyncAll() 全核同步；
 //   Phase 2（RA mini-kernel，A 重切分 aUbFactorP2，kernel 侧现算不进 TilingData）：
 //     ws partial 区 [rGroupCnt, aLen] → ReduceSum RA（dst=cacheBuf[0]）→
 //     PostElewise（max(s,eps)→sqrt，eps 钳在平方和上）→ denom →
 //     workspace denom 区本核槽位（padded 槽位布局，槽步长 slotStride）；
-//   Phase 3（keepdims 广播除法，A 切分沿用 Phase 2 自产自销 ⇒ 无第二次 SyncAll，
-//     R 切分独立现算 rUbFactorP3）：
+//   Phase 3（keepdims 广播除法，tail-A 沿用 Phase 2 自产自销；tail-R 在第二次
+//     SyncAll 后按 A 槽位 × R chunk 分核，避免少量 A 槽位限制输出并行度）：
 //     GM_x 二次读 → denom 广播物化（tail-A srcStride=-blockLen 广播搬入 B2 /
 //     tail-R dense 装入 B3 + BroadcastDenomTailRVf 行常量）→ DivCastVf（fp16
 //     含扩位/缩位 Cast）→ CopyOut y。
@@ -90,13 +90,15 @@ public:
         }
     }
 
-    // Group 主流程：Phase1 → SyncAll → Phase2 → Phase3（Phase2→3 无 SyncAll：
-    // Phase 3 的 A 切分沿用 Phase 2，每核 denom 槽位本核自产自销，无跨核依赖）
+    // tail-R 输出可消费其他核的 denom，因此所有核都必须参加第二次屏障。
     __aicore__ inline void ProcessGroup()
     {
         Phase1Process();
-        SyncAll(); // 唯一一次跨核同步（SetScheduleMode(1) 配套）
+        SyncAll(); // SetScheduleMode(1) 配套
         Phase2Process();
+        if (Base::isTailR_) {
+            SyncAll();
+        }
         Phase3Process();
     }
 
@@ -373,7 +375,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2Process()
     const int64_t aBigCoreLoopCntP2 = aSmallCoreLoopCntP2 + (aBigCoreCntP2 > 0 ? 1 : 0);
     const int64_t usedCoreNumP2 = (aSmallCoreLoopCntP2 > 0) ? Base::td_->usedCoreNum : aBigCoreCntP2;
     if (blockIdx >= usedCoreNumP2) {
-        return; // Phase 2/3 空转早退（denom 槽位自产自销）
+        return; // 仅退出 Phase 2；tail-R 空闲核仍参加其后的屏障和 Phase 3
     }
 
     int64_t aLoopStart = 0;
@@ -449,6 +451,10 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2Process()
         }
     }
     SetFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_); // Phase 2→3 边界：ws 写→读序 + tail-R B3 覆写
+    if (Base::isTailR_) {
+        // 在生产核消费本地事件；空闲核不能等待从未发出的事件。
+        WaitFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_);
+    }
 }
 
 // S2a: workspace partial 区 [rGroupCnt, aTotal] fp32 dense 行优先 → B1（复用 Phase 1
@@ -469,8 +475,8 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2CopyInPartial(int64_
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Phase3Process（§5.3）：keepdims 广播除法——A 切分沿用 Phase 2（槽位自产自销，
-//   免第二次 SyncAll），R 切分独立现算（G9）；A 子 tile = LastA 行扫描段（§5.2）。
+// Phase3Process（§5.3）：keepdims 广播除法——denom 槽位布局沿用 Phase 2，
+//   tail-R 按槽位 × R chunk 分核；tail-A 保持自产自销。A 子 tile = LastA 行扫描段。
 //   每 (段 × R chunk) tile 落 B0/B1/B2 基址（单 tile ≤ preBufSize 构造性保证），
 //   x tile / denom_bcast tile / y tile 三者布局逐 lane 对齐（tail-R [A,R] /
 //   tail-A [R,A]）；段首偏移 segLaneOff 仅用于 denom 源定位。
@@ -480,7 +486,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
 {
     const int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
 
-    // ── 1) 切分参数现算（G8/G9 与 Phase 2 完全同式，保证槽位对齐自产自销）──
+    // ── 1) 槽位布局与 Phase 2 完全同式；tail-R 可重分配槽位消费者──
     const int64_t preInElems = Base::td_->preBufSize / static_cast<int64_t>(sizeof(float));
     constexpr int64_t bsFp32 = UB_BLOCK_BYTES / static_cast<int64_t>(sizeof(float));
     constexpr int64_t bsElem = UB_BLOCK_BYTES / static_cast<int64_t>(sizeof(DType));
@@ -499,7 +505,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     const int64_t aBigCoreCntP2 = aSplitChunkCntP2 % Base::td_->usedCoreNum;
     const int64_t aBigCoreLoopCntP2 = aSmallCoreLoopCntP2 + (aBigCoreCntP2 > 0 ? 1 : 0);
     const int64_t usedCoreNumP2 = (aSmallCoreLoopCntP2 > 0) ? Base::td_->usedCoreNum : aBigCoreCntP2;
-    if (blockIdx >= usedCoreNumP2) {
+    if (!Base::isTailR_ && blockIdx >= usedCoreNumP2) {
         return; // 与 Phase 2 同界早退（自产自销，无跨核依赖）
     }
     int64_t aLoopStart = 0;
@@ -510,6 +516,16 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     } else {
         aLoopStart = aBigCoreCntP2 * aBigCoreLoopCntP2 + (blockIdx - aBigCoreCntP2) * aSmallCoreLoopCntP2;
         aLoopEnd = aLoopStart + aSmallCoreLoopCntP2;
+    }
+    int64_t rLoopStart = 0;
+    int64_t rLoopStep = 1;
+    if (Base::isTailR_ && aSplitChunkCntP2 < Base::td_->usedCoreNum) {
+        // 核号 = rRank * 槽位数 + slot。每个槽的核数允许相差 1。
+        // 同槽各核只写互不重叠的 R chunk，分母及算术顺序不变。
+        aLoopStart = blockIdx % aSplitChunkCntP2;
+        aLoopEnd = aLoopStart + 1;
+        rLoopStart = blockIdx / aSplitChunkCntP2;
+        rLoopStep = CeilDivI64(Base::td_->usedCoreNum - aLoopStart, aSplitChunkCntP2);
     }
 
     // ── 2) R 切分独立现算（G9；Phase 1 的 rUbFactor 仅服务 reduce，不约束除法遍）──
@@ -560,9 +576,9 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     const uint16_t repPerRow = static_cast<uint16_t>(
         CeilDivU32(static_cast<uint32_t>(rBundleP3), static_cast<uint32_t>(REP_F32_U16)));
 
-    bool firstMte2 = true;   // Phase 2→3 边界（MTE3_MTE2：ws 写→读 + tail-R B3 WAR），全局仅消费一次
-    bool pendingV2M = false; // 有未消费的 Set<V_MTE2>（上轮末尾配对发出）
-    bool pendingM3V = false; // 有未消费的 Set<MTE3_V>（上轮末尾配对发出）
+    bool firstMte2 = !Base::isTailR_; // tail-R 已经在生产核消费事件并完成全核屏障
+    bool pendingV2M = false;          // 有未消费的 Set<V_MTE2>（上轮末尾配对发出）
+    bool pendingM3V = false;          // 有未消费的 Set<MTE3_V>（上轮末尾配对发出）
     const int32_t lastAIdx = Base::LastAAxis();
     for (int64_t aLoopIdx = aLoopStart; aLoopIdx < aLoopEnd; ++aLoopIdx) {
         const int64_t aOff = aLoopIdx * aUbFactorP2;
@@ -614,13 +630,13 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
                 const uint16_t repTime = static_cast<uint16_t>(
                     CeilDivU32(totalElems, static_cast<uint32_t>(REP_F32_U16)));
 
-                for (int64_t j = 0; j < rChunkCntP3; ++j) {
+                for (int64_t j = rLoopStart; j < rChunkCntP3; j += rLoopStep) {
                     int64_t rOuterIdx[MAX_PATTERN_RANK] = {0};
                     int64_t rChunkIdx = 0;
                     int64_t rLen = 0;
                     const int64_t rOff = UnravelRLoopP3(j, rOuterIdx, rChunkIdx, rLen, rUbFactorP3);
                     const bool isLast = (aLoopIdx == aLoopEnd - 1) && (cur + rowLen >= segEnd) &&
-                                        (inner + subLen >= rowLen) && (j == rChunkCntP3 - 1);
+                                        (inner + subLen >= rowLen) && (j + rLoopStep >= rChunkCntP3);
 
                     if (pendingV2M) {
                         WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_); // B0/B2 WAR（上轮 DivCast/Broadcast V 读）
