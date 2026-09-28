@@ -203,11 +203,11 @@
 | [aclnnForeachLog2](../../foreach/foreach_log2/docs/aclnnForeachLog2.md) | 对张量列表中的每一个元素执行以2为底的对数函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachLog10](../../foreach/foreach_log10/docs/aclnnForeachLog10.md) | 对张量列表中的每一个元素执行以10为底的对数函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMaximumList](../../foreach/foreach_maximum_list/docs/aclnnForeachMaximumList.md) | 对张量列表x1和张量列表x2执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachMaximumScalar](../../foreach/foreach_maximum_scalar/docs/aclnnForeachMaximumScalar.md) | 对张量列表和张量scalar执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | - |
+| [aclnnForeachMaximumScalar](../../foreach/foreach_maximum_scalar/docs/aclnnForeachMaximumScalar.md) | 对张量列表和张量scalar执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMaximumScalarList](../../foreach/foreach_maximum_scalar_list/docs/aclnnForeachMaximumScalarList.md) | 对张量列表x和标量列表scalars执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMaximumScalarV2](../../foreach/foreach_maximum_scalar/docs/aclnnForeachMaximumScalarV2.md) | 对张量列表和标量值scalar执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMinimumList](../../foreach/foreach_minimum_list/docs/aclnnForeachMinimumList.md) | 对张量列表x1和张量列表x2执行逐元素比较，计算每个元素对应的最小值。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachMinimumScalar](../../foreach/foreach_minimum_scalar/docs/aclnnForeachMinimumScalar.md) | 对张量列表x和张量scalar执行逐元素比较，计算每个元素对应的最小值。 | 默认确定性实现 | - |
+| [aclnnForeachMinimumScalar](../../foreach/foreach_minimum_scalar/docs/aclnnForeachMinimumScalar.md) | 对张量列表x和张量scalar执行逐元素比较，计算每个元素对应的最小值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMinimumScalarList](../../foreach/foreach_minimum_scalar_list/docs/aclnnForeachMinimumScalarList.md) | 对张量列表x和标量列表scalars执行逐元素比较，计算每个元素对应的最小值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMinimumScalarV2](../../foreach/foreach_minimum_scalar/docs/aclnnForeachMinimumScalarV2.md) | 对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMulList](../../foreach/foreach_mul_list/docs/aclnnForeachMulList.md) | 对两个输入张量列表执行逐元素相乘。 | 默认确定性实现 | 默认确定性实现 |
@@ -220,7 +220,7 @@
 | [aclnnForeachNonFiniteCheckAndUnscale](../../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) | 遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf的值保持不变，并对scaledGrads中的所有Tensor进行反缩放。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachNorm](../../foreach/foreach_norm/docs/aclnnForeachNorm.md) | 对输入张量列表的每个张量进行范数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowList](../../foreach/foreach_pow_list/docs/aclnnForeachPowList.md) | 对输入张量列表的每个张量进行幂运算（底数为x1，指数为x2）。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachPowScalar](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalar.md) | 对输入张量列表x中的每个张量进行指数运算，指数为张量scale。 | 默认确定性实现 | - |
+| [aclnnForeachPowScalar](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalar.md) | 对输入张量列表x中的每个张量进行指数运算，指数为张量scale。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowScalarV2](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalarV2.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量exponent。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowScalarAndTensor](../../foreach/foreach_pow_scalar_and_tensor/docs/aclnnForeachPowScalarAndTensor.md) | 对输入张量列表x中的每个张量进行指数运算，底数为输入的标量scalar。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowScalarList](../../foreach/foreach_pow_scalar_list/docs/aclnnForeachPowScalarList.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量列表exponent中对应的标量。 | 默认确定性实现 | 默认确定性实现 |
@@ -232,10 +232,10 @@
 | [aclnnForeachSin](../../foreach/foreach_sin/docs/aclnnForeachSin.md) | 对输入张量列表的每个张量进行正弦函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSinh](../../foreach/foreach_sinh/docs/aclnnForeachSinh.md) | 对输入张量列表的每个张量进行双曲正弦函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSqrt](../../foreach/foreach_sqrt/docs/aclnnForeachSqrt.md) | 对输入张量列表的每个张量进行平方根运算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachSubList](../../foreach/foreach_sub_list/docs/aclnnForeachSubList.md) | 对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。 | 默认确定性实现 | - |
+| [aclnnForeachSubList](../../foreach/foreach_sub_list/docs/aclnnForeachSubList.md) | 对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubListV2](../../foreach/foreach_sub_list/docs/aclnnForeachSubListV2.md) | 对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubListInplace](../../foreach/foreach_sub_list_inplace/docs/aclnnForeachSubListInplace.md) | 对两个张量列表逐元素计算x1-alpha*x2，结果原地写回第一个列表。 | - | 默认确定性实现 |
-| [aclnnForeachSubScalar](../../foreach/foreach_sub_scalar/docs/aclnnForeachSubScalar.md) | 对输入张量列表的每个张量与张量scalar执行相减运算。 | 默认确定性实现 | - |
+| [aclnnForeachSubScalar](../../foreach/foreach_sub_scalar/docs/aclnnForeachSubScalar.md) | 对输入张量列表的每个张量与张量scalar执行相减运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubScalarList](../../foreach/foreach_sub_scalar_list/docs/aclnnForeachSubScalarList.md) | 对输入张量列表的每个张量与标量列表scalars的每个标量逐元素执行相减运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubScalarV2](../../foreach/foreach_sub_scalar/docs/aclnnForeachSubScalarV2.md) | 对输入张量列表的每个张量与标量scalar执行相减运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubScalarInplace](../../foreach/foreach_sub_scalar_inplace/docs/aclnnForeachSubScalarInplace.md) | 对输入张量列表中的每个张量逐元素减去同一标量，结果原地更新。 | - | 默认确定性实现 |
