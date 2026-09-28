@@ -5589,6 +5589,16 @@
     <td>LSTMCell中四个门中matmul后剩余计算的反向传播，计算正向输出四个门激活前的值gates、输入cx、偏置b的梯度。</td>
   </tr>
   <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/thnn_fused_gru_cell_grad/README.md">thnn_fused_gru_cell_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>GRUCell中三个门中matmul后剩余计算的反向传播，计算正向输出三个门激活前的值gates、前向workspace（[r,z,n,hx,hn]五平面）的梯度，以及输入hx与偏置b的梯度。</td>
+  </tr>
+  <tr>
     <td>vfusion</td>
     <td><a href="../../vfusion/multi_scale_deformable_attention_grad/README.md">multi_scale_deformable_attention_grad</a></td>
     <td>✓</td>
