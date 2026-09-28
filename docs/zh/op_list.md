@@ -5428,6 +5428,16 @@
     <td>AI Core</td>
     <td>输入特征图重建的量化方法。</td>
   </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/wts_arq/README.md">wts_arq</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>AMCT 量化感知训练（QAT）场景。</td>
+  </tr>
    <tr>
     <td>rnn</td>
     <td><a href="../../rnn/bidirection_lstm/README.md">bidirection_lstm</a></td>
