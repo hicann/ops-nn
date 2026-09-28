@@ -189,8 +189,8 @@ public:
             uint32_t sreg0 = colsCount;
             for (uint16_t i = 0; i < colsLoopCount; i++) {
                 pregLoop = UpdateMask<float>(sreg0);
-                LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(x1Addr, x2Addr, biasAddr, x, pregLoop,
-                                                                       i * vlFp32, i * vlFp32, i * vlFp32);
+                LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+                    x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32, i * vlFp32, i * vlFp32);
                 LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
                 if constexpr (!IS_PER_TENSOR_SCALE) {
                     LoadQuantParams(scaleAddr, scale, pregLoop, i * vlFp32);

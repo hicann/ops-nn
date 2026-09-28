@@ -24,6 +24,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../../add_layer_norm/arch35/add_layer_norm_regbase_common.h"
+#include "quantize_add_layer_norm_regbase_residual.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace QuantizeAddLayerNormRegbase {
@@ -163,7 +164,7 @@ __aicore__ inline void VFWelfordParallelUpdateCommon(LocalTensor<X1_TYPE>& x1Loc
         biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
     }
 
-    AddLayerNorm::VFWelfordParallelUpdateCommon<INIT, X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+    asc_vf_call<VFWelfordParallelUpdateResidualFirst<INIT, X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>>(
         x1Addr, x2Addr, biasAddr, xOutAddr, tmpMeanAddr, tmpVarAddr, calLen, loopCount, scale);
 }
 

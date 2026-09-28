@@ -194,9 +194,12 @@ public:
             }
 
             for (uint16_t k = 0; k < (uint16_t)rowsCount; k++) {
-                uint32_t sreg0 = colsCount;
                 for (uint16_t i = 0; i < colsLoopCount; i++) {
-                    pregLoop = UpdateMask<float>(sreg0);
+                    // Explicit per-chunk mask (add_layer_norm_grad cut_d/cut_n pattern): the last
+                    // chunk holds only colsCount-i*vlFp32 valid lanes when cols % vlFp32 != 0.
+                    uint32_t remainCnt = colsCount - static_cast<uint32_t>(i) * vlFp32;
+                    uint32_t chunkCnt = (remainCnt > vlFp32) ? vlFp32 : remainCnt;
+                    pregLoop = UpdateMask<float>(chunkCnt);
                     LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
                     if constexpr (!IS_PER_TENSOR_SCALE) {
                         LoadQuantParams(scaleAddr, scale, pregLoop, i * vlFp32);

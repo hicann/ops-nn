@@ -69,13 +69,13 @@ __aicore__ inline void MeanVarFastChunk(MeanVarLocalAddr<X1_TYPE>& localAddr, Re
     RegTensor<float> yFactor;
     RegTensor<float> var;
     if constexpr (IS_BIAS_BROADCAST) {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr,
-                                                               x, pregLoop, i * colsPerLoopAlign, i * colsPerLoopAlign,
-                                                               0);
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+            localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, x, pregLoop, i * colsPerLoopAlign,
+            i * colsPerLoopAlign, 0);
     } else {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr,
-                                                               x, pregLoop, i * colsPerLoopAlign, i * colsPerLoopAlign,
-                                                               i * colsPerLoopAlign);
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+            localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, x, pregLoop, i * colsPerLoopAlign,
+            i * colsPerLoopAlign, i * colsPerLoopAlign);
     }
     // save xOut
     StoreRegToOutput(localAddr.xOutAddr, x, pregLoop, i * colsPerLoopAlign);
@@ -140,18 +140,18 @@ __aicore__ inline void MeanRemainderChunk(MeanVarLocalAddr<X1_TYPE>& localAddr, 
                                           uint32_t vlFp32, uint32_t binaryAddOffset)
 {
     if constexpr (IS_BIAS_BROADCAST) {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr,
-                                                               binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign,
-                                                               i * vlFp32 + k * colsPerLoopAlign, i * vlFp32);
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+            localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddQ, pregLoop,
+            i * vlFp32 + k * colsPerLoopAlign, i * vlFp32 + k * colsPerLoopAlign, i * vlFp32);
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddR, pregLoop,
             i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset, i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
             i * vlFp32 + binaryAddOffset);
     } else {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddQ, pregLoop,
             i * vlFp32 + k * colsPerLoopAlign, i * vlFp32 + k * colsPerLoopAlign, i * vlFp32 + k * colsPerLoopAlign);
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddR, pregLoop,
             i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset, i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
             i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
@@ -179,25 +179,29 @@ __aicore__ inline void MeanRemainderTailChunk(MeanVarLocalAddr<X1_TYPE>& localAd
                                               int64_t binaryAddRemainder, uint16_t binaryAddRemainderLoop,
                                               uint32_t colsPerLoopAlign, uint32_t vlFp32, uint32_t binaryAddOffset)
 {
-    uint32_t sreg0 = binaryAddRemainder;
-    pregLoop = UpdateMask<float>(sreg0);
+    // Tail chunk of the R (remainder) stream: only the lanes below the row end are valid.
+    // Explicit count instead of re-using binaryAddRemainder: UpdateMask(count>=vlFp32) yields a
+    // full-lane mask, so the tail chunk would read/store [cols, cols+pad) lanes out of bounds.
+    uint32_t tailCnt = static_cast<uint32_t>(binaryAddRemainder - static_cast<int64_t>(binaryAddRemainderLoop - 1) *
+                                                                      static_cast<int64_t>(vlFp32));
+    pregLoop = UpdateMask<float>(tailCnt);
     if constexpr (IS_BIAS_BROADCAST) {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddQ, pregMain,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign, (binaryAddRemainderLoop - 1) * vlFp32);
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddR, pregLoop,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
             (binaryAddRemainderLoop - 1) * vlFp32 + binaryAddOffset);
     } else {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddQ, pregMain,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, binaryAddR, pregLoop,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
@@ -231,12 +235,12 @@ __aicore__ inline void MeanQuotientChunk(MeanVarLocalAddr<X1_TYPE>& localAddr, _
 {
     RegTensor<float> x;
     if constexpr (IS_BIAS_BROADCAST) {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, x, pregMain,
             (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
             (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign, (i + binaryAddRemainderLoop) * vlFp32);
     } else {
-        LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
             localAddr.x1Addr, localAddr.x2Addr, localAddr.biasAddr, x, pregMain,
             (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
             (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
@@ -305,8 +309,11 @@ __aicore__ inline void VarRemainderTailChunk(MeanVarLocalAddr<X1_TYPE>& localAdd
                                              int64_t binaryAddRemainder, uint16_t binaryAddRemainderLoop,
                                              uint32_t colsPerLoopAlign, uint32_t vlFp32, uint32_t binaryAddOffset)
 {
-    uint32_t sreg1 = binaryAddRemainder;
-    pregLoop = UpdateMask<float>(sreg1);
+    // Same tail-mask correction as MeanRemainderTailChunk: R stream covers only
+    // remainder-(remainderLoop-1)*vlFp32 valid lanes in its last chunk.
+    uint32_t tailCnt = static_cast<uint32_t>(binaryAddRemainder - static_cast<int64_t>(binaryAddRemainderLoop - 1) *
+                                                                      static_cast<int64_t>(vlFp32));
+    pregLoop = UpdateMask<float>(tailCnt);
     LoadAlign(binaryAddQ,
               (__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
     LoadAlign(binaryAddR, (__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
