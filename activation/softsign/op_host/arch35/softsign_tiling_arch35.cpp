@@ -31,8 +31,6 @@ using Ops::Base::bfloat16_t;
 using Ops::Base::ElewiseBaseTiling;
 using Ops::Base::half;
 
-static constexpr size_t MAX_INPUT_RANK = 8;
-
 template <typename OpDag>
 static ge::graphStatus RunEleTiling(gert::TilingContext* context, SoftsignTilingData* tilingData)
 {
@@ -78,12 +76,6 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
     const size_t inputRank = storageShape.GetDimNum();
 
     bool isUnknownRank = (inputRank == 1 && storageShape.GetDim(0) == unknownRankDim);
-    if (!isUnknownRank) {
-        OP_CHECK_IF(inputRank > MAX_INPUT_RANK,
-                    OP_LOGE(context, "Softsign: input x rank must be no greater than %zu, but got %zu.", MAX_INPUT_RANK,
-                            inputRank),
-                    return ge::GRAPH_FAILED);
-    }
 
     // 标量(rank==0)与空 tensor(totalNum==0)统一放行：SetBlockDim(1) + return SUCCESS，
     // 与 relu6/selu/hard_shrink 等 15 个同类 arch35 elementwise 算子一致
