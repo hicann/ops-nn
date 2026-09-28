@@ -452,8 +452,8 @@ private:
     template <bool UseUbAcc>
     __aicore__ inline void AccumulateScalarRowTaps(uint64_t goPlaneBase, uint32_t hi, uint64_t rowBase,
                                                    LocalTensor<float>& rowAcc, LocalTensor<T>& weightDilated);
-    __aicore__ inline void ComputeRowBf16Vec(uint64_t r);
     __aicore__ inline void ComputeRowBf16VecPlain(uint64_t r);
+    __aicore__ inline void WriteRowToGm(uint64_t rowBase, const LocalTensor<T>& outH);
     __aicore__ inline void ComputeRowBf16VecStrided(uint64_t r);
     __aicore__ inline void ComputeRowScalarAcc(uint64_t r);
     __aicore__ inline void ComputeRow(uint64_t r);

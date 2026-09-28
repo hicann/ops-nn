@@ -221,6 +221,30 @@ static __aicore__ inline void MmadLocal(Intf* self, const LocalTensor<typename I
     }
 }
 
+// out2L1 到 A1 的搬运：srcStride 超出 16bit 编码上限时改按行逐块搬运
+template <class Intf>
+static __aicore__ inline void CopyOut2L1ToA1(Intf* self, LocalTensor<typename Intf::SrcT> a1Buf, uint64_t srcAddrOffset,
+                                             uint32_t blockCount, const DataCopyParams& baseParams)
+{
+    DataCopyParams copyParams = baseParams;
+    const uint64_t srcStride = self->ctx.hwO_ - baseParams.blockLen;
+    if (srcStride <= MAX_16BITS_STRIDE) {
+        copyParams.srcStride = srcStride;
+        copyParams.blockCount = blockCount;
+        DataCopy(a1Buf, self->ctx.outBackPropGlobal_[srcAddrOffset], copyParams);
+        return;
+    }
+    copyParams.srcStride = 0;
+    copyParams.blockCount = 1;
+    uint64_t srcOffset = srcAddrOffset;
+    uint64_t dstOffset = 0;
+    for (uint32_t idx = 0; idx < blockCount; ++idx) {
+        DataCopy(a1Buf[dstOffset], self->ctx.outBackPropGlobal_[srcOffset], copyParams);
+        srcOffset += self->ctx.hwO_ * self->ctx.tiling_->channelSize;
+        dstOffset += copyParams.blockLen * self->ctx.tiling_->channelSize;
+    }
+}
+
 template <class Intf, class src0_T>
 __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, const Out2L1ScalarParams& params,
                                 bool isLoadA1, uint64_t kaStepIdx)
@@ -268,22 +292,7 @@ __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, con
         }
 
         // blockcout和blockLen关联L1, 溢出风险低
-        uint64_t srcStride = self->ctx.hwO_ - dataCopyParams.blockLen;
-        if (srcStride <= MAX_16BITS_STRIDE) {
-            dataCopyParams.srcStride = srcStride;
-            dataCopyParams.blockCount = blockCount;
-            DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dataCopyParams);
-        } else {
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.blockCount = 1;
-            uint64_t srcOffset = out2A1SrcAddrOffset;
-            uint64_t dstOffset = 0;
-            for (uint32_t idx = 0; idx < blockCount; ++idx) {
-                DataCopy(useA1Buf[dstOffset], self->ctx.outBackPropGlobal_[srcOffset], dataCopyParams);
-                srcOffset += self->ctx.hwO_ * self->ctx.tiling_->channelSize;
-                dstOffset += dataCopyParams.blockLen * self->ctx.tiling_->channelSize;
-            }
-        }
+        CopyOut2L1ToA1<Intf>(self, useA1Buf, out2A1SrcAddrOffset, blockCount, dataCopyParams);
 
         if (cachePosA1) {
             self->ctx.a1Ping_.EnQue(useA1Buf);

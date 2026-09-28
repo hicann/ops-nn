@@ -119,11 +119,7 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ProcessRow(uint64_t 
         if (vecScalarOnly) {
             ComputeRow(r);
         } else if (CanUseFp32VecRow()) {
-            if (UseDhBlockedAcc()) {
-                ComputeRowBf16Vec(r);
-            } else {
-                ComputeRowBf16VecPlain(r);
-            }
+            ComputeRowBf16VecPlain(r);
         } else {
             ComputeRowScalarAcc(r);
         }
@@ -326,7 +322,8 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::AccumulateScalarRowT
     }
 }
 
-// BF16/FP16 快路径：整行 W 维向量化累加，行末单次 CAST_RINT
+// BF16/FP16/FP32 快路径：整行 W 维向量化累加，行末单次 CAST_RINT
+// FP32 大 pad 走 dh 分块两级累加（分块和寄存于 outH），其余场景补偿量寄存于 rowComp
 template <typename T>
 __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPlain(uint64_t r)
 {
@@ -342,7 +339,8 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPla
 
     Duplicate(rowAcc, 0.0f, alignedWi);
     if constexpr (std::is_same<T, float>::value) {
-        Duplicate(tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
+        dhBlocked = UseDhBlockedAcc() ? 1U : 0U;
+        Duplicate(dhBlocked != 0 ? outH : tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
     }
 
     uint32_t ciLocal, coStart, coEnd;
@@ -356,15 +354,31 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPla
                     continue;
                 }
                 BuildWeightDilated(co, ciLocal, dk, weightDilated);
-                AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow, weightDilated);
+                if (dhBlocked != 0) {
+                    AccumulateBf16VecRowTapsBlocked(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
+                                                    weightDilated);
+                } else {
+                    AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow, weightDilated);
+                }
             }
         }
     }
 
     if constexpr (std::is_same<T, float>::value) {
-        Add(rowAcc, rowAcc, tmpBufRowComp.Get<float>(), alignedWi);
+        if (dhBlocked != 0) {
+            Add(rowAcc, rowAcc, outH, alignedWi);
+        } else {
+            Add(rowAcc, rowAcc, tmpBufRowComp.Get<float>(), alignedWi);
+        }
     }
     CastRowAccToOutH(rowAcc, outH, alignedWi);
+    WriteRowToGm(rowBase, outH);
+}
+
+// 行结果回写 GM：V/MTE3 双向同步，保证 outH 在被覆写前已搬完
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::WriteRowToGm(uint64_t rowBase, const LocalTensor<T>& outH)
+{
     SetFlag<HardEvent::V_MTE3>(evtVToMte3_);
     WaitFlag<HardEvent::V_MTE3>(evtVToMte3_);
 
@@ -374,67 +388,6 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPla
     // 等待 MTE3 读完 outH 后才能覆写
     SetFlag<HardEvent::MTE3_V>(evtMte3ToV_);
     WaitFlag<HardEvent::MTE3_V>(evtMte3ToV_);
-}
-
-template <typename T>
-__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16Vec(uint64_t r)
-{
-    if constexpr (std::is_same<T, float>::value) {
-        uint32_t n, ci, diRow, hi;
-        DecomposeRow(r, n, ci, diRow, hi);
-        const uint64_t rowBase = GetRowBase(n, ci, diRow, hi);
-
-        LocalTensor<float> rowAcc = tmpBufRowAcc.Get<float>();
-        LocalTensor<float> prod = tmpBufProd.Get<float>();
-        LocalTensor<T> gradRow = tmpBufGradRow.Get<T>();
-        LocalTensor<T> outH = tmpBufOutH.Get<T>();
-        LocalTensor<T> weightDilated = tmpBufWeightDilated.Get<T>();
-
-        Duplicate(rowAcc, 0.0f, alignedWi);
-        dhBlocked = UseDhBlockedAcc() ? 1U : 0U;
-        if (dhBlocked != 0) {
-            Duplicate(outH, static_cast<T>(0), alignedWi);
-        } else {
-            Duplicate(tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
-        }
-
-        uint32_t ciLocal, coStart, coEnd;
-        GetGroupRange(ci, ciLocal, coStart, coEnd);
-        for (uint32_t co = coStart; co < coEnd; co++) {
-            for (uint32_t doIdx = 0; doIdx < gradOutD; doIdx++) {
-                for (uint32_t dk = 0; dk < kernelD; dk++) {
-                    const int32_t di = static_cast<int32_t>(doIdx) * strideD + static_cast<int32_t>(dk) * dilationD -
-                                       padFront;
-                    if (di != static_cast<int32_t>(diRow)) {
-                        continue;
-                    }
-                    BuildWeightDilated(co, ciLocal, dk, weightDilated);
-                    if (dhBlocked != 0) {
-                        AccumulateBf16VecRowTapsBlocked(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
-                                                        weightDilated);
-                    } else {
-                        AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
-                                                 weightDilated);
-                    }
-                }
-            }
-        }
-
-        if (dhBlocked != 0) {
-            Add(rowAcc, rowAcc, outH, alignedWi);
-        } else {
-            Add(rowAcc, rowAcc, tmpBufRowComp.Get<float>(), alignedWi);
-        }
-        CastRowAccToOutH(rowAcc, outH, alignedWi);
-        SetFlag<HardEvent::V_MTE3>(evtVToMte3_);
-        WaitFlag<HardEvent::V_MTE3>(evtVToMte3_);
-
-        DataCopyExtParams outParams(1, static_cast<uint32_t>(gradInW) * sizeof(T), 0, 0, 0);
-        DataCopyPad<T>(gradInputGm[rowBase], outH, outParams);
-
-        SetFlag<HardEvent::MTE3_V>(evtMte3ToV_);
-        WaitFlag<HardEvent::MTE3_V>(evtMte3ToV_);
-    }
 }
 
 template <typename T>
