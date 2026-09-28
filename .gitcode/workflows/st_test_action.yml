@@ -9,10 +9,6 @@ on:
     branches: ['master']
     comments: ['^(?:\/)?st_950\b']
   workflow_call:
-    inputs:
-      x86_run_key:
-        type: string
-        required: false
 
 env:
   org_name: ${{ vars.ORG_NAME }}
@@ -34,7 +30,18 @@ jobs:
         with:
           ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
       -
+        name: check_branch
+        identifier: check_branch
+        run: |
+          if [[ "${{ env.TARGET_BRANCH }}" != "master" ]]; then
+            echo "branch_ok=no" >> "$ATOMGIT_OUTPUT"
+            echo "Skip st_950: target branch '${{ env.TARGET_BRANCH }}' is not master"
+          else
+            echo "branch_ok=yes" >> "$ATOMGIT_OUTPUT"
+          fi
+      -
         name: download_pr_filelist
+        if: ${{ steps.check_branch.outputs.branch_ok == 'yes' }}
         uses: obs-download
         with:
           endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
@@ -45,7 +52,17 @@ jobs:
             ${{ env.obs_path }}/pr_filelist.txt
           path: ${{ steps.process_checkout.outputs.path }}
       -
+        name: check_pr_whitelist
+        identifier: check_whitelist
+        if: ${{ steps.check_branch.outputs.branch_ok == 'yes' }}
+        run: |
+          set -euo pipefail
+          cd ${{ steps.process_checkout.outputs.path }}
+          result=$(bash scripts/ci/ops_st_test.sh --ci_st_check --pr_filelist=./pr_filelist.txt)
+          echo "in_whitelist=${result##*=}" >> "$ATOMGIT_OUTPUT"
+      -
         name: download_compiled_package
+        if: ${{ steps.check_branch.outputs.branch_ok == 'yes' && steps.check_whitelist.outputs.in_whitelist == 'yes' }}
         uses: obs-download
         with:
           endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
@@ -58,41 +75,29 @@ jobs:
       -
         name: check_950_package_content
         identifier: check_950_pkg
+        if: ${{ steps.check_whitelist.outputs.in_whitelist == 'yes' }}
         run: |
-          if [[ "${{ env.TARGET_BRANCH }}" != "master" ]]; then
-            echo "need_st=no" >> "$ATOMGIT_OUTPUT"
-            echo "Skip st_950: target branch '${{ env.TARGET_BRANCH }}' is not master"
-            exit 0
-          fi
           pkg="${{ steps.process_checkout.outputs.path }}/${{ env.run_package_name }}"
-          if [[ ! -f "${pkg}" || $(stat -c%s "${pkg}") -le 0 ]]; then
+          if [[ -f "${pkg}" && $(stat -c%s "${pkg}") -gt 0 ]]; then
+            echo "need_st=yes" >> "$ATOMGIT_OUTPUT"
+          else
             echo "need_st=no" >> "$ATOMGIT_OUTPUT"
-            echo "Skip st_950: compiled package missing or empty: ${pkg}"
-            exit 0
+            echo "Skip st_950: compiled package not found or empty: ${pkg}"
           fi
-          cd ${{ steps.process_checkout.outputs.path }}
-          result=$(bash scripts/ci/ops_st_test.sh --ci_st_check --pr_filelist=./pr_filelist.txt \
-                   | grep -E '^need_st=' || true)
-          echo "${result:-need_st=no}" >> "$ATOMGIT_OUTPUT"
       -
         name: install_run_package
         if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
         run: |
           cd ${{ steps.process_checkout.outputs.path }}
-          if [[ -f "${{ env.run_package_name }}" ]]; then
-            echo "Installing compiled package: ${{ env.run_package_name }}"
-            chmod +x "${{ env.run_package_name }}"
-            source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
-            if bash "${{ env.run_package_name }}" --help 2>&1 | grep -q -- '--full'; then
-              full_arg="--full"
-            else
-              full_arg=""
-            fi
-            echo 'y' | bash "${{ env.run_package_name }}" $full_arg --quiet
+          echo "Installing compiled package: ${{ env.run_package_name }}"
+          chmod +x "${{ env.run_package_name }}"
+          source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
+          if bash "${{ env.run_package_name }}" --help 2>&1 | grep -q -- '--full'; then
+            full_arg="--full"
           else
-            echo "ERROR: compiled package not found: ${{ env.run_package_name }}"
-            exit 1
+            full_arg=""
           fi
+          echo 'y' | bash "${{ env.run_package_name }}" $full_arg --quiet
       -
         name: run_st_test
         identifier: st_test
@@ -109,7 +114,11 @@ jobs:
         run: |
           cd ${{ steps.process_checkout.outputs.path }}
           rm -f st_950_log.tar.gz
-          tar -zcf st_950_log.tar.gz st
+          if [[ -d st ]]; then
+            tar -zcf st_950_log.tar.gz st
+          else
+            echo "WARN: st result dir not found, skip packaging"
+          fi
       -
         name: upload_results
         if: ${{ always() && steps.check_950_pkg.outputs.need_st == 'yes' }}
@@ -121,6 +130,6 @@ jobs:
           secret-key: ${{secrets.SK}}
           artifact-path: |
             ${{ steps.process_checkout.outputs.path }}/st_950_log.tar.gz
-          object-prefix: ${{ env.obs_path }}/st_results/
+          object-prefix: ${{ env.obs_path }}/st_results/cann
     if: "${{ default() }}"
     runs-on: ['self-hosted', 'os=ubuntu', 'evb=a5', 'repo=nn']

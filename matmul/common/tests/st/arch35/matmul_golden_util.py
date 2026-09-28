@@ -329,8 +329,13 @@ def write_back(dst, src):
     import torch
 
     if isinstance(dst, torch.Tensor):
-        dst.copy_(torch.from_numpy(src).to(dst.dtype))
+        if isinstance(src, torch.Tensor):
+            dst.copy_(src.to(dst.dtype))
+        else:
+            dst.copy_(torch.from_numpy(src).to(dst.dtype))
     else:
+        if isinstance(src, torch.Tensor):
+            src = src.detach().cpu().numpy()
         np.copyto(dst, src.astype(dst.dtype))
 
 

@@ -125,6 +125,14 @@ def _pack_int4_weight(weight, need_nz, is_transposed):
     """
     import torch
 
+    if not need_nz and not is_transposed:
+        # ND 非转置: 容器 (K, N_packed)，int4 沿 N 打包（与 aclnn golden unpack axis=-1 一致）
+        K, N_packed = weight.shape
+        unpacked = torch.randint(-8, 8, (K, N_packed * 8), dtype=torch.int32)
+        packed = _quant_util.pack_int32_from_int4(unpacked.numpy(), axis=-1)
+        weight.copy_(torch.from_numpy(packed))
+        return
+
     # 获取逻辑形状 (N, K) 用于生成 unpacked 数据
     N, K_packed = _get_logical_shape(weight, is_transposed)
     K = K_packed * 8
@@ -167,6 +175,14 @@ def _pack_fp4_weight(weight, need_nz, is_transposed):
         is_transposed: bool, weight 是否转置 (从 strides 检测)
     """
     import torch
+
+    if not need_nz and not is_transposed:
+        # ND 非转置: 容器 (K, N_packed)，fp4 沿 N 打包（与 aclnn golden unpack axis=-1 一致）
+        K, N_packed = weight.shape
+        fp4_indices = torch.randint(0, 16, (K, N_packed * 8), dtype=torch.int32)
+        packed = _quant_util.pack_int32_from_fp4(fp4_indices.numpy(), axis=-1)
+        weight.copy_(torch.from_numpy(packed).view(weight.dtype))
+        return
 
     # 获取逻辑形状 (N, K) 用于生成 unpacked 数据
     N, K_packed = _get_logical_shape(weight, is_transposed)
