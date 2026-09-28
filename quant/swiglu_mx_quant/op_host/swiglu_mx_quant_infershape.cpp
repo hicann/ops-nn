@@ -89,10 +89,16 @@ graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shap
         hasGroup && groupIndexShape->GetDimNum() != 1,
         OP_LOGE(context->GetNodeName(), "the rank of group_index must be 1, but is %d", groupIndexShape->GetDimNum()),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        hasGroup && xRank != 2,
-        OP_LOGE(context->GetNodeName(), "when groupIndex is exist, the rank of input x must be 2, but is %ld", xRank),
-        return ge::GRAPH_FAILED);
+    // 当 group_index 存在，且 activate_dim 或 axis 任一为非尾轴（倒数第二维）时，输入 x 必须为 2 维；
+    // 若二者均为尾轴，则 x 允许为 2~7 维。
+    bool activateDimNonTail = (activateDimNorm != xRank - 1);
+    bool axisNonTail = (axisNorm != xRank - 1);
+    OP_CHECK_IF(hasGroup && (activateDimNonTail || axisNonTail) && xRank != 2,
+                OP_LOGE(context->GetNodeName(),
+                        "when group_index exists and activate_dim or axis is not the last axis, "
+                        "the rank of input x must be 2, but is %ld",
+                        xRank),
+                return ge::GRAPH_FAILED);
     int64_t groupIndexNum = 0;
     if (hasGroup) {
         groupIndexNum = groupIndexShape->GetDim(0);
