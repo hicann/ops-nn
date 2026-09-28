@@ -136,15 +136,14 @@ static bool CheckNotNull(const aclTensor* self, const aclTensorList* indices, co
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices, const aclTensor* value)
 {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() < op::SocVersion::ASCEND910B) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_1001) {
         if (self->GetDataType() == op::DataType::DT_BF16) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "self not implemented for DT_BF16, when SocVersion is less than ASCEND910B.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self not implemented for DT_BF16, when NpuArch is DAV_1001.");
             return false;
         }
         if (value->GetDataType() == op::DataType::DT_BF16) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "value not implemented for DT_BF16, when SocVersion is less than ASCEND910B.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "value not implemented for DT_BF16, when NpuArch is DAV_1001.");
             return false;
         }
     }
@@ -268,11 +267,11 @@ static bool IndexPutV2IndicesNumsLimit(const FVector<const aclTensor*, 8>& indic
 static bool IsAiCPUSupport(const aclTensor* selfRef, const FVector<const aclTensor*, 8>& indices,
                            const aclTensor* value, const bool accumulate, const FVector<int64_t, 8> masks)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isSupportAtomic = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-                            socVersion == SocVersion::ASCEND310B);
-    bool is910BSocVersion = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
-    bool is310BSocVersion = (socVersion == SocVersion::ASCEND310B);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    // 910B/910_93 为 DAV_2201；310B 为 DAV_3002
+    bool is910BSocVersion = (curArch == NpuArch::DAV_2201);
+    bool is310BSocVersion = (curArch == NpuArch::DAV_3002);
+    bool isSupportAtomic = (is910BSocVersion || is310BSocVersion);
     if (IsAiCPUSupportCheckIndices(indices, value)) {
         return true;
     }
@@ -347,7 +346,7 @@ static bool IsAiCPUSupport(const aclTensor* selfRef, const FVector<const aclTens
         if ((selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_FLOAT) &&
             accumulate == false && isSupportAtomic == false) {
             OP_LOGD("IndexPutV2 Indices_number > 100 and input_dtype is float16 or float, aicore does not support "
-                    "accumulate false when SocVersion is less than ASCEND910B.");
+                    "accumulate false when NpuArch is neither DAV_2201 nor DAV_3002.");
             return true;
         }
         if (is910BSocVersion && !CheckType(selfRef->GetDataType(), DTYPE_910B_SUPPORT_ATOMIC)) {
@@ -1332,8 +1331,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor* selfRef, const aclTenso
         return ACLNN_SUCCESS;
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
         if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
