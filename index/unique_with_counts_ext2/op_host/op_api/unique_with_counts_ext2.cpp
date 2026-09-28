@@ -61,16 +61,10 @@ static aclnnStatus UniqueDimAiCore(const aclTensor* self, bool sorted, bool retu
     return ret;
 }
 
-aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
-                                 aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
-                                 aclOpExecutor* executor)
+static aclnnStatus UniqueWithCountsExt2AiCpu(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
+                                             aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                                             aclOpExecutor* executor)
 {
-    L0_DFX(UniqueWithCountsExt2, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
-
-    if (CheckSupport4UniqueDim(self)) {
-        return UniqueDimAiCore(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
-    }
-
     const aclScalar* dimScalar = executor->AllocScalar(dim);
     const aclTensor* dimTensor = executor->ConvertToTensor(dimScalar, op::DataType::DT_INT64);
     aclTensor* idxOut = executor->AllocTensor(inverseOut->GetViewShape(), inverseOut->GetDataType());
@@ -79,5 +73,25 @@ aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool return
                                           OP_INPUT(self, dimTensor), OP_OUTPUT(valueOut, idxOut, countsOut, inverseOut),
                                           OP_ATTR(sorted, returnInverse));
     return ret;
+}
+
+aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
+                                 aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                                 aclOpExecutor* executor)
+{
+    L0_DFX(UniqueWithCountsExt2, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
+    return UniqueWithCountsExt2AiCpu(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
+}
+
+aclnnStatus UniqueDim(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim, aclTensor* valueOut,
+                      aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor)
+{
+    L0_DFX(UniqueDim, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
+
+    if (CheckSupport4UniqueDim(self)) {
+        return UniqueDimAiCore(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
+    }
+
+    return UniqueWithCountsExt2AiCpu(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
 }
 } // namespace l0op

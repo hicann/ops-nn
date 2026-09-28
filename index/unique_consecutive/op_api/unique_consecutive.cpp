@@ -73,12 +73,10 @@ bool CheckSupport4Aicore(const aclTensor* self, bool returnInverse, int64_t dim,
     return true;
 }
 
-aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim,
-                                    aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
-                                    op::DataType outIdx, aclOpExecutor* executor)
+static aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, bool returnCounts,
+                                           int64_t /*dim*/, aclTensor* valueOut, aclTensor* inverseOut,
+                                           aclTensor* countsOut, op::DataType outIdx, aclOpExecutor* executor)
 {
-    L0_DFX(UniqueConsecutiveAiCore, self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut, outIdx);
-
     Shape outShapeShape{OUT_SHAPE_SIZE};
     auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
 

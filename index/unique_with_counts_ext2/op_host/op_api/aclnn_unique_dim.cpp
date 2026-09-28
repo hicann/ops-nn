@@ -165,8 +165,8 @@ aclnnStatus aclnnUniqueDimGetWorkspaceSize(const aclTensor* self, bool sorted, b
     countsOut->SetOriginalShape(countsViewShape);
 
     // 调用UniqueDim算子
-    auto opRet = l0op::UniqueWithCountsExt2(selfContiguous, sorted, returnInverse, dim, valueOut, inverseOut, countsOut,
-                                            uniqueExecutor.get());
+    auto opRet = l0op::UniqueDim(selfContiguous, sorted, returnInverse, dim, valueOut, inverseOut, countsOut,
+                                 uniqueExecutor.get());
     CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

@@ -20,6 +20,9 @@ namespace l0op {
 aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
                                  aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
                                  aclOpExecutor* executor);
-}
+
+aclnnStatus UniqueDim(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim, aclTensor* valueOut,
+                      aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_WITH_COUNTS_EXT2_OP_H_
