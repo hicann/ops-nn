@@ -86,10 +86,11 @@ __aicore__ inline void ComputeNormalizedY(RegTensor<float>& dst, RegTensor<float
                                           float negativeInvRCorrection, MaskReg& validMask)
 {
     if constexpr (HAS_AFFINE) {
-        // The low part of sum / R is incorporated in beta by ComputeAffine.
+        // ComputeAffine selects the centering point and incorporates its
+        // low part in beta. Fuse the product and offset to avoid rounding
+        // the product before cancellation with beta.
         Reg::Sub(dst, xReg, meanReg, validMask);
-        Reg::Mul(dst, dst, scaleReg, validMask);
-        Reg::Add(dst, dst, betaReg, validMask);
+        Reg::MulDstAdd(dst, scaleReg, betaReg, validMask);
 
         // Reassociation is not valid for an infinite or NaN scale. Retain
         // x * scale + (beta - mean * scale) in these lanes.
@@ -343,6 +344,22 @@ __aicore__ inline void ComputeAffine(__ubuf__ float* gamma, __ubuf__ float* beta
         Reg::MulDstAdd(correctedBetaReg, scaleReg, betaReg, validMask);
         Reg::Sub(finiteCheckReg, scaleReg, scaleReg, validMask);
         Reg::Compares<float, CMPMODE::EQ>(finiteScaleMask, finiteCheckReg, 0.0f, validMask);
+        // Either center at mean or at zero. Prefer the representation with
+        // the smaller affine offset, reducing cancellation without discarding
+        // mean centering when the original beta is small. Statistics have
+        // already been emitted (or are recomputed by ProcessOwnedStats).
+        Reg::Muls(scaledGammaReg, meanReg, -1.0f, validMask);
+        Reg::MulDstAdd(scaledGammaReg, scaleReg, betaReg, validMask);
+        Reg::Muls(finiteCheckReg, meanErrorReg, -1.0f, validMask);
+        Reg::MulDstAdd(finiteCheckReg, scaleReg, scaledGammaReg, validMask);
+        Reg::Abs(scaledGammaReg, finiteCheckReg, validMask);
+        Reg::Abs(meanErrorReg, correctedBetaReg, validMask);
+        Reg::Compare<float, CMPMODE::LT>(positiveStdMask, scaledGammaReg, meanErrorReg, validMask);
+        Reg::And(positiveStdMask, positiveStdMask, finiteScaleMask, validMask);
+        Reg::Select(correctedBetaReg, finiteCheckReg, correctedBetaReg, positiveStdMask);
+        Reg::Duplicate(scaledGammaReg, 0.0f, validMask);
+        Reg::Select(meanReg, scaledGammaReg, meanReg, positiveStdMask);
+        Reg::StoreAlign<float, StoreDist::DIST_NORM>(mean, meanReg, validMask);
         Reg::Select(betaReg, correctedBetaReg, betaReg, finiteScaleMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(stdValue, scaleReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(betaValue, betaReg, validMask);

@@ -21,6 +21,47 @@ from pathlib import Path
 import numpy as np
 
 
+def affine_offset_inputs(layout):
+    """Finite planes whose normalized values nearly cancel the affine offset."""
+    x = np.array(
+        [
+            -5.341064257535777e-10,
+            3.958068539589021e-9,
+            9361367.0,
+            -2.4847774879321882e-11,
+            9.333510631037711e-10,
+            -9.414795165696432e-9,
+            -8327963648.0,
+            1.6491475948965724e19,
+            -9.386814781464636e-6,
+            0.04902966693043709,
+            6232961766653952.0,
+            -7.39534209208134e-17,
+            -9.645837053540163e-6,
+            -5.158997851945347e-32,
+            -8.914329849788486e-29,
+            -3635625123119104.0,
+            -7.870013999728183e-19,
+            2.179164404481071e-9,
+        ],
+        dtype=np.float32,
+    ).reshape(1, 2, 3, 3)
+    statistics = [
+        [1.6491475948965724e19, 2597336643534848.0],
+        [2.719687774866872e38, 5.206758396702507e31],
+        [-0.02806924097239971, -0.07400741428136826],
+        [-0.009971586056053638, -0.008931613527238369],
+        [0.0, 0.0],
+        [0.0, 0.0],
+    ]
+    inputs = [x] + [
+        np.array(v, dtype=np.float32).reshape(1, 2, 1, 1) for v in statistics
+    ]
+    if layout == "NHWC":
+        inputs = [v.transpose(0, 2, 3, 1).copy() for v in inputs]
+    return inputs
+
+
 def prepare(output):
     assets = Path(__file__).resolve().parent
     module_spec = importlib.util.spec_from_file_location(
@@ -47,7 +88,10 @@ def prepare(output):
                 "square_inf_noaffine",
                 "infinite_mean_std",
                 "exact_mean",
+                "affine_offset_cancellation",
             ):
+                if mode == "affine_offset_cancellation" and dtype != "float32":
+                    continue  # These finite FP32 inputs exceed the FP16 range.
                 name = f"intu2_fix_{dtype}_{layout}_{mode}"
                 shape = (1, 1, 1, 3) if layout == "NCHW" else (1, 1, 3, 1)
                 if mode == "exact_mean":
@@ -118,10 +162,18 @@ def prepare(output):
                 ):
                     shapes = (shape, stat, stat, None, None, None, None)
                     formats = (layout,) * 3 + ("ND",) * 4
+                momentum = 0.1
+                if mode == "affine_offset_cancellation":
+                    inputs = affine_offset_inputs(layout)
+                    shape, stat = inputs[0].shape, inputs[1].shape
+                    shapes = tuple(value.shape for value in inputs)
+                    formats = (layout,) * 7
+                    epsilon = 0.0
+                    momentum = 0.0
                 row = dict(
                     template,
                     testcase_name=name,
-                    attributes=str({"epsilon": epsilon, "momentum": 0.1}),
+                    attributes=str({"epsilon": epsilon, "momentum": momentum}),
                     input_shapes=str(shapes),
                     input_ori_shapes=str(shapes),
                     output_shapes=str((shape, stat, stat)),
@@ -143,7 +195,7 @@ def prepare(output):
                 if mode == "infinite_mean_std":
                     row["attributes"] = "{'epsilon': float('inf'), 'momentum': 0.1}"
                 outputs = golden._kernel_golden(
-                    *promoted, epsilon=epsilon, momentum=0.1, input_formats=formats
+                    *promoted, epsilon=epsilon, momentum=momentum, input_formats=formats
                 )
                 directory = output / "data" / name
                 directory.mkdir(parents=True)
