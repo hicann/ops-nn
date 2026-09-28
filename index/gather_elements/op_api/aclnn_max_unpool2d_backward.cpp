@@ -221,6 +221,7 @@ aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(const aclTensor* gradOutput
 
     int64_t dim = 2;
     auto grad = l0op::GatherElements(gradReshape, dim, indicesReshape, uniqueExecutor.get());
+    CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto outReshape = l0op::Reshape(grad, out->GetViewShape(), uniqueExecutor.get());
     CHECK_RET(outReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);

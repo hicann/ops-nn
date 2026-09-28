@@ -17,7 +17,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "gather_elements.h"
+#include "gather_elements_kernel.h"
 
 namespace AscendC {
 template <typename X_T, typename INDEX_T>

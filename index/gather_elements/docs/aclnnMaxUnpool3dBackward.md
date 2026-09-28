@@ -471,7 +471,7 @@ int main() {
   aclDestroyIntArray(stride);
   aclDestroyIntArray(padding);
 
-  // 7. 释放divice资源
+  // 7. 释放device资源
   aclrtFree(gradDeviceAddr);
   aclrtFree(selfDeviceAddr);
   aclrtFree(indicesDeviceAddr);
