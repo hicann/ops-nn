@@ -1220,6 +1220,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_binary_op/README.md">foreach_binary_op</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个Tensor列表逐Tensor、逐元素做二元运算，运算类型由属性op_code选择，将多种二元foreach运算统一为一个算子，便于图融合。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_copy/README.md">foreach_copy</a></td>
     <td>✓</td>
     <td>✓</td>

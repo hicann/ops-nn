@@ -85,8 +85,14 @@ def _compute(x, target, **kwargs):
     返回的 y 保持计算精度，舍回 x dtype 由各路壳负责。
     """
     reduction = _reduction_str(_attr(kwargs, "reduction", "mean"))
-    low_prec = x.dtype in (torch.float16, torch.bfloat16)
-    xf = x.to(torch.float32) if low_prec else x
+    # golden 在 **float64** 上算: 它是仲裁真值, 必须比被测两腿都准。
+    # kernel/aclnn 通路有 golden_mode=Promote 抬到 fp64, 这里是空操作;
+    # **e2e 通路的 Promote 实测不生效**(framework_api/golden_generation.py 自带
+    # "flat_dtypes 取不到就原样返回、Promote 空转" 的静默路径), golden 停在 fp32 后会与
+    # 同精度的三方腿算出逐位相同的值 → |三方-golden|=0 → cross_check 比值分母塌陷判红。
+    # MSELossV2 实测两例红即此因, 改 fp64 后 e2e 240/240 全通。
+    # aten.multilabel_margin_loss_forward 已实测支持 fp64(CPU)。
+    xf = x.to(torch.float64)
     if x.numel() == 0 and reduction != "none":
         # [0,C] 的 sum/mean：**不能用 aten 当真值** —— 它在空输入上读的是未初始化内存
         # （同一输入连续调用会得到 3.6e19 / 1.6e-12 等互不相同的值）。取归约的通用约定：
@@ -123,6 +129,23 @@ def _cast_np(t, target_dt):
     return arr.astype(target_dt)
 
 
+# 三方腿的 is_target 用**1 元素占位**回传, 不回传整块。
+#
+# 依据: is_target 恒为 int32, _TOL["int32"] = binary_equal, 而 BinaryComparison.compare_impl
+# 只用 self.output 与 self.golden(见 ttk/core_modules/comparison/binary_equal.py) ——
+# **三方腿的 is_target 值从未被任何判据使用**。而它的尺寸是 N x C, 比 y 大几个数量级:
+#   (362038, 11) 单例: y(sum)=4B / y(none)=1.4MB / is_target=15.9MB
+# 这条链路是 proxyjump 公网跳板(:80), 实测吞吐仅 85 KB/s。白传的 is_target 既拖慢跑批,
+# 又把下行堆到上百 MB 触发跳板的连接限制 —— ssh -vvv 实测:
+#   "Connection to 127.0.0.1 closed by remote host.
+#    Transferred: sent 169724, received 148991832 bytes, in 1749.4 seconds"
+# 断连后端点消失 -> 三方腿连续失败 -> 熔断器中止整批(实测 244/300、50/318 两次停摆)。
+#
+# 输出**个数必须保持 2**: comparison.py 有 third_party_count_mismatch 校验, 少返回会直接判错。
+# 占位符 dtype 与真实输出一致, 只把元素数降到 1。
+_IST_PLACEHOLDER_NOTE = True
+
+
 class _MmlCompose:
     """三方标杆：aten forward 在远端 GPU 执行。参数名与 def.cpp 逐字一致（x/target/reduction）。
 
@@ -139,7 +162,10 @@ class _MmlCompose:
             target.to(torch.int64),
             _REDUCTION_STR2INT[self.reduction],
         )
-        return [out.to(x.dtype), is_target.to(torch.int32)]
+        # is_target 回传 1 元素占位, 不回传整块 —— 见文件上方 _IST_PLACEHOLDER_NOTE:
+        # 它的判据是 binary_equal(NPU 对 golden 两腿), 三方腿的值从不被使用, 而尺寸是 N x C。
+        # golden 壳必须保留完整(binary_equal 要拿它跟 NPU 比), 只有三方腿这侧可以省。
+        return [out.to(x.dtype), is_target.reshape(-1)[:1].to(torch.int32)]
 
 
 class _MmlAclnnCompose:
@@ -151,13 +177,28 @@ class _MmlAclnnCompose:
     def __init__(self, /, reduction=1, **_):
         self._red = _reduction_str(reduction)
 
-    def __call__(self, /, **kw):
-        x = kw.get("self", kw.get("input"))
+    def __call__(self, /, *args, **kw):
+        """入参按 aclnn 头文件顺序: (self, target, reduction, out, isTarget)。
+
+        **位置与关键字都要接**: TTK 对 aclnn 三方腿是按头文件形参**顺序**下发的
+        (参照 activation/elu_grad_v2 的 aclnn golden —— 连标量和输出张量都在形参里)。
+        只声明 `**kw` 时 args 为空、kw 里没有 self/input, 取到 None 后 `.to()` 直接崩,
+        服务端返回 500 AttributeError, 熔断器连续 30 例失败后中止整批 ——
+        MSELossV2 的 aclnn 通路实测踩过这个坑(240 例只收 29 条)。
+        """
+        x = args[0] if len(args) > 0 else kw.get("self", kw.get("input"))
+        tgt = args[1] if len(args) > 1 else kw.get("target")
+        red = args[2] if len(args) > 2 else kw.get("reduction", self._red)
         out, is_target = torch.ops.aten.multilabel_margin_loss_forward(
             x.to(torch.float32),
-            kw["target"].to(torch.int64),
-            _REDUCTION_STR2INT[self._red],
+            tgt.to(torch.int64),
+            _REDUCTION_STR2INT[_reduction_str(red)],
         )
+        # 这里**不能**用 1 元素占位(kernel 通路那侧可以): aclnn 契约下 is_target 的 dtype
+        # 跟随 x(fp32/fp16/bf16), 命中 _TOL 的浮点行 -> 判据是 cross_check, **要读三方腿**;
+        # kernel 通路的 is_target 恒 int32 -> binary_equal, 三方腿是死代码才可省。
+        # 实测证据: 套了占位后 171 例里只有 C=1 的 11 例过(占位恰好等于完整张量),
+        # C>1 的 160 例全报 COMPARE_FAILURE 且 precision_metrics 为空。
         return [out.to(x.dtype), is_target.to(x.dtype)]
 
 
@@ -177,6 +218,30 @@ class _MmlTorchCompose:
         return [out.to(input.dtype)]
 
 
+def _inject_nonfinite(x, target, testcase_name=""):
+    """错误场景档 nonfinite 的定点注入: 只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan: TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**(ttk/utilities/data.py `_digitize_inf_nan`), 写了也造不出
+    非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    只注入 x(浮点数据面), **不注入 target** —— target 是 int32 标签下标,
+    往里写非有限数会变成越界下标, 那验的是"越界拒收"而不是"非有限值传播", 两码事。
+    位置固定不随机(随机会让复现依赖 seed, 小 shape 时还可能一个都注不进去):
+    首元素 +inf、第 2 个 -inf、第 3 个 nan。元素数 < 4 不注入。
+
+    预期行为: 按 IEEE 语义自然传播(对齐 torch), 仍走正常精度判据, 不是拒收档。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return x, target
+    a = np.asarray(x).copy()
+    if a.size < 4:
+        return x, target
+    f = a.reshape(-1)
+    f[0], f[1], f[2] = np.inf, -np.inf, np.nan
+    return a, target
+
+
 class MultilabelMarginLossKernelSpec:
     """kernel / GEIR 通路 spec：golden 收 numpy.ndarray、返 [y, is_target]。"""
 
@@ -187,6 +252,9 @@ class MultilabelMarginLossKernelSpec:
         y_dt = od[0] if len(od) > 0 else str(np.asarray(x).dtype)
         t_dt = od[1] if len(od) > 1 else "int32"
         return [_cast_np(outs[0], y_dt), _cast_np(outs[1], t_dt)]
+
+    def customize_inputs(x, target, **kwargs):
+        return _inject_nonfinite(x, target, kwargs.get("testcase_name", ""))
 
     third_party = {"torch": _MmlCompose}
     tolerance = _TOL
@@ -203,9 +271,12 @@ class MultilabelMarginLossAclnnSpec:
         # 签名与 aclnnMultilabelMarginLossGetWorkspaceSize 一致(不含 workspaceSize/executor);
         # reduction 为 int64(0=none/1=mean/2=sum)。
         outs = _compute(self, target, reduction=reduction, **kwargs)
-        # 🆕 A5 aclnn 契约：is_target 跟随 self dtype(torch 契约 is_target==self，免 int32→float
-        # Cast 依赖)；GE 路径保 int32 对齐 A2。见 design_decision_is_target_dtype.md。
-        return [outs[0].to(self.dtype), outs[1].to(self.dtype)]
+        # **y 不得降回 self.dtype**: golden 是仲裁真值, 砍回输入精度后与同精度的三方腿
+        # 可能逐位相同 → |三方-golden|=0 → cross_check 比值分母塌陷判红; 大值域下还会
+        # 自己先溢出。MSELossV2 实测两例红即此因(golden 与三方同为 2437.4717 / golden=inf)。
+        # 比对器会按需提升类型, 返回高精度是安全的。
+        # is_target 是 0/1 掩码, 其 dtype 属**契约**(A5 aclnn 跟随 self)而非精度决策, 保留 cast。
+        return [outs[0], outs[1].to(self.dtype)]
 
     # TTK ≥193da3e 起 aclnn 通路支持三方;指向 aclnn 名参数版 compose(首参 self 防撞名)。
     third_party = {"torch": _MmlAclnnCompose}
@@ -229,7 +300,11 @@ class MultilabelMarginLossTorchSpec:
             ]
             reduction = strs[0] if strs else "mean"
         outs = _compute(input, target, reduction=reduction, **kwargs)
-        return [outs[0].to(input.dtype)]
+        # **不得降回 input.dtype**: e2e 通路的 golden Promote 实测不生效
+        # (framework_api/golden_generation.py 自带 "flat_dtypes 取不到就原样返回" 的静默路径),
+        # 再砍回输入精度后 golden 与同精度三方腿可能逐位相同 → 比值分母塌陷判红,
+        # 大值域下还会自己先溢出。MSELossV2 的 e2e 两例红即此因, 改回高精度后 240/240 全通。
+        return [outs[0]]
 
     third_party = {
         "torch": _MmlTorchCompose

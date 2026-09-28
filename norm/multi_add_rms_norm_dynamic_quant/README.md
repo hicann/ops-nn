@@ -93,35 +93,35 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。不支持空Tensor。</td>
+      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。不支持空Tensor。</td>
+      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致。不支持空Tensor。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale1</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。不支持空Tensor。</td>
+      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale2</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。不支持空Tensor。</td>
+      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -178,10 +178,11 @@
 
 ## 约束说明
 
-- 空 Tensor：支持。任一轴为 0 时空进空出，输出为同形空张量，不做计算。
+- 空Tensor：支持（空进空出），输出为同形空张量，不做计算。
+- 不支持归约轴（末维）为0的输入：该场景下归一化与动态量化的归约对象为空集，`mean(x^2)`与`amax(|x|)`均无定义，`scale1`/`scale2`输出无有效取值。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | - | 暂不支持通过图融合以外的方式调用 |
+| 图模式 | [test_geir_multi_add_rms_norm_dynamic_quant](examples/arch35/test_geir_multi_add_rms_norm_dynamic_quant.cpp) | 通过[算子IR](op_graph/multi_add_rms_norm_dynamic_quant_proto.h)构图方式调用MultiAddRmsNormDynamicQuant算子。 |

@@ -33,6 +33,7 @@
 namespace optiling {
 namespace {
 
+constexpr size_t MAX_DIM_NUM = 2; // 支持面: [N,C] 或 [C]
 constexpr uint32_t BATCH_MODE = 1;
 constexpr int32_t REDUCTION_INVALID = -1;
 constexpr int32_t RED_NONE = 0;
@@ -140,6 +141,13 @@ ge::graphStatus ParseShapeAndReduction(gert::TilingContext* context, uint32_t& N
     const gert::StorageShape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     size_t dimNum = xShape->GetStorageShape().GetDimNum();
+    // 支持面只有 [N, C](2D) 与 [C](1D)。原先 `dimNum >= 2` 一律照收、只取前两维,
+    // 第 3 维起被**静默丢弃** —— 喂 (4,5,6) 会当成 N=4,C=5 算, 不报错也不拒收, 直接出错误结果。
+    // A2 同样缺这道校验(canndev tbe/impl/multilabel_margin_loss.py 只用 len(shape)==2 判 nd_flag),
+    // 但"A2 没有"不构成 A5 也不做的理由: 缺校验 ≠ 支持该形状, 补上是改进不是兼容性回退。
+    OP_CHECK_IF(dimNum < 1 || dimNum > MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "The dim num of x must be 1 or 2, but got %zu.", dimNum),
+                return ge::GRAPH_FAILED);
     if (dimNum >= 2) {
         N = static_cast<uint32_t>(xShape->GetStorageShape().GetDim(0));
         C = static_cast<uint32_t>(xShape->GetStorageShape().GetDim(1));

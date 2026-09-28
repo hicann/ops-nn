@@ -53,12 +53,23 @@ import torch
 # （close、requant 是 CLI 专用别名，写进 Spec 会 InvalidSpecError）。
 # 本算子三输出均为精确搬运语义（gather 输入位 + 坐标 + 计数），正确即逐位相等，
 # 故连浮点 value 也配 binary_equal（cross_check 比值 0/0 无意义）。
+# 判据必须覆盖 def 声明的全部 dtype，缺哪个就会落到 TTK 默认的 mix_tolerance 上。
+# non_zero_with_value_def.cpp 的 xDataType 为 12 类(ascend950 全支持)，此处逐一对齐；
+# def 里没有 bfloat16，故不声明。本算子是纯选取搬运(位置与值都按原 bit 取出)，
+# 不做任何算术，故全部用 binary_equal —— 逐字节相等，浮点 ±0/NaN 的 bit 差异同样判不等。
 _TOL = {
+    "float64": {"standard": "binary_equal"},
     "float32": {"standard": "binary_equal"},
     "float16": {"standard": "binary_equal"},
-    "bfloat16": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
+    "int16": {"standard": "binary_equal"},
+    "uint16": {"standard": "binary_equal"},
     "int32": {"standard": "binary_equal"},
+    "uint32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
+    "uint64": {"standard": "binary_equal"},
+    "bool": {"standard": "binary_equal"},
 }
 
 # torch.nonzero 未实现的无符号类型 → 同宽有符号视图。零值判定等价于「全 bit 为 0」,
@@ -161,6 +172,32 @@ def _verdict(matched, total):
     return matched == total, matched / total * 100.0
 
 
+def _inject_nonfinite(x, testcase_name=""):
+    """常见问题档 nonfinite 的定点注入: 只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan: TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**(ttk/utilities/data.py `_digitize_inf_nan`), 写了也造不出
+    非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    本算子上这一档验的是两个 IEEE 语义陷阱:
+      · nan != 0 恒为真 -> **必须计入非零**; 若实现用比较指令而后端对 nan 处理与 IEEE
+        不一致, 就会漏计(count 少、后续坐标整体前移, 三个输出一起错)。
+      · ±inf 非零 -> 正常计入。
+      · **-0.0 == 0 -> 必须判为零不计入**; 按符号位判会多算一个(由单独的 _negzero 档覆盖,
+        那档用值域 (-0.0, 0.0) 即可造出, 不需注入)。
+    位置固定不随机: 首元素 nan、第 2 个 +inf、第 3 个 -inf、第 4 个 -0.0(同时压一次零判定)。
+    仅浮点 dtype 生效(整型没有非有限值); 元素数 < 4 不注入。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return (x,)
+    a = np.ascontiguousarray(x).copy()
+    if a.dtype.kind != "f" or a.size < 4:
+        return (a,)
+    f = a.reshape(-1)
+    f[0], f[1], f[2], f[3] = np.nan, np.inf, -np.inf, np.float64(-0.0).astype(a.dtype)
+    return (a,)
+
+
 class NonZeroWithValueSpec:
     """kernel / GEIR 通路 spec:golden + 有效前缀比对。
 
@@ -229,6 +266,9 @@ class NonZeroWithValueSpec:
                 "error_info": None if count_ok else f"count NPU={npu_n} golden={n}",
             },
         ]
+
+    def customize_inputs(x, **kwargs):
+        return _inject_nonfinite(x, kwargs.get("testcase_name", ""))
 
     third_party = {"torch": _NzvCompose}
     tolerance = _TOL

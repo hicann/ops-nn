@@ -87,9 +87,21 @@ def _f32_floor(t):
 
 
 def _compute(input, target, **kwargs):
-    """torch.Tensor 进 / 出，返回 list[Tensor]（舍回输出 dtype 由各路壳负责）。"""
+    """torch.Tensor 进 / 出，返回 list[Tensor]（舍回输出 dtype 由各路壳负责）。
+
+    归约在 **float64** 上做: golden 是仲裁真值, 必须比被测两腿都准。
+    kernel/aclnn 通路有 golden_mode=Promote 把输入抬到 fp64, 这里是空操作;
+    **e2e 通路的 Promote 实测没生效**(framework_api/golden_generation.py 自带一条
+    "flat_dtypes 取不到就原样返回、Promote 空转" 的静默路径), golden 停在 fp32 后:
+      · ±1e18 档先求和再除会溢出 → golden 自己变 inf(实测 e2e_0055);
+      · 与同为 fp32 的三方腿算出**逐位相同**的值 → |三方-golden|=0, 比值分母塌陷
+        → rmse 比值虚高判红(实测 e2e_0235, golden 与三方同为 2437.4717)。
+    两种都不是 NPU 的问题, 是参照腿失去了仲裁能力。
+    """
     reduction = _reduction_str(_attr(kwargs, "reduction", "mean"))
-    y = F.mse_loss(_f32_floor(input), _f32_floor(target), reduction=reduction)
+    x64 = _f32_floor(input).to(torch.float64)
+    t64 = _f32_floor(target).to(torch.float64)
+    y = F.mse_loss(x64, t64, reduction=reduction)
     return [y]
 
 
@@ -100,6 +112,45 @@ def _to_torch(arr):
     if _bf16 is not None and a.dtype == _bf16:
         return torch.from_numpy(a.view(np.uint16)).view(torch.bfloat16)
     return torch.from_numpy(a)
+
+
+def _third_party_mse(input, target, reduction):
+    """三方腿的 mse：按 §五 四格对照表「浮点 + 三方」那一行实现。
+
+    规则原文：**GPU（三方腿）按 NPU 加宽行为同步 cast，出口对应窄回**。
+    此前这里是直接 `F.mse_loss(input, target)` 按原 dtype 算，两处不符：
+
+    ① **没按 NPU 加宽**。本算子 fp16/bf16 输入内部提升 fp32（03_spec.yaml
+       `intermediate_dtype: float32`），三方腿却在 fp16 上累加 —— 实测 q0170
+       (fp16, ±180, 1048576 元素) 累加和 2.29e10 远超 fp16 上限 65504，三方腿返回 inf，
+       而 NPU 与 fp64 golden 都是 21792.0。
+    ② **mean 的运算序列与 NPU 不等价**。NPU 在求和完成前就除以 N；三方腿先求和再除，
+       中间和会涨到 N 倍 —— 实测 q0178 (fp32, ±1e18, 14512 元素) 中间和 1.43e40 超
+       fp32 上限 3.4e38，任何"先求和再除"的 fp32 实现都必然 inf，而真值 9.85e35 在
+       fp32 完全可表示，NPU 也算出来了。
+
+    两处都会让三方腿吐 inf，而 cross_check 是三腿比值判据，分母 |三方−golden| 无定义
+    → mare/mere/rmse 全 None、整条用例判不了。**这是参照腿的缺陷，不是算子的**。
+
+    ⚠ 独立性未破（§六之二 V1 / lamb 七算子那个坑）：加宽只改精度落点、不改 torch 自己的
+    归约顺序，实测 fp32 档误差仍在 1e-8~1e-7 且多数用例与改前不同值，fp16 档误差 ~1e-4
+    由输出 cast 主导 —— 不是"两腿同构、三比值恒 1.0"的退化。
+    """
+    out_dt = input.dtype
+    # 按 NPU 的加宽行为: fp16/bf16 → fp32; fp32/fp64 保持原样(不得反向窄化)
+    work = torch.float32 if out_dt in (torch.float16, torch.bfloat16) else out_dt
+    a, b = input.to(work), target.to(work)
+    d = (a - b) ** 2
+    red = _reduction_str(reduction)
+    if red == "mean":
+        # 先除 N 再累加, 与 NPU 的归约序列对齐(NPU 在跨核合并前已除 N)
+        d = d / torch.tensor(float(d.numel()), dtype=work, device=d.device)
+        out = d.sum()
+    elif red == "sum":
+        out = d.sum()
+    else:
+        out = d
+    return out.to(out_dt)
 
 
 class _MseLossCompose:
@@ -113,7 +164,7 @@ class _MseLossCompose:
         self.reduction = _reduction_str(reduction)
 
     def __call__(self, input, target, **_):
-        return [F.mse_loss(input, target, reduction=self.reduction)]
+        return [_third_party_mse(input, target, self.reduction)]
 
 
 class _MseLossAclnnCompose:
@@ -129,9 +180,44 @@ class _MseLossAclnnCompose:
     def __init__(self, /, reduction=1, **_):
         self._red = _reduction_str(reduction)
 
-    def __call__(self, /, **kw):
-        x = kw.get("self", kw.get("input"))
-        return [F.mse_loss(x, kw["target"], reduction=self._red)]
+    def __call__(self, /, *args, **kw):
+        """入参按 aclnn 头文件顺序: (self, target, reduction, out)。
+
+        **位置与关键字都要接**: TTK 对 aclnn 三方腿是按头文件形参**顺序**下发的
+        (参照 activation/elu_grad_v2 的 aclnn golden —— 连标量和输出张量都在形参里),
+        原来只写 `**kw` 时 args 为空、kw 里没有 self/input, 取到 None 后 `.dtype` 直接崩,
+        服务端返回 500 AttributeError, 熔断器连续 30 例失败后中止整批(实测)。
+        """
+        x = args[0] if len(args) > 0 else kw.get("self", kw.get("input"))
+        t = args[1] if len(args) > 1 else kw.get("target")
+        red = args[2] if len(args) > 2 else kw.get("reduction", self._red)
+        return [_third_party_mse(x, t, red)]
+
+
+def _inject_nonfinite(input, target, testcase_name=""):
+    """DFX-nonfinite 档的定点注入：只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan：TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**（ttk/utilities/data.py `_digitize_inf_nan`），
+    写了也造不出非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    注入位置固定（首元素 +inf、次元素 -inf、第三个 nan，各自在 input/target 上错开），
+    不随机：随机会让复现依赖 seed，且小 shape 时可能一个都注不进去。
+    元素数 < 4 的用例不注入（位置放不下，注入会把整个张量变成非有限，失去"传播"这一档的意义）。
+
+    预期行为见 03_spec.yaml `dfx_expect.nonfinite`：NaN/Inf 无特判，按 IEEE 语义自然传播
+    （对齐 A2 与 torch），因此仍走正常精度判据，不是拒收档。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return input, target
+    a, b = np.asarray(input).copy(), np.asarray(target).copy()
+    if a.size < 4:
+        return input, target
+    fa, fb = a.reshape(-1), b.reshape(-1)
+    # bf16 是 ml_dtypes 扩展类型, np.inf 可直接赋值（按 IEEE 编码写入），无需绕 view
+    fa[0], fa[2] = np.inf, np.nan
+    fb[1] = -np.inf
+    return a, b
 
 
 class MseLossV2KernelSpec:
@@ -149,6 +235,9 @@ class MseLossV2KernelSpec:
             out = out.astype(target_dt)
         return [out]
 
+    def customize_inputs(input, target, **kwargs):
+        return _inject_nonfinite(input, target, kwargs.get("testcase_name", ""))
+
     third_party = {"torch": _MseLossCompose}
     tolerance = _TOL
 
@@ -164,7 +253,10 @@ class MseLossV2AclnnSpec:
         # 签名与 aclnnMseLossGetWorkspaceSize 一致(不含 workspaceSize/executor);
         # reduction 为 int64(0=none/1=mean/2=sum),golden 内映射回字符串。
         y = _compute(self, target, reduction=reduction, **kwargs)[0]
-        return [y.to(self.dtype)]
+        # 与 TorchSpec 同理: **不得降回输入 dtype**。golden 是仲裁真值, 砍回 fp32 后
+        # 与同为 fp32 的三方腿可能逐位相同 → |三方-golden|=0 → 比值分母塌陷判红
+        # (实测 aclnn/e2e 同一例 0235_sum: golden 与三方同为 2437.4717)。
+        return [y]
 
     # TTK ≥193da3e 起 aclnn 通路支持三方;指向 aclnn 名参数版 compose(首参 self 防撞名)。
     third_party = {"torch": _MseLossAclnnCompose}
@@ -189,7 +281,10 @@ class MseLossV2TorchSpec:
             ]
             reduction = strs[0] if strs else "mean"
         y = _compute(input, target, reduction=reduction, **kwargs)[0]
-        return [y.to(input.dtype)]
+        # **不得降回 input.dtype**: 那会把 fp64 仲裁值砍成 fp32, 与三方腿同精度,
+        # 判据随即失去判别力(golden 必须比被测两腿都准 —— TTK Promote 的本意)。
+        # 比对器会按需提升类型, 这里返回高精度是安全的。
+        return [y]
 
     third_party = {"torch": _MseLossCompose}  # 【预留】同 AclnnSpec，当前不被取用
     tolerance = _TOL

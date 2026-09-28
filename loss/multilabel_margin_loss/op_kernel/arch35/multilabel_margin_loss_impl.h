@@ -130,15 +130,34 @@ private:
             }
             coreSum = t;
         }
-        // 只写本核原始 partial,不再各自先除 N:sum(coreSum_c / N) 每核都舍一次,
-        // 改由 FinalizeReduced 合并后统一除一次。独占槽位 -> 不用原子加。
+        // 独占槽位 -> 不用原子加。
         // 写整槽(coreSum + 其余补 0): 跨核 GM 写本就是 32B 粒度, 补零后 FinalizeReduced 能
         // 一次连续读入直接矢量累加(补零车道加 0 不改变结果), 不必逐核 GetValue。
         LocalTensor<float> one = this->rowLossBuf.template Get<float>();
         for (uint32_t k = 0; k < this->wsCoreStride; k++) {
             one.SetValue(k, 0.0f);
         }
-        one.SetValue(0, coreSum);
+        // 必须把补偿量补回再写: 循环里算出的 comp 是"最后一轮实际丢掉的零头",
+        // 只写 coreSum 等于把它永久扔掉, 本核 partial 就带着约 1 ULP 的欠账进 workspace。
+        // (跨核合并那侧已经是 (mmlSum - mmlComp) 才写回, 这里漏了同一步。)
+        // 实测证据 (362038,11) sum: NPU=1272497.875 / 正确舍入=1272497.75, 差 1 ULP(=0.125),
+        // 与 CPU torch pairwise 逐位相同而 GPU 腿命中正确舍入 -> cross_check rmse 比值 2.90。
+        // comp 非有限时不补(inf-inf=NaN 会把本该 inf 的和污染成 NaN)。
+        float coreOut = coreSum;
+        if (!__isinf(comp) && !__isnan(comp)) {
+            coreOut = coreSum - comp;
+        }
+        // ── reduction 除数在**写回 workspace 前**就施加(不再等 FinalizeReduced 统一除) ──
+        // 原因是单个 fp32 表示不了未除 C 的总和: 该总和量级 = 结果 x C, 一旦越过 2^23,
+        // ULP 就从 0.125 跳到 1.0, 除 C 之后粒度是 1.0/C —— 这是一条**系统性精度地板**,
+        // Kahan 补偿再准也救不回来(补偿量在那个 binade 里根本表示不出来)。
+        // 实测 (362038,11) sum: 未除 C 的总和 1.4e7(ULP=1.0), 地板 = 1.0/11 = 0.727 ULP,
+        // NPU 实测误差 0.742 ULP 正贴在地板上; 竞品(同为 fp32, 逐行先除 C)是 0.256 ULP。
+        // 改成各核先除, 累加器量级降回 1.27e6(ULP=0.125), 实测 0.258 ULP, 与竞品同档,
+        // 且只引入 usedCoreNum(<=64) 次除法舍入, 不是逐行 36 万次。
+        // 离线网格验证 20 组(形状 x reduction): 更好 3, 持平 17, **更差 0**;
+        // 注释原先担心会变差的 (12,40) 持平, (15,25) 由 1.182/1.461 ULP 降到 0.182/0.539。
+        one.SetValue(0, ApplyReductionDivisor(coreOut));
         PipeBarrier<HardEvent::S_MTE3>();
         DataCopyExtParams cpWs{1, static_cast<uint32_t>(this->wsCoreStride * sizeof(float)), 0, 0, 0};
         DataCopyPad(this->workspaceGm[this->programId * this->wsCoreStride], one, cpWs);
@@ -225,7 +244,13 @@ private:
         }
         this->partialsInQueue.FreeTensor(partials);
 
-        WriteScalarOutput(ApplyReductionDivisor(mmlTotal));
+        // 同上: 车道间标量 Kahan 的 mmlCarry 也要补回, 否则收尾这一步又丢一次零头。
+        float mmlOut = mmlTotal;
+        if (!__isinf(mmlCarry) && !__isnan(mmlCarry)) {
+            mmlOut = mmlTotal - mmlCarry;
+        }
+        // 除数已在 StageCorePartial 施加到每个核的 partial 上, 此处**不可再除**。
+        WriteScalarOutput(mmlOut);
     }
 
     // 对合并后的总和施加 reduction 除数。loss = Σ_all margin / C(sum) 或 /(C·N)(mean)。

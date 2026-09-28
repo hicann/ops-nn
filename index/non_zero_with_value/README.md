@@ -93,4 +93,4 @@
 
 | 调用方式   | 样例代码                                                     | 说明                                                         |
 | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 图模式调用 | [non_zero_with_value_proto.h](op_graph/non_zero_with_value_proto.h) | 通过算子IR（`REG_OP(NonZeroWithValue)`）构图方式调用NonZeroWithValue算子。 |
+| 图模式调用 | [test_geir_non_zero_with_value](examples/test_geir_non_zero_with_value.cpp) | 通过[算子IR](op_graph/non_zero_with_value_proto.h)构图方式调用NonZeroWithValue算子。 |

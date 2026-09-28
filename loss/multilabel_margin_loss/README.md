@@ -90,5 +90,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_multilabel_margin_loss.cpp](examples/test_aclnn_multilabel_margin_loss.cpp) | 通过 [aclnnMultilabelMarginLoss](docs/aclnnMultilabelMarginLoss.md) 接口方式调用MultilabelMarginLoss算子。 |
-| 图模式（GE）  | [test_geir_multilabel_margin_loss.cpp](examples/test_geir_multilabel_margin_loss.cpp) | 通过GE图（`is_target`输出INT32）方式调用。 |
+| aclnn接口  | [test_aclnn_multilabel_margin_loss](examples/test_aclnn_multilabel_margin_loss.cpp) | 通过 [aclnnMultilabelMarginLoss](docs/aclnnMultilabelMarginLoss.md) 接口方式调用MultilabelMarginLoss算子。 |
+| 图模式（GE）  | [test_geir_multilabel_margin_loss](examples/test_geir_multilabel_margin_loss.cpp) | 通过[算子IR](op_graph/multilabel_margin_loss_proto.h)构图方式调用MultilabelMarginLoss算子（`is_target`输出INT32）。 |
