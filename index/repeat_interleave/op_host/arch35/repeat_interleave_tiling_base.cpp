@@ -20,8 +20,8 @@ namespace optiling {
 static constexpr uint32_t INDEX_X_INPUT = 0;
 static constexpr uint32_t INDEX_REPEATS_INPUT = 1;
 static constexpr uint32_t AXIS_DEFAULT_VALUE = 1000;
-static constexpr uint32_t CACHELINE_SIZE = 128;
-static constexpr uint32_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
+static constexpr int64_t CUMSUM_COMPUTE_THRESHOLD = 16384;
+static constexpr int64_t DOUBLE = 2;
 static const std::set<ge::DataType> SUPPORTED_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_UINT8, ge::DT_INT8,
                                                        ge::DT_BOOL,  ge::DT_BF16,    ge::DT_INT16, ge::DT_UINT16,
                                                        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64};
@@ -179,15 +179,7 @@ ge::graphStatus RepeatInterleaveBaseTiling::DoLibApiTiling() { return ge::GRAPH_
 
 uint64_t RepeatInterleaveBaseTiling::GetTilingKey() const { return 0; }
 
-ge::graphStatus RepeatInterleaveBaseTiling::GetWorkspaceSize()
-{
-    auto sysWorkspace = SYS_WORKSPACE_SIZE;
-    sysWorkspace += totalCoreNum_ * CACHELINE_SIZE;
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sysWorkspace;
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RepeatInterleaveBaseTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus RepeatInterleaveBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
@@ -233,4 +225,45 @@ void RepeatInterleaveBaseTiling::MergDim()
     }
     return;
 }
+
+void RepeatInterleaveBaseTiling::CumSumTiling()
+{
+    int64_t availableUbSize = ubSize_;
+    auto ubBlock = Ops::Base::GetUbBlockSize(context_);
+
+    totalRepeatSum_ = yShape_.GetDim(axis_);
+    if (repeatDtype_ == ge::DT_INT32 && totalRepeatSum_ > INT32_MAX) {
+        isCumSumCast_ = true;
+    }
+
+    int64_t repeatsShape = repeatShape_.GetDim(0);
+    /* repeats小于16K时，只开一个核算前缀和*/
+    if (repeatsShape * ge::GetSizeByDataType(repeatDtype_) < CUMSUM_COMPUTE_THRESHOLD) {
+        // availableUbSize -= ubBlock;  // 偏移一个block
+        cumSumNormalCoreRepeatsCount_ = repeatsShape;
+        cumSumCoreNum_ = 1;
+        cumSumTailCoreRepeatsCount_ = repeatsShape;
+    } else {
+        cumSumNormalCoreRepeatsCount_ = Ops::Base::CeilDiv(repeatsShape, totalCoreNum_);
+        cumSumCoreNum_ = Ops::Base::CeilDiv(repeatsShape, cumSumNormalCoreRepeatsCount_);
+        cumSumTailCoreRepeatsCount_ = repeatsShape - cumSumNormalCoreRepeatsCount_ * (cumSumCoreNum_ - 1);
+    }
+
+    if (isCumSumCast_) {
+        ubFactor_ = (availableUbSize - DOUBLE * ubBlock - ubBlock - ubBlock) /
+                    (DOUBLE * ge::GetSizeByDataType(repeatDtype_) + sizeof(int64_t) + sizeof(int64_t));
+    } else {
+        availableUbSize -= DOUBLE * ubBlock; // 放两个元素：0：curCoreSum   1：核内前缀和的第0号位置哨兵0
+        ubFactor_ = (availableUbSize - DOUBLE * ubBlock - ubBlock) /
+                    ((DOUBLE + 1) * ge::GetSizeByDataType(repeatDtype_));
+    }
+    cumSumNormalCoreLoops_ = Ops::Base::CeilDiv(cumSumNormalCoreRepeatsCount_, ubFactor_);
+    cumSumNormalUbFactors_ = Ops::Base::CeilDiv(cumSumNormalCoreRepeatsCount_, cumSumNormalCoreLoops_);
+    cumSumNormalCoreTailUbFactors_ = cumSumNormalCoreRepeatsCount_ -
+                                     cumSumNormalUbFactors_ * (cumSumNormalCoreLoops_ - 1);
+
+    cumSumTailCoreLoops_ = Ops::Base::CeilDiv(cumSumTailCoreRepeatsCount_, cumSumNormalUbFactors_);
+    cumSumTailCoreTailUbFactors_ = cumSumTailCoreRepeatsCount_ - cumSumNormalUbFactors_ * (cumSumTailCoreLoops_ - 1);
+}
+
 } // namespace optiling

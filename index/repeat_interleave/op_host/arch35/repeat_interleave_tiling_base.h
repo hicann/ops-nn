@@ -20,6 +20,8 @@
 #include "platform/platform_info.h"
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
+#include "util/platform_util.h"
+#include "util/math_util.h"
 
 using Ops::NN::Optiling::TilingBaseClass;
 namespace optiling {
@@ -42,6 +44,7 @@ protected:
     void MergDimForTensor();
     void MergDimForScalar();
     void MergDim();
+    void CumSumTiling();
     ge::graphStatus CheckShape();
     ge::graphStatus CheckDtype();
     int64_t MergeDimExceptAxis(const gert::Shape& input, int64_t axis);
@@ -54,6 +57,16 @@ protected:
     int64_t totalCoreNum_{0};
     int64_t ubSize_{0};
     int64_t usedCoreNum_{0};
+    int64_t ubFactor_{0};
+    int64_t totalRepeatSum_{0};
+    int64_t cumSumCoreNum_{0};
+    int64_t cumSumNormalCoreRepeatsCount_{0};
+    int64_t cumSumTailCoreRepeatsCount_{0};
+    int64_t cumSumNormalCoreLoops_{0};
+    int64_t cumSumNormalUbFactors_{0};
+    int64_t cumSumNormalCoreTailUbFactors_{0};
+    int64_t cumSumTailCoreLoops_{0};
+    int64_t cumSumTailCoreTailUbFactors_{0};
     gert::Shape repeatShape_;
     gert::Shape inputShape_;
     gert::Shape yShape_;
@@ -62,6 +75,7 @@ protected:
     int64_t mergedDim_[REPEAT_INTERLEAVE_MERGED_DIM_LENGTH] = {0};
     int64_t axis_{0};
     bool isDefaultAxis_{false};
+    bool isCumSumCast_{false};
     int64_t repeatsCount_{-1};
 };
 } // namespace optiling

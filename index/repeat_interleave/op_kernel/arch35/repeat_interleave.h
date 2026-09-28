@@ -24,7 +24,7 @@ namespace RepeatInterleave {
 using namespace AscendC;
 
 constexpr uint64_t DOUBLE_BUFFER = 2;
-constexpr uint64_t MIN_CP_THRESHOLD = 128;
+constexpr uint64_t MIN_CP_THRESHOLD = 2048;
 
 template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount,
@@ -40,6 +40,35 @@ __simd_vf__ inline void CopyOneCpToRepeatOutVf(__ubuf__ T* xInLocalPtr, __ubuf__
         AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, inputRegTensor, uOut,
                                                                                    dataCount);
     }
+    AscendC::Reg::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
+}
+
+template <typename T>
+__simd_vf__ inline void CopyOneCpToRepeatOutVfLoop(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount,
+                                                   uint16_t repeatTimes, uint32_t vfLen, uint32_t vfLoops,
+                                                   uint32_t tailVfCount)
+{
+    AscendC::Reg::UnalignRegForLoad uIn;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::RegTensor<T> inputRegTensor;
+
+    __ubuf__ T* cpInStartPtr = xInLocalPtr;
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        xInLocalPtr = cpInStartPtr;
+        for (uint16_t vLoop = 0; vLoop < vfLoops - 1; vLoop++) {
+            AscendC::Reg::LoadUnAlignPre(uIn, xInLocalPtr);
+            AscendC::Reg::LoadUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn, xInLocalPtr,
+                                                                                      vfLen);
+            AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, inputRegTensor,
+                                                                                       uOut, vfLen);
+        }
+        AscendC::Reg::LoadUnAlignPre(uIn, xInLocalPtr);
+        AscendC::Reg::LoadUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn, xInLocalPtr,
+                                                                                  tailVfCount);
+        AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, inputRegTensor, uOut,
+                                                                                   tailVfCount);
+    }
+
     AscendC::Reg::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
@@ -210,7 +239,14 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyOneCpToRepeatOut(const Lo
     __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr() + copyToMatchOutNum_;
 
     int64_t dataCount = tilingData_.mergedDims[2];
-    CopyOneCpToRepeatOutVf<T>(xInLocalPtr, xOutLocalPtr, dataCount, repeatTimes);
+    uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(T);
+    uint32_t vfLoops = (dataCount + vfLen - 1) / vfLen;
+    uint32_t tailVfCount = dataCount - vfLen * (vfLoops - 1);
+    if (dataCount <= vfLen) {
+        CopyOneCpToRepeatOutVf<T>(xInLocalPtr, xOutLocalPtr, dataCount, repeatTimes);
+    } else {
+        CopyOneCpToRepeatOutVfLoop<T>(xInLocalPtr, xOutLocalPtr, dataCount, repeatTimes, vfLen, vfLoops, tailVfCount);
+    }
 
     copyToMatchOutNum_ += repeatTimes * dataCount;
     xOutQueue_.EnQue(xOutLocal);
@@ -349,7 +385,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessWholeCp()
     }
     curCoreCpCount *= tilingData_.mergedDims[1];
     int64_t startCpIdx = GetBlockIdx() * tilingData_.eachCoreBatchCount * tilingData_.mergedDims[1];
-    if (tilingData_.mergedDims[2] * sizeof(T) < MIN_CP_THRESHOLD) {
+    if (tilingData_.mergedDims[2] * sizeof(T) <= MIN_CP_THRESHOLD) {
         /* 从每个核要复制的起始轴开始依次处理,不需要对cp轴分loop */
         ProcessCpMatchToUb(startCpIdx, curCoreCpCount);
         return;

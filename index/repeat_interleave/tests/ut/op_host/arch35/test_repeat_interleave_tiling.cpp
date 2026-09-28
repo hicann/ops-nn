@@ -432,7 +432,7 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Tensor_Axis_1_test21)
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, dataSize, const_tensors);
 
-    string expectTilingData = "64 64 1 1 0 0 0 0 10560 -1 55 64 10 4 ";
+    string expectTilingData = "1 10 10 1 1 10 10 10 1 1 4 10 1 55 64 64 0 0 0 64 10 4 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
 }
 
@@ -452,7 +452,7 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Tensor_Axis_1_test22)
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, dataSize, const_tensors);
 
-    string expectTilingData = "64 32 1 1 0 0 0 0 10560 -1 55 32 10 4 ";
+    string expectTilingData = "1 10 10 1 1 10 10 10 1 1 4 10 1 55 32 32 0 0 0 32 10 4 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
 }
 
