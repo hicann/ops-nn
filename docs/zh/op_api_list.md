@@ -268,6 +268,7 @@
 | [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md) | 高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) | 计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md) | GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnGemmSyrk](../../matmul/gemm_syrk/docs/aclnnGemmSyrk.md) | 计算α乘以A与A转置的乘积，再与β和input C的乘积求和，原地更新对称矩阵C。 | - | 默认确定性实现 |
 | [aclnnGlu](../../activation/glu/docs/aclnnGlu.md) | GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGluBackward](../../activation/glu_grad/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |

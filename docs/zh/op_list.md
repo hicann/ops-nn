@@ -3060,6 +3060,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/gemm_syrk/README.md">gemm_syrk</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>计算α乘以A与A转置的乘积，再与β和input C的乘积求和，原地更新对称矩阵C。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/mat_mul_v3/README.md">mat_mul_v3</a></td>
     <td>✓</td>
     <td>✓</td>

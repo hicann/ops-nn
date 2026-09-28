@@ -1073,6 +1073,8 @@ matmul-c@ops-nn:
         - ops/ops-nn/matmul/fused_quant_mat_mul/examples/
         - ops/ops-nn/matmul/gemm/tests/
         - ops/ops-nn/matmul/gemm/examples/
+        - ops/ops-nn/matmul/gemm_syrk/tests/
+        - ops/ops-nn/matmul/gemm_syrk/examples/
         - ops/ops-nn/matmul/gemm_v2/tests/
         - ops/ops-nn/matmul/gemm_v2/examples/
         - ops/ops-nn/matmul/mat_mul_v3/tests/

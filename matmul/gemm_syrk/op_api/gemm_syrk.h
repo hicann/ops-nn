@@ -1,0 +1,34 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software: you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#ifndef OP_API_GEMM_SYRK_L0OP_H
+#define OP_API_GEMM_SYRK_L0OP_H
+
+#include "aclnn/aclnn_base.h"
+
+namespace l0op {
+
+/**
+ * @brief Launch the GemmSyrk op: cRef = alpha * (a @ a^T) + beta * cRef.
+ *
+ * The same aclTensor* cRef is bound as both the op's c input and c output, so
+ * the executor aliases them to one device buffer (in-place update).
+ * transposeX selects a's storage layout: false keeps the row-major (..., m, k)
+ * tensor; true binds the transposed (..., k, m) storage and computes
+ * cRef = alpha * (a^T @ a) + beta * cRef.
+ * fillMode selects the output region ("full"/"up"/"low"); only "full" is
+ * currently supported by the tiling and kernel.
+ */
+aclTensor* GemmSyrk(const aclTensor* a, aclTensor* cRef, float alpha, float beta, bool transposeX, const char* fillMode,
+                    aclOpExecutor* executor);
+
+} // namespace l0op
+
+#endif // OP_API_GEMM_SYRK_L0OP_H

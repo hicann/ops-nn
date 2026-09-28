@@ -1,0 +1,2 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,tensor_storage_shapes,tensor_view_strides,tensor_view_offsets,attributes,output_tensor_indexes,golden_api,input_data_ranges,precision_tolerances,absolute_precision,is_enabled
+e2e_gemm_syrk_bf16_1_512_4096,torch.ops.cann_ops_nn.gemm_syrk,"((1, 512, 4096), (1, 512, 512))","('bfloat16', 'bfloat16')","('ND', 'ND')",,,,"{'alpha': 1.0, 'beta': 1.0, 'transpose_x': False, 'fill_mode': 'full'}","(1,)",,"((0, 1), (0, 1))","((0.001, 0.001),)",0.001,TRUE
