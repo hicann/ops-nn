@@ -60,42 +60,42 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>输入序列特征，对应公式中的$x_t$，shape为[T, B, I]。</td>
+      <td>输入序列特征，对应公式中的x<sub>t</sub>，shape为[T, B, I]。</td>
       <td>FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight_input</td>
       <td>输入</td>
-      <td>输入投影权重，对应公式中的$W_x$，shape为[I, 3H]。</td>
+      <td>输入投影权重，对应公式中的W<sub>x</sub>，shape为[I, 3H]。</td>
       <td>FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight_hidden</td>
       <td>输入</td>
-      <td>隐藏状态投影权重，对应公式中的$W_h$，shape为[H, 3H]。</td>
+      <td>隐藏状态投影权重，对应公式中的W<sub>h</sub>，shape为[H, 3H]。</td>
       <td>FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight_att</td>
       <td>输入</td>
-      <td>注意力分数，对应公式中的$a_t$，shape为[T, B]。</td>
+      <td>注意力分数，对应公式中的a<sub>t</sub>，shape为[T, B]。</td>
       <td>FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias_input</td>
       <td>可选输入</td>
-      <td>输入投影偏置，对应公式中的$b_x$，shape为[3H]，缺省时按零处理。</td>
+      <td>输入投影偏置，对应公式中的b<sub>x</sub>，shape为[3H]，缺省时按零处理。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias_hidden</td>
       <td>可选输入</td>
-      <td>隐藏状态投影偏置，对应公式中的$b_h$，shape为[3H]，缺省时按零处理。</td>
+      <td>隐藏状态投影偏置，对应公式中的b<sub>h</sub>，shape为[3H]，缺省时按零处理。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -130,35 +130,35 @@
     <tr>
       <td>update</td>
       <td>输出</td>
-      <td>更新门$z_t$，shape为[T, B, H]。</td>
+      <td>更新门z<sub>t</sub>，shape为[T, B, H]。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>update_att</td>
       <td>输出</td>
-      <td>注意力调节后的更新门$\widehat{z}_t$，shape为[T, B, H]。</td>
+      <td>注意力调节后的更新门z&#770;<sub>t</sub>，shape为[T, B, H]。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>reset</td>
       <td>输出</td>
-      <td>重置门$r_t$，shape为[T, B, H]。</td>
+      <td>重置门r<sub>t</sub>，shape为[T, B, H]。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>new</td>
       <td>输出</td>
-      <td>候选隐藏状态$n_t$，shape为[T, B, H]。</td>
+      <td>候选隐藏状态n<sub>t</sub>，shape为[T, B, H]。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hidden_new</td>
       <td>输出</td>
-      <td>候选状态对应的隐藏投影$G^h_{t,n}$，包含隐藏侧偏置，尚未乘以重置门，shape为[T, B, H]。</td>
+      <td>候选状态对应的隐藏投影G<sup>h</sup><sub>t,n</sub>，包含隐藏侧偏置，尚未乘以重置门，shape为[T, B, H]。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -253,4 +253,4 @@
 
 | 调用方式 | 调用样例 | 说明 |
 | --- | --- | --- |
-| 图模式调用 | [test_geir_dynamic_augru](examples/arch35/test_geir_dynamic_augru.cpp) | 通过算子IR构图方式调用DynamicAUGRU，验证静态shape、动态shape和动态rank。 |
+| 图模式调用 | [test_geir_dynamic_augru](examples/arch35/test_geir_dynamic_augru.cpp) | 通过[算子IR](op_graph/dynamic_augru_proto.h)构图方式调用DynamicAUGRU，验证静态shape、动态shape和动态rank。 |

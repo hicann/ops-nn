@@ -5480,6 +5480,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/dynamic_augru_grad/README.md">dynamic_augru_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>带注意力更新门的GRU（AUGRU）反向算子，按BPTT计算输入、初始隐状态、权重与偏置的梯度，并输出注意力梯度dw_att。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_gru/README.md">dynamic_gru</a></td>
     <td>✓</td>
     <td>✓</td>
