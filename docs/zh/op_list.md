@@ -5450,6 +5450,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/dynamic_augru/README.md">dynamic_augru</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现由注意力分数调节更新门的门控循环单元，返回完整隐藏状态序列及门控中间结果，支持有效序列长度和逐元素掩码控制。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_gru/README.md">dynamic_gru</a></td>
     <td>✓</td>
     <td>✓</td>
