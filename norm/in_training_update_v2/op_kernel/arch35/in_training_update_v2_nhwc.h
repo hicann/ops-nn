@@ -139,6 +139,7 @@ private:
         __ubuf__ float* mean = this->MeanAddr();
         __ubuf__ float* scale = this->ScaleAddr();
         __ubuf__ float* beta = this->BiasAddr();
+        __ubuf__ float* restore = this->VarAddr();
         const float negativeInvR = -this->tiling_->invR;
         const float negativeInvRCorrection = -this->tiling_->invRCorrection;
         const uint16_t rowLoops = static_cast<uint16_t>(rows);
@@ -148,6 +149,7 @@ private:
             RegTensor<float> meanReg;
             RegTensor<float> scaleReg;
             RegTensor<float> betaReg;
+            RegTensor<float> restoreReg;
             RegTensor<float> xReg;
             RegTensor<float> yReg;
             uint32_t validCount = static_cast<uint32_t>(currentC);
@@ -156,6 +158,7 @@ private:
             if constexpr (HAS_AFFINE) {
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanReg, mean);
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(betaReg, beta);
+                Reg::LoadAlign<float, LoadDist::DIST_NORM>(restoreReg, restore);
             } else {
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(sumReg, sum);
                 if constexpr (ZERO_EPSILON) {
@@ -165,7 +168,7 @@ private:
             for (uint16_t row = 0; row < rowLoops; ++row) {
                 const uint32_t offset = static_cast<uint32_t>(row * rowStrideElems);
                 LoadXToFp32(x, xReg, validMask, offset);
-                ComputeNormalizedY<HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg,
+                ComputeNormalizedY<HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg, restoreReg,
                                                              negativeInvR, negativeInvRCorrection, validMask);
                 StoreFp32ToY(y, yReg, validMask, offset);
             }

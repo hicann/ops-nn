@@ -72,10 +72,9 @@ def _as_tensor(value):
     return torch.from_numpy(np.ascontiguousarray(np.asarray(value)))
 
 
-def _empty_fp32_like(value, device):
-    if isinstance(value, torch.Tensor):
-        return torch.empty_like(value, dtype=torch.float32)
-    return torch.empty(np.shape(value), dtype=torch.float32, device=device)
+def _empty_stat_like(value, device):
+    tensor = _as_tensor(value)
+    return torch.empty_like(tensor, dtype=_compute_dtype(tensor), device=device)
 
 
 def _layout(kwargs):
@@ -132,8 +131,8 @@ def _compute(
     if n == 0 or c == 0:
         return [
             x_tensor.clone(),
-            _empty_fp32_like(sum_value, x_tensor.device),
-            _empty_fp32_like(square_sum, x_tensor.device),
+            _empty_stat_like(sum_value, x_tensor.device),
+            _empty_stat_like(square_sum, x_tensor.device),
         ]
 
     r = (
@@ -230,7 +229,7 @@ def _compute(
         batch_variance = current_variance.clone()
 
     return [
-        y.to(dtype=x_tensor.dtype),
+        y,
         batch_mean.reshape(sum_tensor.shape),
         batch_variance.reshape(sum_tensor.shape),
     ]
@@ -262,14 +261,13 @@ def _kernel_golden(
         epsilon_value,
         _layout(kwargs),
     )
-    dtype_names = [_dtype_name(value) for value in (kwargs.get("output_dtypes") or ())]
-    result = []
-    for index, output in enumerate(outputs):
-        array = output.detach().cpu().contiguous().numpy()
-        if index < len(dtype_names) and dtype_names[index] is not None:
-            array = array.astype(dtype_names[index], copy=False)
-        result.append(np.ascontiguousarray(array))
-    return result
+    # Keep the computation precision even when an individual output's declared
+    # dtype is narrower (e.g. promoted fp16 x with fp64 statistics). Device output
+    # dtypes select comparison thresholds, not the precision of the CPU truth.
+    return [
+        np.ascontiguousarray(output.detach().cpu().contiguous().numpy())
+        for output in outputs
+    ]
 
 
 def _customize_inputs(
