@@ -351,6 +351,8 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
     CHECK_RET(CheckWeightNzDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查Shape是否支持
     CHECK_RET(CheckWeightNzShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查weight Stride是否合法
+    CHECK_RET(Ops::NN::CheckWeightNzViewStrideValid(mat2), ACLNN_ERR_PARAM_INVALID);
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(archRule->CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
@@ -418,7 +420,7 @@ static bool GetTransposeAttrValue(const aclTensor* tensor)
     int64_t dim2 = tensor->GetViewShape().GetDimNum() - LAST_SECOND_DIM_INDEX;
     // check if tensor is contiguous layout
     // viewStride [1, K] viewShape [K, N] -> transpose=True
-    // viewStride [K, 1] viewShape [K, N] -> transpose=False
+    // viewStride [N, 1] viewShape [K, N] -> transpose=False
     // K or N = 1 -> transpose=undeterminated
     if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
         OP_LOGI("Matmul GetTransposeAttrValue, find tensor not contiguous.");

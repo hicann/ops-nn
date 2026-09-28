@@ -2155,6 +2155,32 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor)
     return false;
 }
 
+bool CheckWeightNzViewStrideValid(const aclTensor* mat2)
+{
+    const auto& shape = mat2->GetViewShape();
+    const auto& strides = mat2->GetViewStrides();
+    if (shape.GetDimNum() < DIMS_TWO || strides.size() < DIMS_TWO) {
+        return false;
+    }
+    size_t lastDim = shape.GetDimNum() - INNER_AXIS;
+    size_t secondLastDim = shape.GetDimNum() - OUTER_AXIS;
+    int64_t k = shape.GetDim(secondLastDim);
+    int64_t n = shape.GetDim(lastDim);
+    int64_t strideK = strides[secondLastDim];
+    int64_t strideN = strides[lastDim];
+    // viewStride [1, K] viewShape [K, N] -> transpose; viewStride [N, 1] viewShape [K, N] -> non-transpose
+    bool isTranspose = (strideK == 1 && strideN == k);
+    bool isNonTranspose = (strideK == n && strideN == 1);
+    if (!isTranspose && !isNonTranspose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Unsupported mat2 view strides [%ld,%ld] for viewShape [%ld,%ld]; "
+                "expect [1,%ld] (transpose) or [%ld,1] (non-transpose).",
+                strideK, strideN, k, n, k, n);
+        return false;
+    }
+    return true;
+}
+
 aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
 {
     bool dtypeMismatch = mmOpInfo.ori_info.self_dtype != mmOpInfo.ori_info.mat2_dtype;

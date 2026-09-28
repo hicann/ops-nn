@@ -262,3 +262,41 @@ TEST_F(l2_matmulWeightNz_test, matmul_NZ_910B_FP16_FP16_out_FP32_valid)
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
+
+// mat2的view stride非标准布局（[1,K_full]且K_full != K），需拒绝（issue 6020）
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_nonstandard_stride_rejected)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    // view [K,N]=[32,16]，stride [1,K_full]=[1,40]，既非[1,K]也非[N,1]
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {1, 40}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+// k1 == n1 时storage无法区分转置朝向，非标准stride同样需拒绝
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_nonstandard_stride_k1_eq_n1_rejected)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    // K=32, N=20 -> k1 = n1 = 2
+    TensorDesc b_desc = TensorDesc({32, 20}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {1, 40}, 0, {2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 20}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 标准转置stride [1,K] 不应被误拒
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_transpose_stride_ok)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {1, 32}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+// 标准非转置stride [N,1] 不应被误拒
+TEST_F(l2_matmulWeightNz_test, matmul_NZ_nontranspose_stride_ok)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {16, 1}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}

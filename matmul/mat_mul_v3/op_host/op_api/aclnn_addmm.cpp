@@ -424,6 +424,9 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
         return false;
     }
 
+    // mat2的view stride需为可判定的标准布局（[1,K]转置或[N,1]非转置），否则拒绝
+    CHECK_RET(CheckWeightNzViewStrideValid(mat2), false);
+
     return true;
 }
 
