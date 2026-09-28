@@ -532,15 +532,15 @@ static aclnnStatus Conv2DBackpropFilterWithFlag(const aclTensor* input, const ac
 {
     L0_DFX(Conv2DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag);
     FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
-    FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1]};
+    FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1]};
     FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
     if (padding->Size() == PAD_DIM_4) {
         newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};
     }
     auto stride4 = executor->AllocIntArray(newStrides.data(), 4);
     OP_CHECK(stride4 != nullptr, OP_LOGD("newStrides alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
-    auto dilation4 = executor->AllocIntArray(newDalition.data(), 4);
-    OP_CHECK(dilation4 != nullptr, OP_LOGD("newDalition alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
+    auto dilation4 = executor->AllocIntArray(newDilation.data(), 4);
+    OP_CHECK(dilation4 != nullptr, OP_LOGD("newDilation alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
     auto pad4 = executor->AllocIntArray(newPad.data(), 4);
     OP_CHECK(pad4 != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
     const char* dataFormat = "NCHW";

@@ -1502,7 +1502,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingRunInfo(
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 {
-    OP_LOGD(opName_, "Enable inneProduct tiling");
+    OP_LOGD(opName_, "Enable InnerProduct tiling");
     if (isGetTilingFromRepo) {
         OP_LOGD(context_->GetNodeName(),
                 "Conv3DBackpropInputV2 AscendC: InnerProduct get tiling from knowledge_tiling success.");

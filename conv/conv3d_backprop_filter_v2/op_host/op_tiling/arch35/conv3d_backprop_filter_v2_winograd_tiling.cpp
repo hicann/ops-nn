@@ -82,7 +82,7 @@ bool CheckWinoShape(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
     uint64_t tileH = Ops::Base::CeilDiv(runInfo.ho, 2);
     uint64_t tileW = Ops::Base::CeilDiv(runInfo.wo, 2);
     if (tileH * tileW * runInfo.batch > Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_K_MAX_SIZE) {
-        OP_LOGD(opName, "current reduce asix is too large for Winograd impl");
+        OP_LOGD(opName, "current reduce axis is too large for Winograd impl");
         return false;
     }
     // c轴太小时winograd性能不一定比原始kernel性能好，所以当前限制c轴能划出至少16个基本块

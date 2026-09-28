@@ -1037,7 +1037,7 @@ static const aclTensor* View3dWithGroups(const int64_t& groups, const aclTensor*
              return nullptr);
     auto reformatedInput = l0op::ReFormat(squeezedInput, op::Format::FORMAT_NCL);
     OP_CHECK(reformatedInput != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "View3dWithGroup failed: %s return nullptr after ReFormat operation.",
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "View3dWithGroups failed: %s return nullptr after ReFormat operation.",
                      tensorName.c_str()),
              return nullptr);
     return reformatedInput;
@@ -2737,7 +2737,7 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
                                                      batchMmInput.outputData, batchMmInput.isLeftTranspose,
                                                      batchMmInput.isRightTranspose, params.cubeMathType, executor);
                 OP_CHECK(gradInputND != nullptr,
-                         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The Mamtul In Conv3DBackpropInput Return Nullptr."),
+                         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The Matmul In Conv3DBackpropInput Return Nullptr."),
                          return ACLNN_ERR_INNER_NULLPTR);
                 auto gradInputNCDHW = DoPostMatmulForConv3dBpInput(gradInputND, inputTensor, outputTensor, executor,
                                                                    conv2MmMode);
