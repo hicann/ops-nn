@@ -46,6 +46,33 @@ TEST_F(RmsNormQuantV2, RmsNormQuantV2_infershape_case_0)
     EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y_shape);
 }
 
+TEST_F(RmsNormQuantV2, RmsNormQuantV2_infershape_without_scales2_uses_dummy_y2)
+{
+    ge::op::RmsNormQuantV2 op;
+    op.UpdateInputDesc("x", create_desc({2, 16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("scales1", create_desc({16}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), (std::vector<int64_t>{2, 16}));
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), (std::vector<int64_t>{1}));
+}
+
+TEST_F(RmsNormQuantV2, RmsNormQuantV2_infershape_with_scalar_scales2_uses_x_shape)
+{
+    ge::op::RmsNormQuantV2 op;
+    op.UpdateInputDesc("x", create_desc({2, 16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("scales1", create_desc({1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("scales2", create_desc({}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), (std::vector<int64_t>{2, 16}));
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), (std::vector<int64_t>{2, 16}));
+}
+
 TEST_F(RmsNormQuantV2, RmsNormQuantV2_InferDtype_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormQuantV2"), nullptr);

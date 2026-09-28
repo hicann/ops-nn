@@ -139,7 +139,7 @@
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>表示量化输出Tensor，对应公式中的`y2`。</td>
+      <td>表示量化输出Tensor，对应公式中的`y2`。未传入`scales2`时，该输出为shape为[1]的无效占位Tensor，不参与计算。</td>
       <td>INT8、INT4、FLOAT8、HIF8</td>
       <td>ND</td>
     </tr>

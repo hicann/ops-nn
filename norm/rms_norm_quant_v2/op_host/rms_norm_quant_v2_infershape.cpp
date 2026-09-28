@@ -27,6 +27,12 @@ using namespace ge;
 namespace ops {
 static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
                                                                   DT_FLOAT8_E4M3FN};
+
+static bool HasSecondQuantParam(const gert::InferShapeContext* context)
+{
+    return context->GetOptionalInputShape(INPUT_SCALE2_IDX) != nullptr;
+}
+
 static ge::graphStatus InferShape4RmsNormQuantV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShape4RmsNormQuantV2");
@@ -41,7 +47,7 @@ static ge::graphStatus InferShape4RmsNormQuantV2(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
     *y1Shape = *xShape;
-    *y2Shape = *xShape;
+    *y2Shape = HasSecondQuantParam(context) ? *xShape : gert::Shape({1});
 
     OP_LOGD(context, "End to do InferShape4RmsNormQuantV2");
     return GRAPH_SUCCESS;

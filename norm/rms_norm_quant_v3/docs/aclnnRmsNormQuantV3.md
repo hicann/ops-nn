@@ -53,8 +53,8 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(
   const aclTensor *x,
   const aclTensor *gamma,
   const aclTensor *scale,
-  const aclTensor *offsetOptional,
-  const aclTensor *betaOptional,
+  const aclTensor *offset,
+  const aclTensor *beta,
   double           epsilon,
   bool             divMode,
   bool             outputRstd,
@@ -98,7 +98,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x（aclTensor*）</td>
+      <td>x（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>具体约束详见约束说明。</li></ul></td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma（aclTensor*）</td>
+      <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale（aclTensor*）</td>
+      <td>scale（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y进行的scale张量，对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>维度为1。shape大小为1或者为x的最后一维的维度。</li><li>数据类型约束详见约束说明。</li><li>该参数的值不能为0。</li></ul></td>
@@ -128,17 +128,17 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>√</td>
     </tr>
     <tr>
-      <td>offsetOptional（aclTensor*）</td>
+      <td>offset（const aclTensor*）</td>
       <td>可选输入</td>
       <td>表示量化过程中得到y进行的offset张量，对应公式中的`offset`。</td>
       <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape需要与`scale`保持一致。</li><li>数据类型约束详见约束说明。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT8</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT8、INT32</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>betaOptional（aclTensor*）</td>
+      <td>beta（const aclTensor*）</td>
       <td>可选输入</td>
       <td>表示标准化过程中的偏移张量。对应公式中的`beta`。</td>
       <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
@@ -170,8 +170,8 @@ aclnnStatus aclnnRmsNormQuantV3(
     <tr>
       <td>outputRstd（bool）</td>
       <td>输入</td>
-      <td>表示指定是否输出有效的rstdOut。</td>
-      <td><ul><li>支持True和False。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
+      <td>表示指定是否输出有效的rstd。</td>
+      <td><ul><li>支持True和False。</li><li>当outputRstd为False时，rstd为无效输出。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -181,8 +181,8 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终量化输出Tensor，对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x`一致。</li></ul></td>
-      <td>INT8、INT32、INT4、FLOAT8、HIF8</td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型不为INT32时，shape需要与输入`x`一致；数据类型为INT32时，前面的维度保持不变，尾轴大小为`x`尾轴大小的1/8。</li></ul></td>
+      <td>INT8、INT32、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -191,10 +191,10 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>rstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>当outputRstd为True时，不支持空Tensor，shape与入参x的shape前几维保持一致，前几维指x的维度减去1，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效，支持传入空指针或空Tensor占位。</li></ul></td>
+      <td><ul><li>当outputRstd为True时，不支持空Tensor，shape与x的shape一致，但尾轴大小为1；当x为一维Tensor时，rstd也支持标量。</li><li>当outputRstd为False时，该参数的最终输出无效，支持传入空指针或空Tensor占位。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -242,44 +242,49 @@ aclnnStatus aclnnRmsNormQuantV3(
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
       <td rowspan="2">161001</td>
-      <td>传入的x、gamma、scale、和y是空指针。</td>
+      <td>传入的x、gamma、scale或y是空指针。</td>
     </tr>
     <tr>
       <td>当outputRstd为True时，传入rstd是空指针。</td>
     </tr>
-  <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
-      <td>当输出yDtype为int32时，y的尾轴大小不等于x的尾轴大小的1/8，并且x的尾轴不能被8整除。</td>
-    </tr>
-        <tr>
-      <td>gamma不满足维度数为1-2维，beta(若存在)不满足维度数为1-2维，scale不满足维度数为1维。</td>
+    <tr>
+      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="9">161002</td>
+      <td>x或y的维度数不在1-8范围内；gamma、beta（若存在）的维度数不为1-2；scale的维度数不为1。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_INNER_NULLPTR</td>
-      <td rowspan="7">561103</td>
-      <td>输入或输出参数的维度数和数据类型不在范围之内。</td>
+      <td>x、gamma、scale、offset（若存在）、beta（若存在）或y的数据类型及组合不满足约束说明；outputRstd为True时，rstd的数据类型不是FLOAT32。</td>
     </tr>
     <tr>
-      <td>输入或输出参数的数据类型组合不在约束说明之内。</td>
+      <td>当y为INT32时，x的尾轴大小不能被8整除，或者y的尾轴大小不等于x尾轴大小的1/8。</td>
     </tr>
     <tr>
-      <td>输入x和输出y的shape不是完全相同的shape。</td>
+      <td>y的数据类型不为INT32时，x和y的shape不相同；或者y的数据类型为INT32时，除尾轴外的shape与x不相同。</td>
     </tr>
     <tr>
-      <td>当输出yDtype为int4时，x的尾轴大小不是偶数。</td>
+      <td>当y为INT4时，x的尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>gamma、beta(若存在)的尾轴不相同的，或尾轴长不等于x的尾轴大小，或者类型不相同。</td>
+      <td>gamma或beta（若存在）的shape不是[H]或[1,H]，其中H为x的尾轴大小。</td>
     </tr>
     <tr>
-      <td>rstdOut的维度和x的维度不相同，或rstdOut对应shape与入参x的shape前几维不一致，前几维指x的维度减去1，或rstdOut的尾轴不为1。</td>
+      <td>scale长度既不为1也不等于x的尾轴大小，或者offset（若存在）的shape与scale不相同。</td>
     </tr>
     <tr>
-      <td>scale、offsetOptional(若存在)的shape不是完全相同的shape，或轴长不等于1或x的尾轴大小，或者类型不满足下列约束说明。</td>
+      <td>outputRstd为True时，rstd的shape不是将x的尾轴大小置为1得到的shape，且不满足x为一维Tensor、rstd为标量的条件。</td>
+    </tr>
+    <tr>
+      <td>x、gamma、scale、y、offset（若存在）、beta（若存在）为空Tensor，或outputRstd为True时rstd为空Tensor。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_NULLPTR</td>
+      <td>561103</td>
+      <td>参数校验通过后，内部Tensor构造、连续化、计算任务构建或结果拷贝返回空指针。</td>
     </tr>
 
   </tbody></table>
+
+  `outputRstd`为False时，不校验无效输出`rstd`的shape和数据类型，允许空指针或空Tensor占位；这不改变有效输出`y`的校验要求。
 
 ## aclnnRmsNormQuantV3
 
@@ -337,7 +342,7 @@ aclnnStatus aclnnRmsNormQuantV3(
   <!-- npu="950" id9 -->
   - <term>Ascend 950PR&950DT系列产品</term>：
 
-    | x数据类型 | gamma数据类型 | scale数据类型 | offsetOptional数据类型 | betaOptional数据类型 |epsilon数据类型 | y数据类型 | rstd数据类型 |
+    | x数据类型 | gamma数据类型 | scale数据类型 | offset数据类型 | beta数据类型 |epsilon数据类型 | y数据类型 | rstd数据类型 |
     | --------- | ------------- |  ------------- | -------------- |------------- | --------- |--------- |--------- |
     | FLOAT16   | FLOAT16       |  FLOAT16       | INT8           |FLOAT16       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
     | BFLOAT16   | BFLOAT16       |  BFLOAT16       | INT8           | BFLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |

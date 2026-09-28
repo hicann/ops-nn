@@ -92,6 +92,17 @@ static bool CheckNotEmpty(const RmsNormQuantInputTensor& inputTensor, const aclT
            CheckTensorNotEmpty(inputTensor.offset, "offset") && CheckTensorNotEmpty(y, "y");
 }
 
+static bool CheckShapeBeforeReshape(const aclTensor* tensor, const char* tensorName)
+{
+    if (tensor != nullptr && tensor->GetViewShape().GetDimNum() == DIMS_TWO_NUMS &&
+        tensor->GetViewShape().GetDim(0) != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The first dimension of 2D %s must be 1, but got %ld.", tensorName,
+                tensor->GetViewShape().GetDim(0));
+        return false;
+    }
+    return true;
+}
+
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -169,11 +180,12 @@ static bool CheckDtypeValid(RmsNormQuantInputTensor& inputTensor, const aclTenso
                          OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float16 or bfloat16 and scaleType is not float, "
                                                           "scaleType should be equal to xType"),
                          return false);
-                OP_CHECK(inputTensor.scale->GetDataType() == inputTensor.offset->GetDataType() ||
-                             inputTensor.offset->GetDataType() == op::DataType::DT_INT8,
-                         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float16 or bfloat16 and scaleType is the same "
-                                                          "with xType, scaleType should be equal to xType or int8"),
-                         return false);
+                OP_CHECK(
+                    inputTensor.scale->GetDataType() == inputTensor.offset->GetDataType() ||
+                        inputTensor.offset->GetDataType() == op::DataType::DT_INT8,
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if xType is float16 or bfloat16 and scaleType is the same "
+                                                     "with xType, offsetType should be equal to scaleType or int8"),
+                    return false);
             }
         }
     }
@@ -229,11 +241,23 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
     int64_t scaleDimNum = static_cast<int64_t>(inputTensor.scale->GetViewShape().GetDimNum());
     if (scaleDimNum != 1) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of scale must be 1, but get [%ld]", scaleDimNum);
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            return false;
+        }
     }
     int64_t gammaDimNum = static_cast<int64_t>(inputTensor.gamma->GetViewShape().GetDimNum());
     int64_t gammaLastDim = inputTensor.gamma->GetViewShape().GetDim(gammaDimNum - 1);
     int64_t xDimNum = static_cast<int64_t>(inputTensor.x->GetViewShape().GetDimNum());
     int64_t xLastDim = inputTensor.x->GetViewShape().GetDim(xDimNum - 1);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        int64_t scaleLength = inputTensor.scale->GetViewShape().GetDim(0);
+        OP_CHECK(scaleLength == 1 || scaleLength == xLastDim,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "The length of scale must be 1 or x last dimension (%ld), "
+                         "but got %ld.",
+                         xLastDim, scaleLength),
+                 return false);
+    }
     if (gammaLastDim != xLastDim) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the last dim size(%ld) of x must be same as gamma and beta(%ld).", xLastDim,
                 gammaLastDim);
@@ -377,6 +401,8 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
         // Empty tensors must be rejected before the 2D gamma/beta preprocessing so invalid user input is not
         // reported as an internal reshape/contiguous failure.
         CHECK_RET(CheckNotEmpty(inputTensorOri, y), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckShapeBeforeReshape(gamma, "gamma") && CheckShapeBeforeReshape(beta, "beta"),
+                  ACLNN_ERR_PARAM_INVALID);
     }
     CHECK_RET(PreDealData(inputTensorOri, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     auto ret = CheckParams(inputTensorOri, y);

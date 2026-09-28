@@ -125,6 +125,79 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_001)
     ASSERT_EQ(tiling_key, 0);
 }
 
+TEST_F(RmsNormQuantV3TilingTest, optional_quant_params_require_scales2)
+{
+    gert::StorageShape xShape = {{2, 16}, {2, 16}};
+    gert::StorageShape gammaShape = {{16}, {16}};
+    gert::StorageShape scaleShape = {{1}, {1}};
+    gert::StorageShape rstdShape = {{2, 1}, {2, 1}};
+    fe::PlatFormInfos platformInfo;
+    ASSERT_TRUE(platformInfo.Init());
+    const string hardwareInfo = R"({"hardware_info": {
+        "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+        "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> socVersionInfos = {{"NpuArch", "3510"}};
+    GetPlatFormInfos(hardwareInfo.c_str(), socInfos, aicoreSpec, intrinsics);
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    platformInfo.SetPlatformRes("AICoreSpec", aicoreSpec);
+    platformInfo.SetCoreNumByCoreType("AICore");
+    platformInfo.SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    platformInfo.SetPlatformRes("version", socVersionInfos);
+    optiling::RmsNormQuantV3CompileInfo compileInfo;
+    compileInfo.totalCoreNum = 64;
+    compileInfo.maxUbSize = 245760;
+    const auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormQuantV3");
+    ASSERT_NE(opImpl, nullptr);
+    ASSERT_NE(opImpl->tiling, nullptr);
+
+    for (bool outputRstd : {false, true}) {
+        for (bool hasScale2 : {false, true}) {
+            for (bool hasZeroPoints2 : {false, true}) {
+                SCOPED_TRACE(::testing::Message() << "outputRstd=" << outputRstd << ", scales2=" << hasScale2
+                                                  << ", zero_points2=" << hasZeroPoints2);
+                auto tilingData = gert::TilingData::CreateCap(4096);
+                auto workspace = gert::ContinuousVector::Create<size_t>(16);
+                ASSERT_NE(tilingData, nullptr);
+                ASSERT_NE(workspace, nullptr);
+                auto* workspaceData = static_cast<void*>(workspace.get());
+                auto holder = gert::TilingContextFaker()
+                                  .SetOpType("RmsNormQuantV3")
+                                  .NodeIoNum(7, 3)
+                                  .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                                  .InputShapes({&xShape, &gammaShape, &scaleShape, hasScale2 ? &scaleShape : nullptr,
+                                                &scaleShape, hasZeroPoints2 ? &scaleShape : nullptr, &gammaShape})
+                                  .OutputShapes({&xShape, hasScale2 ? &xShape : &scaleShape,
+                                                 outputRstd ? &rstdShape : &scaleShape})
+                                  .CompileInfo(&compileInfo)
+                                  .PlatformInfo(&platformInfo)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6F)},
+                                              {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                              {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(outputRstd)}})
+                                  .TilingData(tilingData.get())
+                                  .Workspace(static_cast<gert::ContinuousVector*>(workspaceData))
+                                  .Build();
+                const auto expected = !hasScale2 && hasZeroPoints2 ? ge::GRAPH_FAILED : ge::GRAPH_SUCCESS;
+                EXPECT_EQ(opImpl->tiling(holder.GetContext<gert::TilingContext>()), expected);
+            }
+        }
+    }
+}
+
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_002)
 {
     gert::StorageShape input_shape_x = {{24, 1, 2560}, {24, 1, 2560}};

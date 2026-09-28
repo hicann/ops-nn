@@ -58,6 +58,7 @@ multiplication.
 *                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
 * @li y2: A tensor. Describing the output of the second quant operation.
 *                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
+*                   When scales2 is absent, y2 is an invalid placeholder tensor with shape [1].
 */
 
 REG_OP(RmsNormQuantV2)

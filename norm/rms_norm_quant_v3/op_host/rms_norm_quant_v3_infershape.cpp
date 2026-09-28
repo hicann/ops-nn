@@ -19,6 +19,7 @@
 
 static constexpr int INPUT_X_IDX = 0;
 static constexpr int INPUT_GAMMA_IDX = 1;
+static constexpr int INPUT_SCALE2_IDX = 3;
 static constexpr int OUTPUT_Y1_IDX = 0;
 static constexpr int OUTPUT_Y2_IDX = 1;
 static constexpr int OUTPUT_RSTD_IDX = 2;
@@ -31,6 +32,11 @@ using namespace Ops::Base;
 namespace ops {
 static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
                                                                   DT_FLOAT8_E4M3FN};
+
+static bool HasSecondQuantParam(const gert::InferShapeContext* context)
+{
+    return context->GetOptionalInputShape(INPUT_SCALE2_IDX) != nullptr;
+}
 
 static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* context)
 {
@@ -46,8 +52,9 @@ static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
 
+    const bool hasSecondQuantParam = HasSecondQuantParam(context);
     *y1Shape = *xShape;
-    *y2Shape = *xShape;
+    *y2Shape = hasSecondQuantParam ? *xShape : gert::Shape({1});
 
     // rstd shape: A dims preserved, R dims set to 1
     auto* attrs = context->GetAttrs();
@@ -61,7 +68,9 @@ static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* contex
 
     if (IsUnknownRank(*xShape) || IsUnknownRank(*gammaShape)) {
         SetUnknownRank(*y1Shape);
-        SetUnknownRank(*y2Shape);
+        if (hasSecondQuantParam) {
+            SetUnknownRank(*y2Shape);
+        }
         if (rstdEnable) {
             SetUnknownRank(*rstdShape);
         }
@@ -90,7 +99,6 @@ static graphStatus InferDataType4RmsNormQuantV3(gert::InferDataTypeContext* cont
 {
     OP_LOGD(context, "Begin to do InferDataType4RmsNormQuantV3");
     ge::DataType yDtype = ge::DT_INT8;
-    bool rstdEnable = false;
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
@@ -101,16 +109,11 @@ static graphStatus InferDataType4RmsNormQuantV3(gert::InferDataTypeContext* cont
                         OP_LOGE(context, "attr dst_type only support int8, int4, hifloat8, float8_e5m2, float8_e4m3fn"),
                         return ge::GRAPH_FAILED);
         }
-        const bool* outputRstdPtr = attrs->GetAttrPointer<bool>(ATTR_INDEX_OF_OUTPUT_RSTD);
-        if (outputRstdPtr != nullptr) {
-            rstdEnable = *outputRstdPtr;
-        }
     }
     context->SetOutputDataType(OUTPUT_Y1_IDX, yDtype);
     context->SetOutputDataType(OUTPUT_Y2_IDX, yDtype);
-    if (rstdEnable) {
-        context->SetOutputDataType(OUTPUT_RSTD_IDX, ge::DT_FLOAT);
-    }
+    // The registered rstd output still needs a valid dtype when its computation is disabled.
+    context->SetOutputDataType(OUTPUT_RSTD_IDX, ge::DT_FLOAT);
     OP_LOGD(context, "End to do InferDataType4RmsNormQuantV3");
     return GRAPH_SUCCESS;
 }

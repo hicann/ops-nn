@@ -71,7 +71,8 @@ DT_FP8_E5M2,
 *                   The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li y2: A tensor. Describing the output of the second quant operation.
 *                   Support dtype: int8/int4/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
-*                   The shape supports at least 1 dimension, and at most 8 dimensions.
+*                   The shape supports at least 1 dimension, and at most 8 dimensions. When scales2 is absent,
+*                   y2 is an invalid placeholder tensor with shape [1].
 * @li rstd: A tensor. Describing the output of the reciprocal of standard deviation from RMS normalization.
 *                     Support dtype: float32, support format: ND.
 *                     The shape supports at least 1 dimension, and at most 8 dimensions.

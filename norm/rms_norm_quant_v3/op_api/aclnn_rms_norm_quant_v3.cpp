@@ -37,9 +37,16 @@ extern "C" {
 namespace {
 static const size_t DIMS_ONE_NUMS = 1;
 static const size_t DIMS_TWO_NUMS = 2;
+static const size_t MAX_DIM_LEN = 8;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int32_t IDX_0 = 0;
 static constexpr int32_t IDX_1 = 1;
+
+static const std::initializer_list<op::DataType> IN_REGBASE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> OUT_REGBASE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT8,          op::DataType::DT_INT4,        op::DataType::DT_INT32,
+    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8};
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, aclTensor* y,
                          bool outputRstd, aclTensor* rstd)
@@ -77,6 +84,8 @@ static bool CheckNotEmpty(const aclTensor* x, const aclTensor* gamma, const aclT
 
 static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* y)
 {
+    OP_CHECK_MIN_DIM(x, DIMS_ONE_NUMS, return false);
+    OP_CHECK_MIN_DIM(y, DIMS_ONE_NUMS, return false);
     // gamma 维度校验：1~2维
     int64_t gammaDimNum = static_cast<int64_t>(gamma->GetViewShape().GetDimNum());
     if (gammaDimNum < static_cast<int64_t>(DIMS_ONE_NUMS) || gammaDimNum > static_cast<int64_t>(DIMS_TWO_NUMS)) {
@@ -110,6 +119,109 @@ static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const ac
     return true;
 }
 
+static bool CheckRegbaseDtype(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
+                              const aclTensor* offset, const aclTensor* beta, const aclTensor* y, bool outputRstd,
+                              const aclTensor* rstd)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(x, IN_REGBASE_DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SAME(gamma, x, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(scale, IN_REGBASE_DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(y, OUT_REGBASE_DTYPE_SUPPORT_LIST, return false);
+    if (beta != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(beta, x, return false);
+    }
+    if (outputRstd) {
+        OP_CHECK_DTYPE_NOT_MATCH(rstd, op::DataType::DT_FLOAT, return false);
+    }
+    if (x->GetDataType() == op::DataType::DT_FLOAT) {
+        OP_CHECK_DTYPE_NOT_MATCH(scale, op::DataType::DT_FLOAT, return false);
+        if (offset != nullptr) {
+            OP_CHECK_DTYPE_NOT_MATCH(offset, op::DataType::DT_FLOAT, return false);
+        }
+    } else if (scale->GetDataType() == op::DataType::DT_FLOAT) {
+        if (offset != nullptr) {
+            OP_CHECK(offset->GetDataType() == op::DataType::DT_FLOAT || offset->GetDataType() == op::DataType::DT_INT32,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                             "When scale is float32, offset must be float32 or int32 for float16/bfloat16 x."),
+                     return false);
+        }
+    } else {
+        OP_CHECK_DTYPE_NOT_SAME(scale, x, return false);
+        if (offset != nullptr) {
+            OP_CHECK(
+                offset->GetDataType() == scale->GetDataType() || offset->GetDataType() == op::DataType::DT_INT8,
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "When scale has the same dtype as x, offset must have the same dtype as scale or be int8."),
+                return false);
+        }
+    }
+    return true;
+}
+
+static bool CheckRegbaseNormShape(const aclTensor* tensor, const char* tensorName, int64_t xLastDim)
+{
+    if (tensor == nullptr) {
+        return true;
+    }
+    const auto& shape = tensor->GetViewShape();
+    size_t dimNum = shape.GetDimNum();
+    if (dimNum < DIMS_ONE_NUMS || dimNum > DIMS_TWO_NUMS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of %s must be 1 or 2, but got %zu.", tensorName, dimNum);
+        return false;
+    }
+    if ((dimNum == DIMS_TWO_NUMS && shape.GetDim(0) != 1) || shape.GetDim(dimNum - 1) != xLastDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of %s must be [%ld] or [1, %ld].", tensorName, xLastDim, xLastDim);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckRegbaseShape(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
+                              const aclTensor* offset, const aclTensor* beta, const aclTensor* y, bool outputRstd,
+                              const aclTensor* rstd)
+{
+    // Minimum ranks and the scale rank have already been checked by CheckShapeValid.
+    OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(y, MAX_DIM_LEN, return false);
+    const auto& xShape = x->GetViewShape();
+    size_t lastAxis = xShape.GetDimNum() - 1;
+    int64_t xLastDim = xShape.GetDim(lastAxis);
+    if (!CheckRegbaseNormShape(gamma, "gamma", xLastDim) || !CheckRegbaseNormShape(beta, "beta", xLastDim)) {
+        return false;
+    }
+    int64_t scaleLength = scale->GetViewShape().GetDim(0);
+    OP_CHECK(scaleLength == 1 || scaleLength == xLastDim,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of scale must be 1 or x last dimension (%ld), but got %ld.",
+                     xLastDim, scaleLength),
+             return false);
+    if (offset != nullptr) {
+        OP_CHECK_SHAPE_NOT_EQUAL(scale, offset, return false);
+    }
+    auto expectedYShape = xShape;
+    if (y->GetDataType() == op::DataType::DT_INT32) {
+        expectedYShape.SetDim(lastAxis, xLastDim / INT4_NUMS_IN_INT32_SPACE);
+    } else if (y->GetDataType() == op::DataType::DT_INT4) {
+        OP_CHECK(xLastDim % 2 == 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The last dimension of x must be even for int4 output."),
+                 return false);
+    }
+    OP_CHECK(y->GetViewShape() == expectedYShape,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The shape of y must match x, except that int32 packing divides the last dimension by 8."),
+             return false);
+    if (outputRstd) {
+        auto expectedRstdShape = xShape;
+        expectedRstdShape.SetDim(lastAxis, 1);
+        // Preserve the historical scalar rstd representation for one-dimensional x.
+        const bool isScalarRstd = xShape.GetDimNum() == DIMS_ONE_NUMS && rstd->GetViewShape().IsScalar();
+        OP_CHECK(isScalarRstd || rstd->GetViewShape() == expectedRstdShape,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of rstd must match x with its last dimension set to 1; "
+                                                  "a scalar rstd is also allowed for one-dimensional x."),
+                 return false);
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
                                const aclTensor* offset, const aclTensor* beta, aclTensor* y, bool outputRstd,
                                aclTensor* rstd)
@@ -117,8 +229,12 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const
     CHECK_RET(CheckNotNull(x, gamma, scale, y, outputRstd, rstd), ACLNN_ERR_PARAM_NULLPTR);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(CheckNotEmpty(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckRegbaseDtype(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
     }
     CHECK_RET(CheckShapeValid(x, gamma, scale, y), ACLNN_ERR_PARAM_INVALID);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(CheckRegbaseShape(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
+    }
     return ACLNN_SUCCESS;
 }
 

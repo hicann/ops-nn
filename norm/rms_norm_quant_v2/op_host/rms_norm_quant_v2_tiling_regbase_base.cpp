@@ -106,7 +106,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOptionalInput()
     }
     tilingParams.hasY2 = tilingParams.hasScales2; // 没有scales2就没有y2
     if (scales2Shape == nullptr && zeroPoints2Shape != nullptr) {
-        OP_LOGE(context_->GetNodeName(), "Scales2 is required when zero_points2 is present.");
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context_->GetNodeName(), "zero_points2",
+                                                 "scales2 is required when zero_points2 is present");
         return false;
     }
     return true;
@@ -412,7 +413,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "y1")) ||
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "y2")) || (y1DataType != y2DataType)) {
         std::string dtypeMsg = ToString(y1DataType) + " and " + ToString(y2DataType);
-        std::string reasonMsg = "The dtypes of output y1 and output y2 must be int8, fp8e4m3, fp8e5m2 or hifp8, "
+        std::string reasonMsg = "The dtypes of output y1 and output y2 must be int8, int4, fp8e4m3, fp8e5m2 or hifp8, "
                                 "and the dtypes of output y1 and output y2 must be the same";
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y1 and y2", dtypeMsg.c_str(),
                                                reasonMsg.c_str());
@@ -703,9 +704,7 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetShapeAttrsInfo()
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling GetShapeAttrsInfo.");
     OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(context_->GetNodeName(), "The not optional input is null."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOptionalInput(),
-                OP_LOGE(context_->GetNodeName(), "Scales2 is required when zero_points2 is present."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOptionalInput(), , return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputOutputShapeSize(), , return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(context_->GetNodeName(), "The input shape dim is invalid."),
                 return ge::GRAPH_FAILED);
