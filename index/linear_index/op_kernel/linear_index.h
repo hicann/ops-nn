@@ -131,13 +131,14 @@ public:
             // 以下代码用于合轴
             if constexpr (MODE == 1) { // 二维dim = 0 场景
                 // 构造一个{indicesOffset, indicesOffset+1, indicesOffset+2, ……}的tensor
-                ArithProgression(arangeLocal, static_cast<float>(offset), static_cast<float>(1), indicesAlign);
+                GeneratePositions(arangeLocal, offset);
                 PipeBarrier<PIPE_V>();
                 Cast(arangeIntLocal, arangeLocal, RoundMode::CAST_FLOOR, indicesAlign);
+                PipeBarrier<PIPE_V>();
                 // 计算除以indicesStride的余数
                 Muls(arangeLocal, arangeLocal, 1 / static_cast<float>(indicesStride), indicesAlign);
                 PipeBarrier<PIPE_V>();
-                Cast(indicesTemp, arangeLocal, RoundMode::CAST_FLOOR, indicesAlign);
+                Cast(indicesTemp, arangeLocal, RoundMode::CAST_CEIL, indicesAlign);
                 PipeBarrier<PIPE_V>();
                 Muls(indicesTemp, indicesTemp, static_cast<int>(indicesStride), indicesAlign);
                 PipeBarrier<PIPE_V>();
@@ -146,20 +147,29 @@ public:
                 Muls(indices32Local, indices32Local, selfStride, indicesAlign);
                 PipeBarrier<PIPE_V>();
                 Add(indices32Local, indices32Local, indicesTemp, indicesAlign);
+                CorrectLinearIndex(-indicesStride);
             }
             if constexpr (MODE == 2) { // 二维dim = 1 场景
                 // 构造一个{indicesOffset, indicesOffset+1, indicesOffset+2, ……}的tensor
-                ArithProgression(arangeLocal, static_cast<float>(offset), static_cast<float>(1), indicesAlign);
+                GeneratePositions(arangeLocal, offset);
                 PipeBarrier<PIPE_V>();
                 // 计算除以indicesStride的商
                 Muls(arangeLocal, arangeLocal, 1 / static_cast<float>(indicesStride), indicesAlign);
                 PipeBarrier<PIPE_V>();
-                Cast(indicesTemp, arangeLocal, RoundMode::CAST_FLOOR, indicesAlign);
+                Cast(indicesTemp, arangeLocal, RoundMode::CAST_CEIL, indicesAlign);
+                PipeBarrier<PIPE_V>();
+                LocalTensor<int> quotientProduct = arangeLocal.ReinterpretCast<int>();
+                Muls(quotientProduct, indicesTemp, indicesStride, indicesAlign);
                 PipeBarrier<PIPE_V>();
                 // indices32Local = indices32Local  + selfStride * 商
                 Muls(indicesTemp, indicesTemp, selfStride, indicesAlign);
                 PipeBarrier<PIPE_V>();
                 Add(indices32Local, indicesTemp, indices32Local, indicesAlign);
+                // Recover the integer remainder without allocating another UB buffer.
+                GeneratePositions(indicesTemp, offset);
+                PipeBarrier<PIPE_V>();
+                Sub(indicesTemp, indicesTemp, quotientProduct, indicesAlign);
+                CorrectLinearIndex(selfStride);
             }
             int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
@@ -173,6 +183,37 @@ public:
     }
 
 private:
+    template <typename U>
+    __aicore__ inline void GeneratePositions(const LocalTensor<U>& positions, int offset)
+    {
+        // Seed one vector, then double the initialized prefix to avoid a serial loop per vector.
+        constexpr uint32_t repeatSize = ONE_REPEAT_BYTE_SIZE / sizeof(U);
+        const uint32_t first = indicesAlign < repeatSize ? indicesAlign : repeatSize;
+        // Wait for vector users before the scalar seed overwrites the reused buffer.
+        int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventIDVToS);
+        WaitFlag<HardEvent::V_S>(eventIDVToS);
+        ArithProgression(positions, static_cast<U>(offset), static_cast<U>(1), first);
+        for (int32_t filled = first; filled < indicesAlign; filled *= 2) {
+            const uint32_t count = filled < indicesAlign - filled ? filled : indicesAlign - filled;
+            Adds(positions[filled], positions, static_cast<U>(filled), count);
+            PipeBarrier<PIPE_V>();
+        }
+    }
+
+    __aicore__ inline void CorrectLinearIndex(int scale)
+    {
+        // For 0 <= p <= 2^24 and 1 <= d <= 2^24, let q = floor(p/d).
+        // q0 = ceil(fp32(p * fp32(1/d))) is q or q+1, so r0 = p - q0*d is in [-d, d).
+        LocalTensor<int> correction = arangeLocal.ReinterpretCast<int>();
+        PipeBarrier<PIPE_V>();
+        ShiftRight(correction, indicesTemp, INT32_OFFSET, indicesAlign);
+        PipeBarrier<PIPE_V>();
+        Muls(correction, correction, scale, indicesAlign);
+        PipeBarrier<PIPE_V>();
+        Add(indices32Local, indices32Local, correction, indicesAlign);
+    }
+
     TPipe* pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueIndics;
     TBuf<QuePosition::VECCALC> calcIndices32Buf, calcIndicesBuf, arangeBuffer, arangeIntBuffer;

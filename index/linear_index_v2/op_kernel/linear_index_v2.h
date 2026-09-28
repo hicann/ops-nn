@@ -51,12 +51,12 @@ public:
             for (int j = 0; j < formerTime_; j++) {
                 CopyIn(i, j, true);
                 Compute(true);
-                CopyOut(j, true);
+                CopyOut(i, j, true);
             }
             for (int j = 0; j < tailTime_; j++) {
                 CopyIn(i, j, false);
                 Compute(false);
-                CopyOut(j, false);
+                CopyOut(i, j, false);
             }
         }
     }
@@ -104,8 +104,6 @@ private:
         valueSizeGm_.SetGlobalBuffer((__gm__ int*)valueSize);
         strideGm_.SetGlobalBuffer((__gm__ int*)stride);
         outputGm_.SetGlobalBuffer((__gm__ int*)output + idxAddrOffset_, dataNum_);
-        InitGlobalMemory(outputGm_, dataNum_, 0);
-        SyncAll();
     }
 
     __aicore__ inline void CopyIn(const int64_t progress, const int curTimes, const bool formerFlag)
@@ -144,26 +142,42 @@ private:
         int32_t stride = strideLocal.GetValue(0);
         int32_t size = valueSizeLocal.GetValue(0);
         float sizeDiv = size == 0 ? 1 : 1.0f / size;
-        if constexpr (IS_CAST_INT) {
+        if (size > 0 && (size & (size - 1)) == 0) {
+            // Power-of-two modulo is exact for signed indices; And uses 16-bit lanes.
+            LocalTensor<int> maskLocal = remainQue_.AllocTensor<int>();
+            Duplicate(maskLocal, size - 1, dataNum);
+            if constexpr (IS_CAST_INT) {
+                Cast<int, T>(indexOutLocal, indexLocal, RoundMode::CAST_NONE, dataNum);
+                And(indexOutLocal.ReinterpretCast<uint16_t>(), indexOutLocal.ReinterpretCast<uint16_t>(),
+                    maskLocal.ReinterpretCast<uint16_t>(), dataNum * 2);
+            } else {
+                And(indexOutLocal.ReinterpretCast<uint16_t>(), indexLocal.template ReinterpretCast<uint16_t>(),
+                    maskLocal.ReinterpretCast<uint16_t>(), dataNum * 2);
+            }
+            Muls(indexOutLocal, indexOutLocal, stride, dataNum);
+            remainQue_.FreeTensor<int>(maskLocal);
+        } else if constexpr (IS_CAST_INT) {
             LocalTensor<float> remainLocal = remainQue_.AllocTensor<float>();
             Cast<float, T>(remainLocal, indexLocal, RoundMode::CAST_RINT, dataNum);
             Muls(remainLocal, remainLocal, sizeDiv, dataNum);
-            Cast<int, float>(indexOutLocal, remainLocal, RoundMode::CAST_FLOOR, dataNum);
+            Cast<int, float>(indexOutLocal, remainLocal, RoundMode::CAST_CEIL, dataNum);
             Muls(indexOutLocal, indexOutLocal, size, dataNum);
             remainQue_.FreeTensor<float>(remainLocal);
 
             LocalTensor<int> castLocal = remainQue_.AllocTensor<int>();
             Cast<int, T>(castLocal, indexLocal, RoundMode::CAST_NONE, dataNum);
             Sub(indexOutLocal, castLocal, indexOutLocal, dataNum);
+            CorrectRemainder(indexOutLocal, castLocal, size, dataNum);
             Muls(indexOutLocal, indexOutLocal, stride, dataNum);
             remainQue_.FreeTensor<int>(castLocal);
         } else {
             LocalTensor<float> remainLocal = remainQue_.AllocTensor<float>();
             Cast<float, T>(remainLocal, indexLocal, RoundMode::CAST_NONE, dataNum);
             Muls(remainLocal, remainLocal, sizeDiv, dataNum);
-            Cast<int, float>(indexOutLocal, remainLocal, RoundMode::CAST_FLOOR, dataNum);
+            Cast<int, float>(indexOutLocal, remainLocal, RoundMode::CAST_CEIL, dataNum);
             Muls(indexOutLocal, indexOutLocal, size, dataNum);
             Sub(indexOutLocal, indexLocal, indexOutLocal, dataNum);
+            CorrectRemainder(indexOutLocal, remainLocal.ReinterpretCast<int>(), size, dataNum);
             Muls(indexOutLocal, indexOutLocal, stride, dataNum);
             remainQue_.FreeTensor<float>(remainLocal);
         }
@@ -173,14 +187,35 @@ private:
         indexOutQue_.EnQue<int>(indexOutLocal);
     }
 
-    __aicore__ inline void CopyOut(const int curTimes, const bool formerFlag)
+    __aicore__ inline void CorrectRemainder(const LocalTensor<int>& remainder, const LocalTensor<int>& scratch,
+                                            int32_t size, uint32_t count)
+    {
+        if (size == 0) {
+            return;
+        }
+        // For |index| <= 2^24 and 1 <= size <= 2^24, let q = floor(index/size); CEIL gives q or q+1.
+        // Normalize r0 from [-size, size) into [0, size) by correcting only negative values.
+        PipeBarrier<PIPE_V>();
+        ShiftRight(scratch, remainder, 31, count);
+        PipeBarrier<PIPE_V>();
+        Muls(scratch, scratch, size, count);
+        PipeBarrier<PIPE_V>();
+        Sub(remainder, remainder, scratch, count);
+        PipeBarrier<PIPE_V>();
+    }
+
+    __aicore__ inline void CopyOut(const int tensorIndex, const int curTimes, const bool formerFlag)
     {
         LocalTensor<int> indexOutLocal = indexOutQue_.DeQue<int>();
         uint32_t copyNum = formerFlag ? formerDataNum_ : tailDataNum_;
         int64_t addrOffset = formerFlag ? formerDataNum_ * curTimes :
                                           formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(copyNum * sizeof(int)), 0, 0, 0};
-        SetAtomicAdd<int32_t>();
+        // Each core owns a disjoint output range; the first tensor initializes it.
+        // The single-buffer output queue completes each write before the next accumulation.
+        if (tensorIndex != 0) {
+            SetAtomicAdd<int32_t>();
+        }
         DataCopyPad(outputGm_[addrOffset], indexOutLocal, idxCopyParams);
         SetAtomicNone();
         indexOutQue_.FreeTensor<int>(indexOutLocal);
