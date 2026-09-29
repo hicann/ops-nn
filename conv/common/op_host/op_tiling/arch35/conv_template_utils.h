@@ -362,6 +362,7 @@ struct ConvAscendcTilingFlag {
     bool disContinuousFlag = false;
     ge::Format scaleFormat = ge::FORMAT_ND;
     bool isKernelSplit = false;
+    bool isASWT = false;
 };
 
 struct ConvAscendcDescInfo {

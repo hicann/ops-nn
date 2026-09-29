@@ -91,7 +91,8 @@ void Conv2dBaseTiling::PrintLibApiTilingDataPartOne(std::stringstream& ss)
        << ", hasScale: " << static_cast<uint32_t>(tilingData_.get_hasScale())
        << ", offsetx: " << static_cast<uint32_t>(tilingData_.get_offsetx())
        << ", roundMode: " << static_cast<uint32_t>(tilingData_.get_roundMode())
-       << ", innerBatch: " << static_cast<uint32_t>(tilingData_.get_innerBatch());
+       << ", innerBatch: " << static_cast<uint32_t>(tilingData_.get_innerBatch())
+       << ", mWindows: " << tilingData_.get_mWindows();
 }
 
 void Conv2dBaseTiling::PrintLibApiTilingData()

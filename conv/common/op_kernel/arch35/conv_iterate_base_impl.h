@@ -534,8 +534,14 @@ __aicore__ inline void FreeL1Tensor(Intf* self)
         if constexpr (Intf::groupOptPreloadFlag) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
         } else if constexpr (Intf::isMPreLoad) {
-            if ((self->ctx.mL0Iter + 1) % CeilDiv(self->ctx.convTilingData->hoL1, self->ctx.convTilingData->hoL0) ==
-                0) {
+            if (unlikely(self->ctx.convTilingData->mWindows != 0)) {
+                // Only ASWT tasks use the actual M tail to release a partially consumed L1 block.
+                if (self->ctx.mL0Iter == self->ctx.maxML0Iter) {
+                    self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+                }
+            } else if ((self->ctx.mL0Iter + 1) %
+                           CeilDiv(self->ctx.convTilingData->hoL1, self->ctx.convTilingData->hoL0) ==
+                       0) {
                 self->ctx.queueAL1.FreeTensor(self->ctx.al1);
             }
         } else {

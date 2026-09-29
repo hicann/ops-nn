@@ -226,6 +226,7 @@ struct Conv2DTilingData {
     uint8_t clipMode1 = 0;
     int8_t offsetx = 0;
     int8_t roundMode = 0;
+    uint32_t mWindows = 0;
 };
 
 #pragma pack()

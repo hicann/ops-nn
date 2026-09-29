@@ -186,6 +186,32 @@ static __aicore__ inline uint64_t AlignB(uint64_t a, uint64_t b) { return ((a + 
 
 static __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
 
+struct ASWTBlockIndex {
+    uint64_t mBlock;
+    uint32_t nBlock;
+};
+
+// Decode a packed ASWT task into logical M/N blocks; the caller may flatten batch into M.
+// Block counts and windowSize must be positive, and taskIdx must be below mBlocks * nBlocks.
+static __aicore__ inline ASWTBlockIndex CalcASWTBlockIndex(uint64_t taskIdx, uint64_t mBlocks, uint32_t nBlocks,
+                                                           uint32_t windowSize)
+{
+    // Bound the initial window even when the caller has not clamped it on the host.
+    windowSize = mBlocks < windowSize ? static_cast<uint32_t>(mBlocks) : windowSize;
+    uint64_t fullWindowTasks = static_cast<uint64_t>(windowSize) * nBlocks;
+    uint64_t windowIdx = taskIdx / fullWindowTasks;
+    uint64_t windowMStart = windowIdx * windowSize;
+    uint64_t remainM = mBlocks - windowMStart;
+    // Keep full-window strides when locating the window; only its local M extent shrinks at the tail.
+    uint32_t curWindowM = remainM < windowSize ? static_cast<uint32_t>(remainM) : windowSize;
+    uint64_t taskInWindow = taskIdx - windowIdx * fullWindowTasks;
+    uint32_t nOrder = static_cast<uint32_t>(taskInWindow / curWindowM);
+    uint32_t mOrder = static_cast<uint32_t>(taskInWindow % curWindowM);
+    // M varies first inside a window, and adjacent windows traverse N in opposite directions.
+    uint32_t nBlock = (windowIdx & 1) == 0 ? nOrder : nBlocks - 1 - nOrder;
+    return {windowMStart + mOrder, nBlock};
+}
+
 enum class QuantModeType : std::uint8_t { NO_QUANT = 0, SCALAR_QUANT, VECTOR_QUANT };
 
 } // namespace conv

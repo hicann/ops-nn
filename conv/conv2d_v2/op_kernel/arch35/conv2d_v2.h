@@ -73,6 +73,9 @@ protected:
 
     // Conv2d op kernel impl intf
     __aicore__ inline void Conv2dKernelImpl();
+    __aicore__ inline void Conv2dASWTKernelImpl();
+    __aicore__ inline void SetASWTTile(uint64_t taskIdx);
+    __aicore__ inline void IterateSingleTile();
 
 public:
     // Get dtype
@@ -131,6 +134,11 @@ public:
     bool hasScale = false;
     uint64_t fmapOneBatchSize = 0;
     uint64_t outputOneBatchSize = 0;
+    GM_ADDR xAddr = nullptr;
+    GM_ADDR filterAddr = nullptr;
+    GM_ADDR biasAddr = nullptr;
+    GM_ADDR yAddr = nullptr;
+    const ExtendParams* extendParamsAddr = nullptr;
 
     constexpr static uint32_t din = 1;
     constexpr static uint32_t dout = 1;
@@ -140,6 +148,10 @@ public:
     constexpr static ConvFormat B_FORMAT = WEIGHT_TYPE::format;
     constexpr static ConvFormat C_FORMAT = OUTPUT_TYPE::format;
     constexpr static bool isMMode = CONV_CFG::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE);
+    constexpr static bool isASWTEligible = isMMode &&
+                                           CONV_CFG::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
+    // Let the existing M preload overlap two L1 blocks within each ASWT task.
+    constexpr static uint32_t aswtMBlockFactor = decltype(conv)::isMPreLoad ? 2 : 1;
     constexpr static bool isQuant = (IsSameType<FMAP_T, int8_t>::value && IsSameType<OUTPUT_T, half>::value) ||
                                     (IsSameType<FMAP_T, int8_t>::value && IsSameType<OUTPUT_T, int8_t>::value) ||
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
@@ -169,9 +181,16 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
                                                              const Conv2DTilingData& convTilingData,
                                                              const ExtendParams* extendParams)
 {
-    if (Conv2dKernelInit(x, filter, bias, y, extendParams, convTilingData)) {
-        Conv2dKernelImpl();
+    if (!Conv2dKernelInit(x, filter, bias, y, extendParams, convTilingData)) {
+        return;
     }
+    if constexpr (isASWTEligible) {
+        if (unlikely(convTilingData.mWindows != 0)) {
+            Conv2dASWTKernelImpl();
+            return;
+        }
+    }
+    Conv2dKernelImpl();
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
@@ -185,6 +204,17 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     convCommon.Init(this, convTilingData, hasScale);
 
     conv.Init(convTilingData);
+
+    if constexpr (isASWTEligible) {
+        if (unlikely(convTilingData->mWindows != 0)) {
+            xAddr = x;
+            filterAddr = filter;
+            biasAddr = bias;
+            yAddr = y;
+            extendParamsAddr = extendParams;
+            return true;
+        }
+    }
 
     if constexpr (A_FORMAT == ConvFormat::NCHW) {
         if constexpr (isMMode) {
@@ -320,6 +350,86 @@ Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>
         conv.IterateAll(outputGm);
     }
 
+    conv.End();
+}
+
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::SetASWTTile(
+    uint64_t taskIdx)
+{
+    uint64_t totalM = static_cast<uint64_t>(convTilingData->hout) * convTilingData->wout;
+    uint64_t mTile = static_cast<uint64_t>(convTilingData->hoL1) * aswtMBlockFactor;
+    uint64_t mBlocks = (totalM + mTile - 1) / mTile;
+    uint32_t nTile = convTilingData->nBL1;
+    uint32_t nBlocks = static_cast<uint32_t>(conv::CeilDiv(convTilingData->cout, nTile));
+    uint32_t batchTile = convTilingData->innerBatch;
+    uint64_t batchMBlocks = batchTile > 1 ? conv::CeilDiv(convTilingData->batch, batchTile) :
+                                            static_cast<uint64_t>(convTilingData->batch) * mBlocks;
+    conv::ASWTBlockIndex index = conv::CalcASWTBlockIndex(taskIdx, batchMBlocks, nBlocks, convTilingData->mWindows);
+
+    if constexpr (CONV_CFG::innerBatch != static_cast<int8_t>(ConvInnerBatch::SINGLE_BATCH)) {
+        // InnerBatch tiles contain complete output planes. Batch offsets are GM offsets, not M coordinates.
+        batchIdxStart = index.mBlock * batchTile;
+        uint32_t remainBatch = convTilingData->batch - static_cast<uint32_t>(batchIdxStart);
+        singleCoreBatch = batchTile < remainBatch ? batchTile : remainBatch;
+        mIdxStart = 0;
+        singleCoreM = totalM;
+    } else {
+        batchIdxStart = index.mBlock / mBlocks;
+        singleCoreBatch = 1;
+        mIdxStart = (index.mBlock % mBlocks) * mTile;
+        singleCoreM = mTile < totalM - mIdxStart ? mTile : totalM - mIdxStart;
+    }
+    nIdxStart = static_cast<uint64_t>(index.nBlock) * nTile;
+    uint32_t remainN = convTilingData->cout - static_cast<uint32_t>(nIdxStart);
+    singleCoreN = nTile < remainN ? nTile : remainN;
+}
+
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void
+Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::IterateSingleTile()
+{
+    conv.SetSingleOutputShape(singleCoreN, singleCoreM, singleCoreBatch);
+    InitBuffer(xAddr, filterAddr, biasAddr, yAddr, extendParamsAddr);
+    conv.SetFmapStartPosition(mIdxStart);
+    conv.SetWeight(filterGm);
+    if (convTilingData->hasBias) {
+        conv.SetBias(biasGm);
+    }
+    if constexpr (isQuant || CONV_CFG::isExtendConv2d) {
+        if (hasScale) {
+            conv.SetFixpipeParams(fixpipeParams);
+        }
+    }
+    conv.SetFmap(fmapGm);
+    if constexpr (CONV_CFG::isExtendConv2d) {
+        if (convTilingData->dualOutput) {
+            conv.IterateAll(outputGm, output1Gm);
+        } else {
+            conv.IterateAll(outputGm);
+        }
+    } else {
+        conv.IterateAll(outputGm);
+    }
+}
+
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void
+Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::Conv2dASWTKernelImpl()
+{
+    uint64_t totalM = static_cast<uint64_t>(convTilingData->hout) * convTilingData->wout;
+    uint64_t mTile = static_cast<uint64_t>(convTilingData->hoL1) * aswtMBlockFactor;
+    uint64_t mBlocks = convTilingData->innerBatch > 1 ? 1 : conv::CeilDiv(totalM, mTile);
+    uint32_t nBlocks = static_cast<uint32_t>(conv::CeilDiv(convTilingData->cout, convTilingData->nBL1));
+    uint32_t batchBlocks = static_cast<uint32_t>(conv::CeilDiv(convTilingData->batch, convTilingData->innerBatch));
+    uint64_t totalTasks = static_cast<uint64_t>(batchBlocks) * mBlocks * nBlocks;
+    // ASWT on 1952 uses the AI Core block count set by the host directly.
+    uint32_t blockNum = GetBlockNum();
+    // Pack all valid window/N tiles before distributing them. Remainder cores and N tails need no idle groups.
+    for (uint64_t taskIdx = convCommon.blockIdx; taskIdx < totalTasks; taskIdx += blockNum) {
+        SetASWTTile(taskIdx);
+        IterateSingleTile();
+    }
     conv.End();
 }
 

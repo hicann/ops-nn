@@ -122,6 +122,7 @@ TILING_DATA_FIELD_DEF(uint8_t, clipMode1);
 TILING_DATA_FIELD_DEF(uint8_t, fixedShiftValue);
 TILING_DATA_FIELD_DEF(int8_t, offsetx);
 TILING_DATA_FIELD_DEF(int8_t, roundMode);
+TILING_DATA_FIELD_DEF(uint32_t, mWindows);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Conv2DV2, Conv2DTilingData)

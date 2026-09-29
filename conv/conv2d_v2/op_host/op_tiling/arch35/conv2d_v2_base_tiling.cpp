@@ -21,6 +21,8 @@
 #include <cstring>
 #include <securec.h>
 
+#include "conv/common/op_kernel/arch35/conv_tilingkey.h"
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
@@ -460,6 +462,8 @@ ge::graphStatus Conv2dBaseTiling::DoLibApiTiling()
     if (GetConv2dApiTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    SetNumBlocksRes();
+    CalcASWTStrategy();
     if (SetTilingKey() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -494,6 +498,7 @@ ge::graphStatus Conv2dBaseTiling::DoOpTiling()
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
         SetNumBlocksRes();
+        CalcASWTStrategy();
         if (SetTilingKey() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
@@ -521,13 +526,74 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
 {
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
-    if (flagInfo_.mSplitModeFlag) {
+    if (flagInfo_.isASWT) {
+        uint64_t totalM = shapeInfo_.ho * shapeInfo_.wo;
+        uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, GetASWTMTile());
+        uint64_t nBlocks = ConvCeilDiv(shapeInfo_.co, tilingData_.get_nBL1());
+        uint64_t batchBlocks = ConvCeilDiv(shapeInfo_.batch, tilingData_.get_innerBatch());
+        context_->SetBlockDim(std::min<uint64_t>(batchBlocks * mBlocks * nBlocks, opInfo_->aicoreNum));
+    } else if (flagInfo_.mSplitModeFlag) {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim * numBlocksRes.groupDim);
     } else {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.hoDim * numBlocksRes.woDim *
                               numBlocksRes.groupDim);
     }
     return ge::GRAPH_SUCCESS;
+}
+
+uint64_t Conv2dBaseTiling::GetASWTMTile()
+{
+    // Match Conv2dIntf::isMPreLoad using the same values that form the tiling key.
+    uint64_t smallWeight = GetSmallWeightVal();
+    bool isMPreLoad = (smallWeight == CONV_FULLLOAD_KL1_NL0 || smallWeight == CONV_WEIGHT_SMALLER_THAN_BL0) &&
+                      flagInfo_.mSplitModeFlag && GetEnableInnerBatch() == CONV_INNER_BATCH_SINGLE &&
+                      GetL1PingPongVal() == CONV_L1_PINGPONG_AL1_OPEN;
+    // Group two existing L1 blocks into one task; keep the L1 allocation and copy size unchanged.
+    return static_cast<uint64_t>(tilingData_.get_hoL1()) * (isMPreLoad ? 2 : 1);
+}
+
+void Conv2dBaseTiling::CalcASWTStrategy()
+{
+    tilingData_.set_mWindows(0);
+    flagInfo_.isASWT = false;
+    // Keep L1 pingpong on the original schedule until ASWT supports preloading across tasks.
+    if (tilingData_.get_pBufferFlag() > 7) {
+        return;
+    }
+    uint64_t usedCores = numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim * numBlocksRes.groupDim;
+    bool a16w16 = (descInfo_.fMapDtype == ge::DT_FLOAT16 || descInfo_.fMapDtype == ge::DT_BF16) &&
+                  descInfo_.fMapDtype == descInfo_.weightDtype;
+    bool a8w8 = descInfo_.fMapDtype == ge::DT_INT8 && descInfo_.weightDtype == ge::DT_INT8;
+    bool a16w8 = descInfo_.fMapDtype == ge::DT_FLOAT16 && descInfo_.weightDtype == ge::DT_INT8;
+    bool supportedFormat = (descInfo_.fMapFormat == ge::FORMAT_NCHW || descInfo_.fMapFormat == ge::FORMAT_NHWC) &&
+                           (descInfo_.outFormat == ge::FORMAT_NCHW || descInfo_.outFormat == ge::FORMAT_NHWC) &&
+                           (descInfo_.weightFormat == ge::FORMAT_FRACTAL_Z ||
+                            descInfo_.weightFormat == ge::FORMAT_FRACTAL_Z_C04);
+    bool supported = opInfo_->npuArch == NpuArch::DAV_5102 && flagInfo_.mSplitModeFlag &&
+                     flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && attrInfo_.groups == 1 &&
+                     !flagInfo_.disContinuousFlag && GetSmallKernelVal() == CONV_NOT_SMALL_KERNEL &&
+                     (a16w16 || a8w8 || a16w8) && supportedFormat && opInfo_->aicoreNum != 0 &&
+                     tilingData_.get_innerBatch() != 0 && tilingData_.get_hoL1() != 0 && tilingData_.get_nBL1() != 0;
+    if (!supported) {
+        return;
+    }
+
+    uint64_t totalM = shapeInfo_.ho * shapeInfo_.wo;
+    uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, GetASWTMTile());
+    uint64_t nBlocks = ConvCeilDiv(shapeInfo_.co, tilingData_.get_nBL1());
+    uint64_t batchBlocks = ConvCeilDiv(shapeInfo_.batch, tilingData_.get_innerBatch());
+    uint64_t totalBlocks = batchBlocks * mBlocks * nBlocks;
+
+    // Round sqrt(core count) up to an even window, then limit it to the available logical M blocks.
+    uint32_t mWindows = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(opInfo_->aicoreNum))));
+    mWindows = (mWindows + 1) / 2 * 2;
+    mWindows = static_cast<uint32_t>(std::min<uint64_t>(batchBlocks * mBlocks, mWindows));
+    tilingData_.set_mWindows(mWindows);
+    flagInfo_.isASWT = true;
+    OP_LOGI(context_->GetNodeName(),
+            "[ASWT] enabled, mWindows=%u, totalBlocks=%lu, usedCores=%lu, aicoreNum=%u, innerBatch=%u",
+            tilingData_.get_mWindows(), totalBlocks, usedCores, opInfo_->aicoreNum,
+            static_cast<uint32_t>(tilingData_.get_innerBatch()));
 }
 
 ge::graphStatus Conv2dBaseTiling::GetWorkspaceSize()
