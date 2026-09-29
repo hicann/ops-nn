@@ -366,6 +366,12 @@ def isclose_compare(npu_out, golden_out, compare_context=None, **kwargs):
     if hasattr(golden_out, "detach"):
         golden_out = torch_to_numpy(golden_out)
 
+    # 空张量短路（对齐 ttk 内置比对语义）：都空→PASS；仅一方空→FAIL
+    if npu_out.size == 0 and golden_out.size == 0:
+        return {"pass": True, "precision": 100.0}
+    if npu_out.size == 0 or golden_out.size == 0:
+        return {"pass": False, "precision": 0.0}
+
     csv = compare_context.csv_fields if compare_context else {}
 
     if np.issubdtype(npu_out.dtype, np.integer):
