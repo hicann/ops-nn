@@ -233,7 +233,7 @@ aclnnStatus aclnnAvgPool2dBackward(
       * <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为FLOAT16计算。当输入为其他数据类型时不做处理。
       <!-- end id11 -->
       <!-- npu="A3,910b" id12 -->
-      * <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
+      * <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：当输入数据类型为FLOAT32时，会转换为FLOAT16计算。当输入为其他数据类型时不做处理。
       <!-- end id12 -->
       <!-- npu="950" id13 -->
       * <term>Ascend 950PR&950DT系列产品</term>：在globalPooling模式下，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
