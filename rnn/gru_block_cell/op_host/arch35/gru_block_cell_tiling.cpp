@@ -25,7 +25,7 @@
 #include "graph/utils/type_utils.h"               // ge::TypeUtils::DataTypeToSerialString / FormatToSerialString
 #include "../../op_kernel/arch35/gru_block_cell_tiling_struct.h" // GruBlockCellTilingData
 #include "../../op_kernel/arch35/gru_block_cell_struct.h"        // GRU_BLOCK_CELL_TPL_FP32 / GET_TPL_TILING_KEY
-#include "gru_block_cell_tiling_arch35.h"                        // GruBlockCellCompileInfo
+#include "gru_block_cell_tiling.h"                               // GruBlockCellCompileInfo
 
 #include <algorithm>
 #include <cstdint>
@@ -328,6 +328,25 @@ static int64_t UbTileCap(int64_t mChunk, int64_t ubAvail)
     return gru_block_cell::AlignDown(8 * (ubAvail - 32) / denom, GRU_TIL_CUBE_BLOCK);
 }
 
+// nSlice/kc 收尾（ComputeLayoutDecision 尾段与 A1 split2 候选覆盖共用单一实现）：
+// nSlice = min(nL0c, l0b/(4·16))；kc 受 L0B 的 [kc, nSlice] 片、L0A 的 [mChunk,kc] 片
+// （SplitA 落点）与组宽 kgMax 三道界。⚠ 只算 L0B 会在 kg 上调时让 kc 跟着涨而击穿 L0A。
+static void FinalizeSliceKc(LayoutDecision& d, const PlatformCaps& caps)
+{
+    d.nSlice = std::min(d.nL0c, caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * GRU_TIL_CUBE_BLOCK));
+    if (d.nSlice < GRU_TIL_CUBE_BLOCK) {
+        d.nSlice = GRU_TIL_CUBE_BLOCK;
+    }
+    const int64_t kcCapB = caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * d.nSlice);
+    const int64_t kcCapA = caps.l0aSize /
+                           (gru_block_cell::BYTES_PER_FP32 * gru_block_cell::AlignUp(d.mChunk, GRU_TIL_CUBE_BLOCK));
+    const int64_t kgMax = std::max(d.kgX, d.kgH);
+    d.kc = std::min({gru_block_cell::AlignDown(std::min(kcCapB, kcCapA), GRU_TIL_CUBE_BLOCK), kgMax});
+    if (d.kc < GRU_TIL_CUBE_BLOCK) {
+        d.kc = GRU_TIL_CUBE_BLOCK;
+    }
+}
+
 static LayoutDecision ComputeLayoutDecision(int64_t batchSize, int64_t inputSize, int64_t hiddenSize,
                                             int64_t rowsPerCore, const PlatformCaps& caps)
 {
@@ -366,6 +385,9 @@ static LayoutDecision ComputeLayoutDecision(int64_t batchSize, int64_t inputSize
     const int64_t weightBytes = 3 * kDim * d.padHidden * gru_block_cell::BYTES_PER_FP32; // wRu + wC
     const int64_t aStreamBytes = batchSize * kDim * gru_block_cell::BYTES_PER_FP32;      // 一次完整 A 流
     const int64_t actBytes = 7 * batchSize * hiddenSize * gru_block_cell::BYTES_PER_FP32;
+    // B1：pass1 的 h 段每列片从 GM 重读 hPrev+r 现场重算 hr（去全幅 aH 的代价）——
+    // 2 流 × batchSize × hiddenSize，随 nTiles（列片数）线性，故须计入以抑制 mChunk 过大。
+    const int64_t hrRecalcBytes = 2 * batchSize * hiddenSize * gru_block_cell::BYTES_PER_FP32;
     const int64_t cores = std::max<int64_t>(1, caps.coreNum);
 
     int64_t bestM = 0;
@@ -382,12 +404,14 @@ static LayoutDecision ComputeLayoutDecision(int64_t batchSize, int64_t inputSize
         if (ntHi < GRU_TIL_CUBE_BLOCK) {
             continue; // 该 mChunk 下 UB/L0C 容不下一个 N 分形
         }
-        // aK/aH 与 nt 无关，先算出来；b 槽/bias 槽随 nt 单调增，故从 ntHi 向下收缩
-        // 到 L1 放得下为止（不能因 ntHi 超界就整个丢弃该 mChunk —— 实测 Hp=6896
-        // 会把 mChunk 误压到兜底值 1，权重重灌翻 4 倍）。
-        const int64_t aBytes = (gru_block_cell::CeilDiv(kgMax, GRU_TIL_C0F) +
-                                gru_block_cell::CeilDiv(d.padHidden, GRU_TIL_C0F)) *
-                               mAligned * GRU_TIL_C0F * gru_block_cell::BYTES_PER_FP32;
+        // B1：aK 与 nt 无关，先算出来（aH 全幅回灌槽已删除——pass1 的 h 段改由 AIV 逐组
+        // 从 GM 的 r+hPrev 现场重算 hr 切片，故 L1 的 A 侧足迹与 Hp 解耦，mChunk 不再被
+        // aH 钉死）；b 槽/bias 槽随 nt 单调增，故从 ntHi 向下收缩到 L1 放得下为止。
+        // S2：aK/b 各双槽（门级预取）；S3'：hr 独立**三槽** aHR（pass1 深度-2 流水，
+        // AIV 前瞻-3 写——前瞻-2 会踩跨核 L1 写可见性延迟，见 kernel pass1 注释）
+        // ——A 侧合计 5×单槽（aK×2 + aHR×3，同尺寸），b 侧 2×单槽。
+        const int64_t aBytes = 5 * gru_block_cell::CeilDiv(kgMax, GRU_TIL_C0F) * mAligned * GRU_TIL_C0F *
+                               gru_block_cell::BYTES_PER_FP32;
         int64_t nt = 0;
         for (int64_t cand = ntHi; cand >= GRU_TIL_CUBE_BLOCK; cand -= GRU_TIL_CUBE_BLOCK) {
             // b 槽宽 nSlice 受 L0B 上界钳位（⚠ 漏掉这一钳会把 b 槽算大数倍而误拒），
@@ -398,19 +422,20 @@ static LayoutDecision ComputeLayoutDecision(int64_t batchSize, int64_t inputSize
                                                    GRU_TIL_CUBE_BLOCK),
                          kgMax),
                 GRU_TIL_CUBE_BLOCK);
-            const int64_t bBytes = (sl / GRU_TIL_C0F) * gru_block_cell::AlignUp(kcc, GRU_TIL_CUBE_BLOCK) * GRU_TIL_C0F *
-                                   gru_block_cell::BYTES_PER_FP32;
+            const int64_t bBytes = 2 * (sl / GRU_TIL_C0F) * gru_block_cell::AlignUp(kcc, GRU_TIL_CUBE_BLOCK) *
+                                   GRU_TIL_C0F * gru_block_cell::BYTES_PER_FP32; // S2：b 双槽
             if (aBytes + bBytes + gru_block_cell::AlignUp(cand * 4, 64) <= caps.l1Size) {
                 nt = cand;
                 break;
             }
         }
         if (nt < GRU_TIL_CUBE_BLOCK) {
-            continue; // 该 mChunk 下 aH 全幅槽已占满 L1，连最小 N 分形都放不下
+            continue; // 该 mChunk 下 L1（aK+b+bias）已容不下最小 N 分形
         }
         const int64_t nChunks = cores * gru_block_cell::CeilDiv(gru_block_cell::CeilDiv(batchSize, cores), mc);
         const int64_t nTiles = gru_block_cell::CeilDiv(d.padHidden, nt);
-        const int64_t cost = nChunks * weightBytes + 2 * nTiles * aStreamBytes + actBytes;
+        // B1 cost：权重重灌（∝nChunks）+ A 流重读（∝nTiles）+ hr 现场重算重读（∝nTiles）+ 激活。
+        const int64_t cost = nChunks * weightBytes + 2 * nTiles * aStreamBytes + nTiles * hrRecalcBytes + actBytes;
         if (cost < bestCost) {
             bestCost = cost;
             bestM = mc;
@@ -430,21 +455,8 @@ static LayoutDecision ComputeLayoutDecision(int64_t batchSize, int64_t inputSize
     d.nL0c = bestN;
     d.sliced = (d.nAl > d.nL0c);
 
-    // ---- nSlice/kc：B-tile [kc, nSlice] 同驻 L0B 与 L1 ----
-    d.nSlice = std::min(d.nL0c, caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * GRU_TIL_CUBE_BLOCK));
-    if (d.nSlice < GRU_TIL_CUBE_BLOCK) {
-        d.nSlice = GRU_TIL_CUBE_BLOCK;
-    }
-    // kc 三道界：L0B 的 [kc, nSlice] 片、L0A 的 [mChunk, kc] 片（SplitA 落点）、
-    // 以及组宽 kgMax（组内 K 不会超过一个组）。⚠ 原式只算了 L0B，kg 上调后
-    // kc 跟着涨会击穿 L0A（64KB）→ 设备域越界。
-    const int64_t kcCapB = caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * d.nSlice);
-    const int64_t kcCapA = caps.l0aSize /
-                           (gru_block_cell::BYTES_PER_FP32 * gru_block_cell::AlignUp(d.mChunk, GRU_TIL_CUBE_BLOCK));
-    d.kc = std::min({gru_block_cell::AlignDown(std::min(kcCapB, kcCapA), GRU_TIL_CUBE_BLOCK), kgMax});
-    if (d.kc < GRU_TIL_CUBE_BLOCK) {
-        d.kc = GRU_TIL_CUBE_BLOCK;
-    }
+    // ---- nSlice/kc：B-tile [kc, nSlice] 同驻 L0B 与 L1（A1 split2 候选共用）----
+    FinalizeSliceKc(d, caps);
     return d;
 }
 
@@ -466,14 +478,26 @@ static bool CheckLayoutCapacity(gert::TilingContext* context, const LayoutDecisi
     const int64_t btAlign = 64;
     const int64_t kgMax = std::max(d.kgX, d.kgH);
     const int64_t mAligned = gru_block_cell::AlignUp(d.mChunk, GRU_TIL_CUBE_BLOCK);
-    const int64_t aKBytes = gru_block_cell::CeilDiv(kgMax, GRU_TIL_C0F) * mAligned * GRU_TIL_C0F *
+    // S2：aK/b 各双槽（门级预取）；S3'：hr 独立三槽 aHR（与 aK 同尺寸，前瞻-3 的
+    // 跨核 L1 可见性裕量）——A 侧 5×单槽。
+    const int64_t aKBytes = 5 * gru_block_cell::CeilDiv(kgMax, GRU_TIL_C0F) * mAligned * GRU_TIL_C0F *
                             gru_block_cell::BYTES_PER_FP32;
-    const int64_t aHBytes = gru_block_cell::CeilDiv(d.padHidden, GRU_TIL_C0F) * mAligned * GRU_TIL_C0F *
-                            gru_block_cell::BYTES_PER_FP32;
-    const int64_t bBytes = (d.nSlice / GRU_TIL_C0F) * gru_block_cell::AlignUp(d.kc, GRU_TIL_CUBE_BLOCK) * GRU_TIL_C0F *
-                           gru_block_cell::BYTES_PER_FP32;
+    const int64_t bBytes = 2 * (d.nSlice / GRU_TIL_C0F) * gru_block_cell::AlignUp(d.kc, GRU_TIL_CUBE_BLOCK) *
+                           GRU_TIL_C0F * gru_block_cell::BYTES_PER_FP32;
     const int64_t biasBytes = gru_block_cell::AlignUp(d.nL0c * gru_block_cell::BYTES_PER_FP32, btAlign);
-    const int64_t l1Bytes = aKBytes + aHBytes + bBytes + biasBytes;
+    // B1：L1 = aK + b + bias（aH 全幅回灌槽已删除——pass1 的 h 段改逐组现场重算 hr 进
+    // aK）。aH 曾是 Hp 的隐式上界（CeilAlign(mChunk,16)×Hp×4 ≤ L1 余量 ⇒ Hp ≤ 8152）；
+    // 删除后 L1 不再随 Hp 增长，故 Hp 上界改由此处**显式 gate** 承载，保持支持域不回缩
+    // 也不外扩（H-accept 8152 通过 / H-reject 8160 拒绝的既有契约不变；上界外扩需重验，
+    // 见优化方案 B1 备注）。
+    const int64_t l1Bytes = aKBytes + bBytes + biasBytes;
+    if (d.padHidden > GRU_TIL_MAX_PAD_HIDDEN) {
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                        "padHidden=%ld exceeds supported bound %ld (B1 explicit Hp gate; the aH-full-"
+                                        "width L1 slot that implicitly enforced this bound was removed).",
+                                        d.padHidden, static_cast<int64_t>(GRU_TIL_MAX_PAD_HIDDEN));
+        return false;
+    }
     const int64_t rowsMax = (d.mChunk + 1) / 2;
     const int64_t planeElems = rowsMax * d.nL0c;
     const int64_t mskBytes = gru_block_cell::CeilDiv(planeElems, GRU_TIL_BITS_PER_BYTE) * 1; // 1 bit/元素
@@ -639,6 +663,158 @@ static RowSplit MultiCoreSplitRows(int64_t batchSize, int64_t sM, int64_t coreNu
     return r;
 }
 
+// ---------------------------------------------------------------------------
+// A1（splitMode=2 行列 2D 分派）决策 — per-core 墙时字节等价成本模型（全 int64，
+// UT 镜像逐式复刻）。动机（R1）：B 小 ⇒ 行切只出 1~4 核、权重流读集中在少数核
+// （~35GB/s/核）；split2 把列片切给 nsc 组（core k → rowChunk=k/nsc, sliceGrp=k%nsc），
+// 每核只读自己组权重（÷nsc），pass0 后一次 SyncAll 屏障，pass1 跨核读 r 重算 hr。
+//   est = max(perCoreTraffic, totalTraffic×7/250)   单核带宽墙 ∨ 聚合墙（35GB/s、1.25TB/s）
+//       + rounds×12600（!pf 加倍）                  逐组握手链（~1.2μs/轮 × 重叠 0.3）
+//       [+ 350000]                                  一次 SyncAll（≈10μs）
+//   perCoreTraffic = nChunk×W×tl/nTiles + nChunk×tl×rows×(2I+3H)×4 + 5×rows×Hl×4
+//                    （权重份额 + A 流 pass0 K/pass1 I/hr 重算 2H + 输出与 u 回读）
+// 翻转判据：estBase ≥ 10MB（μs 小形状不重构）∧ est2 < 0.8×estBase（20% 裕量）。
+// Cluster B 域 rows_rc 翻倍 ⇒ A 流重读结构性劣后，自然不翻转（已验证通路零扰动）。
+// ⚠ 精度契约：每列 K 组合并序与分派无关 ⇒ splitMode 0/1/2 输出逐位一致（DUMP 实证）。
+// ---------------------------------------------------------------------------
+constexpr int64_t GRU_A1_AGG_NUM = 7; // 聚合带宽折算 total×7/250（1.25TB/s ÷ 35GB/s ≈ 35.7）
+constexpr int64_t GRU_A1_AGG_DEN = 250;
+constexpr int64_t GRU_A1_ROUND_BYTES = 12600;      // 每轮握手字节等价（0.3×1.2μs×35GB/s）
+constexpr int64_t GRU_A1_ROUND_BYTES_SLOW = 25200; // !pf 旧路（nL0c>l0b/64）握手加倍
+constexpr int64_t GRU_A1_BARRIER_BYTES = 350000;   // 一次 SyncAll<false>()（≈10μs×35GB/s）
+constexpr int64_t GRU_A1_MIN_BASE_COST = 10000000; // 基线 est ≥10MB（≈286μs 单核流读）才考虑 split2
+constexpr int64_t GRU_A1_MARGIN_NUM = 80;          // est2 < estBase×80/100 才翻转
+constexpr int64_t GRU_A1_MARGIN_DEN = 100;
+
+// 饱和乘：字节等价成本只做大小比较——病态大 B 域钳位防 int64 回绕翻转决策
+// （现实 Cluster 域远低于钳位线；钳位后 est2≈estBase ⇒ 判据自然不翻转）。
+static int64_t SatMul(int64_t a, int64_t b)
+{
+    constexpr int64_t kSat = INT64_MAX / 4;
+    if (a == 0 || b == 0) {
+        return 0;
+    }
+    if (a > kSat / b) {
+        return kSat;
+    }
+    return a * b;
+}
+
+struct Split2Decision {
+    bool valid = false;
+    int64_t estCost = INT64_MAX; // 字节等价 per-core 墙时（与 EstRowSplitCost 同尺）
+    int64_t mChunk = 0;
+    int64_t nL0c = 0;
+    int64_t sliceCores = 0;  // nsc：列片组数
+    int64_t coresUsed = 0;   // rc×nsc（行块数 rc = coresUsed/sliceCores 可还原，不冗余登记）
+    int64_t rowsPerCore = 0; // 行块商 q = B/rc
+    int64_t rowsTail = 0;    // 行块余 rem = B%rc（前 rem 块各 +1 行）
+};
+
+// per-core 字节等价墙时：max(单核带宽墙, 聚合带宽墙) + 握手链 [+ 屏障]
+// （聚合项先除后乘：SatMul 钳位值 ×AGG_NUM 会越 int64 上界——除法先行则恒安全，
+// 截断差 ≤ AGG_NUM 字节，对排序无影响）
+static int64_t EstWallBytes(int64_t perCoreTraffic, int64_t coresUsed, int64_t rounds, bool slowPath, bool barrier)
+{
+    int64_t est = std::max(perCoreTraffic, SatMul(perCoreTraffic, coresUsed) / GRU_A1_AGG_DEN * GRU_A1_AGG_NUM);
+    est += SatMul(rounds, slowPath ? GRU_A1_ROUND_BYTES_SLOW : GRU_A1_ROUND_BYTES);
+    if (barrier) {
+        est += GRU_A1_BARRIER_BYTES;
+    }
+    return est;
+}
+
+// 行切基线（splitMode 0/1 决策值）的同尺成本——翻转判据的比较基准
+static int64_t EstRowSplitCost(int64_t batchSize, int64_t inputSize, int64_t hiddenSize, const RowSplit& split,
+                               const LayoutDecision& d, const PlatformCaps& caps)
+{
+    const int64_t kDim = inputSize + hiddenSize;
+    const int64_t weightBytes = 3 * kDim * d.padHidden * gru_block_cell::BYTES_PER_FP32;
+    const int64_t aPerRowTile = (2 * inputSize + 3 * hiddenSize) * gru_block_cell::BYTES_PER_FP32;
+    // 最重核口径：满行切=主核 rowsPerCore；商余分核=q+1
+    const int64_t rowsCore = split.rowsPerCore + ((split.splitMode == 1 && split.rowsTail > 0) ? 1 : 0);
+    const int64_t nChunk = gru_block_cell::CeilDiv(rowsCore, d.mChunk);
+    const int64_t nTiles = gru_block_cell::CeilDiv(d.padHidden, d.nL0c);
+    const int64_t traffic = SatMul(nChunk, weightBytes) + SatMul(SatMul(nChunk, nTiles), rowsCore * aPerRowTile) +
+                            5 * rowsCore * hiddenSize * gru_block_cell::BYTES_PER_FP32;
+    const int64_t rounds = SatMul(SatMul(nChunk, nTiles), d.cGroups * 2);
+    const bool slowPath = d.nL0c > caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * GRU_TIL_CUBE_BLOCK);
+    return EstWallBytes(traffic, split.coresUsed, rounds, slowPath, false);
+}
+
+// splitMode=2 候选枚举：(nsc, rc, mc) → nt=该 mc 下最大可行列片宽（同 UB×L0C×L1
+// 三约束 + nTiles≥nsc）。固定 (nsc,rc,mc) 时最大 nt 弱最优（tl 最小、权重份额比
+// tl/nTiles≈1/nsc 不变、A/握手项随 tl 单调），故 nt 不独立枚举。rc/nsc 越大 per-core
+// 流量越小（聚合墙项制衡），全枚举交由成本模型裁决。迭代序即平局裁决序（严格 <）。
+static Split2Decision ComputeSplit2Candidate(int64_t batchSize, int64_t inputSize, int64_t hiddenSize,
+                                             const PlatformCaps& caps, const LayoutDecision& base)
+{
+    Split2Decision best;
+    const int64_t coreNum = std::max<int64_t>(1, caps.coreNum);
+    const int64_t ubAvail = caps.ubSize - GRU_TIL_UB_RESERVE;
+    const int64_t l0cElems = caps.l0cSize / gru_block_cell::BYTES_PER_FP32;
+    const int64_t pfSliceCap = caps.l0bSize / (gru_block_cell::BYTES_PER_FP32 * GRU_TIL_CUBE_BLOCK);
+    const int64_t kDim = inputSize + hiddenSize;
+    const int64_t weightBytes = 3 * kDim * base.padHidden * gru_block_cell::BYTES_PER_FP32;
+    const int64_t aPerRowTile = (2 * inputSize + 3 * hiddenSize) * gru_block_cell::BYTES_PER_FP32;
+    const int64_t kgMax = std::max(base.kgX, base.kgH);
+    for (int64_t nsc = 2; nsc <= coreNum; ++nsc) {
+        // nTiles(nt) ≥ nsc ⇔ padHidden > (nsc−1)×nt ⇔ nt ≤ (Hp−1)/(nsc−1)
+        const int64_t ntCapSlices = gru_block_cell::AlignDown((base.padHidden - 1) / (nsc - 1), GRU_TIL_CUBE_BLOCK);
+        if (ntCapSlices < GRU_TIL_CUBE_BLOCK) {
+            break; // ntCapSlices 随 nsc 单调减 ⇒ 更大 nsc 无解
+        }
+        for (int64_t rc = 1; rc <= std::min(coreNum / nsc, batchSize); ++rc) {
+            const int64_t rowsRc = gru_block_cell::CeilDiv(batchSize, rc); // 商余最重行块（q+1）
+            const int64_t mCap = std::min(rowsRc, GRU_TIL_CAP_L0A_ROWS);
+            const int64_t mcFirst = (mCap < GRU_TIL_CUBE_BLOCK) ? mCap : GRU_TIL_CUBE_BLOCK;
+            for (int64_t mc = mcFirst; mc <= mCap; mc += GRU_TIL_CUBE_BLOCK) {
+                const int64_t mA = gru_block_cell::AlignUp(mc, GRU_TIL_CUBE_BLOCK);
+                const int64_t ntHi = gru_block_cell::AlignDown(
+                    std::min({UbTileCap(mc, ubAvail), l0cElems / mA, base.nAl, ntCapSlices}), GRU_TIL_CUBE_BLOCK);
+                if (ntHi >= GRU_TIL_CUBE_BLOCK) {
+                    // L1 逐点验算（与主枚举同式：A 侧 5×单槽 + b 双槽 + bias 共享槽）
+                    const int64_t aBytes = 5 * gru_block_cell::CeilDiv(kgMax, GRU_TIL_C0F) * mA * GRU_TIL_C0F *
+                                           gru_block_cell::BYTES_PER_FP32;
+                    const int64_t sl = std::max(std::min(ntHi, pfSliceCap), GRU_TIL_CUBE_BLOCK);
+                    const int64_t kcc = std::max(
+                        std::min(gru_block_cell::AlignDown(std::min(caps.l0bSize / (4 * sl), caps.l0aSize / (4 * mA)),
+                                                           GRU_TIL_CUBE_BLOCK),
+                                 kgMax),
+                        GRU_TIL_CUBE_BLOCK);
+                    const int64_t bBytes = 2 * (sl / GRU_TIL_C0F) * gru_block_cell::AlignUp(kcc, GRU_TIL_CUBE_BLOCK) *
+                                           GRU_TIL_C0F * gru_block_cell::BYTES_PER_FP32;
+                    const int64_t nTiles = gru_block_cell::CeilDiv(base.padHidden, ntHi);
+                    if (aBytes + bBytes + gru_block_cell::AlignUp(ntHi * 4, 64) <= caps.l1Size && nTiles >= nsc) {
+                        const int64_t tl = gru_block_cell::CeilDiv(nTiles, nsc); // 最重列片组片数
+                        const int64_t nChunk = gru_block_cell::CeilDiv(rowsRc, mc);
+                        const int64_t hLocal = std::max<int64_t>(1, hiddenSize * tl / nTiles);
+                        const int64_t traffic = SatMul(nChunk, SatMul(weightBytes, tl) / nTiles) +
+                                                SatMul(SatMul(nChunk, tl), rowsRc * aPerRowTile) +
+                                                5 * rowsRc * hLocal * gru_block_cell::BYTES_PER_FP32;
+                        const int64_t rounds = SatMul(SatMul(nChunk, tl), base.cGroups * 2);
+                        const int64_t est = EstWallBytes(traffic, rc * nsc, rounds, ntHi > pfSliceCap, true);
+                        if (est < best.estCost) {
+                            best.valid = true;
+                            best.estCost = est;
+                            best.mChunk = mc;
+                            best.nL0c = ntHi;
+                            best.sliceCores = nsc;
+                            best.coresUsed = rc * nsc;
+                            best.rowsPerCore = batchSize / rc;
+                            best.rowsTail = batchSize % rc;
+                        }
+                    }
+                }
+                if (mc == mCap) {
+                    break; // mCap 非 16 倍数时的末候选（与主枚举同约定）
+                }
+            }
+        }
+    }
+    return best;
+}
+
 } // namespace gru_block_cell
 
 // ---------------------------------------------------------------------------
@@ -709,11 +885,44 @@ static ge::graphStatus TilingFuncGruBlockCell(gert::TilingContext* context)
 
     // ---- batch 行多核切分（rowsPerCore = sM；超核钳位见
     // MultiCoreSplitRows 注释；尾核 / B=1 单核）----
-    const gru_block_cell::RowSplit split = gru_block_cell::MultiCoreSplitRows(batchSize, sM, caps.coreNum);
+    gru_block_cell::RowSplit split = gru_block_cell::MultiCoreSplitRows(batchSize, sM, caps.coreNum);
 
-    // ---- 片上布局决策（唯一计算点）+ 决策值容量验算 ----
-    const gru_block_cell::LayoutDecision d = gru_block_cell::ComputeLayoutDecision(batchSize, inputSize, hiddenSize,
-                                                                                   split.rowsPerCore, caps);
+    // ---- 片上布局决策（唯一计算点）----
+    gru_block_cell::LayoutDecision d = gru_block_cell::ComputeLayoutDecision(batchSize, inputSize, hiddenSize,
+                                                                             split.rowsPerCore, caps);
+
+    // ---- A1：splitMode=2（行列 2D 分派）候选——小 B/大 H 的 R1 欠并行消解 ----
+    // 翻转判据（成本模型与常量见 ComputeSplit2Candidate 函数头）：基线 per-core
+    // 字节等价墙时 ≥ GRU_A1_MIN_BASE_COST 且 split2 最优候选 < 基线×80%。
+    // 除法形态的比较式防 SatMul 钳位域溢出（est/80×100 < base ⇔ est < base×0.8）。
+    bool useSplit2 = false;
+    int64_t baseCost = 0;
+    gru_block_cell::Split2Decision s2;
+    {
+        baseCost = gru_block_cell::EstRowSplitCost(batchSize, inputSize, hiddenSize, split, d, caps);
+        s2 = gru_block_cell::ComputeSplit2Candidate(batchSize, inputSize, hiddenSize, caps, d);
+        useSplit2 = s2.valid && baseCost >= gru_block_cell::GRU_A1_MIN_BASE_COST &&
+                    s2.estCost / gru_block_cell::GRU_A1_MARGIN_NUM * gru_block_cell::GRU_A1_MARGIN_DEN < baseCost;
+        if (useSplit2) {
+            const gru_block_cell::RowSplit splitBak = split;
+            const gru_block_cell::LayoutDecision dBak = d;
+            split.rowsPerCore = s2.rowsPerCore;
+            split.rowsTail = s2.rowsTail;
+            split.coresUsed = s2.coresUsed;
+            split.splitMode = 2;
+            d.mChunk = s2.mChunk;
+            d.nL0c = s2.nL0c;
+            d.sliced = (d.nAl > d.nL0c);
+            gru_block_cell::FinalizeSliceKc(d, caps);
+            if (!gru_block_cell::CheckLayoutCapacity(context, d, caps)) {
+                split = splitBak; // 防御回退（枚举与验算同式，理论不可达）
+                d = dBak;
+                useSplit2 = false;
+            }
+        }
+    }
+
+    // ---- 决策值容量验算（最终裁决）----
     if (!gru_block_cell::CheckLayoutCapacity(context, d, caps)) {
         return ge::GRAPH_FAILED;
     }
@@ -727,7 +936,8 @@ static ge::graphStatus TilingFuncGruBlockCell(gert::TilingContext* context)
     td->rowsPerCore = split.rowsPerCore;
     td->rowsTail = split.rowsTail;
     td->coreNumUsed = split.coresUsed;
-    td->splitMode = split.splitMode; // 0=满行切 1=商余分核（kernel RowDispatch 显式编码）
+    td->splitMode = split.splitMode; // 0=满行切 1=商余分核 2=行列 2D 分派（kernel RowDispatch 显式编码）
+    td->sliceCores = useSplit2 ? s2.sliceCores : 1; // A1：splitMode=2 的列片组数（旧路恒 1）
     td->padHidden = d.padHidden;
     td->nAl = d.nAl;
     td->nSlice = d.nSlice;
@@ -741,11 +951,13 @@ static ge::graphStatus TilingFuncGruBlockCell(gert::TilingContext* context)
     td->kgH = d.kgH;
 
     OP_LOGI(context->GetNodeName(),
-            "[GruBlockCell] B=%ld I=%ld H=%ld cores=%ld rowsPerCore=%ld tail=%ld sM=%ld splitMode=%ld Hp=%ld nAl=%ld "
-            "nSlice=%ld kc=%ld nL0c=%ld sliced=%ld mChunk=%ld cGroups=%ld kgX=%ld kgH=%ld ub=%ld coreNum=%ld",
+            "[GruBlockCell] B=%ld I=%ld H=%ld cores=%ld rowsPerCore=%ld tail=%ld sM=%ld splitMode=%ld sliceCores=%ld "
+            "Hp=%ld nAl=%ld nSlice=%ld kc=%ld nL0c=%ld sliced=%ld mChunk=%ld cGroups=%ld kgX=%ld kgH=%ld ub=%ld "
+            "coreNum=%ld a1Use=%ld a1Base=%ld a1Est2=%ld",
             td->batchSize, td->inputSize, td->hiddenSize, td->coreNumUsed, td->rowsPerCore, td->rowsTail, sM,
-            td->splitMode, td->padHidden, td->nAl, td->nSlice, td->kc, td->nL0c, td->sliced, td->mChunk, td->cGroups,
-            td->kgX, td->kgH, caps.ubSize, caps.coreNum);
+            td->splitMode, td->sliceCores, td->padHidden, td->nAl, td->nSlice, td->kc, td->nL0c, td->sliced, td->mChunk,
+            td->cGroups, td->kgX, td->kgH, caps.ubSize, caps.coreNum, static_cast<long>(useSplit2 ? 1 : 0),
+            static_cast<long>(baseCost), static_cast<long>(s2.valid ? s2.estCost : -1));
 
     // ---- SetBlockDim + SetTilingKey（fp32-only 单档，AIC:AIV=1:2 由
     // __mix__(1,2) 固有配比承载）。setter 返回值逐个校验，失败即拒绝

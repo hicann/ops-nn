@@ -9,80 +9,19 @@
  */
 
 // GruBlockCell — Ascend 950PR (dav_3510) MIX kernel（1 AIC : 2 AIV，fp32-only）。
-// reset_before 变体：
-//   ru_bar = [x, h_prev]·wRu + bRu;  r = σ(ru_bar[:,0:H]);  u = σ(ru_bar[:,H:2H])
-//   c = tanh([x, h_prev⊙r]·wC + bC);  h = c + u·(h_prev − c)
-//
-// 循环嵌套（DATAFLOW NOTES #7 的核心）：**列片 s 最外、split-K 组 g 最内**。
-//   AIC: for s { for g { [A 现搬] r 门 Mmad→Fixpipe→C2V ; u 门 Mmad→Fixpipe→C2V } }
-//        → CubeWaitVec（全部列片的 h⊙r 已落 GM）
-//        → for s { for g { [A 现搬] c 门 Mmad→Fixpipe→C2V } }
-//   AIV: for s { for g { VecWaitCube→σ 前的 Neumaier 归并→V2C }
-//                → finalize→σ(r/u)→CopyOut r/u→hr=hp⊙r(VF)→CopyOut hr }
-//        → for s { for g { VecWaitCube→归并→V2C }
-//                → finalize→tanh(c)→CopyOut c→h=c+u·(hp−c)(VF)→CopyOut h }
-//
-// 为什么列片必须外提（性能契约，勿回退）：
-//   UB 的 8 个平面若按**全幅 Hp** 分配，则 rowsMax=⌈mChunk/2⌉ 被 8·Hp·4B 钉死
-//   （H=6144 → rowsMax=1 → mChunk=2），而权重 wRu+wC 每个 m-chunk 都要从 HBM 全量
-//   重灌一遍 ⇒ 流量 = ⌈B/mChunk⌉·3(I+H)H·4。实测 B=16384/I=620/H=6144 时
-//   mChunk=2 → 4.09TB → 4.1s（有效带宽 ~0.95TB/s，纯 HBM 墙）。列片外提后平面宽
-//   降为 nL0c，mChunk 只受 UB×L0C 联合预算约束（与 Hp 无关），host 侧按流量模型
-//   择优 ⇒ 权重重灌次数从 B/2 降到 B/mChunk。
-//
-// 关键约束（由 I/H 任意 ≥1、非 8/16 对齐的 shape 契约强制）：
-// 1. N 向 pad 到 Hp=CeilAlign(H,8)：Fixpipe(isToUB) 要求 drain 宽度 32B 对齐。
-//    pad 列承载尾块垃圾（Mmad k 按 H 精确截断，不贡献），CopyOut 按每行 tileCols
-//    截断。列片宽 w=min(nL0c, Hp−s) 恒 8 对齐（nL0c 16 对齐、Hp 8 对齐、s 16 对齐）
-//    ⇒ UB 平面行距取 w 即紧凑，AIV 侧全部逐元素算子可按扁平 work=rows·w 处理。
-// 2. r/u 拆两次独立 N=w 的 GEMM（H%8≠0 时合并门的 GatherPlane blockLen 不可表达）。
-// 3. K 按 I/H 边界分段、再按组宽 kg 分组；pass0 两门与 pass1 的 x 段，A 切片
-//    [mChunk, kg] 每 (列片, 组) 从 GM 现搬进 aK 槽（x / h_prev 两源共用），足迹与
-//    I、H 均无关。
-// 4. h⊙r 仍走 **L1 全幅回灌槽 aH [mChunk, Hp] + UB→L1 FeedbackToL1**（不过 GM，
-//    本算子无 workspace）。pass1 的 h 段 Mmad 需要整幅 A，故 aH 不可 K 分片——它是
-//    mChunk 的上界（CeilAlign(mChunk,16)×Hp×4 须与 aK/b/bias 共存于 512KB L1，
-//    H=6144 → mChunk ≤ 16），也是支持域 Hp ≤ 8152 的来源。
-//    与列片外提共存的关键：**pass0 的 h 段不读 aH**（改按 K 组从 GM 现搬 hPrev 进
-//    aK），故 pass0 各列片把 h⊙r 回灌进 aH[:, s] 与 pass0 自身的 A 读互不冲突；
-//    pass1 由块级 CubeWaitVec（V2C 为 FIFO barrier，消费末列片末组即蕴含全部前序
-//    回灌已完成）保证 aH 全幅写满后才开始读。
-//    （曾评估过 h⊙r 改走 GM workspace 以彻底解除 mChunk 的 L1 上界：GE 侧确实按
-//    tiling 申请额分配并下发地址，但 kernel 任一侧访问都触发 EZ9999 errcode 95
-//    "DDR address of the MTE instruction is out of range"，且阈值与 shape 无关地
-//    落在 16~64MB 量级（B=4/H=8 实需 128B 也要 ≥17MB，B=5120/H=1024 给 24MB 仍炸、
-//    64MB 才过），无法稳健工程化，故维持片上回灌。）
-// 5. AIV 工作集 8 个 [rowsMax, nL0c] 列片平面；别名写读先序见 Layout UB 段——
-//    改别名必须重核。
-// 6. M 向按 mChunk 分块，每块独立走完 pass0（全列片）→ pass1（全列片）。
-// 7. 列片 ↔ GM 的搬运逐行下发（CopyTileToGm/CopyTileFromGm，blockCount=1）：
-//    DataCopyPad 在 stride=0 时 GM 侧行距取 blockLen 本身，而列片的
-//    blockLen=tileCols×4 < H×4，整块搬会让第 1 行起落到错误行偏移（实测多列片
-//    shape 只有每个 AIV stripe 的第 0 行正确）；改用 dstStride 表达 H×4 也不通用
-//    ——它以 32B 为单位，需要 (H−tileCols)%8==0，H 非 8 对齐时（H=4097 末列片
-//    tileCols=161）不成立。逐行搬对任意 H 成立，代价是每列片 stripe.count 条指令。
-//
-// tiling 决策全在 host（ComputeLayoutDecision）；本文件 Layout 只消费 TilingData +
-// 纯算术推导 + Bump 偏移。
-//
-// VF 主链：GruBlockCellResetMulVF(hr=hp⊙r)、GruBlockCellBlendVF(h=c+u·(hp−c))。
-// σ/tanh 走 HL 链（regbase VF 无 Sigmoid/Tanh）；tanh 为分段补偿实现（INTRINSIC
-// 近零区 1.67e7 ULP）；饱和 clamp 用 Select 而非 Mins——Mins 的 minNum 语义吞 NaN，
-// 破坏 NaN 逐元素传播契约。
-//
-// cube 通路全走 AscendC::Te 原子层；唯一裸路 gbc::vector::FeedbackToL1（Te ub_to_l1
-// 无 ND→NZ 路由，底层 DataCopyUB2L1ND2NZImpl 存在但未暴露）。
-//
-// 文件组织（单文件交付，按数据通路分节；节间只有向下的依赖）：
-//   §1 gbc::layout  布局算术与片上分配器（常量 / CeilDiv·CeilAlign·MinU·MaxU /
-//                   Bump / NzLayout / RowStripe·DrainStripe / FinFinalize）
-//   §2 gbc::sync    同步事件族（核内定向 hazard + 跨核 C2V/V2C）
-//   §3 gbc::cube    AIC 侧数据通路（GM→L1→L0A/L0B/BT→Mmad→L0C→UB，全走 Te 原子层）
-//   §4 gbc::vector  AIV 侧激活与回灌（σ/tanh / UB→L1 FeedbackToL1）+ VF 主链
-//   §5 GruBlockCellKernel  算子主类（Layout 片上偏移 + CubeChunk/VectorChunk 流水）
-// 另两个头文件不可并入本文件：gru_block_cell_tiling_struct.h 是 host—kernel 共享
-// POD（op_host 侧 tiling 直接 include），gru_block_cell_struct.h 是 ASCENDC_TPL
-// 模板参数声明（编译期分发表，须独立成头）。
+// reset_before：ru_bar=[x,h_prev]·wRu+bRu；r=σ(ru_bar[:,0:H])；u=σ(ru_bar[:,H:2H])；
+//               c=tanh([x,h_prev⊙r]·wC+bC)；h=c+u·(h_prev−c)
+// 结构：M 按 mChunk 分块，每块 pass0（r/u 门）→ pass1（c 门）；列片 s 最外、split-K 组
+// g 最内（kg=16 精度契约）；AIC/AIV 以 C2V/V2C 单 flag 对按 (片,组) 轮握手。
+// 设计依据、失败史与判别证据：log/gru_block_cell_perf_session_archive_20260928.md。
+// ⚠ 勿回退（均有实测翻车记录，细节见存档）：① h 输出经 t3 staging + WaitMte3ToV
+// （Fix B）；② pass1 奇偶 need 分级（纯深度-2 触 L1 无写仲裁）；③ aHR 三槽+前瞻-3；
+// ④ 批量搬运 stride 单位非对称（GM=1 字节/UB=32B）；⑤ A1 splitMode=2 相位拆分每核
+// 恰一次 SyncAll（死锁契约）；⑥ 列片外提（全幅平面钉死 mChunk → HBM 墙）。
+// 文件组织：§1 gbc::layout 布局算术 §2 gbc::sync 同步事件 §3 gbc::cube AIC 数据通路
+// §4 gbc::vector AIV 激活/回灌+VF 主链 §5 GruBlockCellKernel 主类。
+// tiling_struct.h 为 host—kernel 共享 POD、gru_block_cell_struct.h 为 ASCENDC_TPL
+// 编译期分发表（均不可并入本文件）。
 
 #ifndef GRU_BLOCK_CELL_KERNEL_H
 #define GRU_BLOCK_CELL_KERNEL_H
@@ -107,7 +46,7 @@ constexpr uint32_t DRAIN_CHUNK = 2048; // L0C→UB drain 列宽分块（fixpipe 
                                        // Te 内部 main_loop_n_size=512 分段在 SPLIT_M 大宽度
                                        // 下静默丢数据——实测 H=4097 主片 4096 列全零交付）
 
-// 片上容量与预算常量在 host 侧（决策唯一真值：tiling_arch35.cpp 的
+// 片上容量与预算常量在 host 侧（决策唯一真值：gru_block_cell_tiling.cpp 的
 // ComputeLayoutDecision；常量 GRU_TIL_* 在共享头 gru_block_cell_tiling_struct.h）。
 // kernel 不做容量/策略判定，只消费 TilingData。
 // 布局算术三件套。与 common/inc/op_kernel/kernel_utils.h 的 ops:: 版语义重复，
@@ -239,6 +178,8 @@ __aicore__ inline void WaitMte1ToMte2()
 } // SplitB 读 L1 b1 后，MTE2 复写 b1
 __aicore__ inline void WaitVToMte3() { PipeWait<AscendC::HardEvent::V_MTE3>(); } // V 读消费完 → MTE3（置位/搬出）
 __aicore__ inline void WaitVToMte2() { PipeWait<AscendC::HardEvent::V_MTE2>(); } // V 写消费完 → MTE2 复写
+__aicore__ inline void WaitMte2ToV() { PipeWait<AscendC::HardEvent::MTE2_V>(); } // MTE2 落 UB 完 → V 读
+__aicore__ inline void WaitMte3ToV() { PipeWait<AscendC::HardEvent::MTE3_V>(); } // MTE3 读 UB 完 → V 复写
 // （MTE3→V / VF 相邻界面不设定向事件：VF 异步完成不被命名事件闭合，见文件头）
 
 // ---- 跨核（AIC ↔ 2 AIV）----
@@ -625,23 +566,31 @@ private:
     // ---- Layout：两侧（AIC/AIV）从同一组标量构造全部片上偏移——「两核同名偏移」
     // 是 AIC 的 FIX 与 AIV 的 VEC 会合的机制（无 TPipe）。
     struct Layout {
-        // RowDispatch — 满行切/商余分核双模型的行分派（CubeHalf/VectorHalf 共用）。
-        // 编码由 host TilingFunc 的 splitMode 字段**显式承载**（T1/K3：原算术判别式
-        // `(coresUsed−1)×rowsPerCore+rowsTail==batchSize` 解码已删——隐式协议消除）：
-        //   splitMode=0 满行切：主核 rowsPerCore(=sM) 行、尾核 rowsTail 行，
-        //                        行基 = cluster×rowsPerCore
-        //   splitMode=1 商余分核：前 rowsTail(=rem) 核 rowsPerCore(=q)+1 行、
-        //                        其余 q 行，行基 = cluster×q+min(cluster,rem)
-        //                        （全核启用、核间差 ≤1 行）
-        __aicore__ inline void RowDispatch(uint32_t cluster, uint32_t& rowBase, uint32_t& rows) const
+        // RowDispatch — 行分派（host splitMode 显式编码，kernel 不做算术判别）：
+        //   0=满行切（主核 rowsPerCore、尾核 rowsTail）  1=商余分核（前 rowsTail 核 +1 行）
+        //   2=A1 2D 分派：行块商余同 1，但作用于 rowChunk=cluster/sliceCores
+        __aicore__ inline void RowDispatch(uint32_t rowChunk, uint32_t& rowBase, uint32_t& rows) const
         {
             if (splitMode == 0) {
-                rows = (cluster + 1 == coresUsed) ? rowsTail : rowsPerCore;
-                rowBase = cluster * rowsPerCore;
+                rows = (rowChunk + 1 == coresUsed) ? rowsTail : rowsPerCore;
+                rowBase = rowChunk * rowsPerCore;
             } else {
-                rows = rowsPerCore + ((cluster < rowsTail) ? 1u : 0u);
-                rowBase = cluster * rowsPerCore + gbc::layout::MinU(cluster, rowsTail);
+                rows = rowsPerCore + ((rowChunk < rowsTail) ? 1u : 0u);
+                rowBase = rowChunk * rowsPerCore + gbc::layout::MinU(rowChunk, rowsTail);
             }
+        }
+
+        // SliceDispatch — A1 列片组分派：nTiles 商余分给 sliceCores 组，输出本核列域
+        // [sliceLoCol, sliceHiCol)。旧路 sliceCores==1 退化为全幅 [0, padHidden)。
+        __aicore__ inline void SliceDispatch(uint32_t sliceGrp, uint32_t& sliceLoCol, uint32_t& sliceHiCol) const
+        {
+            const uint32_t nTiles = gbc::layout::CeilDiv(padHidden, nL0c);
+            const uint32_t tilesPer = nTiles / sliceCores;
+            const uint32_t remT = nTiles % sliceCores;
+            const uint32_t lo = sliceGrp * tilesPer + gbc::layout::MinU(sliceGrp, remT);
+            const uint32_t cnt = tilesPer + ((sliceGrp < remT) ? 1u : 0u);
+            sliceLoCol = lo * nL0c;
+            sliceHiCol = gbc::layout::MinU(padHidden, (lo + cnt) * nL0c);
         }
 
         uint32_t batchSize;   // 输入维度 batch（单步 cell，无时间轴字段；B）
@@ -655,28 +604,35 @@ private:
         uint32_t rowsPerCore; // host 决策：满行切=sM / 商余分核=商 q
         uint32_t rowsTail;    // host 决策：满行切=尾核行数 / 商余=余 rem
         uint32_t coresUsed;   // host 决策：实际启用核数（blockDim）
-        uint32_t splitMode;   // host 决策：0=满行切 1=商余分核（RowDispatch 显式编码）
-        uint32_t mChunk;      // host 决策：单块行数（≤ rowsPerCore）
-        uint32_t kc;          // host 决策：K 分块行数（16 倍数）
-        uint32_t cGroups;     // host 决策：split-K 总组数
-        uint32_t cGroupsX;    // host 决策：x 段组数
-        uint32_t kgX;         // host 决策：x 段组宽（16 对齐）
-        uint32_t kgH;         // host 决策：h 段组宽（16 对齐）
-        uint32_t rowsMax;     // 派生：CeilDiv(mChunk, 2)，单 AIV drain 行数上界
-        uint32_t planeElems;  // 派生：rowsMax × nL0c（列片平面容量）
+        uint32_t splitMode;   // host 决策：0=满行切 1=商余分核 2=行列 2D 分派（A1）
+        uint32_t sliceCores;  // host 决策：A1 列片组数 nsc（旧路恒 1）
+        // ---- per-core 分派（cluster 的确定函数；片上偏移仍全核同名）----
+        uint32_t rowBase;      // 本核行块起始行
+        uint32_t rowsThisCore; // 本核行块行数（splitMode=2 防御域可 0——仅参与屏障）
+        uint32_t sliceLoCol;   // 本核列片域起始列（含；旧路恒 0）
+        uint32_t sliceHiCol;   // 本核列片域结束列（不含；旧路恒 padHidden）
+        uint32_t mChunk;       // host 决策：单块行数（≤ rowsPerCore）
+        uint32_t kc;           // host 决策：K 分块行数（16 倍数）
+        uint32_t cGroups;      // host 决策：split-K 总组数
+        uint32_t cGroupsX;     // host 决策：x 段组数
+        uint32_t kgX;          // host 决策：x 段组宽（16 对齐）
+        uint32_t kgH;          // host 决策：h 段组宽（16 对齐）
+        uint32_t rowsMax;      // 派生：CeilDiv(mChunk, 2)，单 AIV drain 行数上界
+        uint32_t planeElems;   // 派生：rowsMax × nL0c（列片平面容量）
 
-        // L1（偏移，字节）：A 的 K 组流式槽 + h⊙r 全幅回灌槽 + 单 B slot + bias 共享槽
-        uint32_t aKOff;       // A: K 组切片槽 [mChunk, ≤kgMax]（x / hPrev 两源共用）
-        uint32_t aHOff;       // A: h⊙r 全幅回灌槽 [mChunk, Hp]（pass1 的 h 段 A 操作数）
-        uint32_t bOff;        // B: 权重行块 [kc, nSlice]
+        // L1（偏移，字节）：A 的 K 组流式槽（x/hPrev 双槽 + hr 双槽）+ B 双槽 + bias 共享槽
+        uint32_t aKOff;       // A: x/hPrev 切片双槽 [mChunk, ≤kgMax]×2（S2 预取）
+        uint32_t aHROff;      // A: pass1 hr 切片三槽 [mChunk, ≤kgMax]×3（S3' 前瞻-3；AIV 写/AIC 读）
+        uint32_t bOff;        // B: 权重行块双槽 [kc, nSlice]×2（S2 预取）
         uint32_t biasSlotOff; // BT: bias 列片共享槽（r/u/c 三门按 (门, 列片) 轮用）
-        uint32_t aKElems;     // aK 槽容量（元素）
-        uint32_t aHElems;     // aH 槽容量（元素）
-        uint32_t bElems;      // b 槽容量（元素）
+        uint32_t aKElems;     // aK/aHR 单槽容量（元素）
+        uint32_t bElems;      // b 单槽容量（元素）
         // L0（单 slot，偏移 0）：L0A/L0B/L0C/BT
         // UB（per AIV；VECOUT=drain 会合区，VECCALC=激活平面，同一 Bump 同一基址）
-        uint32_t rBarOff;  // VECOUT: pass0 r drain
-        uint32_t uBarOff;  // VECOUT: pass0 u drain
+        uint32_t rBarOff;  // VECOUT: pass0 r drain（偶数轮；≡ pass1 cBar1）
+        uint32_t uBarOff;  // VECOUT: pass0 u drain（偶数轮；≡ pass1 cBar0）
+        uint32_t rBar1Off; // VECOUT: pass0 r drain（奇数轮——S3'' 深度-2 双缓冲）
+        uint32_t uBar1Off; // VECOUT: pass0 u drain（奇数轮）
         uint32_t cBarOff;  // VECOUT: pass1 c drain
         uint32_t rAccOff;  // VECCALC: r 累加器
         uint32_t rCompOff; // VECCALC: r Neumaier 补偿项
@@ -692,9 +648,9 @@ private:
         uint32_t mskOff;   // VECCALC: uint8 mask（tanh 连接）
 
         // 默认构造（kernel 类需可默认构造；Init 前不消费布局值）
-        __aicore__ inline Layout() : Layout(nullptr) {}
+        __aicore__ inline Layout() : Layout(nullptr, 0) {}
 
-        __aicore__ inline explicit Layout(const GruBlockCellTilingData* tdIn)
+        __aicore__ inline explicit Layout(const GruBlockCellTilingData* tdIn, uint32_t cluster = 0)
             : batchSize(1),
               inputSize(1),
               hiddenSize(1),
@@ -707,6 +663,11 @@ private:
               rowsTail(1),
               coresUsed(1),
               splitMode(0),
+              sliceCores(1),
+              rowBase(0),
+              rowsThisCore(0),
+              sliceLoCol(0),
+              sliceHiCol(gbc::layout::C0F),
               mChunk(1),
               kc(gbc::layout::CUBE_BLOCK),
               cGroups(2),
@@ -716,14 +677,15 @@ private:
               rowsMax(1),
               planeElems(gbc::layout::C0F),
               aKOff(0),
-              aHOff(0),
+              aHROff(0),
               bOff(0),
               biasSlotOff(0),
               aKElems(0),
-              aHElems(0),
               bElems(0),
               rBarOff(0),
               uBarOff(0),
+              rBar1Off(0),
+              uBar1Off(0),
               cBarOff(0),
               rAccOff(0),
               rCompOff(0),
@@ -751,6 +713,10 @@ private:
             rowsTail = static_cast<uint32_t>(tdIn->rowsTail);
             coresUsed = static_cast<uint32_t>(tdIn->coreNumUsed);
             splitMode = static_cast<uint32_t>(tdIn->splitMode);
+            sliceCores = static_cast<uint32_t>(tdIn->sliceCores);
+            if (sliceCores < 1u) {
+                sliceCores = 1u; // 防御：旧 tiling 数据无该字段语义时退化为全列片域
+            }
             padHidden = static_cast<uint32_t>(tdIn->padHidden);
             nAl = static_cast<uint32_t>(tdIn->nAl);
             nSlice = static_cast<uint32_t>(tdIn->nSlice);
@@ -762,61 +728,64 @@ private:
             cGroupsX = static_cast<uint32_t>(tdIn->cGroupsX);
             kgX = static_cast<uint32_t>(tdIn->kgX);
             kgH = static_cast<uint32_t>(tdIn->kgH);
+            // ---- per-core 分派（A1 splitMode=2：cluster → (rowChunk, sliceGrp) 行列 2D；
+            // 旧路 rowChunk=cluster、列片域全幅——指令序与 A1 前逐位同域）----
+            uint32_t rowChunk = cluster;
+            if (splitMode == 2) {
+                rowChunk = cluster / sliceCores;
+                const uint32_t sliceGrp = cluster % sliceCores;
+                SliceDispatch(sliceGrp, sliceLoCol, sliceHiCol);
+            } else {
+                sliceLoCol = 0;
+                sliceHiCol = padHidden;
+            }
+            RowDispatch(rowChunk, rowBase, rowsThisCore);
+            if (splitMode == 2 && rowBase >= batchSize) {
+                rowsThisCore = 0; // 防御（host 契约 rowChunks≤B 下不可达）：空行块仅参与屏障
+            }
             // ---- 纯算术推导（决策的确定函数）----
             rowsMax = gbc::layout::DrainRowsMax(mChunk, true);
             planeElems = rowsMax * nL0c;
 
-            // L1 足迹（元素）：k 尾块按各自 chunk 的 parent extent 圆整，分配取最大。
-            // aK 为 K 组流式槽：容量按 kgMax=max(kgX,kgH) 列——每 (列片, 组) 现搬该组
-            // 的 A 切片 [mChunk, kg]，足迹与 I、H 均解耦。
-            // aH 为 h⊙r 的**全幅**回灌槽 [mChunk, Hp]：pass1 的 h 段 Mmad 需要整幅 A，
-            // 故 aH 不可 K 分片 —— 它是 mChunk 的上界（CeilAlign(mChunk,16)×Hp×4 ≤ L1
-            // 余量），H=6144 时 mChunk ≤ 16。pass0 的 h 段**不读 aH**（改按 K 组从 GM
-            // 现搬 hPrev 进 aK），因此 pass0 各列片的回灌写 aH[:, s] 与 pass0 自身的
-            // A 读互不冲突（这是列片外提能与全幅回灌共存的关键）。
+            // L1 足迹（元素）：aK = K 组流式槽 [mChunk, kgMax]，每 (列片,组) 现搬 A
+            // 切片，足迹与 I/H 解耦（B1 已删全幅 aH 回灌槽，mChunk 不再被 Hp 钉死）。
             const uint32_t kgMax = gbc::layout::MaxU(kgX, kgH);
             aKElems = gbc::layout::CeilDiv(kgMax, gbc::layout::C0F) *
-                      gbc::layout::CeilAlign(mChunk, gbc::layout::CUBE_BLOCK) * gbc::layout::C0F;
-            aHElems = gbc::layout::CeilDiv(padHidden, gbc::layout::C0F) *
                       gbc::layout::CeilAlign(mChunk, gbc::layout::CUBE_BLOCK) * gbc::layout::C0F;
             bElems = (nSlice / gbc::layout::C0F) * gbc::layout::CeilAlign(kc, gbc::layout::CUBE_BLOCK) *
                      gbc::layout::C0F;
             gbc::layout::Bump l1;
-            aKOff = l1.TakeT<float>(aKElems); // A: K 组切片槽 [mChunk, ≤kgMax]
-            aHOff = l1.TakeT<float>(aHElems); // A: h⊙r 全幅回灌槽 [mChunk, Hp]
-            bOff = l1.TakeT<float>(bElems);   // B: 权重行块 [kc, nSlice]
-            // bias 列片共享槽：容量按 nL0c（LoadBiasToBT 读 [0, sliceN)，sliceN ≤ nL0c；
-            // 末片读越 Hp 界的部分落 L0C pad 列、不进 GM，与 SplitB 超读同界）。
-            // r/u/c 三门按 (门, 列片) 从 GM 现搬该列段 bias（宽路指令序不变）。
+            // S2 门级预取：aK/b 各双槽（门 k 尾发射门 k+1 装载进异槽，1-ahead）。
+            // S3' aHR 三槽独立于 aK：AIV 前瞻-3 写 hr[it+3]→aHR[it%3]，AIC 门 it 读
+            // aHR[it%3]。⚠ 三槽+前瞻-3 为实测收敛结果，勿减为前瞻-2（跨核 L1 写
+            // 可见性裕量不足，实测 c/h 大面积错；细节见存档）。
+            aKOff = l1.TakeT<float>(aKElems * 2);  // A: x/hPrev 切片双槽 [mChunk, ≤kgMax]×2
+            aHROff = l1.TakeT<float>(aKElems * 3); // A: pass1 hr 切片三槽（AIV 写 / AIC 读）
+            bOff = l1.TakeT<float>(bElems * 2);    // B: 权重行块双槽 [kc, nSlice]×2
+            // bias 列片共享槽：容量按 nL0c（末片超读落 L0C pad 列、不进 GM）。
             biasSlotOff = l1.TakeT<float>(gbc::cube::BtElems(nL0c));
-            // L1 合计足迹 = l1.cur（Bump 游标；host 侧 CheckLayoutCapacity 同公式复刻
-            // 做前置拒绝，无需在 Layout 登记冗余字段）。
+            // L1 合计足迹 = l1.cur（host CheckLayoutCapacity 同公式复刻做前置拒绝）。
 
-            // L0（单 slot；k-chunk 间 PIPE_ALL 栅栏 + 门间 WaitFixToM 序贯复用）。
-            // L0A/L0B/L0C/BT 容量不在此登记：上界由 host 决策公式钉死（nL0c 由
-            // L0C×UB 联合反推、nSlice/kc 由 L0B 反推、mChunk 受 L0A 行界钳位）并由
-            // tests/ut 属性测试断言；kernel 侧存一份不校验的容量字段属误导代码。
+            // L0（单 slot，PIPE_ALL/WaitFixToM 序贯复用）：容量上界由 host 决策公式
+            // 钉死 + UT 断言，kernel 侧不登记不校验的容量字段。
 
-            // UB（两 AIV 同名偏移；AIC 的 FIX 以 VECOUT 偏移写入各 AIV 的 UB）：
-            // 8 个 [rowsMax, nL0c] **列片**平面（6 独立 + t1/t2，t3≡rAcc）+ msk。
-            // 平面行距取当前列片宽 w（≤ nL0c，恒 8 对齐）⇒ 片内紧凑，AIV 逐元素算子
-            // 可按扁平 work=stripe.count×w 处理（见 DATAFLOW NOTES #1）。
-            // ⚠ 别名复用的写读先序（均经既有 V2C/C2V/PIPE_ALL 栅栏闭合；改别名必须重核）：
-            //   别名            末读                          首写 / 闭合屏障
-            //   rBar ≡ hr       列片末轮 VF 写 hr + MTE3 读    AIC 下一列片 rBar drain——被该轮
-            //                                                 V2C（MTE3 排空才置位）+ 片顶 CubeWaitVec 双重后序
-            //   uBar ≡ cBar     末组 u-merge                  pass1 首片 g0 drain——被 pass0 末轮 V2C + CubeWaitVec 后序
-            //   uAcc ≡ cAcc     CopyOut u（MTE3，其后有 PIPE_ALL）  pass1 首片 g0 DataCopy
-            //   uComp ≡ cComp   FinFinalize(u)（片末轮）       pass1 首片 g1 Neumaier（g0 的 Duplicate 清零亦在其后）
-            //   t1 ≡ hp 副本    Sigmoid/Tanh 的 V 读           hp 两次 MTE2 现拷（pass0 片末 VF hr 前 / pass1 blend
-            //   前），
-            //                                                 读写间有 PIPE_ALL；pass1 各列片 blend 复写 t1 故每片重拷
-            //   t2 ≡ u 回读     blend 的 V 读                  pass1 片末 CopyOut c 之后的 MTE2 现拷
-            //   rAcc ≡ Tanh s3  VF hr（pass0 片末轮，其后有 PIPE_ALL） pass1 的 B 端 Tanh（pass1 全程不触及 rAcc）
-            //   msk             FinFinalize/Tanh 共用按需 scratch，无跨相位保持需求
+            // UB（两 AIV 同名偏移）：10 个 [rowsMax, nL0c] 列片平面（8 独立 + t1/t2，
+            // t3≡rAcc）+ msk；平面行距 = 当前片宽 w（恒 8 对齐），AIV 扁平 work=stripe.count×w。
+            // ⚠ 别名写读先序（均经既有 V2C/C2V/PIPE_ALL 栅栏闭合；改别名必须重核）：
+            //   rBar0≡cBar1、uBar0≡cBar0：pass0 偶轮 merge ↔ pass1 c-merge（深度差 ≥2 轮
+            //     + 块界 CubeWaitVec 后序）
+            //   rBar1/uBar1：仅 pass0 奇轮（深度-2 的 V2C[gIdx−2] 闭合 WAR）
+            //   uAcc≡cAcc：CopyOut u（MTE3+PIPE_ALL）→ pass1 首片 g0 DataCopy
+            //   uComp≡cComp：FinFinalize(u) → pass1 首片 g1 Neumaier
+            //   t1≡hp 副本、t2≡u 回读：V 读 → blend 前 MTE2 现拷（PIPE_ALL 间隔；t1 每片重拷）
+            //   rAcc≡t3：pass0 σ(r)/r CopyOut → pass1 片末 Tanh s3/VF h 落点/h CopyOut
+            //     （WaitMte3ToV 闭合）；⚠ h 不得改回 cAcc 就地（Fix B 零窗竞态）
+            //   msk：FinFinalize/Tanh 按需 scratch，无跨相位保持
             gbc::layout::Bump ub;
-            rBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 r drain；≡ hr
-            uBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 u drain；≡ cBar
+            rBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 r drain 偶轮；≡ pass1 cBar1
+            uBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 u drain 偶轮；≡ pass1 cBar0
+            rBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 r drain 奇轮（S3'' 深度-2）
+            uBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 u drain 奇轮（pass1 空闲）
             rAccOff = ub.TakeT<float>(planeElems);  // VECCALC: r 累加器；B 端 ≡ Tanh s3（宽路）
             rCompOff = ub.TakeT<float>(planeElems); // VECCALC: r Neumaier 补偿项
             uAccOff = ub.TakeT<float>(planeElems);  // VECCALC: u 累加器；≡ cAcc
@@ -849,9 +818,54 @@ private:
                                          uint32_t gw, uint32_t seedMode, uint32_t biasL1Off, uint32_t outBase,
                                          uint32_t mNow);
 
-    // ---- 一个 m-chunk 的完整两段（cube 侧 / vector 侧）
-    __aicore__ inline void CubeChunk(uint32_t rowBase, uint32_t mNow, bool firstChunk);
-    __aicore__ inline void VectorChunk(uint32_t rowBase, uint32_t mNow);
+    // ---- 一个 m-chunk 的两段（cube 侧 / vector 侧）。phase：PHASE_BOTH=pass0+pass1
+    // （旧路，指令序与 A1 前逐位一致）；P0/P1=A1 splitMode=2 相位拆分单段（P0 末枚 V2C
+    // 留 pending，P1 块首 CubeWaitVec 消费——与旧路 pass0→pass1 界同 flag 同 WAR 语义）。
+    // SyncAll 全局屏障在 Half 层，每核恰一次（死锁契约见 CubeHalf ⚠）。
+    static constexpr uint32_t PHASE_BOTH = 0;
+    static constexpr uint32_t PHASE_P0 = 1;
+    static constexpr uint32_t PHASE_P1 = 2;
+    __aicore__ inline void CubeChunk(uint32_t rowBase, uint32_t mNow, bool firstChunk, uint32_t phase);
+    __aicore__ inline void VectorChunk(uint32_t rowBase, uint32_t mNow, uint32_t phase);
+
+    // ---- S2 门级装载预取通路（nSlice ≥ nL0c ⇒ 每门单 n0 片时启用；否则走
+    // GateGemmRange 串行旧路，两路 Mmad 序列逐位一致）----
+    // 组参数包（一个 (列片 s, 组 g) 的全部派生量；PlanGroup 纯算术，无副作用）
+    struct GrpPlan {
+        uint32_t s;      // 列片基列
+        uint32_t w;      // drain/平面宽 = min(nL0c, Hp−s)
+        uint32_t frameN; // L0C 帧宽 = min(nL0c, nAl−s)（= 旧路 sliceN）
+        uint32_t k0;     // K 组起点（段内）
+        uint32_t kw;     // K 组宽
+        bool isX;        // x 段（否则 h 段）
+        bool valid;      // s/g 越界 ⇒ false（末组无 next）
+    };
+    __aicore__ inline GrpPlan PlanGroup(uint32_t s, uint32_t g) const;
+    __aicore__ inline GrpPlan PlanNext(uint32_t s, uint32_t g) const;
+    // 异步发射一门的重载（MTE2，无等待；槽 = 线性门序奇偶）
+    __aicore__ inline void IssueWeightTile(const AscendC::GlobalTensor<float>& wGM, uint32_t wRow, uint32_t wCol,
+                                           uint32_t gw, uint32_t kcNow, uint32_t ns, uint32_t bSlot) const;
+    __aicore__ inline void IssueATile(const AscendC::GlobalTensor<float>& aGM, uint32_t rowBase, uint32_t k0,
+                                      uint32_t mNow, uint32_t kw, uint32_t kLim, uint32_t aSlot) const;
+    // 消费一门的前半：等装载落 L1 → 切 L0（A 可选，aL1Off 为 aK/aHR 槽绝对偏移）→
+    // BT（可选）→ MTE1 排空（返回后槽对 MTE2 自由，调用点随即发射下一门装载）
+    __aicore__ inline void GatePrepare(uint32_t aL1Off, bool doSplitA, uint32_t a1Cols, uint32_t kcNow, uint32_t sliceN,
+                                       bool withBias, uint32_t bL1Off, uint32_t mNow) const;
+    __aicore__ inline void CubeChunkPf(uint32_t rowBase, uint32_t mNow, bool firstChunk, uint32_t phase);
+    // AIV：从 GM 的 hPrev+r 现场重算 hr[gN] 切片（t1/t2 为 scratch，hr 落 t1）→
+    // FeedbackToL1 进 aHR 槽（aHRSlotOff）。S3' 前瞻-2 / !pf 前瞻-1 共用。
+    __aicore__ inline void RecomputeHr(uint32_t gN, uint32_t aHRSlotOff, const gbc::layout::RowStripe& stripe,
+                                       uint32_t gRow, uint32_t mNow, const AscendC::LocalTensor<float>& t1,
+                                       const AscendC::LocalTensor<float>& t2) const;
+    // S3'-T2（pf2 轮首回灌）：RecomputeHr 拆两段——StageHr 算 hr[gN] 暂存 t3
+    // （t1/t2 为 scratch）；FeedbackHr 自 t3 回灌 aHR 槽。两段跨相邻轮（轮 r 尾
+    // stage → 轮 r+1 首 feedback），使 feedback 落在 AIC 的 L1 静默窗（drain[r−1]
+    // → 下一门 L1 访问之间）——L1 无写仲裁，见 pass1 AIC 段 ⚠。
+    __aicore__ inline void StageHr(uint32_t gN, const gbc::layout::RowStripe& stripe, uint32_t gRow,
+                                   const AscendC::LocalTensor<float>& t1, const AscendC::LocalTensor<float>& t2,
+                                   const AscendC::LocalTensor<float>& t3) const;
+    __aicore__ inline void FeedbackHr(uint32_t gN, uint32_t aHRSlotOff, const gbc::layout::RowStripe& stripe,
+                                      uint32_t mNow, const AscendC::LocalTensor<float>& t3) const;
 
     __aicore__ inline void CubeHalf();
     __aicore__ inline void VectorHalf();
@@ -880,7 +894,15 @@ __aicore__ inline void GruBlockCellKernel::Init(GM_ADDR x, GM_ADDR hPrev, GM_ADD
                                                 const GruBlockCellTilingData* td)
 {
     td_ = td;
-    layout_ = Layout(td);
+    // ⚠ 950 核号约定：AIC 的 GetBlockIdx() 即 cluster 号；AIV 的是扁平 subcore 号
+    // （÷ 核比得 cluster）。per-core 分派（A1）在 Layout 构造内完成。
+    uint32_t cluster;
+    if ASCEND_IS_AIC {
+        cluster = static_cast<uint32_t>(AscendC::GetBlockIdx());
+    } else {
+        cluster = static_cast<uint32_t>(AscendC::GetBlockIdx()) / static_cast<uint32_t>(AscendC::GetTaskRatio());
+    }
+    layout_ = Layout(td, cluster);
     gmX_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(x));
     gmHPrev_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(hPrev));
     gmWRu_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(wRu));
@@ -943,15 +965,275 @@ __aicore__ inline void GruBlockCellKernel::GateGemmRange(uint32_t a1Off, uint32_
 }
 
 // ---------------------------------------------------------------------------
-// 列片 ↔ GM 的行跨步搬运。
-// ⚠ 不能用单条 blockCount=stripe.count 的 DataCopyPad：stride=0 时 GM 侧行距取
-// blockLen 本身，而列片的 blockLen = tileCols*4 < hiddenSize*4，会让第 1 行起写到
-// 错误的行偏移（实测多列片 shape 只有每个 AIV stripe 的第 0 行正确）。改用
-// dstStride 表达 GM 行距也不通用——dstStride 以 32B 为单位，需要
-// (hiddenSize − tileCols) % 8 == 0，而 H 非 8 对齐时（如 H=4097、末列片
-// tileCols=161）不成立。故逐行搬（blockCount=1，无需行距），对任意 H 成立。
-// ubPitch = 本列片宽 w（UB 平面行距）；gmPitch = hiddenSize。
+// S2 门级装载预取（pingpong_design 的 L1 双缓冲 + Set/Wait 分离精神的单事件形态）。
+// 结构：门 k 的 GatePrepare 尾（WaitMte1ToM 已排空 MTE1 ⇒ aK/b 槽对 MTE2 自由）
+// 发射门 k+1 的 A/b 装载（异槽），随后 Mmad[k]→drain[k]→C2V→AIV merge→V2C 的
+// 整段空窗与装载重叠；门 k+1 顶的 WaitMte2ToMte1 恰好只覆盖这批装载（发射点与
+// 消费点之间无其他 MTE2——bias 现搬均在 wait 前发射，被同一 wait 覆盖）。
+// 槽位：aK slot = 线性组序 gIdx&1（A 每组一片，r/u 两门共用）；b slot = 线性门序
+// &1（pass0：r 门恒 0 / u 门恒 1；pass1：gIdx&1）。跨核结构零改动（C2V/V2C 轮次、
+// 深度与 B1 完全一致），Mmad 序列不变 ⇒ 逐位不变。
 // ---------------------------------------------------------------------------
+__aicore__ inline GruBlockCellKernel::GrpPlan GruBlockCellKernel::PlanGroup(uint32_t s, uint32_t g) const
+{
+    const Layout& lyt = layout_;
+    GrpPlan p;
+    // A1：有效性上界 = 本核 sliceHiCol（旧路==padHidden）——越域卷绕 ⇒ 预取自然截止。
+    p.valid = (s < lyt.sliceHiCol) && (g < lyt.cGroups);
+    if (!p.valid) {
+        p.s = s;
+        p.w = 0;
+        p.frameN = 0;
+        p.k0 = 0;
+        p.kw = 0;
+        p.isX = false;
+        return p;
+    }
+    p.s = s;
+    p.w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
+    p.frameN = gbc::layout::MinU(lyt.nL0c, lyt.nAl - s);
+    p.isX = (g < lyt.cGroupsX);
+    const uint32_t kg = p.isX ? lyt.kgX : lyt.kgH;
+    const uint32_t kLim = p.isX ? lyt.inputSize : lyt.hiddenSize;
+    p.k0 = p.isX ? (g * lyt.kgX) : ((g - lyt.cGroupsX) * lyt.kgH);
+    p.kw = gbc::layout::MinU(kLim - p.k0, kg);
+    return p;
+}
+
+__aicore__ inline GruBlockCellKernel::GrpPlan GruBlockCellKernel::PlanNext(uint32_t s, uint32_t g) const
+{
+    return (g + 1 < layout_.cGroups) ? PlanGroup(s, g + 1) : PlanGroup(s + layout_.nL0c, 0);
+}
+
+__aicore__ inline void GruBlockCellKernel::IssueWeightTile(const AscendC::GlobalTensor<float>& wGM, uint32_t wRow,
+                                                           uint32_t wCol, uint32_t gw, uint32_t kcNow, uint32_t ns,
+                                                           uint32_t bSlot) const
+{
+    const Layout& lyt = layout_;
+    const uint32_t rowAvail = (gw > wCol) ? (gw - wCol) : 0;
+    const uint32_t copyCols = gbc::layout::MinU(ns, rowAvail);
+    if (copyCols > 0) {
+        gbc::cube::CopyInNd2Nz(wGM, wRow, wCol, kcNow, copyCols, gw,
+                               lyt.bOff + bSlot * lyt.bElems * static_cast<uint32_t>(sizeof(float)));
+    }
+}
+
+__aicore__ inline void GruBlockCellKernel::IssueATile(const AscendC::GlobalTensor<float>& aGM, uint32_t rowBase,
+                                                      uint32_t k0, uint32_t mNow, uint32_t kw, uint32_t kLim,
+                                                      uint32_t aSlot) const
+{
+    const Layout& lyt = layout_;
+    gbc::cube::CopyInNd2Nz(aGM, rowBase, k0, mNow, kw, kLim,
+                           lyt.aKOff + aSlot * lyt.aKElems * static_cast<uint32_t>(sizeof(float)));
+}
+
+__aicore__ inline void GruBlockCellKernel::GatePrepare(uint32_t aL1Off, bool doSplitA, uint32_t a1Cols, uint32_t kcNow,
+                                                       uint32_t sliceN, bool withBias, uint32_t bL1Off,
+                                                       uint32_t mNow) const
+{
+    const Layout& lyt = layout_;
+    gbc::sync::WaitMte2ToMte1(); // 覆盖：本门 A/b 预取 + 组首 bias 现搬（发射点均在本 wait 前）
+    if (doSplitA) {
+        gbc::cube::SplitA(aL1Off, a1Cols, 0, kcNow, mNow);
+    }
+    gbc::cube::SplitB(bL1Off, kcNow, sliceN);
+    if (withBias) {
+        gbc::cube::LoadBiasToBT(lyt.biasSlotOff, 0, sliceN);
+    }
+    gbc::sync::WaitMte1ToM();    // L0 就绪（M 管屏障：Mmad 排在 SplitA/B/BT 之后）
+    gbc::sync::WaitMte1ToMte2(); // MTE2 管屏障：调用点随后发射的下一门装载排在 SplitA/B/BT
+                                 // 对本门 aK/b/BT 槽的读之后（⚠ WaitFlag 只屏障目标管、
+                                 // 不阻标量流——缺本事件则预取 MTE2 与 SplitB 竞态覆槽，
+                                 // 实测 r/u/c/h 大面积"接近但错"的 stale 数据）
+}
+
+// ---------------------------------------------------------------------------
+// CubeChunkPf — S2 预取版 CubeChunk（pf 域 = nSlice ≥ nL0c）。与旧路逐门同构
+// （同 Mmad 序/drain/C2V-V2C 轮次），仅装载发射前移一门 ⇒ 输出逐位一致。
+// 1-ahead：门尾发射下一门 b/A 进异槽；pass1 h 段 A=hr 由 AIV 写（按段互斥）。
+// ---------------------------------------------------------------------------
+__aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_t mNow, bool firstChunk, uint32_t phase)
+{
+    const Layout& lyt = layout_;
+    const uint32_t twoH = static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize;
+    const uint32_t aKBytes = lyt.aKElems * static_cast<uint32_t>(sizeof(float)); // aK/aHR 槽距
+    const uint32_t bBytes = lyt.bElems * static_cast<uint32_t>(sizeof(float));   // b 槽距
+    // pf2 = pass1 深度-2 使能（cGroupsX≥3）：奇偶 need 分级 + feedback 落轮首 L1 静默窗。
+    // ⚠ 勿改纯深度-2（奇偶一律 it−2）——L1 无写仲裁，重叠期并发访问实测大面积错（见存档）。
+    const bool pf2 = (lyt.cGroupsX >= 3u);
+    // A1 列片域（旧路全幅）+ 本域片数（V2C 配平口径）
+    const uint32_t nTilesLocal = gbc::layout::CeilDiv(lyt.sliceHiCol - lyt.sliceLoCol, lyt.nL0c);
+
+    if (phase != PHASE_P1) {
+        if (!firstChunk) {
+            gbc::sync::CubeWaitVec(); // 前一块 epilogue 完成（rBar/uBar 可覆写）
+        }
+
+        // ---- pass0 prologue：门 0（组 0 r 门）的 A/b 装载 ----
+        {
+            const GrpPlan p0 = PlanGroup(lyt.sliceLoCol, 0);
+            IssueATile(p0.isX ? gmX_ : gmHPrev_, rowBase, p0.k0, mNow, p0.kw, p0.isX ? lyt.inputSize : lyt.hiddenSize,
+                       0);
+            // r 门权重列基 = 本片域首列 p0.s（旧路 p0.s==0 逐位同值）
+            IssueWeightTile(gmWRu_, p0.isX ? p0.k0 : (lyt.inputSize + p0.k0), p0.s, twoH, p0.kw, p0.frameN, 0);
+        }
+
+        // ---- pass0 · r/u 两门（1-ahead 预取；S3'' 深度-2）----
+        // 事件链（⚠ WaitFlag 只屏障目标管、不阻标量流——发射点安全全靠定向事件对）：
+        //   GatePrepare → 发射下一门装载(MTE2 ∥ 本门 Mmad) → Mmad → drain(FIX) → C2V。
+        // 深度-2 依据：pass0 的 V2C 为 WAR-only 语义（无跨核数据交接），stale wait 仍安全。
+        // V2C 配平：环内消费至 gIdx−1，尾环至 n0Total−1，末枚留给 pass0→pass1 界。
+        uint32_t consumed0 = 0;
+        uint32_t sIdx = 0; // 本核列片域内局部片序（gIdx/槽轮换与 AIV 同源）
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx) {
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                const GrpPlan cur = PlanGroup(s, g);
+                const GrpPlan nxt = PlanNext(s, g);
+                const uint32_t gIdx = sIdx * lyt.cGroups + g;
+                const uint32_t aSlot = gIdx & 1U;
+                const uint32_t need0 = (gIdx >= 2) ? (gIdx - 1) : 0u; // 深度-2：消费至 V2C[gIdx−2]
+                while (consumed0 < need0) {
+                    gbc::sync::CubeWaitVec(); // AIV 已消费轮 gIdx−2 的 rBar/uBar
+                    ++consumed0;
+                }
+                if (gIdx > 0) {
+                    gbc::sync::WaitFixToM(); // 上一轮 drain 排空后方可覆写 L0C
+                }
+                // -- r 门（bias 仅组首现搬，先于本门 wait 发射、被同一 wait 覆盖）--
+                if (g == 0 && s < lyt.hiddenSize) {
+                    gbc::cube::CopyInBiasPad(gmBRu_, s, twoH, gbc::layout::MinU(lyt.hiddenSize - s, cur.w),
+                                             lyt.biasSlotOff);
+                }
+                GatePrepare(lyt.aKOff + aSlot * aKBytes, true, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff, mNow);
+                IssueWeightTile(gmWRu_, cur.isX ? cur.k0 : (lyt.inputSize + cur.k0), lyt.hiddenSize + s, twoH, cur.kw,
+                                cur.frameN, 1); // u 门 b（槽 1）——与 r Mmad/drain/握手重叠
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                gbc::sync::WaitMToMte1(); // 下门 SplitB/BT 复用 L0B/BT 排在 r Mmad 读之后
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.rBar1Off : lyt.rBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
+                gbc::sync::WaitFixToM(); // L0C 复用于 u 门
+                if (g == 0 && s < lyt.hiddenSize) {
+                    gbc::cube::CopyInBiasPad(gmBRu_, lyt.hiddenSize + s, twoH,
+                                             gbc::layout::MinU(lyt.hiddenSize - s, cur.w), lyt.biasSlotOff);
+                }
+                // -- u 门（L0A 仍持 A[g]，免 SplitA；r 门尾的 M→MTE1 已序化 L0B/BT 复用）--
+                GatePrepare(lyt.aKOff + aSlot * aKBytes, false, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff + bBytes,
+                            mNow);
+                if (nxt.valid) { // 下一组 r 门 b（槽 0）+ 下一组 A（aK 异槽）
+                    IssueWeightTile(gmWRu_, nxt.isX ? nxt.k0 : (lyt.inputSize + nxt.k0), nxt.s, twoH, nxt.kw,
+                                    nxt.frameN, 0);
+                    IssueATile(nxt.isX ? gmX_ : gmHPrev_, rowBase, nxt.k0, mNow, nxt.kw,
+                               nxt.isX ? lyt.inputSize : lyt.hiddenSize, (gIdx + 1) & 1U);
+                }
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                gbc::sync::WaitMToMte1(); // 下一组 r 门 SplitA/B 复用 L0 排在 u Mmad 读之后
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.uBar1Off : lyt.uBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
+                gbc::sync::CubeSignalVec(); // 本轮 r/u 部分和已落 UB（列片 s）
+            }
+        }
+        // 尾环：消费至 n0Total−1 枚（末枚留给 pass0→pass1 界）
+        const uint32_t n0Total = nTilesLocal * lyt.cGroups;
+        while (consumed0 + 1 < n0Total) {
+            gbc::sync::CubeWaitVec();
+            ++consumed0;
+        }
+    } // phase != PHASE_P1（pass0 段）
+
+    if (phase != PHASE_P0) {
+        // ---- pass0 末轮 V2C 收尾（PHASE_BOTH）/ pending V2C 消费（PHASE_P1：pass0 相位
+        // 末块 ∨ 前一 pass1 块的末枚——同 flag 同 WAR 语义，屏障已在 Half 层走过）----
+        gbc::sync::CubeWaitVec();
+
+        // ---- pass1 prologue：门 0/1 的 A/b 装载（2-ahead 冷启动需前两门）----
+        {
+            const GrpPlan p0 = PlanGroup(lyt.sliceLoCol, 0);
+            IssueATile(gmX_, rowBase, p0.k0, mNow, p0.kw, lyt.inputSize, 0); // x[0]→aK0
+            IssueWeightTile(gmWC_, p0.k0, p0.s, lyt.hiddenSize, p0.kw, p0.frameN, 0);
+            const GrpPlan p1 = PlanNext(lyt.sliceLoCol, 0);
+            if (p1.valid) { // b[1]→b1；x 段才发 A（h 段的 A=hr 由 AIV 特例搭载写入）
+                IssueWeightTile(gmWC_, p1.isX ? p1.k0 : (lyt.inputSize + p1.k0), p1.s, lyt.hiddenSize, p1.kw, p1.frameN,
+                                1);
+                if (p1.isX) {
+                    IssueATile(gmX_, rowBase, p1.k0, mNow, p1.kw, lyt.inputSize, 1);
+                }
+            }
+        }
+
+        // ---- pass1 · c 门（S3' 深度-2 + 前瞻-3 hr + 2-ahead 预取）----
+        // cBar 双缓冲（cBar0≡uBarOff、cBar1≡rBarOff，零 UB 增量）；h 段 A=hr[it] 由 AIV
+        // 前瞻-3 写 aHR[it%3]（⚠ 前瞻勿减为 2——跨核 L1 写可见性裕量不足，实测翻车）。
+        // 特例 cGroupsX≤2：g<3 的 h 门由 AIV 在 merge[(s,0)] 一并写入，AIC 门 (s,1) need=it。
+        // V2C 配平：环内消费至 it−1，尾环至 total−1，末枚留给块界（跨块 FIFO 零残留）。
+        uint32_t consumed = 0;
+        uint32_t sIdx = 0; // 本核列片域内局部片序（it 与 AIV 同源；A1 前全幅域时逐位相同）
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx) {
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                const uint32_t it = sIdx * lyt.cGroups + g;
+                const GrpPlan cur = PlanGroup(s, g);
+                const uint32_t slot = it & 1U;
+                // pf2 奇偶分级：奇门 need=it（消费至 V2C[it−1]——轮 it−1 完整排空，含其
+                // 轮首 feedback ⇒ 奇门的全部 L1 访问结构性晚于最近一轮 feedback）；偶门
+                // need=it−1（消费至 V2C[it−2]，与轮 it−1 重叠——hr[it] 由轮 it−2 轮首
+                // feedback 携带于 V2C[it−2]，cBar WAR 同界）。!pf2：深度-1；特例 cGroupsX≤1：
+                // 门 (s,1) 的 hr 由 V2C[(s,0)] 搭载，need 提升为 it。
+                uint32_t need = pf2 ? (((it & 1U) != 0u) ? it : ((it >= 2) ? (it - 1) : 0u)) : ((it >= 1) ? it : 0u);
+                if (!pf2 && lyt.cGroupsX <= 1 && g == 1) {
+                    need = it;
+                }
+                while (consumed < need) {
+                    gbc::sync::CubeWaitVec();
+                    ++consumed;
+                }
+                if (it > 0) {
+                    gbc::sync::WaitFixToM(); // L0C WAR：Mmad[it] 排在 drain[it−1] 之后
+                }
+                if (g == 0 && s < lyt.hiddenSize) {
+                    gbc::cube::CopyInBiasPad(gmBC_, s, lyt.hiddenSize, gbc::layout::MinU(lyt.hiddenSize - s, cur.w),
+                                             lyt.biasSlotOff);
+                }
+                const uint32_t aOff = cur.isX ? (lyt.aKOff + slot * aKBytes) : (lyt.aHROff + (it % 3u) * aKBytes);
+                GatePrepare(aOff, true, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff + slot * bBytes, mNow);
+                // 2-ahead 发射：b[it+2]→b[it&1]、x[it+2]→aK[it&1]（仅 x 段；h 段 aHR 由
+                // AIV 写）。跨列片按线性门序还原域内片基 + sliceLoCol，越域由 sliceHiCol 截止。
+                // ⚠ pf2 下本发射窗与 merge[it−1] 轮首 FeedbackToL1 结构性错开（L1 无写仲裁）。
+                const uint32_t it2 = it + 2;
+                const GrpPlan nxt2 = PlanGroup(lyt.sliceLoCol + (it2 / lyt.cGroups) * lyt.nL0c, it2 % lyt.cGroups);
+                if (nxt2.valid) {
+                    IssueWeightTile(gmWC_, nxt2.isX ? nxt2.k0 : (lyt.inputSize + nxt2.k0), nxt2.s, lyt.hiddenSize,
+                                    nxt2.kw, nxt2.frameN, it2 & 1U);
+                    if (nxt2.isX) {
+                        IssueATile(gmX_, rowBase, nxt2.k0, mNow, nxt2.kw, lyt.inputSize, it2 & 1U);
+                    }
+                }
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                gbc::sync::WaitMToMte1(); // 下一门 SplitA/B 复用 L0 排在本门 Mmad 读之后
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB((slot != 0u) ? lyt.rBarOff : lyt.cBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
+                gbc::sync::CubeSignalVec(); // C2V[it]：本轮部分和已落 cBar[it&1]
+            }
+        }
+        // 尾环：消费至 total−1 枚（末枚留给块界）
+        const uint32_t n1Total = nTilesLocal * lyt.cGroups;
+        while (consumed + 1 < n1Total) {
+            gbc::sync::CubeWaitVec();
+            ++consumed;
+        }
+    } // phase != PHASE_P0（pass1 段）
+}
+
+// ---------------------------------------------------------------------------
+// 列片 ↔ GM 的行跨步搬运（S1 双路径，逐位不变）：UB 侧 8 对齐用单条 blockCount=rows
+// 批量 DataCopyPad，否则逐行回退（任意 H 成立）。⚠ stride 单位非对称：GM 侧=1 字节、
+// UB 侧=32B（dav_c310 实现语义，且 UB 行距向上圆整 32B ⇒ blockLen 须 32B 整除）；
+// 批量条件只看 UB 侧。⚠ 勿用 stride=0 单条整块搬（行距会取 blockLen，第 1 行起错位）。
+// ubPitch = UB 平面行距（片宽 w 或 hr 切片 kwP）；gmPitch = hiddenSize。
+// ---------------------------------------------------------------------------
+__aicore__ inline bool TileCopyBatchable(uint32_t rows, uint32_t ubPitch, uint32_t tileCols)
+{
+    return rows > 0 && (tileCols % gbc::layout::C0F) == 0 && ((ubPitch - tileCols) % gbc::layout::C0F) == 0;
+}
+
 __aicore__ inline void CopyTileToGm(const AscendC::GlobalTensor<float>& gm, uint64_t gmElemOff,
                                     const AscendC::LocalTensor<float>& ub, uint32_t rows, uint32_t ubPitch,
                                     uint32_t gmPitch, uint32_t tileCols)
@@ -961,6 +1243,13 @@ __aicore__ inline void CopyTileToGm(const AscendC::GlobalTensor<float>& gm, uint
     e.blockLen = tileCols * sizeof(float);
     e.srcStride = 0;
     e.dstStride = 0;
+    if (TileCopyBatchable(rows, ubPitch, tileCols)) {
+        e.blockCount = static_cast<uint16_t>(rows);
+        e.srcStride = (ubPitch - tileCols) / gbc::layout::C0F; // UB 侧：32B 单位
+        e.dstStride = (gmPitch - tileCols) * sizeof(float);    // GM 侧：字节单位
+        AscendC::DataCopyPad(gm[gmElemOff], ub, e);
+        return;
+    }
     for (uint32_t rr = 0; rr < rows; ++rr) {
         AscendC::DataCopyPad(gm[gmElemOff + static_cast<uint64_t>(rr) * gmPitch], ub[rr * ubPitch], e);
     }
@@ -976,145 +1265,240 @@ __aicore__ inline void CopyTileFromGm(const AscendC::GlobalTensor<float>& gm, ui
     e.srcStride = 0;
     e.dstStride = 0;
     const AscendC::DataCopyPadExtParams<float> pad{};
+    if (TileCopyBatchable(rows, ubPitch, tileCols)) {
+        e.blockCount = static_cast<uint16_t>(rows);
+        e.srcStride = (gmPitch - tileCols) * sizeof(float);    // GM 侧：字节单位
+        e.dstStride = (ubPitch - tileCols) / gbc::layout::C0F; // UB 侧：32B 单位
+        AscendC::DataCopyPad(ub, gm[gmElemOff], e, pad);
+        return;
+    }
     for (uint32_t rr = 0; rr < rows; ++rr) {
         AscendC::DataCopyPad(ub[rr * ubPitch], gm[gmElemOff + static_cast<uint64_t>(rr) * gmPitch], e, pad);
     }
 }
 
 // ---------------------------------------------------------------------------
-// CubeChunk — 一个 m-chunk 的 cube 侧：
-//   pass0（全列片 × 全组，r/u 两门）→ CubeWaitVec（h⊙r 已全部落 GM）
-//   → pass1（全列片 × 全组，c 门）。
-// 前一块的收尾 V2C 由循环顶部的 CubeWaitVec 消费（WAR：UB drain tile 的复用排在
-// 其后）。每列片、每组一轮 C2V/V2C 握手；轮次配平见文件头 DATAFLOW NOTES 与
-// gbc::sync 注释（每块 AIV 置位 2·nTiles·cGroups 次，cube 消费同数）。
+// RecomputeHr — AIV：hr[gN] = hPrev[:,gN] ⊙ r[:,gN] 现场重算 → aHR 槽（!pf2/!pf 路）。
+// t1/t2 为 scratch（hr 落 t1）；尾组 kwP=CeilAlign(kw,8) 零填充（pad 列不贡献）。
+// 事件链全定向，收尾由调用点 VecSignalCube（PIPE_MTE3）跨核发布。
 // ---------------------------------------------------------------------------
-__aicore__ inline void GruBlockCellKernel::CubeChunk(uint32_t rowBase, uint32_t mNow, bool firstChunk)
+__aicore__ inline void GruBlockCellKernel::RecomputeHr(uint32_t gN, uint32_t aHRSlotOff,
+                                                       const gbc::layout::RowStripe& stripe, uint32_t gRow,
+                                                       uint32_t mNow, const AscendC::LocalTensor<float>& t1,
+                                                       const AscendC::LocalTensor<float>& t2) const
 {
     const Layout& lyt = layout_;
-    // 片上张量由 gbc::cube:: Te 助手按 Layout 槽偏移现构，不预建 LocalTensor 视图。
-
-    if (!firstChunk) {
-        gbc::sync::CubeWaitVec(); // 前一块 epilogue 完成（rBar/uBar 可覆写）
-    }
-
-    // ---- pass0 · r/u 两门：[x|h_prev] @ wRu + bRu，列片外提 × split-K 分组内嵌。
-    // 每组：A 切片现搬进 aK → r 门 Mmad → drain rBar → u 门 Mmad → drain uBar →
-    // C2V（同轮交付 r/u 两组部分和，轮数不翻倍）。bias 仅首组（g==0，必为 x 段首组）
-    // 种子，按列片从 GM 现搬进共享槽。
-    // （r_bar/u_bar 的 GEMM 噪声经 σ 压缩后仍以 2.4e-7 级残差经 h⊙r 回流进 c——
-    // 三门全部走 AIV Neumaier 补偿合并。）
-    for (uint32_t s = 0; s < lyt.padHidden; s += lyt.nL0c) {
-        const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
-        const uint32_t frameN = gbc::layout::MinU(lyt.nL0c, lyt.nAl - s); // L0C 帧宽（Mmad cParent 同源）
-        for (uint32_t g = 0; g < lyt.cGroups; ++g) {
-            if (s > 0 || g > 0) {
-                gbc::sync::CubeWaitVec(); // AIV 已消费上一轮 rBar/uBar
-                gbc::sync::WaitFixToM();  // 上一轮 drain 排空后方可覆写 L0C
-            }
-            const bool isX = (g < lyt.cGroupsX);
-            const uint32_t kg = isX ? lyt.kgX : lyt.kgH;
-            const uint32_t kLim = isX ? lyt.inputSize : lyt.hiddenSize;
-            const uint32_t k0 = isX ? (g * lyt.kgX) : ((g - lyt.cGroupsX) * lyt.kgH);
-            const uint32_t kw = gbc::layout::MinU(kLim - k0, kg);
-            // A 切片现搬（x / h_prev 均按 K 组从 GM 进 aK；aH 全程只被回灌写）
-            gbc::cube::CopyInNd2Nz(isX ? gmX_ : gmHPrev_, rowBase, k0, mNow, kw, kLim, lyt.aKOff);
-            if (g == 0 && s < lyt.hiddenSize) {
-                gbc::cube::CopyInBiasPad(gmBRu_, s, static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize,
-                                         gbc::layout::MinU(lyt.hiddenSize - s, w), lyt.biasSlotOff);
-            }
-            gbc::sync::WaitMte2ToMte1();
-            // r 门（wRu 列块 [0,H)，bRu[0:H]）
-            GateGemmRange(lyt.aKOff, kw, 0, kw, gmWRu_, isX ? k0 : (lyt.inputSize + k0), 0,
-                          static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize, (g == 0) ? 0 : 1,
-                          (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
-            gbc::sync::WaitMToFix();
-            gbc::cube::DrainToUB(lyt.rBarOff, 0, w, mNow, frameN, w);
-            gbc::sync::WaitFixToM(); // L0C 复用于 u 门
-            if (g == 0 && s < lyt.hiddenSize) {
-                gbc::cube::CopyInBiasPad(gmBRu_, lyt.hiddenSize + s,
-                                         static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize,
-                                         gbc::layout::MinU(lyt.hiddenSize - s, w), lyt.biasSlotOff);
-                gbc::sync::WaitMte2ToMte1();
-            }
-            // u 门（wRu 列块 [H,2H)，bRu[H:2H]）；A 切片与 r 门同槽复用（同 k 区间）
-            GateGemmRange(lyt.aKOff, kw, 0, kw, gmWRu_, isX ? k0 : (lyt.inputSize + k0), lyt.hiddenSize,
-                          static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize, (g == 0) ? 0 : 1,
-                          (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
-            gbc::sync::WaitMToFix();
-            gbc::cube::DrainToUB(lyt.uBarOff, 0, w, mNow, frameN, w);
-            gbc::sync::CubeSignalVec(); // 本轮 r/u 部分和已落 UB（列片 s）
-        }
-    }
-
-    // ---- 等待 AIV 把全部列片的 h⊙r 回灌进 L1 aH ----
-    // V2C 为 FIFO barrier：消费末列片末组的那一轮即蕴含前面全部轮次（含各列片的
-    // FeedbackToL1）已完成；CubeWaitVec 尾随的 PIPE_ALL 使 aH 对后续 MTE1 可见。
-    gbc::sync::CubeWaitVec(); // 内含 PIPE_ALL：pass0 末轮 drain 的 FIX 亦已排空
-
-    // ---- pass1 · c 门：[x | h⊙r] @ wC + bC，同款列片外提 × split-K 分组。
-    // x 段按 K 组从 GM 现搬进 aK；h 段读 **aH 全幅回灌槽**（pass0 各列片已把
-    // h⊙r 写满 [0,Hp) 列），故 h 段的 kLo/kHi 是 aH 内的绝对列区间。
-    // bias 仅首组种子。每组一段 Mmad → drain cBar → C2V，轮间 CubeWaitVec 为 cBar
-    // 的 WAR 屏障。----
-    for (uint32_t s = 0; s < lyt.padHidden; s += lyt.nL0c) {
-        const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
-        const uint32_t frameN = gbc::layout::MinU(lyt.nL0c, lyt.nAl - s);
-        for (uint32_t g = 0; g < lyt.cGroups; ++g) {
-            if (s > 0 || g > 0) {
-                gbc::sync::CubeWaitVec(); // AIV 已消费上一轮 cBar
-                gbc::sync::WaitFixToM();  // 上一轮 drain 排空后方可覆写 L0C
-            }
-            const bool isX = (g < lyt.cGroupsX);
-            const uint32_t kg = isX ? lyt.kgX : lyt.kgH;
-            const uint32_t kLim = isX ? lyt.inputSize : lyt.hiddenSize;
-            const uint32_t k0 = isX ? (g * lyt.kgX) : ((g - lyt.cGroupsX) * lyt.kgH);
-            const uint32_t kw = gbc::layout::MinU(kLim - k0, kg);
-            if (isX) {
-                gbc::cube::CopyInNd2Nz(gmX_, rowBase, k0, mNow, kw, kLim, lyt.aKOff);
-                if (g == 0 && s < lyt.hiddenSize) {
-                    gbc::cube::CopyInBiasPad(gmBC_, s, lyt.hiddenSize, gbc::layout::MinU(lyt.hiddenSize - s, w),
-                                             lyt.biasSlotOff);
-                }
-                gbc::sync::WaitMte2ToMte1();
-                GateGemmRange(lyt.aKOff, kw, 0, kw, gmWC_, k0, 0, lyt.hiddenSize, (g == 0) ? 0 : 1,
-                              (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
-            } else {
-                // h 段：A 为 aH **全幅**回灌槽，故 kLo/kHi 用 aH 内的绝对列区间
-                // [k0, k0+kw)，而 wRowOff 只给段基 inputSize（行号 = wRowOff + k0i，
-                // k0i 已含组偏移）。⚠ 与 pass0 的 h 段约定不同——那边 A 是 aK 组内
-                // 切片（kLo=0），故 wRowOff 必须是 inputSize+k0。两处混用会使权重
-                // 行号变成 inputSize+2·k0 而越界读 wC（H=8 时 k0≡0 侥幸不炸）。
-                // bias 只可能落在 g==0，而 cGroupsX ≥ 1 保证 g==0 恒为 x 段组，
-                // 故本支无 bias 装载（seedMode 恒 1 = Plain 覆写，组间由 AIV 合并）。
-                GateGemmRange(lyt.aHOff, lyt.hiddenSize, k0, k0 + kw, gmWC_, lyt.inputSize, 0, lyt.hiddenSize, 1, 0u, s,
-                              mNow);
-            }
-            gbc::sync::WaitMToFix();
-            gbc::cube::DrainToUB(lyt.cBarOff, 0, w, mNow, frameN, w);
-            gbc::sync::CubeSignalVec(); // 本轮部分和已落 UB（列片 s）
-        }
-    }
+    const uint32_t k0n = (gN - lyt.cGroupsX) * lyt.kgH;
+    const uint32_t kwn = gbc::layout::MinU(lyt.hiddenSize - k0n, lyt.kgH);
+    const uint32_t kwPn = gbc::layout::CeilAlign(kwn, gbc::layout::C0F);
+    const uint32_t workHr = stripe.count * kwPn;
+    const uint64_t gmOffHr = static_cast<uint64_t>(gRow) * lyt.hiddenSize + k0n;
+    // ⚠ MTE3→V 闭合：!pf2&&pf 特例轮同轮连调本函数 2~3 次，开头 Duplicate(t1)（V 写）
+    // 与上一次 FeedbackToL1 的 MTE3 读 t1 零窗相邻（实测 hr 近全零落槽）；跨轮调用已由
+    // 轮首 PIPE_ALL 覆盖，本事件即刻通过。t2 无 MTE3 读者。
+    gbc::sync::WaitMte3ToV();
+    AscendC::Duplicate(t1, 0.0f, workHr); // hp 平面清零（含 pad 列）
+    AscendC::Duplicate(t2, 0.0f, workHr); // r 平面清零
+    gbc::sync::WaitVToMte2();             // Duplicate（V 写 t1/t2）→ MTE2 复写
+    CopyTileFromGm(gmHPrev_, gmOffHr, t1, stripe.count, kwPn, lyt.hiddenSize, kwn);
+    CopyTileFromGm(gmR_, gmOffHr, t2, stripe.count, kwPn, lyt.hiddenSize, kwn);
+    gbc::sync::WaitMte2ToV();         // MTE2 写 t1/t2 → V 读（Mul）
+    AscendC::Mul(t1, t1, t2, workHr); // hr = hPrev ⊙ r（pad 列 0⊙0=0，落 t1）
+    gbc::sync::WaitVToMte3();         // V 写 hr → MTE3（FeedbackToL1）读
+    const AscendC::LocalTensor<float> aHR(AscendC::TPosition::A1, aHRSlotOff, lyt.aKElems);
+    gbc::vector::FeedbackToL1(aHR, t1,
+                              gbc::layout::NzLayout(mNow, gbc::layout::MaxU(lyt.kgX, lyt.kgH), gbc::layout::C0F, mNow),
+                              kwPn, 0, stripe);
 }
 
 // ---------------------------------------------------------------------------
-// CubeHalf — 本 cluster 的全部 m-chunk（batch 行切，无跨核栅栏）
+// StageHr — pf2 轮尾：hr[gN] → **t3 暂存**（不回灌）。事件链 V(清零)→MTE2→V(Mul)；
+// t3 跨轮存续，下一轮轮首 FeedbackHr 的 MTE3 读经轮首 PIPE_ALL 闭合。
+// ---------------------------------------------------------------------------
+__aicore__ inline void GruBlockCellKernel::StageHr(uint32_t gN, const gbc::layout::RowStripe& stripe, uint32_t gRow,
+                                                   const AscendC::LocalTensor<float>& t1,
+                                                   const AscendC::LocalTensor<float>& t2,
+                                                   const AscendC::LocalTensor<float>& t3) const
+{
+    const Layout& lyt = layout_;
+    const uint32_t k0n = (gN - lyt.cGroupsX) * lyt.kgH;
+    const uint32_t kwn = gbc::layout::MinU(lyt.hiddenSize - k0n, lyt.kgH);
+    const uint32_t kwPn = gbc::layout::CeilAlign(kwn, gbc::layout::C0F);
+    const uint32_t workHr = stripe.count * kwPn;
+    const uint64_t gmOffHr = static_cast<uint64_t>(gRow) * lyt.hiddenSize + k0n;
+    AscendC::Duplicate(t1, 0.0f, workHr); // hp 平面清零（含 pad 列）
+    AscendC::Duplicate(t2, 0.0f, workHr); // r 平面清零
+    gbc::sync::WaitVToMte2();             // Duplicate（V 写 t1/t2）→ MTE2 复写
+    CopyTileFromGm(gmHPrev_, gmOffHr, t1, stripe.count, kwPn, lyt.hiddenSize, kwn);
+    CopyTileFromGm(gmR_, gmOffHr, t2, stripe.count, kwPn, lyt.hiddenSize, kwn);
+    gbc::sync::WaitMte2ToV();         // MTE2 写 t1/t2 → V 读（Mul）
+    AscendC::Mul(t3, t1, t2, workHr); // hr = hPrev ⊙ r → t3 暂存（pad 列 0）
+}
+
+// ---------------------------------------------------------------------------
+// FeedbackHr — pf2 轮首：t3 暂存的 hr[gN] 回灌 aHR 槽（落 AIC 的 L1 静默窗）。
+// 收尾由 VecSignalCube 的 PIPE_MTE3 管序承载（V2C[it] 蕴含本轮回灌已排空）。
+// ---------------------------------------------------------------------------
+__aicore__ inline void GruBlockCellKernel::FeedbackHr(uint32_t gN, uint32_t aHRSlotOff,
+                                                      const gbc::layout::RowStripe& stripe, uint32_t mNow,
+                                                      const AscendC::LocalTensor<float>& t3) const
+{
+    const Layout& lyt = layout_;
+    const uint32_t k0n = (gN - lyt.cGroupsX) * lyt.kgH;
+    const uint32_t kwn = gbc::layout::MinU(lyt.hiddenSize - k0n, lyt.kgH);
+    const uint32_t kwPn = gbc::layout::CeilAlign(kwn, gbc::layout::C0F);
+    const AscendC::LocalTensor<float> aHR(AscendC::TPosition::A1, aHRSlotOff, lyt.aKElems);
+    gbc::vector::FeedbackToL1(aHR, t3,
+                              gbc::layout::NzLayout(mNow, gbc::layout::MaxU(lyt.kgX, lyt.kgH), gbc::layout::C0F, mNow),
+                              kwPn, 0, stripe);
+}
+
+// ---------------------------------------------------------------------------
+// CubeChunk — 一个 m-chunk 的 cube 侧：pass0（r/u 两门）→ CubeWaitVec → pass1（c 门）。
+// 每 (列片,组) 一轮 C2V/V2C 握手；前一块收尾 V2C 由块顶 CubeWaitVec 消费。
+// phase 语义见类声明处（PHASE_BOTH 旧路 / P0/P1 A1 相位拆分）。
+// ---------------------------------------------------------------------------
+__aicore__ inline void GruBlockCellKernel::CubeChunk(uint32_t rowBase, uint32_t mNow, bool firstChunk, uint32_t phase)
+{
+    const Layout& lyt = layout_;
+    // 片上张量由 gbc::cube:: Te 助手按 Layout 槽偏移现构，不预建 LocalTensor 视图。
+    if (lyt.nSlice >= lyt.nL0c) {
+        CubeChunkPf(rowBase, mNow, firstChunk, phase); // S2 预取路（每门单 n0 片域；两侧同判据）
+        return;
+    }
+
+    if (phase != PHASE_P1) {
+        if (!firstChunk) {
+            gbc::sync::CubeWaitVec(); // 前一块 epilogue 完成（rBar/uBar 可覆写）
+        }
+
+        // ---- pass0 · r/u 两门（旧路串行）：每组 A 现搬 aK → r 门 Mmad/drain → u 门
+        // Mmad/drain → C2V（同轮交付两组部分和）。bias 仅首组种子、按列片现搬共享槽。
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c) {
+            const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
+            const uint32_t frameN = gbc::layout::MinU(lyt.nL0c, lyt.nAl - s); // L0C 帧宽（Mmad cParent 同源）
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                if (s > lyt.sliceLoCol || g > 0) {
+                    gbc::sync::CubeWaitVec(); // AIV 已消费上一轮 rBar/uBar
+                    gbc::sync::WaitFixToM();  // 上一轮 drain 排空后方可覆写 L0C
+                }
+                const bool isX = (g < lyt.cGroupsX);
+                const uint32_t kg = isX ? lyt.kgX : lyt.kgH;
+                const uint32_t kLim = isX ? lyt.inputSize : lyt.hiddenSize;
+                const uint32_t k0 = isX ? (g * lyt.kgX) : ((g - lyt.cGroupsX) * lyt.kgH);
+                const uint32_t kw = gbc::layout::MinU(kLim - k0, kg);
+                // A 切片现搬（x / h_prev 均按 K 组从 GM 进 aK；aH 全程只被回灌写）
+                gbc::cube::CopyInNd2Nz(isX ? gmX_ : gmHPrev_, rowBase, k0, mNow, kw, kLim, lyt.aKOff);
+                if (g == 0 && s < lyt.hiddenSize) {
+                    gbc::cube::CopyInBiasPad(gmBRu_, s, static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize,
+                                             gbc::layout::MinU(lyt.hiddenSize - s, w), lyt.biasSlotOff);
+                }
+                gbc::sync::WaitMte2ToMte1();
+                // r 门（wRu 列块 [0,H)，bRu[0:H]）
+                GateGemmRange(lyt.aKOff, kw, 0, kw, gmWRu_, isX ? k0 : (lyt.inputSize + k0), 0,
+                              static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize, (g == 0) ? 0 : 1,
+                              (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB(lyt.rBarOff, 0, w, mNow, frameN, w);
+                gbc::sync::WaitFixToM(); // L0C 复用于 u 门
+                if (g == 0 && s < lyt.hiddenSize) {
+                    gbc::cube::CopyInBiasPad(gmBRu_, lyt.hiddenSize + s,
+                                             static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize,
+                                             gbc::layout::MinU(lyt.hiddenSize - s, w), lyt.biasSlotOff);
+                    gbc::sync::WaitMte2ToMte1();
+                }
+                // u 门（wRu 列块 [H,2H)，bRu[H:2H]）；A 切片与 r 门同槽复用（同 k 区间）
+                GateGemmRange(lyt.aKOff, kw, 0, kw, gmWRu_, isX ? k0 : (lyt.inputSize + k0), lyt.hiddenSize,
+                              static_cast<uint32_t>(GRU_GATE_NUM) * lyt.hiddenSize, (g == 0) ? 0 : 1,
+                              (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB(lyt.uBarOff, 0, w, mNow, frameN, w);
+                gbc::sync::CubeSignalVec(); // 本轮 r/u 部分和已落 UB（列片 s）
+            }
+        }
+    } // phase != PHASE_P1（pass0 段；末枚 V2C 留 pending，口径同 CubeChunkPf）
+
+    if (phase != PHASE_P0) {
+        // ---- pass0 末轮 V2C 收尾（B1：pass0 不再回灌 aH，此处仅消费末列片末组的 V2C
+        // 使 pass0 的 V2C 轮次零残留；CubeWaitVec 尾随的 PIPE_ALL 亦排空 pass0 末轮 drain
+        // 的 FIX，交还 L0C 给 pass1）。pass1 的 h 段 hr 由 AIV 逐组现场重算（见下）。
+        // A1 相位拆分（PHASE_P1）：同一枚 wait 消费 pending V2C（pass0 相位末块 ∨ 前一
+        // pass1 块），全局屏障已在 Half 层的 SyncAll 走过。----
+        gbc::sync::CubeWaitVec();
+
+        // ---- pass1 · c 门（旧路串行）：x 段现搬 aK；h 段读 AIV 回灌的 aHR（B1）。
+        // 每组 Mmad → drain cBar → C2V；轮间 CubeWaitVec = cBar WAR + hr 就绪蕴含。----
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c) {
+            const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
+            const uint32_t frameN = gbc::layout::MinU(lyt.nL0c, lyt.nAl - s);
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                if (s > lyt.sliceLoCol || g > 0) {
+                    gbc::sync::CubeWaitVec(); // AIV 已消费上一轮 cBar
+                    gbc::sync::WaitFixToM();  // 上一轮 drain 排空后方可覆写 L0C
+                }
+                const bool isX = (g < lyt.cGroupsX);
+                const uint32_t kg = isX ? lyt.kgX : lyt.kgH;
+                const uint32_t kLim = isX ? lyt.inputSize : lyt.hiddenSize;
+                const uint32_t k0 = isX ? (g * lyt.kgX) : ((g - lyt.cGroupsX) * lyt.kgH);
+                const uint32_t kw = gbc::layout::MinU(kLim - k0, kg);
+                if (isX) {
+                    gbc::cube::CopyInNd2Nz(gmX_, rowBase, k0, mNow, kw, kLim, lyt.aKOff);
+                    if (g == 0 && s < lyt.hiddenSize) {
+                        gbc::cube::CopyInBiasPad(gmBC_, s, lyt.hiddenSize, gbc::layout::MinU(lyt.hiddenSize - s, w),
+                                                 lyt.biasSlotOff);
+                    }
+                    gbc::sync::WaitMte2ToMte1();
+                    GateGemmRange(lyt.aKOff, kw, 0, kw, gmWC_, k0, 0, lyt.hiddenSize, (g == 0) ? 0 : 1,
+                                  (g == 0) ? lyt.biasSlotOff : 0u, s, mNow);
+                } else {
+                    // B1：h 段 A = AIV 逐组重算进 aHR 槽 0 的 hr 切片（!pf 恒槽 0，AIV 同
+                    // 判据同槽）；组顶 CubeWaitVec 蕴含回灌完成。本支无 bias（seedMode 恒 Plain）。
+                    GateGemmRange(lyt.aHROff, kw, 0, kw, gmWC_, lyt.inputSize + k0, 0, lyt.hiddenSize, 1, 0u, s, mNow);
+                }
+                gbc::sync::WaitMToFix();
+                gbc::cube::DrainToUB(lyt.cBarOff, 0, w, mNow, frameN, w);
+                gbc::sync::CubeSignalVec(); // 本轮部分和已落 UB（列片 s）
+            }
+        }
+    } // phase != PHASE_P0（pass1 段）
+}
+
+// ---------------------------------------------------------------------------
+// CubeHalf — 本 cluster 的全部 m-chunk。旧路（splitMode 0/1）：逐块 pass0+pass1，无跨核
+// 栅栏。A1（splitMode=2）：相位拆分——全部 pass0 块 → SyncAll<false>() → 全部 pass1 块
+// （pass1 h 段跨核读 GM 全 H 列 r；屏障 = AIV MTE3 管序 + AIC FFTS 全局汇聚）。
+// ⚠ 死锁契约：blockDim 内全 core 到场、每核恰调用一次——host 保证无空转核（rowChunks≤B、
+// coresUsed=rc×nsc），本路径无早退分支，防御域空行块（nChunk=0）亦直达屏障。
 // ---------------------------------------------------------------------------
 __aicore__ inline void GruBlockCellKernel::CubeHalf()
 {
     const Layout& lyt = layout_;
-    // ⚠ 950 核号约定：AIC 的 GetBlockIdx() 即 cluster 号
-    const uint32_t cluster = static_cast<uint32_t>(AscendC::GetBlockIdx());
-    uint32_t blockBase;
-    uint32_t rowsThisCore;
-    lyt.RowDispatch(cluster, blockBase, rowsThisCore); // 满行切/商余分核双模型行分派
-    if (blockBase >= lyt.batchSize) {
+    // per-core 分派已在 Layout 构造完成（⚠ 950 核号约定：AIC 的 GetBlockIdx() 即
+    // cluster 号；AIV 扁平 subcore 号 ÷ 核比——Init 同源）
+    if (lyt.splitMode == 2) {
+        const uint32_t nChunk = gbc::layout::CeilDiv(lyt.rowsThisCore, lyt.mChunk);
+        for (uint32_t ci = 0; ci < nChunk; ++ci) {
+            const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+            CubeChunk(lyt.rowBase + ci * lyt.mChunk, mNow, ci == 0, PHASE_P0);
+        }
+        AscendC::SyncAll<false>(); // pass0 全局排空汇聚（见函数头 ⚠）
+        for (uint32_t ci = 0; ci < nChunk; ++ci) {
+            const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+            CubeChunk(lyt.rowBase + ci * lyt.mChunk, mNow, false, PHASE_P1);
+        }
+        if (nChunk > 0) {
+            gbc::sync::CubeWaitVec(); // 消费末块末轮 V2C（跨 launch 零残留）
+        }
+        AscendC::PipeBarrier<PIPE_ALL>;
+        return;
+    }
+    if (lyt.rowBase >= lyt.batchSize) {
         return; // 无行的 cluster：与伴 AIV 一同早退，不参与任何 flag 轮
     }
-    const uint32_t nChunk = gbc::layout::CeilDiv(rowsThisCore, lyt.mChunk);
+    const uint32_t nChunk = gbc::layout::CeilDiv(lyt.rowsThisCore, lyt.mChunk);
     for (uint32_t ci = 0; ci < nChunk; ++ci) {
-        const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, rowsThisCore - ci * lyt.mChunk);
-        CubeChunk(blockBase + ci * lyt.mChunk, mNow, ci == 0);
+        const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+        CubeChunk(lyt.rowBase + ci * lyt.mChunk, mNow, ci == 0, PHASE_BOTH);
     }
     // 收尾等待：消费末块末轮的 V2C，使整个 launch 的 V2C 轮次零残留（跨 launch
     // 的 flag 残留可能满足下一次 launch 的早期等待——防患于未然）。
@@ -1125,18 +1509,18 @@ __aicore__ inline void GruBlockCellKernel::CubeHalf()
 // ---------------------------------------------------------------------------
 // VectorChunk — 一个 m-chunk 的 AIV 侧：pass0 全列片 → pass1 全列片
 // ---------------------------------------------------------------------------
-__aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_t mNow)
+__aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_t mNow, uint32_t phase)
 {
     const Layout& lyt = layout_;
     AscendC::LocalTensor<float> rBar(AscendC::TPosition::VECOUT, lyt.rBarOff, lyt.planeElems);
     AscendC::LocalTensor<float> uBar(AscendC::TPosition::VECOUT, lyt.uBarOff, lyt.planeElems);
+    AscendC::LocalTensor<float> rBar1(AscendC::TPosition::VECOUT, lyt.rBar1Off, lyt.planeElems); // S3'' 奇轮
+    AscendC::LocalTensor<float> uBar1(AscendC::TPosition::VECOUT, lyt.uBar1Off, lyt.planeElems); // S3'' 奇轮
     AscendC::LocalTensor<float> cBar(AscendC::TPosition::VECOUT, lyt.cBarOff, lyt.planeElems);
     AscendC::LocalTensor<float> rAcc(AscendC::TPosition::VECCALC, lyt.rAccOff, lyt.planeElems);
     AscendC::LocalTensor<float> rComp(AscendC::TPosition::VECCALC, lyt.rCompOff, lyt.planeElems);
     AscendC::LocalTensor<float> uAcc(AscendC::TPosition::VECCALC, lyt.uAccOff, lyt.planeElems);
     AscendC::LocalTensor<float> uComp(AscendC::TPosition::VECCALC, lyt.uCompOff, lyt.planeElems);
-    AscendC::LocalTensor<float> hp(AscendC::TPosition::VECCALC, lyt.hpOff, lyt.planeElems);
-    AscendC::LocalTensor<float> hr(AscendC::TPosition::VECCALC, lyt.hrOff, lyt.planeElems);
     AscendC::LocalTensor<float> cAcc(AscendC::TPosition::VECCALC, lyt.cAccOff, lyt.planeElems);
     AscendC::LocalTensor<float> cComp(AscendC::TPosition::VECCALC, lyt.cCompOff, lyt.planeElems);
     AscendC::LocalTensor<float> t1(AscendC::TPosition::VECCALC, lyt.t1Off, lyt.planeElems);
@@ -1145,7 +1529,12 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
     AscendC::LocalTensor<uint8_t> msk(
         AscendC::TPosition::VECCALC, lyt.mskOff,
         gbc::layout::CeilAlign(lyt.planeElems / gbc::layout::BITS_PER_BYTE, gbc::layout::C0F));
-    AscendC::LocalTensor<float> aH(AscendC::TPosition::A1, lyt.aHOff, lyt.aHElems);
+    // S3'：pass1 cBar 双缓冲——cBar1 复用 rBar 平面（pass1 中空闲：hr 已移驻 t1），
+    // 与 AIC 的 DrainToUB(rBarOff/cBarOff 奇偶轮换) 同奇偶；!pf 旧路恒 cBar0。
+    AscendC::LocalTensor<float> cBar1(AscendC::TPosition::VECOUT, lyt.rBarOff, lyt.planeElems);
+    const uint32_t aKBytes = lyt.aKElems * static_cast<uint32_t>(sizeof(float)); // aHR 槽距
+    const bool pf = (lyt.nSlice >= lyt.nL0c);
+    const bool pf2 = pf && (lyt.cGroupsX >= 3u); // pass1 奇偶分级深度-2（与 AIC 同判据，见 AIC 段 ⚠）
 
     // 与 drain 相同的 stripe（本 AIV 独占的行区间）
     const gbc::layout::RowStripe stripe = gbc::layout::DrainStripe(mNow, true,
@@ -1153,178 +1542,215 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
     const bool hasRows = stripe.count > 0;
     const uint32_t gRow = rowBase + stripe.base; // 本 AIV 起始的全局行
 
-    // ---- pass0：逐列片完成 r/u 的补偿累加 → 门激活 → reset_before 乘 → 落 GM ----
-    // 每组：VecWaitCube → rBar/uBar 并入 (rAcc,rComp)/(uAcc,uComp) → VecSignalCube
-    // （下一轮 drain 的 WAR 屏障）。g=0 直接以首组部分和初始化累加器。
-    // ⚠ 列片收尾（finalize/sigmoid/copyout/hp/VF/hr 落 GM）必须并入**末组轮内**再
-    // VecSignalCube：V2C 按 FIFO 计数配对，且 cube 的 pass0→pass1 CubeWaitVec 消费的
-    // 正是末列片末组的 V2C——收尾若单独成轮，cube 会在 hr 尚未落 GM 时就开始 pass1
-    // 读 aH（静默错数）。并入后每块 V2C 严格 2·nTiles·cGroups 设 = 同数等，轮次配平。
-    for (uint32_t s = 0; s < lyt.padHidden; s += lyt.nL0c) {
-        const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
-        const uint32_t tileCols = (s < lyt.hiddenSize) ? gbc::layout::MinU(w, lyt.hiddenSize - s) : 0;
-        const uint32_t work = stripe.count * w;
-        const uint64_t gmOff = static_cast<uint64_t>(gRow) * lyt.hiddenSize + s;
-        const uint16_t rep = static_cast<uint16_t>(AscendC::CeilDivision(work, VL_F32));
+    // ---- pass0：逐列片 r/u 补偿累加 → 门激活 → 落 GM ----
+    // 每组：VecWaitCube → 归并 → VecSignalCube；pf 域 rBar/uBar 奇偶轮换（S3''）。
+    // ⚠ 列片收尾必须并入末组轮内再置位（V2C FIFO 计数配对，单独成轮即失配）。
+    if (phase != PHASE_P1) {
+        uint32_t sIdx0 = 0; // 本核列片域内局部片序（gIdx 与 AIC 同源；A1 前全幅域逐位相同）
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx0) {
+            const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
+            const uint32_t tileCols = (s < lyt.hiddenSize) ? gbc::layout::MinU(w, lyt.hiddenSize - s) : 0;
+            const uint32_t work = stripe.count * w;
+            const uint64_t gmOff = static_cast<uint64_t>(gRow) * lyt.hiddenSize + s;
 
-        if (hasRows) {
-            AscendC::Duplicate(rComp, 0.0f, work);
-            AscendC::Duplicate(uComp, 0.0f, work);
-        }
-        for (uint32_t g = 0; g < lyt.cGroups; ++g) {
-            gbc::sync::VecWaitCube();
-            AscendC::PipeBarrier<PIPE_ALL>();
             if (hasRows) {
-                if (g == 0) {
-                    AscendC::DataCopy(rAcc, rBar, work);
-                    AscendC::DataCopy(uAcc, uBar, work);
-                    // 轮尾定向事件（范式误区3错误3）：rBar/uBar 的 V 读须先于本轮
-                    // VecSignalCube 的 MTE3 跨核置位完成——命名 V→MTE3 hazard。
-                    gbc::sync::WaitVToMte3();
-                } else {
-                    // Neumaier（Knuth TwoSum，无分支形态）：t = a + p 的舍入损失进补偿项。
-                    // ⚠ accumulator 回拷（UB→UB DataCopy，V 管指令）与下一链对 t1 的复写
-                    // 同属 V 管，程序序即保序；此处 PIPE_V 为条款口径的同管防御标记。
-                    AscendC::Add(t1, rAcc, rBar, work);
-                    AscendC::Sub(t2, rAcc, t1, work);
-                    AscendC::Add(t2, t2, rBar, work);
-                    AscendC::Add(rComp, rComp, t2, work);
-                    AscendC::DataCopy(rAcc, t1, work);
-                    AscendC::PipeBarrier<PIPE_V>(); // t1 拷贝读完成前不得复写（同管保序）
-                    AscendC::Add(t1, uAcc, uBar, work);
-                    AscendC::Sub(t2, uAcc, t1, work);
-                    AscendC::Add(t2, t2, uBar, work);
-                    AscendC::Add(uComp, uComp, t2, work);
-                    AscendC::DataCopy(uAcc, t1, work);
-                    // 轮尾定向事件（非末组轮）：uBar/rBar 的 V 读须先于 VecSignalCube 的
-                    // MTE3 跨核置位——命名 V→MTE3 hazard。
-                    gbc::sync::WaitVToMte3();
-                }
-                if (g == lyt.cGroups - 1) {
-                    // 列片收尾（并入末轮，见上 ⚠）。hp 现拷进 t1（≡hpOff；Sigmoid 的
-                    // t1 V 读与 MTE2 写之间有上一行 PIPE_ALL）
-                    gbc::layout::FinFinalize(rAcc, rComp, t1, t2, msk, work); // r_bar 就绪
-                    gbc::layout::FinFinalize(uAcc, uComp, t1, t2, msk, work); // u_bar 就绪
-                    AscendC::PipeBarrier<PIPE_V>(); // FinFinalize 与 SigmoidVec 同为 V 管指令，同管保序
-                    gbc::vector::SigmoidVec(rAcc, t1, t2, work); // r = σ(r_bar)（就地）
-                    gbc::vector::SigmoidVec(uAcc, t1, t2, work); // u = σ(u_bar)（就地）
-                    // 定向事件对（原 PIPE_ALL）：V 写 rAcc/uAcc → MTE3（CopyOut r/u/hr 读）
-                    // 与 → MTE2（hp 现拷写 t1 槽）双 hazard，分别命名闭合。
-                    gbc::sync::WaitVToMte3();
-                    gbc::sync::WaitVToMte2();
-                    // 输出 r（fp32 直出，字节精确）/ u（pass1 blend 经 t2 回读）/ h_prev 副本（t1 槽）
-                    CopyTileToGm(gmR_, gmOff, rAcc, stripe.count, w, lyt.hiddenSize, tileCols);
-                    CopyTileToGm(gmU_, gmOff, uAcc, stripe.count, w, lyt.hiddenSize, tileCols);
-                    CopyTileFromGm(gmHPrev_, gmOff, hp, stripe.count, w, lyt.hiddenSize, tileCols);
-                    AscendC::PipeBarrier<PIPE_ALL>(); // MTE2 写 hp → VF 读（跨管必须全栅栏，见文件头）
-                    // ★ reset_before：hr = h_prev ⊙ r（VF 主链；hr 落 rBar 平面——
-                    // 末组 r-merge 已消费完该 drain，同 AIV 程序序）
-                    asc_vf_call<GruBlockCellResetMulVF<float>>(reinterpret_cast<__ubuf__ float*>(hr.GetPhyAddr()),
-                                                               reinterpret_cast<__ubuf__ float*>(hp.GetPhyAddr()),
-                                                               reinterpret_cast<__ubuf__ float*>(rAcc.GetPhyAddr()),
-                                                               work, VL_F32, rep);
-                    AscendC::PipeBarrier<PIPE_ALL>(); // VF 异步读闭合 → 回灌（必须全栅栏：VF 异步单元
-                                                      // 完成不被命名 V 管事件闭合，定向化实测 pass1 全错）
-                    // 回灌 UB→L1：只写 aH 的 [s, s+w) 列块区间、本 stripe 的行区间
-                    // （950 独有，不过 GM）。pass0 的 h 段不读 aH，故与本片/后续片的
-                    // pass0 GEMM 无竞争；pass1 由块级 CubeWaitVec 保证全幅已写满。
-                    gbc::vector::FeedbackToL1(aH, hr,
-                                              gbc::layout::NzLayout(mNow, lyt.padHidden, gbc::layout::C0F, mNow), w,
-                                              s / gbc::layout::C0F, stripe);
-                }
+                AscendC::Duplicate(rComp, 0.0f, work);
+                AscendC::Duplicate(uComp, 0.0f, work);
             }
-            gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                const uint32_t gIdx = sIdx0 * lyt.cGroups + g; // pass0 线性轮序（与 AIC 同源）
+                const AscendC::LocalTensor<float> rBarP = (pf && ((gIdx & 1U) != 0U)) ? rBar1 : rBar;
+                const AscendC::LocalTensor<float> uBarP = (pf && ((gIdx & 1U) != 0U)) ? uBar1 : uBar;
+                gbc::sync::VecWaitCube();
+                AscendC::PipeBarrier<PIPE_ALL>();
+                if (hasRows) {
+                    if (g == 0) {
+                        AscendC::DataCopy(rAcc, rBarP, work);
+                        AscendC::DataCopy(uAcc, uBarP, work);
+                        // 轮尾定向事件（范式误区3错误3）：rBar/uBar 的 V 读须先于本轮
+                        // VecSignalCube 的 MTE3 跨核置位完成——命名 V→MTE3 hazard。
+                        gbc::sync::WaitVToMte3();
+                    } else {
+                        // Neumaier（Knuth TwoSum 无分支形态）：舍入损失进补偿项；PIPE_V 为
+                        // t1 回拷读完成前的同管防御标记。
+                        AscendC::Add(t1, rAcc, rBarP, work);
+                        AscendC::Sub(t2, rAcc, t1, work);
+                        AscendC::Add(t2, t2, rBarP, work);
+                        AscendC::Add(rComp, rComp, t2, work);
+                        AscendC::DataCopy(rAcc, t1, work);
+                        AscendC::PipeBarrier<PIPE_V>(); // t1 拷贝读完成前不得复写（同管保序）
+                        AscendC::Add(t1, uAcc, uBarP, work);
+                        AscendC::Sub(t2, uAcc, t1, work);
+                        AscendC::Add(t2, t2, uBarP, work);
+                        AscendC::Add(uComp, uComp, t2, work);
+                        AscendC::DataCopy(uAcc, t1, work);
+                        // 轮尾定向事件（非末组轮）：uBar/rBar 的 V 读须先于 VecSignalCube 的
+                        // MTE3 跨核置位——命名 V→MTE3 hazard。
+                        gbc::sync::WaitVToMte3();
+                    }
+                    if (g == lyt.cGroups - 1) {
+                        // 列片收尾（并入末轮，见上 ⚠）。B1：pass0 只输出 r/u 到 GM，不再
+                        // 现场算 hr/回灌 aH（hr 改由 pass1 逐组从 GM 的 r+hPrev 重算）。
+                        gbc::layout::FinFinalize(rAcc, rComp, t1, t2, msk, work); // r_bar 就绪
+                        gbc::layout::FinFinalize(uAcc, uComp, t1, t2, msk, work); // u_bar 就绪
+                        AscendC::PipeBarrier<PIPE_V>(); // FinFinalize 与 SigmoidVec 同为 V 管指令，同管保序
+                        gbc::vector::SigmoidVec(rAcc, t1, t2, work); // r = σ(r_bar)（就地）
+                        gbc::vector::SigmoidVec(uAcc, t1, t2, work); // u = σ(u_bar)（就地）
+                        // 定向事件：V 写 rAcc/uAcc → MTE3（CopyOut r/u 读）。
+                        gbc::sync::WaitVToMte3();
+                        // 输出 r（fp32 直出，字节精确；pass1 hr 重算与 blend 均回读）/ u（pass1 blend 经 t2 回读）
+                        CopyTileToGm(gmR_, gmOff, rAcc, stripe.count, w, lyt.hiddenSize, tileCols);
+                        CopyTileToGm(gmU_, gmOff, uAcc, stripe.count, w, lyt.hiddenSize, tileCols);
+                    }
+                }
+                gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier
+            }
         }
-    }
+    } // phase != PHASE_P1（pass0 段；A1 相位拆分时全局屏障在 VectorHalf 层）
 
-    // ---- pass1：逐列片完成 c_bar 的补偿累加 + 候选激活 + 状态更新 ----
-    // 每组：VecWaitCube → cBar 并入 (cAcc,cComp) → VecSignalCube（下一轮 drain 的
-    // WAR 屏障）。g=0 直接以首组部分和初始化累加器；g≥1 用 Neumaier：
-    // t = cAcc + p; cComp += (cAcc − t) + p; cAcc = t（组间合并近精确）。
-    for (uint32_t s = 0; s < lyt.padHidden; s += lyt.nL0c) {
-        const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
-        const uint32_t tileCols = (s < lyt.hiddenSize) ? gbc::layout::MinU(w, lyt.hiddenSize - s) : 0;
-        const uint32_t work = stripe.count * w;
-        const uint64_t gmOff = static_cast<uint64_t>(gRow) * lyt.hiddenSize + s;
-        const uint16_t rep = static_cast<uint16_t>(AscendC::CeilDivision(work, VL_F32));
+    // ---- pass1：逐列片 c_bar 补偿累加 + 候选激活 + 状态更新 ----
+    // 每组：VecWaitCube → Neumaier 归并 → VecSignalCube；g=0 以首组部分和为初值。
+    if (phase != PHASE_P0) {
+        uint32_t sIdx = 0; // 本核列片域内局部片序（it 与 AIC 同源）
+        for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx) {
+            const uint32_t w = gbc::layout::MinU(lyt.nL0c, lyt.padHidden - s);
+            const uint32_t tileCols = (s < lyt.hiddenSize) ? gbc::layout::MinU(w, lyt.hiddenSize - s) : 0;
+            const uint32_t work = stripe.count * w;
+            const uint64_t gmOff = static_cast<uint64_t>(gRow) * lyt.hiddenSize + s;
+            const uint16_t rep = static_cast<uint16_t>(AscendC::CeilDivision(work, VL_F32));
 
-        if (hasRows) {
-            AscendC::Duplicate(cComp, 0.0f, work); // 补偿项清零（首组前）
-        }
-        for (uint32_t g = 0; g < lyt.cGroups; ++g) {
-            gbc::sync::VecWaitCube();
-            AscendC::PipeBarrier<PIPE_ALL>();
             if (hasRows) {
-                if (g == 0) {
-                    AscendC::DataCopy(cAcc, cBar, work); // 首组部分和即累加器初值
-                    // 轮尾定向事件（原 PIPE_ALL）：cBar 的 V 读先于本轮 VecSignalCube 的
-                    // MTE3 跨核置位——命名 V→MTE3 hazard。
-                    gbc::sync::WaitVToMte3();
-                } else {
-                    // Neumaier：大数吃小数的舍入损失进补偿项
-                    AscendC::Add(t1, cAcc, cBar, work);   // t = cAcc + p
-                    AscendC::Sub(t2, cAcc, t1, work);     // cAcc − t
-                    AscendC::Add(t2, t2, cBar, work);     // + p
-                    AscendC::Add(cComp, cComp, t2, work); // cComp += (cAcc − t) + p
-                    AscendC::DataCopy(cAcc, t1, work);    // cAcc = t
-                    // 轮尾定向事件（非末组轮，原 PIPE_ALL）：cBar 的 V 读先于 VecSignalCube
-                    // 的 MTE3 跨核置位——命名 V→MTE3 hazard。
-                    gbc::sync::WaitVToMte3();
-                }
+                AscendC::Duplicate(cComp, 0.0f, work); // 补偿项清零（首组前）
             }
-            gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier
+            for (uint32_t g = 0; g < lyt.cGroups; ++g) {
+                const uint32_t it = sIdx * lyt.cGroups + g; // pass1 线性门序（与 AIC 同源）
+                // S3'：pf 域 cBar 奇偶轮换（cBar1≡rBar 平面），与 AIC drain 同奇偶；!pf 恒 cBar0
+                const AscendC::LocalTensor<float> cBarP = (pf && ((it & 1U) != 0U)) ? cBar1 : cBar;
+                gbc::sync::VecWaitCube();
+                AscendC::PipeBarrier<PIPE_ALL>();
+                if (hasRows) {
+                    // ---- pf2 轮首回灌：上一轮 StageHr 暂存的 hr → aHR[(it+2)%3]。
+                    // 落点 = AIC 的 L1 静默窗（L1 无写仲裁，深度-2 安全前提）。----
+                    const uint32_t gF = g + 2;
+                    const bool didFb = pf2 && (g >= 1) && (gF < lyt.cGroups) && (gF >= lyt.cGroupsX);
+                    if (didFb) {
+                        FeedbackHr(gF, lyt.aHROff + ((it + 2) % 3u) * aKBytes, stripe, mNow, t3);
+                    }
+                    if (g == 0) {
+                        AscendC::DataCopy(cAcc, cBarP, work); // 首组部分和即累加器初值
+                        // 轮尾定向事件（原 PIPE_ALL）：cBar 的 V 读先于本轮 VecSignalCube 的
+                        // MTE3 跨核置位——命名 V→MTE3 hazard。
+                        gbc::sync::WaitVToMte3();
+                    } else {
+                        // Neumaier：大数吃小数的舍入损失进补偿项
+                        AscendC::Add(t1, cAcc, cBarP, work);  // t = cAcc + p
+                        AscendC::Sub(t2, cAcc, t1, work);     // cAcc − t
+                        AscendC::Add(t2, t2, cBarP, work);    // + p
+                        AscendC::Add(cComp, cComp, t2, work); // cComp += (cAcc − t) + p
+                        AscendC::DataCopy(cAcc, t1, work);    // cAcc = t
+                        // 轮尾定向事件（非末组轮，原 PIPE_ALL）：cBar 的 V 读先于 VecSignalCube
+                        // 的 MTE3 跨核置位——命名 V→MTE3 hazard。
+                        gbc::sync::WaitVToMte3();
+                    }
+                    // ---- B1+S3'：hr 前瞻（hPrev⊙r 切片 → aHR 槽 / t3 暂存）----
+                    // pf2：轮尾 StageHr 暂存 hr[g+3]→t3，下一轮轮首 FeedbackHr 回灌
+                    //   aHR[(it+3)%3]（轮首窗 = AIC L1 静默窗，深度-2 安全前提）。
+                    // !pf2&&pf：轮尾一体重算+回灌（前瞻-3）；特例 g<3 的 h 门于
+                    //   merge[(s,0)] 一并写入（AIC 门 (s,1) need 提升为 it）。
+                    // !pf：本轮写 hr[g+1]→aHR 槽 0（AIC 下一轮组顶消费后读）。
+                    if (pf2) {
+                        const uint32_t gN3 = g + 3;
+                        if (gN3 < lyt.cGroups && gN3 >= lyt.cGroupsX) {
+                            if (didFb) {
+                                gbc::sync::WaitMte3ToV(); // 轮首 feedback 的 MTE3 读 t3 先于 V 复写
+                            }
+                            StageHr(gN3, stripe, gRow, t1, t2, t3);
+                            gbc::sync::WaitVToMte3(); // Mul（V 写 t3）先于 VecSignalCube 的 MTE3 置位
+                        }
+                    } else if (pf) {
+                        const uint32_t gN3 = g + 3;
+                        if (gN3 < lyt.cGroups && gN3 >= lyt.cGroupsX) {
+                            RecomputeHr(gN3, lyt.aHROff + (it % 3u) * aKBytes, stripe, gRow, mNow, t1, t2);
+                        }
+                        if (g == 0 && lyt.cGroupsX < 3u) {
+                            const uint32_t gSpecialHi = gbc::layout::MinU(3u, lyt.cGroups);
+                            for (uint32_t gS = lyt.cGroupsX; gS < gSpecialHi; ++gS) {
+                                RecomputeHr(gS, lyt.aHROff + ((it + gS) % 3u) * aKBytes, stripe, gRow, mNow, t1, t2);
+                            }
+                        }
+                    } else {
+                        const uint32_t gN = g + 1;
+                        if (gN < lyt.cGroups && gN >= lyt.cGroupsX) {
+                            RecomputeHr(gN, lyt.aHROff, stripe, gRow, mNow, t1, t2);
+                        }
+                    }
+                }
+                gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier（PIPE_MTE3 亦排空 hr 回灌）
+            }
+            if (hasRows) {
+                gbc::layout::FinFinalize(cAcc, cComp, t1, t2, msk, work); // c_bar 就绪（含有限性守卫）
+                AscendC::PipeBarrier<PIPE_V>(); // FinFinalize 与 TanhVec 同为 V 管指令，同管保序
+                // Tanh 的第 3 scratch 落 rAcc 平面（≡t3Off；rAcc 自 pass0 末列片 σ(r)+r CopyOut
+                // 后无人触及，pass1 各组亦只用 cAcc/cComp/t1/t2）
+                gbc::vector::TanhVec(cAcc, cAcc, t1, t2, t3, msk, work); // c = tanh(c_bar)（分段补偿）
+                gbc::sync::WaitVToMte3(); // V 写 cAcc → MTE3 读（原 PIPE_ALL；命名 V→MTE3）
+                CopyTileToGm(gmC_, gmOff, cAcc, stripe.count, w, lyt.hiddenSize, tileCols); // 输出 c
+                AscendC::PipeBarrier<PIPE_ALL>(); // c 的 MTE3 读完成前不得就地改写（全栅栏：随后消费者是 VF，
+                                                  // MTE3→VF 界面不适用命名事件，保守 PIPE_ALL）
+                // blend 双源现拷（Layout 别名表：uAcc≡cAcc 已被 pass1 复用、hp 副本在 t1 槽
+                // 被本片各组 merge 覆写——两源均须重取；gmU_ 于 pass0 已落盘，回读值逐位
+                // 相同，数学不变）
+                CopyTileFromGm(gmU_, gmOff, t2, stripe.count, w, lyt.hiddenSize, tileCols);     // u 回读副本
+                CopyTileFromGm(gmHPrev_, gmOff, t1, stripe.count, w, lyt.hiddenSize, tileCols); // h_prev 副本
+                AscendC::PipeBarrier<PIPE_ALL>(); // MTE2 写 t1/t2 → VF 读（跨管必须全栅栏，见文件头）
+                // h = c + u·(hp − c)（VF 主链；h 落 t3≡rAcc staging）。⚠ 不得改回 cAcc
+                // 就地回写：与下一片轮 0 DataCopy(cAcc) 零窗竞态（Fix B，实测翻车）。
+                asc_vf_call<GruBlockCellBlendVF<float>>(reinterpret_cast<__ubuf__ float*>(t3.GetPhyAddr()),
+                                                        reinterpret_cast<__ubuf__ float*>(cAcc.GetPhyAddr()),
+                                                        reinterpret_cast<__ubuf__ float*>(t2.GetPhyAddr()),
+                                                        reinterpret_cast<__ubuf__ float*>(t1.GetPhyAddr()), work,
+                                                        VL_F32, rep);
+                AscendC::PipeBarrier<PIPE_ALL>(); // VF 异步读闭合 → MTE3 输出 h（必须全栅栏，同上 VF 规则）
+                CopyTileToGm(gmH_, gmOff, t3, stripe.count, w, lyt.hiddenSize, tileCols); // 输出 h（t3≡rAcc staging）
+                // t3≡rAcc 的下一 V 写者（下一片 TanhVec s3 / 下一块 pass0 DataCopy(rAcc)）
+                // 常规靠轮间自然时延，此定向事件为架构闭合（MTE3 读排空先于后续 V 写）。
+                gbc::sync::WaitMte3ToV();
+            }
+            // 末列片末组的 VecSignalCube 即本块的 V2C 收尾（下一块 pass0 drain 的 WAR
+            // 屏障；本片后续 tanh/blend/copyout 只读 AIV 私有平面与 GM，与 cube 无竞争）。
         }
-        if (hasRows) {
-            gbc::layout::FinFinalize(cAcc, cComp, t1, t2, msk, work); // c_bar 就绪（含有限性守卫）
-            AscendC::PipeBarrier<PIPE_V>(); // FinFinalize 与 TanhVec 同为 V 管指令，同管保序
-            // Tanh 的第 3 scratch 落 rAcc 平面（≡t3Off；rAcc 自 pass0 末列片 VF hr 后
-            // 无人触及，pass1 各组亦只用 cAcc/cComp/t1/t2）
-            gbc::vector::TanhVec(cAcc, cAcc, t1, t2, t3, msk, work); // c = tanh(c_bar)（分段补偿）
-            gbc::sync::WaitVToMte3(); // V 写 cAcc → MTE3 读（原 PIPE_ALL；命名 V→MTE3）
-            CopyTileToGm(gmC_, gmOff, cAcc, stripe.count, w, lyt.hiddenSize, tileCols); // 输出 c
-            AscendC::PipeBarrier<PIPE_ALL>(); // c 的 MTE3 读完成前不得就地改写（全栅栏：随后消费者是 VF，
-                                              // MTE3→VF 界面不适用命名事件，保守 PIPE_ALL）
-            // blend 双源现拷（Layout 别名表：uAcc≡cAcc 已被 pass1 复用、hp 副本在 t1 槽
-            // 被本片各组 merge 覆写——两源均须重取；gmU_ 于 pass0 已落盘，回读值逐位
-            // 相同，数学不变）
-            CopyTileFromGm(gmU_, gmOff, t2, stripe.count, w, lyt.hiddenSize, tileCols);     // u 回读副本
-            CopyTileFromGm(gmHPrev_, gmOff, t1, stripe.count, w, lyt.hiddenSize, tileCols); // h_prev 副本
-            AscendC::PipeBarrier<PIPE_ALL>(); // MTE2 写 t1/t2 → VF 读（跨管必须全栅栏，见文件头）
-            // h = c + u·(hp − c)（VF 主链，Sub/Mul/Add 三步形态；就地写回 cAcc 平面）
-            asc_vf_call<GruBlockCellBlendVF<float>>(reinterpret_cast<__ubuf__ float*>(cAcc.GetPhyAddr()),
-                                                    reinterpret_cast<__ubuf__ float*>(cAcc.GetPhyAddr()),
-                                                    reinterpret_cast<__ubuf__ float*>(t2.GetPhyAddr()),
-                                                    reinterpret_cast<__ubuf__ float*>(t1.GetPhyAddr()), work, VL_F32,
-                                                    rep);
-            AscendC::PipeBarrier<PIPE_ALL>(); // VF 异步读闭合 → MTE3 输出 h（必须全栅栏，同上 VF 规则）
-            CopyTileToGm(gmH_, gmOff, cAcc, stripe.count, w, lyt.hiddenSize, tileCols); // 输出 h（cAcc 就地复用）
-            // 下一列片首组的 DataCopy(cAcc/cComp) 为 V 管写，与本片末尾的 MTE3 读跨管：
-            // 由下一片首轮的 VecWaitCube 后 PipeBarrier<PIPE_ALL> 闭合（与既有块间口径一致）。
-        }
-        // 末列片末组的 VecSignalCube 即本块的 V2C 收尾（下一块 pass0 drain 的 WAR
-        // 屏障；本片后续 tanh/blend/copyout 只读 AIV 私有平面与 GM，与 cube 无竞争）。
-    }
+    } // phase != PHASE_P0（pass1 段）
 }
 
 // ---------------------------------------------------------------------------
-// VectorHalf — 本 cluster 的全部 m-chunk（与 CubeHalf 同一套行切/块切标量）
+// VectorHalf — 本 cluster 的全部 m-chunk（与 CubeHalf 同一套分派标量；A1 相位拆分
+// 与屏障契约见 CubeHalf 函数头——AIV 侧 SyncAll：set_intra(PIPE_MTE3, SYNC_AIV_FLAG)
+// 的 MTE3 管序 ⇒ 本核 pass0 的 r/u CopyOut 排空后才置位，随后等 AIC 释放）
 // ---------------------------------------------------------------------------
 __aicore__ inline void GruBlockCellKernel::VectorHalf()
 {
     const Layout& lyt = layout_;
-    // ⚠ 950 核号约定：AIV 的 GetBlockIdx() 是扁平 subcore 号，÷ 核比得 cluster
-    const uint32_t cluster = static_cast<uint32_t>(AscendC::GetBlockIdx()) /
-                             static_cast<uint32_t>(AscendC::GetTaskRatio());
-    uint32_t blockBase;
-    uint32_t rowsThisCore;
-    lyt.RowDispatch(cluster, blockBase, rowsThisCore); // 满行切/商余分核双模型行分派
-    if (blockBase >= lyt.batchSize) {
+    if (lyt.splitMode == 2) {
+        const uint32_t nChunk = gbc::layout::CeilDiv(lyt.rowsThisCore, lyt.mChunk);
+        for (uint32_t ci = 0; ci < nChunk; ++ci) {
+            const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+            VectorChunk(lyt.rowBase + ci * lyt.mChunk, mNow, PHASE_P0);
+        }
+        AscendC::SyncAll<false>(); // pass0 全局排空汇聚（每核恰一次，无早退分支）
+        for (uint32_t ci = 0; ci < nChunk; ++ci) {
+            const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+            VectorChunk(lyt.rowBase + ci * lyt.mChunk, mNow, PHASE_P1);
+        }
+        AscendC::PipeBarrier<PIPE_ALL>;
         return;
     }
-    const uint32_t nChunk = gbc::layout::CeilDiv(rowsThisCore, lyt.mChunk);
+    if (lyt.rowBase >= lyt.batchSize) {
+        return;
+    }
+    const uint32_t nChunk = gbc::layout::CeilDiv(lyt.rowsThisCore, lyt.mChunk);
     for (uint32_t ci = 0; ci < nChunk; ++ci) {
-        const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, rowsThisCore - ci * lyt.mChunk);
-        VectorChunk(blockBase + ci * lyt.mChunk, mNow);
+        const uint32_t mNow = gbc::layout::MinU(lyt.mChunk, lyt.rowsThisCore - ci * lyt.mChunk);
+        VectorChunk(lyt.rowBase + ci * lyt.mChunk, mNow, PHASE_BOTH);
     }
     AscendC::PipeBarrier<PIPE_ALL>;
 }

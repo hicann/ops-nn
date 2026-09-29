@@ -25,7 +25,7 @@
 // 输入非 ND / 声明输出非 ND → 拒绝，输出推导恒 ND。
 //
 // 注册面：InferShape/InferDataType 经 IMPL_OP_INFERSHAPE 分离注册，Tiling 经
-// IMPL_OP_OPTILING 注册（op_host/arch35/gru_block_cell_tiling_arch35.cpp）。
+// IMPL_OP_OPTILING 注册（op_host/arch35/gru_block_cell_tiling.cpp）。
 //
 // CONTENTS:
 // - InferDataTypeForGruBlockCell() — the type inference function

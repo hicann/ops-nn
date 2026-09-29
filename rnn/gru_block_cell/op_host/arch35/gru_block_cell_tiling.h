@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_RNN_GRU_BLOCK_CELL_TILING_ARCH35_H
-#define OPS_RNN_GRU_BLOCK_CELL_TILING_ARCH35_H
+#ifndef OPS_RNN_GRU_BLOCK_CELL_TILING_H
+#define OPS_RNN_GRU_BLOCK_CELL_TILING_H
 
 namespace optiling {
 

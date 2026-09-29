@@ -20,6 +20,11 @@
 constexpr int64_t GRU_BLOCK_CELL_MAX_DIM = 2147483647LL;
 // 声明域 I/H ∈ [1,65535]；H 实际支持域由片上容量 gate 收窄（见 CheckLayoutCapacity）。
 constexpr int64_t GRU_BLOCK_CELL_MAX_INPUT = 65535;
+// 支持域上界 Hp=CeilAlign(H,8) ≤ 8152（H=8152 通过 / H=8160→Hp=8160 拒绝的既有契约）。
+// B1 前由 aH 全幅回灌槽的 L1 预算隐式承载（CeilAlign(mChunk,16)×Hp×4 ≤ L1 余量）；
+// B1 删除 aH 后 L1 不再随 Hp 增长，故改由 host CheckLayoutCapacity 显式 gate 承载，
+// 保持支持域不回缩也不外扩（外扩需重验三方精度，见优化方案 B1 备注）。
+constexpr int64_t GRU_TIL_MAX_PAD_HIDDEN = 8152;
 
 constexpr int64_t GRU_TIL_C0F = 8;            // fp32 C0 元素（32B）
 constexpr int64_t GRU_TIL_CUBE_BLOCK = 16;    // M/N 分形边长（元素）
@@ -35,12 +40,15 @@ constexpr int64_t GRU_TIL_CAP_L0C = 256 * 1024;
 constexpr int64_t GRU_TIL_CAP_L1 = 512 * 1024;
 constexpr int64_t GRU_TIL_AIV_UB = 253952;   // = AscendC::TOTAL_UB_SIZE（3510）
 constexpr int64_t GRU_TIL_C_GROUP_ROWS = 16; // split-K 组宽目标（精度策略）
-// UB 静态足迹总宽口径：6 独立平面 + t1/t2 两个 scratch（t3≡rAcc、hp≡t1 等别名不占
+// UB 静态足迹总宽口径：8 独立平面 + t1/t2 两个 scratch（t3≡rAcc、hp≡t1 等别名不占
 // 额外槽）。mChunk 预算与 CheckLayoutCapacity 验算**共用此单一真值**。
 // ⚠ 平面宽为 **列片宽 nL0c**（非全幅 Hp）——列片外提为最外层循环后，UB 只需容纳
-// 当前列片的 8 个 [rowsMax, nL0c] 平面，这是 mChunk 能脱离 Hp 的关键（见 kernel.h
-// DATAFLOW NOTES #5/#7）。
-constexpr int64_t GRU_TIL_STATIC_PLANES = 8;
+// 当前列片的 10 个 [rowsMax, nL0c] 平面，这是 mChunk 能脱离 Hp 的关键（见 kernel.h
+// DATAFLOW NOTES #5/#7）。S3''：pass0 的 rBar/uBar 各增一个奇数轮平面（深度-2 跨核
+// 流水的 WAR 双缓冲——pass0 的 V2C 只承载 WAR 完成、无跨核数据交接，stale 即过等待
+// 仍安全；pass1 因 FeedbackToL1 的 L1 写仲裁限制维持深度-1，复用 rBar0/uBar0 作
+// cBar1/cBar0，rBar1/uBar1 在 pass1 空闲）。
+constexpr int64_t GRU_TIL_STATIC_PLANES = 10;
 constexpr int64_t GRU_TIL_BITS_PER_BYTE = 8;
 // mChunk 下限（M 分形保底；低于此值 cube M 向利用率过低）
 constexpr int64_t GRU_TIL_MIN_MCHUNK = 16;
@@ -53,11 +61,14 @@ struct GruBlockCellTilingData {
     int64_t inputSize = 0;  // I
     int64_t hiddenSize = 0; // H
 
-    // 多核切分（batch 行切，块间无依赖 → 无跨核栅栏）
-    int64_t rowsPerCore = 0; // 满行切=sM / 商余分核=商 q
-    int64_t rowsTail = 0;    // 满行切=尾核行数 / 商余分核=余 rem（前 rem 核各 +1 行）
+    // 多核切分（batch 行切，块间无依赖 → 无跨核栅栏；A1 splitMode=2 例外——
+    // 行列 2D 分派在 pass0→pass1 界有一次 SyncAll<false>() 全局屏障）
+    int64_t rowsPerCore = 0; // 满行切=sM / 商余分核=商 q / 2D 分派=行块商 q
+    int64_t rowsTail = 0;    // 满行切=尾核行数 / 商余分核与 2D 分派=余 rem（前 rem 块各 +1 行）
     int64_t coreNumUsed = 0; // 实际启用核数（blockDim，AIC 块为单位）
-    int64_t splitMode = 0;   // 0=满行切  1=商余分核（显式编码，kernel 不做算术判别）
+    int64_t splitMode = 0; // 0=满行切  1=商余分核  2=行列 2D 分派（A1，显式编码，kernel 不做算术判别）
+    int64_t sliceCores = 1; // A1：splitMode=2 的列片组数 nsc（core k → rowChunk=k/nsc、sliceGrp=k%nsc；
+                            // 列片 nTiles 商余分给 nsc 组）。splitMode 0/1 恒 1（kernel 退化为全列片域）。
 
     // 片上布局决策（host 唯一计算，kernel 只读）
     int64_t padHidden = 0; // Hp = CeilAlign(H,8)：drain/平面宽

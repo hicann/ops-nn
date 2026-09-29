@@ -511,11 +511,13 @@ int main(int argc, char* argv[])
     if (probeMode) {
         rc = RunRankProbe(session);
     } else {
-        // 4 legal concrete groups (B, I, H) — same contract as the static example, dims vary.
+        // 5 legal concrete groups (B, I, H) — same contract as the static example, dims vary.
         // (1024,64,64) 为结构性判别形状：执行期重切分须改变 coresUsed/sM/rowsTail
         // （满行切 10 核尾 16），使 -1/-2 动态图的重切分得到结构性验证而非最弱形式
         // （范式验收纪律：B=1/小 shape 被 CeilAlign(.,16) 压平一律通过，无判别力）。
-        const std::vector<GruCase> cases = {{4, 16, 8}, {2, 32, 16}, {8, 8, 8}, {1024, 64, 64}};
+        // (4,256,2048) 为 A1 判别形状：执行期重切分须翻转为 splitMode=2 行列 2D 分派
+        // （sliceCores=26、coresUsed=26——动态定形路径的 Split2 决策/屏障覆盖）。
+        const std::vector<GruCase> cases = {{4, 16, 8}, {2, 32, 16}, {8, 8, 8}, {1024, 64, 64}, {4, 256, 2048}};
 
         // Scenario 1: unknown dim -1 (all dims declared -1, rank fixed by contract)
         const std::vector<std::vector<int64_t>> declMinus1 = {{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1}, {-1}};

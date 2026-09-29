@@ -78,6 +78,11 @@ constexpr double ATOL = 1e-6;
 //   GRU_ONLY_TAG=<tag> 只跑 shape 表中 tag 匹配的那一条（其余 continue 跳过）。
 //                      用途：单形状隔离复现（避开批跑的设备争抢/缓存干扰），
 //                      以及配合 plog 定位单个形状的 tiling/执行错误。
+//   GRU_ERRMAP=<path>  全量超差元素追加落盘（行格式：name idx golden actual）。
+//                      用途：大 shape（超 GRU_DUMP_ARRAYS 的 8192 上限）的错误
+//                      模式取证——按行/列/核/块聚合定位竞态前沿，并以值签名反推
+//                      污染源（S3' h-only 竞态即以「坏值 100% = 下一列片 P_1」
+//                      定案 h CopyOut 与下一片 DataCopy(cAcc) 的零窗竞态）。
 //
 // 二者是 ST 交付件的一部分（非临时脚手架）：本算子的验证协议要求逐位回归，
 // 而 GE 静态图下 kernel 侧 printf 不可用（设备 printf 走运行时调试环形缓冲，
@@ -122,6 +127,22 @@ const TestShape kShapes[] = {
     {64, 448, 64, false, 1.0, "K512-calibration"},
     {64, 1984, 64, false, 1.0, "K2048-calibration"},
     {8083, 64, 512, false, 1.0, "quotient-split"},
+    // !pf2&&pf 特例路回归锚（A1 暴露的既有潜伏竞态：merge[(s,0)] 同轮连调
+    // RecomputeHr 2~3 次，FB 的 MTE3 读 t1 与下一次 Duplicate(t1) 零窗相邻——
+    // 修复为 RecomputeHr 顶部 WaitMte3ToV）。判别力要件：cGroupsX≤2（I≤32）
+    // ∧ pf（nL0c≤1024）∧ cGroups≥4（H≥49）——此前全域零覆盖（{4,16,8} 的 cG=2
+    // 使前瞻/补写全部空转）。estBase<10MB 门槛 ⇒ 恒走旧路（split2 不遮蔽本锚）。
+    {256, 16, 512, false, 1.0, "pf2off-special"},
+    // A1（splitMode=2 行列 2D 分派）Cluster-A 代表形：小 B/大 H（R1 欠并行域，
+    // 门禁 32 例中的 6 例锚点；host 决策翻转为 split2 后这些形状即新通路的行为
+    // 验证 + 精度锚）。atolScale 按 K=I+H 噪声域标定（K≤2048 → 1.0；K>2048 超
+    // 标定域按 H-accept-boundary 先例放宽，2.0/3.0 见各行）。
+    {4, 256, 2048, false, 2.0, "clusterA-p264"},    // K=2304；n=8192 可 DUMP 逐位比对
+    {512, 620, 1000, false, 1.0, "clusterA-p422"},  // K=1620 标定域内；H 非 16 对齐
+    {512, 2048, 1024, false, 2.0, "clusterA-p417"}, // K=3072；商余分核域 B>448
+    {64, 128, 4096, false, 3.0, "clusterA-p277"},   // K=4224；小 I（cGroupsX=8）
+    {2, 4096, 4096, false, 3.0, "clusterA-p275"},   // K=8192；n=8192 可 DUMP 逐位比对
+    {32, 3072, 4096, false, 3.0, "clusterA-p406"},  // K=7168；门禁最差例（37.8×）
     {4, 8, 4097, false, 1.0, "sliced-boundary"},
     {4, 8, 8152, false, 3.0, "H-accept-boundary"}, // K=8160 超 kernel 噪声标定域(K<=2048, rms 6.0e-7)：
     //                                  // 实测 20/32608 元素超默认容差，max_abs 1.85e-6 < 3e-6——精度地板
@@ -304,6 +325,8 @@ void CpuGruGolden(const GruInputs& in, GruGolden& g)
 bool CompareOutput(const float* actual, const float* golden, int64_t n, const char* name, double atol = ATOL)
 {
     int64_t badCount = 0;
+    const char* errMap = getenv("GRU_ERRMAP"); // DIAG-TEMP：全量错误索引落盘（行/列模式取证）
+    FILE* errFp = (errMap != nullptr) ? fopen(errMap, "a") : nullptr;
     for (int64_t i = 0; i < n; ++i) {
         const float a = actual[i];
         const float g = golden[i];
@@ -320,8 +343,14 @@ bool CompareOutput(const float* actual, const float* golden, int64_t n, const ch
                 printf("  [%s][%ld] golden=%.7f actual=%.7f diff=%.3e tol=%.3e\n", name, static_cast<long>(i), g, a,
                        diff, tol);
             }
+            if (errFp != nullptr) {
+                fprintf(errFp, "%s %ld %.7f %.7f\n", name, static_cast<long>(i), g, a);
+            }
             ++badCount;
         }
+    }
+    if (errFp != nullptr) {
+        fclose(errFp);
     }
     // GRU_DUMP_ARRAYS：逐位回归基线取证（见文件头「回归仪器」说明）
     if (getenv("GRU_DUMP_ARRAYS") != nullptr && n <= 8192) {
