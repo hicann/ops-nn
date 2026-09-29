@@ -5530,6 +5530,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/block_lstm/README.md">block_lstm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>进行LSTM网络计算，对应TensorFlow的BlockLSTM/BlockLSTMV2。按时间主序接收输入序列和初始状态，整个时间步循环收进一次kernel launch，返回各门控与状态的输出序列。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>
     <td>✓</td>
     <td>✓</td>
