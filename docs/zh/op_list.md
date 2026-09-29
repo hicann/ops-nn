@@ -310,12 +310,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/hard_sigmoid/README.md">hard_sigmoid</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
-    <td>激活函数，对输入张量self逐元素进行HardSigmoid变换，输出与输入shape相同的张量。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1009,16 +1009,6 @@
   </tr>
   <tr>
     <td>foreach</td>
-    <td><a href="../../foreach/foreach_a_cos_inplace/README.md">foreach_a_cos_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入张量列表中的每个张量逐元素求反余弦，结果原地更新。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
     <td><a href="../../foreach/foreach_add_list/README.md">foreach_add_list</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1026,16 +1016,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
-    <td><a href="../../foreach/foreach_add_list_inplace/README.md">foreach_add_list_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对两个张量列表逐元素计算x1+alpha*x2，结果原地写回第一个列表。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1179,16 +1159,6 @@
   </tr>
   <tr>
     <td>foreach</td>
-    <td><a href="../../foreach/foreach_div_list_inplace/README.md">foreach_div_list_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对两个张量列表逐元素相除，结果原地写回第一个列表。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
     <td><a href="../../foreach/foreach_div_scalar/README.md">foreach_div_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1276,16 +1246,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对张量列表执行逐元素自然对数运算（ln(x)）。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
-    <td><a href="../../foreach/foreach_log_inplace/README.md">foreach_log_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入张量列表中的每个张量逐元素求自然对数，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1389,16 +1349,6 @@
   </tr>
   <tr>
     <td>foreach</td>
-    <td><a href="../../foreach/foreach_mul_list_inplace/README.md">foreach_mul_list_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对两个张量列表逐元素相乘，结果原地写回第一个列表。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
     <td><a href="../../foreach/foreach_mul_scalar/README.md">foreach_mul_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1406,16 +1356,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相乘运算。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
-    <td><a href="../../foreach/foreach_mul_scalar_inplace/README.md">foreach_mul_scalar_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入张量列表中的每个张量逐元素乘以同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1579,16 +1519,6 @@
   </tr>
   <tr>
     <td>foreach</td>
-    <td><a href="../../foreach/foreach_sub_list_inplace/README.md">foreach_sub_list_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对两个张量列表逐元素计算x1-alpha*x2，结果原地写回第一个列表。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
     <td><a href="../../foreach/foreach_sub_scalar/README.md">foreach_sub_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1596,16 +1526,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相减运算。</td>
-  </tr>
-  <tr>
-    <td>foreach</td>
-    <td><a href="../../foreach/foreach_sub_scalar_inplace/README.md">foreach_sub_scalar_inplace</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入张量列表中的每个张量逐元素减去同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1889,16 +1809,6 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/inplace_add/README.md">inplace_add</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>根据indices指定的第0维位置，将v中的值加到x对应切片上并输出更新后的张量。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/inplace_index_add_with_sorted/README.md">inplace_index_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1926,16 +1836,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>根据给定的indices，将updates中的值加到输入张量var的第一维度上。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/inplace_sub/README.md">inplace_sub</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>根据indices指定的第0维位置，将v中的值从x对应切片中减去并输出更新后的张量。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2039,16 +1939,6 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/non_zero_with_value/README.md">non_zero_with_value</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>找出2D输入x中的非零元素，静态max-size一次返回非零元素的值value、坐标index（坐标主序[2, numel]，前半段行号/后半段列号）和个数count，有效长度由count给出。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/non_zero_with_value_shape/README.md">non_zero_with_value_shape</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2106,16 +1996,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/arg_max_grad/README.md">arg_max_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>ArgMax的反向：沿指定轴把updates写入indices指定的位置，其余位置保留var的原值。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2409,16 +2289,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/chamfer_distance/README.md">chamfer_distance</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算两组二维点集之间的倒角距离，输出每个点到另一组最近点的平方欧氏距离与最近点下标。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/chamfer_distance_grad/README.md">chamfer_distance_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2459,16 +2329,6 @@
   </tr>
   <tr>
     <td>loss</td>
-    <td><a href="../../loss/fused_cross_entropy_loss_with_max_sum/README.md">fused_cross_entropy_loss_with_max_sum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
     <td><a href="../../loss/sigmoid_cross_entropy_with_logits/README.md">sigmoid_cross_entropy_with_logits</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2506,16 +2366,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>ctcLoss的反向传播，计算CTC的损失梯度。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
-    <td><a href="../../loss/cosine_embedding_loss/README.md">cosine_embedding_loss</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>根据两个输入张量和目标标签计算余弦嵌入损失，支持none、sum和mean归约方式。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2655,7 +2505,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>计算多标签分类的间隔损失值。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2676,16 +2526,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
-    <td><a href="../../loss/poisson_nll_loss/README.md">poisson_nll_loss</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算泊松分布的负对数似然损失（Poisson negative log likelihood loss），常用于计数数据回归。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2746,26 +2586,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
-    <td><a href="../../loss/softmax_focal_loss/README.md">softmax_focal_loss</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算多分类场景下的Softmax Focal Loss，在交叉熵基础上引入调制因子降低易分样本的损失权重。</td>
-  </tr>
-  <tr>
-    <td>loss</td>
-    <td><a href="../../loss/softmax_focal_loss_grad/README.md">softmax_focal_loss_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>求softmax_focal_loss反向传播的梯度值。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -3239,16 +3059,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/batch_norm_ext2/README.md">batch_norm_ext2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>与TensorFlow算子fused_batch_norm_v2兼容的批量归一化，4D NCHW/NHWC输入，输出y及统计量。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/batch_norm_elemt/README.md">batch_norm_elemt</a></td>
     <td>✗</td>
     <td>✗</td>
@@ -3279,56 +3089,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/batch_norm3_d/README.md">batch_norm3d</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对5D输入张量执行BatchNorm3D训练/推理计算，输出批均值、批方差及辅助统计量。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/batch_norm3_d_grad/README.md">batch_norm3d_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算BatchNorm3D的反向传播梯度，输出输入梯度、scale梯度、offset梯度及辅助输出。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/batch_norm_grad_ext2/README.md">batch_norm_grad_ext2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算BatchNorm的反向传播梯度，输出输入梯度、scale梯度、offset梯度及辅助输出。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn_infer/README.md">bn_infer</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>推理场景下使用给定的均值和方差对输入张量执行批量归一化，输出与输入形状一致。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn_inference/README.md">bn_inference</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行Batch Normalization推理，根据均值、方差和动量计算折叠系数，并对输入进行归一化及可选仿射变换。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
     <td>✗</td>
     <td>✗</td>
@@ -3336,95 +3096,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn_training_update_v2/README.md">bn_training_update_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>×</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>批归一化训练前向的update阶段。给定BNTrainingReduce产出的逐通道sum/square_sum，结合缩放因子scale与偏置offset，对输入x做批归一化仿射变换，输出归一化结果y，同时输出本batch的统计量batch_mean/batch_variance。适用于不含moving average更新的场景，与BNTrainingReduce配套使用。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn_training_update_v3/README.md">bn_training_update_v3</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>×</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>批归一化训练前向的update阶段。给定BNTrainingReduce产出的逐通道sum/square_sum，结合缩放因子scale与偏置offset，对输入x做批归一化仿射变换，输出归一化结果y；同时输出本batch的统计量batch_mean/batch_variance（无偏估计）以及反向传播用的中间量reserve_1（save_mean）/reserve_2（save_variance，有偏方差）。适用于不含moving average更新的场景，与BNTrainingReduce配套使用。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn3d_training_reduce/README.md">bn3d_training_reduce</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>三维批量归一化训练前向的规约阶段，跨N维度与全部空间维度求和及平方和，仅保留C维度。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn3_d_training_update/README.md">bn3_d_training_update</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>BN3DTrainingUpdate算子用于3D BatchNorm训练流程的更新环节，结合前驱算子产出的逐通道sum和square_sum对输入做批归一化，输出归一化结果y，同时以factor为EMA权重更新running mean和running variance。</td>
-  </tr>
-  <tr>
-    <td><a href="../../norm/bn_training_reduce_grad/README.md">bn_training_reduce_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>×</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>批归一化训练反向的reduce-grad阶段。给定上层梯度grads、前向输入x、BNTrainingUpdateGrad产出的逐通道统计量diff_scale/diff_offset以及scale/batch_mean/batch_variance，计算回传给x的梯度y。该算子在GE图内由FusedBatchNormGrad融合展开生成，与BNTrainingUpdateGrad配套使用。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn_training_update_grad/README.md">bn_training_update_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>×</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>批归一化训练反向的update阶段。给定反向梯度grads、前向输入x以及逐通道统计量batch_mean/batch_variance，计算缩放因子与偏置的梯度diff_scale/diff_offset（fp32）。与BNTrainingUpdate配套使用。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/bn3_d_training_reduce_grad/README.md">bn3_d_training_reduce_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算3D Batch Normalization训练反传的收尾梯度：将损失对BN输出的梯度与逐通道统计量合成损失对输入x的梯度，支持NCDHW/NDHWC布局。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对数据做正则化处理的第一步，对数据按N、C维度保留，在空间维度上求和及平方和。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/centralization/README.md">centralization</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算输入张量在指定轴上的均值，并从输入对应元素中逐元素减去，输出与输入保持相同的shape和数据类型。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3565,16 +3236,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNorm算子将RmsNorm前的Add算子融合起来，减少搬入搬出操作。InplaceAddRmsNorm是一种结合了原位加法和RMS归一化的操作。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/in_infer_v2/README.md">in_infer_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>×</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实例归一化推理算子。给定每个(N, C)的统计量mean/variance，对输入x做归一化并可选gamma/beta仿射变换，同时将mean/variance透传到batch_mean/batch_variance输出。与InstanceNorm相比，本算子不在算子内计算统计量，直接使用外部给定值，常用于图融合场景。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3749,36 +3410,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/in_training_update_grad/README.md">in_training_update_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>InstanceNorm训练反向的第一阶段。对空间维归约，计算res_gamma=Σ(dy·x_norm)与res_beta=Σdy，保留per-(N,C)部分和。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/instance_norm_grad/README.md">instance_norm_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>InstanceNorm的反向计算。计算输入x、缩放gamma、偏移beta的梯度pd_x、pd_gamma、pd_beta。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/l2_normalize_grad/README.md">l2_normalize_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>L2Normalize的反向计算。计算输入x的梯度dx。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/rms_norm_grad_quant/README.md">rms_norm_grad_quant</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3919,26 +3550,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_came_part1/README.md">apply_came_part1</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算CAME优化器第一阶段的行、列及全局统计量。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/apply_came_part3/README.md">apply_came_part3</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算CAME优化器第三阶段的一阶矩更新以及行、列和全局统计量。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/lamb_apply_optimizer_assign/README.md">lamb_apply_optimizer_assign</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4019,16 +3630,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_came_part4/README.md">apply_came_part4</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>CAME优化器第4段（参数更新段）：按CAME更新规则，利用置信因子r、c对参数param进行更新，回写更新后的param、r、c；sum_r与global_shape为可选输入，缺省时kernel内归约并取本地形状。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_rms_prop/README.md">apply_rms_prop</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4039,27 +3640,7 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/inplace_apply_rms_prop/README.md">inplace_apply_rms_prop</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行RMSProp优化器的单步参数更新，通过三个显式inplace输出更新权重var、梯度平方移动平均ms和动量累积mom；本仓对应Ascend950/GEIR实现。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>ApplyAdagrad是自适应梯度算法的核心更新操作，主要用于在优化器（如随机梯度下降）中更新模型参数。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/apply_adagrad/README.md">apply_adagrad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -4166,16 +3747,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>实现FusedSgd融合优化器功能。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/sgd/README.md">sgd</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>带动量的随机梯度下降优化器更新算子，按weight_decay、dampening、Nesterov动量组合的SGD公式in-place更新权重parameters，同时原地回写动量累加器accum与首步标志stat。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -5046,16 +4617,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。</td>
-  </tr>
-  <tr>
-    <td>vfusion</td>
-    <td><a href="../../vfusion/normalize_bbox/README.md">normalize_bbox</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>将目标检测Prediction阶段筛选后的预选框绝对像素坐标，按对应图像的高与宽逐batch归一化到[0, 1]区间，得到相对坐标框。</td>
   </tr>
   <tr>
     <td>vfusion</td>
