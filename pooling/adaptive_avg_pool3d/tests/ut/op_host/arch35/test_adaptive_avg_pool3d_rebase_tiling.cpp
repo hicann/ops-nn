@@ -24,7 +24,7 @@
 using namespace std;
 using namespace ge;
 
-struct AdaptiveAvgPool3dTilingTestParam {
+struct AdaptiveAvgPool3dRebaseTilingTestParam {
     string case_name;
 
     std::initializer_list<int64_t> x_shape;
@@ -45,11 +45,11 @@ struct AdaptiveAvgPool3dCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-class AdaptiveAvgPool3dTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dTilingTestParam> {
+class AdaptiveAvgPool3dTilingRebaseTest : public testing::TestWithParam<AdaptiveAvgPool3dRebaseTilingTestParam> {
 protected:
-    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest SetUp" << std::endl; }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dTilingRebaseTest SetUp" << std::endl; }
 
-    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest TearDown" << std::endl; }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dTilingRebaseTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -64,9 +64,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return ss.str();
 }
 
-TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
+TEST_P(AdaptiveAvgPool3dTilingRebaseTest, test_case_adaptive_avg_pool3d_simt_tiling)
 {
-    AdaptiveAvgPool3dTilingTestParam param = GetParam();
+    AdaptiveAvgPool3dRebaseTilingTestParam param = GetParam();
 
     gert::StorageShape x_shape = {param.x_shape, param.x_shape};
     gert::StorageShape y_shape = {param.y_shape, param.y_shape};
@@ -122,6 +122,7 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
     ASSERT_NE(tiling_data, nullptr);
 
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("AdaptiveAvgPool3d")
                       .NodeIoNum(1, 1)
                       .IrInstanceNum({1})
                       .InputShapes({&x_shape})
@@ -131,7 +132,7 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
                       .NodeInputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(output_size)},
-                                  {"data_format", param.data_format}})
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)}})
                       .TilingData(tiling_data.get())
                       .Workspace(ws_size)
                       .Build();
@@ -157,115 +158,115 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
     ASSERT_EQ(tiling_data_result, param.expected_tiling_data);
 }
 
-static AdaptiveAvgPool3dTilingTestParam cases[] = {
+static AdaptiveAvgPool3dRebaseTilingTestParam cases[] = {
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint32_float32",
      {19, 46, 50, 33, 5},
      {19, 157, 163, 172, 5},
      {157, 163, 172},
      "NDHWC",
      ge::DT_FLOAT,
-     64,
-     3,
-     "19 5 46 50 33 157 163 172 "},
+     40,
+     6,
+     "19 5 46 50 33 157 163 172 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint32_float16",
      {19, 46, 50, 33, 5},
      {19, 157, 163, 172, 5},
      {157, 163, 172},
      "NDHWC",
      ge::DT_FLOAT16,
-     64,
-     3,
-     "19 5 46 50 33 157 163 172 "},
+     40,
+     6,
+     "19 5 46 50 33 157 163 172 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint32_bfloat16",
      {19, 46, 50, 33, 5},
      {19, 157, 163, 172, 5},
      {157, 163, 172},
      "NDHWC",
      ge::DT_BF16,
-     64,
-     3,
-     "19 5 46 50 33 157 163 172 "},
+     40,
+     6,
+     "19 5 46 50 33 157 163 172 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint32_float32",
      {1, 14, 31, 152, 119},
      {1, 14, 30, 45, 49},
      {30, 45, 49},
      "NCDHW",
      ge::DT_FLOAT,
-     64,
-     35,
-     "1 14 31 152 119 30 45 49 "},
+     40,
+     70,
+     "1 14 31 152 119 30 45 49 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint32_float16",
      {1, 14, 31, 152, 119},
      {1, 14, 30, 45, 49},
      {30, 45, 49},
      "NCDHW",
      ge::DT_FLOAT16,
-     64,
-     35,
-     "1 14 31 152 119 30 45 49 "},
+     40,
+     70,
+     "1 14 31 152 119 30 45 49 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint32_bfloat16",
      {1, 14, 31, 152, 119},
      {1, 14, 30, 45, 49},
      {30, 45, 49},
      "NCDHW",
      ge::DT_BF16,
-     64,
-     35,
-     "1 14 31 152 119 30 45 49 "},
+     40,
+     70,
+     "1 14 31 152 119 30 45 49 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint64_float32",
      {5, 673, 615, 763, 3},
      {5, 47, 345, 496, 3},
      {47, 345, 496},
      "NDHWC",
      ge::DT_FLOAT,
-     64,
-     9,
-     "5 3 673 615 763 47 345 496 "},
+     40,
+     18,
+     "5 3 673 615 763 47 345 496 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint64_float16",
      {5, 673, 615, 763, 3},
      {5, 47, 345, 496, 3},
      {47, 345, 496},
      "NDHWC",
      ge::DT_FLOAT16,
-     64,
-     9,
-     "5 3 673 615 763 47 345 496 "},
+     40,
+     18,
+     "5 3 673 615 763 47 345 496 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ndhwc_uint64_bfloat16",
      {5, 673, 615, 763, 3},
      {5, 47, 345, 496, 3},
      {47, 345, 496},
      "NDHWC",
      ge::DT_BF16,
-     64,
-     9,
-     "5 3 673 615 763 47 345 496 "},
+     40,
+     18,
+     "5 3 673 615 763 47 345 496 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint64_float32",
      {85, 1601, 63, 25, 32},
      {85, 1601, 51, 19, 18},
      {51, 19, 18},
      "NCDHW",
      ge::DT_FLOAT,
-     64,
-     41,
-     "85 1601 63 25 32 51 19 18 "},
+     40,
+     82,
+     "85 1601 63 25 32 51 19 18 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint64_float16",
      {85, 1601, 63, 25, 32},
      {85, 1601, 51, 19, 18},
      {51, 19, 18},
      "NCDHW",
      ge::DT_FLOAT16,
-     64,
-     41,
-     "85 1601 63 25 32 51 19 18 "},
+     40,
+     82,
+     "85 1601 63 25 32 51 19 18 0 "},
     {"test_case_adaptive_avg_pool3d_simt_ncdhw_uint64_bfloat16",
      {85, 1601, 63, 25, 32},
      {85, 1601, 51, 19, 18},
      {51, 19, 18},
      "NCDHW",
      ge::DT_BF16,
-     64,
-     41,
-     "85 1601 63 25 32 51 19 18 "},
+     40,
+     82,
+     "85 1601 63 25 32 51 19 18 0 "},
 };
 
-INSTANTIATE_TEST_CASE_P(AdaptiveAvgPool3d, AdaptiveAvgPool3dTilingTest, testing::ValuesIn(cases));
+INSTANTIATE_TEST_CASE_P(AdaptiveAvgPool3dRebase, AdaptiveAvgPool3dTilingRebaseTest, testing::ValuesIn(cases));
