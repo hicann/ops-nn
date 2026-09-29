@@ -34,6 +34,8 @@ struct is_same<Tp, Tp> : public true_type {};
 constexpr int INT32_OFFSET = 31;
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t SMALL_MODE = 1;
+constexpr uint32_t GROUPED_ADD_SMALL_MODE = 3;
+constexpr uint32_t FP32_ADD_GROUPS = 16;
 
 template <typename T, typename U>
 class KernelScatterElementsV2 {
@@ -49,7 +51,7 @@ public:
         LoadTilingData(tiling_data);
         InitGlobalBuffers(input, indices, updates);
 
-        if (modeFlag == SMALL_MODE) {
+        if (modeFlag == SMALL_MODE || modeFlag == GROUPED_ADD_SMALL_MODE) {
             InitSmallModeBuffers();
         } else {
             InitScatterModeBuffers(tiling_data);
@@ -69,8 +71,25 @@ public:
         }
     }
 
+    template <bool Compensated>
     __aicore__ inline void ScatterSetValue(int k, int kIndex)
     {
+        if constexpr (Compensated && is_same<T, float>::value) {
+            float inputValue = inputLocal.GetValue(kIndex);
+            float updateValue = updatesLocal.GetValue(k);
+            float adjusted = updateValue - compensationLocal.GetValue(kIndex);
+            float sum = inputValue + adjusted;
+            // Avoid introducing NaNs through inf - inf in the correction.
+            constexpr float MAX_FINITE = 0x1.fffffep127f;
+            if (sum <= MAX_FINITE && sum >= -MAX_FINITE) {
+                compensationLocal.SetValue(kIndex, (sum - inputValue) - adjusted);
+            } else {
+                sum = inputValue + updateValue;
+                compensationLocal.SetValue(kIndex, 0.0f);
+            }
+            inputLocal.SetValue(kIndex, sum);
+            return;
+        }
         if (mode == 1) {
             inputLocal.SetValue(kIndex, updatesLocal.GetValue(k));
             return;
@@ -97,8 +116,15 @@ public:
         }
     }
 
-    __aicore__ inline void InitHitCount(uint64_t count)
+    __aicore__ inline void InitReductionState(uint64_t count)
     {
+        if (NeedGroupedAdd()) {
+            Duplicate(groupedLocal, 0.0f, static_cast<int32_t>(count * FP32_ADD_GROUPS));
+        } else if (NeedCompensatedAdd()) {
+            for (uint64_t i = 0; i < count; ++i) {
+                compensationLocal.SetValue(i, 0.0f);
+            }
+        }
         if (NeedHitCount()) {
             for (uint64_t i = 0; i < count; ++i) {
                 countLocal.SetValue(i, 0);
@@ -130,6 +156,20 @@ public:
 
     __aicore__ inline void ProcessSmall()
     {
+        // Select once per task so the compensated hot loop has no reduction-mode
+        // or include_self checks and the ordinary path has no compensation branch.
+        if (NeedGroupedAdd()) {
+            ProcessSmallImpl<false, true>();
+        } else if (NeedCompensatedAdd()) {
+            ProcessSmallImpl<true, false>();
+        } else {
+            ProcessSmallImpl<false, false>();
+        }
+    }
+
+    template <bool Compensated, bool Grouped>
+    __aicore__ inline void ProcessSmallImpl()
+    {
         for (uint64_t index = 0; index < indicesLoop; ++index) {
             uint64_t baseIndex = coreId * oneTime + index * indicesEach;
             uint64_t indicesIndex = baseIndex * indicesOneTime;
@@ -154,16 +194,23 @@ public:
                 PIPE_MTE2_V();
                 Cast<int, U>(indices32Local, indicesLocal, RoundMode::CAST_NONE, indicesAlign);
             }
-            InitHitCount(inputAlign);
+            InitReductionState(inputAlign);
             PipeBarrier<PIPE_ALL>();
             for (uint64_t j = 0; j < currentIndices; ++j) {
                 for (uint64_t k = 0; k < indicesOneTime; ++k) {
                     auto upIndex = j * updatesOneTime + k;
                     auto inIndex = j * inputOneTime + indices32Local.GetValue(j * indicesOneTime + k);
-                    ScatterSetValue(upIndex, inIndex);
+                    if constexpr (Grouped) {
+                        GroupedSetValue(upIndex, inIndex);
+                    } else {
+                        ScatterSetValue<Compensated>(upIndex, inIndex);
+                    }
                 }
             }
             PipeBarrier<PIPE_ALL>();
+            if constexpr (Grouped) {
+                FinishGroupedAdd(currentIndices);
+            }
             CalcMeanValue(inputAlign);
             CastFloatToInput(inputAlign);
             DataCopyPad(inputGm[inputIndex], inputLocal, inputExtParams);
@@ -172,6 +219,16 @@ public:
     }
 
     __aicore__ inline void ProcessScatter()
+    {
+        if (NeedCompensatedAdd()) {
+            ProcessScatterImpl<true>();
+        } else {
+            ProcessScatterImpl<false>();
+        }
+    }
+
+    template <bool Compensated>
+    __aicore__ inline void ProcessScatterImpl()
     {
         for (uint64_t index = start; index < start + currentNum; ++index) {
             uint64_t inputIndex = index * inputOneTime + currentPiece * inputOnePiece;
@@ -187,7 +244,7 @@ public:
                 DataCopyPad(inputLocal, inputGm[inputIndex + i * pieceEach], inputExtParams, tPadParams);
 
                 CastInputToFloat(inputAlign);
-                InitHitCount(inputAlign);
+                InitReductionState(inputAlign);
 
                 for (uint64_t j = 0; j < indicesLoop; ++j) {
                     uint64_t currentIndices = indicesEach;
@@ -213,7 +270,7 @@ public:
                         if (kIndex < 0 || kIndex >= currentInput) {
                             continue;
                         }
-                        ScatterSetValue(k, kIndex);
+                        ScatterSetValue<Compensated>(k, kIndex);
                     }
                 }
                 PipeBarrier<PIPE_ALL>();
@@ -254,6 +311,52 @@ public:
     }
 
 private:
+    __aicore__ inline void GroupedSetValue(uint64_t k, uint64_t kIndex)
+    {
+        if constexpr (is_same<T, float>::value) {
+            uint64_t offset = (k & (FP32_ADD_GROUPS - 1)) * inputAlign + kIndex;
+            groupedLocal.SetValue(offset, groupedLocal.GetValue(offset) + updatesLocal.GetValue(k));
+        }
+    }
+
+    __aicore__ inline void FinishGroupedAdd(uint64_t rows)
+    {
+        if constexpr (is_same<T, float>::value) {
+            for (uint32_t stride = FP32_ADD_GROUPS / 2; stride != 0; stride /= 2) {
+                Add(groupedLocal, groupedLocal, groupedLocal[stride * inputAlign],
+                    static_cast<int32_t>(stride * inputAlign));
+                PipeBarrier<PIPE_V>();
+            }
+            PIPE_V_S();
+            bool finite = true;
+            constexpr float MAX_FINITE = 0x1.fffffep127f;
+            for (uint64_t i = 0; i < rows * inputOneTime; ++i) {
+                float value = inputLocal.GetValue(i) + groupedLocal.GetValue(i);
+                if (!(value <= MAX_FINITE && value >= -MAX_FINITE)) {
+                    finite = false;
+                    break;
+                }
+            }
+            if (finite) {
+                Add(inputLocal, inputLocal, groupedLocal, static_cast<int32_t>(inputAlign));
+                PIPE_V_MTE3();
+                return;
+            }
+            // A different grouping can overflow even when serial addition does
+            // not. Self is still intact: reuse bank 0 as the correction buffer
+            // and replay this tile with compensated serial addition.
+            Duplicate(compensationLocal, 0.0f, static_cast<int32_t>(inputAlign));
+            PIPE_V_S();
+            for (uint64_t j = 0; j < rows; ++j) {
+                for (uint64_t k = 0; k < indicesOneTime; ++k) {
+                    auto inIndex = j * inputOneTime + indices32Local.GetValue(j * indicesOneTime + k);
+                    ScatterSetValue<true>(j * updatesOneTime + k, inIndex);
+                }
+            }
+            PipeBarrier<PIPE_ALL>();
+        }
+    }
+
     __aicore__ inline void LoadTilingData(const ScatterElementsV2TilingData* __restrict tiling_data)
     {
         usedCoreNum = tiling_data->usedCoreNum;
@@ -312,6 +415,15 @@ private:
         if (NeedHitCount()) {
             pipe->InitBuffer(calcCountBuf, inputAlign * sizeof(int));
             countLocal = calcCountBuf.Get<int>();
+        } else if (NeedGroupedAdd()) {
+            pipe->InitBuffer(calcCountBuf, inputAlign * sizeof(float) * FP32_ADD_GROUPS);
+            groupedLocal = calcCountBuf.Get<float>();
+            compensationLocal = groupedLocal;
+        } else if (NeedCompensatedAdd()) {
+            // Reduction tiling already budgets one int per input for hit counts.
+            // include_self=true ADD does not need counts; use that budget for compensation.
+            pipe->InitBuffer(calcCountBuf, inputAlign * sizeof(float));
+            compensationLocal = calcCountBuf.Get<float>();
         }
     }
 
@@ -422,6 +534,19 @@ private:
         return includeSelf == 0 || mode == ScatterElementsV2NS::SCATTER_MODE_MEAN;
     }
 
+    __aicore__ inline bool NeedCompensatedAdd() const
+    {
+        // Deep FP32 accumulation loses low bits with serial addition. Keep the
+        // original path for sparse updates and other reduction modes/dtypes.
+        return is_same<T, float>::value && mode == ScatterElementsV2NS::SCATTER_MODE_ADD && includeSelf != 0 &&
+               indicesOneTime > inputOneTime && !NeedGroupedAdd();
+    }
+
+    __aicore__ inline bool NeedGroupedAdd() const
+    {
+        return is_same<T, float>::value && modeFlag == GROUPED_ADD_SMALL_MODE;
+    }
+
     // fp16/bf16 reductions accumulate in fp32 and cast back once (CAST_RINT) for precision.
     // This is independent of hit-count bookkeeping: include_self=true add/mul/min/max need
     // no counts but still require the fp32 intermediate.
@@ -458,7 +583,7 @@ private:
     TBuf<QuePosition::VECCALC> calcSelfBuf, calcUpdatesBuf, calcIndices32Buf, calcCountBuf;
     GlobalTensor<T> inputGm, updatesGm;
     GlobalTensor<U> indicesGm;
-    LocalTensor<float> inputTemp, updatesTemp;
+    LocalTensor<float> inputTemp, updatesTemp, compensationLocal, groupedLocal;
     LocalTensor<int> indicesTemp, indices32Local, countLocal;
     LocalTensor<U> indicesLocal;
     LocalTensor<T> inputLocal, updatesLocal;

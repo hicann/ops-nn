@@ -47,7 +47,7 @@ __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR
 {
     KernelScatterElementsV2<T, U> op;
     op.Init(tiling_data, pipe, var, indices, updates);
-    if (tiling_data->modeFlag == SMALL_MODE) {
+    if (tiling_data->modeFlag == SMALL_MODE || tiling_data->modeFlag == GROUPED_ADD_SMALL_MODE) {
         op.ProcessSmall();
     } else {
         op.ProcessScatter();
