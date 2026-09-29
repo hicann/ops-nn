@@ -159,6 +159,7 @@ bool Conv3DBackpropInputToV2FusionPass::Createconv3dBpInputTransposeGraph(EsGrap
                 OP_LOGE(GetNodeType().GetString(), "Create Conv3DBackpropInputV2 node failed"), return false);
 
     conv3dBpInputV2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
+    conv3dBpInputV2Node->SetAttr("padding", convBpAttr.padding);
     conv3dBpInputV2Node->UpdateInputDesc(CONV_BP_V2_INPUT_INDEX, input0Desc);
     conv3dBpInputV2Node->UpdateInputDesc(CONV_BP_V2_FILTER_INDEX, transFltDesc);
     conv3dBpInputV2Node->UpdateInputDesc(CONV_BP_V2_OUT_BACKPROP_INDEX, transDedyDesc);
@@ -213,6 +214,7 @@ GraphUniqPtr Conv3DBackpropInputToV2FusionPass::Replacement(const GNode& convBpI
                 OP_LOGE(GetNodeType().GetString(), "Create Conv3DBackpropInputV2 node failed"), return nullptr);
 
     conv3dBpInputV2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
+    conv3dBpInputV2Node->SetAttr("padding", convBpAttr.padding);
     OP_CHECK_IF(!UpdateNodeInputDescInfo(conv3dBpInputV2Node),
                 OP_LOGE(GetNodeType().GetString(), "Update conv3dBpInputV2Node DescInfo failed"), return nullptr);
 

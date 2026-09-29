@@ -202,7 +202,7 @@ using TilingResultHook = std::function<void(gert::TilingContext*)>;
 
 static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param, const TilingContextHook& contextHook = {},
                              bool runTilingAfterHook = false, bool checkTilingOutput = true,
-                             const TilingResultHook& tilingResultHook = {})
+                             const TilingResultHook& tilingResultHook = {}, bool paddingAttrAfterImpl = false)
 {
     std::cout << "run case " << param.case_name << std::endl;
 
@@ -273,6 +273,19 @@ static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param, const 
     } else if (param.dtype == "int32") {
         test_dtype = ge::DT_INT32;
     }
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> nodeAttrs = {
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
+        {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
+        {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
+        {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
+        {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(param.enable_hf32)},
+        {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)},
+        {"_op_impl_mode_enum", Ops::NN::AnyValue::CreateFrom<int64_t>(param._op_impl_mode_enum)}};
+    if (paddingAttrAfterImpl) {
+        // 模拟实际图编译产生的属性数组序：_op_impl_mode_enum先于padding（固定idx6读到int64）
+        std::swap(nodeAttrs[6], nodeAttrs[7]);
+    }
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(3, 1)
@@ -280,15 +293,7 @@ static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param, const 
                       .InputShapes({&input_size, &filter_shape, &out_backprop_shape})
                       .OutputShapes(output_shapes_ref)
                       .PlatformInfo(reinterpret_cast<void*>(&platform_info))
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
-                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(param.enable_hf32)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)},
-                           {"_op_impl_mode_enum", Ops::NN::AnyValue::CreateFrom<int64_t>(param._op_impl_mode_enum)}})
+                      .NodeAttrs(nodeAttrs)
                       .NodeInputTd(0, test_dtype, param.input_size_format, param.input_size_format)
                       .NodeInputTd(1, test_dtype, param.filter_ori_format, param.filter_format)
                       .NodeInputTd(2, test_dtype, param.out_backprop_ori_format, param.out_backprop_format)
@@ -2618,5 +2623,45 @@ TEST_P(Conv3DBackpropInputV2TilingRunTime3, general_cases) { TestOneParamCase(Ge
 
 INSTANTIATE_TEST_CASE_P(CONV3DDX_cases_params_950, Conv3DBackpropInputV2TilingRunTime3,
                         testing::ValuesIn(cases_params_950));
+
+// 属性数组布局漂移场景：padding被排到_op_impl_mode_enum之后（固定idx6读到int64首字节非'S'），
+// 按值扫描兜底应定位"SAME"并完成pads重算。shape沿用conv3d_dx_33骨架（dx=124,dedy=62为SAME语义，
+// kernel=16,stride=2 → pad_total=CeilAlign(124,2)-2+16-124=14，上7/下7），tiling应成功
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, tf_padding_same_scan_when_misaligned)
+{
+    Conv3DBpInputV2TilingTestParam tfSameMisalignedParam = {"tf_padding_same_scan_when_misaligned",
+                                                            "3510",
+                                                            "3510",
+                                                            COMPILE_INFO_STR_950,
+                                                            "bfloat16",
+                                                            {5},
+                                                            {64, 1, 16, 16, 192},
+                                                            {64, 1, 16, 16, 192},
+                                                            {1, 64, 2, 62, 62},
+                                                            {1, 64, 2, 62, 62},
+                                                            {1, 192, 2, 124, 124},
+                                                            {1, 192, 2, 124, 124},
+                                                            ge::FORMAT_ND,
+                                                            ge::FORMAT_NDHWC,
+                                                            ge::FORMAT_NCDHW,
+                                                            ge::FORMAT_NCDHW,
+                                                            ge::FORMAT_NCDHW,
+                                                            ge::FORMAT_NCDHW,
+                                                            ge::FORMAT_NCDHW,
+                                                            {1, 1, 1, 2, 2},
+                                                            {0, 0, 0, 0, 0, 0},
+                                                            {1, 1, 1, 1, 1},
+                                                            1,
+                                                            "NCDHW",
+                                                            0,
+                                                            "SAME",
+                                                            0,
+                                                            true,
+                                                            true,
+                                                            0,
+                                                            0,
+                                                            ""};
+    TestOneParamCase(tfSameMisalignedParam, {}, false, false, {}, true);
+}
 
 } // namespace

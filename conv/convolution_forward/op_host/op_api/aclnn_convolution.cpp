@@ -5023,12 +5023,12 @@ static aclnnStatus CheckN2HAndTranspose(const aclTensor*& input, const aclTensor
                                                  WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
         CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
         weight = l0op::Transpose(weight, permAfter, executor);
+        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 为了infershape正确，需要保存原来的shape
         weight->SetStorageShape(originShape);
         weight->SetOriginalShape(originShape);
 
         // change weight format
-        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
     }
     return ACLNN_SUCCESS;
@@ -5178,6 +5178,12 @@ public:
     aclnnStatus PreProcess() override
     {
         constexpr int paddingDim = 6; // 3D padding Dim
+        if (padding->Size() != CONV_2D_PAD_DIM && padding->Size() != CONV_4D_PAD_DIM) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(entityName, "pads", std::to_string(padding->Size()),
+                                         std::to_string(CONV_2D_PAD_DIM) + " or " + std::to_string(CONV_4D_PAD_DIM) +
+                                             " only when convTranspose 2d is extended to 3d");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         std::vector<int64_t> data = {0, 0, (*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
         if (padding->Size() == CONV_4D_PAD_DIM) {
             data = {0, 0, (*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};

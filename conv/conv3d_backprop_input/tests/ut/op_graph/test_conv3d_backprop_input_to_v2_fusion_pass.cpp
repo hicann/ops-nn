@@ -45,7 +45,8 @@ es::EsTensorHolder CreateConv3dBpInputNode(es::EsGraphBuilder& builder, const ch
                                            const es::EsTensorHolder& dedy, std::vector<int64_t> strides,
                                            std::vector<int64_t> pads, std::vector<int64_t> dilations, int64_t groups,
                                            const std::string& dataFormat, DataType outDtype,
-                                           const std::vector<int64_t>& outShape, Format outFormat)
+                                           const std::vector<int64_t>& outShape, Format outFormat,
+                                           const std::string& padding = "")
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     auto node = es::CompliantNodeBuilder(graph)
@@ -80,6 +81,10 @@ es::EsTensorHolder CreateConv3dBpInputNode(es::EsGraphBuilder& builder, const ch
     node.SetAttr("data_format", fmt);
     int64_t implMode = 0x1;
     node.SetAttr("_op_impl_mode_enum", implMode);
+    if (!padding.empty()) {
+        AscendString paddingStr = padding.c_str();
+        node.SetAttr("padding", paddingStr);
+    }
 
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -93,6 +98,23 @@ bool CheckNodeExists(GraphPtr& graph, const std::string& type)
             return true;
     }
     return false;
+}
+
+std::string GetNodeStringAttr(GraphPtr& graph, const std::string& type, const std::string& attrName)
+{
+    for (auto node : graph->GetAllNodes()) {
+        AscendString nodeType;
+        node.GetType(nodeType);
+        if (nodeType.GetString() != type) {
+            continue;
+        }
+        AscendString attrValue;
+        if (node.GetAttr(attrName.c_str(), attrValue) == GRAPH_SUCCESS) {
+            return attrValue.GetString();
+        }
+        return "";
+    }
+    return "";
 }
 
 } // namespace
@@ -158,6 +180,66 @@ TEST_F(Conv3dBpInputToV2FusionPassTest, bf16FusionSuccess)
     ops::Conv3DBackpropInputToV2FusionPass pass({AscendString("Conv3DBackpropInput")});
     EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInputV2"));
+}
+
+// TF插件场景：padding="SAME" + pads全0占位，padding属性需透传到V2节点（Transpose路径）
+TEST_F(Conv3dBpInputToV2FusionPassTest, paddingAttrForwardWithTranspose)
+{
+    auto builder = es::EsGraphBuilder("paddingAttrForwardWithTranspose");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT64, FORMAT_ND, {5});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_DHWCN, {1, 4, 4, 512, 1037});
+    auto dedy = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {256, 1, 4, 4, 1037});
+
+    auto y = CreateConv3dBpInputNode(builder, "Conv3DBackpropInput", inputSize, filter, dedy, {1, 2, 2, 2, 1},
+                                     {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NDHWC", DT_FLOAT16, {256, 1, 8, 8, 512},
+                                     FORMAT_NDHWC, "SAME");
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DBackpropInputToV2FusionPass pass({AscendString("Conv3DBackpropInput")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInputV2"));
+    EXPECT_EQ(GetNodeStringAttr(graph, "Conv3DBackpropInputV2", "padding"), "SAME");
+}
+
+// TF插件场景：padding="SAME" + pads全0占位，padding属性需透传到V2节点（非Transpose路径）
+TEST_F(Conv3dBpInputToV2FusionPassTest, paddingAttrForwardWithoutTranspose)
+{
+    auto builder = es::EsGraphBuilder("paddingAttrForwardWithoutTranspose");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT64, FORMAT_ND, {5});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_NCDHW, {512, 1, 4, 4, 1037});
+    auto dedy = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {256, 1, 4, 4, 1037});
+
+    auto y = CreateConv3dBpInputNode(builder, "Conv3DBackpropInput", inputSize, filter, dedy, {1, 2, 2, 2, 1},
+                                     {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NDHWC", DT_FLOAT16, {256, 1, 8, 8, 512},
+                                     FORMAT_NDHWC, "SAME");
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DBackpropInputToV2FusionPass pass({AscendString("Conv3DBackpropInput")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInputV2"));
+    EXPECT_EQ(GetNodeStringAttr(graph, "Conv3DBackpropInputV2", "padding"), "SAME");
+}
+
+// 无padding属性时，V2节点padding属性应为空串（与PrivateAttr默认值一致）
+TEST_F(Conv3dBpInputToV2FusionPassTest, paddingAttrDefaultEmptyWhenAbsent)
+{
+    auto builder = es::EsGraphBuilder("paddingAttrDefaultEmptyWhenAbsent");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT64, FORMAT_ND, {5});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_DHWCN, {1, 4, 4, 512, 1037});
+    auto dedy = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {256, 1, 4, 4, 1037});
+
+    auto y = CreateConv3dBpInputNode(builder, "Conv3DBackpropInput", inputSize, filter, dedy, {1, 2, 2, 2, 1},
+                                     {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NDHWC", DT_FLOAT16, {256, 1, 8, 8, 512},
+                                     FORMAT_NDHWC);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DBackpropInputToV2FusionPass pass({AscendString("Conv3DBackpropInput")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInputV2"));
+    EXPECT_EQ(GetNodeStringAttr(graph, "Conv3DBackpropInputV2", "padding"), "");
 }
 
 // Test 5: fp32FusionSuccess - FP32 融合成功

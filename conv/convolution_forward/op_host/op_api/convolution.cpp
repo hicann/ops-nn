@@ -1054,6 +1054,12 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor* input, const aclTens
     }
 
     auto pad4 = ConstructNewPad(padding, executor);
+    if (pad4->Size() != PAD_DIM_4) {
+        OP_LOGE(ACLNN_ERR_INNER,
+                "L0 func construct conv2dTranspose new pad failed, the legal pad dim is %ld, but got %lu.", PAD_DIM_4,
+                pad4->Size());
+        return ACLNN_ERR_INNER;
+    }
     OP_LOGD("new pad: [%ld] [%ld] [%ld] [%ld]", (*pad4)[PAD_TOP_INDEX], (*pad4)[PAD_BOTTOM_INDEX],
             (*pad4)[PAD_LEFT_INDEX], (*pad4)[PAD_RIGHT_INDEX]);
     FVector<int64_t> output_shape;

@@ -14,6 +14,7 @@
  */
 #include "conv_backprop_input_context_utils.h"
 #include "conv_backprop_input_context_utils_internal.h"
+#include <cstring>
 #include <log/log.h>
 #include <util/math_util.h>
 #include <unordered_set>
@@ -1034,20 +1035,58 @@ bool CheckCalPads(const gert::TilingContext* context, const Conv3dBpInputV2RunIn
     return true;
 }
 
+static size_t GetPaddingAttrIdx(const gert::TilingContext* context, optiling::OpTypeV2 opType)
+{
+    if (opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType == optiling::OpTypeV2::kExtendConvTransposeV2) {
+        return IsSocVersionFuse(context) ? kPaddingExtendConvTransposeIdx : kPaddingConv3dTransposeIdx;
+    }
+    return kPaddingConv3dBpInputIdx;
+}
+
+// 实际图编译产生的属性数组序可能与声明序不一致（固定idx可能读到非padding槽），RuntimeAttrs无按名获取
+// 接口，固定idx读不到"SAME"开头值时按值全槽扫描定位
+static const char* GetPaddingAttr(const gert::RuntimeAttrs* attrs, size_t paddingAttrIdx)
+{
+    const char* padding = attrs->GetAttrPointer<char>(paddingAttrIdx);
+    if (padding != nullptr && padding[0] == kPaddingSame[0]) {
+        return padding;
+    }
+    for (size_t i = 0; i < attrs->GetAttrNum(); ++i) {
+        const char* candidate = attrs->GetAttrPointer<char>(i);
+        if (candidate != nullptr && strncmp(candidate, kPaddingSame, sizeof(kPaddingSame) - 1) == 0) {
+            return candidate;
+        }
+    }
+    return padding;
+}
+
+// SAME语义：pad_total = CeilAlign(dim, stride) - stride + filter_dilation - dim（下限0），head取半
+static void UpdatePadsBySamePadding(Conv3dBpInputV2RunInfo& runInfoV2, const OtherParams& otherParams)
+{
+    int32_t padTotalD = std::max(Ops::Base::CeilAlign(otherParams.c_shape.d, static_cast<int64_t>(runInfoV2.stride_d)) -
+                                     runInfoV2.stride_d + otherParams.filter_d_dilation - otherParams.c_shape.d,
+                                 0L);
+    int32_t padTotalH = std::max(Ops::Base::CeilAlign(otherParams.c_shape.h, static_cast<int64_t>(runInfoV2.stride_h)) -
+                                     runInfoV2.stride_h + otherParams.filter_h_dilation - otherParams.c_shape.h,
+                                 0L);
+    int32_t padTotalW = std::max(Ops::Base::CeilAlign(otherParams.c_shape.w, static_cast<int64_t>(runInfoV2.stride_w)) -
+                                     runInfoV2.stride_w + otherParams.filter_w_dilation - otherParams.c_shape.w,
+                                 0L);
+    runInfoV2.pad_h = static_cast<int32_t>((static_cast<uint32_t>(padTotalD) >> 1U));
+    runInfoV2.pad_t = padTotalD - runInfoV2.pad_h;
+    runInfoV2.pad_u = static_cast<int32_t>((static_cast<uint32_t>(padTotalH) >> 1U));
+    runInfoV2.pad_d = padTotalH - runInfoV2.pad_u;
+    runInfoV2.pad_l = static_cast<int32_t>((static_cast<uint32_t>(padTotalW) >> 1U));
+    runInfoV2.pad_r = padTotalW - runInfoV2.pad_l;
+}
+
 bool CalPads(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 op_type,
              OtherParams& otherParams)
 {
     auto attrs = context->GetAttrs();
-    size_t padding_attr_idx = kPaddingConv3dBpInputIdx;
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
-        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
-        if (IsSocVersionFuse(context)) {
-            padding_attr_idx = kPaddingExtendConvTransposeIdx;
-        } else {
-            padding_attr_idx = kPaddingConv3dTransposeIdx;
-        }
-    }
-    if (attrs->GetAttrNum() <= padding_attr_idx) {
+    size_t paddingAttrIdx = GetPaddingAttrIdx(context, op_type);
+    if (attrs->GetAttrNum() <= paddingAttrIdx) {
         OP_LOGD(context, "no padding attr, skip calc and check");
         otherParams.filter_d_dilation += otherParams.output_padding.output_padding_d;
         otherParams.filter_h_dilation += otherParams.output_padding.output_padding_h;
@@ -1055,30 +1094,9 @@ bool CalPads(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, op
         return true;
     }
 
-    auto padding = attrs->GetAttrPointer<char>(padding_attr_idx);
-    if (padding != nullptr && (padding[0] == 'S')) {
-        int32_t pad_d = std::max(Ops::Base::CeilAlign(otherParams.c_shape.d, static_cast<int64_t>(runInfoV2.stride_d)) -
-                                     runInfoV2.stride_d + otherParams.filter_d_dilation - otherParams.c_shape.d,
-                                 0L);
-        int32_t pad_head = static_cast<int32_t>((static_cast<uint32_t>(pad_d) >> 1U));
-        int32_t pad_tail = pad_d - pad_head;
-        int32_t pad_h = std::max(Ops::Base::CeilAlign(otherParams.c_shape.h, static_cast<int64_t>(runInfoV2.stride_h)) -
-                                     runInfoV2.stride_h + otherParams.filter_h_dilation - otherParams.c_shape.h,
-                                 0L);
-        int32_t pad_up = static_cast<int32_t>((static_cast<uint32_t>(pad_h) >> 1U));
-        int32_t pad_down = pad_h - pad_up;
-        int32_t pad_w = std::max(Ops::Base::CeilAlign(otherParams.c_shape.w, static_cast<int64_t>(runInfoV2.stride_w)) -
-                                     runInfoV2.stride_w + otherParams.filter_w_dilation - otherParams.c_shape.w,
-                                 0L);
-        int32_t pad_left = static_cast<int32_t>((static_cast<uint32_t>(pad_w) >> 1U));
-        int32_t pad_right = pad_w - pad_left;
-
-        runInfoV2.pad_h = pad_head;
-        runInfoV2.pad_t = pad_tail;
-        runInfoV2.pad_u = pad_up;
-        runInfoV2.pad_d = pad_down;
-        runInfoV2.pad_l = pad_left;
-        runInfoV2.pad_r = pad_right;
+    const char* padding = GetPaddingAttr(attrs, paddingAttrIdx);
+    if (padding != nullptr && padding[0] == kPaddingSame[0]) {
+        UpdatePadsBySamePadding(runInfoV2, otherParams);
     }
 
     if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||

@@ -88,6 +88,7 @@ constexpr size_t kCin0FRACTALZ3DIdx = 3;
 constexpr size_t kPaddingConv3dBpInputIdx = 6;
 constexpr size_t kPaddingConv3dTransposeIdx = 8;
 constexpr size_t kPaddingExtendConvTransposeIdx = 9;
+constexpr char kPaddingSame[] = "SAME";
 
 constexpr int32_t kBlockSize = 16;
 const int32_t BYTE_BLOCK = 32;
