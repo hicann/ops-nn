@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term>| √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 > **本任务（experimental）范围**：仅新增 **ascend910b（Atlas A2/A3，DAV_2201）** 原生 AscendC kernel。ascend950（arch35）路径由 mainline `optim/apply_ftrl` 已提供。上表反映 `ApplyFtrl` 算子整体（mainline + 本扩展）的产品支持。
 
@@ -225,7 +225,7 @@ aclnnStatus aclnnApplyFtrl(
     </tr>
   </tbody></table>
 
-  - <term>Atlas 训练系列产品</term>：是否支持 BFLOAT16 以最终实现及配套为准。
+  - <term>Atlas训练系列产品</term>：是否支持 BFLOAT16 以最终实现及配套为准。
 
 - **返回值**
 
@@ -291,7 +291,7 @@ aclnnStatus aclnnApplyFtrl(
 
 ## 调用示例
 
-> **标准 CANN OPP 未部署 ApplyFtrl 的 aclnn 接口**（ACLNNTYPE=`aclnn_exclude`），也无 PyTorch 等价；但本实验扩展通过手写 op_api 提供了派生 aclnn 封装，安装本算子的自定义算子包（`cann-ops-nn-custom_*.run`）后，`aclnnApplyFtrl` / `aclnnApplyFtrlGetWorkspaceSize` 符号即在 `libcust_opapi.so` 中可链接调用（ATK pyaclnn 测试经此使能）。本节给出本实验算子目录 `examples/` 下**真实可运行**的两种调用样例，以及上文「派生 aclnn 两段式接口」的调用骨架。
+> **标准 CANN OPP 未部署 ApplyFtrl 的 aclnn 接口**（ACLNNTYPE=`aclnn_exclude`），也无 PyTorch 等价；但本实验扩展通过手写 op_api 提供了派生 aclnn 封装，安装本算子的自定义算子包（`cann-ops-nn-custom_*.run`）后，`aclnnApplyFtrl` / `aclnnApplyFtrlGetWorkspaceSize` 符号即在 `libcust_opapi.so` 中可链接调用（ATK pyaclnn 测试经此开启）。本节给出本实验算子目录 `examples/` 下**真实可运行**的两种调用样例，以及上文「派生 aclnn 两段式接口」的调用骨架。
 
 ### 可运行样例（指向 examples/）
 

@@ -5,22 +5,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -126,7 +126,7 @@ aclnnStatus aclnnScatterNdUpdate(
       </tr>
     </tbody></table>
   <!-- npu="A3,910b" id8 -->
-  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。
+  <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。
   <!-- end id8 -->
 - **返回值：**
 
@@ -213,17 +213,17 @@ aclnnStatus aclnnScatterNdUpdate(
 - 非连续Tensor支持：
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：varRef支持首轴非连续（即第0维的stride大于其按连续布局计算的期望值，其余各维均连续）的场景，算子可直接基于该非连续视图完成更新，无需先将varRef转换为连续Tensor。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：varRef支持首轴非连续（即第0维的stride大于其按连续布局计算的期望值，其余各维均连续）的场景，算子可直接基于该非连续视图完成更新，无需先将varRef转换为连续Tensor。
 
   <!-- end id7 -->
 
 - 确定性计算：
 
   <!-- npu="950" id9 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性，支持通过`aclrtSetSysParamOpt`开启确定性。
+  - <term>Ascend 950PR&950DT系列产品</term>：默认非确定性，支持通过`aclrtSetSysParamOpt`开启确定性。
   <!-- end id9 -->
   <!-- npu="A3,910b" id10 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：默认确定性。
   <!-- end id10 -->
 
 ## 调用示例

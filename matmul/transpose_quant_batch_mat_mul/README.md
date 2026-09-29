@@ -4,12 +4,12 @@
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
+| <term>Atlas A3系列产品</term>    |    ×    |
+| <term>Atlas A2系列产品</term> |    ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -122,11 +122,11 @@
   </tr>
 </tbody></table>
 
-- Ascend 950PR/Ascend 950DT：只有输入x2支持FRACTAL_NZ格式。
+- Ascend 950PR&950DT系列产品：只有输入x2支持FRACTAL_NZ格式。
 
 ## 约束说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
     - permX1和permY支持[1, 0, 2]。
     - K-C量化场景，permX2支持输入[0, 1, 2]；MX和T-C量化场景，permX2支持输入[0, 1, 2]或[0, 2, 1]。
     - K-C[量化模式](../../docs/zh/context/quant_mode_introduction.md)，K仅支持512，N仅支持128。x1Scale和x2Scale为1维，并且x1Scale为(M,)，x2Scale为(N,)，group_size仅支持配置为0，其他取值不生效。x1/x2输入支持FLOAT8_E5M2、FLOAT8_E4M3FN两种类型，x1Scale/x2Scale仅支持FLOAT32类型。

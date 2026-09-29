@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term> | √ |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-|  <term>Atlas 200I/500 A2 推理产品</term> | × |
-|  <term>Atlas 推理系列产品</term> | × |
-|  <term>Atlas 训练系列产品</term> | × |
+|  <term>Ascend 950PR&950DT系列产品</term> | √ |
+|  <term>Atlas A3系列产品</term>| √ |
+|  <term>Atlas A2系列产品</term> | √ |
+|  <term>Atlas 200I/500 A2推理产品</term> | × |
+|  <term>Atlas推理系列产品</term> | × |
+|  <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -97,12 +97,12 @@
 
 - `grad`必须为非空ND张量，所有维度的大小均必须大于0。
 - `eps`必须为仅含一个FLOAT类型元素的ND张量。
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - `grad`的rank不小于2，最后两维为`[N, M]`，其余维度为批次维度。
   - `grad`所有维度大小的乘积不能超过INT64的最大值。
   - `eps`支持标量或shape为`[1]`的一维张量。
   - `sum_grad_r`、`sum_grad_c`和`sum_grad_rc`的shape分别为`[batch..., N]`、`[batch..., M]`和`[batch...]`；当`grad`的rank为2时，`sum_grad_rc`为标量。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - `grad`仅支持shape为`[N, M]`的二维张量。
   - `eps`仅支持标量。
   - `sum_grad_r`、`sum_grad_c`和`sum_grad_rc`的shape分别为`[N]`、`[M]`和`[1]`。

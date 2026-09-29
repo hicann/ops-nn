@@ -4,7 +4,7 @@
 
 | 产品系列 | 产品型号 |
 |---------|---------|
-| Atlas A2 训练系列产品 | Atlas 800T A2、Atlas 800I A2、Atlas 900 A2 PoD、Atlas 200I A2 |
+| Atlas A2训练系列产品 | Atlas 800T A2、Atlas 800I A2、Atlas 900 A2 PoD、Atlas 200I A2 |
 
 ## 功能描述
 

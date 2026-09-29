@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id10 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id10 -->
 <!-- npu="A3" id1 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id1 -->
 <!-- npu="910b" id2 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="310b" id3 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310p" id4 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="910" id5 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id5 -->
 
 ## 功能说明
@@ -169,7 +169,7 @@ aclnnStatus aclnnGemmSyrk(
   </tbody></table>
 
   <!-- npu="950" id9 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
     - 仅支持FLOAT16、BFLOAT16数据类型；
     - fillMode当前仅支持"full"，"up"/"low"为原型预留值，尚未实现；
     - k轴为0时，接口自动路由为逐元素计算$C = \beta \times C$，不进入matmul计算路径。
@@ -209,7 +209,7 @@ aclnnStatus aclnnGemmSyrk(
       <td>fillMode不为"full"。</td>
     </tr>
     <tr>
-      <td>当前设备不是Ascend 950PR/Ascend 950DT。</td>
+      <td>当前设备不是Ascend 950PR&950DT系列产品。</td>
     </tr>
   </tbody>
   </table>
@@ -264,7 +264,7 @@ aclnnStatus aclnnGemmSyrk(
 - 确定性说明：
 
   <!-- npu="950" id11 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnGemmSyrk默认确定性实现（每个输出tile由单条Mmad链按固定顺序累加，无原子操作与切K归约）。
+  - <term>Ascend 950PR&950DT系列产品</term>：aclnnGemmSyrk默认确定性实现（每个输出tile由单条Mmad链按固定顺序累加，无原子操作与切K归约）。
   <!-- end id11 -->
 
 - a与cRef的数据类型必须一致（FLOAT16或BFLOAT16），格式仅支持ND，维度为2~3维。

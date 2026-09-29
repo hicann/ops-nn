@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -153,12 +153,12 @@ aclnnStatus aclnnMatmulWeightNz(
     </tbody></table>
 
   <!-- npu="A3,910b,310p" id7 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
     - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
   <!-- end id7 -->
   <!-- npu="950" id8 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
     - 调用此接口之前，必须使用aclnnNpuFormatCast接口完成mat2的原始输入Format从ND到NZ格式的转换。
     - 不支持 cubeMathType为1：ALLOW_FP32_DOWN_PRECISION 的选项
     - 不支持 cubeMathType为3：USE_HF32 的选项
@@ -254,19 +254,19 @@ aclnnStatus aclnnMatmulWeightNz(
 - 确定性说明：
 
   <!-- npu="950,910,310p" id9 -->
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmulWeightNz默认确定性实现。
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：aclnnMatmulWeightNz默认确定性实现。
 
   <!-- end id9 -->
 
 <!-- npu="950" id10 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 当self和mat2的数据类型同为FLOAT16或同为BFLOAT16，且out的数据类型为FLOAT32时，乘加结果使用FLOAT32累加，并将最终结果以FLOAT32写入out。
 
 <!-- end id10 -->
 - 计算一致性说明
 
   <!-- npu="910,310p" id11 -->
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
     - 当开启强一致性计算功能时，计算结果是确定的，多次执行将产生相同的输出。此外，计算结果与数据的位置无关。
     - aclnnMatmulWeightNz默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。
@@ -278,14 +278,14 @@ aclnnStatus aclnnMatmulWeightNz(
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 <!-- npu="310p" id12 -->
-- <term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz不支持输入数据类型为BFLOAT16。
+- <term>Atlas推理系列产品</term>：aclnnMatmulWeightNz不支持输入数据类型为BFLOAT16。
 <!-- end id12 -->
 - 建议使用场景：建议在mte2 bound场景下使用，例如M轴较小，A矩阵存在重复搬运，B矩阵无重复搬运的情况。
 
 ## 调用示例
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
@@ -512,7 +512,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 <!-- end id13 -->
 <!-- npu="A3,910b" id14 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   线性层或输入权重转置场景（数学语义：`out = self @ mat2.T`）下的示例代码如下。本示例中 weight 物理布局为 `[N, K]`，通过 `aclCreateTensor` 同时配置 `view_shape=[K, N]`、对应 `view_strides` 与 `storage_shape=[N, K]` 后，再调用 `aclnnTransMatmulWeight` 与 `aclnnMatmulWeightNz`，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
@@ -743,7 +743,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 <!-- end id14 -->
 <!-- npu="950" id15 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   self和mat2数据类型为bfloat16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp

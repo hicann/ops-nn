@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
-| <term>Atlas 训练系列产品</term> | × |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term>| × |
+| <term>Atlas A2系列产品</term> | × |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -151,7 +151,7 @@
 - lr、rho、momentum和epsilon必须为标量或仅含一个元素的一维张量。
 - 所有输入和输出的数据类型必须相同，支持FLOAT和FLOAT16。
 - var、mg、ms和mom均为原地更新，输出与对应输入共享存储。
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - var、mg、ms、mom、grad及其对应输出仅支持ND格式，rank不超过8。
   - 支持空Tensor。
   - FLOAT16输入在内部使用FLOAT精度进行计算，结果转换为FLOAT16后输出。

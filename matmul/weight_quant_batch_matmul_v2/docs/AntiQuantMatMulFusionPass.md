@@ -23,11 +23,11 @@
 该融合模式支持的产品如下。
 
 <!-- npu="910b" id2 -->
-Atlas A2 训练系列产品/Atlas A2 推理系列产品
+Atlas A2系列产品
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR/Ascend 950DT
+Ascend 950PR&950DT系列产品
 <!-- end id3 -->
 <!-- end id1 -->
 
@@ -42,10 +42,10 @@ Ascend 950PR/Ascend 950DT
 - Mul的常量scale元素数仅支持1或N（weight的N维度），Add的常量offset元素数仅支持1或N。
 - Add和Mul节点的shape要求保持一致， 均为(1,n)或者(n,)或者(1,)。在不存在Add，存在Mul的场景下，Mul节点的shape必须为(1,)。
 <!-- npu="910b" -->
-- 在Atlas A2 训练系列产品/Atlas A2 推理系列产品场景下，需满足shape准入条件：M<=64、K>=5120、N>=5120，且(K,N)不能为(5120,10240)或(10240,5120)。
+- 在Atlas A2系列产品场景下，需满足shape准入条件：M<=64、K>=5120、N>=5120，且(K,N)不能为(5120,10240)或(10240,5120)。
 <!-- end -->
 <!-- npu="950" -->
-- 在Ascend 950PR/Ascend 950DT场景下，无shape准入限制。
+- 在Ascend 950PR&950DT系列产品场景下，无shape准入限制。
 <!-- end -->
 - MatMul的transpose_x1/transpose_x2（或BatchMatMul的adj_x1/adj_x2）属性会传递到融合后的WeightQuantBatchMatmulV2的transpose_x/transpose_weight属性。
 - 支持可选的bias输入。

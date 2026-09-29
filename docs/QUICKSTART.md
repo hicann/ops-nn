@@ -59,7 +59,7 @@ bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
 
 产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品：取值为ascend910b
+- Atlas A2系列产品：取值为ascend910b
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值为ascend910_93
 - 950系列产品：取值为ascend950
 
@@ -154,7 +154,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
     产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
 
-    - Atlas A2 训练系列产品/Atlas A2 推理系列产品：取值为ascend910b
+    - Atlas A2系列产品：取值为ascend910b
     - Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值为ascend910_93
     - 950系列产品：取值为ascend950
 

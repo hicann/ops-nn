@@ -4,21 +4,21 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Ascend 950PR/Ascend 950DT|√|
+|Ascend 950PR&950DT系列产品|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2 推理产品|x|
-|Atlas 推理系列产品|√|
-|Atlas 训练系列产品|x|
-|Kirin X90 处理器系列产品|√|
-|Kirin 9030 处理器系列产品|√|
+|Atlas A2系列产品|√|
+|Atlas 200I/500 A2推理产品|x|
+|Atlas推理系列产品|√|
+|Atlas训练系列产品|x|
+|Kirin X90处理器系列产品|√|
+|Kirin 9030处理器系列产品|√|
 
 ## 功能说明
 
 - 算子功能：完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。
 - 计算公式：
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：
     - 无pertoken无bias：
 
       $$
@@ -55,7 +55,7 @@
       out = x1@x2 * scale * pertokenScaleOptional + bias
       $$
 
-  - <term>Atlas 推理系列产品</term>：
+  - <term>Atlas推理系列产品</term>：
     - 无pertoken、无bias：
 
       $$
@@ -148,7 +148,7 @@
   </tr>
 </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - x1只支持INT8、INT4数据类型。
   - x2只支持INT8、INT4数据类型。
   - scale只支持UINT64、FLOAT32、INT64、BF16数据类型。
@@ -156,14 +156,14 @@
   - offset只支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和BFLOAT16数据类型。
-- <term>Atlas 推理系列产品</term>：
+- <term>Atlas推理系列产品</term>：
   - x1只支持INT8数据类型。
   - x2只支持INT8数据类型。
   - scale只支持UINT64、FLOAT32数据类型。
   - bias只支持INT32数据类型，pertoken场景额外支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和INT32数据类型。
-- Kirin X90/Kirin 9030 处理器系列产品：
+- Kirin X90/Kirin 9030处理器系列产品：
   - x1、x2只支持INT8数据类型。
   - scale只支持UINT64、INT64数据类型。
   - offset只支持FLOAT32数据类型。

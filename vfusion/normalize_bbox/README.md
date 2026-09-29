@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term>| √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -41,8 +41,8 @@
 
 | 产品 | 静态shape能力 | 动态shape能力 | shape/rank及空Tensor限制 |
 | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 输入、输出均为ND | 支持动态shape和动态rank，输入、输出均为ND | `boxes`的rank为2～8；支持batch或非坐标维为0的空Tensor，坐标维必须为4 |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 输入、输出均为ND | 不支持 | `boxes`仅支持3维，不支持空Tensor |
+| <term>Ascend 950PR&950DT系列产品</term> | 输入、输出均为ND | 支持动态shape和动态rank，输入、输出均为ND | `boxes`的rank为2～8；支持batch或非坐标维为0的空Tensor，坐标维必须为4 |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 输入、输出均为ND | 不支持 | `boxes`仅支持3维，不支持空Tensor |
 
 ## 约束说明
 

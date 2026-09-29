@@ -10,12 +10,12 @@
 
 | 产品 | 是否支持 | 本实验算子（experimental）覆盖 |
 | :----------------------------------------- | :------:| :---------------------------- |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ | 由主线 `optim/apply_ftrl`（arch35）提供，**不在本实验范围** |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ | **本实验新增**（ascend910b / DAV_2201 原生 kernel） |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ | **本实验新增**（ascend910b / DAV_2201 原生 kernel） |
-| <term>Atlas 200I/500 A2 推理产品</term> | × | — |
-| <term>Atlas 推理系列产品</term> | √ | 由主线提供 |
-| <term>Atlas 训练系列产品</term> | √ | 由主线提供 |
+| <term>Ascend 950PR&950DT系列产品</term> | √ | 由主线 `optim/apply_ftrl`（arch35）提供，**不在本实验范围** |
+| <term>Atlas A3系列产品</term>| √ | **本实验新增**（ascend910b / DAV_2201 原生 kernel） |
+| <term>Atlas A2系列产品</term> | √ | **本实验新增**（ascend910b / DAV_2201 原生 kernel） |
+| <term>Atlas 200I/500 A2推理产品</term> | × | — |
+| <term>Atlas推理系列产品</term> | √ | 由主线提供 |
+| <term>Atlas训练系列产品</term> | √ | 由主线提供 |
 
 > 上表反映 `ApplyFtrl` 算子整体（主线 + 本扩展）的产品支持。**本实验任务仅新增 ascend910b（Atlas A2/A3，DAV_2201）原生 AscendC kernel**；ascend950（arch35）路径由主线 `optim/apply_ftrl` 已提供，本任务不改动。
 

@@ -5,22 +5,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -225,7 +225,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   后继处理
 
-  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未使能，则直接使用输入logits的归一化结果：
+  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未开启，则直接使用输入logits的归一化结果：
 
     $$
     logitsMinpFiltered =
@@ -621,7 +621,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
   - Q-Sample约束：
       - 输入张量q的索引，总是按元素逐一对齐到相应batch进行后继处理时输入的$\text{probs}[b]$。
       - $\text{probs}[b]$输入必定紧凑排布，即有效元素集中在当前batch前段。
-      - 如果当前batch的前序topK或topP采样至少使能其一，则$\text{probs}[b]$的元素还将满足降序排列。
+      - 如果当前batch的前序topK或topP采样至少开启其一，则$\text{probs}[b]$的元素还将满足降序排列。
   - 其他限制：
     - 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
     - 如果min(ksMaxAligned, 1024)<topK[batch]<vocSize[batch]，则视为选择当前batch的全部有效元素并跳过topK采样。其中ksMaxAligned为ksMax向上对齐到8的整数倍，ksMax的值域为[1, 1024]。

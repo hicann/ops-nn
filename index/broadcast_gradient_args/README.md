@@ -4,12 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×   |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×   |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -100,7 +100,7 @@
 
 ## 约束说明
 
-- 仅支持Ascend 950PR/Ascend 950DT，不支持其他架构。
+- 仅支持Ascend 950PR&950DT系列产品，不支持其他架构。
 - 输入x1和x2需满足广播规则：对应维度要么相等，要么至少一个为1，不满足时算子会报错。
 - y1和y2为动态shape输出，输出内存需按max(x1长度, x2长度)预分配，实际输出元素数可能小于此值。
 - x1和x2的数据类型需一致，y1和y2的数据类型需与x1一致，仅支持INT32、INT64。

@@ -4,9 +4,9 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Ascend 950PR/Ascend 950DT|√|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
+|Ascend 950PR&950DT系列产品|√|
+|Atlas A3系列产品|√|
+|Atlas A2系列产品|√|
 
 ## 功能说明
 
@@ -107,13 +107,13 @@
   </tr>
 </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品：
+- Atlas A2系列产品：
   - weight只支持INT8、INT4、INT32。
   - antiquant_scale只支持FLOAT16、BF16、UINT64、INT64。
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A3系列产品：
   - weight只支持INT8、INT4、INT32。
   - antiquant_scale只支持FLOAT16、BF16、UINT64、INT64。
-- Ascend 950PR/Ascend 950DT：quant_scale和quant_offset暂不支持。
+- Ascend 950PR&950DT系列产品：quant_scale和quant_offset暂不支持。
 
 ## 约束说明
 

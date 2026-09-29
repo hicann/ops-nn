@@ -5,22 +5,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -30,7 +30,7 @@
 - 计算公式：
 
   <!-- npu="950" id7 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
     支持MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
@@ -359,7 +359,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
         <td>
           <ul>
-            <li>当yDtype为FLOAT4_E2M1时，支持取值0和2。取值为0代表场景1，为2代表场景3（使能dstTypeMax）。</li>
+            <li>当yDtype为FLOAT4_E2M1时，支持取值0和2。取值为0代表场景1，为2代表场景3（开启dstTypeMax）。</li>
             <li>当yDtype为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1。取值为0代表场景1，为1代表场景2。</li>
           </ul>
         </td>

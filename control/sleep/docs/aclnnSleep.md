@@ -4,22 +4,22 @@
 
 ## 产品支持情况
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -99,7 +99,7 @@ aclnnStatus aclnnSleep(
       <td>cycles（aclIntArray*）</td>
       <td>输入</td>
       <td>休眠的时钟周期数。因声明值依赖，aclnn接口层转换为aclIntArray*传值。</td>
-      <td><ul><li>必须为正整数（cycles &gt; 0）。</li><li>不支持空数组。</li><li>受AICore超时限制，cycles最大值约为1.782e12（Ascend 950PR/Ascend 950DT主频1.65GHz，约18分钟），详见约束说明。</li></ul></td>
+      <td><ul><li>必须为正整数（cycles &gt; 0）。</li><li>不支持空数组。</li><li>受AICore超时限制，cycles最大值约为1.782e12（Ascend 950PR&950DT系列产品主频1.65GHz，约18分钟），详见约束说明。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>[1]</td>
@@ -212,13 +212,13 @@ aclnnStatus aclnnSleep(
 - cycles以aclIntArray*传入，数组包含1个元素即休眠周期数。
 - 不支持空数组：cycles为空数组时，返回ACLNN_ERR_INNER_TILING_ERROR（561002）。
 - 输入不支持包含±inf或nan：cycles为INT64类型，本身不存在inf/nan。若上游通过浮点类型转换传入（如PyTorch的`.to(torch.int64)`），`+inf`会转换为INT64_MAX，cycles校验通过但运行时会触发AICore超时；`-inf`和`nan`转换为非正数，tiling阶段拒绝并返回ACLNN_ERR_INNER_TILING_ERROR（561002）。
-- AICore超时限制：AICore默认执行超时时间为18分钟。在Ascend 950PR/Ascend 950DT（主频1.65GHz）下，cycles的最大值约为1.782e12（= 1080s × 1.65GHz）。超出此值可能导致算子被强制终止，请根据实际场景合理设置cycles。如需更长的休眠时间，可通过`aclrtSetOpExecuteTimeOut`接口修改AICore超时配置来调整此限制。
+- AICore超时限制：AICore默认执行超时时间为18分钟。在Ascend 950PR&950DT系列产品（主频1.65GHz）下，cycles的最大值约为1.782e12（= 1080s × 1.65GHz）。超出此值可能导致算子被强制终止，请根据实际场景合理设置cycles。如需更长的休眠时间，可通过`aclrtSetOpExecuteTimeOut`接口修改AICore超时配置来调整此限制。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-<term>Ascend 950PR/Ascend 950DT</term>：
+<term>Ascend 950PR&950DT系列产品</term>：
 
 ```Cpp
 

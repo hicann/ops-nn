@@ -11,7 +11,7 @@ DynamicGRU 是单层、单向 GRU（门控循环单元）前向整段循环算�
 |  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
 |  <term>Atlas A3系列产品</term>   |     √    |
 |  <term>Atlas A2系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
 |  <term>Atlas推理系列产品</term>    |     ×    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
 

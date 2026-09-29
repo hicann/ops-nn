@@ -233,7 +233,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
   </tbody>
   </table>
 
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：参数`gradOut`、`input`、`mean`、`invstd`、`weight`、`sumDy`、`sumDyXmu`、`gradWeight`、`gradBias`的数据类型不支持BFLOAT16。
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：参数`gradOut`、`input`、`mean`、`invstd`、`weight`、`sumDy`、`sumDyXmu`、`gradWeight`、`gradBias`的数据类型不支持BFLOAT16。
 
 - **返回值**
 

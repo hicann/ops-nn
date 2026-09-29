@@ -26,7 +26,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -71,7 +71,6 @@ aclnnStatus aclnnMaxPoolingGrad(
 
 - **参数说明：**
 
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1475px"><colgroup>
   <col style="width: 205px">
   <col style="width: 120px">
@@ -161,7 +160,6 @@ aclnnStatus aclnnMaxPoolingGrad(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  </style>
   <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
   <col style="width: 269px">
   <col style="width: 120px">

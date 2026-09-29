@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>Ascend 950PR/Ascend 950DT</term></td>
+<td><term>Ascend 950PR&950DT系列产品</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -16,7 +16,7 @@
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
+<td><term>Atlas A2系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 </table>
@@ -147,7 +147,7 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT：
+- Ascend 950PR&950DT系列产品：
   - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCHW`。
   - `x`、`filter`、`bias`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
   - `strides`、`dilations`的值应该在[1, 1000000]范围内。

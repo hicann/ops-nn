@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -154,7 +154,7 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 | `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`，默认值`"gelu_tanh"`。 | string | - |
 | `quant_mode` | str | 可选 | 量化模式，当前支持`"mx"`，默认值`"mx"`。 | string | - |
 | `round_mode` | str | 可选 | 舍入模式。当`output_dtype`为FLOAT4_E2M1时，支持`"rint"`、`"floor"`、`"round"`；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持`"rint"`。默认值`"rint"`。 | string | - |
-| `scale_alg` | int | 可选 | 缩放算法。当`output_dtype`为FLOAT4_E2M1时，支持取值0和2，0表示场景1，2表示场景3（使能`dst_type_max`）；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1，0表示场景1，1表示场景2。默认值0。 | int | - |
+| `scale_alg` | int | 可选 | 缩放算法。当`output_dtype`为FLOAT4_E2M1时，支持取值0和2，0表示场景1，2表示场景3（开启`dst_type_max`）；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1，0表示场景1，1表示场景2。默认值0。 | int | - |
 | `dst_type_max` | float | 可选 | 目标数据类型最大值，用于量化范围控制。当`scale_alg`为0或1时不生效，传入0.0即可；当`scale_alg`为2时，支持取值0.0和6.0-12.0，0.0表示使用目标类型的默认最大值。默认值0.0。 | float32 | - |
 
 ## 返回值说明

@@ -4,21 +4,21 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Ascend 950PR/Ascend 950DT|√|
+|Ascend 950PR&950DT系列产品|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2 推理产品|x|
-|Atlas 推理系列产品|x|
-|Atlas 训练系列产品|x|
-|Kirin X90 处理器系列产品|√|
-|Kirin 9030 处理器系列产品|√|
+|Atlas A2系列产品|√|
+|Atlas 200I/500 A2推理产品|x|
+|Atlas推理系列产品|x|
+|Atlas训练系列产品|x|
+|Kirin X90处理器系列产品|√|
+|Kirin 9030处理器系列产品|√|
 
 ## 功能说明
 
 - 算子功能：完成量化的矩阵乘计算。
 - 计算公式：
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32，out为FLOAT16/BFLOAT16：
 
       $$
@@ -73,7 +73,7 @@
       out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
       $$
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
     - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，无x2Offset，可选参数bias的dtype为FLOAT32，out为FLOAT16/BFLOAT16/FLOAT32：
 
@@ -207,7 +207,7 @@
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 - 输入和输出支持以下数据类型组合:
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
     | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
@@ -223,7 +223,7 @@
     | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
     | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
     | x1                        | x2                        | x1_scale     | x2_scale     | x2_offset | y_scale | bias    | y                                    |
     | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
@@ -242,13 +242,13 @@
 
 ## 调用说明
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
   | aclnn接口  | [test_aclnn_quant_matmul_v5](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |

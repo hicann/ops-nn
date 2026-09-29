@@ -8,7 +8,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品|√|
+|Atlas A2系列产品|√|
 
 ## 目录结构介绍
 
@@ -24,7 +24,7 @@
 │   ├── input                             // 存放脚本生成的输入数据目录
 │   ├── output                            // 存放算子运行处处数据和真值数据的目录
 │   ├── run.sh                            // 编译 + 执行aclnn接口的脚本文件
-│   ├── scripts                
+│   ├── scripts
 │   │   ├── gen_data.py                   // 输入数据和真值数据生成脚本文件
 │   │   └── verify_result.py              // 真值对比文件
 │   └── src
@@ -45,7 +45,7 @@
 │   ├── matmul_fp32_base_kernel.h          // 基础模板Kernel实现文件
 │   ├── matmul_fp32_common.h               // Kernel模板公共头文件
 │   ├── matmul_fp32_tiling_data.h          // Tilingdata文件，存储Tiling策略相关的配置数据，如块大小等
-│   └── matmul_fp32_tiling_key.h           // Tilingkey文件，定义Tiling策略的Key,标识不同的划分方式                     
+│   └── matmul_fp32_tiling_key.h           // Tilingkey文件，定义Tiling策略的Key,标识不同的划分方式
 └── tests                                  // UT实现
     └── ut                                 // tiling/kernel/aclnn UT实现
 ```
@@ -103,9 +103,9 @@ cd ${git_clone_path}/experimental/matmul/matmul_fp32
 
 ```bash
 # 切换到工程根目录
-cd ${git_clone_path}  
+cd ${git_clone_path}
 # 编译样例算子run包
-bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=matmul_fp32 --experimental 
+bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=matmul_fp32 --experimental
 #安装自定义算子run包
 ./build_out/cann-ops-nn-${vendor_name}-${arch}_linux.run
 ```

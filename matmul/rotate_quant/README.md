@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| Ascend 950PR/Ascend 950DT                   |    √     |
+| Ascend 950PR&950DT系列产品                   |    √     |
 | Atlas A3 训练系列产品/Atlas A3 推理系列产品 |    √     |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 |    √     |
-| Atlas 200I/500 A2 推理产品                  |    ×     |
-| Atlas 推理系列产品                          |    ×     |
-| Atlas 训练系列产品                          |    ×     |
+| Atlas A2系列产品 |    √     |
+| Atlas 200I/500 A2推理产品                  |    ×     |
+| Atlas推理系列产品                          |    ×     |
+| Atlas训练系列产品                          |    ×     |
 
 ## 功能说明
 
@@ -33,7 +33,7 @@
     GroupMax表示每32个为一组，计算组内最大值。
 
   3. 执行量化
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken逐行量化）
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
 
         $$
@@ -47,7 +47,7 @@
         y_{i,j} = \frac{Y_{i,j}}{s_i}
         $$
 
-    - <term>Ascend 950PR/Ascend 950DT</term>：MX量化
+    - <term>Ascend 950PR&950DT系列产品</term>：MX量化
 
       - 场景1，当scaleAlg为0时：
         - 将输入x在axis维度上按k = 32个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = 32
@@ -235,7 +235,7 @@
 
 ## 约束说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - x的shape为(*, N)，维度范围[1, 7]；rotation的shape为(K, K)或(N/K, K, K)，维度范围[2, 3], K当前版本仅支持取32，64，128。
   - x最后一维的长度(N)必须是K的整数倍。
   - yOut的输出类型为FLOAT4_E2M1、FLOAT8_E4M3FN或FLOAT8_E5M2，shape与x相同。
@@ -248,7 +248,7 @@
   - dstTypeMax：当scaleAlg=2时dstTypeMax必须在[6.0, 12.0]范围内，其余场景仅支持0.0。
   - trans目前只支持false。
 
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：
   - x的shape为(M, N)，rotation的shape为(K, K)。
   - rotation的shape必须是方阵(K, K)。
   - x第二维的长度(N)必须是K的整数倍，N必须可以整除8。

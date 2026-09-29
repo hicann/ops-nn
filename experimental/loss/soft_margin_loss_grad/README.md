@@ -4,7 +4,7 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品|√|
+|Atlas A2系列产品|√|
 
 ## 功能说明
 
@@ -45,7 +45,7 @@ $$
       <td>前向传播的预测值输入。公式中的self</td>
       <td>fp16、fp32、bf16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>y</td>
       <td>输入</td>
@@ -59,7 +59,7 @@ $$
       <td>反向传播的梯度输入。公式中的grad_output</td>
       <td>fp16、fp32、bf16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>reduction</td>
       <td>属性</td>

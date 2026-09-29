@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term>     |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -130,7 +130,7 @@ aclnnStatus aclnnThresholdBackward(
   </tbody>
   </table>
 
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term>：数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8。
+    - <term>Atlas A2系列产品</term>：数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8。
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。

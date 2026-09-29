@@ -4,16 +4,16 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                     |     √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>    |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
-| <term>Atlas 推理系列产品</term>                               |    √     |
-| <term>Atlas 训练系列产品</term>                               |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                     |     √    |
+| <term>Atlas A3系列产品</term>   |    ×     |
+| <term>Atlas A2系列产品</term>    |    ×     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    √     |
+| <term>Atlas推理系列产品</term>                               |    √     |
+| <term>Atlas训练系列产品</term>                               |    √     |
 
 ## 功能说明
 
-* 算子功能：读取NPU硬件浮点溢出状态寄存器，并在检测到溢出时将溢出标志写回输入`addr`（side effect），输出`data`固定为全零。该算子常与NPUAllocFloatStatus配合使用，用于混合精度训练中loss scaling溢出状态的读取场景。本仓交付<term>Ascend 950PR/Ascend 950DT</term>实现（暂未支持溢出探测的空实现）：不修改输入`addr`，输出`data`固定全零；其余支持产品的实现由canndev仓交付。
+* 算子功能：读取NPU硬件浮点溢出状态寄存器，并在检测到溢出时将溢出标志写回输入`addr`（side effect），输出`data`固定为全零。该算子常与NPUAllocFloatStatus配合使用，用于混合精度训练中loss scaling溢出状态的读取场景。本仓交付<term>Ascend 950PR&950DT系列产品</term>实现（暂未支持溢出探测的空实现）：不修改输入`addr`，输出`data`固定全零；其余支持产品的实现由canndev仓交付。
 
 - 计算公式：
 

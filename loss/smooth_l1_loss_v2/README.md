@@ -4,26 +4,26 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>     |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     √    |
+|  <term>Atlas A2系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>     |     √    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
 - 算子功能：计算SmoothL1损失函数。
 - 计算公式:
-  
+
   Batch为N的损失函数，当`reduction`为none时，此函数定义为：
 
   $$
   \ell(x,y) = L = \{l_1,\dots,l_N\}^\top
   $$
-  
+
   其中的$l_n$为：
-  
+
   $$
   l_n = \begin{cases}
   0.5(x_n-y_n)^2/beta, & if |x_n-y_n| < beta \\
@@ -39,7 +39,7 @@
   sum(L), & \text{if reduction} = \text{sum}
   \end{cases}
   $$
-  
+
 - 其中：
   - Xn: predictions
   - Yn: labels/truth

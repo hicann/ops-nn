@@ -4,8 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term>    |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                       |    ×     |
+| <term>Atlas A2系列产品</term>    |    √     |
 
 ## 功能说明
 
@@ -147,7 +147,7 @@ aclnnStatus aclnnApplyGradientDescent(
 ## 性能说明
 
 本算子为逐元素、访存受限（MTE2 GM 读）型算子：每元素读 `var`+`delta`、写 `var`。在
-<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term>（`ascend910b`）上，大 shape 的
+<term>Atlas A2系列产品</term>（`ascend910b`）上，大 shape 的
 float32 已接近 HBM 读带宽上限（读流量不可约减），性能主要由访存带宽决定；fp16/bf16 及中小
 shape 因实现中采用 ≥512B 对齐的读突发与 `Axpy` 融合计算而略有收益。
 

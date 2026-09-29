@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>Ascend 950PR/Ascend 950DT</term></td>
+<td><term>Ascend 950PR&950DT系列产品</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -16,19 +16,19 @@
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
+<td><term>Atlas A2系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas 200I/500 A2 推理产品</term></td>
+<td><term>Atlas 200I/500 A2推理产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas 推理系列产品</term></td>
+<td><term>Atlas推理系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas 训练系列产品</term></td>
+<td><term>Atlas训练系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 </table>
@@ -175,7 +175,7 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT：
+- Ascend 950PR&950DT系列产品：
   - `x`的数据类型必须与`filter`一致。
   - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
   - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。

@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                              |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Ascend 950PR&950DT系列产品</term>                       |    √     |
+| <term>Atlas A3系列产品</term>    |    √     |
+| <term>Atlas A2系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                              |    ×     |
+| <term>Atlas训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -57,7 +57,7 @@
 | pred   | 输入           | 前级softmax输出的概率，对应公式中的$p$，取值应落在(0, 1)开区间。 | FLOAT16、FLOAT  | ND       |
 | target | 输入           | one-hot标签，对应公式中的$t$，shape与pred一致。               | INT32           | ND       |
 | dout   | 输入           | 上游传入的梯度，对应公式中的$\text{d}$，shape与数据类型均与pred一致。 | FLOAT16、FLOAT  | ND       |
-| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与数据类型均与pred一致。不传入时按全1处理，该行为仅<term>Ascend 950PR/Ascend 950DT</term>支持，其余产品需显式传入weight。 | FLOAT16、FLOAT  | ND       |
+| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与数据类型均与pred一致。不传入时按全1处理，该行为仅<term>Ascend 950PR&950DT系列产品</term>支持，其余产品需显式传入weight。 | FLOAT16、FLOAT  | ND       |
 | alpha  | 属性           | 调制因子的权重系数，对应公式中的$\alpha$，缺省值为0.25。      | FLOAT           | -        |
 | gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
 | reduction | 属性        | 取值为"none"、"mean"、"sum"之一（大小写不敏感），缺省值为"mean"，传入其他取值会报错。取"mean"时梯度乘以$1/\text{numel(pred)}$，"none"与"sum"不缩放。 | STRING          | -        |

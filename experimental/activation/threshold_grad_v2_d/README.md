@@ -4,7 +4,7 @@
 
 | 产品                                                               | 是否支持 |
 | ------------------------------------------------------------------ | :------: |
-| Atlas A2 训练系列产品/Atlas 800I A2 推理产品 |    √    |
+| Atlas A2系列产品 |    √    |
 
 ## 功能说明
 
@@ -12,8 +12,8 @@
 - 计算公式：
 
 $$
- y = 
-  \begin{cases} 
+ y =
+  \begin{cases}
   input\_ gradient, & input\_ feature > threshold \\
   0, & input\_ feature <= threshold
   \end{cases}
@@ -58,7 +58,7 @@ $$
       <td>FLOAT</td>
       <td></td>
     </tr>
-    <tr>  
+    <tr>
       <td>output_backprops</td>
       <td>输出</td>
       <td>公式中的输出张量</td>

@@ -4,18 +4,18 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     ×    |
+|  <term>Atlas A3系列产品</term>  |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     √    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 算子功能：LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。
 - 计算公式：
-  
+
   $$
   f_t =sigm(W_f[h_{t-1}, x_t] + b_f)\\
   i_t =sigm(W_i[h_{t-1}, x_t] + b_i)\\

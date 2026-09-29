@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -191,21 +191,21 @@ aclnnStatus aclnnAddmmWeightNz(
   </tbody></table>
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
       - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
       - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
       - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项；
       - cubeMathType=4，当self、mat1和mat2均为FLOAT16或均为BFLOAT16时，矩阵乘与bias相加过程使用FLOAT32中间结果计算，支持self相对矩阵乘结果进行broadcast，输出数据类型由out指定。
   <!-- end id7 -->
   <!-- npu="950" id8 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Ascend 950PR&950DT系列产品</term>：
       - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
       - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
       - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
       - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时，addmm过程会升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
   <!-- end id8 -->
   <!-- npu="910,310p" id9 -->
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
@@ -297,7 +297,7 @@ aclnnStatus aclnnAddmmWeightNz(
 - 确定性说明：aclnnAddmmWeightNz默认确定性实现。
 
 <!-- npu="950" id10 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
   - 当mat1和mat2的数据类型同为FLOAT16或同为BFLOAT16时，计算精度如下：
     - self为一维Tensor：
       - out的数据类型为FLOAT32时，MatMul使用FLOAT32累加，beta×self、alpha×(mat1@mat2)以及两部分相加的中间结果均使用FLOAT32，最终结果以FLOAT32写入out。
@@ -313,7 +313,7 @@ aclnnStatus aclnnAddmmWeightNz(
 - 计算一致性说明
 
   <!-- npu="910,310p" id11 -->
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
     - 当开启强一致性计算功能时，计算结果是确定的，多次执行将产生相同的输出。此外，计算结果与数据的位置无关。
     - aclnnAddmmWeightNz默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。

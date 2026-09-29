@@ -32,7 +32,7 @@ $$
 | Ascend 950PR / Ascend 950DT（Atlas A5 推理系列，DAV_3510） | √ |
 | Atlas A3 训练系列 / Atlas A3 推理系列 | × |
 | Atlas A2 训练系列 / Atlas A2 推理系列 | × |
-| Atlas 200I/500 A2 推理产品 | × |
+| Atlas 200I/500 A2推理产品 | × |
 | Atlas 推理系列 | × |
 | Atlas 训练系列 | × |
 

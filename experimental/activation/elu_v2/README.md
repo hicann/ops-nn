@@ -4,7 +4,7 @@
 
 | 产品                              | 是否支持 |
 | ------------------------------- |:----:|
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 | √    |
+| Atlas A2系列产品 | √    |
 
 ## 功能说明
 
@@ -13,9 +13,9 @@
 
 $$
 f(x) =
-\begin{cases} 
-\text{scale} \cdot x , \quad x > 0 \\ 
-\text{scale} \cdot \alpha \cdot (e^{\text{input\_scale} \cdot x} - 1) , \quad x \leq 0 
+\begin{cases}
+\text{scale} \cdot x , \quad x > 0 \\
+\text{scale} \cdot \alpha \cdot (e^{\text{input\_scale} \cdot x} - 1) , \quad x \leq 0
 \end{cases}
 
 $$

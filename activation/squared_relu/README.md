@@ -11,7 +11,7 @@
 |  <term>Atlas推理系列产品</term>     |     ×    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
 |  <term>kirin X90处理器系列产品</term>    |     √    |
-|  <term>kirin 9030 处理器系列产品</term>    |     √    |
+|  <term>Kirin 9030处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -67,7 +67,7 @@
     </tr>
   </tbody></table>
 
-- <term>kirin X90处理器系列产品</term>、<term>kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
+- <term>kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

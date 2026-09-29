@@ -58,5 +58,5 @@ Atlas A3训练系列产品/Atlas A3推理系列产品
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR/Ascend 950DT
+Ascend 950PR&950DT系列产品
 <!-- end id3 -->

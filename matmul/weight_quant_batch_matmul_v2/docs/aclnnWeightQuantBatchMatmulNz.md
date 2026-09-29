@@ -3,22 +3,22 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：不支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
-- <term>Atlas 训练系列产品</term>：不支持
+- <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
 ## 功能说明
@@ -307,7 +307,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   - 输入和输出支持以下数据类型和shape组合：
 
     <!-- npu="950" id7 -->
-    - <term>Ascend 950PR/Ascend 950DT</term>：
+    - <term>Ascend 950PR&950DT系列产品</term>：
 
       |[量化模式](../../../docs/zh/context/quant_mode_introduction.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
       |------------| ----     | ----------------- | ----------- | ------------- | --------------------- | -------- | ------------------------------- | ------------------------------------ |
@@ -948,7 +948,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   ```
 
 <!-- npu="950" id8 -->
-- x为FLOAT16，weight为INT4且数据格式为FRACTAL_NZ_C0_16的调用示例（仅支持<term>Ascend 950PR/Ascend 950DT</term>，FRACTAL_NZ_C0_16格式的weight由`aclnnWeightQuantPreprocess`接口的非转置路径产生，无需调用`aclnnConvertWeightToINT4Pack`接口转换，storage shape为(ceil(n/16), ceil(k/16), 16, 16)）：
+- x为FLOAT16，weight为INT4且数据格式为FRACTAL_NZ_C0_16的调用示例（仅支持<term>Ascend 950PR&950DT系列产品</term>，FRACTAL_NZ_C0_16格式的weight由`aclnnWeightQuantPreprocess`接口的非转置路径产生，无需调用`aclnnConvertWeightToINT4Pack`接口转换，storage shape为(ceil(n/16), ceil(k/16), 16, 16)）：
 
   ```Cpp
   #include <iostream>
@@ -1224,7 +1224,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 <!-- end id8 -->
 
 <!-- npu="950" id9 -->
-- x为FLOAT16，weight为FLOAT4_E2M1且数据格式为FRACTAL_NZ_C0_16，antiquantScale为FLOAT8_E8M0的A16MXF4调用示例（仅支持<term>Ascend 950PR/Ascend 950DT</term>；weight为4-bit紧凑排布，按16x16分块，块间按(n1, k1)排布，块内按(k0, n0)行主序且n0维连续，1个uint8存放2个fp4_e2m1数据、低4bit为偶数n，storage shape为(ceil(n/16), ceil(k/16), 16, 16)，实际场景中由`aclnnWeightQuantPreprocess`接口的非转置路径产生）：
+- x为FLOAT16，weight为FLOAT4_E2M1且数据格式为FRACTAL_NZ_C0_16，antiquantScale为FLOAT8_E8M0的A16MXF4调用示例（仅支持<term>Ascend 950PR&950DT系列产品</term>；weight为4-bit紧凑排布，按16x16分块，块间按(n1, k1)排布，块内按(k0, n0)行主序且n0维连续，1个uint8存放2个fp4_e2m1数据、低4bit为偶数n，storage shape为(ceil(n/16), ceil(k/16), 16, 16)，实际场景中由`aclnnWeightQuantPreprocess`接口的非转置路径产生）：
 
   ```Cpp
   #include <algorithm>
@@ -1574,7 +1574,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 <!-- end id9 -->
 
 <!-- npu="950" id10 -->
-- x为FLOAT16，weight为FLOAT4_E2M1且数据格式为FRACTAL_NZ_C0_16，antiquantScale为FLOAT16的A16F4 pergroup调用示例（仅支持<term>Ascend 950PR/Ascend 950DT</term>；weight为4-bit紧凑排布，按16x16分块，块间按(n1, k1)排布，块内按(k0, n0)行主序且n0维连续，1个uint8存放2个fp4_e2m1数据、低4bit为偶数n，storage shape为(ceil(n/16), ceil(k/16), 16, 16)，实际场景中由`aclnnWeightQuantPreprocess`接口的非转置路径产生，无需调用`aclnnConvertWeightToINT4Pack`接口转换；antiquantScale的shape为(ceildiv(k, groupSize), n)）：
+- x为FLOAT16，weight为FLOAT4_E2M1且数据格式为FRACTAL_NZ_C0_16，antiquantScale为FLOAT16的A16F4 pergroup调用示例（仅支持<term>Ascend 950PR&950DT系列产品</term>；weight为4-bit紧凑排布，按16x16分块，块间按(n1, k1)排布，块内按(k0, n0)行主序且n0维连续，1个uint8存放2个fp4_e2m1数据、低4bit为偶数n，storage shape为(ceil(n/16), ceil(k/16), 16, 16)，实际场景中由`aclnnWeightQuantPreprocess`接口的非转置路径产生，无需调用`aclnnConvertWeightToINT4Pack`接口转换；antiquantScale的shape为(ceildiv(k, groupSize), n)）：
 
   ```Cpp
   #include <algorithm>

@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|<term>Ascend 950PR/Ascend 950DT</term>|√|
+|<term>Ascend 950PR&950DT系列产品</term>|√|
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>|×|
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>|×|
-|<term>Atlas 200I/500 A2 推理产品</term>|×|
-|<term>Atlas 推理系列产品</term>|×|
-|<term>Atlas 训练系列产品</term>|×|
+|<term>Atlas A2系列产品</term>|×|
+|<term>Atlas 200I/500 A2推理产品</term>|×|
+|<term>Atlas推理系列产品</term>|×|
+|<term>Atlas训练系列产品</term>|×|
 
 ## 功能说明
 
@@ -22,7 +22,7 @@
   稀疏矩阵x1由三部分描述：非零元素索引`x1_indices`（shape为 [nnz, 2]）、非零元素值`x1_values`（shape为 [nnz]）、矩阵形状`x1_shape`（shape为 [2]，值为 [m, n]）。稠密矩阵x2的shape为 [n, p]。
 
   当adjoint\_a=false、adjoint\_b=false时：
-  
+
   $$y_{i,j} = \sum_{k} x1_{i,k} \cdot x2_{k,j}$$
 
   其中 $x1_{i,k}$ 为0（不在x1\_indices中）或取x1\_values中对应位置的值。

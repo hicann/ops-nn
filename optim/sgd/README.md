@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | √ |
-| <term>Atlas 推理系列产品</term> | √ |
-| <term>Atlas 训练系列产品</term> | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term>| √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -70,9 +70,9 @@
 
 | 产品 | 数据类型 | 静态shape格式 | 动态shape格式 | shape/rank及空Tensor限制 |
 | --- | --- | --- | --- | --- |
-| <term>Ascend 950PR/Ascend 950DT</term> | 各输入、输出支持FLOAT、FLOAT16、BFLOAT16 | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `parameters`的rank为1～8，不支持空Tensor |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | 各输入、输出支持FLOAT、FLOAT16、BFLOAT16 | `parameters`、`gradient`、`accum`、`stat`及输出支持NC1HWC0、NDC1HWC0、ND、FRACTAL_Z、FRACTAL_Z_3D；`learning_rate`和`momentum`为ND | 不支持 | `parameters`的rank为1～8，不支持空Tensor |
-| <term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term><br><term>Atlas 训练系列产品</term> | 各输入、输出支持FLOAT、FLOAT16 | `parameters`、`gradient`、`accum`、`stat`及输出支持NC1HWC0、NDC1HWC0、ND、FRACTAL_Z、FRACTAL_Z_3D；`learning_rate`和`momentum`为ND | 不支持 | `parameters`的rank为1～8，不支持空Tensor |
+| <term>Ascend 950PR&950DT系列产品</term> | 各输入、输出支持FLOAT、FLOAT16、BFLOAT16 | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `parameters`的rank为1～8，不支持空Tensor |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term> | 各输入、输出支持FLOAT、FLOAT16、BFLOAT16 | `parameters`、`gradient`、`accum`、`stat`及输出支持NC1HWC0、NDC1HWC0、ND、FRACTAL_Z、FRACTAL_Z_3D；`learning_rate`和`momentum`为ND | 不支持 | `parameters`的rank为1～8，不支持空Tensor |
+| <term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 各输入、输出支持FLOAT、FLOAT16 | `parameters`、`gradient`、`accum`、`stat`及输出支持NC1HWC0、NDC1HWC0、ND、FRACTAL_Z、FRACTAL_Z_3D；`learning_rate`和`momentum`为ND | 不支持 | `parameters`的rank为1～8，不支持空Tensor |
 
 ## 约束说明
 

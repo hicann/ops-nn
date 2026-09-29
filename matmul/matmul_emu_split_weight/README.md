@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                  |    ×     |
-| <term>Atlas 推理系列产品</term>                          |    ×     |
-| <term>Atlas 训练系列产品</term>                          |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                   |    √     |
+| <term>Atlas A3系列产品</term>|    √     |
+| <term>Atlas A2系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                  |    ×     |
+| <term>Atlas推理系列产品</term>                          |    ×     |
+| <term>Atlas训练系列产品</term>                          |    ×     |
 
 ## 功能说明
 
@@ -119,14 +119,14 @@
 
 ## 调用说明
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
   | aclnn接口  | [test_aclnn_matmul_emu_split_weight](examples/test_aclnn_matmul_emu_split_weight.cpp) | 通过<br>[aclnnMatmulEmuSplitWeight](docs/aclnnMatmulEmuSplitWeight.md)<br>接口调用MatmulEmuSplitWeight算子。 |
   | torch接口  | [matmul_emu_split_weight](torch_extension/matmul_emu_split_weight.py) | 通过<br>[torchapi](docs/torchapi_matmul_emu_split_weight.md)<br>接口调用MatmulEmuSplitWeight算子。 |
 
-- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR&950DT系列产品</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |

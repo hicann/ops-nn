@@ -4,12 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    ×  |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×   |
+| <term>Ascend 950PR&950DT系列产品</term>                          |    ×  |
+| <term>Atlas A3系列产品</term>    |    √    |
+| <term>Atlas A2系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
+| <term>Atlas推理系列产品</term>                             |    ×     |
+| <term>Atlas训练系列产品</term>                              |    ×   |
 
 ## 功能说明
 
@@ -27,7 +27,7 @@
   |topK-Sample采样|√|×|√|对输入logits按每个batch，先进行topK采样，再进行Sample采样后取最大结果|
   |topP-Sample采样|×|√|√|对输入logits按每个batch，先进行topP采样，再进行Sample采样后取最大结果|
   |topK-topP-Sample采样|√|√|√|对输入logits按每个batch，先进行topK采样，再进行topP采样，最后进行Sample采样后取最大结果|
-  
+
 - 计算公式：
 
   输入logits为大小为[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>

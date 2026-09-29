@@ -11,7 +11,7 @@
 |  <term>Atlas推理系列产品</term>     |     ×    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
 |  <term>kirin X90处理器系列产品</term>    |     √    |
-|  <term>kirin 9030 处理器系列产品</term>    |     √    |
+|  <term>Kirin 9030处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -147,7 +147,7 @@
     </tr>
   </tbody></table>
 
-- <term>kirin X90处理器系列产品</term>、<term>kirin 9030 处理器系列产品</term>：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
+- <term>kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
 
 ## 约束说明
 

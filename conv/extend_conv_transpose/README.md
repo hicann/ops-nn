@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>   |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                   |    ×     |
-| <term>Atlas 推理系列产品</term>                           |    ×     |
-| <term>Atlas 训练系列产品</term>                           |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                   |    √     |
+| <term>Atlas A3系列产品</term>  |    ×     |
+| <term>Atlas A2系列产品</term>   |    ×     |
+| <term>Atlas 200I/500 A2推理产品</term>                   |    ×     |
+| <term>Atlas推理系列产品</term>                           |    ×     |
+| <term>Atlas训练系列产品</term>                           |    ×     |
 
 ## 功能说明
 
@@ -47,7 +47,7 @@
 | data_format | 可选属性 | <ul><li>字符串，当前仅支持取值"NCDHW"。对应关系为：batch(N)、channels(C)、depth(D)、height(H)、width(W)。</li><li>指定'x'与'y'的数据排布格式。</li></ul> | STRING                                          | -                                   |
 | output_padding | 可选属性 | <ul><li>将在输出形状末尾额外增加的尺寸，默认值为[0,0,0,0,0]。</li><li>相当于公式中的output_padding[0]、output_padding[1]、output_padding[2]。</li></ul> | -                                   | -                                   |
 | offset_x  | 可选属性 | <ul><li>默认值为0，保留字段。</li></ul> | INT                                             | -                                   |
-| fusion_mode | 可选属性 | <ul><li>整数，取值为0或1，默认0。表示输出是否使能ReLU：0表示不使能，1表示使能。</li></ul> | INT                                             | -                                   |
+| fusion_mode | 可选属性 | <ul><li>整数，取值为0或1，默认0。表示输出是否开启ReLU：0表示不开启，1表示开启。</li></ul> | INT                                             | -                                   |
 | y_quant_mode | 可选属性 | <ul><li>默认值为0，保留字段。</li></ul> | INT                                             | -                                   |
 | y | 输出 | <ul><li>相当于公式中的($N,C_{out},D_{out},H_{out},W_{out}$)。</li><li>数据格式与'x'一致。</li></ul> | FLOAT16、INT8 | NCDHW                         |
 

@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------- |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term> | √        |
+| <term>Atlas A2系列产品</term> | √        |
 
 ## 功能说明
 
@@ -27,7 +27,7 @@ $$
 | dim   | 输入数组       | 整型，代表指定的维度。取值需在[0，3]范围内。 | INT32    | -        |
 | out    | 输出           | 维度为4维，shape和原selfx的一致，dtype需要与selfx一致。 | 同x   | ND       |
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品</term>：数据类型支持FLOAT、FLOAT16
+- <term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16
 
 ## 约束说明
 

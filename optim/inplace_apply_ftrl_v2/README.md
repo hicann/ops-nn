@@ -6,12 +6,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
+|  <term>Atlas A3系列产品</term>  |     ×    |
+|  <term>Atlas A2系列产品</term>     |     ×    |
+|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
+|  <term>Atlas推理系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -155,7 +155,7 @@ $$
 - 属性约束：use_locking仅支持false（NPU无Ref语义）。
 - 支持空Tensor（shape含0维，如[0, N]），短路返回空输出。
 - 支持动态Shape（-1未知维度）与动态Rank（-2未知秩）。
-- 仅在Ascend 950PR/Ascend 950DT上注册，其他产品不支持。
+- 仅在Ascend 950PR&950DT系列产品上注册，其他产品不支持。
 
 ## 调用说明
 

@@ -11,7 +11,7 @@
 |  <term>Atlas推理系列产品</term>     |     √    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
 |  <term>kirin X90处理器系列产品</term>    |     √    |
-|  <term>kirin 9030 处理器系列产品</term>    |     √    |
+|  <term>Kirin 9030处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -95,7 +95,7 @@
 
 - GeGlu不包含activateLeft参数。
 - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：self、out和outGelu的数据类型支持FLOAT、FLOAT16。
-- <term>kirin X90处理器系列产品</term>、<term>kirin 9030 处理器系列产品</term>：self、out和outGelu的数据类型不支持BFLOAT16。
+- <term>kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：self、out和outGelu的数据类型不支持BFLOAT16。
 
 ## 约束说明
 
