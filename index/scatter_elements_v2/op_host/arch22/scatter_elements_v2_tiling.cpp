@@ -62,6 +62,8 @@ const int INPUT_2 = 2;
 const int WORK_SPACE_SIZE = 1024 * 1024 * 16;
 
 const int SMALL_MODE = 1;
+const int GROUPED_ADD_SMALL_MODE = 3;
+const uint64_t FP32_ADD_GROUPS = 16;
 const int VAR_LIMIT = 128;
 const int VAR_GROUPS = 64;
 
@@ -496,9 +498,19 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
 
     uint32_t times = indicesCount / indicesOneTime;
     uint32_t totalSize = inputSize * inputOneTime + indicesSize * (updatesOneTime + indicesOneTime);
+    // For deep FP32 ADD, independent partial sums shorten the serial dependency
+    // chain. Account for all banks before deciding how many rows fit in UB.
+    const bool canGroupAdd = inputDtype == ge::DT_FLOAT && mode == ADD && includeSelf != 0 &&
+                             indicesOneTime / inputOneTime >= FP32_ADD_GROUPS;
+    const uint64_t groupedTotalSize = (inputSize + (FP32_ADD_GROUPS - 1) * sizeof(float)) * inputOneTime +
+                                      static_cast<uint64_t>(indicesSize) * (updatesOneTime + indicesOneTime);
+    const bool useGroupedAdd = canGroupAdd && groupedTotalSize <= max_ub;
+    if (useGroupedAdd) {
+        totalSize = static_cast<uint32_t>(groupedTotalSize);
+    }
     // 小包场景，一次性可以搬入一轮尾轴，按ub上限尽可能的搬多轮，特殊处理走small分支
     if (totalSize <= max_ub) {
-        modeFlag = SMALL_MODE;
+        modeFlag = useGroupedAdd ? GROUPED_ADD_SMALL_MODE : SMALL_MODE;
         max_ub = max_ub / totalSize;
         if (times < coreNum) {
             usedCoreNum = times;
