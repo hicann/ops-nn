@@ -81,11 +81,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (tilingData->bs == 0 || tilingData->splitD == 0) {
-            // Empty input (zero token count or zero last dim of x): nothing to compute.
-            return;
-        }
-        if (GetBlockIdx() >= usedCoreNums) {
+        if (CheckNeedSkip()) {
             return;
         }
         SetMaxValue();
@@ -219,6 +215,18 @@ public:
     }
 
 private:
+    __aicore__ inline bool CheckNeedSkip()
+    {
+        if (tilingData->bs == 0 || tilingData->splitD == 0) {
+            // Empty input (zero token count or zero last dim of x): nothing to compute.
+            return true;
+        }
+        if (GetBlockIdx() >= usedCoreNums) {
+            return true;
+        }
+        return false;
+    }
+
     TPipe* pipe;
     const SwigluGroupQuantTilingData* tilingData;
     GlobalTensor<T0> xGm;
