@@ -16,44 +16,6 @@
 #define GROUP_NORM_REGBASE_WELFORD_GENERALIZED_H_
 
 #include "group_norm_regbase_base.h"
-
-// fp32 仿射内层融合版对齐归一化（文件局部）：与 base_part3.h 的 VFNormalizeAlign 语义一致，
-// 唯一差异为仿射内层用 MulDstAdd(vmadd) 三算子替代四算子（单次舍入）。
-namespace GroupNorm {
-template <typename T1, typename T2>
-__aicore__ inline void VFNormalizeAlignMadd(__local_mem__ T1* xLocal, __local_mem__ T2* gammaLocal,
-                                            __local_mem__ T2* betaLocal, __local_mem__ float* meanLocal,
-                                            __local_mem__ float* rstdLocal, __local_mem__ T1* yLocal,
-                                            uint16_t rowsCount, int32_t reduceCount)
-{
-    uint16_t loopCount = CeilDiv(reduceCount, VL_FP32);
-    uint32_t reduceCountAlign = RoundUp<T1>(reduceCount);
-    __VEC_SCOPE__
-    {
-        RegTensor<float> x;
-        RegTensor<float> gamma;
-        RegTensor<float> beta;
-        RegTensor<float> mean;
-        RegTensor<float> rstd;
-        MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstd, rstdLocal);
-        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(mean, meanLocal);
-        for (uint16_t i = 0; i < rowsCount; i++) {
-            uint32_t sreg0 = reduceCount;
-            LoadGammaAndBetaData<T2>(gamma, beta, gammaLocal, betaLocal, pregMain, i);
-            for (uint16_t j = 0; j < loopCount; j++) {
-                pregLoop = UpdateMask<float>(sreg0);
-                LoadInputData<T1>(x, xLocal, pregLoop, i * reduceCountAlign + j * VL_FP32);
-                Sub(x, x, mean, pregLoop);
-                Mul(x, x, rstd, pregLoop);
-                MulDstAdd<float, AscendC::Reg::MaskMergeMode::ZEROING>(x, gamma, beta, pregLoop);
-                StoreOutputData<T1>(yLocal, x, pregLoop, i * reduceCountAlign + j * VL_FP32);
-            }
-        }
-    }
-}
-} // namespace GroupNorm
 namespace GroupNorm {
 using namespace AscendC;
 template <typename T1, typename T2, int32_t BUFFER_NUM = 2>
@@ -234,14 +196,8 @@ private:
             WaitFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
             __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
             __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[inputUbOffset].GetPhyAddr();
-            // fp32 走 MulDstAdd 融合仿射（减少一次舍入），其余类型走基线路径。
-            if constexpr (IsSameType<T1, float>::value) {
-                VFNormalizeAlignMadd<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount,
-                                             reduceCount);
-            } else {
-                VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount,
-                                         reduceCount);
-            }
+            VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount,
+                                     reduceCount);
             SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
             WaitFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
             if (i < loopNum - 1) {
@@ -326,14 +282,7 @@ private:
                 __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
                 __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[inputUbOffset].GetPhyAddr();
                 int32_t reduceCount = copyLen;
-                // fp32 走 MulDstAdd 融合仿射（减少一次舍入），其余类型走基线路径。
-                if constexpr (IsSameType<T1, float>::value) {
-                    VFNormalizeAlignMadd<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
-                                                 copyLen);
-                } else {
-                    VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
-                                             copyLen);
-                }
+                VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1, copyLen);
                 SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
                 WaitFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
                 if (extent < loopNum * innerLoopNum - BUFFER_NUM) {
