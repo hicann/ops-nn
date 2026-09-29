@@ -27,6 +27,15 @@ const char* const kSparseSegmentMean = "SparseSegmentMean";
 
 namespace aicpu {
 namespace {
+constexpr size_t kSecondRow = 1U;
+constexpr size_t kThirdRow = 2U;
+constexpr size_t kFourthRow = 3U;
+constexpr size_t kRowsPerBatch = 4U;
+constexpr size_t kMebibyte = 1024U * 1024U;
+constexpr size_t kParallelElementThreshold = 16U * kMebibyte;
+constexpr size_t kMinColumnsPerShard = 64U;
+constexpr size_t kMinParallelColumns = 2U * kMinColumnsPerShard;
+
 template <typename T>
 struct MeanVectorOps {
     using Packet = typename Eigen::internal::packet_traits<T>::type;
@@ -46,6 +55,16 @@ struct MeanVectorOps {
         const Packet lhs = Eigen::internal::ploadu<Packet>(output);
         const Packet rhs = Eigen::internal::ploadu<Packet>(input);
         Eigen::internal::pstoreu<T, Packet>(output, Eigen::internal::padd(lhs, rhs));
+    }
+
+    static EIGEN_STRONG_INLINE void Add4(const T* input0, const T* input1, const T* input2, const T* input3, T* output)
+    {
+        Packet value = Eigen::internal::ploadu<Packet>(output);
+        value = Eigen::internal::padd(value, Eigen::internal::ploadu<Packet>(input0));
+        value = Eigen::internal::padd(value, Eigen::internal::ploadu<Packet>(input1));
+        value = Eigen::internal::padd(value, Eigen::internal::ploadu<Packet>(input2));
+        value = Eigen::internal::padd(value, Eigen::internal::ploadu<Packet>(input3));
+        Eigen::internal::pstoreu<T, Packet>(output, value);
     }
 
     static EIGEN_STRONG_INLINE void Divide(T divisor, T* output)
@@ -87,6 +106,25 @@ EIGEN_STRONG_INLINE void AddRow(const T* input, T* output, size_t size)
 }
 
 template <typename T>
+EIGEN_STRONG_INLINE void Add4Rows(const T* input0, const T* input1, const T* input2, const T* input3, T* output,
+                                  size_t size)
+{
+    size_t i = 0;
+    constexpr size_t kLanes = MeanVectorOps<T>::kLanes;
+    if (kLanes > 0) {
+        for (; i + kLanes <= size; i += kLanes) {
+            MeanVectorOps<T>::Add4(input0 + i, input1 + i, input2 + i, input3 + i, output + i);
+        }
+    }
+    for (; i < size; ++i) {
+        T value = output[i] + input0[i];
+        value = value + input1[i];
+        value = value + input2[i];
+        output[i] = value + input3[i];
+    }
+}
+
+template <typename T>
 EIGEN_STRONG_INLINE void DivideRow(T divisor, T* output, size_t size)
 {
     size_t i = 0;
@@ -119,6 +157,105 @@ EIGEN_STRONG_INLINE KernelStatus InvalidIndex()
 {
     KERNEL_LOG_ERROR("indices out of range.");
     return KERNEL_STATUS_PARAM_INVALID;
+}
+
+template <typename T, typename T1>
+EIGEN_STRONG_INLINE void AccumulateRowsUnchecked(const T* x, const T1* indices, size_t n, size_t start, size_t end,
+                                                 size_t column, T* output, size_t size)
+{
+    const T* input = x + static_cast<size_t>(indices[start]) * n + column;
+    InitRow(input, output, size);
+    size_t r = start + 1U;
+    for (; r + kRowsPerBatch <= end; r += kRowsPerBatch) {
+        const T* input0 = x + static_cast<size_t>(indices[r]) * n + column;
+        const T* input1 = x + static_cast<size_t>(indices[r + kSecondRow]) * n + column;
+        const T* input2 = x + static_cast<size_t>(indices[r + kThirdRow]) * n + column;
+        const T* input3 = x + static_cast<size_t>(indices[r + kFourthRow]) * n + column;
+        Add4Rows(input0, input1, input2, input3, output, size);
+    }
+    for (; r < end; ++r) {
+        input = x + static_cast<size_t>(indices[r]) * n + column;
+        AddRow(input, output, size);
+    }
+}
+
+template <typename T1, typename T2>
+EIGEN_STRONG_INLINE KernelStatus ValidateInputData(const T1* indices, const T2* segmentIds, size_t count, int64_t rows)
+{
+    if (segmentIds[0] < 0)
+        return InvalidSegmentId();
+    for (size_t i = 0; i < count; ++i) {
+        if ((indices[i] < 0) || (indices[i] >= rows))
+            return InvalidIndex();
+        if ((i > 0U) && (segmentIds[i - 1U] > segmentIds[i])) {
+            return InvalidSegmentOrder(segmentIds[i - 1U], segmentIds[i]);
+        }
+    }
+    return KERNEL_STATUS_OK;
+}
+
+template <typename T, typename T1, typename T2>
+void ComputeColumnRange(const T* x, const T1* indices, const T2* segmentIds, T* y, size_t n, size_t count,
+                        size_t column, size_t size)
+{
+    size_t start = 0;
+    size_t end = 1;
+    size_t done = 0;
+    T2 segment = segmentIds[0];
+    while (start < count) {
+        while ((end < count) && (segmentIds[end] == segment))
+            ++end;
+        const size_t row = static_cast<size_t>(segment);
+        for (; done < row; ++done) {
+            std::fill(y + done * n + column, y + done * n + column + size, static_cast<T>(0));
+        }
+        T* output = y + row * n + column;
+        AccumulateRowsUnchecked(x, indices, n, start, end, column, output, size);
+        DivideRow(static_cast<T>(end - start), output, size);
+        done = row + 1U;
+        start = end;
+        if (start < count)
+            segment = segmentIds[start];
+        ++end;
+    }
+}
+
+EIGEN_STRONG_INLINE bool ReachesParallelThreshold(size_t count, size_t n)
+{
+    if (n == 0U)
+        return false;
+    const size_t quotient = kParallelElementThreshold / n;
+    const size_t remainder = kParallelElementThreshold % n;
+    return count >= quotient + static_cast<size_t>(remainder != 0U);
+}
+
+inline bool ShouldRunParallel(size_t count, size_t n)
+{
+    if (n < kMinParallelColumns)
+        return false;
+    return ReachesParallelThreshold(count, n);
+}
+
+template <typename T, typename T1, typename T2>
+KernelStatus ComputeParallel(const CpuKernelContext& ctx, const T* x, const T1* indices, const T2* segmentIds, T* y,
+                             int64_t rows, size_t n, size_t count)
+{
+    const KernelStatus status = ValidateInputData(indices, segmentIds, count, rows);
+    if (status != KERNEL_STATUS_OK)
+        return status;
+    const uint32_t cpuNum = CpuKernelUtils::GetCPUNum(ctx);
+    const uint32_t coreNum = (cpuNum > kResvCpuNum) ? cpuNum - kResvCpuNum : 1U;
+    const int64_t total = static_cast<int64_t>(n);
+    const size_t columnCoreNum = n / kMinColumnsPerShard;
+    const int64_t cores = std::min(static_cast<int64_t>(coreNum), static_cast<int64_t>(columnCoreNum));
+    if (cores == 0)
+        return KERNEL_STATUS_PARAM_INVALID;
+    const int64_t perUnit = total / cores + static_cast<int64_t>(total % cores != 0);
+    const auto work = [x, indices, segmentIds, y, n, count](int64_t begin, int64_t end) {
+        const size_t column = static_cast<size_t>(begin);
+        ComputeColumnRange(x, indices, segmentIds, y, n, count, column, static_cast<size_t>(end - begin));
+    };
+    return static_cast<KernelStatus>(CpuKernelUtils::ParallelFor(ctx, total, perUnit, work));
 }
 } // namespace
 
@@ -189,10 +326,11 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelCo
     const int64_t rows = shape->GetDimSize(0);
     const size_t n = shape->NumElements() / static_cast<size_t>(rows);
     const size_t count = ctx.Input(2)->GetTensorShape()->NumElements();
-    auto x = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto x = PtrToPtr<void, T>(ctx.Input(0)->GetData()), y = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     auto indices = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
     auto ids = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
-    auto y = PtrToPtr<void, T>(ctx.Output(0)->GetData());
+    if (__builtin_expect(ShouldRunParallel(count, n), 0))
+        return ComputeParallel(ctx, x, indices, ids, y, rows, n, count);
 
     size_t start = 0, end = 1, done = 0;
     T2 segment = ids[start];
@@ -213,8 +351,7 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelCo
         }
 
         const size_t row = static_cast<size_t>(segment);
-        if (row > done)
-            std::fill(y + done * n, y + row * n, static_cast<T>(0));
+        std::fill(y + done * n, y + row * n, static_cast<T>(0));
 
         T* output = y + row * n;
         for (size_t r = start; r < end; ++r) {
@@ -234,9 +371,8 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernelWithType(const CpuKernelCo
         segment = next;
         start = end++;
         if (start >= count)
-            break;
+            return KERNEL_STATUS_OK;
     }
-    return KERNEL_STATUS_OK;
 }
 
 template <typename T>
