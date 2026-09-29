@@ -609,7 +609,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
 ## 调用示例
 
-完整示例见 [GELU + MXQuant（ND 权重）](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp) 和 [SwiGLU + MXQuant（ND 权重）](../examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp)。SwiGLU 示例使用 `activationType="swiglu"`，bias 长度为 N，输出为 `[M,N/2]`，输出 scale 为 `[M,ceil((N/2)/64),2]`。
+完整示例见[GELU + MXQuant（ND权重）](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp)和[SwiGLU + MXQuant（ND权重）](../examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp)。SwiGLU示例使用`activationType="swiglu"`，bias长度为N，输出为`[M,N/2]`，输出scale为`[M,ceil((N/2)/64),2]`。
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 

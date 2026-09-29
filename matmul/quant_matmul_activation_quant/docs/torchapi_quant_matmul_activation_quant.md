@@ -35,7 +35,7 @@
     matmulOut[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
     $$
 
-    其中，gsM、gsN 和 gsK 分别代表 groupSizeM、groupSizeN 和 groupSizeK；x1Slice 代表 x1 第 m 行长度为 groupSizeK 的向量，x2Slice 代表 x2 第 n 列长度为 groupSizeK 的向量；K 轴均从 j*groupSizeK 起始切片，j 的取值范围为 [0, kLoops)，kLoops = ceil(K / groupSizeK)，K 为 K 轴长度，支持最后的切片长度不足 groupSizeK。
+    其中，gsM、gsN和gsK分别代表groupSizeM、groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围为 [0, kLoops)，kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。
 
   - 激活计算公式：
 
@@ -60,7 +60,7 @@
   - 动态量化计算公式：
 
     - **场景1，当scale_alg为0时**：
-      - 将输入 activationOut 在尾轴上按 $k = 32$ 个数分组，一组 k 个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}， k = 32$
+      - 将输入activationOut在尾轴上按 $k = 32$ 个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}，k = 32$
 
       $$
       shared\_exp = floor(log_2(max_i(|V_i|))) - emax \\
@@ -86,15 +86,15 @@
         Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
         $$
 
-      - 将 FP32 映射到目标数据类型 FP8 可表示的范围内，其中 $Amax(DType)$ 是目标精度能表示的最大值：
+      - 将FP32映射到目标数据类型FP8可表示的范围内，其中 $Amax(DType)$ 是目标精度能表示的最大值：
 
         $$
         S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
         $$
 
-      - 将块缩放因子 $S_{fp32}^b$ 转换为 FP8 格式下可表示的缩放值 $S_{ue8m0}^b$
+      - 将块缩放因子 $S_{fp32}^b$ 转换为FP8格式下可表示的缩放值 $S_{ue8m0}^b$
       - 从块的浮点缩放因子 $S_{fp32}^b$ 中提取无偏指数 $E_{int}^b$ 和尾数 $M_{fixp}^b$
-      - 为保证量化时不溢出，对指数进行向上取整，且在 FP8 可表示的范围内：
+      - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
 
         $$
         E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -163,7 +163,7 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 | `x2_dtype` | int | 可选 | `x2`的数据类型枚举值。不传入时根据`x2`的scalar_type自动推导。 | int | - |
 | `x1scale_dtype` | int | 可选 | `x1_scale`的数据类型枚举值。不传入时根据`x1_scale`的scalar_type自动推导。 | int | - |
 | `x2scale_dtype` | int | 可选 | `x2_scale`的数据类型枚举值。不传入时根据`x2_scale`的scalar_type自动推导。 | int | - |
-| `group_sizes` | List[int] | 可选 | 分组量化大小 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]。 | list | `(3,)` |
+| `group_sizes` | List[int] | 可选 | 分组量化大小`[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]。 | list | `(3,)` |
 | `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`、`"swiglu"`，默认值`"gelu_tanh"`。 | string | - |
 | `quant_mode` | str | 可选 | 量化模式，当前支持`"mx"`，默认值`"mx"`。 | string | - |
 | `round_mode` | str | 可选 | 舍入模式。当`output_dtype`为FLOAT4_E2M1时，支持`"rint"`、`"floor"`、`"round"`；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持`"rint"`。默认值`"rint"`。 | string | - |

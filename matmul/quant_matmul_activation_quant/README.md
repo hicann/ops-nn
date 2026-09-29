@@ -252,9 +252,9 @@
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
-  | ACLNN：GELU + MXQuant，ND 权重 | [test_aclnn_quant_matmul_gelu_mx_quant](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp) | 使用 [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为 `gelu_tanh`，输出宽度为 N。 |
-  | ACLNN：GELU + MXQuant，WeightNZ 权重 | [test_aclnn_quant_matmul_gelu_mx_quant_weight_nz](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp) | 先转换权重，再调用 [aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)，激活为 `gelu_tanh`。 |
-  | ACLNN：SwiGLU + MXQuant，ND 权重 | [test_aclnn_quant_matmul_swiglu_mx_quant](examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp) | 使用 [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为 `swiglu`，包含 `[N]` FP32 bias，输出宽度为 N/2。 |
+  | ACLNN：GELU + MXQuant，ND权重 | [test_aclnn_quant_matmul_gelu_mx_quant](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp) | 使用[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为`gelu_tanh`，输出宽度为N。 |
+  | ACLNN：GELU + MXQuant，WeightNZ权重 | [test_aclnn_quant_matmul_gelu_mx_quant_weight_nz](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp) | 先转换权重，再调用[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)，激活为`gelu_tanh`。 |
+  | ACLNN：SwiGLU + MXQuant，ND权重 | [test_aclnn_quant_matmul_swiglu_mx_quant](examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp) | 使用[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为`swiglu`，包含`[N]` FP32 bias，输出宽度为N/2。 |
   | PyTorch API | - | 通过<br>[quant_matmul_activation_quant](docs/torchapi_quant_matmul_activation_quant.md)<br>调用QuantMatmulActivationQuant算子。 |
 
 ## SwiGLU支持范围
