@@ -27,10 +27,15 @@ const aclTensor* LpNormV2(const aclTensor* x, const aclTensor* y, float p, const
 {
     L0_DFX(LpNormV2, x, p, dims, keepDim, epsilon);
     auto out = executor->AllocTensor(y->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-    INFER_SHAPE(LpNormV2, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, dims, keepDim, epsilon));
+    auto ret = INFER_SHAPE(LpNormV2, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, dims, keepDim, epsilon));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "LpNormV2 InferShape failed.");
+        return nullptr;
+    }
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpNormV2, OP_INPUT(x), OP_OUTPUT(out), OP_ATTR(p, dims, keepDim, epsilon));
-    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(LpNormV2, OP_INPUT(x), OP_OUTPUT(out),
+                                                 OP_ATTR(p, dims, keepDim, epsilon));
+    OP_CHECK(retAicore == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return out;
 }
