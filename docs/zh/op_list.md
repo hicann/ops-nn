@@ -5589,6 +5589,16 @@
     <td>计算LSTMBlockCell单元（含窥孔连接）的反向梯度：cs_prev_grad、四门拼接梯度dicfo及三个窥孔权重梯度，对标TensorFlow tf.raw_ops.LSTMBlockCellGrad。</td>
   </tr>
   <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/lstm_block_cell/README.md">lstm_block_cell</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LSTM单步cell前向计算，融合投影GEMM与ICFO四门激活，输出i/cs/f/o/ci/co/h七个[B, H]张量。仅支持float32/float16与ND格式，GEIR-only交付。</td>
+  </tr>
+  <tr>
     <td>index</td>
     <td><a href="../../index/unsorted_segment_max/README.md">unsorted_segment_max</a></td>
     <td>✓</td>
