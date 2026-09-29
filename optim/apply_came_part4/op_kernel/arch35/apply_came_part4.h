@@ -46,7 +46,14 @@ class ApplyCamePart4 {
     // Pre phase (sum_r reduction) chunk sizes, aligned to canndev
     static constexpr int64_t PRE_MAX_ONCE_NUM = IS_REDUCED ? (56 * 1024 / sizeof(T)) : (128 * 1024 / sizeof(float));
     static constexpr int64_t PRE_CAST_MAX_NUM = 112 * 1024 / sizeof(float);
-    static constexpr int64_t PRE_TMPBUF_NUM = 2048;
+    // ReduceSum workspace: dav_3510 shapeScope6 needs count2 = ceil(count / 8)
+    // partial sums, count <= PRE_MAX_ONCE_NUM -> max 28672/8 = 3584 floats.
+    static constexpr int64_t PRE_TMPBUF_NUM = 4096;
+    // Sub-tile for the R/C phases: the tiling's per-loop chunk (up to 32640 bf16)
+    // overflows the 950 UB budget (TOTAL_UB_SIZE = 248KB) once param-phase buffers
+    // are added on huge-n tensors. Capping the R/C buffers and looping sub-tiles
+    // keeps total UB usage in budget.
+    static constexpr int64_t RC_SUB_BUF_NUM = 8192;
     // arch35 reduced-precision VCONV operates on aligned lane groups
     static constexpr int64_t CAST_ALIGN = 16;
 
@@ -290,14 +297,17 @@ __aicore__ inline void ApplyCamePart4<T>::Init(GM_ADDR paramIn, GM_ADDR m, GM_AD
         return;
     }
 
-    // buffers for R / C phase
-    pipe_.InitBuffer(rcInQue_, 1, (handleMax_ * sizeof(T) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
-    pipe_.InitBuffer(sumurcQue_, 1, (handleMax_ * sizeof(float) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
-    pipe_.InitBuffer(rcOutQue_, 1, (handleMax_ * sizeof(T) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
+    // buffers for R / C phase (capped to RC_SUB_BUF_NUM to fit the 950 UB budget)
+    int64_t rcBufNum = handleMax_ < RC_SUB_BUF_NUM ? handleMax_ : RC_SUB_BUF_NUM;
+    pipe_.InitBuffer(rcInQue_, 1, (rcBufNum * sizeof(T) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
+    pipe_.InitBuffer(sumurcQue_, 1, (rcBufNum * sizeof(float) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
+    pipe_.InitBuffer(rcOutQue_, 1, (rcBufNum * sizeof(T) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
     pipe_.InitBuffer(scalarBuf_, ONE_BLK);
 
     int64_t rBufferLength = rNumPerLoop_ > rRcNumPerLoop_ ? rNumPerLoop_ : rRcNumPerLoop_;
     int64_t cBufferLength = cNumPerLoop_ > cRcNumPerLoop_ ? cNumPerLoop_ : cRcNumPerLoop_;
+    rBufferLength = rBufferLength < RC_SUB_BUF_NUM ? rBufferLength : RC_SUB_BUF_NUM;
+    cBufferLength = cBufferLength < RC_SUB_BUF_NUM ? cBufferLength : RC_SUB_BUF_NUM;
     rBufferLength = NUM_PER_BLOCK * CeilDiv(rBufferLength, NUM_PER_BLOCK);
     cBufferLength = NUM_PER_BLOCK * CeilDiv(cBufferLength, NUM_PER_BLOCK);
     pipe_.InitBuffer(inQueR_, 1, (rBufferLength * sizeof(T) + ONE_BLK - 1) / ONE_BLK * ONE_BLK);
@@ -326,7 +336,12 @@ __aicore__ inline void ApplyCamePart4<T>::Init(GM_ADDR paramIn, GM_ADDR m, GM_AD
 template <typename T>
 __aicore__ inline void ApplyCamePart4<T>::InitForCalcParam()
 {
-    int64_t num = rRcNumPerLoop_ * cRcNumPerLoop_;
+    // Cap per-row column count to m (NUM_PER_BLOCK-aligned): on huge-n / small-m
+    // tensors this keeps the 7 param-phase buffers within the 950 UB budget,
+    // where the raw rRcNumPerLoop*cRcNumPerLoop tile would overflow UB.
+    int64_t mAligned = NUM_PER_BLOCK * CeilDiv(mShape_, NUM_PER_BLOCK);
+    int64_t colPerLoop = cRcNumPerLoop_ < mAligned ? cRcNumPerLoop_ : mAligned;
+    int64_t num = rRcNumPerLoop_ * colPerLoop;
     num = CeilDiv(num, NUM_PER_BLOCK) * NUM_PER_BLOCK;
     int64_t perLoopBytes = num * sizeof(float);
     pipe_.InitBuffer(inQuem_, 1, perLoopBytes);
@@ -489,47 +504,34 @@ __aicore__ inline void ApplyCamePart4<T>::ProcessR()
     if (GetBlockIdx() >= rCoreNumToUse_) {
         return;
     }
-    if (GetBlockIdx() != rCoreNumToUse_ - 1) {
-        for (int64_t i = 0; i < rLoopCount_; i++) {
-            CopyInR(i, rNumPerLoop_);
-            CopyInSumur(i, rNumPerLoop_);
-            ComputeR(rNumPerLoop_);
-            CopyOutR(i, rNumPerLoop_);
-        }
-    } else {
-        for (int64_t i = 0; i < rLoopCountTailCore_; i++) {
-            CopyInR(i, rNumTailPerLoop_);
-            CopyInSumur(i, rNumTailPerLoop_);
-            ComputeR(rNumTailPerLoop_);
-            CopyOutR(i, rNumTailPerLoop_);
-        }
-        // handle the unaligned tail separately
-        if (rNumTailLoopLast_ != 0) {
-            rInGm_.SetGlobalBuffer((__gm__ T*)rIn_ + rLoopCountTailCore_ * rNumTailPerLoop_);
-            rOutGm_.SetGlobalBuffer((__gm__ T*)rOut_ + rLoopCountTailCore_ * rNumTailPerLoop_);
-            sumurGm_.SetGlobalBuffer((__gm__ float*)sumUR_ + rLoopCountTailCore_ * rNumTailPerLoop_);
-            CopyInR(0, rNumTailLoopLast_);
-            CopyInSumur(0, rNumTailLoopLast_);
-            ComputeR(rNumTailLoopLast_);
-            CopyOutR(0, rNumTailLoopLast_);
-        }
+    // Each core owns rNumPerCore_ rows (tail core owns the remainder). rInGm_/
+    // rOutGm_/sumurGm_ already point at this core's slice; loop it in sub-tiles
+    // of RC_SUB_BUF_NUM so the UB footprint fits the 950 budget.
+    int64_t total = (GetBlockIdx() == rCoreNumToUse_ - 1) ? nShape_ - (rCoreNumToUse_ - 1) * rNumPerCore_ :
+                                                            rNumPerCore_;
+    for (int64_t off = 0; off < total; off += RC_SUB_BUF_NUM) {
+        int64_t chunk = total - off > RC_SUB_BUF_NUM ? RC_SUB_BUF_NUM : total - off;
+        CopyInR(off, chunk);
+        CopyInSumur(off, chunk);
+        ComputeR(chunk);
+        CopyOutR(off, chunk);
     }
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyInR(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyInR(int64_t baseOffset, int64_t num)
 {
     LocalTensor<T> rInput = rcInQue_.AllocTensor<T>();
-    DataCopy(rInput, rInGm_[iter * num], CeilDiv(num, NUM_PER_BLOCK) * NUM_PER_BLOCK);
+    DataCopy(rInput, rInGm_[baseOffset], CeilDiv(num, NUM_PER_BLOCK) * NUM_PER_BLOCK);
     rcInQue_.EnQue(rInput);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyInSumur(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyInSumur(int64_t baseOffset, int64_t num)
 {
     LocalTensor<float> sumurInput = sumurcQue_.AllocTensor<float>();
     constexpr int64_t FLOAT_PER_BLOCK = ONE_BLK / sizeof(float);
-    DataCopy(sumurInput, sumurGm_[iter * num], CeilDiv(num, FLOAT_PER_BLOCK) * FLOAT_PER_BLOCK);
+    DataCopy(sumurInput, sumurGm_[baseOffset], CeilDiv(num, FLOAT_PER_BLOCK) * FLOAT_PER_BLOCK);
     sumurcQue_.EnQue(sumurInput);
 }
 
@@ -564,11 +566,11 @@ __aicore__ inline void ApplyCamePart4<T>::ComputeR(int64_t num)
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyOutR(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyOutR(int64_t baseOffset, int64_t num)
 {
     LocalTensor<T> output = rcOutQue_.DeQue<T>();
     DataCopyParams dataCopyParams{1, (uint16_t)(num * sizeof(T)), 0, 0};
-    DataCopyPad(rOutGm_[iter * num], output, dataCopyParams);
+    DataCopyPad(rOutGm_[baseOffset], output, dataCopyParams);
     rcOutQue_.FreeTensor(output);
 }
 
@@ -578,46 +580,32 @@ __aicore__ inline void ApplyCamePart4<T>::ProcessC()
     if (GetBlockIdx() >= cCoreNumToUse_) {
         return;
     }
-    if (GetBlockIdx() != cCoreNumToUse_ - 1) {
-        for (int64_t i = 0; i < cLoopCount_; i++) {
-            CopyInC(i, cNumPerLoop_);
-            CopyInSumuc(i, cNumPerLoop_);
-            ComputeC(cNumPerLoop_);
-            CopyOutC(i, cNumPerLoop_);
-        }
-    } else {
-        for (int64_t i = 0; i < cLoopCountTailCore_; i++) {
-            CopyInC(i, cNumTailPerLoop_);
-            CopyInSumuc(i, cNumTailPerLoop_);
-            ComputeC(cNumTailPerLoop_);
-            CopyOutC(i, cNumTailPerLoop_);
-        }
-        if (cNumTailLoopLast_ != 0) {
-            cInGm_.SetGlobalBuffer((__gm__ T*)cIn_ + cLoopCountTailCore_ * cNumTailPerLoop_);
-            cOutGm_.SetGlobalBuffer((__gm__ T*)cOut_ + cLoopCountTailCore_ * cNumTailPerLoop_);
-            sumucGm_.SetGlobalBuffer((__gm__ float*)sumUC_ + cLoopCountTailCore_ * cNumTailPerLoop_);
-            CopyInC(0, cNumTailLoopLast_);
-            CopyInSumuc(0, cNumTailLoopLast_);
-            ComputeC(cNumTailLoopLast_);
-            CopyOutC(0, cNumTailLoopLast_);
-        }
+    // Same sub-tile loop as ProcessR, over the c dimension (length m).
+    int64_t total = (GetBlockIdx() == cCoreNumToUse_ - 1) ? mShape_ - (cCoreNumToUse_ - 1) * cNumPerCore_ :
+                                                            cNumPerCore_;
+    for (int64_t off = 0; off < total; off += RC_SUB_BUF_NUM) {
+        int64_t chunk = total - off > RC_SUB_BUF_NUM ? RC_SUB_BUF_NUM : total - off;
+        CopyInC(off, chunk);
+        CopyInSumuc(off, chunk);
+        ComputeC(chunk);
+        CopyOutC(off, chunk);
     }
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyInC(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyInC(int64_t baseOffset, int64_t num)
 {
     LocalTensor<T> cInput = rcInQue_.AllocTensor<T>();
-    DataCopy(cInput, cInGm_[iter * num], CeilDiv(num, NUM_PER_BLOCK) * NUM_PER_BLOCK);
+    DataCopy(cInput, cInGm_[baseOffset], CeilDiv(num, NUM_PER_BLOCK) * NUM_PER_BLOCK);
     rcInQue_.EnQue(cInput);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyInSumuc(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyInSumuc(int64_t baseOffset, int64_t num)
 {
     LocalTensor<float> sumucInput = sumurcQue_.AllocTensor<float>();
     constexpr int64_t FLOAT_PER_BLOCK = ONE_BLK / sizeof(float);
-    DataCopy(sumucInput, sumucGm_[iter * num], CeilDiv(num, FLOAT_PER_BLOCK) * FLOAT_PER_BLOCK);
+    DataCopy(sumucInput, sumucGm_[baseOffset], CeilDiv(num, FLOAT_PER_BLOCK) * FLOAT_PER_BLOCK);
     sumurcQue_.EnQue(sumucInput);
 }
 
@@ -652,11 +640,11 @@ __aicore__ inline void ApplyCamePart4<T>::ComputeC(int64_t num)
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart4<T>::CopyOutC(int64_t iter, int64_t num)
+__aicore__ inline void ApplyCamePart4<T>::CopyOutC(int64_t baseOffset, int64_t num)
 {
     LocalTensor<T> output = rcOutQue_.DeQue<T>();
     DataCopyParams dataCopyParams{1, (uint16_t)(num * sizeof(T)), 0, 0};
-    DataCopyPad(cOutGm_[iter * num], output, dataCopyParams);
+    DataCopyPad(cOutGm_[baseOffset], output, dataCopyParams);
     rcOutQue_.FreeTensor(output);
 }
 
