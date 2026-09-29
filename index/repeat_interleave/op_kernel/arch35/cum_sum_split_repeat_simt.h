@@ -109,7 +109,7 @@ __aicore__ inline void SplitRepeatSumSimt<T, U, V, AddrType>::Process()
 
     asc_vf_call<SimtSplitRepeats<T, U, V, AddrType>>(
         dim3{threadNumX, threadNumY}, startRepeatsIdx_, endRepeatsIdx_, startRepeatsIdxResNum_, endRepeatsIdxResNum_,
-        tilingData_.mergedDims[2], (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ U*)(repeatsGm_.GetPhyAddr()),
+        repeatsStart_, tilingData_.mergedDims[2], (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ U*)(repeatsGm_.GetPhyAddr()),
         (__gm__ T*)(yGm_.GetPhyAddr()), (__gm__ V*)(prefixSumGm_.GetPhyAddr()));
 }
 

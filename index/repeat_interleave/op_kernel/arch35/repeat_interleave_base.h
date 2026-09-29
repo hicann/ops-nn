@@ -99,15 +99,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_REPEAT) inline void 
 
 template <typename T, typename U, typename V, typename AddrType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_REPEAT) inline void SimtSplitRepeats(
-    AddrType startRepeatsIdx, AddrType endRepeatsIdx, U startRepeatsIdxResNum, U endRepeatsIdxResNum, AddrType cpNum,
-    __gm__ T* xGm, __gm__ U* repeatsGm, __gm__ volatile T* yGm, __gm__ V* prefixSumGm)
+    AddrType startRepeatsIdx, AddrType endRepeatsIdx, U startRepeatsIdxResNum, U endRepeatsIdxResNum,
+    AddrType repeatsStart, AddrType cpNum, __gm__ T* xGm, __gm__ U* repeatsGm, __gm__ volatile T* yGm,
+    __gm__ V* prefixSumGm)
 {
     for (AddrType repeatIdx = threadIdx.y + startRepeatsIdx; repeatIdx <= endRepeatsIdx; repeatIdx += blockDim.y) {
         AddrType curRepeatNum;
         V curOutRepeatOffset;
         if (repeatIdx == startRepeatsIdx) {
             curRepeatNum = startRepeatsIdxResNum;
-            curOutRepeatOffset = prefixSumGm[repeatIdx] + repeatsGm[repeatIdx] - curRepeatNum;
+            curOutRepeatOffset = (repeatIdx == endRepeatsIdx) ?
+                                     repeatsStart :
+                                     prefixSumGm[repeatIdx] + repeatsGm[repeatIdx] - curRepeatNum;
         } else if (repeatIdx == endRepeatsIdx) {
             curRepeatNum = endRepeatsIdxResNum;
             curOutRepeatOffset = prefixSumGm[repeatIdx];
