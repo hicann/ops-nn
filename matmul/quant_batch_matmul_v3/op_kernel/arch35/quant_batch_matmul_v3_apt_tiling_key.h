@@ -125,19 +125,24 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_NON_MX_CUBE_ND_TPL false
 #endif
 
+// Ordinary ND and WeightNZ Mix share the Blaze kernel and transpose selectors.
 #if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && defined(ASC_DEVKIT_MAJOR) && \
     defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0 && defined(ORIG_DTYPE_X1) &&           \
-    defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_FRACTAL_NZ) &&        \
-    defined(DT_FLOAT8_E4M3FN) && defined(DT_INT8) && defined(DT_HIFLOAT8) && defined(DT_FLOAT) && defined(DT_BF16)
-#define SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY                                                                   \
-    (((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_HIFLOAT8) &&                                   \
-      (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_HIFLOAT8) && (ORIG_DTYPE_SCALE == DT_FLOAT) && \
-      ORIG_DTYPE_Y != DT_INT32) ||                                                                             \
-     (ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8 && ORIG_DTYPE_Y == DT_BF16 &&                       \
-      (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16))) &&                                       \
-        FORMAT_X2 == FORMAT_FRACTAL_NZ&& ORIG_DTYPE_X1 == ORIG_DTYPE_X2
+    defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_Y) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) &&             \
+    defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2) &&       \
+    defined(DT_HIFLOAT8) && defined(DT_INT8) && defined(DT_FLOAT) && defined(DT_FLOAT16) && defined(DT_BF16)
+#define SUPPORT_MIX_TILING_KEY                                                                \
+    ((FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ) &&                            \
+     (((ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8) &&                              \
+       (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_BF16) &&                             \
+       (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)) ||                      \
+      (((((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&           \
+          (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2))) ||         \
+        (ORIG_DTYPE_X1 == DT_HIFLOAT8 && ORIG_DTYPE_X2 == DT_HIFLOAT8)) &&                    \
+       (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_BF16 || ORIG_DTYPE_Y == DT_FLOAT) && \
+       ORIG_DTYPE_SCALE == DT_FLOAT)))
 #else
-#define SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY false
+#define SUPPORT_MIX_TILING_KEY false
 #endif
 
 #if defined(__CCE_AICORE__) && (defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && \
@@ -212,14 +217,14 @@ ASCENDC_TPL_ARGS_DECL(
 ASCENDC_TPL_SEL(
 #if ((!defined(__CCE_AICORE__)) || (defined(ORIG_DTYPE_SCALE) && defined(DT_FLOAT) && defined(DT_BF16) && \
                                     (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)))
-#if (SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY == 1)
-    ASCENDC_TPL_ARGS_SEL( // kernel type {2, 3} * batch mode {0, 1} * ATRANS {0} * BTRANS {0, 1}
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0),
-        ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
-        ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITH_BATCH, TPL_WITHOUT_BATCH),
-        ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_WITH_MMAPI,
-                             TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
-        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
+#if (SUPPORT_MIX_TILING_KEY == 1)
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+                         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+                         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+                         ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITH_BATCH, TPL_WITHOUT_BATCH),
+                         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_WITH_MMAPI,
+                                              TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
+                         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
     ASCENDC_TPL_ARGS_SEL( // kernel type {2, 3} * ATRANS {0, 1} * BTRANS {0, 1} * APILEVEL {0}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),

@@ -64,7 +64,6 @@ protected:
     uint64_t GetBatchMode() const override;
     uint64_t GetKernelType() const override;
     const void* GetTilingData() const override;
-    uint64_t GetBaseMAlignSize() const;
     void OptimizeBaseBlock();
     bool CalcBasicBlock() override;
     void AnalyseFullLoadInfo() override;

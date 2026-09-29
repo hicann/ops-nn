@@ -36,7 +36,6 @@ constexpr uint64_t CUBE_BLOCK = 16UL;
 constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
 constexpr uint64_t BASEM_BASEN_RATIO = 2UL;
 constexpr uint32_t NUM_HALF = 2;
-constexpr uint64_t L1_ALIGN_SIZE = 32UL;
 constexpr uint64_t L2_ALIGN_SIZE = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t BASEK_LIMIT = 4095UL;
@@ -104,10 +103,10 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::IsCapable()
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
     bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
-    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix) &&
-                   inputParams_.transA == 0 && IsMixTensorapi(inputParams_) &&
-                   inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
-    return capable;
+    // INT4 retains its existing preprocessing route.
+    return (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix) &&
+           inputParams_.cDtype != ge::DT_INT32 && !inputParams_.isPerBlock && !inputParams_.isMxPerGroup &&
+           inputParams_.aDtype != ge::DT_INT4 && inputParams_.bDtype != ge::DT_INT4 && IsTensorapiCapable();
 }
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::CheckCoreNum() const
@@ -134,11 +133,9 @@ const void* AdaptiveSlidingWindowMixBasicAPITiling::GetTilingData() const
                                         static_cast<const void*>(&tilingData_);
 }
 
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseMAlignSize() const { return CUBE_BLOCK; }
-
 bool AdaptiveSlidingWindowMixBasicAPITiling::InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo& info)
 {
-    info.baseMAlign = CUBE_BLOCK;
+    info.baseMAlign = inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
     info.baseNAlign = inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype);
     info.baseKAlign = (inputParams_.transA && !inputParams_.transB) ?
                           GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
@@ -376,7 +373,12 @@ void AdaptiveSlidingWindowMixBasicAPITiling::CalculateNBufferNum4Mix()
 void AdaptiveSlidingWindowMixBasicAPITiling::UpdateAFullLoadStatus()
 {
     uint64_t realBaseMSize = adaptiveWin_.mBaseTailSplitCnt == 1UL ? adaptiveWin_.baseM : adaptiveWin_.mTailMain;
-    uint64_t singleCoreASize = GetSizeWithDataType(realBaseMSize * inputParams_.kSize, inputParams_.aDtype);
+    const uint64_t singleCoreASize = realBaseMSize *
+                                     (inputParams_.transA ?
+                                          GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK),
+                                                              inputParams_.aDtype) :
+                                          ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype),
+                                                         CUBE_REDUCE_BLOCK));
     isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_A_SCALER &&
                    adaptiveWin_.mBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                    adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;

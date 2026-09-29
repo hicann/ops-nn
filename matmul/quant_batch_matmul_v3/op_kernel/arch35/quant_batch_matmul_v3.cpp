@@ -393,21 +393,26 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #endif
 
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
-#if SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY
-    if constexpr (TPL_APILEVEL == TPL_API_LEVEL_BLAZE && TPL_ATRANS == 0) {
+#if SUPPORT_MIX_TILING_KEY
+#if FORMAT_X2 == FORMAT_ND
+    using TeBLayout = TeBLayoutNd;
+#else
+    using TeBLayout = TeBLayoutNz;
+#endif
+    if constexpr (TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayout, asc::te::nd_ext_layout_ptn,
                                                                     0);
             } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayout, asc::te::nd_ext_layout_ptn, 0);
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
             if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayout, asc::te::nd_ext_layout_ptn,
                                                                     Blaze::Gemm::A_FULL_LOAD_MODE);
             } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayout, asc::te::nd_ext_layout_ptn,
                                                       Blaze::Gemm::A_FULL_LOAD_MODE);
             }
         }

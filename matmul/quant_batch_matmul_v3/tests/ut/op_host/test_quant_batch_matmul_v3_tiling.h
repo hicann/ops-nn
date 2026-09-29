@@ -41,6 +41,7 @@ public:
     int64_t m;
     int64_t k;
     int64_t n;
+    int64_t x2K = -1; // Optional independent K for mismatched-input tests.
     bool offsetFlag;
     bool pertokenFlag;
     bool biasFlag;

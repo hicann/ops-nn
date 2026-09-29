@@ -10,7 +10,7 @@
 
 /* !
  * \file qbmm_mix_tensor_api_blaze.h
- * \brief Blaze tensor API entries for quant batch matmul MIX kernels with and without batch (WeightNz).
+ * \brief Blaze tensor API entries for quant batch matmul MIX kernels with and without batch (ND / WeightNz).
  */
 #pragma once
 #include "quant_batch_matmul_v3_tiling_data.h"
@@ -86,7 +86,7 @@ __aicore__ inline void QbmmMixTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
                                   static_cast<int64_t>(matmulTiling.baseN),
                                   quantBmmTilingData_->params.x1QuantMode,
                                   quantBmmTilingData_->params.x2QuantMode,
-                                  static_cast<bool>(matmulTiling.isBias),
+                                  matmulTiling.isBias != 0 && quantBmmTilingData_->params.biasDtype != DT_INT32,
                                   quantBmmTilingData_->params.biasDtype};
 
     const ProblemShape problemShape{static_cast<int64_t>(matmulTiling.m), static_cast<int64_t>(matmulTiling.n),
@@ -98,7 +98,8 @@ __aicore__ inline void QbmmMixTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     Params params = {
         problemShape,
         {aGM, bGM, problemShape, l0TileShape, static_cast<uint64_t>(qbmmParams.kAL1),
-         static_cast<uint64_t>(qbmmParams.kBL1), static_cast<uint64_t>(qbmmParams.nBufferNum), qbmmParams.dbL0C > 1},
+         static_cast<uint64_t>(qbmmParams.kBL1), static_cast<uint64_t>(qbmmParams.nBufferNum), qbmmParams.dbL0C > 1,
+         bias, matmulTiling.isBias != 0 && quantBmmTilingData_->params.biasDtype == DT_INT32},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
          slidingWindowParams.nTailMain},
@@ -146,7 +147,7 @@ __aicore__ inline void QbmmMixWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR b
                                   static_cast<int64_t>(quantBmmTilingData->baseN),
                                   quantBmmTilingData->x1QuantMode,
                                   quantBmmTilingData->x2QuantMode,
-                                  static_cast<bool>(quantBmmTilingData->isBias),
+                                  quantBmmTilingData->isBias != 0 && quantBmmTilingData->biasDtype != DT_INT32,
                                   quantBmmTilingData->biasDtype};
 
     const ProblemShape problemShape{static_cast<int64_t>(quantBmmTilingData->m),
@@ -158,7 +159,8 @@ __aicore__ inline void QbmmMixWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR b
     Params params{.problemShape = problemShape,
                   .mmParams = {aGM, bGM, problemShape, l0TileShape, static_cast<uint64_t>(quantBmmTilingData->kAL1),
                                static_cast<uint64_t>(quantBmmTilingData->kBL1),
-                               static_cast<uint64_t>(quantBmmTilingData->nBufferNum), quantBmmTilingData->dbL0C > 1},
+                               static_cast<uint64_t>(quantBmmTilingData->nBufferNum), quantBmmTilingData->dbL0C > 1,
+                               bias, quantBmmTilingData->isBias != 0 && quantBmmTilingData->biasDtype == DT_INT32},
                   .schParams = {quantBmmTilingData->baseM, quantBmmTilingData->baseN, quantBmmTilingData->mTailTile,
                                 quantBmmTilingData->nTailTile, quantBmmTilingData->mBaseTailSplitCnt,
                                 quantBmmTilingData->nBaseTailSplitCnt, quantBmmTilingData->mTailMain,

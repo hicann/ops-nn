@@ -282,6 +282,10 @@ static QuantBatchMatmulV3TilingCsvLoadResult LoadParams(const std::string& socVe
             if (testParam.size() > kDeterministicLevelCol && !Trim(testParam[kDeterministicLevelCol]).empty()) {
                 param.deterministicLevel = stoi(testParam[kDeterministicLevelCol]);
             }
+            constexpr size_t kX2KCol = 36UL;
+            if (testParam.size() > kX2KCol && !Trim(testParam[kX2KCol]).empty()) {
+                param.x2K = stol(testParam[kX2KCol]);
+            }
             result.params.push_back(param);
         } catch (const std::exception& e) {
             result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath + ": " +
@@ -383,6 +387,11 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
         } else {
             x2Shape.MutableOriginShape() = gert::Shape({n});
         }
+    }
+
+    if (x2K >= 0 && x2Shape.MutableOriginShape().GetDimNum() >= 2) {
+        auto& shape = x2Shape.MutableOriginShape();
+        shape.SetDim(shape.GetDimNum() - (transB ? 1 : 2), x2K);
     }
 
     pertokenShape.MutableStorageShape() = gert::Shape({m});
@@ -583,6 +592,11 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
     }
 
+    if (x2K >= 0 && x2Shape.MutableOriginShape().GetDimNum() >= 2) {
+        auto& shape = x2Shape.MutableOriginShape();
+        shape.SetDim(shape.GetDimNum() - (transB ? 1 : 2), x2K);
+    }
+
     pertokenShape.MutableStorageShape() = gert::Shape({m});
     if (quantMode == 0) { // per_tensor
         scaleShape.MutableStorageShape() = gert::Shape({1});
@@ -761,7 +775,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
 
         size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
-        bool useWithoutBatchTilingData = tensorApiCapable &&
+        bool useWithoutBatchTilingData = tensorApiCapable && expectBlazeApiLevel &&
                                          actualTilingDataSize ==
                                              sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
         bool useBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
