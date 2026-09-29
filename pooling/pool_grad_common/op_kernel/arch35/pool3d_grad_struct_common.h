@@ -82,6 +82,17 @@ struct Pool3DGradNCDHWTilingData {
     int64_t padDBack = 0;
     int64_t padHBack = 0;
     int64_t padWBack = 0;
+    int64_t isBigKernel = 0;
+};
+
+struct Pool3DGradNDHWCTilingData {
+    Pool3DGradNCDHWTilingData base;
+
+    int64_t cDim = 0;
+    int64_t cOutputInner = 0;
+    int64_t cOutputTail = 0;
+    int64_t cOutputOuter = 0;
+    int64_t isBigKernel = 0;
 };
 
 struct MaxPool3DGradSimtTilingData {

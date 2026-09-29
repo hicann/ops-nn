@@ -12,6 +12,10 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "arch35/max_pool3d_grad_small_kernel_impl_scatter.h"
 #include "arch35/max_pool3d_grad_small_kernel_impl_gather.h"
+#include "arch35/max_pool3d_grad_ncdhw_impl_big_kernel.h"
+// BackwardBase（共享反向）在 impl_scatter.h, big/small kernel 头各自 include, 无顺序依赖
+#include "arch35/max_pool3d_grad_ndhwc_big_kernel.h"
+#include "arch35/max_pool3d_grad_ndhwc_impl_gather.h"
 #include "arch35/max_pool3d_grad_simt_kernel.h"
 
 constexpr int64_t NCDHW = 0;
@@ -29,30 +33,24 @@ __global__ __aicore__ void max_pool3d_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_AD
         return;
     }
     TPipe pipe;
-    if constexpr (IS_SIMT == 0 && INDEX_DTYPE == TPL_INT32 && IS_CHECK_RANGE == 1) {
-        REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
+    REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
+
+    if constexpr (IS_SIMT == 0 && IS_CHANNEL_LAST == 0 && INDEX_DTYPE == TPL_INT32) {
         GET_TILING_DATA_WITH_STRUCT(Pool3DGradNCDHWTilingData, tilingData, tiling);
-        Pool3DGradSmallKernel<DTYPE_ORIG_X, int32_t, int32_t, true> op(pipe, tilingData);
+        Pool3DGradSmallKernel<DTYPE_ORIG_X, int32_t, int32_t, IS_CHECK_RANGE> op(pipe, tilingData);
         op.Init(orig_x, orig_y, grads, y);
         op.Process();
-    } else if (IS_SIMT == 0 && INDEX_DTYPE == TPL_INT64 && IS_CHECK_RANGE == 1) {
-        REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
-        GET_TILING_DATA_WITH_STRUCT(Pool3DGradNCDHWTilingData, tilingData, tiling);
-        Pool3DGradSmallKernel<DTYPE_ORIG_X, int64_t, int64_t, true> op(pipe, tilingData);
-        op.Init(orig_x, orig_y, grads, y);
-        op.Process();
-    } else if (IS_SIMT == 0 && INDEX_DTYPE == TPL_INT32 && IS_CHECK_RANGE == 0) {
-        REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
-        GET_TILING_DATA_WITH_STRUCT(Pool3DGradNCDHWTilingData, tilingData, tiling);
-        Pool3DGradSmallKernel<DTYPE_ORIG_X, int32_t, int32_t, false> op(pipe, tilingData);
-        op.Init(orig_x, orig_y, grads, y);
-        op.Process();
-    } else if (IS_SIMT == 0 && INDEX_DTYPE == TPL_INT64 && IS_CHECK_RANGE == 0) {
-        REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
-        GET_TILING_DATA_WITH_STRUCT(Pool3DGradNCDHWTilingData, tilingData, tiling);
-        Pool3DGradSmallKernel<DTYPE_ORIG_X, int64_t, int64_t, false> op(pipe, tilingData);
-        op.Init(orig_x, orig_y, grads, y);
-        op.Process();
+    } else if (IS_SIMT == 0 && IS_CHANNEL_LAST == 1 && INDEX_DTYPE == TPL_INT32) {
+        GET_TILING_DATA_WITH_STRUCT(Pool3DGradNDHWCTilingData, tilingData, tiling);
+        if (tilingData.isBigKernel) {
+            MaxPool3DGradNDHWCNameSpace::MaxPool3DGradNDHWCBigKernel<DTYPE_ORIG_X, int32_t, IS_CHECK_RANGE> op;
+            op.Init(orig_x, orig_y, grads, y, tilingData);
+            op.Process();
+        } else {
+            MaxPool3DGradNDHWCNameSpace::MaxPool3DGradNDHWCSmallKernel<DTYPE_ORIG_X, int32_t, IS_CHECK_RANGE> op;
+            op.Init(orig_x, orig_y, grads, y, tilingData);
+            op.Process();
+        }
     } else if constexpr (IS_SIMT == 1 && INDEX_DTYPE == TPL_INT32 && IS_CHANNEL_LAST == 0 && USE_INT64_INDEX == 0) {
         REGISTER_TILING_FOR_TILINGKEY(
             "IS_SIMT == 1 && INDEX_DTYPE == TPL_INT32 && IS_CHANNEL_LAST == 0 && USE_INT64_INDEX == 0",

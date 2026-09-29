@@ -17,6 +17,7 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_MAX_POOL3D_GRAD_TILING_H_
 
 #include "../../../pool_grad_common/op_host/arch35/pool3d_grad_ncdhw_small_kernel_tiling.h"
+#include "../../../pool_grad_common/op_host/arch35/pool3d_grad_ndhwc_small_kernel_tiling.h"
 #include "../../../pool_grad_common/op_kernel/arch35/pool3d_grad_struct_common.h"
 #include "../../../pool_grad_common/op_host/arch35/util.h"
 #include "register/op_impl_registry.h"
@@ -63,16 +64,69 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-class MaxPool3DGradNCDHWSmallKernelTiling : public MaxPool3DGradTilingBase {
+class MaxPool3DGradNCDHWTilingHelper : public Pool3DGradNCDHWSmallKernelCommonTiling {
 public:
-    explicit MaxPool3DGradNCDHWSmallKernelTiling(gert::TilingContext* context)
-        : MaxPool3DGradTilingBase(context), base(new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData))
+    MaxPool3DGradNCDHWTilingHelper(Pool3DGradNCDHWInputInfo* input)
+        : Pool3DGradNCDHWSmallKernelCommonTiling(input), inputData(input)
     {}
 
-    ~MaxPool3DGradNCDHWSmallKernelTiling() override { delete base; }
+    ~MaxPool3DGradNCDHWTilingHelper() override = default;
+    void DoBufferCalculate();
+    int64_t isBigKernel = 0;
+
+protected:
+    bool IsMeetUBSize() override;
 
 private:
-    Pool3DGradNCDHWSmallKernelCommonTiling* base;
+    Pool3DGradNCDHWInputInfo* inputData;
+};
+
+class MaxPool3DGradNCDHWTiling : public MaxPool3DGradTilingBase {
+public:
+    explicit MaxPool3DGradNCDHWTiling(gert::TilingContext* context)
+        : MaxPool3DGradTilingBase(context), base(new MaxPool3DGradNCDHWTilingHelper(&inputData))
+    {}
+
+    ~MaxPool3DGradNCDHWTiling() override { delete base; }
+
+private:
+    MaxPool3DGradNCDHWTilingHelper* base;
+    int64_t isCheckRange_ = 0;
+    uint64_t GetTilingKey() const override;
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+};
+
+class MaxPool3DGradNDHWCTilingImpl : public Pool3DGradNDHWCSmallKernelCommonTiling {
+public:
+    MaxPool3DGradNDHWCTilingImpl(Pool3DGradNCDHWInputInfo* input)
+        : Pool3DGradNDHWCSmallKernelCommonTiling(input), inputData(input)
+    {}
+    ~MaxPool3DGradNDHWCTilingImpl() override = default;
+    void DoBufferCalculate();
+    void SetTilingData(gert::TilingContext* context) override;
+
+protected:
+    bool IsMeetUBSize() override;
+
+private:
+    Pool3DGradNCDHWInputInfo* inputData;
+};
+
+class MaxPool3DGradNDHWCSmallKernelTiling : public MaxPool3DGradTilingBase {
+public:
+    explicit MaxPool3DGradNDHWCSmallKernelTiling(gert::TilingContext* context)
+        : MaxPool3DGradTilingBase(context), ndhwcBase(new MaxPool3DGradNDHWCTilingImpl(&inputData))
+    {}
+
+    ~MaxPool3DGradNDHWCSmallKernelTiling() override { delete ndhwcBase; }
+
+private:
+    MaxPool3DGradNDHWCTilingImpl* ndhwcBase;
+    Pool3DGradNDHWCTilingData* ndhwcTilingData_ = context_->GetTilingData<Pool3DGradNDHWCTilingData>();
+    int64_t isCheckRange_ = 0;
+
     uint64_t GetTilingKey() const override;
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;

@@ -27,7 +27,8 @@
 using namespace AscendC;
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr int64_t DOUBLE = 2;
-constexpr uint32_t HELP_BUFFER = 5120;
+constexpr uint32_t HELP_BUFFER = 1024; // 4×dataCount(VReg/4)×4B=1024B,impl_scatter 四个 StoreAlign pattern
+                                       // 为实际最大用量;与 tiling UB_RESERVED_SIZE 同值
 
 constexpr uint32_t INDEX_TWO = 2;
 constexpr uint32_t INDEX_THREE = 3;
@@ -95,7 +96,8 @@ __aicore__ inline void GetConCurrentInput(Reg::RegTensor<int32_t>& argmaxReg, Re
         AscendC::Reg::RegTensor<T1> gradRegT1;
         AscendC::Reg::RegTensor<uint16_t> parallelRegGradU16;
         AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-        AscendC::Reg::Cast<uint16_t, uint32_t, castTraitU32U16>(parallelRegGradU16, parallelRegGrad, allMaskU32);
+        AscendC::Reg::Cast<uint16_t, uint32_t, castTraitU32U16>(
+            parallelRegGradU16, (AscendC::Reg::RegTensor<uint32_t>&)parallelRegGrad, allMaskU32);
         AscendC::Reg::Pack(parallelRegGradU16, (AscendC::Reg::RegTensor<int32_t>&)parallelRegGradU16);
         AscendC::Reg::DataCopyGather(gradRegT1, gradAddr, parallelRegGradU16, pregT1);
         AscendC::Reg::UnPack((AscendC::Reg::RegTensor<uint32_t>&)gradRegT1,
@@ -112,6 +114,17 @@ __aicore__ inline void GetConCurrentInput(Reg::RegTensor<int32_t>& argmaxReg, Re
         AscendC::Reg::DataCopyGather(argmaxRegTwo, argmaxAddr, parallelRegIndex, pregT2);
         argmaxReg = (AscendC::Reg::RegTensor<int32_t>&)argmaxRegTwo.reg[0];
     }
+}
+
+template <typename T1, typename T2>
+__aicore__ inline void GetConCurrentInput(Reg::RegTensor<int32_t>& argmaxReg, Reg::RegTensor<computeType>& gradReg,
+                                          __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+                                          Reg::RegTensor<int32_t>& parallelRegIndex,
+                                          Reg::RegTensor<int32_t>& parallelRegGrad, Reg::MaskReg& pregT1,
+                                          Reg::MaskReg& pregT2)
+{
+    GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, (Reg::RegTensor<uint32_t>&)parallelRegIndex,
+                               (Reg::RegTensor<uint32_t>&)parallelRegGrad, pregT1, pregT2);
 }
 
 namespace MaxPool3DSmallKernelNameSpace {
@@ -542,5 +555,229 @@ __aicore__ inline void Gen4DIndexOneFast(Reg::RegTensor<T>& indexReg, int64_t ro
     AscendC::Reg::Add(indexReg, highPartReg, dPartReg, preg);
     AscendC::Reg::Add(indexReg, indexReg, hPartReg, preg);
 }
+
+// ==================== NDHWC Scatter 函数 ====================
+
+// ==================== NDHWC 索引生成 ====================
+// NDHWC 的 C 在 lane 低位: lane 段结构 [...][空间组][C], C = lane % cOutputActual
+// 参考 2D NHWC GenInitial3DIndicesNhwc (pool_grad_nhwc_scatter_index.h) 扩展到 3D 空间段,
+// 不复用 NCDHW 的 GenInitial*IndicesFast(批组语义, C 不在 lane 内)
+// 注意: VEC 域内禁止除法/64 位运算, DivMagic 必须在 __VEC_SCOPE__ 外用 PrecomputeDiv 算好传入
+// (参考 NCDHW impl 的写法), 参数一律 int32
+
+// 2 段: (空间组, C)。groupStride 为组间步长(元素), 例如 W 批 = wProBatchSize * cStride
+template <typename T>
+__aicore__ inline void GenInitial2DIndicesNdhwc(Reg::RegTensor<T>& indexReg, int32_t groupStride, int32_t cOutputActual,
+                                                const DivMagic& divC)
+{
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> groupReg;
+    AscendC::Reg::RegTensor<T> cReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    FastDivInt32(groupReg, indexReg, divC);
+    AscendC::Reg::Muls(cReg, groupReg, T(cOutputActual), preg);
+    AscendC::Reg::Sub(cReg, indexReg, cReg, preg);
+    AscendC::Reg::Muls(groupReg, groupReg, T(groupStride), preg);
+    AscendC::Reg::Add(indexReg, groupReg, cReg, preg);
+}
+
+// 3 段: (高位组, 低位组, C)。低位组含 lowGroupCount 个组, 组步长 lowGroupStride
+template <typename T>
+__aicore__ inline void GenInitial3DIndicesNdhwc(Reg::RegTensor<T>& indexReg, int32_t highGroupStride,
+                                                int32_t lowGroupStride, int32_t lowGroupCount, int32_t cOutputActual,
+                                                const DivMagic& divLC, const DivMagic& divC)
+{
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> highReg;
+    AscendC::Reg::RegTensor<T> lowReg;
+    AscendC::Reg::RegTensor<T> cReg;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    FastDivInt32(highReg, indexReg, divLC);
+    AscendC::Reg::Muls(tmpReg, highReg, T(lowGroupCount * cOutputActual), preg);
+    AscendC::Reg::Sub(tmpReg, indexReg, tmpReg, preg);
+    FastDivInt32(lowReg, tmpReg, divC);
+    AscendC::Reg::Muls(cReg, lowReg, T(cOutputActual), preg);
+    AscendC::Reg::Sub(cReg, tmpReg, cReg, preg);
+    AscendC::Reg::Muls(highReg, highReg, T(highGroupStride), preg);
+    AscendC::Reg::Muls(lowReg, lowReg, T(lowGroupStride), preg);
+    AscendC::Reg::Add(indexReg, highReg, lowReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, cReg, preg);
+}
+
+// 4 段: (D组, H组, W组, C)。W 组数 wGroupCount, H 组数 hGroupCount
+template <typename T>
+__aicore__ inline void GenInitial4DIndicesNdhwc(Reg::RegTensor<T>& indexReg, int32_t dGroupStride, int32_t hGroupStride,
+                                                int32_t wGroupStride, int32_t wGroupCount, int32_t hGroupCount,
+                                                int32_t cOutputActual, const DivMagic& divHWC, const DivMagic& divWC,
+                                                const DivMagic& divC)
+{
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> dReg;
+    AscendC::Reg::RegTensor<T> hReg;
+    AscendC::Reg::RegTensor<T> wReg;
+    AscendC::Reg::RegTensor<T> cReg;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    FastDivInt32(dReg, indexReg, divHWC);
+    AscendC::Reg::Muls(tmpReg, dReg, T(hGroupCount * wGroupCount * cOutputActual), preg);
+    AscendC::Reg::Sub(tmpReg, indexReg, tmpReg, preg);
+    FastDivInt32(hReg, tmpReg, divWC);
+    AscendC::Reg::Muls(cReg, hReg, T(wGroupCount * cOutputActual), preg);
+    AscendC::Reg::Sub(tmpReg, tmpReg, cReg, preg);
+    FastDivInt32(wReg, tmpReg, divC);
+    AscendC::Reg::Muls(cReg, wReg, T(cOutputActual), preg);
+    AscendC::Reg::Sub(cReg, tmpReg, cReg, preg);
+    AscendC::Reg::Muls(dReg, dReg, T(dGroupStride), preg);
+    AscendC::Reg::Muls(hReg, hReg, T(hGroupStride), preg);
+    AscendC::Reg::Muls(wReg, wReg, T(wGroupStride), preg);
+    AscendC::Reg::Add(indexReg, dReg, hReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, wReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, cReg, preg);
+}
+
+template <const uint32_t IS_MUL_C = 0>
+__aicore__ inline void IndexConvNdhwcFastDiv(Reg::RegTensor<int32_t>& argmaxReg, Reg::RegTensor<uint32_t>& dTmpReg,
+                                             Reg::RegTensor<uint32_t>& hTmpReg, Reg::RegTensor<uint32_t>& wTmpReg,
+                                             Reg::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW,
+                                             Reg::RegTensor<uint32_t>& magicWReg, int16_t shiftW,
+                                             int32_t dhOutputActual, int32_t wOutputActual, int32_t wOutput,
+                                             int32_t hwOutput, int32_t wInput, int32_t hwInput, int32_t baseOffset,
+                                             int32_t cOutputAligned, Reg::RegTensor<int32_t>& cIncReg)
+{
+    // NDHWC: argmax 为 (d, h, w) 空间展平索引, C 由 cIncReg 提供
+    // 解码用全量维度 (wInput/hwInput, argmax = d*hIn*wIn + h*wIn + w);
+    // 写偏移用 tile 维度 (dhOutputActual = hAct*wAct, wOutputActual = wAct), y UB 布局 [n][dAct][hAct][wAct][cAligned]:
+    // 输出偏移 = (d * dhOutputActual + h * wOutputActual + w) * cOutputAligned + cInc + baseOffset
+    // baseOffset 由调用方在 tile 口径下扣除 tile 原点 (参考 NCDHW baseOffsetConst)
+    // 参考 IndexConvNcdhwFastDiv, 差异: NCDHW 的 C 在外层, NDHWC 的 C 在内层 (stride 乘 cOutputAligned)
+    Reg::MaskReg allMask = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+    Reg::RegTensor<uint32_t> remU32;
+
+    // d = argmax / hwInput
+    PoolUtils::Compute::FastDivImpl(dTmpReg, (Reg::RegTensor<uint32_t>&)argmaxReg, magicHWReg, shiftHW, allMask);
+    // rem = argmax - d * hwInput
+    Reg::Muls(remU32, dTmpReg, uint32_t(hwInput), allMask);
+    Reg::Sub(remU32, (Reg::RegTensor<uint32_t>&)argmaxReg, remU32, allMask);
+    // h = rem / wInput
+    PoolUtils::Compute::FastDivImpl(hTmpReg, remU32, magicWReg, shiftW, allMask);
+    // w = rem - h * wInput
+    Reg::Muls(wTmpReg, hTmpReg, uint32_t(wInput), allMask);
+    Reg::Sub(wTmpReg, remU32, wTmpReg, allMask);
+
+    // NDHWC 输出偏移: w * cStride + h * wOutputActual * cStride + d * dhOutputActual * cStride + cInc + baseOffset
+    Reg::Muls(argmaxReg, (Reg::RegTensor<int32_t>&)wTmpReg, int32_t(cOutputAligned), allMask);
+    Reg::RegTensor<int32_t> hhwTmpIndexReg;
+    Reg::Muls(hhwTmpIndexReg, (Reg::RegTensor<int32_t>&)hTmpReg, int32_t(wOutputActual * cOutputAligned), allMask);
+    Reg::Add(argmaxReg, argmaxReg, hhwTmpIndexReg, allMask);
+    Reg::RegTensor<int32_t> dhwTmpIndexReg;
+    Reg::Muls(dhwTmpIndexReg, (Reg::RegTensor<int32_t>&)dTmpReg, int32_t(dhOutputActual * cOutputAligned), allMask);
+    Reg::Add(argmaxReg, argmaxReg, dhwTmpIndexReg, allMask);
+    Reg::Add(argmaxReg, argmaxReg, cIncReg, allMask);
+    Reg::Adds(argmaxReg, argmaxReg, baseOffset, allMask);
+
+    if constexpr (IS_MUL_C == 1) {
+        // C 模运算由 DoMulNCNdhwcFastDiv 在调用前完成, 此处无需额外处理
+    }
+}
+
+template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void DoSingleNCNdhwcFastDiv(
+    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+    Reg::RegTensor<int32_t>& parallelRegIndex, Reg::RegTensor<int32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
+    Reg::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, Reg::RegTensor<uint32_t>& magicWReg, int16_t shiftW,
+    int32_t dhOutputActual, int32_t wOutputActual, int32_t wOutput, int32_t hwOutput, int32_t wInput, int32_t hwInput,
+    int32_t baseOffset, int32_t cOutputAligned, Reg::RegTensor<int32_t>& cIncReg, Reg::RegTensor<int32_t>& dLowerReg,
+    Reg::RegTensor<int32_t>& hLowerReg, Reg::RegTensor<int32_t>& wLowerReg, Reg::RegTensor<int32_t>& dUpperReg,
+    Reg::RegTensor<int32_t>& hUpperReg, Reg::RegTensor<int32_t>& wUpperReg)
+{
+    // 参考 DoSingleNCNchwFastDiv, 差异: 调用 IndexConvNdhwcFastDiv 处理 NDHWC 布局
+    AscendC::Reg::RegTensor<computeType> gradReg;
+    AscendC::Reg::RegTensor<int32_t> argmaxReg;
+    AscendC::Reg::RegTensor<uint32_t> dTmpReg;
+    AscendC::Reg::RegTensor<uint32_t> hTmpReg;
+    AscendC::Reg::RegTensor<uint32_t> wTmpReg;
+
+    uint32_t maskT1 = argmaxMaskCount;
+    uint32_t maskT2 = argmaxMaskCount;
+    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
+    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
+
+    GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, pregT1,
+                               pregT2);
+    IndexConvNdhwcFastDiv<0>(argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
+                             dhOutputActual, wOutputActual, wOutput, hwOutput, wInput, hwInput, baseOffset,
+                             cOutputAligned, cIncReg);
+    if constexpr (std::is_same<T2, int32_t>::value) {
+        if constexpr (IS_CHECK_RANGE == 1) {
+            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
+        }
+        GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregT2);
+    } else {
+        uint32_t argmaxMask = argmaxMaskCount;
+        AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
+        if constexpr (IS_CHECK_RANGE == 1) {
+            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
+        }
+        GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
+    }
+}
+
+template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void DoMulNCNdhwcFastDiv(
+    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+    Reg::RegTensor<int32_t>& parallelRegIndex, Reg::RegTensor<int32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
+    Reg::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, Reg::RegTensor<uint32_t>& magicWReg, int16_t shiftW,
+    int32_t dhOutputActual, int32_t wOutputActual, int32_t wOutput, int32_t hwOutput, int32_t wInput, int32_t hwInput,
+    int32_t baseOffset, int32_t cOutputAligned, int32_t cOutputActual, const DivMagic& divC,
+    Reg::RegTensor<int32_t>& cIncReg, Reg::RegTensor<int32_t>& dLowerReg, Reg::RegTensor<int32_t>& hLowerReg,
+    Reg::RegTensor<int32_t>& wLowerReg, Reg::RegTensor<int32_t>& dUpperReg, Reg::RegTensor<int32_t>& hUpperReg,
+    Reg::RegTensor<int32_t>& wUpperReg)
+{
+    // 参考 DoMulNCNcdhwFastDiv, 差异: NDHWC 的 C 是最内层, 需对 cIncReg 取模 cOutputActual
+    // 注意: VEC 域内禁止除法/64 位运算, divC 必须在 __VEC_SCOPE__ 外用 PrecomputeDiv 算好传入
+    AscendC::Reg::RegTensor<computeType> gradReg;
+    AscendC::Reg::RegTensor<int32_t> argmaxReg;
+    AscendC::Reg::RegTensor<uint32_t> dTmpReg;
+    AscendC::Reg::RegTensor<uint32_t> hTmpReg;
+    AscendC::Reg::RegTensor<uint32_t> wTmpReg;
+    uint32_t maskT1 = argmaxMaskCount;
+    uint32_t maskT2 = argmaxMaskCount;
+    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
+    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
+    GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, pregT1,
+                               pregT2);
+
+    // NDHWC: cIncReg = Arange(0), 需取模 cOutputActual 得到实际 C 索引
+    Reg::RegTensor<int32_t> cIdxReg;
+    Reg::RegTensor<int32_t> cIncModReg;
+    FastDivInt32(cIdxReg, cIncReg, divC);
+    Reg::MaskReg allMask = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+    Reg::Muls(cIncModReg, cIdxReg, cOutputActual, allMask);
+    Reg::Sub(cIncModReg, cIncReg, cIncModReg, allMask);
+
+    IndexConvNdhwcFastDiv<1>(argmaxReg, dTmpReg, hTmpReg, wTmpReg, magicHWReg, shiftHW, magicWReg, shiftW,
+                             dhOutputActual, wOutputActual, wOutput, hwOutput, wInput, hwInput, baseOffset,
+                             cOutputAligned, cIncModReg);
+
+    if constexpr (std::is_same<T2, int32_t>::value) {
+        if constexpr (IS_CHECK_RANGE == 1) {
+            FilterMask3D(pregT2, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
+        }
+        GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregT2);
+    } else {
+        uint32_t argmaxMask = argmaxMaskCount;
+        AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
+        if constexpr (IS_CHECK_RANGE == 1) {
+            FilterMask3D(pregArgmax, dTmpReg, hTmpReg, wTmpReg, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg,
+                         wUpperReg);
+        }
+        GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
+    }
+}
+
 } // namespace MaxPool3DSmallKernelNameSpace
 #endif // MAX_POOL3D_GRAD_SMALL_KERNEL_SCATTER_H

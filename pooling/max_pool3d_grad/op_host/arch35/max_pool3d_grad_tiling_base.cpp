@@ -366,9 +366,6 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckInputValid()
     const uint64_t kd = inputData.dKernel;
     const uint64_t kh = inputData.hKernel;
     const uint64_t kw = inputData.wKernel;
-    const uint64_t sd = inputData.dStride;
-    const uint64_t sh = inputData.hStride;
-    const uint64_t sw = inputData.wStride;
     const uint64_t pDTop = inputData.dPad;
     const uint64_t pHTop = inputData.hPad;
     const uint64_t pWTop = inputData.wPad;
@@ -443,7 +440,6 @@ ge::graphStatus MaxPool3DGradTilingBase::GetShapeAttrsInfo()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
     if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return ge::GRAPH_PARAM_INVALID;
     }

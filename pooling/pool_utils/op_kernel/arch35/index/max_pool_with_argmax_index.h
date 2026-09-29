@@ -147,6 +147,84 @@ __aicore__ inline void GenGatterIndex4D(AscendC::Reg::RegTensor<T>& indexReg, T 
     AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg3, preg);
 }
 
+template <typename T>
+__simd_callee__ inline void GenGatterIndex4DVF(AscendC::Reg::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D,
+                                               T num2D, T rate2D, T num1D, T rate1D = 1)
+{
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segmentScalarReg;
+    AscendC::Reg::RegTensor<T> segmentScalarReg2;
+    AscendC::Reg::RegTensor<T> segmentScalarReg3;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num3D));
+    AscendC::Reg::Div(segmentScalarReg3, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg3, T(num3D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg3, segmentScalarReg3, T(rate4D), preg);
+
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segmentScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
+
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg3, preg);
+}
+
+template <typename T>
+__simd_callee__ inline void GenGatterIndex5DVF(AscendC::Reg::RegTensor<T>& indexReg, T rate5D, T num4D, T rate4D,
+                                               T num3D, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+{
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segmentScalarReg;
+    AscendC::Reg::RegTensor<T> segmentScalarReg2;
+    AscendC::Reg::RegTensor<T> segmentScalarReg3;
+    AscendC::Reg::RegTensor<T> segmentScalarReg4;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num4D));
+    AscendC::Reg::Div(segmentScalarReg4, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg4, T(num4D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg4, segmentScalarReg4, T(rate5D), preg);
+
+    AscendC::Reg::Duplicate(constReg, T(num3D));
+    AscendC::Reg::Div(segmentScalarReg3, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg3, T(num3D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg3, segmentScalarReg3, T(rate4D), preg);
+
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segmentScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
+
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg3, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg4, preg);
+}
+
 } // namespace Index
 } // namespace PoolUtils
 

@@ -80,7 +80,7 @@ __aicore__ inline void LoadOneTensor(const __ubuf__ void* input, Reg::RegTensor<
 {
     if constexpr (IsSameType<T, half>::value) {
         Reg::RegTensor<half> xFp16;
-        LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input), offset);
+        Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input), offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         Reg::RegTensor<bfloat16_t> xBf16;
@@ -117,6 +117,49 @@ __aicore__ inline void CalcRealIndex(Reg::RegTensor<T>& resIndex, Reg::RegTensor
         Reg::Sub(v0, indexCast, wLen, pregOneIndex);
         Reg::Add(resIndex, resIndex, v0, pregOneIndex);
     }
+}
+
+template <typename T>
+__aicore__ inline void CalcRealIndex3D(Reg::RegTensor<T>& resIndex, Reg::RegTensor<int32_t>& index, int64_t curkW,
+                                       int64_t hwStride, int64_t hOutput, int64_t wOutput, int64_t offset)
+{
+    Reg::MaskReg pregOneIndex = Reg::CreateMask<int32_t, Reg::MaskPattern::VL1>();
+
+    Reg::RegTensor<T> indexCast;
+    if constexpr (IsSameType<T, int64_t>::value) {
+        Reg::Cast<int64_t, int32_t, castTraitB322B64>(indexCast, index, pregOneIndex);
+    } else {
+        Reg::Move(indexCast, index, pregOneIndex);
+    }
+
+    Reg::RegTensor<T> hwLen;
+    Reg::Duplicate(hwLen, static_cast<T>(hwStride), pregOneIndex);
+    Reg::RegTensor<T> d;
+    Reg::Div(d, indexCast, hwLen, pregOneIndex);
+
+    Reg::RegTensor<T> dh;
+    Reg::Mul(dh, d, hwLen, pregOneIndex);
+    Reg::Sub(dh, indexCast, dh, pregOneIndex);
+
+    Reg::RegTensor<T> wLen;
+    Reg::Duplicate(wLen, static_cast<T>(curkW), pregOneIndex);
+    Reg::RegTensor<T> h;
+    Reg::Div(h, dh, wLen, pregOneIndex);
+    Reg::RegTensor<T> w;
+    Reg::Mul(w, wLen, h, pregOneIndex);
+    Reg::Sub(w, dh, w, pregOneIndex);
+
+    Reg::RegTensor<T> hwOutputStride;
+    Reg::Duplicate(hwOutputStride, static_cast<T>(hOutput * wOutput), pregOneIndex);
+    Reg::Mul(resIndex, d, hwOutputStride, pregOneIndex);
+
+    Reg::RegTensor<T> wOutputStride;
+    Reg::Duplicate(wOutputStride, static_cast<T>(wOutput), pregOneIndex);
+    Reg::RegTensor<T> hContrib;
+    Reg::Mul(hContrib, h, wOutputStride, pregOneIndex);
+    Reg::Add(resIndex, resIndex, hContrib, pregOneIndex);
+    Reg::Adds(resIndex, resIndex, static_cast<T>(offset), pregOneIndex);
+    Reg::Add(resIndex, resIndex, w, pregOneIndex);
 }
 
 template <typename T>

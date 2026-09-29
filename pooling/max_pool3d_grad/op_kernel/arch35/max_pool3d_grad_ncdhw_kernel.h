@@ -9,17 +9,17 @@
  */
 
 /*!
- * \file max_pool3d_grad_small_kernel.h
+ * \file max_pool3d_grad_ncdhw_kernel.h
  * \brief
  */
 
-#ifndef MAX_POOL3D_GRAD_SMALL_KERNEL_H
-#define MAX_POOL3D_GRAD_SMALL_KERNEL_H
+#ifndef MAX_POOL3D_GRAD_NCDHW_KERNEL_H
+#define MAX_POOL3D_GRAD_NCDHW_KERNEL_H
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
-#include "max_pool3d_grad_struct.h"
+#include "../pool_grad_common/arch35/pool3d_grad_struct_common.h"
 #include "../pool_3d_common/arch35/pool_3d_grad_kernel_base.h"
 
 namespace MaxPool3DSmallKernelNameSpace {
@@ -28,6 +28,7 @@ using namespace Pool3DGradNameSpace;
 
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr int64_t RATIO = 2;
+constexpr int32_t BK_MERGE_BUF_ALIGN = 32;
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
 class Pool3DGradSmallKernel : public Pool3DGradCommon::Pool3DGradNcdhwKernelBase {
@@ -38,9 +39,11 @@ public:
 
     __aicore__ inline void Init(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grads, GM_ADDR y);
     __aicore__ inline void CopyOut();
-    __aicore__ inline void CopyIn();
-    __aicore__ inline void Compute();
     __aicore__ inline void Process();
+    __aicore__ inline void CopyInForward();
+    __aicore__ inline void CopyInBackward();
+    __aicore__ inline void ForwardCompute();
+    __aicore__ inline void BackwardScatter();
     __aicore__ inline void ConvertIndexWithoutPadAlign(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
                                                        uint32_t hInputActualPad, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
                                                        TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput,
@@ -91,14 +94,33 @@ public:
                                                     __local_mem__ TYPE_ARGMAX* argmaxAddr);
     __aicore__ inline void ProcessNoArgmaxBlock();
 
+    // 大 kernel 正向方法
+    __aicore__ inline void ForwardBigKernel();
+    __aicore__ inline void CalcKernelSize(int64_t highIdx, int64_t dIdx, int64_t hIdx, int64_t wIdx, int64_t& curKD,
+                                          int64_t& curKH, int64_t& curKW, int64_t& curInOffset, int64_t& curOriginIndex,
+                                          int64_t& curOriginD, int64_t& curOriginH, int64_t& curOriginW);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount);
+    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
+    __aicore__ inline void CopyInMultiRowsWithD(int64_t curkD, int64_t curkH, int64_t curkW, int64_t curInOffset,
+                                                int64_t hwAligned);
+    __aicore__ inline void NoSplitKernelProcess(int64_t curKD, int64_t curKH, int64_t curKW, int64_t curInOffset,
+                                                int64_t curOriginIndex, int64_t bufferOffset);
+    __aicore__ inline void SplitKernelProcess(int64_t curKD, int64_t curKH, int64_t curKW, int64_t curInOffset,
+                                              int64_t curOriginIndex, int64_t bufferOffset);
+    __aicore__ inline void InitMergeBuffer(int64_t bufferOffset, int64_t initIndex);
+    template <bool MERGE, bool SPLITKW, bool IS_3D = false>
+    __aicore__ inline void ComputeSingleArgmax(int64_t dataCount, int64_t curKW, int64_t curOriginIndex,
+                                               int64_t bufferOffset, int64_t hwStride = 0);
+
     TPipe& pipe_;
     const Pool3DGradNCDHWTilingData& tilingData_;
+    TBuf<TPosition::VECCALC> helpBuf_;
+    TBuf<TPosition::VECCALC> argmaxBuff_;
+    TBuf<TPosition::VECCALC> inputCalcBuff_;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQue_;
-    TBuf<TPosition::VECCALC> helpBuf_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
-    TBuf<TPosition::VECCALC> inputCalcBuff_;
-    TBuf<TPosition::VECCALC> argmaxBuff_;
+    TBuf<TPosition::VECCALC> maxValBuf_;
 
     GlobalTensor<TYPE_ORIG_X> gradGm_;
     GlobalTensor<TYPE_ORIG_X> yGm_;
@@ -141,8 +163,10 @@ public:
     int64_t hArgmaxActualEnd = 0;
     int64_t wArgmaxActualStart = 0;
     int64_t wArgmaxActualEnd = 0;
+    int64_t inDHW_ = 1;
 
     bool IS_PAD = false;
+    int64_t maxCount_ = 0;
 
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
@@ -164,6 +188,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     ParseTilingData(tilingData_);
     blockIdx_ = GetBlockIdx();
     argmaxPlaneSize_ = dArgmax_ * hArgmax_ * wArgmax_;
+    inDHW_ = dOutput_ * hOutput_ * wOutput_;
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
@@ -172,42 +197,42 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     gradGm_.SetGlobalBuffer((__gm__ TYPE_ORIG_X*)grads);
     yGm_.SetGlobalBuffer((__gm__ TYPE_ORIG_X*)y);
 
-    pipe_.InitBuffer(inputQue_, BUFFER_NUM, tilingData_.inputBufferSize);
-    if (IS_PAD) {
+    pipe_.InitBuffer(inputQue_, BUFFER_NUM, static_cast<uint32_t>(tilingData_.inputBufferSize));
+    pipe_.InitBuffer(gradQue_, BUFFER_NUM, static_cast<uint32_t>(gradBufferSize_));
+    pipe_.InitBuffer(outputQue_, BUFFER_NUM, static_cast<uint32_t>(outputBufferSize_));
+    pipe_.InitBuffer(argmaxBuff_, tilingData_.argmaxBufferSize);
+    pipe_.InitBuffer(helpBuf_, HELP_BUFFER);
+
+    if (IS_PAD && !tilingData_.isBigKernel) {
         pipe_.InitBuffer(inputCalcBuff_, tilingData_.inputBufferSize);
     }
-    pipe_.InitBuffer(argmaxBuff_, tilingData_.argmaxBufferSize);
-    pipe_.InitBuffer(outputQue_, BUFFER_NUM, outputBufferSize_);
-    pipe_.InitBuffer(gradQue_, BUFFER_NUM, gradBufferSize_);
-    pipe_.InitBuffer(helpBuf_, HELP_BUFFER);
+
+    // 大 kernel 专属变量: maxCount_ 向下对齐到向量寄存器元素数,
+    // 保证 ComputeSingleArgmax 的尾部填充区间 [dataCount, num) 不越过 buffer 边界
+    if (tilingData_.isBigKernel) {
+        pipe_.InitBuffer(maxValBuf_, static_cast<uint32_t>(BK_MERGE_BUF_ALIGN));
+        constexpr int64_t repeatElm = platform::GetVRegSize() / sizeof(float);
+        int64_t maxLoadCount = tilingData_.inputBufferSize / sizeof(TYPE_ORIG_X);
+        int64_t alignedCount = maxLoadCount / repeatElm * repeatElm;
+        maxCount_ = (alignedCount >= repeatElm) ? alignedCount : repeatElm;
+    }
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::Compute()
+__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ForwardCompute()
 {
     LocalTensor<TYPE_ORIG_X> inputLocal = inputQue_.DeQue<TYPE_ORIG_X>();
-    LocalTensor<TYPE_ORIG_X> caclBuffLocal;
-    __local_mem__ TYPE_ORIG_X* inputBuffAddr;
     __local_mem__ TYPE_ORIG_X* inputQueAddr = (__local_mem__ TYPE_ORIG_X*)inputLocal.GetPhyAddr();
     __local_mem__ TYPE_ORIG_X* computeAddr = inputQueAddr;
     if (IS_PAD) {
-        caclBuffLocal = inputCalcBuff_.Get<TYPE_ORIG_X>();
-        inputBuffAddr = (__local_mem__ TYPE_ORIG_X*)caclBuffLocal.GetPhyAddr();
+        LocalTensor<TYPE_ORIG_X> caclBuffLocal = inputCalcBuff_.Get<TYPE_ORIG_X>();
+        __local_mem__ TYPE_ORIG_X* inputBuffAddr = (__local_mem__ TYPE_ORIG_X*)caclBuffLocal.GetPhyAddr();
         DupAndCopyToCalcBuffer(inputBuffAddr, inputQueAddr);
         computeAddr = inputBuffAddr;
     }
-    uint32_t calCount = outputBufferSize_ / sizeof(computeType);
-    LocalTensor<computeType> yLocal = outputQue_.AllocTensor<computeType>();
-    Duplicate(yLocal, computeType(0), calCount);
-    LocalTensor<TYPE_ORIG_X> gradLocal = gradQue_.DeQue<TYPE_ORIG_X>();
     LocalTensor<TYPE_ARGMAX> argmaxLocal = argmaxBuff_.Get<TYPE_ARGMAX>();
     Duplicate(argmaxLocal, TYPE_ARGMAX(0), tilingData_.argmaxBufferSize / sizeof(TYPE_ARGMAX));
-    __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
-    __local_mem__ TYPE_ORIG_X* gradAddr = (__local_mem__ TYPE_ORIG_X*)gradLocal.GetPhyAddr();
     __local_mem__ TYPE_ARGMAX* argmaxAddr = (__local_mem__ TYPE_ARGMAX*)argmaxLocal.GetPhyAddr();
-    uint32_t wConcurrentCount = wArgmaxActual_ / curWProBatchSize_;
-    uint32_t hConcurrentCount = hArgmaxActual_ / curHProBatchSize_;
-    uint32_t dConcurrentCount = dArgmaxActual_ / curDProBatchSize_;
 
     if (wOutputActual_ * RATIO > vlT2_) {
         SingleRowGather(computeAddr, argmaxAddr);
@@ -218,6 +243,24 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     } else {
         MultiNcGather(computeAddr, argmaxAddr);
     }
+
+    inputQue_.FreeTensor(inputLocal);
+}
+
+template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::BackwardScatter()
+{
+    uint32_t calCount = outputBufferSize_ / sizeof(computeType);
+    LocalTensor<computeType> yLocal = outputQue_.AllocTensor<computeType>();
+    Duplicate(yLocal, computeType(0), calCount);
+    LocalTensor<TYPE_ORIG_X> gradLocal = gradQue_.DeQue<TYPE_ORIG_X>();
+    LocalTensor<TYPE_ARGMAX> argmaxLocal = argmaxBuff_.Get<TYPE_ARGMAX>();
+    __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
+    __local_mem__ TYPE_ORIG_X* gradAddr = (__local_mem__ TYPE_ORIG_X*)gradLocal.GetPhyAddr();
+    __local_mem__ TYPE_ARGMAX* argmaxAddr = (__local_mem__ TYPE_ARGMAX*)argmaxLocal.GetPhyAddr();
+    uint32_t wConcurrentCount = wArgmaxActual_ / curWProBatchSize_;
+    uint32_t hConcurrentCount = hArgmaxActual_ / curHProBatchSize_;
+    uint32_t dConcurrentCount = dArgmaxActual_ / curDProBatchSize_;
 
     if (wConcurrentCount * DOUBLE * sizeof(TYPE_ARGMAX) > V_REG_SIZE) {
         singleLineProcessVF(yAddr, gradAddr, argmaxAddr);
@@ -231,7 +274,6 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
         multipleLineProcessVF2(yAddr, gradAddr, argmaxAddr);
     }
 
-    inputQue_.FreeTensor(inputLocal);
     if constexpr (std::negation<std::is_same<TYPE_ORIG_X, float>>::value) {
         Cast(yLocal.ReinterpretCast<TYPE_ORIG_X>(), yLocal, RoundMode::CAST_RINT, calCount);
     }
@@ -355,36 +397,15 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::CopyIn()
+__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::CopyInForward()
 {
-    LocalTensor<TYPE_ORIG_X> gradLocal = gradQue_.AllocTensor<TYPE_ORIG_X>();
     LocalTensor<TYPE_ORIG_X> xLocal = inputQue_.AllocTensor<TYPE_ORIG_X>();
     int64_t xGmOffset = highInputOffset_ + forwarddInputOffset_ + forwardhInputOffset_ + forwardwInputOffset_;
-    int64_t planeHW = hArgmax_ * wArgmax_;
-    int64_t argmaxGmOffset = highAxisArgmaxOffset_ + dAxisArgmaxOffset_ + hAxisArgmaxOffset_ + wAxisArgmaxOffset_;
-    DataCopyPadExtParams<TYPE_ORIG_X> paramsT1 = {false, 0, 0, 0};
-    LoopModeParams loopModeParamsT1;
-    loopModeParamsT1.loop1Size = dArgmaxActual_;
-    loopModeParamsT1.loop2Size = highAxisActual_;
-    loopModeParamsT1.loop1SrcStride = planeHW * sizeof(TYPE_ORIG_X);
-    loopModeParamsT1.loop2SrcStride = argmaxPlaneSize_ * sizeof(TYPE_ORIG_X);
-    loopModeParamsT1.loop1DstStride = hArgmaxActual_ * wArgmaxAligned_ * sizeof(TYPE_ORIG_X);
-    loopModeParamsT1.loop2DstStride = dArgmaxActual_ * hArgmaxActual_ * wArgmaxAligned_ * sizeof(TYPE_ORIG_X);
-
-    SetLoopModePara(loopModeParamsT1, DataCopyMVType::OUT_TO_UB);
-    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(hArgmaxActual_),
-                                        static_cast<uint32_t>(wArgmaxActual_ * sizeof(TYPE_ORIG_X)),
-                                        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(TYPE_ORIG_X)),
-                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-
-    DataCopyPad(gradLocal, gradGm_[argmaxGmOffset], copyOutParamT1, paramsT1);
 
     LoopModeParams loopModeParamsT2;
-    int64_t wInputActualAlignedNoPadTmp;
     if (IS_PAD) {
         int64_t wInputActualAlignedNoPad = CeilDivision(wInputActualNoPad_, BLOCK_SIZE / sizeof(TYPE_ORIG_X)) *
                                            (BLOCK_SIZE / sizeof(TYPE_ORIG_X));
-        wInputActualAlignedNoPadTmp = wInputActualAlignedNoPad;
         loopModeParamsT2.loop1Size = highAxisActual_;
         loopModeParamsT2.loop2Size = dInputActualNoPad_;
         loopModeParamsT2.loop1SrcStride = tilingData_.dOutput * tilingData_.hOutput * tilingData_.wOutput *
@@ -424,8 +445,34 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     }
     DataCopyPad(xLocal, xGm_[xGmOffset], copyOutParamT2, paramsT2);
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    gradQue_.EnQue(gradLocal);
     inputQue_.EnQue(xLocal);
+}
+
+template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::CopyInBackward()
+{
+    LocalTensor<TYPE_ORIG_X> gradLocal = gradQue_.AllocTensor<TYPE_ORIG_X>();
+    int64_t planeHW = hArgmax_ * wArgmax_;
+    int64_t argmaxGmOffset = highAxisArgmaxOffset_ + dAxisArgmaxOffset_ + hAxisArgmaxOffset_ + wAxisArgmaxOffset_;
+
+    DataCopyPadExtParams<TYPE_ORIG_X> paramsT1 = {false, 0, 0, 0};
+    LoopModeParams loopModeParamsT1;
+    loopModeParamsT1.loop1Size = dArgmaxActual_;
+    loopModeParamsT1.loop2Size = highAxisActual_;
+    loopModeParamsT1.loop1SrcStride = planeHW * sizeof(TYPE_ORIG_X);
+    loopModeParamsT1.loop2SrcStride = argmaxPlaneSize_ * sizeof(TYPE_ORIG_X);
+    loopModeParamsT1.loop1DstStride = hArgmaxActual_ * wArgmaxAligned_ * sizeof(TYPE_ORIG_X);
+    loopModeParamsT1.loop2DstStride = dArgmaxActual_ * hArgmaxActual_ * wArgmaxAligned_ * sizeof(TYPE_ORIG_X);
+
+    SetLoopModePara(loopModeParamsT1, DataCopyMVType::OUT_TO_UB);
+    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(hArgmaxActual_),
+                                        static_cast<uint32_t>(wArgmaxActual_ * sizeof(TYPE_ORIG_X)),
+                                        static_cast<uint32_t>((wArgmax_ - wArgmaxActual_) * sizeof(TYPE_ORIG_X)),
+                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+
+    DataCopyPad(gradLocal, gradGm_[argmaxGmOffset], copyOutParamT1, paramsT1);
+    ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
+    gradQue_.EnQue(gradLocal);
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
@@ -472,10 +519,20 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
             ProcessNoArgmaxBlock();
             continue;
         }
-        CopyIn();
-        Compute();
+
+        if (tilingData_.isBigKernel) {
+            ForwardBigKernel();
+        } else {
+            // === 小 kernel 正向：Gather 路径 ===
+            CopyInForward();
+            ForwardCompute();
+        }
+
+        // === Backward: grad → Scatter → output ===
+        CopyInBackward();
+        BackwardScatter();
         CopyOut();
     }
 }
 } // namespace MaxPool3DSmallKernelNameSpace
-#endif // MAX_POOL3D_GRAD_SMALL_KERNEL_H
+#endif // MAX_POOL3D_GRAD_NCDHW_KERNEL_H

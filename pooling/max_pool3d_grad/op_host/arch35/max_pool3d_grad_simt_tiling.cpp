@@ -152,7 +152,8 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     int32_t strideD = stride->GetData()[dDimPos];
     int32_t strideH = stride->GetData()[hDimPos];
     int32_t strideW = stride->GetData()[wDimPos];
-    inputData.stride = std::array<uint64_t, DHW_DIMS>{strideD, strideH, strideW};
+    inputData.stride = std::array<uint64_t, DHW_DIMS>{static_cast<uint64_t>(strideD), static_cast<uint64_t>(strideH),
+                                                      static_cast<uint64_t>(strideW)};
     const char* padMode = runtimeAttrs->GetAttrPointer<char>(PADDING_MODE_POS);
     std::string padModeStr = padMode;
     uint32_t padsD = 0;

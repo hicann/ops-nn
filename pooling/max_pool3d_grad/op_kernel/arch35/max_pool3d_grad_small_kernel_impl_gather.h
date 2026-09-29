@@ -16,7 +16,7 @@
 #define MAX_POOL3D_GRAD_SMALL_KERNEL_IMPL_GATHER_H
 
 #include "max_pool3d_grad_small_kernel_gather.h"
-#include "max_pool3d_grad_small_kernel.h"
+#include "max_pool3d_grad_ncdhw_kernel.h"
 
 namespace MaxPool3DSmallKernelNameSpace {
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>

@@ -111,16 +111,6 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetTargetCoreNum() const
            baseData.coreUsedForBestPerformance;
 }
 
-bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetUBSize()
-{
-    DoBufferCalculate();
-    if (baseData.inputBytes == FLOAT16_SIZE) {
-        return splitData.totalBufferSize <= baseData.availableUb &&
-               splitData.gradBufferSize <= MAX_INPUT_ELEMENTS * baseData.inputBytes;
-    }
-    return splitData.totalBufferSize <= baseData.availableUb;
-}
-
 bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitNC()
 {
     splitData.dOutputInner = inputData->dX;
@@ -242,7 +232,7 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::SearchBestTiling()
 void Pool3DGradNCDHWSmallKernelCommonTiling::DoUBTiling()
 {
     SearchBestTiling();
-    DoBufferCalculate();
+    IsMeetUBSize();
     PoolGradTiling::CalcAxisOuterTail(inputData->wX, splitData.wOutputInner, splitData.wOutputOuter,
                                       splitData.wOutputTail);
     PoolGradTiling::CalcAxisOuterTail(inputData->hX, splitData.hOutputInner, splitData.hOutputOuter,
@@ -320,7 +310,7 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::PrintSplitData() const
     info << "splitData.gradBufferSize: " << splitData.gradBufferSize << std::endl;
     info << "splitData.argmaxBufferSize: " << splitData.argmaxBufferSize << std::endl;
     info << "splitData.totalBufferSize: " << splitData.totalBufferSize << std::endl;
-
+    info << "splitData.isBigKernel: " << splitData.isBigKernel << std::endl;
     OP_LOGI("MaxPool3DGradNCDHWSmallKernel", "%s", info.str().c_str());
 }
 
@@ -371,6 +361,7 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::SetTilingData(gert::TilingContext* 
     tilingData->dProBatchSize = baseData.dProBatchSize;
     tilingData->hProBatchSize = baseData.hProBatchSize;
     tilingData->wProBatchSize = baseData.wProBatchSize;
+    tilingData->isBigKernel = splitData.isBigKernel;
 }
 
 ge::graphStatus Pool3DGradNCDHWSmallKernelCommonTiling::DoOpTiling(gert::TilingContext* context)

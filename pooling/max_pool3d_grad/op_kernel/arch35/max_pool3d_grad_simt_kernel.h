@@ -18,7 +18,7 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 #include "../inc/platform.h"
-#include "max_pool3d_grad_struct.h"
+#include "../pool_grad_common/arch35/pool3d_grad_struct_common.h"
 
 #include "simt_api/asc_simt.h"
 #ifdef __CCE_KT_TEST__

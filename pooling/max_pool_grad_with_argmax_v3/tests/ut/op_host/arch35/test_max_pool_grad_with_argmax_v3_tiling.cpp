@@ -401,8 +401,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test1)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 502;
-    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 4800 1792 1792 1 1 502 ";
+    uint64_t except_tilingkey = 501;
+    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 4800 1792 1792 1 1 501 ";
     ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
                     dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
@@ -422,8 +422,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test2)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 502;
-    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 502 ";
+    uint64_t except_tilingkey = 501;
+    std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 501 ";
     ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
                     dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }

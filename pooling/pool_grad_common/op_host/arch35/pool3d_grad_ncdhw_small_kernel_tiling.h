@@ -113,6 +113,7 @@ struct Pool3DGradNCDHWSplitInfo {
     int64_t gradBufferSize{0};
     int64_t argmaxBufferSize{0};
     int64_t totalBufferSize{0};
+    int64_t isBigKernel{0};
 };
 
 struct Tiling4Pool3DGradCompileInfo {
@@ -124,10 +125,11 @@ struct Tiling4Pool3DGradCompileInfo {
 class Pool3DGradNCDHWSmallKernelCommonTiling {
 public:
     Pool3DGradNCDHWSmallKernelCommonTiling(Pool3DGradNCDHWInputInfo* input) : inputData(input) {}
+    virtual ~Pool3DGradNCDHWSmallKernelCommonTiling() = default;
 
     // 约定: IsMeetUBSize / IsMeetTargetCoreNum 需公开, 供 pool_grad_tiling_split_helper 模板调用
     bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
+    virtual bool IsMeetUBSize() = 0;
 
     void InitializationVars(gert::TilingContext* context_, int64_t ubSize_, int64_t coreNum_);
     ge::graphStatus DoOpTiling(gert::TilingContext* context);

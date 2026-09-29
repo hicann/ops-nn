@@ -17,7 +17,7 @@
 #define MAX_POOL3D_GRAD_SMALL_KERNEL_IMPL_SCATTER_H
 
 #include "max_pool3d_grad_small_kernel_scatter.h"
-#include "max_pool3d_grad_small_kernel.h"
+#include "max_pool3d_grad_ncdhw_kernel.h"
 
 namespace MaxPool3DSmallKernelNameSpace {
 
