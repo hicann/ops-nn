@@ -5,7 +5,7 @@
 | 产品 | 是否支持 |
 | ---- | ------- |
 | Ascend 950PR | √ |
-| Atlas A2 训练系列产品/Atlas 800I A2推理产品 | ×（请使用 experimental/index/masked_scatter） |
+| Atlas A2系列产品 | ×（请使用 experimental/index/masked_scatter） |
 
 ## 功能说明
 
