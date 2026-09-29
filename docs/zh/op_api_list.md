@@ -40,10 +40,10 @@
 | [aclnnAdaptiveMaxPool2dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool2dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
-| [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) | 首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 | - | 默认确定性实现 |
-| [aclnnAddmm&aclnnInplaceAddmm](../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。 | - | 默认确定性实现 |
+| [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) | 首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnAddmm&aclnnInplaceAddmm](../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnAddmmWeightNz](../../matmul/mat_mul_v3/docs/aclnnAddmmWeightNz.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。相较于原有addmm接口，新接口mat2支持nz格式。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAddmv](../../matmul/addmv/docs/aclnnAddmv.md) | 完成矩阵乘计算，然后和向量相加。 | - | 默认确定性实现 |
+| [aclnnAddmv](../../matmul/addmv/docs/aclnnAddmv.md) | 完成矩阵乘计算，然后和向量相加。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnAddLayerNorm](../../norm/add_layer_norm/docs/aclnnAddLayerNorm.md) | 实现AddLayerNorm功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddLayerNormGrad](../../norm/add_layer_norm_grad/docs/aclnnAddLayerNormGrad.md) | LayerNorm是一种归一化方法，可以将网络层输入数据归一化为均值为0、方差为1的分布。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnAddLayerNormQuant](../../norm/add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md) | LayerNorm算子是大模型常用的归一化操作。 | - | 默认确定性实现 |
@@ -63,7 +63,7 @@
 | [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAntiMxQuant](../../quant/anti_mx_quant/docs/aclnnAntiMxQuant.md) | 将调用aclnnDynamicMxQuant/aclnnDynamicMxQuantV2量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。 | - | 默认确定性实现 |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | - | 默认确定性实现 |
-| [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | - |
+| [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyFusedEmaAdam](../../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md) | 实现FusedEmaAdam融合优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyTopKTopP](../../index/apply_top_k_top_p_with_sorted/docs/aclnnApplyTopKTopP.md) | 对原始输入logits进行top-k和top-p采样过滤。 | 默认确定性实现 | 默认确定性实现 |
@@ -75,7 +75,7 @@
 | [aclnnAvgPool3d](../../pooling/avg_pool3_d/docs/aclnnAvgPool3d.md) | 对输入Tensor进行窗口为$kD * kH * kW$、步长为$sD * sH * sW$的三维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAvgPool3dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool3dBackward.md) | 三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) | 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
+| [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，归一化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md) | 将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
@@ -111,8 +111,8 @@
 | [aclnnCrossEntropySumExpAndIndexLogit](../../loss/cross_entropy_sum_exp_and_index_logit/docs/aclnnCrossEntropySumExpAndIndexLogit.md) | 面向vocab并行（Tensor Parallel）场景的CrossEntropy本地计算融合算子。 | - | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | - |
-| [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | - |
+| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | 默认非确定性实现，不支持配置开启 |
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |
 | [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | 默认确定性实现 |
@@ -135,7 +135,7 @@
 | [aclnnDynamicMxQuantV2](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuantV2.md) | 目的数据类型为FLOAT4类、FLOAT8类的MX量化。根据scaleAlg不同取值，选择目的数据类型FP4E2M1的不同量化算法。可以根据dstTypeMax设置目标数据类型的最大值。 | - | 默认确定性实现 |
 | [aclnnDynamicMxQuantV3](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuantV3.md) | 目的数据类型为FLOAT4类、FLOAT8类的MX量化。根据scaleAlg不同取值，选择目的数据类型FP4E2M1的不同量化算法。可以通过maxLowBound设置每个block计算出的最大绝对值的下界钳位值。 | - | 默认确定性实现 |
 | [aclnnMxToBlockMxQuant](../../quant/mx_to_block_mx_quant/docs/aclnnMxToBlockMxQuant.md) | 将调用 aclnnDynamicMxQuantV2 量化得到的 FLOAT4 的 Tensor 结合 FLOAT8_E8M0 缩放系数，转换为 FLOAT8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。 | - | 默认确定性实现 |
-| [aclnnDynamicMxQuantWithDualAxis](../../quant/dynamic_mx_quant_with_dual_axis/docs/aclnnDynamicMxQuantWithDualAxis.md) | 在-1轴和-2轴上同时进行目的数据类型为FLOAT4类、FLOAT8类的MX量化。支持scaleAlg取值0（OCP算法）和1（CuBLAS算法）。算子实现时，-2轴（不包含）之前的轴会进行合轴处理。 | - | - |
+| [aclnnDynamicMxQuantWithDualAxis](../../quant/dynamic_mx_quant_with_dual_axis/docs/aclnnDynamicMxQuantWithDualAxis.md) | 在-1轴和-2轴上同时进行目的数据类型为FLOAT4类、FLOAT8类的MX量化。支持scaleAlg取值0（OCP算法）和1（CuBLAS算法）。算子实现时，-2轴（不包含）之前的轴会进行合轴处理。 | - | 默认确定性实现 |
 | [aclnnDynamicMxQuantWithDualAxisV2](../../quant/dynamic_mx_quant_with_dual_axis/docs/aclnnDynamicMxQuantWithDualAxisV2.md) | 在-1轴和-2轴上同时进行目的数据类型为FLOAT4类、FLOAT8类的MX量化。在V1基础上新增scaleAlg取值2（DynamicDtypeRange算法）及dstTypeMax参数，支持FP4_E2M1类型的自定义量化范围。算子实现时，-2轴（不包含）之前的轴会进行合轴处理。 | - | 默认确定性实现 |
 | [aclnnDynamicBlockMxQuant](../../quant/dynamic_block_mx_quant/docs/aclnnDynamicBlockMxQuant.md) | 对输入变量，以数据块（32\*32）为基本块进行MX量化转换为目的数据类型。在每个基本块中，根据scale_alg的取值采取不同的scale算法计算出当前块对应的量化参数scale（1\*1），将其广播为scale1（32\*1）和scale2（1\*32）输出。同时对基本块中的每一个数除以scale，根据round_mode转换到对应的dst_type，得到量化结果y | - | 默认确定性实现 |
 | [aclnnDynamicBlockQuant](../../quant/dynamic_block_quant/docs/aclnnDynamicBlockQuant.md) | 对输入张量，通过给定的rowBlockSize和colBlockSize将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scaleOut，并根据scaleOut对输入进行量化。输出最终的量化结果，以及每个块的量化参数scaleOut。 | 默认确定性实现 | 默认确定性实现 |
@@ -250,7 +250,7 @@
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | - | 默认确定性实现 |
 | [aclnnFusedMatmulV2](../../matmul/fused_mat_mul/docs/aclnnFusedMatmulV2.md) | 矩阵乘与通用向量计算融合。 | - | 默认确定性实现 |
 | [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md) | 量化矩阵乘与通用向量计算融合。 | 默认确定性实现 | - |
-| [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md) | 量化矩阵乘与通用向量计算融合，WeightNz输入。 | - | - |
+| [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md) | 量化矩阵乘与通用向量计算融合，WeightNz输入。 | 默认确定性实现 | - |
 | [aclnnFusedSgd](../../optim/fused_sgd/docs/aclnnFusedSgd.md) | 实现fusedSgd算子。将传统 SGD 更新过程中原本分散的多个细粒度操作（如梯度缩放、权重衰减、动量更新、参数赋值等）融合为单个NPU Kernel执行。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md) | 对输入tensor中指定的维度dim进行数据聚集。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md) | 对于维度为r≥1的输入张量self，和维度q≥1的输入张量indices，将数据切片收集到维度为(q-1) + (r - indices_shape[-1])的输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
@@ -325,10 +325,10 @@
 | [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) | 对输入张量计算logsoftmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLogSoftmaxBackward](../../activation/log_softmax_grad/docs/aclnnLogSoftmaxBackward.md) | 完成aclnnLogSoftmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLSTM](../../rnn/dynamic_rnn/docs/aclnnLSTM.md) | 完成LSTM的计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnLstmBackward](../../rnn/single_layer_lstm_grad/docs/aclnnLstmBackward.md) | 完成LSTM反向的计算。 | 默认确定性实现 | - |
+| [aclnnLstmBackward](../../rnn/single_layer_lstm_grad/docs/aclnnLstmBackward.md) | 完成LSTM反向的计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) | 替换在swinTransformer中使用window attention计算softmax的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) | 完成1到6维张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
-| [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。 | - | 默认确定性实现 |
+| [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMatmulCompress](../../matmul/matmul_compress/docs/aclnnMatmulCompress.md) | 进行l@r矩阵乘计算时，可先通过msModelSlim工具对r矩阵进行无损压缩，减少r矩阵的内存占用大小，然后通过本接口完成无损解压缩，矩阵乘，反量化计算。 | - | - |
 | [aclnnMatmulCompressDequant](../../matmul/matmul_v2_compress_dequant/docs/aclnnMatmulCompressDequant.md) | 进行l@r矩阵乘计算时，可先通过msModelSlim工具对r矩阵进行无损压缩，减少r矩阵的内存占用大小，然后通过本接口完成无损解压缩，矩阵乘，反量化计算。 | - | - |
 | [aclnnMatmulEmuSplitWeight](../../matmul/matmul_emu_split_weight/docs/aclnnMatmulEmuSplitWeight.md) | 使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。离线将FP32权重拆分为高位BF16与低位残差BF16，推理阶段执行两次BF16 GEMM并做线性组合，激活值全程保持BF16，两路矩阵乘均运行在Cube上。 | 默认确定性实现 | 默认确定性实现 |
@@ -336,7 +336,7 @@
 | [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md) | 对于输入信号的输入通道，提供2维（H，W维度）最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool2dWithIndicesBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md) | 正向最大池化aclnnMaxPool2dWithIndices的反向传播。 | 默认非确定性实现，支持配置开启。 | 默认非确定性实现，支持配置开启。 |
 | [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md) | 对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。 | 默认确定性实现 | - |
-| [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
+| [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnMaxPool3dWithArgmax](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md) | 对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool3dWithArgmaxBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认非确定性实现，支持配置开启。 |
 | [aclnnMaxUnpool2d](../../index/scatter_elements/docs/aclnnMaxUnpool2d.md) | [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md)在2d的逆运算，由outputSize决定out的H、W轴大小，并根据indices索引在out中填入self的元素值，其余位置都设置为0。 | 默认确定性实现 | 默认确定性实现 |
@@ -345,7 +345,7 @@
 | [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMedian](../../index/median/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMedianDim](../../index/median/docs/aclnnMedianDim.md) | 返回所有元素的中位数及所在位置（若指定维度元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
+| [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) | 计算aclnnMish的反向传播过程。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnModulate](../../vfusion/modulate/docs/aclnnModulate.md) | 实现特征的自适应缩放（scale）和平移（shift）。 | 默认确定性实现 | 默认确定性实现 |
@@ -356,7 +356,7 @@
 | [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md) | 计算多标签分类的间隔损失值。 | 默认非确定性实现，不支持配置开启 | 默认非确定性实现，不支持配置开启 |
 | [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | 默认非确定性实现，支持配置开启。 |
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md) | 正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启。 | 默认非确定性实现，支持配置开启。 |
-| [aclnnMv](../../matmul/mv/docs/aclnnMv.md) | 计算矩阵input与向量vec的乘积。 | - | 默认确定性实现 |
+| [aclnnMv](../../matmul/mv/docs/aclnnMv.md) | 计算矩阵input与向量vec的乘积。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnNanMedian](../../index/nan_median/docs/aclnnNanMedian.md) | 忽略NAN后，返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNanMedianDim](../../index/nan_median/docs/aclnnNanMedianDim.md) | 忽略NAN后，返回Tensor指定维度求中位数及所在位置。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md) | 返回给定张量的矩阵范数或者向量范数。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
@@ -401,11 +401,11 @@
 | [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认确定性实现 |
 | [aclnnScatterNd](../../index/scatter_nd/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterMax](../../index/scatter_max/docs/aclnnScatterMax.md) | 实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。 | - | 默认确定性实现 |
 | [aclnnScatterMin](../../index/scatter_min/docs/aclnnScatterMin.md) | 实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。 | - | 默认确定性实现 |
 | [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认确定性实现 |
-| [aclnnScatterReduce&aclnnInplaceScatterReduce](../../index/scatter_elements_v2/docs/aclnnScatterReduce&aclnnInplaceScatterReduce.md) | 对输入Tensor完成带规约语义的scatter操作，支持替换、累加、累乘、取最大值、取最小值、取平均值六种规约模式，可通过includeSelf控制是否将self中的原始值参与规约计算。 | - | - |
+| [aclnnScatterReduce&aclnnInplaceScatterReduce](../../index/scatter_elements_v2/docs/aclnnScatterReduce&aclnnInplaceScatterReduce.md) | 对输入Tensor完成带规约语义的scatter操作，支持替换、累加、累乘、取最大值、取最小值、取平均值六种规约模式，可通过includeSelf控制是否将self中的原始值参与规约计算。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 | - |
@@ -452,7 +452,7 @@
 | [aclnnThnnFusedGruCellBackward](../../rnn/thnn_fused_gru_cell_grad/docs/aclnnThnnFusedGruCellBackward.md) | 完成单个时间步GRU反向的计算。 | 默认确定性实现 | - |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnTransSparse4to2Para](../../matmul/sparse4to2quant_matmul/docs/aclnnTransSparse4to2Para.md) | 对结构化稀疏的weight矩阵进行压缩预处理，输出压缩后的稀疏矩阵以及对应的索引矩阵。 | - | - |
+| [aclnnTransSparse4to2Para](../../matmul/sparse4to2quant_matmul/docs/aclnnTransSparse4to2Para.md) | 对结构化稀疏的weight矩阵进行压缩预处理，输出压缩后的稀疏矩阵以及对应的索引矩阵。 | 默认确定性实现 | - |
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) | 完成张量x1与张量x2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNZ.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md) | 完成张量x1与张量x2量化的矩阵乘计算。 | - | 默认确定性实现 |
@@ -461,7 +461,7 @@
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md) | 完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md) | 完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTopKTopPSample](../../index/top_k_top_p_sample/docs/aclnnTopKTopPSample.md) | 根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。 | 默认确定性实现 | - |
-| [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md) | 根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。 | 默认确定性实现 | - |
+| [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md) | 根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTurboQuant](../../quant/turbo_quant/docs/aclnnTurboQuant.md) | 将MLA的KV latent逐token量化为TurboQuant 4bit索引，并分别输出索引和FLOAT16 scale。latent仅支持FLOAT32。 | 默认确定性实现 | - |
 | [aclnnUnique](../../index/unique/docs/aclnnUnique.md) | 返回输入张量中的唯一元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUnique2](../../index/unique/docs/aclnnUnique2.md) | 对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。 | 默认确定性实现 | 默认确定性实现 |
