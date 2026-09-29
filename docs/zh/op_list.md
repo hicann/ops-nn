@@ -5520,6 +5520,16 @@
   </tr>
   <tr>
     <td>rnn</td>
+    <td><a href="../../rnn/block_lstm_grad/README.md">block_lstm_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现统一的TF BlockLSTMGrad（V1+V2）反向传播计算。基于正向输入与前向缓存，计算BlockLSTM的输入、权重、偏置及各门控的梯度。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
     <td><a href="../../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>
     <td>✓</td>
     <td>✓</td>
