@@ -23,6 +23,8 @@ static constexpr size_t OUTPUT_Y = 0;
 static constexpr size_t OUTPUT_MEAN = 1;
 static constexpr size_t OUTPUT_VARIANCE = 2;
 static constexpr size_t ATTR_NUM_GROUPS = 0;
+static constexpr size_t MIN_RANK = 2;
+static constexpr size_t MAX_RANK = 8;
 static constexpr int64_t UNKNOWN_RANK = -2LL;
 static constexpr int64_t UNKNOWN_DIM = -1LL;
 
@@ -35,8 +37,12 @@ static ge::graphStatus GroupNormInferShape(gert::InferShapeContext* context)
 {
     const gert::Shape* xShape = context->GetInputShape(INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-    OP_CHECK_IF(xShape->GetDimNum() < 2 && !IsUnknownRank(xShape),
+    // x的维度必须为2-8维。
+    OP_CHECK_IF(xShape->GetDimNum() < MIN_RANK && !IsUnknownRank(xShape),
                 OP_LOGE(context->GetNodeName(), "The rank of x must be at least 2, got %zu", xShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() > MAX_RANK,
+                OP_LOGE(context->GetNodeName(), "The rank of x must be at most 8, got %zu", xShape->GetDimNum()),
                 return ge::GRAPH_FAILED);
 
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_Y);
@@ -53,6 +59,24 @@ static ge::graphStatus GroupNormInferShape(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(ATTR_NUM_GROUPS);
     OP_CHECK_NULL_WITH_CONTEXT(context, numGroups);
+    // num_groups必须为正整数。
+    OP_CHECK_IF(*numGroups <= 0,
+                OP_LOGE(context->GetNodeName(), "The num_groups must be greater than 0, got %lld",
+                        static_cast<long long>(*numGroups)),
+                return ge::GRAPH_FAILED);
+    // C维取值已知时校验C大于0且可被num_groups整除，动态维交由Tiling校验。
+    if (!IsUnknownRank(xShape) && xShape->GetDim(1) != UNKNOWN_DIM) {
+        int64_t channel = xShape->GetDim(1);
+        OP_CHECK_IF(channel <= 0,
+                    OP_LOGE(context->GetNodeName(), "The channel of x must be greater than 0, got %lld",
+                            static_cast<long long>(channel)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(channel % *numGroups != 0,
+                    OP_LOGE(context->GetNodeName(),
+                            "The channel of x must be divisible by num_groups, got channel %lld, num_groups %lld",
+                            static_cast<long long>(channel), static_cast<long long>(*numGroups)),
+                    return ge::GRAPH_FAILED);
+    }
 
     // 统计输出的shape为(N, num_groups)。
     if (IsUnknownRank(xShape)) {
