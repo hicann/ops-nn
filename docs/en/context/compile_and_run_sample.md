@@ -11,7 +11,7 @@ This chapter takes the development and runtime environment co-location scenario 
 
 - **Example Code**
 
-   The AddMatMul operator implements tensor addition operation, and the calculation formula is: out = β * self + α * (mat1 @ mat2). You can obtain the example code from the "Calling Example" section in [aclnnAddmm&aclnnInplaceAddmm.md](../../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) and name the code file "**test\_addmm.cpp**".
+   The AddMatMul operator implements tensor addition operation, and the calculation formula is: `out = β * self + α * (mat1 @ mat2)`. You can obtain the example code from the "Calling Example" section in [aclnnAddmm&aclnnInplaceAddmm.md](../../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) and name the code file "**test\_addmm.cpp**".
 
 - **CMakeLists File**
 
