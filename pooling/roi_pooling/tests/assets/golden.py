@@ -146,17 +146,150 @@ def _roi_pool_torch(x, rois, pooled_h, pooled_w, ssh, ssw):
     return out
 
 
+def _round_away_from_zero_np(t):
+    """numpy 版 C++ round 语义: round half away from zero（与 _round_away_from_zero 一致）。"""
+    return np.where(
+        t >= 0, np.floor(t + np.float32(0.5)), -np.floor(-t + np.float32(0.5))
+    ).astype(np.int64)
+
+
+# _roi_pool_torch 需物化 x[batch_idx] (K*C*H*W) 与 result_h (pH*K*C*W)，超大 shape 时可达数百 GB。
+# 估算内存超过该预算时自动切换到语义一致的低内存实现 _roi_pool_torch_lowmem。
+_TORCH_PATH_MEM_BUDGET = 8 * 1024**3
+# lowmem 单次 gather 块 (pooled_h, pooled_w, chunkK, C) 的字节预算
+_LOWMEM_GATHER_BUDGET = 256 * 1024**2
+
+
+def _torch_path_estimate_bytes(x, rois, pooled_h, pooled_w):
+    """估算 _roi_pool_torch 的两个大中间张量的字节数（fp32 计算域）。"""
+    N, C, H, W = x.shape
+    K = rois.shape[0]
+    return (K * C * H * W + pooled_h * K * C * W) * 4
+
+
+def _roi_pool_torch_lowmem(x, rois, pooled_h, pooled_w, ssh, ssw):
+    """_roi_pool_torch 的低内存等价实现（numpy，分块 + bin 偏移扫描）。
+
+    与 _roi_pool_torch 数学语义逐点一致：
+      - batch_idx 越界 clamp 到 [0, N-1]（同 torch.clamp）
+      - roi_start/end = round half away from zero(coord * scale)，尺寸 +1、min 1
+      - bin 边界 floor/ceil + roi_start，clamp 到 [0, H]/[0, W]
+      - 空 bin -> 0；非空 bin 取有效像素 max（NaN 像素剔除），全无效 -> fp32 finfo.min
+    差异仅在内存布局：不物化 x[batch_idx] 与 result_h，按 K 分块处理。
+    输入为 fp32 连续 numpy 数组（golden() 已做 fp16->fp32 提升）。
+    """
+    N, C, H, W = x.shape
+    K = rois.shape[0]
+    out = np.zeros((K, C, pooled_h, pooled_w), dtype=np.float32)
+    if K == 0:
+        return out
+
+    batch_idx = np.clip(rois[:, 0].astype(np.int64), 0, N - 1)
+    roi_start_w = _round_away_from_zero_np(rois[:, 1] * ssw)
+    roi_start_h = _round_away_from_zero_np(rois[:, 2] * ssh)
+    roi_end_w = _round_away_from_zero_np(rois[:, 3] * ssw)
+    roi_end_h = _round_away_from_zero_np(rois[:, 4] * ssh)
+
+    roi_w = np.maximum(roi_end_w - roi_start_w + 1, 1)
+    roi_h = np.maximum(roi_end_h - roi_start_h + 1, 1)
+    bin_w = roi_w.astype(np.float32) / np.float32(pooled_w)
+    bin_h = roi_h.astype(np.float32) / np.float32(pooled_h)
+
+    ph = np.arange(pooled_h, dtype=np.float32)
+    pw = np.arange(pooled_w, dtype=np.float32)
+    hstart = np.clip(
+        np.floor(ph[:, None] * bin_h[None, :]).astype(np.int64) + roi_start_h[None, :],
+        0,
+        H,
+    )
+    hend = np.clip(
+        np.ceil((ph[:, None] + 1) * bin_h[None, :]).astype(np.int64)
+        + roi_start_h[None, :],
+        0,
+        H,
+    )
+    wstart = np.clip(
+        np.floor(pw[:, None] * bin_w[None, :]).astype(np.int64) + roi_start_w[None, :],
+        0,
+        W,
+    )
+    wend = np.clip(
+        np.ceil((pw[:, None] + 1) * bin_w[None, :]).astype(np.int64)
+        + roi_start_w[None, :],
+        0,
+        W,
+    )
+
+    empty = (hend <= hstart)[:, None, :] | (wend <= wstart)[None, :, :]  # (P, Q, K)
+
+    per_k = max(pooled_h * pooled_w * C * 4, 1)
+    chunk = int(max(1, _LOWMEM_GATHER_BUDGET // per_k))
+    # xb = x[batch_idx[k0:k1]] 物化 B*C*H*W，同样受预算约束（取两者较小值）
+    per_k_x = max(C * H * W * 4, 1)
+    chunk = min(chunk, int(max(1, _LOWMEM_GATHER_BUDGET // per_k_x)))
+    finfo_min = np.finfo(np.float32).min
+
+    for k0 in range(0, K, chunk):
+        k1 = min(k0 + chunk, K)
+        B = k1 - k0
+        xb = x[batch_idx[k0:k1]]  # (B, C, H, W)
+        hs, he = hstart[:, k0:k1], hend[:, k0:k1]
+        ws, we = wstart[:, k0:k1], wend[:, k0:k1]
+        emp = empty[:, :, k0:k1]
+        max_bh = max(int((he - hs).max()), 0)
+        max_bw = max(int((we - ws).max()), 0)
+        acc = np.full((pooled_h, pooled_w, B, C), -np.inf, dtype=np.float32)
+        bb = np.arange(B)[None, None, :, None]
+        cb = np.arange(C)[None, None, None, :]
+        for dy in range(max_bh):
+            y = hs + dy
+            vy = y < he
+            yi = np.clip(y, 0, H - 1)
+            for dx in range(max_bw):
+                xv = ws + dx
+                vw = xv < we
+                xi = np.clip(xv, 0, W - 1)
+                g = xb[
+                    bb, cb, yi[:, None, :, None], xi[None, :, :, None]
+                ]  # (P, Q, B, C)
+                valid = (
+                    vy[:, None, :, None] & vw[None, :, :, None] & (~emp[:, :, :, None])
+                )
+                g = np.where(np.isnan(g), -np.inf, g)
+                np.maximum(acc, np.where(valid, g, -np.inf), out=acc)
+        res = np.where(acc == -np.inf, finfo_min, acc)
+        out[k0:k1] = np.where(emp[:, :, :, None], np.float32(0.0), res).transpose(
+            2, 3, 0, 1
+        )
+    return out
+
+
 def _roi_pool_compute(x, rois, pooled_h, pooled_w, spatial_scale_h, spatial_scale_w):
     """ROI Pooling core computation (shared by golden).
 
     Equal scale uses roi_pool; unequal scale uses _roi_pool_torch.
+    超大 shape自动切换到 _roi_pool_torch_lowmem——与 _roi_pool_torch 数学语义逐点一致的低内存实现。
     """
     output_size = (int(pooled_h), int(pooled_w))
     ssh = float(spatial_scale_h)
     ssw = float(spatial_scale_w)
     if abs(ssh - ssw) < 1e-9:
         return roi_pool(x, rois, output_size=output_size, spatial_scale=ssh)
-    return _roi_pool_torch(x, rois, int(pooled_h), int(pooled_w), ssh, ssw)
+    if (
+        _torch_path_estimate_bytes(x, rois, int(pooled_h), int(pooled_w))
+        <= _TORCH_PATH_MEM_BUDGET
+    ):
+        return _roi_pool_torch(x, rois, int(pooled_h), int(pooled_w), ssh, ssw)
+    return torch.from_numpy(
+        _roi_pool_torch_lowmem(
+            x.detach().numpy(),
+            rois.detach().numpy(),
+            int(pooled_h),
+            int(pooled_w),
+            ssh,
+            ssw,
+        )
+    )
 
 
 class RoiPoolingKernelSpec:
@@ -186,7 +319,7 @@ class RoiPoolingKernelSpec:
             out = out.half()
         return [out.numpy()]
 
-    def customize_inputs(x, rois, roi_actual_num, **kwargs):
+    def customize_inputs(x, rois, roi_actual_num=None, **kwargs):
         rois = _fix_batch_idx(x, rois)
         return (x, rois, roi_actual_num)
 
@@ -195,6 +328,7 @@ class RoiPoolingKernelSpec:
             self,
             x,
             rois,
+            roi_actual_num=None,
             *,
             pooled_h,
             pooled_w,
@@ -219,11 +353,28 @@ class RoiPoolingKernelSpec:
                         spatial_scale=self._ssh,
                     )
                 ]
-            return [
-                _roi_pool_torch(
-                    self._x, self._rois, *self._output_size, self._ssh, self._ssw
+            # 与 golden() 相同的内存预算路由：超预算时切换 lowmem
+            if (
+                _torch_path_estimate_bytes(self._x, self._rois, *self._output_size)
+                <= _TORCH_PATH_MEM_BUDGET
+            ):
+                return [
+                    _roi_pool_torch(
+                        self._x, self._rois, *self._output_size, self._ssh, self._ssw
+                    )
+                ]
+            # lowmem 为 numpy(fp32) 实现：搬 CPU 计算（fp16 先提升，与 golden() 语义一致），
+            orig_dtype = self._x.dtype
+            out = torch.from_numpy(
+                _roi_pool_torch_lowmem(
+                    self._x.float().detach().cpu().numpy(),
+                    self._rois.float().detach().cpu().numpy(),
+                    *self._output_size,
+                    self._ssh,
+                    self._ssw,
                 )
-            ]
+            ).to(device=self._x.device, dtype=orig_dtype)
+            return [out]
 
     third_party = {"torch": ThirdPartyImpl}
     tolerance = {
