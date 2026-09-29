@@ -79,14 +79,14 @@
     <tr>
       <td>w_input</td>
       <td>输入</td>
-      <td>输入侧权重（kernel 布局），对应 $W_{ir}/W_{iz}/W_{in}$。形状为 $[I, 3H]$（首层）或 $[D*H, 3H]$（非首层）。</td>
+      <td>输入侧权重（kernel 布局），对应 $W_{ir}/W_{iz}/W_{in}$。形状为 $[3H, I]$（首层）或 $[3H, D*H]$（非首层）。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>w_hidden</td>
       <td>输入</td>
-      <td>隐状态侧权重（kernel 布局），对应 $W_{hr}/W_{hz}/W_{hn}$。形状为 $[H, 3H]$。</td>
+      <td>隐状态侧权重（kernel 布局），对应 $W_{hr}/W_{hz}/W_{hn}$。形状为 $[3H, H]$。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
     </tr>
@@ -149,7 +149,7 @@
     <tr>
       <td>batch_sizes</td>
       <td>可选输入</td>
-      <td>不定长序列各时刻有效 batch 数。形状为 (T)。当前实现按定长处理。</td>
+      <td>不定长序列各时刻有效 batch 数。形状为 (T)。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
@@ -219,7 +219,7 @@
     <tr>
       <td>batch_first</td>
       <td>属性</td>
-      <td>input/dy/dx 的 batch 是否在第一维。当前 aclnn 层拒绝 true。默认 false。</td>
+      <td>input/dy/dx 的 batch 是否在第一维。默认 false。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -227,8 +227,8 @@
 
 ## 约束说明
 
-- 输入 x 为 3D 定长 (T, B, I)；`batch_first=true` 与真正的不定长（PackedSequence）暂不支持。
-- 权重为 kernel 布局：`w_input` 为 $[I, 3H]$（首层）或 $[D*H, 3H]$（非首层），`w_hidden` 为 $[H, 3H]$；aclnn 入参的 `params` 按 PyTorch 布局 $[3H, *]$ 传入。
+- 输入 x 为 3D 定长 (T, B, I)。
+- 权重为 kernel 布局：`w_input` 为 $[3H, I]$（首层）或 $[3H, D*H]$（非首层），`w_hidden` 为 $[3H, H]$；aclnn 入参的 `params` 按 PyTorch 布局 $[3H, *]$ 传入。
 - 门控输入（reset_gate/update_gate/new_gate/h_n/output_h/dy）均要求 (T, B, H) 且 dtype 与 x 一致。
 - `has_bias=false` 时不计算 bias 梯度（`db_input`/`db_hidden` 无有效输出）。
 - x/dy/dh/output_h 及各门控支持 ND 与 NCL 两种格式；`batch_sizes`（1D）仅支持 ND。
