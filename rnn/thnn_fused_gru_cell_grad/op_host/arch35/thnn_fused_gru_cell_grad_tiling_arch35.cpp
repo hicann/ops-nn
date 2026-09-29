@@ -553,8 +553,27 @@ static ge::graphStatus ThnnFusedGruCellGradTilingFunc(gert::TilingContext* conte
     return SetWorkspaceSize(context, usrWorkspaceBytes);
 }
 
-// 官方仓规范注册：tiling 文件内 IMPL_OP_OPTILING（对齐 static {OP_TYPE}TilingFunc
-// 唯一命名 + 零符号导出；def.cpp 不再经 AICore().SetTiling 跨文件绑定）
-IMPL_OP_OPTILING(ThnnFusedGruCellGrad).Tiling(ThnnFusedGruCellGradTilingFunc);
+// TilingParse 编译期填充平台参数（coreNum/ubSize）到 CompileInfo
+struct ThnnFusedGruCellGradCompileInfo {
+    uint64_t coreNum{0};
+    uint64_t ubSize{0};
+};
+
+ge::graphStatus TilingPrepareForThnnFusedGruCellGrad(gert::TilingParseContext* context)
+{
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
+    auto compileInfo = context->GetCompiledInfo<ThnnFusedGruCellGradCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    auto ap = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo->coreNum = ap.GetCoreNumAiv();
+    ap.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+// IMPL_OP_OPTILING 注册：static TilingFunc 唯一命名 + 零符号导出；def.cpp 不经 SetTiling 绑定
+IMPL_OP_OPTILING(ThnnFusedGruCellGrad)
+    .Tiling(ThnnFusedGruCellGradTilingFunc)
+    .TilingParse<ThnnFusedGruCellGradCompileInfo>(TilingPrepareForThnnFusedGruCellGrad);
 
 } // namespace optiling
