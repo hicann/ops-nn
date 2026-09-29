@@ -448,7 +448,7 @@
 | [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md) | 实现兼容tf.scatter\_add和tf.scatter\_nd\_add的功能，将updates中的值按指定的索引加到varRef的切片上。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnThnnFusedGruCell](../../rnn/thnn_fused_gru_cell/docs/aclnnThnnFusedGruCell.md) | 对GRU的单个时间步执行门控融合计算，一次计算产出新隐状态hy与反向计算复用的中间量storage。 | - | 默认确定性实现 |
 | [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md) | 完成LSTM单元前向计算中，矩阵乘法后的后续计算。 | 默认确定性实现 | - |
-| [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 | - |
+| [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnThnnFusedGruCellBackward](../../rnn/thnn_fused_gru_cell_grad/docs/aclnnThnnFusedGruCellBackward.md) | 完成单个时间步GRU反向的计算。 | 默认确定性实现 | - |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 | 默认确定性实现 |

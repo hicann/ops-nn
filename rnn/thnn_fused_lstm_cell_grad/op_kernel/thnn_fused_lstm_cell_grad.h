@@ -37,6 +37,22 @@ constexpr int64_t OFFSET_J = 2;
 constexpr int64_t OFFSET_O = 3;
 constexpr int64_t MAX_COPY_LINES = 4095;
 
+// 高精度 tanh：ADV API 分段补偿算法（|x|<0.55 九次奇多项式 + exp 式，Reg 寄存器
+// 实现）。默认 Tanh 公式 (e^{2x}-1)/(e^{2x}+1) 在 x→0 邻域因 e^{2x}-1 相消存在
+// ~2e-8 绝对误差地板，经 dgo=(dhy·tanh·o·(1-o)) 与 grad_c=(dhy·o·(1-tanh²)+dc)
+// 两条路径进入小值带输出；多项式分支近零相对误差有界（~1e-9），消除该地板。
+// 编译期 if constexpr 分派（tanh_c310_impl.h），无需临时 buffer。
+// 芯片隔离：SUBSECTION_COMPENSATION 仅 c310 核系支持——CANN adv_api/math/
+// tanh.h 只在 c310 架构提供 TanhConfig 模板重载。c310 系成员（NpuArch）：
+// 3510=Ascend950 系列（A5，950DT/950PR）、3003=KirinX90、3113=Kirin9030、
+// 5102=预留（无量产 ini）；A2/A3（__NPU_ARCH__=2201，ascend910b/ascend910_93）
+// 走默认 Tanh。隔离条件与 tanh.h 的 c310 分派逐字一致。
+#if defined(__NPU_ARCH__) && \
+    (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102 || __NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
+#define TANH_HIGHPREC_ENABLED 1
+constexpr TanhConfig TANH_HIGHPREC_CONFIG = {TanhAlgo::SUBSECTION_COMPENSATION};
+#endif
+
 struct blockParams {
     int64_t mShape{0};
     int64_t nShape{0};
@@ -508,8 +524,14 @@ private:
 
     __aicore__ inline void ComputeDgatesDC(int64_t calcSizeAlign)
     {
-        // tanh
+#ifdef TANH_HIGHPREC_ENABLED
+        // tanh —— SUBSECTION_COMPENSATION 高精度分段（A5/c310 系，Reg 寄存器
+        // 实现，近零相对误差 ~1e-9，消除 exp 式 e^{2x}-1 相消的 ~2e-8 绝对误差地板）
+        Tanh<float, false, TANH_HIGHPREC_CONFIG>(tanhTensor, cTensor, static_cast<uint32_t>(calcSizeAlign));
+#else
+        // tanh —— 非 c310 架构（A2/A3：ascend910b/ascend910_93）默认实现
         Tanh(tanhTensor, cTensor, calcSizeAlign);
+#endif
         PipeBarrier<PIPE_V>();
         Mul(dcTensor, tanhTensor, tanhTensor, calcSizeAlign);
         PipeBarrier<PIPE_V>();
@@ -712,18 +734,27 @@ private:
         int64_t offset = start * tiling.hiddenSize * LSTM_GATE_SIZE + reduceBlock_.offset;
         int64_t copyInLoop = CeilDiv(mLines, MAX_COPY_LINES);
         for (int64_t copyLoopIdx = 0; copyLoopIdx < copyInLoop; copyLoopIdx++) {
-            int64_t curLines = copyLoopIdx == copyInLoop - 1 ? mLines % MAX_COPY_LINES : MAX_COPY_LINES;
+            // 末块行数：min(块上限, 剩余行数)——mLines 为 MAX_COPY_LINES 整倍数时
+            // 取模会得 0 导致漏搬整块
+            int64_t remainLines = mLines - copyLoopIdx * MAX_COPY_LINES;
+            int64_t curLines = remainLines < MAX_COPY_LINES ? remainLines : MAX_COPY_LINES;
             DataCopyExtParams dataCopyParams{
                 static_cast<uint16_t>(curLines), static_cast<uint32_t>(reduceBlock_.nReduceShape * FLOAT_BYTES),
                 static_cast<uint32_t>((tiling.hiddenSize * LSTM_GATE_SIZE - reduceBlock_.nReduceShape) * FLOAT_BYTES),
                 0u, 0u};
             int64_t currentOffset = offset + copyLoopIdx * LSTM_GATE_SIZE * tiling.hiddenSize * MAX_COPY_LINES;
+            // 目的地址按块递增：多块搬运时后块须接续前块（nReduceShapeAlign 与
+            // nReduceShape 相等——baseReduceN 已按 8/16 对齐，32B 地址对齐满足）
+            int64_t dstOffset = copyLoopIdx * MAX_COPY_LINES * reduceBlock_.nReduceShapeAlign;
             if (loopTime >= 1) {
-                DataCopyPad(subDataTensor, outputGm.reduceTempGm[currentOffset], dataCopyParams, padInFloatParams);
+                DataCopyPad(subDataTensor[dstOffset], outputGm.reduceTempGm[currentOffset], dataCopyParams,
+                            padInFloatParams);
             } else if constexpr (!std::is_same<T, float>::value) {
-                DataCopyPad(subDataTensor, outputGm.dgatesTempGm[currentOffset], dataCopyParams, padInFloatParams);
+                DataCopyPad(subDataTensor[dstOffset], outputGm.dgatesTempGm[currentOffset], dataCopyParams,
+                            padInFloatParams);
             } else {
-                DataCopyPad(subDataTensor, outputGm.dgatesGm[currentOffset], dataCopyParams, padInFloatParams);
+                DataCopyPad(subDataTensor[dstOffset], outputGm.dgatesGm[currentOffset], dataCopyParams,
+                            padInFloatParams);
             }
         }
     }

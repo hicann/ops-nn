@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&950DT系列产品</term>：不支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3系列产品</term>：支持
@@ -421,11 +421,11 @@ int main() {
   aclTensor* dcPrev = nullptr;
   aclTensor* db = nullptr;
 
-  std::vector<float> dhyHostData(n * hiddenSize, 1.0f); // 1*1*8 = 8个1
-  std::vector<float> dcHostData(n * hiddenSize, 1.0f); // (8+8)*32 = 16*32 = 512个1
-  std::vector<float> cxHostData(n * hiddenSize, 1.0f); // (8+8)*32 = 16*32 = 512个1
-  std::vector<float> cyHostData(n * hiddenSize, 1.0f); // 32个1
-  std::vector<float> storageHostData(n * hiddenSize * 4, 1.0f); // 32个1
+  std::vector<float> dhyHostData(n * hiddenSize, 1.0f); // 1*8 = 8个1
+  std::vector<float> dcHostData(n * hiddenSize, 1.0f); // 1*8 = 8个1
+  std::vector<float> cxHostData(n * hiddenSize, 1.0f); // 1*8 = 8个1
+  std::vector<float> cyHostData(n * hiddenSize, 1.0f); // 1*8 = 8个1
+  std::vector<float> storageHostData(n * hiddenSize * 4, 1.0f); // 1*8*4 = 32个1
 
   // 反向传播输出主机数据（初始化为0）
   std::vector<float> dgatesHostData(n * hiddenSize * 4, 0.0f);

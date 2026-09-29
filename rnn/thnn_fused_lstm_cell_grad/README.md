@@ -4,7 +4,7 @@
 
 | 产品                                                                            | 是否支持 |
 | :------------------------------------------------------------------------------ | :------: |
-| <term>Ascend 950PR&950DT系列产品</term>                                                |    ×     |
+| <term>Ascend 950PR&950DT系列产品</term>                                                |    √     |
 | <term>Atlas A3系列产品</term>                         |    √     |
 | <term>Atlas A2系列产品</term>    |    √     |
 | <term>Atlas 200I/500 A2推理产品</term>                                          |    ×     |
@@ -117,14 +117,14 @@ $$
     </tr>
     <tr>
       <td>dc_prev</td>
-      <td>输入</td>
+      <td>输出</td>
       <td><ul><li>表示LSTMCell正向中输入细胞状态的梯度。</li><li>shape为[batch，hidden_size]。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>db</td>
-      <td>输入</td>
+      <td>输出</td>
       <td><ul><li>表示LSTMCell正向中输入偏置的梯度。</li><li>shape为[4 * hidden_size]。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
@@ -133,7 +133,7 @@ $$
       <td>has_bias</td>
       <td>属性</td>
       <td>是否需要计算bias梯度。</td>
-      <td>STRING</td>
+      <td>BOOL</td>
       <td>-</td>
     </tr>
   </tbody></table>
