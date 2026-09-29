@@ -60,7 +60,7 @@ struct ASWOffsetParam {
 class WeightQuantBmmAswBlock {
 public:
     __aicore__ inline WeightQuantBmmAswBlock() {}
-    __aicore__ inline void Init(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData,
+    __aicore__ inline void Init(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWCustomTilingDataParams* tilingData,
                                 uint32_t blockIdx);
     __aicore__ inline void UpdateBasicIndex(uint64_t roundIdx);
     __aicore__ inline void UpdateBlockParams(uint64_t roundIdx);
@@ -71,7 +71,7 @@ public:
 public:
     ASWTilingParam params_;
     ASWOffsetParam offset_;
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData_;
+    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWCustomTilingDataParams* tilingData_;
 
 private:
     const uint64_t WINDOW_LEN = 4;
@@ -79,21 +79,19 @@ private:
 };
 
 __aicore__ inline void WeightQuantBmmAswBlock::Init(
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData, uint32_t blockIdx)
+    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWCustomTilingDataParams* tilingData, uint32_t blockIdx)
 {
     params_.mSplitAddrOffset = 0;
     params_.nSplitAddrOffset = 0;
     blockIdx_ = blockIdx;
     tilingData_ = tilingData;
-    params_.mCnt = CeilDiv(static_cast<uint64_t>(tilingData_->matmulTiling.M),
-                           static_cast<uint64_t>(tilingData_->matmulTiling.baseM));
-    params_.nCnt = CeilDiv(static_cast<uint64_t>(tilingData_->matmulTiling.N),
-                           static_cast<uint64_t>(tilingData_->matmulTiling.baseN));
+    params_.mCnt = CeilDiv(static_cast<uint64_t>(tilingData_->m), static_cast<uint64_t>(tilingData_->baseM));
+    params_.nCnt = CeilDiv(static_cast<uint64_t>(tilingData_->n), static_cast<uint64_t>(tilingData_->baseN));
     params_.totalCnt = params_.mCnt * params_.nCnt;
-    params_.mBaseTail = tilingData_->matmulTiling.M - (params_.mCnt - 1) * tilingData_->matmulTiling.baseM;
-    params_.nBaseTail = tilingData_->matmulTiling.N - (params_.nCnt - 1) * tilingData_->matmulTiling.baseN;
-    params_.totalTailTile = tilingData_->mTailTile * tilingData_->nTailTile;
-    params_.round = CeilDiv(params_.totalCnt, static_cast<uint64_t>(tilingData_->matmulTiling.usedCoreNum));
+    params_.mBaseTail = tilingData_->m - (params_.mCnt - 1) * tilingData_->baseM;
+    params_.nBaseTail = tilingData_->n - (params_.nCnt - 1) * tilingData_->baseN;
+    params_.totalTailTile = tilingData_->mTailCnt * tilingData_->nTailCnt;
+    params_.round = CeilDiv(params_.totalCnt, static_cast<uint64_t>(tilingData_->usedCoreNum));
     params_.mCoreNum = Min(WINDOW_LEN, params_.mCnt);
     params_.mainRow = params_.mCnt / params_.mCoreNum - 1;
     params_.mTailCoreNum = params_.mCnt - params_.mCoreNum * params_.mainRow;
@@ -102,7 +100,7 @@ __aicore__ inline void WeightQuantBmmAswBlock::Init(
 __aicore__ inline void WeightQuantBmmAswBlock::UpdateBasicIndex(uint64_t roundIdx)
 {
     uint64_t newBlockIdx = (roundIdx == params_.round - 1) ? (blockIdx_ / params_.totalTailTile) : blockIdx_;
-    params_.index = newBlockIdx + roundIdx * tilingData_->matmulTiling.usedCoreNum;
+    params_.index = newBlockIdx + roundIdx * tilingData_->usedCoreNum;
     uint64_t rowIdx = params_.index / params_.nCnt / params_.mCoreNum;
     if (rowIdx < params_.mainRow) {
         params_.mIndex = rowIdx * params_.mCoreNum + params_.index % params_.mCoreNum;
@@ -121,16 +119,16 @@ __aicore__ inline void WeightQuantBmmAswBlock::UpdateBasicIndex(uint64_t roundId
 
 __aicore__ inline void WeightQuantBmmAswBlock::UpdateBlockParams(uint64_t roundIdx)
 {
-    params_.singleCoreM = params_.mIndex != (params_.mCnt - 1) ? tilingData_->matmulTiling.baseM : params_.mBaseTail;
-    params_.singleCoreN = params_.nIndex != (params_.nCnt - 1) ? tilingData_->matmulTiling.baseN : params_.nBaseTail;
-    if (tilingData_->mTailTile == 1 && tilingData_->nTailTile == 1) {
+    params_.singleCoreM = params_.mIndex != (params_.mCnt - 1) ? tilingData_->baseM : params_.mBaseTail;
+    params_.singleCoreN = params_.nIndex != (params_.nCnt - 1) ? tilingData_->baseN : params_.nBaseTail;
+    if (tilingData_->mTailCnt == 1 && tilingData_->nTailCnt == 1) {
         return;
     }
     if (roundIdx == params_.round - 1) {
-        uint64_t singleCoreMSplit = (params_.singleCoreM + tilingData_->mTailTile - 1) / tilingData_->mTailTile;
-        uint64_t singleCoreNSplit = (params_.singleCoreN + tilingData_->nTailTile - 1) / tilingData_->nTailTile;
-        uint64_t mSplitIdx = (blockIdx_ % params_.totalTailTile) % tilingData_->mTailTile;
-        uint64_t nSplitIdx = (blockIdx_ % params_.totalTailTile) / tilingData_->mTailTile;
+        uint64_t singleCoreMSplit = (params_.singleCoreM + tilingData_->mTailCnt - 1) / tilingData_->mTailCnt;
+        uint64_t singleCoreNSplit = (params_.singleCoreN + tilingData_->nTailCnt - 1) / tilingData_->nTailCnt;
+        uint64_t mSplitIdx = (blockIdx_ % params_.totalTailTile) % tilingData_->mTailCnt;
+        uint64_t nSplitIdx = (blockIdx_ % params_.totalTailTile) / tilingData_->mTailCnt;
         params_.mSplitAddrOffset = mSplitIdx * singleCoreMSplit;
         params_.nSplitAddrOffset = nSplitIdx * singleCoreNSplit;
         if (params_.mSplitAddrOffset >= params_.singleCoreM || params_.nSplitAddrOffset >= params_.singleCoreN) {
@@ -160,29 +158,29 @@ __aicore__ inline void WeightQuantBmmAswBlock::ResetAddressOffsets()
 template <bool aTrans, bool bTrans, CubeFormat formatX2>
 __aicore__ inline void WeightQuantBmmAswBlock::CalcGMOffset()
 {
-    uint64_t mOffset = params_.mIndex * tilingData_->matmulTiling.baseM + params_.mSplitAddrOffset;
-    uint64_t nOffset = params_.nIndex * tilingData_->matmulTiling.baseN + params_.nSplitAddrOffset;
+    uint64_t mOffset = params_.mIndex * tilingData_->baseM + params_.mSplitAddrOffset;
+    uint64_t nOffset = params_.nIndex * tilingData_->baseN + params_.nSplitAddrOffset;
     if constexpr (aTrans) {
         offset_.offsetA = mOffset;
     } else {
-        offset_.offsetA = mOffset * tilingData_->matmulTiling.Ka;
+        offset_.offsetA = mOffset * tilingData_->k;
     }
-    offset_.offsetA += offset_.batchAOffset * tilingData_->matmulTiling.M * tilingData_->matmulTiling.Ka;
+    offset_.offsetA += offset_.batchAOffset * tilingData_->m * tilingData_->k;
 
     if constexpr (bTrans) {
-        offset_.offsetB = nOffset * tilingData_->matmulTiling.Kb;
+        offset_.offsetB = nOffset * tilingData_->k;
     } else {
         offset_.offsetB = nOffset;
     }
-    offset_.offsetB += offset_.batchBOffset * tilingData_->matmulTiling.N * tilingData_->matmulTiling.Kb;
+    offset_.offsetB += offset_.batchBOffset * tilingData_->n * tilingData_->k;
 
-    offset_.offsetC = mOffset * tilingData_->matmulTiling.N + nOffset;
-    offset_.offsetC += offset_.batchCOffset * tilingData_->matmulTiling.M * tilingData_->matmulTiling.N;
+    offset_.offsetC = mOffset * tilingData_->n + nOffset;
+    offset_.offsetC += offset_.batchCOffset * tilingData_->m * tilingData_->n;
     offset_.offsetScale = nOffset;
-    if (tilingData_->matmulTiling.isBias) {
+    if (tilingData_->isBias) {
         offset_.offsetBias = nOffset;
-        if (static_cast<bool>(tilingData_->params.biasWithBatch)) {
-            offset_.offsetBias += offset_.batchCOffset * tilingData_->matmulTiling.N;
+        if (static_cast<bool>(tilingData_->biasWithBatch)) {
+            offset_.offsetBias += offset_.batchCOffset * tilingData_->n;
         }
     }
 }

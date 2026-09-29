@@ -21,7 +21,6 @@
 #include "kernel_run_context_facker.h"
 #include "../../../op_host/op_tiling/arch35/weight_quant_batch_matmul_v2_adaptive_split_tiling.h"
 #include "../../../op_host/op_tiling/arch35/weight_quant_batch_matmul_v2_adaptive_sliding_window_tiling.h"
-#include "../../../op_host/op_tiling/arch35/weight_quant_batch_matmul_v2_asw_cmct_tiling.h"
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 
@@ -268,8 +267,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
     ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
 
-    // Directly exercise ASW tiling template (priority 11) which is never selected by the framework
-    // because ASW_CMCT (priority 10) always returns true for valid shapes. This covers ASW-specific
+    // Directly exercise the ASW tiling template (priority 11) to cover ASW-specific
     // methods: DoOpTiling, AnalyseSlidingWinInfo, CalcBasicBlock, CalcTailBasicBlock, CalL1Tiling,
     // SetTilingData, GetTilingKey, etc.
     auto aswTiling = optiling::weight_quant_batch_matmul_v2::WeightQuantBatchMatmulV2TilingASW(tilingContext);
@@ -379,10 +377,6 @@ TEST(TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTilingDirect, DirectDoTili
     // Call ASW DoTiling directly (bypass framework template selection which rejects INT4+NZ on this platform)
     auto aswTiling = optiling::weight_quant_batch_matmul_v2::WeightQuantBatchMatmulV2TilingASW(tilingContext);
     ASSERT_EQ(aswTiling.DoTiling(), ge::GRAPH_SUCCESS);
-
-    // Also call ASW_CMCT DoTiling directly to cover 4-bit dtype and NZ tail split branches
-    auto aswCmctTiling = optiling::weight_quant_batch_matmul_v2::WeightQuantBatchMatmulV2TilingAswCmct(tilingContext);
-    ASSERT_EQ(aswCmctTiling.DoTiling(), ge::GRAPH_SUCCESS);
 }
 
 TEST_P(TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTiling, generalTest)
@@ -398,36 +392,36 @@ TEST_P(TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTiling, generalTest)
 // Note: socversion
 //        0: RESERVED
 static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
-    {"Case_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 285250051UL},
-    {"Case_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 302027267UL},
-    {"Case_1_2048_4096_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_2_2_0_0", 2, 285250051UL},
-    {"Case_1_2048_4096_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_2_2_0_0", 2, 302027267UL},
-    {"Case_3072_2048_4096_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_14_14_0_0", 14, 285250051UL},
-    {"Case_3072_2048_4096_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_14_14_0_0", 14, 302027267UL},
-    {"Case_64_64_64_0_0_0_1_1_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8887767555UL},
-    {"Case_64_64_64_0_0_0_1_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8875184643UL},
-    {"Case_64_64_64_0_0_0_1_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 8879378947UL},
-    {"Case_64_64_64_0_0_0_1_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 8883573251UL},
-    {"Case_64_64_64_0_0_0_0_1_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 297832963UL},
-    {"Case_64_64_64_0_0_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 293638659UL},
-    {"Case_64_64_64_0_0_0_0_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 289444355UL},
-    {"Case_64_64_64_0_0_0_1_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8904544771UL},
-    {"Case_64_64_64_0_0_0_1_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8891961859UL},
-    {"Case_64_64_64_0_0_0_1_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 8896156163UL},
-    {"Case_64_64_64_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 8900350467UL},
-    {"Case_64_64_64_0_0_0_0_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 314610179UL},
-    {"Case_64_64_64_0_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 310415875UL},
-    {"Case_64_64_64_0_0_0_0_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 306221571UL},
+    {"Case_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 285229571UL},
+    {"Case_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 302006787UL},
+    {"Case_1_2048_4096_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_2_2_0_0", 2, 285229571UL},
+    {"Case_1_2048_4096_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_2_2_0_0", 2, 302006787UL},
+    {"Case_3072_2048_4096_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_14_14_0_0", 14, 285229571UL},
+    {"Case_3072_2048_4096_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_14_14_0_0", 14, 302006787UL},
+    {"Case_64_64_64_0_0_0_1_1_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8887747075UL},
+    {"Case_64_64_64_0_0_0_1_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8875164163UL},
+    {"Case_64_64_64_0_0_0_1_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 8879358467UL},
+    {"Case_64_64_64_0_0_0_1_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 8883552771UL},
+    {"Case_64_64_64_0_0_0_0_1_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 297812483UL},
+    {"Case_64_64_64_0_0_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 293618179UL},
+    {"Case_64_64_64_0_0_0_0_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 289423875UL},
+    {"Case_64_64_64_0_0_0_1_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8904524291UL},
+    {"Case_64_64_64_0_0_0_1_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 8891941379UL},
+    {"Case_64_64_64_0_0_0_1_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 8896135683UL},
+    {"Case_64_64_64_0_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 8900329987UL},
+    {"Case_64_64_64_0_0_0_0_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 4, 314589699UL},
+    {"Case_64_64_64_0_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 310395395UL},
+    {"Case_64_64_64_0_0_0_0_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 1, 306201091UL},
     // enable_uncache=1 to cover SetDisableL2cache L2 uncache logic in ASW
-    {"Uncache_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 4, 285250051UL},
-    {"Uncache_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 4, 302027267UL},
+    {"Uncache_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 4, 285229571UL},
+    {"Uncache_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 4, 302006787UL},
     // n=128 aligned to 128B for INT8 → triggers rightNotL2Cache=true in SetDisableL2cache
-    {"Uncache_128_128_128_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 8, 285250051UL},
-    {"Uncache_128_128_128_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 8, 302027267UL},
+    {"Uncache_128_128_128_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 8, 285229571UL},
+    {"Uncache_128_128_128_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 8, 302006787UL},
     // transB + n=128 aligned to 128B → triggers flagB transB=true and rightNotL2Cache
-    {"Uncache_128_128_128_0_0_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 293638659UL},
+    {"Uncache_128_128_128_0_0_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 293618179UL},
     // transA + enable_uncache → covers flagA transA=true branch
-    {"Uncache_128_128_128_0_0_0_0_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 2, 289444355UL},
+    {"Uncache_128_128_128_0_0_0_0_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 2, 289423875UL},
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTiling, testing::ValuesIn(casesParams));

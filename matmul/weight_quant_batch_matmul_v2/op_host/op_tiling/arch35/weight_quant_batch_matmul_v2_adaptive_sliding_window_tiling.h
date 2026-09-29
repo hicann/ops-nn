@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,19 +21,10 @@
 namespace optiling {
 namespace weight_quant_batch_matmul_v2 {
 struct AdaptiveSlidingWindow {
-    uint64_t baseM = 0; // 主窗口基本块大小
-    uint64_t baseN = 0; // 主窗口基本块大小
-    uint64_t baseK = 0;
-    uint64_t mBlockCnt = 0;       // m方向基本块数量
-    uint64_t nBlockCnt = 0;       // n方向基本块数量
-    uint64_t totalBlockCnt = 0;   // 基本块总数
-    uint64_t mTail = 0;           // m方向尾块的有效行数
-    uint64_t nTail = 0;           // n方向尾块的有效列数
-    uint64_t totalWinCnt = 0;     // 窗口总数，及核执行最大轮数
-    uint64_t tailWinBlockCnt = 0; // 尾窗口包含的基本块数量
-    uint64_t mTailTile = 1;       // 尾部窗口基本块m方向重切粒度
-    uint64_t nTailTile = 1;       // 尾部窗口基本块n方向重切粒度
-    bool useTailWinLogic = true;  // 是否使用尾窗口处理逻辑
+    uint64_t mBlockCnt = 0; // m方向基本块数量
+    uint64_t nBlockCnt = 0; // n方向基本块数量
+    uint64_t mTailTile = 1; // 尾部窗口基本块m方向重切粒度
+    uint64_t nTailTile = 1; // 尾部窗口基本块n方向重切粒度
 };
 
 struct BasicTiling {
@@ -55,6 +46,26 @@ struct BasicTiling {
     uint32_t iterBatch = 0;
 };
 
+// ASW tiling 的中间计算结果
+struct ASWRunInfo {
+    uint64_t usedCoreNum = 1;
+    uint64_t baseM = 1;
+    uint64_t baseN = 1;
+    uint64_t baseK = 1;
+    uint64_t stepM = 1;
+    uint64_t stepN = 1;
+    uint64_t stepKa = 1;
+    uint64_t stepKb = 1;
+    uint64_t dbL0c = 1;
+    uint64_t l1BufferNum = 2;
+    uint64_t mBlockCnt = 1; // m方向基本块数量
+    uint64_t nBlockCnt = 1; // n方向基本块数量
+    uint64_t mTailCnt = 1;  // 尾轮基本块m方向重切粒度
+    uint64_t nTailCnt = 1;  // 尾轮基本块n方向重切粒度
+    double cubeBoundParam = 0.0;
+    double cubeBoundEdge = 0.0;
+};
+
 class WeightQuantBatchMatmulV2TilingASW : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2TilingASW(gert::TilingContext* context) : WeightQuantBatchMatmulV2Tiling(context)
@@ -72,26 +83,32 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
-    std::unique_ptr<wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams> tilingData_;
-    size_t tilingDataSize_ = sizeof(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams);
+    std::unique_ptr<wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWCustomTilingDataParams> tilingData_;
+    size_t tilingDataSize_ = sizeof(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWCustomTilingDataParams);
 
     ge::graphStatus InstantiateTilingData();
-    void AnalyseSlidingWinInfo();
-    void CalcBasicBlock();
-    uint64_t GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
-    uint64_t GetSizeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
-    void CalcTailBasicBlock();
-    bool IsValidWeightNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
-    uint32_t CalUsedCoreNum() const;
-    uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile) const;
+    void ResetBaseTiling();
+    ge::graphStatus CalRebalanceBlock();
+    uint64_t GetMaxBaseWithLimit(uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix,
+                                 bool isMemoryBound) const;
+    double GetBalanceRateWithTail(uint64_t baseM, uint64_t baseN) const;
+    void CalBaseK();
+    void CalTailBasicBlock();
+    bool IsValidWeightNzTailSplit(uint64_t splitCnt) const;
     void CalL1Tiling();
+    void CalL1BufferNum();
+    void MapRunInfoToTiling();
+    // 以下接口保留给 iterbatch tiling 复用
     void CalL1TilingDepth(uint64_t leftL1Size);
     void CalStepKs();
     bool CheckAntiQuantScale(uint64_t baseN, uint64_t dbL0c = 1) const;
     void SetTilingData();
     void SetBatchParams();
     wqbmmv2_tiling::L2CacheMode SetDisableL2cache(uint32_t mL1, uint32_t kaL1, uint32_t kbL1, uint32_t nL1) const;
+    uint64_t GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
+    uint64_t GetSizeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
     BasicTiling basicTiling_;
+    ASWRunInfo runInfo_;
 
 private:
     OptimizationAlgorithmSubCategory algorithmSubCategory_ = OptimizationAlgorithmSubCategory::ASW;

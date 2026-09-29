@@ -105,42 +105,38 @@ struct WeightQuantBatchMatmulV2ASWTilingDataParams {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-// ASW cmct kernel 的基础 tiling 结构
-struct WqbmmV2AswBasicTilingData {
+// ASW kernel 专用平铺 tiling 结构：基础块/尾块参数 + wqbmmv2 量化与多 batch 参数
+struct WeightQuantBatchMatmulV2ASWCustomTilingDataParams {
     uint32_t usedCoreNum = 0;
     uint32_t m = 0;
     uint32_t n = 0;
     uint32_t k = 0;
-    uint32_t mL1 = 0;
-    uint32_t nL1 = 0;
-    uint32_t kL1 = 0;
     uint32_t baseM = 0;
     uint32_t baseN = 0;
     uint32_t baseK = 0;
-    uint32_t skSingleCoreK = 0;
     uint32_t mTailCnt = 0;
     uint32_t nTailCnt = 0;
-    uint32_t mBaseTailSplitCnt = 1;
-    uint32_t nBaseTailSplitCnt = 1;
-    uint32_t mTailMain = 1;
-    uint32_t nTailMain = 1;
-    uint8_t shiftValue = 0; // 5102 平台为 fixedShiftValue
+    uint8_t mmadParam = 0;
     uint8_t l1BufferNum = 0;
     uint8_t l0cDB = 1;                                          // 默认不开db为1
-    uint8_t ubDB = 1;                                           // 默认不开db为1
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT; // L2Cache默认使能
-    uint32_t sliceM = 1;                                        // 非连续场景m轴
-    uint32_t srcNdStride = 1;                                   // 非连续场景m轴stride
-    uint32_t innerBatch = 1;                                    // 非连续transpose场景内轴batch值
-};
-#pragma pack(pop)
-
-#pragma pack(push, 8)
-// ASW cmct kernel 的完整 tiling 结构
-struct WqbmmV2AswTilingData {
-    WqbmmV2AswBasicTilingData matMulTilingData;
-    uint32_t batchDimAll = 1; // batchC，仅支持 batchA == batchB == batchC
-    uint32_t batchX3 = 1;
+    uint32_t batchDimAll = 1;
+    uint32_t stepKa = 1;
+    uint32_t stepKb = 1;
+    uint32_t isBias = 0;
+    uint64_t batchA1 = 0;
+    uint64_t batchA2 = 0;
+    uint64_t batchA3 = 0;
+    uint64_t batchA4 = 0;
+    uint64_t batchB1 = 0;
+    uint64_t batchB2 = 0;
+    uint64_t batchB3 = 0;
+    uint64_t batchB4 = 0;
+    uint64_t batchC1 = 0;
+    uint64_t batchC2 = 0;
+    uint64_t batchC3 = 0;
+    uint64_t batchC4 = 0;
+    uint64_t biasWithBatch = 0;
 };
 #pragma pack(pop)
 

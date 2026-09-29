@@ -38,11 +38,23 @@ __aicore__ inline void SetL2CacheHintHelper(wqbmmv2_tiling::L2CacheMode l2CacheD
 #endif
 }
 
-template <typename xType, typename wType, typename biasType, typename yType, QuantType antiQuantType, typename BlockT>
+// ASW kernel 的 isBias 为顶层字段，iterbatch kernel 的 isBias 位于嵌套的 matmulTiling 内，通过重载兼容两种取值方式
+template <typename TilingT>
+__aicore__ inline int32_t GetTilingIsBias(const TilingT* tiling)
+{
+    return tiling->isBias;
+}
+
+__aicore__ inline int32_t GetTilingIsBias(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tiling)
+{
+    return tiling->matmulTiling.isBias;
+}
+
+template <typename xType, typename wType, typename biasType, typename yType, QuantType antiQuantType, typename BlockT,
+          typename TilingT>
 __aicore__ inline void UpdateGlobalAddrHelper(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, BlockT& block,
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tiling, uint32_t blockIdx,
+    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, BlockT& block, const TilingT* tiling, uint32_t blockIdx,
     AscendC::GlobalTensor<xType>& aGlobal, AscendC::GlobalTensor<wType>& bGlobal, AscendC::GlobalTensor<yType>& cGlobal,
     AscendC::GlobalTensor<biasType>& biasGlobal, AscendC::GlobalTensor<uint64_t>& scaleGlobal,
     wqbmmv2_tiling::L2CacheMode l2CacheDisable)
@@ -60,7 +72,7 @@ __aicore__ inline void UpdateGlobalAddrHelper(
     bGlobal.SetGlobalBuffer((__gm__ wType*)weight);
     SetL2CacheHintHelper<xType, wType, biasType, yType>(l2CacheDisable, aGlobal, bGlobal);
     cGlobal.SetGlobalBuffer((__gm__ yType*)y);
-    if (static_cast<bool>(tiling->matmulTiling.isBias)) {
+    if (static_cast<bool>(GetTilingIsBias(tiling))) {
         biasGlobal.SetGlobalBuffer((__gm__ biasType*)bias);
     }
 }

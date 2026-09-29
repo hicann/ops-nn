@@ -29,16 +29,23 @@ public:
 
 protected:
     ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
     void GetBroadCastInfo(uint64_t& broadcastNum, uint64_t& innerBatchNum, bool& isBroadcastA, bool& isBroadcastB);
 
     void CalL1Tiling();
-    bool CheckBatch();
     uint32_t CalcIterBatch();
     uint32_t GetGcd(uint32_t numA, uint32_t numB) const;
 
 private:
+    ge::graphStatus InstantiateIterbatchTilingData();
+    void SetIterbatchBatchParams();
+
+    // iterbatch kernel 仍使用嵌套 TCubeTiling/BatchParams 的 tiling 结构
+    std::unique_ptr<wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams> iterbatchTilingData_;
+    size_t iterbatchTilingDataSize_ = sizeof(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams);
     uint64_t leftL1Size_ = 0;
 };
 } // namespace weight_quant_batch_matmul_v2

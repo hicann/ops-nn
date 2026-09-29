@@ -36,14 +36,116 @@ namespace weight_quant_batch_matmul_v2 {
 ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::DoOpTiling()
 {
     OP_LOGD(opName_, "DoOpTiling of iterate batch tiling strategy.");
-    OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
+    OP_TILING_CHECK(InstantiateIterbatchTilingData() == ge::GRAPH_FAILED,
                     OP_LOGE(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     CalL1Tiling();
-    tilingData_->shiftValue = shiftValue_;
-    tilingData_->l2CacheDisable = SetDisableL2cache(basicTiling_.baseM, basicTiling_.baseK, basicTiling_.baseK,
-                                                    basicTiling_.baseN);
-    SetBatchParams();
+    iterbatchTilingData_->shiftValue = shiftValue_;
+    iterbatchTilingData_->l2CacheDisable = SetDisableL2cache(basicTiling_.baseM, basicTiling_.baseK, basicTiling_.baseK,
+                                                             basicTiling_.baseN);
+    SetIterbatchBatchParams();
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::InstantiateIterbatchTilingData()
+{
+    if (iterbatchTilingData_ == nullptr) {
+        try {
+            // make_unique不会返回空指针，只会返回异常，无需在后面加空指针校验
+            iterbatchTilingData_ = std::make_unique<wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams>();
+        } catch (std::bad_alloc&) {
+            OP_LOGE(opName_, "tiling data memory allocation failed");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < iterbatchTilingDataSize_,
+                    OP_LOGE(opName_, "tiling data capacity %zu < actual tiling data size %zu",
+                            context_->GetRawTilingData()->GetCapacity(), iterbatchTilingDataSize_),
+                    return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+void WeightQuantBatchMatmulV2IterbatchTiling::SetIterbatchBatchParams()
+{
+    iterbatchTilingData_->params.batchA1 = matmulInfoPtr_->batchX0;
+    iterbatchTilingData_->params.batchA2 = matmulInfoPtr_->batchX1;
+    iterbatchTilingData_->params.batchA3 = matmulInfoPtr_->batchX2;
+    iterbatchTilingData_->params.batchA4 = matmulInfoPtr_->batchX3;
+    iterbatchTilingData_->params.batchA = matmulInfoPtr_->batchX;
+    iterbatchTilingData_->params.batchB1 = matmulInfoPtr_->batchWeight0;
+    iterbatchTilingData_->params.batchB2 = matmulInfoPtr_->batchWeight1;
+    iterbatchTilingData_->params.batchB3 = matmulInfoPtr_->batchWeight2;
+    iterbatchTilingData_->params.batchB4 = matmulInfoPtr_->batchWeight3;
+    iterbatchTilingData_->params.batchB = matmulInfoPtr_->batchWeight;
+    iterbatchTilingData_->params.batchC1 = matmulInfoPtr_->batchY0;
+    iterbatchTilingData_->params.batchC2 = matmulInfoPtr_->batchY1;
+    iterbatchTilingData_->params.batchC3 = matmulInfoPtr_->batchY2;
+    iterbatchTilingData_->params.batchC4 = matmulInfoPtr_->batchY3;
+    iterbatchTilingData_->params.batchC = matmulInfoPtr_->batchY;
+    iterbatchTilingData_->params.biasWithBatch = static_cast<uint64_t>(matmulInfoPtr_->biasWithBatch);
+}
+
+ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::DoLibApiTiling()
+{
+    iterbatchTilingData_->matmulTiling.M = matmulInfoPtr_->mSize;
+    iterbatchTilingData_->matmulTiling.N = matmulInfoPtr_->nSize;
+    iterbatchTilingData_->matmulTiling.Ka = matmulInfoPtr_->kSize;
+    iterbatchTilingData_->matmulTiling.Kb = matmulInfoPtr_->kSize;
+    iterbatchTilingData_->matmulTiling.usedCoreNum = basicTiling_.usedCoreNum;
+    iterbatchTilingData_->matmulTiling.singleCoreM = basicTiling_.singleCoreM;
+    iterbatchTilingData_->matmulTiling.singleCoreN = basicTiling_.singleCoreN;
+    iterbatchTilingData_->matmulTiling.singleCoreK = basicTiling_.singleCoreK;
+    iterbatchTilingData_->matmulTiling.baseM = basicTiling_.baseM;
+    iterbatchTilingData_->matmulTiling.baseN = basicTiling_.baseN;
+    iterbatchTilingData_->matmulTiling.baseK = basicTiling_.baseK;
+    iterbatchTilingData_->matmulTiling.depthA1 = basicTiling_.depthA1;
+    iterbatchTilingData_->matmulTiling.depthB1 = basicTiling_.depthB1;
+    iterbatchTilingData_->matmulTiling.stepM = basicTiling_.stepM;
+    iterbatchTilingData_->matmulTiling.stepN = basicTiling_.stepN;
+    iterbatchTilingData_->matmulTiling.stepKa = basicTiling_.stepKa;
+    iterbatchTilingData_->matmulTiling.stepKb = basicTiling_.stepKb;
+    iterbatchTilingData_->matmulTiling.isBias = matmulInfoPtr_->hasBias;
+    iterbatchTilingData_->matmulTiling.iterateOrder = basicTiling_.iterateOrder;
+    iterbatchTilingData_->matmulTiling.dbL0A = 2; // db switch, 1: off, 2: on
+    iterbatchTilingData_->matmulTiling.dbL0B = 2; // db switch, 1: off, 2: on
+    iterbatchTilingData_->matmulTiling.dbL0C = basicTiling_.dbL0c;
+    if (basicTiling_.iterBatch > 0U) {
+        // additional tiling for bmm
+        iterbatchTilingData_->matmulTiling.BatchNum = basicTiling_.iterBatch;
+        iterbatchTilingData_->matmulTiling.ALayoutInfoB = basicTiling_.iterBatch;
+        iterbatchTilingData_->matmulTiling.ALayoutInfoS = basicTiling_.singleCoreM;
+        iterbatchTilingData_->matmulTiling.ALayoutInfoN = 1;
+        iterbatchTilingData_->matmulTiling.ALayoutInfoG = 1;
+        iterbatchTilingData_->matmulTiling.ALayoutInfoD = basicTiling_.singleCoreK;
+        iterbatchTilingData_->matmulTiling.BLayoutInfoB = basicTiling_.iterBatch;
+        iterbatchTilingData_->matmulTiling.BLayoutInfoS = basicTiling_.singleCoreN;
+        iterbatchTilingData_->matmulTiling.BLayoutInfoN = 1;
+        iterbatchTilingData_->matmulTiling.BLayoutInfoG = 1;
+        iterbatchTilingData_->matmulTiling.BLayoutInfoD = basicTiling_.singleCoreK;
+        iterbatchTilingData_->matmulTiling.CLayoutInfoB = basicTiling_.iterBatch;
+        iterbatchTilingData_->matmulTiling.CLayoutInfoS1 = basicTiling_.singleCoreM;
+        iterbatchTilingData_->matmulTiling.CLayoutInfoN = 1;
+        iterbatchTilingData_->matmulTiling.CLayoutInfoG = 1;
+        iterbatchTilingData_->matmulTiling.CLayoutInfoS2 = basicTiling_.singleCoreN;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::PostTiling()
+{
+    OP_LOGD(opName_, "final tiling data size: %zu", iterbatchTilingDataSize_);
+    OP_TILING_CHECK(iterbatchTilingDataSize_ % sizeof(uint64_t) != 0,
+                    OP_LOGE(opName_, "tiling data size[%zu] is not aligned to 8", iterbatchTilingDataSize_),
+                    return ge::GRAPH_FAILED);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           static_cast<const void*>(iterbatchTilingData_.get()), iterbatchTilingDataSize_);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->SetBlockDim(basicTiling_.usedCoreNum);
+    context_->GetRawTilingData()->SetDataSize(iterbatchTilingDataSize_);
     return ge::GRAPH_SUCCESS;
 }
 
