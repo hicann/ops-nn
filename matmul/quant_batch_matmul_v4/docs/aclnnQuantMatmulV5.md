@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -28,7 +28,7 @@
 - 接口功能：完成量化的矩阵乘计算。
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
   <!-- end id7 -->
@@ -42,7 +42,7 @@
 - 计算公式：
 
   <!-- npu="A3,910b" id9 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
@@ -508,7 +508,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <!-- end id12 -->
   <!-- npu="A3,910b" id13 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
 
@@ -642,7 +642,7 @@ aclnnStatus aclnnQuantMatmulV5(
 <!-- npu="A3,910b" id19 -->
 <details>
 
-<summary><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+<summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></summary>
 
 - **公共约束：**
   <a id="公共约束1"></a>
@@ -1654,7 +1654,7 @@ x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，
   ```
 
 <!-- npu="A3,910b" id17 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 <!-- end id17 -->
 
 x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64。

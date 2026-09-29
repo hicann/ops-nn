@@ -93,7 +93,7 @@
       </tr>
     </tbody></table>
 
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型不支持DOUBLE、INT16、UINT16、UINT32、UINT64。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：数据类型不支持DOUBLE、INT16、UINT16、UINT32、UINT64。
 - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：数据类型不支持BFLOAT16、DOUBLE、INT16、UINT16、UINT32、UINT64。
 
 ## 约束说明

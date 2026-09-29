@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -272,7 +272,7 @@ aclnnStatus aclnnEmbeddingDenseBackward(
 
 <!-- end id8 -->
 <!-- npu="A3,910b" id9 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)
     - numWeights超过INT32_MAX(2147483647)

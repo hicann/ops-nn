@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -42,7 +42,7 @@
     - <term>Atlas训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     <!-- end id7 -->
     <!-- npu="950,A3,910b" id8 -->
-    - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
     <!-- end id8 -->
 
   - indices(aclTensor*,计算输入)：grad输入对应的索引值，Device侧的aclTensor，取值范围为[0, numWeights)，支持维度1-8维,支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，[数据格式](../../../docs/zh/context/data_format.md)支持ND。数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL。
@@ -55,7 +55,7 @@
     - <term>Atlas训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     <!-- end id9 -->
     <!-- npu="950,A3,910b" id10 -->
-    - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
     <!-- end id10 -->
 
   - workspaceSize(uint64_t *,出参): 返回需要在Device侧申请的workspace大小。
@@ -142,7 +142,7 @@
 
 <!-- end id11 -->
 <!-- npu="A3,910b" id12 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)
     - numWeights超过INT32_MAX(2147483647)

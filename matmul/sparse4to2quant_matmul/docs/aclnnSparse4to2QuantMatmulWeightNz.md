@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="A3" id1 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="910b" id2 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -243,7 +243,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 - 确定性说明：
 
   <!-- npu="A3,910b" id3 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：aclnnSparse4to2QuantMatmulWeightNz默认确定性实现。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：aclnnSparse4to2QuantMatmulWeightNz默认确定性实现。
   <!-- end id3 -->
 
 - 其他约束：
@@ -255,7 +255,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 <!-- npu="A3,910b" id4 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
   ```Cpp
   #include <iostream>

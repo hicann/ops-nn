@@ -76,7 +76,7 @@
 * <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：
     - 不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
     - gradOutput、weight参数下，不支持空tensor。
-* <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+* <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - 不支持HIFLOAT8、FLOAT8_E4M3FN。
 
 ## 约束说明

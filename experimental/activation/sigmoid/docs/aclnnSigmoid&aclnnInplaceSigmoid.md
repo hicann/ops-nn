@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -141,7 +141,7 @@ aclnnStatus aclnnInplaceSigmoid(
   </table>
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、INT16、INT8、UINT8。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、INT16、INT8、UINT8。
   <!-- end id7 -->
 
 - **返回值：**
@@ -284,7 +284,7 @@ aclnnStatus aclnnInplaceSigmoid(
    - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128。
    <!-- end id8 -->
   <!-- npu="A3,910b" id9 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16、INT16、INT8、UINT8。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16、INT16、INT8、UINT8。
   <!-- end id9 -->
 
 - **返回值：**

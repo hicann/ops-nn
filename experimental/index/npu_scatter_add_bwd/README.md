@@ -44,7 +44,7 @@
 - `x`、`s`、`indices`、`x_grad`、`s_grad` 的 `dim[0]` 必须相同。
 - `y_grad` 和 `x` 必须为 2 维张量，`s` 和 `indices` 必须为 1 维张量。
 - 隐藏维度 H 需满足：`align(H) * (element_size * 4 + 4 * 4) + 32 <= 180KB`（受 UB 容量限制，其中 `align(H)` 为 H 按 32 字节对齐后的元素个数，`element_size` 为 2 字节）。
-- 当前支持 Atlas A2 和 Atlas A3 系列产品。
+- 当前支持 Atlas A2 和 Atlas A3系列产品。
 
 ## 调用说明
 

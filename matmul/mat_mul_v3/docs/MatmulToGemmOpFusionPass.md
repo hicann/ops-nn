@@ -6,7 +6,7 @@
 - <term>Atlas A2系列产品</term>：该融合将符合图融合pattern的MatMulV3/MatMulV2/MatMul的算子转换为GemmV2算子。
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该融合将符合图融合pattern的MatMulV3/MatMulV2/MatMul的算子转换为GemmV2算子。
+- <term>Atlas A3系列产品</term>：该融合将符合图融合pattern的MatMulV3/MatMulV2/MatMul的算子转换为GemmV2算子。
 <!-- end id2 -->
 <!-- npu="950" id3 -->
 - <term>Ascend 950PR&950DT系列产品</term>：该融合将符合图融合pattern的MatMulV3/MatMulV2/MatMul的算子转换为GemmV3算子。
@@ -23,7 +23,7 @@
   - <term>Atlas A2系列产品</term>：仅支持float16和bfloat16。
   <!-- end id4 -->
   <!-- npu="A3" id5 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持float16和bfloat16。
+  - <term>Atlas A3系列产品</term>：仅支持float16和bfloat16。
   <!-- end id5 -->
   <!-- npu="950" id6 -->
   - <term>Ascend 950PR&950DT系列产品</term>：支持float16、float32和bfloat16。
@@ -33,7 +33,7 @@
   - <term>Atlas A2系列产品</term>：仅支持白名单中的shape进行融合。
   <!-- end id7 -->
   <!-- npu="A3" id8 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持白名单中的shape进行融合。
+  - <term>Atlas A3系列产品</term>：仅支持白名单中的shape进行融合。
   <!-- end id8 -->
 - AssignAdd节点输入dtype仅支持float32。
 - 不建议关闭，关闭后可能会影响网络精度。
@@ -45,7 +45,7 @@ Atlas A2系列产品
 <!-- end id9 -->
 
 <!-- npu="A3" id10 -->
-Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A3系列产品
 <!-- end id10 -->
 
 <!-- npu="950" id11 -->

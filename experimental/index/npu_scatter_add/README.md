@@ -50,7 +50,7 @@
 - `x` 和 `y` 必须为 2 维张量，`indices`、`sort_idx` 必须为 1 维张量。
 - 隐藏维度 H 需满足：`align(H) * (element_size * 3 + 4 * 3) + 32 <= 180KB`（受 UB 容量限制，其中 `align(H)` 为 H 按 32 字节对齐后的元素个数，`element_size` 为 2 字节）。
 - `sort_idx` 必须是 `indices` 的 argsort 结果，即 `sort_idx = argsort(indices)`。
-- 当前支持 Atlas A2 和 Atlas A3 系列产品。
+- 当前支持 Atlas A2 和 Atlas A3系列产品。
 
 ## 调用说明
 

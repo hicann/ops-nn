@@ -47,15 +47,15 @@
 * strides
     - N和C的维度必须为1。
     - Ascend 950PR&950DT系列产品：D、H和W维度的取值必须范围在 [1,2147483646] 之间。
-    - Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H和W的维度的取值范围必须在 [1,63] 之间，D维度的取值范围必须在 [1,255] 之间。
+    - Atlas A2系列产品、Atlas A3系列产品：H和W的维度的取值范围必须在 [1,63] 之间，D维度的取值范围必须在 [1,255] 之间。
 * pads
     - 填充顺序为：[front, back, top, bottom, left, right]。
     - Ascend 950PR&950DT系列产品：H、W和D维度的取值范围必须在 [1,2147483646] 之间。
-    - Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H、W和D维度的取值范围必须在 [0,255] 之间。
+    - Atlas A2系列产品、Atlas A3系列产品：H、W和D维度的取值范围必须在 [0,255] 之间。
 * dilations
     - N与C的维度必须为1。
     - Ascend 950PR&950DT系列产品：H、W和D维度的取值范围必须在 [1,2147483646] 之间。
-    - Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H、W和D维度的取值范围必须在 [1,255] 之间。
+    - Atlas A2系列产品、Atlas A3系列产品：H、W和D维度的取值范围必须在 [1,255] 之间。
 * output_padding
     - 仅<term>Ascend 950PR&950DT系列产品</term>支持非零值，其他产品仅支持全零。
     - D、H和W维度的取值范围必须在 [0,2147483646] 之间。

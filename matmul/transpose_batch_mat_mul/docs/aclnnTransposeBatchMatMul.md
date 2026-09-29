@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -337,7 +337,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
 - 确定性说明：aclnnTransposeBatchMatMul默认确定性实现。
 
 <!-- npu="A3,910b" id7 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
     - 当x1的输入shape为(B, M, K)时，需要K <= 65535；当x1的输入shape为(M, B, K)且B * K > 65535时，不支持传入scale，并且batchSplitFactor只能等于1，permX1必须为[1, 0, 2]。
     - 当permX2输入为[0, 2, 1]时，不支持传入scale，并且batchSplitFactor只能等于1，permX1必须为[1, 0, 2]。

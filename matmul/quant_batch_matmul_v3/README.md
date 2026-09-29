@@ -5,7 +5,7 @@
 | 产品 | 是否支持 |
 | ---- | :----:|
 |Ascend 950PR&950DT系列产品|√|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
+|Atlas A3系列产品|√|
 |Atlas A2系列产品|√|
 |Atlas 200I/500 A2推理产品|x|
 |Atlas推理系列产品|√|
@@ -18,7 +18,7 @@
 - 算子功能：完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。
 - 计算公式：
 
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：
     - 无pertoken无bias：
 
       $$
@@ -148,7 +148,7 @@
   </tr>
 </tbody></table>
 
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - x1只支持INT8、INT4数据类型。
   - x2只支持INT8、INT4数据类型。
   - scale只支持UINT64、FLOAT32、INT64、BF16数据类型。

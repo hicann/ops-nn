@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -29,7 +29,7 @@
 
     <!-- npu="950,A3,910b,310p" id7 -->
     <details>
-    <summary><term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term></summary>
+    <summary><term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term></summary>
 
     - 无x1Scale、无bias：
 
@@ -66,7 +66,7 @@
 
     <!-- npu="950,A3,910b" id8 -->
     <details>
-    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term></summary>
+    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term></summary>
 
     - bias BFLOAT16/FLOAT32（此场景无x2Offset）：
 
@@ -384,7 +384,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <!-- npu="A3,910b" id17 -->
     <details>
 
-    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+    <summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></summary>
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
     - x2不支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。
@@ -496,7 +496,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 <!-- npu="A3,910b" id10 -->
 <details>
-<summary><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
+<summary><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></summary>
 
   - x1的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
   - x2的最后一维大小不能超过65535，但当x1和x2的dtype为INT8，x2Scale的dtype为FLOAT32或BFLOAT16且x2Scale和x1Scale维度都为1时，支持大于65535。x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
@@ -939,7 +939,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <!-- end id19 -->
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
   x2为NZ格式场景下的示例代码如下(transposeX2=false)。
 

@@ -13,7 +13,7 @@ kernel 计算逻辑改编自经过验证的 pto-ISA 参考实现（`pto-kernels/
 | 产品 | 是否支持 |
 | ---- | :----: |
 | Atlas A2系列产品 | √ |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 | √ |
+| Atlas A3系列产品 | √ |
 
 > 说明：A2（`ascend910b`）与 A3（`ascend910_93`）共享 `dav-2201` 架构与 pto `npu/a2a3` 后端，同一二进制适用于两者；当前在 A2 上完成验证。kernel 内 UB 布局按 A2/A3 的 184KB Unified Buffer 规划，`blockDim` 采用 A2/A3 的向量核数（40）作为启动网格大小，`batch` 在 kernel 内按实际核数切分，故该常量仅影响启动规模、不影响正确性。
 

@@ -12,7 +12,7 @@
 <td style="text-align:center">√</td>
 </tr>
 <tr>
-<td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
+<td><term>Atlas A3系列产品</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -166,7 +166,7 @@
 </tr>
 </table>
 
-- Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A2系列产品、Atlas A3系列产品：
   - 不支持`HIFLOAT8`数据类型。
   - `scale`和`offset`参数仅支持`FLOAT`类型。
   - 输入为`INT8`数据类型时，`bias`为必选输入，`groups`仅支持1。
@@ -176,7 +176,7 @@
 
 ## 约束说明
 
-- Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A2系列产品、Atlas A3系列产品：
   - `filter`的`H`、`W`维度范围：[1,511]。
   - 不支持空`tensor`。
   - 当`groups`为1, `dilation`全为1，`padding`全为0，`filter`没有为1的维度，`x`的`D`*`H`*`W`小于65536，`bias`为`FLOAT`时，会进入`Pointwise`分支，可以使用`NCDHW`格式。

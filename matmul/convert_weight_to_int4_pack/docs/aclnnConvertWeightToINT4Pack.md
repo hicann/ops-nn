@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -28,7 +28,7 @@
 对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/data_format.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/data_format.md)从ND转为FRACTAL_NZ。
 
 <!-- npu="A3,910b" id7 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：将INT32类型的weight输入数据打包为紧密排布的INT4数据。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：将INT32类型的weight输入数据打包为紧密排布的INT4数据。
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR&950DT系列产品</term> ：将INT32类型的weight打包为紧密排布的INT4类型，将FLOAT类型的weight打包为紧密排布的FLOAT4_E2M1类型。
@@ -220,14 +220,14 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
 - 确定性说明：
 
   <!-- npu="950,A3,910b" id9 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
 
   <!-- end id9 -->
 
 - 参数间数据类型、数据格式间关系如下：
 
     <!-- npu="A3,910b" id10 -->
-    - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
       <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
       <col style="width: 200px">
       <col style="width: 121px">
@@ -361,7 +361,7 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
 ## 调用示例
 
 <!-- npu="A3,910b" id12 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
   伪量化有aclnnWeightQuantBatchMatmulV2和aclnnWeightQuantBatchMatmulV3接口，这里以aclnnWeightQuantBatchMatmulV2为例。
 

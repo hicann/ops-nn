@@ -27,7 +27,7 @@ Atlas A2系列产品
 
 <!-- npu="A3" id2 -->
 
-Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A3系列产品
 
 <!-- end id2 -->
 

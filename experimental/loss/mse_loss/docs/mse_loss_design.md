@@ -4,7 +4,7 @@
 
 ### 1.1 需求来源
 
-通过 CANN 训练营 2026 暑期季社区任务完成 `MseLoss` 算子 Ascend C 实现，并向昇腾开源算子仓贡献。任务要求参考昇腾 CANN 内置 `aclnnMseLoss` / TBE 算子语义，在 Atlas A2训练系列产品和 Atlas A3 系列产品上实现功能一致、精度达标、性能不低于 TBE 版本的 Ascend C 自定义算子。
+通过 CANN 训练营 2026 暑期季社区任务完成 `MseLoss` 算子 Ascend C 实现，并向昇腾开源算子仓贡献。任务要求参考昇腾 CANN 内置 `aclnnMseLoss` / TBE 算子语义，在 Atlas A2训练系列产品和 Atlas A3系列产品上实现功能一致、精度达标、性能不低于 TBE 版本的 Ascend C 自定义算子。
 
 ### 1.2 背景介绍
 
@@ -437,7 +437,7 @@ flowchart TD
 | 支持的芯片版本 | 涉及勾选 |
 | --- | --- |
 | Atlas A2训练系列产品 | √ |
-| Atlas A3 系列产品 | √ |
+| Atlas A3系列产品 | √ |
 
 ### 3.4 算子约束限制
 

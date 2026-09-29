@@ -8,7 +8,7 @@
 - Ascend 950PR&950DT系列产品：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持
+- Atlas A3系列产品：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - Atlas A2系列产品：支持
@@ -48,7 +48,7 @@
   3. 执行量化
 
     <!-- npu="A3,910b" id7 -->
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：对称动态量化（pertoken逐行量化）
+    - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
 
         $$
@@ -425,7 +425,7 @@ aclnnStatus aclnnRotateQuant(
 
 <!-- end id9 -->
 <!-- npu="A3,910b" id10 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - x的shape为(M, N)，rotation的shape为(K, K)。
   - rotation的shape必须是方阵(K, K)。
   - x第二维的长度(N)必须是K的整数倍，N必须可以整除8。

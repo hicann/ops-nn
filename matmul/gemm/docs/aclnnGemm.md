@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id10 -->
 <!-- npu="A3" id1 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="910b" id2 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -211,7 +211,7 @@ aclnnStatus aclnnGemm(
   </tbody></table>
 
   <!-- npu="A3,910b" id6 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - A数据类型支持BFLOAT16、FLOAT16、FLOAT32。
     - B数据类型支持BFLOAT16、FLOAT16、FLOAT32。
     - C数据类型支持BFLOAT16、FLOAT16、FLOAT32。
@@ -334,7 +334,7 @@ aclnnStatus aclnnGemm(
   <!-- end id12 -->
 
   <!-- npu="A3,910b" id14 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：aclnnGemm默认确定性实现。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：aclnnGemm默认确定性实现。
 
   <!-- end id14 -->
 

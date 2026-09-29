@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -153,7 +153,7 @@ aclnnStatus aclnnMatmulWeightNz(
     </tbody></table>
 
   <!-- npu="A3,910b,310p" id7 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
     - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
   <!-- end id7 -->
@@ -285,7 +285,7 @@ aclnnStatus aclnnMatmulWeightNz(
 ## 调用示例
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
@@ -512,7 +512,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 <!-- end id13 -->
 <!-- npu="A3,910b" id14 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   线性层或输入权重转置场景（数学语义：`out = self @ mat2.T`）下的示例代码如下。本示例中 weight 物理布局为 `[N, K]`，通过 `aclCreateTensor` 同时配置 `view_shape=[K, N]`、对应 `view_strides` 与 `storage_shape=[N, K]` 后，再调用 `aclnnTransMatmulWeight` 与 `aclnnMatmulWeightNz`，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp

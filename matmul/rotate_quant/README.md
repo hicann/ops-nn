@@ -5,7 +5,7 @@
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
 | Ascend 950PR&950DT系列产品                   |    √     |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 |    √     |
+| Atlas A3系列产品 |    √     |
 | Atlas A2系列产品 |    √     |
 | Atlas 200I/500 A2推理产品                  |    ×     |
 | Atlas推理系列产品                          |    ×     |
@@ -33,7 +33,7 @@
     GroupMax表示每32个为一组，计算组内最大值。
 
   3. 执行量化
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：对称动态量化（pertoken逐行量化）
+    - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
 
         $$
@@ -248,7 +248,7 @@
   - dstTypeMax：当scaleAlg=2时dstTypeMax必须在[6.0, 12.0]范围内，其余场景仅支持0.0。
   - trans目前只支持false。
 
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - x的shape为(M, N)，rotation的shape为(K, K)。
   - rotation的shape必须是方阵(K, K)。
   - x第二维的长度(N)必须是K的整数倍，N必须可以整除8。

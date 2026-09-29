@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -360,7 +360,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   - aclnnTransposeBatchMatMulWeightNz默认确定性实现。
 
 <!-- npu="A3,910b" id7 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
   - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
   - x2的NZ格式对应的ND格式中，第二维和第三维都必须被16整除。
@@ -382,7 +382,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 ## 调用示例
 
 <!-- npu="A3,910b" id9 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp

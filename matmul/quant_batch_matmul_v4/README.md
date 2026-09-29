@@ -5,7 +5,7 @@
 | 产品 | 是否支持 |
 | ---- | :----:|
 |Ascend 950PR&950DT系列产品|√|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
+|Atlas A3系列产品|√|
 |Atlas A2系列产品|√|
 |Atlas 200I/500 A2推理产品|x|
 |Atlas推理系列产品|x|
@@ -18,7 +18,7 @@
 - 算子功能：完成量化的矩阵乘计算。
 - 计算公式：
 
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32，out为FLOAT16/BFLOAT16：
 
       $$
@@ -207,7 +207,7 @@
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 - 输入和输出支持以下数据类型组合:
 
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
     | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
@@ -242,7 +242,7 @@
 
 ## 调用说明
 
-- <term>Atlas A2系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2系列产品、Atlas A3系列产品</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |

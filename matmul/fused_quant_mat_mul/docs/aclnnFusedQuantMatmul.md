@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：不支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -365,7 +365,7 @@ aclnnStatus aclnnFusedQuantMatmul(
 - 确定性说明：
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：aclnnFusedQuantMatmul默认确定性实现。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：aclnnFusedQuantMatmul默认确定性实现。
 
   <!-- end id7 -->
 
@@ -406,7 +406,7 @@ aclnnStatus aclnnFusedQuantMatmul(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 <!-- npu="A3,910b" id8 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
 <!-- end id8 -->
 
 x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。

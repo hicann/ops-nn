@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -26,7 +26,7 @@
 - 接口功能：完成张量self与张量mat2的矩阵乘计算。（支持1维到6维作为输入的矩阵乘）。
   相似接口有aclnnMm（支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatmul（仅支持3维的矩阵乘，其中第1维为batch）。
   <!-- npu="A3,910b" id14 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持1维到8维作为输入的矩阵乘。
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：支持1维到8维作为输入的矩阵乘。
   <!-- end id14 -->
 - 计算公式：
 
@@ -160,7 +160,7 @@ aclnnStatus aclnnMatmul(
     - cubeMathType=4时不做处理。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
@@ -280,7 +280,7 @@ aclnnStatus aclnnMatmul(
   <!-- end id12 -->
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
 <!-- end id13 -->
 - self和mat2都是1维时，cubeMathType不生效。
 

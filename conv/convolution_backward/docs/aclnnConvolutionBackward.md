@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -453,7 +453,7 @@ aclnnStatus aclnnConvolutionBackward(
 - 确定性计算
 
   <!-- npu="A3,910b,910,310b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>、<term>Atlas训练系列产品</term>：aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>、<term>Atlas训练系列产品</term>：aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   <!-- end id7 -->
   <!-- npu="950" id8 -->
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnConvolutionBackward默认确定性实现。
@@ -472,7 +472,7 @@ aclnnStatus aclnnConvolutionBackward(
      <th><term>Ascend 950PR&950DT系列产品</term></th>
      <!-- end id9 -->
      <!-- npu="A3,910b" id10 -->
-     <th><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></th>
      <!-- end id10 -->
      <!-- npu="910,310p" id11 -->
      <th><term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term></th>

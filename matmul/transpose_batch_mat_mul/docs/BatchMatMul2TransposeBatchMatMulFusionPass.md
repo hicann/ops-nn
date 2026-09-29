@@ -42,15 +42,15 @@
   <!-- end id3 -->
 
   <!-- npu="A3" id4 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1输入支持\[B,M,K\]或者\[M,B,K\]，x2输入只支持\[B,K,N\]，对应的TransposeBatchMatMul的属性为perm\_x1=\[0,1,2\]/\[1,0,2\]，perm\_x2=\[0,1,2\]。
+- <term>Atlas A3系列产品</term>：x1输入支持\[B,M,K\]或者\[M,B,K\]，x2输入只支持\[B,K,N\]，对应的TransposeBatchMatMul的属性为perm\_x1=\[0,1,2\]/\[1,0,2\]，perm\_x2=\[0,1,2\]。
   <!-- end id4 -->
 
   <!-- npu="A3" id5 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为BFLOAT16、FLOAT16时，k和n向128对齐，需要满足B\*K<65536或者B\*K\>=65536，k<65536。
+- <term>Atlas A3系列产品</term>：当输入数据类型为BFLOAT16、FLOAT16时，k和n向128对齐，需要满足B\*K<65536或者B\*K\>=65536，k<65536。
   <!-- end id5 -->
 
   <!-- npu="A3" id6 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32且输入的transpose节点不为空时，无对齐限制，但仍需满足B\*K<65536。
+- <term>Atlas A3系列产品</term>：当输入数据类型为FLOAT32且输入的transpose节点不为空时，无对齐限制，但仍需满足B\*K<65536。
   <!-- end id6 -->
 
   <!-- npu="950" id7 -->
@@ -70,7 +70,7 @@
   <!-- end id9 -->
 
   <!-- npu="A3" id10 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持开启HF32。
+- <term>Atlas A3系列产品</term>：不支持开启HF32。
   <!-- end id10 -->
 
 - 仅支持静态图模式。
@@ -80,7 +80,7 @@
   <!-- end id11 -->
 
   <!-- npu="A3" id12 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输入需要满足B1\*K<65536。
+- <term>Atlas A3系列产品</term>：输入需要满足B1\*K<65536。
   <!-- end id12 -->
 
 ## 支持的型号
@@ -90,7 +90,7 @@ Atlas A2系列产品
 <!-- end id13 -->
 
 <!-- npu="A3" id14 -->
-Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A3系列产品
 <!-- end id14 -->
 
 <!-- npu="950" id15 -->

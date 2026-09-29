@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="A3" id1 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="910b" id2 -->
 - <term>Atlas A2系列产品</term>：支持

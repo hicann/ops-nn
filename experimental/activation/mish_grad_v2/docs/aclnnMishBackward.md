@@ -5,7 +5,7 @@
 |产品|是否支持|
 |:---|:---:|
 |<term>Ascend 950PR&950DT系列产品</term>|√|
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>|√|
+|<term>Atlas A3系列产品</term>|√|
 |<term>Atlas A2系列产品</term>|√|
 |<term>Atlas 200I/500 A2推理产品</term>|×|
 |<term>Atlas推理系列产品</term>|√|
@@ -131,7 +131,7 @@ aclnnStatus aclnnMishBackward(
   </table>
 
   - <term>Atlas训练系列产品</term>：数据类型支持 FLOAT16、FLOAT32。
-  - <term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：额外支持 BFLOAT16。
+  - <term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：额外支持 BFLOAT16。
 
 - **返回值：**
 

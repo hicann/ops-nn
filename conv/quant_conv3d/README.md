@@ -12,7 +12,7 @@
 <td style="text-align:center">√</td>
 </tr>
 <tr>
-<td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
+<td><term>Atlas A3系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>

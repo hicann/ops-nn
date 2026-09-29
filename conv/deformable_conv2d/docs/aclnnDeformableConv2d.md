@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -392,7 +392,7 @@ aclnnStatus aclnnDeformableConv2d(
     <tr>
      <th>参数名</th>
      <!-- npu="A3,910b" id7 -->
-     <th><term>Atlas A2系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term></th>
      <!-- end id7 -->
      <!-- npu="950" id8 -->
      <th><term>Ascend 950PR&950DT系列产品</term></th>

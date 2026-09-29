@@ -8,7 +8,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -422,7 +422,7 @@ aclnnStatus aclnnFlatQuantV3(
     - groupListOptional仅支持nullptr。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>：
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
     - groupListOptional不为nullptr时：
       - groupListType必须从[0, 1, 2]中取值。
       - 当groupListType为0或1时，shape为[G]，当groupListType为2时，shape为[G, 2]，G表示分组数，G需要小于等于1024。

@@ -105,7 +105,7 @@
 | 产品 | 参数或场景 | `x`、`v`、`y`数据类型 | 静态shape能力 | 动态shape能力 | 索引、空Tensor及规模限制 |
 | :--- | :----------- | :-------------------- | :------------ | :------------ | :----------------------- |
 | <term>Ascend 950PR&950DT系列产品</term> | `indices`为运行期输入或编译期常量 | FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 当$N>0$时，按$row_j=((indices_j \bmod N)+N)\bmod N$确定目标行。支持$K=0$；当$N=0$时要求$K=0$，当任一尾维为0时输出为空。$N$和$K$不超过INT32最大值；尾维大小、张量元素数、合计处理规模及字节大小必须在INT64可表示范围内。 |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term> | `indices`为运行期输入或编译期常量 | FLOAT16、FLOAT、INT32 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
+| <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term> | `indices`为运行期输入或编译期常量 | FLOAT16、FLOAT、INT32 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
 | <term>Atlas训练系列产品</term> | `x`、`v`、`y`为FLOAT或INT32，`indices`为运行期输入或编译期常量 | FLOAT、INT32 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
 | <term>Atlas训练系列产品</term> | `x`、`v`、`y`为FLOAT16，且`indices`在编译期为常量 | FLOAT16 | 仅支持静态shape，输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 不支持。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
 

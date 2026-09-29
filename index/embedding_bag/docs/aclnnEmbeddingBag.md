@@ -6,7 +6,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
 - <term>Atlas A2系列产品</term>：支持
@@ -28,7 +28,7 @@
   假设输入weight的shape为(numWeight, embeddingDim)，indices的shape为(bagIndices)，offsets的shape为(bagOffsets)。
 
   <!-- npu="A3,910b,910,310p" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：
 
     - 当mode为sum模式：
 
@@ -300,7 +300,7 @@ aclnnStatus aclnnEmbeddingBag(
     </tbody></table>
 
   <!-- npu="A3,910b,910,310p" id9 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>： indices仅支持0-1维，perSampleWeights仅支持1维且在除sum模式外的其他模式必须为nullptr 。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>： indices仅支持0-1维，perSampleWeights仅支持1维且在除sum模式外的其他模式必须为nullptr 。
   - indices和offsets的数据类型至少一个为INT32或INT64；当数据类型为INT16、INT8、UINT8时，接口内部会转换为INT32进行计算。
 
   <!-- end id9 -->

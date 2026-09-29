@@ -37,7 +37,7 @@
 - `var`、`indices` 和 `updates` 的维度数应一致。
 - `indices` 与 `updates` 的形状应一致，非 `axis` 轴的大小不得超过 `var` 对应轴的大小。
 - `indices` 中的值必须位于 `[-var.shape[axis], var.shape[axis])` 范围内。
-- 当前支持 Atlas A2 和 Atlas A3 系列产品。
+- 当前支持 Atlas A2 和 Atlas A3系列产品。
 
 ## 调用说明
 
