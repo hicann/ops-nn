@@ -12,6 +12,7 @@
 #define OPS_NN_LSTM_SINGLE_LAYER_ADAPTER_H
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
@@ -31,6 +32,24 @@
 
 // Compose dense ACLNN LSTM through SingleLayerLstm nodes in the caller's executor.
 namespace lstm_single_layer_adapter {
+constexpr size_t PLANE_Y = 0;
+constexpr size_t PLANE_H = 1;
+constexpr size_t PLANE_C = 2;
+constexpr size_t PLANE_I = 3;
+constexpr size_t PLANE_J = 4;
+constexpr size_t PLANE_F = 5;
+constexpr size_t PLANE_O = 6;
+constexpr size_t PLANE_TANHC = 7;
+constexpr size_t PLANE_COUNT = 8;
+constexpr size_t PUBLIC_ORDER_COUNT = 7;
+constexpr std::array<size_t, PUBLIC_ORDER_COUNT> PUBLIC_ORDER = {PLANE_I, PLANE_J, PLANE_F,    PLANE_O,
+                                                                 PLANE_H, PLANE_C, PLANE_TANHC};
+constexpr int64_t WEIGHT_H_AXIS = 2;
+constexpr int64_t INPUT_I_AXIS = 2;
+constexpr double DROPOUT_ZERO_TOLERANCE = 1e-6;
+
+inline bool IsDropoutZero(double dropout) { return std::abs(dropout) <= DROPOUT_ZERO_TOLERANCE; }
+
 struct DenseInputs {
     const aclTensor* input;
     const aclTensorList* params;
@@ -47,7 +66,7 @@ struct DenseOutputs {
     const aclTensor* y;
     const aclTensor* hy;
     const aclTensor* cy;
-    std::array<const aclTensorList*, 7> saved; // Public order: i,j,f,o,h,c,tanhc.
+    std::array<const aclTensorList*, PUBLIC_ORDER_COUNT> saved; // Public order: i,j,f,o,h,c,tanhc.
 };
 
 inline bool FitsBytes(std::initializer_list<int64_t> shape, int64_t width)
@@ -129,7 +148,7 @@ inline const aclTensor* GateWeight(const aclTensor* weight, int64_t k, int64_t k
     CHECK_RET(result != nullptr, nullptr);
     if (h != hp) {
         result = l0op::Reshape(result, op::Shape{k, 4, h}, executor);
-        result = PadAxis(result, 2, hp, executor);
+        result = PadAxis(result, WEIGHT_H_AXIS, hp, executor);
         CHECK_RET(result != nullptr, nullptr);
         result = l0op::Reshape(result, op::Shape{k, 4 * hp}, executor);
     }
@@ -180,7 +199,7 @@ inline aclnnStatus CopyPublic(const aclTensor* value, const aclTensor* output, a
 inline aclnnStatus BuildSingleLayerLstm(const DenseInputs& in, const DenseOutputs& out, aclOpExecutor* executor)
 {
     CHECK_RET(executor != nullptr && in.input != nullptr && in.params != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    OP_CHECK(!in.bidirectional && in.dropout == 0.0,
+    OP_CHECK(!in.bidirectional && IsDropoutZero(in.dropout),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ascend950 LSTM currently requires unidirectional and dropout=0; "
                                               "no DynamicRNN fallback is used."),
              return ACLNN_ERR_PARAM_INVALID);
@@ -221,7 +240,7 @@ inline aclnnStatus BuildSingleLayerLstm(const DenseInputs& in, const DenseOutput
         if (in.batchFirst) {
             layerInput = Transpose(layerInput, {1, 0, 2}, executor);
         }
-        layerInput = PadAxis(layerInput, 2, ip0, executor);
+        layerInput = PadAxis(layerInput, INPUT_I_AXIS, ip0, executor);
     }
     CHECK_RET(layerInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* lastY = nullptr;
@@ -248,26 +267,26 @@ inline aclnnStatus BuildSingleLayerLstm(const DenseInputs& in, const DenseOutput
                  return ACLNN_ERR_PARAM_INVALID);
 
         // Native operator order: y,h,c,i,j,f,o,tanhc. All outputs follow the input dtype.
-        std::array<aclTensor*, 8> planes{};
+        std::array<aclTensor*, PLANE_COUNT> planes{};
         for (size_t i = 0; i < planes.size(); ++i) {
             planes[i] = executor->AllocTensor(op::Shape{t, batch, hp}, dtype, op::Format::FORMAT_ND);
             CHECK_RET(planes[i] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
         const auto result = l0op::SingleLayerLstm(layerInput, weight, bias, h0, c0, nullptr, "UNIDIRECTIONAL", "ifjo",
-                                                  planes[0], planes[1], planes[2], planes[3], planes[4], planes[5],
-                                                  planes[6], planes[7], executor, logicalI, h, biasHh);
-        CHECK_RET(std::get<0>(result) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                                                  planes[PLANE_Y], planes[PLANE_H], planes[PLANE_C], planes[PLANE_I],
+                                                  planes[PLANE_J], planes[PLANE_F], planes[PLANE_O],
+                                                  planes[PLANE_TANHC], executor, logicalI, h, biasHh);
+        CHECK_RET(std::get<PLANE_Y>(result) != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // The next layer consumes the declared-dtype hidden output.
-        layerInput = planes[1];
-        lastY = planes[0];
-        const aclTensor* layerH = Slice(planes[0], {t - 1, 0, 0}, {1, batch, h}, executor);
-        const aclTensor* layerC = Slice(planes[2], {t - 1, 0, 0}, {1, batch, h}, executor);
+        layerInput = planes[PLANE_H];
+        lastY = planes[PLANE_Y];
+        const aclTensor* layerH = Slice(planes[PLANE_Y], {t - 1, 0, 0}, {1, batch, h}, executor);
+        const aclTensor* layerC = Slice(planes[PLANE_C], {t - 1, 0, 0}, {1, batch, h}, executor);
         CHECK_RET(layerH != nullptr && layerC != nullptr, ACLNN_ERR_INNER_NULLPTR);
         hy = hy == nullptr ? layerH : Concat(hy, layerH, 0, executor);
         cy = cy == nullptr ? layerC : Concat(cy, layerC, 0, executor);
         CHECK_RET(hy != nullptr && cy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         if (in.train) {
-            constexpr std::array<size_t, 7> PUBLIC_ORDER = {3, 4, 5, 6, 1, 2, 7};
             for (size_t i = 0; i < PUBLIC_ORDER.size(); ++i) {
                 CHECK_RET(out.saved[i] != nullptr, ACLNN_ERR_INNER_NULLPTR);
                 const aclTensor* cropped = Slice(planes[PUBLIC_ORDER[i]], {0, 0, 0}, {t, batch, h}, executor);

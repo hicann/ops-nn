@@ -130,6 +130,22 @@ static const int64_t PARAM_TENSORS_PER_DIRECTION_WITH_BIAS = 4; // W_ih, W_hh, b
 static const int64_t MAX_PARAM_TENSORS_PER_LAYER = BIDIRECTIONAL_NUM * PARAM_TENSORS_PER_DIRECTION_WITH_BIAS;
 static const int64_t FEATURE_DIM = 2;
 static const int64_t HX_TENSOR_COUNT = 2;
+static const size_t RESULT_Y = 0;
+static const size_t RESULT_I = 1;
+static const size_t RESULT_J = 2;
+static const size_t RESULT_F = 3;
+static const size_t RESULT_O = 4;
+static const size_t RESULT_H = 5;
+static const size_t RESULT_C = 6;
+static const size_t RESULT_TANHC = 7;
+static const size_t SL_RESULT_Y = 0;
+static const size_t SL_RESULT_H = 1;
+static const size_t SL_RESULT_C = 2;
+static const size_t SL_RESULT_I = 3;
+static const size_t SL_RESULT_J = 4;
+static const size_t SL_RESULT_F = 5;
+static const size_t SL_RESULT_O = 6;
+static const size_t SL_RESULT_TANHC = 7;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
@@ -230,6 +246,8 @@ LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const 
         layerResult;
     const char* refusal = nullptr;
     if (l0op::SingleLayerLstmSupports(input, initH, direction, &refusal)) {
+        OP_CHECK_NULL(initH, return nullptrInner);
+        OP_CHECK_NULL(initC, return nullptrInner);
         /* The two operators disagree on the state rank: DynamicRNN takes [1, B, H], SingleLayerLstm
          * takes [B, H]. */
         const op::Shape stateShape = {initH->GetViewShape().GetDim(1), initH->GetViewShape().GetDim(2)};
@@ -278,9 +296,10 @@ LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const 
          * (y, output_h, output_c, i, j, f, o, tanhc); l0op::DynamicRNN's wrapper hands back
          * (y, i, j, f, o, h, c, tanhc). Re-seat the tuple so everything downstream of this function
          * sees one order regardless of which node ran. */
-        layerResult = std::make_tuple(std::get<0>(slResult), std::get<3>(slResult), std::get<4>(slResult),
-                                      std::get<5>(slResult), std::get<6>(slResult), std::get<1>(slResult),
-                                      std::get<2>(slResult), std::get<7>(slResult));
+        layerResult = std::make_tuple(std::get<SL_RESULT_Y>(slResult), std::get<SL_RESULT_I>(slResult),
+                                      std::get<SL_RESULT_J>(slResult), std::get<SL_RESULT_F>(slResult),
+                                      std::get<SL_RESULT_O>(slResult), std::get<SL_RESULT_H>(slResult),
+                                      std::get<SL_RESULT_C>(slResult), std::get<SL_RESULT_TANHC>(slResult));
     } else {
         /* ON ascend950 THERE IS NO FALLBACK. DynamicRNN declares ascend950 and ships a binary config
          * for it, but a call that lands there does not come back: measured on device, a single-layer
@@ -308,14 +327,14 @@ LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const 
                                        executor);
     }
 
-    OP_CHECK_NULL(std::get<0>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<1>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<2>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<3>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<4>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<5>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<6>(layerResult), return nullptrInner);
-    OP_CHECK_NULL(std::get<7>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_Y>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_I>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_J>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_F>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_O>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_H>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_C>(layerResult), return nullptrInner);
+    OP_CHECK_NULL(std::get<RESULT_TANHC>(layerResult), return nullptrInner);
 
     return layerResult;
 }
@@ -329,31 +348,31 @@ static aclnnStatus ProcessViewCopy(std::tuple<const aclTensor*, const aclTensor*
                                    const char* direction, aclOpExecutor* executor)
 {
     auto paramsNumSingleLayer = bidirectional == true ? 2 : 1;
-    CHECK_RET(std::get<0>(layerResult) != nullptr && std::get<1>(layerResult) != nullptr &&
-                  std::get<2>(layerResult) != nullptr && std::get<3>(layerResult) != nullptr &&
-                  std::get<4>(layerResult) != nullptr && std::get<5>(layerResult) != nullptr &&
-                  std::get<6>(layerResult) != nullptr && std::get<7>(layerResult) != nullptr,
+    CHECK_RET(std::get<RESULT_Y>(layerResult) != nullptr && std::get<RESULT_I>(layerResult) != nullptr &&
+                  std::get<RESULT_J>(layerResult) != nullptr && std::get<RESULT_F>(layerResult) != nullptr &&
+                  std::get<RESULT_O>(layerResult) != nullptr && std::get<RESULT_H>(layerResult) != nullptr &&
+                  std::get<RESULT_C>(layerResult) != nullptr && std::get<RESULT_TANHC>(layerResult) != nullptr,
               ACLNN_ERR_INNER_NULLPTR);
     auto directionStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
-    auto viewCopyResultI = l0op::ViewCopy(std::get<1>(layerResult),
+    auto viewCopyResultI = l0op::ViewCopy(std::get<RESULT_I>(layerResult),
                                           (*iOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultI != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultJ = l0op::ViewCopy(std::get<2>(layerResult),
+    auto viewCopyResultJ = l0op::ViewCopy(std::get<RESULT_J>(layerResult),
                                           (*jOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultJ != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultF = l0op::ViewCopy(std::get<3>(layerResult),
+    auto viewCopyResultF = l0op::ViewCopy(std::get<RESULT_F>(layerResult),
                                           (*fOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultF != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultO = l0op::ViewCopy(std::get<4>(layerResult),
+    auto viewCopyResultO = l0op::ViewCopy(std::get<RESULT_O>(layerResult),
                                           (*oOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultO != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultH = l0op::ViewCopy(std::get<5>(layerResult),
+    auto viewCopyResultH = l0op::ViewCopy(std::get<RESULT_H>(layerResult),
                                           (*hOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultH != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultC = l0op::ViewCopy(std::get<6>(layerResult),
+    auto viewCopyResultC = l0op::ViewCopy(std::get<RESULT_C>(layerResult),
                                           (*cOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultC != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResultTanhc = l0op::ViewCopy(std::get<7>(layerResult),
+    auto viewCopyResultTanhc = l0op::ViewCopy(std::get<RESULT_TANHC>(layerResult),
                                               (*tanhCOut)[paramsNumSingleLayer * numLayers + directionStart], executor);
     CHECK_RET(viewCopyResultTanhc != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -366,12 +385,12 @@ static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor*, const aclTensor*
                                    std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector,
                                    const char* direction, aclOpExecutor* executor)
 {
-    CHECK_RET(std::get<0>(layerResult) != nullptr && std::get<5>(layerResult) != nullptr &&
-                  std::get<6>(layerResult) != nullptr,
+    CHECK_RET(std::get<RESULT_Y>(layerResult) != nullptr && std::get<RESULT_H>(layerResult) != nullptr &&
+                  std::get<RESULT_C>(layerResult) != nullptr,
               ACLNN_ERR_INNER_NULLPTR);
-    int64_t numStep = std::get<0>(layerResult)->GetViewShape().GetDim(0);
-    int64_t batch = std::get<0>(layerResult)->GetViewShape().GetDim(1);
-    int64_t hidden = std::get<0>(layerResult)->GetViewShape().GetDim(2);
+    int64_t numStep = std::get<RESULT_Y>(layerResult)->GetViewShape().GetDim(0);
+    int64_t batch = std::get<RESULT_Y>(layerResult)->GetViewShape().GetDim(1);
+    int64_t hidden = std::get<RESULT_Y>(layerResult)->GetViewShape().GetDim(2);
     int64_t copyStep = strcmp(direction, "UNIDIRECTIONAL") == 0 ? numStep - 1 : 0;
 
     const int64_t offsetData[] = {copyStep, 0, 0};
@@ -380,11 +399,11 @@ static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor*, const aclTensor*
     aclIntArray* size = executor->AllocIntArray(sizeData, 3);
     CHECK_RET(offsets != nullptr && size != nullptr && numStep > 0, ACLNN_ERR_INNER_NULLPTR);
 
-    auto thOutput = l0op::Slice(std::get<5>(layerResult), offsets, size, executor);
+    auto thOutput = l0op::Slice(std::get<RESULT_H>(layerResult), offsets, size, executor);
     CHECK_RET(thOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     hyVector.emplace_back(thOutput);
 
-    auto tcOutput = l0op::Slice(std::get<6>(layerResult), offsets, size, executor);
+    auto tcOutput = l0op::Slice(std::get<RESULT_C>(layerResult), offsets, size, executor);
     CHECK_RET(tcOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     cyVector.emplace_back(tcOutput);
 
