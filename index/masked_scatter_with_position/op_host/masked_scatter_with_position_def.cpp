@@ -76,6 +76,7 @@ public:
             .ExtendCfgInfo("opFile.value", "masked_scatter_with_position");
 
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 
