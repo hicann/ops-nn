@@ -9,36 +9,32 @@
  */
 
 /*!
- * \file quant_base_block_calculator.cpp
- * \brief BaseBlockCalculator subclass that forces baseN 32-alignment for MX quant.
+ * \file quant_matmul_activation_quant_base_block_calculator.cpp
+ * \brief Base-block alignment for GELU and paired-column SwiGLU MX quantization.
  */
-#include "quant_base_block_calculator.h"
+#include "quant_matmul_activation_quant_base_block_calculator.h"
 
-#include "graph/utils/type_utils.h"
-#include "log/log.h"
-#include "util/math_util.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
+#include "../quant_matmul_activation_quant_host_utils.h"
 
 namespace optiling {
 
-using Ops::NN::MathUtil;
-
-namespace {
-constexpr uint64_t MX_BASEN_ALIGN = 32UL;
-constexpr uint64_t DOUBLE_BUFFER_NUM = 2UL;
-} // namespace
+using QuantMatmulActivationQuantTilingConstant::GELU_BASEN_ALIGN;
+using QuantMatmulActivationQuantTilingConstant::SWIGLU_BASEN_ALIGN;
 
 QuantBaseBlockCalculator::QuantBaseBlockCalculator(const QuantBatchMatmulInfo& inputParams,
                                                    const QuantBatchMatmulV3CompileInfo& compileInfo,
-                                                   uint64_t batchCoreCnt)
-    : BaseBlockCalculator(inputParams, compileInfo, batchCoreCnt),
-      quantInputParams_(inputParams),
-      quantCompileInfo_(compileInfo)
+                                                   uint64_t batchCoreCnt, bool isSwiglu)
+    : BaseBlockCalculator(inputParams, compileInfo, batchCoreCnt), isSwiglu_(isSwiglu)
 {}
 
 uint64_t QuantBaseBlockCalculator::GetBaseNAlignSize(uint64_t innerAlignSize) const
 {
-    return this->inputParams_.transB ? MX_BASEN_ALIGN : GetShapeWithDataType(innerAlignSize, this->inputParams_.bDtype);
+    if (isSwiglu_) {
+        return SWIGLU_BASEN_ALIGN;
+    }
+    return this->inputParams_.transB ? GELU_BASEN_ALIGN :
+                                       GetShapeWithDataType(innerAlignSize, this->inputParams_.bDtype);
 }
 
 } // namespace optiling

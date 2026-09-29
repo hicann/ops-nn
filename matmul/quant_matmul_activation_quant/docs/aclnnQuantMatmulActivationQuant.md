@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：融合量化的矩阵乘、激活以及动态量化计算。当前支持激活为gelu（包括gelu_tanh和gelu_erf），量化模式为MX [量化模式](../../../docs/zh/context/quant_mode_introduction.md)。最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度），本接口在其他接口的基础上融合了gelu激活及动态MX量化，提高硬件计算效率。
+- 接口功能：融合量化的矩阵乘、激活以及动态量化计算。当前支持激活为gelu（包括gelu_tanh和gelu_erf）及swiglu，量化模式为MX [量化模式](../../../docs/zh/context/quant_mode_introduction.md)。最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度），本接口在其他接口的基础上融合了激活及动态MX量化，提高硬件计算效率。
 
 - 计算公式：
 
@@ -62,6 +62,14 @@
         activationOut=GELU(matmulOut)=0.5 * matmulOut * (1 + erf(matmulOut / \sqrt{2}))
         $$
 
+      - swiglu：原始N必须为正数且是64的倍数。先在完整FP32矩阵乘结果上加bias，再沿尾轴按`matmulOut=[gate | linear]`连续等分：
+
+        $$
+        activationOut=SiLU(gate) * linear
+        $$
+
+        SwiGLU结果以RNE舍入为BF16后执行MX量化，输出宽度为原始N的二分之一。
+
     </details>
 
     <details>
@@ -77,7 +85,7 @@
         P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space k\\
         $$
 
-        - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按尾轴上的分组输出yScaleOut。
+        - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`yOut`，mxscale按尾轴上的分组组成输出`yScaleOut`。
 
         - emax: 对应数据类型的最大正则数的指数位。
 
@@ -111,7 +119,7 @@
 
         - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
         - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
       - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
         - 当dstTypeMax = 0.0/6.0/7.0时：
@@ -122,7 +130,7 @@
           $$
           P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
           $$
-          - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+          - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`yOut`，mxscale按对应的axis维度上的分组组成输出`yScaleOut`。
         - 当dstTypeMax != 0.0/6.0/7.0时：
           - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
           - 找到该块中数值的最大绝对值:
@@ -141,10 +149,12 @@
             $$
           - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
           - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
-          - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+          - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`yOut`，mxscale按对应的axis维度上的分组组成输出`yScaleOut`。
 
     </details>
+
+    FP8输出的`scaleAlg=0`使用OCP共享指数算法，与[DynamicMxQuant](../../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuant.md)、[SwigluMxQuant](../../../quant/swiglu_mx_quant/docs/aclnnSwigluMxQuant.md)的OCP语义一致，不会根据目标FP8最大有限值额外上调scale；归一化结果位于FP8表示边界外时，输出由底层FP8类型转换语义决定。`scaleAlg=1`使用BLAS算法，按目标FP8最大有限值计算scale并将E8M0指数向上取整，可降低边界值量化溢出的风险。输入可能触及FP8表示边界且业务要求有限输出时，建议使用`scaleAlg=1`。
 
   <!-- end id7 -->
 
@@ -322,7 +332,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>activationType</td>
         <td>输入</td>
         <td>激活的类型。</td>
-        <td>支持{"gelu_tanh", "gelu_erf"}。</td>
+        <td>支持{"gelu_tanh", "gelu_erf", "swiglu"}。</td>
         <td>STRING</td>
         <td>-</td>
         <td>-</td>
@@ -356,7 +366,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
       <tr>
         <td>scaleAlg</td>
         <td>输入</td>
-        <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
+        <td>表示yScaleOut的计算方法，对应公式中的scaleAlg。</td>
         <td>
           <ul>
             <li>当yDtype为FLOAT4_E2M1时，支持取值0和2。取值为0代表场景1，为2代表场景3（开启dstTypeMax）。</li>
@@ -390,7 +400,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>
           <ul>
             <li>不支持空Tensor。</li>
-            <li>shape和矩阵乘计算结果一致，(batch, m, n)，batch可不存在。</li>
+            <li>shape为(batch, m, h)，GELU时h=n，SwiGLU时h=n/2，batch可不存在。</li>
           </ul>
         </td>
         <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
@@ -407,7 +417,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
             <li>不支持空Tensor。</li>
             <li>shape在尾轴上为y对应轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</li>
             <li>yScale输出需要对每两行数据进行交织处理。</li>
-            <li>shape和矩阵乘计算结果一致，(batch, m, ceil(n/64), 2)，batch可不存在。</li>
+            <li>shape为(batch, m, ceil(h/64), 2)，GELU时h=n，SwiGLU时h=n/2，batch可不存在。</li>
           </ul>
         </td>
         <td>FLOAT8_E8M0</td>
@@ -437,7 +447,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
       </tr>
   </tbody></table>
 
-  - 注：可选输入是指可选的量化参数，支持传入空指针。
+  - 注：当前MX模式的x1ScaleOptional和x2Scale必须提供；仅biasOptional允许为空指针。
 
   - 公式一：<a name='f1'></a>
 
@@ -559,7 +569,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
 
-  - y的shape支持2~6维，(batch, m, n)，batch可不存在，m与x1的m一致，n与x2的n一致。
+  - y的shape支持2~6维，(batch, m, h)，batch可不存在，m与x1的m一致；GELU时h=n，SwiGLU时h=n/2。
 
   <details>
     <summary><strong>MX量化场景约束：</strong></summary>
@@ -576,19 +586,19 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         | FLOAT8_E4M3FN | FLOAT8_E5M2   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E4M3FN             | FLOAT8_E8M0 |
         | FLOAT4_E2M1   | FLOAT4_E2M1   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT4_E2M1               | FLOAT8_E8M0 |
 
-    - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+    - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系。为同时表示两类激活，令h=n（GELU）或h=n/2（SwiGLU）：
 
         |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM, gsN, gsK]|groupSize|
         |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT8_E5M2|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
-        |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li><li>转置：(batch_x1, k, m)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li><li>转置：(batch_x1, ceil(k / 64), m, 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(n / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(h / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(h / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E5M2|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(h / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(h / 64), 2)|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li><li>转置：(batch_x1, k, m)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li><li>转置：(batch_x1, ceil(k / 64), m, 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|(batch_max, m, ceil(h / 64), 2)|[1, 1, 32]|4295032864|
 
     - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
     - MX量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-    - yOut的数据类型由x1的数据类型决定，两者必须保持一致。
+    - GELU和SwiGLU场景的yOut数据类型都必须与x1一致；SwiGLU仅支持上述FP8组合，不支持MXFP4。
     - MXFP4场景约束（x1、x2、y数据类型均为FLOAT4_E2M1）：
       - scaleAlg仅支持取值0和2。
       - 当scaleAlg为2时，dstTypeMax支持取值0.0和6.0-12.0。
@@ -598,6 +608,8 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
   </details>
 
 ## 调用示例
+
+完整示例见 [GELU + MXQuant（ND 权重）](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp) 和 [SwiGLU + MXQuant（ND 权重）](../examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp)。SwiGLU 示例使用 `activationType="swiglu"`，bias 长度为 N，输出为 `[M,N/2]`，输出 scale 为 `[M,ceil((N/2)/64),2]`。
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
@@ -801,3 +813,16 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       return 0;
   }
   ```
+
+## SwiGLU支持范围
+
+`activationType="swiglu"`在完整FP32矩阵乘结果加bias后，沿最后一维按`C=[gate | linear]`连续等分，计算`SiLU(gate) * linear`，将SwiGLU结果以RNE舍入为BF16后执行MX量化。
+
+- 原始`N`必须为正数且是64的倍数；输出宽度`N/2`可有32列尾块。
+- `x1`、`x2`为E4M3FN或E5M2，`yOut`的数据类型必须与`x1`一致；输入和输出scale为E8M0。
+- 本接口的`x2`仅支持ND；WeightNZ输入请调用[aclnnQuantMatmulActivationQuantWeightNz](aclnnQuantMatmulActivationQuantWeightNz.md)。ND格式支持`transposeX1`为false或true，WeightNZ格式要求`transposeX1=false`，`transposeX2`支持false或true，且不支持MXFP4。
+- `bias`可为空；非空时为FP32`[N]`，三维输出场景还支持`[B,1,N]`。bias在split之前作用于完整原始N宽度，不接受`[N/2]`。
+- 输入rank为2～6，batch轴右对齐广播；scale的batch维必须与对应输入一致。
+- `quantMode="mx"`、`roundMode="rint"`、`scaleAlg=0/1`；groupSize为默认值或`[1,1,32]`。
+
+SwiGLU输出形状为`yOut=[...,M,N/2]`、`yScaleOut=[...,M,ceil((N/2)/64),2]`。GELU输出宽度仍为N。两个32元素量化组构成一个64元素scale存储组，末尾不足的元素不写入yOut。

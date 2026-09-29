@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：融合量化的矩阵乘、激活以及动态量化，当前支持激活为gelu、MX [量化模式](../../docs/zh/context/quant_mode_introduction.md)。支持FP8（FLOAT8_E4M3FN/FLOAT8_E5M2）和FP4（FLOAT4_E2M1）数据类型输入输出。x2支持ND和NZ两种数据格式，当x2为NZ格式时通过[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)接口调用，当x2为ND格式时通过[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)接口调用。
+- 算子功能：融合量化的矩阵乘、激活以及动态量化，当前支持激活为gelu和swiglu、MX [量化模式](../../docs/zh/context/quant_mode_introduction.md)。支持FP8（FLOAT8_E4M3FN/FLOAT8_E5M2）和FP4（FLOAT4_E2M1）数据类型输入输出。x2支持ND和NZ两种数据格式，当x2为NZ格式时通过[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)接口调用，当x2为ND格式时通过[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)接口调用。
 
 - 计算公式：
 
@@ -39,6 +39,14 @@
       activationOut=GELU(matmulOut)=0.5 * matmulOut * (1 + erf(matmulOut / \sqrt{2}))
       $$
 
+      - swiglu：原始N必须为正数且是64的倍数。先在完整FP32矩阵乘结果上加bias，再沿尾轴按`matmulOut=[gate | linear]`连续等分：
+
+      $$
+      activationOut=SiLU(gate) * linear
+      $$
+
+      SwiGLU结果以RNE舍入为BF16后执行MX量化，输出宽度为原始N的二分之一。
+
     - 动态量化计算公式：
 
       - 场景1，当scaleAlg为0时：
@@ -50,7 +58,7 @@
         P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space k\\
         $$
 
-        - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按尾轴上的分组输出yScaleOut。
+        - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，mxscale按尾轴上的分组组成输出`y_scale`。
 
         - emax: 对应数据类型的最大正则数的指数位。
 
@@ -85,7 +93,7 @@
 
         - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
         - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
       - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
         - 当dstTypeMax = 0.0/6.0/7.0时：
@@ -99,7 +107,7 @@
           P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize
           $$
 
-          - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按尾轴上的分组输出yScaleOut。
+          - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，mxscale按尾轴上的分组组成输出`y_scale`。
 
         - 当dstTypeMax != 0.0/6.0/7.0时：
           - 将输入activationOut在尾轴上按$k = blocksize$个数分块，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足$k$个元素，把缺失值视为0，按照完整块处理。
@@ -125,8 +133,14 @@
 
           - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
           - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
-          - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按尾轴上的分组输出yScaleOut。
+          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+          - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，mxscale按尾轴上的分组组成输出`y_scale`。
+
+### FP8缩放算法选择
+
+- `scale_alg=0`使用OCP共享指数算法，与[DynamicMxQuant](../../quant/dynamic_mx_quant/README.md)、[SwigluMxQuant](../../quant/swiglu_mx_quant/README.md)的OCP语义一致。该算法按最大指数直接生成2的整数次幂scale，不会根据目标FP8最大有限值额外上调scale；归一化结果位于FP8表示边界外时，输出由底层FP8类型转换语义决定。
+- `scale_alg=1`使用BLAS算法，按目标FP8最大有限值计算scale并将E8M0指数向上取整，可降低边界值量化溢出的风险。输入可能触及FP8表示边界且业务要求有限输出时，建议使用该算法。
+- 在相同输出dtype、32元素分组和`scale_alg`下，融合算子只是在量化前增加矩阵乘和激活，scale生成方式以及FP8转换规则与拆分调用小算子保持一致。
 
 ## 参数说明
 
@@ -204,7 +218,7 @@
 | transpose_x1 | 表示x1的输入shape是否转置。 | false |
 | transpose_x2 | 表示x2的输入shape是否转置。 | false |
 | group_size | 用于输入m、n、k方向上的量化分组大小，由groupSizeM、groupSizeN、groupSizeK三个值拼接组成。当前MX场景仅支持[1, 1, 32]。 | 0 |
-| activation_type | 激活函数类型，支持"gelu_tanh"、"gelu_erf"。 | "gelu_tanh" |
+| activation_type | 激活函数类型，支持"gelu_tanh"、"gelu_erf"和"swiglu"。 | "gelu_tanh" |
 | y_dtype | 输出y的数据类型。 | DT_FLOAT8_E4M3FN |
 | quant_mode | 量化模式，当前支持"mx"。 | "mx" |
 | round_mode | 舍入模式。当y为FLOAT4_E2M1时支持"rint"、"floor"、"round"；当y为FLOAT8时仅支持"rint"。 | "rint" |
@@ -225,7 +239,7 @@
     | FLOAT4_E2M1   | FLOAT4_E2M1   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT4_E2M1               | FLOAT8_E8M0 |
 
   - x2为FLOAT8_E5M2时仅支持ND格式，不支持NZ格式。
-  - y的数据类型由x1的数据类型决定，两者必须保持一致。
+  - GELU和SwiGLU场景y的数据类型都由x1的数据类型决定，两者必须保持一致；SwiGLU仅支持MXFP8，不支持MXFP4。
   - MXFP4场景约束（x1、x2、y数据类型均为FLOAT4_E2M1）：
     - scale_alg仅支持取值0和2。
     - 当scale_alg为2时，dst_type_max支持取值0.0和6.0-12.0。
@@ -238,6 +252,22 @@
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
-  | aclnn接口（x2为NZ格式） | [test_aclnn_quant_matmul_activation_quant](examples/arch35/test_aclnn_quant_matmul_activation_quant.cpp) | 通过<br>[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)<br>调用QuantMatmulActivationQuant算子。 |
-  | aclnn接口（x2为ND格式） | [test_aclnn_quant_matmul_activation_quant_nd](examples/arch35/test_aclnn_quant_matmul_activation_quant_nd.cpp) | 通过<br>[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)<br>调用QuantMatmulActivationQuant算子。 |
+  | ACLNN：GELU + MXQuant，ND 权重 | [test_aclnn_quant_matmul_gelu_mx_quant](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp) | 使用 [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为 `gelu_tanh`，输出宽度为 N。 |
+  | ACLNN：GELU + MXQuant，WeightNZ 权重 | [test_aclnn_quant_matmul_gelu_mx_quant_weight_nz](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp) | 先转换权重，再调用 [aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)，激活为 `gelu_tanh`。 |
+  | ACLNN：SwiGLU + MXQuant，ND 权重 | [test_aclnn_quant_matmul_swiglu_mx_quant](examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp) | 使用 [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)，激活为 `swiglu`，包含 `[N]` FP32 bias，输出宽度为 N/2。 |
   | PyTorch API | - | 通过<br>[quant_matmul_activation_quant](docs/torchapi_quant_matmul_activation_quant.md)<br>调用QuantMatmulActivationQuant算子。 |
+
+## SwiGLU支持范围
+
+`activation_type="swiglu"`在完整FP32矩阵乘结果加bias后，沿最后一维按`C=[gate | linear]`连续等分，计算`SiLU(gate) * linear`，将SwiGLU结果以RNE舍入为BF16后执行MX量化。
+
+- 原始`N`必须为正数且是64的倍数；输出宽度`N/2`可有32列尾块。
+- `x1`、`x2`为E4M3FN或E5M2，`y`的数据类型必须与`x1`一致；输入和输出scale为E8M0。
+- `x2`支持ND或WeightNZ；WeightNZ场景`x2`仅支持E4M3FN。ND场景`transpose_x1`支持false或true；WeightNZ场景要求`transpose_x1=false`，`transpose_x2`支持false或true；不支持MXFP4。
+- `bias`可为空；非空时为FP32`[N]`，三维输出场景还支持`[B,1,N]`。bias在split之前作用于完整原始N宽度，不接受`[N/2]`。
+- 输入rank为2～6，batch轴右对齐广播；scale的batch维必须与对应输入一致。
+- `quant_mode="mx"`、`round_mode="rint"`、`scale_alg=0/1`；group size为默认值或`[1,1,32]`。
+
+SwiGLU输出形状为`y=[...,M,N/2]`、`y_scale=[...,M,ceil((N/2)/64),2]`。GELU输出宽度仍为N。两个32元素量化组构成一个64元素scale存储组，末尾不足的元素不写入y。
+
+ND与WeightNZ接口约束分别见[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)和[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)。

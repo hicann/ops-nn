@@ -10,7 +10,7 @@
 
 /*!
  * \file quant_matmul_activation_quant_def.cpp
- * \brief
+ * \brief Register fused MX matmul, activation and quantization dtype combinations.
  */
 
 #include "register/op_def_registry.h"

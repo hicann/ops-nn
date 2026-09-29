@@ -1087,6 +1087,8 @@ matmul-c@ops-nn:
         - ops/ops-nn/matmul/quant_batch_matmul_v4/examples/
         - ops/ops-nn/matmul/quant_matmul/tests/
         - ops/ops-nn/matmul/quant_matmul/examples/
+        - ops/ops-nn/matmul/quant_matmul_activation_quant/tests/
+        - ops/ops-nn/matmul/quant_matmul_activation_quant/examples/
         - ops/ops-nn/matmul/quant_matmul_dequant/tests/
         - ops/ops-nn/matmul/quant_matmul_dequant/examples/
         - ops/ops-nn/matmul/sparse_tensor_dense_mat_mul/tests/

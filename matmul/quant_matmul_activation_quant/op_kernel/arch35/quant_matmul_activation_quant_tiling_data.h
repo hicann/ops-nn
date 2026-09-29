@@ -9,40 +9,26 @@
  */
 /*!
  * \file quant_matmul_activation_quant_tiling_data.h
- * \brief
+ * \brief Shared host/device tiling fields for activation and MX quantization.
  */
 #pragma once
 #include "kernel_tiling/kernel_tiling.h"
-#if defined(__CCE_AICORE__)
-#include "../../quant_batch_matmul_v3/arch35/quant_batch_matmul_v3_tiling_data.h"
-#else
-#include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
-#endif
 #ifndef __CCE_AICORE__
 #include <cstdint>
 #endif
 
 // QuantMatmulActivationQuant tiling_data
 namespace QMMAQ {
-enum class BasicQuantMode : uint32_t {
-    DEFAULT = 0x0U,
-    PERTENSOR_MODE = 0x1U,
-    PERCHANNEL_MODE = 0x1U << 1,
-    PERTOKEN_MODE = 0x1U << 2,
-    MX_PERGROUP_MODE = 0x1U << 3,
-    PERBLOCK_MODE = 0x1U << 4,
-    PERGROUP_MODE = 0x1U << 5,
-};
-
 enum class QuantAlg : uint8_t {
     OCP = 0,
     BLAS = 1,
     DYN_DTYPE_RANGE = 2,
 };
 
-enum class GeluAlg : uint8_t {
+enum class ActivationAlg : uint8_t {
     TANH = 0,
     ERF = 1,
+    SWIGLU = 2,
 };
 
 enum class MX_QUANT_ROUND_MODE : uint8_t {
@@ -52,12 +38,69 @@ enum class MX_QUANT_ROUND_MODE : uint8_t {
 };
 
 #pragma pack(push, 8)
-struct QuantMatmulActivationQuantTilingData {
-    DequantBmm::QuantBatchMatmulV3BasicAPITilingData mmTilingData;
-    GeluAlg activationType = GeluAlg::TANH;
+struct alignas(8) QMMAQTilingData {
+    uint32_t batchA1 = 1;
+    uint32_t batchA2 = 1;
+    uint32_t batchA3 = 1;
+    uint32_t batchA4 = 1;
+    uint32_t batchB1 = 1;
+    uint32_t batchB2 = 1;
+    uint32_t batchB3 = 1;
+    uint32_t batchB4 = 1;
+    uint32_t batchC1 = 1;
+    uint32_t batchC2 = 1;
+    uint32_t batchC3 = 1;
+    uint32_t batchC4 = 1;
+    uint32_t batchCount = 1;
+    uint32_t m = 0;
+    uint32_t n = 0;
+    uint32_t k = 0;
+    uint32_t kL1 = 0;
+    uint32_t scaleKL1 = 0;
+    float dstTypeMax = 0.0;
+    uint16_t baseM = 0;
+    uint16_t baseN = 0;
+    uint16_t baseK = 0;
+    uint16_t mTailTile = 0;
+    uint16_t nTailTile = 0;
+    uint16_t mBaseTailSplitCnt = 1;
+    uint16_t nBaseTailSplitCnt = 1;
+    uint16_t mTailMain = 0;
+    uint16_t nTailMain = 0;
+    uint8_t nBufferNum = 0;
+    uint8_t isBias = 0;
+    uint8_t dbL0C = 0;
+    uint8_t weightMustHitL2 = 1;
+    uint8_t biasThreeDim = 0;
+    ActivationAlg activationType = ActivationAlg::TANH;
     QuantAlg scaleAlg = QuantAlg::OCP;
     MX_QUANT_ROUND_MODE roundMode = MX_QUANT_ROUND_MODE::RINT;
+};
+
+struct alignas(8) QMMAQWithoutBatchTilingData {
+    uint32_t m = 0;
+    uint32_t n = 0;
+    uint32_t k = 0;
+    uint32_t kL1 = 0;
+    uint32_t scaleKL1 = 0;
     float dstTypeMax = 0.0;
+    uint16_t baseM = 0;
+    uint16_t baseN = 0;
+    uint16_t baseK = 0;
+    uint16_t mTailTile = 0;
+    uint16_t nTailTile = 0;
+    uint16_t mBaseTailSplitCnt = 1;
+    uint16_t nBaseTailSplitCnt = 1;
+    uint16_t mTailMain = 0;
+    uint16_t nTailMain = 0;
+    uint8_t nBufferNum = 0;
+    uint8_t isBias = 0;
+    uint8_t dbL0C = 0;
+    uint8_t weightMustHitL2 = 1;
+    ActivationAlg activationType = ActivationAlg::TANH;
+    QuantAlg scaleAlg = QuantAlg::OCP;
+    MX_QUANT_ROUND_MODE roundMode = MX_QUANT_ROUND_MODE::RINT;
 };
 #pragma pack(pop)
+
 } // namespace QMMAQ

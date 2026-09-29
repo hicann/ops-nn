@@ -9,6 +9,7 @@
  */
 
 #include <torch/extension.h>
+#include <string>
 #include "aclnn_common.h"
 namespace {
 constexpr int64_t ALIGN_NUM = 2;
@@ -34,7 +35,7 @@ int64_t CeilDiv(int64_t value, int64_t factor)
     return value_num;
 }
 
-int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
+int64_t CheckAndGetGroupSize(at::IntArrayRef group_size_list)
 {
     int64_t groups = 0;
     if (group_size_list.empty()) {
@@ -53,7 +54,7 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
-bool static is_transpose_last_two_dims(const at::Tensor& tensor)
+static bool IsTransposeLastTwoDims(const at::Tensor& tensor)
 {
     if (tensor.dim() < 2 || tensor.dim() > 6) {
         return false;
@@ -90,14 +91,25 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
 {
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
+    // Keep only the preconditions needed to inspect shapes and construct
+    // output tensors here; ACLNN/tiling owns the operator contract checks.
+    TORCH_CHECK(x1_dim_num >= 2 && x2_dim_num >= 2, "x1 and x2 must have at least two dimensions");
+    TORCH_CHECK(
+        x1.device().type() == at::kPrivateUse1 && x2.device() == x1.device() && x2_scale.device() == x1.device(),
+        "x1, x2 and x2_scale must be on the same NPU device");
+    TORCH_CHECK(!x1_scale.has_value() || !x1_scale->defined() || x1_scale->device() == x1.device(),
+                "x1_scale must be on the same NPU device as x1");
+    TORCH_CHECK(!bias.has_value() || !bias->defined() || bias->device() == x1.device(),
+                "bias must be on the same NPU device as x1");
 
     int64_t x1_a = x1.size(x1_dim_num - 2);
-    int64_t x1_b = x1.size(x1_dim_num - 1);
-    int64_t x2_a = x2.size(x2_dim_num - 2);
     int64_t x2_b = x2.size(x2_dim_num - 1);
 
     int64_t m = 0;
     int64_t n = 0;
+    // The Torch API keeps canonical (M,K)/(K,N) view shapes.  Leave the
+    // explicit ACLNN flags at false; its checker derives transpose views from
+    // the last-two strides (and normalizes the view before tiling).
     bool transposeX1 = false;
     bool transposeX2 = false;
 
@@ -108,13 +120,20 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     bool isMXFP4 = x1_dtype_val == DTYPE_FLOAT4_E2M1 && x2_dtype_val == DTYPE_FLOAT4_E2M1;
 
     if (isMXFP4) {
-        bool transX1 = is_transpose_last_two_dims(x1);
-        bool transX2 = is_transpose_last_two_dims(x2);
+        bool transX1 = IsTransposeLastTwoDims(x1);
+        bool transX2 = IsTransposeLastTwoDims(x2);
         m = !transX1 ? x1_a : x1_a * FP4_IN_INT8;
         n = transX2 ? x2_b : x2_b * FP4_IN_INT8;
     } else {
         m = x1_a;
         n = x2_b;
+    }
+
+    if (activation_type == "swiglu") {
+        // The ACLNN checker/tiling layer validates the SwiGLU N alignment and
+        // transpose restrictions.  The bridge only needs the post-epilogue
+        // width to allocate y and y_scale before dispatch.
+        n /= 2;
     }
 
     c10::SmallVector<int64_t, op_infer::SIZE> output_size;
@@ -141,7 +160,7 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     scale_size.emplace_back(ALIGN_NUM);
 
     aclDataType output_acltype;
-    int64_t output_dtype_val = output_dtype.value_or(0);
+    int64_t output_dtype_val = output_dtype.value_or(x1_dtype.value_or(0));
     bool special_output_type = false;
 
     if (output_dtype_val == DTYPE_FLOAT4_E2M1) {
@@ -154,9 +173,9 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
         TORCH_CHECK(last_dim_val % 2 == 0, "The last dim output shape must be divisible by 2 if "
                                            "output dtype is FLOAT4_E2M1");
         output_size[output_size.size() - 1] = last_dim_val / 2;
-        output = at::empty(output_size, at::TensorOptions().dtype(c10::ScalarType::Byte).device(at::kPrivateUse1));
+        output = at::empty(output_size, at::TensorOptions().dtype(c10::ScalarType::Byte).device(x1.device()));
         output_acltype = GetAclDataType(output_dtype_val);
-    } else if (output_dtype.has_value()) {
+    } else if (output_dtype.has_value() || x1_dtype.has_value()) {
         at::ScalarType scalar_dtype = at::ScalarType::Float8_e5m2;
         output_acltype = GetAclDataType(output_dtype_val);
         if (output_acltype == ACL_FLOAT8_E5M2) {
@@ -167,14 +186,20 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
             TORCH_CHECK(false,
                         "unsupport output_dtype, only support output_dtype FLOAT8_E5M2, FLOAT8_E4M3FN or FLOAT4_E2M1");
         }
-        output = at::empty(output_size, at::TensorOptions().dtype(scalar_dtype).device(at::kPrivateUse1));
+        output = at::empty(output_size, at::TensorOptions().dtype(scalar_dtype).device(x1.device()));
     } else {
         output_acltype = ConvertToAclDataType(x1.scalar_type());
-        output = at::empty(output_size, at::TensorOptions().dtype(x1.scalar_type()).device(at::kPrivateUse1));
+        output = at::empty(output_size, at::TensorOptions().dtype(x1.scalar_type()).device(x1.device()));
     }
 
-    at::Tensor scale_cpu = at::zeros(scale_size, at::TensorOptions().dtype(c10::ScalarType::Float8_e8m0fnu));
-    at::Tensor scale = scale_cpu.to(at::TensorOptions().device(at::kPrivateUse1));
+    at::Tensor scale;
+    if (activation_type == "swiglu") {
+        scale = at::empty(scale_size, at::TensorOptions().dtype(c10::ScalarType::Float8_e8m0fnu).device(x1.device()));
+    } else {
+        // Preserve GELU's existing scale initialization, including padding groups.
+        auto scaleCpu = at::zeros(scale_size, at::TensorOptions().dtype(c10::ScalarType::Float8_e8m0fnu));
+        scale = scaleCpu.to(at::TensorOptions().device(x1.device()));
+    }
 
     TensorWrapper output_wrapper = {output, output_acltype};
     TensorWrapper scale_wrapper = {scale, aclDataType::ACL_FLOAT8_E8M0};
@@ -199,12 +224,14 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     int64_t scale_alg_optional = scale_alg.has_value() ? scale_alg.value() : DEFAULT_SCALE_ALG;
 
     at::IntArrayRef group_size_ref = group_sizes.has_value() ? at::IntArrayRef(group_sizes.value()) : at::IntArrayRef{};
-    int64_t group_size = check_and_get_group_size(group_size_ref);
-    TORCH_CHECK(group_size != -1, "Invalid group_sizes.");
+    int64_t group_size = CheckAndGetGroupSize(group_size_ref);
 
-    char* activation_type_ptr = const_cast<char*>(activation_type.data());
-    char* quant_mode_ptr = const_cast<char*>(quant_mode.data());
-    char* round_mode_ptr = const_cast<char*>(round_mode.data());
+    std::string activationTypeString(activation_type.data(), activation_type.size());
+    std::string quantModeString(quant_mode.data(), quant_mode.size());
+    std::string roundModeString(round_mode.data(), round_mode.size());
+    char* activation_type_ptr = activationTypeString.data();
+    char* quant_mode_ptr = quantModeString.data();
+    char* round_mode_ptr = roundModeString.data();
 
     bool isX2Nz = at_npu::native::get_npu_format(x2) == static_cast<int64_t>(ACL_FORMAT_FRACTAL_NZ);
     if (isX2Nz) {

@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <exception>
@@ -21,6 +22,7 @@
 #include <vector>
 
 #include "log/log.h"
+#include "../../../op_kernel/arch35/quant_matmul_activation_quant_tiling_key.h"
 
 #define protected public
 #define private public
@@ -32,9 +34,13 @@
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
+#include "../../../op_host/op_tiling/quant_matmul_activation_quant_helper.h"
 #include "../../../op_kernel/arch35/quant_matmul_activation_quant_tiling_data.h"
 #include "ut_string_utils.h"
+#undef private
+#undef protected
 
 using namespace ut_str;
 using namespace std;
@@ -121,9 +127,9 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
 
         std::vector<std::string> cols;
         SplitStr2Vec(line, ",", cols);
-        if (cols.size() < kExpectedCols) {
+        if (cols.size() != kExpectedCols) {
             result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath +
-                                    ": expected at least " + std::to_string(kExpectedCols) + " columns, got " +
+                                    ": expected " + std::to_string(kExpectedCols) + " columns, got " +
                                     std::to_string(cols.size()));
             continue;
         }
@@ -192,62 +198,68 @@ static const QuantMatmulActivationQuantTilingCsvLoadResult& GetParamsLoadResult(
 
 static std::vector<QuantMatmulActivationQuantTilingParam> GetParams() { return GetParamsLoadResult().params; }
 
-static void DumpTilingData(gert::TilingContext* tilingContext, const std::string& caseName)
-{
-    const auto* tilingData = static_cast<const QMMAQ::QuantMatmulActivationQuantTilingData*>(
-        tilingContext->GetRawTilingData()->GetData());
-    uint64_t tilingKey = tilingContext->GetTilingKey();
+using QuantMatmulActivationQuantMxHelper = QuantMatmulActivationQuantHelper<AdaptiveSlidingWindowMXBasicAPITiling>;
 
-    std::cout << "===== TilingData [caseName=" << caseName << "] =====" << std::endl;
-    std::cout << "tilingKey: " << tilingKey << std::endl;
-    std::cout << "--- params ---" << std::endl;
-    std::cout << "  batchA=" << tilingData->mmTilingData.params.batchA
-              << " batchB=" << tilingData->mmTilingData.params.batchB
-              << " batchC=" << tilingData->mmTilingData.params.batchC << std::endl;
-    std::cout << "  batchA1=" << tilingData->mmTilingData.params.batchA1
-              << " batchA2=" << tilingData->mmTilingData.params.batchA2
-              << " batchA3=" << tilingData->mmTilingData.params.batchA3
-              << " batchA4=" << tilingData->mmTilingData.params.batchA4 << std::endl;
-    std::cout << "  batchB1=" << tilingData->mmTilingData.params.batchB1
-              << " batchB2=" << tilingData->mmTilingData.params.batchB2
-              << " batchB3=" << tilingData->mmTilingData.params.batchB3
-              << " batchB4=" << tilingData->mmTilingData.params.batchB4 << std::endl;
-    std::cout << "  batchC1=" << tilingData->mmTilingData.params.batchC1
-              << " batchC2=" << tilingData->mmTilingData.params.batchC2
-              << " batchC3=" << tilingData->mmTilingData.params.batchC3
-              << " batchC4=" << tilingData->mmTilingData.params.batchC4 << std::endl;
-    std::cout << "  x1QuantMode=" << tilingData->mmTilingData.params.x1QuantMode
-              << " x2QuantMode=" << tilingData->mmTilingData.params.x2QuantMode << std::endl;
-    std::cout << "  biasThreeDim=" << tilingData->mmTilingData.params.biasThreeDim
-              << " biasDtype=" << tilingData->mmTilingData.params.biasDtype << std::endl;
-    std::cout << "  groupSizeM=" << tilingData->mmTilingData.params.groupSizeM
-              << " groupSizeN=" << tilingData->mmTilingData.params.groupSizeN
-              << " groupSizeK=" << tilingData->mmTilingData.params.groupSizeK << std::endl;
-    std::cout << "--- matmulTiling ---" << std::endl;
-    std::cout << "  m=" << tilingData->mmTilingData.matmulTiling.m << " n=" << tilingData->mmTilingData.matmulTiling.n
-              << " k=" << tilingData->mmTilingData.matmulTiling.k << std::endl;
-    std::cout << "  baseM=" << tilingData->mmTilingData.matmulTiling.baseM
-              << " baseN=" << tilingData->mmTilingData.matmulTiling.baseN
-              << " baseK=" << tilingData->mmTilingData.matmulTiling.baseK << std::endl;
-    std::cout << "  kAL1=" << tilingData->mmTilingData.matmulTiling.kAL1
-              << " kBL1=" << tilingData->mmTilingData.matmulTiling.kBL1
-              << " scaleKL1=" << tilingData->mmTilingData.matmulTiling.scaleKL1 << std::endl;
-    std::cout << "  nBufferNum=" << static_cast<int>(tilingData->mmTilingData.matmulTiling.nBufferNum)
-              << " isBias=" << static_cast<int>(tilingData->mmTilingData.matmulTiling.isBias)
-              << " dbL0C=" << static_cast<int>(tilingData->mmTilingData.matmulTiling.dbL0C) << std::endl;
-    std::cout << "--- adaptiveSlidingWin ---" << std::endl;
-    std::cout << "  mTailTile=" << tilingData->mmTilingData.adaptiveSlidingWin.mTailTile
-              << " nTailTile=" << tilingData->mmTilingData.adaptiveSlidingWin.nTailTile << std::endl;
-    std::cout << "  mBaseTailSplitCnt=" << tilingData->mmTilingData.adaptiveSlidingWin.mBaseTailSplitCnt
-              << " nBaseTailSplitCnt=" << tilingData->mmTilingData.adaptiveSlidingWin.nBaseTailSplitCnt << std::endl;
-    std::cout << "  mTailMain=" << tilingData->mmTilingData.adaptiveSlidingWin.mTailMain
-              << " nTailMain=" << tilingData->mmTilingData.adaptiveSlidingWin.nTailMain << std::endl;
-    std::cout << "--- activationQuant ---" << std::endl;
-    std::cout << "  activationType=" << static_cast<int>(tilingData->activationType)
-              << " scaleAlg=" << static_cast<int>(tilingData->scaleAlg)
-              << " roundMode=" << static_cast<int>(tilingData->roundMode) << " dstTypeMax=" << tilingData->dstTypeMax
-              << std::endl;
-    std::cout << "============================================" << std::endl;
+// These two tests are white-box checks of the tail-search ordering.  They inject an
+// adaptive-window state that cannot be expressed by the public tiling CSV schema;
+// ordinary operator cases remain data-driven by the CSV below.
+static void SetupSwiGluTailSplitHelper(QuantMatmulActivationQuantMxHelper& helper, bool isAFullLoad)
+{
+    ResetQuantBatchMatmulV3InputParams();
+    helper.activationType_ = QMMAQ::ActivationAlg::SWIGLU;
+    helper.aicoreParams_.aicNum = 32UL;
+    helper.inputParams_.mSize = isAFullLoad ? 256UL : 258UL;
+    helper.inputParams_.nSize = isAFullLoad ? 4352UL : 256UL;
+    helper.inputParams_.transA = false;
+    helper.inputParams_.bFormat = ge::FORMAT_ND;
+    helper.inputParams_.aDtype = ge::DT_FLOAT8_E4M3FN;
+    helper.inputParams_.bDtype = ge::DT_FLOAT8_E4M3FN;
+    helper.isAFullLoad_ = isAFullLoad;
+    helper.adaptiveWin_.useTailWinLogic = true;
+    helper.adaptiveWin_.baseM = 128UL;
+    helper.adaptiveWin_.baseN = 256UL;
+    helper.adaptiveWin_.mBlockCnt = isAFullLoad ? 2UL : 3UL;
+    helper.adaptiveWin_.nBlockCnt = isAFullLoad ? 17UL : 1UL;
+    helper.adaptiveWin_.totalBlockCnt = isAFullLoad ? 34UL : 3UL;
+    helper.adaptiveWin_.totalWinCnt = isAFullLoad ? 2UL : 1UL;
+    helper.adaptiveWin_.tailWinBlockCnt = isAFullLoad ? 2UL : 3UL;
+    helper.adaptiveWin_.mTail = isAFullLoad ? 128UL : 2UL;
+    helper.adaptiveWin_.nTail = 256UL;
+    helper.adaptiveWin_.mTailTile = 7UL;
+    helper.adaptiveWin_.nTailTile = 5UL;
+    helper.adaptiveWin_.nBaseTailSplitCnt = 4UL;
+    helper.adaptiveWin_.nTailMain = 64UL;
+}
+
+TEST(QuantMatmulActivationQuantTailSplit, SwiGluNonFullLoadSearchesMOnlyBeforeCoreCount)
+{
+    QuantMatmulActivationQuantMxHelper helper(nullptr);
+    SetupSwiGluTailSplitHelper(helper, false);
+
+    helper.CalcTailRoundBasicBlockSplit();
+
+    // A coupled M/N search would spend cores on N=2 and stop M at 5 for this shape.
+    EXPECT_EQ(helper.adaptiveWin_.mTailTile, 8UL);
+    EXPECT_EQ(helper.adaptiveWin_.nTailTile, 1UL);
+    EXPECT_EQ(helper.adaptiveWin_.nBaseTailSplitCnt, 1UL);
+    EXPECT_EQ(helper.adaptiveWin_.nTailMain, 0UL);
+    EXPECT_EQ(helper.CalUsedCoreNum(), 24U);
+    ResetQuantBatchMatmulV3InputParams();
+}
+
+TEST(QuantMatmulActivationQuantTailSplit, SwiGluAFullLoadKeepsTailRoundUnsplit)
+{
+    QuantMatmulActivationQuantMxHelper helper(nullptr);
+    SetupSwiGluTailSplitHelper(helper, true);
+
+    helper.CalcTailRoundBasicBlockSplit();
+
+    EXPECT_EQ(helper.adaptiveWin_.mTailTile, 1UL);
+    EXPECT_EQ(helper.adaptiveWin_.nTailTile, 1UL);
+    EXPECT_EQ(helper.adaptiveWin_.nBaseTailSplitCnt, 1UL);
+    EXPECT_EQ(helper.adaptiveWin_.nTailMain, 0UL);
+    EXPECT_EQ(helper.CalUsedCoreNum(), 32U);
+    ResetQuantBatchMatmulV3InputParams();
 }
 
 static void SetupTilingParse(const string& opType, const string& compileInfoStr, fe::PlatFormInfos& platformInfo,
@@ -290,6 +302,25 @@ protected:
 
     static void TearDownTestCase() {}
 };
+
+static uint64_t GetBatchCount(const gert::Shape& shape)
+{
+    uint64_t count = 1;
+    for (size_t dim = 0; dim + 2 < shape.GetDimNum(); ++dim) {
+        count *= static_cast<uint64_t>(shape.GetDim(dim));
+    }
+    return count;
+}
+
+static void CheckBatchDims(const std::array<uint32_t, 4>& dims, const gert::Shape& shape)
+{
+    const size_t batchRank = shape.GetDimNum() - 2;
+    ASSERT_LE(batchRank, 4U);
+    const size_t leading = 4U - batchRank;
+    for (size_t dim = 0; dim < 4U; ++dim) {
+        EXPECT_EQ(dims[dim], dim < leading ? 1 : shape.GetDim(dim - leading));
+    }
+}
 
 TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
 {
@@ -387,10 +418,61 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
     ASSERT_NE(tilingFunc, nullptr) << "caseName=" << param.caseName;
 
     if (param.expectResult) {
-        EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS) << "caseName=" << param.caseName;
-        DumpTilingData(tilingContext, param.caseName);
+        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS) << "caseName=" << param.caseName;
+        using namespace QuantMatmulActivationQuantArch35TilingKey;
+        const bool withoutBatch = GetBatchCount(param.x1Shape) == 1 && GetBatchCount(param.x2OriginShape) == 1;
+        const uint64_t batchMode = withoutBatch ? TPL_WITHOUT_BATCH : TPL_WITH_BATCH;
+        auto* rawTiling = tilingContext->GetRawTilingData();
+        const auto checkTilingFields = [&param](const auto& data) {
+            EXPECT_EQ(static_cast<int64_t>(data.scaleAlg), param.scaleAlg);
+            EXPECT_EQ(data.isBias, param.hasBias ? 1U : 0U);
+            EXPECT_EQ(data.m, param.yShape.GetDim(param.yShape.GetDimNum() - 2));
+            EXPECT_EQ(data.n,
+                      param.x2OriginShape.GetDim(param.x2OriginShape.GetDimNum() - (param.transposeX2 ? 2 : 1)));
+            EXPECT_EQ(data.k, param.x1Shape.GetDim(param.x1Shape.GetDimNum() - (param.transposeX1 ? 2 : 1)));
+            if (param.activationType == "swiglu") {
+                EXPECT_EQ(data.activationType, QMMAQ::ActivationAlg::SWIGLU);
+                EXPECT_EQ(data.n % 64U, 0U);
+                EXPECT_EQ(data.baseN % 128U, 0U);
+                EXPECT_LE(static_cast<uint64_t>(data.baseM) * (data.baseN / 2U), 64UL * 256UL);
+                EXPECT_EQ(data.nTailTile, 1U);
+                EXPECT_EQ(data.nBaseTailSplitCnt, 1U);
+                EXPECT_EQ(data.nTailMain, 0U);
+                EXPECT_LE(ops::CeilAlign(static_cast<uint64_t>(data.baseM), 2UL) * data.baseN, 2UL * 64UL * 256UL);
+                EXPECT_LE(ops::CeilAlign(static_cast<uint64_t>(data.baseK), 64UL) * data.baseN, 65536UL / 2UL);
+            } else {
+                EXPECT_EQ(data.activationType,
+                          param.activationType == "gelu_erf" ? QMMAQ::ActivationAlg::ERF : QMMAQ::ActivationAlg::TANH);
+            }
+        };
+        if (withoutBatch) {
+            ASSERT_EQ(rawTiling->GetDataSize(), sizeof(QMMAQ::QMMAQWithoutBatchTilingData));
+            const auto* data = static_cast<const QMMAQ::QMMAQWithoutBatchTilingData*>(rawTiling->GetData());
+            checkTilingFields(*data);
+        } else {
+            ASSERT_EQ(rawTiling->GetDataSize(), sizeof(QMMAQ::QMMAQTilingData));
+            const auto* batchData = static_cast<const QMMAQ::QMMAQTilingData*>(rawTiling->GetData());
+            EXPECT_EQ(batchData->batchCount, GetBatchCount(param.yShape));
+            CheckBatchDims({batchData->batchA1, batchData->batchA2, batchData->batchA3, batchData->batchA4},
+                           param.x1Shape);
+            CheckBatchDims({batchData->batchB1, batchData->batchB2, batchData->batchB3, batchData->batchB4},
+                           param.x2OriginShape);
+            CheckBatchDims({batchData->batchC1, batchData->batchC2, batchData->batchC3, batchData->batchC4},
+                           param.yShape);
+            checkTilingFields(*batchData);
+        }
+        const bool isSwiglu = param.activationType == "swiglu";
+        const uint64_t noFullLoadKey = GET_TPL_TILING_KEY(
+            static_cast<uint64_t>(param.transposeX1), static_cast<uint64_t>(param.transposeX2), batchMode,
+            static_cast<uint64_t>(isSwiglu ? TPL_SWIGLU_NO_FULLLOAD : TPL_GELU_NO_FULLLOAD));
+        const uint64_t fullLoadKey = GET_TPL_TILING_KEY(
+            static_cast<uint64_t>(param.transposeX1), static_cast<uint64_t>(param.transposeX2), batchMode,
+            static_cast<uint64_t>(isSwiglu ? TPL_SWIGLU_FULLLOAD : TPL_GELU_FULLLOAD));
+        const uint64_t actualTilingKey = tilingContext->GetTilingKey();
+        EXPECT_TRUE(actualTilingKey == noFullLoadKey || actualTilingKey == fullLoadKey)
+            << "caseName=" << param.caseName
+            << " activation/transpose/batch kernel dispatch mismatch, tilingKey=" << actualTilingKey;
         if (param.expectTilingKey >= 0) {
-            uint64_t actualTilingKey = tilingContext->GetTilingKey();
             EXPECT_EQ(static_cast<int64_t>(actualTilingKey), param.expectTilingKey)
                 << "caseName=" << param.caseName << " tilingKey mismatch, expected=" << param.expectTilingKey
                 << " actual=" << actualTilingKey;

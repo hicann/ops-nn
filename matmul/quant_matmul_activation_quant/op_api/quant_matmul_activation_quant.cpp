@@ -18,6 +18,7 @@
 #include "quant_matmul_activation_quant.h"
 #include "util/math_util.h"
 #include "quant_matmul_activation_quant_util.h"
+#include <string>
 
 using namespace op;
 using namespace QBMMActivationQuant;
@@ -25,7 +26,6 @@ using namespace QBMMActivationQuant;
 namespace l0op {
 
 OP_TYPE_REGISTER(QuantMatmulActivationQuant);
-constexpr int64_t DIM_TWO = 2L;
 constexpr int64_t BLOCKSIZE = 32L;
 
 const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulActivationQuant(
@@ -48,9 +48,12 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
                                   x1Shape.GetDim(x1DimNum - LAST_SECOND_DIM_INDEX);
     auto yOutDim1 = transposeX2 ? x2Shape.GetDim(x2DimNum - LAST_SECOND_DIM_INDEX) :
                                   x2Shape.GetDim(x2DimNum - LAST_FIRST_DIM_INDEX);
+    if (activationType != nullptr && std::string(activationType) == "swiglu") {
+        yOutDim1 /= SWIGLU_BRANCH_COUNT;
+    }
 
-    size_t x1BatchCount = (x1DimNum >= 2) ? (x1DimNum - 2) : 0;
-    size_t x2BatchCount = (x2DimNum >= 2) ? (x2DimNum - 2) : 0;
+    size_t x1BatchCount = (x1DimNum >= MX_X1_DIM) ? (x1DimNum - MX_X1_DIM) : 0;
+    size_t x2BatchCount = (x2DimNum >= MX_X2_DIM) ? (x2DimNum - MX_X2_DIM) : 0;
     size_t batchDimNum = std::max(x1BatchCount, x2BatchCount);
     for (size_t i = 0; i < batchDimNum; ++i) {
         int64_t x1Idx = static_cast<int64_t>(i) - static_cast<int64_t>(batchDimNum - x1BatchCount);
@@ -58,7 +61,8 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
         int64_t x1Dim = (x1Idx >= 0) ? x1Shape.GetDim(static_cast<size_t>(x1Idx)) : 1;
         int64_t x2Dim = (x2Idx >= 0) ? x2Shape.GetDim(static_cast<size_t>(x2Idx)) : 1;
         if (x1Dim != x2Dim && x1Dim != 1 && x2Dim != 1) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch dims are not broadcastable: x1=%ld, x2=%ld", x1Dim, x2Dim);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch dimensions are not broadcastable: x1=%lld, x2=%lld",
+                    static_cast<long long>(x1Dim), static_cast<long long>(x2Dim));
             return {nullptr, nullptr};
         }
         yOutShape.SetDim(i, std::max(x1Dim, x2Dim));
@@ -69,13 +73,13 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
     op::Shape yScaleOutShape = yOutShape;
     auto yScaleOutDim1 = (Ops::Base::CeilDiv(yOutDim1, BLOCKSIZE) + MXFP_MULTI_BASE_SIZE - 1) / MXFP_MULTI_BASE_SIZE;
     yScaleOutShape.SetDim(outDimNum - LAST_FIRST_DIM_INDEX, yScaleOutDim1);
-    yScaleOutShape.AppendDim(DIM_TWO);
+    yScaleOutShape.AppendDim(MXFP_MULTI_BASE_SIZE);
 
-    auto yOut = executor->AllocTensor(yOutShape, x1->GetDataType(), format);
+    auto yOut = executor->AllocTensor(yOutShape, static_cast<op::DataType>(y_dtype), format);
     auto yScaleOut = executor->AllocTensor(yScaleOutShape, x1Scale->GetDataType(), format);
 
     if (yOut == nullptr || yScaleOut == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alloc tensor failed.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Failed to allocate output tensors.");
         return {yOut, yScaleOut};
     }
 
@@ -86,18 +90,19 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
                                    scaleAlg, dstTypeMax));
 
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed for QuantMatmulActivationQuant.");
         return {nullptr, nullptr};
     }
 
-    OP_LOGD("l0 transposeX1 = %s, transposeX2 = %s", transposeX1 ? "true" : "false", transposeX2 ? "true" : "false");
+    OP_LOGD("Resolved L0 transpose attributes: transposeX1=%s, transposeX2=%s", transposeX1 ? "true" : "false",
+            transposeX2 ? "true" : "false");
 
     ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantMatmulActivationQuant, OP_INPUT(x1, x2, bias, x1Scale, x2Scale),
                                       OP_OUTPUT(yOut, yScaleOut),
                                       OP_ATTR(transposeX1, transposeX2, groupSize, activationType, y_dtype, quantMode,
                                               roundMode, scaleAlg, static_cast<float>(dstTypeMax)));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Failed to add QuantMatmulActivationQuant to the AICore launcher list.");
         return {nullptr, nullptr};
     }
     return {yOut, yScaleOut};

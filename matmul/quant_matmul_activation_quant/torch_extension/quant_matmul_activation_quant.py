@@ -19,6 +19,9 @@ DTYPE_FLOAT8_E4M3FN = 292
 FP4_IN_INT8 = 2
 
 
+# FP4 is physically packed in uint8, so Meta must account for which logical
+# axis is packed when it computes the output shape.  FP8 transpose handling is
+# intentionally left to ACLNN, which reads the input strides.
 def _is_transpose_last_two_dims(tensor: torch.Tensor) -> bool:
     if tensor.dim() < 2 or tensor.dim() > 6:
         return False
@@ -106,6 +109,10 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
             x1_batch = list(x1.shape[:-2])
             x2_batch = list(x2.shape[:-2])
             batch_size = list(torch.broadcast_shapes(x1_batch, x2_batch))
+            if activation_type == "swiglu":
+                # ACLNN/tiling owns the positive-N and 64-alignment checks;
+                # Meta only reflects the epilogue's two-way split.
+                n //= 2
             output_size = batch_size + [m, n]
 
             # 3. 计算 scale_size (包含分块与对齐逻辑)
@@ -123,7 +130,7 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
             scale_size.append(ALIGN_NUM)
 
             # 4. 判断特殊输出类型 (FLOAT4)
-            output_dtype_val = output_dtype if output_dtype is not None else 0
+            output_dtype_val = output_dtype if output_dtype is not None else x1_dtype
             special_output_type = output_dtype_val == DTYPE_FLOAT4_E2M1
 
             # 5. 分配 output tensor

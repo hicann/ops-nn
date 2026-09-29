@@ -26,7 +26,7 @@
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "quant_matmul_activation_quant.h"
-#include "quant_matmul_activation_quant_check.h"
+#include "quant_matmul_activation_quant_checker.h"
 #include "util/math_util.h"
 
 using namespace op;
@@ -37,6 +37,7 @@ using Ops::NN::SwapLastTwoDimValue;
 namespace {
 
 constexpr int IDX_0 = 0;
+constexpr int IDX_1 = 1;
 constexpr const char* API_NAME = "aclnnQuantMatmulActivationQuantGetWorkspaceSize";
 
 static aclnnStatus CheckFormat(const QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params)
@@ -78,12 +79,12 @@ static aclnnStatus CheckInputOutDims(const QBMMActivationQuant::QuantMatmulActiv
     auto x2DimNum = params.x2->GetViewShape().GetDimNum();
     if (x1DimNum < MX_X1_DIM_MIN || x1DimNum > MX_X1_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(API_NAME, "x1", FormatString("%zuD", x1DimNum).c_str(),
-                                                 FormatString("the shape dim of x1 must be in the range of 2 to 6"));
+                                                 FormatString("the rank of x1 must be in the range [2, 6]"));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (x2DimNum < MX_X1_DIM_MIN || x2DimNum > MX_X1_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(API_NAME, "x2", FormatString("%zuD", x2DimNum).c_str(),
-                                                 FormatString("the shape dim of x2 must be in the range of 2 to 6"));
+                                                 FormatString("the rank of x2 must be in the range [2, 6]"));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -94,34 +95,30 @@ static aclnnStatus CheckWeightNdParamsDAV3510(const aclTensor* x1, const aclTens
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         SocVersion socVersion = op::GetCurrentPlatformInfo().GetSocVersion();
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "SOC version %s is not supported", op::ToString(socVersion).GetString());
         return ACLNN_ERR_RUNTIME_ERROR;
     }
 
     if (x1 == nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(API_NAME, "x1", "null", "x1 can not be null");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(API_NAME, "x1", "null", "x1 cannot be null");
         return ACLNN_ERR_PARAM_NULLPTR;
     }
     if (x2 == nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(API_NAME, "x2", "null", "x2 can not be null");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(API_NAME, "x2", "null", "x2 cannot be null");
         return ACLNN_ERR_PARAM_NULLPTR;
     }
 
-    OP_LOGD("QuantMatmulWeightNd check params success.");
+    OP_LOGD("WeightND input validation succeeded.");
     return ACLNN_SUCCESS;
 }
 
 static aclnnStatus CheckShape(const QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params)
 {
-    CHECK_COND(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check CheckInputOutDims failed.");
+    CHECK_RET(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     MatmulShapeInfo shapeInfo = GetMatmulShapeInfo(params);
-    CHECK_COND(CheckShapeInfoMatch(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
-               "CheckShapeInfoMatch failed.");
+    CHECK_RET(CheckShapeInfoMatch(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
 
-    if (!CheckMKN(shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim, API_NAME)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN failed.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
+    CHECK_RET(CheckMKN(shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim, API_NAME), ACLNN_ERR_PARAM_INVALID);
     if (IsMxFp4Input(params.x1, params.x2, params.y, params.yScale)) {
         if (shapeInfo.kDim <= 2) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -130,22 +127,21 @@ static aclnnStatus CheckShape(const QBMMActivationQuant::QuantMatmulActivationQu
             return ACLNN_ERR_PARAM_INVALID;
         }
         int64_t x1InnerAxis = params.transposeX1 ? shapeInfo.mDim : shapeInfo.kDim;
-        if (x1InnerAxis % 2 != 0) {
+        if (x1InnerAxis % FP4_PACK_RATIO != 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 API_NAME, params.transposeX1 ? "x1 M" : "x1 K", std::to_string(x1InnerAxis).c_str(),
                 "when the dtypes of x1, x2 and y are FP4, the inner axis of x1 must be even");
             return ACLNN_ERR_PARAM_INVALID;
         }
         int64_t x2InnerAxis = params.transposeX2 ? shapeInfo.kDim : shapeInfo.nDim;
-        if (x2InnerAxis % 2 != 0) {
+        if (x2InnerAxis % FP4_PACK_RATIO != 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 API_NAME, params.transposeX2 ? "x2 K" : "x2 N", std::to_string(x2InnerAxis).c_str(),
                 "when the dtypes of x1, x2 and y are FP4, the inner axis of x2 must be even");
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
-    CHECK_COND(CheckMxScaleLastDim(params, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
-               "CheckMxScaleLastDim failed.");
+    CHECK_RET(CheckMxScaleLastDim(params, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
 
     if (params.bias != nullptr) {
         auto biasDimNum = params.bias->GetViewShape().GetDimNum();
@@ -153,50 +149,63 @@ static aclnnStatus CheckShape(const QBMMActivationQuant::QuantMatmulActivationQu
         auto nDim = shapeInfo.nDim;
         if (biasDimNum != 1 && biasDimNum != 3) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(API_NAME, "bias", FormatString("%zuD", biasDimNum).c_str(),
-                                                     "the shape dim of bias must be 1 or 3");
+                                                     "the rank of bias must be 1 or 3");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (biasDimNum == 1) {
-            CHECK_COND(params.bias->GetViewShape().GetDim(0) == nDim, ACLNN_ERR_PARAM_INVALID,
-                       "bias dim should be equal to N dim %ld, but is %ld", nDim,
-                       params.bias->GetViewShape().GetDim(0));
+            if (params.bias->GetViewShape().GetDim(0) != nDim) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    API_NAME, "bias", op::ToString(params.bias->GetViewShape()).GetString(),
+                    FormatString("the shape of bias must be [%lld]", static_cast<long long>(nDim)).c_str());
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         } else {
             if (outDimNum == 2 || outDimNum == 4 || outDimNum == 5 || outDimNum == 6) {
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     API_NAME, "bias", FormatString("%zuD", biasDimNum).c_str(),
-                    FormatString("when out dim-num is %zu, bias only support 1D, but is 3D", outDimNum).c_str());
+                    FormatString("when output rank is %zu, only 1D bias is supported, but got 3D", outDimNum).c_str());
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            CHECK_COND(params.bias->GetViewShape().GetDim(1) == 1, ACLNN_ERR_PARAM_INVALID,
-                       "bias 2nd dim should be 1, but is %ld", params.bias->GetViewShape().GetDim(1));
-            CHECK_COND(params.bias->GetViewShape().GetDim(2) == nDim, ACLNN_ERR_PARAM_INVALID,
-                       "bias 3rd dim should be equal to N dim %ld, but is %ld", nDim,
-                       params.bias->GetViewShape().GetDim(2));
-            int64_t inferedOutbatchValue = InferOutputShape(params);
+            if (params.bias->GetViewShape().GetDim(1) != 1) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(API_NAME, "bias",
+                                                      op::ToString(params.bias->GetViewShape()).GetString(),
+                                                      "the 2nd dimension of bias must be 1");
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+            if (params.bias->GetViewShape().GetDim(2) != nDim) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    API_NAME, "bias", op::ToString(params.bias->GetViewShape()).GetString(),
+                    FormatString("the 3rd dimension of bias must be %lld", static_cast<long long>(nDim)).c_str());
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+            int64_t inferedOutbatchValue = InferOutputShape(params, API_NAME);
             if (inferedOutbatchValue == OUTPUT_INFER_FAIL) {
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            CHECK_COND(params.bias->GetViewShape().GetDim(0) == inferedOutbatchValue, ACLNN_ERR_PARAM_INVALID,
-                       "bias 1st dim should be batch, but is %ld", params.bias->GetViewShape().GetDim(0));
+            if (params.bias->GetViewShape().GetDim(0) != inferedOutbatchValue) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    API_NAME, "bias", op::ToString(params.bias->GetViewShape()).GetString(),
+                    FormatString("the 1st dimension of bias must be %lld", static_cast<long long>(inferedOutbatchValue))
+                        .c_str());
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         }
     }
 
-    CHECK_COND(CheckExpectedShapes(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
-               "CheckExpectedShapes failed.");
-    CHECK_COND(CheckOutputShape(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
-               "CheckOutputShape failed.");
+    CHECK_RET(CheckExpectedShapes(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckOutputShape(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
 static aclnnStatus CheckParams(const QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params)
 {
-    OP_LOGD("QuantMatmulActivationQuant check params.");
+    OP_LOGD("Parameter validation started.");
     CHECK_RET(CheckNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckDtype(params, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckOptionalAlg(params, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
-    OP_LOGD("QuantMatmulActivationQuant check params success.");
+    OP_LOGD("Parameter validation succeeded.");
 
     return ACLNN_SUCCESS;
 }
@@ -206,22 +215,22 @@ static aclnnStatus PreProcessOriginalShape(const aclTensor* x1, const aclTensor*
 {
     if (x1 != nullptr) {
         x1->SetOriginalShape(x1->GetViewShape());
-        OP_LOGD("x1 original shape set to view shape.");
+        OP_LOGD("Set x1 original shape to its view shape.");
     }
 
     if (x2 != nullptr) {
         x2->SetOriginalShape(x2->GetViewShape());
-        OP_LOGD("x2 original shape set to view shape.");
+        OP_LOGD("Set x2 original shape to its view shape.");
     }
 
     if (x1Scale != nullptr) {
         x1Scale->SetOriginalShape(x1Scale->GetViewShape());
-        OP_LOGD("x1Scale original shape set to view shape.");
+        OP_LOGD("Set x1Scale original shape to its view shape.");
     }
 
     if (x2Scale != nullptr) {
         x2Scale->SetOriginalShape(x2Scale->GetViewShape());
-        OP_LOGD("x2Scale original shape set to view shape.");
+        OP_LOGD("Set x2Scale original shape to its view shape.");
     }
 
     return ACLNN_SUCCESS;
@@ -259,12 +268,12 @@ static aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSizeCommon(
     params.x2 = reformatedX2;
     CHECK_RET(QuantMatmulActivationQuantAclnnCheck::TensorContiguousProcess(params.x2, params.transposeX2, executor),
               ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(MxScaleContiguousProcess(params.x1Scale, params.transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(MxScaleContiguousProcess(params.x2Scale, params.transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(MxScaleContiguousProcess(params.x1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(MxScaleContiguousProcess(params.x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
 
     GetTranspose(params, params.transposeX1, params.transposeX2);
 
-    CHECK_COND(CheckGroupSize(params, API_NAME), ACLNN_ERR_PARAM_INVALID, "CheckGroupSize failed.");
+    CHECK_RET(CheckGroupSize(params, API_NAME), ACLNN_ERR_PARAM_INVALID);
 
     // 固定写法，参数检查
     auto ret = CheckParams(params);
@@ -277,7 +286,7 @@ static aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSizeCommon(
         params.dstTypeMax, executor);
 
     auto yComputeOut = std::get<IDX_0>(quantMatmulActivationQuantResults);
-    auto yScaleComputeOut = std::get<1>(quantMatmulActivationQuantResults);
+    auto yScaleComputeOut = std::get<IDX_1>(quantMatmulActivationQuantResults);
 
     CHECK_RET(yComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(yScaleComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -341,11 +350,11 @@ aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(const aclTensor* x1,
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    // Step 1: 设置original_shape（必须在Contiguous之前）
+    // 在 Contiguous 之前保留输入的 original_shape。
     ret = PreProcessOriginalShape(params.x1, params.x2, params.x1Scale, params.x2Scale);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    CHECK_COND(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check CheckInputOutDims failed.");
+    CHECK_RET(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();

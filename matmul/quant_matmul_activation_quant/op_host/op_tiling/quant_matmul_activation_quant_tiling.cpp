@@ -50,18 +50,17 @@ const char* GetValidOpName(Context* context)
 // QuantMatmulActivationQuant 算子的 Tiling 入口函数
 static ge::graphStatus QuantMatmulActivationQuantTilingFunc(gert::TilingContext* context)
 {
-    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantMatmulActivationQuant", "TilingContext is null!");
+    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantMatmulActivationQuant", "Tiling context is null.");
     const char* opName = GetValidOpName(context);
 
     auto compileInfoPtr = context->GetCompileInfo<QuantBatchMatmulV3CompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The compileInfoPtr is null!");
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "compileInfoPtr is null.");
     if (!compileInfoPtr->supportL12BtBf16) {
-        OP_LOGD("QuantMatmulActivationQuantTilingFunc",
-                "Do op tiling failed, only supports on Ascend 950PR/Ascend 950DT for now.");
+        OP_LOGD(opName, "Skip tiling: only Ascend 950PR and Ascend 950DT are supported.");
         return ge::GRAPH_FAILED;
     }
 
-    OP_LOGD("QuantMatmulActivationQuantTilingFunc", "Using the basic api tiling strategy.");
+    OP_LOGD(opName, "Using the basic API tiling strategy.");
     ResetQuantBatchMatmulV3InputParams();
     return TilingRegistryArch::GetInstance().DoTilingImpl(context, ACTIVATION_QUANT_TILING_PRIORITIES,
                                                           static_cast<int32_t>(compileInfoPtr->npuArch));
@@ -69,13 +68,13 @@ static ge::graphStatus QuantMatmulActivationQuantTilingFunc(gert::TilingContext*
 
 static ge::graphStatus TilingPrepareForQuantMatmulActivationQuant(gert::TilingParseContext* context)
 {
-    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantMatmulActivationQuant", "TilingParseContext is null!");
+    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantMatmulActivationQuant", "Tiling parse context is null.");
     const char* opName = GetValidOpName(context);
     auto platformInfoPtr = context->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The platformInfoPtr is null!");
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "platformInfoPtr is null.");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<QuantBatchMatmulV3CompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The compileInfoPtr is null!");
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "compileInfoPtr is null.");
 
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, opName, *platformInfoPtr);
 

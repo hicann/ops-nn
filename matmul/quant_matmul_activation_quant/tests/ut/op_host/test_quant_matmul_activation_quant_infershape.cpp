@@ -56,6 +56,8 @@ struct QuantMatmulActivationQuantInferShapeParam {
     gert::Shape expectYScale;
 };
 
+static std::vector<std::string> g_csvLoadErrors;
+
 static std::vector<QuantMatmulActivationQuantInferShapeParam> LoadParams(const std::string& socVersion)
 {
     std::vector<QuantMatmulActivationQuantInferShapeParam> params;
@@ -64,7 +66,7 @@ static std::vector<QuantMatmulActivationQuantInferShapeParam> LoadParams(const s
                                     "test_quant_matmul_activation_quant_infershape.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
-        std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
+        g_csvLoadErrors.push_back("cannot open case file: " + casePath);
         return params;
     }
 
@@ -80,51 +82,56 @@ static std::vector<QuantMatmulActivationQuantInferShapeParam> LoadParams(const s
         }
         std::vector<std::string> cols;
         SplitStr2Vec(line, ",", cols);
-        if (cols.size() < 26UL) {
+        if (cols.size() != 27UL) {
+            g_csvLoadErrors.push_back("invalid CSV column count: " + line);
             continue;
         }
 
-        QuantMatmulActivationQuantInferShapeParam param;
-        size_t idx = 0UL;
-        param.socVersion = Trim(cols[idx++]);
-        param.caseName = Trim(cols[idx++]);
-        param.inputNum = static_cast<size_t>(ParseInt64OrDefault(cols[idx++], 0));
-        param.x1 = ParseShape(cols[idx++]);
-        param.x2 = ParseShape(cols[idx++]);
-        param.x1Scale = ParseShape(cols[idx++]);
-        param.x2Scale = ParseShape(cols[idx++]);
-        param.bias = ParseShape(cols[idx++]);
-        param.x1Dtype = ParseDtype(cols[idx++]);
-        param.x2Dtype = ParseDtype(cols[idx++]);
-        param.x1ScaleDtype = ParseDtype(cols[idx++]);
-        param.x2ScaleDtype = ParseDtype(cols[idx++]);
-        param.biasDtype = ParseDtype(cols[idx++]);
-        param.yDtype = ParseDtype(cols[idx++]);
-        param.yScaleDtype = ParseDtype(cols[idx++]);
-        param.x2IsNz = (Trim(cols[idx++]) == "NZ");
-        param.transposeX1 = ParseBool(cols[idx++]);
-        param.transposeX2 = ParseBool(cols[idx++]);
-        param.groupSize = ParseInt64OrDefault(cols[idx++], 0);
-        param.activationType = Trim(cols[idx++]);
-        param.quantMode = Trim(cols[idx++]);
-        param.roundMode = Trim(cols[idx++]);
-        param.scaleAlg = ParseInt64OrDefault(cols[idx++], 0);
-        param.dstTypeMax = static_cast<float>(std::stod(Trim(cols[idx++])));
-        param.expectStatus = ParseGraphStatus(cols[idx++], ge::GRAPH_SUCCESS);
-        std::string expectYStr = Trim(cols[idx++]);
-        std::string expectYScaleStr = Trim(cols[idx++]);
-        if (!expectYStr.empty()) {
-            param.expectY = ParseShape(expectYStr);
-        }
-        if (!expectYScaleStr.empty()) {
-            param.expectYScale = ParseShape(expectYScaleStr);
-        }
+        try {
+            QuantMatmulActivationQuantInferShapeParam param;
+            size_t idx = 0UL;
+            param.socVersion = Trim(cols[idx++]);
+            param.caseName = Trim(cols[idx++]);
+            param.inputNum = static_cast<size_t>(ParseInt64OrDefault(cols[idx++], 0));
+            param.x1 = ParseShape(cols[idx++]);
+            param.x2 = ParseShape(cols[idx++]);
+            param.x1Scale = ParseShape(cols[idx++]);
+            param.x2Scale = ParseShape(cols[idx++]);
+            param.bias = ParseShape(cols[idx++]);
+            param.x1Dtype = ParseDtype(cols[idx++]);
+            param.x2Dtype = ParseDtype(cols[idx++]);
+            param.x1ScaleDtype = ParseDtype(cols[idx++]);
+            param.x2ScaleDtype = ParseDtype(cols[idx++]);
+            param.biasDtype = ParseDtype(cols[idx++]);
+            param.yDtype = ParseDtype(cols[idx++]);
+            param.yScaleDtype = ParseDtype(cols[idx++]);
+            param.x2IsNz = (Trim(cols[idx++]) == "NZ");
+            param.transposeX1 = ParseBool(cols[idx++]);
+            param.transposeX2 = ParseBool(cols[idx++]);
+            param.groupSize = ParseInt64OrDefault(cols[idx++], 0);
+            param.activationType = Trim(cols[idx++]);
+            param.quantMode = Trim(cols[idx++]);
+            param.roundMode = Trim(cols[idx++]);
+            param.scaleAlg = ParseInt64OrDefault(cols[idx++], 0);
+            param.dstTypeMax = static_cast<float>(std::stod(Trim(cols[idx++])));
+            param.expectStatus = ParseGraphStatus(cols[idx++], ge::GRAPH_SUCCESS);
+            std::string expectYStr = Trim(cols[idx++]);
+            std::string expectYScaleStr = Trim(cols[idx++]);
+            if (!expectYStr.empty()) {
+                param.expectY = ParseShape(expectYStr);
+            }
+            if (!expectYScaleStr.empty()) {
+                param.expectYScale = ParseShape(expectYScaleStr);
+            }
 
-        if (param.socVersion != socVersion) {
-            continue;
-        }
+            if (param.socVersion != socVersion) {
+                continue;
+            }
 
-        params.push_back(param);
+            params.push_back(param);
+        } catch (const std::exception& error) {
+            g_csvLoadErrors.push_back("invalid CSV row: " + line + ": " + error.what());
+        }
     }
 
     return params;
@@ -177,7 +184,7 @@ TEST_P(TestQuantMatmulActivationQuantInferShape, InferShapeFromCsv)
     gert::StorageShape yShape;
     gert::StorageShape yScaleShape;
 
-    // New op def input order: x1(0), x2(1), bias(2), x1Scale(3), x2Scale(4)
+    // Input order: x1, x2, bias, x1Scale, x2Scale.
     bool hasBias = (param.bias.GetDimNum() > 0UL);
     std::vector<gert::StorageShape*> inputShapes = {&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr, &x1ScaleShape,
                                                     &x2ScaleShape};
@@ -223,6 +230,79 @@ TEST_P(TestQuantMatmulActivationQuantInferShape, InferShapeFromCsv)
 }
 
 static const std::vector<QuantMatmulActivationQuantInferShapeParam> kCasesParams950 = LoadParams("Ascend950");
+
+TEST(QuantMatmulActivationQuantInferDataType, SwiGluOutputMatchesX1)
+{
+    const auto* implementation = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulActivationQuant");
+    ASSERT_NE(implementation, nullptr);
+    ASSERT_NE(implementation->infer_datatype, nullptr);
+    for (const auto x1TypeValue : {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2}) {
+        ge::DataType x1Type = x1TypeValue;
+        ge::DataType x2Type = ge::DT_FLOAT8_E5M2;
+        ge::DataType biasType = ge::DT_FLOAT;
+        ge::DataType scaleType = ge::DT_FLOAT8_E8M0;
+        ge::DataType yType = ge::DT_UNDEFINED;
+        ge::DataType yScaleType = ge::DT_UNDEFINED;
+        auto holder = gert::InferDataTypeContextFaker()
+                          .NodeIoNum(5, 2)
+                          .IrInstanceNum({1, 1, 1, 1, 1})
+                          .InputDataTypes({&x1Type, &x2Type, &biasType, &scaleType, &scaleType})
+                          .OutputDataTypes({&yType, &yScaleType})
+                          .NodeAttrs(
+                              {{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                               {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                               {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                               {"activation_type", Ops::NN::AnyValue::CreateFrom<std::string>("swiglu")},
+                               {"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(x1TypeValue))},
+                               {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("mx")},
+                               {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                               {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                               {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
+                          .Build();
+        auto* context = holder.GetContext<gert::InferDataTypeContext>();
+        ASSERT_EQ(implementation->infer_datatype(context), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(context->GetOutputDataType(0), x1TypeValue);
+        EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT8_E8M0);
+    }
+}
+
+TEST(QuantMatmulActivationQuantInferDataType, SwiGluRejectsOutputDifferentFromX1)
+{
+    const auto* implementation = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulActivationQuant");
+    ASSERT_NE(implementation, nullptr);
+    ASSERT_NE(implementation->infer_datatype, nullptr);
+    ge::DataType x1Type = ge::DT_FLOAT8_E4M3FN;
+    ge::DataType x2Type = ge::DT_FLOAT8_E5M2;
+    ge::DataType biasType = ge::DT_FLOAT;
+    ge::DataType scaleType = ge::DT_FLOAT8_E8M0;
+    ge::DataType yType = ge::DT_UNDEFINED;
+    ge::DataType yScaleType = ge::DT_UNDEFINED;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(5, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputDataTypes({&x1Type, &x2Type, &biasType, &scaleType, &scaleType})
+                      .OutputDataTypes({&yType, &yScaleType})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"activation_type", Ops::NN::AnyValue::CreateFrom<std::string>("swiglu")},
+                                  {"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_FLOAT8_E5M2))},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("mx")},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
+                      .Build();
+    EXPECT_EQ(implementation->infer_datatype(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST(QuantMatmulActivationQuantInferShapeCsv, ShouldLoadValidCases)
+{
+    for (const auto& error : g_csvLoadErrors) {
+        ADD_FAILURE() << error;
+    }
+    EXPECT_FALSE(kCasesParams950.empty());
+}
 
 INSTANTIATE_TEST_CASE_P(QuantMatmulActivationQuantInferShapeCsv, TestQuantMatmulActivationQuantInferShape,
                         testing::ValuesIn(kCasesParams950));

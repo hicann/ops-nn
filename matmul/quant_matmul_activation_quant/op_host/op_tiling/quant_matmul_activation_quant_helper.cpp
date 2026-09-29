@@ -14,12 +14,19 @@
  */
 #include "quant_matmul_activation_quant_helper.h"
 
+#include <algorithm>
+#include <limits>
 #include <string>
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
 
 namespace optiling {
 using namespace QuantMatmulActivationQuantTilingConstant;
 using Ops::NN::FormatString;
+
+namespace {
+constexpr size_t BATCH_BIAS_RANK = 3UL;
+constexpr int64_t BATCH_BIAS_BROADCAST_SIZE = 1L;
+} // namespace
 
 template <typename BaseT>
 const char* QuantMatmulActivationQuantHelper<BaseT>::GetDefaultOpName() const
@@ -30,14 +37,15 @@ const char* QuantMatmulActivationQuantHelper<BaseT>::GetDefaultOpName() const
 template <typename BaseT>
 ge::graphStatus QuantMatmulActivationQuantHelper<BaseT>::GetShapeAttrsInfo()
 {
-    this->tilingDataSize_ = sizeof(QMMAQ::QuantMatmulActivationQuantTilingData);
+    this->tilingDataSize_ = sizeof(QMMAQ::QMMAQTilingData);
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
 template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::CalcBasicBlock()
 {
-    QuantBaseBlockCalculator calculator(this->inputParams_, this->compileInfo_, GetBatchCoreCnt());
+    QuantBaseBlockCalculator calculator(this->inputParams_, this->compileInfo_, GetBatchCoreCnt(),
+                                        activationType_ == QMMAQ::ActivationAlg::SWIGLU);
     if (!calculator.Compute(BaseBlockMode::DEFAULT)) {
         return false;
     }
@@ -45,6 +53,15 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CalcBasicBlock()
     this->adaptiveWin_.baseM = baseBlockRes.baseM;
     this->adaptiveWin_.baseN = baseBlockRes.baseN;
     this->adaptiveWin_.baseK = baseBlockRes.baseK;
+    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU) {
+        // Compute() guarantees nonzero blocks, and SwiGLU baseN is generated with SWIGLU_BASEN_ALIGN.
+        const uint64_t outputBaseN = this->adaptiveWin_.baseN / SWIGLU_BRANCH_COUNT;
+        const uint64_t baseMAlign = this->inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE,
+                                                                                     this->inputParams_.aDtype) :
+                                                                CUBE_BLOCK;
+        const uint64_t maxBaseM = ops::FloorAlign(SWIGLU_MX_MAX_SINGLE_MN / outputBaseN, baseMAlign);
+        this->adaptiveWin_.baseM = std::min(this->adaptiveWin_.baseM, maxBaseM);
+    }
     this->adaptiveWin_.useTailWinLogic = baseBlockRes.useTailWinLogic;
     return true;
 }
@@ -52,7 +69,44 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CalcBasicBlock()
 template <typename BaseT>
 uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetBaseNAlignSize(uint64_t innerAlignSize) const
 {
-    return this->inputParams_.transB ? MX_BASEN_ALIGN : GetShapeWithDataType(innerAlignSize, this->inputParams_.bDtype);
+    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU) {
+        // Scheduler tiles H=N/2; keep each main H tile aligned to a y_scale group.
+        return SWIGLU_BASEN_ALIGN;
+    }
+    return this->inputParams_.transB ? GELU_BASEN_ALIGN :
+                                       GetShapeWithDataType(innerAlignSize, this->inputParams_.bDtype);
+}
+
+template <typename BaseT>
+void QuantMatmulActivationQuantHelper<BaseT>::CalcTailRoundBasicBlockSplit()
+{
+    if (activationType_ != QMMAQ::ActivationAlg::SWIGLU) {
+        BaseT::CalcTailRoundBasicBlockSplit();
+        return;
+    }
+
+    // The host calculator sees the physical matmul width N, while the device scheduler sees H=N/2.
+    // N-tail decisions made for the physical width cannot be reused by the logical H scheduler.
+    this->adaptiveWin_.nBaseTailSplitCnt = 1UL;
+    this->adaptiveWin_.nTailMain = 0UL;
+    this->adaptiveWin_.mTailTile = 1UL;
+    this->adaptiveWin_.nTailTile = 1UL;
+
+    // A-full-load scheduling maps physical block ids around N splitting. Keep its tail round unsplit until
+    // that scheduler has an M-split-aware mapping. The non-full-load scheduler can safely consume M-only splits.
+    if (!this->adaptiveWin_.useTailWinLogic || this->isAFullLoad_ || this->adaptiveWin_.tailWinBlockCnt == 0UL) {
+        return;
+    }
+
+    const uint64_t tileMax = this->aicoreParams_.aicNum / this->adaptiveWin_.tailWinBlockCnt;
+    const uint64_t tailBaseM = this->adaptiveWin_.mBaseTailSplitCnt != 1UL ? this->adaptiveWin_.mTailMain :
+                                                                             this->adaptiveWin_.baseM;
+    const uint64_t mTailSplitSize = std::min(this->inputParams_.mSize, tailBaseM);
+    const uint64_t mTileMax = this->GetTailBasicBlockSplitMax(true, tileMax, mTailSplitSize);
+    const uint64_t nTailSplitSize = std::min(this->inputParams_.nSize, this->adaptiveWin_.baseN);
+    // Reuse the QBMMv3 validity/alignment search, but cap N at one so no N candidate consumes cores or
+    // constrains the independently selected M result.
+    this->CalcTailBasicBlockSplit(true, mTileMax, 1UL, mTailSplitSize, nTailSplitSize);
 }
 
 template <typename BaseT>
@@ -62,7 +116,7 @@ void QuantMatmulActivationQuantHelper<BaseT>::CalculateCurrentPerf(uint64_t merg
     const uint64_t totalWindows = ops::CeilDiv(this->adaptiveWin_.nBlockCnt * this->adaptiveWin_.mBlockCnt,
                                                this->aicoreParams_.aicNum);
     newTailMain = ops::CeilAlign(ops::CeilDiv((mergeLen * this->adaptiveWin_.baseN + nTail), mergeLen + 1UL),
-                                 MX_BASEN_ALIGN);
+                                 GELU_BASEN_ALIGN);
     uint64_t newTailLast = mergeLen * (this->adaptiveWin_.baseN - newTailMain) + nTail;
     uint64_t newMainRound = 0UL;
     uint64_t newTailRound = 0UL;
@@ -85,6 +139,12 @@ void QuantMatmulActivationQuantHelper<BaseT>::CalculateCurrentPerf(uint64_t merg
 template <typename BaseT>
 void QuantMatmulActivationQuantHelper<BaseT>::GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
 {
+    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU) {
+        // SwiGLU schedules H=N/2, so load balancing derived from the physical matmul N is not transferable.
+        baseTailSplitCnt = 1UL;
+        tailMain = 0UL;
+        return;
+    }
     uint64_t baseN = this->adaptiveWin_.baseN;
     uint64_t nTail = this->inputParams_.nSize % baseN;
     uint64_t blockCnt = this->adaptiveWin_.nBlockCnt * this->adaptiveWin_.mBlockCnt;
@@ -103,7 +163,7 @@ void QuantMatmulActivationQuantHelper<BaseT>::GetOuterNAxisTailCnt(uint64_t& bas
     uint64_t tailWindows = totalWindows - mainWindows;
     uint64_t perfRes = mainWindows * baseN + tailWindows * nTail;
 
-    uint64_t baseTailCntMax = std::min((baseN - nTail) / MX_BASEN_ALIGN, this->adaptiveWin_.nBlockCnt);
+    uint64_t baseTailCntMax = std::min((baseN - nTail) / GELU_BASEN_ALIGN, this->adaptiveWin_.nBlockCnt);
     for (uint64_t mergeLen = 1UL; mergeLen < baseTailCntMax; ++mergeLen) {
         uint64_t newTailMain = 0UL;
         uint64_t curPerf = 0UL;
@@ -124,7 +184,7 @@ void QuantMatmulActivationQuantHelper<BaseT>::CalcTailBasicBlockAfullLoad()
     uint64_t nTileAlignValid = 1UL;
     if (this->adaptiveWin_.tailWinBlockCnt != 0UL) {
         while (this->CalUsedCoreNum(this->adaptiveWin_.mTailTile, (nTile + 1UL)) <= this->aicoreParams_.aicNum &&
-               ops::CeilDiv(this->adaptiveWin_.baseN, nTile + 1UL) >= MX_BASEN_ALIGN) {
+               ops::CeilDiv(this->adaptiveWin_.baseN, nTile + 1UL) >= GELU_BASEN_ALIGN) {
             nTile += 1UL;
             if (this->IsInValidWeighNzTailSplit(nTile, true)) {
                 continue;
@@ -160,44 +220,81 @@ uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetTailSplitState(bool isPreSp
 template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::IsAligned32(uint64_t value) const
 {
-    return value != 0 && value % 32 == 0;
+    return value != 0 && value % GELU_BASEN_ALIGN == 0;
+}
+
+template <typename BaseT>
+bool QuantMatmulActivationQuantHelper<BaseT>::CheckInputShapeRange(const gert::Shape& x1Shape,
+                                                                   const gert::Shape& x2Shape) const
+{
+    const size_t x1ShapeLen = x1Shape.GetDimNum();
+    const size_t x2ShapeLen = x2Shape.GetDimNum();
+    if (!this->CheckShapeInRangeForMandtoryInputs(x1ShapeLen, x2ShapeLen)) {
+        return false;
+    }
+    for (const auto* shape : {&x1Shape, &x2Shape}) {
+        const char* shapeName = shape == &x1Shape ? "x1" : "x2";
+        for (size_t i = 0; i < shape->GetDimNum(); ++i) {
+            const int64_t dim = shape->GetDim(i);
+            OP_CHECK_IF(dim <= 0 || dim > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()),
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            this->inputParams_.opName, shapeName, std::to_string(dim).c_str(),
+                            "the input dimensions must be positive and fit the uint32 tiling fields"),
+                        return false);
+        }
+    }
+
+    const size_t rank = std::max(x1ShapeLen, x2ShapeLen);
+    uint64_t batchCount = 1UL;
+    for (size_t i = 0; i + 2 < rank; ++i) {
+        const size_t offsetA = rank - x1ShapeLen;
+        const size_t offsetB = rank - x2ShapeLen;
+        const uint64_t batchDim = static_cast<uint64_t>(
+            std::max(i < offsetA ? 1 : x1Shape.GetDim(i - offsetA), i < offsetB ? 1 : x2Shape.GetDim(i - offsetB)));
+        OP_CHECK_IF(batchCount > std::numeric_limits<uint32_t>::max() / batchDim,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "broadcast batch size",
+                                                          std::to_string(batchCount).c_str(),
+                                                          "the broadcast batch size must fit the uint32 tiling range"),
+                    return false);
+        batchCount *= batchDim;
+    }
+    const uint64_t mSize = static_cast<uint64_t>(
+        x1Shape.GetDim(x1ShapeLen - (this->inputParams_.transA ? LAST_FIRST_DIM_INDEX : LAST_SECOND_DIM_INDEX)));
+    const uint64_t nSize = static_cast<uint64_t>(
+        x2Shape.GetDim(x2ShapeLen - (this->inputParams_.transB ? LAST_SECOND_DIM_INDEX : LAST_FIRST_DIM_INDEX)));
+    const uint64_t maxOutputElements = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
+    OP_CHECK_IF(mSize > maxOutputElements / nSize / batchCount,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    this->inputParams_.opName, "matmul output size",
+                    FormatString("M=%llu, N=%llu, batch=%llu", static_cast<unsigned long long>(mSize),
+                                 static_cast<unsigned long long>(nSize), static_cast<unsigned long long>(batchCount))
+                        .c_str(),
+                    "the matmul output size must fit the tiling address range"),
+                return false);
+    return true;
 }
 
 template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::InitMatmulSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape)
 {
-    auto x1ShapeLen = x1Shape.GetDimNum();
-    auto x2ShapeLen = x2Shape.GetDimNum();
-    // x1维度数量大于等于2
-    if (x1ShapeLen < X1_MINIMUM_DIMENSION_LENGTH) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->inputParams_.opName, "x1",
-                                                  FormatString("%zuD", x1ShapeLen).c_str(),
-                                                  "the shape dim of x1 must be greater than or equal to 2");
+    if (!CheckInputShapeRange(x1Shape, x2Shape)) {
         return false;
     }
+    const size_t x1ShapeLen = x1Shape.GetDimNum();
+    const size_t x2ShapeLen = x2Shape.GetDimNum();
+    const int64_t x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
+    const int64_t x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
+    const int64_t x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
+    const int64_t x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
 
-    // x2维度数量大于等于2
-    if (x2ShapeLen < X2_MINIMUM_DIMENSION_LENGTH) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->inputParams_.opName, "x2",
-                                                  FormatString("%zuD", x2ShapeLen).c_str(),
-                                                  "the shape dim of x2 must be greater than or equal to 2");
-        return false;
-    }
-
-    // 根据x1和x2的originalShape解析M/K/N
-    // 维度提取，x1 shape: [x1Outer, x1Inner]
-    auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
-    auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
-    auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
-    auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
-
-    // M/K/N赋值
     this->inputParams_.mSize = static_cast<uint64_t>(this->inputParams_.transA ? x1Inner : x1Outer);
     this->inputParams_.kSize = static_cast<uint64_t>(this->inputParams_.transA ? x1Outer : x1Inner);
     this->inputParams_.nSize = static_cast<uint64_t>(this->inputParams_.transB ? x2Outer : x2Inner);
 
-    OP_LOGD(this->inputParams_.opName, "mSize: %lu, kSize: %lu, nSize: %lu", this->inputParams_.mSize,
-            this->inputParams_.kSize, this->inputParams_.nSize);
+    OP_LOGD(this->inputParams_.opName, "Matrix sizes: M=%llu, K=%llu, N=%llu",
+            static_cast<unsigned long long>(this->inputParams_.mSize),
+            static_cast<unsigned long long>(this->inputParams_.kSize),
+            static_cast<unsigned long long>(this->inputParams_.nSize));
 
     return true;
 }
@@ -222,32 +319,32 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
     auto attrs = this->context_->GetAttrs();
     OP_CHECK_IF(
         attrs == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "attrs", "null", "attrs can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "attrs", "null", "attrs cannot be null"),
         return false);
     OP_CHECK_IF(attrs->GetAttrNum() < ATTR_INDEX_NUMBERS,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     this->inputParams_.opName, "attrs num", std::to_string(attrs->GetAttrNum()).c_str(),
-                    FormatString("the num of attrs must be greater than or equal to %u", ATTR_INDEX_NUMBERS).c_str()),
+                    FormatString("the number of attributes must be at least %u", ATTR_INDEX_NUMBERS).c_str()),
                 return false);
     const bool* transposeXPtr = attrs->template GetAttrPointer<bool>(ATTR_INDEX_TRANSPOSE_X1);
     OP_CHECK_IF(transposeXPtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "transposeX1", "null",
-                                                      "transposeX1 can not be null"),
+                                                      "transposeX1 cannot be null"),
                 return false);
     const bool* transposeWeightPtr = attrs->template GetAttrPointer<bool>(ATTR_INDEX_TRANSPOSE_X2);
     OP_CHECK_IF(transposeWeightPtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "transposeX2", "null",
-                                                      "transposeX2 can not be null"),
+                                                      "transposeX2 cannot be null"),
                 return false);
     const int64_t* groupSizePtr = attrs->template GetAttrPointer<int64_t>(ATTR_INDEX_GROUP_SIZE);
     OP_CHECK_IF(groupSizePtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "groupSize", "null",
-                                                      "groupSize can not be null"),
+                                                      "groupSize cannot be null"),
                 return false);
     OP_CHECK_IF(
         *groupSizePtr < 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "groupSize",
-                                              std::to_string(*groupSizePtr).c_str(), "groupSize can not be negative"),
+                                              std::to_string(*groupSizePtr).c_str(), "groupSize cannot be negative"),
         return false);
     this->inputParams_.groupSize = static_cast<uint64_t>(*groupSizePtr);
     this->inputParams_.transA = *transposeXPtr;
@@ -256,53 +353,57 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
     // mx场景，[groupSizeM, groupSizeN, groupSizeK]的取值组合仅分别支持[1, 1, 32]
     if (this->inputParams_.groupSize != 0ULL) {
         this->inputParams_.groupSizeK = this->inputParams_.groupSize & GROUP_MKN_BIT_SIZE;
-        this->inputParams_.groupSizeN = (this->inputParams_.groupSize >> 16U) & GROUP_MKN_BIT_SIZE;
-        this->inputParams_.groupSizeM = (this->inputParams_.groupSize >> 32U) & GROUP_MKN_BIT_SIZE;
-        OP_CHECK_IF(this->inputParams_.groupSizeM != 1UL || this->inputParams_.groupSizeN != 1UL ||
-                        this->inputParams_.groupSizeK != 32UL,
+        this->inputParams_.groupSizeN = (this->inputParams_.groupSize >> GROUP_N_BIT_OFFSET) & GROUP_MKN_BIT_SIZE;
+        this->inputParams_.groupSizeM = (this->inputParams_.groupSize >> GROUP_M_BIT_OFFSET) & GROUP_MKN_BIT_SIZE;
+        OP_CHECK_IF((this->inputParams_.groupSize >> GROUP_RESERVED_BIT_OFFSET) != 0 ||
+                        this->inputParams_.groupSizeM != MX_GROUP_SIZE_MN ||
+                        this->inputParams_.groupSizeN != MX_GROUP_SIZE_MN ||
+                        this->inputParams_.groupSizeK != MX_GROUP_SIZE_K,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "groupSize",
                                                           std::to_string(*groupSizePtr).c_str(),
-                                                          "mx quant only supports groupSize [M=1, N=1, K=32]"),
+                                                          "MX quantization supports only groupSize [M=1, N=1, K=32]."),
                     return false);
     }
 
     const char* activationTypePtr = attrs->template GetAttrPointer<char>(ATTR_INDEX_ACTIVATION_TYPE);
     OP_CHECK_IF(activationTypePtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "activationType", "null",
-                                                      "activationType can not be null"),
+                                                      "activationType cannot be null"),
                 return false);
     std::string activationType(activationTypePtr);
-    OP_CHECK_IF(!(activationType == "gelu_tanh" || activationType == "gelu_erf"),
+    OP_CHECK_IF(!(activationType == "gelu_tanh" || activationType == "gelu_erf" || activationType == "swiglu"),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "activationType", activationType,
-                                                      "activationType optional values are gelu_tanh/gelu_erf"),
+                                                      "activationType must be one of gelu_tanh, gelu_erf, or swiglu."),
                 return false);
-    if (activationType == "gelu_erf") {
-        activationType_ = QMMAQ::GeluAlg::ERF;
+    if (activationType == "swiglu") {
+        activationType_ = QMMAQ::ActivationAlg::SWIGLU;
+    } else if (activationType == "gelu_erf") {
+        activationType_ = QMMAQ::ActivationAlg::ERF;
     } else {
-        activationType_ = QMMAQ::GeluAlg::TANH;
+        activationType_ = QMMAQ::ActivationAlg::TANH;
     }
 
     const char* quantModePtr = attrs->template GetAttrPointer<char>(ATTR_INDEX_QUANT_MODE);
     OP_CHECK_IF(quantModePtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "quantMode", "null",
-                                                      "quantMode can not be null"),
+                                                      "quantMode cannot be null"),
                 return false);
     std::string quantMode(quantModePtr);
     OP_CHECK_IF(quantMode != "mx",
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "quantMode", quantMode,
-                                                      "quantMode must be mx"),
+                                                      "quantMode must be \"mx\""),
                 return false);
 
     const char* roundModePtr = attrs->template GetAttrPointer<char>(ATTR_INDEX_ROUND_MODE);
     OP_CHECK_IF(roundModePtr == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "roundMode", "null",
-                                                      "roundMode can not be null"),
+                                                      "roundMode cannot be null"),
                 return false);
     std::string roundMode(roundModePtr);
     OP_CHECK_IF(!(roundMode == "rint" || roundMode == "floor" || roundMode == "round"),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "roundMode", roundMode,
-                                                      "roundMode optional values are rint/floor/round, it's enabled "
-                                                      "when dynamic mx quant, fp8 only support rint, fp4 support all"),
+                                                      "roundMode must be one of rint, floor, or round. FP8 supports "
+                                                      "only rint; FP4 supports all three modes."),
                 return false);
     if (roundMode == "round") {
         roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::ROUND;
@@ -313,22 +414,22 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
     }
 
     const int64_t* scaleAlg = attrs->template GetAttrPointer<int64_t>(ATTR_INDEX_SCALE_ALG);
-    OP_CHECK_IF(scaleAlg == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", "null",
-                                                      "scaleAlg can not be null"),
-                return false);
-    OP_CHECK_IF(!(static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::OCP ||
-                  static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::BLAS ||
-                  static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::DYN_DTYPE_RANGE),
+    OP_CHECK_IF(
+        scaleAlg == nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", "null", "scaleAlg cannot be null"),
+        return false);
+    // Validate the original attribute before narrowing to the uint8_t tiling enum.
+    OP_CHECK_IF(*scaleAlg < static_cast<int64_t>(QMMAQ::QuantAlg::OCP) ||
+                    *scaleAlg > static_cast<int64_t>(QMMAQ::QuantAlg::DYN_DTYPE_RANGE),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", std::to_string(*scaleAlg),
-                                                      "scaleAlg optional values are 0/1/2"),
+                                                      "scaleAlg must be one of 0, 1, or 2."),
                 return false);
     scaleAlg_ = static_cast<QMMAQ::QuantAlg>(*scaleAlg);
 
     const float* dstTypeMax = attrs->template GetAttrPointer<float>(ATTR_INDEX_DST_TYPE_MAX);
     OP_CHECK_IF(dstTypeMax == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "dstTypeMax", "null",
-                                                      "dstTypeMax can not be null"),
+                                                      "dstTypeMax cannot be null"),
                 return false);
     dstTypeMax_ = *dstTypeMax;
     return true;
@@ -339,14 +440,16 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeDtype()
 {
     auto xDesc = this->context_->GetInputDesc(X1_INDEX);
     OP_CHECK_IF(xDesc == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1", "null", "x1 can not be null"),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1", "null", "x1 cannot be null"),
                 return false);
     this->inputParams_.aDtype = xDesc->GetDataType();
     auto wDesc = this->context_->GetInputDesc(X2_INDEX);
     OP_CHECK_IF(wDesc == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2", "null", "x2 can not be null"),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2", "null", "x2 cannot be null"),
                 return false);
     this->inputParams_.bDtype = wDesc->GetDataType();
+    auto biasDesc = this->context_->GetOptionalInputDesc(BIAS_INDEX);
+    this->inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_FLOAT;
 
     auto scaleDesc = this->context_->GetOptionalInputDesc(X2_SCALE_INDEX);
     this->inputParams_.scaleDtype = scaleDesc != nullptr ? scaleDesc->GetDataType() : this->inputParams_.scaleDtype;
@@ -359,7 +462,7 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeDtype()
     auto outDesc = this->context_->GetOutputDesc(Y_OUTPUT_INDEX);
     OP_CHECK_IF(
         outDesc == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "output", "null", "output can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "output", "null", "output cannot be null"),
         return false);
 
     this->inputParams_.cDtype = ge::DT_FLOAT;
@@ -368,8 +471,9 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeDtype()
     auto outScaleDesc = this->context_->GetOutputDesc(Y_SCALE_OUTPUT_INDEX);
     OP_CHECK_IF(
         outScaleDesc == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "yScale", "null", "yScale can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "yScale", "null", "yScale cannot be null"),
         return false);
+    this->SetFormat();
     return CheckDtype();
 }
 
@@ -404,6 +508,49 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
 
     bool isFp8 = IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype);
     bool isFp4 = IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype);
+    OP_CHECK_IF(
+        this->context_->GetOptionalInputShape(BIAS_INDEX) != nullptr && this->inputParams_.biasDtype != ge::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            this->inputParams_.opName, "bias",
+            ge::TypeUtils::DataTypeToSerialString(this->inputParams_.biasDtype).c_str(),
+            "the dtype of bias must be FLOAT"),
+        return false);
+    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU) {
+        const auto isNd = [](const auto* desc) {
+            return desc != nullptr && ge::GetPrimaryFormat(desc->GetStorageFormat()) == ge::FORMAT_ND;
+        };
+        const auto* x2Desc = this->context_->GetInputDesc(X2_INDEX);
+        const auto x2Format = x2Desc == nullptr ? ge::FORMAT_RESERVED :
+                                                  ge::GetPrimaryFormat(x2Desc->GetStorageFormat());
+        const bool isSupportedX2 = x2Format == ge::FORMAT_ND || (x2Format == ge::FORMAT_FRACTAL_NZ &&
+                                                                 this->inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN);
+        OP_CHECK_IF(!isNd(this->context_->GetInputDesc(X1_INDEX)) || !isSupportedX2 ||
+                        !isNd(this->context_->GetOptionalInputDesc(X1_SCALE_INDEX)) ||
+                        !isNd(this->context_->GetOptionalInputDesc(X2_SCALE_INDEX)) || !isNd(outDesc) ||
+                        !isNd(outScaleDesc) ||
+                        ((this->context_->GetOptionalInputShape(BIAS_INDEX) != nullptr &&
+                          !isNd(this->context_->GetOptionalInputDesc(BIAS_INDEX))) ||
+                         (this->inputParams_.transA && x2Format == ge::FORMAT_FRACTAL_NZ)),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        this->inputParams_.opName, "SwiGLU input formats", "unsupported",
+                        "SwiGLU requires ND x1/scales/outputs/bias and ND x2 or E4M3FN FRACTAL_NZ x2; "
+                        "transposeX1 is only supported with ND x2"),
+                    return false);
+    }
+
+    OP_CHECK_IF(activationType_ == QMMAQ::ActivationAlg::SWIGLU && !isFp8,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(this->inputParams_.opName, "x1, x2", "non-FP8",
+                                                       "SwiGLU MX only supports MXFP8 inputs"),
+                return false);
+
+    OP_CHECK_IF(yDtype != this->inputParams_.aDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    this->inputParams_.opName, "y, x1",
+                    FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
+                                 ge::TypeUtils::DataTypeToSerialString(this->inputParams_.aDtype).c_str())
+                        .c_str(),
+                    "the output dtype must match x1"),
+                return false);
 
     // 校验y的Dtype
     if (isFp8) {
@@ -449,17 +596,29 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
     auto attrs = this->context_->GetAttrs();
     OP_CHECK_IF(
         attrs == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "attrs", "null", "attrs can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "attrs", "null", "attrs cannot be null"),
         return false);
     const char* roundModePtr = attrs->template GetAttrPointer<char>(ATTR_INDEX_ROUND_MODE);
     OP_CHECK_IF(isFp8 && roundMode_ != QMMAQ::MX_QUANT_ROUND_MODE::RINT,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "roundMode",
                                                       roundModePtr != nullptr ? roundModePtr : "null",
-                                                      "roundMode must be rint when dtype is fp8 in mx quant"),
+                                                      "roundMode must be rint for FP8 MX quantization."),
                 return false);
     OP_CHECK_IF(scaleAlg_ == QMMAQ::QuantAlg::BLAS && !isFp8,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", "1",
-                                                      "The y dtype must be fp8 in mx quant when scaleAlg is 1"),
+                                                      "Output y must have an FP8 dtype for MX quantization when "
+                                                      "scaleAlg is 1."),
+                return false);
+    OP_CHECK_IF(scaleAlg_ == QMMAQ::QuantAlg::DYN_DTYPE_RANGE && !isFp4,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", "2",
+                                                      "scaleAlg=2 requires FP4 inputs and an FP4 output."),
+                return false);
+    OP_CHECK_IF(scaleAlg_ == QMMAQ::QuantAlg::DYN_DTYPE_RANGE &&
+                    !(dstTypeMax_ == DST_TYPE_MAX_DISABLED ||
+                      (dstTypeMax_ >= DST_TYPE_MAX_MIN && dstTypeMax_ <= DST_TYPE_MAX_MAX)),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "dstTypeMax",
+                                                      std::to_string(dstTypeMax_).c_str(),
+                                                      "when scaleAlg is 2, dstTypeMax must be 0 or in [6,12]"),
                 return false);
     return true;
 }
@@ -468,32 +627,23 @@ template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::CheckShapeValid(const gert::Shape& x1Shape,
                                                               const gert::Shape& x2Shape) const
 {
-    auto x1ShapeLength = x1Shape.GetDimNum();
-    auto x2ShapeLength = x2Shape.GetDimNum();
-    OP_CHECK_IF(x1ShapeLength < X1_MINIMUM_DIMENSION_LENGTH || x1ShapeLength > X1_MAXIMUM_DIMENSION_LENGTH ||
-                    x2ShapeLength < X2_MINIMUM_DIMENSION_LENGTH || x2ShapeLength > X2_MAXIMUM_DIMENSION_LENGTH,
-                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                    this->inputParams_.opName, "x1", FormatString("%zuD, %zuD", x1ShapeLength, x2ShapeLength).c_str(),
-                    "the shape dim of x1 must be in the range of 2 to 6, and the shape dim of x2 must be in the range "
-                    "of 4 to 8"),
-                return false);
-
-    // K 维取最后两维中的对应位置，以跳过 batch 前缀（与 InitMatmulSize 保持一致）
-    constexpr int64_t UNKNOWN_DIM = -1;
-    auto x2KDimValue = this->inputParams_.transB ? x2Shape.GetDim(x2ShapeLength - LAST_FIRST_DIM_INDEX) :
-                                                   x2Shape.GetDim(x2ShapeLength - LAST_SECOND_DIM_INDEX);
-    auto x1KDimValue = this->inputParams_.transA ? x1Shape.GetDim(x1ShapeLength - LAST_SECOND_DIM_INDEX) :
-                                                   x1Shape.GetDim(x1ShapeLength - LAST_FIRST_DIM_INDEX);
-    OP_CHECK_IF(x1KDimValue == UNKNOWN_DIM || x2KDimValue == UNKNOWN_DIM,
-                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(this->inputParams_.opName, "x1K, x2K",
-                                                       FormatString("%ld, %ld", x1KDimValue, x2KDimValue).c_str(),
-                                                       "dynamic shape is not supported, the K dimension of x1 and x2 "
-                                                       "must not be unknown (-1)"),
-                return false);
+    const size_t x1ShapeLength = x1Shape.GetDimNum();
+    const size_t x2ShapeLength = x2Shape.GetDimNum();
+    const int64_t x2KDimValue = this->inputParams_.transB ? x2Shape.GetDim(x2ShapeLength - LAST_FIRST_DIM_INDEX) :
+                                                            x2Shape.GetDim(x2ShapeLength - LAST_SECOND_DIM_INDEX);
+    const int64_t x1KDimValue = this->inputParams_.transA ? x1Shape.GetDim(x1ShapeLength - LAST_SECOND_DIM_INDEX) :
+                                                            x1Shape.GetDim(x1ShapeLength - LAST_FIRST_DIM_INDEX);
     OP_CHECK_IF(x1KDimValue != x2KDimValue,
-                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(this->inputParams_.opName, "x1K, x2K",
-                                                       FormatString("%ld, %ld", x1KDimValue, x2KDimValue).c_str(),
-                                                       "the K dimension of x1 must be equal to the K dimension of x2"),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    this->inputParams_.opName, "x1K, x2K",
+                    FormatString("%lld, %lld", static_cast<long long>(x1KDimValue), static_cast<long long>(x2KDimValue))
+                        .c_str(),
+                    "the K dimension of x1 must be equal to the K dimension of x2"),
+                return false);
+    OP_CHECK_IF(activationType_ == QMMAQ::ActivationAlg::SWIGLU && this->inputParams_.nSize % SWIGLU_N_ALIGN != 0UL,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "N",
+                                                      std::to_string(this->inputParams_.nSize).c_str(),
+                                                      "SwiGLU MX requires positive pre-activation N divisible by 64"),
                 return false);
     return true;
 }
@@ -516,16 +666,16 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckParamsForMxQuant(const gert::
     OP_CHECK_IF(x1ScaleDimNum != expectedX1ScaleDimNum,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     this->inputParams_.opName, "x1Scale", FormatString("%zuD", x1ScaleDimNum).c_str(),
-                    FormatString("when the quant mode is mx, the shape dim of x1Scale must be %zu "
-                                 "(x1 batch dim %zu + fixed dim %u)",
+                    FormatString("when the quant mode is mx, the rank of x1Scale must be %zu "
+                                 "(x1 batch rank %zu + fixed rank %u)",
                                  expectedX1ScaleDimNum, x1BatchDimNum, MX_X1_SCALE_DIM)
                         .c_str()),
                 return false);
     OP_CHECK_IF(x2ScaleDimNum != expectedX2ScaleDimNum,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     this->inputParams_.opName, "x2Scale", FormatString("%zuD", x2ScaleDimNum).c_str(),
-                    FormatString("when the quant mode is mx, the shape dim of x2Scale must be %zu "
-                                 "(x2 batch dim %zu + fixed dim %u)",
+                    FormatString("when the quant mode is mx, the rank of x2Scale must be %zu "
+                                 "(x2 batch rank %zu + fixed rank %u)",
                                  expectedX2ScaleDimNum, x2BatchDimNum, MX_X2_SCALE_DIM)
                         .c_str()),
                 return false);
@@ -537,7 +687,9 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckParamsForMxQuant(const gert::
         OP_CHECK_IF(x1ScaleBatchDim != x1BatchDim,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         this->inputParams_.opName, "dimIndex, x1Batch, x1ScaleBatch",
-                        FormatString("%zu, %ld, %ld", i, x1BatchDim, x1ScaleBatchDim).c_str(),
+                        FormatString("%zu, %lld, %lld", i, static_cast<long long>(x1BatchDim),
+                                     static_cast<long long>(x1ScaleBatchDim))
+                            .c_str(),
                         "when the quant mode is mx, the batch dimension of x1Scale must be equal to that of x1"),
                     return false);
     }
@@ -547,42 +699,56 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckParamsForMxQuant(const gert::
         OP_CHECK_IF(x2ScaleBatchDim != x2BatchDim,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         this->inputParams_.opName, "dimIndex, x2Batch, x2ScaleBatch",
-                        FormatString("%zu, %ld, %ld", i, x2BatchDim, x2ScaleBatchDim).c_str(),
+                        FormatString("%zu, %lld, %lld", i, static_cast<long long>(x2BatchDim),
+                                     static_cast<long long>(x2ScaleBatchDim))
+                            .c_str(),
                         "when the quant mode is mx, the batch dimension of x2Scale must be equal to that of x2"),
                     return false);
     }
 
     // M/K/N 与 lastDim 用倒数位置取，以跳过 batch 前缀
     // x1Scale 固定尾部 3 维: [mOrK, kOrM, 2]; x2Scale 固定尾部 3 维: [kOrN, nOrK, 2]
-    auto x1ScaleMDim = static_cast<uint64_t>(this->inputParams_.transA ? x1ScaleShape.GetDim(x1ScaleDimNum - 2) :
-                                                                         x1ScaleShape.GetDim(x1ScaleDimNum - 3));
-    auto x1ScaleKDim = static_cast<uint64_t>(this->inputParams_.transA ? x1ScaleShape.GetDim(x1ScaleDimNum - 3) :
-                                                                         x1ScaleShape.GetDim(x1ScaleDimNum - 2));
-    auto x2ScaleNDim = static_cast<uint64_t>(this->inputParams_.transB ? x2ScaleShape.GetDim(x2ScaleDimNum - 3) :
-                                                                         x2ScaleShape.GetDim(x2ScaleDimNum - 2));
-    auto x2ScaleKDim = static_cast<uint64_t>(this->inputParams_.transB ? x2ScaleShape.GetDim(x2ScaleDimNum - 2) :
-                                                                         x2ScaleShape.GetDim(x2ScaleDimNum - 3));
-    auto x1ScaleLastDim = static_cast<uint64_t>(x1ScaleShape.GetDim(x1ScaleDimNum - 1));
-    auto x2ScaleLastDim = static_cast<uint64_t>(x2ScaleShape.GetDim(x2ScaleDimNum - 1));
+    auto x1ScaleMDim = static_cast<uint64_t>(this->inputParams_.transA ?
+                                                 x1ScaleShape.GetDim(x1ScaleDimNum - LAST_SECOND_DIM_INDEX) :
+                                                 x1ScaleShape.GetDim(x1ScaleDimNum - LAST_THIRD_DIM_INDEX));
+    auto x1ScaleKDim = static_cast<uint64_t>(this->inputParams_.transA ?
+                                                 x1ScaleShape.GetDim(x1ScaleDimNum - LAST_THIRD_DIM_INDEX) :
+                                                 x1ScaleShape.GetDim(x1ScaleDimNum - LAST_SECOND_DIM_INDEX));
+    auto x2ScaleNDim = static_cast<uint64_t>(this->inputParams_.transB ?
+                                                 x2ScaleShape.GetDim(x2ScaleDimNum - LAST_THIRD_DIM_INDEX) :
+                                                 x2ScaleShape.GetDim(x2ScaleDimNum - LAST_SECOND_DIM_INDEX));
+    auto x2ScaleKDim = static_cast<uint64_t>(this->inputParams_.transB ?
+                                                 x2ScaleShape.GetDim(x2ScaleDimNum - LAST_SECOND_DIM_INDEX) :
+                                                 x2ScaleShape.GetDim(x2ScaleDimNum - LAST_THIRD_DIM_INDEX));
+    auto x1ScaleLastDim = static_cast<uint64_t>(x1ScaleShape.GetDim(x1ScaleDimNum - LAST_FIRST_DIM_INDEX));
+    auto x2ScaleLastDim = static_cast<uint64_t>(x2ScaleShape.GetDim(x2ScaleDimNum - LAST_FIRST_DIM_INDEX));
     auto expectedKDimValue = ops::CeilDiv(this->inputParams_.kSize, MXFP_BASEK_FACTOR);
-    OP_CHECK_IF(x2ScaleKDim != expectedKDimValue || x2ScaleNDim != this->inputParams_.nSize ||
-                    x2ScaleLastDim != MXFP_MULTI_BASE_SIZE,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    this->inputParams_.opName, "x2Scale",
-                    FormatString("[%lu, %lu, %lu]", x2ScaleKDim, x2ScaleNDim, x2ScaleLastDim).c_str(),
-                    FormatString("when the quant mode is mx, the shape of x2Scale must be [%lu, %lu, 2]",
-                                 expectedKDimValue, this->inputParams_.nSize)
-                        .c_str()),
-                return false);
-    OP_CHECK_IF(x1ScaleMDim != this->inputParams_.mSize || x1ScaleKDim != expectedKDimValue ||
-                    x1ScaleLastDim != MXFP_MULTI_BASE_SIZE,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    this->inputParams_.opName, "x1Scale",
-                    FormatString("[%lu, %lu, %lu]", x1ScaleKDim, x1ScaleMDim, x1ScaleLastDim).c_str(),
-                    FormatString("when the quant mode is mx, the shape of x1Scale must be [%lu, %lu, 2]",
-                                 expectedKDimValue, this->inputParams_.mSize)
-                        .c_str()),
-                return false);
+    OP_CHECK_IF(
+        x2ScaleKDim != expectedKDimValue || x2ScaleNDim != this->inputParams_.nSize ||
+            x2ScaleLastDim != MXFP_MULTI_BASE_SIZE,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            this->inputParams_.opName, "x2Scale",
+            FormatString("[%llu, %llu, %llu]", static_cast<unsigned long long>(x2ScaleKDim),
+                         static_cast<unsigned long long>(x2ScaleNDim), static_cast<unsigned long long>(x2ScaleLastDim))
+                .c_str(),
+            FormatString("when the quant mode is mx, the shape of x2Scale must be [%llu, %llu, 2]",
+                         static_cast<unsigned long long>(expectedKDimValue),
+                         static_cast<unsigned long long>(this->inputParams_.nSize))
+                .c_str()),
+        return false);
+    OP_CHECK_IF(
+        x1ScaleMDim != this->inputParams_.mSize || x1ScaleKDim != expectedKDimValue ||
+            x1ScaleLastDim != MXFP_MULTI_BASE_SIZE,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            this->inputParams_.opName, "x1Scale",
+            FormatString("[%llu, %llu, %llu]", static_cast<unsigned long long>(x1ScaleKDim),
+                         static_cast<unsigned long long>(x1ScaleMDim), static_cast<unsigned long long>(x1ScaleLastDim))
+                .c_str(),
+            FormatString("when the quant mode is mx, the shape of x1Scale must be [%llu, %llu, 2]",
+                         static_cast<unsigned long long>(expectedKDimValue),
+                         static_cast<unsigned long long>(this->inputParams_.mSize))
+                .c_str()),
+        return false);
     return true;
 }
 
@@ -592,11 +758,11 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeInputs()
     // 获取输入张量形状
     const gert::StorageShape* x1StorageShape = this->context_->GetInputShape(X1_INDEX);
     OP_CHECK_IF(x1StorageShape == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1", "null", "x1 can not be null"),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1", "null", "x1 cannot be null"),
                 return false);
     const gert::StorageShape* x2StorageShape = this->context_->GetInputShape(X2_INDEX);
     OP_CHECK_IF(x2StorageShape == nullptr,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2", "null", "x2 can not be null"),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2", "null", "x2 cannot be null"),
                 return false);
     auto x1Shape = x1StorageShape->GetOriginShape();
     auto x2Shape = x2StorageShape->GetOriginShape();
@@ -605,13 +771,13 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeInputs()
     const gert::StorageShape* scaleStorageShape = this->context_->GetOptionalInputShape(X2_SCALE_INDEX);
     OP_CHECK_IF(
         scaleStorageShape == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2Scale", "null", "x2Scale can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x2Scale", "null", "x2Scale cannot be null"),
         return false);
     auto scaleShape = scaleStorageShape->GetOriginShape();
     const gert::StorageShape* pertokenShape = this->context_->GetOptionalInputShape(X1_SCALE_INDEX);
     OP_CHECK_IF(
         pertokenShape == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1Scale", "null", "x1Scale can not be null"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x1Scale", "null", "x1Scale cannot be null"),
         return false);
     auto& x1ScaleShape = pertokenShape->GetStorageShape();
     this->inputParams_.isPertoken = false;
@@ -644,17 +810,95 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeInputs()
 
     // 验证量化参数
     if (!this->SetQuantMode(scaleShape, pertokenShape) ||
-        !ValidateQuantParams(x1Shape, x2Shape, x1ScaleShape, scaleShape) || !CheckShapeValid(x1Shape, x2Shape)) {
+        !ValidateQuantParams(x1Shape, x2Shape, x1ScaleShape, scaleShape) || !CheckShapeValid(x1Shape, x2Shape) ||
+        !CheckBiasAndOutputShapes(x1Shape, x2Shape)) {
         return false;
     }
-    OP_LOGD(this->inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",
-            this->inputParams_.batchA, this->inputParams_.batchB, this->inputParams_.batchC,
+    OP_LOGD(this->inputParams_.opName,
+            "Batch sizes: batchA=%llu, batchB=%llu, batchC=%llu; isPerTensor=%s, isPerToken=%s",
+            static_cast<unsigned long long>(this->inputParams_.batchA),
+            static_cast<unsigned long long>(this->inputParams_.batchB),
+            static_cast<unsigned long long>(this->inputParams_.batchC),
             this->inputParams_.isPerTensor ? "true" : "false", this->inputParams_.isPertoken ? "true" : "false");
     return true;
 }
 
 template <typename BaseT>
-void QuantMatmulActivationQuantHelper<BaseT>::SetQuantParams(QMMAQ::QuantMatmulActivationQuantTilingData& tilingData)
+bool QuantMatmulActivationQuantHelper<BaseT>::CheckBiasAndOutputShapes(const gert::Shape& x1Shape,
+                                                                       const gert::Shape& x2Shape) const
+{
+    const size_t rank = std::max(x1Shape.GetDimNum(), x2Shape.GetDimNum());
+    const auto* yStorage = this->context_->GetOutputShape(Y_OUTPUT_INDEX);
+    const auto* scaleStorage = this->context_->GetOutputShape(Y_SCALE_OUTPUT_INDEX);
+    OP_CHECK_IF(yStorage == nullptr || scaleStorage == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "y/yScale shape", "null",
+                                                      "y and yScale shapes are required"),
+                return false);
+    const auto& yShape = yStorage->GetOriginShape();
+    const auto& scaleShape = scaleStorage->GetOriginShape();
+    OP_CHECK_IF(yShape.GetDimNum() != rank || scaleShape.GetDimNum() != rank + 1,
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    this->inputParams_.opName, "y/yScale rank",
+                    FormatString("%zu, %zu", yShape.GetDimNum(), scaleShape.GetDimNum()).c_str(),
+                    FormatString("the ranks of y and yScale must be %zu and %zu", rank, rank + 1).c_str()),
+                return false);
+    const int64_t inputN = static_cast<int64_t>(this->inputParams_.nSize);
+    const int64_t outputN = activationType_ == QMMAQ::ActivationAlg::SWIGLU ?
+                                inputN / static_cast<int64_t>(SWIGLU_BRANCH_COUNT) :
+                                inputN;
+    const int64_t scaleN = ops::CeilDiv(outputN, static_cast<int64_t>(MXFP_BASEK_FACTOR));
+    OP_CHECK_IF(yShape.GetDim(rank - LAST_SECOND_DIM_INDEX) != static_cast<int64_t>(this->inputParams_.mSize) ||
+                    yShape.GetDim(rank - LAST_FIRST_DIM_INDEX) != outputN ||
+                    scaleShape.GetDim(rank - LAST_SECOND_DIM_INDEX) != yShape.GetDim(rank - LAST_SECOND_DIM_INDEX) ||
+                    scaleShape.GetDim(rank - LAST_FIRST_DIM_INDEX) != scaleN ||
+                    scaleShape.GetDim(rank) != static_cast<int64_t>(MXFP_MULTI_BASE_SIZE),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    this->inputParams_.opName, "y, yScale",
+                    FormatString("%s, %s", Ops::Base::ToString(yShape).c_str(), Ops::Base::ToString(scaleShape).c_str())
+                        .c_str(),
+                    FormatString("y and yScale must have matrix dimensions [%lld, %lld] and [%lld, %lld, %llu]",
+                                 static_cast<long long>(this->inputParams_.mSize), static_cast<long long>(outputN),
+                                 static_cast<long long>(this->inputParams_.mSize), static_cast<long long>(scaleN),
+                                 static_cast<unsigned long long>(MXFP_MULTI_BASE_SIZE))
+                        .c_str()),
+                return false);
+    for (size_t i = 0; i + 2 < rank; ++i) {
+        const size_t offsetA = rank - x1Shape.GetDimNum();
+        const size_t offsetB = rank - x2Shape.GetDimNum();
+        const int64_t batchDim = std::max(i < offsetA ? 1 : x1Shape.GetDim(i - offsetA),
+                                          i < offsetB ? 1 : x2Shape.GetDim(i - offsetB));
+        OP_CHECK_IF(yShape.GetDim(i) != batchDim || scaleShape.GetDim(i) != batchDim,
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        this->inputParams_.opName, "y/yScale batch dim",
+                        FormatString("dim %zu: %lld, %lld, expected %lld", i, static_cast<long long>(yShape.GetDim(i)),
+                                     static_cast<long long>(scaleShape.GetDim(i)), static_cast<long long>(batchDim))
+                            .c_str(),
+                        "the batch dimensions of y and yScale must match the broadcast batch dimensions"),
+                    return false);
+    }
+    const auto* biasStorage = this->context_->GetOptionalInputShape(BIAS_INDEX);
+    if (biasStorage != nullptr) {
+        const auto& biasShape = biasStorage->GetOriginShape();
+        const bool vectorBias = biasShape.GetDimNum() == 1 &&
+                                biasShape.GetDim(biasShape.GetDimNum() - LAST_FIRST_DIM_INDEX) ==
+                                    static_cast<int64_t>(this->inputParams_.nSize);
+        const bool batchBias = rank == BATCH_BIAS_RANK && biasShape.GetDimNum() == BATCH_BIAS_RANK &&
+                               biasShape.GetDim(rank - LAST_THIRD_DIM_INDEX) ==
+                                   yShape.GetDim(rank - LAST_THIRD_DIM_INDEX) &&
+                               biasShape.GetDim(rank - LAST_SECOND_DIM_INDEX) == BATCH_BIAS_BROADCAST_SIZE &&
+                               biasShape.GetDim(rank - LAST_FIRST_DIM_INDEX) ==
+                                   static_cast<int64_t>(this->inputParams_.nSize);
+        OP_CHECK_IF(!vectorBias && !batchBias,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(this->inputParams_.opName, "bias",
+                                                          Ops::Base::ToString(biasShape).c_str(),
+                                                          "bias must be [N], or [B,1,N] for a rank-3 output"),
+                    return false);
+    }
+    return true;
+}
+
+template <typename BaseT>
+void QuantMatmulActivationQuantHelper<BaseT>::SetQuantParams(QMMAQ::QMMAQTilingData& tilingData)
 {
     tilingData.activationType = activationType_;
     tilingData.scaleAlg = scaleAlg_;
@@ -670,24 +914,70 @@ uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetBatchCoreCnt() const
 
 // 清空并重置Tiling数据结构，准备新的tiling计算
 template <typename BaseT>
-void QuantMatmulActivationQuantHelper<BaseT>::ResetActivationQuantTilingData(
-    QMMAQ::QuantMatmulActivationQuantTilingData& tilingData)
+void QuantMatmulActivationQuantHelper<BaseT>::ResetActivationQuantTilingData(QMMAQ::QMMAQTilingData& tilingData)
 {
     if (!this->isTilingOut_) {
-        tilingData = QMMAQ::QuantMatmulActivationQuantTilingData();
+        tilingData = QMMAQ::QMMAQTilingData();
         OP_TILING_CHECK(
             memset_s(this->context_->GetRawTilingData()->GetData(), this->context_->GetRawTilingData()->GetCapacity(),
                      0, this->context_->GetRawTilingData()->GetCapacity()) != EOK,
-            CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to clear tiling data"), return);
+            CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Failed to clear tiling data."), return);
     }
 }
 
-// 复制QBMM TilingData
+// Project the host calculator result onto the fields consumed by this operator.
 template <typename BaseT>
-void QuantMatmulActivationQuantHelper<BaseT>::CopyV3BasicApiTilingData(
-    const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src, DequantBmm::QuantBatchMatmulV3BasicAPITilingData& dst)
+ge::graphStatus QuantMatmulActivationQuantHelper<BaseT>::CopyMatmulTilingData(
+    const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src, QMMAQ::QMMAQTilingData& dst)
 {
-    dst = src;
+    const auto& matmul = src.matmulTiling;
+    const auto& window = src.adaptiveSlidingWin;
+    OP_TILING_CHECK(
+        std::max({matmul.baseM, matmul.baseN, matmul.baseK, window.mTailTile, window.nTailTile,
+                  window.mBaseTailSplitCnt, window.nBaseTailSplitCnt, window.mTailMain, window.nTailMain}) >
+            std::numeric_limits<uint16_t>::max(),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "matmul base/tail parameters", "out of range",
+                                              "matmul base/tail parameters must fit the uint16_t tiling range"),
+        return ge::GRAPH_FAILED);
+    dst.m = matmul.m;
+    dst.n = matmul.n;
+    dst.k = matmul.k;
+    dst.kL1 = matmul.kBL1;
+    dst.scaleKL1 = matmul.scaleKL1;
+    dst.baseM = static_cast<uint16_t>(matmul.baseM);
+    dst.baseN = static_cast<uint16_t>(matmul.baseN);
+    dst.baseK = static_cast<uint16_t>(matmul.baseK);
+    dst.mTailTile = static_cast<uint16_t>(window.mTailTile);
+    dst.nTailTile = static_cast<uint16_t>(window.nTailTile);
+    dst.mBaseTailSplitCnt = static_cast<uint16_t>(window.mBaseTailSplitCnt);
+    dst.nBaseTailSplitCnt = static_cast<uint16_t>(window.nBaseTailSplitCnt);
+    dst.mTailMain = static_cast<uint16_t>(window.mTailMain);
+    dst.nTailMain = static_cast<uint16_t>(window.nTailMain);
+    dst.nBufferNum = matmul.nBufferNum;
+    dst.isBias = matmul.isBias;
+    dst.dbL0C = matmul.dbL0C;
+    dst.weightMustHitL2 = matmul.weightMustHitL2;
+    return ge::GRAPH_SUCCESS;
+}
+
+template <typename BaseT>
+void QuantMatmulActivationQuantHelper<BaseT>::CopyBatchTilingData(
+    const DequantBmm::QuantBatchMatmulV3BasicAPIDataParams& src, QMMAQ::QMMAQTilingData& dst)
+{
+    dst.batchA1 = src.batchA1;
+    dst.batchA2 = src.batchA2;
+    dst.batchA3 = src.batchA3;
+    dst.batchA4 = src.batchA4;
+    dst.batchB1 = src.batchB1;
+    dst.batchB2 = src.batchB2;
+    dst.batchB3 = src.batchB3;
+    dst.batchB4 = src.batchB4;
+    dst.batchC1 = src.batchC1;
+    dst.batchC2 = src.batchC2;
+    dst.batchC3 = src.batchC3;
+    dst.batchC4 = src.batchC4;
+    dst.batchCount = src.batchC;
+    dst.biasThreeDim = static_cast<uint8_t>(src.biasThreeDim);
 }
 
 // 显式实例化：QuantMatmulActivationQuant 唯一实例化点

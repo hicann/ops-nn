@@ -19,7 +19,7 @@
 
 namespace ge {
 /**
-* @brief The fusion operator of QuantBatchMatmul, Gelu and mxQuant.
+* @brief The fusion operator of QuantBatchMatmul, Gelu, SwiGLU and mxQuant.
 
 * @par Inputs:
  * @li x1: A matrix tensor. Must be one of the following types: float8_e5m2, float8_e4m3fn, float4_e2m1 \n
@@ -40,7 +40,8 @@ namespace ge {
                     ceil(k / x2_k0) == x2_k1. \n
 * @li bias: An optional matrix tensor. Must be float32, supports ND format.
             The shape is 1D (t,) or 3D (batch, 1, n),
-            with t equal to n, where n is the same as that of x2.
+            with t equal to n, where n is the same as that of x2. For SwiGLU,
+            bias is applied to the full pre-activation width before splitting.
 * @li x1_scale: An optional matrix tensor. The type supports float8_e8m0, supports ND format. \n
                       - When the data type is float8_e8m0, the shape is 3D. When the shape of x1 is (m, k), scale is (m,
 z, 2), when the shape of x1 is (k, m), scale is (z, m, 2), where z = ceil(k / 64) and k is the reduce axis of x1. \n
@@ -53,9 +54,9 @@ z, 2), when the shape of x1 is (k, m), scale is (z, m, 2), where z = ceil(k / 64
 
 * @par Attributes:
 * @li transpose_x1: A bool. If true, changes the shape of "x1" from [m, k] to [k, m] before multiplication.
-* Default: false. Only supports false now.
+* Default: false. For SwiGLU, true is supported with ND x2; WeightNZ x2 requires false.
 * @li transpose_x2: A bool. If true, changes the shape of "x2" from [k, n] to [n, k] before multiplication.
-* Default: false. Only supports false now.
+* Default: false.
 * @li group_size: An optional Int. Indicating the ratio between pertoken_scale/scale and x1/x2 in group dequantization.
 * If the value of pertoken_scale along the k-dimension is n, one value in pertoken_scale can be used to dequantize n
 values in x1 along the k-dimension. \n
@@ -66,8 +67,8 @@ values in x1 along the k-dimension. \n
 * input shape, eg: group_size_m = m / scale_m （m % scale_m must be 0). \n
 * Final group_size_m, group_size_n, group_size_k should satisify following requirements: \n
 * In mx quantification, the supported final [group_size_m, group_size_n, group_size_k] combinations are [1, 1, 32]. \n
-* @li activation_type: A optional string. The gelu approximation algorithm to use: 'gelu_tanh' or 'gelu_erf', default is
-'gelu_tanh'.
+* @li activation_type: An optional string. The activation algorithm to use: 'gelu_tanh', 'gelu_erf' or 'swiglu', default
+is 'gelu_tanh'.
 * @li y_dtype: A Int. Declare the output dtype.
 * @li quant_mode: An optional string. Declare the quant mode.Support mx. Defaults to "mx".
 * @li round_mode: An optional string. Defaults to "rint".
@@ -78,7 +79,8 @@ value.Defaults to 0.
 
 
 * @par Outputs:
- * @li y: A matrix tensor. The data type is float8_e5m2, float8_e4m3fn, float4_e2m1. The format supports ND. \n
+ * @li y: A matrix tensor. The data type is float8_e5m2, float8_e4m3fn, float4_e2m1. The format supports ND. For GELU,
+ * the shape is (batch, m, n); for SwiGLU, the shape is (batch, m, n / 2). \n
 * @li
 y_scale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * - rank(mxscale) = rank(x) + 1.
@@ -95,6 +97,11 @@ y_scale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following
 * when the out shape is 3D.
 * @li Inputs does not support tensor with dimension size 0.
 * @li When x2 is ND format, x1 should be ND format.
+* @li When activation_type is 'swiglu', x1 and x2 must be FP8, x1 must be ND,
+* x2 must be ND or FLOAT8_E4M3FN NZ; transpose_x1 is supported for ND x2 and must be false for WeightNZ x2;
+* y_dtype must match x1.
+* The pre-activation N must be positive and divisible by 64; round_mode must be 'rint'
+* and scale_alg must be 0 or 1. SwiGLU uses only the FP8 rows in the table below.
 * @li In mx quantification, when x1 type and x2 type are both float8_e4m3fn/float8_e5m2 and x1_scale/x2_scale types are
 float8_e8m0:
 *      - x1 and x2 inner axis (the last dimension of view shape, independent of transpose_x1/transpose_x2) must be even.

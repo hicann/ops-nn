@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  融合量化的矩阵乘、激活以及动态量化，封装`aclnnQuantMatmulActivationQuantWeightNz`。当前支持激活为gelu、MX量化模式。输入`x1`、`x2`为P8量化矩阵，必选输入`x2_scale`、可选输入`x1_scale`为MX量化缩放因子，`bias`为偏置项；矩阵乘结果经激活函数后做动态量化，输出量化结果`y`和量化尺度`y_scale`。M/N/K维度及转置标志由`x1`、`x2`最后两维自动匹配推导，无需显式传入。
+  融合量化的矩阵乘、激活以及动态量化，按x2格式封装ND或WeightNZ接口。当前支持激活为gelu和swiglu、MX量化模式。输入`x1`、`x2`为FP8或FP4量化矩阵，必选输入`x2_scale`、`x1_scale`为MX量化缩放因子，`bias`为偏置项；矩阵乘结果经激活函数后做动态量化，输出量化结果`y`和量化尺度`y_scale`。Torch的逻辑视图固定按`(..., M, K)`和`(..., K, N)`传入；FP4在PyTorch侧以uint8双元素打包，连续非转置布局的被打包轴物理长度减半，转置布局则由stride决定被打包轴，由C++桥接层恢复逻辑维度。M/N/K不通过相等维度猜测转置，ACLNN根据最后两维stride处理转置视图。
 
 - 计算公式：
 
@@ -49,6 +49,14 @@
     activationOut=GELU(matmulOut)=0.5 * matmulOut * (1 + erf(matmulOut / \sqrt{2}))
     $$
 
+    - swiglu：原始N必须为正数且是64的倍数。先在完整FP32矩阵乘结果上加bias，再沿尾轴按`matmulOut=[gate | linear]`连续等分：
+
+    $$
+    activationOut=SiLU(gate) * linear
+    $$
+
+    SwiGLU结果以RNE舍入为BF16后执行MX量化，输出宽度为原始N的二分之一。
+
   - 动态量化计算公式：
 
     - **场景1，当scale_alg为0时**：
@@ -60,7 +68,7 @@
       P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space k\\
       $$
 
-      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按尾轴上的分组输出yScaleOut。
+      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，mxscale按尾轴上的分组组成输出`y_scale`。
 
       - emax：对应数据类型的最大正则数的指数位。
 
@@ -94,7 +102,7 @@
 
       - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
       - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-      - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是 $\left(S^b, [d^i]_{i=1}^k\right)$，其中 $S^b$ 代表块的缩放因子，这里指 $S_{ue8m0}^b$，$[d^i]_{i=1}^k$ 代表块内量化后的数据。
+      - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是 $\left(S^b, [d^i]_{i=1}^k\right)$，其中 $S^b$ 代表块的缩放因子，这里指 $S_{ue8m0}^b$，$[d^i]_{i=1}^k$ 代表块内量化后的数据。
 
     - **场景3，当scale_alg为2时，只涉及FP4_E2M1类型**：
       - 当dstTypeMax = 0.0/6.0/7.0时：
@@ -105,7 +113,7 @@
         $$
         P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
         $$
-        - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+        - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，mxscale按对应的axis维度上的分组组成输出`y_scale`。
       - 当dstTypeMax != 0.0/6.0/7.0时：
         - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
         - 找到该块中数值的最大绝对值:
@@ -124,8 +132,13 @@
           $$
         - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
         - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
-        - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+        - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，mxscale按对应的axis维度上的分组组成输出`y_scale`。
+
+  - FP8缩放算法选择：
+    - `scale_alg=0`使用OCP共享指数算法，与[DynamicMxQuant](../../../quant/dynamic_mx_quant/README.md)、[SwigluMxQuant](../../../quant/swiglu_mx_quant/README.md)的OCP语义一致，不会根据目标FP8最大有限值额外上调scale；归一化结果位于FP8表示边界外时，输出由底层FP8类型转换语义决定。
+    - `scale_alg=1`使用BLAS算法，按目标FP8最大有限值计算scale并将E8M0指数向上取整，可降低边界值量化溢出的风险。输入可能触及FP8表示边界且业务要求有限输出时，建议使用该算法。
+    - 在相同输出dtype、32元素分组和`scale_alg`下，融合算子只是在量化前增加矩阵乘和激活，scale生成方式以及FP8转换规则与拆分调用小算子保持一致。
 
 ## 函数原型
 
@@ -140,18 +153,18 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为ND。最后两维为`(M, K)`或`(K, M)`，由与`x2`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | 2-6维，`(..., M, K)`或`(..., K, M)` |
-| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为ND或FRACTAL_NZ。最后两维为`(K, N)`或`(N, K)`，由与`x1`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | 2-6维，`(..., K, N)`或`(..., N, K)` |
-| `x2_scale` | Tensor | 必选 | 矩阵乘计算时x2的MX量化缩放因子。数据格式为ND。batch维须与`x2`一致。 | torch.float8_e8m0fnu | `(..., K//64, N, 2)`或`(..., N, K//64, 2)`（随`x2`方向） |
-| `x1_scale` | Tensor | 可选 | 矩阵乘计算时x1的MX量化缩放因子。数据格式为ND。batch维须与`x1`一致。 | torch.float8_e8m0fnu | `(..., M, K//64, 2)`或`(..., K//64, M, 2)`（随`x1`方向） |
-| `bias` | Tensor | 可选 | 矩阵乘运算后累加的偏置。数据格式为ND。 | float32 | `(N,)` |
-| `output_dtype` | int | 可选 | 输出`y`的数据类型枚举值。支持torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2等。默认值None（表示与`x1`同类型）。 | int | - |
+| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为ND。逻辑形状为`(..., M, K)`；FP4以uint8双元素打包，非转置连续布局通常为末轴`K/2`，转置布局的打包轴由stride决定，显式dtype=296时恢复逻辑维度。可传入最后两轴转置后的Tensor视图。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.uint8（FP4双元素打包，显式dtype=296） | 2-6维，逻辑形状`(..., M, K)` |
+| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为ND或FRACTAL_NZ。逻辑形状为`(..., K, N)`；ND FP4以uint8双元素打包，非转置连续布局通常为末轴`N/2`，转置布局的打包轴由stride决定，显式dtype=296时恢复逻辑维度。WeightNZ的物理存储形状由torch_npu管理。可传入最后两轴转置后的Tensor视图。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.uint8（FP4双元素打包，显式dtype=296） | 2-6维，逻辑形状`(..., K, N)` |
+| `x2_scale` | Tensor | 必选 | 矩阵乘计算时x2的MX量化缩放因子。数据格式为ND。batch维须与`x2`一致。 | torch.float8_e8m0fnu | `(..., ceil(K/64), N, 2)` |
+| `x1_scale` | Tensor | 必选 | 矩阵乘计算时x1的MX量化缩放因子。数据格式为ND。batch维须与`x1`一致。 | torch.float8_e8m0fnu | `(..., M, ceil(K/64), 2)` |
+| `bias` | Tensor | 可选 | 矩阵乘运算后累加的偏置。数据格式为ND。 | float32 | `(N,)`，三维输出时也支持`(B,1,N)` |
+| `output_dtype` | int | 可选 | 输出`y`的数据类型枚举值，必须与`x1`的逻辑数据类型一致。支持torch.float8_e4m3fn、torch.float8_e5m2、torch.uint8（FP4双元素打包，显式dtype=296）等。默认值None（表示与`x1`同类型）。 | int | - |
 | `x1_dtype` | int | 可选 | `x1`的数据类型枚举值。不传入时根据`x1`的scalar_type自动推导。 | int | - |
 | `x2_dtype` | int | 可选 | `x2`的数据类型枚举值。不传入时根据`x2`的scalar_type自动推导。 | int | - |
 | `x1scale_dtype` | int | 可选 | `x1_scale`的数据类型枚举值。不传入时根据`x1_scale`的scalar_type自动推导。 | int | - |
 | `x2scale_dtype` | int | 可选 | `x2_scale`的数据类型枚举值。不传入时根据`x2_scale`的scalar_type自动推导。 | int | - |
 | `group_sizes` | List[int] | 可选 | 分组量化大小 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]。 | list | `(3,)` |
-| `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`，默认值`"gelu_tanh"`。 | string | - |
+| `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`、`"swiglu"`，默认值`"gelu_tanh"`。 | string | - |
 | `quant_mode` | str | 可选 | 量化模式，当前支持`"mx"`，默认值`"mx"`。 | string | - |
 | `round_mode` | str | 可选 | 舍入模式。当`output_dtype`为FLOAT4_E2M1时，支持`"rint"`、`"floor"`、`"round"`；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持`"rint"`。默认值`"rint"`。 | string | - |
 | `scale_alg` | int | 可选 | 缩放算法。当`output_dtype`为FLOAT4_E2M1时，支持取值0和2，0表示场景1，2表示场景3（开启`dst_type_max`）；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1，0表示场景1，1表示场景2。默认值0。 | int | - |
@@ -161,8 +174,8 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
 | 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `y` | Tensor | 必选 | 动态量化后的矩阵乘及激活计算结果。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | `(..., M, N)`； |
-| `y_scale` | Tensor | 必选 | 动态量化后每个分组对应的量化尺度，最后一维固定为2。 | torch.float8_e8m0fnu | `(..., M, CeilDiv(N, 64), 2)` |
+| `y` | Tensor | 必选 | 动态量化后的矩阵乘及激活计算结果。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.uint8（FP4双元素打包，显式dtype=296） | GELU：`(..., M, N)`；SwiGLU：`(..., M, N/2)` |
+| `y_scale` | Tensor | 必选 | 动态量化后每个分组对应的量化尺度，最后一维固定为2。 | torch.float8_e8m0fnu | `(..., M, CeilDiv(H, 64), 2)`，GELU时H=N，SwiGLU时H=N/2 |
 
 ## 约束说明
 
@@ -174,17 +187,16 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
   - `x1`的逻辑shape始终为`(..., M, K)`，`x2`的逻辑shape始终为`(..., K, N)`。
   - 需要转置时，以最后两维的转置视图传入：`x1`的stride为`(..., 1, M)`，`x2`的stride为`(..., 1, K)`；不转置时stride为正常的连续步长，`x1`为`(..., K, 1)`，`x2`为`(..., N, 1)`。
   - 接口依据stride自动识别转置并推导M/N/K；仅支持沿最后两维的转置，其他轴的视图/非连续Tensor不支持。
-- `x1_scale`、`x2_scale`不携带转置标志，shape方向与`x1`、`x2`一致：转置时`x1_scale`为`(..., CeilDiv(K, 64), M, 2)`、`x2_scale`为`(..., N, CeilDiv(K, 64), 2)`；非转置时为`(..., M, CeilDiv(K, 64), 2)`、`(..., CeilDiv(K, 64), N, 2)`。
-- 当`x1`最后两维相等（M = K）或`x2`最后两维相等（K = N）时，转置不按stride判断；由于本接口内部固定向aclnn传入transposeX1、transposeX2为false，该场景始终按不转置处理。
-- `x1`支持 2-6 维，`x2`为NZ时支持 4-8 维，`x2`为ND时支持 2-6 维。
-- `x2`为NZ时仅支持数据类型为torch.float8_e4m3fn。
-- 当`K`或`N`为1时，无法使用weightNz特性，本接口不支持此种场景。
+- 令`B = CeilDiv(K, 64)`。`x1_scale`的输入view shape始终为`(..., M, B, 2)`，`x2_scale`始终为`(..., B, N, 2)`；最后一维的2个scale值不参与转置。转置时view shape不变，`x1_scale`尾三维stride为`(2, 2M, 1)`，`x2_scale`为`(2, 2B, 1)`；非转置时分别为`(2B, 2, 1)`和`(2N, 2, 1)`。`x1`与`x1_scale`、`x2`与`x2_scale`的转置布局必须分别一致。
+- `x1`、`x2`的逻辑Tensor均支持2-6维；NZ的内部存储形状由torch_npu管理。
+- `x2`为NZ时支持E4M3FN或显式声明为E2M1的FP4打包数据；不支持E5M2。
+- WeightNZ路径不支持`K`或`N`为1；ND路径另按具体激活的约束校验。
 - `x1`、`x2`的batch维度（除最后两维外的维度）支持广播（右对齐），如`x1=(1,M,K)`、`x2=(8,K,N)`输出`(8,M,N)`。
-- `x1_scale`、`x2_scale`若传入，其batch维度（除最后三维外的维度）的数量和每一维的值必须与对应的`x1`、`x2`完全一致；若`x1`无 batch维度（2D），则`x1_scale`、`x2_scale`须为3D。
+- `x1_scale`、`x2_scale`必须传入，其batch维度（除最后三维外的维度）的数量和每一维的值必须与对应的`x1`、`x2`完全一致；对应输入为2D时，该输入的scale须为3D。
 - `x1_scale`、`x2_scale`最后一维必须为2。
 - `group_sizes`若传入，必须包含三个元素`[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]，当前MX场景仅支持[0, 0, 0]、[1, 1, 32]。
-- `y`的数据类型由`x1`的数据类型决定，两者必须保持一致。
-- 输入和输出支持以下数据类型组合：
+- GELU和SwiGLU的输出类型都必须与`x1_dtype`或`x1`的逻辑数据类型一致。
+- 下表列出支持的数据类型组合；SwiGLU仅支持其中的FP8组合：
 
   | x1            | x2            | x1_scale   |  x2_scale    | bias             | y                         | y_scale      |
   |---------------|---------------|-------------|-------------|------------------|---------------------------|-------------|
@@ -192,9 +204,9 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
   | torch.float8_e5m2   | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
   | torch.float8_e5m2   | torch.float8_e5m2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
   | torch.float8_e4m3fn | torch.float8_e5m2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn | torch.float8_e8m0fnu |
-  | torch.float4_e2m1fn_x2 | torch.float4_e2m1fn_x2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float4_e2m1fn_x2 | torch.float8_e8m0fnu |
+  | torch.uint8（FP4双元素打包，显式dtype=296） | torch.uint8（FP4双元素打包，显式dtype=296） | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.uint8（FP4双元素打包，显式dtype=296） | torch.float8_e8m0fnu |
 
-- MXFP4场景约束（`x1`、`x2`、`y`实际数据类型均为`torch.float4_e2m1fn_x2`）：
+- MXFP4场景约束（`x1`、`x2`、`y`实际数据类型均为`torch.uint8`，逻辑类型由dtype参数296指定）：
   - 当前`x1`、`x2`、`y`都已打包为uint8，打包前的shape尾轴需要为偶数。
   - 当`x2`为NZ格式时，`x1`不支持转置。
   - `scale_alg`仅支持取值0和2。
@@ -209,7 +221,7 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
 - 单算子模式调用
 
-  - FP8场景示例：
+  - GELU FP8场景示例：
 
     ```python
     import math
@@ -234,6 +246,32 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
     print("y_scale: ", y_scale.cpu())
     ```
 
+  - SwiGLU FP8场景示例：
+
+    ```python
+    import math
+    import torch
+    import torch_npu
+    import cann_ops_nn
+
+    m, k, n = 5, 64, 128  # SwiGLU中的n是矩阵乘原始输出宽度，必须是64的倍数
+    group_size = 32
+    x1 = torch.randn(m, k, dtype=torch.float32).to(torch.float8_e4m3fn).npu()
+    x2 = torch.randn(k, n, dtype=torch.float32).to(torch.float8_e4m3fn).npu()
+    x2_nz = torch_npu.npu_format_cast(x2, 29)  # 29为NZ格式
+    x1_scale = torch.ones(m, math.ceil(k / group_size / 2), 2, dtype=torch.float8_e8m0fnu).npu()
+    x2_scale = torch.ones(math.ceil(k / group_size / 2), n, 2, dtype=torch.float8_e8m0fnu).npu()
+    bias = torch.zeros(n, dtype=torch.float32).npu()  # bias按原始n传入，在SwiGLU split前相加
+
+    y, y_scale = torch.ops.cann_ops_nn.quant_matmul_activation_quant(
+        x1, x2_nz, x2_scale, x1_scale=x1_scale, bias=bias,
+        activation_type="swiglu", quant_mode="mx", round_mode="rint",
+        scale_alg=1, dst_type_max=0.0)
+    # y shape: (M, N/2)；y_scale shape: (M, CeilDiv(N/2, 64), 2)
+    print("y: ", y.cpu())
+    print("y_scale: ", y_scale.cpu())
+    ```
+
   - FP4场景示例：
 
     ```python
@@ -245,20 +283,41 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
     m, k, n = 5, 64, 128
     group_size = 32
     # x1 物理形状 (M, K//2)；x2 物理形状 (K, N//2)，FP4双nibble打包为uint8末维减半
-    x1 = torch.randn(m, k // 2, dtype=torch.float32).to(torch.uint8).npu()
-    x2 = torch.randn(k, n // 2, dtype=torch.float32).to(torch.uint8).npu()
+    x1 = torch.randint(0, 256, (m, k // 2), dtype=torch.uint8).npu()
+    x2 = torch.randint(0, 256, (k, n // 2), dtype=torch.uint8).npu()
     x2_nz = torch_npu.npu_format_cast(x2, 29) # 29为NZ格式
     x1_scale = torch.ones(m, math.ceil(k / group_size / 2), 2, dtype=torch.float8_e8m0fnu).npu()
     x2_scale = torch.ones(math.ceil(k / group_size / 2), n, 2, dtype=torch.float8_e8m0fnu).npu()
 
     y, y_scale = torch.ops.cann_ops_nn.quant_matmul_activation_quant(
         x1, x2_nz, x2_scale, x1_scale=x1_scale, bias=None,
-        output_dtype=torch_npu.float4_e2m1fn_x2,
-        x1_dtype=torch_npu.float4_e2m1fn_x2,
-        x2_dtype=torch_npu.float4_e2m1fn_x2,
+        output_dtype=296,
+        x1_dtype=296,
+        x2_dtype=296,
         activation_type="gelu_tanh", quant_mode="mx", round_mode="rint",
         scale_alg=0, dst_type_max=0.0)
     # y 物理形状 (M, N//2)，FP4双nibble打包为uint8末维减半，y_scale 物理形状(M, CeilDiv(N, 64), 2)
     print("y: ", y.cpu())
     print("y_scale: ", y_scale.cpu())
     ```
+
+## SwiGLU支持范围
+
+`activation_type="swiglu"`在完整FP32矩阵乘结果加bias后，沿最后一维按`C=[gate | linear]`连续等分，计算`SiLU(gate) * linear`，将SwiGLU结果以RNE舍入为BF16后执行MX量化。
+
+- 原始`N`必须为正数且是64的倍数；输出宽度`N/2`可有32列尾块。
+- `x1`、`x2`为E4M3FN或E5M2，`y`的数据类型必须与`x1`一致；输入和输出scale为E8M0。
+- `x2`支持ND或WeightNZ；WeightNZ场景`x2`仅支持E4M3FN。`transpose_x1=false`，`transpose_x2`支持false或true；不支持MXFP4。
+- `bias`可为空；非空时为FP32`[N]`，三维输出场景还支持`[B,1,N]`。bias在split之前作用于完整原始N宽度，不接受`[N/2]`。
+- 输入rank为2～6，batch轴右对齐广播；scale的batch维必须与对应输入一致。
+- `quant_mode="mx"`、`round_mode="rint"`、`scale_alg=0/1`；group size为默认值或`[1,1,32]`。
+
+SwiGLU输出形状为`y=[...,M,N/2]`、`y_scale=[...,M,ceil((N/2)/64),2]`。GELU输出宽度仍为N。两个32元素量化组构成一个64元素scale存储组，末尾不足的元素不写入y。
+
+ND与WeightNZ接口约束分别见[aclnnQuantMatmulActivationQuant](aclnnQuantMatmulActivationQuant.md)和[aclnnQuantMatmulActivationQuantWeightNz](aclnnQuantMatmulActivationQuantWeightNz.md)。
+
+### PyTorch扩展约定
+
+`x1_scale`在当前MX路径必须提供实际输入scale，不会自动假定单位scale；缺失或形状/类型不匹配由ACLNN和tiling层校验。输出在x1所在NPU设备分配，输入、scale和bias必须处于同一设备。
+
+`output_dtype=None`使用x1的逻辑数据类型（提供`x1_dtype`时使用该覆盖值）。运行时直接把dtype编码交给C++桥接层，由根目录`torch_extension/cann_ops_nn/common/aclnn_common.h`统一转换；Python不再做dtype编码归一化。合法FP8组合的Meta输出直接继承`x1.dtype`，FP4仅保留uint8双元素打包所需的特殊形状处理。

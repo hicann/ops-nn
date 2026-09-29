@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <cstring>
+#include <string>
 #include <fstream>
 #include <vector>
 #include "gtest/gtest.h"
@@ -24,7 +24,7 @@ using namespace std;
 using namespace ut_str;
 using namespace op;
 
-struct QuantMatmulActivationQuantNdTestParam {
+struct QuantMatmulActivationQuantTestParam {
     string caseName;
     string x1ShapeStr;
     string x1DtypeStr;
@@ -78,14 +78,17 @@ static TensorDesc BuildTensorDesc(const string& shapeStr, const string& dtypeStr
     return TensorDesc(shape, dtype, format);
 }
 
-static vector<QuantMatmulActivationQuantNdTestParam> GetParams()
+static std::vector<std::string> g_csvLoadErrors;
+
+static vector<QuantMatmulActivationQuantTestParam> GetParams()
 {
-    vector<QuantMatmulActivationQuantNdTestParam> params;
+    vector<QuantMatmulActivationQuantTestParam> params;
     string rootPath(ut_str::GetExeDirPath() + "../../../../");
-    string casePath(rootPath + "matmul/quant_matmul_activation_quant/tests/ut/op_host/"
-                               "test_aclnn_quant_matmul_activation_quant_nd.csv");
+    string casePath(rootPath + "matmul/quant_matmul_activation_quant/tests/ut/op_api/"
+                               "test_aclnn_quant_matmul_activation_quant.csv");
     ifstream csvData(casePath, ios::in);
     if (!csvData.is_open()) {
+        g_csvLoadErrors.push_back("cannot open case file: " + casePath);
         return params;
     }
 
@@ -102,11 +105,12 @@ static vector<QuantMatmulActivationQuantNdTestParam> GetParams()
         }
         vector<string> cols;
         SplitStr2Vec(line, ",", cols);
-        if (cols.size() < 35UL) {
+        if (cols.size() != 35UL) {
+            g_csvLoadErrors.push_back("invalid CSV column count: " + line);
             continue;
         }
 
-        QuantMatmulActivationQuantNdTestParam param;
+        QuantMatmulActivationQuantTestParam param;
         size_t idx = 0UL;
         param.caseName = Trim(cols[idx++]);
         param.x1ShapeStr = Trim(cols[idx++]);
@@ -148,13 +152,13 @@ static vector<QuantMatmulActivationQuantNdTestParam> GetParams()
     return params;
 }
 
-class QuantMatmulActivationQuantNdAclnnTest : public testing::TestWithParam<QuantMatmulActivationQuantNdTestParam> {
+class QuantMatmulActivationQuantAclnnTest : public testing::TestWithParam<QuantMatmulActivationQuantTestParam> {
 protected:
     static void SetUpTestCase() {}
     static void TearDownTestCase() {}
 };
 
-TEST_P(QuantMatmulActivationQuantNdAclnnTest, CsvTest)
+TEST_P(QuantMatmulActivationQuantAclnnTest, CsvTest)
 {
     const auto& param = GetParam();
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
@@ -179,38 +183,41 @@ TEST_P(QuantMatmulActivationQuantNdAclnnTest, CsvTest)
     bool transposeX1 = ParseBool(param.transposeX1Str);
     bool transposeX2 = ParseBool(param.transposeX2Str);
     int64_t groupSize = ParseInt64OrDefault(param.groupSizeStr, 0);
-    char* activationType = new char[param.activationType.size() + 1];
-    strcpy(activationType, param.activationType.c_str());
-    char* quantMode = new char[param.quantMode.size() + 1];
-    strcpy(quantMode, param.quantMode.c_str());
-    char* roundMode = new char[param.roundMode.size() + 1];
-    strcpy(roundMode, param.roundMode.c_str());
     int64_t scaleAlg = ParseInt64OrDefault(param.scaleAlgStr, 0);
+    auto activationTypeString = param.activationType;
+    auto quantModeString = param.quantMode;
+    auto roundModeString = param.roundMode;
+    char* activationType = activationTypeString.data();
+    char* quantMode = quantModeString.data();
+    char* roundMode = roundModeString.data();
     double dstTypeMax = param.dstTypeMaxStr.empty() ? 6.0 : stod(param.dstTypeMaxStr);
     aclnnStatus expectRet = ParseAclnnStatus(param.expectRetStr);
 
-    aclnnStatus aclRet = ACLNN_ERR_PARAM_INVALID;
     uint64_t workspaceSize = 0;
-
-    if (hasBias) {
-        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuant,
-                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasDesc, transposeX1, transposeX2,
-                                  groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax),
-                            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
-        aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    } else {
-        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuant,
-                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, transposeX1, transposeX2,
-                                  groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax),
-                            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
-        aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    }
-    delete[] activationType;
-    delete[] quantMode;
-    delete[] roundMode;
+    const auto outputs = OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc());
+    const auto testWorkspaceSize = [&](const auto& biasInput) {
+        const auto inputs = INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasInput, transposeX1, transposeX2,
+                                  groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax);
+        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuant, inputs, outputs);
+        return ut.TestGetWorkspaceSize(&workspaceSize);
+    };
+    const aclnnStatus aclRet = hasBias ? testWorkspaceSize(biasDesc) : testWorkspaceSize(nullptr);
 
     EXPECT_EQ(aclRet, expectRet) << "caseName=" << param.caseName;
 }
 
-INSTANTIATE_TEST_SUITE_P(QuantMatmulActivationQuantNdAclnn, QuantMatmulActivationQuantNdAclnnTest,
-                         testing::ValuesIn(GetParams()));
+static const auto kCsvCases = GetParams();
+
+TEST(QuantMatmulActivationQuantAclnnCsv, ShouldLoadValidCases)
+{
+    for (const auto& error : g_csvLoadErrors) {
+        ADD_FAILURE() << error;
+    }
+    EXPECT_FALSE(kCsvCases.empty());
+}
+
+INSTANTIATE_TEST_SUITE_P(QuantMatmulActivationQuantAclnn, QuantMatmulActivationQuantAclnnTest,
+                         testing::ValuesIn(kCsvCases),
+                         [](const testing::TestParamInfo<QuantMatmulActivationQuantTestParam>& info) {
+                             return info.param.caseName;
+                         });

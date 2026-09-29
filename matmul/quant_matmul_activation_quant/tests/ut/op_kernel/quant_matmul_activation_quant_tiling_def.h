@@ -7,14 +7,15 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#pragma once
 
-/*!
- * \file quant_matmul_activation_quant_tiling.h
- * \brief QuantMatmulActivationQuant tiling entry declarations.
- */
-#ifndef QUANT_MATMUL_ACTIVATION_QUANT_TILING_H
-#define QUANT_MATMUL_ACTIVATION_QUANT_TILING_H
+#include <cstring>
+#include "kernel_tiling/kernel_tiling.h"
 
-#include "quant_matmul_activation_mx_quant_tiling.h"
-
-#endif
+// NN AddOpTestCase force-includes this header instead of generating a tiling
+// header from the registry. Copy the production POD directly; no duplicate
+// REGISTER_TILING_DATA_CLASS definition is needed in a registry stub.
+#undef GET_TILING_DATA_WITH_STRUCT
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingAddress) \
+    tilingStruct tilingData;                                                 \
+    std::memcpy(&tilingData, tilingAddress, sizeof(tilingData))

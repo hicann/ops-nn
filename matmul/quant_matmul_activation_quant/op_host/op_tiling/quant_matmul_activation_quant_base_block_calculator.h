@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file quant_base_block_calculator.h
- * \brief BaseBlockCalculator subclass that forces baseN 32-alignment for MX quant.
+ * \file quant_matmul_activation_quant_base_block_calculator.h
+ * \brief Base-block alignment for GELU and paired-column SwiGLU MX quantization.
  */
 #pragma once
 
@@ -21,16 +21,14 @@ namespace optiling {
 class QuantBaseBlockCalculator : public BaseBlockCalculator {
 public:
     QuantBaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
-                             uint64_t batchCoreCnt = 1UL);
+                             uint64_t batchCoreCnt = 1UL, bool isSwiglu = false);
     ~QuantBaseBlockCalculator() override = default;
 
 protected:
     uint64_t GetBaseNAlignSize(uint64_t innerAlignSize) const override;
 
 private:
-    const QuantBatchMatmulInfo& quantInputParams_;
-    const QuantBatchMatmulV3CompileInfo& quantCompileInfo_;
-    BaseBlockRes quantBaseBlockRes_{};
+    bool isSwiglu_;
 };
 
 } // namespace optiling

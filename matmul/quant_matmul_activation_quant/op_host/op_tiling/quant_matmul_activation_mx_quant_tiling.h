@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file quant_matmul_activation_quant_mx_tiling.h
+ * \file quant_matmul_activation_mx_quant_tiling.h
  * \brief mxFP8 basic-api tiling strategy for QuantMatmulActivationQuant.
  */
-#ifndef QUANT_MATMUL_ACTIVATION_QUANT_MX_TILING_H
-#define QUANT_MATMUL_ACTIVATION_QUANT_MX_TILING_H
+#ifndef QUANT_MATMUL_ACTIVATION_MX_QUANT_TILING_H
+#define QUANT_MATMUL_ACTIVATION_MX_QUANT_TILING_H
 
 #include "quant_matmul_activation_quant_helper.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
@@ -28,17 +28,21 @@ public:
 
 protected:
     bool IsCapable() override;
+    bool CheckCoreNum() const override;
     const void* GetTilingData() const override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus UpdateTilingData();
     uint64_t GetTilingKey() const override;
     uint64_t GetKernelType() const override;
-    void SetTilingData() override;
+    uint64_t GetBatchMode() const override;
 
 private:
     void Reset();
+    ge::graphStatus ValidateTilingData() const;
+    void SetFinalTilingData();
 
-    QMMAQ::QuantMatmulActivationQuantTilingData tilingData_;
+    QMMAQ::QMMAQTilingData tilingData_;
+    QMMAQ::QMMAQWithoutBatchTilingData withoutBatchTilingData_;
 };
 
 } // namespace optiling

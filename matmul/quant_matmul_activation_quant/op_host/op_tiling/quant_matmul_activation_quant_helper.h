@@ -25,7 +25,7 @@
 #include "../../op_kernel/arch35/quant_matmul_activation_quant_tiling_data.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_tiling_base.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
-#include "quant_base_block_calculator.h"
+#include "quant_matmul_activation_quant_base_block_calculator.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 
 namespace optiling {
@@ -55,16 +55,20 @@ protected:
 
     bool CheckParamsForMxQuant(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
                                const gert::Shape& x2ScaleShape) const;
+    bool CheckInputShapeRange(const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool CheckShapeValid(const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
+    bool CheckBiasAndOutputShapes(const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool InitMatmulSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape);
     bool ValidateQuantParams(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
                              const gert::Shape& scaleShape);
     uint64_t GetBatchCoreCnt() const override;
-    void SetQuantParams(QMMAQ::QuantMatmulActivationQuantTilingData& tilingData);
-    void ResetActivationQuantTilingData(QMMAQ::QuantMatmulActivationQuantTilingData& tilingData);
-    void CopyV3BasicApiTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src,
-                                  DequantBmm::QuantBatchMatmulV3BasicAPITilingData& dst);
+    void SetQuantParams(QMMAQ::QMMAQTilingData& tilingData);
+    void ResetActivationQuantTilingData(QMMAQ::QMMAQTilingData& tilingData);
+    ge::graphStatus CopyMatmulTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src,
+                                         QMMAQ::QMMAQTilingData& dst);
+    void CopyBatchTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPIDataParams& src, QMMAQ::QMMAQTilingData& dst);
     uint64_t GetBaseNAlignSize(uint64_t innerAlignSize) const override;
+    void CalcTailRoundBasicBlockSplit() override;
     void CalcTailBasicBlockAfullLoad() override;
     uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const override;
     void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain) override;
@@ -72,7 +76,7 @@ protected:
     bool IsAligned32(uint64_t value) const;
 
 private:
-    QMMAQ::GeluAlg activationType_ = QMMAQ::GeluAlg::TANH;
+    QMMAQ::ActivationAlg activationType_ = QMMAQ::ActivationAlg::TANH;
     QMMAQ::QuantAlg scaleAlg_ = QMMAQ::QuantAlg::OCP;
     QMMAQ::MX_QUANT_ROUND_MODE roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::RINT;
     float dstTypeMax_ = 0.0;
