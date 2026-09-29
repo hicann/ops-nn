@@ -262,6 +262,9 @@ PatternUniqPtr MakePattern(size_t config)
 
 std::vector<PatternUniqPtr> LayerNormInferenceFusionPass::Patterns()
 {
+    if (!IsSupportedPlatform()) {
+        return {};
+    }
     std::vector<PatternUniqPtr> patterns;
     patterns.reserve(kCommConfigNum);
     for (size_t config = 0U; config < kCommConfigNum; ++config) {
@@ -277,9 +280,6 @@ std::vector<PatternUniqPtr> LayerNormInferenceFusionPass::Patterns()
 bool LayerNormInferenceFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
 {
     OPS_LOG_D(kPassName.c_str(), "guard_begin.");
-    if (!IsSupportedPlatform()) {
-        return false;
-    }
     Matched matched;
     if (!CollectMatched(match_result, matched)) {
         return false;

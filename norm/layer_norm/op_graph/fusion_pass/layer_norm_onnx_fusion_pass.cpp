@@ -635,6 +635,9 @@ bool CreateAffineConst(es::EsGraphBuilder& builder, const Matched& m, es::EsTens
 std::vector<PatternUniqPtr> LayerNormONNXFusionPass::Patterns()
 {
     OPS_LOG_D(kPassName.c_str(), "Enter Patterns for LayerNormONNXFusionPass.");
+    if (!IsSupportedPlatform()) {
+        return {};
+    }
     std::vector<PatternUniqPtr> patterns;
     patterns.reserve(kExpectedPatternNum);
     for (const auto& shape : kShapes) {
@@ -651,9 +654,6 @@ std::vector<PatternUniqPtr> LayerNormONNXFusionPass::Patterns()
 bool LayerNormONNXFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
 {
     OPS_LOG_D(kPassName.c_str(), "guard_begin.");
-    if (!IsSupportedPlatform()) {
-        return false;
-    }
     Matched m;
     if (!CollectMatched(match_result, m)) {
         return false;

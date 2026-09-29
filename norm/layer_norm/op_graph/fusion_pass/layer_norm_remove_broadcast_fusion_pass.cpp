@@ -214,6 +214,10 @@ std::vector<es::EsTensorHolder> CreateReplacementInputs(es::EsGraphBuilder& grap
 
 std::vector<PatternUniqPtr> LayerNormRemoveBroadcastFusionPass::Patterns()
 {
+    if (!IsSupportedPlatform()) {
+        OPS_LOG_D(kPassName.c_str(), "Platform is not support.");
+        return {};
+    }
     std::vector<PatternUniqPtr> patterns;
     patterns.emplace_back(MakePattern());
     return patterns;
@@ -222,10 +226,6 @@ std::vector<PatternUniqPtr> LayerNormRemoveBroadcastFusionPass::Patterns()
 bool LayerNormRemoveBroadcastFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
 {
     OPS_LOG_D(kPassName.c_str(), "Enter LayerNormRemoveBroadcastFusionPass MeetRequirements.");
-    if (!IsSupportedPlatform()) {
-        OPS_LOG_D(kPassName.c_str(), "Platform is not support.");
-        return false;
-    }
 
     GNode ln_node;
     if (!GetCapturedNode(match_result, kLNCaptureIdx, ln_node)) {
