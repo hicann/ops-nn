@@ -315,6 +315,21 @@ ge::graphStatus BNInferTiling::GetShapeAttrsInfo()
         return ge::GRAPH_PARAM_INVALID;
     }
 
+    constexpr size_t PARAM_INPUT_FIRST = 1;
+    constexpr size_t PARAM_INPUT_COUNT = 4;
+    const char* paramNames[PARAM_INPUT_COUNT] = {"scale", "offset", "mean", "variance"};
+    for (size_t i = 0; i < PARAM_INPUT_COUNT; ++i) {
+        const size_t inputIndex = PARAM_INPUT_FIRST + i;
+        auto paramShape = context_->GetInputShape(inputIndex);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, paramShape);
+        const auto& shape = paramShape->GetStorageShape();
+        OP_CHECK_IF(shape.GetDimNum() != 1 || shape.GetDim(0) != fusedALen_,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), paramNames[i], Ops::Base::ToString(shape).c_str(),
+                        (std::string("parameter must be rank-1 with length C=") + std::to_string(fusedALen_)).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
     OP_CHECK_IF(fusedB0Len_ <= 0 || fusedALen_ <= 0 || fusedB1Len_ <= 0,
                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName, "fusedB0Len, fusedALen, fusedB1Len",
                                                        (std::to_string(fusedB0Len_) + ", " +

@@ -45,11 +45,7 @@ int64_t CeilAlign(int64_t value, int64_t factor)
     return quotient * factor;
 }
 
-bool IsScalarShape(const gert::Shape& shape)
-{
-    return shape.GetDimNum() == 0 ||
-           (shape.GetDimNum() == 1 && (shape.GetDim(0) == 1 || shape.GetDim(0) == ge::UNKNOWN_DIM));
-}
+bool IsOneElementTensorShape(const gert::Shape& shape) { return shape.GetShapeSize() == 1; }
 
 ge::graphStatus SetTilingData(gert::TilingContext* context, const ApplyCamePart3TilingData& data)
 {
@@ -76,7 +72,7 @@ bool CheckInputParams(const gert::TilingContext* context, const gert::CompileTim
     for (int32_t i = 2; i <= 5; ++i) {
         const auto* shape = context->GetInputShape(i);
         OPS_CHECK_NULL_WITH_CONTEXT(context, shape);
-        OP_TILING_CHECK(!IsScalarShape(shape->GetStorageShape()),
+        OP_TILING_CHECK(!IsOneElementTensorShape(shape->GetStorageShape()),
                         VECTOR_INNER_ERR_REPORT_TILIING(context, "scalar input must have one element"), return false);
     }
     OP_TILING_CHECK(uDesc->GetDataType() != ge::DT_FLOAT ||

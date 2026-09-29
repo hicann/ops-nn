@@ -360,6 +360,21 @@ ge::graphStatus BNInferLastChannelTiling::GetShapeAttrsInfo()
                                                "BNInfer does not support empty tensor on Ascend950"),
         return ge::GRAPH_FAILED);
 
+    constexpr size_t PARAM_INPUT_FIRST = 1;
+    constexpr size_t PARAM_INPUT_COUNT = 4;
+    const char* paramNames[PARAM_INPUT_COUNT] = {"scale", "offset", "mean", "variance"};
+    for (size_t i = 0; i < PARAM_INPUT_COUNT; ++i) {
+        const size_t inputIndex = PARAM_INPUT_FIRST + i;
+        auto paramShape = context_->GetInputShape(inputIndex);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, paramShape);
+        const auto& shape = paramShape->GetStorageShape();
+        OP_CHECK_IF(shape.GetDimNum() != 1 || shape.GetDim(0) != fusedALen,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), paramNames[i], Ops::Base::ToString(shape).c_str(),
+                        (std::string("parameter must be rank-1 with length C=") + std::to_string(fusedALen)).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
     isSmallLastChannel = dataType != ge::DT_BF16 && fusedALen <= MAX_SMALL_A && fusedBLen > MIN_SMALL_A_B_LEN;
     return ge::GRAPH_SUCCESS;
 }
@@ -434,17 +449,21 @@ ge::graphStatus BNInferLastChannelTiling::FillLastChannelTilingForBSplit(int64_t
                     (std::to_string(perElemBytes) + ", " + std::to_string(fusedALen)).c_str(),
                     "perElemBytes and fusedALen must be greater than 0"),
                 return ge::GRAPH_FAILED);
+    auto alignUp = [](int64_t value, int64_t align) { return (value + align - 1) / align * align; };
+    paramBytes = alignUp(paramBytes, static_cast<int64_t>(blockSize));
+    cacheBytes = alignUp(cacheBytes, static_cast<int64_t>(blockSize));
     int64_t elemFactorMax = (static_cast<int64_t>(aicoreParams_.ubSize) - paramBytes - cacheBytes) / perElemBytes;
     int64_t bInner = elemFactorMax / fusedALen;
     bInner = bInner <= 0 ? 1 : bInner;
     bInner = fusedBLen <= bInner ? fusedBLen : bInner;
-    while ((paramBytes + cacheBytes + bInner * fusedALen * INPUT_OUTPUT_NUM * DOUBLE_BUFFER * bytesPerElement >
-            static_cast<int64_t>(aicoreParams_.ubSize)) &&
-           bInner > 1) {
+    auto requiredBytesForB = [&](int64_t b) {
+        const int64_t tileBytes = alignUp(b * fusedALen * bytesPerElement, static_cast<int64_t>(blockSize));
+        return paramBytes + cacheBytes + tileBytes * INPUT_OUTPUT_NUM * DOUBLE_BUFFER;
+    };
+    while ((requiredBytesForB(bInner) > static_cast<int64_t>(aicoreParams_.ubSize)) && bInner > 1) {
         bInner--;
     }
-    const int64_t requiredUbBytes = paramBytes + cacheBytes +
-                                    bInner * fusedALen * INPUT_OUTPUT_NUM * DOUBLE_BUFFER * bytesPerElement;
+    const int64_t requiredUbBytes = requiredBytesForB(bInner);
     OP_CHECK_IF(requiredUbBytes > static_cast<int64_t>(aicoreParams_.ubSize),
                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "requiredUbBytes",
                                                        std::to_string(requiredUbBytes).c_str(),
@@ -487,8 +506,10 @@ ge::graphStatus BNInferLastChannelTiling::ValidateTilingParams() const
 ge::graphStatus BNInferLastChannelTiling::DoSmallLastChannelTiling()
 {
     auto alignUp = [](int64_t value, int64_t base) { return (value + base - 1) / base * base; };
-    int64_t paramBytes = DOUBLE_BUFFER * (MEAN_VAR_NUM * sizeof(float) + WEIGHT_BIAS_NUM * bytesPerWeightElement) *
-                         fusedALen;
+    const int64_t alignedWeightBytes = alignUp(fusedALen * bytesPerWeightElement, static_cast<int64_t>(blockSize));
+    const int64_t alignedMeanBytes = alignUp(fusedALen * static_cast<int64_t>(sizeof(float)),
+                                             static_cast<int64_t>(blockSize));
+    int64_t paramBytes = DOUBLE_BUFFER * (WEIGHT_BIAS_NUM * alignedWeightBytes + MEAN_VAR_NUM * alignedMeanBytes);
     int64_t paramCacheElemLen = (static_cast<int64_t>(vlFp32) / fusedALen) * fusedALen;
     int64_t offsetBytes = alignUp(paramCacheElemLen * UINT32_BYTES, static_cast<int64_t>(blockSize));
     int64_t cacheBytes = offsetBytes + SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM *

@@ -17,15 +17,13 @@ using namespace ge;
 namespace ops {
 namespace {
 constexpr size_t kGradIndex = 0;
-constexpr size_t kEpsIndex = 1;
 constexpr size_t kSumGradRIndex = 0;
 constexpr size_t kSumGradCIndex = 1;
 constexpr size_t kSumGradRCIndex = 2;
 constexpr size_t kMinGradRank = 2;
 } // namespace
 
-static ge::graphStatus CheckApplyCamePart1Inputs(const gert::InferShapeContext* context, const gert::Shape& gradShape,
-                                                 const gert::Shape& epsShape)
+static ge::graphStatus CheckApplyCamePart1Inputs(const gert::InferShapeContext* context, const gert::Shape& gradShape)
 {
     if (gradShape.GetDimNum() < kMinGradRank) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad", std::to_string(gradShape.GetDimNum()),
@@ -40,30 +38,20 @@ static ge::graphStatus CheckApplyCamePart1Inputs(const gert::InferShapeContext* 
             return ge::GRAPH_FAILED;
         }
     }
-    const bool epsIsOneElement = epsShape.GetDimNum() == 0 ||
-                                 (epsShape.GetDimNum() == 1 &&
-                                  (epsShape.GetDim(0) == 1 || epsShape.GetDim(0) == UNKNOWN_DIM));
-    OP_CHECK_IF(
-        !epsIsOneElement,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "eps", Ops::Base::ToString(epsShape).c_str(),
-                                              "eps must be a scalar or a 1-element tensor"),
-        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InferShape4ApplyCamePart1(gert::InferShapeContext* context)
 {
     const gert::Shape* gradShape = context->GetInputShape(kGradIndex);
-    const gert::Shape* epsShape = context->GetInputShape(kEpsIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
     if (Ops::Base::IsUnknownRank(*gradShape)) {
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradRIndex));
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradCIndex));
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradRCIndex));
         return ge::GRAPH_SUCCESS;
     }
-    if (CheckApplyCamePart1Inputs(context, *gradShape, *epsShape) != ge::GRAPH_SUCCESS) {
+    if (CheckApplyCamePart1Inputs(context, *gradShape) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 

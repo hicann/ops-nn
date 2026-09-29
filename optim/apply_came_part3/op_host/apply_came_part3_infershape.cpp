@@ -26,26 +26,6 @@ constexpr size_t kGlobalShapeIndex = 6;
 constexpr size_t kRank = 2;
 } // namespace
 
-static bool IsScalarShape(const gert::Shape& shape)
-{
-    return shape.GetDimNum() == 0 ||
-           (shape.GetDimNum() == 1 && (shape.GetDim(0) == 1 || shape.GetDim(0) == UNKNOWN_DIM));
-}
-
-static ge::graphStatus CheckScalarInputs(gert::InferShapeContext* context)
-{
-    for (size_t i = 2; i < 6; ++i) {
-        const gert::Shape* scalarShape = context->GetInputShape(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
-        if (!IsScalarShape(*scalarShape)) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "scalar inputs", "non-scalar shape",
-                                                  "scalar inputs must be scalar or one-element tensors");
-            return ge::GRAPH_FAILED;
-        }
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 static ge::graphStatus CheckGlobalShape(gert::InferShapeContext* context)
 {
     const gert::Shape* globalShape = context->GetOptionalInputShape(kGlobalShapeIndex);
@@ -82,7 +62,7 @@ static ge::graphStatus InferShape4ApplyCamePart3(gert::InferShapeContext* contex
             return ge::GRAPH_FAILED;
         }
     }
-    if (CheckScalarInputs(context) != ge::GRAPH_SUCCESS || CheckGlobalShape(context) != ge::GRAPH_SUCCESS) {
+    if (CheckGlobalShape(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 

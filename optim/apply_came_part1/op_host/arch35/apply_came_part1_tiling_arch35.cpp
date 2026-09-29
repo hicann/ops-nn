@@ -184,14 +184,11 @@ static bool CheckParamsShape(const gert::TilingContext* context)
     auto epsShapeInput = context->GetInputShape(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, epsShapeInput);
     auto epsShape = epsShapeInput->GetStorageShape();
-    const bool epsIsOneElement = epsShape.GetDimNum() == 0 ||
-                                 (epsShape.GetDimNum() == 1 &&
-                                  (epsShape.GetDim(0) == 1 || epsShape.GetDim(0) == ge::UNKNOWN_DIM));
-    OP_TILING_CHECK(!epsIsOneElement,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
-                                                    "eps must be a scalar or a 1-element tensor, but got %s",
-                                                    Ops::Base::ToString(epsShape).c_str()),
-                    return false);
+    OP_TILING_CHECK(
+        epsShape.GetShapeSize() != 1,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "eps must contain exactly one element, but got %s",
+                                        Ops::Base::ToString(epsShape).c_str()),
+        return false);
 
     return true;
 }

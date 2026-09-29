@@ -52,7 +52,7 @@ using Ops::Base::GetUbBlockSize;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 constexpr uint64_t SINGLE_BUFFER_MODE = 0;
 constexpr uint64_t DOUBLE_BUFFER_MODE = 1;
-constexpr int64_t SCALAR_FP32_UB_BYTES = 128;
+constexpr int64_t SCALAR_FP32_UB_BYTES = 256;
 constexpr int64_t SCALAR_REDUCED_UB_BYTES = 256;
 
 static int64_t GetDataTypeBytes(ge::DataType dataType)

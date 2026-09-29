@@ -67,34 +67,25 @@ def inplace_apply_rms_prop_golden(var, ms, mom, lr, rho, momentum, epsilon, grad
     if np.asarray(var).size == 0:
         return [np.asarray(value).copy() for value in (var, ms, mom)]
 
+    target_dtype_name = _dtype_name(var)
     var_tensor, ms_tensor, mom_tensor, grad_tensor = map(
         _to_torch, (var, ms, mom, grad)
     )
-    lr_value = _to_torch(lr).reshape(-1)[0]
-    rho_value = _to_torch(rho).reshape(-1)[0]
-    momentum_value = _to_torch(momentum).reshape(-1)[0]
-    epsilon_value = _to_torch(epsilon).reshape(-1)[0]
-    epsilon_floor = torch.tensor(
-        torch.finfo(torch.float32).tiny, dtype=var_tensor.dtype
+    scalar_tensors = tuple(
+        _to_torch(value).reshape(-1)[0] for value in (lr, rho, momentum, epsilon)
     )
-    epsilon_value = torch.where(
-        epsilon_value > epsilon_floor, epsilon_value, epsilon_floor
+    if target_dtype_name in ("float16", "bfloat16"):
+        var_tensor = var_tensor.float()
+        ms_tensor = ms_tensor.float()
+        mom_tensor = mom_tensor.float()
+        grad_tensor = grad_tensor.float()
+    outputs = _torch_rms_prop(
+        var_tensor, ms_tensor, mom_tensor, *scalar_tensors, grad_tensor
     )
-
-    # Keep the algebraic order used by the kernel. torch.lerp computes
-    # grad^2 + rho * (ms - grad^2), which is mathematically equivalent but
-    # can produce amplified var/mom differences after sqrt and division.
-    ms_out = torch.add(
-        torch.mul(ms_tensor, rho_value),
-        torch.mul(torch.square(grad_tensor), 1.0 - rho_value),
-    )
-    denominator = torch.sqrt(torch.add(ms_out, epsilon_value))
-    mom_out = torch.add(
-        torch.mul(mom_tensor, momentum_value),
-        torch.div(torch.mul(grad_tensor, lr_value), denominator),
-    )
-    var_out = torch.sub(var_tensor, mom_out)
-    return [value.detach().cpu().numpy() for value in (var_out, ms_out, mom_out)]
+    return [
+        np.asarray(value.detach().cpu().numpy(), dtype=_numpy_dtype(target_dtype_name))
+        for value in outputs
+    ]
 
 
 def _torch_rms_prop(var, ms, mom, lr, rho, momentum, epsilon, grad):

@@ -111,11 +111,18 @@ TEST(ApplyCamePart3InferShape, RejectsMismatchedShapes)
     EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
 }
 
-TEST(ApplyCamePart3InferShape, RejectsNonScalarControlInput)
+TEST(ApplyCamePart3InferShape, DoesNotValidateControlInputShape)
 {
-    ShapeCase shapes;
-    shapes.scalar = gert::StorageShape({{2}, {2}});
-    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+    for (const auto& scalarShape : {gert::StorageShape({{}, {}}), gert::StorageShape({{1}, {1}}),
+                                    gert::StorageShape({{2}, {2}}), gert::StorageShape({{-2}, {-2}})}) {
+        ShapeCase shapes;
+        shapes.scalar = scalarShape;
+        ASSERT_EQ(RunInferShape(shapes), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(shapes.mOut.GetStorageShape(), gert::Shape({65, 67}));
+        EXPECT_EQ(shapes.sumUR.GetStorageShape(), gert::Shape({65}));
+        EXPECT_EQ(shapes.sumUC.GetStorageShape(), gert::Shape({67}));
+        EXPECT_EQ(shapes.sumURC.GetStorageShape(), gert::Shape({1}));
+    }
 }
 
 TEST(ApplyCamePart3InferShape, InfersAllOutputDataTypes)

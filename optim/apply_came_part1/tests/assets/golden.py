@@ -48,8 +48,8 @@ def _to_numpy(outputs):
 
 
 def apply_came_part1_golden(grad, eps, **kwargs):
-    """Torch reference; TTK Promote exclusively controls CPU precision."""
-    return _to_numpy(_compute(grad, eps))
+    """Use FP32 accumulation for low-precision input."""
+    return _to_numpy(_compute(grad, eps, match_kernel=True))
 
 
 class _ApplyCamePart1Compose:

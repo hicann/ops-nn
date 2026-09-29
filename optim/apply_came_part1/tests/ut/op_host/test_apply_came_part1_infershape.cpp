@@ -160,21 +160,27 @@ TEST(ApplyCamePart1InferShape, RejectsOneDimensionalGrad)
     EXPECT_EQ(InferApplyCamePart1Shape(grad), ge::GRAPH_FAILED);
 }
 
-TEST(ApplyCamePart1InferShape, RejectsNonScalarEps)
+TEST(ApplyCamePart1InferShape, DoesNotValidateEpsShape)
 {
-    gert::StorageShape grad = {{4, 8}, {-1, -1}};
-    gert::StorageShape eps = {{2}, {-1}};
-    gert::StorageShape sumR = {{}, {}};
-    gert::StorageShape sumC = {{}, {}};
-    gert::StorageShape sumRC = {{}, {}};
-    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(2, 3)
-                      .IrInstanceNum({2, 3})
-                      .InputShapes({&grad, &eps})
-                      .OutputShapes({&sumR, &sumC, &sumRC})
-                      .Build();
-    EXPECT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    for (const auto& epsShape : {gert::StorageShape({{}, {}}), gert::StorageShape({{1}, {1}}),
+                                 gert::StorageShape({{2}, {2}}), gert::StorageShape({{-2}, {-2}})}) {
+        gert::StorageShape grad = {{4, 8}, {-1, -1}};
+        gert::StorageShape eps = epsShape;
+        gert::StorageShape sumR = {{}, {}};
+        gert::StorageShape sumC = {{}, {}};
+        gert::StorageShape sumRC = {{}, {}};
+        auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(2, 3)
+                          .IrInstanceNum({2, 3})
+                          .InputShapes({&grad, &eps})
+                          .OutputShapes({&sumR, &sumC, &sumRC})
+                          .Build();
+        ASSERT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(0), 4);
+        EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(0), 8);
+        EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDimNum(), 0);
+    }
 }
 
 TEST(ApplyCamePart1InferShape, RejectsZeroRowDimension)

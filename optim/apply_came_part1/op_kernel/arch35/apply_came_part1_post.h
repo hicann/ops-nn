@@ -148,7 +148,8 @@ __aicore__ inline void ApplyCamePart1Post<T>::Init(GM_ADDR grad, GM_ADDR eps, GM
     workspaceOffsets = workspaceOffsets + rcOffsets;
     workspaceSumGradRCLow_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);
     workspaceOffsets = workspaceOffsets + rcOffsets;
-    int32_t rOffsets = (rPartialCount * ONCE_HANDLE_NUM64 + 128 - 1) / 128 * 128;
+    // Keep workspace offsets 64-bit to avoid overflow.
+    int64_t rOffsets = (rPartialCount * ONCE_HANDLE_NUM64 + 128 - 1) / 128 * 128;
     workspaceSumGradR_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);
     workspaceOffsets = workspaceOffsets + rOffsets;
     workspaceSumGradC_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);

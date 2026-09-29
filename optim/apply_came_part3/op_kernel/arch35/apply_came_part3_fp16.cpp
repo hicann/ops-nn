@@ -128,9 +128,7 @@ __aicore__ inline void ApplyCamePart3FP16<T>::InitOutBuffers(CamePart3InOut came
     sumURGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUR + nOffset * sizeof(float)), curN);
     sumUCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUC + mOffset * sizeof(float)), curM);
     sumURCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumURC), 1 * sizeof(float));
-    if (useFirstMoment == 1) {
-        mOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(mOut + blockOffset * sizeof(T)), curN * curM);
-    }
+    mOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(mOut + blockOffset * sizeof(T)), curN * curM);
 
     workspaceSumGradRC_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE));
     workspaceSumGradC_.SetGlobalBuffer(
@@ -580,6 +578,10 @@ __aicore__ inline void ApplyCamePart3FP16<T>::ProcessOneLoop(int64_t mIdx, int64
 
     CopyInU(ubLocal2, uGm);
     CopyInM(ubLocal3, mInputGm);
+    // Preserve m_in before CalcOutM overwrites the working buffer.
+    if (!useFirstMoment) {
+        CopyOutM(mOutputGm, ubLocal3, outMOffset);
+    }
     CalcOutM(ubLocal2, ubLocal3, ubLocal4);
     if (useFirstMoment) {
         CopyOutM(mOutputGm, ubLocal3, outMOffset);
@@ -651,6 +653,11 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcScalar()
     CopyScalar(clipThresholdGm, clipThreshold);
     CopyScalar(sumSquareUGm, sumSquareU);
     SetNM();
+    if (!(globalM > 0.0f) || !(globalN > 0.0f) || !(clipThreshold > 0.0f)) {
+        maxValue = 1.0f;
+        beta2 = 1 - beta1;
+        return;
+    }
     float scaleRes = sumSquareU / (globalM * globalN) / clipThreshold;
     if (scaleRes > 1) {
         maxValue = scaleRes;
