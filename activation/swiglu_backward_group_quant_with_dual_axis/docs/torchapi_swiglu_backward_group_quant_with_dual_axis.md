@@ -111,7 +111,7 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
   ```python
   import torch
   import torch_npu
-  import cann_ops_nn_custom.ops
+  import cann_ops_nn.ops
 
   torch.npu.set_device(0)
   grad_y = torch.randn(10240, 3072, dtype=torch.float16).npu()
@@ -139,7 +139,7 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
   ```python
   import torch
   import torch_npu
-  import cann_ops_nn_custom.ops
+  import cann_ops_nn.ops
 
   class Model(torch.nn.Module):
       def forward(self, grad_y, x):
