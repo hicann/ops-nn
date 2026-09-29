@@ -277,8 +277,31 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
     size_t x1DimNum = x1_shape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gamma_shape->GetStorageShape().GetDimNum();
 
+    // 空张量(reduce empty)放行: 仅当 regbase(950) 且归一化维 R==0、外维 A>0,
+    // 由 key=5000 空模板兜底; 其余情况下 x1 仍不允许为空张量。
+    bool reduceEmpty = false;
+    if (norm_key == RMS_NORM_KEY && Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        bool prefixAllPositive = true;
+        for (uint32_t i = 0; i < x1DimNum - gammaDimNum; i++) {
+            if (x1_shape->GetStorageShape().GetDim(i) <= 0) {
+                prefixAllPositive = false;
+                break;
+            }
+        }
+        bool reduceDimEmpty = false;
+        for (uint32_t i = x1DimNum - gammaDimNum; i < x1DimNum; i++) {
+            if (x1_shape->GetStorageShape().GetDim(i) == 0) {
+                reduceDimEmpty = true;
+                break;
+            }
+        }
+        reduceEmpty = prefixAllPositive && reduceDimEmpty;
+    }
+
     for (uint32_t i = 0; i < x1DimNum; i++) {
-        OP_CHECK_IF(x1_shape->GetStorageShape().GetDim(i) == 0,
+        bool isReduceDim = (norm_key == RMS_NORM_KEY && i >= x1DimNum - gammaDimNum);
+        bool allowZero = reduceEmpty && isReduceDim;
+        OP_CHECK_IF(!allowZero && x1_shape->GetStorageShape().GetDim(i) == 0,
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
                                                           Ops::Base::ToString(x1_shape->GetStorageShape()).c_str(),
                                                           "x1 cannot be an empty tensor"),

@@ -125,6 +125,38 @@ static bool CheckDtypeValid(AddRmsNormInputTensor& inputTensor, AddRmsNormOutput
     return true;
 }
 
+static bool CheckGammaAndRstdShape(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor,
+                                   int64_t mode)
+{
+    const op::Shape& xShape = inputTensor.x1->GetViewShape();
+    const size_t xDimNum = xShape.GetDimNum();
+    const size_t gammaDimNum = inputTensor.gamma->GetViewShape().GetDimNum();
+
+    if (mode == AddRmsNormACLNN::ADD_RMS_NORM_MODE) {
+        OP_CHECK(gammaDimNum <= xDimNum,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "The gamma tensor's rank %zu cannot be greater than the x1 tensor's rank %zu.", gammaDimNum,
+                         xDimNum),
+                 return false);
+
+        op::Shape expectedGammaShape;
+        op::Shape expectedRstdShape;
+        const size_t normStartDim = xDimNum - gammaDimNum;
+        for (size_t i = 0; i < normStartDim; ++i) {
+            expectedRstdShape.AppendDim(xShape.GetDim(i));
+        }
+        for (size_t i = normStartDim; i < xDimNum; ++i) {
+            expectedGammaShape.AppendDim(xShape.GetDim(i));
+            expectedRstdShape.AppendDim(1);
+        }
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(inputTensor.gamma, expectedGammaShape, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputTensor.rstdOut, expectedRstdShape, return false);
+        return true;
+    }
+
+    return true;
+}
+
 static bool CheckShapeDim(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor, int64_t mode)
 {
     OP_CHECK_MAX_DIM(inputTensor.x1, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -154,11 +186,29 @@ static bool CheckShapeDim(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTe
     if (mode == AddRmsNormACLNN::POST_RMS_NORM_MODE) {
         OP_CHECK_MAX_DIM(inputTensor.gamma, DIM_TWO, return false);
     }
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(CheckGammaAndRstdShape(inputTensor, outputTensor, mode), false);
+    }
     return true;
 }
 
-static aclnnStatus CheckParams(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor, int64_t& mode)
+static bool CheckAttr(double epsilon)
 {
+    OP_CHECK(
+        epsilon >= 0.0,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The epsilon value must be greater than or equal to 0, but got %lf.", epsilon),
+        return false);
+    return true;
+}
+
+static aclnnStatus CheckParams(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor, int64_t& mode,
+                               double epsilon)
+{
+    // Regbase kernels always write both outputs; pre/post modes are legacy-only.
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_NULL(outputTensor.rstdOut, return ACLNN_ERR_PARAM_NULLPTR);
+        OP_CHECK_NULL(outputTensor.xOut, return ACLNN_ERR_PARAM_NULLPTR);
+    }
     if (outputTensor.xOut != nullptr && outputTensor.rstdOut == nullptr) {
         mode = AddRmsNormACLNN::PRE_RMS_NORM_MODE; // 2个输出，prermsnorm
     } else if (outputTensor.xOut == nullptr && outputTensor.rstdOut == nullptr) {
@@ -172,6 +222,11 @@ static aclnnStatus CheckParams(AddRmsNormInputTensor& inputTensor, AddRmsNormOut
 
     // 3. 检查输入/输出的shape大小
     CHECK_RET(CheckShapeDim(inputTensor, outputTensor, mode), ACLNN_ERR_PARAM_INVALID);
+
+    // Additional attribute validation applies only to regbase.
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(CheckAttr(epsilon), ACLNN_ERR_PARAM_INVALID);
+    }
 
     return ACLNN_SUCCESS;
 }
@@ -213,6 +268,9 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(const aclTensor* x1, const aclTensor
                                             double epsilon, aclTensor* yOut, aclTensor* rstdOut, aclTensor* xOut,
                                             uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_COMM_INPUT(workspaceSize, executor);
+    }
     OP_LOGD("Enter aclnnAddRmsNormGetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnAddRmsNorm, DFX_IN(x1, x2, gamma, epsilon), DFX_OUT(yOut, rstdOut, xOut));
 
@@ -225,12 +283,15 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(const aclTensor* x1, const aclTensor
     AddRmsNormACLNN::AddRmsNormOutputTensor outputTensor = {yOut, rstdOut, xOut};
 
     int64_t mode = AddRmsNormACLNN::ADD_RMS_NORM_MODE; // 0为addrmsnorm，1为preRmsNorm, 2为postRmsNorm
-    auto ret = CheckParams(inputTensorOri, outputTensor, mode);
+    auto ret = CheckParams(inputTensorOri, outputTensor, mode, epsilon);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 支持空tensor
     bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty();
-    if (anyEmptyTensor) {
+    // 950 归约轴为空时 rstd 仍有 A 个元素，必须进入 L0/kernel 由 key=5000 写 NaN。
+    bool isRegbaseReduceEmpty = mode == AddRmsNormACLNN::ADD_RMS_NORM_MODE && Ops::NN::AclnnUtil::IsRegbase() &&
+                                gamma->IsEmpty() && !outputTensor.rstdOut->IsEmpty();
+    if (anyEmptyTensor && !isRegbaseReduceEmpty) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNorm!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);

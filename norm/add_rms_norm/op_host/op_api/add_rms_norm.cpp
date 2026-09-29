@@ -24,6 +24,7 @@
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
 #include "aclnn_kernels/cast.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -40,6 +41,12 @@ const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(const aclTensor* x
         Shape rstdShape;
         size_t x1DimNum = x1->GetViewShape().GetDimNum();
         size_t gammaDimNum = gamma->GetViewShape().GetDimNum();
+        if (Ops::NN::AclnnUtil::IsRegbase() && gammaDimNum > x1DimNum) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The gamma tensor's rank %zu cannot be greater than the x1 tensor's rank %zu.", gammaDimNum,
+                    x1DimNum);
+            return {nullptr, nullptr, nullptr};
+        }
         for (uint32_t i = 0; i < x1DimNum - gammaDimNum; i++) {
             rstdShape.AppendDim(x1->GetViewShape().GetDim(i));
         }

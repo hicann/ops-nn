@@ -14,6 +14,9 @@
  */
 #include "../add_rms_norm/arch35/add_rms_norm_regbase.h"
 #include "../add_rms_norm/arch35/add_rms_norm_regbase_split_d.h"
+#include "../add_rms_norm/arch35/add_rms_norm_regbase_trans.h"
+#include "../add_rms_norm/arch35/add_rms_norm_regbase_split_ar.h"
+#include "../add_rms_norm/arch35/add_rms_norm_regbase_reduce_empty.h"
 
 using namespace AscendC;
 using namespace AddRmsNorm;
@@ -27,6 +30,25 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(GM_ADDR x1, GM_ADDR x
         GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseRFullLoadTilingData, tilingDataIn, tiling);
         KernelAddRmsNormRegBase<DTYPE_X1> op(&pipe);
         op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
+        op.Process();
+    } else if (TILING_KEY_IS(4000)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTransTilingData, tilingDataIn, tiling);
+        KernelAddRmsNormRegBaseTrans<DTYPE_X1> op(&pipe);
+        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
+        op.Process();
+    } else if (TILING_KEY_IS(5000)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseReduceEmptyTilingData, tilingDataIn, tiling);
+        KernelAddRmsNormRegBaseReduceEmpty op(&pipe);
+        op.Init(rstd, &tilingDataIn);
+        op.Process();
+    } else if (TILING_KEY_IS(3000)) {
+        // 仅 SplitAR 使用跨核同步。
+        KERNEL_TASK_TYPE(3000, KERNEL_TYPE_MIX_AIV_1_0);
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseSplitARTilingData, tilingDataIn, tiling);
+        // Host 准入保证每核跨 A 累计至少 8 次 tile 迭代，因此固定使用双缓冲。
+        GM_ADDR userWS = GetUserWorkspace(workspace);
+        KernelAddRmsNormRegBaseSplitAR<DTYPE_X1> op(&pipe);
+        op.Init(x1, x2, gamma, y, rstd, x, userWS, &tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(2000)) {
         GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTilingData, tilingDataIn, tiling);

@@ -103,6 +103,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         numCore = ptrCompileInfo->totalCoreNum;
         ubSize = ptrCompileInfo->totalUbSize;
     }
+    OP_CHECK_IF(numCore == 0, OP_LOGE(context, "The number of AIV cores cannot be zero."), return ge::GRAPH_FAILED);
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
 
     const gert::Shape gammaShape = context->GetInputShape(GAMMA_INDEX)->GetStorageShape();
@@ -130,6 +131,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     uint32_t dtypeKey = DTYPE_KEY_FP16;
     size_t usrSize = 256;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);

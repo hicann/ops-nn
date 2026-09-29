@@ -274,8 +274,8 @@ aclnnStatus aclnnAddRmsNorm(
 
 - 输入x1、x2、gamma、yOut、rstdOut、xOut支持的组合如下所示：
 
-  <!-- npu="950,A3,910b" id8 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：
+  <!-- npu="A3,910b" id8 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
 
     | x1 | x2 | gamma | yOut | rstdOut | xOut |
     | --------| --------| --------| --------| --------| :------ |
@@ -287,6 +287,16 @@ aclnnStatus aclnnAddRmsNorm(
     | FLOAT16 | FLOAT16 | shape为[1, x1的最后一维]；FLOAT16 | FLOAT16 | 空指针 | 必选，FLOAT16 |
     | BFLOAT16 | BFLOAT16 | shape为[1, x1的最后一维]；BFLOAT16 | BFLOAT16 | 空指针 | 必选，BFLOAT16 |
   <!-- end id8 -->
+
+  <!-- npu="950" id10 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：
+
+    | x1 | x2 | gamma | yOut | rstdOut | xOut |
+    | --------| --------| --------| --------| --------| :------ |
+    | FLOAT32 | FLOAT32 | shape需要与`x1`后几维保持一致，后几维为`x1`需要norm的维度；FLOAT32 | FLOAT32 | 必选 | 必选，FLOAT32 |
+    | FLOAT16 | FLOAT16 | shape需要与`x1`后几维保持一致，后几维为`x1`需要norm的维度；FLOAT16 | FLOAT16 | 必选 | 必选，FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | shape需要与`x1`后几维保持一致，后几维为`x1`需要norm的维度；BFLOAT16 | BFLOAT16 | 必选 | 必选，BFLOAT16 |
+  <!-- end id10 -->
 
   <!-- npu="310p" id9 -->
   - <term>Atlas推理系列产品</term>：
