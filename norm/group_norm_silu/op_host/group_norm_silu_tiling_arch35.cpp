@@ -29,7 +29,7 @@ static const uint64_t EMPTY_SHAPE_SIZE = 0;
 static const uint64_t DIM_0 = 0;
 static const uint64_t DIM_1 = 1;
 static const uint64_t DEFAULT_NUMGROUPS = 32;
-static const uint64_t RESERVED_WORKSPACE_SIZE = 16 * 1024 * 1024;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
 static const uint64_t FLOAT32_BYTES = 4;
 static const uint64_t FLOAT16_BYTES = 2;
 static const uint64_t BLOCK_SIZE = 32;
@@ -776,7 +776,6 @@ ge::graphStatus Tiling4GroupNormSiluRegBase(gert::TilingContext* context)
     // block tiling
     SetBlockTiling(context, tilingData);
     // ub tiling
-    size_t sysWorkspaceSize = RESERVED_WORKSPACE_SIZE;
     SetTilingForRegbase(context, tilingData);
     OP_CHECK_IF(GroupNormSiluSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GroupNormSiluSetTilingData set tiling data fail."),
@@ -798,7 +797,7 @@ ge::graphStatus Tiling4GroupNormSiluRegBase(gert::TilingContext* context)
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);
-    workspaces[0] = sysWorkspaceSize;
+    workspaces[0] = DEFAULT_WORKSPACE_SIZE;
 
     return ge::GRAPH_SUCCESS;
 }

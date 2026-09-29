@@ -41,55 +41,47 @@ extern "C" __global__ __aicore__ void group_norm_silu(GM_ADDR x, GM_ADDR gamma, 
         return;
     }
 
-    if (workspace == nullptr) {
-        return;
-    }
-
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
     GET_TILING_DATA_WITH_STRUCT(GroupNormSiluRegbaseTilingData, tilingDataIn, tiling);
     const GroupNormSiluRegbaseTilingData* __restrict tilingData = &tilingDataIn;
     if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF)) {
         GroupNormSilu::GroupNormSiluWelford<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF_MIX_TYPE)) {
         GroupNormSilu::GroupNormSiluWelford<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF)) {
         GroupNormSilu::GroupNormSiluTwoPass<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF_MIX_TYPE)) {
         GroupNormSilu::GroupNormSiluTwoPass<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED)) {
         GroupNormSilu::GroupNormSiluWelfordGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE)) {
         GroupNormSilu::GroupNormSiluWelfordGeneralized<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED)) {
         GroupNormSilu::GroupNormSiluTwoPassGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE)) {
         GroupNormSilu::GroupNormSiluTwoPassGeneralized<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_EMPTY_TENSOR)) {
         GroupNormSilu::GroupNormSiluEmpty<DTYPE_X> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_EMPTY_TENSOR_MIX_TYPE)) {
         GroupNormSilu::GroupNormSiluEmpty<float> op;
-        op.Init(x, gamma, beta, silu, mean, rstd, userWS, tilingData);
+        op.Init(x, gamma, beta, silu, mean, rstd, tilingData);
         op.Process();
     }
 }

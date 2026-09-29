@@ -23,7 +23,7 @@ class GroupNormSiluWelford {
 public:
     __aicore__ inline GroupNormSiluWelford(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
-                                GM_ADDR workspace, const GroupNormSiluRegbaseTilingData* tilingData)
+                                const GroupNormSiluRegbaseTilingData* tilingData)
     {
         tiling = tilingData;
         blockIdx = GetBlockIdx();

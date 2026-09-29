@@ -23,6 +23,8 @@
 
 namespace optiling {
 
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
+
 const uint32_t INPUT_PREDICT_INDEX = 0;
 const uint32_t INPUT_TARGET_INDEX = 1;
 const uint32_t INPUT_WEIGHT_INDEX = 2;
@@ -121,7 +123,13 @@ ge::graphStatus SigmoidCEWithLogitsV2TilingClass::DoOpTiling()
 
 ge::graphStatus SigmoidCEWithLogitsV2TilingClass::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SigmoidCEWithLogitsV2TilingClass::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus SigmoidCEWithLogitsV2TilingClass::GetWorkspaceSize()
+{
+    size_t* workspaceSize = context_->GetWorkspaceSizes(1);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaceSize);
+    workspaceSize[0] = DEFAULT_WORKSPACE_SIZE;
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus SigmoidCEWithLogitsV2TilingClass::PostTiling() { return ge::GRAPH_SUCCESS; }
 

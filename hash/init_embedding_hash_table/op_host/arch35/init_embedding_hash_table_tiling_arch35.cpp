@@ -41,7 +41,7 @@ constexpr uint32_t BUCKET_HANDLE_SIZE = 1;
 constexpr uint32_t BUCKET_COUNTER_SIZE = 1;
 constexpr uint32_t BUCKET_FLAG_SIZE = 1;
 
-constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16 * 1024 * 1024;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
 } // namespace
 
 ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
@@ -132,7 +132,7 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     size_t* workspace = context->GetWorkspaceSizes(1);
-    workspace[0] = ASCENDC_TOOLS_WORKSPACE;
+    workspace[0] = DEFAULT_WORKSPACE_SIZE;
     OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable ends");
     return ge::GRAPH_SUCCESS;
 }

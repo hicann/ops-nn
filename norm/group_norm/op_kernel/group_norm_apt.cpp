@@ -25,31 +25,22 @@ extern "C" __global__ __aicore__ void group_norm(GM_ADDR x, GM_ADDR gamma, GM_AD
 {
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-    // 正常路径依赖运行时用户workspace。
-    if (workspace == nullptr) {
-        return;
-    }
-    GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
-    if (userWorkspace == nullptr) {
-        return;
-    }
-
     // 根据tiling key分派全载或分块归约模板。
     if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF)) {
         GroupNorm::GroupNormWelford<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, variance, userWorkspace, &tilingData);
+        op.Init(x, gamma, beta, y, mean, variance, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF)) {
         GroupNorm::GroupNormTwoPass<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, variance, userWorkspace, &tilingData);
+        op.Init(x, gamma, beta, y, mean, variance, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED)) {
         GroupNorm::GroupNormWelfordGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, variance, userWorkspace, &tilingData);
+        op.Init(x, gamma, beta, y, mean, variance, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED)) {
         GroupNorm::GroupNormTwoPassGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, variance, userWorkspace, &tilingData);
+        op.Init(x, gamma, beta, y, mean, variance, &tilingData);
         op.Process();
     }
 }

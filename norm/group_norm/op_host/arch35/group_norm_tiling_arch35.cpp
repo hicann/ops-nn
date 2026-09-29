@@ -34,7 +34,7 @@ static const int64_t INPUT_IDX_X = 0;
 static const int64_t INPUT_IDX_GAMMA = 1;
 static const int64_t INPUT_IDX_BETA = 2;
 static const int64_t PROCESSSIZE = 8192;
-static const int64_t RESERVED_WORKSPACE_SIZE_950 = 16L * 1024L * 1024L;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
 static const int64_t FOUR_BUFFER = 4;
 static const int64_t BUFFER_NUM = 2;
 static const int64_t DOUBLE_BUFFER = 2;
@@ -629,7 +629,7 @@ static ge::graphStatus SetEmptyBatchTilingData(gert::TilingContext* context, Gro
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
-    workspaces[0] = 0;
+    workspaces[0] = DEFAULT_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -669,7 +669,7 @@ ge::graphStatus SetGroupNormTilingData(gert::TilingContext* context)
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
-    workspaces[0] = RESERVED_WORKSPACE_SIZE_950;
+    workspaces[0] = DEFAULT_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
