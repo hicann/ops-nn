@@ -67,8 +67,19 @@ uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetTilingKey() const
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL)
         .SetL0C2Out(l0C2Out_)
-        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+        .SetApiLevel(apiLevel_)
         .GetTilingKey();
+}
+
+// DAV_RESV当前只支持基础API；非连续B(3D非连续transpose)仅基础API支持；后融合场景不支持TensorAPI
+void BatchMatMulV3IterBatchBasicApiTiling::CheckTensorApiSupport()
+{
+    bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
+    bool isNonContiguousB = IsInputNonContiguousTranspose(context_, 1UL);
+    apiLevel_ = (args_.isAvoidTensorApi || isNonContiguousB || compileInfo_.npuArch == NpuArch::DAV_RESV ||
+                 !isBatchMatmul) ?
+                    MatMulV3ApiLevel::BASIC_LEVEL :
+                    MatMulV3ApiLevel::TENSOR_LEVEL;
 }
 
 bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
@@ -92,7 +103,6 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
     if (batchInfo_->batchC <= compileInfo_.aicNum) {
         return false;
     }
-    c0Size_ = BLOCK_BYTE_SIZE / args_.aDtypeSize;
     // when fp16 or (fp32 and m,k), m align to 16; when fp32 and k,m, m align to 8 * 2 for frac combine in loadtol0a
     alignMValue_ = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
     alignKValue_ = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
@@ -223,6 +233,8 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
 
     // enable Fixpipe optimization
     l0C2Out_ = GetL0C2OutFlag();
+
+    CheckTensorApiSupport();
 
     OP_LOGI(args_.opName, "In IterBatchBasicApi module, temp iterBatchL0A is %lu, temp iterBatchL0B is %lu, \
             temp iterBatchL0C is %lu, temp iterBatchL1 is %lu, after calculation actual runInfo_.iterBatchL0 is %lu, \

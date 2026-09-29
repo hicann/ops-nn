@@ -40,10 +40,13 @@ protected:
 
     MatMulV3L0C2Out GetL0C2OutFlag() const;
 
+    void CheckTensorApiSupport();
+
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 
+    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
+
 private:
-    uint64_t c0Size_{16};
     uint64_t alignMValue_{0};
     uint64_t alignNValue_{0};
     uint64_t alignKValue_{0};

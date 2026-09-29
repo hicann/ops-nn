@@ -850,7 +850,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     257UL,
+     258UL,
      "32 32 32 1200 32 8 1 32 32 32 0 1 0 0 "},
     {"BatchMatMulV3_950_test_iterbatch_basicapi_fixpip_opt_fp32_01",
      "BatchMatMulV3",
@@ -876,7 +876,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     2097473UL,
+     2097474UL,
      "47 77 8 90 3 3 1 48 80 16 0 1 0 0 "},
     {"BatchMatMulV3_950_test_batchmatmultomul_fp32_01",
      "BatchMatMulV3",
@@ -954,7 +954,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     273UL,
+     274UL,
      "20 1 1 2400 75 16 1 32 16 16 0 1 0 0 "},
     {"BatchMatMulV3_910D1_test_mergebatch_01",
      "BatchMatMulV3",
@@ -1654,7 +1654,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l0_iterbatchbias_success)
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData("16 16 16 2048 64 64 0 16 16 16 0 1 0 0", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 257UL);
+    ASSERT_EQ(tiling_key, 258UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
