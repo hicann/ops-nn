@@ -94,7 +94,7 @@ aclnnStatus aclnnIndexSelect(
         <td>输入</td>
         <td>输入Tensor。</td>
         <td>-</td>
-        <td>FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128</td>
         <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
         <td>不大于8</td>
         <td>√</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnIndexSelect(
 
     <!-- npu="910,310p" id7 -->
     - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：数据类型不支持BFLOAT16。
-
+    - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>、<term>Atlas A2系列产品</term>：数据类型不支持HIFLOAT8。
     <!-- end id7 -->
 
 - **返回值**

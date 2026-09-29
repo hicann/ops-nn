@@ -55,10 +55,22 @@ extern "C" {
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT,     op::DataType::DT_INT32,     op::DataType::DT_INT64,  op::DataType::DT_FLOAT16,
+    op::DataType::DT_INT16,     op::DataType::DT_INT8,      op::DataType::DT_UINT8,  op::DataType::DT_BOOL,
+    op::DataType::DT_UINT64,    op::DataType::DT_UINT32,    op::DataType::DT_UINT16, op::DataType::DT_DOUBLE,
+    op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128};
+
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_2201 = {
     op::DataType::DT_FLOAT,     op::DataType::DT_INT32,      op::DataType::DT_INT64,  op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16,     op::DataType::DT_INT8,       op::DataType::DT_UINT8,  op::DataType::DT_BOOL,
     op::DataType::DT_UINT64,    op::DataType::DT_UINT32,     op::DataType::DT_UINT16, op::DataType::DT_DOUBLE,
     op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_950 = {
+    op::DataType::DT_FLOAT,     op::DataType::DT_INT32,      op::DataType::DT_INT64,  op::DataType::DT_FLOAT16,
+    op::DataType::DT_INT16,     op::DataType::DT_INT8,       op::DataType::DT_UINT8,  op::DataType::DT_BOOL,
+    op::DataType::DT_UINT64,    op::DataType::DT_UINT32,     op::DataType::DT_UINT16, op::DataType::DT_DOUBLE,
+    op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BF16,   op::DataType::DT_HIFLOAT8};
 
 static constexpr uint64_t MAX_INPUT_DIM_NUM = 8;
 static const std::initializer_list<op::DataType> INDEX_SUPPORT_LIST = {op::DataType::DT_INT32, op::DataType::DT_INT64};
@@ -76,17 +88,23 @@ static inline bool CheckNotNull(const aclTensor* self, const aclTensor* index, c
     return true;
 }
 
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    auto ver = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(ver)) {
+        return DTYPE_SUPPORT_LIST_950;
+    } else if (ver == NpuArch::DAV_2201) {
+        return DTYPE_SUPPORT_LIST_2201;
+    } else {
+        return DTYPE_SUPPORT_LIST;
+    }
+}
+
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const aclTensor* out)
 {
     // 检查self的数据类型是否在支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
-
-    auto ver = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (self->GetDataType() == op::DataType::DT_BF16 && ver != NpuArch::DAV_2201 &&
-        !Ops::NN::AclnnUtil::IsRegbase(ver)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "NpuArch %u does not support BF16.", static_cast<uint32_t>(ver));
-        return false;
-    }
+    auto supportList = GetDtypeSupportList();
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
 
     // self和out数据类型必须一样
     OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
