@@ -22,7 +22,6 @@ constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t BLOCK_BYTES = 32;
 constexpr int32_t SIGN_BIT_SHIFT = 31;
 constexpr uint32_t MAX_TENSOR_NUM = 8;
-constexpr int64_t MAX_EXACT_FLOAT_INTEGER = 16777216;
 
 template <typename T>
 class IndexCheckKernel {
@@ -32,8 +31,8 @@ public:
                                        const IndexCheckTilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling, indexList);
-        InitBuffers(pipe);
         InitBounds(bounds);
+        InitBuffers(pipe);
     }
 
     __aicore__ inline void Process()
@@ -71,16 +70,7 @@ public:
                 while (processed < dataNum) {
                     uint64_t remaining = dataNum - processed;
                     uint64_t currentBatch = (remaining > maxBatchSize_) ? maxBatchSize_ : remaining;
-                    if constexpr (std::is_same<T, int64_t>::value) {
-                        ProcessScalar(i, static_cast<uint32_t>(currentBatch), idxAddrOffset + processed);
-                    } else {
-                        bool useScalar = bounds_[i] <= 0 || bounds_[i] > MAX_EXACT_FLOAT_INTEGER;
-                        if (useScalar) {
-                            ProcessScalar(i, static_cast<uint32_t>(currentBatch), idxAddrOffset + processed);
-                        } else {
-                            ProcessBatch(i, static_cast<uint32_t>(currentBatch), idxAddrOffset + processed);
-                        }
-                    }
+                    ProcessBatch(i, static_cast<uint32_t>(currentBatch), idxAddrOffset + processed);
                     processed += currentBatch;
                 }
             }
@@ -103,19 +93,8 @@ private:
     __aicore__ inline void InitBounds(GM_ADDR bounds)
     {
         boundsGm_.SetGlobalBuffer((__gm__ int64_t*)bounds);
-        LocalTensor<int64_t> boundsLocal = boundsTableBuf_.Get<int64_t>();
-        uint32_t boundsAlignUnit = BLOCK_BYTES / sizeof(int64_t);
-        uint32_t tensorId = static_cast<uint32_t>(tensorId_);
-        uint32_t boundsCountAligned = ((tensorId + boundsAlignUnit - 1) / boundsAlignUnit) * boundsAlignUnit;
-        DataCopyExtParams copyParams{1, static_cast<uint32_t>(tensorId * sizeof(int64_t)), 0, 0, 0};
-        uint8_t rightPadCount = static_cast<uint8_t>(boundsCountAligned - tensorId);
-        DataCopyPadExtParams<int64_t> padParams{true, 0, rightPadCount, static_cast<int64_t>(0)};
-        DataCopyPad(boundsLocal, boundsGm_, copyParams, padParams);
-        SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
-        WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
-        PipeBarrier<PIPE_ALL>();
         for (uint64_t i = 0; i < tensorId_; i++) {
-            bounds_[i] = boundsLocal.GetValue(i);
+            bounds_[i] = boundsGm_.GetValue(i);
         }
     }
 
@@ -125,45 +104,28 @@ private:
         alignedBatch_ = ((maxBatchSize_ + idxAlignUnit - 1) / idxAlignUnit) * idxAlignUnit;
 
         pipe.InitBuffer(indicesQue_, BUFFER_NUM, alignedBatch_ * sizeof(T));
-        if constexpr (!std::is_same<T, int64_t>::value) {
-            pipe.InitBuffer(workingQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
-            pipe.InitBuffer(tempQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
-            pipe.InitBuffer(floatQue_, BUFFER_NUM, alignedBatch_ * sizeof(float));
-            pipe.InitBuffer(workQue_, BUFFER_NUM, alignedBatch_ * sizeof(float));
-            pipe.InitBuffer(boundsQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
-        }
-        pipe.InitBuffer(boundsTableBuf_, MAX_TENSOR_NUM * sizeof(int64_t));
+        pipe.InitBuffer(workingQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
+        pipe.InitBuffer(tempQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
+        pipe.InitBuffer(floatQue_, BUFFER_NUM, alignedBatch_ * sizeof(float));
+        pipe.InitBuffer(workQue_, BUFFER_NUM, alignedBatch_ * sizeof(float));
+        pipe.InitBuffer(boundsQue_, BUFFER_NUM, alignedBatch_ * sizeof(int32_t));
     }
 
     __aicore__ inline void ProcessScalar(uint64_t tensorIdx, uint32_t count, uint64_t offset)
     {
         int64_t bound = bounds_[tensorIdx];
-        if (bound <= 0) {
-            Trap();
-        }
-        LocalTensor<T> indexLocal = indicesQue_.AllocTensor<T>();
-        uint32_t copyAlignUnit = BLOCK_BYTES / sizeof(T);
-        uint32_t countCopyAligned = ((count + copyAlignUnit - 1) / copyAlignUnit) * copyAlignUnit;
-        DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
-        uint8_t rightPadCount = static_cast<uint8_t>(countCopyAligned - count);
-        DataCopyPadExtParams<T> padParams{true, 0, rightPadCount, static_cast<T>(0)};
-        DataCopyPad(indexLocal, indexGm_[offset], copyParams, padParams);
-        SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
-        WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
-        PipeBarrier<PIPE_ALL>();
         for (uint32_t i = 0; i < count; i++) {
-            int64_t idx = static_cast<int64_t>(indexLocal.GetValue(i));
+            T idxVal = indexGm_.GetValue(offset + i);
+            int64_t idx = static_cast<int64_t>(idxVal);
             if (idx < 0) {
                 idx += bound;
             }
-            if (idx < 0) {
-                Trap();
-            }
-            if (idx >= bound) {
-                Trap();
-            }
+            ascendc_assert((idx >= 0),
+                           "Index out of range in dimension %lu: index value %ld is too negative for bounds %ld!\n",
+                           tensorIdx, static_cast<int64_t>(idxVal), bound);
+            ascendc_assert((idx < bound), "Index out of range in dimension %lu: index value %ld exceeds bounds %ld!\n",
+                           tensorIdx, static_cast<int64_t>(idxVal), bound);
         }
-        indicesQue_.FreeTensor(indexLocal);
     }
 
     __aicore__ inline void ProcessBatch(uint64_t tensorIdx, uint32_t count, uint64_t offset)
@@ -184,9 +146,14 @@ private:
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
 
-        auto indexInt32Local = indexLocal.template ReinterpretCast<int32_t>();
-        DataCopy(workingLocal, indexInt32Local, countCopyAligned);
-        PipeBarrier<PIPE_V>();
+        if constexpr (std::is_same<T, int64_t>::value) {
+            Cast(workingLocal, indexLocal, RoundMode::CAST_NONE, count);
+            PipeBarrier<PIPE_V>();
+        } else {
+            auto indexInt32Local = indexLocal.template ReinterpretCast<int32_t>();
+            DataCopy(workingLocal, indexInt32Local, countCopyAligned);
+            PipeBarrier<PIPE_V>();
+        }
 
         ShiftRight(tempLocal, workingLocal, SIGN_BIT_SHIFT, count);
         PipeBarrier<PIPE_V>();
@@ -206,9 +173,9 @@ private:
         SetFlag<HardEvent::S_V>(EVENT_ID0);
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
-        if (minValue < 0.0f) {
-            Trap();
-        }
+        ascendc_assert((minValue >= 0.0f),
+                       "Index out of range in dimension %lu: index value %f is too negative for bounds %ld!\n",
+                       tensorIdx, minValue, bounds_[tensorIdx]);
 
         CheckUpperBound(floatLocal, workLocal, workingLocal, boundsLocal, tensorIdx, count);
 
@@ -240,16 +207,15 @@ private:
         SetFlag<HardEvent::S_V>(EVENT_ID0);
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
-        if (maxValue >= 0.0f) {
-            Trap();
-        }
+        ascendc_assert((maxValue < 0.0f), "Index out of range in dimension %lu: index value %f exceeds bounds %ld!\n",
+                       tensorIdx, maxValue, bounds_[tensorIdx]);
     }
 
     __aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR indexListPtr, const uint64_t offset)
     {
         __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(indexListPtr);
         uint64_t tensorPtrOffset = *dataAddr;
-        __gm__ uint64_t* tensorPtr = dataAddr + tensorPtrOffset / sizeof(uint64_t);
+        __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> 3);
         return reinterpret_cast<__gm__ T*>(*(tensorPtr + offset));
     }
 
@@ -264,7 +230,6 @@ private:
     TQue<TPosition::VECCALC, BUFFER_NUM> floatQue_;
     TQue<TPosition::VECCALC, BUFFER_NUM> workQue_;
     TQue<TPosition::VECCALC, BUFFER_NUM> boundsQue_;
-    TBuf<TPosition::VECCALC> boundsTableBuf_;
 
     uint64_t blockIdx_ = 0;
     uint64_t usedCoreNum_ = 0;

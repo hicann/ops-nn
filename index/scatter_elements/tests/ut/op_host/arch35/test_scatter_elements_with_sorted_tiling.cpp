@@ -35,25 +35,13 @@ struct WithSortedTilingResult {
     uint64_t wsSrcPosOff = 0;
 };
 
-static bool gScatterOptilingLinked = true;
-
 void RunWithSortedTilingCase(ge::DataType inputDtype, ge::DataType indicesDtype, gert::StorageShape& inputShape,
                              gert::StorageShape& indicesShape, int64_t axis, const std::string& reduction,
                              int32_t deterministic, WithSortedTilingResult& result)
 {
-    gScatterOptilingLinked = true;
     const std::string opType("ScatterElements");
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
     ASSERT_NE(opImpl, nullptr);
-    // ScatterElements registers its optiling only under arch35 (ascend950/mc62). In a
-    // UT build whose compute unit has no arch35 entry for this op (e.g. the default
-    // ascend910b UT build), the tiling registration is not linked while this test
-    // still is, leaving tiling/tiling_parse null. Skip such tests instead of calling
-    // a null function pointer and crashing the whole UT binary.
-    if (opImpl->tiling == nullptr || opImpl->tiling_parse == nullptr) {
-        gScatterOptilingLinked = false;
-        return;
-    }
     auto tilingFunc = opImpl->tiling;
     auto tilingParseFunc = opImpl->tiling_parse;
 
@@ -148,9 +136,6 @@ TEST(ScatterElementsWithSortedTiling, DeterministicAddUsesSortedRoute)
     gert::StorageShape indicesShape = {{100000}, {100000}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2000100UL);
@@ -169,9 +154,6 @@ TEST(ScatterElementsWithSortedTiling, Int64IndicesUseSortedRoute)
     gert::StorageShape indicesShape = {{100000}, {100000}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT16, ge::DT_INT64, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2001101UL);
@@ -184,9 +166,6 @@ TEST(ScatterElementsWithSortedTiling, LargeCountUses64BitPermutation)
     gert::StorageShape indicesShape = {{largeCount}, {largeCount}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.countMode, 1);
@@ -199,9 +178,6 @@ TEST(ScatterElementsWithSortedTiling, DeterministicNoneUsesSortedRoute)
     gert::StorageShape indicesShape = {{100000}, {100000}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_UINT8, ge::DT_INT32, dataShape, indicesShape, 0, "none", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2000001UL);
@@ -215,9 +191,6 @@ TEST(ScatterElementsWithSortedTiling, NonDominantScatterAxisKeepsOriginalRoute)
     gert::StorageShape indicesShape = {{64, 64}, {64, 64}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 1000100UL);
@@ -230,9 +203,6 @@ TEST(ScatterElementsWithSortedTiling, WellParallelizedFloatRouteKeepsOriginalRou
     gert::StorageShape indicesShape = {{128, 6400}, {128, 6400}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 1, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 1000100UL);
@@ -245,9 +215,6 @@ TEST(ScatterElementsWithSortedTiling, MultiDimensionalInt32KeepsOriginalRoute)
     gert::StorageShape indicesShape = {{1, 100000}, {1, 100000}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_INT32, ge::DT_INT32, dataShape, indicesShape, 1, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 1000103UL);
@@ -260,9 +227,6 @@ TEST(ScatterElementsWithSortedTiling, EqualIndexAndAxisParallelismKeepsOriginalR
     gert::StorageShape indicesShape = {{1024}, {1024}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 1000100UL);
@@ -275,9 +239,6 @@ TEST(ScatterElementsWithSortedTiling, FloatNoneUsesSortedRoute)
     gert::StorageShape indicesShape = {{100000}, {100000}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "none", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2000004UL);
@@ -307,9 +268,6 @@ TEST(ScatterElementsWithSortedTiling, MoreIndexParallelismUsesSortedRoute)
     gert::StorageShape indicesShape = {{2048}, {2048}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2000100UL);
@@ -322,9 +280,6 @@ TEST(ScatterElementsWithSortedTiling, EightDimensionalUint8UsesSortedRoute)
     gert::StorageShape indicesShape = {{1, 1, 1, 1, 1, 1, 1, 8192}, {1, 1, 1, 1, 1, 1, 1, 8192}};
     WithSortedTilingResult result;
     RunWithSortedTilingCase(ge::DT_UINT8, ge::DT_INT32, dataShape, indicesShape, 7, "none", 1, result);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
 
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 2000001UL);
@@ -337,17 +292,11 @@ TEST(ScatterElementsWithSortedTiling, UnsupportedModesKeepOriginalRoute)
     gert::StorageShape indicesShape = {{100000}, {100000}};
     WithSortedTilingResult nonDeterm;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "add", 0, nonDeterm);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
     EXPECT_EQ(nonDeterm.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(nonDeterm.tilingKey, 1000100UL);
 
     WithSortedTilingResult mul;
     RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, dataShape, indicesShape, 0, "mul", 1, mul);
-    if (!gScatterOptilingLinked) {
-        GTEST_SKIP() << "ScatterElements optiling registration is not linked in this UT build";
-    }
     EXPECT_EQ(mul.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(mul.tilingKey, 1000200UL);
 }

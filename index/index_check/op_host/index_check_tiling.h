@@ -18,13 +18,11 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
-constexpr size_t MAX_TENSOR_NUM = 8;
-
 BEGIN_TILING_DATA_DEF(IndexCheckTilingParam)
 TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum)
 TILING_DATA_FIELD_DEF(uint64_t, tensorId)
 TILING_DATA_FIELD_DEF(uint64_t, maxBatchSize)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_TENSOR_NUM, tensorLens)
+TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, tensorLens)
 END_TILING_DATA_DEF
 
 REGISTER_TILING_DATA_CLASS(IndexCheckTilingParamOp, IndexCheckTilingParam)
