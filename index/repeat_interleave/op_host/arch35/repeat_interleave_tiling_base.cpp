@@ -15,12 +15,15 @@
 
 #include "repeat_interleave_tiling_base.h"
 #include "repeat_interleave_tiling_arch35.h"
+#include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/platform_util.h"
 
 namespace optiling {
 static constexpr uint32_t INDEX_X_INPUT = 0;
 static constexpr uint32_t INDEX_REPEATS_INPUT = 1;
 static constexpr uint32_t AXIS_DEFAULT_VALUE = 1000;
-static constexpr int64_t CUMSUM_COMPUTE_THRESHOLD = 16384;
+static constexpr int64_t CUMSUM_COMPUTE_THRESHOLD = 16384; // repeats字节数小于16K时，单核算前缀和
+static constexpr int64_t INT32_MAX_LIM = 2147483647;
 static constexpr int64_t DOUBLE = 2;
 static const std::set<ge::DataType> SUPPORTED_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_UINT8, ge::DT_INT8,
                                                        ge::DT_BOOL,  ge::DT_BF16,    ge::DT_INT16, ge::DT_UINT16,
@@ -264,6 +267,14 @@ void RepeatInterleaveBaseTiling::CumSumTiling()
 
     cumSumTailCoreLoops_ = Ops::Base::CeilDiv(cumSumTailCoreRepeatsCount_, cumSumNormalUbFactors_);
     cumSumTailCoreTailUbFactors_ = cumSumTailCoreRepeatsCount_ - cumSumNormalUbFactors_ * (cumSumTailCoreLoops_ - 1);
+}
+
+void RepeatInterleaveBaseTiling::UseInt64()
+{
+    if (repeatDtype_ == ge::DataType::DT_INT64 || yShape_.GetShapeSize() > INT32_MAX_LIM) {
+        isUseInt64_ = 1;
+    }
+    return;
 }
 
 } // namespace optiling

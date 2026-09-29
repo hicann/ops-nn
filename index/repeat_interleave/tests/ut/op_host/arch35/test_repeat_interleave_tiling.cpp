@@ -136,6 +136,7 @@ static void ExecuteTestCase(const OpsParamInfosRepeatInterleave& opsParamInfos, 
     gert::StorageShape repeatsShape = opsParamInfos.repeatsShape;
     gert::StorageShape yShape = opsParamInfos.yShape;
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("RepeatInterleave")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
                       .InputShapes({&xShape, &repeatsShape})
@@ -224,7 +225,7 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Scalar_Axis_1_test2)
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
 
-    string expectTilingData = "64 48 1 1 1 32 32 8 10560 10 30 6 1 256 ";
+    string expectTilingData = "64 6 1 1 0 0 0 0 10560 10 30 6 1 256 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
 }
 TEST_F(RepeatInterleaveTilingAscendC, Repeats_Scalar_Axis_1_test3)
@@ -392,7 +393,7 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Scalar_Axis_0_test11)
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
 
-    string expectTilingData = "64 64 1 1 1 96 96 32 10560 2 4 2 1 3072 ";
+    string expectTilingData = "64 12 1 1 1 512 512 6 10560 2 4 2 1 3072 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
 }
 
@@ -515,7 +516,7 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Tensor_Axis_1_test25)
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
     SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, dataSize, const_tensors);
 
-    string expectTilingData = "64 48 1 1 3 1 24 20800 1380 19 2 70 256 ";
+    string expectTilingData = "1 70 70 1 1 70 70 70 64 43 8 49 0 1 0 0 0 1 1380 2 70 256 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
 }
 

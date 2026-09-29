@@ -14,11 +14,15 @@
  */
 #include "repeat_interleave_tiling_arch35.h"
 #include "repeat_interleave_tiling_normal.h"
+#include "repeat_interleave_tiling_repeat.h"
 #include "log/log.h"
 #include "register/tilingdata_base.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../../../../matmul/common/op_host/op_tiling/tiling_cache.h"
 #include "op_api/runtime2_util_nn.h"
 #include "../../../../matmul/common/op_host/op_tiling/hash.h"
+
+using Ops::NN::Optiling::TilingRegistry;
 
 namespace optiling {
 constexpr size_t ATTR_AXIS_IDX = 0;
@@ -33,8 +37,7 @@ ge::graphStatus RepeatInterleaveTilingForAscendC(gert::TilingContext* context)
 {
     OP_CHECK_IF((context == nullptr), OP_LOGE("RepeatInterleave", "context should not be nullptr."),
                 return ge::GRAPH_FAILED);
-    RepeatInterleaveTilingKernelNorm tiling(context);
-    return tiling.DoTiling();
+    return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 ge::graphStatus TilingPrepareRepeatInterleaveForAscendC(gert::TilingParseContext* context)

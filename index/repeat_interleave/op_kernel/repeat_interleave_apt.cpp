@@ -19,11 +19,16 @@
 #include "arch35/cum_sum_exclusive.h"
 #include "arch35/cum_sum_split_batch_simt.h"
 #include "arch35/cum_sum_split_repeat_simt.h"
+#include "arch35/repeat_interleave_repeat.h"
 
 using namespace RepeatInterleave;
 
 #define BATCH_TILING_REPEAT_SCALAR 101
 #define BATCH_TILING_REPEAT_TENSOR 102
+#define SPLIT_REPEAT_REPEAT_INT32_CAST_TRUE_SHAPE_INT64 3011
+#define SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT64 3001
+#define SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT32 3000
+#define SPLIT_REPEAT_REPEAT_INT64_CAST_FALSE_SHAPE_INT64 3101
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT32 201
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT64 202
 #define SPLIT_REPEAT_SUM_SIMT_ADDR_INT64_CAST 4101
@@ -165,6 +170,50 @@ extern "C" __global__ __aicore__ void repeat_interleave(GM_ADDR x, GM_ADDR repea
         RepeatInterleave::SplitRepeatSumSimt<DTYPE_X, DTYPE_REPEATS, int64_t, int64_t> simtOp(tilingInfo, pipe);
         simtOp.Init(x, repeats, y, userWs);
         simtOp.Process();
+    } else if (TILING_KEY_IS(SPLIT_REPEAT_REPEAT_INT32_CAST_TRUE_SHAPE_INT64)) {
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        CumSumExclusive<DTYPE_X, DTYPE_REPEATS, int64_t, RepeatInterleaveTilingKernelRepeat> op(tilingInfo, pipe);
+        op.Init(x, repeats, y, userWs);
+        op.Process();
+        SyncAll();
+        pipe.Reset();
+        RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, int64_t> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT64)) {
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        CumSumExclusive<DTYPE_X, DTYPE_REPEATS, DTYPE_REPEATS, RepeatInterleaveTilingKernelRepeat> op(tilingInfo, pipe);
+        op.Init(x, repeats, y, userWs);
+        op.Process();
+        SyncAll();
+        pipe.Reset();
+        RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, DTYPE_REPEATS> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT32)) {
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        CumSumExclusive<DTYPE_X, DTYPE_REPEATS, DTYPE_REPEATS, RepeatInterleaveTilingKernelRepeat> op(tilingInfo, pipe);
+        op.Init(x, repeats, y, userWs);
+        op.Process();
+        SyncAll();
+        pipe.Reset();
+        RepeatInterleaveRepeatImpl<DTYPE_X, int32_t, DTYPE_REPEATS, DTYPE_REPEATS> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SPLIT_REPEAT_REPEAT_INT64_CAST_FALSE_SHAPE_INT64)) {
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        CumSumExclusive<DTYPE_X, DTYPE_REPEATS, DTYPE_REPEATS, RepeatInterleaveTilingKernelRepeat> op(tilingInfo, pipe);
+        op.Init(x, repeats, y, userWs);
+        op.Process();
+        SyncAll();
+        pipe.Reset();
+        RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, DTYPE_REPEATS> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
     }
     return;
 }

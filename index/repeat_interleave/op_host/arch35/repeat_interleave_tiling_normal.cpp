@@ -14,11 +14,14 @@
  */
 
 #include "repeat_interleave_tiling_normal.h"
+#include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/platform_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 static constexpr int64_t DOUBLE = 2;
 static constexpr int64_t ALIGN_COUNT = 32;
-static constexpr int64_t MIN_CP_THRESHOLD = 128;
+static constexpr int64_t MIN_CP_THRESHOLD = 2048;
 static constexpr int64_t MAX_THREAD_NUM = 2048;
 static constexpr int64_t CUMSUMUB_REPEATS_THRESHOLD = 8192;
 static constexpr int64_t MIN_SHAPE_THRESHOLD = 64;
@@ -114,19 +117,6 @@ void RepeatInterleaveTilingKernelNorm::GetUbFactor()
                    (ge::GetSizeByDataType(inputDtype_) * DOUBLE + ge::GetSizeByDataType(repeatDtype_));
     }
     ubFactor_ = ubFactor / ALIGN_COUNT * ALIGN_COUNT;
-    return;
-}
-
-void RepeatInterleaveTilingKernelNorm::UseInt64()
-{
-    uint64_t yShapeNum = 1;
-    for (size_t i = 0; i < yShape_.GetDimNum(); i++) {
-        yShapeNum *= yShape_.GetDim(i);
-    }
-
-    if (repeatDtype_ == ge::DataType::DT_INT64 || yShapeNum > INT32_MAX_LIM) {
-        isUseInt64_ = 1;
-    }
     return;
 }
 
@@ -444,4 +434,5 @@ ge::graphStatus RepeatInterleaveTilingKernelNorm::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
+REGISTER_TILING_TEMPLATE("RepeatInterleave", RepeatInterleaveTilingKernelNorm, 2);
 } // namespace optiling

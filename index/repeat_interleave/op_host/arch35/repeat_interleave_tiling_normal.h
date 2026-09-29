@@ -113,7 +113,6 @@ protected:
     int64_t repeatsSlice_{0};
     int64_t usedCoreNumBefore_{0};
     int64_t averageRepeatTime_{0};
-    int64_t isUseInt64_{0};
     RepeatInterleaveTilingKernelDataNorm kernelTilingData_;
     RepeatInterleaveTilingKernelDataSmall kernelTilingDataSmall_;
     RepeatInterleaveCumSumTilingData cumSumTilingData_;
@@ -128,7 +127,6 @@ protected:
     void DumpCumSumTilingInfo();
     void SplitCP();
     void GetUbFactor();
-    void UseInt64();
     void SplitRepeatsShape();
     void CalcSimtAddr();
     void setCumSumTilingData();

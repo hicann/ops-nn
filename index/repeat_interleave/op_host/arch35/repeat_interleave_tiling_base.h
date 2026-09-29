@@ -44,6 +44,7 @@ protected:
     void MergDimForTensor();
     void MergDimForScalar();
     void MergDim();
+    void UseInt64();
     void CumSumTiling();
     ge::graphStatus CheckShape();
     ge::graphStatus CheckDtype();
@@ -77,6 +78,7 @@ protected:
     bool isDefaultAxis_{false};
     bool isCumSumCast_{false};
     int64_t repeatsCount_{-1};
+    int64_t isUseInt64_{0};
 };
 } // namespace optiling
 #endif
