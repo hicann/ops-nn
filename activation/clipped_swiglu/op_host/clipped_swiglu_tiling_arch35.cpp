@@ -298,7 +298,7 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckY()
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeY);
     const gert::Shape& inputShapeY = shapeY->GetStorageShape();
     int64_t yDims = inputShapeY.GetDimNum();
-    auto descY = context_->GetInputDesc(Y_INDEX);
+    auto descY = context_->GetOutputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, descY);
     auto yDtype = descY->GetDataType();
     auto xShape = context_->GetInputShape(0)->GetStorageShape();
