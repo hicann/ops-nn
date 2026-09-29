@@ -135,6 +135,13 @@ inline static bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTenso
                 "Input tensor's dtype[DT_FLOAT] should be the same as output's dtype[DT_FLOAT16].");
         return false;
     }
+    // out数据类型需与self、mat2推导之后的数据类型满足推导规则（out为FLOAT32时属于16进32出场景，不校验）
+    bool isLowPrecisionInputs = self->GetDataType() != DataType::DT_FLOAT && mat2->GetDataType() != DataType::DT_FLOAT;
+    if (isLowPrecisionInputs && out->GetDataType() != DataType::DT_FLOAT && self->GetDataType() != out->GetDataType()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self's dtype [%s] and out's dtype [%s] are not equal.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        return false;
+    }
     return CheckWeightNzDtype(self, mat2);
 }
 
