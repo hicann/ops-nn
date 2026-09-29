@@ -209,18 +209,16 @@ static bool CheckNoBroadcastBatchShape(const aclTensor* x1, const aclTensor* x2,
     return true;
 }
 
-static bool CanReluMergeBatchAndMAxis(const aclTensor* x1, const aclTensor* x2, const aclTensor* y,
-                                      const char* fusedOpType)
+static bool CanReluMergeBatchAndMAxis(const aclTensor* x1, const aclTensor* x2, const char* fusedOpType)
 {
     if (strcmp(fusedOpType, "relu") != 0 || IsTransposeLastTwoDims(x1)) {
         return false;
     }
     const auto& xShape = x1->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
-    const auto& yShape = y->GetViewShape();
     const size_t xDimNum = xShape.GetDimNum();
     const size_t x2DimNum = x2Shape.GetDimNum();
-    if (xDimNum <= DIM_LEN_MIN || x2DimNum < DIM_LEN_MIN || yShape.GetDimNum() != xDimNum) {
+    if (xDimNum <= DIM_LEN_MIN || x2DimNum < DIM_LEN_MIN) {
         return false;
     }
     for (size_t i = 0; i + DIM_LEN_MIN < x2DimNum; ++i) {
@@ -237,7 +235,7 @@ static bool CanReluMergeBatchAndMAxis(const aclTensor* x1, const aclTensor* x2, 
     const uint64_t maxMergedM = static_cast<uint64_t>(INT32_MAX);
     for (size_t i = 0; i + DIM_LEN_MIN < xDimNum; ++i) {
         const int64_t batchDim = xShape[i];
-        if (batchDim <= 0 || batchDim != yShape[i] || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
+        if (batchDim <= 0 || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
             return false;
         }
         mergedM *= static_cast<uint64_t>(batchDim);
@@ -341,7 +339,7 @@ static inline bool CheckShape(const aclTensor* x1, const aclTensor* x2, const ac
     OP_CHECK_MAX_DIM(x2, dimLenMax, return false);
     OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
 
-    const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x1, x2, y, fusedOpType);
+    const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x1, x2, fusedOpType);
 
     // Relu can use a shared x2 by merging all x1 batch axes into M; other rank mismatches remain unsupported.
     if (x2->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum() && !canMergeBatch) {
@@ -351,8 +349,8 @@ static inline bool CheckShape(const aclTensor* x1, const aclTensor* x2, const ac
         return false;
     }
 
-    // check dimensions of x1 and y must be same
-    if (y->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum()) {
+    // A shared x2 may add leading size-1 batch axes to y after standard MatMul broadcasting.
+    if (y->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum() && !canMergeBatch) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "x1 dimension and y dimension should be the same, but x1 dimension is %d, y dimension is %d.",
                 x1->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());

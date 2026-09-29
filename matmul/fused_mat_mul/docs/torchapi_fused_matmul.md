@@ -89,7 +89,7 @@ cann_ops_nn.fused_matmul(
 - x、x2、bias和x3必须是NPU Tensor，可选Tensor可以传入None。
 - x和x2的数据类型必须一致，shape必须满足矩阵乘关系；多维场景下x和x2的batch维度必须一致，不支持batch轴广播，以下relu共享x2场景除外。
 <!-- npu="950" -->
-- 当fused_op_type="relu"时，支持x为3-6维、x不转置且x2的所有batch轴均为1（包括x2为二维）的场景。此时x和x2的维度数可以不同；输出的维度数及batch轴必须与x一致，x的所有batch轴与M轴长度的乘积不能超过INT32_MAX。
+- 当fused_op_type="relu"时，支持x为3-6维、x不转置且x2的所有batch轴均为1（包括x2为二维）的场景。此时x和x2的维度数可以不同，输出shape按MatMul的batch轴广播规则确定；x的所有batch轴与M轴长度的乘积不能超过INT32_MAX。
 <!-- end -->
 - 当x为torch.float16或torch.bfloat16时，bias的数据类型必须与x一致或为torch.float32；当x为torch.float32时，bias必须为torch.float32。
 - 当fused_op_type为"add"或"mul"时，x3的数据类型必须与x一致。

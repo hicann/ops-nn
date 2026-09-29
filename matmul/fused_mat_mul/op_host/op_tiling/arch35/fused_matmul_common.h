@@ -112,10 +112,9 @@ inline bool CanReluMergeBatchAndMAxis(const gert::TilingContext* context)
     }
     const auto& a = context->GetInputShape(INPUT_X1_IDX)->GetOriginShape();
     const auto& b = context->GetInputShape(INPUT_X2_IDX)->GetOriginShape();
-    const auto& c = context->GetOutputShape(0)->GetOriginShape();
     const size_t aDimNum = a.GetDimNum();
     const size_t bDimNum = b.GetDimNum();
-    if (aDimNum <= FUSED_MATMUL_MATMUL_DIM_NUM || bDimNum < FUSED_MATMUL_MATMUL_DIM_NUM || c.GetDimNum() != aDimNum) {
+    if (aDimNum <= FUSED_MATMUL_MATMUL_DIM_NUM || bDimNum < FUSED_MATMUL_MATMUL_DIM_NUM) {
         return false;
     }
     for (size_t i = 0; i + FUSED_MATMUL_MATMUL_DIM_NUM < bDimNum; ++i) {
@@ -132,7 +131,7 @@ inline bool CanReluMergeBatchAndMAxis(const gert::TilingContext* context)
     const uint64_t maxMergedM = static_cast<uint64_t>(INT32_MAX);
     for (size_t i = 0; i + FUSED_MATMUL_MATMUL_DIM_NUM < aDimNum; ++i) {
         const int64_t batchDim = a.GetDim(i);
-        if (batchDim <= 0 || batchDim != c.GetDim(i) || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
+        if (batchDim <= 0 || static_cast<uint64_t>(batchDim) > maxMergedM / mergedM) {
             return false;
         }
         mergedM *= static_cast<uint64_t>(batchDim);

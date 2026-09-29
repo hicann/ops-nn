@@ -370,7 +370,7 @@ aclnnStatus aclnnFusedMatmulV2(
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16，且x1、x2、y仅支持二维；当fusedOpType为""、"relu"时，x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16，且x1、x2、y支持二维，或batch轴为1的三维；当fusedOpType为"add"、"mul"时，x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为""、"relu"、"add"、"mul"时，在多维场景下不支持batch轴broadcast，batch维度需要一致；以下relu共享x2场景除外。
 <!-- npu="950" -->
-- 当fusedOpType取值为"relu"时，支持x1为3-6维、x1不转置且x2的所有batch轴均为1（包括x2为二维）的场景。此时x1和x2的维度数可以不同；y的维度数及batch轴必须与x1一致，x1的所有batch轴与M轴长度的乘积不能超过INT32_MAX。
+- 当fusedOpType取值为"relu"时，支持x1为3-6维、x1不转置且x2的所有batch轴均为1（包括x2为二维）的场景。此时x1和x2的维度数可以不同，输出shape按MatMul的batch轴广播规则确定；x1的所有batch轴与M轴长度的乘积不能超过INT32_MAX。
 <!-- end -->
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。

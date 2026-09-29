@@ -615,17 +615,17 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_relu_4d_2d_success)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend950_test_relu_shared_x2_y_batch_mismatch_failed)
+TEST_F(l2_fusedmatmul_test, ascend950_test_relu_shared_x2_4d_5d_success)
 {
     SocVersionManager versionManager(SocVersion::ASCEND950);
-    TensorDesc x1_desc = TensorDesc({50, 1, 448}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x1_desc = TensorDesc({2, 25, 1, 448}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({1, 1, 1, 448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({896}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({49, 1, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 2, 25, 1, 896}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::USE_HF32),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
-    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fusedmatmul_test, ascend950_test_x3_mm_shape_mismatch)
