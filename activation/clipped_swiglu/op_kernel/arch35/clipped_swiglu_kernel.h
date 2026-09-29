@@ -503,7 +503,6 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>
                                                                                           int64_t blockLen)
 {
     LocalTensor<T> outputUb = outQueY_.DeQue<T>();
-    outQueY_.EnQue(outputUb);
 
     DataCopyExtParams copyParams = {1, 0, 0, 0, 0};
     if constexpr (isInterleaved) {
