@@ -49,20 +49,20 @@ __aicore__ inline void CopyAImpl(const LocalTensor<int8_t>& aMatrix, const __gm_
     if (tilingDataPtr->matmulRunInfo.transA) {
         n = singleCoreK;
         d = singleCoreM;
-        useN = CeilDivision(useK, ALIGNED_H) * ALIGNED_H;
-        useD = CeilDivision(useM, c0Size) * c0Size;
+        useN = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useK), static_cast<uint64_t>(ALIGNED_H)));
+        useD = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useM), c0Size));
         useRow = col * baseK;
         useCol = row * baseM;
     } else {
         n = singleCoreM;
         d = singleCoreK;
-        useN = CeilDivision(useM, ALIGNED_H) * ALIGNED_H;
-        useD = CeilDivision(useK, c0Size) * c0Size;
+        useN = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useM), static_cast<uint64_t>(ALIGNED_H)));
+        useD = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useK), c0Size));
         useRow = row * baseM;
         useCol = col * baseK;
     }
-    n_aligned = CeilDivision(n, ALIGNED_H) * ALIGNED_H;
-    d_aligned = CeilDivision(d, c0Size) * c0Size;
+    n_aligned = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(n), static_cast<uint64_t>(ALIGNED_H)));
+    d_aligned = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(d), c0Size));
     src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
     uint64_t srcOffset = static_cast<uint64_t>(useRow) * static_cast<uint64_t>(c0Size) +
@@ -100,20 +100,20 @@ __aicore__ inline void CopyBImpl(const LocalTensor<int8_t>& bMatrix, const __gm_
     if (tilingDataPtr->matmulRunInfo.transB) {
         n = singleCoreN;
         d = singleCoreK;
-        useN = CeilDivision(useNn, ALIGNED_H) * ALIGNED_H;
-        useD = CeilDivision(useK, c0Size) * c0Size;
+        useN = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useNn), static_cast<uint64_t>(ALIGNED_H)));
+        useD = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useK), c0Size));
         useRow = col * baseN;
         useCol = row * baseK;
     } else {
         n = singleCoreK;
         d = singleCoreN;
-        useN = CeilDivision(useK, ALIGNED_H) * ALIGNED_H;
-        useD = CeilDivision(useNn, c0Size) * c0Size;
+        useN = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useK), static_cast<uint64_t>(ALIGNED_H)));
+        useD = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(useNn), c0Size));
         useRow = row * baseK;
         useCol = col * baseN;
     }
-    n_aligned = CeilDivision(n, ALIGNED_H) * ALIGNED_H;
-    d_aligned = CeilDivision(d, c0Size) * c0Size;
+    n_aligned = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(n), static_cast<uint64_t>(ALIGNED_H)));
+    d_aligned = static_cast<uint32_t>(MMV3CeilAlign(static_cast<uint64_t>(d), c0Size));
     src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
     uint64_t srcOffset = static_cast<uint64_t>(useRow) * static_cast<uint64_t>(c0Size) +
@@ -238,8 +238,8 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     uint64_t singleCoreK = this->block_.matmulTilingData_->matmulTiling.singleCoreK;
     uint32_t usedCoreNum = this->block_.matmulTilingData_->matmulTiling.usedCoreNum;
 
-    oneBufferSize = CeilDivision((aNz ? singleCoreM : singleCoreN), ALIGNED_H) * ALIGNED_H *
-                    CeilDivision(singleCoreK, c0Size) * c0Size;
+    oneBufferSize = MMV3CeilAlign(aNz ? singleCoreM : singleCoreN, static_cast<uint64_t>(ALIGNED_H)) *
+                    MMV3CeilAlign(singleCoreK, c0Size);
     wsBufferSize = oneBufferSize * PP_GM * usedCoreNum; // 开启double buffer
     wsGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(workspaceGM) + GetCurrentBlockIdx() * oneBufferSize * PP_GM,
                               static_cast<uint64_t>(oneBufferSize * PP_GM));
