@@ -1009,6 +1009,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_a_cos_inplace/README.md">foreach_a_cos_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素求反余弦，结果原地更新。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_add_list/README.md">foreach_add_list</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1016,6 +1026,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_add_list_inplace/README.md">foreach_add_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素计算x1+alpha*x2，结果原地写回第一个列表。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1159,6 +1179,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_div_list_inplace/README.md">foreach_div_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素相除，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_div_scalar/README.md">foreach_div_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1246,6 +1276,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对张量列表执行逐元素自然对数运算（ln(x)）。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_log_inplace/README.md">foreach_log_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素求自然对数，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1349,6 +1389,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_mul_list_inplace/README.md">foreach_mul_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素相乘，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_mul_scalar/README.md">foreach_mul_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1356,6 +1406,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相乘运算。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_mul_scalar_inplace/README.md">foreach_mul_scalar_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素乘以同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1519,6 +1579,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_sub_list_inplace/README.md">foreach_sub_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素计算x1-alpha*x2，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_sub_scalar/README.md">foreach_sub_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1526,6 +1596,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相减运算。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_sub_scalar_inplace/README.md">foreach_sub_scalar_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素减去同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
