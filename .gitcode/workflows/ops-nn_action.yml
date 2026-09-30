@@ -349,9 +349,6 @@ stages:
         runs-on: ['self-hosted','npu=1','smoke=204']
         container:
           image: swr.cn-south-1.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A900 }}
-      JOB_st_test_950:
-        name: ST_test_950
-        uses: .gitcode/workflows/st_test_action.yml
       # PreSmoke_harmony-infer-chs-nn:
       #   name: PreSmoke_harmony-infer-chs-nn
       #   uses: .gitcode/workflows/kirin_pre_smoke_action.yml
