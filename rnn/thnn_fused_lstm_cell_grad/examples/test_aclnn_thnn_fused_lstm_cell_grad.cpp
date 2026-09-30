@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -81,7 +80,7 @@ int main()
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-    // 2. 构造输入与输出，需要根据API的接口自定义构造
+    // 2. 构造输入与输出
     // 定义变量
     int64_t n = 1;
     int64_t hiddenSize = 8;
@@ -90,14 +89,13 @@ int main()
     std::vector<int64_t> bShape = {hiddenSize * 4};
     std::vector<int64_t> dhShape = {n, hiddenSize};
     std::vector<int64_t> gatesShape = {n, 4 * hiddenSize};
-    ;
 
     // 设备地址指针
     void* dhyDeviceAddr = nullptr;
     void* dcDeviceAddr = nullptr;
     void* cxDeviceAddr = nullptr;
     void* cyDeviceAddr = nullptr;
-    void* gatesDeviceAddr = nullptr;
+    void* storageDeviceAddr = nullptr;
 
     // 反向传播输出设备地址指针
     void* dgatesDeviceAddr = nullptr;
@@ -109,18 +107,18 @@ int main()
     aclTensor* dc = nullptr;
     aclTensor* cx = nullptr;
     aclTensor* cy = nullptr;
-    aclTensor* gates = nullptr;
+    aclTensor* storage = nullptr;
 
     // 反向传播输出 ACL Tensor 指针
     aclTensor* dgates = nullptr;
     aclTensor* dcPrev = nullptr;
     aclTensor* db = nullptr;
 
-    std::vector<float> dhyHostData(n * hiddenSize, 1.0f);       // 1*1*8 = 8个1
-    std::vector<float> dcHostData(n * hiddenSize, 1.0f);        // (8+8)*32 = 16*32 = 512个1
-    std::vector<float> cxHostData(n * hiddenSize, 1.0f);        // (8+8)*32 = 16*32 = 512个1
-    std::vector<float> cyHostData(n * hiddenSize, 1.0f);        // 32个1
-    std::vector<float> gatesHostData(n * hiddenSize * 4, 1.0f); // 32个1
+    std::vector<float> dhyHostData(n * hiddenSize, 1.0f);         // 1*8 = 8个1
+    std::vector<float> dcHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+    std::vector<float> cxHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+    std::vector<float> cyHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+    std::vector<float> storageHostData(n * hiddenSize * 4, 1.0f); // 1*8*4 = 32个1
 
     // 反向传播输出主机数据（初始化为0）
     std::vector<float> dgatesHostData(n * hiddenSize * 4, 0.0f);
@@ -131,14 +129,20 @@ int main()
     ret = CreateAclTensor(dhyHostData, dhShape, &dhyDeviceAddr, aclDataType::ACL_FLOAT, &dhy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建 params aclTensorList
+    // 创建dc aclTensor
     ret = CreateAclTensor(dcHostData, dhShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 创建cx aclTensor
     ret = CreateAclTensor(cxHostData, dhShape, &cxDeviceAddr, aclDataType::ACL_FLOAT, &cx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 创建cy aclTensor
     ret = CreateAclTensor(cyHostData, dhShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(gatesHostData, gatesShape, &gatesDeviceAddr, aclDataType::ACL_FLOAT, &gates);
+
+    // 创建storage aclTensor
+    ret = CreateAclTensor(storageHostData, gatesShape, &storageDeviceAddr, aclDataType::ACL_FLOAT, &storage);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建反向传播输出张量
@@ -154,11 +158,11 @@ int main()
     ret = CreateAclTensor(dbHostData, bShape, &dbDeviceAddr, aclDataType::ACL_FLOAT, &db);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用aclnnThnnFusedLstmCellBackward算子API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnThnnFusedLstmCellBackward第一段接口
-    ret = aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(dhy, dc, cx, cy, gates, true, dgates, dcPrev, db,
+    ret = aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(dhy, dc, cx, cy, storage, true, dgates, dcPrev, db,
                                                          &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCellBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -176,8 +180,8 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    // 打印 dparams 结果
+    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧
+    // 打印结果
     auto dgatesSize = GetShapeSize(gatesShape);
     std::vector<float> resultDgatesData(dgatesSize, 0);
     ret = aclrtMemcpy(resultDgatesData.data(), resultDgatesData.size() * sizeof(resultDgatesData[0]), dgatesDeviceAddr,
@@ -189,12 +193,12 @@ int main()
     }
 
     auto dbSize = GetShapeSize(bShape);
-    std::vector<float> resultDwhData(dbSize, 0);
-    ret = aclrtMemcpy(resultDwhData.data(), resultDwhData.size() * sizeof(resultDwhData[0]), dbDeviceAddr,
-                      dbSize * sizeof(resultDwhData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    std::vector<float> resultDbData(dbSize, 0);
+    ret = aclrtMemcpy(resultDbData.data(), resultDbData.size() * sizeof(resultDbData[0]), dbDeviceAddr,
+                      dbSize * sizeof(resultDbData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy db result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < dbSize; i++) {
-        LOG_PRINT("result db[%ld] is: %f\n", i, resultDwhData[i]);
+        LOG_PRINT("result db[%ld] is: %f\n", i, resultDbData[i]);
     }
 
     auto dcPrevSize = GetShapeSize(dhShape);
@@ -211,7 +215,7 @@ int main()
     aclDestroyTensor(dc);
     aclDestroyTensor(cx);
     aclDestroyTensor(cy);
-    aclDestroyTensor(gates);
+    aclDestroyTensor(storage);
     aclDestroyTensor(dgates);
     aclDestroyTensor(dcPrev);
     aclDestroyTensor(db);
@@ -221,7 +225,7 @@ int main()
     aclrtFree(dcDeviceAddr);
     aclrtFree(cxDeviceAddr);
     aclrtFree(cyDeviceAddr);
-    aclrtFree(gatesDeviceAddr);
+    aclrtFree(storageDeviceAddr);
     aclrtFree(dgatesDeviceAddr);
     aclrtFree(dcPrevDeviceAddr);
     aclrtFree(dbDeviceAddr);

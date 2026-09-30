@@ -125,7 +125,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>-</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，hidden_size]</td>
+      <td>[batch, hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -135,7 +135,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，hidden_size]</td>
+      <td>[batch, hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -145,7 +145,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，hidden_size]</td>
+      <td>[batch, hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -155,17 +155,17 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，hidden_size]</td>
+      <td>[batch, hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
       <td>storage</td>
       <td>输入</td>
       <td>表示LSTMCell正向输出四个门的激活值。</td>
-      <td>数据类型与input一致。</td>
+      <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，4 * hidden_size]</td>
+      <td>[batch, 4 * hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
@@ -182,7 +182,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradGatesOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中四个门预激活值的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, 4 * hidden_size]</td>
@@ -192,17 +192,17 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCxOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中输入细胞状态的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
-      <td>[batch，hidden_size]</td>
+      <td>[batch, hidden_size]</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradBiasOut</td>
       <td>输出</td>
       <td>表示LSTM正向中输入偏置的梯度。</td>
-      <td>数据类型与input一致。</td>
+      <td>数据类型与gradHy一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[4 * hidden_size]</td>
@@ -311,7 +311,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
 - 确定性计算：
   - aclnnThnnFusedLstmCellBackward默认确定性实现。
 - 边界值场景说明：
-  - 当输入是Inf时，输出为NAN。
+  - 当输入是Inf时，输出为NaN。
   - 当输入是NaN时，输出为NaN。
 
 ## 调用示例
@@ -387,7 +387,7 @@ int main() {
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
+  // 2. 构造输入与输出
   // 定义变量
   int64_t n = 1;
   int64_t hiddenSize = 8;
@@ -421,11 +421,11 @@ int main() {
   aclTensor* dcPrev = nullptr;
   aclTensor* db = nullptr;
 
-  std::vector<float> dhyHostData(n * hiddenSize, 1.0f); // 1*1*8 = 8个1
-  std::vector<float> dcHostData(n * hiddenSize, 1.0f); // (8+8)*32 = 16*32 = 512个1
-  std::vector<float> cxHostData(n * hiddenSize, 1.0f); // (8+8)*32 = 16*32 = 512个1
-  std::vector<float> cyHostData(n * hiddenSize, 1.0f); // 32个1
-  std::vector<float> storageHostData(n * hiddenSize * 4, 1.0f); // 32个1
+  std::vector<float> dhyHostData(n * hiddenSize, 1.0f);         // 1*8 = 8个1
+  std::vector<float> dcHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+  std::vector<float> cxHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+  std::vector<float> cyHostData(n * hiddenSize, 1.0f);          // 1*8 = 8个1
+  std::vector<float> storageHostData(n * hiddenSize * 4, 1.0f); // 1*8*4 = 32个1
 
   // 反向传播输出主机数据（初始化为0）
   std::vector<float> dgatesHostData(n * hiddenSize * 4, 0.0f);
@@ -436,13 +436,19 @@ int main() {
   ret = CreateAclTensor(dhyHostData, dhShape, &dhyDeviceAddr, aclDataType::ACL_FLOAT, &dhy);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建params aclTensorList
+  // 创建dc aclTensor
   ret = CreateAclTensor(dcHostData, dhShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+  // 创建cx aclTensor
   ret = CreateAclTensor(cxHostData, dhShape, &cxDeviceAddr, aclDataType::ACL_FLOAT, &cx);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+  // 创建cy aclTensor
   ret = CreateAclTensor(cyHostData, dhShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+  // 创建storage aclTensor
   ret = CreateAclTensor(storageHostData, gatesShape, &storageDeviceAddr, aclDataType::ACL_FLOAT, &storage);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
@@ -459,7 +465,7 @@ int main() {
   ret = CreateAclTensor(dbHostData, bShape, &dbDeviceAddr, aclDataType::ACL_FLOAT, &db);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的API名称
+  // 3. 调用aclnnThnnFusedLstmCellBackward算子API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnThnnFusedLstmCellBackward第一段接口
@@ -480,8 +486,8 @@ int main() {
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  // 打印dparams结果
+  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧
+  // 打印结果
   auto dgatesSize = GetShapeSize(gatesShape);
   std::vector<float> resultDgatesData(dgatesSize, 0);
   ret = aclrtMemcpy(resultDgatesData.data(), resultDgatesData.size() * sizeof(resultDgatesData[0]), dgatesDeviceAddr,
@@ -492,12 +498,12 @@ int main() {
   }
 
   auto dbSize = GetShapeSize(bShape);
-  std::vector<float> resultDwhData(dbSize, 0);
-  ret = aclrtMemcpy(resultDwhData.data(), resultDwhData.size() * sizeof(resultDwhData[0]), dbDeviceAddr,
-                    dbSize * sizeof(resultDwhData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+  std::vector<float> resultDbData(dbSize, 0);
+  ret = aclrtMemcpy(resultDbData.data(), resultDbData.size() * sizeof(resultDbData[0]), dbDeviceAddr,
+                    dbSize * sizeof(resultDbData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy db result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < dbSize; i++) {
-    LOG_PRINT("result db[%ld] is: %f\n", i, resultDwhData[i]);
+    LOG_PRINT("result db[%ld] is: %f\n", i, resultDbData[i]);
   }
 
   auto dcPrevSize = GetShapeSize(dhShape);
