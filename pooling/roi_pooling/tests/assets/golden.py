@@ -46,8 +46,18 @@ def _round_away_from_zero(t):
     return int(math.floor(t + 0.5)) if t >= 0 else -int(math.floor(-t + 0.5))
 
 
+# 向量化路径的 ph/pw 循环分块预算：每次 tile 的 gather 物化上限。
+# 循环完全展开（pH*pW*K*C*bin 维单次 gather）会重新引爆内存，
+# 分块向量化在 launch 次数与物化量之间取平衡。
+_VEC_TILE_BYTES = 64 * 1024**2
+
+
 def _roi_pool_torch(x, rois, pooled_h, pooled_w, ssh, ssw):
-    """ROI Pooling matching TBE/torchvision algorithm (vectorized, no per-element .item())."""
+    """ROI Pooling matching TBE/torchvision algorithm (vectorized, no per-element .item()).
+
+    ph/pw 两层循环按 _VEC_TILE_BYTES 分块向量化：每个 tile 一次批量 gather + amax，
+    与逐 bin 循环逐点 bit 级一致（max 对元素集合无序），launch 次数降低 2~4 个数量级。
+    """
     N, C, H, W = x.shape
     K = rois.shape[0]
     if K == 0:
@@ -101,36 +111,49 @@ def _roi_pool_torch(x, rois, pooled_h, pooled_w, ssh, ssw):
 
     offsets_h = torch.arange(max_bin_h, device=x.device, dtype=torch.long)
     offsets_w = torch.arange(max_bin_w, device=x.device, dtype=torch.long)
+    dev = x.device
+    itemsize = x_gathered.element_size()
 
-    result_h = torch.empty(pooled_h, K, C, W, dtype=x.dtype, device=x.device)
+    result_h = torch.empty(pooled_h, K, C, W, dtype=x.dtype, device=dev)
 
-    for ph in range(pooled_h):
-        hs = hstart[ph]
-        he = hend[ph]
-        h_idx = hs.unsqueeze(1) + offsets_h
-        h_valid = h_idx < he.unsqueeze(1)
+    # ---- H 维 max：按 pooled_h 分块, 每 tile 物化 (t, K, C, max_bin_h, W) ----
+    # 高级索引统一 4 维布局 (t, K, C, mbh), 未索引的 W 维自然追加为 dim4
+    k_i = torch.arange(K, device=dev)[None, :, None, None]
+    c_i = torch.arange(C, device=dev)[None, None, :, None]
+    per_ph = max(K * C * max_bin_h * W * itemsize, 1)
+    tile_h = int(max(1, min(pooled_h, _VEC_TILE_BYTES // per_ph)))
+    for ph0 in range(0, pooled_h, tile_h):
+        t = min(tile_h, pooled_h - ph0)
+        hs, he = hstart[ph0 : ph0 + t], hend[ph0 : ph0 + t]  # (t, K)
+        h_idx = hs.unsqueeze(2) + offsets_h  # (t, K, max_bin_h)
+        h_valid = h_idx < he.unsqueeze(2)
         h_idx_clamped = h_idx.clamp(max=H - 1)
-        h_idx_exp = h_idx_clamped.unsqueeze(1).unsqueeze(3).expand(K, C, max_bin_h, W)
-        gathered = torch.gather(x_gathered, 2, h_idx_exp)
-        invalid = ~h_valid.unsqueeze(1).unsqueeze(3) | torch.isnan(gathered)
+        h_i = h_idx_clamped.unsqueeze(2)  # (t, K, 1, mbh)
+        gathered = x_gathered[k_i, c_i, h_i]  # (t, K, C, max_bin_h, W)
+        invalid = ~h_valid.unsqueeze(2).unsqueeze(4) | torch.isnan(gathered)
         gathered.masked_fill_(invalid, float("-inf"))
-        result_h[ph] = gathered.amax(dim=2)
+        result_h[ph0 : ph0 + t] = gathered.amax(dim=3)
 
-    out = torch.empty(K, C, pooled_h, pooled_w, dtype=x.dtype, device=x.device)
+    out = torch.empty(K, C, pooled_h, pooled_w, dtype=x.dtype, device=dev)
 
-    for pw in range(pooled_w):
-        ws = wstart[pw]
-        we = wend[pw]
-        w_idx = ws.unsqueeze(1) + offsets_w
-        w_valid = w_idx < we.unsqueeze(1)
+    # ---- W 维 max：按 pooled_w 分块, 每 tile 物化 (pH, t, K, C, max_bin_w) ----
+    # 高级索引统一 5 维布局 (pH, t, K, C, mbw), 4 个索引覆盖 result_h 全部 4 维
+    ph_i = torch.arange(pooled_h, device=dev)[:, None, None, None, None]
+    k_j = torch.arange(K, device=dev)[None, None, :, None, None]
+    c_j = torch.arange(C, device=dev)[None, None, None, :, None]
+    per_pw = max(pooled_h * K * C * max_bin_w * itemsize, 1)
+    tile_w = int(max(1, min(pooled_w, _VEC_TILE_BYTES // per_pw)))
+    for pw0 in range(0, pooled_w, tile_w):
+        t = min(tile_w, pooled_w - pw0)
+        ws, we = wstart[pw0 : pw0 + t], wend[pw0 : pw0 + t]  # (t, K)
+        w_idx = ws.unsqueeze(2) + offsets_w  # (t, K, max_bin_w)
+        w_valid = w_idx < we.unsqueeze(2)
         w_idx_clamped = w_idx.clamp(max=W - 1)
-        w_idx_exp = (
-            w_idx_clamped.unsqueeze(0).unsqueeze(2).expand(pooled_h, K, C, max_bin_w)
-        )
-        gathered_w = torch.gather(result_h, 3, w_idx_exp)
-        gathered_w.masked_fill_(~w_valid.unsqueeze(0).unsqueeze(2), float("-inf"))
-        result_hw = gathered_w.amax(dim=3)
-        out[:, :, :, pw] = result_hw.permute(1, 2, 0)
+        w_i = w_idx_clamped.unsqueeze(0).unsqueeze(3)  # (1, t, K, 1, max_bin_w)
+        gathered_w = result_h[ph_i, k_j, c_j, w_i]  # (pH, t, K, C, max_bin_w)
+        gathered_w.masked_fill_(~w_valid.unsqueeze(0).unsqueeze(3), float("-inf"))
+        result_hw = gathered_w.amax(dim=4)  # (pH, t, K, C)
+        out[:, :, :, pw0 : pw0 + t] = result_hw.permute(2, 3, 0, 1)
 
     # 匹配 torchvision: 空 bin -> 0, 非空但无有效值(全 NaN) -> -FLT_MAX
     is_empty_h = hend <= hstart
@@ -144,13 +167,6 @@ def _roi_pool_torch(x, rois, pooled_h, pooled_w, ssh, ssw):
         torch.where(out == float("-inf"), torch.full_like(out, neg_min), out),
     )
     return out
-
-
-def _round_away_from_zero_np(t):
-    """numpy 版 C++ round 语义: round half away from zero（与 _round_away_from_zero 一致）。"""
-    return np.where(
-        t >= 0, np.floor(t + np.float32(0.5)), -np.floor(-t + np.float32(0.5))
-    ).astype(np.int64)
 
 
 # _roi_pool_torch 需物化 x[batch_idx] (K*C*H*W) 与 result_h (pH*K*C*W)，超大 shape 时可达数百 GB。
@@ -168,66 +184,60 @@ def _torch_path_estimate_bytes(x, rois, pooled_h, pooled_w):
 
 
 def _roi_pool_torch_lowmem(x, rois, pooled_h, pooled_w, ssh, ssw):
-    """_roi_pool_torch 的低内存等价实现（numpy，分块 + bin 偏移扫描）。
+    """_roi_pool_torch 的低内存等价实现（torch 分块 + bin 偏移扫描，设备无关）。
 
     与 _roi_pool_torch 数学语义逐点一致：
       - batch_idx 越界 clamp 到 [0, N-1]（同 torch.clamp）
       - roi_start/end = round half away from zero(coord * scale)，尺寸 +1、min 1
       - bin 边界 floor/ceil + roi_start，clamp 到 [0, H]/[0, W]
-      - 空 bin -> 0；非空 bin 取有效像素 max（NaN 像素剔除），全无效 -> fp32 finfo.min
-    差异仅在内存布局：不物化 x[batch_idx] 与 result_h，按 K 分块处理。
-    输入为 fp32 连续 numpy 数组（golden() 已做 fp16->fp32 提升）。
+      - 空 bin -> 0；非空 bin 取有效像素 max（NaN 像素剔除），全无效 -> dtype finfo.min
+    差异仅在内存布局：不物化 x[batch_idx] 与 result_h，按 K 分块处理，
+    峰值受 _LOWMEM_GATHER_BUDGET 预算约束（x 分块 + 累加器）。
+    所有张量操作跟随输入设备：CPU tensor 在 CPU 计算，GPU tensor 在 GPU 计算，
+    无主机搬运（三方对拍在 GPU 标杆机上执行时不产生 PCIe round-trip）。
     """
     N, C, H, W = x.shape
     K = rois.shape[0]
-    out = np.zeros((K, C, pooled_h, pooled_w), dtype=np.float32)
+    dev, dt = x.device, x.dtype
+    out = torch.zeros((K, C, pooled_h, pooled_w), dtype=dt, device=dev)
     if K == 0:
         return out
 
-    batch_idx = np.clip(rois[:, 0].astype(np.int64), 0, N - 1)
-    roi_start_w = _round_away_from_zero_np(rois[:, 1] * ssw)
-    roi_start_h = _round_away_from_zero_np(rois[:, 2] * ssh)
-    roi_end_w = _round_away_from_zero_np(rois[:, 3] * ssw)
-    roi_end_h = _round_away_from_zero_np(rois[:, 4] * ssh)
+    batch_idx = rois[:, 0].long().clamp(0, N - 1)
+    roi_start_w = _round_away_from_zero(rois[:, 1] * ssw)
+    roi_start_h = _round_away_from_zero(rois[:, 2] * ssh)
+    roi_end_w = _round_away_from_zero(rois[:, 3] * ssw)
+    roi_end_h = _round_away_from_zero(rois[:, 4] * ssh)
 
-    roi_w = np.maximum(roi_end_w - roi_start_w + 1, 1)
-    roi_h = np.maximum(roi_end_h - roi_start_h + 1, 1)
-    bin_w = roi_w.astype(np.float32) / np.float32(pooled_w)
-    bin_h = roi_h.astype(np.float32) / np.float32(pooled_h)
+    roi_w = (roi_end_w - roi_start_w + 1).clamp(min=1)
+    roi_h = (roi_end_h - roi_start_h + 1).clamp(min=1)
+    bin_w = roi_w.float() / pooled_w
+    bin_h = roi_h.float() / pooled_h
 
-    ph = np.arange(pooled_h, dtype=np.float32)
-    pw = np.arange(pooled_w, dtype=np.float32)
-    hstart = np.clip(
-        np.floor(ph[:, None] * bin_h[None, :]).astype(np.int64) + roi_start_h[None, :],
-        0,
-        H,
-    )
-    hend = np.clip(
-        np.ceil((ph[:, None] + 1) * bin_h[None, :]).astype(np.int64)
-        + roi_start_h[None, :],
-        0,
-        H,
-    )
-    wstart = np.clip(
-        np.floor(pw[:, None] * bin_w[None, :]).astype(np.int64) + roi_start_w[None, :],
-        0,
-        W,
-    )
-    wend = np.clip(
-        np.ceil((pw[:, None] + 1) * bin_w[None, :]).astype(np.int64)
-        + roi_start_w[None, :],
-        0,
-        W,
-    )
+    ph = torch.arange(pooled_h, device=dev, dtype=torch.float32)
+    pw = torch.arange(pooled_w, device=dev, dtype=torch.float32)
+    hstart = (
+        torch.floor(ph[:, None] * bin_h[None, :]).long() + roi_start_h[None, :]
+    ).clamp(0, H)
+    hend = (
+        torch.ceil((ph[:, None] + 1) * bin_h[None, :]).long() + roi_start_h[None, :]
+    ).clamp(0, H)
+    wstart = (
+        torch.floor(pw[:, None] * bin_w[None, :]).long() + roi_start_w[None, :]
+    ).clamp(0, W)
+    wend = (
+        torch.ceil((pw[:, None] + 1) * bin_w[None, :]).long() + roi_start_w[None, :]
+    ).clamp(0, W)
 
     empty = (hend <= hstart)[:, None, :] | (wend <= wstart)[None, :, :]  # (P, Q, K)
 
-    per_k = max(pooled_h * pooled_w * C * 4, 1)
+    itemsize = dt.itemsize
+    per_k = max(pooled_h * pooled_w * C * itemsize, 1)
     chunk = int(max(1, _LOWMEM_GATHER_BUDGET // per_k))
     # xb = x[batch_idx[k0:k1]] 物化 B*C*H*W，同样受预算约束（取两者较小值）
-    per_k_x = max(C * H * W * 4, 1)
+    per_k_x = max(C * H * W * itemsize, 1)
     chunk = min(chunk, int(max(1, _LOWMEM_GATHER_BUDGET // per_k_x)))
-    finfo_min = np.finfo(np.float32).min
+    finfo_min = torch.finfo(dt).min
 
     for k0 in range(0, K, chunk):
         k1 = min(k0 + chunk, K)
@@ -238,37 +248,45 @@ def _roi_pool_torch_lowmem(x, rois, pooled_h, pooled_w, ssh, ssw):
         emp = empty[:, :, k0:k1]
         max_bh = max(int((he - hs).max()), 0)
         max_bw = max(int((we - ws).max()), 0)
-        acc = np.full((pooled_h, pooled_w, B, C), -np.inf, dtype=np.float32)
-        bb = np.arange(B)[None, None, :, None]
-        cb = np.arange(C)[None, None, None, :]
+        acc = torch.full(
+            (pooled_h, pooled_w, B, C), float("-inf"), dtype=dt, device=dev
+        )
+        bb = torch.arange(B, device=dev)[None, None, :, None]
+        cb = torch.arange(C, device=dev)[None, None, None, :]
         for dy in range(max_bh):
-            y = hs + dy
+            y = hs + dy  # (P, B)
             vy = y < he
-            yi = np.clip(y, 0, H - 1)
+            yi = y.clamp(0, H - 1)
             for dx in range(max_bw):
-                xv = ws + dx
+                xv = ws + dx  # (Q, B)
                 vw = xv < we
-                xi = np.clip(xv, 0, W - 1)
+                xi = xv.clamp(0, W - 1)
                 g = xb[
                     bb, cb, yi[:, None, :, None], xi[None, :, :, None]
                 ]  # (P, Q, B, C)
-                valid = (
-                    vy[:, None, :, None] & vw[None, :, :, None] & (~emp[:, :, :, None])
+                g = torch.nan_to_num(g, nan=float("-inf"))  # NaN 像素剔除
+                g.masked_fill_(
+                    ~(
+                        vy[:, None, :, None]
+                        & vw[None, :, :, None]
+                        & ~emp[:, :, :, None]
+                    ),
+                    float("-inf"),
                 )
-                g = np.where(np.isnan(g), -np.inf, g)
-                np.maximum(acc, np.where(valid, g, -np.inf), out=acc)
-        res = np.where(acc == -np.inf, finfo_min, acc)
-        out[k0:k1] = np.where(emp[:, :, :, None], np.float32(0.0), res).transpose(
-            2, 3, 0, 1
-        )
+                torch.maximum(acc, g, out=acc)
+        res = torch.where(acc == float("-inf"), torch.full_like(acc, finfo_min), acc)
+        res = res.masked_fill(emp[:, :, :, None], 0.0)  # 空 bin -> 0
+        out[k0:k1] = res.permute(2, 3, 0, 1)
     return out
 
 
 def _roi_pool_compute(x, rois, pooled_h, pooled_w, spatial_scale_h, spatial_scale_w):
-    """ROI Pooling core computation (shared by golden).
+    """ROI Pooling core computation (shared by golden and third_party).
 
     Equal scale uses roi_pool; unequal scale uses _roi_pool_torch.
-    超大 shape自动切换到 _roi_pool_torch_lowmem——与 _roi_pool_torch 数学语义逐点一致的低内存实现。
+    超大 shape
+    自动切换到 _roi_pool_torch_lowmem——与 _roi_pool_torch 数学语义逐点一致的低内存实现，
+    在输入所在设备上分块执行。
     """
     output_size = (int(pooled_h), int(pooled_w))
     ssh = float(spatial_scale_h)
@@ -280,20 +298,11 @@ def _roi_pool_compute(x, rois, pooled_h, pooled_w, spatial_scale_h, spatial_scal
         <= _TORCH_PATH_MEM_BUDGET
     ):
         return _roi_pool_torch(x, rois, int(pooled_h), int(pooled_w), ssh, ssw)
-    return torch.from_numpy(
-        _roi_pool_torch_lowmem(
-            x.detach().numpy(),
-            rois.detach().numpy(),
-            int(pooled_h),
-            int(pooled_w),
-            ssh,
-            ssw,
-        )
-    )
+    return _roi_pool_torch_lowmem(x, rois, int(pooled_h), int(pooled_w), ssh, ssw)
 
 
 class RoiPoolingKernelSpec:
-    """Kernel / GEIR golden"""
+    """Kernel / GEIR golden (2D rois only)"""
 
     def golden(
         x,
@@ -353,28 +362,13 @@ class RoiPoolingKernelSpec:
                         spatial_scale=self._ssh,
                     )
                 ]
-            # 与 golden() 相同的内存预算路由：超预算时切换 lowmem
-            if (
-                _torch_path_estimate_bytes(self._x, self._rois, *self._output_size)
-                <= _TORCH_PATH_MEM_BUDGET
-            ):
-                return [
-                    _roi_pool_torch(
-                        self._x, self._rois, *self._output_size, self._ssh, self._ssw
-                    )
-                ]
-            # lowmem 为 numpy(fp32) 实现：搬 CPU 计算（fp16 先提升，与 golden() 语义一致），
-            orig_dtype = self._x.dtype
-            out = torch.from_numpy(
-                _roi_pool_torch_lowmem(
-                    self._x.float().detach().cpu().numpy(),
-                    self._rois.float().detach().cpu().numpy(),
-                    *self._output_size,
-                    self._ssh,
-                    self._ssw,
+            # 与 golden() 相同的内存预算路由（共享 _roi_pool_compute）：
+            # 超预算时切 _roi_pool_torch_lowmem（torch 分块，设备无关）
+            return [
+                _roi_pool_compute(
+                    self._x, self._rois, *self._output_size, self._ssh, self._ssw
                 )
-            ).to(device=self._x.device, dtype=orig_dtype)
-            return [out]
+            ]
 
     third_party = {"torch": ThirdPartyImpl}
     tolerance = {
