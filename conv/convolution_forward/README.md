@@ -44,7 +44,7 @@
 | output | 输出 | <ul><li>公式中的out，表示卷积输出。</li><li>数据类型需要与input与weight推导之后的数据类型保持一致。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
 | cubeMathType | 输入 | <ul><li>用于判断Cube单元应该使用哪种计算逻辑进行运算。</li><li>0 (KEEP_DTYPE): 保持输入数据类型进行计算。</li><li> 1 (ALLOW_FP32_DOWN_PRECISION): 允许FLOAT32降低精度计算，提升性能。</li><li> 2 (USE_FP16): 使用FLOAT16精度进行计算。</li><li> 3 (USE_HF32): 使用HF32（混合精度）进行计算。</li></ul> | INT8 | - |
 
-* <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term>、<term>Atlas A3训练系列产品/Atlas A3推理系列产品</term>：
+* <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - input、weight数据类型不支持HIFLOAT8、FLOAT8_E4M3FN。
     - bias数据类型不支持HIFLOAT8、FLOAT8_E4M3FN。数据类型与input、weight一致。
     - conv1d、conv2d、conv3d正向场景下bias会转成FLOAT参与计算。
@@ -68,7 +68,7 @@
 
 ## 约束说明
 
-* <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term>、<term>Atlas A3训练系列产品/Atlas A3推理系列产品</term>：input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
+* <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
 * <term>Ascend 950PR&950DT系列产品</term>：transposed为true的场景，支持1D、2D和3D卷积，支持空Tensor。
 * 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
 
