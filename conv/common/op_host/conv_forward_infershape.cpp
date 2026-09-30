@@ -1447,6 +1447,16 @@ static ge::graphStatus InferShapeForConv2DV2(InferShapeContext* context)
     return InferShapeForConvInner(context, convParamIdx, convType);
 }
 
+static ge::graphStatus InferDataTypeConv2DV2(gert::InferDataTypeContext* context)
+{
+    OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("Conv2DV2", "context is null."), return ge::GRAPH_FAILED);
+
+    const ge::DataType xDtype = context->GetInputDataType(X_IDX_CONV);
+    context->SetOutputDataType(Y_IDX_CONV, xDtype);
+    OP_LOGD(context->GetNodeName(), "Set y dtype: %s success.", DTypeToStr(xDtype).c_str());
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShapeForConv3DV2(InferShapeContext* context)
 {
     OpParamIdx convParamIdx = {X_IDX_CONV,    W_IDX_CONV,         BIAS_IDX_CONV,   Y_IDX_CONV,        STRIDES_IDX_CONV,
@@ -1560,6 +1570,14 @@ ge::graphStatus InferShapeRangeForConvInner(gert::InferShapeRangeContext* contex
                "failed to set output shape range.");
 
     return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus InferShapeRangeForConv2DV2(gert::InferShapeRangeContext* context)
+{
+    OpParamIdx convParamIdx = {X_IDX_CONV,    W_IDX_CONV,         BIAS_IDX_CONV,   Y_IDX_CONV,        STRIDES_IDX_CONV,
+                               PADS_IDX_CONV, DILATIONS_IDX_CONV, GROUPS_IDX_CONV, PAD_MODE_IDX_CONV, -1};
+    ConvOptype convType = ConvOptype::CONV2DV2;
+    return InferShapeRangeForConvInner(context, convParamIdx, convType);
 }
 
 static ge::graphStatus InferShapeRangeForQuantConv3D(gert::InferShapeRangeContext* context)
@@ -1696,6 +1714,8 @@ static ge::graphStatus InferDataTypeExtendConv2D(gert::InferDataTypeContext* con
 
 IMPL_OP_INFERSHAPE(Conv2DV2)
     .InferShape(Ops::NN::Conv::InferShapeForConv2DV2)
+    .InferShapeRange(Ops::NN::Conv::InferShapeRangeForConv2DV2)
+    .InferDataType(Ops::NN::Conv::InferDataTypeConv2DV2)
     .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 
 IMPL_OP_INFERSHAPE(Conv3DV2)

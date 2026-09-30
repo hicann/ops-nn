@@ -1148,3 +1148,80 @@ TEST_F(Conv2DV2RuntimeInferShape, SupportedConv2dv2NHWCFp16PadModeSame)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+// InferShapeRange: derive y range from x range. NCHW strides {1,1,2,2}, pads {1,1,1,1}, kernel 3x3.
+TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2InferShapeRangeSpecific)
+{
+    auto inferShapeRangeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Conv2DV2")->infer_shape_range;
+    ASSERT_NE(inferShapeRangeFunc, nullptr);
+
+    gert::Shape xMin = {1, 32, 8, 16};
+    gert::Shape xMax = {1, 32, 64, 128};
+    gert::Shape wMin = {16, 32, 3, 3};
+    gert::Shape wMax = {16, 32, 3, 3};
+    gert::Shape yMin;
+    gert::Shape yMax;
+    gert::Range<gert::Shape> xRange(&xMin, &xMax);
+    gert::Range<gert::Shape> wRange(&wMin, &wMax);
+    gert::Range<gert::Shape> yRange(&yMin, &yMax);
+
+    auto holder = gert::InferShapeRangeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .InputShapeRanges({&xRange, &wRange})
+                      .OutputShapeRanges({&yRange})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .Build();
+
+    ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    // H: (8+2-2-1)/2+1=4 / (64+2-2-1)/2+1=32; W: (16+2-2-1)/2+1=8 / (128+2-2-1)/2+1=64
+    // C follows filter N=16, N follows x
+    gert::Shape targetMin = {1, 16, 4, 8};
+    gert::Shape targetMax = {1, 16, 32, 64};
+    auto* outRange = holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0);
+    ASSERT_EQ(Ops::Base::ToString(*outRange->GetMin()), Ops::Base::ToString(targetMin));
+    ASSERT_EQ(Ops::Base::ToString(*outRange->GetMax()), Ops::Base::ToString(targetMax));
+}
+
+// InferDataType: y dtype follows x.
+TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2InferDataTypeFollowX)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Conv2DV2")->infer_datatype;
+    ASSERT_NE(inferDataTypeFunc, nullptr);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .Build();
+
+    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_FLOAT16);
+}
+
+TEST_F(Conv2DV2RuntimeInferShape, Conv2dv2InferDataTypeHifloat8FollowX)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Conv2DV2")->infer_datatype;
+    ASSERT_NE(inferDataTypeFunc, nullptr);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .Build();
+
+    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_HIFLOAT8);
+}

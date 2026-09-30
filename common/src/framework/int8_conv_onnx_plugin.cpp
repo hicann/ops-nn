@@ -12,6 +12,7 @@
 #include "op_nn_proto_extend.h"
 #include "quant/ascend_dequant/op_graph/ascend_dequant_proto.h"
 #include "quant/ascend_quant/op_graph/ascend_quant_proto.h"
+#include "conv/conv2d/op_graph/conv2d_proto.h"
 
 using namespace ge;
 

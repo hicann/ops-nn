@@ -13,6 +13,7 @@
 #include "quant/ascend_dequant/op_graph/ascend_dequant_proto.h"
 #include "quant/ascend_quant/op_graph/ascend_quant_proto.h"
 #include "activation/relu/op_graph/relu_proto.h"
+#include "conv/conv2d/op_graph/conv2d_proto.h"
 
 namespace {
 constexpr int X_INDEX = 0;

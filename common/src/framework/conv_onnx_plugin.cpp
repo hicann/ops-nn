@@ -11,6 +11,7 @@
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
 #include "conv/conv3d/op_graph/conv3d_proto.h"
+#include "conv/conv2d/op_graph/conv2d_proto.h"
 
 namespace domi {
 

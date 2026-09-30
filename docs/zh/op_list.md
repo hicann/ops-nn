@@ -1020,6 +1020,26 @@
   </tr>
   <tr>
     <td>conv</td>
+    <td><a href="../../conv/conv3d/README.md">conv3d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现3D卷积rt1.0功能。</td>
+  </tr>
+  <tr>
+    <td>conv</td>
+    <td><a href="../../conv/conv2d/README.md">conv2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现2D卷积rt1.0功能。</td>
+  </tr>
+  <tr>
+    <td>conv</td>
     <td><a href="../../conv/convolution_backward/README.md">convolution_backward</a></td>
     <td>✓</td>
     <td>✓</td>
