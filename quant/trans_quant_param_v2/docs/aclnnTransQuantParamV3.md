@@ -25,18 +25,18 @@
 
 ## 功能说明
 
-- 接口功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转换模式。
+- 接口功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64、INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转换模式。
 - 计算公式：
 
   1. `out`为64位格式，初始为0。
 
-  2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
+  2. 若`roundMode`为1，`scale`按bit位round到高19位，`roundMode`为0不做处理。
 
      $$
      scale = Round(scale)
      $$
 
-  3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
+  3. `scale`按bit位保留高19位（即bit位13~31，低13位清零），写入`out`的低32位，并将46位修改为1。
 
      $$
      out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
@@ -61,7 +61,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnTransQuantParamV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTransQuantParamV3”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
   const aclTensor* scale,
   const aclTensor* offset,
@@ -71,7 +71,7 @@ aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
   aclOpExecutor**  executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV3(
   void                *workspace,
   uint64_t             workspaceSize,
@@ -271,7 +271,7 @@ aclnnStatus aclnnTransQuantParamV3(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <memory>
 #include <iostream>
 #include <vector>

@@ -43,19 +43,19 @@
     out = (x1@x2 + bias) * x2Scale + x2Offset
     $$
 
-    - 有x1Scale无bias
+    - 有x1Scale、无bias：
 
     $$
     out = x1@x2 * x2Scale * x1Scale
     $$
 
-    - 有x1Scale，bias INT32
+    - 有x1Scale，bias INT32：
 
     $$
     out = (x1@x2 + bias) * x2Scale * x1Scale
     $$
 
-    - 有x1Scale，bias FLOAT32
+    - 有x1Scale，bias FLOAT32：
 
     $$
     out = x1@x2 * x2Scale * x1Scale + bias
@@ -586,7 +586,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       | FLOAT8_E4M3FN        | FLOAT8_E4M3FN        | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
       | HIFLOAT8             | HIFLOAT8             | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
 
-    - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致;
+    - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致。
     - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
     - 当x1与x2数据类型为FLOAT8_E4M3FN和HIFLOAT8时，仅支持transA为false。
 
@@ -646,9 +646,9 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
 
     - 约束说明：
-      - MX量化模式下, k要求8对齐, n要求8对齐。
+      - MX量化模式下，k要求8对齐，n要求8对齐。
       - T-CG量化模式下，k要求32对齐且大于等于64，n要求8对齐。
-      - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
+      - x1是FLOAT8_E4M3FN，x2是FLOAT32时，x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
       - MX量化模式下，bias数据类型与out数据类型需要一致；T-CG量化模式下，x2Scale的数据类型和out的数据类型需要一致。
 
 </details>
@@ -1195,7 +1195,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // C语言中无法直接打印fp16的数据，需要用uint16读出来，自行通过二进制转成fp16
+          size, 0);  // uint16_t保存FP16原始位模式；下方以整数打印位模式，如需打印浮点数值，应先按FP16格式解码为float
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -1446,7 +1446,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       }
       // 调用aclnnPermute第二段接口
       ret = aclnnPermute(workspaceAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermute failed. ERROR: %d\n", ret); return ret);
 
       workspaceSize = 0;
       // 调用aclnnTransMatmulWeight第一段接口
@@ -1508,7 +1508,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // C语言中无法直接打印fp16的数据，需要用uint16读出来，自行通过二进制转成fp16
+          size, 0);  // uint16_t保存FP16原始位模式；下方以整数打印位模式，如需打印浮点数值，应先按FP16格式解码为float
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -1836,7 +1836,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(size,
-                                       0); // C语言中无法直接打印fp16的数据，需要用uint16读出来，自行通过二进制转成fp16
+                                       0); // uint16_t保存BF16原始位模式；下方通过Bf16ToFloat转换为float后打印浮点数值
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);

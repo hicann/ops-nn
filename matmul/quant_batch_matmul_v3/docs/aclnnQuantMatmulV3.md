@@ -1401,7 +1401,7 @@ aclnnStatus aclnnQuantMatmulV3(
       }
       // 调用aclnnPermute第二段接口
       ret = aclnnPermute(workspaceAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermute failed. ERROR: %d\n", ret); return ret);
 
       workspaceSize = 0;
       // 调用aclnnTransMatmulWeight第一段接口

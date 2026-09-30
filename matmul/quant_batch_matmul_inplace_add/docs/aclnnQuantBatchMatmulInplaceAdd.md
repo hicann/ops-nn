@@ -178,7 +178,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>输入</td>
       <td>整数型参数，用于输入m、n、k方向上的量化分组大小。</td>
       <td>
-      由3个方向的groupSizeM，groupSizeN，groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。
+      由3个方向的groupSizeM、groupSizeN、groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。
       </td>
       <td>INT64</td>
       <td>-</td>
@@ -500,8 +500,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧
       auto size = GetShapeSize(yInputShape);
       std::vector<float> resultData(size, 0);
-      ret = aclrtMemcpy(resultData.data(), size * sizeof(uint32_t), yInputDeviceAddr,
-                       size * sizeof(uint32_t), ACL_MEMCPY_DEVICE_TO_HOST);
+      ret = aclrtMemcpy(resultData.data(), size * sizeof(resultData[0]), yInputDeviceAddr,
+                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
       for (int64_t j = 0; j < size; j++) {
           LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
