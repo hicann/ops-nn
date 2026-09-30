@@ -242,7 +242,7 @@ aclnnStatus aclnnAscendQuantV3(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、scale、y是空指针。</td>
+      <td>传入的x、scale、y或roundMode是空指针。</td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>

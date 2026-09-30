@@ -358,7 +358,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910B_rountMode_is_null_error)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_1)

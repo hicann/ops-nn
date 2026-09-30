@@ -99,11 +99,15 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
     }
 }
 
-static inline bool CheckNotNull(const aclTensor* x, const aclTensor* scale, const aclTensor* y)
+static inline bool CheckNotNull(const aclTensor* x, const aclTensor* scale, const char* roundMode, const aclTensor* y)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(scale, return false);
     OP_CHECK_NULL(y, return false);
+    if (roundMode == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "roundMode cannot be nullptr");
+        return false;
+    }
     return true;
 }
 
@@ -267,10 +271,6 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
 
 static bool CheckRoundMode(const char* roundMode, int32_t dstType)
 {
-    if (roundMode == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode cannot be empty");
-        return false;
-    }
     const std::string mode = std::string(roundMode);
     if (dstType == op::DataType::DT_HIFLOAT8) {
         if (mode != "round" && mode != "hybrid") {
@@ -353,7 +353,7 @@ static aclnnStatus CheckInputScalar(const aclTensor* x)
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* scale, const aclTensor* offset,
                                const char* roundMode, int32_t dstType, int32_t axis, const aclTensor* y)
 {
-    CHECK_RET(CheckNotNull(x, scale, y), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x, scale, roundMode, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckInputScalar(x), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckDtypeValid(x, scale, offset, y, dstType), ACLNN_ERR_PARAM_INVALID);

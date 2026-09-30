@@ -96,7 +96,7 @@ aclnnStatus aclnnGroupQuant(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化中的scale值，对应公式中的`scale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>`scale`的第2维与x的第2维相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>`scale`的第0维大小不支持为0。</li><li>`scale`的第2维与x的第2维相等。</li></ul></td>
       <td>FLOAT32，FLOAT16，BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnGroupQuant(
       <td>groupIndex（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化中的groupIndex值。</td>
-      <td><ul><li>支持空Tensor。</li><li>维度与scale的第1维相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>维度与scale的第1维相等。</li></ul></td>
       <td>INT32，INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnGroupQuant(
       <td>offsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示量化中的offset值，对应公式中的`offsetOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`scale`一致。</li><li>`offsetOptional`为1个数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`scale`一致。</li><li>`offsetOptional`为1个数。</li></ul></td>
       <td>FLOAT32，FLOAT16，BFLOAT16</td>
       <td>ND</td>
       <td>1</td>

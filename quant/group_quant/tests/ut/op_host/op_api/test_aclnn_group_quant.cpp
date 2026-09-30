@@ -102,3 +102,36 @@ TEST_F(l2_group_quant_test, ascend910B2_param_invalid)
     CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT64, ACL_FLOAT, ACL_INT32, ACL_INT32, true,
                ACLNN_ERR_PARAM_INVALID);
 }
+
+// scale dim0 is zero, should be rejected by the first-stage interface with 161002
+TEST_F(l2_group_quant_test, ascend910B2_scale_dim0_is_zero)
+{
+    auto x = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto scale = TensorDesc({0, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto groupIndex = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto y = TensorDesc({4, 8}, ACL_INT8, ACL_FORMAT_ND);
+    int32_t dstType = ACL_INT8;
+
+    auto ut = OP_API_UT(aclnnGroupQuant, INPUT(x, scale, groupIndex, nullptr, dstType), OUTPUT(y));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// offsetOptional contains no element (shape is [0]), should be rejected by the first-stage interface with 161002
+TEST_F(l2_group_quant_test, ascend910B2_offset_is_empty)
+{
+    auto x = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto scale = TensorDesc({2, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto groupIndex = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+    auto offset = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y = TensorDesc({4, 8}, ACL_INT8, ACL_FORMAT_ND);
+    int32_t dstType = ACL_INT8;
+
+    auto ut = OP_API_UT(aclnnGroupQuant, INPUT(x, scale, groupIndex, offset, dstType), OUTPUT(y));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

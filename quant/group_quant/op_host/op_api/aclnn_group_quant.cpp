@@ -134,10 +134,11 @@ static bool CheckDim(const aclTensor* x, const aclTensor* scale, const aclTensor
     //  groupIndex(E)
     //  offset(1)
     if (offsetOptional != nullptr) {
-        OP_CHECK(
-            offsetOptional->GetViewShape().GetShapeSize() <= 1,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offsetOptional tensor should be scalar or tensor with shape is [1, ]."),
-            return false);
+        OP_CHECK(offsetOptional->GetViewShape().GetShapeSize() == 1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "offsetOptional tensor should be scalar or tensor with shape is [1, ], but shape is %s.",
+                         op::ToString(offsetOptional->GetViewShape()).GetString()),
+                 return false);
     }
 
     auto xShape = x->GetViewShape();
@@ -156,6 +157,10 @@ static bool CheckDim(const aclTensor* x, const aclTensor* scale, const aclTensor
     OP_CHECK(xDim1 == scaleDim1, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim1 should be same with scale dim1."),
              return false);
     OP_CHECK(scaleDim0 == groupDim, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dim0 should be same with groupIndex dim0."),
+             return false);
+    OP_CHECK(scaleDim0 > 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the first dim of scale should not be 0, but scale shape is %s.",
+                     op::ToString(scaleShape).GetString()),
              return false);
 
     return true;
