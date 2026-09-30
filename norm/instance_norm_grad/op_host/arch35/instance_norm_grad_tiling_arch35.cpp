@@ -167,6 +167,7 @@ ge::graphStatus InstanceNormGradRegBaseTiling::InputCheck()
                                                    .c_str(),
                                                "The shapes of dy, x and pd_x must be the same"),
         return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -207,6 +208,36 @@ ge::graphStatus InstanceNormGradRegBaseTiling::ParamsCheck()
                      std::to_string(N_ * C_))
                         .c_str()),
                 return ge::GRAPH_FAILED);
+
+    // variance 与 mean 还须**形状相等** —— 上面只比了元素数, 而元素数相等推不出形状相等
+    // (如 (N,C) 与 (N,1,1,1,C) 元素数同为 N*C)。A2 对此有显式校验
+    // (canndev instance_norm_grad.py::_check_shape "shape of variance and mean should be same"),
+    // 我方此前缺。
+    OP_CHECK_IF(varShape != meanShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "variance and mean",
+                    (Ops::Base::ToString(varShape) + " and " + Ops::Base::ToString(meanShape)).c_str(),
+                    "The shapes of variance and mean must be the same"),
+                return ge::GRAPH_FAILED);
+
+    // 两个统计量输出同样按 C_ 个元素写回(base.h:83-84 的 SetGlobalBuffer 长度由 dy 推出的
+    // N_/C_ 决定), 元素数不符即越界写。原 ParamsCheck 只校验了输入侧。
+    const std::vector<std::pair<uint16_t, const char*>> cSizedOutputs = {{OUTPUT_IDX_PDGAMMA, "pd_gamma"},
+                                                                         {OUTPUT_IDX_PDBETA, "pd_beta"}};
+    for (const auto& [idx, name] : cSizedOutputs) {
+        auto shPtr = context_->GetOutputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, shPtr);
+        const auto& sh = shPtr->GetStorageShape();
+        int64_t n = 1;
+        for (uint32_t k = 0; k < sh.GetDimNum(); k++) {
+            n *= sh.GetDim(k);
+        }
+        OP_CHECK_IF(n != C_,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), name, Ops::Base::ToString(sh).c_str(),
+                        ("The size of this output must equal the C axis, where C = " + std::to_string(C_)).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 

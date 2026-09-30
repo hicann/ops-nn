@@ -89,7 +89,12 @@
 ## 约束说明
 
 - 仅支持图模式调用。
+- 数据格式仅支持NDC1HWC0（6维），所有输入与输出一致。
+- 入参`x`的shape必须与`dy`完全一致。
+- 入参`variance`、`mean`与输出`res_gamma`、`res_beta`的shape须为(N, 1, C1, 1, 1, C0)，即由`dy`的N、C1、C0确定、归约轴D/H/W折叠为1。
+- 入参`dy`、`x`的数据类型须一致，同为FLOAT16或同为FLOAT32；`variance`、`mean`与两个输出恒为FLOAT32。
 - 归约轴（D、H、W）中存在0时，`res_gamma`、`res_beta`的所有元素均为0。
+- N、C1、C0维度需大于0；为0时不支持，算子拒绝执行。
 
 ## 调用说明
 

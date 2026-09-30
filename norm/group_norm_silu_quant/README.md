@@ -44,157 +44,105 @@
 
 ## 参数说明
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
-    <col style="width: 187px">
-    <col style="width: 121px">
-    <col style="width: 287px">
-    <col style="width: 387px">
-    <col style="width: 187px">
-    <col style="width: 187px">
-    <col style="width: 187px">
-    <col style="width: 146px">
-    </colgroup>
-    <thead>
+<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
     <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-        <th>使用说明</th>
-        <th>数据类型</th>
-        <th>数据格式</th>
-        <th>维度(shape)</th>
-        <th>非连续Tensor</th>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
     </tr></thead>
-    <tbody>
+  <tbody>
     <tr>
-        <td>self</td>
-        <td>输入</td>
-        <td>计算公式中的x。</td>
-        <td>支持空Tensor：N（第0维）与C（第1维）需大于0，其余维度可为0。此时out为空，meanOut填充为0，rstdOut填充为NAN。</td>
-        <td>FLOAT16、BFLOAT16</td>
-        <td>ND</td>
-        <td>2-8，其中第0维为N，第1维为C</td>
-        <td>√</td>
+      <td>x</td>
+      <td>输入</td>
+      <td>表示待归一化的输入张量，对应公式中的`x`。维度为2~8，第0维为N、第1维为C。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>gamma</td>
-        <td>输入</td>
-        <td>公式中的γ。</td>
-        <td>数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
-        <td>FLOAT16、BFLOAT16</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>gamma</td>
+      <td>输入</td>
+      <td>表示归一化后的缩放张量，对应公式中的$\gamma$。数据类型与`x`一致，shape为`[C]`（C为`x`的第1维）。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>beta</td>
-        <td>输入</td>
-        <td>公式中的β。</td>
-        <td>数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
-        <td>FLOAT16、BFLOAT16</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>beta</td>
+      <td>输入</td>
+      <td>表示归一化后的偏移张量，对应公式中的$\beta$。数据类型与`x`一致，shape为`[C]`（C为`x`的第1维）。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>quantScale</td>
-        <td>输入</td>
-        <td>公式中的quantScale。</td>
-        <td>元素数量需为1或与输入self的第1维度保持相同。</td>
-        <td>FLOAT32</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+      <td>quantScale</td>
+      <td>输入</td>
+      <td>表示量化缩放系数，对应公式中的`quantScale`。shape为`[1]`（per-tensor）或`[C]`（per-channel，C为`x`的第1维）。</td>
+      <td>FLOAT</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>group</td>
-        <td>输入</td>
-        <td>表示将输入self的第1维度分为group组。</td>
-        <td>group需可以整除self的第一维度</td>
-        <td>INT64</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>num_groups</td>
+      <td>属性</td>
+      <td>表示将`x`的第1维（C）分为`num_groups`组，需能整除C。</td>
+      <td>INT</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>eps</td>
-        <td>输入</td>
-        <td>公式中的eps。</td>
-        <td>eps需要大于0</td>
-        <td>DOUBLE</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>eps</td>
+      <td>属性</td>
+      <td>表示归一化时加在方差上的扰动量，对应公式中的$\epsilon$，默认值为1e-05。</td>
+      <td>FLOAT</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>activateSilu</td>
-        <td>输入</td>
-        <td>是否开启silu计算。</td>
-        <td>当前仅支持开启。</td>
-        <td>BOOL</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>activate_silu</td>
+      <td>属性</td>
+      <td>表示是否对归一化结果做Silu激活，默认值为true；取false时跳过激活直接量化。</td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
     <tr>
-        <td>out</td>
-        <td>输出</td>
-        <td>量化后的结果，公式中的out。</td>
-        <td>-</td>
-        <td>INT8</td>
-        <td>ND</td>
-        <td>与self一致</td>
-        <td>√</td>
+      <td>yOut</td>
+      <td>输出</td>
+      <td>表示量化后的输出张量，对应公式中的`yOut`。shape与`x`一致。</td>
+      <td>INT8</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>meanOut</td>
-        <td>输出</td>
-        <td>公式中的meanOut。</td>
-        <td>数据类型与self保持一致，shape中N与self的第0维度保持一致。</td>
-        <td>FLOAT16、BFLOAT16</td>
-        <td>ND</td>
-        <td>(N, group)</td>
-        <td>√</td>
+      <td>meanOut</td>
+      <td>输出</td>
+      <td>表示每组的均值，对应公式中的`meanOut`。数据类型与`x`一致，shape为(N, num_groups)。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
     </tr>
     <tr>
-        <td>rstdOut</td>
-        <td>输出</td>
-        <td>公式中的rstdOut。</td>
-        <td>数据类型与self保持一致，shape中N与self的第0维度保持一致。</td>
-        <td>FLOAT16、BFLOAT16</td>
-        <td>ND</td>
-        <td>(N, group)</td>
-        <td>√</td>
+      <td>rstdOut</td>
+      <td>输出</td>
+      <td>表示每组标准差的倒数，对应公式中的`rstdOut`。数据类型与`x`一致，shape为(N, num_groups)。</td>
+      <td>FLOAT16、BFLOAT16</td>
+      <td>ND</td>
     </tr>
-    <tr>
-        <td>workspaceSize</td>
-        <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>executor</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-    </tr>
-    </tbody></table>
+  </tbody></table>
 
 ## 约束说明
 
-无
+- `x`的维度为2~8，第0维为N、第1维为C；`num_groups`需能整除C。
+- `gamma`、`beta`的shape需为`[C]`，数据类型与`x`一致。
+- `quantScale`的shape需为`[1]`（per-tensor）或`[C]`（per-channel）。
+- 本节描述算子（图模式）的约束。aclnn接口另有其自身约束，参见[aclnnGroupNormSiluQuant](docs/aclnnGroupNormSiluQuant.md)。
+- 支持空Tensor：N（第0维）与C（第1维）需大于0，其余维度可为0；此时`yOut`为空，`meanOut`填充为0、`rstdOut`填充为NAN。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_group_norm_silu_quant.cpp](examples/arch22/test_aclnn_group_norm_silu_quant.cpp) | 通过[aclnnGroupNormSiluQuant.md](docs/aclnnGroupNormSiluQuant.md)接口方式调用GroupNormSiluQuant算子。 |
-| 图模式调用 | [test_geir_group_norm_silu_quant.cpp](examples/arch35/test_geir_group_norm_silu_quant.cpp) | 通过[算子IR](op_graph/group_norm_silu_quant_proto.h)构图方式调用GroupNormSiluQuant算子。 |
+| aclnn接口  | [test_aclnn_group_norm_silu_quant](examples/arch22/test_aclnn_group_norm_silu_quant.cpp) | 通过[aclnnGroupNormSiluQuant](docs/aclnnGroupNormSiluQuant.md)接口方式调用GroupNormSiluQuant算子。 |
+| 图模式调用 | [test_geir_group_norm_silu_quant](examples/arch35/test_geir_group_norm_silu_quant.cpp) | 通过[算子IR](op_graph/group_norm_silu_quant_proto.h)构图方式调用GroupNormSiluQuant算子。 |

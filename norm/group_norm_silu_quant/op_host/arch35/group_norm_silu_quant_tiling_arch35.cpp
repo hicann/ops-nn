@@ -17,6 +17,9 @@
 #include "op_host/tiling_templates_registry.h"
 #include "op_host/tiling_util.h"
 namespace optiling {
+
+// SetScheduleMode 的 batch mode: 整批 block 一起下发, 是跨核同步(SyncAll)成立的前提。
+constexpr uint32_t BATCH_MODE_SCHEDULE = 1;
 static const uint64_t X_SHAPE_MIN_LEN = 2;
 static const uint64_t X_SHAPE_MAX_LEN = 8;
 static const uint64_t INPUT_IDX_X = 0;
@@ -1101,6 +1104,16 @@ ge::graphStatus Tiling4GroupNormSiluQuantRegBase(gert::TilingContext* context)
     // block dim, tilingKey
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
+
+    // split-reduce(1140) 内核用 SyncAll 做两阶段跨核归约, 要求所有 block 同时在位;
+    // 默认调度下可能只驻留一部分核, 先到的核会在 SyncAll 上永久等待 -> 死锁。
+    // batch mode(1) 保证整批一起下发。只对 1140 设置: 其余 tilingKey 不含跨核同步,
+    // 无谓地改调度模式会影响它们的性能。
+    if (tilingData.get_tilingKey() ==
+        static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_SPLIT_REDUCE)) {
+        OP_CHECK_IF(context->SetScheduleMode(BATCH_MODE_SCHEDULE) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context->GetNodeName(), "SetScheduleMode failed."), return ge::GRAPH_FAILED);
+    }
     size_t* workspaces = context->GetWorkspaceSizes(1);
     workspaces[0] = sysWorkspaceSize + splitUserWs;
 

@@ -19,8 +19,9 @@ TTK TestSpec for instance_norm_grad (kernel / GEIR 通路, arch35/Ascend950).
 
 布局 NDHWC：空间维 (D,H,W) 按 (N,C) 实例规约；gamma/beta 梯度再对 N 规约（仅保留 C）。
 variance 是 RAW 方差，rstd 用固定 eps=1e-6 计算；不从新鲜前向重推方差。
-全部 torch 算子拼接（非 numpy 纯公式，红线 R3），fp64 真值（大规约对消敏感，
-fp32 golden 自带误差会误flag内核——内核为 fp32+Kahan，已达 fp32 地板）。
+全部 torch 算子拼接（非 numpy 纯公式，红线 R3）。精度档不由 golden 自己硬抬:
+照 ttk_golden_logic.md 三/四,三方档由 TTK Promote 抬(零 cast)、泛化档跟内核的加宽
+行为——见 _work_dtype。大规约对消敏感,内核为 fp32+Kahan,已达 fp32 地板。
 
 Canonical IO order (instance_norm_grad_def.cpp):
     inputs : dy, x, variance, mean, gamma
@@ -42,6 +43,19 @@ _TOL = {
 INSTANCE_NORM_GRAD_EPS = 1e-6
 
 
+def _work_dtype(*tensors):
+    """计算档位:只向上兜底 —— f16/bf16 抬 f32;任一输入是 f64(Promote 抬档)则全 f64。
+
+    golden 自己不做 Promote:三方档(cross_check)由 TTK 抬(入口 dtype 已整体高一档),
+    这里再 `.to(float64)` 是重复动作、还会掩盖 Promote 空转;两方泛化档 TTK 不提升,
+    规范(ttk_golden_logic.md 三/四)要求跟 NPU 的加宽行为——内核把 f16/bf16 抬到 f32
+    做中间量,f32 不再加宽。
+    """
+    if any(t.dtype == torch.float64 for t in tensors):
+        return torch.float64
+    return torch.float32
+
+
 def _sum_axes(t, axes, keepdim=True):
     """对 axes 求和；axes 为空则恒等返回（torch 会把空 dim 元组当成对所有维求和）。"""
     if not axes:
@@ -50,7 +64,7 @@ def _sum_axes(t, axes, keepdim=True):
 
 
 def _compute(dy, x, variance, mean, gamma, **_):
-    """torch.Tensor 进 / 出（fp64 真值），返回 [pd_x, pd_gamma, pd_beta]，顺序照 def.cpp。"""
+    """torch.Tensor 进 / 出（档位由 _work_dtype 定），返回 [pd_x, pd_gamma, pd_beta]，顺序照 def.cpp。"""
     nd = x.dim()
     C = x.shape[-1]
     reduce_axes = tuple(range(1, nd - 1))  # 空间轴 (D,H,W)
@@ -58,15 +72,16 @@ def _compute(dy, x, variance, mean, gamma, **_):
     for ax in reduce_axes:
         m *= x.shape[ax]
 
-    dyf = dy.to(torch.float64)
-    xf = x.to(torch.float64)
+    work = _work_dtype(dy, x, variance, mean, gamma)
+    dyf = dy.to(work)
+    xf = x.to(work)
 
     pshape = [x.shape[0]] + [1] * (nd - 2) + [C]  # [N,1,...,1,C]
-    varb = variance.to(torch.float64).reshape(pshape)
-    meanb = mean.to(torch.float64).reshape(pshape)
+    varb = variance.to(work).reshape(pshape)
+    meanb = mean.to(work).reshape(pshape)
     gshape = [1] * nd
     gshape[-1] = C
-    gammab = gamma.to(torch.float64).reshape(gshape)
+    gammab = gamma.to(work).reshape(gshape)
 
     rstd = torch.pow(varb + INSTANCE_NORM_GRAD_EPS, -0.5)
     rstd3 = torch.pow(varb + INSTANCE_NORM_GRAD_EPS, -1.5)
@@ -93,12 +108,24 @@ def _compute(dy, x, variance, mean, gamma, **_):
     return [pd_x, pd_gamma, pd_beta]
 
 
+def _tp_widen(t):
+    """三方腿的计算档: **跟 NPU 的加宽行为**(ttk_golden_logic.md 三/四 的 GPU 列)。
+
+    内核把 f16/bf16 抬到 f32 做中间量, f32 不再加宽; 三方腿必须同步, 出口再窄回。
+    不同步的后果是三方被人为劣化 —— 它把整条归约留在 f16 算, 误差远大于内核,
+    cross_check 的分母虚高、比值系统性偏小, 内核有缺陷也照样 PASS。
+    (L2 实测: fp16 档 mare 比值中位 0.0135, fp32 档 0.4697, 差 35 倍。)
+    """
+    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
 class _InstanceNormGradCompose:
     """三方标杆：torch 拼接在远端 GPU 执行，fp32（竞品自然精度，不抬 fp64——
     否则分母趋零、cross_check 比值爆表，会把内核误判成缺陷；三方须同精度对等）。
     参数名与 def.cpp 逐字一致（dy/x/variance/mean/gamma）。
-    ⚠️ 输出必须 cast 回 NPU 的输出 dtype（= 输入 dtype），否则竞品留在 fp32 而
-    NPU 是 fp16 时 ratio 凭空爆表（gnsq 实测 mare 961→1.0 的教训）。
+    计算档由 `_tp_widen` 跟随内核(f16/bf16 抬 f32); 出口必须 cast 回 NPU 的输出 dtype
+    (= 输入 dtype), 否则竞品留在 fp32 而 NPU 是 fp16 时 ratio 凭空爆表
+    (gnsq 实测 mare 961→1.0 的教训)。两步缺一不可: 只窄回不加宽 = 三方被劣化、掩盖缺陷。
     """
 
     def __init__(self, **_):
@@ -112,12 +139,14 @@ class _InstanceNormGradCompose:
         for ax in reduce_axes:
             m *= x.shape[ax]
 
+        # 计算档跟内核: f16/bf16 抬 f32(内核中间量即 f32), 出口再窄回 dy.dtype。
+        dyw, xw = _tp_widen(dy), _tp_widen(x)
         pshape = [x.shape[0]] + [1] * (nd - 2) + [C]
-        varb = variance.reshape(pshape)
-        meanb = mean.reshape(pshape)
+        varb = _tp_widen(variance).reshape(pshape)
+        meanb = _tp_widen(mean).reshape(pshape)
         gshape = [1] * nd
         gshape[-1] = C
-        gammab = gamma.reshape(gshape)
+        gammab = _tp_widen(gamma).reshape(gshape)
 
         rstd = torch.pow(varb + INSTANCE_NORM_GRAD_EPS, -0.5)
         # rstd^3 必须与算子实现逐字一致(A2 tbe impl instance_norm_grad.py:117-118 与 arch35 内核
@@ -125,17 +154,47 @@ class _InstanceNormGradCompose:
         # 实现准约 2 倍,三方比的就不再是"同一算法下谁实现得更好",而是"用了哪个公式"。
         # fp64 golden 不受影响(两种写法差 ~2e-16),故只在三方 compose 这一处对齐。
         rstd3 = rstd * rstd * rstd
-        xc = x - meanb
-        pd_xl = dy * gammab
+        xc = xw - meanb
+        pd_xl = dyw * gammab
         # 空轴集求和取恒等，理由同 _compute（rank == 2 无空间轴）。
         pd_var = _sum_axes(-0.5 * pd_xl * xc * rstd3, reduce_axes)
         pd_mean = _sum_axes(-1.0 * pd_xl * rstd, reduce_axes)
         inv_m = 0.0 if m == 0 else 1.0 / m
         pd_x = pd_xl * rstd + pd_var * (2.0 * inv_m) * xc + pd_mean * inv_m
         x_hat = xc * rstd
-        pd_gamma = (dy * x_hat).sum(dim=(0,) + reduce_axes)
-        pd_beta = dy.sum(dim=(0,) + reduce_axes)
+        pd_gamma = (dyw * x_hat).sum(dim=(0,) + reduce_axes)
+        pd_beta = dyw.sum(dim=(0,) + reduce_axes)
         return [pd_x.to(dy.dtype), pd_gamma.to(dy.dtype), pd_beta.to(dy.dtype)]
+
+
+def _inject_nonfinite(dy, x, variance, mean, gamma, testcase_name=""):
+    """DFX-nonfinite 档的定点注入: 只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan: TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**(ttk/utilities/data.py `_digitize_inf_nan`), 写了也造不出
+    非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    只注入**数据面**输入(dy, x), 不注入权重/统计量(variance, mean, gamma):
+    后者是逐通道广播量, 注入会让整通道输出非有限, 掩盖"非有限值沿计算链如何传播"这一档
+    真正要看的东西。位置固定不随机(随机会让复现依赖 seed, 小 shape 时还可能一个都注不进去):
+    首元素 +inf、第 2 个 -inf、第 3 个 nan。元素数 < 3 不注入。
+
+    预期行为: 按 IEEE 语义自然传播, 仍走正常精度判据, 不是拒收档。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return dy, x, variance, mean, gamma
+    _t0 = np.ascontiguousarray(dy).copy() if dy is not None else None
+    _t1 = np.ascontiguousarray(x).copy() if x is not None else None
+    _t2 = np.ascontiguousarray(variance).copy() if variance is not None else None
+    _t3 = np.ascontiguousarray(mean).copy() if mean is not None else None
+    _t4 = np.ascontiguousarray(gamma).copy() if gamma is not None else None
+    if _t0 is not None and _t0.size >= 3:
+        _f = _t0.reshape(-1)
+        _f[0], _f[1], _f[2] = np.inf, -np.inf, np.nan
+    if _t1 is not None and _t1.size >= 3:
+        _f = _t1.reshape(-1)
+        _f[0], _f[1], _f[2] = np.inf, -np.inf, np.nan
+    return _t0, _t1, _t2, _t3, _t4
 
 
 class InstanceNormGradSpec:
@@ -157,6 +216,11 @@ class InstanceNormGradSpec:
             o.numpy().astype(od[i] if i < len(od) else ori_dtype, copy=False)
             for i, o in enumerate(outs)
         ]
+
+    def customize_inputs(dy, x, variance, mean, gamma, **kwargs):
+        return _inject_nonfinite(
+            dy, x, variance, mean, gamma, kwargs.get("testcase_name", "")
+        )
 
     third_party = {"torch": _InstanceNormGradCompose}
     tolerance = _TOL

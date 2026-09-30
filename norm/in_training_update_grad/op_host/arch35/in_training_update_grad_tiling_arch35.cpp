@@ -23,6 +23,9 @@ using namespace Ops::Base;
 
 namespace {
 constexpr int64_t NDC1HWC0_DIM_NUM = 6;
+// C0 不做 ==16 的校验: 平台常量 C0_SIZE 虽为 16(tbe platform_info.py:39 / cce_params.py:144),
+// 但本算子的全部尺寸都从 dy 的 C0 推导, 六个张量 C0 一致时(由下面的形状校验保证)结果对该布局即正确,
+// C0 取值不影响我方输出正确性; 校验它只会拒掉本能正常工作的输入。A2 亦无此约束。
 constexpr int64_t DIM_N = 0;
 constexpr int64_t DIM_D = 1;
 constexpr int64_t DIM_C1 = 2;
@@ -154,6 +157,60 @@ ge::graphStatus InTrainingUpdateGradTilingBase::GetShapeAttrsInfo()
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape).c_str(),
                                                       "spatial dims (D, H, W) of input dy must not be negative"),
                 return ge::GRAPH_FAILED);
+
+    // 跨输入/输出 shape 一致性。tiling 的全部维度只从 dy 取(见上), kernel 也按这套几何读写其余
+    // 张量: variance/mean 按每组 C0 个元素连续读(full_load.h:121 DataCopyPad varianceGm_[scalarOffset]),
+    // 两个输出同样是 groupNum*C0。形状不符时不会报错, 而是按 dy 的几何去读写别人的内存 —— 越界或
+    // 静默读错数据, 必须在入口拦住。
+    //
+    // A2(canndev in_training_update_grad.py)对此无显式校验, 但其 DSL 隐式要求等价:
+    //   vadd(x, broadcast(mean, shape_dy))  -> x 必须与 dy 同形;
+    //   broadcast(variance, shape_dy)       -> variance/mean 必须可广播到 dy;
+    //   tuple_sum(..., [1,3,4], keepdims)   -> 输出形状由 dy 的归约轴决定, 与 variance 无关。
+    // 故这里按**dy 推出的期望形状**判定, 不拿 variance 当基准(那样会把 A2 的语义搞反)。
+    auto xShapePtr = context_->GetInputShape(INPUT_X_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
+    const auto& xShape = xShapePtr->GetStorageShape();
+    OP_CHECK_IF(xShape != storageShape,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xShape).c_str(),
+                                                      "The shape of x must be the same as dy"),
+                return ge::GRAPH_FAILED);
+
+    // 统计量与输出的期望形状: (N, 1, C1, 1, 1, C0) —— D/H/W 三个归约轴折叠为 1。
+    gert::Shape statShape;
+    statShape.SetDimNum(NDC1HWC0_DIM_NUM);
+    statShape.SetDim(DIM_N, numN_);
+    statShape.SetDim(DIM_D, 1);
+    statShape.SetDim(DIM_C1, numC1_);
+    statShape.SetDim(DIM_H, 1);
+    statShape.SetDim(DIM_W, 1);
+    statShape.SetDim(DIM_C0, numC0_);
+    const std::vector<std::pair<const gert::Shape*, std::string>> statTensors = {
+        {context_->GetInputShape(INPUT_VARIANCE_IDX) == nullptr ?
+             nullptr :
+             &context_->GetInputShape(INPUT_VARIANCE_IDX)->GetStorageShape(),
+         "variance"},
+        {context_->GetInputShape(INPUT_MEAN_IDX) == nullptr ?
+             nullptr :
+             &context_->GetInputShape(INPUT_MEAN_IDX)->GetStorageShape(),
+         "mean"},
+        {context_->GetOutputShape(OUTPUT_RES_GAMMA_IDX) == nullptr ?
+             nullptr :
+             &context_->GetOutputShape(OUTPUT_RES_GAMMA_IDX)->GetStorageShape(),
+         "res_gamma"},
+        {context_->GetOutputShape(OUTPUT_RES_BETA_IDX) == nullptr ?
+             nullptr :
+             &context_->GetOutputShape(OUTPUT_RES_BETA_IDX)->GetStorageShape(),
+         "res_beta"}};
+    for (const auto& [shapePtr, name] : statTensors) {
+        OP_CHECK_IF(shapePtr == nullptr, OP_LOGE(context_->GetNodeName(), "shape of %s is null", name.c_str()),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            *shapePtr != statShape,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), name.c_str(), ToString(*shapePtr).c_str(),
+                                                  "The shape must be (N, 1, C1, 1, 1, C0) derived from dy"),
+            return ge::GRAPH_FAILED);
+    }
 
     numHW_ = numH_ * numW_;
     reduceR_ = numD_ * numHW_;

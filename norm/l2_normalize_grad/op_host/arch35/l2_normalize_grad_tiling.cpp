@@ -64,6 +64,9 @@ constexpr int64_t MIN_D_TILE = 128;       // 2VL:strided-split 每趟至少铺�
 // 与内核常量一一对应(l2_normalize_grad_regbase_common.h / _split_d.h);host 是 UB 尺寸的唯一权威
 
 constexpr int64_t K_SPLIT_D_MAX_CHUNKS = 256; // 与内核累加槽数一致(定长槽,非平台量)
+// 7010 的 s 走 double-float 补偿求和,需要 4 个 VL 的 (hi,lo) 暂存槽(hi/lo 各 1 VL + 各 1 VL 补零,
+// 补零是给车道间树形合并按 +stride 偏移读时兜底的)。复用 accum 缓冲,故其尺寸取两者较大者。
+constexpr int64_t K_SPLIT_D_DF_SCRATCH_VLS = 4;
 
 // 平台量一律经接口取,不写死:核数 / UB 大小 / 矢量寄存器长度 / 系统 workspace 预留。
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum,
@@ -272,7 +275,8 @@ static int64_t DeriveUbFactor(uint64_t ubSize, bool isSplitD, int64_t vlElems)
     const int64_t perElem = STRIDED_BUF_NUM * BUFFER_NUM * FLOAT_BYTE + 2 * FLOAT_BYTE; // 40B/元素
     int64_t fixed = 2 * vlElems * FLOAT_BYTE;                                           // 两个 tmp buf
     if (isSplitD) {
-        fixed += 2 * K_SPLIT_D_MAX_CHUNKS * FLOAT_BYTE; // 两个 chunk 累加槽
+        fixed += 2 * std::max(K_SPLIT_D_MAX_CHUNKS, K_SPLIT_D_DF_SCRATCH_VLS * vlElems) *
+                 FLOAT_BYTE; // 两个 chunk 累加槽(其一兼作 double-float 暂存)
     }
     int64_t f = (ubAvail - fixed) / perElem;
     const int64_t alignVL = vlElems; // 1VL,由平台 GetVecRegLen 推导;与内核行宽对齐一致
@@ -405,7 +409,7 @@ static void ComputeBufBytes(uint32_t tilingKey, int64_t dimLen, int64_t colFacto
     } else if (tilingKey == SPLIT_D_KEY) {
         qBufBytes = ubFactorElems * FLOAT_BYTE;
         reduceBufBytes = ubFactorElems * FLOAT_BYTE;
-        accumBufBytes = K_SPLIT_D_MAX_CHUNKS * FLOAT_BYTE;
+        accumBufBytes = std::max(K_SPLIT_D_MAX_CHUNKS, K_SPLIT_D_DF_SCRATCH_VLS * vlElems) * FLOAT_BYTE;
         tmpBufBytes = vlElems * FLOAT_BYTE;
     } else if (tilingKey == STRIDED_KEY || tilingKey == STRIDED_SPLIT_KEY) {
         // 归约改用平台 ReduceSum<Pattern::Reduce::RA>,需要两块 **fp32** 中间量 tile(x^2 / y*dy)
@@ -476,7 +480,8 @@ static ge::graphStatus CheckUbBudget(gert::TilingContext* context, uint32_t tili
     if (tilingKey == EMPTY_TILING_KEY) {
         return ge::GRAPH_SUCCESS;
     }
-    // 四个 in/out 队列均双缓冲;reduce/tmp 各两份;accum 在 7010 为两份、7030 为四份(含 Kahan 补偿量)
+    // 四个 in/out 队列均双缓冲;reduce/tmp 各两份;accum 在 7010 为两份(其一兼作 s 的
+    // double-float 暂存)、7030 为四份
     int64_t total = STRIDED_BUF_NUM * BUFFER_NUM * qBufBytes + 2 * reduceBufBytes + 2 * tmpBufBytes +
                     2 * accumBufBytes + 2 * midBufBytes + 2 * sumBufBytes + 2 * slotBufBytes;
     const int64_t avail = static_cast<int64_t>(ubSize) - UB_RESERVED;

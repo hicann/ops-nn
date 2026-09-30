@@ -115,6 +115,10 @@
 ## 约束说明
 
 - 确定性说明：确定性实现。
+- 入参`dy`、`x`与输出`pd_x`的shape必须完全一致。
+- 入参`variance`、`mean`的shape必须相同，元素数须为N×C（N为`dy`的第0维、C为`dy`的末维）。
+- 入参`gamma`与输出`pd_gamma`、`pd_beta`的元素数均须为C。
+- 所有输入与输出的数据类型必须一致，同为FLOAT16或同为FLOAT32。
 - `x`为空Tensor时，`pd_x`同为空Tensor，`pd_gamma`、`pd_beta`的所有元素均为0。
 
 ## 调用说明

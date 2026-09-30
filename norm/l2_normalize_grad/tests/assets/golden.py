@@ -13,7 +13,7 @@
 TTK TestSpec for l2_normalize_grad (kernel / GEIR 通路, arch35/Ascend950).
 
 三份资产各司其职：
-    golden       —— 真值，torch 算子拼接（sum/sqrt/clamp/逐点乘除），fp64 计算（理由见下）
+    golden       —— 真值，torch 算子拼接（sum/sqrt/clamp/逐点乘除），档位见下
     third_party  —— 三方标杆，torch 拼接在远端 GPU 上执行（fp32，竞品自然精度）
     tolerance    —— 浮点输出 cross_check（NPU/竞品 相对 golden 的误差比值）
 
@@ -26,15 +26,13 @@ TTK TestSpec for l2_normalize_grad (kernel / GEIR 通路, arch35/Ascend950).
 当 y == F.normalize(x, p=2, dim, eps)（一致输入、||x|| > eps 的正常量级）时，等价于
 torch autograd 经 F.normalize 的反向（见 00_spec 2 / 6.1）。
 
-为什么 golden 返回 fp64（特事特办，非一般规则）：
-  - 内部用 fp64 算是通用做法：dx = dy - y*s 是对消差，fp32 golden 自带规约/对消误差、
-    会误flag内核（torch 拼接、非 numpy 纯公式，红线 R3）。
-  - 返回值也保留 fp64,是本算子声明 cross_check 的要求:三条腿在比较前统一 promote
-    (core_modules/comparison/cross_check.py:18),golden 必须严格高于 NPU 与三方两条腿,
-    误差比值才有意义(三方腿刻意留 fp32,见 third_party 注释)。
-  ⚠️ 因此本 golden **不可**改用 binary_equal 判据:该判据对 dtype 不一致直接判"不可比"
-    (GOLD 0%),数值完全正确也会全红。若将来要换 binary_equal,须同步把返回值 cast 回
-    算子输出 dtype(参照 instance_norm_grad 的写法)。
+精度档位（ttk_golden_logic.md 三/四）：golden **自己不抬精度**。
+  - 三方档(cross_check)由 TTK 的 Promote 把入口 dtype 整体抬一档,golden 零 cast;
+    自行 `.to(float64)` 不但是重复动作,还会掩盖 Promote 空转(TTK 为此留了 warning)。
+  - 两方泛化档 TTK 不提升,规范要求跟 NPU 的加宽行为——内核把 f16/bf16 抬到 f32 做
+    中间量、f32 不再加宽,golden 照此由 `_work_dtype` 决定,出口按下发 dtype 窄回。
+  dx = dy - y*s 是对消差,对 s 的归约误差敏感;真值的精度由上面的档位规则保证,
+  不靠 golden 自己硬抬。
 
 Canonical IO order (l2_normalize_grad_def.cpp):
     inputs : x, y, dy（同 dtype）
@@ -91,14 +89,28 @@ def _attr(kwargs, name, default):
     return default if v is None else v
 
 
+def _work_dtype(*tensors):
+    """计算档位:只向上兜底 —— f16/bf16 抬 f32;任一输入是 f64(Promote 抬档)则全 f64。
+
+    golden 自己不做 Promote:三方档(cross_check)由 TTK 抬(入口 dtype 已整体高一档),
+    这里再 `.to(float64)` 是重复动作、还会掩盖 Promote 空转;两方泛化档 TTK 不提升,
+    规范(ttk_golden_logic.md 三/四)要求跟 NPU 的加宽行为——内核把 f16/bf16 抬到 f32
+    做中间量,f32 不再加宽。
+    """
+    if any(t.dtype == torch.float64 for t in tensors):
+        return torch.float64
+    return torch.float32
+
+
 def _compute(x, y, dy, **kwargs):
-    """torch.Tensor 进 / 出（fp64 真值），返回 [dx]，顺序照 def.cpp。"""
+    """torch.Tensor 进 / 出（档位由 _work_dtype 定），返回 [dx]，顺序照 def.cpp。"""
     axes = _resolve_axis(_attr(kwargs, "dim", ()), x.dim())
     eps = float(_attr(kwargs, "eps", 1e-4))
 
-    xf = x.to(torch.float64)
-    yf = y.to(torch.float64)
-    dyf = dy.to(torch.float64)
+    work = _work_dtype(x, y, dy)
+    xf = x.to(work)
+    yf = y.to(work)
+    dyf = dy.to(work)
 
     # ── 以下全部为 torch 库算子拼接，不手写 numpy 数值公式（红线 R3）──
     sq, s = _reduce_pair(xf * xf, yf * dyf, axes)
@@ -107,10 +119,22 @@ def _compute(x, y, dy, **kwargs):
     return [dx]
 
 
+def _tp_widen(t):
+    """三方腿的计算档: **跟 NPU 的加宽行为**(ttk_golden_logic.md 三/四 的 GPU 列)。
+
+    内核把 f16/bf16 抬到 f32 做中间量, f32 不再加宽; 三方腿必须同步, 出口再窄回。
+    不同步的后果是三方被人为劣化 —— 它把整条归约留在 f16 算, 误差远大于内核,
+    cross_check 的分母虚高、比值系统性偏小, 内核有缺陷也照样 PASS。
+    (L2 实测: fp16 档 mare 比值中位 0.0135, fp32 档 0.4697, 差 35 倍。)
+    """
+    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
 class _L2NormalizeGradCompose:
-    """三方标杆：torch 拼接在远端 GPU 执行，fp32（竞品自然精度，不抬 fp64——
-    否则分母趋零、cross_check 比值爆表，会把内核误判成缺陷；三方须同精度对等）。
-    参数名与 def.cpp 逐字一致（x/y/dy/dim/eps）。输出与 NPU 同 dtype，无需额外 cast。
+    """三方标杆：torch 拼接在远端 GPU 执行。不抬 fp64——否则分母趋零、cross_check
+    比值爆表，会把内核误判成缺陷；三方须与 NPU 同精度对等。
+    参数名与 def.cpp 逐字一致（x/y/dy/dim/eps）。
+    计算档由 `_tp_widen` 跟随内核(f16/bf16 抬 f32)，出口按 dy.dtype 窄回。
     """
 
     def __init__(self, *, dim=(), eps=1e-4, **_):
@@ -119,13 +143,42 @@ class _L2NormalizeGradCompose:
 
     def __call__(self, x, y, dy, **_):
         axes = _resolve_axis(self.dim, x.dim())
-        sq, s = _reduce_pair(x * x, y * dy, axes)
+        xw, yw, dyw = _tp_widen(x), _tp_widen(y), _tp_widen(dy)
+        sq, s = _reduce_pair(xw * xw, yw * dyw, axes)
         n = torch.clamp(torch.sqrt(sq), min=self.eps)
-        return [(dy - y * s) / n]
+        return [((dyw - yw * s) / n).to(dy.dtype)]
+
+
+def _inject_nonfinite(x, y, dy, testcase_name=""):
+    """DFX-nonfinite 档的定点注入: 只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan: TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**(ttk/utilities/data.py `_digitize_inf_nan`), 写了也造不出
+    非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    只注入**数据面**输入(x, dy), 不注入权重/统计量(y):
+    后者是逐通道广播量, 注入会让整通道输出非有限, 掩盖"非有限值沿计算链如何传播"这一档
+    真正要看的东西。位置固定不随机(随机会让复现依赖 seed, 小 shape 时还可能一个都注不进去):
+    首元素 +inf、第 2 个 -inf、第 3 个 nan。元素数 < 3 不注入。
+
+    预期行为: 按 IEEE 语义自然传播, 仍走正常精度判据, 不是拒收档。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return x, y, dy
+    _t0 = np.ascontiguousarray(x).copy() if x is not None else None
+    _t1 = np.ascontiguousarray(y).copy() if y is not None else None
+    _t2 = np.ascontiguousarray(dy).copy() if dy is not None else None
+    if _t0 is not None and _t0.size >= 3:
+        _f = _t0.reshape(-1)
+        _f[0], _f[1], _f[2] = np.inf, -np.inf, np.nan
+    if _t2 is not None and _t2.size >= 3:
+        _f = _t2.reshape(-1)
+        _f[0], _f[1], _f[2] = np.inf, -np.inf, np.nan
+    return _t0, _t1, _t2
 
 
 class L2NormalizeGradSpec:
-    """kernel / GEIR 通路 spec：golden 收 numpy.ndarray、返 list[np.ndarray](fp64 真值)。"""
+    """kernel / GEIR 通路 spec：golden 收 numpy.ndarray、返 list[np.ndarray](档位见 _work_dtype)。"""
 
     def golden(x, y, dy, **kwargs):
         outs = _compute(
@@ -134,7 +187,11 @@ class L2NormalizeGradSpec:
             torch.from_numpy(np.ascontiguousarray(dy)),
             **kwargs,
         )
-        return [o.numpy().astype(np.float64) for o in outs]
+        # 出口跟随下发 dtype 窄回(Promote 档下发即 fp64, 此处自然是 no-op)。
+        return [o.numpy().astype(x.dtype) for o in outs]
+
+    def customize_inputs(x, y, dy, **kwargs):
+        return _inject_nonfinite(x, y, dy, kwargs.get("testcase_name", ""))
 
     third_party = {"torch": _L2NormalizeGradCompose}
     tolerance = _TOL
