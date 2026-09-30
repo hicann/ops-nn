@@ -5659,6 +5659,16 @@
     <td>unsorted_segment_prod主要功能是对一个张量分段求乘积。</td>
   </tr>
   <tr>
+    <td>index</td>
+    <td><a href="../../index/tensor_scatter_sub/README.md">tensor_scatter_sub</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将x拷贝到输出y，再按照indices指定的位置，逐条将updates中对应的slice从y中减去，重复索引按输入顺序串行累减，结果确定。</td>
+  </tr>
+  <tr>
     <td>rnn</td>
     <td><a href="../../rnn/single_layer_lstm/README.md">single_layer_lstm</a></td>
     <td>✓</td>
