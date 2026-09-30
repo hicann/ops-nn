@@ -102,7 +102,7 @@ aclnnStatus aclnnAvgPool2d(
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>表示待转换的张量，公式中的input。</td>
+      <td>表示待进行平均池化的输入张量，公式中的input。</td>
       <td>不支持空Tensor。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCHW、NCL</td>
