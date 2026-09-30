@@ -21,6 +21,7 @@
 #include "simt_api/asc_simt.h"
 #include "simt_api/asc_fp16.h"
 #include "simt_api/asc_bf16.h"
+#include "utils/debug/asc_assert.h" // __asc_simt_vf::__trap：simt_vf 内可用的 Trap
 #include "multi_scale_deformable_attn_function_tiling_data.h"
 
 #ifdef __CCE_KT_TEST__
@@ -132,6 +133,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MsdaSimtForwardFunc(
             int32_t hL = spatialShapesGm[l * 2];
             int32_t wL = spatialShapesGm[l * 2 + 1];
             int32_t levelStart = levelStartIndexGm[l];
+
+            // 校验 valueGm 读区间 [levelStart, levelStart + hL*wL) 不越出 numKeys；hL/wL 非正时 guard 恒假、
+            // 零读取（simt_vf 内不可调用 AscendC::Trap/ascendc_assert，用 SIMT 版 __trap 终止）
+            if (static_cast<int64_t>(levelStart) < 0 ||
+                static_cast<int64_t>(levelStart) + static_cast<int64_t>(hL) * wL > numKeys) {
+                __asc_simt_vf::__trap();
+            }
 
             for (int64_t p = 0; p < numPoints; p++) {
                 sum += SampleBilinearPoint<T>(valueGm, samplingLocGm, attnWeightGm, valBase, locBase, weightBase,

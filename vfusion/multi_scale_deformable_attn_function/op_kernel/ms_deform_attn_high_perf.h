@@ -300,7 +300,13 @@ __aicore__ inline void KernelMultiScaleDeformableAttnOpt<num_points, embed_dims>
         for (uint32_t level = 0; level < numLevels_; ++level) {
             int32_t h = shapes.GetValue(level * 2);
             int32_t w = shapes.GetValue(level * 2 + 1);
-            srcOffset_ = valueOffset + offset.GetValue(level) * outDims_;
+            int64_t levelStart = static_cast<int64_t>(offset.GetValue(level));
+
+            // 校验 valueGm 读区间 [levelStart, levelStart + h*w) 不越出 numKeys_；h/w 非正时 guard 恒假、零读取
+            if (levelStart < 0 || levelStart + static_cast<int64_t>(h) * w > static_cast<int64_t>(numKeys_)) {
+                AscendC::Trap();
+            }
+            srcOffset_ = valueOffset + static_cast<uint32_t>(levelStart) * outDims_;
 
             uint32_t sx = head * alignedOneHeadNum_ + level * alignedNumPoints_;
             uint32_t sy = sx + alignedOneQueryNum_;

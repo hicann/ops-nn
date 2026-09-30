@@ -310,6 +310,12 @@ private:
         h = shapesLocal.GetValue(level * TWO);
         w = shapesLocal.GetValue(level * TWO + 1);
 
+        // 校验 valueGm 读区间 [levelStartId, levelStartId + h*w) 不越出 numKeys；h/w 非正时 guard 恒假、零读取
+        if (static_cast<int64_t>(levelStartId) < 0 ||
+            static_cast<int64_t>(levelStartId) + h * w > static_cast<int64_t>(numKeys)) {
+            AscendC::Trap();
+        }
+
         offsetWeight = batch * weightStride3 + head * weightStride2 + level * weightStride1 + point * weightStride0;
         offsetLocation = TWO * offsetWeight;
         thisCycleNumAlign = (nqloop == numQueriesper - 1) ? numQueriestail : maxUbNum;
