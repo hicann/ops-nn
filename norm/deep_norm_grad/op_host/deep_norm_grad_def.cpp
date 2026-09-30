@@ -78,7 +78,6 @@ public:
         this->Attr("alpha").AttrType(OPTIONAL).Float(0.3f);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend950");
 
         OpAICoreConfig config_310p;
         config_310p.Input("dy")

@@ -66,17 +66,6 @@ public:
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
-
-        OpAICoreConfig aicore_config950;
-        aicore_config950.DynamicCompileStaticFlag(true)
-            .DynamicFormatFlag(false)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "dynamic_quant_update_scatter_v2")
-            .ExtendCfgInfo("opInterface.value", "dynamic_quant_update_scatter_v2");
-        this->AICore().AddConfig("ascend950", aicore_config950);
     }
 
 private:

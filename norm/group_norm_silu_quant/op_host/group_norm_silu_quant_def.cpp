@@ -59,15 +59,6 @@ public:
         this->Attr("activate_silu").AttrType(OPTIONAL).Bool(true);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-
-        // arch35(Ascend950) regbase 配置: A5 原型与 A2 完全一致(仅 same-type), 故不重复声明输入输出原型,
-        // 仅覆盖 950 特有项(opFile + dynamic flags), 其余继承 this->(见 opdef-aicoreconfig-partial-override)。
-        OpAICoreConfig config_regbase;
-        config_regbase.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "group_norm_silu_quant");
-        this->AICore().AddConfig("ascend950", config_regbase);
     }
 };
 

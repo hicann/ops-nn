@@ -116,20 +116,6 @@ public:
         this->Attr("block_size").AttrType(OPTIONAL).Int(BLOCKSIZE);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-
-        // arch35(Ascend950)regbase 出包配置:契约与 A2 完全一致(9 入/5 出、fp32/fp16/bf16),
-        // 仅走 regbase 编译路径;opFile/opInterface 名与 A2 相同,由 op_kernel CMake 的
-        // COMPUTE_UNITS 路由区分根 kernel(A2)与 arch35/ kernel(A5)。
-        OpAICoreConfig aicoreConfig950;
-        aicoreConfig950.DynamicCompileStaticFlag(true)
-            .DynamicFormatFlag(false)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "apply_adam_w_quant")
-            .ExtendCfgInfo("opInterface.value", "apply_adam_w_quant");
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
     }
 };
 
