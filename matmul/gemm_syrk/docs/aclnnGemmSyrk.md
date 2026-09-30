@@ -23,20 +23,20 @@
 
 ## 功能说明
 
-- 接口功能：完成对称秩k更新（syrk，参考 cublas `?syrk`）计算，计算 $\alpha$ 乘以 A 与其转置的乘积，再与
-  $\beta$ 和 C 的乘积求和，结果原地写回 C（输出完整对称矩阵，上三角和下三角均写出，而非只写单个三角）。
+- 接口功能：完成对称秩k更新（syrk，参考 cublas `syrk`）计算，计算 α 乘以 A 与其转置的乘积，再与
+  β 和 C 的乘积求和，结果原地写回 C（输出完整对称矩阵，上三角和下三角均写出，而非只写单个三角）。
 - 计算公式（transposeX = false，a 为 (…, m, k)，2-6 维，前面为 batch 轴）：
 
-  $$
-  C = \alpha \times (A @ A^T) + \beta \times C
-  $$
+  <div>
+  C = α × (A @ A<sup>T</sup>) + β × C
+  </div>
 
   transposeX = true 时，a 以转置的 (…, k, m) 布局存储，计算
-  $C = \alpha \times (A^T @ A) + \beta \times C$（对应 cublas syrk 的 OP_T 语义）。
+  C = α × (A<sup>T</sup> @ A) + β × C（对应 cublas syrk 的 OP_T 语义）。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGemmSyrkGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGemmSyrk”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用aclnnGemmSyrkGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnGemmSyrk接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGemmSyrkGetWorkspaceSize(
@@ -99,8 +99,7 @@ aclnnStatus aclnnGemmSyrk(
       <td>输入&输出</td>
       <td>表示对称矩阵C，公式中的C。原地更新：结果直接写回该tensor的内存，输入输出为同一地址。</td>
       <td><ul><li>shape为(…, m, m)（2-6维，与a的batch轴一致），最后两维相等且等于a的m轴（transposeX为true时m为a的最后一维）。</li>
-      <li>batch轴需要与a一致（原地更新不支持广播）。</li>
-      <li>建议输入C为对称矩阵：$\beta \neq 0$时输出矩阵的对称性依赖输入C对称。</li></ul></td>
+      <li>batch轴需要与a一致（原地更新不支持广播）。</li></ul></td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2~6</td>
@@ -130,7 +129,7 @@ aclnnStatus aclnnGemmSyrk(
       <td>transposeX</td>
       <td>输入</td>
       <td>是否按转置布局解读a。</td>
-      <td>为true时a以(k, m)存储，计算$C = \alpha \times (A^T @ A) + \beta \times C$。</td>
+      <td>为true时a以(k, m)存储，计算C = α × (A<sup>T</sup> @ A) + β × C。</td>
       <td>BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -168,13 +167,6 @@ aclnnStatus aclnnGemmSyrk(
     </tr>
   </tbody></table>
 
-  <!-- npu="950" id9 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：
-    - 仅支持FLOAT16、BFLOAT16数据类型；
-    - fillMode当前仅支持"full"，"up"/"low"为原型预留值，尚未实现；
-    - k轴为0时，接口自动路由为逐元素计算$C = \beta \times C$，不进入matmul计算路径。
-  <!-- end id9 -->
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
@@ -198,9 +190,12 @@ aclnnStatus aclnnGemmSyrk(
       <td>传入的a或cRef是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>a和cRef的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>维度数不在[2, 6]范围内，或a和cRef维度数不一致。</td>
     </tr>
     <tr>
       <td>cRef不是方阵，或m轴与a不匹配，或batch轴与a不一致。</td>
@@ -209,7 +204,7 @@ aclnnStatus aclnnGemmSyrk(
       <td>fillMode不为"full"。</td>
     </tr>
     <tr>
-      <td>当前设备不是Ascend 950PR&950DT系列产品。</td>
+      <td>当前产品不在支持的范围内。</td>
     </tr>
   </tbody>
   </table>
@@ -267,11 +262,10 @@ aclnnStatus aclnnGemmSyrk(
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnGemmSyrk默认确定性实现（每个输出tile由单条Mmad链按固定顺序累加，无原子操作与切K归约）。
   <!-- end id11 -->
 
-- a与cRef的数据类型必须一致（FLOAT16或BFLOAT16），格式仅支持ND，维度为2~3维。
-- cRef必须为方阵且m轴与a一致（transposeX为true时m为a的最后一维），batch轴与a一致（原地更新不支持广播）。
-- k轴必须大于等于1；k轴为0时接口自动路由为逐元素计算$C = \beta \times C$。
-- fillMode当前仅支持"full"；"up"/"low"为原型预留值，尚未实现。
-- 建议输入C为对称矩阵：$\beta \neq 0$时输出矩阵的对称性依赖输入C对称。
+- m、k、n各维度及多维batch乘积的取值范围为(0, 2147483647)。
+- k为0或alpha为0时，接口自动路由为逐元素计算C = β × C（`l0op::Muls`），不进入matmul计算路径。
+- m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
+- 建议输入C为对称矩阵：β ≠ 0时输出矩阵的对称性依赖输入C对称。
 
 ## 调用示例
 

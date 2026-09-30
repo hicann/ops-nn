@@ -79,7 +79,8 @@ void CheckGemmSyrkInputs(const at::Tensor& a, const at::Tensor& c, bool transpos
     for (int64_t i = 0; i + MIN_DIM_NUM < a.dim(); ++i) {
         TORCH_CHECK(a.size(i) == c.size(i), "gemm_syrk: batch axis ", i, " of a and c must match (no broadcast)");
     }
-    TORCH_CHECK(a.is_contiguous() && c.is_contiguous(), "gemm_syrk: a and c must be contiguous");
+    // 非连续输入无需强制 contiguous: CreateAclTensorND 已透传 strides/storageOffset,
+    // aclnn 层经 l0op::Contiguous 统一处理(已连续时为 no-op)。
 }
 
 } // namespace

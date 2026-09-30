@@ -13,47 +13,28 @@
 
 ## 功能说明
 
-- 算子功能：实现对称秩k更新（syrk，参考 cublas `?syrk`）计算。基于 Blaze 框架
-  （`BlockMmadSyrk` + `GemmUniversal` syrk 特化 + `BlockEpilogueFmmWithScaleAdd`，
-  MIX 1 AIC : 2 AIV）实现。
+- 算子功能：实现对称秩k更新（syrk，参考 cublas `syrk`）计算：
 
-- 计算公式：
+  <div>
+  C = α × (A @ A<sup>T</sup>) + β × C
+  </div>
 
-  $$
-  C = \alpha \times (A @ A^T) + \beta \times C
-  $$
+  其中 A 的shape为 (…, m, k)（2-6 维，前面为 batch 轴），C 为 (…, m, m)
+  的对称矩阵，输入输出同地址原地更新。
 
-  其中 $A$ 的shape为 $(\dots, m, k)$（2-6 维，前面为 batch 轴），$C$ 为 $(\dots, m, m)$
-  的对称矩阵。
+- transpose_x 属性为 true 时，A 以转置的 (…, k, m) 布局存储（cublas syrk
+  的 OP_T 语义），计算 C = α × (A<sup>T</sup> @ A) + β × C。
 
-- transpose_x 属性为 true 时，$A$ 以转置的 $(\dots, k, m)$ 布局存储（2-6 维），
-  计算 $C = \alpha \times (A^T @ A) + \beta \times C$（对应 cublas syrk 的 OP_T
-  语义）。kernel 以 DNExt 视图绑定转置存储，单次搬运走 dn2nz 路径，产生与
-  非转置场景字节级相同的双视图 L1 镜像（$NZ(X^T) \equiv ZN(X)$），L0A/L0B
-  装配与双 fixpipe 输出链路完全复用。
-
-- 单次搬运（GM→L1）：利用分形对偶性 $NZ(X)(m,k) \equiv ZN(X^T)(k,m)$（字节级相等），
-  每个 A 行块每 k-chunk 仅做一次 `nd2nz CopyGM2L1`，同一份 L1 镜像以 NZ 视图供给
-  `CopyL12L0A`（L0A）、以 ZN 视图供给 `CopyL12L0B`（L0B）；对角块（i==j）一次搬运
-  同时喂两个 L0。kernel 仅遍历上三角槽位，总 GM→L1 搬运量为通用 matmul 组合的一半
-  （下界 $nB^2$）。
-
-- 计算减半（Mmad）：每个上三角槽位仅跑一条 Mmad 链产出 C[i,j]；镜像 tile
-  C[j,i] = C[i,j]^T（依赖输入 C 对称——syrk 语义约定）由 AIV 侧
-  `WriteTransposedTile` 转置写出：16×16 块分块跨步 GM→UB 回读（L2 热）→
-  `asc_transpose`（3510 `vtranspose`，b16 位级 16×16 转置，half/bf16 通用）→
-  分块跨步 UB→GM 写出；边角块与 CPU 仿真回退标量路径。cube 计算量 ≈ 通用 matmul
-  的一半（$nB(nB+1)/2$）。
-
-- 原地更新：`c` 的输入与输出为同一地址（def 中 Input("c") 与 Output("c") 同名，
-  GE 将输出端口别名到输入内存），kernel 内 epilogue 分段读取 $\beta \times C$
-  后原位写回，读写时序由 MTE2→V→MTE3 事件链保证安全。
-
-- 完整输出：算子内部按 M×N 全量分块调度（上三角槽位成对计算，下三角由对偶 tile
-  覆盖），将计算结果完整写出到整个对称矩阵，不单只输出上三角或下三角。
-
-- $k = 0$ 场景由 aclnn 层路由为逐元素 $C = \beta \times C$（`l0op::Muls`），
-  不进入 matmul kernel。
+- 实现原理（基于 Blaze 框架，MIX 1 AIC : 2 AIV）：
+  - 单次搬运：利用分形对偶性 NZ(X)(m,k) ≡ ZN(X<sup>T</sup>)(k,m)（字节级相等），
+    每个 A 行块每 k-chunk 仅一次 GM→L1 搬运，同一份 L1 镜像同时供给 L0A 与 L0B
+    两个 cube 输入，总搬运量为通用矩阵乘组合的一半；
+  - 计算减半：仅遍历紧凑上三角槽位（`BlockSchedulerSyrkTriangular`），每槽位单条
+    Mmad 链产出 C[i,j]，AIV sub0 以 nz2nd fixpipe 写出 (i,j)、AIV sub1 以
+    nz2dn fixpipe（硬件转置）写出镜像 (j,i)，无 GM 回读、无软件转置，
+    cube 计算量约为通用矩阵乘的一半；
+  - 特殊路径：k = 0 或 α = 0 时由 aclnn 层路由为逐元素C = β × C（`l0op::Muls`），不启动 matmul kernel
+    m 或 batch 为 0 时直接返回成功（空张量 no-op）。
 
 ## 参数说明
 
@@ -66,45 +47,51 @@
 | transpose_x | 属性 | 为true时按转置布局解读a，计算C = alpha * (A^T @ A) + beta * C。 | BOOL | - |
 | fill_mode | 属性 | 输出区域模式："full"（完整对称矩阵，默认）/"up"（上三角）/"low"（下三角）。原型支持三值，当前 aclnn/tiling 仅实现 "full"，其余值报参数错误。 | STRING | - |
 
-## 约束
+## 约束说明
 
-- 仅支持 DAV_3510（Ascend 950 / 350）平台，要求 `aivNum == aicNum * 2`（MIX 1:2）。
+- 仅支持 DAV_3510（Ascend 950PR/Ascend 950DT）平台，要求 `aivNum == aicNum * 2`（MIX 1:2）。
 - a 与 c 数据类型必须一致（FLOAT16 或 BFLOAT16），格式仅支持 ND。
 - c 的最后两维必须相等且等于 a 的 m 轴（transpose_x 为 true 时 m 为 a 的最后一维）；
   batch 轴必须与 a 一致（原地更新不支持广播）。
+- m、k、n各维度及多维batch乘积的取值范围为 (0, 2147483647)。
 - 暂不支持图模式直接调用（proto IR 已定义但 infer-shape 未注册，构图期输出 shape 无法推导）；
-  请使用 aclnn 接口（k = 0 时自动路由为逐元素缩放）。
-- `fill_mode` 原型可配置 "full"/"up"/"low"，当前仅支持 "full"（完整对称矩阵输出）；"up"/"low" 在
-  aclnn/tiling 层均返回参数错误，待后续实现。
+  请使用 aclnn 或 torch 接口。
+- `fill_mode` 当前仅支持 "full"（完整对称矩阵输出）；"up"/"low" 在 aclnn/tiling 层
+  均返回参数错误，待后续实现。
 - 对称方块 tiling 契约（host 侧已强制）：`baseM == baseN == mL1 == nL1`
-  （镜像 tile (j, i) 换轴后由同一对称块尺寸同时满足 epilogue 单 N-chunk 规则
-  与 baseM/baseN 行 clamp，即 `mL1 >= baseM` 取等号；转置存储下 L1 槽位亦对称）、
-  `mTailCnt == nTailCnt == 1`（不做核间尾块切分）、
-  `baseM × baseN × 4B ≤ L0C_SIZE / 4` 且 16 对齐
-  （单累加器位于一个 L0C 槽、槽粒度即 L0C/2，UB 需容纳 (i,j) ND 与 (j,i) DN
-  两幅 fp32 镜像及两个 AIV 的 staging；对称块上界为
-  floor16(sqrt(L0C/4/4B))，无需 L0CDB）。
+  （对称块尺寸，16 对齐）、每轴单尾块（不做核间尾块切分）、
+  `baseM × baseN × 4B ≤ L0C_SIZE / 2`（单累加器位于一个 L0C 槽，槽粒度即 L0C/2；
+  UB 需容纳 fp32 累加器镜像与两个 AIV 的 staging）。详细推导见
+  [BlockMmadSyrk](https://gitcode.com/cann/ops-tensor/blob/master/docs/API/gemm/block/block_mmad_matmul_syrk.md) 文档。
 
-## 接口
+## 调用说明
 
-```c
-aclnnStatus aclnnGemmSyrkGetWorkspaceSize(const aclTensor* a, aclTensor* cRef,
-    const aclScalar* alphaOptional, const aclScalar* betaOptional, bool transposeX,
-    const char* fillMode, uint64_t* workspaceSize, aclOpExecutor** executor);
-aclnnStatus aclnnGemmSyrk(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
-```
-
-`cRef` 为原地更新的对称矩阵（[in/out]）；`alphaOptional`/`betaOptional` 为
-`nullptr` 时取默认值 1.0；`transposeX` 为 true 时按转置布局解读 a；`fillMode`
-为输出区域模式（"full"/"up"/"low"，当前仅支持 "full"，`nullptr` 默认 "full"）。
-调用示例见 `examples/arch35/test_aclnn_gemm_syrk.cpp`。
-
-torch 侧接口（cann_ops_nn 包）见 `docs/torchapi_gemm_syrk.md`：
-
-```python
-cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mode="full")
-    -> Tensor   # 原地更新c并返回c本身
-```
+<table><thead>
+  <tr>
+    <th>调用方式</th>
+    <th>调用样例</th>
+    <th>说明</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>aclnn调用</td>
+    <td><a href="./examples/arch35/test_aclnn_gemm_syrk.cpp">test_aclnn_gemm_syrk</a></td>
+    <td>两段式接口：`aclnnGemmSyrkGetWorkspaceSize` + `aclnnGemmSyrk`，
+    接口原型与参数说明详见<a href="./docs/aclnnGemmSyrk.md">aclnnGemmSyrk</a>。</td>
+  </tr>
+  <tr>
+    <td>torch调用</td>
+    <td><a href="./docs/torchapi_gemm_syrk.md">torchapi_gemm_syrk</a></td>
+    <td>`cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mode="full")`，
+    原地更新 c 并返回 c。</td>
+  </tr>
+  <tr>
+    <td>图模式调用</td>
+    <td>-</td>
+    <td>暂不支持（见约束说明）。</td>
+  </tr>
+</tbody>
+</table>
 
 ## 目录结构
 

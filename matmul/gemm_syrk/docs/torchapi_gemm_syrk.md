@@ -25,22 +25,22 @@
 
 - 接口功能：
 
-  实现对称秩k更新（syrk，参考 cublas `?syrk`）计算。原地更新对称矩阵 C：底层封装
+  实现对称秩k更新（syrk，参考 cublas `syrk`）计算。原地更新对称矩阵 C：底层封装
   `aclnnGemmSyrk`，将 c 同时绑定为算子的输入与输出（同一 device buffer），计算结果
   完整写回整个对称矩阵（上三角和下三角均写出）。transpose_x 为 True 时 a 以转置的
   (k, m) 布局存储，对应 cublas syrk 的 OP_T 语义。
 
 - 计算公式（transpose_x = False，a 为 (…, m, k)，2-6 维，前面为 batch 轴）：
 
-  $$
-  C = \alpha \times (A @ A^T) + \beta \times C
-  $$
+  <div>
+  C = α × (A @ A<sup>T</sup>) + β × C
+  </div>
 
   transpose_x = True 时，a 为转置的 (…, k, m) 存储：
 
-  $$
-  C = \alpha \times (A^T @ A) + \beta \times C
-  $$
+  <div>
+  C = α × (A<sup>T</sup> @ A) + β × C
+  </div>
 
 ## 函数原型
 
@@ -156,12 +156,14 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- a与c的数据类型必须一致（float16或bfloat16），数据格式仅支持ND，维度为2~3维。
+- a与c的数据类型必须一致（float16或bfloat16），数据格式仅支持ND，维度为2~6维。
 - c必须为方阵且m轴与a一致（transpose_x为True时m为a的最后一维），batch轴与a一致（原地更新不支持广播）。
-- k轴为0时接口自动路由为逐元素计算C = beta * C。
+- k轴为0或alpha为0时，接口自动路由为逐元素计算C = beta * C，不进入matmul计算路径。
 - fill_mode当前仅支持"full"，"up"/"low"为预留值尚未实现。
 - 建议输入c为对称矩阵：beta不为0时输出矩阵的对称性依赖输入c对称。
 - 支持非连续Tensor，无需额外做contiguous。
+- m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
+- m、k、n各维度及多维batch乘积的取值范围为(0, 2147483647)。
 
 ## 确定性计算
 

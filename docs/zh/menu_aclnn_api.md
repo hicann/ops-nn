@@ -232,6 +232,7 @@
 - [aclnnGeluQuant](../../activation/gelu_quant/docs/aclnnGeluQuant.md)
 - [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md)
 - [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md)
+- [aclnnGemmSyrk](../../matmul/gemm_syrk/docs/aclnnGemmSyrk.md)
 - [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md)
 - [aclnnGlu](../../activation/glu/docs/aclnnGlu.md)
 - [aclnnGluBackward](../../activation/glu_grad/docs/aclnnGluBackward.md)

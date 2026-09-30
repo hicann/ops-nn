@@ -51,3 +51,4 @@
 |[situ_mx_quant](../../quant/situ_mx_quant/docs/torchapi_situ_mx_quant.md)|将Situ激活函数与动态MX量化融合，实现x的SituMxQuant计算，支持FP8量化输出。|-|默认支持确定性计算|
 |[fused_matmul](../../matmul/fused_mat_mul/docs/torchapi_fused_matmul.md)|矩阵乘与通用向量计算融合。|-|默认支持确定性计算|
 |[transpose_quant_batch_mat_mul](../../matmul/transpose_quant_batch_mat_mul/docs/torchapi_transpose_quant_batch_mat_mul.md)|完成张量x1与x2的MX量化（MXFP8/MXFP4）转置矩阵乘计算，输入scale为FLOAT8_E8M0类型，输出FLOAT16/BFLOAT16结果。|-|默认支持确定性计算|
+|[gemm_syrk](../../matmul/gemm_syrk/docs/torchapi_gemm_syrk.md)|对称秩k更新：计算α乘以A与A转置的乘积，再与β和input C的乘积求和，原地更新对称矩阵C。|-|默认支持确定性计算|

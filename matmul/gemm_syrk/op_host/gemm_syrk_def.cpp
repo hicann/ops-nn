@@ -42,6 +42,7 @@ public:
         this->Attr("beta").AttrType(OPTIONAL).Float(1.0f);
         this->Attr("transpose_x").AttrType(OPTIONAL).Bool(false);
         this->Attr("fill_mode").AttrType(OPTIONAL).String("full");
+        this->Attr("op_impl_mode").AttrType(OPTIONAL).Int(0x1);
         OpAICoreConfig config;
         config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)

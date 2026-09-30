@@ -8,8 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef __OP_HOST_GEMM_SYRK_COMPILE_INFO_H__
-#define __OP_HOST_GEMM_SYRK_COMPILE_INFO_H__
+#pragma once
 #include <cstdint>
 #include "tiling/platform/platform_ascendc.h"
 
@@ -25,4 +24,3 @@ struct GemmSyrkCompileInfo {
     uint64_t ubSize{0UL};
 };
 } // namespace optiling
-#endif // __OP_HOST_GEMM_SYRK_COMPILE_INFO_H__
