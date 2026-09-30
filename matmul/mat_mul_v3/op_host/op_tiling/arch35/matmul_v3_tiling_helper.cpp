@@ -205,8 +205,8 @@ uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMu
     }
     // K内轴时，要求kL1至少256B对齐；有效batch为1时按照MatMul处理
     uint64_t kAlignUnit = !args.isATrans || args.isBTrans ?
-                              (isMemoryBound && IsMatMulTiling(args) ? BASIC_BLOCK_K_256_BYTE :
-                                                                       BASIC_BLOCK_K_512_BYTE) /
+                              (isMemoryBound && IsMatMulTiling(args, compileInfo.npuArch) ? BASIC_BLOCK_K_256_BYTE :
+                                                                                            BASIC_BLOCK_K_512_BYTE) /
                                   args.aDtypeSize :
                               BASIC_BLOCK_SIZE_16;
     uint64_t maxBaseMNWithKInner = compileInfo.l1Size /
@@ -220,10 +220,11 @@ uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMu
     return maxBaseBlock;
 }
 
-static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, uint64_t baseM, uint64_t baseN)
+static double GetBalanceRateWithTail(const MatMulV3Args& args, NpuArch npuArch, uint64_t usedCoreNum, uint64_t baseM,
+                                     uint64_t baseN)
 {
     // 考虑尾轮优化负载均衡率，仅针对cubebound场景生效
-    uint64_t batch = IsMatMulTiling(args) ? 1UL : args.batchInfo->batchA;
+    uint64_t batch = IsMatMulTiling(args, npuArch) ? 1UL : args.batchInfo->batchA;
     uint64_t totalRound = batch * MathUtil::CeilDivision(args.mValue, baseM) *
                           MathUtil::CeilDivision(args.nValue, baseN);
     uint64_t mainRound = MathUtil::CeilDivision(totalRound, usedCoreNum) - 1;
@@ -234,7 +235,8 @@ static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCore
     if (args.nValue <= BASIC_BLOCK_SIZE_16) {
         baseN = args.nValue;
     }
-    if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE || !IsMatMulTiling(args)) {
+    if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE ||
+        !IsMatMulTiling(args, npuArch)) {
         return (static_cast<double>(batch) * args.mValue * args.nValue / usedCoreNum) /
                ((mainRound + 1) * baseM * baseN);
     }
@@ -272,10 +274,10 @@ static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args&
 
 namespace optiling {
 namespace matmul_v3_advanced {
-bool IsMatMulTiling(const MatMulV3Args& args)
+bool IsMatMulTiling(const MatMulV3Args& args, NpuArch npuArch)
 {
-    return args.batchInfo == nullptr ||
-           (args.batchInfo->batchA == 1UL && args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
+    return args.batchInfo == nullptr || (npuArch == NpuArch::DAV_3510 && args.batchInfo->batchA == 1UL &&
+                                         args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
 }
 
 void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
@@ -415,7 +417,7 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
                                      compileInfo.l0CSize :
                                      std::min(compileInfo.l0CSize, compileInfo.ubSize);
 
-    uint64_t batchNum = IsMatMulTiling(args) ? 1UL : args.batchInfo->batchA;
+    uint64_t batchNum = IsMatMulTiling(args, compileInfo.npuArch) ? 1UL : args.batchInfo->batchA;
     double l2CacheUsage = std::max(
         static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
             compileInfo.l2Size,
@@ -448,14 +450,16 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
         std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / runInfo.baseM, baseNAlignUnit)));
     runInfo.cubeBoundParam = (1.0 / runInfo.baseM) + (1.0 / runInfo.baseN);
     runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * CUBE_BOUND_RATIO;
-    double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
+    double balanceRate = GetBalanceRateWithTail(args, compileInfo.npuArch, runInfo.usedCoreNum, runInfo.baseM,
+                                                runInfo.baseN);
 
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
         uint64_t curMaxBaseN = std::min(maxBaseN,
                                         ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM, baseNAlignUnit));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlignUnit) {
             double curCubeBoundParam = (1.0 / curBaseM) + (1.0 / curBaseN);
-            double curBalanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, curBaseM, curBaseN);
+            double curBalanceRate = GetBalanceRateWithTail(args, compileInfo.npuArch, runInfo.usedCoreNum, curBaseM,
+                                                           curBaseN);
             // 当前最优解满足负载均衡阈值时，本轮解集无法在计算访存拿到收益时过滤本轮解集
             bool skipCond = balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
                             curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
