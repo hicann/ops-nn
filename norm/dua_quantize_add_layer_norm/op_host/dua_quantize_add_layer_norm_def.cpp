@@ -98,6 +98,20 @@ public:
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+
+        // Ascend950（arch35）：dtype 集合与 910 一致，故仅覆盖 950 特有项（opFile + dynamic flags），
+        // 其余 Input/Output/Attr 继承 this->（见 opdef-aicoreconfig-partial-override）。
+        // opFile.value 取 kernel 入口文件名（不含子目录前缀），arch35 入口位于
+        // op_kernel/arch35/dua_quantize_add_layer_norm.cpp，由 op_kernel/CMakeLists.txt 的 KERNEL_SRC 指过去。
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "dua_quantize_add_layer_norm");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 OP_ADD(DuaQuantizeAddLayerNorm);

@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR&950DT系列产品</term>   |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
 |  <term>Atlas A3系列产品</term>   |     √    |
 |  <term>Atlas A2系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
@@ -120,14 +120,14 @@
       <td>zero_points1</td>
       <td>可选输入</td>
       <td>用于量化第一个输入张量的偏移量，对应公式中的`zero_points1`。</td>
-      <td>INT8、UINT8、BFLOAT16、INT32</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>zero_points2</td>
       <td>可选输入</td>
       <td>用于量化第二个输入张量的偏移量，对应公式中的`zero_points2`。</td>
-      <td>INT8、UINT8、BFLOAT16、INT32</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -162,14 +162,14 @@
       <td>y1</td>
       <td>输出</td>
       <td>量化后的第一个输出张量，对应公式中的`out1`。</td>
-      <td>INT8、UINT8、INT32</td>
+      <td>INT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
       <td>量化后的第二个输出张量，对应公式中的`out2`。</td>
-      <td>INT8、UINT8、INT32</td>
+      <td>INT8</td>
       <td>ND</td>
     </tr>
     <tr>
