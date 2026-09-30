@@ -3619,6 +3619,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn3d_training_update_grad/README.md">bn3d_training_update_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>3D Batch Normalization训练反传的逐通道参数梯度归约：给定反向梯度grads、前向输入x以及逐通道统计量batch_mean/batch_variance，沿批与空间维归约得到缩放因子与偏置的梯度diff_scale/diff_offset（fp32），支持NCDHW/NCHW/NHWC布局。与BN3DTrainingUpdate配套使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>
