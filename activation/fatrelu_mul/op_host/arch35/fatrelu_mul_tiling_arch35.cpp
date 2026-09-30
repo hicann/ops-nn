@@ -80,6 +80,10 @@ constexpr int64_t FATRELUMUL_UB_BYTES_MIN = 32;         // 单 buffer ≥ 1 个 
 constexpr int64_t FATRELUMUL_MIN_BYTES_PER_CORE = 4096; // 每核 ≥ 4KB 输入（= 32768 bits / 8，EleWise 范式口径）
 constexpr int64_t FATRELUMUL_MIN_RANK = 2;              // spec.yaml：rank(x) ∈ [2, 8]
 constexpr int64_t FATRELUMUL_MAX_RANK = 8;
+constexpr int64_t FATRELUMUL_DTYPE_BYTES_FP32 = 4; // fp32 每元素字节数（x / threshold / y 同 dtype）
+constexpr int64_t FATRELUMUL_DTYPE_BYTES_FP16 = 2; // fp16 / bf16 每元素字节数
+constexpr int64_t FATRELUMUL_LAST_DIM_DIVISOR = 2; // x 末维 2d 折半因子（halfDim = lastDim / 2）
+constexpr int64_t FATRELUMUL_BUF_COPIES = 3; // T 路 buffer 份数（HostTiling.md「存活节点分析」P 表）
 
 // ---------------------------------------------------------------------------
 // FatreluMulCompileInfoPlausible(coreNum, ubSize) — CompileInfo 垃圾值防御界
@@ -111,7 +115,6 @@ static inline int64_t FatreluMulCeilDiv(int64_t a, int64_t b) { return (a + b - 
 
 // ---------------------------------------------------------------------------
 // FatreluMulShapeToVector(shp) — StorageShape → int64 维度向量
-//
 // 读运行时 storage shape（行模型前提：x 进 kernel 必为 ND 连续，OpDef
 // AutoContiguous() 承接非连续输入，Interface.md「数据 Format 支持」）。
 // ---------------------------------------------------------------------------
@@ -127,16 +130,15 @@ static std::vector<int64_t> FatreluMulShapeToVector(const gert::StorageShape* sh
 
 // ---------------------------------------------------------------------------
 // FatreluMulDtypeBytes(dt) — x dtype → 每元素字节数（不支持 dtype 返回 -1）
-//
 // spec.yaml dtype_policy：x / threshold / y 同 dtype，支持 {fp32, fp16, bf16}。
 // ---------------------------------------------------------------------------
 static int64_t FatreluMulDtypeBytes(const ge::DataType dt)
 {
     if (dt == ge::DT_FLOAT) {
-        return 4;
+        return FATRELUMUL_DTYPE_BYTES_FP32;
     }
     if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16) {
-        return 2;
+        return FATRELUMUL_DTYPE_BYTES_FP16;
     }
     return -1;
 }
@@ -162,13 +164,12 @@ struct FatreluMulMultiCore {
 
 // ---------------------------------------------------------------------------
 // FatreluMulCheckInput(ctx, xShape, thresholdShape, yShape) — 异常值校验
-//
 // 纵深防御（主拦截在 aclnn 第一段接口 161001/161002，Interface.md「错误码映射」）：
 // 校验顺序 dtype → format → 维度 → attr(N/A 无属性) → shape，任一失败
 // return GRAPH_FAILED，保证 L2 反向用例即使绕过接口层也不会把非法
 // shape/dtype 带进切分计算（除零 / 越界）。
 // ---------------------------------------------------------------------------
-static ge::graphStatus FatreluMulCheckInput(gert::TilingContext* ctx, const std::vector<int64_t>& xShape,
+static ge::graphStatus FatreluMulCheckInput(const gert::TilingContext* ctx, const std::vector<int64_t>& xShape,
                                             const std::vector<int64_t>& thresholdShape,
                                             const std::vector<int64_t>& yShape)
 {
@@ -229,12 +230,12 @@ static ge::graphStatus FatreluMulCheckInput(gert::TilingContext* ctx, const std:
     // 5) shape（非 broadcast 型 → 一致性校验变体）：x 末维为偶数；
     //    y.shape == x.shape[:-1] + (x末维/2,)
     const int64_t lastDim = xShape[rankX - 1];
-    OP_CHECK_IF((lastDim & 1) != 0,
+    OP_CHECK_IF(lastDim % FATRELUMUL_LAST_DIM_DIVISOR != 0,
                 OP_LOGE(ctx->GetNodeName(), "x last dim %ld must be even (2d)", static_cast<long>(lastDim)),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(yShape[rankX - 1] != lastDim / 2,
+    OP_CHECK_IF(yShape[rankX - 1] != lastDim / FATRELUMUL_LAST_DIM_DIVISOR,
                 OP_LOGE(ctx->GetNodeName(), "y last dim %ld must equal x last dim / 2 (%ld)",
-                        static_cast<long>(yShape[rankX - 1]), static_cast<long>(lastDim / 2)),
+                        static_cast<long>(yShape[rankX - 1]), static_cast<long>(lastDim / FATRELUMUL_LAST_DIM_DIVISOR)),
                 return ge::GRAPH_FAILED);
     for (int64_t i = 0; i < rankX - 1; ++i) {
         OP_CHECK_IF(yShape[i] != xShape[i],
@@ -247,7 +248,6 @@ static ge::graphStatus FatreluMulCheckInput(gert::TilingContext* ctx, const std:
 
 // ---------------------------------------------------------------------------
 // FatreluMulExpandRowModel(xShape, rm) — 行模型展开（输入预处理）
-//
 // batchSize = ∏(前 n-1 维)（任一前导维为 0 → batch=0，走空 Tensor 短路）；
 // halfDim = lastDim / 2（偶数末维减半，奇数已在校验段拒绝）。
 // ---------------------------------------------------------------------------
@@ -258,21 +258,25 @@ static void FatreluMulExpandRowModel(const std::vector<int64_t>& xShape, Fatrelu
     for (int64_t i = 0; i < rank - 1; ++i) {
         rm->batchSize *= xShape[i];
     }
-    rm->halfDim = xShape[rank - 1] / 2;
+    rm->halfDim = xShape[rank - 1] / FATRELUMUL_LAST_DIM_DIVISOR;
 }
 
 // ---------------------------------------------------------------------------
 // FatreluMulPerElemDepth(dtypeBytes) — per-dtype 每元素 buffer 深度（B/elem）
-//
 // 「存活节点分析」P 结论表（HostTiling.md）：
 //   fp32      ：T 路 3 份 × 4B            = 12（全程原生 fp32，无 Cast 中间 buffer）
 //   fp16/bf16 ：T 路 3 份 × 2B + fp32 路 3 份 × 4B = 18（Cast↑×2 + Cast↓×1 断链独立 buffer）
 // ---------------------------------------------------------------------------
-static int64_t FatreluMulPerElemDepth(int64_t dtypeBytes) { return (dtypeBytes == 4) ? 3 * 4 : 3 * dtypeBytes + 3 * 4; }
+static int64_t FatreluMulPerElemDepth(int64_t dtypeBytes)
+{
+    if (dtypeBytes == FATRELUMUL_DTYPE_BYTES_FP32) {
+        return FATRELUMUL_BUF_COPIES * FATRELUMUL_DTYPE_BYTES_FP32;
+    }
+    return FATRELUMUL_BUF_COPIES * dtypeBytes + FATRELUMUL_BUF_COPIES * FATRELUMUL_DTYPE_BYTES_FP32;
+}
 
 // ---------------------------------------------------------------------------
 // FatreluMulComputeTileElems(ubSize, dtypeBytes) — UB 切分：tileElems（256B 对齐）
-//
 // tileElems = ⌊(ubSize / depth) / alignElems⌋ × alignElems，
 // alignElems = 256 / sizeof(T)（fp32=64，fp16/bf16=128 元素）。
 // ubSize 为运行期平台量（GetCoreMemSize(UB)，禁止硬编码）；ubSize 异常小
@@ -294,7 +298,6 @@ static int64_t FatreluMulComputeTileElems(int64_t ubSize, int64_t dtypeBytes)
 
 // ---------------------------------------------------------------------------
 // FatreluMulMultiCoreSplit(batchSize, halfDim, dtypeBytes, availableAivCores, mc)
-//
 // 行域多核切分（对齐内置旧代际 kernel 口径：kernel 入口 blockIdx >=
 // needCoreNum 直接返回，REQUIREMENTS §5.7）：
 //   1) 数据量约束核数：batchSize × 2d × sizeof(T) 总量按每核 4KB 均摊向上取整，
@@ -314,12 +317,11 @@ static void FatreluMulMultiCoreSplit(int64_t batchSize, int64_t halfDim, int64_t
 
 // ---------------------------------------------------------------------------
 // FatreluMulFillAndLogTilingData(ctx, td, rm, mc, tileElems, rowsPerGroup)
-//
 // 全字段赋值（docs/fatrelu_mul/design/TilingData.md §1，不增不删；两路径共用
 // 同一非模板化结构体，路径不用的字段置 0）+ 维测日志（全字段 OP_LOGI 逐字段
 // 打印，Broadcast 范式维测规范）。字段单位：元素数（need_core_num 为核数）。
 // ---------------------------------------------------------------------------
-static void FatreluMulFillAndLogTilingData(gert::TilingContext* ctx, FatreluMulTilingData* td,
+static void FatreluMulFillAndLogTilingData(const gert::TilingContext* ctx, FatreluMulTilingData* td,
                                            const FatreluMulRowModel& rm, const FatreluMulMultiCore& mc,
                                            int64_t tileElems, int64_t rowsPerGroup)
 {
@@ -344,7 +346,6 @@ static void FatreluMulFillAndLogTilingData(gert::TilingContext* ctx, FatreluMulT
 
 // ---------------------------------------------------------------------------
 // TilingFuncFatreluMul(context) — tiling 入口（CANN runtime 调用）
-//
 // 步骤顺序 = HostTiling.md「Tiling 整体结构」flowchart：
 //   平台量 → 异常值校验 → 行模型展开 → 空 Tensor 短路 → UB 切分 → 多核切分
 //   → 判界选 key → 填 TilingData → SetBlockDim / SetTilingKey / ws[0]=0
@@ -455,7 +456,6 @@ static ge::graphStatus TilingFuncFatreluMul(gert::TilingContext* context)
 
 // ---------------------------------------------------------------------------
 // TilingPrepareForFatreluMul(context) — 编译期准备（graph compilation 阶段一次）
-//
 // 读平台信息写 FatreluMulCompileInfo（coreNum / ubSize）供 TilingFunc 使用；
 // 返回值零值守卫（coreNum / ubSize == 0 会导致下游多核切分 / tileElems 计算
 // 除零）。

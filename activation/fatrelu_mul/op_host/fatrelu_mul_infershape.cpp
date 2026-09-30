@@ -20,7 +20,7 @@ using namespace ge;
 namespace ops {
 
 static constexpr int64_t IDX_0 = 0;
-static constexpr size_t SIZE_2 = 2;
+static constexpr int64_t SIZE_2 = 2;
 static constexpr int64_t UNKNOWN_RANK_DIM = -2;
 static constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 

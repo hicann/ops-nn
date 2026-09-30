@@ -28,8 +28,6 @@
 //   FatreluMulKernel<D_T_X, kPath> 实例化（Init / Process）。
 //   The compute chain lives in arch35/FatreluMul_kernel.h（small-tail 行组路径
 //   per branches/DESIGN-BRANCH-0.md §3–§5；big-tail per DESIGN-BRANCH-1.md）.
-//   The original sample compute logic (ScaleCustom-style broadcast mul-add)
-//   is preserved below as a `// [REF_SAMPLE]` comment block.
 //
 //   NOTE: the OpDef's ExtendCfgInfo("opFile.value", "fatrelu_mul_apt") 按仓内
 //   约定（elu / fast_gelu_v2 等）使用 snake_case 算子目录名 + "_apt" 后缀，
@@ -140,32 +138,6 @@ __global__ __aicore__ void FatreluMul(GM_ADDR input, GM_ADDR threshold, GM_ADDR 
     FatreluMulKernel<D_T_X, kPath> kernel;
     kernel.Init(ins, outs, &td);
     kernel.Process();
-
-    // -----------------------------------------------------------------------
-    // [REF_SAMPLE] Original sample entry logic (ScaleCustom-style broadcast
-    // mul-add, kept verbatim for reference; superseded by the FatreluMul
-    // entry chain above per docs/fatrelu_mul/design/Kernel.md「Kernel 入口」):
-    //
-    // // Bundle input pointers into an array for the kernel.
-    // // Index: 0=x, 1=scale, 2=bias (may be null/unused if has_bias==0)
-    // GM_ADDR ins[3]   = {x, scale_in, bias};
-    // // Bundle output pointers: index 0=y
-    // GM_ADDR outs[1]  = {y};
-    //
-    // if constexpr (RANK == 4) {
-    //     GET_TILING_DATA_WITH_STRUCT(TilingData4, td, tiling);
-    //     // DTYPE_X expands to the actual data type (float, half, bfloat16)
-    //     FatreluMulKernel<DTYPE_X, 4> kernel;
-    //     kernel.Init(ins, outs, &td);
-    //     kernel.Process();
-    // } else {
-    //     // Rank 5-8: use FatreluMulTilingData<8>
-    //     GET_TILING_DATA_WITH_STRUCT(TilingData8, td, tiling);
-    //     FatreluMulKernel<DTYPE_X, 8> kernel;
-    //     kernel.Init(ins, outs, &td);
-    //     kernel.Process();
-    // }
-    // -----------------------------------------------------------------------
 }
 
 // ===========================================================================

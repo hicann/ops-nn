@@ -26,7 +26,7 @@
 //         §5.1 Init   : GM binding (x / threshold / y) + per-dtype TBuf
 //                       allocation (one role one buffer) + threshold scalar GM
 //                       direct read + this-core row range / row pitch
-//                       precompute + sync event IDs (FetchEventID);
+//                       precompute + sync event IDs (FetchEventID)
 //         §5.2 CopyIn : row-group strided multi-row DataCopyPad (x1 / x2 half
 //                       zones, blockCount = gRows, blockLen = d·S, GM srcStride
 //                       = d·S byte gap, UB dstStride = 0 → hardware lays each
@@ -95,6 +95,12 @@
 #include "FatreluMul_tiling_data.h" // FatreluMulTilingData / kMaxInputSlots / kMaxOutputSlots (= TilingData.md)
 
 // ---------------------------------------------------------------------------
+// FATRELUMUL_MAX_BLOCK_COUNT — DataCopyExtParams.blockCount 上限（防御性钳制；
+// arch35 下 pitch 钳制已保证 rowsPerGroupEff_ ≤ 2640，此界实际不可达）
+// ---------------------------------------------------------------------------
+constexpr int64_t FATRELUMUL_MAX_BLOCK_COUNT = 4095;
+
+// ---------------------------------------------------------------------------
 // FatreluMulMin — int64_t 最小值（设备侧工具；libstdc++ std::min 被 ccec 标记
 // 为 [host] 函数，不可从 [aicore] 设备函数调用，故内置等价实现）
 // ---------------------------------------------------------------------------
@@ -160,11 +166,20 @@ __simd_vf__ inline void FatreluMulVF(__ubuf__ float* yfAddr, __ubuf__ float* x1f
 //   rowStart_ / rowCount_      — this-core row range (row-domain multicore split)
 //   rowPitchElems_             — UB row pitch in elements = CeilAlign(d·S,32)/S
 //   rowsPerGroupEff_           — pitch-safe effective group rows = min(
-//                                rows_per_group, tileElems/pitchElems, 4095)
+//                                rows_per_group, tileElems/pitchElems, FATRELUMUL_MAX_BLOCK_COUNT)
 // ===========================================================================
 template <typename T, int64_t kPath>
 class FatreluMulKernel {
 public:
+    // TBuf 槽位索引（一角色一 buffer；fp32 用 B0-B2 / fp16·bf16 用 B0-B5，
+    // 语义与 buf_ 声明处注释一致，Kernel.md「TBuf 分配」）
+    static constexpr int64_t kB0 = 0;     // B0 = x1
+    static constexpr int64_t kB1 = 1;     // B1 = x2
+    static constexpr int64_t kB2 = 2;     // B2 = y(fp32) / x1f(fp16·bf16)
+    static constexpr int64_t kB3 = 3;     // B3 = x2f(fp16·bf16)
+    static constexpr int64_t kB4 = 4;     // B4 = yf(fp16·bf16)
+    static constexpr int64_t kB5 = 5;     // B5 = y(fp16·bf16)
+    static constexpr int64_t kBufNum = 6; // per-dtype P 份（fp32 用 3 / fp16·bf16 用 6）
     // -----------------------------------------------------------------------
     // Init — GM binding + TBuf allocation + threshold direct read + row range
     //        / pitch precompute + event IDs (DESIGN-BRANCH-0.md §5.1)
@@ -187,16 +202,16 @@ public:
             const uint32_t bytesT = static_cast<uint32_t>(td_->tile_elems * static_cast<int64_t>(sizeof(T)));
             const uint32_t bytesF = static_cast<uint32_t>(td_->tile_elems * static_cast<int64_t>(sizeof(float)));
             if constexpr (std::is_same_v<T, float>) { // fp32：P=3，全程原生 fp32
-                pipe_.InitBuffer(buf_[0], bytesF);    // B0 = x1
-                pipe_.InitBuffer(buf_[1], bytesF);    // B1 = x2
-                pipe_.InitBuffer(buf_[2], bytesF);    // B2 = y
+                pipe_.InitBuffer(buf_[kB0], bytesF);  // B0 = x1
+                pipe_.InitBuffer(buf_[kB1], bytesF);  // B1 = x2
+                pipe_.InitBuffer(buf_[kB2], bytesF);  // B2 = y
             } else {                                  // fp16/bf16：P=6，Cast 断链独立 buffer
-                pipe_.InitBuffer(buf_[0], bytesT);    // B0 = x1(T)
-                pipe_.InitBuffer(buf_[1], bytesT);    // B1 = x2(T)
-                pipe_.InitBuffer(buf_[2], bytesF);    // B2 = x1f(fp32)
-                pipe_.InitBuffer(buf_[3], bytesF);    // B3 = x2f(fp32)
-                pipe_.InitBuffer(buf_[4], bytesF);    // B4 = yf(fp32)
-                pipe_.InitBuffer(buf_[5], bytesT);    // B5 = y(T)
+                pipe_.InitBuffer(buf_[kB0], bytesT);  // B0 = x1(T)
+                pipe_.InitBuffer(buf_[kB1], bytesT);  // B1 = x2(T)
+                pipe_.InitBuffer(buf_[kB2], bytesF);  // B2 = x1f(fp32)
+                pipe_.InitBuffer(buf_[kB3], bytesF);  // B3 = x2f(fp32)
+                pipe_.InitBuffer(buf_[kB4], bytesF);  // B4 = yf(fp32)
+                pipe_.InitBuffer(buf_[kB5], bytesT);  // B5 = y(T)
             }
         }
         if constexpr (kPath == FATRELUMUL_PATH_SMALL_TAIL) {
@@ -215,9 +230,7 @@ public:
                 if (rowPitchElems_ > 0) {
                     rowsPerGroupEff_ = FatreluMulMin(
                         FatreluMulMin(td_->rows_per_group, td_->tile_elems / rowPitchElems_),
-                        static_cast<int64_t>(4095));
-                    // 4095 = DataCopyExtParams.blockCount 上限（防御性；arch35 下 pitch
-                    // 钳制已保证 ≤ 2640）
+                        FATRELUMUL_MAX_BLOCK_COUNT);
                 }
             }
         }
@@ -344,16 +357,17 @@ private:
         const int64_t d = td_->half_dim;
         const int64_t S = static_cast<int64_t>(sizeof(T));
         AscendC::DataCopyExtParams params;
-        params.blockCount = static_cast<uint16_t>(gRows); // ≤ 4095（rowsPerGroupEff_ 已钳制，§5.1）
-        params.blockLen = static_cast<uint32_t>(d * S);   // 行有效字节（≥2B，不要求 32B 对齐）
+        params.blockCount = static_cast<uint16_t>(
+            gRows); // ≤ FATRELUMUL_MAX_BLOCK_COUNT（rowsPerGroupEff_ 已钳制，§5.1）
+        params.blockLen = static_cast<uint32_t>(d * S); // 行有效字节（≥2B，不要求 32B 对齐）
         params.srcStride = d * S; // GM 侧 gap（byte）：x1 行尾→下行 x1 行头 = d 元素
         params.dstStride = 0;     // UB 侧 gap（32B 单位）=0：硬件按 CeilAlign(d·S,32) 推进
         params.rsv = 0;           // 必须显式填 0
         AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
         // gate 半区：组内第 i 行 x1 首地址 = (r0+i)·2d（元素）
-        AscendC::DataCopyPad(buf_[0].Get<T>(), gmX_[r0 * 2 * d], params, padParams);
+        AscendC::DataCopyPad(buf_[kB0].Get<T>(), gmX_[r0 * 2 * d], params, padParams);
         // up 半区：组内第 i 行 x2 首地址 = (r0+i)·2d + d；GM gap 同为 d 元素
-        AscendC::DataCopyPad(buf_[1].Get<T>(), gmX_[r0 * 2 * d + d], params, padParams);
+        AscendC::DataCopyPad(buf_[kB1].Get<T>(), gmX_[r0 * 2 * d + d], params, padParams);
     }
 
     // -----------------------------------------------------------------------
@@ -369,23 +383,23 @@ private:
             // fp32 路径 — P=3（B0=x1 / B1=x2 / B2=y，全程原生 fp32）
             // 执行前: 持有=[B0, B1]；执行中: 持有=[B0, B1, B2]（P_fp32=3 峰值，
             // cmpMask/act 全程寄存器不占 UB）；执行后: 持有=[B2] ← B0/B1 释放给下一组
-            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[2].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[0].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[1].Get<float>().GetPhyAddr()),
+            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[kB2].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB0].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB1].Get<float>().GetPhyAddr()),
                         count); // 共享 VF 链（Kernel.md「共享 VF 计算链」）
         } else {
             // fp16/bf16 路径 — P=6（B0/B1/B5 T 路 + B2/B3/B4 fp32 路），存活峰值 3 / 分配 6
             // Cast↑×2（CAST_NONE 无损上行，断链，src/dst 独立）：
             //   执行中: 持有=[B0, B1, B2] → [B1, B2, B3]（峰值 3）
-            AscendC::Cast(buf_[2].Get<float>(), buf_[0].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-            AscendC::Cast(buf_[3].Get<float>(), buf_[1].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+            AscendC::Cast(buf_[kB2].Get<float>(), buf_[kB0].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+            AscendC::Cast(buf_[kB3].Get<float>(), buf_[kB1].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             // VF 链（fp32 域）：执行中: 持有=[B2, B3, B4]（存活峰值 3）；执行后: 持有=[B4]
-            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[4].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[2].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[3].Get<float>().GetPhyAddr()), count);
+            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[kB4].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB2].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB3].Get<float>().GetPhyAddr()), count);
             // Cast↓（fp16/bf16 统一 CAST_RINT 舍入到最近偶数；4 参数形式 roundMode 不可省略）：
             //   执行中: 持有=[B4, B5]；执行后: 持有=[B5]
-            AscendC::Cast(buf_[5].Get<T>(), buf_[4].Get<float>(), AscendC::RoundMode::CAST_RINT, count);
+            AscendC::Cast(buf_[kB5].Get<T>(), buf_[kB4].Get<float>(), AscendC::RoundMode::CAST_RINT, count);
         }
     }
 
@@ -406,9 +420,9 @@ private:
         params.dstStride = 0; // GM 侧 gap（byte）=0：y 行连续
         params.rsv = 0;
         if constexpr (std::is_same_v<T, float>) {
-            AscendC::DataCopyPad(gmY_[r0 * d], buf_[2].Get<T>(), params); // B2 = y(fp32)
+            AscendC::DataCopyPad(gmY_[r0 * d], buf_[kB2].Get<T>(), params); // B2 = y(fp32)
         } else {
-            AscendC::DataCopyPad(gmY_[r0 * d], buf_[5].Get<T>(), params); // B5 = y(T)
+            AscendC::DataCopyPad(gmY_[r0 * d], buf_[kB5].Get<T>(), params); // B5 = y(T)
         }
     }
 
@@ -431,7 +445,7 @@ private:
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMte2_); // WAR 反向同步(跨段)，§5.5 事件 2
         }
         AscendC::DataCopyExtParams copParams;
-        copParams.blockCount = 1; // 单块 [1, 4095]
+        copParams.blockCount = 1; // 单块 [1, FATRELUMUL_MAX_BLOCK_COUNT]
         copParams.blockLen = static_cast<uint32_t>(segLen *
                                                    static_cast<int64_t>(sizeof(T))); // 有效字节，非 32B 对齐合法
         copParams.srcStride = 0; // GM 侧 gap=0（单块无块间空隙）
@@ -439,8 +453,8 @@ private:
         copParams.rsv = 0;       // 必须显式填 0
         AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
         // MTE2 写 B0 ← GM gate 段；MTE2 写 B1 ← GM up 段（GlobalTensor::operator[] 元素索引）
-        AscendC::DataCopyPad(buf_[0].Get<T>(), gmX_[x1Off], copParams, padParams);
-        AscendC::DataCopyPad(buf_[1].Get<T>(), gmX_[x2Off], copParams, padParams);
+        AscendC::DataCopyPad(buf_[kB0].Get<T>(), gmX_[x1Off], copParams, padParams);
+        AscendC::DataCopyPad(buf_[kB1].Get<T>(), gmX_[x2Off], copParams, padParams);
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMte2ToV_); // RAW 正向同步，§5.5 事件 1
     }
 
@@ -466,17 +480,17 @@ private:
         const uint32_t count = static_cast<uint32_t>(segLen);
         if constexpr (std::is_same_v<T, float>) {
             // fp32: VF 链直连 T buffer —— 执行中持有 [B0, B1, B2] = P_fp32 峰值 3
-            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[2].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[0].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[1].Get<float>().GetPhyAddr()), count);
+            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[kB2].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB0].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB1].Get<float>().GetPhyAddr()), count);
         } else {
             // fp16/bf16: Cast 断链 ×3 共享子链 —— 存活峰值 3 / 分配 P=6
-            AscendC::Cast(buf_[2].Get<float>(), buf_[0].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-            AscendC::Cast(buf_[3].Get<float>(), buf_[1].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[4].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[2].Get<float>().GetPhyAddr()),
-                        reinterpret_cast<__ubuf__ float*>(buf_[3].Get<float>().GetPhyAddr()), count);
-            AscendC::Cast(buf_[5].Get<T>(), buf_[4].Get<float>(), AscendC::RoundMode::CAST_RINT, count);
+            AscendC::Cast(buf_[kB2].Get<float>(), buf_[kB0].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+            AscendC::Cast(buf_[kB3].Get<float>(), buf_[kB1].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+            ComputeTile(reinterpret_cast<__ubuf__ float*>(buf_[kB4].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB2].Get<float>().GetPhyAddr()),
+                        reinterpret_cast<__ubuf__ float*>(buf_[kB3].Get<float>().GetPhyAddr()), count);
+            AscendC::Cast(buf_[kB5].Get<T>(), buf_[kB4].Get<float>(), AscendC::RoundMode::CAST_RINT, count);
         }
         if (!isLast) {
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMte2_); // WAR 发布(跨段)：释放 B0/B1，§5.5 事件 2
@@ -504,9 +518,9 @@ private:
         copParams.dstStride = 0; // GM 侧 gap=0（段间 GM 连续由 yOff 步进保证）
         copParams.rsv = 0;       // 必须显式填 0
         if constexpr (std::is_same_v<T, float>) {
-            AscendC::DataCopyPad(gmY_[yOff], buf_[2].Get<T>(), copParams); // B2 = y(fp32)
+            AscendC::DataCopyPad(gmY_[yOff], buf_[kB2].Get<T>(), copParams); // B2 = y(fp32)
         } else {
-            AscendC::DataCopyPad(gmY_[yOff], buf_[5].Get<T>(), copParams); // B5 = y(T)
+            AscendC::DataCopyPad(gmY_[yOff], buf_[kB5].Get<T>(), copParams); // B5 = y(T)
         }
         if (!isLast) {
             AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(evMte3ToV_); // WAR 发布(跨段)，§5.5 事件 4
@@ -514,19 +528,19 @@ private:
     }
 
     // ---- shared members ----
-    AscendC::TPipe pipe_;                               // TBuf 静态分配
-    const FatreluMulTilingData* td_ = nullptr;          // 全局非模板 TilingData（TilingData.md）
-    AscendC::GlobalTensor<T> gmX_;                      // x：gate_up 拼接张量（行模型 (batch, 2d)）
-    AscendC::GlobalTensor<T> gmThreshold_;              // threshold：单元素标量 Tensor（GM 直读）
-    AscendC::GlobalTensor<T> gmY_;                      // y：(batch, d)
-    T threshold_ = static_cast<T>(0);                   // 标量阈值（寄存器参与比较，不占 UB）
-    AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[6]; // per-dtype P 份（fp32 用 B0-B2 / fp16·bf16 用 B0-B5）
+    AscendC::TPipe pipe_;                                     // TBuf 静态分配
+    const FatreluMulTilingData* td_ = nullptr;                // 全局非模板 TilingData（TilingData.md）
+    AscendC::GlobalTensor<T> gmX_;                            // x：gate_up 拼接张量（行模型 (batch, 2d)）
+    AscendC::GlobalTensor<T> gmThreshold_;                    // threshold：单元素标量 Tensor（GM 直读）
+    AscendC::GlobalTensor<T> gmY_;                            // y：(batch, d)
+    T threshold_ = static_cast<T>(0);                         // 标量阈值（寄存器参与比较，不占 UB）
+    AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kBufNum]; // per-dtype 槽位数（fp32=3 / fp16·bf16=6）
 
     // ---- small-tail path members（DESIGN-BRANCH-0.md §5.1）----
     int64_t rowStart_ = 0;        // 本核行区间起点 = blockIdx·rows_former + min(blockIdx, rows_tail_core)
     int64_t rowCount_ = 0;        // 本核行数 = rows_former + (blockIdx < rows_tail_core ? 1 : 0)
     int64_t rowPitchElems_ = 0;   // UB 内行距（元素）= CeilAlign(d·S, 32) / S
-    int64_t rowsPerGroupEff_ = 0; // pitch 安全有效组行数 = min(rows_per_group, tileElems/pitchElems, 4095)
+    int64_t rowsPerGroupEff_ = 0; // pitch 安全组行数 = min(rows_per_group, tileElems/pitchElems, blockCount 上限)
 
     // ---- sync event IDs（DESIGN-BRANCH-0.md §5.5；FetchEventID 托管分配）----
     int32_t evMte2ToV_ = 0; // MTE2_V：组内 RAW（CopyIn 写 B0/B1 → Compute 读）
