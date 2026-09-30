@@ -14,8 +14,11 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "error_util.h"
 #include "util/shape_util.h"
 #include "util/const_util.h"
+
+#include <string>
 
 using namespace ge;
 using namespace Ops::Base;
@@ -28,10 +31,31 @@ static constexpr size_t INPUT_SEGMENTS_ID_IDX = 1;
 static constexpr size_t INPUT_NUM_SEGMENTS_IDX = 2;
 
 static ge::graphStatus UnsortedSegmentInferShapeImpl(const int64_t& first_dim, const gert::Shape* x_shape,
-                                                     const gert::Shape* segment_ids_shape, gert::Shape* output_shape)
+                                                     const gert::Shape* segment_ids_shape, gert::Shape* output_shape,
+                                                     const char* nodeName)
 {
     const size_t x_rank = x_shape->GetDimNum();
     const size_t segment_ids_rank = segment_ids_shape->GetDimNum();
+
+    OP_CHECK_IF(
+        x_rank < segment_ids_rank,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            nodeName, "x, segment_ids", (Shape2String(*x_shape) + ", " + Shape2String(*segment_ids_shape)).c_str(),
+            "the rank of segment_ids must not be greater than the rank of x"),
+        return ge::GRAPH_FAILED);
+
+    // a dim is skipped when either side is unknown (-1), to stay compatible with dynamic shape
+    for (size_t i = 0; i < segment_ids_rank; i++) {
+        const int64_t x_dim = x_shape->GetDim(i);
+        const int64_t ids_dim = segment_ids_shape->GetDim(i);
+        OP_CHECK_IF(
+            x_dim >= 0 && ids_dim >= 0 && x_dim != ids_dim,
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                nodeName, "x, segment_ids", (Shape2String(*x_shape) + ", " + Shape2String(*segment_ids_shape)).c_str(),
+                "segment_ids.shape must be a prefix of x.shape"),
+            return ge::GRAPH_FAILED);
+    }
+
     size_t output_rank = x_rank - segment_ids_rank + 1;
     output_shape->SetDimNum(output_rank);
     output_shape->SetDim(0, first_dim);
@@ -79,7 +103,8 @@ static graphStatus InferShape4UnsortedSegment(gert::InferShapeContext* context)
         num_segments = UNKNOWN_DIM_VALUE_;
     }
 
-    return UnsortedSegmentInferShapeImpl(num_segments, x_shape, segment_ids_shape, output_shape);
+    return UnsortedSegmentInferShapeImpl(num_segments, x_shape, segment_ids_shape, output_shape,
+                                         context->GetNodeName());
 }
 
 IMPL_OP_INFERSHAPE(UnsortedSegmentSum)
