@@ -373,7 +373,7 @@ int main()
     std::vector<float> scalesHostData = {1.0, -3.0};
     std::vector<int32_t> zeroPointsData = {2, 10};
     std::vector<float> xHostData = {0.3382, -0.0919, 0.7564, 0.0234, 3.1024, 1.0761, 0.4228, 1.4621};
-    std::vector<int32_t> outHostData = {8, 0};
+    std::vector<int32_t> outHostData(8, 0);
 
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
