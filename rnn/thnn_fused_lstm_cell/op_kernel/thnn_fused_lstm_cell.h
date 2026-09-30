@@ -338,7 +338,7 @@ public:
         PipeBarrier<PIPE_V>();
         Mul(ubs[BUF4], ubs[BUF3], ubs[BUF6], info.x);
         PipeBarrier<PIPE_V>();
-        Add(ubs[BUF1], ubs[BUF3], ubs[BUF4], info.x);
+        Add(ubs[BUF1], ubs[BUF1], ubs[BUF4], info.x);
         PipeBarrier<PIPE_V>();
         if constexpr (Std::is_same<dtype, half>::value) {
             Cast(ubsHalf[BUF17], ubs[BUF1], RoundMode::CAST_RINT, info.x);
@@ -356,7 +356,7 @@ public:
 
     __aicore__ inline void ProcessHy()
     {
-        Mul(ubs[BUF13], ubs[BUF14], ubs[BUF4], info.x);
+        Mul(ubs[BUF13], ubs[BUF15], ubs[BUF4], info.x);
         if constexpr (Std::is_same<dtype, half>::value) {
             PipeBarrier<PIPE_V>();
             Cast(ubsHalf[BUF16], ubs[BUF13], RoundMode::CAST_RINT, info.x);
