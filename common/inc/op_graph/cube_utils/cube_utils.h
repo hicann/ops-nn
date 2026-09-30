@@ -80,7 +80,6 @@ private:
                                 std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info);
     ge::graphStatus FiltrNodeStrategy(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForTransData(const PostCubeNodeInfo& node) const;
-    ge::graphStatus FiltrNodeStrategyForRelu(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForCast(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForEltWise(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForQuant(const PostCubeNodeInfo& cur_node, const PostCubeNodeInfo& prenode) const;

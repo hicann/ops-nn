@@ -666,42 +666,6 @@ TEST_F(cube_utils_ut, IsInWhitelist_Dequant)
 // Test Suite: FiltrNodeStrategy
 // ============================================================================
 
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_FP16)
-{
-    PostCubeUtils post_cube_utils;
-    ge::Graph graph("test_graph");
-    auto relu = CreateReluNode(graph, "relu1");
-
-    ge::CustomPassContext context;
-    (void)post_cube_utils.ReadConfig(context);
-
-    ge::GNodePtr relu_ptr = std::make_shared<ge::GNode>(*relu);
-    PostCubeNodeInfo node_info(relu_ptr);
-    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
-    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
-}
-
-TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_Int8)
-{
-    PostCubeUtils post_cube_utils;
-    ge::Graph graph("test_graph");
-    auto relu = CreateReluNode(graph, "relu1");
-
-    // 修改数据类型为 INT8
-    ge::Shape shape({1, 64, 112, 112});
-    ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_INT8);
-    relu->UpdateInputDesc(0, desc);
-    relu->UpdateOutputDesc(0, desc);
-
-    ge::CustomPassContext context;
-    (void)post_cube_utils.ReadConfig(context);
-
-    ge::GNodePtr relu_ptr = std::make_shared<ge::GNode>(*relu);
-    PostCubeNodeInfo node_info(relu_ptr);
-    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
-    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
-}
-
 TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToFP16)
 {
     PostCubeUtils post_cube_utils;

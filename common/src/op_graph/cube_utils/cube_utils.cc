@@ -338,7 +338,7 @@ bool PostCubeUtils::PreMatchAcorrdingToPass(const PostCubePassInfo& cur_pass, co
         return false;
     }
     if (!node.GetIsHeadNode() && PostCubeComm::GetPostCubeCubeType(node.GetNode()) != PostCubeCubeType::NotCube) {
-        OPS_LOG_D("PostCube", "node isnt headcube name = %s type = %s", GNodeGetName(node.GetNode()).GetString(),
+        OPS_LOG_D("PostCube", "node isn't headcube name = %s type = %s", GNodeGetName(node.GetNode()).GetString(),
                   GNodeGetType(node.GetNode()).GetString());
         return false;
     }
@@ -361,7 +361,7 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
     PostCubeNodeInfo node = m_pass.m_opnodes[m_pass.m_opnodes.size() - 1];
     if (node.GetNode()->GetOutputsSize() == 0) {
         OPS_LOG_D("PostCube", "GetOutDataNodes.empty");
-        m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKOWN
+        m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
     std::string cube_type = GetMergeInputNodeType(m_pass.m_opnodes[0].GetNode());
@@ -384,7 +384,7 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
         }
     }
     if (cube_type != CONV2D && node.GetNode()->GetOutputsSize() > 1) {
-        m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKOWN
+        m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
 
@@ -395,13 +395,13 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
             if (!PreMatchAcorrdingToPass(m_pass, grandnode)) {
                 OPS_LOG_D("PostCube", "Has a can't post_cube outputnode name = %s type = %s",
                           GNodeGetName(grandnode.GetNode()).GetString(), GNodeGetType(grandnode.GetNode()).GetString());
-                m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKOWN
+                m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
                 return false;
             }
         }
     }
     OPS_LOG_D("PostCube", " needto cut, passid = %d", m_pass.pass_index);
-    m_pass.m_flag = 1; // m_flag = 2 DONT NEED, 1NEED, 0 UNKOWN
+    m_pass.m_flag = 1; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
     return true;
 }
 
@@ -459,9 +459,6 @@ ge::graphStatus PostCubeUtils::FiltrNodeStrategy(const PostCubeNodeInfo& node) c
     if (node_type == kAdd || node_type == kSub || node_type == ELTWISE) {
         return FiltrNodeStrategyForEltWise(node);
     }
-    if (node_type == kPRelu || node_type == kLeakyRelu || node_type == RELU6) {
-        return FiltrNodeStrategyForRelu(node);
-    }
     if (node_type == CAST) {
         return FiltrNodeStrategyForCast(node);
     }
@@ -510,21 +507,6 @@ ge::graphStatus PostCubeUtils::FiltrNodeStrategyForQuant(const PostCubeNodeInfo&
         }
     }
     return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus PostCubeUtils::FiltrNodeStrategyForRelu(const PostCubeNodeInfo& node) const
-{
-    ge::TensorDesc input_desc;
-    if (node.GetNode()->GetInputDesc(0, input_desc) != ge::GRAPH_SUCCESS) {
-        PrintNodeFilterReason(node, "input 0 is empty");
-        return ge::GRAPH_FAILED;
-    }
-    if (input_desc.GetDataType() == ge::DT_FLOAT16 || input_desc.GetDataType() == ge::DT_INT8) {
-        return ge::GRAPH_SUCCESS;
-    }
-    PrintNodeFilterReason(node, "input data type is not fp16 or int8, cur input datatype is ",
-                          PostCubeComm::GetStrByDataTypeVec({input_desc.GetDataType()}));
-    return ge::GRAPH_FAILED;
 }
 
 ge::graphStatus PostCubeUtils::FiltrNodeStrategyForCast(const PostCubeNodeInfo& node) const
@@ -653,7 +635,7 @@ ge::graphStatus PostCubeUtils::FiltrNodeStrategyForEltWise(const PostCubeNodeInf
     }
     auto input1_node = node.GetNode()->GetInDataNodesAndPortIndexs(1);
     if (GNodeGetName(input1_node.first) == cur_pass_pre_node) {
-        PrintNodeFilterReason(node, "input1 node is same wiht cur pass pre node, ", "input0 is ",
+        PrintNodeFilterReason(node, "input1 node is same with cur pass pre node, ", "input0 is ",
                               GNodeGetName(input1_node.first).GetString(), "cur pass pre node is ",
                               cur_pass_pre_node.GetString());
         return ge::GRAPH_FAILED;
@@ -685,7 +667,7 @@ ge::graphStatus PostCubeUtils::JudgeIsMatch(const PostCubeNodeInfo& node, std::s
         return ge::GRAPH_FAILED;
     }
     if (!JudgeCachePass(node, cur_index, ret_index)) {
-        OPS_LOG_D("PostCube", "JudgeIsMatch node isnt JudgeCachePass name = %s type = %s",
+        OPS_LOG_D("PostCube", "JudgeIsMatch node isn't JudgeCachePass name = %s type = %s",
                   GNodeGetName(node.GetNode()).GetString(), GNodeGetType(node.GetNode()).GetString());
         return ge::GRAPH_FAILED;
     }

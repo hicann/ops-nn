@@ -167,6 +167,67 @@ class ExtendConv2D : public OpDef {
 public:
     explicit ExtendConv2D(const char* name) : OpDef(name)
     {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("filter")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("offset_w")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("scale0")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("relu_weight0")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("clip_value0")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("scale1")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("relu_weight1")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Input("clip_value1")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Output("y0")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+        this->Output("y1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_MAX})
+            .Format({ge::FORMAT_END})
+            .UnknownShapeFormat({ge::FORMAT_END});
+
         this->Attr("strides").AttrType(REQUIRED).ListInt();
         this->Attr("pads").AttrType(OPTIONAL).ListInt({0, 0, 0, 0});
         this->Attr("dilations").AttrType(OPTIONAL).ListInt({1, 1, 1, 1});

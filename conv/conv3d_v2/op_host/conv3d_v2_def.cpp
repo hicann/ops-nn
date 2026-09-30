@@ -184,7 +184,6 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "conv3d_v2")
             .ExtendCfgInfo("opInterface.value", "conv3dv2")
-            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
             .ExtendCfgInfo("jitCompile.flag", "false");
 
         SetAscendConfig(aicoreConfig95, "ascend950");
