@@ -704,7 +704,10 @@ static bool CheckConvGroupValue(const InferShapeContext* context, ConvOpInfo& op
     const gert::Shape* filterShape = context->GetInputShape(opInfo.paramIdx.weightIdx);
     OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, filterShape);
     std::vector<const gert::Shape*> xFilterShape = {xShape, filterShape};
-    if (opInfo.opType == ConvOptype::CONV2DV2 && groups == 1 && opInfo.ic != 0 && opInfo.kc != 0) {
+
+    if ((opInfo.opType == ConvOptype::CONV2DV2 || opInfo.opType == ConvOptype::CONV3DV2 ||
+         opInfo.opType == ConvOptype::QUANT_CONV3D) &&
+        groups == 1 && opInfo.ic != 0 && opInfo.kc != 0) {
         if (opInfo.ic % opInfo.kc == 0) {
             groups = opInfo.ic / opInfo.kc;
             OP_LOGD(context->GetNodeName(), "Attr groups is implicitly changed.");
@@ -1452,6 +1455,16 @@ static ge::graphStatus InferShapeForConv3DV2(InferShapeContext* context)
     return InferShapeForConvInner(context, convParamIdx, convType);
 }
 
+static ge::graphStatus InferDataTypeConv3DV2(gert::InferDataTypeContext* context)
+{
+    OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DV2", "context is null."), return ge::GRAPH_FAILED);
+
+    const ge::DataType xDtype = context->GetInputDataType(X_IDX_CONV);
+    context->SetOutputDataType(Y_IDX_CONV, xDtype);
+    OP_LOGD(context->GetNodeName(), "Set y dtype: %s success.", DTypeToStr(xDtype).c_str());
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShapeForQuantConv2D(InferShapeContext* context)
 {
     OpParamIdx convParamIdx = {X_IDX_CONV,
@@ -1562,6 +1575,14 @@ static ge::graphStatus InferShapeRangeForQuantConv3D(gert::InferShapeRangeContex
                                PAD_MODE_IDX_QUANTCONV3D,
                                ROUNDMODE_IDX_QUANT_CONV};
     ConvOptype convType = ConvOptype::QUANT_CONV3D;
+    return InferShapeRangeForConvInner(context, convParamIdx, convType);
+}
+
+static ge::graphStatus InferShapeRangeForConv3DV2(gert::InferShapeRangeContext* context)
+{
+    OpParamIdx convParamIdx = {X_IDX_CONV,    W_IDX_CONV,         BIAS_IDX_CONV,   Y_IDX_CONV,        STRIDES_IDX_CONV,
+                               PADS_IDX_CONV, DILATIONS_IDX_CONV, GROUPS_IDX_CONV, PAD_MODE_IDX_CONV, -1};
+    ConvOptype convType = ConvOptype::CONV3DV2;
     return InferShapeRangeForConvInner(context, convParamIdx, convType);
 }
 
@@ -1677,7 +1698,10 @@ IMPL_OP_INFERSHAPE(Conv2DV2)
     .InferShape(Ops::NN::Conv::InferShapeForConv2DV2)
     .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 
-IMPL_OP_INFERSHAPE(Conv3DV2).InferShape(Ops::NN::Conv::InferShapeForConv3DV2);
+IMPL_OP_INFERSHAPE(Conv3DV2)
+    .InferShape(Ops::NN::Conv::InferShapeForConv3DV2)
+    .InferShapeRange(Ops::NN::Conv::InferShapeRangeForConv3DV2)
+    .InferDataType(Ops::NN::Conv::InferDataTypeConv3DV2);
 
 IMPL_OP_INFERSHAPE(QuantConv2D)
     .InferShape(Ops::NN::Conv::InferShapeForQuantConv2D)

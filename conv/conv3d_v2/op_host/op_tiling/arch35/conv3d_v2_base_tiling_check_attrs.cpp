@@ -311,6 +311,19 @@ ge::graphStatus Conv3dBaseTilingV2::ParseGroupLegal()
             FormatString("If the dtype of input x is int8, parameter %s must be %d", "groups", 1).c_str());
         return ge::GRAPH_FAILED;
     }
+
+    auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
+    if (fMapShapePtr != nullptr && fMapShapePtr->GetStorageShape().GetDimNum() == CONV3D_DIM_SIZE_LIMIT &&
+        !flagInfo_.isConv3dDequant && oriShapeAttrInfo_.oriGroups == 1 && oriShapeAttrInfo_.oriWeightC > 0 &&
+        oriShapeAttrInfo_.oriFmapC > 0 && oriShapeAttrInfo_.oriFmapC != oriShapeAttrInfo_.oriWeightC) {
+        if (oriShapeAttrInfo_.oriFmapC % oriShapeAttrInfo_.oriWeightC == 0) {
+            oriShapeAttrInfo_.oriGroups = oriShapeAttrInfo_.oriFmapC / oriShapeAttrInfo_.oriWeightC;
+            OP_LOGD(context_->GetNodeName(),
+                    "%s AscendC: Attr groups is implicitly changed, original groups %ld, actual groups %ld",
+                    paramInfo_.nodeType.c_str(), *groupsPtr, oriShapeAttrInfo_.oriGroups);
+        }
+    }
+
     if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context_->GetNodeType(), "groups", std::to_string(oriShapeAttrInfo_.oriGroups).c_str(),

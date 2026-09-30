@@ -27,7 +27,7 @@
 
 - 计算公式：
 
-  - 假定输入（`x`）的shape是 $(N, C_{\text{in}}, D, H, W)$ ，（`filter`）的shape是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（`y`）的shape是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$
+  - 假定输入（`x`）的shape是$(N, C_{\text{in}}, D, H, W)$，（`filter`）的shape是$(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（`y`）的shape是$(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$
 
   - 对于INT8类型的输入，输出将被表示为：
 
@@ -41,7 +41,7 @@
     \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
-  其中，$\star$ 表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$ 代表`batch size`，$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高和宽，相应输出维度的计算公式如下：
+  其中，$\star$表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$代表`batch size`，$C$代表通道数，$D$、$H$和$W$分别代表深度、高和宽，相应输出维度的计算公式如下：
 
   $$
     D_{\text{out}} = (D + \text{pad\_head} + \text{pad\_tail} - (\text{dilation\_d} \times (K_d - 1) + 1)) / \text{stride\_d} + 1 \\
@@ -54,7 +54,7 @@
 <table>
 <tr>
 <th style="width:100px">参数名</th>
-<th style="width:180px">输入 / 输出 / 属性</th>
+<th style="width:180px">输入/输出/属性</th>
 <th style="width:420px">描述</th>
 <th style="width:420px">数据类型</th>
 <th style="width:200px">数据格式</th>
@@ -132,7 +132,7 @@
 <tr>
 <td>groups</td>
 <td>可选属性</td>
-<td>从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
+<td>从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围[1, 65535]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -160,7 +160,7 @@
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>表示表示是否启用hf32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启hf32计算。</td>
+<td>表示是否启用hf32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启hf32计算。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -179,7 +179,7 @@
 - Atlas A2系列产品、Atlas A3系列产品：
   - `filter`的`H`、`W`维度范围：[1,511]。
   - 不支持空`tensor`。
-  - 当`groups`为1, `dilation`全为1，`padding`全为0，`filter`没有为1的维度，`x`的`D`*`H`*`W`小于65536，`bias`为`FLOAT`时，会进入`Pointwise`分支，可以使用`NCDHW`格式。
+  - 当`groups`为1，`dilation`全为1，`padding`全为0，`filter`没有为1的维度，`x`的`D`*`H`*`W`小于65536，`bias`为`FLOAT`时，会进入`Pointwise`分支，可以使用`NCDHW`格式。
 
   <table>
   <tr>
@@ -237,7 +237,7 @@
 
 - Ascend 950PR&950DT系列产品：
   - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCDHW`。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
+  - 对于`filter`输入，`H`、`W`的大小应该在[1, 511]的范围内。
   - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
   - 当`x`数据类型为`INT8`时，`x`的数据格式仅支持`NCDHW`，`filter`的数据格式支持`NCDHW`和`FRACTAL_Z_3D`，`output`的数据格式仅支持`NDHWC`。
   - 支持的数据类型和Format组合如下表：
@@ -325,11 +325,11 @@
   </table>
 
 - 如果任何参数超出上述范围，算子的正确性无法保证。
-- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
+- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv3DV2算子的非`INT8`数据类型计算。    |
-| aclnn调用 | [test_aclnn_quant_conv3d](../quant_conv3d/examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md)接口方式调用Conv3DV2算子的`INT8`数据类型计算。    |
+| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过[aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv3DV2算子的非`INT8`数据类型计算。    |
+| aclnn调用 | [test_aclnn_quant_conv3d](../quant_conv3d/examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过[aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md)接口方式调用Conv3DV2算子的`INT8`数据类型计算。    |
