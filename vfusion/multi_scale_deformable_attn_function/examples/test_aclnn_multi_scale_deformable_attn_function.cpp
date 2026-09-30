@@ -99,12 +99,12 @@ int main()
     aclTensor* location = nullptr;
     aclTensor* attnWeight = nullptr;
     aclTensor* output = nullptr;
-    std::vector<float> valueHostData = {static_cast<float>(GetShapeSize(locationShape)), 1};
+    std::vector<float> valueHostData(static_cast<float>(GetShapeSize(valueShape)), 0);
     std::vector<int32_t> spatialShapeHostData = {1, 1};
     std::vector<float> levelStartIndexHostData = {0};
     std::vector<float> locationHostData(static_cast<float>(GetShapeSize(locationShape)), 0);
-    std::vector<float> attnWeightHostData = {static_cast<float>(GetShapeSize(attnWeightShape)), 1};
-    std::vector<float> outputHostData = {static_cast<float>(GetShapeSize(outputShape)), 1};
+    std::vector<float> attnWeightHostData(static_cast<float>(GetShapeSize(attnWeightShape)), 0);
+    std::vector<float> outputHostData(static_cast<float>(GetShapeSize(outputShape)), 0);
     // value aclTensor
     ret = CreateAclTensor(valueHostData, valueShape, &valueDeviceAddr, aclDataType::ACL_FLOAT, &value);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
