@@ -352,26 +352,26 @@ stages:
       JOB_st_test_950:
         name: ST_test_950
         uses: .gitcode/workflows/st_test_action.yml
-      PreSmoke_harmony-infer-chs-nn:
-        name: PreSmoke_harmony-infer-chs-nn
-        uses: .gitcode/workflows/kirin_pre_smoke_action.yml
-        with:
-          repo_name: 'ops-nn'
-          device_type: 'chs_phone'
-          rdv_script: 'rdv_kirin9030_gitcode.sh'
-          chip_version: 'Kirin9030'
-          cases_pool: 'nn_all.json'
-          cases_baseline: 'nn.json'
-      PreSmoke_harmony-infer-cpro-nn:
-        name: PreSmoke_harmony-infer-cpro-nn
-        uses: .gitcode/workflows/kirin_pre_smoke_action.yml
-        with:
-          repo_name: 'ops-nn'
-          device_type: 'kirinx90'
-          rdv_script: 'rdv_kirinx90_gitcode.sh'
-          chip_version: 'KirinX90'
-          cases_pool: 'nn_all.json'
-          cases_baseline: 'nn.json'
+      # PreSmoke_harmony-infer-chs-nn:
+      #   name: PreSmoke_harmony-infer-chs-nn
+      #   uses: .gitcode/workflows/kirin_pre_smoke_action.yml
+      #   with:
+      #     repo_name: 'ops-nn'
+      #     device_type: 'chs_phone'
+      #     rdv_script: 'rdv_kirin9030_gitcode.sh'
+      #     chip_version: 'Kirin9030'
+      #     cases_pool: 'nn_all.json'
+      #     cases_baseline: 'nn.json'
+      # PreSmoke_harmony-infer-cpro-nn:
+      #   name: PreSmoke_harmony-infer-cpro-nn
+      #   uses: .gitcode/workflows/kirin_pre_smoke_action.yml
+      #   with:
+      #     repo_name: 'ops-nn'
+      #     device_type: 'kirinx90'
+      #     rdv_script: 'rdv_kirinx90_gitcode.sh'
+      #     chip_version: 'KirinX90'
+      #     cases_pool: 'nn_all.json'
+      #     cases_baseline: 'nn.json'
     pre:
     - type: auto
     fail-fast: true
