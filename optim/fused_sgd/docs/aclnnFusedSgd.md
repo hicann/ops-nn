@@ -267,12 +267,12 @@ aclnnStatus aclnnFusedSgd(
       <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale是空指针。</td>
+      <td>传入的paramsRef、gradsRef、momentumBufferListOptionalRef、gradScaleOptional是空指针。</td>
       </tr>
       <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td><ul><li>paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale的数据类型不在支持的范围之内。</li>
+      <td><ul><li>paramsRef、gradsRef、momentumBufferListOptionalRef、gradScaleOptional的数据类型不在支持的范围之内。</li>
       <li>paramsRef、gradsRef与momentumBufferListOptionalRef及其中各个tensor的数据类型不同。</li>
       <li>paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度大于8。</li>
       <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape不同。</li>
@@ -329,7 +329,7 @@ aclnnStatus aclnnFusedSgd(
 
 ## 约束说明
 
-1. paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale的数据类型在支持的范围之内。
+1. paramsRef、gradsRef、momentumBufferListOptionalRef、gradScaleOptional的数据类型在支持的范围之内。
 2. paramsRef、gradsRef与momentumBufferListOptionalRef及其中各个tensor具有相同的数据类型。
 3. paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度小于等于8。
 4. paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape相同。
