@@ -455,11 +455,12 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
             bool skipCond = balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
                             curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
             // FP32 cubeBound 场景且mCnt*nCnt大于核数时，baseM/baseN需大于64
-            skipCond = skipCond ||
-                       (isFP32 && curCubeBoundParam < runInfo.cubeBoundEdge &&
-                        ((curBaseM < FP32_MIN_BASE_BLOCK || curBaseN < FP32_MIN_BASE_BLOCK) &&
-                         MathUtil::CeilDivision(args.mValue, curBaseM) * MathUtil::CeilDivision(args.nValue, curBaseN) >
-                             compileInfo.aicNum));
+            uint64_t usedCoreTmp = MathUtil::CeilDivision(args.mValue, curBaseM) *
+                                   MathUtil::CeilDivision(args.nValue, curBaseN);
+            skipCond = skipCond || (isFP32 && curCubeBoundParam < runInfo.cubeBoundEdge &&
+                                    ((curBaseM < FP32_MIN_BASE_BLOCK && args.mValue > curBaseM) ||
+                                     (curBaseN < FP32_MIN_BASE_BLOCK && args.nValue > curBaseN)) &&
+                                    usedCoreTmp > compileInfo.aicNum);
             if (skipCond) {
                 continue;
             }
