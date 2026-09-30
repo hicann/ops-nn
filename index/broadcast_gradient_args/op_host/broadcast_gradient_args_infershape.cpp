@@ -139,6 +139,11 @@ graphStatus InferShape4BroadcastGradientArgs(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, y1_shape);
     gert::Shape* y2_shape = context->GetOutputShape(BROADCASTGRADIENTARGS_OUT_IDX_Y2);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2_shape);
+    if (x1_shape->GetDimNum() != 1 || x2_shape->GetDimNum() != 1) {
+        OP_LOGE(context->GetNodeName(), "x1 and x2 shape tensors must be 1D, got rank %zu and %zu",
+                x1_shape->GetDimNum(), x2_shape->GetDimNum());
+        return ge::GRAPH_FAILED;
+    }
     ge::DataType x1_dtype = x1_tensor->GetDataType();
     ge::DataType x2_dtype = x2_tensor->GetDataType();
     if (x1_dtype != x2_dtype) {

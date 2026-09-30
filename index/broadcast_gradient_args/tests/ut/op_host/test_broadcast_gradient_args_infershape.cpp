@@ -10,15 +10,16 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <vector>
+#include "exe_graph/runtime/storage_shape.h"
 #include "infershape_test_util.h"
+#include "kernel_run_context_facker.h"
 #include "ut_op_common.h"
 #include "log/log.h"
-#include "ut_op_util.h"
 #include "../../../op_graph/broadcast_gradient_args_proto.h"
 
 using namespace ge;
-using namespace op;
-using namespace ut_util;
 
 class BroadcastGradientArgsOpUT : public testing::Test {
 protected:
@@ -26,6 +27,106 @@ protected:
 
     static void TearDownTestCase() { std::cout << "BroadcastGradientArgs Proto Test TearDown" << std::endl; }
 };
+
+namespace {
+template <typename T>
+gert::Tensor* CreateConstTensor(const gert::Shape& shape, const std::vector<T>& data, ge::DataType dataType,
+                                std::unique_ptr<uint8_t[]>& tensorHolder)
+{
+    size_t totalSize = 0;
+    tensorHolder = gert::Tensor::CreateFollowing(static_cast<int64_t>(data.size()), dataType, totalSize);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensorHolder.get());
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        auto dim = shape.GetDim(i);
+        tensor->MutableStorageShape().AppendDim(dim);
+        tensor->MutableOriginShape().AppendDim(dim);
+    }
+    tensor->SetOriginFormat(ge::FORMAT_ND);
+    tensor->SetStorageFormat(ge::FORMAT_ND);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), totalSize - sizeof(gert::Tensor), data.data(), data.size() * sizeof(T));
+    return tensor;
+}
+
+gert::InferShapeContext* BuildContext(const gert::Shape& x1Shape, const std::vector<int32_t>& x1Data,
+                                      const gert::Shape& x2Shape, const std::vector<int32_t>& x2Data,
+                                      std::unique_ptr<uint8_t[]>& x1TensorHolder,
+                                      std::unique_ptr<uint8_t[]>& x2TensorHolder, gert::KernelRunContextHolder& holder)
+{
+    auto x1Tensor = CreateConstTensor(x1Shape, x1Data, ge::DT_INT32, x1TensorHolder);
+    auto x2Tensor = CreateConstTensor(x2Shape, x2Data, ge::DT_INT32, x2TensorHolder);
+    auto x1OutputShape = gert::Shape{};
+    auto x2OutputShape = gert::Shape{};
+
+    holder = gert::InferShapeContextFaker()
+                 .SetOpType("BroadcastGradientArgs")
+                 .NodeIoNum(2, 2)
+                 .IrInstanceNum({1, 1})
+                 .InputShapes(std::vector<void*>{static_cast<void*>(x1Tensor), static_cast<void*>(x2Tensor)})
+                 .OutputShapes({&x1OutputShape, &x2OutputShape})
+                 .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .Build();
+    return holder.GetContext<gert::InferShapeContext>();
+}
+} // namespace
+
+TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_rank_one_inputs)
+{
+    auto x1_shape = gert::Shape{2};
+    auto x2_shape = gert::Shape{2};
+    std::vector<int32_t> x1_value = {2, 1};
+    std::vector<int32_t> x2_value = {1, 2};
+    std::unique_ptr<uint8_t[]> x1_tensor_holder;
+    std::unique_ptr<uint8_t[]> x2_tensor_holder;
+    gert::KernelRunContextHolder holder;
+
+    auto context = BuildContext(x1_shape, x1_value, x2_shape, x2_value, x1_tensor_holder, x2_tensor_holder, holder);
+    ASSERT_NE(context, nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    EXPECT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[1]");
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[1]");
+}
+
+TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_x1_rank_not_one)
+{
+    auto x1_shape = gert::Shape{2, 1};
+    auto x2_shape = gert::Shape{2};
+    std::vector<int32_t> x1_value = {2, 1};
+    std::vector<int32_t> x2_value = {1, 2};
+    std::unique_ptr<uint8_t[]> x1_tensor_holder;
+    std::unique_ptr<uint8_t[]> x2_tensor_holder;
+    gert::KernelRunContextHolder holder;
+
+    auto context = BuildContext(x1_shape, x1_value, x2_shape, x2_value, x1_tensor_holder, x2_tensor_holder, holder);
+    ASSERT_NE(context, nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    EXPECT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_x2_rank_not_one)
+{
+    auto x1_shape = gert::Shape{2};
+    auto x2_shape = gert::Shape{2, 1};
+    std::vector<int32_t> x1_value = {2, 1};
+    std::vector<int32_t> x2_value = {1, 2};
+    std::unique_ptr<uint8_t[]> x1_tensor_holder;
+    std::unique_ptr<uint8_t[]> x2_tensor_holder;
+    gert::KernelRunContextHolder holder;
+
+    auto context = BuildContext(x1_shape, x1_value, x2_shape, x2_value, x1_tensor_holder, x2_tensor_holder, holder);
+    ASSERT_NE(context, nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    EXPECT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
 
 // TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_zero_shape) {
 //   // input info
