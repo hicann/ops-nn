@@ -73,6 +73,7 @@ static ge::graphStatus OptimizedTransducerTilingFunc(gert::TilingContext* contex
     uint64_t maxT = logitsShape->GetStorageShape().GetDim(1);       // 输入序列长度的最大值
     uint64_t maxU = logitsShape->GetStorageShape().GetDim(2);       // 目标序列长度的最大值 + 1
     uint64_t V = logitsShape->GetStorageShape().GetDim(3);          // 输入类别数量
+    OP_CHECK_IF(batch_size == 0, OP_LOGE(context, "batch_size is 0"), return ge::GRAPH_FAILED);
     coreNum = (batch_size < coreNum) ? batch_size : coreNum;
     uint64_t bigCoreNum = batch_size % coreNum;
     uint64_t smallCoreProcessNum = batch_size / coreNum;
