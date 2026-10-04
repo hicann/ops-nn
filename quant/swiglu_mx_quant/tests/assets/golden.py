@@ -34,15 +34,29 @@ Outputs:
     y       : quantized result (dst_type)
     mxscale : scale factors (FP8_E8M0)
 
+Quantization semantics (mirrors kernel and ttk.utilities.mx_quantize):
+    - scale_alg=0 (OCP) or FP4 dst types: shared_exp = floor(log2(amax)) - emax;
+      the exponent may be negative and is encoded as E8M0 byte = shared_exp + 127
+      clipped to [0, 255]; all-zero block -> byte 0 (2^-127); inf/NaN block ->
+      NaN (byte 255)
+    - scale_alg=1 (cuBLAS, FP8 only): S = amax / max_norm(dst), the E8M0 exponent
+      is the fp32 exponent of S rounded up when its mantissa is non-zero
+    - elements are quantized on the target dtype grid: the scaled value is split
+      into private_exp + mantissa bits, rounded per round_mode, then clipped to
+      the max norm of the dst type
+    - round modes: rint (ties-to-even), round (ties away from zero, kernel
+      CAST_ROUND), floor, ceil, trunc; NaN elements are cast to +0 (mirrors NPU)
+
 mxscale layout (mirrors kernel/infershape):
     - one scale per block_size(=32) block along axis
     - scales are stored in pairs: the axis dim of mxscale is
       ceil(n_blocks / 2) (i.e. block count padded to even) and a last dim
       of 2 is appended; slot k of pair p holds the scale of block (2p + k)
-    - all-zero block -> scale byte 0 (2^-127)
+    - all-zero block / padding slot -> scale byte 0 (2^-127)
     - with group_index: axis=-2 packs ceil(rows_g/64) pairs per group
       compactly (allocated axis dim = M // 64 + groupNum); axis=-1 segments
-      rows and each row still owns ceil(N/64) pairs
+      rows and each row still owns ceil(N/64) pairs; slots not covered by any
+      group keep their zero-initialized value (byte 0)
 
 Reference (mirrors docs/aclnnSwigluMxQuant.md and kernel ComputeVfSwigluV1-V4):
 
@@ -75,32 +89,34 @@ import numpy as np
 
 try:
     from ml_dtypes import bfloat16 as _bf16
-except ImportError:
-    _bf16 = None
-
-try:
     from ml_dtypes import float8_e4m3fn as _fp8_e4m3
     from ml_dtypes import float8_e5m2 as _fp8_e5m2
-    from ml_dtypes import float8_e8m0 as _fp8_e8m0
-except ImportError:
-    _fp8_e4m3 = None
-    _fp8_e5m2 = None
-    _fp8_e8m0 = None
+except ImportError as _exc:
+    raise ImportError(
+        "swiglu_mx_quant golden requires the ml_dtypes package (pip install ml-dtypes)"
+    ) from _exc
 
 try:
-    from ml_dtypes import float4_e2m1_fn as _fp4_e2m1
-    from ml_dtypes import float4_e1m2_fn as _fp4_e1m2
-except ImportError:
-    _fp4_e2m1 = None
-    _fp4_e1m2 = None
+    from en_dtypes import float8_e8m0 as _fp8_e8m0
+    from en_dtypes import float4_e2m1 as _fp4_e2m1
+    from en_dtypes import float4_e1m2 as _fp4_e1m2
+except ImportError as _exc:
+    raise ImportError(
+        "swiglu_mx_quant golden requires the en_dtypes package (pip install en-dtypes)"
+    ) from _exc
 
 
+# dst_type -> (name, numpy dtype, emax, exp_bits, mant_bits, min_exp, max_norm)
+# min_exp is the minimum normal exponent of the target format (e1m2 is special-cased to 0).
 _DST_TYPE_MAP = {
-    40: ("float4_e2m1", _fp4_e2m1, 2),
-    41: ("float4_e1m2", _fp4_e1m2, 0),
-    36: ("float8_e4m3fn", _fp8_e4m3, 8),
-    35: ("float8_e5m2", _fp8_e5m2, 15),
+    40: ("float4_e2m1", _fp4_e2m1, 2, 2, 1, 0, 6.0),
+    41: ("float4_e1m2", _fp4_e1m2, 0, 1, 2, 0, 1.75),
+    36: ("float8_e4m3fn", _fp8_e4m3, 8, 4, 3, -6, 448.0),
+    35: ("float8_e5m2", _fp8_e5m2, 15, 5, 2, -14, 57344.0),
 }
+
+_FP32_MIN_NORMAL = np.float32(2.0**-126)
+_E8M0_MAX_EXP = 127
 
 
 def _prod(seq):
@@ -165,9 +181,61 @@ def _swiglu(
     return y
 
 
+def _round_mantissa(arr, round_mode):
+    """Round on the target grid; 'round' is ties-away-from-zero (kernel CAST_ROUND)."""
+    if round_mode in ("rint", "even"):
+        return np.rint(arr)
+    if round_mode in ("round", "nearest"):
+        sign = np.signbit(arr)
+        rounded_abs = np.floor(np.abs(arr) + arr.dtype.type(0.5))
+        return np.where(sign, -rounded_abs, rounded_abs)
+    if round_mode == "floor":
+        return np.floor(arr)
+    if round_mode == "ceil":
+        return np.ceil(arr)
+    if round_mode == "trunc":
+        return np.trunc(arr)
+    raise ValueError(f"Unrecognized round mode: {round_mode}")
+
+
+def _share_exp_ocp(abs_max, emax):
+    """OCP scale: shared_exp = floor(log2(amax)) - emax; all-zero block -> -inf."""
+    safe = abs_max + _FP32_MIN_NORMAL * (abs_max == 0)
+    share_exp = np.floor(np.log2(safe.astype(np.float32))) - emax
+    return np.where(abs_max == 0, -np.inf, share_exp)
+
+
+def _share_exp_blas(abs_max, max_norm):
+    """cuBLAS scale (scale_alg=1, FP8): S = amax / max_norm, the E8M0 exponent is
+    the fp32 exponent of S rounded up when its mantissa is non-zero."""
+    s_fp32 = (abs_max / np.float32(max_norm)).astype(np.float32)
+    bits = s_fp32.view(np.uint32)
+    exponents = ((bits & np.uint32(0x7F800000)) >> 23).astype(np.int16)
+    mantissas = bits & np.uint32(0x007FFFFF)
+    round_up = ((exponents > 0) & (exponents < 254) & (mantissas > 0)) | (
+        (exponents == 0) & (mantissas > 2**22)
+    )
+    exponents = np.where(round_up, exponents + 1, exponents)
+    share_exp = (exponents - 127).astype(np.float32)
+    return np.where(abs_max == 0, -np.inf, share_exp)
+
+
+def _quantize_elements(values, share_exp, dst_type, round_mode):
+    """Quantize values / 2^share_exp onto the target dtype grid."""
+    _, _, _, _, mant_bits, min_exp, max_norm = _DST_TYPE_MAP[dst_type]
+    ret = values / np.power(2.0, share_exp)
+    private_exp = np.floor(np.log2(np.abs(ret) + (ret == 0)))
+    private_exp = np.clip(private_exp, min_exp, None)
+    ret = ret / np.power(2.0, private_exp) * float(2**mant_bits)
+    ret = _round_mantissa(ret, round_mode)
+    ret = ret / float(2**mant_bits) * np.power(2.0, private_exp)
+    return np.clip(ret, -max_norm, max_norm)
+
+
 def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_alg):
     """Dynamic MX quantization, returns (quantized_y, mxscale, dst_dtype)."""
-    dst_name, dst_dtype, emax = _DST_TYPE_MAP[dst_type]
+    dst_name, dst_dtype, emax, _, _, _, max_norm = _DST_TYPE_MAP[dst_type]
+    use_blas = scale_alg != 0 and dst_type in (35, 36)
 
     shape = list(data_fp32.shape)
     pre_q = _prod(shape[:axis_pos]) if axis_pos > 0 else 1
@@ -190,32 +258,30 @@ def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_al
 
         abs_max = np.max(np.abs(chunk), axis=1, keepdims=True)
 
-        # OCP scale: shared_exp = floor(log2(amax)) - emax, encoded as E8M0
-        # byte = shared_exp + 127 (clipped); all-zero block -> byte 0
-        safe_amax = np.where(abs_max > 0, abs_max, 1.0)
-        shared_exp = np.floor(np.log2(safe_amax)) - emax
-        scale_byte = np.clip((shared_exp + 127).astype(np.int32), 0, 255)
-        scale_byte = np.where(abs_max <= 0, 0, scale_byte)
-        mxscale = np.power(2.0, scale_byte.astype(np.float32) - 127.0)
-
-        scaled = chunk / np.where(abs_max <= 0, 1.0, mxscale)
-
-        if round_mode == "floor":
-            scaled_q = np.floor(scaled)
-        elif round_mode == "round":
-            scaled_q = np.round(scaled)
+        # Scale exponent: OCP or cuBLAS; E8M0 encoding clamps to [-127, 127],
+        # above that (inf/huge block) -> NaN (byte 255).
+        if use_blas:
+            share_exp = _share_exp_blas(abs_max, max_norm)
         else:
-            scaled_q = np.rint(scaled)
+            share_exp = _share_exp_ocp(abs_max, emax)
+        share_exp = np.where(share_exp > _E8M0_MAX_EXP, np.float32(np.nan), share_exp)
+        share_exp = np.where(
+            share_exp < -_E8M0_MAX_EXP, np.float32(-_E8M0_MAX_EXP), share_exp
+        )
+
+        scaled_q = _quantize_elements(chunk, share_exp, dst_type, round_mode)
 
         actual_len = end - start
         y_flat[:, start:end, :] = scaled_q[:, :actual_len, :]
-        scale_flat[:, b, :] = mxscale[:, 0, :]
+        scale_flat[:, b, :] = np.power(2.0, share_exp)[:, 0, :]
 
-    y_out = y_flat.reshape(shape)
+    # NPU casts NaN elements (NaN-scale blocks) to +0
+    y_out = np.nan_to_num(y_flat.reshape(shape), nan=0.0, copy=False)
 
     # Pack scales in pairs: axis dim becomes n_pairs, last dim of 2 appended;
-    # slot k of pair p holds the scale of block (2p + k), padding slots are 0.
-    padded = np.zeros((pre_q, n_pairs * 2, post_q), dtype=np.float32)
+    # slot k of pair p holds the scale of block (2p + k); padding slots hold
+    # 2^-127 (byte 0), mirroring the kernel's zero-padded phantom block.
+    padded = np.full((pre_q, n_pairs * 2, post_q), np.float32(2.0**-127))
     padded[:, :n_blocks, :] = scale_flat
     pairs = padded.reshape(pre_q, n_pairs, 2, post_q)
     lead = tuple(shape[:axis_pos])
@@ -246,10 +312,6 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
     scale_alg = int(kwargs.get("scale_alg", 0))
     block_size = 32
 
-    output_dtypes = kwargs.get("output_dtypes")
-    if output_dtypes is not None and len(output_dtypes) > 0:
-        pass
-
     ndim = x.ndim
     dim_pos = activate_dim % ndim
     axis_pos = axis % ndim
@@ -266,9 +328,7 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
     )
 
     if "bfloat16" in str(x.dtype):
-        swiglu_result = (
-            swiglu_result.astype(_bf16) if _bf16 is not None else swiglu_result
-        )
+        swiglu_result = swiglu_result.astype(_bf16)
     elif "float16" in str(x.dtype):
         swiglu_result = swiglu_result.astype(np.float16)
 
@@ -288,11 +348,9 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
             scale_shape[axis_pos] = math.ceil(y_shape[axis_pos] / (block_size * 2))
         scale_shape.append(2)
 
-        _, dst_dtype, _ = _DST_TYPE_MAP[dst_type]
-        y_dtype = dst_dtype if dst_dtype is not None else np.float32
-        scale_dtype = _fp8_e8m0 if _fp8_e8m0 is not None else np.float32
+        y_dtype = _DST_TYPE_MAP[dst_type][1]
         y = np.zeros(y_shape, dtype=y_dtype)
-        scale = np.zeros(scale_shape, dtype=scale_dtype)
+        scale = np.zeros(scale_shape, dtype=_fp8_e8m0)
 
         if axis_pos == ndim - 2:
             # axis=-2: each group owns ceil(rows_g / 64) scale pairs, packed compactly
@@ -313,7 +371,7 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
                 y[start : start + gv] = y_part.astype(y_dtype)
                 npair_g = scale_part.shape[axis_pos]
                 idx = (slice(None),) * axis_pos + (slice(pair_off, pair_off + npair_g),)
-                scale[idx] = scale_part.astype(scale_dtype)
+                scale[idx] = scale_part.astype(_fp8_e8m0)
                 pair_off += npair_g
                 start += gv
         else:
@@ -335,20 +393,15 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
                     scale_alg,
                 )
                 y_rows[start : start + gv] = y_part.astype(y_dtype)
-                scale_rows[start : start + gv] = scale_part.astype(scale_dtype)
+                scale_rows[start : start + gv] = scale_part.astype(_fp8_e8m0)
                 start += gv
     else:
         y_np, scale_np, dst_dtype = _mx_quantize(
             swiglu_fp32, axis_pos, dst_type, block_size, round_mode, scale_alg
         )
-        if dst_dtype is not None:
-            y = y_np.astype(dst_dtype)
-        else:
-            y = y_np
-        scale = scale_np.astype(_fp8_e8m0 if _fp8_e8m0 is not None else np.float32)
+        y = y_np.astype(dst_dtype)
+        scale = scale_np.astype(_fp8_e8m0)
 
-    y = np.nan_to_num(y, nan=0.0)
-    scale = np.nan_to_num(scale, nan=0.0)
     return [y, scale]
 
 
