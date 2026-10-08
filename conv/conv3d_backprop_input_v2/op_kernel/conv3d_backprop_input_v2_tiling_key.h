@@ -30,11 +30,14 @@ ASCENDC_TPL_ARGS_DECL(Conv3dBackPropInputV2,
 
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_RANGE, 1, TPL_BASEK_LT_HKWK,
-                             TPL_HKWK_EQ_ONE), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
-        ASCENDC_TPL_BOOL_SEL(enableKernelSplit, 0, 1), ASCENDC_TPL_BOOL_SEL(useBasicBlock, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(useVecMode, 0, 1)), );
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),
+                                     ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_RANGE, 1, TPL_BASEK_LT_HKWK,
+                                                          TPL_HKWK_EQ_ONE),
+                                     ASCENDC_TPL_BOOL_SEL(enableKernelSplit, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(useBasicBlock, 0, 1), ASCENDC_TPL_BOOL_SEL(useVecMode, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),
+                                     ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_BASEK_LT_HKWK),
+                                     ASCENDC_TPL_BOOL_SEL(enableKernelSplit, 0), ASCENDC_TPL_BOOL_SEL(useBasicBlock, 0),
+                                     ASCENDC_TPL_BOOL_SEL(useVecMode, 1)));
 
 #endif // CONV3D_BACKPROP_INPUT_V2_TILING_KEY_H
