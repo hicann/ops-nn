@@ -169,7 +169,7 @@ aclnnStatus aclnnL1LossBackward(
       <tr>
         <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
         <td class="tg-0pky">161001</td>
-        <td class="tg-0pky">传入的gradOutput、self、target和out是空指针。</td>
+        <td class="tg-0pky">传入的gradOutput、self、target和gradInput是空指针。</td>
       </tr>
       <tr>
         <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
