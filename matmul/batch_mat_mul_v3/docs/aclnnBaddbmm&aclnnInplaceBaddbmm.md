@@ -168,7 +168,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       <td>out</td>
       <td>输出</td>
       <td>公式中的输出out。</td>
-      <td><ul><li>数据类型需要与self保持一致。</li><li>shape要求与batch1@batch2的后两维shape保持一致。</li><li>format需要与self、batch1@batch2保持一致。</li>
+      <td><ul><li>数据类型需要与self保持一致。</li><li>shape要求与batch1@batch2的shape保持一致。</li><li>format需要与self、batch1@batch2保持一致。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
