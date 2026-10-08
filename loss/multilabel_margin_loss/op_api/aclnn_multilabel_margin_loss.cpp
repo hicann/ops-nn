@@ -246,7 +246,10 @@ aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, con
     // 不预 cast self:kernel 模板化直收 fp32/fp16/bf16 x(内部 fp32 累加),使 (x,is_target) combo 同 dtype、
     // is_target 直接产 self dtype,免 int32/fp32->self 的 Cast 依赖。
     auto selfCasted = selfContiguous;
-
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && self->GetDataType() == op::DataType::DT_BF16) {
+        selfCasted = l0op::Cast(selfCasted, DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_COND(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast self failed!");
+    }
     int64_t squeezeDim = 0;
     auto selfReshape = self->GetViewShape().GetDimNum() == 0 ?
                            l0op::UnsqueezeNd(selfCasted, squeezeDim, uniqueExecutor.get()) :
