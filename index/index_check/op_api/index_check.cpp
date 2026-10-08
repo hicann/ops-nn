@@ -17,8 +17,6 @@
 #include "opdev/op_log.h"
 #include "opdev/op_executor.h"
 #include "opdev/make_op_executor.h"
-#include "opdev/shape_utils.h"
-#include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
@@ -29,18 +27,23 @@ namespace l0op {
 
 OP_TYPE_REGISTER(IndexCheck);
 
-constexpr uint64_t MAX_DIM_LEN = 8;
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
-                                                                              op::DataType::DT_INT32};
+constexpr uint64_t MAX_TENSOR_NUM = 8;
+static const std::initializer_list<op::DataType> aicoreDtypeSupportList = {op::DataType::DT_INT64,
+                                                                           op::DataType::DT_INT32};
 
 static bool IsAiCoreSupport(const aclTensorList* indices)
 {
     op::DataType firstDtype = op::DataType::DT_UNDEFINED;
     for (size_t i = 0; i < indices->Size(); i++) {
-        auto dtype = (*indices)[i]->GetDataType();
-        if (!CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST)) {
-            OP_LOGW("Tensor indices not implemented for %s, should be in dtype support list %s.",
-                    op::ToString(dtype).GetString(), op::ToString(AICORE_DTYPE_SUPPORT_LIST).GetString());
+        const aclTensor* tensor = (*indices)[i];
+        if (tensor == nullptr) {
+            OP_LOGW("indices[%zu] is null, skip IndexCheck.", i);
+            return false;
+        }
+        auto dtype = tensor->GetDataType();
+        if (!CheckType(dtype, aicoreDtypeSupportList)) {
+            OP_LOGW("The dtype %s of indices tensor[%zu] is not supported, should be in dtype support list %s.",
+                    op::ToString(dtype).GetString(), i, op::ToString(aicoreDtypeSupportList).GetString());
             return false;
         }
         if (i == 0) {
@@ -56,6 +59,10 @@ static bool IsAiCoreSupport(const aclTensorList* indices)
 
 void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
 {
+    if (bounds == nullptr || indices == nullptr || executor == nullptr) {
+        OP_LOGW("IndexCheck received null input, skip.");
+        return;
+    }
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
         !Ops::NN::AclnnUtil::IsRegbase()) {
@@ -80,12 +87,14 @@ void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExec
     }
 
     if (static_cast<int64_t>(bounds->Size()) != static_cast<int64_t>(indices->Size())) {
-        OP_LOGW("bounds size %zu not equal indices size %zu, skip IndexCheck.", bounds->Size(), indices->Size());
+        OP_LOGW("bounds size %zu not equal indices size %zu, skip IndexCheck.", static_cast<size_t>(bounds->Size()),
+                indices->Size());
         return;
     }
 
-    if (indices->Size() > MAX_DIM_LEN) {
-        OP_LOGW("indices tensor num %zu exceeds max, skip IndexCheck.", indices->Size());
+    if (indices->Size() > MAX_TENSOR_NUM) {
+        OP_LOGW("indices tensor num %zu exceeds max %zu, skip IndexCheck.", indices->Size(),
+                static_cast<size_t>(MAX_TENSOR_NUM));
         return;
     }
 
