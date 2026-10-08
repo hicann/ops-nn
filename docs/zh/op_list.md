@@ -3739,16 +3739,6 @@
     <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新。</td>
   </tr>
   <tr>
-    <td>math</td>
-    <td><a href="../../optim/adam_apply_one_assign/README.md">adam_apply_one_assign</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行Adam优化器的一次参数更新，10输入3输出，支持broadcast。</td>
-  </tr>
-  <tr>
     <td>optim</td>
     <td><a href="../../optim/adam_apply_one_with_decay/README.md">adam_apply_one_with_decay</a></td>
     <td>✓</td>
@@ -3970,16 +3960,6 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/global_lp_pool/README.md">global_lp_pool</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算输入张量空间维度的 Lp 范数：y = (sum(|x|^p))^(1/p)。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
     <td><a href="../../pooling/max_pool3_d/README.md">max_pool3d</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4100,16 +4080,6 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/acts_ulq/README.md">acts_ulq</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入数据进行均匀线性量化（ULQ），支持broadcast和固定下界，输出量化结果及上下界掩码和量化损失。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
     <td><a href="../../quant/anti_mx_quant/README.md">anti_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4170,16 +4140,6 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/ascend_requant/README.md">ascend_requant</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>INT8静态量化推理链路中的反量化再量化算子，将上游Conv/MatMul在INT8权重下产生的INT32累加结果，按反量化缩放因子重新量化回INT8，作为下一层INT8计算的输入。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
     <td><a href="../../quant/dequant_bias/README.md">dequant_bias</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4207,16 +4167,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/dequantize/README.md">dequantize</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对量化后的整数张量进行反量化，将其转换回浮点数。</td>
   </tr>
   <tr>
     <td>quant</td>
@@ -4367,46 +4317,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>FakeQuantWithMinMaxArgs的反向梯度算子，通过Nudge后的nudgedMin/nudgedMax构建0/1 mask，对梯度进行乘法门控。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/fake_quant_with_min_max_vars/README.md">fake_quant_with_min_max_vars</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入x进行per-tensor假量化，通过Nudge算法将min/max调整为量化步长的整数倍后，执行量化-反量化操作。与FakeQuantWithMinMaxArgs的区别在于min/max作为可训练变量（tensor输入）参与梯度更新，适用于量化感知训练。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/fake_quant_with_min_max_vars_gradient/README.md">fake_quant_with_min_max_vars_gradient</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>FakeQuantWithMinMaxVars的反向梯度算子，用于量化感知训练的反向传播。通过Nudge后的nudgedMin/nudgedMax构建0/1 mask，对梯度进行乘法门控，同时计算min/max的越界梯度之和。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/fake_quant_with_min_max_vars_per_channel/README.md">fake_quant_with_min_max_vars_per_channel</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对输入x进行per-channel假量化，沿最后一轴的每个通道使用各自的min/max独立执行Nudge量化-反量化操作。每个通道拥有独立的量化参数，能更好地适应不同通道的数值范围差异，适用于量化感知训练。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/fake_quant_with_min_max_vars_per_channel_gradient/README.md">fake_quant_with_min_max_vars_per_channel_gradient</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>FakeQuantWithMinMaxVarsPerChannel的反向梯度算子，用于per-channel量化感知训练的反向传播。通过per-channel Nudge后的nudgedMin/nudgedMax构建0/1 mask，对梯度进行乘法门控，同时计算min/max的per-channel越界梯度之和。</td>
   </tr>
   <tr>
     <td>quant</td>
