@@ -143,7 +143,7 @@ aclnnStatus aclnnGRU(
     <tr>
       <td>hx（aclTensor*）</td>
       <td>可选输入</td>
-      <td>GRU每层的初始hidden状态。对应0时刻的h(t-1)。</td>
+      <td>GRU每层的初始隐藏状态。对应0时刻的h(t-1)。</td>
       <td><ul><li>可选参数，传入空指针表示不使用该参数，此时初始隐状态为零向量。</li><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li><li>[numLayers * D, batch_size, hidden_size]。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
