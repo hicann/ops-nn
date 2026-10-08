@@ -38,6 +38,7 @@ constexpr uint32_t SMALL_MN_EXPAND_RATIO = 3U;
 // Do not switch a Cube/MX tile across the compute/memory roofline on a marginal estimate.  The margin absorbs
 // cache/pipeline effects that are not represented by the per-K tile arithmetic-intensity model.
 constexpr double LOAD_BALANCE_ROOFLINE_MARGIN = 0.05;
+constexpr double FOUR_BIT_DTYPE_BYTES = 0.5;
 
 uint64_t GetNextLoadBalanceBase(uint64_t curBase, uint64_t baseAlign)
 {
@@ -64,7 +65,7 @@ double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
 double GetDtypeBytes(ge::DataType dtype)
 {
     if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
-        return 0.5;
+        return FOUR_BIT_DTYPE_BYTES;
     }
     return static_cast<double>(ge::GetSizeByDataType(dtype));
 }

@@ -528,7 +528,6 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateAFullLoadStatus()
     bool selectAFullLoad = isAFullLoadCandidate;
     if (selectAFullLoad && compileInfo_.npuArch == NpuArch::DAV_3510) {
         const bool aFullSelectsMultiBuffer = CanSelectMultiBufferByL1Plan(true, realBaseMSize, adaptiveWin_.baseN);
-
         if (!aFullSelectsMultiBuffer) {
             const bool nonFullSelectsMultiBuffer = CanSelectMultiBufferByL1Plan(false, adaptiveWin_.baseM,
                                                                                 adaptiveWin_.baseN);

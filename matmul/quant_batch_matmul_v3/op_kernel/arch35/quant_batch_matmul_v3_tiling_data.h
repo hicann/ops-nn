@@ -20,6 +20,8 @@
 
 namespace DequantBmm {
 
+constexpr uint32_t TILING_DATA_ALIGNMENT = 8U;
+
 enum class L2CacheMode : uint32_t {
     L2_CACHE_DEFAULT = 0x00,
     A_L2_CACHE_DISABLE = 0x01,
@@ -176,7 +178,7 @@ static_assert(sizeof(QuantBatchMatmulV3StreamKBasicAPITilingData) % 8U == 0U,
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct alignas(8) QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
+struct alignas(TILING_DATA_ALIGNMENT) QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
     uint32_t m = 0;
     uint32_t n = 0;
     uint32_t k = 0;
