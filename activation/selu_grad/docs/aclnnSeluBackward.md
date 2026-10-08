@@ -242,7 +242,7 @@ aclnnStatus aclnnSeluBackward(
 #include <vector>
 #include <cmath>
 #include "acl/acl.h"
-#include "aclnn_selu_backward.h"
+#include "aclnnop/aclnn_selu_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \

@@ -1507,29 +1507,6 @@ currently supported.
     .OP_END_FACTORY_REG(HardSigmoid)
 
     /**
-    * @brief Calculate the soft shrinkage function.
-
-    * @par Inputs:
-    * One inputs, including:
-    * input_x: A tensor. Must be one of the following types:
-    *     float16, float32, bfloat16. \n
-
-    * @par Attributes:
-    * lambd: An optional float. Defaults to 0.5. \n
-
-    * @par Outputs:
-    * output_y: A Tensor with the same dtype and shape of input_x's. \n
-
-    * @par Third-party framework compatibility
-    * Compatible with the Pytorch operator Softshrink. \n
-    */
-    REG_OP(SoftShrink)
-    .INPUT(input_x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(output_y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .ATTR(lambd, Float, 0.5)
-    .OP_END_FACTORY_REG(SoftShrink)
-
-    /**
      *@brief Operators for managing cache memory.
 
      *@par Inputs:
