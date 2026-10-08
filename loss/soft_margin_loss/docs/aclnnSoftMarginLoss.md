@@ -105,7 +105,7 @@ aclnnStatus aclnnSoftMarginLoss(
     <tr>
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">真是标签，公式中的输入`target`。</td>
+      <td class="tg-0pky">真实标签，公式中的输入`target`。</td>
       <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>

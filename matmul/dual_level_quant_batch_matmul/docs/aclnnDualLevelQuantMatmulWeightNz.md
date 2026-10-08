@@ -249,7 +249,7 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
       <tr>
         <td>out(aclTensor)</td>
         <td>输出</td>
-        <td>举证计算的输出out。</td>
+        <td>矩阵计算的输出out。</td>
         <td>
           <ul>
             <li>不支持空Tensor。</li>

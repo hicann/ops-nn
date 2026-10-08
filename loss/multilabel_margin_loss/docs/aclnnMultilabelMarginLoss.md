@@ -209,7 +209,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">self的数据类型不在支持的范围之内（仅支持FLOAT/FLOAT16/BFLOAT16）。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">out或isTarget的数据类型与self不一致（aclnn路径校验out==self、isTarget==self，三者须同为同一浮点类型）。</td>
+      <td class="tg-0pky">out或isTarget的数据类型与self不一致（aclnn路径校验out==self、isTarget==self，三者须为同一浮点类型）。</td>
     </tr>
     <tr>
       <td class="tg-0pky">target的数据类型不在支持的范围之内。</td>
