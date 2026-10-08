@@ -11,10 +11,10 @@
 set -e
 RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph" "tfplugin")
 
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62" "ascend5162a")
+SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "ascend960dt" "ascend960pr" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62" "ascend5162a")
 declare -A SOC_TO_ARCH
 SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201"
-            ["ascend950"]="3510" ["ascend350"]="3510" ["ascend910"]="1001" ["mc62"]="5102")
+            ["ascend950"]="3510" ["ascend350"]="3510" ["ascend960dt"]="9201" ["ascend960pr"]="9202" ["ascend910"]="1001" ["mc62"]="5102")
 # 对SUPPORT_COMPUTE_UNIT_SHORT按字符串长度从长到短排序，避免前缀匹配时出错
 SUPPORT_COMPUTE_UNIT_SHORT=($(printf '%s\n' "${SUPPORT_COMPUTE_UNIT_SHORT[@]}" | awk '{print length($0) " " $0}' | sort -rn | cut -d ' ' -f2-))
 TRIGER_UTS=()
@@ -1618,7 +1618,7 @@ build_example() {
   OLDIFS=$IFS
   IFS=$'\n'
   files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental" || true))
-  if [[ "$COMPUTE_UNIT" == "ascend950" || "$COMPUTE_UNIT" == "ascend350" ]]; then
+  if [[ "$COMPUTE_UNIT" == "ascend950" || "$COMPUTE_UNIT" == "ascend350" || "$COMPUTE_UNIT" == "ascend960dt" || "$COMPUTE_UNIT" == "ascend960pr" ]]; then
     files+=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
   if [[ "$COMPUTE_UNIT" == "ascend910b" ]]; then
