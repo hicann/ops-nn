@@ -62,7 +62,7 @@ aclnnStatus aclnnModulateBackwardGetWorkspaceSize(
 
 ```Cpp
 aclnnStatus aclnnModulateBackward(
-    void*          workspaceAddr,
+    void*          workspace,
     uint64_t       workspaceSize,
     aclOpExecutor* executor,
     aclrtStream    stream)
