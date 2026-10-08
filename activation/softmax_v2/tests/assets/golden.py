@@ -5,8 +5,8 @@
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS provided on an "AS IS" BASIS, WITHOUT warranties of any kind, either express or implied,
-# including but not limited to non-INFRINGEMENT, merchantability or or fitness for a PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -15,12 +15,8 @@ import torch
 import copy
 
 __golden__ = {
-    "kernel": {
-        "softmax_v2": "softmax_v2_golden"
-    },
-    "aclnn": {
-        "aclnnSoftmax": "aclnn_softmax_golden"
-    }
+    "kernel": {"softmax_v2": "softmax_v2_golden"},
+    "aclnn": {"aclnnSoftmax": "aclnn_softmax_golden"},
 }
 
 
@@ -39,7 +35,7 @@ def _normalize_axis(axis, shape_length):
     return normalized_axis
 
 
-def _softmax(x, axis=None, output_dtype='float32'):
+def _softmax(x, axis=None, output_dtype="float32"):
     x_dtype = x.dtype
     if "float16" in str(x_dtype):
         x = x.astype("float32", copy=True)
@@ -51,21 +47,21 @@ def _softmax(x, axis=None, output_dtype='float32'):
     return out.astype(output_dtype, copy=False)
 
 
-def softmax_v2_golden(x, *, axis=None, output_dtype='float32', **kwargs):
-    input_ori_shapes = kwargs.get('input_ori_shapes', [[]])
+def softmax_v2_golden(x, *, axis=None, output_dtype="float32", **kwargs):
+    input_ori_shapes = kwargs.get("input_ori_shapes", [[]])
     ori_shape = input_ori_shapes[0]
-    
+
     if axis is None:
-        axis = kwargs.get('axes')
-    
+        axis = kwargs.get("axes")
+
     axis = _normalize_axis(axis, len(ori_shape))
     result = _softmax(x, axis, output_dtype)
-    
+
     return result
 
 
 def aclnn_softmax_golden(selfT, dim, out, **kwargs):
-    '''
+    """
     Aclnn golden for aclnnSoftmax.
     All the parameters (name & order) follow \
         function `aclnnSoftmaxGetWorkspaceSize` in @aclnn_softmax.h \
@@ -79,7 +75,7 @@ def aclnn_softmax_golden(selfT, dim, out, **kwargs):
 
     Returns:
         Output tensors.
-    '''
+    """
     input_data_dtype = selfT.dtype
     if "float16" in str(input_data_dtype):
         selfT = selfT.to(dtype=torch.float32)
@@ -87,4 +83,3 @@ def aclnn_softmax_golden(selfT, dim, out, **kwargs):
     result = torch.softmax(selfT, dim=dim)
     result = result.to(dtype=out.dtype)
     return result
-

@@ -11,15 +11,12 @@
 # ----------------------------------------------------------------------------
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
 
 
 @register("ascend_torch_nn_softmax")
 class MethodTorchNnSoftmaxApi(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         origin_dtype = input_data.kwargs["self"].dtype
         dim = input_data.kwargs["dim"]

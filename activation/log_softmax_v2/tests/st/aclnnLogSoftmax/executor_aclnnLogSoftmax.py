@@ -14,8 +14,6 @@ import torch
 from atk.configs.dataset_config import InputDataset
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
-from atk.configs.results_config import TaskResult
-from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat
 
 
 @register("aclnn_logsoftmax")

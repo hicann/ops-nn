@@ -16,12 +16,8 @@ import torch
 from typing import Tuple
 
 __golden__ = {
-    "kernel": {
-        "log_softmax_v2": "log_softmax_v2_golden"
-    },
-    "aclnn": {
-        "aclnnLogSoftmax": "aclnn_log_softmax_golden"
-    }
+    "kernel": {"log_softmax_v2": "log_softmax_v2_golden"},
+    "aclnn": {"aclnnLogSoftmax": "aclnn_log_softmax_golden"},
 }
 
 
@@ -54,7 +50,7 @@ def log_softmax(x, axis=None):
 
 
 def log_softmax_v2_golden(data, *, axis=None, axes=None, **kwargs):
-    '''
+    """
     Golden function for log_softmax_v2.
     All the parameters (names and order) follow @log_softmax_v2_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -65,11 +61,8 @@ def log_softmax_v2_golden(data, *, axis=None, axes=None, **kwargs):
 
     Returns:
         Output tensor
-    '''
-    ori_shape = kwargs.get('input_ori_shapes', [data.shape])[0]
-    ori_format = kwargs.get('input_ori_formats', ['ND'])[0]
-    fmt = kwargs.get('input_formats', ['ND'])[0]
-    shape = kwargs.get('input_shapes', [data.shape])[0]
+    """
+    ori_shape = kwargs.get("input_ori_shapes", [data.shape])[0]
 
     if axis is None:
         axis = axes
@@ -82,7 +75,7 @@ def log_softmax_v2_golden(data, *, axis=None, axes=None, **kwargs):
 
 
 def aclnn_log_softmax_golden(selfT, dim, out, **kwargs):
-    '''
+    """
     Aclnn golden for aclnnLogSoftmax.
     All the parameters (name & order) follow \
         function `aclnnLogSoftmaxGetWorkspaceSize` in @aclnn_logsoftmax.h \
@@ -96,7 +89,7 @@ def aclnn_log_softmax_golden(selfT, dim, out, **kwargs):
 
     Returns:
         Output tensors.
-    '''
+    """
     input_data_dtype = selfT.dtype
     if "float16" in str(input_data_dtype):
         selfT = selfT.to(dtype=torch.float32)
