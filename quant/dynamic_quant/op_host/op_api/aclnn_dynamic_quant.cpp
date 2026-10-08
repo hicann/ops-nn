@@ -46,6 +46,7 @@ static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int64_t INT4_NUMS_IN_INT8_SPACE = 2;
 static constexpr int64_t NUM_TWO = 2;
 static constexpr int64_t DIM_MAX = 9;
+static constexpr int64_t MAX_EXPERT_NUM = 1024;
 using DtypeCheck = std::initializer_list<op::DataType>;
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
@@ -210,11 +211,35 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     int64_t xLastToSecondDimInput = dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - NUM_TWO);
     const std::string mode = std::string(dynamicQuantParams.quantMode);
 
+    if (dynamicQuantParams.groupIndex != nullptr) {
+        CHECK_COND(dynamicQuantParams.smoothScales != nullptr, ACLNN_ERR_PARAM_INVALID,
+                   "If group_index is provided, smooth_scales must not be nullptr.");
+    }
     if (dynamicQuantParams.smoothScales) {
         if (dynamicQuantParams.groupIndex) {
             auto groupDimNum = dynamicQuantParams.groupIndex->GetViewShape().GetDimNum();
             CHECK_COND(groupDimNum == 1, ACLNN_ERR_PARAM_INVALID,
                        "The dimNum[%lu] of group_indexs should be equal to one.", groupDimNum);
+            auto smoothDimNum = dynamicQuantParams.smoothScales->GetViewShape().GetDimNum();
+            CHECK_COND(smoothDimNum == NUM_TWO, ACLNN_ERR_PARAM_INVALID,
+                       "When group_index is provided, the dimNum[%lu] of smooth_scales should be equal to two.",
+                       smoothDimNum);
+            int64_t expertNum = dynamicQuantParams.smoothScales->GetViewShape().GetDim(0);
+            CHECK_COND(expertNum == dynamicQuantParams.groupIndex->GetViewShape().GetDim(0), ACLNN_ERR_PARAM_INVALID,
+                       "The first dim[%ld] of smooth_scales should be equal to the dim[%ld] of group_index.", expertNum,
+                       dynamicQuantParams.groupIndex->GetViewShape().GetDim(0));
+            CHECK_COND(expertNum <= MAX_EXPERT_NUM, ACLNN_ERR_PARAM_INVALID,
+                       "The expert num[%ld] of smooth_scales should not be greater than 1024.", expertNum);
+            CHECK_COND(dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
+                       ACLNN_ERR_PARAM_INVALID,
+                       "The last dim[%ld] of x and the last dim[%ld] of smooth_scales should be equal.", xLastDimInput,
+                       dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
+            if (!dynamicQuantParams.x->IsEmpty()) {
+                CHECK_COND(expertNum >= 1, ACLNN_ERR_PARAM_INVALID,
+                           "When x is not empty, the expert num (the first dim of smooth_scales and the dim of "
+                           "group_index) [%ld] should be greater than or equal to one.",
+                           expertNum);
+            }
         } else {
             auto smoothDimNum = dynamicQuantParams.smoothScales->GetViewShape().GetDimNum();
             CHECK_COND(smoothDimNum == 1, ACLNN_ERR_PARAM_INVALID,

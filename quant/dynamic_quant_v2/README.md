@@ -111,7 +111,7 @@
     <tr>
       <td>smooth_scales</td>
       <td>可选输入</td>
-      <td><ul><li>算子输入的Tensor，对应公式中的`smooth_scales`。</li><li>数据类型与x的数据类型保持一致。当group_index为空时，形状为1维。Dim[0]是x的最后一个维度；当group_index不为空时，形状为2维。Dim[0]是专家数(E)。E必须不大于1024。Dim[1]是x的最后一个维度。</li></ul></td>
+      <td><ul><li>算子输入的Tensor，对应公式中的`smooth_scales`。</li><li>数据类型与x的数据类型保持一致。当group_index为空时，形状为1维。Dim[0]是x的最后一个维度；当group_index不为空时，形状为2维。Dim[0]是专家数(E)。E必须不大于1024，且x非空时不小于1。Dim[1]是x的最后一个维度。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

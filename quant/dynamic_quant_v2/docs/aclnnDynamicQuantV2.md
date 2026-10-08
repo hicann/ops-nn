@@ -153,7 +153,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>smoothScalesOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的smoothScales。对应公式描述中的`smoothScalesOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>当没有groupIndexOptional时，shape维度与x的最后一维相同。当有groupIndexOptional时，shape是两维，第一维大小是专家数，不超过1024，第二维大小是x的最后一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>当没有groupIndexOptional时，shape维度与x的最后一维相同。当有groupIndexOptional时，shape是两维，第一维大小是专家数，不超过1024，x非空时专家数不小于1，第二维大小是x的最后一维。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>

@@ -228,7 +228,8 @@ ge::graphStatus DynamicQuantTiling::CheckOpInputShape(const gert::TilingContext*
 ge::graphStatus DynamicQuantTiling::CheckSmoothShape(const gert::TilingContext* context, int64_t xDimLast)
 {
     auto groupShape = context->GetOptionalInputShape(GROUP_INDEX);
-    if (groupShape != nullptr) {
+    bool hasGroupIndex = (groupShape != nullptr);
+    if (hasGroupIndex) {
         size_t groupDimNum = groupShape->GetStorageShape().GetDimNum();
         int64_t groupNumTmp = 0;
         if (groupDimNum > 0U) {
@@ -244,16 +245,22 @@ ge::graphStatus DynamicQuantTiling::CheckSmoothShape(const gert::TilingContext* 
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
                                                           "The value of groupNum must be less than or equal to 1024"),
                     return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (groupNum == 0U),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "group_index", std::to_string(groupNum),
+                                                  "The value of expert num in group_index must be within the "
+                                                  "range [1, 1024] when group_index is provided"),
+            return ge::GRAPH_FAILED);
     }
 
     auto smoothShape = context->GetOptionalInputShape(SMOOTH_INDEX);
     size_t smoothDimNum = smoothShape->GetStorageShape().GetDimNum();
     // 针对moe场景下的校验
-    if (groupNum >= 1U) {
+    if (hasGroupIndex) {
         OP_CHECK_IF((smoothDimNum != MOE_SMOOTH_NUM),
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                         context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
-                        "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
+                        "When group_index is provided, the shape dim of smooth_scales must be equal to 2"),
                     return ge::GRAPH_FAILED);
         int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
         if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
