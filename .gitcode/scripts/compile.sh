@@ -179,7 +179,7 @@ case "${task_name}" in
         DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
-    Compile_Ascend_experimental)
+    Compile_Ascend_experimental*)
         sh scripts/ci/check_experimental_pkg.sh "pr_filelist.txt"
         DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [sh scripts/ci/check_experimental_pkg.sh pr_filelist.txt]"

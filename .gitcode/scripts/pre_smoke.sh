@@ -54,16 +54,18 @@ if [ ! -f "${DOWNLOAD_FILE}" ]; then
 fi
 
 FILE_SIZE=$(stat -c%s "${DOWNLOAD_FILE}" 2>/dev/null || echo 0)
+SINGLE_OK=1
 if [ "${FILE_SIZE}" -lt 15360 ]; then
     echo "No compiled operators, no need to execute smoke test task"
     rm -f "${DOWNLOAD_FILE}"
     touch slog.tar.gz
-    exit 0
+    SINGLE_OK=0
 fi
-echo "File download completed, size ${FILE_SIZE}, starting decompression."
-
-tar -ztf ${DOWNLOAD_FILE}
-tar -zxf ${DOWNLOAD_FILE}
+if [ "${SINGLE_OK}" -eq 1 ]; then
+  echo "File download completed, size ${FILE_SIZE}, starting decompression."
+  tar -ztf ${DOWNLOAD_FILE}
+  tar -zxf ${DOWNLOAD_FILE}
+fi
 
 # ==============================
 # 运行测试主循环
@@ -74,14 +76,28 @@ for op in "${ops[@]}"; do
   mode="eager"
   [ "$op" = "crop_and_resize" ] && mode="graph"
   source /usr/local/Ascend/cann/set_env.sh
-  bash ${WORKSPACE}/scripts/ci/check_example.sh ${WORKSPACE}/pr_filelist.txt  2>&1 | tee -a ./run_test.log
+  if [ "${SINGLE_OK}" -eq 1 ]; then
+    bash ${WORKSPACE}/scripts/ci/check_example.sh ${WORKSPACE}/pr_filelist.txt  2>&1 | tee -a ./run_test.log
+  fi
   fatrel_arm_package=$(basename "${fatrelu_run_url}")
   wget -nv ${fatrelu_run_url}
-  chmod +x ${fatrel_arm_package} && ./${fatrel_arm_package} 2>&1 | tee -a ./run_test.log
-  bash build.sh --run_example "$op" "$mode" cust  2>&1 | tee -a ./run_test.log
+  FATREL_SIZE=$(stat -c%s "${fatrel_arm_package}" 2>/dev/null || echo 0)
+  if [ "${FATREL_SIZE}" -lt 15360 ]; then
+    echo "File ${fatrel_arm_package} size ${FATREL_SIZE} is less than 15360, skip running it"
+    touch slog.tar.gz
+  else
+    chmod +x ${fatrel_arm_package} && ./${fatrel_arm_package} 2>&1 | tee -a ./run_test.log
+    bash build.sh --run_example "$op" "$mode" cust  2>&1 | tee -a ./run_test.log
+  fi
   experimental_arm_package=$(basename "${experimental_run_url}")
   wget -nv "${experimental_run_url}" && chmod +x ${experimental_arm_package}
-  echo 'y' | bash ${experimental_arm_package} --quiet && source /usr/local/Ascend/cann/set_env.sh && bash scripts/ci/check_experimental_example.sh ${WORKSPACE}/pr_filelist.txt 2>&1 | tee -a ./run_test.log
+  EXPERIMENTAL_SIZE=$(stat -c%s "${experimental_arm_package}" 2>/dev/null || echo 0)
+  if [ "${EXPERIMENTAL_SIZE}" -lt 15360 ]; then
+    echo "File ${experimental_arm_package} size ${EXPERIMENTAL_SIZE} is less than 15360, skip running it"
+    touch slog.tar.gz
+  else
+    echo 'y' | bash ${experimental_arm_package} --quiet && source /usr/local/Ascend/cann/set_env.sh && bash scripts/ci/check_experimental_example.sh ${WORKSPACE}/pr_filelist.txt 2>&1 | tee -a ./run_test.log
+  fi
 done
 
 # ==============================
