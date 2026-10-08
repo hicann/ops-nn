@@ -21,6 +21,8 @@
 #include "test_cube_util.h"
 #include "../../../../op_host/op_tiling/matmul_v3_compile_info.h"
 #include "../../../../op_host/op_tiling/arch35/matmul_v3_tiling_advanced.h"
+#include "../../../../op_host/op_tiling/arch35/matmul_v3_basic_streamk_tiling.h"
+#include "../../../../op_host/op_tiling/arch35/matmul_v3_k_equal_zero_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -3519,6 +3521,995 @@ TEST_F(MatMulV3TilingRuntime, 950_rowstride_noncontiguous_2d_slice)
     ASSERT_EQ(tiling_key, 2UL);
     ASSERT_EQ(block_dim, 8);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
+}
+
+// =================================================================================================
+// MatMulV3BasicStreamKTiling 白盒直调用例（append-only 新增段）
+// 覆盖目标（op_host/op_tiling/arch35/matmul_v3_basic_streamk_tiling.cpp）：
+//   L26-29   CheckStreamKDPSKTilingDefault  非3510架构兜底，恒返回false
+//   L55-58   CheckStreamKSKTilingDefault    非3510架构兜底，恒返回false
+//   L91      GetL0C2OutFlagDefault          非3510架构兜底，返回ON_THE_FLY
+//   L201-206 baseM==baseN && depthB1==2*depthA1 调平分支（depthA1翻倍/depthB1减半/stepKa/stepKb重算）
+//   L207-210 totalMNCnt_>aicNum && hasBias     bias预留分支（stepKa/stepKb=3）
+// 触达方式：MatMulV3BasicStreamKTiling 仅注册于 DAV_3510（BASIC_STREAM_K），经注册表的全量tiling流程
+//   只会在 npuArch==DAV_3510 时选中该类，Default 兜底在生产路由下不可达；故沿用本仓
+//   batch_mat_mul_v3 直调范式：TilingContextFaker 构造上下文 + ForTest 派生类暴露 protected 入口，
+//   以非3510 compileInfo（DAV_2201/DAV_2002）直调 IsCapable/DoOpTiling。
+// =================================================================================================
+class MatMulV3BasicStreamKTilingForTest : public optiling::matmul_v3_advanced::MatMulV3BasicStreamKTiling {
+public:
+    using MatMulV3BasicStreamKTiling::MatMulV3BasicStreamKTiling;
+
+    bool IsCapablePublic() { return IsCapable(); }
+
+    ge::graphStatus DoOpTilingPublic() { return DoOpTiling(); }
+
+    uint64_t GetTilingKeyPublic() const { return GetTilingKey(); }
+
+    uint64_t GetRunInfoBaseM() const { return runInfo_.baseM; }
+
+    uint64_t GetRunInfoBaseN() const { return runInfo_.baseN; }
+
+    uint64_t GetRunInfoBaseK() const { return runInfo_.baseK; }
+
+    uint64_t GetRunInfoSingleCoreK() const { return runInfo_.singleCoreK; }
+
+    uint64_t GetRunInfoStepKa() const { return runInfo_.stepKa; }
+
+    uint64_t GetRunInfoStepKb() const { return runInfo_.stepKb; }
+
+    uint64_t GetRunInfoDepthA1() const { return runInfo_.depthA1; }
+
+    uint64_t GetRunInfoDepthB1() const { return runInfo_.depthB1; }
+
+    uint64_t GetRunInfoKCnt() const { return runInfo_.tailInfo.kCnt; }
+};
+
+class MatMulV3StreamKTilingDirectTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        platformInfo_.Init();
+        compileInfo_.aicNum = 8UL;
+        compileInfo_.aivNum = 16UL; // streamk模板要求 aivNum == aicNum * 2
+        compileInfo_.l1Size = 524288UL;
+        compileInfo_.l0ASize = 65536UL;
+        compileInfo_.l0BSize = 65536UL;
+        compileInfo_.l0CSize = 262144UL;
+        compileInfo_.l2Size = 134217728UL;
+        compileInfo_.ubSize = 253952UL;
+        compileInfo_.btSize = 4096UL;
+        compileInfo_.npuArch = NpuArch::DAV_2201;
+        args_.opName = "MatMulV3StreamKDirectUT";
+        args_.aType = ge::DT_FLOAT16;
+        args_.bType = ge::DT_FLOAT16;
+        args_.cType = ge::DT_FLOAT16;
+        args_.aFormat = ge::FORMAT_ND;
+        args_.bFormat = ge::FORMAT_ND;
+        args_.outFormat = ge::FORMAT_ND;
+        args_.aDtypeSize = 2UL;
+        args_.bDtypeSize = 2UL;
+        SetShape(256UL, 256UL, 4096UL);
+        RebuildContext();
+    }
+
+    void SetShape(uint64_t m, uint64_t n, uint64_t k)
+    {
+        args_.mValue = m;
+        args_.nValue = n;
+        args_.kValue = k;
+    }
+
+    // 构造带确定性等级0、合法输入shape的TilingContext，保证IsCapable中
+    // GetDeterministicLevel/aFormat/IsSelfNonContiguous/aivNum等守卫可通过
+    void RebuildContext()
+    {
+        aShape_ = gert::StorageShape({static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.kValue)},
+                                     {static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.kValue)});
+        bShape_ = gert::StorageShape({static_cast<int64_t>(args_.kValue), static_cast<int64_t>(args_.nValue)},
+                                     {static_cast<int64_t>(args_.kValue), static_cast<int64_t>(args_.nValue)});
+        yShape_ = gert::StorageShape({static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.nValue)},
+                                     {static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.nValue)});
+        tilingDataBuf_ = gert::TilingData::CreateCap(2048);
+        workspaceBuf_ = gert::ContinuousVector::Create<size_t>(4096);
+        holder_ = gert::TilingContextFaker()
+                      .SetOpType("MatMulV3")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&aShape_, &bShape_})
+                      .OutputShapes({&yShape_})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .DeterministicLevelInfo(0)
+                      .CompileInfo(&compileInfo_)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
+                      .TilingData(reinterpret_cast<gert::TilingData*>(tilingDataBuf_.get()))
+                      .Workspace(reinterpret_cast<gert::ContinuousVector*>(workspaceBuf_.get()))
+                      .Build();
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+    }
+
+    std::unique_ptr<MatMulV3BasicStreamKTilingForTest> CreateTiling()
+    {
+        cfg_ = std::make_unique<optiling::MatMulTilingCfg>(false, &compileInfo_, &args_, nullptr);
+        return std::make_unique<MatMulV3BasicStreamKTilingForTest>(context_, *cfg_);
+    }
+
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* context_ = nullptr;
+    fe::PlatFormInfos platformInfo_;
+    optiling::MatmulV3CompileInfo compileInfo_;
+    optiling::matmul_v3_advanced::MatMulV3Args args_;
+    std::unique_ptr<optiling::MatMulTilingCfg> cfg_;
+    gert::StorageShape aShape_;
+    gert::StorageShape bShape_;
+    gert::StorageShape yShape_;
+    std::unique_ptr<uint8_t[]> tilingDataBuf_;
+    std::unique_ptr<uint8_t[]> workspaceBuf_;
+};
+
+// L55-58/L26-29：DAV_2201未注册CheckStreamK*函数（map仅注册DAV_3510），IsCapable经
+// CheckStreamKSKTiling/CheckStreamKDPSKTiling先后回落Default（均返回false），整体返回false
+TEST_F(MatMulV3StreamKTilingDirectTest, IsCapable_Non3510Arch_FallsBackToDefault)
+{
+    compileInfo_.npuArch = NpuArch::DAV_2201;
+    auto tiling = CreateTiling();
+    EXPECT_FALSE(tiling->IsCapablePublic());
+}
+
+// 正向对照：同入参（m=n=256,k=4096,aicNum=8）下3510走CheckStreamKSKTilingDav3510返回true，
+// 证明上一用例的false确由非3510回落Default导致，而非IsCapable前置守卫拦截
+TEST_F(MatMulV3StreamKTilingDirectTest, IsCapable_Dav3510_SktEnablePositiveControl)
+{
+    compileInfo_.npuArch = NpuArch::DAV_3510;
+    auto tiling = CreateTiling();
+    EXPECT_TRUE(tiling->IsCapablePublic());
+}
+
+// L91：DAV_2201下GetL0C2OutFlag回落Default返回ON_THE_FLY（经totalMNCnt_=1 <= aicNum/2分支触发）；
+// 同时baseM(128)!=baseN(256)，L201调平分支与L207 bias分支均不进入（对照路径）
+TEST_F(MatMulV3StreamKTilingDirectTest, DoOpTiling_Non3510Arch_GetL0C2OutDefault_LevelingNotTaken)
+{
+    compileInfo_.npuArch = NpuArch::DAV_2201;
+    SetShape(128UL, 256UL, 512UL);
+    RebuildContext();
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetRunInfoBaseM(), 128UL);
+    EXPECT_EQ(tiling->GetRunInfoBaseN(), 256UL);
+    EXPECT_NE(tiling->GetRunInfoBaseM(), tiling->GetRunInfoBaseN()); // 调平分支条件不成立
+    EXPECT_EQ(tiling->GetRunInfoKCnt(), 8UL);                        // FloorDiv(aicNum=8, totalMNCnt_=1)
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), 64UL);                // CeilDiv(k=512, kCnt=8)
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 64UL);                      // min(singleCoreK=64, kValueMax=128)
+    // CalL1TilingDefault产生的depthA1==depthB1且非0，调平未生效
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), 8UL);
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), 8UL);
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 4UL);
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), 4UL);
+    // tilingkey的L0C2Out域来自GetL0C2OutFlagDefault返回的ON_THE_FLY（模型STREAM_K、张量API级）
+    uint64_t expectedKey = optiling::matmul_v3_advanced::MatMulV3TilingKey()
+                               .SetTrans(false, false)
+                               .SetModel(MatMulV3Model::STREAM_K)
+                               .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
+                               .SetApiLevel(MatMulV3ApiLevel::TENSOR_LEVEL)
+                               .GetTilingKey();
+    EXPECT_EQ(tiling->GetTilingKeyPublic(), expectedKey);
+}
+
+// L201-206：DAV_2002走CalL1Tiling310P，NZ/NZ下ka全载失败(depthA1=16)而kb全载成功(depthB1=32)，
+// 且m==n使baseM==baseN==128，命中调平分支：depthA1翻倍32/depthB1减半16/stepKa=16/stepKb=8
+TEST_F(MatMulV3StreamKTilingDirectTest, DoOpTiling_DepthLeveling_WhenBaseMEqBaseNAndDepthB1TwiceDepthA1)
+{
+    compileInfo_.npuArch = NpuArch::DAV_2002;
+    compileInfo_.l1Size = 2097152UL; // 2MB：使128*2048*4恰好不小于l1Size/2（ka全载失败），fp16侧成功
+    args_.aType = ge::DT_FLOAT;
+    args_.aDtypeSize = 4UL; // a为fp32、b为fp16，制造ka/kb全载条件不对称
+    args_.aFormat = ge::FORMAT_FRACTAL_NZ;
+    args_.bFormat = ge::FORMAT_FRACTAL_NZ;
+    SetShape(128UL, 128UL, 2048UL);
+    RebuildContext();
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetRunInfoBaseM(), 128UL);
+    EXPECT_EQ(tiling->GetRunInfoBaseN(), 128UL);       // m==n且totalMNCnt_=1<=aicNum/2，重算后baseM==baseN
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), 256UL); // CeilAlign(CeilDiv(2048, 8), 16)
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 64UL);        // min(256, kValueMax=FloorAlign(64,32))
+    // 调平分支调整后的取值
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), 32UL); // 16 * 2
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), 16UL); // 32 / 2
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 16UL);  // 32 / DB_SIZE
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), 8UL);   // 16 / DB_SIZE
+}
+
+// L207-210：DAV_2201下m=256,n=1280使totalMNCnt_=10>aicNum=8（且10%8!=0保证else分支可除），hasBias
+// 时stepKa/stepKb被预置为3（为bias预留L1空间），depthA1/depthB1保持CalL1Tiling结果不变
+TEST_F(MatMulV3StreamKTilingDirectTest, DoOpTiling_BiasReserve_SetsStepKaStepKb3)
+{
+    compileInfo_.npuArch = NpuArch::DAV_2201;
+    compileInfo_.l1Size = 33554432UL; // 32MB，保证CalL1TilingDefault非0退出
+    args_.hasBias = true;
+    SetShape(256UL, 1280UL, 1024UL);
+    RebuildContext();
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetRunInfoKCnt(), 4UL);          // aicNum/(10%8)=4, CeilDiv(1024,256)=4
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), 256UL); // CeilDiv(k=1024, kCnt=4)
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 64UL);        // min(256, kValueMax=FloorAlign(65536/2/2/256,64)=64)
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 3UL);        // NUM_THREE，bias预留
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), 3UL);        // NUM_THREE，bias预留
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), 8UL);       // 2*stepKa(CalL1Tiling)=8，未被bias分支修改
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), 8UL);       // 2*stepKb(CalL1Tiling)=8，未被bias分支修改
+}
+
+// =================================================================================================
+// MatMulV3KEqZeroTiling 白盒直调用例（append-only 新增段）
+// 覆盖目标（op_host/op_tiling/arch35/matmul_v3_k_equal_zero_tiling.cpp）：
+//   L27-37   IsCapable      hasBias拦截分支/kValue!=0拦截分支/通过路径
+//   L39-44   DoOpTiling     totalDataAmount=m*n、usedCoreNum=aivNum
+//   L46      GetNumBlocks   返回compileInfo_.aivNum
+//   L48-59   GetTilingKey   tilingKeyObj为空走tmp分支，构造含K_EQUAL_ZERO model的key
+//   L61-64   GetTilingData  经GetTilingDataImpl<MatMulV3KEqZeroBasicTilingData>填充tilingData
+// 触达方式：该类仅注册于DAV_3510（MATMUL_INPUT_K_EQUAL_ZERO），生产路由下仅k==0时被选中，
+//   全量tiling流程对非k0输入不会进入其DoOpTiling；故沿用本仓 batch_mat_mul_v3 直调范式：
+//   TilingContextFaker 构造上下文 + ForTest 派生类暴露 protected 入口，以 kValue=0/非0 的
+//   args 直调各入口并断言精确值。
+// =================================================================================================
+class MatMulV3KEqZeroTilingForTest : public optiling::matmul_v3_advanced::MatMulV3KEqZeroTiling {
+public:
+    using MatMulV3KEqZeroTiling::MatMulV3KEqZeroTiling;
+
+    bool IsCapablePublic() { return IsCapable(); }
+
+    ge::graphStatus DoOpTilingPublic() { return DoOpTiling(); }
+
+    uint64_t GetTilingKeyPublic() const { return GetTilingKey(); }
+
+    uint64_t GetNumBlocksPublic() const { return GetNumBlocks(); }
+
+    ge::graphStatus GetTilingDataPublic(optiling::TilingResult& tiling) const { return GetTilingData(tiling); }
+
+    uint64_t GetRunInfoTotalDataAmount() const { return runInfo_.totalDataAmount; }
+
+    uint64_t GetRunInfoUsedCoreNum() const { return runInfo_.usedCoreNum; }
+};
+
+class MatMulV3KEqZeroTilingDirectTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        platformInfo_.Init();
+        compileInfo_.aicNum = 8UL;
+        compileInfo_.aivNum = 16UL;
+        compileInfo_.l1Size = 524288UL;
+        compileInfo_.l0ASize = 65536UL;
+        compileInfo_.l0BSize = 65536UL;
+        compileInfo_.l0CSize = 262144UL;
+        compileInfo_.l2Size = 134217728UL;
+        compileInfo_.ubSize = 253952UL;
+        compileInfo_.btSize = 4096UL;
+        compileInfo_.npuArch = NpuArch::DAV_3510;
+        args_.opName = "MatMulV3KEqZeroDirectUT";
+        args_.aType = ge::DT_FLOAT16;
+        args_.bType = ge::DT_FLOAT16;
+        args_.cType = ge::DT_FLOAT16;
+        args_.aFormat = ge::FORMAT_ND;
+        args_.bFormat = ge::FORMAT_ND;
+        args_.outFormat = ge::FORMAT_ND;
+        args_.aDtypeSize = 2UL;
+        args_.bDtypeSize = 2UL;
+        SetShape(64UL, 128UL, 0UL); // k=0：KEqZero模板的通过条件
+        RebuildContext();
+    }
+
+    void SetShape(uint64_t m, uint64_t n, uint64_t k)
+    {
+        args_.mValue = m;
+        args_.nValue = n;
+        args_.kValue = k;
+    }
+
+    // 构造带确定性等级0、合法输入shape的TilingContext，保证context_非空且各守卫可通过
+    void RebuildContext()
+    {
+        aShape_ = gert::StorageShape({static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.kValue)},
+                                     {static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.kValue)});
+        bShape_ = gert::StorageShape({static_cast<int64_t>(args_.kValue), static_cast<int64_t>(args_.nValue)},
+                                     {static_cast<int64_t>(args_.kValue), static_cast<int64_t>(args_.nValue)});
+        yShape_ = gert::StorageShape({static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.nValue)},
+                                     {static_cast<int64_t>(args_.mValue), static_cast<int64_t>(args_.nValue)});
+        tilingDataBuf_ = gert::TilingData::CreateCap(2048);
+        workspaceBuf_ = gert::ContinuousVector::Create<size_t>(4096);
+        holder_ = gert::TilingContextFaker()
+                      .SetOpType("MatMulV3")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&aShape_, &bShape_})
+                      .OutputShapes({&yShape_})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .DeterministicLevelInfo(0)
+                      .CompileInfo(&compileInfo_)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
+                      .TilingData(reinterpret_cast<gert::TilingData*>(tilingDataBuf_.get()))
+                      .Workspace(reinterpret_cast<gert::ContinuousVector*>(workspaceBuf_.get()))
+                      .Build();
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+    }
+
+    std::unique_ptr<MatMulV3KEqZeroTilingForTest> CreateTiling()
+    {
+        cfg_ = std::make_unique<optiling::MatMulTilingCfg>(false, &compileInfo_, &args_, nullptr);
+        return std::make_unique<MatMulV3KEqZeroTilingForTest>(context_, *cfg_);
+    }
+
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* context_ = nullptr;
+    fe::PlatFormInfos platformInfo_;
+    optiling::MatmulV3CompileInfo compileInfo_;
+    optiling::matmul_v3_advanced::MatMulV3Args args_;
+    std::unique_ptr<optiling::MatMulTilingCfg> cfg_;
+    gert::StorageShape aShape_;
+    gert::StorageShape bShape_;
+    gert::StorageShape yShape_;
+    std::unique_ptr<uint8_t[]> tilingDataBuf_;
+    std::unique_ptr<uint8_t[]> workspaceBuf_;
+};
+
+// L29-31：hasBias=true时IsCapable在kValue判断前即拦截，返回false
+TEST_F(MatMulV3KEqZeroTilingDirectTest, IsCapable_HasBias_ReturnFalse)
+{
+    args_.hasBias = true;
+    auto tiling = CreateTiling();
+    EXPECT_FALSE(tiling->IsCapablePublic());
+}
+
+// L33-35：hasBias=false但kValue!=0时拦截，返回false
+TEST_F(MatMulV3KEqZeroTilingDirectTest, IsCapable_KValueNonZero_ReturnFalse)
+{
+    SetShape(64UL, 128UL, 512UL);
+    auto tiling = CreateTiling();
+    EXPECT_FALSE(tiling->IsCapablePublic());
+}
+
+// L33-36：hasBias=false且kValue=0时通过，返回true
+TEST_F(MatMulV3KEqZeroTilingDirectTest, IsCapable_KZeroNoBias_ReturnTrue)
+{
+    auto tiling = CreateTiling();
+    EXPECT_TRUE(tiling->IsCapablePublic());
+}
+
+// L39-44：k=0通过前置后直调DoOpTiling，totalDataAmount=m*n=64*128=8192、usedCoreNum=aivNum=16
+TEST_F(MatMulV3KEqZeroTilingDirectTest, DoOpTiling_KZero_SetsTotalDataAmountAndUsedCoreNum)
+{
+    auto tiling = CreateTiling();
+    ASSERT_TRUE(tiling->IsCapablePublic());
+    EXPECT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetRunInfoTotalDataAmount(), 8192UL); // 64 * 128
+    EXPECT_EQ(tiling->GetRunInfoUsedCoreNum(), 16UL);       // compileInfo_.aivNum
+}
+
+// L46：GetNumBlocks直接返回compileInfo_.aivNum
+TEST_F(MatMulV3KEqZeroTilingDirectTest, GetNumBlocks_ReturnsAivNum)
+{
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetNumBlocksPublic(), 16UL); // compileInfo_.aivNum
+}
+
+// L48-59：tilingKeyObj为空走tmp分支，返回key与手工构造的K_EQUAL_ZERO组合一致；
+// 并经静态位段解析核对model/batchModel/apiLevel三个关键域
+TEST_F(MatMulV3KEqZeroTilingDirectTest, GetTilingKey_TilingKeyObjNull_TmpBranchKEqualZeroModel)
+{
+    auto tiling = CreateTiling();
+    uint64_t expectedKey = optiling::matmul_v3_advanced::MatMulV3TilingKey()
+                               .SetTrans(false, false)
+                               .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+                               .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
+                               .SetModel(MatMulV3Model::K_EQUAL_ZERO)
+                               .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
+                               .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
+                               .GetTilingKey();
+    EXPECT_EQ(tiling->GetTilingKeyPublic(), expectedKey);
+    EXPECT_EQ(optiling::matmul_v3_advanced::MatMulV3TilingKey::GetModel(tiling->GetTilingKeyPublic()),
+              MatMulV3Model::K_EQUAL_ZERO);
+    EXPECT_EQ(optiling::matmul_v3_advanced::MatMulV3TilingKey::GetBatchModel(tiling->GetTilingKeyPublic()),
+              MatMulV3BatchModel::BATCH_MODEL);
+    EXPECT_EQ(optiling::matmul_v3_advanced::MatMulV3TilingKey::GetApiLevel(tiling->GetTilingKeyPublic()),
+              MatMulV3ApiLevel::BASIC_LEVEL);
+}
+
+// L51：tilingKeyObj非空走*tilingKeyObj分支（三目另一臂），结果与tmp分支构造的key一致
+TEST_F(MatMulV3KEqZeroTilingDirectTest, GetTilingKey_TilingKeyObjNonNull_UsesProvidedObj)
+{
+    optiling::matmul_v3_advanced::MatMulV3TilingKey keyObj;
+    cfg_ = std::make_unique<optiling::MatMulTilingCfg>(false, &compileInfo_, &args_, &keyObj);
+    auto tiling = std::make_unique<MatMulV3KEqZeroTilingForTest>(context_, *cfg_);
+    uint64_t expectedKey = optiling::matmul_v3_advanced::MatMulV3TilingKey()
+                               .SetTrans(false, false)
+                               .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+                               .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
+                               .SetModel(MatMulV3Model::K_EQUAL_ZERO)
+                               .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
+                               .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
+                               .GetTilingKey();
+    EXPECT_EQ(tiling->GetTilingKeyPublic(), expectedKey);
+}
+
+// L61-64：GetTilingData经GetTilingDataImpl<MatMulV3KEqZeroBasicTilingData>填充tilingData，
+// 字段取自runInfo_（totalDataAmount=m*n、aivNum=usedCoreNum）
+TEST_F(MatMulV3KEqZeroTilingDirectTest, GetTilingData_FillsKEqZeroBasicTilingData)
+{
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    optiling::TilingResult tilingResult{};
+    ASSERT_EQ(tiling->GetTilingDataPublic(tilingResult), ge::GRAPH_SUCCESS);
+    ASSERT_NE(tilingResult.tilingData, nullptr);
+    EXPECT_EQ(tilingResult.tilingDataSize, sizeof(MatMulV3KEqZeroBasicTilingData));
+    auto* kEqZeroData = static_cast<MatMulV3KEqZeroBasicTilingData*>(tilingResult.tilingData.get());
+    EXPECT_EQ(kEqZeroData->totalDataAmount, 8192U); // runInfo_.totalDataAmount = 64 * 128
+    EXPECT_EQ(kEqZeroData->aivNum, 16U);            // runInfo_.usedCoreNum = compileInfo_.aivNum
+}
+
+// =================================================================================================
+// MatMulV3Tiling 校验/提取阶段白盒直调用例（append-only 新增段）
+// 覆盖目标（op_host/op_tiling/arch35/matmul_v3_tiling_advanced.cpp）：
+//   L44-74    InvalidDtypeErrorMsg          hasBias 两臂（经 ValidateDtype L342 校验失败触达）
+//   L76-99    InvalidDtypeErrorMsgForResv   hasBias 两臂（经 ValidateDtype L333 校验失败触达）
+//   L231-241  ValidateFormat                DAV_RESV 架构存在非ND格式报错分支
+//   L243-252  ValidateFormat                非DAV_RESV 时 a/out 为 FRACTAL_NZ 报错分支
+//   L267-274  ValidateShape                 k=0 且带 bias 报错分支
+//   L277-287  ValidateShape                 m/n/k 维度值越界报错分支
+//   L290-295  ValidateShape                 输出c维度数<2报错分支
+//   L308-314  ValidateBias                  bias末维与c末维不一致报错分支
+//   L325-334  ValidateDtype                 DAV_RESV分支（匹配成功臂329-331 + 失败臂333）
+//   L490-497  ExtractSliceDims              transposeA=true报错分支（经view输入路由自然触达）
+//   L516-523  ExtractTransposeDims          维度数!=3防御分支（ExtractNonContiguousDims两个调用点
+//                                           均有oriDimNum==3守卫，生产路由不可达，按本文件
+//                                           TestSlice中L269-270直调先例覆盖）
+//   L584-591  ExtractNormalDims             ND格式storage维度数<2报错分支
+//   L593-600  ExtractNormalDims             FRACTAL_NZ格式storage维度数<4报错分支
+//   L603-611  ExtractNormalDims             FRACTAL_NZ对齐校验失败报错分支
+// 触达方式：沿用本仓既有范式——TilingContextFaker 构造上下文 + ForTest 派生类暴露 protected 入口
+//   直调 GetShapeAttrsInfo（InitContext→CheckArgs→GetArgs 完整前置流程）及各提取/校验阶段；
+//   私有 Extract* 函数对路由可达者经 ExtractMKN→ExtractNonContiguousDims 自然触达，
+//   防御分支与点态验证按 L269-270 先例直调。
+// =================================================================================================
+class MatMulV3TilingAdvancedForTest : public optiling::matmul_v3_advanced::MatMulV3Tiling {
+public:
+    using MatMulV3Tiling::MatMulV3Tiling;
+
+    ge::graphStatus InitContextPublic() { return InitContext(); }
+
+    ge::graphStatus CheckArgsPublic() { return CheckArgs(); }
+
+    ge::graphStatus GetShapeAttrsInfoPublic() { return GetShapeAttrsInfo(); }
+
+    ge::graphStatus GetShapePublic() { return GetShape(); }
+
+    ge::graphStatus ValidateFormatPublic() { return ValidateFormat(); }
+
+    ge::graphStatus ValidateShapePublic() { return ValidateShape(); }
+
+    ge::graphStatus ValidateBiasPublic() { return ValidateBias(); }
+
+    ge::graphStatus ValidateDtypePublic() { return ValidateDtype(); }
+
+    ge::graphStatus ExtractTransposePublic() { return ExtractTranspose(); }
+
+    ge::graphStatus ExtractMKNPublic() { return ExtractMKN(); }
+
+    void ExtractFormatPublic() { ExtractFormat(); }
+
+    void ExtractDtypePublic() { ExtractDtype(); }
+
+    bool GetIsSelfSlice() const { return isSelfSlice_; }
+
+    uint64_t GetMValue() const { return args_.mValue; }
+
+    uint64_t GetKValue() const { return args_.kValue; }
+
+    uint64_t GetNValue() const { return args_.nValue; }
+
+    int64_t GetKBValue() const { return kBValue_; }
+};
+
+class MatMulV3TilingAdvancedDirectTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        platformInfo_.Init();
+        compileInfo_.aicNum = 8UL;
+        compileInfo_.aivNum = 16UL;
+        compileInfo_.l1Size = 524288UL;
+        compileInfo_.l0ASize = 65536UL;
+        compileInfo_.l0BSize = 65536UL;
+        compileInfo_.l0CSize = 262144UL;
+        compileInfo_.l2Size = 134217728UL;
+        compileInfo_.ubSize = 253952UL;
+        compileInfo_.btSize = 4096UL;
+        compileInfo_.npuArch = NpuArch::DAV_3510;
+    }
+
+    void SetNpuArch(NpuArch arch) { compileInfo_.npuArch = arch; }
+
+    // 构造普通（非view）输入的TilingContext：a/b/bias/y 均经 InputShapes + NodeInputTd 提供
+    void BuildContext(const gert::StorageShape& aShape, ge::DataType aDtype, ge::Format aOriFmt, ge::Format aFmt,
+                      const gert::StorageShape& bShape, ge::DataType bDtype, ge::Format bOriFmt, ge::Format bFmt,
+                      const gert::StorageShape& yShape, ge::DataType yDtype,
+                      const gert::StorageShape* biasShape = nullptr, ge::DataType biasDtype = ge::DT_FLOAT16,
+                      bool transA = false, bool transB = false)
+    {
+        aShape_ = aShape;
+        bShape_ = bShape;
+        yShape_ = yShape;
+        yShapes_ = {yShape_};
+        yRefs_ = {&yShapes_[0]};
+        auto attrs = [transA, transB]() {
+            return std::vector<std::pair<string, Ops::NN::AnyValue>>{
+                {"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                {"opImplMode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}};
+        };
+        if (biasShape != nullptr) {
+            biasShape_ = *biasShape;
+            holder_ = gert::TilingContextFaker()
+                          .SetOpType("MatMulV3")
+                          .NodeIoNum(3, 1)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&aShape_, &bShape_, &biasShape_})
+                          .OutputShapes(yRefs_)
+                          .NodeAttrs(attrs())
+                          .NodeInputTd(0, aDtype, aOriFmt, aFmt)
+                          .NodeInputTd(1, bDtype, bOriFmt, bFmt)
+                          .NodeInputTd(2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .CompileInfo(&compileInfo_)
+                          .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
+                          .Build();
+        } else {
+            holder_ = gert::TilingContextFaker()
+                          .SetOpType("MatMulV3")
+                          .NodeIoNum(2, 1)
+                          .IrInstanceNum({1, 1})
+                          .InputShapes({&aShape_, &bShape_})
+                          .OutputShapes(yRefs_)
+                          .NodeAttrs(attrs())
+                          .NodeInputTd(0, aDtype, aOriFmt, aFmt)
+                          .NodeInputTd(1, bDtype, bOriFmt, bFmt)
+                          .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .CompileInfo(&compileInfo_)
+                          .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
+                          .Build();
+        }
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+    }
+
+    // 构造a为view（origin多维、storage一维压平）且b为普通2-D张量的TilingContext
+    void BuildViewContext(std::initializer_list<int64_t> aOri, std::initializer_list<int64_t> aStorage,
+                          std::initializer_list<int64_t> bShape, std::initializer_list<int64_t> yShape,
+                          bool transA = false, bool transB = false)
+    {
+        aShape_ = gert::StorageShape(aOri, aStorage);
+        bShape_ = gert::StorageShape(bShape, bShape);
+        yShapes_ = {gert::StorageShape(yShape, yShape)};
+        yRefs_ = {&yShapes_[0]};
+        aTensor_ = std::make_unique<gert::TensorV2>(aShape_,
+                                                    gert::StorageFormat(ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()),
+                                                    TensorPlacement::kOnHost, ge::DT_FLOAT16, nullptr, nullptr);
+        bTensor_ = std::make_unique<gert::TensorV2>(bShape_,
+                                                    gert::StorageFormat(ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()),
+                                                    TensorPlacement::kOnHost, ge::DT_FLOAT16, nullptr, nullptr);
+        std::vector<gert::TensorV2*> inputTensors = {aTensor_.get(), bTensor_.get()};
+        holder_ = gert::TilingContextFaker()
+                      .SetOpType("MatMulV3")
+                      .IrInstanceNum({1, 1}, {1})
+                      .InputTensors(inputTensors)
+                      .OutputShapes(yRefs_)
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"opImplMode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .NodeOutputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compileInfo_)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
+                      .Build();
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+    }
+
+    std::unique_ptr<MatMulV3TilingAdvancedForTest> CreateTiling()
+    {
+        return std::make_unique<MatMulV3TilingAdvancedForTest>(context_);
+    }
+
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* context_ = nullptr;
+    fe::PlatFormInfos platformInfo_;
+    optiling::MatmulV3CompileInfo compileInfo_;
+    gert::StorageShape aShape_ = {{2, 3}, {2, 3}};
+    gert::StorageShape bShape_ = {{3, 4}, {3, 4}};
+    gert::StorageShape biasShape_ = {{4}, {4}};
+    gert::StorageShape yShape_ = {{2, 4}, {2, 4}};
+    std::vector<gert::StorageShape> yShapes_;
+    std::vector<void*> yRefs_;
+    std::unique_ptr<gert::TensorV2> aTensor_;
+    std::unique_ptr<gert::TensorV2> bTensor_;
+};
+
+// 全部前置校验通过的对照用例：fp16/ND/2-D/无bias，GetShapeAttrsInfo 完整链路返回SUCCESS
+TEST_F(MatMulV3TilingAdvancedDirectTest, GetShapeAttrsInfo_AllValid_Success)
+{
+    BuildContext(aShape_, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, bShape_, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND,
+                 yShape_, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateFormatPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateShapePublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateBiasPublic(), ge::GRAPH_SUCCESS); // 无bias直接通过臂
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_SUCCESS);
+}
+
+// L44-59（经L342触达）：非RESV架构下INT8不匹配支持列表且hasBias，走带bias报错臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_NonResv_InvalidDtypeWithBias_Fail)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND, y, DT_INT8, &bias,
+                 DT_INT8);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    // 精确断言：失败点在dtype校验（前一阶段format/shape/bias均已通过）
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_FAILED);
+}
+
+// L60-73（经L342触达）：非RESV架构下INT8不匹配支持列表且无bias，走无bias报错臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_NonResv_InvalidDtypeNoBias_Fail)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND, y, DT_INT8);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_FAILED);
+}
+
+// L76-88（经L333触达）：RESV架构下FP32不满足全fp16要求且hasBias，走带bias报错臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_Resv_InvalidDtypeWithBias_Fail)
+{
+    SetNpuArch(NpuArch::DAV_RESV);
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND, y, DT_FLOAT,
+                 &bias, DT_FLOAT);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_FAILED);
+}
+
+// L89-97（经L333触达）：RESV架构下FP32不满足全fp16要求且无bias，走无bias报错臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_Resv_InvalidDtypeNoBias_Fail)
+{
+    SetNpuArch(NpuArch::DAV_RESV);
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND, y, DT_FLOAT);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_FAILED);
+}
+
+// L325-331：RESV架构全fp16（无bias）命中RESV专属支持列表匹配成功臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_Resv_AllFp16NoBias_Success)
+{
+    SetNpuArch(NpuArch::DAV_RESV);
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_SUCCESS);
+}
+
+// L325-331：RESV架构a/b/c/bias全fp16（4元组与RESV列表逐项相等）匹配成功臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_Resv_AllFp16WithBias_Success)
+{
+    SetNpuArch(NpuArch::DAV_RESV);
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16, &bias, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_SUCCESS);
+}
+
+// L336-341对照：非RESV架构命中混合支持列表项（fp16,fp16,fp32,fp32）通过臂
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateDtype_NonResv_MixedSupportList_Success)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y, DT_FLOAT,
+                 &bias, DT_FLOAT);
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateDtypePublic(), ge::GRAPH_SUCCESS);
+}
+
+// L231-241：RESV架构仅支持ND，a为FRACTAL_NZ时报错返回GRAPH_FAILED
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateFormat_ResvNonNd_Fail)
+{
+    SetNpuArch(NpuArch::DAV_RESV);
+    gert::StorageShape a = {{2, 32}, {1, 16, 1, 32}};
+    gert::StorageShape b = {{32, 4}, {32, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    // 精确断言：args_已提取完成，单独重放ValidateFormat
+    EXPECT_EQ(tiling->ValidateFormatPublic(), ge::GRAPH_FAILED);
+}
+
+// L243-252：非RESV架构下a不允许FRACTAL_NZ，报错返回GRAPH_FAILED（b为NZ不在此校验范围）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateFormat_NonResv_ANz_Fail)
+{
+    gert::StorageShape a = {{2, 32}, {1, 16, 1, 32}};
+    gert::StorageShape b = {{32, 4}, {32, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateFormatPublic(), ge::GRAPH_FAILED);
+}
+
+// L267-274：k=0且带bias时报错返回GRAPH_FAILED（k两侧相等，通过第一道K一致性校验）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateShape_KZeroWithBias_Fail)
+{
+    gert::StorageShape a = {{2, 0}, {2, 0}};
+    gert::StorageShape b = {{0, 4}, {0, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16, &bias, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateShapePublic(), ge::GRAPH_FAILED);
+}
+
+// L277-287：m=0不满足(0, INT32_MAX]时报错返回GRAPH_FAILED（k=0无bias可通过前道校验形成对照）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateShape_InvalidDimValue_Fail)
+{
+    gert::StorageShape a = {{0, 3}, {0, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{0, 4}, {0, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateShapePublic(), ge::GRAPH_FAILED);
+}
+
+// L290-295：输出c维度数为1（<2）时报错返回GRAPH_FAILED
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateShape_CDimLessThanTwo_Fail)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{8}, {8}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateShapePublic(), ge::GRAPH_FAILED);
+}
+
+// L308-314：bias末维(5)与c末维(4)不一致时报错返回GRAPH_FAILED
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateBias_LastDimMismatch_Fail)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{5}, {5}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16, &bias, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->ValidateBiasPublic(), ge::GRAPH_FAILED);
+}
+
+// L299-315对照：bias末维与c末维一致时ValidateBias通过
+TEST_F(MatMulV3TilingAdvancedDirectTest, ValidateBias_LastDimMatch_Success)
+{
+    gert::StorageShape a = {{2, 3}, {2, 3}};
+    gert::StorageShape b = {{3, 4}, {3, 4}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    gert::StorageShape bias = {{4}, {4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16, &bias, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ValidateBiasPublic(), ge::GRAPH_SUCCESS);
+}
+
+// L490-497：a为非连续slice view且transposeA=true时ExtractSliceDims报错；
+// 路由链：ExtractMKN→ExtractNonContiguousDims（isASliceNonContiguous）→ExtractSliceDims
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractSliceDims_TransAForbidden_Fail)
+{
+    BuildViewContext({5, 7}, {70}, {7, 4}, {5, 4}, true, false);
+    ASSERT_TRUE(context_->InputIsView(0)); // 路由前提：a为view tensor
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(tiling->ExtractTransposePublic(), ge::GRAPH_SUCCESS); // args_.isATrans=true
+    // 直调私有函数（沿用本文件TestSlice中L269-270先例），精确命中L490-497报错臂
+    int64_t dims[2] = {0, 0};
+    EXPECT_EQ(tiling->ExtractSliceDims(dims), ge::GRAPH_FAILED);
+    // 完整前置流程同样在ExtractMKN处失败
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+}
+
+// L498-507：a为非连续slice view且transposeA=false时，2-D origin走L503-504取m/k臂，
+// 置isSelfSlice_=true并成功；后续校验全通过形成对照
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractSliceDims_TwoDimView_Success)
+{
+    BuildViewContext({5, 7}, {70}, {7, 4}, {5, 4}, false, false);
+    ASSERT_TRUE(context_->InputIsView(0));
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(tiling->ExtractTransposePublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    ASSERT_EQ(tiling->ExtractSliceDims(dims), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(dims[0], 5); // m = selfShape[0]
+    EXPECT_EQ(dims[1], 7); // sliceK = selfShape[1]
+    EXPECT_TRUE(tiling->GetIsSelfSlice());
+    ASSERT_EQ(tiling->ExtractMKNPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetMValue(), 5UL);
+    EXPECT_EQ(tiling->GetKValue(), 7UL);
+    EXPECT_EQ(tiling->GetKBValue(), 7);
+    EXPECT_EQ(tiling->GetNValue(), 4UL);
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+}
+
+// L516-523：ExtractTransposeDims维度数!=3防御分支。生产路由下两个调用点均有oriDimNum==3
+// 守卫（isATransposeNonContiguous要求selfDimNum==3、isBTransposeNonContiguous要求mat2DimNum==3），
+// 该报错臂经路由不可达，故按本文件TestSlice中L269-270直调先例覆盖
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractTransposeDims_DimNotThree_Fail)
+{
+    BuildContext(aShape_, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, bShape_, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND,
+                 yShape_, DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    EXPECT_EQ(tiling->ExtractTransposeDims(dims, 1), ge::GRAPH_FAILED); // b为2维
+    EXPECT_EQ(tiling->ExtractTransposeDims(dims, 0), ge::GRAPH_FAILED); // a为2维
+}
+
+// L511-527对照：origin为3维时ExtractTransposeDims取末两维成功
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractTransposeDims_ThreeDim_Success)
+{
+    gert::StorageShape a = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape b = {{3, 4, 5}, {3, 4, 5}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, yShape_,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    ASSERT_EQ(tiling->ExtractTransposeDims(dims, 0), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(dims[0], 3);
+    EXPECT_EQ(dims[1], 4);
+    ASSERT_EQ(tiling->ExtractTransposeDims(dims, 1), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(dims[0], 4);
+    EXPECT_EQ(dims[1], 5);
+}
+
+// L584-591：ND格式下storage维度数<2时报错。origin保持2维避免L581-582读越界，
+// 仅storage压平为1维且非view（路由前提ASSERT_FALSE(InputIsView)）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractNormalDims_NdStorageDimLessThanTwo_Fail)
+{
+    gert::StorageShape a = {{5, 7}, {35}};
+    gert::StorageShape b = {{7, 4}, {7, 4}};
+    gert::StorageShape y = {{5, 4}, {5, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, y,
+                 DT_FLOAT16);
+    ASSERT_FALSE(context_->InputIsView(0)); // 非view：路由进ExtractNormalDims
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    EXPECT_EQ(tiling->ExtractNormalDims(context_->GetInputShape(0)->GetStorageShape(),
+                                        context_->GetInputShape(0)->GetOriginShape(), 2UL, ge::FORMAT_ND, dims, "a"),
+              ge::GRAPH_FAILED);
+    // 经ExtractMKN的集成路由同样失败（同时覆盖ExtractNonContiguousDims L555-556失败日志臂）
+    ASSERT_EQ(tiling->ExtractTransposePublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ExtractMKNPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+}
+
+// L593-600：FRACTAL_NZ格式下storage维度数<4时报错（b为NZ不触发ValidateFormat拦截，
+// 经ExtractMKN自然路由至b侧ExtractNormalDims）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractNormalDims_NzStorageDimLessThanFour_Fail)
+{
+    gert::StorageShape a = {{2, 32}, {2, 32}};
+    gert::StorageShape b = {{32, 4}, {16, 16, 2}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    EXPECT_EQ(
+        tiling->ExtractNormalDims(context_->GetInputShape(1)->GetStorageShape(),
+                                  context_->GetInputShape(1)->GetOriginShape(), 2UL, ge::FORMAT_FRACTAL_NZ, dims, "b"),
+        ge::GRAPH_FAILED);
+    // 按GetArgs阶段顺序先提取format/dtype（bFormat=NZ、bDtypeSize=2），再经ExtractMKN集成路由
+    tiling->ExtractFormatPublic();
+    tiling->ExtractDtypePublic();
+    ASSERT_EQ(tiling->ExtractTransposePublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ExtractMKNPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+}
+
+// L603-611：FRACTAL_NZ格式下oriShape对齐值与storageShape不一致时报错
+// （storage[1]*storage[2]=256 != CeilAlign(m=32,16)=32）
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractNormalDims_NzAlignMismatch_Fail)
+{
+    gert::StorageShape a = {{2, 32}, {2, 32}};
+    gert::StorageShape b = {{32, 4}, {1, 16, 16, 32}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    EXPECT_EQ(
+        tiling->ExtractNormalDims(context_->GetInputShape(1)->GetStorageShape(),
+                                  context_->GetInputShape(1)->GetOriginShape(), 2UL, ge::FORMAT_FRACTAL_NZ, dims, "b"),
+        ge::GRAPH_FAILED);
+    // 按GetArgs阶段顺序先提取format/dtype（bFormat=NZ、bDtypeSize=2），再经ExtractMKN集成路由
+    tiling->ExtractFormatPublic();
+    tiling->ExtractDtypePublic();
+    ASSERT_EQ(tiling->ExtractTransposePublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->ExtractMKNPublic(), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_FAILED);
+}
+
+// L601-613对照：NZ格式下对齐一致（storage[1]*storage[2]=32=CeilAlign(k=32,16)、
+// storage[0]*storage[3]=16=CeilAlign(n=4,16)）时ExtractNormalDims通过，且全流程SUCCESS
+TEST_F(MatMulV3TilingAdvancedDirectTest, ExtractNormalDims_NzAligned_Success)
+{
+    gert::StorageShape a = {{2, 32}, {2, 32}};
+    gert::StorageShape b = {{32, 4}, {1, 16, 2, 16}};
+    gert::StorageShape y = {{2, 4}, {2, 4}};
+    BuildContext(a, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND, b, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, y,
+                 DT_FLOAT16);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->InitContextPublic(), ge::GRAPH_SUCCESS);
+    int64_t dims[2] = {0, 0};
+    ASSERT_EQ(
+        tiling->ExtractNormalDims(context_->GetInputShape(1)->GetStorageShape(),
+                                  context_->GetInputShape(1)->GetOriginShape(), 2UL, ge::FORMAT_FRACTAL_NZ, dims, "b"),
+        ge::GRAPH_SUCCESS);
+    EXPECT_EQ(dims[0], 32); // k
+    EXPECT_EQ(dims[1], 4);  // n
+    EXPECT_EQ(tiling->GetShapeAttrsInfoPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetKValue(), 32UL);
+    EXPECT_EQ(tiling->GetKBValue(), 32);
+    EXPECT_EQ(tiling->GetNValue(), 4UL);
 }
 
 } // namespace
