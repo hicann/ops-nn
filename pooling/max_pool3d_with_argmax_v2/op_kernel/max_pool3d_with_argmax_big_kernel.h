@@ -633,10 +633,24 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
     int64_t dhAlignkW = CeilValue(kw, BLOCK_NUM_T1) * kh * kd;
     int32_t InitIndicesNum = (dhAlignkW > maxCount) ? maxCount : dhAlignkW;
     if (InitIndicesNum > 8) {
+        // indicesLocal为float(32bit)，单条向量指令的mask窗口上限为256B(64个元素)，
+        // 超出部分由repeatTimes+repeatStride覆盖(repeatStride=8个block=256B，保证repeat间连续推进)
+        constexpr int32_t indicesMaskMax = 256 / sizeof(float);
+        constexpr uint64_t indicesMask = static_cast<uint64_t>(indicesMaskMax);
+        constexpr uint8_t indicesRepeatStride = 256 / BLOCK_DATA;
         int32_t addNum = 8;
         for (int32_t idx = 8; idx < InitIndicesNum;) {
             int32_t addNumCount = (2 * idx > InitIndicesNum) ? InitIndicesNum - idx : idx;
-            Adds(indicesLocal[idx], indicesLocal, float(addNum), addNumCount);
+            int32_t repeatTimes = addNumCount / indicesMaskMax;
+            if (repeatTimes > 0) {
+                Adds(indicesLocal[idx], indicesLocal, float(addNum), indicesMask, static_cast<uint8_t>(repeatTimes),
+                     {1, 1, indicesRepeatStride, indicesRepeatStride});
+            }
+            int32_t tailCount = addNumCount - repeatTimes * indicesMaskMax;
+            if (tailCount > 0) {
+                Adds(indicesLocal[idx + repeatTimes * indicesMaskMax], indicesLocal[repeatTimes * indicesMaskMax],
+                     float(addNum), tailCount);
+            }
             PipeBarrier<PIPE_V>();
             idx += addNumCount;
             addNum = 2 * addNum;
