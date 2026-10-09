@@ -176,7 +176,7 @@
       <td>quant_scale</td>
       <td>输入</td>
       <td>量化的scale，公式中的quant_scale。输入不支持包含±inf或nan。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
      <tr>

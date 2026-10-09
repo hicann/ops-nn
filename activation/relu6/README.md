@@ -73,4 +73,4 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式(GE IR)  | [test_geir_relu6.cpp](examples/test_geir_relu6.cpp) | 通过GE IR图模式方式调用Relu6算子。 |
+| 图模式(GE IR)  | [test_geir_relu6.cpp](examples/test_geir_relu6.cpp) | 通过GE IR图模式调用Relu6算子。 |

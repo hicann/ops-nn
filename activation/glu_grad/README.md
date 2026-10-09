@@ -50,14 +50,14 @@
       <td>grad_out</td>
       <td>输入</td>
       <td>梯度输出张量。</td>
-      <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>self</td>
       <td>输入</td>
       <td>前向传播的输入张量。</td>
-      <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -71,7 +71,7 @@
       <td>out</td>
       <td>输出</td>
       <td>梯度输出，shape与self一致。</td>
-      <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
