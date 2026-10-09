@@ -319,8 +319,8 @@ static UtSplit2 UT_Split2Best(int64_t B, int64_t I, int64_t H, const GruBlockCel
             for (int64_t mc = mcFirst; mc <= mCap; mc += GRU_TIL_CUBE_BLOCK) {
                 const int64_t mA = UT_AlignUp(mc, GRU_TIL_CUBE_BLOCK);
                 const int64_t ntHi = UT_AlignDown(
-                    UT_Min(UT_Min(UT_Min(UT_UbTileCap(mc, ubAvail), l0cElems / mA), m.nAl), ntCapSlices),
-                    GRU_TIL_CUBE_BLOCK);
+                    UT_Min(UT_Min(UT_Min(UT_UbTileCap(mc, ubAvail), l0cElems / 2 / mA), m.nAl), ntCapSlices),
+                    GRU_TIL_CUBE_BLOCK); // S5：L0C 双槽（host 同式镜像）
                 if (ntHi >= GRU_TIL_CUBE_BLOCK) {
                     const int64_t aBytes = 5 * UT_CeilDiv(kgMax, GRU_TIL_C0F) * mA * GRU_TIL_C0F * 4;
                     const int64_t sl = UT_Max(UT_Min(ntHi, pfSliceCap), GRU_TIL_CUBE_BLOCK);
@@ -411,8 +411,8 @@ static GruBlockCellTilingData MirrorDecision(int64_t B, int64_t I, int64_t H, co
     const int64_t mcFirst = (mCap < GRU_TIL_CUBE_BLOCK) ? mCap : GRU_TIL_CUBE_BLOCK;
     for (int64_t mc = mcFirst; mc <= mCap; mc += GRU_TIL_CUBE_BLOCK) {
         const int64_t mA = UT_AlignUp(mc, GRU_TIL_CUBE_BLOCK);
-        const int64_t ntHi = UT_AlignDown(UT_Min(UT_Min(UT_UbTileCap(mc, ubAvail), l0cElems / mA), m.nAl),
-                                          GRU_TIL_CUBE_BLOCK);
+        const int64_t ntHi = UT_AlignDown(UT_Min(UT_Min(UT_UbTileCap(mc, ubAvail), l0cElems / 2 / mA), m.nAl),
+                                          GRU_TIL_CUBE_BLOCK); // S5：L0C 双槽（host 同式镜像）
         if (ntHi < GRU_TIL_CUBE_BLOCK) {
             continue;
         }
@@ -436,11 +436,17 @@ static GruBlockCellTilingData MirrorDecision(int64_t B, int64_t I, int64_t H, co
         if (nt < GRU_TIL_CUBE_BLOCK) {
             continue;
         }
-        const int64_t nChunks = cores * UT_CeilDiv(UT_CeilDiv(B, cores), mc);
+        const int64_t chunkPerCore = UT_CeilDiv(UT_CeilDiv(B, cores), mc);
+        const int64_t nChunks = cores * chunkPerCore;
         // B1 流量模型：+ nTiles×hrRecalc（pass1 h 段每列片重读 hPrev+r 现场重算 hr）
         const int64_t hrRecalcBytes = 2 * B * H * 4;
-        const int64_t cost = nChunks * weightBytes + 2 * UT_CeilDiv(m.padHidden, nt) * aStreamBytes +
-                             UT_CeilDiv(m.padHidden, nt) * hrRecalcBytes + actBytes;
+        // S7：握手轮次项（host 同式镜像：cores × per-core 轮数 × 字节等价）
+        const int64_t nTilesM = UT_CeilDiv(m.padHidden, nt);
+        const int64_t roundsPerCore = chunkPerCore * nTilesM * (m.cGroups * 2);
+        const int64_t roundBytes = (nt > c.l0bSize / (4 * GRU_TIL_CUBE_BLOCK)) ? UT_A1_ROUND_BYTES_SLOW :
+                                                                                 UT_A1_ROUND_BYTES;
+        const int64_t cost = nChunks * weightBytes + 2 * nTilesM * aStreamBytes + nTilesM * hrRecalcBytes + actBytes +
+                             cores * roundsPerCore * roundBytes;
         if (cost < bestCost) {
             bestCost = cost;
             bestM = mc;
@@ -517,9 +523,9 @@ static CapBytes MirrorCapacity(const GruBlockCellTilingData& td)
     const int64_t rowsMax = (td.mChunk + 1) / 2;
     const int64_t planeElems = rowsMax * td.nL0c;
     const int64_t msk = UT_AlignUp(UT_CeilDiv(planeElems, GRU_TIL_BITS_PER_BYTE), 32);
-    return {aSlots + b + bias, GRU_TIL_STATIC_PLANES * planeElems * 4 + msk, mAligned * td.nL0c * 4,
+    return {aSlots + b + bias, GRU_TIL_STATIC_PLANES * planeElems * 4 + msk, 2 * mAligned * td.nL0c * 4,
             UT_CeilDiv(td.kc, GRU_TIL_C0F) * mAligned * GRU_TIL_C0F * 4,
-            (td.nSlice / GRU_TIL_C0F) * UT_AlignUp(td.kc, GRU_TIL_CUBE_BLOCK) * GRU_TIL_C0F * 4};
+            (td.nSlice / GRU_TIL_C0F) * UT_AlignUp(td.kc, GRU_TIL_CUBE_BLOCK) * GRU_TIL_C0F * 4}; // S5：L0C 双槽
 }
 
 static bool MirrorGatePass(int64_t B, int64_t I, int64_t H)
@@ -544,13 +550,15 @@ static void CheckProperties(const GruBlockCellTilingData& td, const std::string&
     const UtCaps& c = Caps();
     const int64_t mAligned = UT_CeilAlign(td.mChunk, GRU_TIL_CUBE_BLOCK);
 
-    // P2：L0C 单片不越界（用反推容量，UT/真机两环境同时成立）
-    EXPECT_LE(mAligned * td.nL0c * 4, c.l0cSize) << tag << " P2: mAligned×nL0c 超 L0C";
+    // P2：L0C 双槽不越界（S5 pingpong；用反推容量，UT/真机两环境同时成立）
+    EXPECT_LE(2 * mAligned * td.nL0c * 4, c.l0cSize) << tag << " P2: 2×mAligned×nL0c 超 L0C";
 
     // P3：决策与容量验算自洽（host gate 放行 ⇒ 独立复算必在界内）
     const CapBytes cap = MirrorCapacity(td);
     EXPECT_LE(cap.l1, c.l1Size) << tag << " P3: 复算 L1=" << cap.l1 << " 超 cap=" << c.l1Size;
     EXPECT_LE(cap.ub, c.ubSize - GRU_TIL_UB_RESERVE) << tag << " P3: 复算 UB=" << cap.ub << " 超 cap";
+    EXPECT_LE(cap.l0a, c.l0aSize) << tag << " P3: 复算 L0A 超 cap";
+    EXPECT_LE(cap.l0b, c.l0bSize) << tag << " P3: 复算 L0B 超 cap";
 
     // P4/P5：分形对齐前提
     EXPECT_EQ(td.nL0c % GRU_TIL_CUBE_BLOCK, 0) << tag << " P4: nL0c 非 16 倍数";

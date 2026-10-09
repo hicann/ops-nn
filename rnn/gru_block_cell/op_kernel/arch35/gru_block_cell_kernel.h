@@ -169,6 +169,21 @@ __aicore__ inline void WaitMte1ToM() { PipeWait<AscendC::HardEvent::MTE1_M>(); }
 __aicore__ inline void WaitMToFix() { PipeWait<AscendC::HardEvent::M_FIX>(); }         // Mmad 后
 __aicore__ inline void WaitFixToM() { PipeWait<AscendC::HardEvent::FIX_M>(); }         // drain 后复用 L0C
 
+// ---- S5 L0C 双槽：FIX_M 的 Set/Wait 分离形态（pingpong_design 问题3「Set/Wait
+// 紧耦合则流水仍串行」+ §3.2 **每缓冲独立事件 ID**——set 挂在 drain 之后（FIX 管序），
+// wait 挂在 2 门后复用同槽的 Mmad 之前（M 管序）；id=槽号 ⇒ 每 id 严格 set/wait
+// 交替、在途 token 恒 ≤1（⚠ 单 id 承载 2 枚在途 set 实测挂死——静态/动态双套件
+// 均卡首个 wait，硬件事件通道不接受同 id 多 token 堆积）。Mmad[j] 只等 drain[j−2]
+// （同槽 WAR），drain[j−1] 退出关键路径，Mmad[j]∥drain[j−1] 成立）----
+__aicore__ inline void SignalFixDrained(uint32_t slot)
+{
+    AscendC::SetFlag<AscendC::HardEvent::FIX_M>(static_cast<int32_t>(slot));
+}
+__aicore__ inline void AwaitSlotFree(uint32_t slot)
+{
+    AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(static_cast<int32_t>(slot));
+}
+
 // ---- 定向化细分（范式 patterns.md 误区3错误3：热循环屏障换命名 hazard 的
 // 定向事件，实测同类改造快 13~17% 且输出逐位相同；只排真正相关的那对流水）----
 __aicore__ inline void WaitMToMte1() { PipeWait<AscendC::HardEvent::M_MTE1>(); } // Mmad 读 L0A/L0B/BT 后，MTE1 复用装载
@@ -183,20 +198,33 @@ __aicore__ inline void WaitMte3ToV() { PipeWait<AscendC::HardEvent::MTE3_V>(); }
 // （MTE3→V / VF 相邻界面不设定向事件：VF 异步完成不被命名事件闭合，见文件头）
 
 // ---- 跨核（AIC ↔ 2 AIV）----
+// S15：握手原语由 ffts 消息路（CrossCoreSet/WaitFlag mode 0x2）切换为 intra-block
+// 硬件信号量（NotifyEvent/WaitEvent mode-4——SyncAll 同款原语）。1:2 配对纪律完全
+// 复刻 SyncAll 已验证形态：AIC→AIV 广播 = AIC 双 set（id 与 id+16 两子块槽）、
+// 每 AIV 单 wait（硬件按 subBlockIdx 路由）；AIV→AIC 屏障 = 每 AIV 单 set（自动
+// 路由至各自槽）、AIC 双 wait。id 8/9（+16 → 24/25）与 SyncAll 的 11/12/13（+16）
+// 无交叠。管序语义不变：set 挂 FIX/MTE3 管（drain/回灌排空后置位），AIC wait 挂
+// M 管 + PIPE_ALL 全栅栏（标量阻断依据，S13 负结果：窄栅栏不承载 flag-wait）。
 constexpr uint16_t FLAG_C2V = 8;
 constexpr uint16_t FLAG_V2C = 9;
+constexpr uint16_t GRU_SYNC_FLAG_ID_MAX = 16; // = SDK SYNC_FLAG_ID_MAX（子块槽距）
 
 // CUBE → VECTOR：drain 落 UB 后由 FIX 管置位；两个 AIV 各自 wait。
-__aicore__ inline void CubeSignalVec() { AscendC::CrossCoreSetFlag<0x2, PIPE_FIX>(FLAG_C2V); }
-__aicore__ inline void VecWaitCube() { AscendC::CrossCoreWaitFlag(FLAG_C2V); }
+__aicore__ inline void CubeSignalVec()
+{
+    AscendC::NotifyEvent<PIPE_FIX, 4>(FLAG_C2V);
+    AscendC::NotifyEvent<PIPE_FIX, 4>(FLAG_C2V + GRU_SYNC_FLAG_ID_MAX);
+}
+__aicore__ inline void VecWaitCube() { AscendC::WaitEvent<PIPE_S, 4>(FLAG_C2V); }
 
-// VECTOR → CUBE：⚠ barrier 而非计数信号量——两个 AIV 都要 set，cube 恰好消费一次
-// （1:1 与 2:2 配对均死锁，实测）。cube 的 wait 在 M 管，但对回灌数据的后续读在
-// MTE2/MTE1，故附带全栅栏。
-__aicore__ inline void VecSignalCube() { AscendC::CrossCoreSetFlag<0x2, PIPE_MTE3>(FLAG_V2C); }
+// VECTOR → CUBE：⚠ barrier 而非计数信号量——两个 AIV 都要 set，cube 双 wait 消费
+// （1:1 与 2:2 配对均死锁，实测——mode-4 形态同理保持双 set/双 wait 纪律）。
+// cube 的 wait 在 M 管，但对回灌数据的后续读在 MTE2/MTE1，故附带全栅栏。
+__aicore__ inline void VecSignalCube() { AscendC::NotifyEvent<PIPE_MTE3, 4>(FLAG_V2C); }
 __aicore__ inline void CubeWaitVec()
 {
-    AscendC::CrossCoreWaitFlag<0x2, PIPE_M>(FLAG_V2C);
+    AscendC::WaitEvent<PIPE_M, 4>(FLAG_V2C);
+    AscendC::WaitEvent<PIPE_M, 4>(FLAG_V2C + GRU_SYNC_FLAG_ID_MAX);
     AscendC::PipeBarrier<PIPE_ALL>();
 }
 
@@ -258,13 +286,20 @@ __aicore__ inline auto L0cLayoutF(uint32_t rows, uint32_t cols)
 // 的 init 硬编码 false 与原「cmatrixInitVal 必须 false——true 丢弃 BT 种子」一致）
 // seedMode：0=Bias（BT 种子，段/门首块）/ 1=Plain（覆写从零起，组 g≥1 首块）/
 // 2=Accum（续累加，同链后续段）。
+// unitFlag（S4 unitflag 优化）：0=disable（旧路整段 M_FIX 同步）；3=enable_update
+// （FINAL_ACCUMULATION——本 kernel 每门单 k 块（kc==kgMax≥kw），门内无 K 向续累，
+// 恒为尾块语义）。3 时 MMAD 每写完一个 512B L0C 块即由硬件放行 Fixpipe 搬出，
+// Mmad∥drain 细粒度流水，M_FIX 整段等待删除（blaze block_mmad_matmul_fixpipe_opti
+// 同构；skill unitflag_design.md）。⚠ 与 DrainToUB 的 unitFlag 必须同值成对。
 // ---------------------------------------------------------------------------
+constexpr uint32_t GRU_UNITFLAG_FINAL = 3; // unit_flag_mode::enable_update（尾块/最终累加）
+
 __aicore__ inline void MmadGate(uint32_t mNow, uint32_t sliceN, uint32_t n0, uint32_t ns, uint32_t kcNow,
-                                uint32_t seedMode, bool firstChunk)
+                                uint32_t seedMode, bool firstChunk, uint32_t unitFlag = 0, uint32_t l0cOff = 0)
 {
     constexpr auto atom = AscendC::Te::MakeMmad(AscendC::Te::MmadOperation{});
     const uint32_t nAl = gbc::layout::CeilAlign(ns, gbc::layout::CUBE_BLOCK);
-    auto cParent = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0C, float>(0u),
+    auto cParent = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0C, float>(l0cOff),
                                            L0cLayoutF(mNow, sliceN));
     auto cTile = cParent.Slice(AscendC::Te::MakeCoord(0u, n0), AscendC::Te::MakeShape(mNow, ns));
     auto aTile = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0A, float>(0u),
@@ -277,17 +312,17 @@ __aicore__ inline void MmadGate(uint32_t mNow, uint32_t sliceN, uint32_t n0, uin
                                             AscendC::Te::MakeFrameLayout<AscendC::Te::NDExtLayoutPtn>(1u, ns));
         AscendC::Te::Mmad(
             atom.with(AscendC::Te::MmadParams{static_cast<uint16_t>(MmadM(mNow)), static_cast<uint16_t>(nAl),
-                                              static_cast<uint16_t>(kcNow), 0, false}),
+                                              static_cast<uint16_t>(kcNow), static_cast<uint8_t>(unitFlag), false}),
             cTile, aTile, bTile, bias);
     } else if (seedMode == 1 && firstChunk) {
         AscendC::Te::Mmad(
             atom.with(AscendC::Te::MmadParams{static_cast<uint16_t>(MmadM(mNow)), static_cast<uint16_t>(nAl),
-                                              static_cast<uint16_t>(kcNow), 0, true}),
+                                              static_cast<uint16_t>(kcNow), static_cast<uint8_t>(unitFlag), true}),
             cTile, aTile, bTile);
     } else {
         AscendC::Te::Mmad(
             atom.with(AscendC::Te::MmadParams{static_cast<uint16_t>(MmadM(mNow)), static_cast<uint16_t>(nAl),
-                                              static_cast<uint16_t>(kcNow), 0, false}),
+                                              static_cast<uint16_t>(kcNow), static_cast<uint8_t>(unitFlag), false}),
             cTile, aTile, bTile);
     }
 }
@@ -374,13 +409,18 @@ struct GruL0c2UbSplitMTrait {
     static constexpr const TraitType value = GRU_L0C2UB_SPLITM_TRAIT;
 };
 
-// ubOff：UB 平面基偏移；colOff/width：列片；mNow：行数。⚠ dst 张量行数必须取
+// ubOff：UB 平面基偏移；colOff/width：列片；mNow：行数。unitFlag：与 MmadGate 成对
+// （S4 unitflag——3=enable_update 时 Fixpipe 按 512B 块与 MMAD 硬件级流水，无需
+// M_FIX 整段等待；0=disable 保持旧路整段同步语义。l0c_to_ub_params{unit_flag_mode,
+// subBlockId} 与 DUAL_DST_SPLIT_M trait 同指令共存——arch3510 asc_copy_l0c2ub_impl
+// 参数表承载，blaze fixpipe_opti CopyOutFromL0C2UB 同构）。
+// ⚠ dst 张量行数必须取
 // 逻辑全高 mEven=CeilAlign(mNow,2)（fixpipe 的 m_size=min(src,dst) 行数——若 dst
 // 呈现每 AIV 半高 rowsMax 会被钳到半数，splitM 半区投递残缺：实测 AIV0 行对、
 // AIV1 行全错）。物理平面每 AIV 仅 m/2 行，硬件按 dualDstCtl 对半投递，逻辑全高
 // 不越界；行距=planePitch（全平面宽）由 pitch 布局承载。
 __aicore__ inline void DrainToUB(uint32_t ubOff, uint32_t colOff, uint32_t width, uint32_t mNow, uint32_t nL0c,
-                                 uint32_t planePitch)
+                                 uint32_t planePitch, uint32_t unitFlag = 0, uint32_t l0cOff = 0)
 {
     const uint32_t mEven = gbc::layout::CeilAlign(mNow, 2);
     // 源恒在 L0C 帧基 [0, width)——mmad 列片写帧内 [0, sliceN)（MmadGate 的
@@ -388,7 +428,7 @@ __aicore__ inline void DrainToUB(uint32_t ubOff, uint32_t colOff, uint32_t width
     // [colOff, colOff+width)。sliced 尾片（colOff≥nL0c）若把源也切在 colOff
     // 会越出 [mEven, nL0c] 帧 → CCU instruction address check error（实测
     // H=4097 error 263 subErrType 0x4）。
-    auto src = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0C, float>(0u),
+    auto src = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0C, float>(l0cOff),
                                        L0cLayoutF(mEven, nL0c));
     auto dst = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, float>(ubOff),
                                        NdPitchLayout(mEven, planePitch, planePitch));
@@ -396,7 +436,9 @@ __aicore__ inline void DrainToUB(uint32_t ubOff, uint32_t colOff, uint32_t width
         const uint32_t cn = gbc::layout::MinU(gbc::layout::DRAIN_CHUNK, width - off);
         auto srcTile = src.Slice(AscendC::Te::MakeCoord(0u, off), AscendC::Te::MakeShape(mEven, cn));
         auto dstTile = dst.Slice(AscendC::Te::MakeCoord(0u, colOff + off), AscendC::Te::MakeShape(mEven, cn));
-        AscendC::Te::Copy(AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2UB{}, GruL0c2UbSplitMTrait{}), dstTile, srcTile);
+        AscendC::Te::Copy(AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2UB{}, GruL0c2UbSplitMTrait{})
+                              .with(AscendC::Te::FixpipeParams{static_cast<uint8_t>(unitFlag)}),
+                          dstTile, srcTile);
     }
 }
 
@@ -550,6 +592,79 @@ __simd_vf__ inline void GruBlockCellBlendVF(__ubuf__ T* hAddr, __ubuf__ T* cAddr
     }
 }
 
+// S9：Neumaier 归并整链寄存器驻留（VF 范例库 register-resident-vector-chain 形态；
+// 运算序与高层 5-op 链逐项同构 ⇒ 输出逐位一致）：
+//   t = acc + p;  c2 = acc − t;  c2 += p;  comp += c2;  acc = t
+// UB 访问 15 次（5 op × 2读1写）→ 5 次（3 LoadAlign + 2 StoreAlign）；t1/t2 平面
+// 退出 merge（仅片尾 epilogue 使用）。⚠ VF 异步完成不被命名事件闭合（文件头纪律）
+// ——调用点以 PipeBarrier<PIPE_ALL> 先于 V2C 置位与后续跨管消费者闭合。
+template <typename T>
+__simd_vf__ inline void GruBlockCellNeumaierVF(__ubuf__ T* accAddr, __ubuf__ T* compAddr, __ubuf__ T* pAddr,
+                                               uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<T> accReg;
+    AscendC::Reg::RegTensor<T> compReg;
+    AscendC::Reg::RegTensor<T> pReg;
+    AscendC::Reg::RegTensor<T> tReg;
+    AscendC::Reg::RegTensor<T> cReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::AddrReg aReg;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        aReg = AscendC::Reg::CreateAddrReg<T>(i, oneRepeatSize);
+        uint32_t remain = count - static_cast<uint32_t>(i) * oneRepeatSize; // UpdateMask 收非 const 引用
+        mask = AscendC::Reg::UpdateMask<T>(remain);
+        AscendC::Reg::LoadAlign(accReg, accAddr, aReg);
+        AscendC::Reg::LoadAlign(compReg, compAddr, aReg);
+        AscendC::Reg::LoadAlign(pReg, pAddr, aReg);
+        AscendC::Reg::Add(tReg, accReg, pReg, mask);         // t = acc + p
+        AscendC::Reg::Sub(cReg, accReg, tReg, mask);         // c2 = acc − t
+        AscendC::Reg::Add(cReg, cReg, pReg, mask);           // c2 += p
+        AscendC::Reg::Add(compReg, compReg, cReg, mask);     // comp += c2
+        AscendC::Reg::StoreAlign(accAddr, tReg, aReg, mask); // acc = t
+        AscendC::Reg::StoreAlign(compAddr, compReg, aReg, mask);
+    }
+}
+
+// S10：pass0 双链 Neumaier（r+u 同调用）——共享一次 asc_vf_call 开销与 mask/addr
+// 寄存器；5 枚 RegTensor 顺序复用（r 链存回后复用于 u 链，寄存器压力与单链同）。
+// 两链运算序各自与高层 5-op 链逐项同构 ⇒ 逐位一致（链间交错不触及同一元素）。
+template <typename T>
+__simd_vf__ inline void GruBlockCellNeumaier2VF(__ubuf__ T* acc0Addr, __ubuf__ T* comp0Addr, __ubuf__ T* p0Addr,
+                                                __ubuf__ T* acc1Addr, __ubuf__ T* comp1Addr, __ubuf__ T* p1Addr,
+                                                uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<T> accReg;
+    AscendC::Reg::RegTensor<T> compReg;
+    AscendC::Reg::RegTensor<T> pReg;
+    AscendC::Reg::RegTensor<T> tReg;
+    AscendC::Reg::RegTensor<T> cReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::AddrReg aReg;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        aReg = AscendC::Reg::CreateAddrReg<T>(i, oneRepeatSize);
+        uint32_t remain = count - static_cast<uint32_t>(i) * oneRepeatSize; // UpdateMask 收非 const 引用
+        mask = AscendC::Reg::UpdateMask<T>(remain);
+        AscendC::Reg::LoadAlign(accReg, acc0Addr, aReg);
+        AscendC::Reg::LoadAlign(compReg, comp0Addr, aReg);
+        AscendC::Reg::LoadAlign(pReg, p0Addr, aReg);
+        AscendC::Reg::Add(tReg, accReg, pReg, mask);     // r 链：t = acc + p
+        AscendC::Reg::Sub(cReg, accReg, tReg, mask);     // c2 = acc − t
+        AscendC::Reg::Add(cReg, cReg, pReg, mask);       // c2 += p
+        AscendC::Reg::Add(compReg, compReg, cReg, mask); // comp += c2
+        AscendC::Reg::StoreAlign(acc0Addr, tReg, aReg, mask);
+        AscendC::Reg::StoreAlign(comp0Addr, compReg, aReg, mask);
+        AscendC::Reg::LoadAlign(accReg, acc1Addr, aReg);
+        AscendC::Reg::LoadAlign(compReg, comp1Addr, aReg);
+        AscendC::Reg::LoadAlign(pReg, p1Addr, aReg);
+        AscendC::Reg::Add(tReg, accReg, pReg, mask); // u 链：同序
+        AscendC::Reg::Sub(cReg, accReg, tReg, mask);
+        AscendC::Reg::Add(cReg, cReg, pReg, mask);
+        AscendC::Reg::Add(compReg, compReg, cReg, mask);
+        AscendC::Reg::StoreAlign(acc1Addr, tReg, aReg, mask);
+        AscendC::Reg::StoreAlign(comp1Addr, compReg, aReg, mask);
+    }
+}
+
 // ===========================================================================
 
 // ===========================================================================
@@ -619,6 +734,8 @@ private:
         uint32_t kgH;          // host 决策：h 段组宽（16 对齐）
         uint32_t rowsMax;      // 派生：CeilDiv(mChunk, 2)，单 AIV drain 行数上界
         uint32_t planeElems;   // 派生：rowsMax × nL0c（列片平面容量）
+        uint32_t l0cSlotBytes; // 派生：L0C 单槽字节 CeilAlign(mChunk,16)×nL0c×4（S5 双槽
+                               // pingpong 槽距；恒 1KB 分形对齐——mc/nt 均 16 倍数）
 
         // L1（偏移，字节）：A 的 K 组流式槽（x/hPrev 双槽 + hr 双槽）+ B 双槽 + bias 共享槽
         uint32_t aKOff;       // A: x/hPrev 切片双槽 [mChunk, ≤kgMax]×2（S2 预取）
@@ -627,7 +744,10 @@ private:
         uint32_t biasSlotOff; // BT: bias 列片共享槽（r/u/c 三门按 (门, 列片) 轮用）
         uint32_t aKElems;     // aK/aHR 单槽容量（元素）
         uint32_t bElems;      // b 单槽容量（元素）
-        // L0（单 slot，偏移 0）：L0A/L0B/L0C/BT
+        // L0（S5：L0C 双槽 pingpong，槽距 l0cSlotBytes、slot=pf 路线性门序&1；
+        // L0A/L0B/BT 单 slot 偏移 0——⚠ L0A/L0B 的 WAR 勿改跨门延迟事件配对：
+        // M_MTE1/FIX_MTE1 延迟形态实测竞态错数（m/n 分形域确定性破坏，相邻即处
+        // WaitMToMte1 形态绿；L0C 的 FIX_M 延迟配对为已验证例外），见 S4 负结果记录）
         // UB（per AIV；VECOUT=drain 会合区，VECCALC=激活平面，同一 Bump 同一基址）
         uint32_t rBarOff;  // VECOUT: pass0 r drain（偶数轮；≡ pass1 cBar1）
         uint32_t uBarOff;  // VECOUT: pass0 u drain（偶数轮；≡ pass1 cBar0）
@@ -676,6 +796,7 @@ private:
               kgH(gbc::layout::CUBE_BLOCK),
               rowsMax(1),
               planeElems(gbc::layout::C0F),
+              l0cSlotBytes(0),
               aKOff(0),
               aHROff(0),
               bOff(0),
@@ -746,6 +867,8 @@ private:
             // ---- 纯算术推导（决策的确定函数）----
             rowsMax = gbc::layout::DrainRowsMax(mChunk, true);
             planeElems = rowsMax * nL0c;
+            l0cSlotBytes = gbc::layout::CeilAlign(mChunk, gbc::layout::CUBE_BLOCK) * nL0c *
+                           static_cast<uint32_t>(sizeof(float));
 
             // L1 足迹（元素）：aK = K 组流式槽 [mChunk, kgMax]，每 (列片,组) 现搬 A
             // 切片，足迹与 I/H 解耦（B1 已删全幅 aH 回灌槽，mChunk 不再被 Hp 钉死）。
@@ -766,26 +889,36 @@ private:
             biasSlotOff = l1.TakeT<float>(gbc::cube::BtElems(nL0c));
             // L1 合计足迹 = l1.cur（host CheckLayoutCapacity 同公式复刻做前置拒绝）。
 
-            // L0（单 slot，PIPE_ALL/WaitFixToM 序贯复用）：容量上界由 host 决策公式
+            // L0（S5：L0C 双槽 pingpong，槽距 l0cSlotBytes、slot=pf 路线性门序&1，
+            // FIX_M set/wait 分离且 **id=槽号**（每 id 严格交替、在途 token ≤1——单 id
+            // 多 token 堆积实测挂死）；L0A/L0B/BT 单 slot 偏移 0，PIPE_ALL/定向事件
+            // 序贯复用）：容量上界由 host 决策公式
             // 钉死 + UT 断言，kernel 侧不登记不校验的容量字段。
 
             // UB（两 AIV 同名偏移）：10 个 [rowsMax, nL0c] 列片平面（8 独立 + t1/t2，
             // t3≡rAcc）+ msk；平面行距 = 当前片宽 w（恒 8 对齐），AIV 扁平 work=stripe.count×w。
-            // ⚠ 别名写读先序（均经既有 V2C/C2V/PIPE_ALL 栅栏闭合；改别名必须重核）：
+            // ⚠ 别名写读先序（经 V2C/C2V flag、PIPE_ALL 与 S6 定向事件闭合；改别名必须重核）：
             //   rBar0≡cBar1、uBar0≡cBar0：pass0 偶轮 merge ↔ pass1 c-merge（深度差 ≥2 轮
             //     + 块界 CubeWaitVec 后序）
-            //   rBar1/uBar1：仅 pass0 奇轮（深度-2 的 V2C[gIdx−2] 闭合 WAR）
-            //   uAcc≡cAcc：CopyOut u（MTE3+PIPE_ALL）→ pass1 首片 g0 DataCopy
-            //   uComp≡cComp：FinFinalize(u) → pass1 首片 g1 Neumaier
+            //   rBar1/uBar1：pass0 奇轮 drain（深度-2 的 V2C[gIdx−2] 闭合 WAR）；S6/S9：
+            //     pass1-pf2 的 hr 前瞻装载平面（轮尾 V2C 后 MTE2 写 / 下一轮首 Mul V 读
+            //     ——StageHrIssue 的 WaitVToMte2 闭合本轮首 Mul 读、片界经 C2V flag 闭合
+            //     pass0 fixpipe 写；pass1 fixpipe 只写偶平面，无远端写者冲突）
+            //   uAcc≡cAcc：CopyOut u（MTE3+S6 片尾 WaitMte3ToV）→ pass1 首片 g0 DataCopy
+            //   uComp≡cComp：FinFinalize(u) → pass1 首片 g1 Neumaier（V 同管保序）
             //   t1≡hp 副本、t2≡u 回读：V 读 → blend 前 MTE2 现拷（PIPE_ALL 间隔；t1 每片重拷）
+            //     S9：pf2/pass0 的 merge 改 VF 寄存器链后 t1/t2 仅片尾 epilogue 与 !pf2 域使用
             //   rAcc≡t3：pass0 σ(r)/r CopyOut → pass1 片末 Tanh s3/VF h 落点/h CopyOut
-            //     （WaitMte3ToV 闭合）；⚠ h 不得改回 cAcc 就地（Fix B 零窗竞态）
+            //     （WaitMte3ToV 闭合）；S6/S9：pass1 轮间 t3 = hr 暂存（轮首 Mul V 写 →
+            //     同轮 FB MTE3 读经 WaitVToMte3；跨轮 FB 读 → 下一轮首 Mul 写经
+            //     StageHrMul 内 WaitMte3ToV；片末 FB→TanhVec 由 epilogue 首
+            //     WaitMte3ToV 闭合）；⚠ h 不得改回 cAcc 就地（Fix B 零窗竞态）
             //   msk：FinFinalize/Tanh 按需 scratch，无跨相位保持
             gbc::layout::Bump ub;
-            rBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 r drain 偶轮；≡ pass1 cBar1
-            uBarOff = ub.TakeT<float>(planeElems);  // VECOUT: pass0 u drain 偶轮；≡ pass1 cBar0
-            rBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 r drain 奇轮（S3'' 深度-2）
-            uBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 u drain 奇轮（pass1 空闲）
+            rBarOff = ub.TakeT<float>(planeElems); // VECOUT: pass0 r drain 偶轮；≡ pass1 cBar1
+            uBarOff = ub.TakeT<float>(planeElems); // VECOUT: pass0 u drain 偶轮；≡ pass1 cBar0
+            rBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 r drain 奇轮（S3'' 深度-2）；S6: pass1 hr 装载 hp
+            uBar1Off = ub.TakeT<float>(planeElems); // VECOUT: pass0 u drain 奇轮；S6: pass1 hr 装载 r（fixpipe 不写）
             rAccOff = ub.TakeT<float>(planeElems);  // VECCALC: r 累加器；B 端 ≡ Tanh s3（宽路）
             rCompOff = ub.TakeT<float>(planeElems); // VECCALC: r Neumaier 补偿项
             uAccOff = ub.TakeT<float>(planeElems);  // VECCALC: u 累加器；≡ cAcc
@@ -857,13 +990,16 @@ private:
     __aicore__ inline void RecomputeHr(uint32_t gN, uint32_t aHRSlotOff, const gbc::layout::RowStripe& stripe,
                                        uint32_t gRow, uint32_t mNow, const AscendC::LocalTensor<float>& t1,
                                        const AscendC::LocalTensor<float>& t2) const;
-    // S3'-T2（pf2 轮首回灌）：RecomputeHr 拆两段——StageHr 算 hr[gN] 暂存 t3
-    // （t1/t2 为 scratch）；FeedbackHr 自 t3 回灌 aHR 槽。两段跨相邻轮（轮 r 尾
-    // stage → 轮 r+1 首 feedback），使 feedback 落在 AIC 的 L1 静默窗（drain[r−1]
-    // → 下一门 L1 访问之间）——L1 无写仲裁，见 pass1 AIC 段 ⚠。
-    __aicore__ inline void StageHr(uint32_t gN, const gbc::layout::RowStripe& stripe, uint32_t gRow,
-                                   const AscendC::LocalTensor<float>& t1, const AscendC::LocalTensor<float>& t2,
-                                   const AscendC::LocalTensor<float>& t3) const;
+    // S3'-T2（pf2 轮首回灌）+ S6（轮链重构）：hr 前瞻拆三段——轮首 StageHrIssue
+    // 发射 GM 装载进 rBar1/uBar1（pass1 空闲奇平面，HBM 时延与 merge 重叠）；轮尾
+    // StageHrMul 算 hr[gN] 暂存 t3（不在 V2C 关键路径）；下一轮轮首 FeedbackHr 自
+    // t3 回灌 aHR 槽（落 AIC 的 L1 静默窗——L1 无写仲裁，见 pass1 AIC 段 ⚠）。
+    __aicore__ inline void StageHrIssue(uint32_t gN, const gbc::layout::RowStripe& stripe, uint32_t gRow,
+                                        const AscendC::LocalTensor<float>& hrHp,
+                                        const AscendC::LocalTensor<float>& hrR) const;
+    __aicore__ inline void StageHrMul(uint32_t gN, const gbc::layout::RowStripe& stripe,
+                                      const AscendC::LocalTensor<float>& hrHp, const AscendC::LocalTensor<float>& hrR,
+                                      const AscendC::LocalTensor<float>& t3) const;
     __aicore__ inline void FeedbackHr(uint32_t gN, uint32_t aHRSlotOff, const gbc::layout::RowStripe& stripe,
                                       uint32_t mNow, const AscendC::LocalTensor<float>& t3) const;
 
@@ -882,6 +1018,10 @@ private:
     AscendC::GlobalTensor<float> gmU_;     // u [B,H]
     AscendC::GlobalTensor<float> gmC_;     // c [B,H]
     AscendC::GlobalTensor<float> gmH_;     // h [B,H]
+    // S5 L0C 双槽：pf 路线性门序（每 Mmad+drain 一门；跨 chunk/phase 连续，set/wait
+    // 计数全局配平）。slot = seq&1，Mmad[seq] 前等第 seq−2 枚 FIX_M set（= drain[seq−2]
+    // 同槽排空）。旧路 !pf 不触碰（恒单槽 0 + 即处 WaitFixToM）。
+    uint32_t l0cGateSeq_ = 0;
 
     static constexpr uint32_t VL_F32 = AscendC::GetVecLen() / sizeof(float);
 };
@@ -1080,7 +1220,8 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
 
         // ---- pass0 · r/u 两门（1-ahead 预取；S3'' 深度-2）----
         // 事件链（⚠ WaitFlag 只屏障目标管、不阻标量流——发射点安全全靠定向事件对）：
-        //   GatePrepare → 发射下一门装载(MTE2 ∥ 本门 Mmad) → Mmad → drain(FIX) → C2V。
+        //   GatePrepare → 发射下一门装载(MTE2 ∥ 本门 Mmad) → Mmad ∥ drain(FIX，S4
+        //   unitflag 512B 块级硬件同步，无 M_FIX) → C2V。
         // 深度-2 依据：pass0 的 V2C 为 WAR-only 语义（无跨核数据交接），stale wait 仍安全。
         // V2C 配平：环内消费至 gIdx−1，尾环至 n0Total−1，末枚留给 pass0→pass1 界。
         uint32_t consumed0 = 0;
@@ -1096,27 +1237,37 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
                     gbc::sync::CubeWaitVec(); // AIV 已消费轮 gIdx−2 的 rBar/uBar
                     ++consumed0;
                 }
-                if (gIdx > 0) {
-                    gbc::sync::WaitFixToM(); // 上一轮 drain 排空后方可覆写 L0C
-                }
+                // S5 L0C 双槽：轮首 WaitFixToM（等 drain[gIdx−1]）删除——同槽 WAR 延迟
+                // 到门内 AwaitSlotFree（只等 drain[seq−2]），Mmad∥上一门 drain 成立。
                 // -- r 门（bias 仅组首现搬，先于本门 wait 发射、被同一 wait 覆盖）--
                 if (g == 0 && s < lyt.hiddenSize) {
                     gbc::cube::CopyInBiasPad(gmBRu_, s, twoH, gbc::layout::MinU(lyt.hiddenSize - s, cur.w),
                                              lyt.biasSlotOff);
                 }
+                // S5：本门 L0C 槽 = 线性门序奇偶
+                const uint32_t l0SlotR = l0cGateSeq_ & 1u;
                 GatePrepare(lyt.aKOff + aSlot * aKBytes, true, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff, mNow);
                 IssueWeightTile(gmWRu_, cur.isX ? cur.k0 : (lyt.inputSize + cur.k0), lyt.hiddenSize + s, twoH, cur.kw,
                                 cur.frameN, 1); // u 门 b（槽 1）——与 r Mmad/drain/握手重叠
-                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                if (l0cGateSeq_ >= 2u) {
+                    gbc::sync::AwaitSlotFree(l0SlotR); // FIX_M(id=槽)：drain[seq−2]（同槽）排空
+                }
+                const uint32_t l0cOffR = l0SlotR * lyt.l0cSlotBytes;
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true,
+                                    gbc::cube::GRU_UNITFLAG_FINAL, l0cOffR);
                 gbc::sync::WaitMToMte1(); // 下门 SplitB/BT 复用 L0B/BT 排在 r Mmad 读之后
-                gbc::sync::WaitMToFix();
-                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.rBar1Off : lyt.rBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
-                gbc::sync::WaitFixToM(); // L0C 复用于 u 门
+                // S4 unitflag：原 WaitMToFix（M_FIX 整段等待）删除——unitFlag=enable_update
+                // 下 Fixpipe 与 MMAD 按 512B 块硬件级流水（skill unitflag_design.md §2.3）。
+                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.rBar1Off : lyt.rBarOff, 0, cur.w, mNow, cur.frameN, cur.w,
+                                     gbc::cube::GRU_UNITFLAG_FINAL, l0cOffR);
+                gbc::sync::SignalFixDrained(l0SlotR); // FIX_M set(id=槽)，与 Mmad[seq+2] 的 wait 交替配对
+                ++l0cGateSeq_;
                 if (g == 0 && s < lyt.hiddenSize) {
                     gbc::cube::CopyInBiasPad(gmBRu_, lyt.hiddenSize + s, twoH,
                                              gbc::layout::MinU(lyt.hiddenSize - s, cur.w), lyt.biasSlotOff);
                 }
                 // -- u 门（L0A 仍持 A[g]，免 SplitA；r 门尾的 M→MTE1 已序化 L0B/BT 复用）--
+                const uint32_t l0SlotU = l0cGateSeq_ & 1u;
                 GatePrepare(lyt.aKOff + aSlot * aKBytes, false, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff + bBytes,
                             mNow);
                 if (nxt.valid) { // 下一组 r 门 b（槽 0）+ 下一组 A（aK 异槽）
@@ -1125,10 +1276,17 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
                     IssueATile(nxt.isX ? gmX_ : gmHPrev_, rowBase, nxt.k0, mNow, nxt.kw,
                                nxt.isX ? lyt.inputSize : lyt.hiddenSize, (gIdx + 1) & 1U);
                 }
-                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                if (l0cGateSeq_ >= 2u) {
+                    gbc::sync::AwaitSlotFree(l0SlotU); // S5：drain[seq−2]（u 槽）排空；r 门 drain[seq−1] 不阻本门
+                }
+                const uint32_t l0cOffU = l0SlotU * lyt.l0cSlotBytes;
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true,
+                                    gbc::cube::GRU_UNITFLAG_FINAL, l0cOffU);
                 gbc::sync::WaitMToMte1(); // 下一组 r 门 SplitA/B 复用 L0 排在 u Mmad 读之后
-                gbc::sync::WaitMToFix();
-                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.uBar1Off : lyt.uBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
+                gbc::cube::DrainToUB((aSlot != 0u) ? lyt.uBar1Off : lyt.uBarOff, 0, cur.w, mNow, cur.frameN, cur.w,
+                                     gbc::cube::GRU_UNITFLAG_FINAL, l0cOffU); // S4 unitflag（M_FIX 已删，同上）
+                gbc::sync::SignalFixDrained(l0SlotU);                         // S5：FIX_M set(id=槽)
+                ++l0cGateSeq_;
                 gbc::sync::CubeSignalVec(); // 本轮 r/u 部分和已落 UB（列片 s）
             }
         }
@@ -1167,6 +1325,16 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
         // V2C 配平：环内消费至 it−1，尾环至 total−1，末枚留给块界（跨块 FIFO 零残留）。
         uint32_t consumed = 0;
         uint32_t sIdx = 0; // 本核列片域内局部片序（it 与 AIV 同源；A1 前全幅域时逐位相同）
+        // S12：2-ahead 计划 (s2,g2) 增量追踪——消除每轮 it2/cGroups 与 it2%cGroups
+        // 两次运行期整数除法（标量链 ~40-60cy/轮）。初值 it2=2（cGroups≥2 恒成立），
+        // 每轮 +1 进位换片；与 PlanGroup(sliceLoCol+(it2/cGroups)×nL0c, it2%cGroups)
+        // 逐项等值（越域截止同由 PlanGroup 的 s<sliceHiCol 判定承载）⇒ 逐位不变。
+        uint32_t s2 = lyt.sliceLoCol;
+        uint32_t g2 = 2;
+        if (g2 >= lyt.cGroups) {
+            g2 -= lyt.cGroups;
+            s2 += lyt.nL0c;
+        }
         for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx) {
             for (uint32_t g = 0; g < lyt.cGroups; ++g) {
                 const uint32_t it = sIdx * lyt.cGroups + g;
@@ -1185,20 +1353,20 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
                     gbc::sync::CubeWaitVec();
                     ++consumed;
                 }
-                if (it > 0) {
-                    gbc::sync::WaitFixToM(); // L0C WAR：Mmad[it] 排在 drain[it−1] 之后
-                }
+                // S5 L0C 双槽：原轮内 WaitFixToM（等 drain[it−1]）删除——同槽 WAR 由
+                // AwaitSlotFree 延迟到 drain[seq−2]，Mmad[it]∥drain[it−1] 成立。
                 if (g == 0 && s < lyt.hiddenSize) {
                     gbc::cube::CopyInBiasPad(gmBC_, s, lyt.hiddenSize, gbc::layout::MinU(lyt.hiddenSize - s, cur.w),
                                              lyt.biasSlotOff);
                 }
                 const uint32_t aOff = cur.isX ? (lyt.aKOff + slot * aKBytes) : (lyt.aHROff + (it % 3u) * aKBytes);
+                const uint32_t l0Slot = l0cGateSeq_ & 1u; // S5：L0C 槽 = 线性门序奇偶
                 GatePrepare(aOff, true, cur.kw, cur.kw, cur.frameN, g == 0, lyt.bOff + slot * bBytes, mNow);
                 // 2-ahead 发射：b[it+2]→b[it&1]、x[it+2]→aK[it&1]（仅 x 段；h 段 aHR 由
                 // AIV 写）。跨列片按线性门序还原域内片基 + sliceLoCol，越域由 sliceHiCol 截止。
                 // ⚠ pf2 下本发射窗与 merge[it−1] 轮首 FeedbackToL1 结构性错开（L1 无写仲裁）。
                 const uint32_t it2 = it + 2;
-                const GrpPlan nxt2 = PlanGroup(lyt.sliceLoCol + (it2 / lyt.cGroups) * lyt.nL0c, it2 % lyt.cGroups);
+                const GrpPlan nxt2 = PlanGroup(s2, g2); // S12：增量追踪（无除法）
                 if (nxt2.valid) {
                     IssueWeightTile(gmWC_, nxt2.isX ? nxt2.k0 : (lyt.inputSize + nxt2.k0), nxt2.s, lyt.hiddenSize,
                                     nxt2.kw, nxt2.frameN, it2 & 1U);
@@ -1206,10 +1374,22 @@ __aicore__ inline void GruBlockCellKernel::CubeChunkPf(uint32_t rowBase, uint32_
                         IssueATile(gmX_, rowBase, nxt2.k0, mNow, nxt2.kw, lyt.inputSize, it2 & 1U);
                     }
                 }
-                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true);
+                ++g2; // S12：下一轮的 it2 计划
+                if (g2 >= lyt.cGroups) {
+                    g2 = 0;
+                    s2 += lyt.nL0c;
+                }
+                if (l0cGateSeq_ >= 2u) {
+                    gbc::sync::AwaitSlotFree(l0Slot); // S5：drain[seq−2]（同槽）排空
+                }
+                const uint32_t l0cOff = l0Slot * lyt.l0cSlotBytes;
+                gbc::cube::MmadGate(mNow, cur.frameN, 0, cur.frameN, cur.kw, (g == 0) ? 0 : 1, true,
+                                    gbc::cube::GRU_UNITFLAG_FINAL, l0cOff);
                 gbc::sync::WaitMToMte1(); // 下一门 SplitA/B 复用 L0 排在本门 Mmad 读之后
-                gbc::sync::WaitMToFix();
-                gbc::cube::DrainToUB((slot != 0u) ? lyt.rBarOff : lyt.cBarOff, 0, cur.w, mNow, cur.frameN, cur.w);
+                gbc::cube::DrainToUB((slot != 0u) ? lyt.rBarOff : lyt.cBarOff, 0, cur.w, mNow, cur.frameN, cur.w,
+                                     gbc::cube::GRU_UNITFLAG_FINAL, l0cOff); // S4 unitflag（M_FIX 已删，同上）
+                gbc::sync::SignalFixDrained(l0Slot);                         // S5：FIX_M set(id=槽)
+                ++l0cGateSeq_;
                 gbc::sync::CubeSignalVec(); // C2V[it]：本轮部分和已落 cBar[it&1]
             }
         }
@@ -1312,13 +1492,16 @@ __aicore__ inline void GruBlockCellKernel::RecomputeHr(uint32_t gN, uint32_t aHR
 }
 
 // ---------------------------------------------------------------------------
-// StageHr — pf2 轮尾：hr[gN] → **t3 暂存**（不回灌）。事件链 V(清零)→MTE2→V(Mul)；
-// t3 跨轮存续，下一轮轮首 FeedbackHr 的 MTE3 读经轮首 PIPE_ALL 闭合。
+// StageHrIssue — S6/S9 pf2 轮尾（V2C 后）：hr[gN] 前瞻装载发射（hp/r 切片 → **rBar1/uBar1**——
+// pass1 的 fixpipe 只写偶平面 cBar0≡uBar/cBar1≡rBar，奇平面空闲；MTE2 的 HBM
+// GM 时延窗 = 整轮（下一轮轮首 StageHrMul 消费），不进任何栅栏/V2C 关键路径）。
+// 事件：WaitVToMte2 = 本轮首 Mul（V 读 hr 平面）→ 轮尾 MTE2 复写（WAR）；尾组
+// （kwn<kwPn）pad 列须先清零（V 写 → MTE2 写同平面，第二枚 WaitVToMte2）；
+// 满宽时装载覆盖全部 workHr，清零可省（数值逐位同）。
 // ---------------------------------------------------------------------------
-__aicore__ inline void GruBlockCellKernel::StageHr(uint32_t gN, const gbc::layout::RowStripe& stripe, uint32_t gRow,
-                                                   const AscendC::LocalTensor<float>& t1,
-                                                   const AscendC::LocalTensor<float>& t2,
-                                                   const AscendC::LocalTensor<float>& t3) const
+__aicore__ inline void GruBlockCellKernel::StageHrIssue(uint32_t gN, const gbc::layout::RowStripe& stripe,
+                                                        uint32_t gRow, const AscendC::LocalTensor<float>& hrHp,
+                                                        const AscendC::LocalTensor<float>& hrR) const
 {
     const Layout& lyt = layout_;
     const uint32_t k0n = (gN - lyt.cGroupsX) * lyt.kgH;
@@ -1326,13 +1509,41 @@ __aicore__ inline void GruBlockCellKernel::StageHr(uint32_t gN, const gbc::layou
     const uint32_t kwPn = gbc::layout::CeilAlign(kwn, gbc::layout::C0F);
     const uint32_t workHr = stripe.count * kwPn;
     const uint64_t gmOffHr = static_cast<uint64_t>(gRow) * lyt.hiddenSize + k0n;
-    AscendC::Duplicate(t1, 0.0f, workHr); // hp 平面清零（含 pad 列）
-    AscendC::Duplicate(t2, 0.0f, workHr); // r 平面清零
-    gbc::sync::WaitVToMte2();             // Duplicate（V 写 t1/t2）→ MTE2 复写
-    CopyTileFromGm(gmHPrev_, gmOffHr, t1, stripe.count, kwPn, lyt.hiddenSize, kwn);
-    CopyTileFromGm(gmR_, gmOffHr, t2, stripe.count, kwPn, lyt.hiddenSize, kwn);
-    gbc::sync::WaitMte2ToV();         // MTE2 写 t1/t2 → V 读（Mul）
-    AscendC::Mul(t3, t1, t2, workHr); // hr = hPrev ⊙ r → t3 暂存（pad 列 0）
+    // S14f：原首部 WaitVToMte2（Mul 的 V 读 hr 平面 → MTE2 复写）自 S9 起冗余——
+    // 本函数在轮尾 V2C 之后调用，同轮 PIPE_ALL（VF 闭合）已排空 V 管（含轮首 Mul）。
+    // 清零分支的 WaitVToMte2 保留（Dup 为本调用内新 V 写）。
+    if (kwPn != kwn) { // 尾组 pad 列清零（含 pad 列的 hp/r 平面）
+        AscendC::Duplicate(hrHp, 0.0f, workHr);
+        AscendC::Duplicate(hrR, 0.0f, workHr);
+        gbc::sync::WaitVToMte2(); // 清零（V 写）→ 装载（MTE2 写）同平面 WAR
+    }
+    CopyTileFromGm(gmHPrev_, gmOffHr, hrHp, stripe.count, kwPn, lyt.hiddenSize, kwn);
+    CopyTileFromGm(gmR_, gmOffHr, hrR, stripe.count, kwPn, lyt.hiddenSize, kwn);
+}
+
+// ---------------------------------------------------------------------------
+// StageHrMul — S6 pf2 轮尾：hr = hp⊙r → **t3 暂存**（V）。⚠ 本段不在 V2C 关键
+// 路径上：轮尾 merge→V2C 的 WaitVToMte3 先于本 Mul 入列（V 管序），V2C 的 MTE3
+// 置位不等 V 管——原「Mul→VecSignalCube 间 WaitVToMte3」删除后，t3 的跨轮闭合由
+// 下一轮轮首 WaitVToMte3（FB 的 MTE3 读）与 StageHrIssue 的 WaitVToMte2（hr 平面
+// 复写）双事件承载。WaitMte3ToV = 本轮轮首 FB（MTE3 读 t3）→ Mul（V 写 t3）
+// WAR（无 FB 轮即刻通过，取代原 didFb 条件式）；WaitMte2ToV = 装载落地 → V 读。
+// ---------------------------------------------------------------------------
+__aicore__ inline void GruBlockCellKernel::StageHrMul(uint32_t gN, const gbc::layout::RowStripe& stripe,
+                                                      const AscendC::LocalTensor<float>& hrHp,
+                                                      const AscendC::LocalTensor<float>& hrR,
+                                                      const AscendC::LocalTensor<float>& t3) const
+{
+    const Layout& lyt = layout_;
+    const uint32_t k0n = (gN - lyt.cGroupsX) * lyt.kgH;
+    const uint32_t kwn = gbc::layout::MinU(lyt.hiddenSize - k0n, lyt.kgH);
+    const uint32_t kwPn = gbc::layout::CeilAlign(kwn, gbc::layout::C0F);
+    const uint32_t workHr = stripe.count * kwPn;
+    // S14a：原 WaitMte3ToV（上轮 FB 的 MTE3 读 t3 → 本轮 Mul 的 V 写 t3）自 S9 起
+    // 冗余——上一轮尾 PIPE_ALL（VF 完成闭合）已排空全部管道（含 FB 的 MTE3 读），
+    // 本轮 Mul 在标量序上严格后发（AIV 单线程指令序 + 该 PIPE_ALL）。
+    gbc::sync::WaitMte2ToV();            // 装载（MTE2 写 hr 平面）→ V 读（Mul）
+    AscendC::Mul(t3, hrHp, hrR, workHr); // hr = hPrev ⊙ r → t3 暂存（pad 列 0⊙0=0）
 }
 
 // ---------------------------------------------------------------------------
@@ -1552,6 +1763,7 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
             const uint32_t tileCols = (s < lyt.hiddenSize) ? gbc::layout::MinU(w, lyt.hiddenSize - s) : 0;
             const uint32_t work = stripe.count * w;
             const uint64_t gmOff = static_cast<uint64_t>(gRow) * lyt.hiddenSize + s;
+            const uint16_t rep0 = static_cast<uint16_t>(AscendC::CeilDivision(work, VL_F32)); // S9 VF repeat
 
             if (hasRows) {
                 AscendC::Duplicate(rComp, 0.0f, work);
@@ -1562,7 +1774,11 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                 const AscendC::LocalTensor<float> rBarP = (pf && ((gIdx & 1U) != 0U)) ? rBar1 : rBar;
                 const AscendC::LocalTensor<float> uBarP = (pf && ((gIdx & 1U) != 0U)) ? uBar1 : uBar;
                 gbc::sync::VecWaitCube();
-                AscendC::PipeBarrier<PIPE_ALL>();
+                // S6/S9：pass0 轮首 PIPE_ALL 删除——merge（VF 寄存器链）只读 rBarP/uBarP
+                // （远端 fixpipe 写，C2V flag 闭合；VecWaitCube 默认 PIPE_S 阻标量流）与
+                // acc/comp 平面（VF↔VF 同管保序；g0 的 V 写→g1 VF 读由 g0 轮尾 PIPE_ALL
+                // 闭合）；片内轮间无 MTE2/MTE3 在途。片尾 CopyOut（MTE3 读 rAcc/uAcc）→
+                // 下一片轮 0 的 V 写由片尾 WaitMte3ToV 显式闭合（原 PIPE_ALL 承载）。
                 if (hasRows) {
                     if (g == 0) {
                         AscendC::DataCopy(rAcc, rBarP, work);
@@ -1570,23 +1786,24 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                         // 轮尾定向事件（范式误区3错误3）：rBar/uBar 的 V 读须先于本轮
                         // VecSignalCube 的 MTE3 跨核置位完成——命名 V→MTE3 hazard。
                         gbc::sync::WaitVToMte3();
+                        // S9：g0 的 V 写（rAcc/uAcc）→ g1 的 VF merge 读——V→VF 界面
+                        // 无命名事件，全栅栏闭合（仅 g==0 轮，每片一次）。
+                        AscendC::PipeBarrier<PIPE_ALL>();
                     } else {
-                        // Neumaier（Knuth TwoSum 无分支形态）：舍入损失进补偿项；PIPE_V 为
-                        // t1 回拷读完成前的同管防御标记。
-                        AscendC::Add(t1, rAcc, rBarP, work);
-                        AscendC::Sub(t2, rAcc, t1, work);
-                        AscendC::Add(t2, t2, rBarP, work);
-                        AscendC::Add(rComp, rComp, t2, work);
-                        AscendC::DataCopy(rAcc, t1, work);
-                        AscendC::PipeBarrier<PIPE_V>(); // t1 拷贝读完成前不得复写（同管保序）
-                        AscendC::Add(t1, uAcc, uBarP, work);
-                        AscendC::Sub(t2, uAcc, t1, work);
-                        AscendC::Add(t2, t2, uBarP, work);
-                        AscendC::Add(uComp, uComp, t2, work);
-                        AscendC::DataCopy(uAcc, t1, work);
-                        // 轮尾定向事件（非末组轮）：uBar/rBar 的 V 读须先于 VecSignalCube 的
-                        // MTE3 跨核置位——命名 V→MTE3 hazard。
-                        gbc::sync::WaitVToMte3();
+                        // S9/S10：Neumaier 双链 VF 寄存器化（Knuth TwoSum 无分支形态，
+                        // 运算序与原 5-op 链逐项同构 ⇒ 逐位一致；UB 访问 15→5 次/链，
+                        // r+u 单次调用共享开销，t1/t2 退出）
+                        asc_vf_call<GruBlockCellNeumaier2VF<float>>(
+                            reinterpret_cast<__ubuf__ float*>(rAcc.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(rComp.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(rBarP.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(uAcc.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(uComp.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(uBarP.GetPhyAddr()), work, VL_F32, rep0);
+                        // VF 异步完成 → VecSignalCube（MTE3 置位蕴含 merge 读毕——AIC
+                        // 深度-2 平面 WAR 依据）与下一轮 VF/片尾 V 消费者：VF 界面无命名
+                        // 事件，全栅栏（pass0 轮内无 MTE2 在途，PIPE_ALL ≈ VF 本体）。
+                        AscendC::PipeBarrier<PIPE_ALL>();
                     }
                     if (g == lyt.cGroups - 1) {
                         // 列片收尾（并入末轮，见上 ⚠）。B1：pass0 只输出 r/u 到 GM，不再
@@ -1601,6 +1818,10 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                         // 输出 r（fp32 直出，字节精确；pass1 hr 重算与 blend 均回读）/ u（pass1 blend 经 t2 回读）
                         CopyTileToGm(gmR_, gmOff, rAcc, stripe.count, w, lyt.hiddenSize, tileCols);
                         CopyTileToGm(gmU_, gmOff, uAcc, stripe.count, w, lyt.hiddenSize, tileCols);
+                        // S6：CopyOut（MTE3 读 rAcc/uAcc）→ 下一片轮 0 merge 的 V 写
+                        // （rAcc/uAcc/cAcc≡uAcc/t3≡rAcc 全部后续 V 写者）WAR 闭合——
+                        // 原由下一轮首 PIPE_ALL 承载，降级后显式定向（每片一次）。
+                        gbc::sync::WaitMte3ToV();
                     }
                 }
                 gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier
@@ -1610,6 +1831,18 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
 
     // ---- pass1：逐列片 c_bar 补偿累加 + 候选激活 + 状态更新 ----
     // 每组：VecWaitCube → Neumaier 归并 → VecSignalCube；g=0 以首组部分和为初值。
+    // S11：hr 装载前瞻深度 3→4（cGroupsX≥4 时；装载窗 1 轮→2 轮，轮首 WaitMte2ToV
+    // 的 GM 残余暴露归零）+ hr 平面对按轮序奇偶轮换（pair0=rBar1/uBar1，pair1=t1/t2
+    // ——S9 VF 归并后 t1/t2 轮内空闲；深度-4 的 2 轮在途窗单对平面必被提前覆写）。
+    // 组覆盖自洽：X∈[cGX,cG) 于轮 X−laDepth 尾发射（X−laDepth≥0 ⟺ cGX≥laDepth），
+    // 轮 X−2 首消费（对奇偶同源：尾 g&1 == 首 (g+laDepth)&1，因 X−laDepth ≡ X−2 mod 2
+    // ⟺ laDepth≡2 mod 2… laDepth∈{3,4} 均满足 (g+laDepth)&1 == (g−laDepth+2)&1 ==
+    // 发射轮 (X−laDepth)&1 ✓）；aHR 三槽/前瞻-3 回灌纪律（FB 消费 t3=hr[g+2]）与
+    // 装载深度解耦，不变。cGroupsX<4 保持深度 3（绿基线数值路径，仅平面对轮换）。
+    // ⚠ t1/t2 的 pass1-pf2 轮内新用途（hr 装载对 1）：片尾 epilogue 的 t1/t2 使用
+    // （FinFinalize/Tanh/回读/blend）在末轮之后——末装载于轮 cG−laDepth−1 前完成、
+    // 末消费于轮 cG−3 首，epilogue 首 WaitMte3ToV + V 同管序 + 1698 PIPE_ALL 闭合。
+    const uint32_t laDepth = (lyt.cGroupsX >= 4u) ? 4u : 3u;
     if (phase != PHASE_P0) {
         uint32_t sIdx = 0; // 本核列片域内局部片序（it 与 AIC 同源）
         for (uint32_t s = lyt.sliceLoCol; s < lyt.sliceHiCol; s += lyt.nL0c, ++sIdx) {
@@ -1627,10 +1860,29 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                 // S3'：pf 域 cBar 奇偶轮换（cBar1≡rBar 平面），与 AIC drain 同奇偶；!pf 恒 cBar0
                 const AscendC::LocalTensor<float> cBarP = (pf && ((it & 1U) != 0U)) ? cBar1 : cBar;
                 gbc::sync::VecWaitCube();
-                AscendC::PipeBarrier<PIPE_ALL>();
+                // S9：pf2 轮首 = 消费上一轮轮尾发射的 hr 装载（StageHrMul：MTE3→V +
+                // MTE2→V 双定向事件 + Mul→t3），随后 WaitVToMte3 闭合 Mul→本轮 FB。
+                // merge 改 VF 寄存器链，其完成由轮内 PIPE_ALL 闭合（VF 界面无命名事件）；
+                // hr 装载移至 V2C 之后发射 ⇒ GM 时延窗 = 整轮，不进任何栅栏/关键路径。
+                // !pf2 保持轮首 PIPE_ALL + 高层 merge + RecomputeHr（既有绿基线，不动）。
+                if (pf2) {
+                    const uint32_t gP2 = g + 2; // 轮首消费的组 = 轮 (gP2−laDepth) 尾装载
+                    if (hasRows && (gP2 < lyt.cGroups) && (gP2 >= lyt.cGroupsX)) {
+                        // S11：hr 平面对按轮序奇偶轮换（pair0=rBar1/uBar1，pair1=t1/t2——
+                        // S9 VF 归并后 t1/t2 轮内空闲）；深度-4 下装载窗 2 轮，单对平面
+                        // 会被下一轮装载提前覆写（实测 9/20 错数），双对轮换后
+                        // 消费对 (g+laDepth)&1 与在途装载对 g&1 恒异槽。
+                        const bool hp1 = (((g + laDepth) & 1U) != 0U);
+                        StageHrMul(gP2, stripe, hp1 ? t1 : rBar1, hp1 ? t2 : uBar1, t3); // 内含 WaitMte3ToV+WaitMte2ToV
+                    }
+                    gbc::sync::WaitVToMte3(); // Mul（V 写 t3）→ FB（MTE3 读 t3）；无 Mul 即刻通过
+                } else {
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                }
                 if (hasRows) {
-                    // ---- pf2 轮首回灌：上一轮 StageHr 暂存的 hr → aHR[(it+2)%3]。
-                    // 落点 = AIC 的 L1 静默窗（L1 无写仲裁，深度-2 安全前提）。----
+                    // ---- pf2 轮首回灌：轮首 StageHrMul 刚落 t3 的 hr[g+2] → aHR[(it+2)%3]。
+                    // 落点 = AIC 的 L1 静默窗（L1 无写仲裁，深度-2 安全前提；位置相对
+                    // C2V[it] 与绿基线相同——AIC 偶门 2-ahead 的 L1 访问窗重叠形态不变）。----
                     const uint32_t gF = g + 2;
                     const bool didFb = pf2 && (g >= 1) && (gF < lyt.cGroups) && (gF >= lyt.cGroupsX);
                     if (didFb) {
@@ -1641,8 +1893,21 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                         // 轮尾定向事件（原 PIPE_ALL）：cBar 的 V 读先于本轮 VecSignalCube 的
                         // MTE3 跨核置位——命名 V→MTE3 hazard。
                         gbc::sync::WaitVToMte3();
+                        if (pf2) {
+                            AscendC::PipeBarrier<PIPE_ALL>(); // S9：g0 V 写 cAcc → g1 VF 读（V→VF 无命名事件）
+                        }
+                    } else if (pf2) {
+                        // S9：Neumaier VF 寄存器化（运算序与高层 5-op 链逐项同构 ⇒ 逐位一致）
+                        asc_vf_call<GruBlockCellNeumaierVF<float>>(
+                            reinterpret_cast<__ubuf__ float*>(cAcc.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(cComp.GetPhyAddr()),
+                            reinterpret_cast<__ubuf__ float*>(cBarP.GetPhyAddr()), work, VL_F32, rep);
+                        // VF 完成 → V2C（MTE3 置位蕴含 merge 读毕——AIC 深度-2 平面 WAR
+                        // 依据）/ 下一轮 VF（VF↔VF 同管保序）/ 片尾 V 消费者（FinFinalize）。
+                        // 轮内在途仅 VF + FB（MTE3，快）——hr 装载已在 V2C 后发射，不入本栅栏。
+                        AscendC::PipeBarrier<PIPE_ALL>();
                     } else {
-                        // Neumaier：大数吃小数的舍入损失进补偿项
+                        // Neumaier（!pf2 高层链原样保留）：大数吃小数的舍入损失进补偿项
                         AscendC::Add(t1, cAcc, cBarP, work);  // t = cAcc + p
                         AscendC::Sub(t2, cAcc, t1, work);     // cAcc − t
                         AscendC::Add(t2, t2, cBarP, work);    // + p
@@ -1652,42 +1917,50 @@ __aicore__ inline void GruBlockCellKernel::VectorChunk(uint32_t rowBase, uint32_
                         // 的 MTE3 跨核置位——命名 V→MTE3 hazard。
                         gbc::sync::WaitVToMte3();
                     }
-                    // ---- B1+S3'：hr 前瞻（hPrev⊙r 切片 → aHR 槽 / t3 暂存）----
-                    // pf2：轮尾 StageHr 暂存 hr[g+3]→t3，下一轮轮首 FeedbackHr 回灌
-                    //   aHR[(it+3)%3]（轮首窗 = AIC L1 静默窗，深度-2 安全前提）。
+                    // ---- B1+S3'：!pf2 的 hr 前瞻（既有结构原样不动）----
                     // !pf2&&pf：轮尾一体重算+回灌（前瞻-3）；特例 g<3 的 h 门于
                     //   merge[(s,0)] 一并写入（AIC 门 (s,1) need 提升为 it）。
                     // !pf：本轮写 hr[g+1]→aHR 槽 0（AIC 下一轮组顶消费后读）。
-                    if (pf2) {
-                        const uint32_t gN3 = g + 3;
-                        if (gN3 < lyt.cGroups && gN3 >= lyt.cGroupsX) {
-                            if (didFb) {
-                                gbc::sync::WaitMte3ToV(); // 轮首 feedback 的 MTE3 读 t3 先于 V 复写
+                    if (!pf2) {
+                        if (pf) {
+                            const uint32_t gN3 = g + 3;
+                            if (gN3 < lyt.cGroups && gN3 >= lyt.cGroupsX) {
+                                RecomputeHr(gN3, lyt.aHROff + (it % 3u) * aKBytes, stripe, gRow, mNow, t1, t2);
                             }
-                            StageHr(gN3, stripe, gRow, t1, t2, t3);
-                            gbc::sync::WaitVToMte3(); // Mul（V 写 t3）先于 VecSignalCube 的 MTE3 置位
-                        }
-                    } else if (pf) {
-                        const uint32_t gN3 = g + 3;
-                        if (gN3 < lyt.cGroups && gN3 >= lyt.cGroupsX) {
-                            RecomputeHr(gN3, lyt.aHROff + (it % 3u) * aKBytes, stripe, gRow, mNow, t1, t2);
-                        }
-                        if (g == 0 && lyt.cGroupsX < 3u) {
-                            const uint32_t gSpecialHi = gbc::layout::MinU(3u, lyt.cGroups);
-                            for (uint32_t gS = lyt.cGroupsX; gS < gSpecialHi; ++gS) {
-                                RecomputeHr(gS, lyt.aHROff + ((it + gS) % 3u) * aKBytes, stripe, gRow, mNow, t1, t2);
+                            if (g == 0 && lyt.cGroupsX < 3u) {
+                                const uint32_t gSpecialHi = gbc::layout::MinU(3u, lyt.cGroups);
+                                for (uint32_t gS = lyt.cGroupsX; gS < gSpecialHi; ++gS) {
+                                    RecomputeHr(gS, lyt.aHROff + ((it + gS) % 3u) * aKBytes, stripe, gRow, mNow, t1,
+                                                t2);
+                                }
                             }
-                        }
-                    } else {
-                        const uint32_t gN = g + 1;
-                        if (gN < lyt.cGroups && gN >= lyt.cGroupsX) {
-                            RecomputeHr(gN, lyt.aHROff, stripe, gRow, mNow, t1, t2);
+                        } else {
+                            const uint32_t gN = g + 1;
+                            if (gN < lyt.cGroups && gN >= lyt.cGroupsX) {
+                                RecomputeHr(gN, lyt.aHROff, stripe, gRow, mNow, t1, t2);
+                            }
                         }
                     }
                 }
                 gbc::sync::VecSignalCube(); // ⚠ count==0 的 AIV 也必须 set——barrier（PIPE_MTE3 亦排空 hr 回灌）
+                // ---- S9：pf2 轮尾（V2C 之后）发射 hr 前瞻-3 装载（rBar1/uBar1 空闲平面）
+                // ——GM 时延窗 = 整轮（下一轮轮首 StageHrMul 消费），不进本轮 PIPE_ALL/
+                // V2C 关键路径。WAR（本轮首 Mul 的 V 读 → MTE2 复写）由 StageHrIssue 内
+                // WaitVToMte2 闭合；跨片/跨 pass 首轮的装载由 C2V flag（FIX 管序）闭合
+                // pass0 的 fixpipe 远端写。----
+                if (hasRows && pf2) {
+                    const uint32_t gNLA = g + laDepth; // S11：前瞻深度 laDepth（3 或 4）
+                    if (gNLA < lyt.cGroups && gNLA >= lyt.cGroupsX) {
+                        const bool ip1 = ((g & 1U) != 0U); // 装载对 = 轮序奇偶（与轮首消费对同源）
+                        StageHrIssue(gNLA, stripe, gRow, ip1 ? t1 : rBar1, ip1 ? t2 : uBar1);
+                    }
+                }
             }
             if (hasRows) {
+                // S6：末轮轮首 FB（MTE3 读 t3）→ TanhVec（V 写 t3）WAR 闭合——原由
+                // 轮首 PIPE_ALL 承载，pf2 降级后显式定向（每片一次；!pf2 轮首仍有
+                // PIPE_ALL，本事件即刻通过，零流水损失）。
+                gbc::sync::WaitMte3ToV();
                 gbc::layout::FinFinalize(cAcc, cComp, t1, t2, msk, work); // c_bar 就绪（含有限性守卫）
                 AscendC::PipeBarrier<PIPE_V>(); // FinFinalize 与 TanhVec 同为 V 管指令，同管保序
                 // Tanh 的第 3 scratch 落 rAcc 平面（≡t3Off；rAcc 自 pass0 末列片 σ(r)+r CopyOut
