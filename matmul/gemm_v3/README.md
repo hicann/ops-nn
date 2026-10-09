@@ -70,7 +70,7 @@
     <tr>
       <td>c</td>
       <td>输出</td>
-      <td>输入input和输出，进行原地累加。</td>
+      <td>输入和输出，进行原地累加。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

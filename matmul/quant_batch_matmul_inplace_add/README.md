@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：在micro-batch训练场景中，需要做micro-batch的梯度累计，会存在大量QuantBatchMatmul后接InplaceAdd的融合场景。QuantBatchMatmulInplaceAdd算子将上述算子融合起来，提高网络性能。实现量化矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合。
+- 算子功能：在micro-batch训练场景中，需要做micro-batch的梯度累积，会存在大量QuantBatchMatmul后接InplaceAdd的融合场景。QuantBatchMatmulInplaceAdd算子将上述算子融合起来，提高网络性能。实现量化矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合。
 
 - 计算公式：
 

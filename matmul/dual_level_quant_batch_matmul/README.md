@@ -15,10 +15,10 @@
 
 - 算子功能：完成二级量化mxfp4的矩阵乘计算
 - 计算公式
-    - x1和x2为FLOAT4_E2M1，x1Levl0Scale和x2Levl0Scale为FLOAT32，x1Levl1Scale和x2Levl1Scale为FLOAT8_E8M0，out为FLOAT16/BFLOAT16, bias为可选参数类型为FLOAT32：
+    - x1和x2为FLOAT4_E2M1，x1Level0Scale和x2Level0Scale为FLOAT32，x1Level1Scale和x2Level1Scale为FLOAT8_E8M0，out为FLOAT16/BFLOAT16, bias为可选参数类型为FLOAT32：
 
       $$
-      out =\sum_{i}^{level0GroupSize} x1Levl0Scale @ x2Levl0Scale \sum_{ij}^{level1GroupSize} ((x1Levl1Scale @ x1_{ij})@ (x2Levl1Scale @ x2_{ij})) + bias
+      out =\sum_{i}^{level0GroupSize} x1Level0Scale @ x2Level0Scale \sum_{ij}^{level1GroupSize} ((x1Level1Scale @ x1_{ij})@ (x2Level1Scale @ x2_{ij})) + bias
       $$
 
 ## 参数说明
