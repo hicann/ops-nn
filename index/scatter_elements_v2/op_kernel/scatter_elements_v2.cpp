@@ -74,9 +74,14 @@ __aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updat
 }
 #endif
 
-#define CALL_OP_IMPL(T, U)                                                                 \
-    do {                                                                                   \
-        ExecScatterOp<T, U, false>(var, indices, updates, tilingDevice, &pipe, workspace); \
+// Keep only the input dtype specialization in each binary; bool uses the uint8_t implementation.
+#define CALL_OP_IMPL(T, U)                                                                           \
+    do {                                                                                             \
+        if constexpr ((std::is_same<DTYPE_VAR, T>::value ||                                          \
+                       (std::is_same<DTYPE_VAR, bool>::value && std::is_same<T, uint8_t>::value)) && \
+                      std::is_same<DTYPE_INDICES, U>::value) {                                       \
+            ExecScatterOp<T, U, false>(var, indices, updates, tilingDevice, &pipe, workspace);       \
+        }                                                                                            \
     } while (0)
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
