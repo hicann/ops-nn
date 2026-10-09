@@ -50,12 +50,18 @@ public:
     static constexpr uint8_t BUF_CNT = BlockConfig::SingleTransformBufCnt<TilingT>();
 
     __aicore__ inline AivFwdTransformer(const WinoFmapFwdTransformer<T, TilingT>& fmapFwd,
-                                        const WinoDyFwdTransformer<T, TilingT>& dyFwd)
-        : fmapFwd_(fmapFwd), dyFwd_(dyFwd)
+                                        const WinoDyFwdTransformer<T, TilingT>& dyFwd,
+                                        const BlockConfig::RtTiling& rtTiling)
+        : fmapFwd_(fmapFwd), dyFwd_(dyFwd), rtTiling_(rtTiling)
     {}
 
     __aicore__ inline void Init()
     {
+        constexpr BlockConfig::InputTensor ResidentTarget = BlockConfig::ResidentTarget<TilingT>();
+        taskPerSingleResidentC_ = Ops::Base::CeilDiv(
+            Std::min(BlockConfig::SingleShapeC(rtTiling_, ResidentTarget), SingleShapeResidentC),
+            SingleShapeTransformC);
+
         constexpr uint32_t fwdTmpBufSize = GetFwdTmpBufSize() * sizeof(T);
         constexpr uint32_t fwdSrcBufSize = GetFwdSrcBufSize() * sizeof(T) * BUF_CNT;
         constexpr uint32_t fwdOutBufSize = GetFwdOutBufSize() * sizeof(T) * BUF_CNT;
@@ -165,7 +171,13 @@ private:
         stream.singleCoreCLen = Ops::Base::CeilDiv(Ops::Base::CeilDiv(stream.cLen, C0<T>()), AivNumInBlock()) * C0<T>();
 
         if (residentCBound > watermarkResidentC) {
-            constexpr uint16_t singleShapeC = BlockConfig::SingleShapeC<TilingT, TensorT1>();
+            // 驻留任务切分必须与BlockIterator使用同一份运行时分块大小。若此处仍按模板常量64划分
+            // 驻留写入范围（每个64对齐块只写前SingleShapeResidentC个通道），而BlockIterator已按
+            // 运行时48/32/16分块、各块读取驻留区的前SingleShapeResidentC个通道，两套块边界
+            // 错位后会产生永远无人写入的缺口通道，MMAD读到未初始化workspace（输出0或者NaN）。
+            // 例：cout=192调节为48分块时，按64分块只覆盖[0,32)/[64,96)/[128,160)，
+            // 而48块的驻留半区为[0,32)/[48,80)/[96,128)/[144,176)，缺口[48,64)/[96,128)/[160,176)。
+            const uint16_t singleShapeC = BlockConfig::SingleShapeC(rtTiling_, TensorT1);
             uint32_t t1FullCLen = residentCBound - watermarkResidentC;
             uint32_t t1MainCBlk = t1FullCLen / singleShapeC;
             uint16_t t1TailCLen = t1FullCLen % singleShapeC;
@@ -174,7 +186,7 @@ private:
             resident.singleShapeTailC = t1TailCLen;
             resident.tailCTaskCnt = Ops::Base::CeilDiv(Std::min(t1TailCLen, SingleShapeResidentC),
                                                        SingleShapeTransformC);
-            resident.cTaskCnt = resident.tailCTaskCnt + t1MainCBlk * TaskPerSingleResidentC;
+            resident.cTaskCnt = resident.tailCTaskCnt + t1MainCBlk * taskPerSingleResidentC_;
         }
     }
 
@@ -256,15 +268,18 @@ private:
 
         const uint32_t coreId = AivCoreId() - residentKGroupStartCoreIdx * AivNumInBlock();
         const uint32_t stride = residentKGroupCoreNum * AivNumInBlock();
+        const uint16_t singleShapeC = BlockConfig::SingleShapeC(rtTiling_, TransformType);
 
         for (uint32_t taskId = (coreId + stride - taskOffset) % stride; taskId < task.cTaskCnt; taskId += stride) {
-            uint32_t cBlockIdx = taskId / TaskPerSingleResidentC;
-            uint32_t taskIdxInCBlock = taskId % TaskPerSingleResidentC;
+            // 任务编码/解码与ComputeT1TaskInfo保持对应：按运行时分块大小解算块偏移，
+            // 保证驻留区写入的块边界与BlockIterator的读取块边界一致
+            uint32_t cBlockIdx = taskId / taskPerSingleResidentC_;
+            uint32_t taskIdxInCBlock = taskId % taskPerSingleResidentC_;
 
-            uint32_t cBlockOffset = cBlockIdx * BlockConfig::SingleShapeC<TilingT, TransformType>();
+            uint32_t cBlockOffset = cBlockIdx * singleShapeC;
             uint32_t offsetInCBlock = taskIdxInCBlock * SingleShapeTransformC;
             bool isTailTask = taskId >= task.cTaskCnt - task.tailCTaskCnt;
-            uint32_t cLengthInBlock = SingleShapeResidentC;
+            uint32_t cLengthInBlock = Std::min(singleShapeC, SingleShapeResidentC);
             if (isTailTask) {
                 cLengthInBlock = Std::min(SingleShapeResidentC, task.singleShapeTailC);
             }
@@ -394,11 +409,16 @@ private:
 
     static constexpr uint16_t SingleShapeResidentC = BlockConfig::SingleShapeResidentC<TilingT>();
     static constexpr uint16_t SingleShapeTransformC = BlockConfig::SingleTransformC1<TilingT>() * C0<T>();
-    static constexpr uint16_t TaskPerSingleResidentC = ConstexprMaths::CeilDiv(SingleShapeResidentC,
-                                                                               SingleShapeTransformC);
+
+    // 每个C轴分块产生的驻留任务数：块宽不足驻留长度时（如16档位）整块驻留，仅产生1个任务，
+    // 避免按64分块的"每块2个任务"在窄块上越界写下一个块的范围
+    uint16_t taskPerSingleResidentC_ = 0;
 
     const WinoFmapFwdTransformer<T, TilingT>& fmapFwd_;
     const WinoDyFwdTransformer<T, TilingT>& dyFwd_;
+    // 运行时C轴分块（Conv2dDwWinograd::Init统一计算，构造时以const引用传入），
+    // 驻留任务切分与BlockIterator共用同一份分块大小，避免两套块边界错位
+    const BlockConfig::RtTiling& rtTiling_;
 
     LocalTensor<T> transformFwdTmpVBuf_;
     LocalTensor<T> transformFwdSrcVBuf_;

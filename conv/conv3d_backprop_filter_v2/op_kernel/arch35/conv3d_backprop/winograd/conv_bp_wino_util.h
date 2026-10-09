@@ -266,6 +266,12 @@ struct RtTiling {
     uint16_t singleShapeCin;
 };
 
+// 运行时版SingleShapeC：按张量方向从RtTiling取C轴分块大小（对应模板版从TilingT取静态量的语义）
+static __aicore__ inline uint16_t SingleShapeC(const RtTiling& tiling, InputTensor tensorType)
+{
+    return tensorType == InputTensor::FMAP ? tiling.singleShapeCin : tiling.singleShapeCout;
+}
+
 template <typename TilingT>
 static __aicore__ inline void CalRtSingleShapeBlock(RtTiling& tiling, uint32_t cout, uint32_t cin)
 {
