@@ -62,7 +62,7 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>fixTriuMask</td>
+      <td>fixedTriuMask</td>
       <td>属性</td>
       <td>仅支持false</td>
       <td>BOOL</td>

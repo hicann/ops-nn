@@ -31,7 +31,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(
     const aclTensor* x,
     const aclTensor* mask,
     double scale,
-    bool fixTriuMask,
+    bool fixedTriuMask,
     aclTensor*       y,
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
@@ -101,7 +101,7 @@ aclnnStatus aclnnScaledMaskedSoftmax(
       <td>-</td>
     </tr>
     <tr>
-      <td>fixTriuMask</td>
+      <td>fixedTriuMask</td>
       <td>输入</td>
       <td>表示是否需要从在算子内生成上三角的mask Tensor。</td>
       <td>仅支持false</td>
@@ -341,14 +341,14 @@ int main() {
 
   // attr
   float scale = 1.0f;
-  bool triuMask = false;
+  bool fixedTriuMask = false;
 
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
   // aclnnScaledMaskedSoftmax
-  ret = aclnnScaledMaskedSoftmaxGetWorkspaceSize(x, mask, scale, triuMask, y, &workspaceSize, &executor);
+  ret = aclnnScaledMaskedSoftmaxGetWorkspaceSize(x, mask, scale, fixedTriuMask, y, &workspaceSize, &executor);
   CHECK_RET(
       ret == ACL_SUCCESS,
       LOG_PRINT("aclnnScaledMaskedSoftmaxGetWorkspaceSize failed. ERROR: %d\n", ret);
