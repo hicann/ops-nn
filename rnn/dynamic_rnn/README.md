@@ -100,7 +100,7 @@
       <td>mask</td>
       <td>输入</td>
       <td>输入的掩码矩阵。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
