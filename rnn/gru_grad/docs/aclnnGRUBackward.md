@@ -33,7 +33,7 @@
   * $\text{上游总梯度：} \quad dh_t = dy_t + dh_{next} \quad $($dy_t$为上层梯度，$dh_{next}$为t+1时刻传回的梯度)
   * $\text{更新门梯度：} \quad dz_t = dh_t * (h_{t-1} - \tilde{h}_t) * z_t * (1 - z_t)$
   * $\text{候选态梯度：} \quad dh_{\tilde{h}t} = dh_t * (1 - z_t) * (1 - \tilde{h}_t^2)$
-  * $\text{重置门梯度：} \quad dr_t = dh_{\tilde{h}t} * lin_{hh}[2*hidden\_size:3*hidden\_size] * r_t * (1 - r_t)$
+  * $\text{重置门梯度：} \quad dr_t = dh_{\tilde{h}t} * W_{hr} * r_t * (1 - r_t)$
   * $\text{线性变换梯度拆分：}$
     $\quad dlin_{ih} = [dz_t; dr_t; dh_{\tilde{h}t}], \quad dlin_{hh} = [dz_t; dr_t; dh_{\tilde{h}t} * r_t]$
   * $\text{输入梯度（传给下层）：} \quad dx_t = W_{ih}^T @ dlin_{ih}$
@@ -131,7 +131,7 @@
      <tr>
        <td>hx</td>
        <td>输入</td>
-       <td>GRU每层的初始hidden状态。对应0时刻的h(t-1)。</td>
+       <td>GRU每层的初始隐藏状态。对应0时刻的h(t-1)。</td>
        <td><ul><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -141,7 +141,7 @@
      <tr>
        <td>dy</td>
        <td>输入</td>
-       <td>GRU正向最后一层输出hidden的梯度。对应公式中的∂L/∂h^(l)。</td>
+       <td>GRU正向最后一层输出隐藏状态的梯度。对应公式中的∂L/∂h^(l)。</td>
        <td><ul><li>双向时数据沿最后一维按前后向排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -154,7 +154,7 @@
      <tr>
        <td>dh</td>
        <td>输入</td>
-       <td>GRU正向每层输出hidden在T时刻从下一个时间步传来的梯度。对应δh_next。</td>
+       <td>GRU正向每层输出隐藏状态在T时刻从下一个时间步传来的梯度。对应δh_next。</td>
        <td><ul><li>多层双向时数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -269,7 +269,7 @@
      <tr>
        <td>batchFirst</td>
        <td>输入</td>
-       <td>表示输入数据input、y、dy格式是否是batch在第一维。</td>
+       <td>表示输入数据input、hx、dy格式是否是batch在第一维。</td>
        <td>-</td>
        <td>BOOL</td>
        <td>-</td>
@@ -292,7 +292,7 @@
      <tr>
        <td>dhPrevOut(grad_h_prev)</td>
        <td>输出</td>
-       <td>GRU每层初始hidden的梯度，对应t=0时的δh_prev。</td>
+       <td>GRU每层初始隐藏状态的梯度，对应t=0时的δh_prev。</td>
        <td><ul><li>多层双向时数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -355,8 +355,8 @@
        <td>如果传入参数为aclTensor或aclTensorList且非batchSizesOptional，是空指针。</td>
      </tr>
      <tr>
-       <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-       <td rowspan="12">161002</td>
+       <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+       <td rowspan="7">161002</td>
        <td>如果传入参数为aclTensor或aclTensorList，数据类型不在支持的范围之内。</td>
      </tr>
      <tr>
