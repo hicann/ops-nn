@@ -74,6 +74,9 @@
     </tr>
   </tbody></table>
 
+- <term>Ascend 950PR&950DT系列产品</term>：var、updates的数据类型支持FLOAT16、FLOAT32、INT32、INT8、UINT8。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：var、updates的数据类型支持FLOAT16、FLOAT32、INT32、INT64、DOUBLE，不支持INT8、UINT8。
+
 ## 约束说明
 
 - 确定性计算：默认确定性实现。
