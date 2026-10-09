@@ -115,7 +115,7 @@
 | [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | 默认非确定性实现，不支持配置开启 |
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |
-| [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | - |
 | [aclnnDequantSituQuant](../../quant/dequant_situ_quant/docs/aclnnDequantSituQuant.md) | 在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。 | 默认确定性实现 | - |
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
