@@ -45,7 +45,7 @@ static const std::initializer_list<op::DataType> STEP_DTYPE_SUPPORT_LIST = {op::
 
 static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gradsRef, const aclTensorList* expAvgsRef,
                          const aclTensorList* expAvgSqsRef, const aclTensorList* stateSteps,
-                         const aclTensorList* maxExpAvgSqsRef)
+                         const aclTensorList* maxExpAvgSqsRef, bool amsgrad)
 {
     OP_CHECK_NULL(paramsRef, return false);
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
@@ -67,9 +67,11 @@ static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gr
     for (uint64_t i = 0; i < stateSteps->Size(); i++) {
         OP_CHECK_NULL((*stateSteps)[i], return false);
     }
-    if (maxExpAvgSqsRef != nullptr) {
-        for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
-            OP_CHECK_NULL((*maxExpAvgSqsRef)[i], return false);
+    if (amsgrad == true) {
+        if (maxExpAvgSqsRef != nullptr) {
+            for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
+                OP_CHECK_NULL((*maxExpAvgSqsRef)[i], return false);
+            }
         }
     }
     return true;
@@ -77,7 +79,8 @@ static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gr
 
 static bool CheckTensorListCount(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
                                  const aclTensorList* expAvgsRef, const aclTensorList* expAvgSqsRef,
-                                 const aclTensorList* stateSteps, const aclTensorList* maxExpAvgSqsRef)
+                                 const aclTensorList* stateSteps, const aclTensorList* maxExpAvgSqsRef,
+                                 const bool amsgrad)
 {
     auto tensorCount = paramsRef->Size();
     if (tensorCount == 0) {
@@ -100,16 +103,18 @@ static bool CheckTensorListCount(const aclTensorList* paramsRef, const aclTensor
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stateSteps tensor count does not match params.");
         return false;
     }
-    if (maxExpAvgSqsRef != nullptr && maxExpAvgSqsRef->Size() != tensorCount) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxExpAvgSqs tensor count does not match params.");
-        return false;
+    if (amsgrad == true) {
+        if (maxExpAvgSqsRef != nullptr && maxExpAvgSqsRef->Size() != tensorCount) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "maxExpAvgSqs tensor count does not match params.");
+            return false;
+        }
     }
     return true;
 }
 
 static bool CheckDtype(const aclTensorList* paramsRef, const aclTensorList* gradsRef, const aclTensorList* expAvgsRef,
                        const aclTensorList* expAvgSqsRef, const aclTensorList* stateSteps,
-                       const aclTensorList* maxExpAvgSqsRef)
+                       const aclTensorList* maxExpAvgSqsRef, const bool amsgrad)
 {
     auto paramsTensor = (*paramsRef)[0];
     auto stateStepsTensor = (*stateSteps)[0];
@@ -130,14 +135,16 @@ static bool CheckDtype(const aclTensorList* paramsRef, const aclTensorList* grad
             return false;
         }
     }
-    if (maxExpAvgSqsRef != nullptr) {
-        auto maxExpAvgSqsTensor = (*maxExpAvgSqsRef)[0];
-        OP_CHECK_DTYPE_NOT_SUPPORT(maxExpAvgSqsTensor, INPUT_DTYPE_SUPPORT_LIST, return false);
-        OP_CHECK_DTYPE_NOT_SAME(paramsTensor, maxExpAvgSqsTensor, return false);
-        for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
-            if ((*maxExpAvgSqsRef)[i]->GetDataType() != inputType) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same dtype.");
-                return false;
+    if (amsgrad == true) {
+        if (maxExpAvgSqsRef != nullptr) {
+            auto maxExpAvgSqsTensor = (*maxExpAvgSqsRef)[0];
+            OP_CHECK_DTYPE_NOT_SUPPORT(maxExpAvgSqsTensor, INPUT_DTYPE_SUPPORT_LIST, return false);
+            OP_CHECK_DTYPE_NOT_SAME(paramsTensor, maxExpAvgSqsTensor, return false);
+            for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
+                if ((*maxExpAvgSqsRef)[i]->GetDataType() != inputType) {
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same dtype.");
+                    return false;
+                }
             }
         }
     }
@@ -187,7 +194,7 @@ static bool CheckAttr(double lr, double beta1, double beta2, double weightDecay,
 }
 
 static bool CheckShape(const aclTensorList* paramsRef, const aclTensorList* grads, const aclTensorList* expAvgsRef,
-                       const aclTensorList* expAvgSqsRef, const aclTensorList* maxExpAvgSqsRef)
+                       const aclTensorList* expAvgSqsRef, const aclTensorList* maxExpAvgSqsRef, const bool amsgrad)
 {
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
         op::Shape expectShape = (*paramsRef)[i]->GetViewShape();
@@ -196,8 +203,11 @@ static bool CheckShape(const aclTensorList* paramsRef, const aclTensorList* grad
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same shape.");
             return false;
         }
-        if (maxExpAvgSqsRef != nullptr && (*maxExpAvgSqsRef)[i]->GetViewShape() != expectShape) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same shape.");
+        if (amsgrad == true) {
+            if (maxExpAvgSqsRef != nullptr && (*maxExpAvgSqsRef)[i]->GetViewShape() != expectShape) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same shape.");
+                return false;
+            }
         }
     }
     return true;
@@ -209,13 +219,14 @@ static aclnnStatus CheckParams(const aclTensorList* paramsRef, const aclTensorLi
                                double beta1, double beta2, double weightDecay, double eps, bool amsgrad)
 {
     CHECK_RET(CheckAttr(lr, beta1, beta2, weightDecay, eps, amsgrad, maxExpAvgSqsRef), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckNotNull(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef),
+    CHECK_RET(CheckNotNull(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef, amsgrad),
               ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckTensorListCount(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef),
+    CHECK_RET(CheckTensorListCount(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef, amsgrad),
               ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckDtype(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef),
+    CHECK_RET(CheckDtype(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef, amsgrad),
               ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShape(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, maxExpAvgSqsRef), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, maxExpAvgSqsRef, amsgrad),
+              ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -336,8 +347,10 @@ aclnnStatus aclnnFusedAdamGetWorkspaceSize(const aclTensorList* paramsRef, const
     ViewCopyTensorList(gradsOut, gradsRef, uniqueExecutor.get());
     ViewCopyTensorList(expAvgsOut, expAvgsRef, uniqueExecutor.get());
     ViewCopyTensorList(expAvgSqsOut, expAvgSqsRef, uniqueExecutor.get());
-    if (maxExpAvgSqsRef != nullptr) {
-        ViewCopyTensorList(maxExpAvgSqsOut, maxExpAvgSqsRef, uniqueExecutor.get());
+    if (amsgrad == true) {
+        if (maxExpAvgSqsRef != nullptr) {
+            ViewCopyTensorList(maxExpAvgSqsOut, maxExpAvgSqsRef, uniqueExecutor.get());
+        }
     }
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
