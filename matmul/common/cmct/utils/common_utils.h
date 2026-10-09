@@ -163,7 +163,7 @@ __aicore__ inline constexpr static bool IsQuantSenario()
 
 __aicore__ inline void SetHf32Mode(bool hf32Flag, int32_t mode_flag)
 {
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     if ASCEND_IS_AIC {
         if (hf32Flag) {
             AscendC::SetHF32Mode(mode_flag);

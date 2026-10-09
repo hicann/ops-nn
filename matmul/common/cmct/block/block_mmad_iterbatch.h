@@ -81,7 +81,7 @@ public:
     uint64_t l0BOffset_ = AscendC::TOTAL_L0B_SIZE / BUFFER_NUM / sizeof(B_T);
     uint64_t l0COffset_ = AscendC::TOTAL_L0C_SIZE / BUFFER_NUM / sizeof(L0cType);
     uint64_t innerBatch_{0};
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     uint8_t shiftValue_{42};
     constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
 #endif
@@ -122,7 +122,7 @@ public:
         l0EventID_ = 0;
         abL1EventID_ = 0;
         innerBatch_ = innerBatch;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         shiftValue_ = shiftValue;
 #endif
         if (isBias_) {
@@ -294,7 +294,7 @@ public:
         constexpr uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
         uint16_t bustLenth = Cmct::Gemm::Align(alignedNL0 / BIAS_C0, btAlign);
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(bustLenth), 0, 0};
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         biasParam.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
 #endif
         // 当dstlocal位于C2时，C2中至少为fp32*16
@@ -316,7 +316,7 @@ public:
         mmadParams.cmatrixInitVal = cmatrixInitVal;
         mmadParams.disableGemv = true; // disable gemv when m equals 1, which is not capable.
         mmadParams.cmatrixSource = needBias;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         mmadParams.fixShiftVal = shiftValue_;
 #endif
         if (needBias) {
@@ -362,7 +362,7 @@ public:
         } else {
             fixpipeParams.reluEn = 0;
         }
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         fixpipeParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
 #endif
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);

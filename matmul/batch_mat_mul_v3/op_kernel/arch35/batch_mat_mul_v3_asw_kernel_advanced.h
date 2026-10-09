@@ -77,7 +77,7 @@ template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK
 __aicore__ inline void
 BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENABLE_QUANT>::SetL2CacheHint()
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     if (block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
         block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::A_L2_CACHE_DISABLE) {
         aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
@@ -156,7 +156,7 @@ BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENAB
 
     SetAtomicNone();
     mm_.SetHF32(false, 0);
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     if (block_.batchMatmulTilingData_->matMulTilingData.mmadParam) {
         mm_.SetHF32(true, 1);
     }

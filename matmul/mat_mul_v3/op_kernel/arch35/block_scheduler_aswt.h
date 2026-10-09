@@ -112,7 +112,7 @@ public:
         baseM_ = params.tilingData->baseM;
         baseN_ = params.tilingData->baseN;
         baseK_ = params.tilingData->baseK;
-        mmadParam_ = params.tilingData->mmadParam; // 非5102场景mmadParam代表isHf32Flag
+        mmadParam_ = params.tilingData->mmadParam; // 非__FIXED_POINT_ONLY_CUBE_TO_L0C__场景mmadParam代表isHf32Flag
         l1BuferNum_ = params.tilingData->l1BufferNum;
         l0cDB_ = params.tilingData->l0cDB;
         ubDB_ = params.tilingData->ubDB;

@@ -79,7 +79,7 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
     mm.SetSubBlockIdx(0);
     mm.Init(&matmulv3TilingData->tCubeTiling, GetTPipePtr());
     SetAtomicNone();
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     mm.SetHF32(matmulv3TilingData->mmadParam, 1);
 #else
     mm.SetFixShiftValue(matmulv3TilingData->mmadParam);
@@ -108,7 +108,7 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
             }
         }
     }
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     mm.SetHF32(false, 0);
 #endif
     InQueueAL1.FreeTensor(al1Local);
@@ -202,7 +202,7 @@ __aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
                                                     LocalTensor<typename B_TYPE::T>& bl1Local, uint8_t enAtomic)
 {
     mm.SetSubBlockIdx(0);
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     mm.SetHF32(matmulv3TilingData->mmadParam, 1);
 #else
     mm.SetFixShiftValue(matmulv3TilingData->mmadParam);

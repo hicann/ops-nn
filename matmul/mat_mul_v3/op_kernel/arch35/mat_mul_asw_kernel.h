@@ -116,7 +116,7 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
     }
 
     SetAtomicNone();
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     mm_.SetHF32(block_.matmulTilingData_->mmadParam, 1);
 #else
     mm_.SetFixShiftValue(block_.matmulTilingData_->mmadParam);

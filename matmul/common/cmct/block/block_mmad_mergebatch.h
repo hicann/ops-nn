@@ -96,7 +96,7 @@ public:
         l0EventID_ = 0;
         aL1EventID_ = 0;
         bL1EventID_ = 0;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         shiftValue_ = shiftValue;
 #endif
     }
@@ -273,7 +273,7 @@ public:
         InitFixpipeParams(fixpParams, n_);
         fixpParams.params.dstNdStride = m_ * n_;
         fixpParams.dualDstCtl = 0;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         fixpParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
 #endif
         static constexpr AscendC::FixpipeConfig config = {AscendC::CO2Layout::ROW_MAJOR, true};
@@ -327,7 +327,7 @@ public:
         mmadParams.k = realK0;
         mmadParams.disableGemv = true;
         mmadParams.cmatrixInitVal = iterK0 == 0 && iterK1 == 0;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         mmadParams.fixShiftVal = shiftValue_;
 #endif
         AscendC::LocalTensor<float> l0cLocal = c1Local_[l0cDBOffset_];
@@ -424,7 +424,7 @@ private:
     uint64_t kL1_{1};
     uint64_t baseK_{1};
     uint64_t l0cDBOffset_{0};
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     uint8_t shiftValue_{42};
     constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
 #endif

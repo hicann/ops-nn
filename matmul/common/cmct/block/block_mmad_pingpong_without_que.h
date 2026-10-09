@@ -140,7 +140,7 @@ public:
     bool enableL0cPingPong_{false};
     bool splitM_{false};
     uint64_t fullLoadMode_{0};
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     uint8_t shiftValue_{42};
     constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
 #endif
@@ -198,7 +198,7 @@ public:
         isBias_ = isBias;
         l1BufNum_ = l1BufNum;
         enableL0cPingPong_ = l0cDB;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         shiftValue_ = shiftValue;
 #endif
         // init tensor
@@ -359,7 +359,7 @@ public:
         uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
         uint16_t bustLenth = Cmct::Gemm::Align(nl1Align / BIAS_C0, btAlign);
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(bustLenth), 0, 0};
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         biasParam.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
 #endif
         // 当dstlocal位于C2时，C2中至少为fp32*16
@@ -473,7 +473,7 @@ public:
         } else {
             fixpipeParams.reluEn = 0;
         }
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         fixpipeParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
 #endif
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
@@ -1073,7 +1073,7 @@ private:
                                 uint64_t biasOffset, bool needBias)
     {
         mmadParams.cmatrixSource = needBias;
-#if __NPU_ARCH__ == 5102
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         mmadParams.fixShiftVal = shiftValue_;
 #endif
         if (needBias) {

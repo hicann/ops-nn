@@ -226,7 +226,7 @@ public:
         }
 
         // come from the block_mmad_pingpong_without_que.h
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
         bool isHf32 = bs.GetHf32Flag();
         if (isHf32) {
             AscendC::SetHF32Mode(1);
@@ -274,7 +274,7 @@ public:
                             tileL1, bs.GetSplitOffset(), bs.GetTailParams(), bs.isSplitSingleK_);
                         if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                             SetMMLayoutTransform(false);
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
                             UnsetHf32(isHf32);
 #endif
                             return;
@@ -294,7 +294,7 @@ public:
         }
 
         SetMMLayoutTransform(false);
-#if __NPU_ARCH__ != 5102
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
         UnsetHf32(isHf32);
 #endif
     }
