@@ -58,7 +58,7 @@
    const aclTensorList *n,
    const aclTensorList *hn,
    const aclTensorList *h,
-   const aclTensor     *batchSizesOptional,
+   const aclTensor     *batchSizes,
    bool                hasBias,
    int64_t             numLayers,
    bool                bidirection,
@@ -112,8 +112,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, input_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -146,8 +146,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size * D];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size * D] 或 [batch_size, time_step, hidden_size * D]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size * D];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size * D] 或 [batch_size, time_step, hidden_size * D]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -169,8 +169,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -182,8 +182,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -195,8 +195,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -208,8 +208,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -221,13 +221,13 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>若传入有效batchSizes，为[time_step * batch_size, hidden_size];</li>
+       <li>若传入空指针batchSizes，为[time_step, batch_size, hidden_size]</li>
        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
-       <td>batchSizesOptional</td>
+       <td>batchSizes</td>
        <td>输入</td>
        <td>变长GRU输入序列各个时刻的有效序列batch数。</td>
        <td><ul><li>变长序列时支持。</li></ul></td>
@@ -284,8 +284,8 @@
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
-        <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size];</li>
-        <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
+        <li>若传入有效batchSizes，为[time_step * batch_size, input_size];</li>
+        <li>若传入空指针batchSizes，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
         <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
@@ -352,7 +352,7 @@
      <tr>
        <td>ACLNN_ERR_PARAM_NULLPTR</td>
        <td>161001</td>
-       <td>如果传入参数为aclTensor或aclTensorList且非batchSizesOptional，是空指针。</td>
+       <td>如果传入参数为aclTensor或aclTensorList且非batchSizes，是空指针。</td>
      </tr>
      <tr>
        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
@@ -363,13 +363,13 @@
        <td>如果传入参数类型为aclTensor或aclTensorList，数据类型不同。</td>
      </tr>
      <tr>
-       <td>如果传入参数类型为aclTensor或aclTensorList，数据格式不在支持的范围之内（ND/NCL，batchSizesOptional仅支持ND）。</td>
+       <td>如果传入参数类型为aclTensor或aclTensorList，数据格式不在支持的范围之内（ND/NCL，batchSizes仅支持ND）。</td>
      </tr>
      <tr>
        <td>如果传入参数类型为aclTensor或aclTensorList，shape不满足对应的shape要求。</td>
      </tr>
      <tr>
-       <td>如果传入的batchSizesOptional为空指针时input不是3维，或batchSizesOptional非空指针时input不是2维。</td>
+       <td>如果传入的batchSizes为空指针时input不是3维，或batchSizes非空指针时input不是2维。</td>
      </tr>
      <tr>
        <td>time_step、batch_size、input_size、hidden_size任一不大于0。</td>
