@@ -81,22 +81,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim1Compu
 }
 
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compute(
-    __gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
-    __gm__ const GatherElementsTilingData* tiling)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compute(__gm__ X_T* xAddr,
+                                                                                   __gm__ INDEX_T* indexAddr,
+                                                                                   __gm__ volatile X_T* yAddr, U magic,
+                                                                                   U shift, U indexStride, U xStride,
+                                                                                   U batchNum, U coreOffset)
 {
-    GET_TILING_DATA_PTR_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
-    if (blockIdx.x >= tilingData->usedCore) {
-        return;
-    }
-    U coreOffset = static_cast<U>(blockIdx.x * tilingData->perCoreNum);
-    U batchNum = static_cast<U>((blockIdx.x == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
-                                                                           tilingData->perCoreNum) +
-                 coreOffset;
-    U magic = tilingData->magic[MS_IDX6];
-    U shift = tilingData->shift[MS_IDX6];
-    U indexStride = tilingData->indexStrideArr[MS_IDX6];
-    U xStride = tilingData->xStrideArr[MS_IDX6];
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexAddr[i];
 
@@ -455,12 +445,7 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __gm__ X_T* xAddr, __gm__ INDEX_T* indexAddr, __gm__ volatile X_T* yAddr,
     __gm__ const GatherElementsTilingData* tilingData)
 {
-    if constexpr (DIM_NUM == DIM1) {
-        asc_vf_call<GatherDim1Compute<X_T, INDEX_T, COM_T>>(dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr, tilingData);
-    } else if constexpr (DIM_NUM == DIM2) {
-        asc_vf_call<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr,
-                                                                  tilingData);
-    }
+    asc_vf_call<GatherDim1Compute<X_T, INDEX_T, COM_T>>(dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr, tilingData);
 }
 
 template <typename X_T, typename INDEX_T, typename COM_T, int32_t DIM_NUM, int32_t AXIS>
@@ -494,7 +479,12 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __ubuf__ COM_T* mAndShiftAddr = (__ubuf__ COM_T*)(mAndShiftLocal.GetPhyAddr());
     __ubuf__ COM_T* strideAddr = (__ubuf__ COM_T*)(strideLocal.GetPhyAddr());
 
-    if constexpr (DIM_NUM == DIM3) {
+    if constexpr (DIM_NUM == DIM2) {
+        asc_vf_call<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(
+            dim3(THREAD_DIM_2048), xAddr, indexAddr, yAddr, m_[MS_IDX6], shift_[MS_IDX6],
+            static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX6]),
+            static_cast<COM_T>(tilingData_->xStrideArr[MS_IDX6]), batchNum, coreOffset);
+    } else if constexpr (DIM_NUM == DIM3) {
         asc_vf_call<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(
             dim3(THREAD_DIM_2048), indexAddr, yAddr, xAddr, m_[MS_IDX5], shift_[MS_IDX5], m_[MS_IDX6], shift_[MS_IDX6],
             static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX5]),

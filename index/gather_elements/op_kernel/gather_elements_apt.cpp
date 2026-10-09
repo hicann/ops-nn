@@ -591,13 +591,15 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
                         (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_0)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM2, 0> op(pipe);
-        op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-                        (__gm__ const GatherElementsTilingData*)tiling);
+        op.Init(x, index, y, &tilingData);
+        op.Process();
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_1)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM2, 1> op(pipe);
-        op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-                        (__gm__ const GatherElementsTilingData*)tiling);
+        op.Init(x, index, y, &tilingData);
+        op.Process();
     } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_0)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM3, 0> op(pipe);
@@ -768,13 +770,15 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
                         (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT64_AXIS_0)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM2, 0> op(pipe);
-        op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-                        (__gm__ const GatherElementsTilingData*)tiling);
+        op.Init(x, index, y, &tilingData);
+        op.Process();
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT64_AXIS_1)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM2, 1> op(pipe);
-        op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-                        (__gm__ const GatherElementsTilingData*)tiling);
+        op.Init(x, index, y, &tilingData);
+        op.Process();
     } else if (TILING_KEY_IS(SIMT_DIM_3_INT64_AXIS_0)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM3, 0> op(pipe);
