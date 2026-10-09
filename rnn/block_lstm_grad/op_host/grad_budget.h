@@ -29,7 +29,7 @@
 #ifndef GRAD_BUDGET_H
 #define GRAD_BUDGET_H
 
-#include "block_lstm_grad_tiling.h"
+#include "../op_kernel/arch35/block_lstm_grad_tiling.h"
 
 namespace blg {
 

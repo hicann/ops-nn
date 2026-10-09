@@ -19,7 +19,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "block_lstm_tiling.h"
+#include "../op_kernel/arch35/block_lstm_tiling.h"
 #include "proj_budget.h"
 
 namespace optiling {

@@ -22,7 +22,7 @@
 #ifndef PROJ_BUDGET_H
 #define PROJ_BUDGET_H
 #include <cstdint>
-#include "block_lstm_tiling.h"
+#include "../op_kernel/arch35/block_lstm_tiling.h"
 
 namespace blv2 {
 

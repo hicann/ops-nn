@@ -11,20 +11,6 @@
 
 # (copyright header)
 
-# Tiling header lives in op_host/ (host layer). Copy to build's ascendc dir
-# so kernel impl.h can #include "block_lstm_grad_tiling.h" during asc_opc build.
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../op_host/block_lstm_grad_tiling.h
-     DESTINATION ${CMAKE_BINARY_DIR}/tbe/ascendc/block_lstm_grad/arch35)
-
-# The packaged CMakeLists' ../op_host copy above is a dead path at install time
-# (only op_kernel/ is collected into the vendor package), so the tiling header
-# must be installed explicitly beside the kernel sources for GE's asc_opc
-# online recompile to resolve the #include.
-if(ENABLE_PACKAGE)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../op_host/block_lstm_grad_tiling.h
-          DESTINATION ${IMPL_INSTALL_DIR}/block_lstm_grad/arch35)
-endif()
-
 # MIX_AIC_1_2 kernel, SINGLE TU: fp32/fp16 both instantiated in block_lstm_grad.cpp and
 # selected at runtime by tiling key (set from the input dtype in TilingFunc).
 add_kernel_sources(

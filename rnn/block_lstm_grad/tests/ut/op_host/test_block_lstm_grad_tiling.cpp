@@ -33,7 +33,9 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-struct BlockLstmGradCompileInfo {};
+struct BlockLstmGradCompileInfo {
+    int64_t coreNumAic = 0;
+};
 
 class BlockLstmGradTiling : public testing::Test {
 protected:

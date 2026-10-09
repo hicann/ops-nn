@@ -21,7 +21,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "block_lstm_grad_tiling.h"
+#include "../op_kernel/arch35/block_lstm_grad_tiling.h"
 #include "grad_budget.h"
 
 /* Probed once per host process by TilingParseGrad; TilingFunc reads it to cap
