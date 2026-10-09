@@ -52,20 +52,21 @@ at::Tensor transpose_quant_batch_mat_mul(
     const at::Tensor& x1_scale_real = x1_scale.value_or(at::Tensor());
     const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
 
-    // The torch interface only exposes the MX path: MXFP8 (float8_e4m3fn + e8m0
-    // scale) and MXFP4 (float4_e2m1 + e8m0 scale).  Reject FP8-INT8 / Hifp8
-    // inputs up-front so the user sees a clear error instead of a downstream
-    // aclnn/graph failure.
+    // The torch interface supports MX fp4/fp8 (float4_e2m1/float8_e4m3fn with
+    // e8m0 scale), FP8 (float8_e4m3fn with float scale), and HIFP8 (hifloat8
+    // with uint64 scale).  The aclnn op_api layer handles dtype dispatch.
     const aclDataType x1_acl = x1_dtype.has_value() ? GetAclDataType(x1_dtype.value()) :
                                                       ConvertToAclDataType(x1.scalar_type());
     const aclDataType x2_acl = x2_dtype.has_value() ? GetAclDataType(x2_dtype.value()) :
                                                       ConvertToAclDataType(x2.scalar_type());
-    const bool x1_mx = (x1_acl == ACL_FLOAT4_E2M1) || (x1_acl == ACL_FLOAT8_E4M3FN);
-    const bool x2_mx = (x2_acl == ACL_FLOAT4_E2M1) || (x2_acl == ACL_FLOAT8_E4M3FN);
-    TORCH_CHECK(x1_mx, "x1 must be float4_e2m1 or float8_e4m3fn (MX fp4/fp8) in the torch interface, got aclDataType ",
-                x1_acl);
-    TORCH_CHECK(x2_mx, "x2 must be float4_e2m1 or float8_e4m3fn (MX fp4/fp8) in the torch interface, got aclDataType ",
-                x2_acl);
+    const bool x1_supported = (x1_acl == ACL_FLOAT4_E2M1) || (x1_acl == ACL_FLOAT8_E4M3FN) ||
+                              (x1_acl == ACL_FLOAT8_E5M2) || (x1_acl == ACL_HIFLOAT8);
+    const bool x2_supported = (x2_acl == ACL_FLOAT4_E2M1) || (x2_acl == ACL_FLOAT8_E4M3FN) ||
+                              (x2_acl == ACL_FLOAT8_E5M2) || (x2_acl == ACL_HIFLOAT8);
+    TORCH_CHECK(x1_supported,
+                "x1 must be float4_e2m1, float8_e4m3fn, or hifloat8 in the torch interface, got aclDataType ", x1_acl);
+    TORCH_CHECK(x2_supported,
+                "x2 must be float4_e2m1, float8_e4m3fn, or hifloat8 in the torch interface, got aclDataType ", x2_acl);
     const aclDataType x1_scale_acl = x1_scale_dtype.has_value() ?
                                          GetAclDataType(x1_scale_dtype.value()) :
                                          (x1_scale_real.defined() ? ConvertToAclDataType(x1_scale_real.scalar_type()) :
@@ -74,10 +75,28 @@ at::Tensor transpose_quant_batch_mat_mul(
                                          GetAclDataType(x2_scale_dtype.value()) :
                                          (x2_scale_real.defined() ? ConvertToAclDataType(x2_scale_real.scalar_type()) :
                                                                     ACL_DT_UNDEFINED);
-    TORCH_CHECK(x1_scale_acl == ACL_DT_UNDEFINED || x1_scale_acl == ACL_FLOAT8_E8M0,
-                "x1_scale must be float8_e8m0 (MX scale) in the torch interface, got aclDataType ", x1_scale_acl);
-    TORCH_CHECK(x2_scale_acl == ACL_DT_UNDEFINED || x2_scale_acl == ACL_FLOAT8_E8M0,
-                "x2_scale must be float8_e8m0 (MX scale) in the torch interface, got aclDataType ", x2_scale_acl);
+    // Scale dtype validation: e8m0 for MX, float for FP8, uint64 for HIFP8.
+    // Mode is determined by scale dtype (mirroring op tiling): e8m0 scale => MX,
+    // uint64 scale => HIFP8, float32 scale => FP8 K-C.
+    const bool is_hifp8 = (x1_acl == ACL_HIFLOAT8) || (x2_acl == ACL_HIFLOAT8);
+    const bool is_mx = !is_hifp8 && (x1_scale_acl == ACL_FLOAT8_E8M0 || x2_scale_acl == ACL_FLOAT8_E8M0);
+    if (is_mx) {
+        TORCH_CHECK(x1_scale_acl == ACL_DT_UNDEFINED || x1_scale_acl == ACL_FLOAT8_E8M0,
+                    "x1_scale must be float8_e8m0 (MX scale) for MX input, got aclDataType ", x1_scale_acl);
+        TORCH_CHECK(x2_scale_acl == ACL_DT_UNDEFINED || x2_scale_acl == ACL_FLOAT8_E8M0,
+                    "x2_scale must be float8_e8m0 (MX scale) for MX input, got aclDataType ", x2_scale_acl);
+    } else if (is_hifp8) {
+        // HIFP8: x2_scale is a per-channel 64-bit scale. torch uint64 tensors are not
+        // available on every backend, so int64 is accepted too and reinterpreted as
+        // uint64 when building the aclnn argument (see x2_scale_acltype below).
+        TORCH_CHECK(x2_scale_acl == ACL_UINT64 || x2_scale_acl == ACL_INT64 || x2_scale_acl == ACL_DT_UNDEFINED,
+                    "x2_scale must carry the uint64 bit pattern (int64 is reinterpreted bitwise) for HIFP8 ",
+                    "input, got aclDataType ", x2_scale_acl);
+    } else {
+        // FP8: x2_scale must be float (per-channel) or undefined; x1_scale optional (float per-token)
+        TORCH_CHECK(x2_scale_acl == ACL_DT_UNDEFINED || x2_scale_acl == ACL_FLOAT,
+                    "x2_scale must be float (FP8 per-channel scale) for FP8 input, got aclDataType ", x2_scale_acl);
+    }
 
     const int64_t b_idx = 0;
     const int64_t m_idx = 1;
@@ -123,8 +142,11 @@ at::Tensor transpose_quant_batch_mat_mul(
         scalar_type = at::ScalarType::Half;
     } else if (dtype_value == ACL_BF16) {
         scalar_type = at::ScalarType::BFloat16;
+    } else if (dtype_value == ACL_HIFLOAT8) {
+        scalar_type = at::ScalarType::Byte;
     } else {
-        TORCH_CHECK(false, "unsupported output dtype, only support float16(1) and bfloat16(27), got ", dtype);
+        TORCH_CHECK(false, "unsupported output dtype, only support float16(1), bfloat16(27) and hifloat8(34), got ",
+                    dtype);
     }
 
     at::Tensor result = at::empty(output_size, at::TensorOptions().dtype(scalar_type).device(at::kPrivateUse1));
@@ -151,6 +173,9 @@ at::Tensor transpose_quant_batch_mat_mul(
         x2_scale_acltype = GetAclDataType(x2_scale_dtype.value());
     } else if (x2_scale_real.defined()) {
         x2_scale_acltype = ConvertToAclDataType(x2_scale_real.scalar_type());
+    }
+    if (is_hifp8 && x2_scale_acltype == ACL_INT64) {
+        x2_scale_acltype = ACL_UINT64;
     }
     TensorWrapper x2_scale_wrapper = {x2_scale_real, x2_scale_acltype};
     int32_t dtype_value_i32 = static_cast<int32_t>(dtype_value);

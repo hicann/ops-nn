@@ -29,20 +29,25 @@ MM_REGISTER_TILING_TEMPLATE(TransposeQuantBatchMatMul, TransposeQuantBatchMatMul
 ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
+    apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
     isMXFP4_ = IsMXFP4(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
                        context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX));
     if (isMXFP4_) {
         runInfo_.baseK = BASIC_BLOCK_K_128_BYTE;
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP4;
-        apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
         CalL1Tiling();
     } else if (IsMxFp8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
                        context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP8;
-        apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
         CalL1Tiling();
     } else if (IsHIFP8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_HIFP8;
+        if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr &&
+            context_->GetOptionalInputDesc(BIAS_IDX)->GetDataType() != ge::DT_FLOAT) {
+            OP_LOGE(args_.opName, "HIFP8 only supports float32 bias, but got dtype %d",
+                    static_cast<int32_t>(context_->GetOptionalInputDesc(BIAS_IDX)->GetDataType()));
+            return ge::GRAPH_FAILED;
+        }
         CalL1Tiling();
     } else {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;

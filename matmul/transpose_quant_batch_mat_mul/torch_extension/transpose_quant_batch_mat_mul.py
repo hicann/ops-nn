@@ -15,30 +15,64 @@ import torch_npu
 from torch.library import impl
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
-# The torch-level interface only serves the MX path: MXFP8 (float8_e4m3fn with
-# e8m0 scale) and MXFP4 (float4_e2m1 with e8m0 scale).  FP8-INT8 / Hifp8 inputs
-# must be rejected here so the kernel (or the graph-mode infer dtype below) does
-# not fail with a confusing downstream error.
+# Supported torch-level input dtypes: MXFP8 (float8_e4m3fn), FP8 (float8_e4m3fn with
+# float scale), and HIFP8 (via acl dtype override). MXFP4 uses acl dtype override.
 _FP8_E4M3FN_DTYPE = getattr(torch, "float8_e4m3fn", None)
-_MX_TORCH_DTYPES = tuple(d for d in (_FP8_E4M3FN_DTYPE,) if isinstance(d, torch.dtype))
-_FP4_E2M1_ACL = getattr(torch_npu, "float4_e2m1fn_x2", None)
-_FP8_E4M3FN_ACL = getattr(torch_npu, "float8_e4m3fn", None)
-_MX_ACL_DTYPES = tuple(
-    d for d in (_FP4_E2M1_ACL, _FP8_E4M3FN_ACL) if isinstance(d, int)
+_FP8_E5M2_DTYPE = getattr(torch, "float8_e5m2", None)
+_FP8_TORCH_DTYPES = tuple(
+    d for d in (_FP8_E4M3FN_DTYPE, _FP8_E5M2_DTYPE) if isinstance(d, torch.dtype)
 )
 
+# ACL dtype codes for dtype overrides (DType enum in aclnn_common.h = ACL code + g_toAclOffset).
+# Use torch_npu int attrs when available, fall back to the codes from acl_base_rt.h.
+_ACL_OFFSET = 256
+_ACL_CODE_FLOAT4_E2M1 = 40
+_ACL_CODE_FLOAT8_E5M2 = 35
+_ACL_CODE_FLOAT8_E4M3FN = 36
+_ACL_CODE_HIFLOAT8 = 34
+
+
+def _acl_override_code(attr_name, acl_code):
+    value = getattr(torch_npu, attr_name, None)
+    if not isinstance(value, int):
+        return _ACL_OFFSET + acl_code
+    return value if value >= _ACL_OFFSET else value + _ACL_OFFSET
+
+
+_FP4_E2M1_ACL = _acl_override_code("float4_e2m1fn_x2", _ACL_CODE_FLOAT4_E2M1)
+_FP8_E5M2_ACL = _acl_override_code("float8_e5m2", _ACL_CODE_FLOAT8_E5M2)
+_FP8_E4M3FN_ACL = _acl_override_code("float8_e4m3fn", _ACL_CODE_FLOAT8_E4M3FN)
+_HIFLOAT8_ACL = _acl_override_code("hifloat8", _ACL_CODE_HIFLOAT8)
+
+# All supported acl dtype codes (int values for x1_dtype/x2_dtype overrides)
+_SUPPORTED_ACL_DTYPES = tuple(
+    d for d in (_FP4_E2M1_ACL, _FP8_E5M2_ACL, _FP8_E4M3FN_ACL, _HIFLOAT8_ACL)
+)
+
+
+def _normalize_acl_dtype(dtype_code):
+    """Accept both the DType enum code (ACL + 256) and the raw ACL code."""
+    if isinstance(dtype_code, int) and dtype_code < _ACL_OFFSET:
+        return dtype_code + _ACL_OFFSET
+    return dtype_code
+
+
 # dtype attr (int) -> torch output dtype, matching op_api aclnn output rules.
-_DTYPE_TO_TORCH = {1: torch.float16, 27: torch.bfloat16}
+_DTYPE_TO_TORCH = {1: torch.float16, 27: torch.bfloat16, 34: torch.uint8}
 
 
-def _check_mx_input(x, name, acl_dtype=None):
-    if x.dtype in _MX_TORCH_DTYPES:
+def _check_supported_input(x, name, acl_dtype=None):
+    """Check that x1/x2 is a supported input dtype (MX fp4/fp8, FP8, or HIFP8)."""
+    if x.dtype in _FP8_TORCH_DTYPES:
         return
-    if acl_dtype is not None and acl_dtype in _MX_ACL_DTYPES:
+    if (
+        acl_dtype is not None
+        and _normalize_acl_dtype(acl_dtype) in _SUPPORTED_ACL_DTYPES
+    ):
         return
     raise NotImplementedError(
-        "%s torch interface only supports MX fp4/fp8 (float4_e2m1 or "
-        "float8_e4m3fn) input, got dtype %s (acl dtype %s)" % (name, x.dtype, acl_dtype)
+        "%s torch interface supports fp8 (float8_e4m3fn/float8_e5m2), hifp8, and MX fp4/fp8 input, "
+        "got dtype %s (acl dtype %s)" % (name, x.dtype, acl_dtype)
     )
 
 
@@ -46,7 +80,7 @@ def _output_dtype(dtype: int) -> torch.dtype:
     out_dtype = _DTYPE_TO_TORCH.get(dtype)
     if out_dtype is None:
         raise NotImplementedError(
-            "unsupported output dtype %s; only float16 (1) and bfloat16 (27) are supported"
+            "unsupported output dtype %s; only float16 (1), bfloat16 (27) and hifloat8 (34) are supported"
             % dtype
         )
     return out_dtype
@@ -90,9 +124,9 @@ class TransposeQuantBatchMatMulOpBuilder(OpBuilder):
             x1_scale_dtype: Optional[int] = None,
             x2_scale_dtype: Optional[int] = None,
         ) -> torch.Tensor:
-            # Reject FP8-INT8 / Hifp8 inputs at meta time as well.
-            _check_mx_input(x1, "x1", x1_dtype)
-            _check_mx_input(x2, "x2", x2_dtype)
+            # Reject unsupported inputs at meta time as well.
+            _check_supported_input(x1, "x1", x1_dtype)
+            _check_supported_input(x2, "x2", x2_dtype)
             out_dtype = _output_dtype(dtype)
 
             default_perm_x1 = [1, 0, 2]
@@ -152,11 +186,10 @@ def transpose_quant_batch_mat_mul(
     x1_scale_dtype: Optional[int] = None,
     x2_scale_dtype: Optional[int] = None,
 ) -> torch.Tensor:
-    # Torch entry rejects FP8-INT8 / Hifp8 input up-front; only MX fp4/fp8
-    # (with e8m0 scale) is exposed.  The csrc validates x1/x2 against the
-    # resolved acl dtypes (including the x1_dtype/x2_dtype overrides).
-    _check_mx_input(x1, "x1", x1_dtype)
-    _check_mx_input(x2, "x2", x2_dtype)
+    # Torch entry accepts fp8, hifp8, and MX fp4/fp8 inputs. The csrc validates
+    # x1/x2 against the resolved acl dtypes (including x1_dtype/x2_dtype overrides).
+    _check_supported_input(x1, "x1", x1_dtype)
+    _check_supported_input(x2, "x2", x2_dtype)
 
     op_module_matmul = transpose_quant_batch_mat_mul_builder.load()
     return op_module_matmul.transpose_quant_batch_mat_mul(
