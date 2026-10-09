@@ -79,11 +79,7 @@ fi
 gcc --version
 source /home/jenkins/Ascend/cann/bin/setenv.bash
 set +e
-if [[ "${task_name}" =~ x86_compile_ubuntu24 ]] && [ -f "build_out/"*.run ] && [ "${TARGET_BRANCH}" == master ]; then
-    echo "api-check=compile" >> "${ATOMGIT_OUTPUT}"
-else
-    echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
-fi
+
 non_skip_count=$(grep -vE '(\.md$|^tests/)' "${WORKSPACE}/pr_filelist.txt" | grep -cv '^$')
 if [ "${non_skip_count}" -eq 0 ]; then
     echo "pr_filelist.txt only contains .md or tests/ files, skip build"
@@ -237,6 +233,11 @@ case "${task_name}" in
         ;;
 esac
 
+if [[ "${task_name}" =~ x86_compile_ubuntu24 ]] && [ -f "build_out/"*.run ] && [ "${TARGET_BRANCH}" == master ]; then
+    echo "api-check=compile" >> "${ATOMGIT_OUTPUT}"
+else
+    echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
+fi
 
 if [ ! -f "build_out/"*.run ]; then
     mkdir -p build_out
