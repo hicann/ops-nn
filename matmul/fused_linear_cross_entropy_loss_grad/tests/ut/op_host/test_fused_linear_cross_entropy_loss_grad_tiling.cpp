@@ -35,22 +35,25 @@ void TilingTest(std::string opName, bool isMemFriendly, // false: high-perf, tru
                 std::initializer_list<int64_t>& logits_max, std::initializer_list<int64_t>& sum_exp_logits,
                 std::initializer_list<int64_t>& grad_input, std::initializer_list<int64_t>& grad_weight,
                 ge::DataType dataTypeFp, ge::DataType dataTypeInt, ge::DataType dataTypeBool,
-                const ge::graphStatus status)
+                const ge::graphStatus status, int coreNum = 24, const std::string& shortSocVersion = "Ascend910B",
+                const std::string& npuArch = "2201")
 {
     std::string op_type(opName);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    // auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-    string compile_info_string = R"({
-    "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, 
-    "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, 
-    "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, 
-    "CORE_NUM": 24}
-    })";
+    // coreNum: 24=910B1(A2), 28=ascend950(满核)
+    string compile_info_string = string(R"({
+    "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true,
+    "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+    "CORE_NUM": )") + std::to_string(coreNum) +
+                                 "}\n    }";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    // soc 版本: 950 用例经该 mock 命中 tiling 内 SocVersion::ASCEND950 分支(覆盖 SetScheduleMode 声明)
+    map<string, string> soc_version = {{"Short_SoC_version", shortSocVersion}, {"NpuArch", npuArch}};
     // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
@@ -119,6 +122,7 @@ void TilingTest(std::string opName, bool isMemFriendly, // false: high-perf, tru
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
@@ -377,4 +381,121 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
     TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
                logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status);
+}
+// ===== dtype 矩阵补齐: uint8 位打包掩码 + int64 索引 =====
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_fp16_int64_uint8_success)
+{
+    int64_t bt = 8192;
+    int64_t h = 4096;
+    int64_t v = 19392;
+    std::initializer_list<int64_t> input = {bt, h};
+    std::initializer_list<int64_t> weight = {v, h};
+    std::initializer_list<int64_t> softmax = {bt, v};
+    std::initializer_list<int64_t> target_mask = {bt / 8}; // uint8 位打包: 每字节 8 行
+    std::initializer_list<int64_t> masked_target = {bt};
+    std::initializer_list<int64_t> grad_output = {bt};
+    std::initializer_list<int64_t> logits_max = {bt};
+    std::initializer_list<int64_t> sum_exp_logits = {bt};
+
+    std::initializer_list<int64_t> grad_input = {bt, h};
+    std::initializer_list<int64_t> grad_weight = {v, h};
+
+    const ge::graphStatus status = ge::GRAPH_SUCCESS;
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT64,
+               ge::DT_UINT8, status);
+}
+
+TEST_F(FusedLinearCrossEntropyLossGradTiling,
+       fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_bf16_int64_uint8_success)
+{
+    int64_t bt = 8192;
+    int64_t h = 4096;
+    int64_t v = 19392;
+    std::initializer_list<int64_t> grad_output = {bt};
+    std::initializer_list<int64_t> input = {bt, h};
+    std::initializer_list<int64_t> weight = {v, h};
+    std::initializer_list<int64_t> target_mask = {bt / 8}; // uint8 位打包
+    std::initializer_list<int64_t> masked_target = {bt};
+    std::initializer_list<int64_t> logits_max = {bt};
+    std::initializer_list<int64_t> sum_exp_logits = {bt};
+    std::initializer_list<int64_t> softmax = {bt, v};
+
+    std::initializer_list<int64_t> grad_input = {bt, h};
+    std::initializer_list<int64_t> grad_weight = {v, h};
+
+    const ge::graphStatus status = ge::GRAPH_SUCCESS;
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT64, ge::DT_UINT8, status);
+}
+
+// ===== ascend950 平台: 满核 28 核, 覆盖 SetScheduleMode(1) batch 调度声明分支 =====
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_950_aicore28_success)
+{
+    int64_t bt = 8192;
+    int64_t h = 4096;
+    int64_t v = 19392;
+    std::initializer_list<int64_t> input = {bt, h};
+    std::initializer_list<int64_t> weight = {v, h};
+    std::initializer_list<int64_t> softmax = {bt, v};
+    std::initializer_list<int64_t> target_mask = {bt};
+    std::initializer_list<int64_t> masked_target = {bt};
+    std::initializer_list<int64_t> grad_output = {bt};
+    std::initializer_list<int64_t> logits_max = {bt};
+    std::initializer_list<int64_t> sum_exp_logits = {bt};
+
+    std::initializer_list<int64_t> grad_input = {bt, h};
+    std::initializer_list<int64_t> grad_weight = {v, h};
+
+    const ge::graphStatus status = ge::GRAPH_SUCCESS;
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status, 28, "Ascend950", "3510");
+}
+
+TEST_F(FusedLinearCrossEntropyLossGradTiling,
+       fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_950_aicore28_success)
+{
+    int64_t bt = 8192;
+    int64_t h = 4096;
+    int64_t v = 19392;
+    std::initializer_list<int64_t> grad_output = {bt};
+    std::initializer_list<int64_t> input = {bt, h};
+    std::initializer_list<int64_t> weight = {v, h};
+    std::initializer_list<int64_t> target_mask = {bt};
+    std::initializer_list<int64_t> masked_target = {bt};
+    std::initializer_list<int64_t> logits_max = {bt};
+    std::initializer_list<int64_t> sum_exp_logits = {bt};
+    std::initializer_list<int64_t> softmax = {bt, v};
+
+    std::initializer_list<int64_t> grad_input = {bt, h};
+    std::initializer_list<int64_t> grad_weight = {v, h};
+
+    const ge::graphStatus status = ge::GRAPH_SUCCESS;
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status, 28,
+               "Ascend950", "3510");
+}
+
+// ===== mem_friendly 边界: V=512B 下限(恰好满足最小行宽校验) =====
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_v_512B_success)
+{
+    int64_t bt = 8192;
+    int64_t h = 4096;
+    int64_t v = 128; // 128*4=512B, 恰好通过 V*4>=512 校验
+    std::initializer_list<int64_t> grad_output = {bt};
+    std::initializer_list<int64_t> input = {bt, h};
+    std::initializer_list<int64_t> weight = {v, h};
+    std::initializer_list<int64_t> target_mask = {bt};
+    std::initializer_list<int64_t> masked_target = {bt};
+    std::initializer_list<int64_t> logits_max = {bt};
+    std::initializer_list<int64_t> sum_exp_logits = {bt};
+    std::initializer_list<int64_t> softmax = {bt, v};
+
+    std::initializer_list<int64_t> grad_input = {bt, h};
+    std::initializer_list<int64_t> grad_weight = {v, h};
+
+    const ge::graphStatus status = ge::GRAPH_SUCCESS;
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status);
 }

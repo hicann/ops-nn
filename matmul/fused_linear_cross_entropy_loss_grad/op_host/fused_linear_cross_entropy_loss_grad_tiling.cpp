@@ -291,6 +291,12 @@ static ge::graphStatus HighPerfTilingFunc(gert::TilingContext* context)
 
     // tiling设定
     context->SetBlockDim(aicNum);
+    // kernel 内跨核 flag 计数屏障要求全部 launch 核共驻; 950 上 stream 调度可能
+    // 派发不全导致计数不齐而挂死, 需声明 batch 调度模式保障全核派发
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950) {
+        OP_CHECK_IF(context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
+    }
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     context->SetTilingKey(HIGH_PERF_KEY);
@@ -568,6 +574,12 @@ static ge::graphStatus MemFriendlyTilingFunc(gert::TilingContext* context)
 
     // tiling设定
     context->SetBlockDim(aicNum);
+    // kernel 内跨核 flag 计数屏障要求全部 launch 核共驻; 950 上 stream 调度可能
+    // 派发不全导致计数不齐而挂死, 需声明 batch 调度模式保障全核派发
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950) {
+        OP_CHECK_IF(context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
+    }
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     context->SetTilingKey(MEM_FRIENDLY_KEY);

@@ -60,12 +60,51 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 or
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {
         // 空tensor直接返回成功，未及平台校验
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     }
+}
+
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_ascend950_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    int64_t BT = 8192;
+    int64_t H = 4096;
+    int64_t V = 19392;
+    vector<int64_t> grad = {BT};
+    vector<int64_t> input = {BT, H};
+    vector<int64_t> weight = {V, H};
+    vector<int64_t> targetMask = {BT};
+    vector<int64_t> maskedTarget = {BT};
+    vector<int64_t> logitsMaxOptional = {BT};
+    vector<int64_t> sumExpLogitsOptional = {BT};
+    vector<int64_t> softmaxOptional = {BT, V};
+    vector<int64_t> inputGradOut = {BT, H};
+    vector<int64_t> weightGradOut = {V, H};
+
+    auto grad_desc = TensorDesc(grad, ACL_FLOAT, ACL_FORMAT_ND);
+    auto input_desc = TensorDesc(input, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weight_desc = TensorDesc(weight, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto targetMask_desc = TensorDesc(targetMask, ACL_BOOL, ACL_FORMAT_ND);
+    auto maskedTarget_desc = TensorDesc(maskedTarget, ACL_INT32, ACL_FORMAT_ND);
+    auto logitsMaxOptional_desc = TensorDesc(logitsMaxOptional, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumExpLogitsOptional_desc = TensorDesc(sumExpLogitsOptional, ACL_FLOAT, ACL_FORMAT_ND);
+    auto softmaxOptional_desc = TensorDesc(softmaxOptional, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_platform_failed)
@@ -103,7 +142,8 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 or
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {
         EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_RUNTIME_ERROR);
@@ -412,7 +452,8 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 or
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {
         EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_RUNTIME_ERROR);

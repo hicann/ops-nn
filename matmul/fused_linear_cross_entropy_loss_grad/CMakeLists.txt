@@ -13,13 +13,20 @@ add_all_modules_sources(
     DEPENDENCIES mat_mul_v3
 )
 
-# param1：算子名称，以kernel方式命名
-# param2：soc版本，多个以分号分隔，例如："ascend950pr_9599;AscendB1"
-# param3：自定义编译选项，一般填写测试的一种典型数据类型组合，不需要则传入空字符串，例如："-DDTYPE_X=float"，多个使用空格分隔，例如："-DDTYPE_X=float -DDTYPE_Y=float"
-# param4：该算子依赖的所有tiling源码文件
+# [COMPUTE_UNITS ascendxx] soc版本，支持配置多个unit，缺省为配置所有的soc
+# [SIMPLIFIED_KEY 0/None] 缺省为0，设置为None则不携带该参数
+# 注: 仅 950 声明; 910b/910_93 二进制沿用默认 key mode, 与仓内既有二进制形态一致
+add_kernel_sources(
+    COMPUTE_UNITS ascend950
+    SIMPLIFIED_KEY 1
+)
+
+# param1：soc版本，多个以分号分隔，例如："ascend950pr_9599;AscendB1"
+# param2：自定义编译选项，一般填写测试的一种典型数据类型组合，不需要则传入空字符串，例如："-DDTYPE_X=float"，多个使用空格分隔，例如："-DDTYPE_X=float -DDTYPE_Y=float"
+# param3：该算子依赖的所有tiling源码文件
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(
-        "ascend910B1"
+        "ascend910B1;ascend950pr_9599"
         ""
     )
 endif()

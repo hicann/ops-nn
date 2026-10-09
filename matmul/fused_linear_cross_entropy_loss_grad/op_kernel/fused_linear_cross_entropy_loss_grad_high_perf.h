@@ -445,7 +445,8 @@ private:
         auto softmaxHalfUB = queBindSoftmax.DeQue<TPosition::VECOUT, TPosition::GM, HalfType>();
         DataCopyExtParams copyParams{rowCnt, (uint32_t)(tilingData.V * OUT_BYTE_SIZE), 0, tilingData.copyOutDstStride,
                                      0};
-        DataCopyPad(softmaxHalfGM[startRow * tilingData.VOut512BAlignedSize], softmaxHalfUB, copyParams);
+        // 大 BT 场景下 startRow * VOut512BAlignedSize 可超出 int32 范围, 显式按 uint64 计算偏移
+        DataCopyPad(softmaxHalfGM[(uint64_t)startRow * tilingData.VOut512BAlignedSize], softmaxHalfUB, copyParams);
 
         // 转nz搬出到workspace，用于启动第一个mm
         DataCopyParams repeatParams{C0BlockCnt, 1, 0, (uint16_t)(tilingData.mm1Tiling.baseM - 1)};

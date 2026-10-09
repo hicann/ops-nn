@@ -214,8 +214,10 @@ inline static bool CheckShapeValid(FusedLinearCrossEntropyLossGradInputs& inputs
 
 inline static bool CheckPlatformSupported()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    const auto& platformInfo = GetCurrentPlatformInfo();
+    auto socVersion = platformInfo.GetSocVersion();
+    if (socVersion == SocVersion::ASCEND910B or socVersion == SocVersion::ASCEND910_93 or
+        socVersion == SocVersion::ASCEND950) {
         return true;
     }
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "Current platform is not supported");
