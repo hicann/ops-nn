@@ -63,7 +63,7 @@
 | [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
 | [aclnnAntiMxQuant](../../quant/anti_mx_quant/docs/aclnnAntiMxQuant.md) | 将调用aclnnDynamicMxQuant/aclnnDynamicMxQuantV2量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。 | - | 默认确定性实现 |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | - | 默认确定性实现 |
-| [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | - |
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyFusedEmaAdam](../../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md) | 实现FusedEmaAdam融合优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyTopKTopP](../../index/apply_top_k_top_p_with_sorted/docs/aclnnApplyTopKTopP.md) | 对原始输入logits进行top-k和top-p采样过滤。 | 默认确定性实现 | 默认确定性实现 |
@@ -111,8 +111,8 @@
 | [aclnnCrossEntropySumExpAndIndexLogit](../../loss/cross_entropy_sum_exp_and_index_logit/docs/aclnnCrossEntropySumExpAndIndexLogit.md) | 面向vocab并行（Tensor Parallel）场景的CrossEntropy本地计算融合算子。 | - | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | 默认非确定性实现，不支持配置开启 |
+| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | - |
+| [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | - |
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |
 | [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | - |
