@@ -43,6 +43,11 @@ public:
         dyH_ = tilingData->dwTiling.ho;
         dyW_ = tilingData->dwTiling.wo;
         hf32_ = tilingData->dwTiling.hf32Flag;
+
+        // 运行时C轴分块统一在此计算一次，经构造函数以const引用传入下游
+        // （ConvBackpropFilterWinograd/AivFwdTransformer），BlockIterator与驻留任务切分共用
+        using TilingT = decltype(BuildTilingType());
+        BlockConfig::CalRtSingleShapeBlock<TilingT>(rtTiling_, cout_, cin_);
     }
 
     __aicore__ inline void Process()
@@ -77,7 +82,7 @@ public:
                                                                                nk1c1k0c0Shape.k0 * nk1c1k0c0Shape.k1);
 
         ConvBackpropFilterWinograd<SrcT, DstT, TilingT> winograd(fmapFwd, dyFwd, nk1c1k0c0, nk1c1k0c0Shape, y_, tailGm,
-                                                                 winoMmad, tileH, tileW, batch_);
+                                                                 winoMmad, tileH, tileW, batch_, rtTiling_);
 
         winograd.Init();
         winograd.IterateAll();
@@ -164,6 +169,7 @@ private:
     uint32_t dyH_ = 0;
     uint32_t dyW_ = 0;
     bool hf32_ = false;
+    BlockConfig::RtTiling rtTiling_{};
 };
 
 #endif

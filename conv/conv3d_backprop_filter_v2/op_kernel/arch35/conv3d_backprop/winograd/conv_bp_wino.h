@@ -31,14 +31,15 @@ public:
                                                  __gm__ SrcT* nk1c1k0c0Gm, NK1C1K0C0::Shape<SrcT>& nk1c1k0c0Shape,
                                                  __gm__ DstT* yGm, __gm__ float* tailGm,
                                                  WinoMMAD<SrcT, TilingT>& winoMmad, uint32_t tilesH, uint32_t tilesW,
-                                                 uint32_t batch)
+                                                 uint32_t batch, const BlockConfig::RtTiling& rtTiling)
         : tilesH_(tilesH),
           tilesW_(tilesW),
           batch_(batch),
           cin_(fmap.SrcC()),
           cout_(dy.SrcC()),
           gm2l1_(nk1c1k0c0Gm, nk1c1k0c0Shape),
-          dwFwd_(fmap, dy),
+          rtTiling_(rtTiling),
+          dwFwd_(fmap, dy, rtTiling),
           dwMmad_(winoMmad),
           dwInv_(yGm, tailGm)
     {}
@@ -72,13 +73,11 @@ public:
 
         constexpr uint32_t singleShapeTileH = BlockConfig::SingleShapeTileH<TilingT>();
         uint32_t cuttableK = batch_ * Ops::Base::CeilDiv(tilesH_, singleShapeTileH);
-        BlockConfig::RtTiling tiling;
-        BlockConfig::CalRtSingleShapeBlock<TilingT>(tiling, cout_, cin_);
 
         // 可切k的话进行尾轮循环（util 化：BlockIterator 单模板参 + SingleShape 运行时入参——
         // 分核档位由 CalRtSingleShapeBlock 运行时自适应，未命中调节档时为 TilingT 模板静态量）
-        auto blockIter = BlockIterator<BasicBlockIterDir>::Create(cuttableK > 1, cout_, cin_, tiling.singleShapeCout,
-                                                                  tiling.singleShapeCin);
+        auto blockIter = BlockIterator<BasicBlockIterDir>::Create(cuttableK > 1, cout_, cin_, rtTiling_.singleShapeCout,
+                                                                  rtTiling_.singleShapeCin);
 
         uint32_t watermarkResidentC = 0;
 
@@ -103,8 +102,8 @@ public:
         }
 
         auto tailIter = TailBlockSplitKIterator<BasicBlockIterDir, TilingT>(
-            blockIter.GetTailBlockCnt(), blockIter.GetSwizzleTopology(), cuttableK, cout_, cin_, tiling.singleShapeCin,
-            tiling.singleShapeCout);
+            blockIter.GetTailBlockCnt(), blockIter.GetSwizzleTopology(), cuttableK, cout_, cin_,
+            rtTiling_.singleShapeCin, rtTiling_.singleShapeCout);
 
         CoutCinRange localBlock;
         SplitKState splitKState;
@@ -207,6 +206,7 @@ private:
     WinoDetail::FwdTransformGM2L1Queue<SrcT> gm2l1_;
     WinoDetail::FwdTransformUB2L1Queue<SrcT> ub2l1_;
     WinoDetail::InvTransformL0C2UBSyncQueue<TilingT> l0c2ubSync_;
+    const BlockConfig::RtTiling& rtTiling_;
     WinoDetail::AivFwdTransformer<SrcT, TilingT> dwFwd_;
     WinoDetail::AicMmadComputer<SrcT, TilingT> dwMmad_;
     WinoInvTransformer<DstT, TilingT> dwInv_;
