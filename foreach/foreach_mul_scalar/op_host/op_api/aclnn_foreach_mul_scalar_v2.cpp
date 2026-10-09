@@ -8,8 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <vector>
 #include "aclnn_foreach_mul_scalar_v2.h"
 #include "foreach_mul_scalar_v2.h"
+#include "foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/aclnn_util.h"
 #include "op_api/op_api_def_nn.h"
@@ -168,14 +170,24 @@ static aclnnStatus ExecForeachMulScalarV2GetWorkspaceSize(const aclTensorList* x
     }
 
     // self如果非连续，需要转连续
-    std::vector<const aclTensor*> tensorsVec;
-    for (size_t j = 0; j < x->Size(); ++j) {
-        auto secondContiguous = l0op::Contiguous((*x)[j], uniqueExecutor.get());
-        CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec.push_back(secondContiguous);
-    }
-    auto contiguousTensors = uniqueExecutor.get()->AllocTensorList(tensorsVec.data(), tensorsVec.size());
+    auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
     CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // Allocate temporary outputs without copying the old output data.
+    std::vector<const aclTensor*> outputTensors;
+    outputTensors.reserve(out->Size());
+    for (size_t i = 0; i < out->Size(); ++i) {
+        auto outTensor = (*out)[i];
+        if (op::IsContiguous(outTensor) && outTensor->GetStorageShape() == outTensor->GetViewShape()) {
+            outputTensors.push_back(outTensor);
+        } else {
+            auto tempOut = uniqueExecutor->AllocTensor(outTensor->GetViewShape(), outTensor->GetDataType());
+            CHECK_RET(tempOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            outputTensors.push_back(tempOut);
+        }
+    }
+    auto contiguousOut = uniqueExecutor->AllocTensorList(outputTensors.data(), outputTensors.size());
+    CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // sclar to tensor
     const aclTensor* otherTensor;
@@ -188,9 +200,13 @@ static aclnnStatus ExecForeachMulScalarV2GetWorkspaceSize(const aclTensorList* x
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
     }
     CHECK_RET(otherTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     // 调用l0算子ForeachMulScalarV2进行计算
-    auto result = l0op::ForeachMulScalarV2(contiguousTensors, otherTensor, out, uniqueExecutor.get());
+    auto result = l0op::ForeachMulScalarV2(contiguousTensors, otherTensor, contiguousOut, uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_PARAM_INVALID);
+
+    // copy contiguousOut to non-contiguous out
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
