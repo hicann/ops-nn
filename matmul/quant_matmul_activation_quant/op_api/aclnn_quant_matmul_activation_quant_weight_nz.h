@@ -22,8 +22,21 @@ extern "C" {
  * @brief aclnnQuantMatmulActivationQuantWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现QuantMatmulActivationQuantWeightNz计算
- * @param [in] x1: matmul左矩阵，数据类型支持：FLOAT8_E4M3FN、FLOAT8_E5M2数据类型，数据格式支持ND。
- * @param [in] x2: matmul右矩阵，数据类型支持：FLOAT8_E4M3FN数据类型，数据格式支持NZ。
+ * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn、float8_e5m2、float4_e2m1数据类型，数据格式支持ND。
+ * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn、float4_e2m1数据类型，数据格式支持NZ。
+ * @param [in] x1ScaleOptional: x1的scale，数据类型支持：float8_e8m0。
+ * @param [in] x2Scale: x2的scale，数据类型支持：float8_e8m0。
+ * @param [in] biasOptional: bias，数据类型支持：float32。
+ * @param [in] transposeX1: x1是否转置。
+ * @param [in] transposeX2: x2是否转置。
+ * @param [in] groupSize: 分组大小，数据类型支持：int64。
+ * @param [in] activationType: 激活函数类型。
+ * @param [in] quantMode: 量化模式。
+ * @param [in] roundMode: 取整模式。
+ * @param [in] scaleAlg: scale算法。
+ * @param [in] dstTypeMax: 目标类型最大值。
+ * @param [out] yOut: 输出tensor，数据类型：float8_e4m3fn、float8_e5m2、float4_e2m1。
+ * @param [out] yScaleOut: 输出scale tensor，数据类型：float8_e8m0。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -35,10 +48,10 @@ ACLNN_API aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
     uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnQuantMatmulActivationQuant的第二段接口，用于执行计算。
+ * @brief aclnnQuantMatmulActivationQuantWeightNz的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu
- * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulActivationQuantGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
@@ -50,4 +63,4 @@ ACLNN_API aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(void* workspace, u
 }
 #endif
 
-#endif // QuantMatmulActivationQuantWeightNz
+#endif // OP_API_INC_QUANT_MATMUL_ACTIVATION_QUANT_NZ_H
