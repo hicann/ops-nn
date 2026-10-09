@@ -48,7 +48,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
                 return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, *ubSize);
     if (*ubSize == 0) {
-        OP_LOGW(context->GetNodeName(), "ubSize is 0, fallback to 0");
+        OP_LOGE(context->GetNodeName(), "ubSize is 0, get platform UB size failed");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -152,8 +152,8 @@ ge::graphStatus InplaceApplyFtrlTilingFunc(gert::TilingContext* context)
 {
     OP_LOGI(context->GetNodeName(), "Enter InplaceApplyFtrlTilingFunc");
 
-    uint64_t ubSize;
-    int64_t coreNum;
+    uint64_t ubSize = 0;
+    int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
