@@ -48,7 +48,7 @@ extern "C" {
  * @param [out] out: npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16(仅昇腾910B和910_93
  * AI处理器支持)，支持非连续的Tensor，数据格式支持ND。
- * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
+ * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
@@ -57,37 +57,11 @@ ACLNN_API aclnnStatus aclnnHardtanhBackwardGetWorkspaceSize(const aclTensor* gra
                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnHardtanhBackward的第一段接口，根据具体的计算流程，计算workspace大小。
- *
- * 算子功能：完成Hardtanh的反向计算
- *
- * 实现说明：api
- * 计算的基本路径：如下所示
- * ```mermaid
- * graph LR
- *     A[(gradOutput)] -->B([l0op::Contiguous])
- *     B -->C([l0op::HardtanhGrad])
- *     D[(self)] -->E([l0op::Contiguous])
- *     E -->C([l0op::HardtanhGrad])
- *     F((min)) --> C([l0op::HardtanhGrad])
- *     G((max)) --> C([l0op::HardtanhGrad])
- *     C --> H([l0op::ViewCopy])
- *     H --> K[(out)]
- * ```
- *
- * @param [in] gradOutput: npu
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16(仅昇腾910B和910_93
- * AI处理器支持)，支持非连续的Tensor，数据格式支持ND。
- * @param [in] self: npu
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16(仅昇腾910B和910_93
- * AI处理器支持)，支持非连续的Tensor，数据格式支持ND。
- * @param [in] min: 下界。
- * @param [in] max: 上界。
- * @param [out] out: npu
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16(仅昇腾910B和910_93
- * AI处理器支持)，支持非连续的Tensor，数据格式支持ND。
- * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
- * @param [out] executor: 返回op执行器，包含算子计算流程。
+ * @brief aclnnHardtanhBackward的第二段接口，用于执行计算。
+ * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnHardtanhBackwardGetWorkspaceSize获取。
+ * @param [in] executor: op执行器，包含了算子计算流程。
+ * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnHardtanhBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,

@@ -22,9 +22,11 @@ extern "C" {
  * @domain aclnn_math
  * 算子功能：aclnnFastGelu的反向计算
  *
+ * @param [in] gradOutput: 输入张量，npu device侧的aclTensor,
+ * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
  * @param [in] self: 输入张量，npu device侧的aclTensor,
  * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
- * @param [in] out: 输出张量，npu device侧的aclTensor,
+ * @param [out] gradInput: 输出张量，npu device侧的aclTensor,
  * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包括算子计算流程
