@@ -209,6 +209,7 @@ public:
         LocalTensor<int32_t> argmaxUb = indicesQue.DeQue<int32_t>();
         LocalTensor<int32_t> argmaxTranUb = indicesTransposeBuf.Get<int32_t>();
         TransposeBase16M8(argmaxTranUb, argmaxUb, params_.singleCoreNc, block_.dohowoAlign8);
+        PipeBarrier<PIPE_V>();
         indicesQue.FreeTensor(argmaxUb);
 
         CopyInGrad();
@@ -232,6 +233,8 @@ public:
 
         LocalTensor<float> kernelIdx = kernelIdxBuf.Get<float>();
         uint64_t ncCoreIdx = core_.ncCntIndex * params_.singleCoreNc;
+        event_t eventPrevMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventPrevMTE3ToV);
         for (uint64_t woCntIndex = 0; woCntIndex < block_.woShape; woCntIndex++) {
             uint64_t curWoBlockIdx = woBlockIdx + woCntIndex;
             block_.startW = FloorDiv(curWoBlockIdx * params_.wiDim, params_.woDim);
@@ -247,6 +250,7 @@ public:
                     params_.maxKdhwLen, repeatParams);
             PipeBarrier<PIPE_V>();
             // 5.2 Select
+            WaitFlag<HardEvent::MTE3_V>(eventPrevMTE3ToV);
             LocalTensor<TGrad> gradSelUb = tempGradBuf.Get<TGrad>();
             SelectGrad(gradSelUb, maskUb, gradTranUb, woCntIndex);
             PipeBarrier<PIPE_V>();
@@ -254,9 +258,12 @@ public:
             LocalTensor<TGrad> yTranspose = yTransposeBuf.Get<TGrad>();
             LocalTensor<float> yTransposeFP32 = yTransposeBuf.Get<float>();
             CalcY(gradSelUb, yTranspose, yTransposeFP32);
+            PipeBarrier<PIPE_V>();
             // 5.4 Y transpose
             YTransposeCopyOut(yTranspose, yTransposeFP32);
+            SetFlag<HardEvent::MTE3_V>(eventPrevMTE3ToV);
         }
+        WaitFlag<HardEvent::MTE3_V>(eventPrevMTE3ToV);
     }
 
     __aicore__ inline void GenkernelIndex(LocalTensor<float>& dstLocal)

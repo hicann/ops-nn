@@ -373,6 +373,8 @@ public:
         LocalTensor<int32_t> argmaxTranUb = totalUb[ubOffset_.argmaxTran].ReinterpretCast<int32_t>();
         uint64_t dohowoAlign8 = AlignUp(block_.dohowoShape, BLOCK_NUM_32);
         TransposeAddrBase16M8(argmaxTranAddrList_, argmaxAddrList_, para_.baseNc, dohowoAlign8);
+        // argmaxUb 之后会复用为 tmpIndex/tmpGrad，等转置读完再复用
+        PipeBarrier<PIPE_V>();
 
         CopyInGrad();
         event_t eventGradMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -395,6 +397,10 @@ public:
         LocalTensor<TY> yTranUb = totalUb[ubOffset_.yTran].ReinterpretCast<TY>();
         LocalTensor<float> yTranUbFp32 = totalUb[ubOffset_.yTran].ReinterpretCast<float>();
         Duplicate(yTranUbFp32, 0.0f, para_.baseDiHiWiAlign * para_.baseNc);
+
+        event_t eventGradMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventGradMTE3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventGradMTE3ToV);
 
         for (uint64_t kdId = 0; kdId < para_.kd; kdId++) {
             for (uint64_t khId = 0; khId < para_.kh; khId++) {
@@ -437,9 +443,8 @@ public:
                 Cast(yTranUb, yTranUbFp32, RoundMode::CAST_RINT, para_.baseDiHiWiAlign * para_.baseNc);
             }
         }
-        event_t eventGradMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-        SetFlag<HardEvent::MTE3_V>(eventGradMTE3ToV);
-        WaitFlag<HardEvent::MTE3_V>(eventGradMTE3ToV); // 考虑不与y复用，容易阻塞
+        PipeBarrier<PIPE_V>();
+
         event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         if constexpr (is_same<TY, float>::value) {
             TransposeAddrBase8M16(yAddrList_, yTranAddrList_, para_.baseDiHiWiAlign, para_.baseNc);
