@@ -17,24 +17,32 @@ from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.dataset.base_dataset import OpsDataset
 
-def matmul_celoss_backward(input, weight, softmax, target_mask_bool, masked_target, grad):
+
+def matmul_celoss_backward(
+    input, weight, softmax, target_mask_bool, masked_target, grad
+):
     # Add the gradient from matching classes.
-    arange_1d = torch.arange(start=0, end=softmax.size()[0], device=softmax.device)  # [BT]
+    arange_1d = torch.arange(
+        start=0, end=softmax.size()[0], device=softmax.device
+    )  # [BT]
 
     target_mask = target_mask_bool
-    softmax_update = 1.0 - target_mask.view(-1).float() # [BT,]
-    softmax[arange_1d, masked_target] -= softmax_update  # masked_target_1d的值代表每一行的index
-    
+    softmax_update = 1.0 - target_mask.view(-1).float()  # [BT,]
+    softmax[arange_1d, masked_target] -= (
+        softmax_update  # masked_target_1d的值代表每一行的index
+    )
+
     # Finally elementwise multiplication with the output gradients.
-    softmax.mul_(grad.unsqueeze(dim=-1)) # [BT, V]
+    softmax.mul_(grad.unsqueeze(dim=-1))  # [BT, V]
 
     # 对输入input, weight求导
     target_dtype = weight.dtype
     if target_dtype != softmax.dtype:
         softmax = softmax.to(target_dtype)
-    grad_input = torch.matmul(softmax, weight) # [BT, H]
-    grad_weight = torch.matmul(softmax.t(), input) # [V, H]
+    grad_input = torch.matmul(softmax, weight)  # [BT, H]
+    grad_weight = torch.matmul(softmax.t(), input)  # [V, H]
     return grad_input, grad_weight
+
 
 @register("aclnn_fused_linear_cross_entropy_loss_grad")
 class FusedLinearCrossEntropyLossGradApi(BaseApi):
@@ -44,13 +52,6 @@ class FusedLinearCrossEntropyLossGradApi(BaseApi):
 
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         func = matmul_celoss_backward
-        
-        if self.device == "gpu":
-            device = f"cuda:{self.device_id}"
-        elif self.device == "npu":
-            device = f"{self.device}:{self.device_id}"
-        else:
-            device = "cpu"
 
         # debug
         # print('-----------------------------', flush=True)
@@ -60,29 +61,28 @@ class FusedLinearCrossEntropyLossGradApi(BaseApi):
         #     else:
         #         print(f'{k}: {v}')
         # # if input_data.kwargs['input'].dtype != torch.float32:
-        # #     torch.save(input_data.kwargs, '/home/jisihuai/workspace/FusedMatmulCelossGrad/cppExtensionInvocation-aclnn/dump.pt')
+        # #     torch.save(input_data.kwargs, '/home/username/workspace/FusedMatmulCelossGrad/cppExtensionInvocation-aclnn/dump.pt')
         # #     print('----------- save success ----------')
         # print(end='', flush=True)
-            
-        
+
         output = None
         if with_output:
             output = func(
-                input_data.kwargs['input'],
-                input_data.kwargs['weight'],
-                input_data.kwargs['softmaxOptional'],
-                input_data.kwargs['targetMask'],
-                input_data.kwargs['maskedTarget'],
-                input_data.kwargs['grad']                
+                input_data.kwargs["input"],
+                input_data.kwargs["weight"],
+                input_data.kwargs["softmaxOptional"],
+                input_data.kwargs["targetMask"],
+                input_data.kwargs["maskedTarget"],
+                input_data.kwargs["grad"],
             )
         else:
             func(
-                input_data.kwargs['input'],
-                input_data.kwargs['weight'],
-                input_data.kwargs['softmaxOptional'],
-                input_data.kwargs['targetMask'],
-                input_data.kwargs['maskedTarget'],
-                input_data.kwargs['grad']  
+                input_data.kwargs["input"],
+                input_data.kwargs["weight"],
+                input_data.kwargs["softmaxOptional"],
+                input_data.kwargs["targetMask"],
+                input_data.kwargs["maskedTarget"],
+                input_data.kwargs["grad"],
             )
 
         return output
