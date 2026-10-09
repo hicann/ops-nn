@@ -86,6 +86,7 @@ if [ "${non_skip_count}" -eq 0 ]; then
     mkdir -p build_out
     touch build_out/skip_build.run
     touch single.tar.gz
+    echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
     exit 0
 fi
 if [[ "${task_name}" == compile_single* ]]; then
@@ -204,6 +205,7 @@ case "${task_name}" in
             echo "not need build mobile_station"
             mkdir build_out
             touch build_out/cann-ops-nn-kirinx90_linux-x86_64.run
+            echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
             exit 0
         fi
         ;;
@@ -216,6 +218,7 @@ case "${task_name}" in
             echo "not need build mobile_station"
             mkdir build_out
             touch build_out/cann-ops-nn-kirinx90_linux-x86_64.run
+            echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
             exit 0
         fi
         ;;
@@ -228,6 +231,7 @@ case "${task_name}" in
             echo "not need build mobile_station"
             mkdir build_out
             touch build_out/cann-ops-nn-kirin9030_linux-x86_64.run
+            echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
             exit 0
         fi
         ;;
