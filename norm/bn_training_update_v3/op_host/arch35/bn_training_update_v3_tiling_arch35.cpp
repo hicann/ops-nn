@@ -16,7 +16,7 @@
  *        三路径分派（向量访存 32B 对齐约束 ⇒ 系数切片仅 64 对齐整块）：
  *        Flat（C%64==0 且 C≤12288，静态 pattern=coeff，plane=64 元向量块）/
  *        Stream（C%64==0 且 C>12288，驻留 12288 chunk 环）/
- *        Rows（C%64!=0 任意 C，plane=一行，行距 pitch 逐行 DataCopyPad；行预算超 UB 拒收）。
+ *        Rows/RowsWindowed（C%64!=0 任意 C；rows 占不满核时按 c 窗口做 inner 切分补齐并行度）。
  *        统计量恒为 [C] 逻辑布局，元素数=C 校验；numRecip=fp32(1/num)；
  *        batchVarScaler=fp32(num/(num-1))（num==1 时 0.0）；无 workspace。
  */
@@ -210,7 +210,7 @@ ge::graphStatus BNTrainingUpdateV3Tiling::SelectNhwcPath()
 ge::graphStatus BNTrainingUpdateV3Tiling::CalcNhwcSplit()
 {
     if (nhwcPath_ == NHWC_PATH_ROWS) {
-        // Rows：plane=一行（C 元素，逐行 1D DataCopyPad），units=rows，inner 恒 1
+        // Rows：plane=一行；rows 占不满核时由 CalcNhwcRowsUbTile 转 RowsWindowed 并按 c 窗口 inner 切分
         units_ = rows_;
         innerSize_ = 1;
         innerCores_ = 1;
@@ -247,33 +247,55 @@ void BNTrainingUpdateV3Tiling::SplitPlanesAcrossCores()
 // Rows 行距 pitch 的 UB tile：pitch 64 元素对齐（kernel 行尾 64 元向量无掩码读不越界，兼保证
 // 32B 行基址对齐）。系数 buffer 驻留 2×ceil64(C)×4B（一次构建，替代 RESERVED_UB 内 256 项槽位）；
 // x/y 双队列各 DOUBLE_BUFFER=2 份行 tile，共 4×tileRows×rowBytes；ubTileSize 复用为 tileRows。
-// 整行预算放不下（odd-C 超大）时切 RowsWindowed（nhwcPath=4）：c 窗口外层 × 行内层——系数窗
-// W 元从任意通道偏移按 64 对齐直算重建（无拷贝拼接，规避 VEC 340），每窗流式处理本核全部行的
-// 对应段；全部 UB 占用（4W×dtype + 2W×4 + bulk staging）与 C 无关 → odd-C 支持面无上限，且
-// 每核系数计算总量仍为 C/64（每通道恰好一次，与快路径同量）
+// 整行预算放不下（odd-C 超大）或 rows 占不满核时切 RowsWindowed（nhwcPath=4）：c 窗口外层 ×
+// 行内层——系数窗 W 元从任意通道偏移按 64 对齐直算重建（无拷贝拼接，规避 VEC 340）；rows 不足时
+// 用 innerCores 把 c 窗口分摊到更多核，UB 占用（4W×dtype + 2W×4 + bulk staging）与 C 无关。
 ge::graphStatus BNTrainingUpdateV3Tiling::CalcNhwcRowsUbTile()
 {
-    int64_t rowBytes = ((numC_ + VL - 1) / VL * VL) * xDtypeSize_;
-    int64_t coeffBytes = 2 * ((numC_ + VL - 1) / VL * VL) * FLOAT_BYTES - AFFINE_PRECOMPUTE_BYTES;
+    int64_t pitch = (numC_ + VL - 1) / VL * VL;
+    int64_t rowBytes = pitch * xDtypeSize_;
+    int64_t coeffBytes = 2 * pitch * FLOAT_BYTES - AFFINE_PRECOMPUTE_BYTES;
     int64_t statBulkBytes = 4 * NHWC_STAT_BULK_ELEMS * FLOAT_BYTES - STAT_STAGING_BYTES;
     int64_t ubAvail = ubSize_ - RESERVED_UB - coeffBytes - statBulkBytes;
     ubTileSize_ = ubAvail / (4 * rowBytes);
-    if (ubTileSize_ >= 1) {
+    if (ubTileSize_ >= 1 && (unitCores_ >= coreNum_ || numC_ <= VL)) {
         return ge::GRAPH_SUCCESS; // 快路径：整行 tile + 系数一次驻留
     }
-    // 窗口流式：W = min(ceil64(C), UB 可容纳)，64 对齐；ubTileSize 复用为 W（c 窗口宽度）。
-    // 预算：RESERVED_UB + (2W×4 − AFFINE_PRE) + statBulk + 4W×dtypeSize ≤ ub
+
     nhwcPath_ = NHWC_PATH_ROWS_BLOCKED;
     int64_t wAfford = (ubSize_ - RESERVED_UB - statBulkBytes + AFFINE_PRECOMPUTE_BYTES) /
                       (2 * FLOAT_BYTES + 4 * xDtypeSize_);
+    int64_t minWindow = (xDtypeSize_ == 2) ? (2 * VL) : VL;
     int64_t wMax = (wAfford / VL) * VL;
-    OP_CHECK_IF(wMax < VL,
+    OP_CHECK_IF(wMax < minWindow,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     context_->GetNodeName(), "ubTileSize", "0",
                     ("NHWC rows path: C=" + std::to_string(numC_) + " window budget exceeds UB").c_str()),
                 return ge::GRAPH_FAILED);
-    int64_t pitch = (numC_ + VL - 1) / VL * VL;
-    ubTileSize_ = (pitch < wMax) ? pitch : wMax;
+
+    int64_t maxWindows = (numC_ + minWindow - 1) / minWindow;
+    innerCores_ = 1;
+    if (unitCores_ < coreNum_ && maxWindows > 1) {
+        int64_t wantCores = coreNum_ / unitCores_;
+        innerCores_ = (wantCores < maxWindows) ? wantCores : maxWindows;
+        if (innerCores_ < 1) {
+            innerCores_ = 1;
+        }
+    }
+    int64_t window = pitch;
+    if (innerCores_ > 1) {
+        window = (numC_ + innerCores_ - 1) / innerCores_;
+        window = (window + VL - 1) / VL * VL;
+    }
+    if (window < minWindow) {
+        window = minWindow;
+    }
+    if (window > wMax) {
+        window = wMax;
+    }
+    ubTileSize_ = (pitch < window) ? pitch : window;
+    innerSize_ = (numC_ + ubTileSize_ - 1) / ubTileSize_;
+    innerPerCore_ = (innerSize_ + innerCores_ - 1) / innerCores_;
     return ge::GRAPH_SUCCESS;
 }
 

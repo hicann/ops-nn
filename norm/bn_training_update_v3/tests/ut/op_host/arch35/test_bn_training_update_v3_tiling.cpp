@@ -276,21 +276,21 @@ TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_stream)
     EXPECT_EQ(blockDim, 64);
 }
 
-// NHWC Rows 大 C：C%64!=0 且 C>192（如 C=4097）：plane=一行，units=rows
+// NHWC Rows 大 C：C%64!=0 且 rows 足够占满核（如 rows=70）：plane=一行，units=rows
 TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows)
 {
     uint64_t key = 0;
     int64_t blockDim = 0;
     BNTrainingUpdateV3TilingData td = {};
-    EXPECT_EQ(RunTiling({3, 4097}, 4097, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+    EXPECT_EQ(RunTiling({70, 4097}, 4097, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(td.isNhwc, 1);
     EXPECT_EQ(td.nhwcPath, 3);
     EXPECT_EQ(td.numC, 4097);
-    EXPECT_EQ(td.units, 3); // rows=3
+    EXPECT_EQ(td.units, 70); // rows=70
     EXPECT_EQ(td.innerSize, 1);
     EXPECT_TRUE(td.ubTileSize >= 1); // tileRows ≥ 1
-    EXPECT_EQ(blockDim, 3);
+    EXPECT_EQ(blockDim, 64);
 }
 
 // NHWC rank2 最小形态：C=8（C%64!=0 → Rows）
@@ -389,19 +389,25 @@ TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows_windowed_huge_c)
     EXPECT_EQ(td.numC, 30000);
     EXPECT_EQ(td.units, 2);                                      // rows=2
     EXPECT_TRUE(td.ubTileSize >= 64 && td.ubTileSize % 64 == 0); // 窗口宽 W
-    EXPECT_EQ(blockDim, 2);
+    EXPECT_EQ(td.innerCores, 32);
+    EXPECT_EQ(td.innerSize, 32);
+    EXPECT_EQ(blockDim, 64);
 }
 
 // NHWC Rows 窗口流式第二档：fp16 大 odd-C（整行预算 4×pitch×2+系数远超 UB）
 TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows_windowed_huge_c_f16)
 {
     uint64_t key = 0;
+    int64_t blockDim = 0;
     BNTrainingUpdateV3TilingData td = {};
-    EXPECT_EQ(RunTiling({7, 15608}, 15608, key, nullptr, ge::DT_FLOAT16, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+    EXPECT_EQ(RunTiling({7, 15608}, 15608, key, &blockDim, ge::DT_FLOAT16, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(td.nhwcPath, 4);
     EXPECT_EQ(td.numC, 15608);
     EXPECT_TRUE(td.ubTileSize >= 64 && td.ubTileSize % 64 == 0);
+    EXPECT_EQ(td.innerCores, 9);
+    EXPECT_EQ(td.innerSize, 9);
+    EXPECT_EQ(blockDim, 63);
 }
 
 // epsilon 为 REQUIRED 属性，缺失须拒

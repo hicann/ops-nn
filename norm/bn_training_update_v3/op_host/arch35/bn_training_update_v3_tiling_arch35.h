@@ -57,7 +57,7 @@ private:
     int64_t numC_ = 0;      // C（ND：dim1；NHWC：最后一维）
     int64_t rows_ = 0;      // NHWC：numel / C（= num，numRecip/batchVarScaler 分母）
     int64_t nhwcPath_ = 0;  // NHWC 内部分派：1=Flat 2=Stream 3=Rows
-    int64_t innerSize_ = 0; // R = prod(d2:)（ND）；NHWC：Flat/Stream=64、Rows=1（CalcNhwcSplit 填）
+    int64_t innerSize_ = 0; // R = prod(d2:)（ND）；NHWC：Flat/Stream=64、Rows=1、RowsWindowed=c 窗口数
     int64_t units_ = 0;
     int64_t xDtypeSize_ = 4;
     float epsilon_ = 0.0f;

@@ -45,8 +45,8 @@
  *          batch_variance 为 save_variance * batchVarScaler），全程恰好一次，零核间通信。无 workspace。
  *
  *        NHWC 路径（isNhwc=1，x 任意 rank≥2、C=最后一维、rows=numel/C=num，tilingKey 恒 0
- *        运行时分发；统计量路径零改动，blockIdx==0 核全量写出）三路径（向量访存 32B 对齐
- *        约束 ⇒ 系数切片仅能取 64 对齐整块）：
+ *        运行时分发；统计量由 blockIdx==0 全量写出，RowsWindowed 多窗口切核时按首行块归属核
+ *        分摊对应 c 窗口）三路径（向量访存 32B 对齐约束 ⇒ 系数切片仅能取 64 对齐整块）：
  *        - Flat（nhwcPath=1，C%64==0 且 C≤12288）/Stream（nhwcPath=2，C%64==0 且 C>12288）：
  *          循环体同构。flat 连续 DMA，逐 64 向量按 (v mod C/64) 取 pattern 向量做 per-element
  *          Mul→Add；pattern[j]=coeff[j%C] 周期恰为 C，chunk 落址恒 64 对齐。系数按窗口惰性
@@ -157,6 +157,12 @@ public:
             writeBatch_ = (blockIdx == 0);
             batchC0_ = 0;
             batchC1_ = tl_->numC;
+            if (tl_->nhwcPath == 4 && tl_->innerCores > 1) {
+                writeBatch_ = (ncIdx == 0 && myR_ > 0);
+                batchC0_ = rStart_ * tl_->ubTileSize;
+                int64_t batchC1 = batchC0_ + myR_ * tl_->ubTileSize;
+                batchC1_ = (batchC1 < tl_->numC) ? batchC1 : tl_->numC;
+            }
             patternVecs_ = tl_->numC / static_cast<int64_t>(VL_FP32); // M=C/64（Flat/Stream 仅承接 C%64==0）
             // Rows 行距：64 元素对齐（行尾向量读不越界），与 tiling CalcNhwcRowsUbTile 的 rowBytes 同口径
             int64_t vl = static_cast<int64_t>(VL_FP32);
@@ -894,14 +900,16 @@ private:
     // RowsWindowed（nhwcPath=4，odd-C 无上限）：c 窗口外层 × 行内层。每窗 [c0, c0+cnt) 先从任意
     // 通道偏移按 64 对齐直算重建系数窗（BuildNhwcPatternBulk：staged 统计量切片 + 直写窗内 64
     // 对齐落址——无拷贝拼接，规避 VEC 340），再流式处理本核全部行的对应段（W 元大块 DMA，逐行
-    // 双缓冲）。每核系数计算总量 C/64（每通道恰好一次，与快路径同量）；UB 全部占用与 C 无关
+    // 双缓冲）。rows 占不满核时按 innerCores 分摊 c 窗口；UB 全部占用与 C 无关
     __aicore__ inline void ProcessNhwcRowsWindowed()
     {
         int64_t rowEnd = planeStart_ + planeNum_;
         int64_t window = tl_->ubTileSize; // c 窗口宽度（tiling 已按 UB 预算取 min(ceil64(C), W_MAX)）
         __ubuf__ float* multAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
         __ubuf__ float* addAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
-        for (int64_t c0 = 0; c0 < tl_->numC; c0 += window) {
+        int64_t winEnd = rStart_ + myR_;
+        for (int64_t w = rStart_; w < winEnd; w++) {
+            int64_t c0 = w * window;
             int64_t cnt = (tl_->numC - c0) < window ? (tl_->numC - c0) : window;
             BuildNhwcPatternBulk(multAddr, addAddr, c0, cnt, 0);
             DataCopyExtParams cpSeg{1, static_cast<uint32_t>(cnt * sizeof(T)), 0, 0, 0};

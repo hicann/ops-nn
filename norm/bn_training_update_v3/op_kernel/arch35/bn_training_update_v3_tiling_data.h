@@ -35,9 +35,9 @@
  *     Rows（nhwcPath=3）：C%64≠0 且整行预算内（fp32 C≲9100/fp16≲13700）。行距 pitch（64 元素
  *       对齐）的 UB tile，逐行 1D DataCopyPad；行内按 64-chunk 取 coeff 无旋转连续段（天然对齐），
  *       全量系数一次驻留。
- *     RowsWindowed（nhwcPath=4）：C%64≠0 且整行预算外（odd-C 无上限）。c 窗口外层 × 行内层：
- *       系数窗 W 元从任意通道偏移按 64 对齐直算重建（无拷贝拼接，规避 VEC 340），每窗流式处理
- *       本核全部行的对应段；每核系数计算总量仍 C/64（每通道恰好一次），UB 占用与 C 无关。
+ *     RowsWindowed（nhwcPath=4）：C%64≠0 且整行预算外，或 rows 占不满核需补并行度。c 窗口外层 ×
+ *       行内层：系数窗 W 元从任意通道偏移按 64 对齐直算重建（无拷贝拼接，规避 VEC 340），每窗流式
+ *       处理本核行范围的对应段；多窗口切核时 innerSize=窗口数、innerPerCore=每核窗口数，UB 占用与 C 无关。
  *
  * 统一切分模型：units 个独立 plane 按 unitCores 均分（former/latter），plane 不足时
  * plane 内 inner 维再切 innerCores 份；blockIdx = unitIdx * innerCores + innerIdx。无 workspace。
@@ -52,7 +52,7 @@
 struct BNTrainingUpdateV3TilingData {
     int64_t numN;      // N（kernel 不直接消费：units/numC 已含；保留供 host 日志与问题定位核对）
     int64_t numC;      // C（ND：dim1；NHWC：最后一维）
-    int64_t innerSize; // R = prod(d2:)（ND）；NHWC-Flat/Stream=64（向量宽），Rows=1
+    int64_t innerSize; // R = prod(d2:)（ND）；NHWC-Flat/Stream=64（向量宽），Rows=1，RowsWindowed=c 窗口数
     int64_t units;     // plane 数（ND：N*C；NHWC：rows 或向量块总数）
     int64_t unitCores; // plane 维切分核数（kernel 由 blockIdx/formerCoreNum 反推，保留供 host 日志）
     int64_t formerCoreNum; // 前 formerCoreNum 核每核 formerUnits 个 plane，其余 latterUnits 个
