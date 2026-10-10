@@ -96,10 +96,10 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
         <td>index</td>
         <td>输入</td>
         <td>经过aclnnTransSparse4to2Para接口压缩后计算得到的索引矩阵。</td>
-        <td><ul><li>4维输入，ViewShape可表达为ceil（k_half / 32），ceil(n / 16)，16，8）。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参indexDims和indexDimsNum获取,获取的值为4维，与ViewShape相同，为（ceil（k_half / 32），ceil(n / 16)，16，8）。</li></ul></td>
+        <td><ul><li>仅支持2维输入，ViewShape可表达为（n，ceil（k / 8））。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参indexDims和indexDimsNum获取，获取的值为4维，可表达为（ceil（k_half / 32），ceil（n / 16），16，8）。</li></ul></td>
         <td>UINT8</td>
         <td>ND</td>
-        <td>4</td>
+        <td>2</td>
         <td>×</td>
       </tr>
       <tr>
