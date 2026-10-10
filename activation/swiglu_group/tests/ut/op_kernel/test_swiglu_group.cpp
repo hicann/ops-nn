@@ -60,7 +60,7 @@ void RunKernelBasic(float clampLimit)
 
     uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(bs * d * sizeof(half)));
     uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(bs * splitD * sizeof(half)));
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(sizeof(SwigluGroupTilingData)));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -74,7 +74,6 @@ void RunKernelBasic(float clampLimit)
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
-    AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
 
@@ -89,7 +88,7 @@ void RunKernelGroupLarge(int64_t g)
     uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(bs * d * sizeof(half)));
     uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(bs * splitD * sizeof(half)));
     uint8_t* groupIndex = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(g * sizeof(int64_t)));
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(sizeof(SwigluGroupTilingData)));
 
     // group_index counts sum to bs so realBs == bs (all rows processed).
@@ -116,7 +115,7 @@ void RunKernelGroupLarge(int64_t g)
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(groupIndex);
-    AscendC::GmFree(workspace);
+
     AscendC::GmFree(tiling);
 }
 

@@ -35,43 +35,35 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
                                                          GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace,
                                                          GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    GM_ADDR userWs = GetUserWorkspace(workspace);
-    if (userWs == nullptr) {
-        return;
-    }
     TPipe pipe;
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
     if (TILING_KEY_IS(BLOCK_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
-        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, workspace, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(BLOCK_QUANT_YORIGIN_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
-        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, workspace, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MX_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
-        RunMxQuant<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false>(x, weight, groupIndex, y, yScale, yOrigin, userWs,
+        RunMxQuant<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false>(x, weight, groupIndex, y, yScale, yOrigin, workspace,
                                                            &tilingData, &pipe);
     } else if (TILING_KEY_IS(MX_QUANT_YORIGIN_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
-        RunMxQuant<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true>(x, weight, groupIndex, y, yScale, yOrigin, userWs,
+        RunMxQuant<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true>(x, weight, groupIndex, y, yScale, yOrigin, workspace,
                                                           &tilingData, &pipe);
     } else if (TILING_KEY_IS(MXFP4_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluMxFp4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
-        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, workspace, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MXFP4_QUANT_YORIGIN_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluMxFp4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
-        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, workspace, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(MX_QUANT_EXTEND_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantMxExtendTilingData, tilingData, tiling);
@@ -81,13 +73,14 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
         RunMxQuantExtend<DTYPE_X, DTYPE_Y>(x, weight, groupIndex, y, yScale, yOrigin, tilingData, &pipe);
     } else if (TILING_KEY_IS(DYNAMIC_HIFP8_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantHifp8TilingData, hifp8TilingData, tiling);
+        GM_ADDR userWs = hifp8TilingData.isGroup ? nullptr : GetUserWorkspace(workspace);
         SwigluGroupQuantDynamicHifp8Ops::SwigluGroupQuantDynamicHifp8Kernel<DTYPE_X> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &hifp8TilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(STATIC_HIFP8_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantHifp8TilingData, hifp8TilingData, tiling);
         SwigluGroupQuantStaticHifp8Ops::SwigluGroupQuantStaticHifp8Kernel<DTYPE_X> op;
-        op.Init(x, weight, groupIndex, scale, y, yOrigin, userWs, &hifp8TilingData, &pipe);
+        op.Init(x, weight, groupIndex, scale, y, yOrigin, nullptr, &hifp8TilingData, &pipe);
         op.Process();
     }
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);

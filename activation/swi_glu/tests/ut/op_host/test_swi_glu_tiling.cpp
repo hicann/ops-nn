@@ -115,7 +115,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_002)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    // todo check tiling result
+    EXPECT_EQ(tiling_context->GetWorkspaceSizes(1)[0], 0U);
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1);
@@ -295,6 +295,7 @@ TEST_F(SwiGluTiling, swi_glu_tiling_100)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100);
+    EXPECT_EQ(tiling_context->GetWorkspaceSizes(1)[0], 0U);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
 }

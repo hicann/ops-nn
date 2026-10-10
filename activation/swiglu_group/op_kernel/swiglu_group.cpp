@@ -20,19 +20,11 @@ using namespace AscendC;
 extern "C" __global__ __aicore__ void swiglu_group(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y,
                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    GM_ADDR userWs = GetUserWorkspace(workspace);
-    if (userWs == nullptr) {
-        return;
-    }
     GET_TILING_DATA(tilingData, tiling);
     TPipe pipe;
     if (TILING_KEY_IS(SWIGLU_GROUP_TILING_KEY)) {
         SwigluGroup::SwigluGroupPerf<DTYPE_X> op;
-        op.Init(x, weight, groupIndex, y, userWs, &tilingData, &pipe);
+        op.Init(x, weight, groupIndex, y, workspace, &tilingData, &pipe);
         op.Process();
     }
 }

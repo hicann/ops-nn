@@ -397,20 +397,17 @@ void SwigluGroupQuantHifp8Tiling::SetTilingKey()
 
 ge::graphStatus SwigluGroupQuantHifp8Tiling::GetWorkspaceSize()
 {
-    auto platformInfo = context_->GetPlatformInfo();
-    if (platformInfo == nullptr) {
-        workspaceSize_ = 0;
-        if (!isGroup_ && quantMode_ != QUANT_MODE_STATIC) {
-            workspaceSize_ += (usedCoreNum_ + 1) * SIZE_OF_FLOAT + BLOCK_SIZE;
-        }
+    workspaceSize_ = 0;
+    // Only dynamic non-group quantization needs workspace for cross-core reduction.
+    if (isGroup_ || quantMode_ == QUANT_MODE_STATIC) {
         return ge::GRAPH_SUCCESS;
     }
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    workspaceSize_ = sysWorkspaceSize;
-    if (!isGroup_ && quantMode_ != QUANT_MODE_STATIC) {
-        workspaceSize_ += (usedCoreNum_ + 1) * SIZE_OF_FLOAT + BLOCK_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    if (platformInfo != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+        workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     }
+    workspaceSize_ += (usedCoreNum_ + 1) * SIZE_OF_FLOAT + BLOCK_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 

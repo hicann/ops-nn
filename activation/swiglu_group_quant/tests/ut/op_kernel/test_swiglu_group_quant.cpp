@@ -47,7 +47,7 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWeigh
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
     uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -91,7 +91,6 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWeigh
     if (hasWeight) {
         AscendC::GmFree(weight);
     }
-    AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
 
@@ -122,7 +121,7 @@ void RunMxKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWei
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
     uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -166,7 +165,6 @@ void RunMxKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool hasWei
     if (hasWeight) {
         AscendC::GmFree(weight);
     }
-    AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
 
@@ -198,7 +196,7 @@ void RunMxFp4KernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool has
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
     uint8_t* weight = hasWeight ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize)) : nullptr;
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -242,7 +240,6 @@ void RunMxFp4KernelWithTilingKey(uint64_t tilingKey, bool outputOrigin, bool has
     if (hasWeight) {
         AscendC::GmFree(weight);
     }
-    AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
 
@@ -277,7 +274,7 @@ void RunHifp8KernelWithTilingKey(uint64_t tilingKey, bool hasScale, bool outputO
     uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = outputOrigin ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize)) : nullptr;
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = hasScale ? nullptr : reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -312,7 +309,9 @@ void RunHifp8KernelWithTilingKey(uint64_t tilingKey, bool hasScale, bool outputO
     AscendC::GmFree(yScale);
     if (outputOrigin)
         AscendC::GmFree(yOrigin);
-    AscendC::GmFree(workspace);
+    if (workspace != nullptr) {
+        AscendC::GmFree(workspace);
+    }
     AscendC::GmFree(tiling);
 }
 
@@ -355,7 +354,7 @@ void RunHifp8YOriginWeightVerify(uint64_t tilingKey, bool isDynamic)
     uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
     uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
     uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
-    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* workspace = isDynamic ? reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32)) : nullptr;
     uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
     auto* xHalf = reinterpret_cast<half*>(x);
@@ -423,7 +422,9 @@ void RunHifp8YOriginWeightVerify(uint64_t tilingKey, bool isDynamic)
     AscendC::GmFree(y);
     AscendC::GmFree(yScale);
     AscendC::GmFree(yOrigin);
-    AscendC::GmFree(workspace);
+    if (workspace != nullptr) {
+        AscendC::GmFree(workspace);
+    }
     AscendC::GmFree(tiling);
 }
 

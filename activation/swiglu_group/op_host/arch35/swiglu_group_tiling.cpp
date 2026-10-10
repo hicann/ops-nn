@@ -22,7 +22,7 @@
 using namespace ge;
 namespace optiling {
 namespace {
-constexpr uint64_t WORKSPACE_SIZE = 32;
+constexpr uint64_t DEFAULT_WORKSPACE_SIZE = 0;
 int64_t CeilDiv(int64_t x, int64_t y)
 {
     if (y != 0) {
@@ -512,7 +512,7 @@ ge::graphStatus SwigluGroupTiling::DoOpTiling()
 
 ge::graphStatus SwigluGroupTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = WORKSPACE_SIZE;
+    workspaceSize_ = DEFAULT_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 

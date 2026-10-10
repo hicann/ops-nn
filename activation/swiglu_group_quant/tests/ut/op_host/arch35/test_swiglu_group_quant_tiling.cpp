@@ -178,6 +178,16 @@ void ExecuteTilingCase(const TilingCase& tc)
 
     auto status = tilingFunc(tilingContext);
     EXPECT_EQ(status, tc.status);
+    if (status == ge::GRAPH_SUCCESS) {
+        auto* workspace = tilingContext->GetWorkspaceSizes(1);
+        ASSERT_NE(workspace, nullptr);
+        if (tc.quantMode == 3 && !tc.hasGroupIndex) {
+            auto platform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+            EXPECT_GT(workspace[0], platform.GetLibApiWorkSpaceSize());
+        } else {
+            EXPECT_EQ(workspace[0], 0U);
+        }
+    }
     if (status == ge::GRAPH_SUCCESS && tc.tilingKey != 0) {
         EXPECT_EQ(tilingContext->GetTilingKey(), tc.tilingKey);
     }

@@ -44,6 +44,7 @@ const uint32_t XXGLU_BW_TQUE_NUM = 5;
 const uint32_t SWIGLU_BW_TBUF_NUM_FLOAT = 2;
 const uint32_t SWIGLU_BW_TBUF_NUM_BF16 = 5;
 const uint32_t SWIGLU_BW_TBUF_NUM_HALF = 5;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 0;
 const int64_t WORKSPACE_BUFFER = static_cast<int64_t>(16 * 1024 * 1024);
 
 const int64_t INPUT_OUTPUT_IDX = 0;
@@ -490,6 +491,9 @@ inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const ui
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(totalCore);
     context->SetTilingKey(TILING_KEY_EMPTY);
+    size_t* workspaceSize = context->GetWorkspaceSizes(1);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, workspaceSize);
+    workspaceSize[0] = DEFAULT_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -551,8 +555,8 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context)
 
     size_t* userWorkspaceSize = context->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, userWorkspaceSize);
-    size_t workspaceSize = WORKSPACE_BUFFER;
-    userWorkspaceSize[0] = workspaceSize;
+    const bool noWorkspace = Glu_Flag == GLU_FLAG::SWIGLU_SINGLE;
+    userWorkspaceSize[0] = noWorkspace ? DEFAULT_WORKSPACE_SIZE : WORKSPACE_BUFFER;
     return ge::GRAPH_SUCCESS;
 }
 
