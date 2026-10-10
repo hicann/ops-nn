@@ -73,26 +73,43 @@ def _to_supported_torch_tensor(x, device):
     return torch.as_tensor(arr, device=device)
 
 
+def _torch_dtype(dtype):
+    if isinstance(dtype, torch.dtype):
+        return dtype
+    name = str(dtype)
+    return {
+        "float16": torch.float16,
+        "float32": torch.float32,
+        "float64": torch.float64,
+        "bfloat16": torch.bfloat16,
+    }.get(name, torch.float32)
+
+
 def __golden_dynamic_quant_update_scatter_v2(
     x, indices, var, var_scale, var_offset, **kwargs
 ):
-    x_t = torch.as_tensor(np.asarray(x).astype(np.float32), dtype=torch.float32)
-    hidden = x_t.shape[-1]
-    rows = x_t.reshape(-1, hidden)
-    batch = rows.shape[0]
-
     out_var = np.array(var, copy=True)
-    out_scale = np.array(var_scale, dtype=np.float32, copy=True)
-    out_offset = np.array(var_offset, dtype=np.float32, copy=True)
+    out_scale = np.array(var_scale, copy=True)
+    out_offset = np.array(var_offset, copy=True)
     seq_len = out_var.shape[1] if out_var.ndim >= 2 else 0
     var_bytes = _pack_int4(out_var)
     scale_flat = out_scale.reshape(-1)
     offset_flat = out_offset.reshape(-1)
     indices_t = torch.as_tensor(np.asarray(indices), dtype=torch.int64).reshape(-1)
 
-    scale_range = torch.tensor(INT4_SCALE_RANGE, dtype=torch.float32)
-    quant_max = torch.tensor(INT4_QUANT_MAX, dtype=torch.float32)
-    quant_eps = torch.tensor(QUANT_EPSILON, dtype=torch.float32)
+    # Compute in at least fp32, retaining fp64 (TTK Promote). x is fp16/bf16 in
+    # the op contract; the fp64-promoted var_scale/var_offset drive the precision
+    # so the cross_check true value stays above the GPU leg's fp32 computation.
+    x_t = torch.as_tensor(np.asarray(x).astype(np.float32))
+    compute_dtype = torch.promote_types(torch.float32, _torch_dtype(out_scale.dtype))
+    x_t = x_t.to(compute_dtype)
+    hidden = x_t.shape[-1]
+    rows = x_t.reshape(-1, hidden)
+    batch = rows.shape[0]
+
+    scale_range = torch.tensor(INT4_SCALE_RANGE, dtype=compute_dtype)
+    quant_max = torch.tensor(INT4_QUANT_MAX, dtype=compute_dtype)
+    quant_eps = torch.tensor(QUANT_EPSILON, dtype=compute_dtype)
     for b in range(batch):
         valid_idx = int(indices_t[b].item())
         if valid_idx < 0 or valid_idx >= seq_len:
@@ -103,7 +120,7 @@ def __golden_dynamic_quant_update_scatter_v2(
         min_val = torch.min(row)
         scale = torch.maximum((max_val - min_val) / scale_range, quant_eps)
         offset_quant = quant_max - max_val / scale
-        back_scale = torch.tensor(1.0, dtype=torch.float32) / scale
+        back_scale = torch.tensor(1.0, dtype=compute_dtype) / scale
         quantized = torch.round(row * back_scale + offset_quant)
         quantized_i64 = _wrap_to_int4(quantized.to(torch.int64))
 
@@ -113,8 +130,8 @@ def __golden_dynamic_quant_update_scatter_v2(
         byte_end = min(byte_base + packed.size, var_bytes.size)
         if 0 <= byte_base < byte_end:
             var_bytes[byte_base:byte_end] = packed[: byte_end - byte_base]
-        scale_flat[dst] = np.float32(scale.item())
-        offset_flat[dst] = np.float32(-offset_quant.item())
+        scale_flat[dst] = scale.item()
+        offset_flat[dst] = -offset_quant.item()
 
     out_var = _unpack_int4(var_bytes, out_var.size).reshape(out_var.shape)
     return [

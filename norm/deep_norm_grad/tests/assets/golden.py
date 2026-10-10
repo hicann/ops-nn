@@ -85,16 +85,30 @@ def _numpy_dtype(value):
     return np.asarray(value).dtype
 
 
-def _to_torch_float32(value):
+def _to_torch_compute(value):
+    """Convert to torch tensor: retain fp64 (TTK Promote), lift fp16/bf16 to fp32."""
     if isinstance(value, torch.Tensor):
-        return value.detach().to(device="cpu", dtype=torch.float32)
-    return torch.as_tensor(np.asarray(value, dtype=np.float32), dtype=torch.float32)
+        t = value.detach().to(device="cpu")
+        if t.is_floating_point() and t.dtype not in (torch.float16, torch.bfloat16):
+            return t
+        return t.to(torch.float32)
+    arr = np.asarray(value)
+    if arr.dtype not in (np.float32, np.float64):
+        arr = arr.astype(np.float32)
+    return torch.as_tensor(arr)
 
 
-def _to_numpy_float32(value):
+def _to_numpy_compute(value):
+    """Convert to numpy: retain fp64 (TTK Promote), lift fp16/bf16 to fp32."""
     if isinstance(value, torch.Tensor):
-        return value.detach().cpu().to(torch.float32).numpy()
-    return np.asarray(value, dtype=np.float32)
+        t = value.detach().cpu()
+        if t.is_floating_point() and t.dtype not in (torch.float16, torch.bfloat16):
+            return t.numpy()
+        return t.to(torch.float32).numpy()
+    arr = np.asarray(value)
+    if arr.dtype not in (np.float32, np.float64):
+        arr = arr.astype(np.float32)
+    return arr
 
 
 def _semantic_shape(x, gamma):
@@ -121,25 +135,26 @@ def _get_power_split(count):
 
 
 def _reduce_sum_vl(values):
-    work = np.asarray(values, dtype=np.float32).reshape(-1)
+    values = np.asarray(values)
+    work = values.reshape(-1)
     if work.size == 0:
-        return np.float32(0.0)
+        return values.dtype.type(0.0)
     while work.size > 1:
         if work.size % 2 != 0:
-            work = np.append(work, np.float32(0.0))
-        work = (work[0::2] + work[1::2]).astype(np.float32)
+            work = np.append(work, values.dtype.type(0.0))
+        work = (work[0::2] + work[1::2]).astype(values.dtype)
     return work[0]
 
 
 def _reduce_sum_regbase_1d(values):
-    values = np.asarray(values, dtype=np.float32).reshape(-1)
+    values = np.asarray(values).reshape(-1)
     reduce_num = int(values.size)
     if reduce_num == 0:
-        return np.float32(0.0)
+        return values.dtype.type(0.0)
     if reduce_num <= VL_FP32:
         return _reduce_sum_vl(values[:reduce_num])
     if reduce_num <= VL_FP32 + VL_FP32:
-        folded = np.zeros((VL_FP32,), dtype=np.float32)
+        folded = np.zeros((VL_FP32,), dtype=values.dtype)
         folded += values[:VL_FP32]
         folded[: reduce_num - VL_FP32] += values[VL_FP32:reduce_num]
         return _reduce_sum_vl(folded)
@@ -149,7 +164,7 @@ def _reduce_sum_regbase_1d(values):
     tail = reduce_num - fold_point
     tail_ceil_loops = (tail + VL_FP32 - 1) // VL_FP32
     tail_full_loops = tail // VL_FP32
-    tmp = np.zeros((max(fold_loops, 2 * VL_FP32),), dtype=np.float32)
+    tmp = np.zeros((max(fold_loops, 2 * VL_FP32),), dtype=values.dtype)
     for r in range(tail_full_loops):
         offset = r * VL_FP32
         summed = (
@@ -161,7 +176,7 @@ def _reduce_sum_regbase_1d(values):
     if tail_remain != 0:
         offset = tail_full_loops * VL_FP32
         folded = np.array(
-            values[offset : offset + VL_FP32], dtype=np.float32, copy=True
+            values[offset : offset + VL_FP32], dtype=values.dtype, copy=True
         )
         folded[:tail_remain] += values[
             fold_point + offset : fold_point + offset + tail_remain
@@ -175,44 +190,44 @@ def _reduce_sum_regbase_1d(values):
         return _reduce_sum_vl(tmp[: fold_point // VL_FP32])
 
     last_num = fold_point // VL_FP32 - VL_FP32
-    folded = np.array(tmp[:VL_FP32], dtype=np.float32, copy=True)
+    folded = np.array(tmp[:VL_FP32], dtype=values.dtype, copy=True)
     folded[:last_num] += tmp[VL_FP32 : VL_FP32 + last_num]
     return _reduce_sum_vl(folded)
 
 
 def _reduce_sum_regbase(values, axis):
-    values = np.asarray(values, dtype=np.float32)
+    values = np.asarray(values)
     axis = axis % values.ndim
     reduce_num = values.shape[axis]
     if reduce_num <= MAX_TILE_LENGTH:
         return np.apply_along_axis(_reduce_sum_regbase_1d, axis, values).astype(
-            np.float32
+            values.dtype
         )
 
     moved = np.moveaxis(values, axis, -1)
-    result = np.zeros(moved.shape[:-1], dtype=np.float32)
+    result = np.zeros(moved.shape[:-1], dtype=values.dtype)
     for start in range(0, reduce_num, MAX_TILE_LENGTH):
         tile = moved[..., start : start + MAX_TILE_LENGTH]
         tile_sum = np.apply_along_axis(_reduce_sum_regbase_1d, -1, tile).astype(
-            np.float32
+            values.dtype
         )
-        result = (result + tile_sum).astype(np.float32)
+        result = (result + tile_sum).astype(values.dtype)
     return result
 
 
 def _reduce_sum_rows(values):
-    values = np.asarray(values, dtype=np.float32)
-    result = np.zeros(values.shape[1:], dtype=np.float32)
+    values = np.asarray(values)
+    result = np.zeros(values.shape[1:], dtype=values.dtype)
     for row in values:
-        result = (result + row).astype(np.float32)
+        result = (result + row).astype(values.dtype)
     return result
 
 
 def _reduce_sum_rows_fp64(values):
-    values32 = torch.as_tensor(
-        np.asarray(values, dtype=np.float32), dtype=torch.float32
-    )
-    return values32.to(torch.float64).sum(dim=0).to(torch.float32).numpy()
+    values = np.asarray(values)
+    values32 = torch.as_tensor(values)
+    torch_dtype = torch.float64 if values.dtype == np.float64 else torch.float32
+    return values32.to(torch.float64).sum(dim=0).to(torch_dtype).numpy()
 
 
 def _is_row_constant(values):
@@ -241,14 +256,24 @@ def deep_norm_grad_input(
         return [dy, x, gx, gamma, zero, zero]
 
     alpha32 = torch.tensor(float(alpha), dtype=torch.float32)
-    x32 = _to_torch_float32(x)
-    gx32 = _to_torch_float32(gx)
+    x32 = _to_torch_compute(x)
+    gx32 = _to_torch_compute(gx)
     mean32, rstd32 = _compute_mean_rstd(
         x32, gx32, rows, cols, semantic_shape, alpha32, epsilon
     )
-    mean = _to_numpy_float32(mean32)
-    rstd = _to_numpy_float32(rstd32)
+    mean = _to_numpy_compute(mean32)
+    rstd = _to_numpy_compute(rstd32)
     return [dy, x, gx, gamma, mean, rstd]
+
+
+def _output_dtype(kwargs, index, default):
+    output_dtypes = kwargs.get("output_dtypes") or []
+    if index >= len(output_dtypes):
+        return default
+    dtype = output_dtypes[index]
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0]
+    return dtype if dtype is not None else default
 
 
 def deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
@@ -268,12 +293,14 @@ def deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
 
     alpha32 = torch.tensor(float(alpha), dtype=torch.float32)
     inv_cols32 = np.float32(1.0 / float(cols))
-    dy32 = _to_torch_float32(dy).reshape(rows, cols)
-    x32 = _to_torch_float32(x).reshape(rows, cols)
-    gx32 = _to_torch_float32(gx).reshape(rows, cols)
-    gamma32 = _to_torch_float32(gamma).reshape(1, cols)
-    mean32 = _to_torch_float32(mean)
-    rstd32 = _to_torch_float32(rstd)
+    dy32 = _to_torch_compute(dy).reshape(rows, cols)
+    x32 = _to_torch_compute(x).reshape(rows, cols)
+    gx32 = _to_torch_compute(gx).reshape(rows, cols)
+    gamma32 = _to_torch_compute(gamma).reshape(1, cols)
+    mean32 = _to_torch_compute(mean)
+    rstd32 = _to_torch_compute(rstd)
+    compute_dtype = dy32.dtype
+    np_compute_dtype = np.float64 if compute_dtype == torch.float64 else np.float32
     semantic_shape = _semantic_shape(x, gamma)
     if mean32.numel() != rows or rstd32.numel() != rows:
         mean32, rstd32 = _compute_mean_rstd(
@@ -291,36 +318,36 @@ def deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
     product = product * rstd32
     product = product * x_centered
     product = product * tmp
-    product_np = _to_numpy_float32(product)
-    tmp_norm_np = _to_numpy_float32(tmp_norm)
-    pd_var = _reduce_sum_regbase(product_np, axis=1).reshape(rows, 1) * np.float32(
-        -inv_cols32
+    product_np = _to_numpy_compute(product)
+    tmp_norm_np = _to_numpy_compute(tmp_norm)
+    pd_var = _reduce_sum_regbase(product_np, axis=1).reshape(rows, 1) * np.asarray(
+        -inv_cols32, dtype=np_compute_dtype
     )
-    pd_mean = _reduce_sum_regbase(tmp_norm_np, axis=1).reshape(rows, 1) * np.float32(
-        -inv_cols32
+    pd_mean = _reduce_sum_regbase(tmp_norm_np, axis=1).reshape(rows, 1) * np.asarray(
+        -inv_cols32, dtype=np_compute_dtype
     )
     if _dtype_name(output_dtype) != "float16":
         pd_mean = np.where(
             _is_row_constant(tmp_norm_np), -tmp_norm_np[:, :1], pd_mean
-        ).astype(np.float32)
-    pd_var_t = torch.as_tensor(pd_var, dtype=torch.float32)
-    pd_mean_t = torch.as_tensor(pd_mean, dtype=torch.float32)
+        ).astype(np_compute_dtype)
+    pd_var_t = torch.as_tensor(pd_var, dtype=compute_dtype)
+    pd_mean_t = torch.as_tensor(pd_mean, dtype=compute_dtype)
     dgx = tmp_norm + x_centered * pd_var_t
     dgx = dgx + pd_mean_t
     dx = dgx * alpha32
 
     normalized = x_centered * rstd32
-    dy_np = _to_numpy_float32(dy32)
+    dy_np = _to_numpy_compute(dy32)
     dbeta = _reduce_sum_rows_fp64(dy_np).reshape(gamma_shape)
-    dgamma = _reduce_sum_rows_fp64(_to_numpy_float32(dy32 * normalized)).reshape(
+    dgamma = _reduce_sum_rows_fp64(_to_numpy_compute(dy32 * normalized)).reshape(
         gamma_shape
     )
 
     return [
-        _to_numpy_float32(dx.reshape(x_shape)).astype(output_dtype, copy=False),
-        _to_numpy_float32(dgx.reshape(gx_shape)).astype(output_dtype, copy=False),
-        dbeta.astype(np.float32, copy=False),
-        dgamma.astype(np.float32, copy=False),
+        _to_numpy_compute(dx.reshape(x_shape)).astype(output_dtype, copy=False),
+        _to_numpy_compute(dgx.reshape(gx_shape)).astype(output_dtype, copy=False),
+        dbeta.astype(_output_dtype(kwargs, 2, np.float32), copy=False),
+        dgamma.astype(_output_dtype(kwargs, 3, np.float32), copy=False),
     ]
 
 

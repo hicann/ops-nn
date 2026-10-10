@@ -15,8 +15,16 @@ import torch
 import torch.nn.functional as F
 
 
-__spec__ = {"batch_norm3d": "BatchNorm3DSpec"}
-__golden__ = {"kernel": {"batch_norm3d": "batch_norm3d_golden"}}
+__spec__ = {
+    "batch_norm3d": "BatchNorm3DSpec",
+    "batch_norm3_d": "BatchNorm3DSpec",
+}
+__golden__ = {
+    "kernel": {
+        "batch_norm3d": "batch_norm3d_golden",
+        "batch_norm3_d": "batch_norm3d_golden",
+    }
+}
 
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -91,6 +99,28 @@ class BatchNorm3DSpec:
     tolerance = _TOL
 
 
+def _torch_dtype(dtype):
+    if isinstance(dtype, torch.dtype):
+        return dtype
+    name = str(dtype)
+    return {
+        "float16": torch.float16,
+        "float32": torch.float32,
+        "float64": torch.float64,
+        "bfloat16": torch.bfloat16,
+    }.get(name, torch.float32)
+
+
+def _out_dtype(kwargs, index, default):
+    output_dtypes = kwargs.get("output_dtypes") or []
+    if index >= len(output_dtypes):
+        return default
+    dtype = output_dtypes[index]
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0]
+    return _torch_dtype(dtype) if dtype is not None else default
+
+
 def batch_norm3d_golden(
     x,
     scale,
@@ -140,8 +170,8 @@ def batch_norm3d_golden(
     y = _from_ncdhw_torch(y_t, data_format).to(x_in.dtype).numpy()
     return [
         y,
-        batch_mean.to(torch.float32).numpy(),
-        saved_var.to(torch.float32).numpy(),
-        batch_mean.to(torch.float32).numpy(),
-        saved_rstd.to(torch.float32).numpy(),
+        batch_mean.to(_out_dtype(kwargs, 1, torch.float32)).numpy(),
+        saved_var.to(_out_dtype(kwargs, 2, torch.float32)).numpy(),
+        batch_mean.to(_out_dtype(kwargs, 3, torch.float32)).numpy(),
+        saved_rstd.to(_out_dtype(kwargs, 4, torch.float32)).numpy(),
     ]

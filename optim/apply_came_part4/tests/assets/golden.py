@@ -36,9 +36,6 @@ __spec__ = {
 __golden__ = {
     "kernel": {"apply_came_part4": "apply_came_part4_golden"},
 }
-__input__ = {
-    "kernel": {"apply_came_part4": "customize_inputs"},
-}
 
 _KERNEL_TOLERANCE = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -47,10 +44,17 @@ _KERNEL_TOLERANCE = {
 }
 
 
-def _to_f32(x):
+def _to_compute(x):
+    """Convert to torch tensor: retain fp64 (TTK Promote), lift fp16/bf16 to fp32."""
     if torch.is_tensor(x):
-        return x.detach().cpu().to(torch.float32)
-    return torch.as_tensor(np.asarray(x).astype(np.float32), dtype=torch.float32)
+        t = x.detach().cpu()
+        if t.is_floating_point() and t.dtype not in (torch.float16, torch.bfloat16):
+            return t
+        return t.to(torch.float32)
+    arr = np.asarray(x)
+    if arr.dtype not in (np.float32, np.float64):
+        arr = arr.astype(np.float32)
+    return torch.as_tensor(arr)
 
 
 def _to_numpy_for_golden(x):
@@ -69,6 +73,8 @@ def _dtype_of(x):
         return torch.float16
     if np_dtype == ml_dtypes.bfloat16:
         return torch.bfloat16
+    if np_dtype == np.float64:
+        return torch.float64
     return torch.float32
 
 
@@ -90,21 +96,22 @@ def apply_came_part4_golden(
 ):
     out_dtype = _dtype_of(param_in)
 
-    param_f = _to_f32(param_in)
-    m_f = _to_f32(m)
-    r_f = _to_f32(r_in).reshape(-1)
-    c_f = _to_f32(c_in).reshape(-1)
-    wd = _to_f32(weight_decay).reshape(-1)[0]
-    lr_v = _to_f32(lr).reshape(-1)[0]
-    beta3_v = _to_f32(beta3).reshape(-1)[0]
-    sum_u_r_f = _to_f32(sum_u_r).reshape(-1)
-    sum_u_c_f = _to_f32(sum_u_c).reshape(-1)
-    sum_u_rc_v = _to_f32(sum_u_rc).reshape(-1)[0]
+    param_f = _to_compute(param_in)
+    m_f = _to_compute(m)
+    r_f = _to_compute(r_in).reshape(-1)
+    c_f = _to_compute(c_in).reshape(-1)
+    wd = _to_compute(weight_decay).reshape(-1)[0]
+    lr_v = _to_compute(lr).reshape(-1)[0]
+    beta3_v = _to_compute(beta3).reshape(-1)[0]
+    sum_u_r_f = _to_compute(sum_u_r).reshape(-1)
+    sum_u_c_f = _to_compute(sum_u_c).reshape(-1)
+    sum_u_rc_v = _to_compute(sum_u_rc).reshape(-1)[0]
+    compute_dtype = param_f.dtype
 
     if sum_r is None:
         sum_r_v = r_f.sum()
     else:
-        sum_r_v = _to_f32(sum_r).reshape(-1)[0]
+        sum_r_v = _to_compute(sum_r).reshape(-1)[0]
 
     n, mm = r_f.shape[0], c_f.shape[0]
     if global_shape is None:
@@ -113,13 +120,13 @@ def apply_came_part4_golden(
         gs = np.asarray(global_shape).reshape(-1)
         n_g, m_g = float(gs[0]), float(gs[1])
 
-    one = torch.tensor(1.0, dtype=torch.float32)
+    one = torch.tensor(1.0, dtype=compute_dtype)
     # r/c 更新:fp32 计算后 round 回输出 dtype(torch cast 为 RNE,对齐 CAST_RINT)
     r_out = (beta3_v * r_f + (one - beta3_v) / m_g * sum_u_r_f).to(out_dtype)
     c_out = (beta3_v * c_f + (one - beta3_v) / n_g * sum_u_c_f).to(out_dtype)
-    # param 更新:以 round 后的 r_out/c_out(cast 回 fp32)为输入
+    # param 更新:以 round 后的 r_out/c_out(cast 回 compute_dtype)为输入
     denom = beta3_v * sum_r_v / n_g + (one - beta3_v) * sum_u_rc_v / (m_g * n_g)
-    s = torch.outer(r_out.to(torch.float32), c_out.to(torch.float32)) / denom
+    s = torch.outer(r_out.to(compute_dtype), c_out.to(compute_dtype)) / denom
     param_out = ((one - lr_v * wd) * param_f - lr_v * m_f / torch.sqrt(s)).to(out_dtype)
     return [param_out, r_out, c_out]
 
@@ -137,6 +144,7 @@ def customize_inputs(
     sum_u_rc,
     sum_r,
     global_shape,
+    **kwargs,
 ):
     """约束取值域,保证金色可算(sqrt 内 r_out*c_out/denom 非负、denom != 0)。"""
     for tensor in (r_in, c_in, sum_u_r, sum_u_c):
@@ -159,10 +167,10 @@ def customize_inputs(
         weight_decay,
         lr,
         beta3,
-        sum_r,
         sum_u_r,
         sum_u_c,
         sum_u_rc,
+        sum_r,
         global_shape,
     )
 

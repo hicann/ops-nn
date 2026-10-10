@@ -150,7 +150,7 @@ def _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon):
     var64 = torch.mean(centered * centered, dim=reduce_axes, keepdim=True)
     rstd64 = torch.rsqrt(var64 + float(epsilon))
     y64 = centered * rstd64 * gamma64 + beta64
-    return mean64.to(torch.float32), rstd64.to(torch.float32), y64
+    return mean64, rstd64, y64
 
 
 def _torch_to_numpy(tensor, dtype_name):
@@ -189,11 +189,15 @@ def deep_norm_golden(
         )
 
     y_dtype = _dtype_name(np.asarray(x).dtype)
+    mean_dtype = "float32"
+    rstd_dtype = "float32"
     if output_dtypes and len(output_dtypes) >= 3:
         y_dtype = _dtype_name(output_dtypes[2])
+        mean_dtype = _dtype_name(output_dtypes[0])
+        rstd_dtype = _dtype_name(output_dtypes[1])
     return (
-        mean.numpy(),
-        rstd.numpy(),
+        _torch_to_numpy(mean, mean_dtype),
+        _torch_to_numpy(rstd, rstd_dtype),
         _torch_to_numpy(y, y_dtype),
     )
 

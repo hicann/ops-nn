@@ -36,44 +36,80 @@ def _resolve(kwargs, margin, reduction):
     return float(margin), str(reduction)
 
 
+def _torch_dtype(dtype):
+    if isinstance(dtype, torch.dtype):
+        return dtype
+    name = str(dtype)
+    return {
+        "float16": torch.float16,
+        "float32": torch.float32,
+        "float64": torch.float64,
+        "bfloat16": torch.bfloat16,
+        "int32": torch.int32,
+        "int64": torch.int64,
+    }.get(name, torch.float32)
+
+
+def _output_dtype(kwargs, index, default):
+    output_dtypes = kwargs.get("output_dtypes") or []
+    if index >= len(output_dtypes):
+        return default
+    dtype = output_dtypes[index]
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0]
+    return _torch_dtype(dtype) if dtype is not None else default
+
+
+def _to_compute_tensor(value, compute_dtype):
+    """Convert to torch tensor, lifting integer inputs to the compute dtype."""
+    tensor = torch.as_tensor(np.asarray(value))
+    if not tensor.is_floating_point():
+        return tensor.to(compute_dtype)
+    return tensor
+
+
 def cosine_embedding_loss_golden(
     x1, x2, target, margin=0.0, reduction="mean", **kwargs
 ):
     margin, reduction = _resolve(kwargs, margin, reduction)
-    a = torch.as_tensor(np.asarray(x1).astype(np.float32), dtype=torch.float32)
-    b = torch.as_tensor(np.asarray(x2).astype(np.float32), dtype=torch.float32)
+    a = _to_compute_tensor(x1, torch.float32)
+    b = _to_compute_tensor(x2, torch.float32)
     a, b = torch.broadcast_tensors(a, b)
     if a.dim() < 2:
         raise ValueError("broadcast rank of x1 and x2 must be at least 2")
-    t = torch.as_tensor(np.asarray(target).astype(np.float32), dtype=torch.float32)
+    # Compute in at least fp32, retaining the wider dtype TTK Promote supplies
+    # (fp64 for a fp32 case). Integer x1/x2 inputs are lifted through the
+    # promoted output dtype so the true value stays at the promoted precision.
+    compute_dtype = torch.promote_types(torch.float32, a.dtype)
+    out_dtype = _output_dtype(kwargs, 0, compute_dtype)
+    compute_dtype = torch.promote_types(compute_dtype, out_dtype)
+    a = a.to(compute_dtype)
+    b = b.to(compute_dtype)
+    t = _to_compute_tensor(target, compute_dtype)
 
-    dot = torch.sum(a * b, dim=1, dtype=torch.float32)
-    s1 = torch.sum(a * a, dim=1, dtype=torch.float32)
-    s2 = torch.sum(b * b, dim=1, dtype=torch.float32)
-    eps = torch.tensor(EPS, dtype=torch.float32)
+    dot = torch.sum(a * b, dim=1)
+    s1 = torch.sum(a * a, dim=1)
+    s2 = torch.sum(b * b, dim=1)
+    eps = torch.tensor(EPS, dtype=compute_dtype)
     denom = torch.sqrt(s1 + eps) * torch.sqrt(s2 + eps)
     cos = dot / denom
 
     cos, t = torch.broadcast_tensors(cos, t)
-    pos = torch.tensor(1.0, dtype=torch.float32) - cos
+    pos = torch.tensor(1.0, dtype=compute_dtype) - cos
     neg = torch.maximum(
-        torch.tensor(0.0, dtype=torch.float32),
-        cos - torch.tensor(margin, dtype=torch.float32),
+        torch.tensor(0.0, dtype=compute_dtype),
+        cos - torch.tensor(margin, dtype=compute_dtype),
     )
     loss = torch.where(
         t == 1.0, pos, torch.where(t == -1.0, neg, torch.zeros_like(pos))
     )
 
     if reduction == "none":
-        return loss.numpy().astype(np.float32, copy=False)
+        return loss.to(out_dtype).numpy()
     if reduction == "sum":
-        return np.asarray(
-            [torch.sum(loss, dtype=torch.float32).item()], dtype=np.float32
-        )
+        return torch.sum(loss).reshape(1).to(out_dtype).numpy()
     denom_n = loss.numel() if loss.numel() > 0 else 1
-    return np.asarray(
-        [(torch.sum(loss, dtype=torch.float32) / denom_n).item()], dtype=np.float32
-    )
+    return (torch.sum(loss) / denom_n).reshape(1).to(out_dtype).numpy()
 
 
 def __golden_cosine_embedding_loss(x1, x2, target, **kwargs):

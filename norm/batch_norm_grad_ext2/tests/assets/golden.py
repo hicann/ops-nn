@@ -60,13 +60,13 @@ def _channel_axes(rank):
 
 
 def _sum_fp32(x, axis=None):
-    return np.sum(x, axis=axis, dtype=np.float32).astype(np.float32, copy=False)
+    return np.sum(x, axis=axis, dtype=x.dtype).astype(x.dtype, copy=False)
 
 
 def _sum_seq_fp32(x):
-    acc = np.zeros(x.shape[0], dtype=np.float32)
+    acc = np.zeros(x.shape[0], dtype=x.dtype)
     for idx in range(x.shape[1]):
-        acc = (acc + x[:, idx]).astype(np.float32)
+        acc = (acc + x[:, idx]).astype(x.dtype)
     return acc
 
 
@@ -95,7 +95,7 @@ def _binary_fold_sum(block_cr, r_loop_factor=64):
     )
     fold_cnt = binary_block_cnt - binary_fold_point
     cache = [
-        np.zeros(block_cr.shape[0], dtype=np.float32)
+        np.zeros(block_cr.shape[0], dtype=block_cr.dtype)
         for _ in range(binary_block_cnt.bit_length())
     ]
     result_cache_id = _cache_id(binary_fold_point - 1)
@@ -113,18 +113,18 @@ def _binary_fold_sum(block_cr, r_loop_factor=64):
             main = (
                 main
                 + _sum_fp32(block_cr[:, fold_start : fold_start + r_length], axis=1)
-            ).astype(np.float32)
+            ).astype(block_cr.dtype)
 
         cid = _cache_id(loop_idx)
         acc = main
         for cache_idx in range(cid):
-            acc = (acc + cache[cache_idx]).astype(np.float32)
-        cache[cid] = acc.astype(np.float32, copy=False)
+            acc = (acc + cache[cache_idx]).astype(block_cr.dtype)
+        cache[cid] = acc.astype(block_cr.dtype, copy=False)
     return cache[result_cache_id]
 
 
 def _ra_split_r_channel_sum(x_n, core_num=72, r_loop_factor=64):
-    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=np.float32).reshape(
+    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=x_n.dtype).reshape(
         x_n.shape[1], -1
     )
     r_dim = x_cr.shape[1]
@@ -140,22 +140,22 @@ def _ra_split_r_channel_sum(x_n, core_num=72, r_loop_factor=64):
 
 
 def _sum_pairwise_fp32(x):
-    acc = x.astype(np.float32, copy=True)
+    acc = x.astype(x.dtype, copy=True)
     while acc.shape[1] > 1:
         pair_count = acc.shape[1] // 2
         paired = (acc[:, : 2 * pair_count : 2] + acc[:, 1 : 2 * pair_count : 2]).astype(
-            np.float32
+            x.dtype
         )
         acc = (
             np.concatenate([paired, acc[:, -1:]], axis=1)
             if acc.shape[1] % 2
             else paired
         )
-    return acc[:, 0].astype(np.float32, copy=False)
+    return acc[:, 0].astype(x.dtype, copy=False)
 
 
 def _chunk32_pair_channel_sum(x_n):
-    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=np.float32).reshape(
+    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=x_n.dtype).reshape(
         x_n.shape[1], -1
     )
     partials = []
@@ -165,7 +165,7 @@ def _chunk32_pair_channel_sum(x_n):
 
 
 def _chunk_channel_sum(x_n, chunk, partial_mode="np", outer_mode="np"):
-    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=np.float32).reshape(
+    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=x_n.dtype).reshape(
         x_n.shape[1], -1
     )
     partials = []
@@ -194,14 +194,12 @@ def _ascend_like_channel_sum(x_n, chunk=24):
     a_dim = x_n.shape[1]
     if r_dim >= 64 and r_dim > 1024 and a_dim < 1024 and r_dim > a_dim * 4:
         return _ra_split_r_channel_sum(x_n)
-    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=np.float32)
+    x_cr = np.ascontiguousarray(np.moveaxis(x_n, 1, 0), dtype=x_n.dtype)
     x_cr = x_cr.reshape(x_cr.shape[0], -1)
     partials = []
     for start in range(0, x_cr.shape[1], chunk):
-        partials.append(
-            np.sum(x_cr[:, start : start + chunk], axis=1, dtype=np.float32)
-        )
-    return np.sum(np.stack(partials, axis=0), axis=0, dtype=np.float32)
+        partials.append(np.sum(x_cr[:, start : start + chunk], axis=1, dtype=x_n.dtype))
+    return np.sum(np.stack(partials, axis=0), axis=0, dtype=x_n.dtype)
 
 
 def _ascend_like_dbeta_sum(x_n, use_chunk32_pair=False, data_format="NCHW"):
@@ -280,6 +278,22 @@ class BatchNormGradExt2Spec:
     tolerance = _TOL
 
 
+def _output_dtype(kwargs, index, default):
+    output_dtypes = kwargs.get("output_dtypes") or []
+    if index >= len(output_dtypes):
+        return default
+    dtype = output_dtypes[index]
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0]
+    return dtype if dtype is not None else default
+
+
+def _compute_dtype(y_backprop):
+    """Compute in at least fp32, retaining fp64 (TTK Promote) so the true value
+    is not cut back to fp32. The fp32 reduction-mirror structure is preserved."""
+    return np.float64 if y_backprop.dtype == np.float64 else np.float32
+
+
 def batch_norm_grad_ext2_golden(
     y_backprop,
     x,
@@ -299,23 +313,25 @@ def batch_norm_grad_ext2_golden(
     interface. The dscale/doffset reduction uses fixed fp32 chunks to avoid
     false failures from CPU/GPU reduction order differences on large R.
     """
+    compute_dtype = _compute_dtype(y_backprop)
     use_chunk32_pair_dbeta = y_backprop.dtype == np.float64
-    x_n = _to_nchw_like_np(x.astype(np.float32), data_format)
-    dy_n = _to_nchw_like_np(y_backprop.astype(np.float32), data_format)
+    x_n = _to_nchw_like_np(x.astype(compute_dtype), data_format)
+    dy_n = _to_nchw_like_np(y_backprop.astype(compute_dtype), data_format)
     axes = _channel_axes(x_n.ndim)
-    reduce_count = np.float32(
-        np.prod([x_n.shape[axis] for axis in axes], dtype=np.float64)
+    reduce_count = np.asarray(
+        np.prod([x_n.shape[axis] for axis in axes], dtype=np.float64),
+        dtype=compute_dtype,
     )
     broadcast_shape = [1] * x_n.ndim
     broadcast_shape[1] = x_n.shape[1]
 
-    scale_n = scale.astype(np.float32).reshape(broadcast_shape)
-    mean_n = reserve_space_1.astype(np.float32).reshape(broadcast_shape)
-    rs2 = reserve_space_2.astype(np.float32)
+    scale_n = scale.astype(compute_dtype).reshape(broadcast_shape)
+    mean_n = reserve_space_1.astype(compute_dtype).reshape(broadcast_shape)
+    rs2 = reserve_space_2.astype(compute_dtype)
     if is_training:
         rstd = rs2
     else:
-        rstd = (1.0 / np.sqrt(rs2 + np.float32(epsilon))).astype(np.float32)
+        rstd = (1.0 / np.sqrt(rs2 + compute_dtype(epsilon))).astype(compute_dtype)
     rstd_n = rstd.reshape(broadcast_shape)
 
     x_sub = x_n - mean_n
@@ -327,7 +343,7 @@ def batch_norm_grad_ext2_golden(
         y_backprop.dtype != np.float64 and data_format == "NDHWC" and x_n.shape[1] <= 16
     )
     dscale = _ascend_like_dscale_sum(
-        (x_sub * dy_n).astype(np.float32) * rstd_n, use_chunk16_dscale
+        (x_sub * dy_n).astype(compute_dtype) * rstd_n, use_chunk16_dscale
     )
     doffset = _ascend_like_dbeta_sum(dy_n, use_chunk32_pair_dbeta, data_format)
 
@@ -341,6 +357,14 @@ def batch_norm_grad_ext2_golden(
         )
     else:
         dx_n = dy_n * scale_n * rstd_n
-    dx = _from_nchw_like_np(dx_n, data_format).astype(x.dtype, copy=False)
+    dx = _from_nchw_like_np(dx_n, data_format).astype(
+        _output_dtype(kwargs, 0, x.dtype), copy=False
+    )
     empty = np.empty((0,), dtype=np.float32)
-    return [dx, dscale.astype(np.float32), doffset.astype(np.float32), empty, empty]
+    return [
+        dx,
+        dscale.astype(_output_dtype(kwargs, 1, np.float32), copy=False),
+        doffset.astype(_output_dtype(kwargs, 2, np.float32), copy=False),
+        empty,
+        empty,
+    ]

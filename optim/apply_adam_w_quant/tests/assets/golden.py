@@ -48,10 +48,25 @@ _ACLNN_TOLERANCE = {
 }
 
 
-def _to_f32(x):
+def _to_compute(x):
+    """Convert to torch tensor: retain fp64 (TTK Promote), lift fp16/bf16 to fp32."""
     if torch.is_tensor(x):
-        return x.detach().cpu().to(torch.float32)
-    return torch.as_tensor(np.asarray(x).astype(np.float32), dtype=torch.float32)
+        t = x.detach().cpu()
+        if t.is_floating_point() and t.dtype not in (torch.float16, torch.bfloat16):
+            return t
+        return t.to(torch.float32)
+    arr = np.asarray(x)
+    if arr.dtype not in (np.float32, np.float64):
+        arr = arr.astype(np.float32)
+    return torch.as_tensor(arr)
+
+
+def _compute_dtype(x):
+    if torch.is_tensor(x):
+        dtype = x.dtype
+    else:
+        dtype = np.asarray(x).dtype
+    return torch.float64 if dtype in (torch.float64, np.float64) else torch.float32
 
 
 def _to_numpy_for_golden(x):
@@ -137,8 +152,23 @@ def apply_adam_w_quant_golden(
     block_size = int(kwargs.get("block_size", kwargs.get("blockSize", BLOCK)))
 
     out_dtype = _dtype_of(var)
-    one = torch.tensor(1.0, dtype=torch.float32)
-    step_v = _to_f32(step).reshape(-1)[0] + one
+    compute_dtype = _compute_dtype(var)
+    one = torch.tensor(1.0, dtype=compute_dtype)
+    lr = torch.tensor(float(kwargs.get("lr", 0.001)), dtype=compute_dtype)
+    beta1 = torch.tensor(float(kwargs.get("beta1", 0.9)), dtype=compute_dtype)
+    beta2 = torch.tensor(float(kwargs.get("beta2", 0.999)), dtype=compute_dtype)
+    weight_decay = torch.tensor(
+        float(kwargs.get("weight_decay", kwargs.get("weightDecay", 1.0))),
+        dtype=compute_dtype,
+    )
+    eps = torch.tensor(float(kwargs.get("eps", 1e-8)), dtype=compute_dtype)
+    gnorm_scale = torch.tensor(
+        float(kwargs.get("gnorm_scale", kwargs.get("gnormScale", 1.0))),
+        dtype=compute_dtype,
+    )
+    block_size = int(kwargs.get("block_size", kwargs.get("blockSize", BLOCK)))
+
+    step_v = _to_compute(step).reshape(-1)[0] + one
     bias_c1 = one - torch.pow(beta1, step_v)
     bias_c2_sqrt = torch.sqrt(one - torch.pow(beta2, step_v))
     step_size = -lr * bias_c2_sqrt / bias_c1
@@ -146,16 +176,16 @@ def apply_adam_w_quant_golden(
     one_minus_beta2 = one - beta2
     weight_decay_factor = one - lr * weight_decay
 
-    var_f = _to_f32(var).reshape(-1).clone()
-    grad_f = _to_f32(grad).reshape(-1)
+    var_f = _to_compute(var).reshape(-1).clone()
+    grad_f = _to_compute(grad).reshape(-1)
     m_codes = torch.as_tensor(np.asarray(m).reshape(-1).copy(), dtype=torch.int64)
     v_codes = torch.as_tensor(np.asarray(v).reshape(-1).copy(), dtype=torch.int64)
-    qmap_m_t = _to_f32(qmap_m).reshape(-1)
-    qmap_v_t = _to_f32(qmap_v).reshape(-1)
-    absmax_m_t = _to_f32(absmax_m).reshape(-1)
-    absmax_v_t = _to_f32(absmax_v).reshape(-1)
-    new_am = torch.zeros_like(absmax_m_t, dtype=torch.float32)
-    new_av = torch.zeros_like(absmax_v_t, dtype=torch.float32)
+    qmap_m_t = _to_compute(qmap_m).reshape(-1)
+    qmap_v_t = _to_compute(qmap_v).reshape(-1)
+    absmax_m_t = _to_compute(absmax_m).reshape(-1)
+    absmax_v_t = _to_compute(absmax_v).reshape(-1)
+    new_am = torch.zeros_like(absmax_m_t, dtype=compute_dtype)
+    new_av = torch.zeros_like(absmax_v_t, dtype=compute_dtype)
 
     n = var_f.numel()
     num_blocks = (n + block_size - 1) // block_size
@@ -188,12 +218,8 @@ def apply_adam_w_quant_golden(
         var_out = var_np.astype(out_dtype, copy=False)
     m_out = m_codes.numpy().reshape(_shape_of(m))
     v_out = v_codes.numpy().reshape(_shape_of(v))
-    absmax_m_out = (
-        new_am.numpy().astype(np.float32, copy=False).reshape(_shape_of(absmax_m))
-    )
-    absmax_v_out = (
-        new_av.numpy().astype(np.float32, copy=False).reshape(_shape_of(absmax_v))
-    )
+    absmax_m_out = new_am.numpy().reshape(_shape_of(absmax_m))
+    absmax_v_out = new_av.numpy().reshape(_shape_of(absmax_v))
     return [
         var_out,
         _cast_like(m_out, m),

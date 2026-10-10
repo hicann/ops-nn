@@ -68,14 +68,40 @@ def dynamic_quant_update_scatter_input(
     return [var, var_scale, generated.astype(indices.dtype), updates, smooth_scales]
 
 
-def _to_torch(x, dtype=torch.float32):
+def _torch_dtype(dtype):
+    if isinstance(dtype, torch.dtype):
+        return dtype
+    name = str(dtype)
+    return {
+        "float16": torch.float16,
+        "float32": torch.float32,
+        "float64": torch.float64,
+        "bfloat16": torch.bfloat16,
+    }.get(name, torch.float32)
+
+
+def _compute_dtype(*float_inputs, output_dtypes=None):
+    """Compute in at least fp32, retaining fp64 (TTK Promote) and the promoted
+    output dtype so the cross_check true value stays at output precision."""
+    dtype = torch.float32
+    for tensor in float_inputs:
+        if tensor is not None and tensor.is_floating_point():
+            dtype = torch.promote_types(dtype, tensor.dtype)
+    for out in output_dtypes or ():
+        if isinstance(out, (list, tuple)):
+            out = out[0] if out else None
+        if out is not None:
+            dtype = torch.promote_types(dtype, _torch_dtype(out))
+    return dtype
+
+
+def _to_torch(x):
     if x is None:
         return None
     arr = np.asarray(x)
-    try:
-        return torch.as_tensor(arr.copy(), dtype=dtype)
-    except TypeError:
-        return torch.as_tensor(arr.astype(np.float32).copy(), dtype=dtype)
+    if arr.dtype not in (np.float32, np.float64):
+        arr = arr.astype(np.float32)
+    return torch.as_tensor(arr.copy())
 
 
 def _to_numpy_for_golden(x):
@@ -101,6 +127,9 @@ def dynamic_quant_update_scatter_golden(
     updates_t = _to_torch(updates)
     smooth_t = _to_torch(smooth_scales)
     index_arr = np.asarray(indices)
+    compute_dtype = _compute_dtype(
+        updates_t, scale_t, output_dtypes=kwargs.get("output_dtypes")
+    )
 
     axis_n = _norm_axis(axis, var_t.dim())
     var_batch = var_t.shape[0]
@@ -116,9 +145,11 @@ def dynamic_quant_update_scatter_golden(
     scale_view = scale_t.reshape(var_batch, head, axis_size, quant_groups, 1)
     updates_view = updates_t.reshape(
         update_batch, head, update_axis, quant_groups, last_dim
-    ).float()
-    smooth_view = smooth_t.reshape(-1).float() if smooth_t is not None else None
-    qmax = torch.tensor(QUANT_MAX, dtype=torch.float32)
+    ).to(compute_dtype)
+    smooth_view = (
+        smooth_t.reshape(-1).to(compute_dtype) if smooth_t is not None else None
+    )
+    qmax = torch.tensor(QUANT_MAX, dtype=compute_dtype)
 
     for b in range(update_batch):
         out_b = int(index_arr[b, 0]) if index_arr.ndim == 2 else b
@@ -139,12 +170,12 @@ def dynamic_quant_update_scatter_golden(
                         output_scale = 1.0 / multiplier
                     quantized = torch.round(row * multiplier)
                     quantized = torch.clamp(quantized, -127, 127).to(torch.int8)
-                    var_view[out_b, h, out_axis, q] = quantized.to(torch.float32)
+                    var_view[out_b, h, out_axis, q] = quantized.to(compute_dtype)
                     scale_view[out_b, h, out_axis, q, 0] = output_scale
 
     return [
         var_t.numpy().astype(np.asarray(var).dtype, copy=False),
-        scale_t.numpy().astype(np.float32, copy=False),
+        scale_t.numpy().astype(np.asarray(var_scale).dtype, copy=False),
     ]
 
 
