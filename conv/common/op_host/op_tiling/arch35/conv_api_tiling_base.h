@@ -217,7 +217,7 @@ struct CubeInfo {
 
 class __attribute__((visibility("default"))) ConvTilingBase {
 public:
-    ConvTilingBase(){};
+    ConvTilingBase() {};
     explicit ConvTilingBase(const PlatformInfo& platform);
     virtual ~ConvTilingBase() = default;
     void SetNodeType(std::string inType);
@@ -265,6 +265,13 @@ protected:
     std::vector<std::vector<ConvDtype>> GetSupportedDataTypes() const;
     bool CheckLoad3DLimits();
     uint32_t GetBandWidthCof() const;
+
+private:
+    void LogLoad3DLimitError(const std::string& paramName, const std::string& actualValue,
+                             const std::string& reason) const;
+    bool CheckLoad3DAttrLimits();
+    bool CheckLoad3DWeightLimits();
+    bool CheckLoad3DAllPadLimits();
 };
 } // namespace conv_tiling
 
