@@ -181,7 +181,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终量化输出Tensor，对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型不为INT32时，shape需要与输入`x`一致；数据类型为INT32时，前面的维度保持不变，尾轴大小为`x`尾轴大小的1/8。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型不为INT32时，shape需要与输入`x`一致；数据类型为INT32时，除尾轴外的维度与`x`一致，尾轴大小为`x`尾轴大小的1/8。</li></ul></td>
       <td>INT8、INT32、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>1-8</td>
@@ -191,7 +191,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>rstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>当outputRstd为True时，不支持空Tensor，shape与x的shape一致，但尾轴大小为1；当x为一维Tensor时，rstd也支持标量。</li><li>当outputRstd为False时，该参数的最终输出无效，支持传入空指针或空Tensor占位。</li></ul></td>
+      <td><ul><li>当outputRstd为True时，rstd不支持空Tensor，最后一维大小为1，其余维度的大小与x一致。当x为一维Tensor时，rstd也支持标量。</li><li>当outputRstd为False时，该参数的最终输出无效，支持传入空指针或空Tensor占位。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -279,7 +279,7 @@ aclnnStatus aclnnRmsNormQuantV3(
     <tr>
       <td>ACLNN_ERR_INNER_NULLPTR</td>
       <td>561103</td>
-      <td>参数校验通过后，内部Tensor构造、连续化、计算任务构建或结果拷贝返回空指针。</td>
+      <td>内部Tensor构造、连续化、计算任务构建或结果拷贝返回空指针。</td>
     </tr>
 
   </tbody></table>
@@ -335,7 +335,7 @@ aclnnStatus aclnnRmsNormQuantV3(
 - <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
 <!-- end id7 -->
 <!-- npu="950" id8 -->
-- <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
+- <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT32时，`x`的尾轴大小必须是8的倍数。
 <!-- end id8 -->
 - 各产品型号支持数据类型说明：
 
@@ -344,15 +344,15 @@ aclnnStatus aclnnRmsNormQuantV3(
 
     | x数据类型 | gamma数据类型 | scale数据类型 | offset数据类型 | beta数据类型 |epsilon数据类型 | y数据类型 | rstd数据类型 |
     | --------- | ------------- |  ------------- | -------------- |------------- | --------- |--------- |--------- |
-    | FLOAT16   | FLOAT16       |  FLOAT16       | INT8           |FLOAT16       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | BFLOAT16   | BFLOAT16       |  BFLOAT16       | INT8           | BFLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | FLOAT16   | FLOAT16       |  FLOAT16       | FLOAT16           | FLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | BFLOAT16   | BFLOAT16       |  BFLOAT16       | BFLOAT16           |BFLOAT16       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | FLOAT32   | FLOAT32       |  FLOAT32       | FLOAT32           |FLOAT32       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | FLOAT16   | FLOAT16       |  FLOAT32       | INT32           |FLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | BFLOAT16   | BFLOAT16       |  FLOAT32      | INT32           |BFLOAT16       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | FLOAT16   | FLOAT16       |  FLOAT32       | FLOAT32           | FLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
-    | BFLOAT16   | BFLOAT16       |  FLOAT32       | FLOAT32           | BFLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     | FLOAT32       |
+    | FLOAT16   | FLOAT16       |  FLOAT16       | INT8           |FLOAT16       | DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | BFLOAT16   | BFLOAT16       |  BFLOAT16       | INT8           | BFLOAT16       |DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | FLOAT16   | FLOAT16       |  FLOAT16       | FLOAT16           | FLOAT16       |DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | BFLOAT16   | BFLOAT16       |  BFLOAT16       | BFLOAT16           |BFLOAT16       | DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | FLOAT32   | FLOAT32       |  FLOAT32       | FLOAT32           |FLOAT32       | DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | FLOAT16   | FLOAT16       |  FLOAT32       | INT32           |FLOAT16       |DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | BFLOAT16   | BFLOAT16       |  FLOAT32      | INT32           |BFLOAT16       | DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | FLOAT16   | FLOAT16       |  FLOAT32       | FLOAT32           | FLOAT16       |DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
+    | BFLOAT16   | BFLOAT16       |  FLOAT32       | FLOAT32           | BFLOAT16       |DOUBLE      |INT8、INT4、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     | FLOAT32       |
   <!-- end id9 -->
 
 - 确定性计算：
