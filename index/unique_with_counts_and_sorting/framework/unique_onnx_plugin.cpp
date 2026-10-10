@@ -78,7 +78,10 @@ static Status ParseOpToGraphUnique(const ge::Operator& op, ge::Graph& graph)
     std::vector<ge::Operator> inputs{data_x};
     std::vector<std::pair<ge::Operator, std::vector<size_t>>> outputs;
     outputs.emplace_back(unique_with_counts_and_sorting, std::vector<size_t>{0});
-    if (output_size >= 2) {
+    constexpr int OUTPUT_COUNT_WITH_INDICES = 2;
+    constexpr int OUTPUT_COUNT_WITH_INVERSE = 3;
+    constexpr int OUTPUT_COUNT_WITH_COUNTS = 4;
+    if (output_size >= OUTPUT_COUNT_WITH_INDICES) {
         auto shape = ge::op::Shape((name + "_shape").c_str()).set_input_x_by_name(unique_with_counts_and_sorting, "y");
         auto empty = ge::op::Empty((name + "_empty").c_str())
                          .set_input_shape(shape)
@@ -86,10 +89,10 @@ static Status ParseOpToGraphUnique(const ge::Operator& op, ge::Graph& graph)
                          .set_attr_init(true);
         outputs.emplace_back(empty, std::vector<size_t>{0});
     }
-    if (output_size >= 3) {
+    if (output_size >= OUTPUT_COUNT_WITH_INVERSE) {
         outputs.emplace_back(unique_with_counts_and_sorting, std::vector<size_t>{1});
     }
-    if (output_size >= 4) {
+    if (output_size >= OUTPUT_COUNT_WITH_COUNTS) {
         outputs.emplace_back(unique_with_counts_and_sorting, std::vector<size_t>{2});
     }
 

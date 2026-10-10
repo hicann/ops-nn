@@ -9,11 +9,11 @@
  */
 
 #include <cstdint>
-#include <cstring>
 #include <iostream>
 #include <map>
 #include <vector>
 
+#include "securec.h"
 #include "ge/ge_api.h"
 #include "../op_graph/unique_with_counts_and_sorting_proto.h"
 
@@ -39,7 +39,10 @@ bool CheckTensor(const ge::Tensor& tensor, ge::DataType dtype, const std::vector
     }
     for (size_t i = 0; i < expected.size(); ++i) {
         T actual;
-        std::memcpy(&actual, tensor.GetData() + i * sizeof(T), sizeof(T));
+        if (memcpy_s(&actual, sizeof(actual), tensor.GetData() + i * sizeof(T), sizeof(T)) != EOK) {
+            std::cerr << "Failed to copy output at index " << i << std::endl;
+            return false;
+        }
         if (actual != expected[i]) {
             std::cerr << "Unexpected output at index " << i << ": " << actual << ", expected " << expected[i]
                       << std::endl;

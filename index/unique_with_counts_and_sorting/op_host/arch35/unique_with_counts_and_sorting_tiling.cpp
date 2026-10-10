@@ -9,10 +9,10 @@
  */
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
 #include <vector>
 
+#include "securec.h"
 #include "graph/utils/type_utils.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -140,7 +140,9 @@ ge::graphStatus TilingGenericUnique(gert::TilingContext* context, int64_t count,
     }
     ws[0] = systemWorkspace + data.valuesBytes +
             std::max(data.indicesBytes + plan.workspaceBytes, uint64_t(cores) * CORE_COUNT_STRIDE);
-    std::memcpy(raw->GetData(), &data, sizeof(data));
+    if (memcpy_s(raw->GetData(), raw->GetCapacity(), &data, sizeof(data)) != EOK) {
+        return ge::GRAPH_FAILED;
+    }
     raw->SetDataSize(sizeof(data));
     context->SetBlockDim(cores);
     context->SetLocalMemorySize(usable);
@@ -154,7 +156,7 @@ struct ValuesOnlyRequest {
     ge::DataType dtype = ge::DT_UNDEFINED;
 };
 
-bool ValidateValuesOnlyRequest(gert::TilingContext* context, ValuesOnlyRequest& request)
+bool ValidateValuesOnlyRequest(const gert::TilingContext* context, ValuesOnlyRequest& request)
 {
     if (context == nullptr || context->GetPlatformInfo() == nullptr || context->GetInputShape(0) == nullptr ||
         context->GetInputDesc(0) == nullptr) {
@@ -179,7 +181,9 @@ bool ValidateValuesOnlyRequest(gert::TilingContext* context, ValuesOnlyRequest& 
         context->GetOutputDesc(0)->GetDataType() != inputType) {
         return false;
     }
-    for (size_t output = 1; output < 3; ++output) {
+    constexpr size_t FIRST_INDEX_OUTPUT = 1;
+    constexpr size_t OUTPUT_COUNT = 3;
+    for (size_t output = FIRST_INDEX_OUTPUT; output < OUTPUT_COUNT; ++output) {
         if (context->GetOutputDesc(output) == nullptr ||
             context->GetOutputDesc(output)->GetDataType() != ge::DT_INT64) {
             return false;
@@ -334,8 +338,11 @@ ge::graphStatus TilingUniqueWithCountsAndSorting(gert::TilingContext* context)
     const uint64_t radixBytes = Align(uint64_t(tiles) * tile, block);
     ws[0] = platform.GetLibApiWorkSpaceSize() + data.valuesBytes +
             std::max<uint64_t>(binsBytes + histBytes + tileMetadataBytes + radixBytes, cores * CORE_COUNT_STRIDE);
-    std::memcpy(context->GetRawTilingData()->GetData(), &data, sizeof(data));
-    context->GetRawTilingData()->SetDataSize(sizeof(data));
+    auto raw = context->GetRawTilingData();
+    if (memcpy_s(raw->GetData(), raw->GetCapacity(), &data, sizeof(data)) != EOK) {
+        return ge::GRAPH_FAILED;
+    }
+    raw->SetDataSize(sizeof(data));
     context->SetBlockDim(cores);
     // SIMT validates UB addresses against this runtime limit, in addition to the Host allocation budget.
     context->SetLocalMemorySize(usable);
