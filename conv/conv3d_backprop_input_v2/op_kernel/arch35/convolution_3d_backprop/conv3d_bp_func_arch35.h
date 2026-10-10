@@ -159,7 +159,7 @@ __aicore__ inline void InitFullLoadFlag(Intf* self)
         self->ctx.isA1FullLoadFlag_ = false;
         return;
     }
-    if (UseLocalWWindow<Intf>(self)) {
+    if (unlikely(UseLocalWWindow<Intf>(self))) {
         self->ctx.isB1FullLoadFlag_ = false;
         self->ctx.isA1FullLoadFlag_ = false;
         return;
@@ -381,7 +381,7 @@ __aicore__ inline void CalcMatrixByteSize(Intf* self, uint32_t& aMatrixByteSize,
             aMatrixByteSize = self->ctx.tiling_->baseM *
                               DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                               sizeof(typename Intf::SrcAT);
-        } else if (UseLocalWWindow<Intf>(self)) {
+        } else if (unlikely(UseLocalWWindow<Intf>(self))) {
             uint32_t localL1W = self->ctx.tiling_->baseM + self->ctx.tiling_->kwDilation - 1;
             aMatrixByteSize = localL1W * DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                               sizeof(typename Intf::SrcAT);
@@ -783,7 +783,7 @@ static __aicore__ inline void UpdateCurHoSize(Intf* self)
                    (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->dilationH);
     }
     UpdateCurHoSizeCore<Intf>(self, endHoIdx);
-    if (UseLocalWWindow<Intf>(self)) {
+    if (unlikely(UseLocalWWindow<Intf>(self))) {
         UpdateLocalWLoadInfo<Intf>(self, curMIdx);
     }
 }

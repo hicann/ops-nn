@@ -865,6 +865,10 @@ bool Conv3DDXV2InnerProductTiling::RunLocalWRecompute(L0TilingParams& l0Params, 
                                                       CoreTilingParams& coreParams)
 {
     (void)CalcKSegment();
+    if (tilingRunInfo_.enableSplitK) {
+        // 优先split K
+        return false;
+    }
     InitBaseMNK(l0Params);
     if (!ChooseLocalWTile(l0Params)) {
         return false;

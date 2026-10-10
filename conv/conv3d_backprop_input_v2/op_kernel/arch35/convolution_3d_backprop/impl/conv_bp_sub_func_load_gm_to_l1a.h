@@ -76,7 +76,7 @@ static __aicore__ inline void CalcSetFmatrixParams(Intf* self, uint32_t fmapH, u
             self->ctx.load3d_.padList[2] = 0;
         }
 
-        if (UseLocalWWindow<Intf>(self)) {
+        if (unlikely(UseLocalWWindow<Intf>(self))) {
             self->ctx.load3d_.padList[0] = self->ctx.localPadLeft_;
             self->ctx.load3d_.padList[1] = self->ctx.localPadRight_;
             self->ctx.load3d_.padList[2] = 0;
@@ -259,7 +259,7 @@ static __aicore__ inline void CalcOutToA1DstAddr(Intf* self, const uint32_t stri
         out2A1DstAddrOffset = static_cast<uint64_t>(hDstDataSkipLine) * woExpand << self->ctx.tiling_->c0BitsA;
     }
 
-    if (UseLocalWWindow<Intf>(self)) {
+    if (unlikely(UseLocalWWindow<Intf>(self))) {
         loadToA1HLoop = 1;
         out2A1DstAddrOffset = 0;
         woExpand = self->ctx.localL1W_;
@@ -443,7 +443,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf* self, LocalTensor<typename Intf::S
         }
     }
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo;
-    if (UseLocalWWindow<Intf>(self)) {
+    if (unlikely(UseLocalWWindow<Intf>(self))) {
         woOffset += self->ctx.localWoStart_;
     } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset += (self->ctx.curWoLeftIdx_ <= 0 ? 0 : DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW));
@@ -504,7 +504,7 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf* self, LocalTensor<typename Intf::S
     }
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo * self->ctx.tiling_->cout;
     uint64_t woOffset = 0;
-    if (UseLocalWWindow<Intf>(self)) {
+    if (unlikely(UseLocalWWindow<Intf>(self))) {
         woOffset = static_cast<uint64_t>(self->ctx.localWoStart_) * self->ctx.tiling_->cout;
     } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset = (self->ctx.curWoLeftIdx_ <= 0 ?
