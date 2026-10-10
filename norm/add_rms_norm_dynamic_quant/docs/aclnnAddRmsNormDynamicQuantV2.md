@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果。
+- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMask参数，用于配置是否输出对应位置的量化结果。
 
 - 计算公式：
 
@@ -96,7 +96,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
   const aclTensor    *smoothScale2Optional,
   const aclTensor    *betaOptional,
   double              epsilon,
-  const aclBoolArray *outputMaskOptional,
+  const aclBoolArray *outputMask,
   aclTensor          *y1Out,
   aclTensor          *y2Out,
   aclTensor          *xOut,
@@ -211,7 +211,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>outputMaskOptional（aclBoolArray*）</td>
+      <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td><ul><li>表示输出的掩码，对应公式中的`outputMask`。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>支持传空指针或长度为2的数组。</td>
@@ -323,10 +323,10 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>outputMaskOptional为空指针时，输入smoothScale2Optional，而没有输入smoothScale1Optional。</td>
+      <td>outputMask为空指针时，输入smoothScale2Optional，而没有输入smoothScale1Optional。</td>
     </tr>
     <tr>
-      <td>outputMaskOptional不为空指针时，outputMaskOptional的长度不为2，smoothScale1Optional或smoothScale2Optional不为空，但outputMaskOptional对应位置为false。</td>
+      <td>outputMask不为空指针时，outputMask的长度不为2，smoothScale1Optional或smoothScale2Optional不为空，但outputMask对应位置为false。</td>
     </tr>
     <tr>
       <td>y1Out和y2Out都为有效输出时，两者的数据类型不同。</td>
@@ -398,16 +398,16 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 
 - **输入参数约束**
 
-  - 当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
-  - 当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
-  - 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
+  - 当outputMask不为空时，参数smoothScale1Optional有值时，则outputMask[0]必须为True。参数smoothScale2Optional有值时，则outputMask[1]必须为True。
+  - 当outputMask不为空时，outputMask[0]与outputMask[1]不能同时为False。
+  - 当outputMask为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
 
 - **输出约束说明**
 
-  - 当outputMaskOptional[0]为True时，y1Out和scale1Out为有效输出；当outputMaskOptional[0]为False时，y1Out和scale1Out为无效输出。
-  - 当outputMaskOptional[1]为True时，y2Out和scale2Out为有效输出；当outputMaskOptional[1]为False时，y2Out和scale2Out为无效输出。
-  - 当outputMaskOptional为空时，y1Out和scale1Out始终为有效输出。
-  - 当outputMaskOptional为空时，y2Out和scale2Out在smoothScale1Optional和smoothScale2Optional均有效时为有效输出，否则为无效输出。
+  - 当outputMask[0]为True时，y1Out和scale1Out为有效输出；当outputMask[0]为False时，y1Out和scale1Out为无效输出。
+  - 当outputMask[1]为True时，y2Out和scale2Out为有效输出；当outputMask[1]为False时，y2Out和scale2Out为无效输出。
+  - 当outputMask为空时，y1Out和scale1Out始终为有效输出。
+  - 当outputMask为空时，y2Out和scale2Out在smoothScale1Optional和smoothScale2Optional均有效时为有效输出，否则为无效输出。
 
 - **各产品型号支持数据类型说明**
 

@@ -180,10 +180,10 @@ aclnnStatus aclnnRmsNormQuant(
   </table>
 
   <!-- npu="310p,310b" id7 -->
-  - <term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，`scale`的shape为`[1]`。
+  - <term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16；`scale`的shape为`[1]`；出参`y`的数据类型仅支持INT8。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8，`scale`的shape为`[1]`。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16；`offset`仅支持INT8；`scale`的shape为`[1]`；出参`y`的数据类型仅支持INT8、INT4。
   <!-- end id8 -->
 
   <!-- npu="950" id15 -->
@@ -299,7 +299,6 @@ aclnnStatus aclnnRmsNormQuant(
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
   <!-- end id13 -->
 
   <!-- npu="950" id14 -->
@@ -307,15 +306,15 @@ aclnnStatus aclnnRmsNormQuant(
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
-    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | FLOAT32           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT32           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT32           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     |
   <!-- end id14 -->
 
 - 确定性计算：
