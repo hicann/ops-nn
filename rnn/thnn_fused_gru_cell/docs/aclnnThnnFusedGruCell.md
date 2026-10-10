@@ -141,7 +141,7 @@ aclnnStatus aclnnThnnFusedGruCell(
       <td>inputBiasOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>输入侧bias，对应公式中的b1_r、b1_z、b1_n。</td>
-      <td><ul><li>可选输入，传入空指针表示缺省，等价于全零bias。</li><li>在位时数据类型与inputGates保持一致。</li><li>在位时shape需为（3H,）。</li></ul></td>
+      <td><ul><li>可选输入，传入空指针表示缺省，等价于全零bias。</li><li>非空时数据类型与inputGates保持一致。</li><li>非空时shape需为（3H,）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>(3H,)</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnThnnFusedGruCell(
       <td>hiddenBiasOptional（aclTensor*）</td>
       <td>可选输入</td>
       <td>隐层侧bias，对应公式中的b2_r、b2_z、b2_n。</td>
-      <td><ul><li>可选输入，传入空指针表示缺省，等价于全零bias。</li><li>在位时数据类型与inputGates保持一致。</li><li>在位时shape需为（3H,），且与inputBiasOptional同size。</li></ul></td>
+      <td><ul><li>可选输入，传入空指针表示缺省，等价于全零bias。</li><li>非空时数据类型与inputGates保持一致。</li><li>非空时shape需为（3H,），且与inputBiasOptional同size。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>(3H,)</td>
@@ -224,14 +224,18 @@ aclnnStatus aclnnThnnFusedGruCell(
       <td>inputGates、hiddenGates、hx、hyOut、storageOut或executor存在空指针。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
-      <td>输入的数据类型组合不在支持范围内，如数据类型不是BFLOAT16、FLOAT16、FLOAT之一，或各张量数据类型不一致。</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>输入的数据类型不在支持范围内，如数据类型不是BFLOAT16、FLOAT16、FLOAT之一，或各张量数据类型不一致。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561002</td>
-      <td>输入shape或格式不满足约束，如rank不等于2、门控矩阵第二维不等于3H、bias元素个数不等于3H或数据格式不为ND。</td>
+      <td>输入shape的rank不满足约束，如门控矩阵、hx、hyOut、storageOut的rank不等于2，或bias的rank不等于1。</td>
+    </tr>
+    <tr>
+      <td>门控矩阵（inputGates与hiddenGates）的第二维不等于3H。</td>
+    </tr>
+    <tr>
+      <td>bias（inputBiasOptional与hiddenBiasOptional）非空时元素个数不等于3H。</td>
     </tr>
   </tbody></table>
 
@@ -262,14 +266,14 @@ aclnnStatus aclnnThnnFusedGruCell(
 
 - 确定性说明：aclnnThnnFusedGruCell默认确定性实现。
 - 输入与输出的数据类型必须一致，仅支持BFLOAT16、FLOAT16、FLOAT；不支持跨数据类型组合，也不支持DOUBLE、INT64等其它数据类型。
-- inputGates与hiddenGates的shape必须相同且为（B, 3H），hx的shape为（B, H），需满足inputGates.shape[1] == 3 × hx.shape[1]；inputBiasOptional与hiddenBiasOptional在位时shape为（3H,）且两者同size。
+- inputGates与hiddenGates的shape必须相同且为（B, 3H），hx的shape为（B, H），需满足inputGates.shape[1] == 3 × hx.shape[1]；inputBiasOptional与hiddenBiasOptional非空时shape为（3H,）且两者同size。
 - 输入与输出的数据格式仅支持ND。
 - B=0或H=0（numel为0的空Tensor）为合法输入，直接返回空输出。
 - 输入支持非连续Tensor（由框架自动连续化处理）；输出支持非连续Tensor（算子内部计算完成后由框架按输出布局自动拷贝写回）。
 
 ## 调用示例
 
-调用示例代码如下，示例为FLOAT输入、可选bias传入空指针的场景，其余数据类型与bias在位场景的调用方式相同。
+调用示例代码如下，示例为FLOAT输入、可选bias传入空指针的场景，其余数据类型与bias非空场景的调用方式相同。
 
 ```cpp
 #include <cstdint>

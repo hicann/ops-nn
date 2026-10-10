@@ -114,8 +114,9 @@
 ## 约束说明
 
 - 输入与输出的数据类型必须一致，仅支持BFLOAT16、FLOAT16、FLOAT；不支持跨数据类型组合，也不支持DOUBLE、INT64等其它数据类型。
-- input_gates与hidden_gates的shape必须相同且为(B, 3H)，hx的shape为(B, H)，需满足input_gates.shape[1] == 3 × hx.shape[1]；input_bias与hidden_bias在位时元素个数必须为3H且两者相同。
+- input_gates与hidden_gates的shape必须相同且为(B, 3H)，hx的shape为(B, H)，需满足input_gates.shape[1] == 3 × hx.shape[1]；input_bias与hidden_bias非空时元素个数必须为3H且两者相同。
 - 输入与输出的数据格式仅支持ND。
+- 支持动态shape与动态rank：图模式下shape中的-1表示未知维、[-2]表示未知rank，实际shape与rank在执行期推导，仍须满足上述shape与格式约束。
 - B=0或H=0（numel为0的空Tensor）为合法输入，直接返回空输出。
 - aclnn接口中可选bias以空指针表达缺省，等价于全零bias；输入与输出均支持非连续Tensor（输入由接口层自动连续化，输出由接口层按声明的布局逐元素写回）。
 
