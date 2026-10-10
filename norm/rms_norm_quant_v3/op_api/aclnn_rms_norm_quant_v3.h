@@ -44,18 +44,21 @@ extern "C" {
  * 数据类型支持INT32、INT8、FLOAT16、BFLOAT16、FLOAT32，shape维度支持1维。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] beta:
- * 公式中的输入beta，RmsNorm的偏置参数，可选参数。数据类型和shape维度与gamma保持一致。
+ * 公式中的输入beta，RmsNorm的偏置参数，可选参数。数据类型与x保持一致。
+ * shape支持[H]或[1,H]，其中H为x的尾轴大小，维度数不要求与gamma相同。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] epsilon: double 类型，RMS层归一化中用到的防止除0的参数，默认值为1e-6。
  * @param [in] divMode: bool 类型，量化模式选择。true表示使用除法量化，false表示使用乘法量化。默认值为true。
  * @param [in] outputRstd: bool 类型，表示指定是否输出有效的rstd，当为false时，rstd为无效输出。默认值为false。
  * @param [out] y:
  * 公式中的输出y，量化后的输出张量。
- * 数据类型支持INT8、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN，shape需要与x一致。
+ * 数据类型支持INT8、INT4、INT32、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
+ * shape约束详见接口文档。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] rstd:
  * 公式中的输出rstd，RMS归一化的标准差倒数。数据类型支持FLOAT32。
- * 当outputRstd为true时不支持空Tensor；当outputRstd为false时该输出无效，支持空指针或空Tensor占位。
+ * 当outputRstd为true时，rstd不支持空Tensor，最后一维大小为1，其余维度的大小与x一致；当x为一维Tensor时，也支持标量。
+ * 当outputRstd为false时，rstd为无效输出，支持空指针或空Tensor占位。
  * 数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
