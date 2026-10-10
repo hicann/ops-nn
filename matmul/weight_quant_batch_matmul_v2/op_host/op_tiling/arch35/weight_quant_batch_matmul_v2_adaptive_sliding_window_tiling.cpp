@@ -65,11 +65,10 @@ int64_t StrToInt64WithDefault(const std::string& str, int64_t defaultValue)
     if (str.empty()) {
         return defaultValue;
     }
-    const char* s = str.c_str();
     char* endPtr = nullptr;
     errno = 0;
-    long long parsed = std::strtoll(s, &endPtr, 10);
-    if (errno != 0 || endPtr == s || *endPtr != '\0' || parsed < 0) {
+    long long parsed = std::strtoll(str.c_str(), &endPtr, 10);
+    if (errno != 0 || endPtr == str.c_str() || *endPtr != '\0' || parsed < 0) {
         return defaultValue;
     }
     return static_cast<int64_t>(parsed);

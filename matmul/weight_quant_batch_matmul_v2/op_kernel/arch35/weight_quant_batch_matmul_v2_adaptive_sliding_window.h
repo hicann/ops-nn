@@ -63,6 +63,10 @@ class WeightQuantBatchMatmulV2ASWKernel {
     constexpr static uint16_t SCALE_MTE2_FIX_FLAG = 0; // 0~3: scale L1缓冲，级数同l1BufferNum
     // bias BT(C2)单缓冲复用，等上一tile读取bias的Mmad完成后再覆写，避让L0的3/4号flag
     constexpr static uint16_t BIAS_BT_M_MTE1_FLAG = 5;
+    // 多buffer flag序号（0~3级buffer对应的偏移）
+    constexpr static uint16_t FIRST_FLAG = 1;
+    constexpr static uint16_t SECOND_FLAG = 2;
+    constexpr static uint16_t THIRD_FLAG = 3;
     // unitflag状态：3=最后一次累加，2=非最后一次累加，硬件自动完成M与FIX的同步
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
@@ -77,9 +81,9 @@ public:
     {
         // 预设"资源空闲"flag，使首个WaitFlag直接通过；L1最多4buffer，flag 0~3全部预设
         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG);
-        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 1);
-        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 2);
-        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 3);
+        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + FIRST_FLAG);
+        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + SECOND_FLAG);
+        AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + THIRD_FLAG);
         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(BIAS_MTE1_MTE2_FLAG);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(L0_M_MTE1_FLAG);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(L0_M_MTE1_FLAG + 1);
@@ -88,17 +92,17 @@ public:
         AscendC::SetFlag<AscendC::HardEvent::FIX_M>(L0C_FIX_M_FLAG + 1);
         // scale flag 0~3全部预设，l1BufNum为2时多余的2/3号由析构配平
         AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG);
-        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 1);
-        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 2);
-        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 3);
+        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + FIRST_FLAG);
+        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + SECOND_FLAG);
+        AscendC::SetFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + THIRD_FLAG);
     }
 
     __aicore__ inline ~WeightQuantBatchMatmulV2ASWKernel()
     {
         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 1);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 2);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + 3);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + FIRST_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + SECOND_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(L1_MTE1_MTE2_FLAG + THIRD_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(BIAS_MTE1_MTE2_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(L0_M_MTE1_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(L0_M_MTE1_FLAG + 1);
@@ -106,9 +110,9 @@ public:
         AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(L0C_FIX_M_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(L0C_FIX_M_FLAG + 1);
         AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG);
-        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 1);
-        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 2);
-        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + 3);
+        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + FIRST_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + SECOND_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(SCALE_FIX_MTE2_FLAG + THIRD_FLAG);
     }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
