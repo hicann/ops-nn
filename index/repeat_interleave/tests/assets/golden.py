@@ -22,6 +22,7 @@ __golden__ = {
         "aclnnRepeatInterleave": "aclnn_repeat_interleave_golden",
     },
     "kernel": {"repeat_interleave": "repeat_interleave_golden"},
+    "e2e": {"torch.repeat_interleave": "torch_repeat_interleave_golden"},
 }
 
 
@@ -131,4 +132,13 @@ def aclnn_repeat_interleave_with_dim_golden(
     repeats = repeats
     if hasattr(dim, "item"):
         dim = dim.item()
+    return torch.repeat_interleave(input, repeats, dim)
+
+
+def torch_repeat_interleave_golden(input, repeats, dim, **kwargs):
+    """
+    E2e golden for torch.repeat_interleave.
+    Parameters follow @torch.repeat_interleave(input, repeats, dim).
+    All the input Tensors are torch.Tensor.
+    """
     return torch.repeat_interleave(input, repeats, dim)
