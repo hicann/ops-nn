@@ -271,6 +271,8 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/rnn/single_layer_lstm_grad/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell_grad/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_graph/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch22/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/common/
@@ -332,6 +334,10 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/rnn/thnn_fused_lstm_cell/examples/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/tests/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/examples/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell/tests/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell/examples/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell_grad/tests/
+        - ops/ops-nn/rnn/thnn_fused_gru_cell_grad/examples/
       non_delivery: null
       open_source: null
 
