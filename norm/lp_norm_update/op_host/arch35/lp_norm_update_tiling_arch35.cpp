@@ -142,10 +142,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto epsilonPtr = attrs->GetAttrPointer<float>(1);
     *epsilon = (epsilonPtr == nullptr) ? 1.0e-12f : *epsilonPtr;
 
-    // 校验 p 非零或 ±inf（p=0 走恒等路径；有限非零 p 含负值走 Power 路径，与 PyTorch 对齐）
-    OP_CHECK_IF(*p == 0.0f && !IsPosInf(*p) && !IsNegInf(*p),
-                OP_LOGE(context, "LpNormUpdate: p must be != 0 or ±inf(INT_MAX/INT_MIN), got p=%f", *p),
-                return ge::GRAPH_FAILED);
+    // p=0/1/±inf(INT_MAX/INT_MIN) 走恒等路径（CalcTilingKey 分派，1/p 不计算，无除零风险）；
+    // 有限非零 p 含负值走 Power 路径，与 PyTorch 对齐。p 合法域含 0（spec lower_inclusive: 0），不做拦截。
     // 校验 epsilon >= 0
     OP_CHECK_IF(*epsilon < 0.0f, OP_LOGE(context, "LpNormUpdate: epsilon must be >= 0, got epsilon=%f", *epsilon),
                 return ge::GRAPH_FAILED);
@@ -180,7 +178,7 @@ static int32_t CalcTilingKey(float p, float* invP)
         return TILING_KEY_SQRT;
     }
     if (p == P_ZERO) {
-        // p == 0 → 校验阶段已拒绝，此处兜底防除零
+        // p == 0 → 恒等路径（L0 范数 Reduce 步已得计数，开 0 次根为退化操作）；invP 置 0 防除零
         *invP = P_ZERO;
         return TILING_KEY_IDENTITY;
     }
