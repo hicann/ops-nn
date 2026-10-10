@@ -116,7 +116,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, MapIndexTi
     OP_CHECK_IF(xShape.GetDimNum() != 1,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()), "1"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(xShape.GetDim(0) > X_MAX_DIM0,
+    OP_CHECK_IF(xShape.GetDim(0) < 1 || xShape.GetDim(0) > X_MAX_DIM0,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShape.GetDim(0)),
                                                          "The shape dim of x must be within the range [1, 24000]"),
                 return ge::GRAPH_FAILED);

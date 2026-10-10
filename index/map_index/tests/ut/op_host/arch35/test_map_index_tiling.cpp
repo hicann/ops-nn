@@ -46,9 +46,9 @@ TEST_F(MapIndexTiling, test_tiling_pass_01)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -110,6 +110,68 @@ TEST_F(MapIndexTiling, test_tiling_pass_01)
     }
 }
 
+TEST_F(MapIndexTiling, test_tiling_x_zero_dim_fail)
+{
+    std::string opType("MapIndex");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+
+    string compileInfoString = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
+                        "Intrinsic_data_move_out2l1_nd2nz": false,
+                        "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                        "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                        "CORE_NUM": 64}
+                        })";
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    optiling::MapIndexCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 253952;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::StorageShape xShape = {{0}, {0}};
+    gert::StorageShape dataSeqShape = {{0}, {0}};
+    gert::StorageShape levelIndexShape = {{0}, {0}};
+    gert::StorageShape yShape = {{1}, {1}};
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &dataSeqShape, &levelIndexShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    auto* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    ASSERT_NE(tilingFunc, nullptr);
+    EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
+}
+
 TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02)
 {
     std::string opType("MapIndex");
@@ -119,9 +181,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_dtype_fail_02)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -192,9 +254,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_dtype_fail_03)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -265,9 +327,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_03)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -338,9 +400,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_y_shape_fail_04)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -411,9 +473,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_05)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -484,9 +546,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_x_shape_fail_06)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -557,9 +619,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_07)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -630,9 +692,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_08)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -703,9 +765,9 @@ TEST_F(MapIndexTiling, test_tiling_dtype_dataSeq_shape_fail_09)
 
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                        "Intrinsic_fix_pipe_l0c2out": false, 
-                        "Intrinsic_data_move_l12ub": true, 
-                        "Intrinsic_data_move_l0c2ub": true, 
+                        "Intrinsic_fix_pipe_l0c2out": false,
+                        "Intrinsic_data_move_l12ub": true,
+                        "Intrinsic_data_move_l0c2ub": true,
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
