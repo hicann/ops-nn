@@ -19,6 +19,12 @@ add_kernel_sources(
     AUTO_SYNC false
 )
 
+add_kernel_sources(
+    KERNEL_SRC arch35/quant_batch_matmul_inplace_add.cpp
+    COMPUTE_UNITS ascend960dt
+    AUTO_SYNC false
+)
+
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(
         "ascend950pr_9599"

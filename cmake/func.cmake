@@ -221,6 +221,7 @@ function(add_opapi_modules)
       PUBLIC $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
       PRIVATE $<BUILD_INTERFACE:adump_headers> $<BUILD_INTERFACE:dlog_headers>
               $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
+              $<$<TARGET_EXISTS:cann_version_headers>:cann_version_headers>
       )
   endif()
 endfunction()

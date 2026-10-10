@@ -83,6 +83,8 @@ DTYPE_LIST = [
     "float8_e8m0",
     "float4_e2m1",
     "float4_e1m2",
+    "hifloat4",
+    "hifloat4_scale",
 ]
 FORMAT_LIST = [
     "NCHW",
