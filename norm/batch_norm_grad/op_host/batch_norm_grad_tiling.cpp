@@ -441,7 +441,7 @@ bool BatchNormGradRARFullLoadTilingBase::IsCapable()
     if ((onceProcUbNeed + reservUbSizeForAlign) * DOUBLE_BUFFER + binaryAddUbNeed > static_cast<int64_t>(ubSize)) {
         OP_LOGD(context_,
                 "shape: %ld_%ld_%ld onceUbNeed: %ld bigger than "
-                "ub: %ld resserve: %ld binaryAdd %ld core: %d, not all load template",
+                "ub: %ld reserve: %ld binaryAdd %ld core: %d, not all load template",
                 r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
         return false;
     }
