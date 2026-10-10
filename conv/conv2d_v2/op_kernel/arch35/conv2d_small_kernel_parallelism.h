@@ -740,7 +740,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
         // The next N tile reuses this window before advancing M/H/W or batch.
         PrefetchCinBlock(0, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, (this->l1Pingpong_ + 1) % 2, false);
     } else {
-        PrefetchNextUnit(setupMOff, curM, curHo, curWo, setupWoOff, kernelHxW, loadWeight, groupIter, x);
+        PrefetchNextUnit(setupMOff, curM, curHo, curWo, setupWoOff, kernelHxW, false, groupIter, x);
     }
 
     WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
