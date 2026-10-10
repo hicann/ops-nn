@@ -42,6 +42,12 @@ using namespace ge;
 using std::map;
 using std::string;
 using std::vector;
+
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
+
 #define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                                                 \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
     auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
@@ -53,7 +59,7 @@ using std::vector;
     ret = GenTensorData(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                          \
                         placeholder##intputIndex##_desc, intputDtype, 2.0F);                                        \
     if (ret != SUCCESS) {                                                                                           \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
+        LOG_PRINT("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                           \
         return FAILED;                                                                                              \
     }                                                                                                               \
     placeholder##intputIndex.update_input_desc_x(placeholder##intputIndex##_desc);                                  \
@@ -76,7 +82,7 @@ using std::vector;
     ret = GenTensorData(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                          \
                         placeholder##intputIndex##_desc, intputDtype, 2.0F);                                        \
     if (ret != SUCCESS) {                                                                                           \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
+        LOG_PRINT("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                           \
         return FAILED;                                                                                              \
     }                                                                                                               \
     placeholder##intputIndex.SetAttr("value", tensor_placeholder##intputIndex);                                     \
@@ -89,11 +95,6 @@ using std::vector;
 #define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
     TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
     add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
-
-#define LOG_PRINT(message, ...)         \
-    do {                                \
-        printf(message, ##__VA_ARGS__); \
-    } while (0)
 
 string GetTime()
 {
@@ -223,26 +224,26 @@ int main()
     std::vector<ge::Tensor> input;
 
     // 初始化GE运行环境。
-    printf("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
     std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
     if (ret != SUCCESS) {
-        printf("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
+        LOG_PRINT("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: Initialize ge using ge global options success\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Initialize ge using ge global options success\n", GetTime().c_str());
 
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
 
     DataType inDtype = DT_FLOAT;
 
-    std::cout << inDtype << std::endl;
+    LOG_PRINT("input dtype: %d\n", static_cast<int>(inDtype));
 
     // 构造单算子图并绑定图输入输出。
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
         return FAILED;
     }
 
@@ -253,15 +254,15 @@ int main()
     std::map<AscendString, AscendString> build_options = {
 
     };
-    printf("%s - INFO - [XIR]: Start to create ir session using build options\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Start to create ir session using build options\n", GetTime().c_str());
     ge::Session* session = new Session(build_options);
 
     if (session == nullptr) {
-        printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
-    printf("%s - INFO - [XIR]: Start to add compute graph to ir session\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Start to add compute graph to ir session\n", GetTime().c_str());
 
     std::map<AscendString, AscendString> graph_options = {
 
@@ -270,38 +271,38 @@ int main()
     // 将计算图加入Session并执行。
     ret = session->AddGraph(graph_id, graph, graph_options);
     if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Add graph failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [XIR]: Add graph failed\n", GetTime().c_str());
         delete session;
         GEFinalize();
         return FAILED;
     }
 
-    printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
-    printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
     std::string file_path = "./dump";
     aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
-    printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
     std::vector<ge::Tensor> output;
     ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
-        printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
+        LOG_PRINT("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
         delete session;
         GEFinalize();
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
     // 保存输入数据以便复核。
     int input_num = input.size();
     for (int i = 0; i < input_num; i++) {
-        std::cout << "input " << i << " dtype :  " << input[i].GetTensorDesc().GetDataType() << std::endl;
+        LOG_PRINT("input %d dtype : %d\n", i, static_cast<int>(input[i].GetTensorDesc().GetDataType()));
         string input_file = "./tc_ge_irrun_test_0008_npu_input_" + std::to_string(i) + ".bin";
         uint8_t* input_data_i = input[i].GetData();
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
-        std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
+        LOG_PRINT("this is %dth input, input shape size = %lld\n", i, static_cast<long long>(input_shape));
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
         if (WriteDataToFile(input_file, data_size, input_data_i) != SUCCESS) {
-            printf("%s - ERROR - [XIR]: Write input data failed\n", GetTime().c_str());
+            LOG_PRINT("%s - ERROR - [XIR]: Write input data failed\n", GetTime().c_str());
             delete session;
             GEFinalize();
             return FAILED;
@@ -311,14 +312,14 @@ int main()
     // 保存并打印输出数据。
     int output_num = output.size();
     for (int i = 0; i < output_num; i++) {
-        std::cout << "output " << i << " dtype :  " << output[i].GetTensorDesc().GetDataType() << std::endl;
+        LOG_PRINT("output %d dtype : %d\n", i, static_cast<int>(output[i].GetTensorDesc().GetDataType()));
         string output_file = "./tc_ge_irrun_test_0008_npu_output_" + std::to_string(i) + ".bin";
         uint8_t* output_data_i = output[i].GetData();
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
+        LOG_PRINT("this is %dth output, output shape size = %lld\n", i, static_cast<long long>(output_shape));
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
         if (WriteDataToFile(output_file, data_size, output_data_i) != SUCCESS) {
-            printf("%s - ERROR - [XIR]: Write output data failed\n", GetTime().c_str());
+            LOG_PRINT("%s - ERROR - [XIR]: Write output data failed\n", GetTime().c_str());
             delete session;
             GEFinalize();
             return FAILED;
@@ -332,17 +333,17 @@ int main()
     // 输出GE诊断信息并释放Session。
     ge::AscendString error_msg = ge::GEGetErrorMsgV2();
     std::string error_str(error_msg.GetString());
-    std::cout << "Error message: " << error_str << std::endl;
+    LOG_PRINT("Error message: %s\n", error_str.c_str());
     ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
     std::string warning_str(warning_msg.GetString());
-    std::cout << "Warning message: " << warning_str << std::endl;
-    printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    LOG_PRINT("Warning message: %s\n", warning_str.c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     delete session;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
-        printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
+        LOG_PRINT("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
+    LOG_PRINT("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
     return SUCCESS;
 }

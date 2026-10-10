@@ -108,3 +108,78 @@ TEST_F(GroupNorm, group_norm_infershape_rejects_rank_one)
     Runtime2TestParam param{{"num_groups"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
 }
+
+TEST_F(GroupNorm, group_norm_infershape_preserves_rank_nine)
+{
+    ge::op::GroupNorm op;
+    op.UpdateInputDesc("x", create_desc({1, 4, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT));
+    op.SetAttr("num_groups", 2);
+
+    Runtime2TestParam param{{"num_groups"}};
+    // Preserve the pre-PR inference contract.
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc("y").GetShape().GetDims(), std::vector<int64_t>({1, 4, 2, 2, 2, 2, 2, 2, 2}));
+    EXPECT_EQ(op.GetOutputDesc("mean").GetShape().GetDims(), std::vector<int64_t>({1, 2}));
+    EXPECT_EQ(op.GetOutputDesc("variance").GetShape().GetDims(), std::vector<int64_t>({1, 2}));
+}
+
+TEST_F(GroupNorm, group_norm_infershape_preserves_zero_num_groups)
+{
+    ge::op::GroupNorm op;
+    op.UpdateInputDesc("x", create_desc({8, 16, 15, 15}, ge::DT_FLOAT16));
+    op.SetAttr("num_groups", 0);
+
+    Runtime2TestParam param{{"num_groups"}};
+    // Preserve the pre-PR inference contract.
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc("y").GetShape().GetDims(), std::vector<int64_t>({8, 16, 15, 15}));
+    EXPECT_EQ(op.GetOutputDesc("mean").GetShape().GetDims(), std::vector<int64_t>({8, 0}));
+    EXPECT_EQ(op.GetOutputDesc("variance").GetShape().GetDims(), std::vector<int64_t>({8, 0}));
+}
+
+TEST_F(GroupNorm, group_norm_infershape_preserves_zero_channel)
+{
+    ge::op::GroupNorm op;
+    op.UpdateInputDesc("x", create_desc({2, 0, 3, 3}, ge::DT_FLOAT));
+    op.SetAttr("num_groups", 1);
+
+    Runtime2TestParam param{{"num_groups"}};
+    // Preserve the pre-PR inference contract.
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc("y").GetShape().GetDims(), std::vector<int64_t>({2, 0, 3, 3}));
+    EXPECT_EQ(op.GetOutputDesc("mean").GetShape().GetDims(), std::vector<int64_t>({2, 1}));
+    EXPECT_EQ(op.GetOutputDesc("variance").GetShape().GetDims(), std::vector<int64_t>({2, 1}));
+}
+
+TEST_F(GroupNorm, group_norm_infershape_preserves_indivisible_channel)
+{
+    ge::op::GroupNorm op;
+    op.UpdateInputDesc("x", create_desc({2, 7, 3, 3}, ge::DT_FLOAT));
+    op.SetAttr("num_groups", 2);
+
+    Runtime2TestParam param{{"num_groups"}};
+    // Preserve the pre-PR inference contract.
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc("y").GetShape().GetDims(), std::vector<int64_t>({2, 7, 3, 3}));
+    EXPECT_EQ(op.GetOutputDesc("mean").GetShape().GetDims(), std::vector<int64_t>({2, 2}));
+    EXPECT_EQ(op.GetOutputDesc("variance").GetShape().GetDims(), std::vector<int64_t>({2, 2}));
+}
+
+TEST_F(GroupNorm, group_norm_infershape_skips_channel_check_when_unknown)
+{
+    ge::op::GroupNorm op;
+    op.UpdateInputDesc("x", create_desc({-1, -1, -1, -1}, ge::DT_FLOAT16));
+    op.SetAttr("num_groups", 3);
+    std::vector<int64_t> expected_output_shape = {-1, -1, -1, -1};
+    std::vector<int64_t> expected_mean_shape = {-1, 3};
+    std::vector<int64_t> expected_variance_shape = {-1, 3};
+
+    Runtime2TestParam param{{"num_groups"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto output0_desc = op.GetOutputDesc(0);
+    EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
+    auto output1_desc = op.GetOutputDesc(1);
+    EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_mean_shape);
+    auto output2_desc = op.GetOutputDesc(2);
+    EXPECT_EQ(output2_desc.GetShape().GetDims(), expected_variance_shape);
+}
