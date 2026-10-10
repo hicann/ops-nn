@@ -120,7 +120,25 @@ def aclnn_quant_conv2d_input(
     aclnnQuantConvolutionGetWorkspaceSize(input, weight, bias, scale, offset, output,
                                           stride, padding, dilation, transposed,
                                           outputPadding, groups, offsetx, roundMode)
+
+    The conv3d dequant scenario (5D int8 input with float32 scale) is dispatched
+    to Conv3DV2 inside aclnnQuantConvolution: the float32 scale is a plain tensor
+    and is passed through as-is. The uint64/int64 scale encoding below only
+    applies to the quant conv3d and extend conv2d paths.
     """
+
+    def _dtype_name(tensor):
+        return str(getattr(tensor, "dtype", "")).split(".")[-1]
+
+    if (
+        scale is not None
+        and not isinstance(scale, (int, float))
+        and getattr(x, "ndim", 0) == 5
+        and _dtype_name(x) == "int8"
+        and _dtype_name(scale) == "float32"
+    ):
+        return [x, weight, bias, scale, offset]
+
     if scale is not None and not isinstance(scale, (int, float)):
         n_channels = scale.shape[0] if hasattr(scale, "shape") else len(scale)
         scale_float = np.random.uniform(0.01, 1.0, size=n_channels).astype(np.float32)

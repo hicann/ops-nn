@@ -1349,6 +1349,14 @@ public:
         if (ret != ACLNN_SUCCESS) {
             return ret;
         }
+
+        bool isConv3DQuant = input->GetViewShape().GetDimNum() == CONV_3D_INPUT_DIM &&
+                             input->GetDataType() == DataType::DT_INT8 && scale->GetDataType() == DataType::DT_FLOAT;
+        if (isConv3DQuant && bias != nullptr &&
+            (bias->GetDataType() == DataType::DT_FLOAT16 || bias->GetDataType() == DataType::DT_BF16)) {
+            bias = l0op::Cast(bias, DataType::DT_FLOAT, executor);
+            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
         return ACLNN_SUCCESS;
     }
 
