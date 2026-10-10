@@ -109,7 +109,7 @@ def process_formats_a5(x, filter, input_formats):
     Process format conversion for Ascend 950PR/950DT (A5).
     Constraints:
     - x supports: NCHW, NHWC
-    - filter supports: NCHW (when x is NCHW) or HWCN (when x is NHWC)
+    - filter supports: NCHW, HWCN, NHWC
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
 
@@ -118,6 +118,8 @@ def process_formats_a5(x, filter, input_formats):
 
     if input_filter_format == "HWCN":
         filter = filter.transpose(3, 2, 0, 1)
+    elif input_filter_format == "NHWC":
+        filter = filter.transpose(0, 3, 1, 2)
 
     return x, filter
 

@@ -128,9 +128,12 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
     return out
 
 
-def is_ascend950(short_soc_version):
-    """Check if target SoC is Ascend 950PR/950DT."""
-    return short_soc_version in ("Ascend950", "Ascend350")
+def is_ascend950_or_960(short_soc_version):
+    """Check if target SoC is Ascend 950PR/950DT or 960PR/960DT."""
+    return short_soc_version in (
+        "Ascend950",
+        "Ascend350",
+    ) or short_soc_version.startswith("Ascend960")
 
 
 def process_input_format(x, filter, input_formats):
@@ -139,7 +142,7 @@ def process_input_format(x, filter, input_formats):
 
     Args:
         x: Input tensor (N, C, H, W) or (N, H, W, C)
-        filter: Weight tensor (OutC, InC, kH, kW) or (kH, kW, InC, OutC)
+        filter: Weight tensor (OutC, InC, kH, kW), (kH, kW, InC, OutC) or (OutC, kH, kW, InC)
         input_formats: [data_format, filter_format] e.g. ["NCHW", "NCHW"] or ["NHWC", "HWCN"]
 
     Returns:
@@ -152,6 +155,8 @@ def process_input_format(x, filter, input_formats):
 
     if input_filter_format == "HWCN":
         filter = filter.transpose(3, 2, 0, 1)
+    elif input_filter_format == NHWC_FORMAT:
+        filter = filter.transpose(0, 3, 1, 2)
 
     return x, filter
 
@@ -315,8 +320,10 @@ def extend_conv2d_golden(
     import torch.nn.functional as F
 
     short_soc_version = kwargs.get("short_soc_version", "")
-    if not is_ascend950(short_soc_version):
-        raise ValueError("extend_conv2d only supports Ascend 950PR/950DT")
+    if not is_ascend950_or_960(short_soc_version):
+        raise ValueError(
+            "extend_conv2d only supports Ascend 950PR/950DT and 960PR/960DT"
+        )
 
     input_formats = kwargs.get("input_formats", [NCHW_FORMAT, NCHW_FORMAT])
     x_dtype_str = x.dtype.name

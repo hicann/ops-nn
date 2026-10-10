@@ -177,9 +177,12 @@ def to_NDC1HWC0(data, ori_format, target_shape):
     return data
 
 
-def is_ascend950(short_soc_version):
-    """Check if the target is Ascend 950PR/950DT"""
-    return short_soc_version in ("Ascend950", "Ascend350")
+def is_ascend950_or_960(short_soc_version):
+    """Check if the target is Ascend 950PR/950DT or 960PR/960DT"""
+    return short_soc_version in (
+        "Ascend950",
+        "Ascend350",
+    ) or short_soc_version.startswith("Ascend960")
 
 
 def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
@@ -206,11 +209,11 @@ def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
 
 def process_formats_a5(x, filter, input_formats, input_ori_shapes=None, groups=1):
     """
-    Process format conversion for Ascend 950PR/950DT (A5).
+    Process format conversion for Ascend 950PR/950DT (A5) and 960PR/960DT.
 
     Constraints:
     - x supports: NCDHW, NDHWC
-    - filter supports: NCDHW, DHWCN, FRACTAL_Z_3D
+    - filter supports: NCDHW, DHWCN, NDHWC, FRACTAL_Z_3D
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
 
@@ -219,6 +222,8 @@ def process_formats_a5(x, filter, input_formats, input_ori_shapes=None, groups=1
 
     if input_filter_format == "DHWCN":
         filter = filter.transpose(4, 3, 0, 1, 2)
+    elif input_filter_format == "NDHWC":
+        filter = filter.transpose(0, 4, 1, 2, 3)
     elif input_filter_format == "FRACTAL_Z_3D":
         if input_ori_shapes is not None and input_ori_shapes[1] is not None:
             filter = to_NCDHW_from_FRACTAL_Z_3D(filter, input_ori_shapes[1], groups)
@@ -608,14 +613,14 @@ def conv3d_v2_golden(
     import torch
 
     short_soc_version = kwargs.get("short_soc_version", "")
-    is_950 = is_ascend950(short_soc_version)
+    is_950_or_960 = is_ascend950_or_960(short_soc_version)
 
     input_formats = kwargs.get("input_formats", [NCDHW_FORMAT, NCDHW_FORMAT])
     input_ori_shapes = kwargs.get("input_ori_shapes", None)
 
     x_dtype_str = x.dtype.name
 
-    if is_950:
+    if is_950_or_960:
         x_np, filter_np = process_formats_a5(
             x, filter, input_formats, input_ori_shapes, groups
         )
@@ -749,7 +754,7 @@ def conv3d_v2_golden(
 
     output_ori_shapes = kwargs.get("output_ori_shapes", None)
 
-    if not is_950:
+    if not is_950_or_960:
         out = process_output_format_a2_a3(
             out, output_format, input_format, output_ori_shapes
         )

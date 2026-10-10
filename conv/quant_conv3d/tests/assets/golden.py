@@ -61,13 +61,13 @@ def is_ascend950(short_soc_version):
 
 def process_formats(x, filter, input_formats):
     """
-    Process format conversion for Ascend 950PR/950DT.
+    Process format conversion for Ascend 950PR/950DT and 960PR/960DT.
 
     Constraints:
     - x supports: NCDHW, NDHWC
-    - filter supports: NCDHW, DHWCN
+    - filter supports: NCDHW, DHWCN, NDHWC
     - when x is NCDHW, filter is NCDHW
-    - when x is NDHWC, filter is DHWCN
+    - when x is NDHWC, filter is DHWCN or NDHWC
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
 
@@ -76,6 +76,8 @@ def process_formats(x, filter, input_formats):
 
     if input_filter_format == "DHWCN":
         filter = filter.transpose(4, 3, 0, 1, 2)
+    elif input_filter_format == NDHWC_FORMAT:
+        filter = filter.transpose(0, 4, 1, 2, 3)
 
     return x, filter
 
