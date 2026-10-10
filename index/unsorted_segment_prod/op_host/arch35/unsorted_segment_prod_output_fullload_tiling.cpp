@@ -27,7 +27,7 @@ bool UnsortedSegmentProdOutFlTiling::IsCapable()
         return false;
     }
     if (dataShapeSize_ == 0UL) {
-        return true;
+        return IsSupportDtype();
     }
     constexpr uint64_t OUTFL_ECONOMIC_FACTOR = 2;
     uint64_t outputSize = outputOuterDim_ * innerDim_;
