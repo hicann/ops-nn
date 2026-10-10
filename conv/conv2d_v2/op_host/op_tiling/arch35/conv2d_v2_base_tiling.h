@@ -193,7 +193,6 @@ private:
     ge::graphStatus InitConv2dApiTiling();
     ge::graphStatus SetTilingKey();
     void CalcASWTStrategy();
-    uint64_t GetASWTMTile();
 
     // get tiilingKey params value
     uint64_t GetL0PingPongVal();

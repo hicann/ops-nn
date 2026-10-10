@@ -528,7 +528,7 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     if (flagInfo_.isASWT) {
         uint64_t totalM = shapeInfo_.ho * shapeInfo_.wo;
-        uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, GetASWTMTile());
+        uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, tilingData_.get_hoL1());
         uint64_t nBlocks = ConvCeilDiv(shapeInfo_.co, tilingData_.get_nBL1());
         uint64_t batchBlocks = ConvCeilDiv(shapeInfo_.batch, tilingData_.get_innerBatch());
         context_->SetBlockDim(std::min<uint64_t>(batchBlocks * mBlocks * nBlocks, opInfo_->aicoreNum));
@@ -539,17 +539,6 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
                               numBlocksRes.groupDim);
     }
     return ge::GRAPH_SUCCESS;
-}
-
-uint64_t Conv2dBaseTiling::GetASWTMTile()
-{
-    // Match Conv2dIntf::isMPreLoad using the same values that form the tiling key.
-    uint64_t smallWeight = GetSmallWeightVal();
-    bool isMPreLoad = (smallWeight == CONV_FULLLOAD_KL1_NL0 || smallWeight == CONV_WEIGHT_SMALLER_THAN_BL0) &&
-                      flagInfo_.mSplitModeFlag && GetEnableInnerBatch() == CONV_INNER_BATCH_SINGLE &&
-                      GetL1PingPongVal() == CONV_L1_PINGPONG_AL1_OPEN;
-    // Group two existing L1 blocks into one task; keep the L1 allocation and copy size unchanged.
-    return static_cast<uint64_t>(tilingData_.get_hoL1()) * (isMPreLoad ? 2 : 1);
 }
 
 void Conv2dBaseTiling::CalcASWTStrategy()
@@ -579,7 +568,7 @@ void Conv2dBaseTiling::CalcASWTStrategy()
     }
 
     uint64_t totalM = shapeInfo_.ho * shapeInfo_.wo;
-    uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, GetASWTMTile());
+    uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, tilingData_.get_hoL1());
     uint64_t nBlocks = ConvCeilDiv(shapeInfo_.co, tilingData_.get_nBL1());
     uint64_t batchBlocks = ConvCeilDiv(shapeInfo_.batch, tilingData_.get_innerBatch());
     uint64_t totalBlocks = batchBlocks * mBlocks * nBlocks;
