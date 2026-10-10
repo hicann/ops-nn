@@ -148,12 +148,12 @@ bool AddRmsNormDynamicQuantTilingHelper::DoTiling()
     OP_TILING_CHECK((nullptr == context_),
                     OP_LOGE("AddRmsNormDynamicQuantTiling", "Helper context_ get nullptr, return failed."),
                     return false);
-    OP_TILING_CHECK(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
-    OP_TILING_CHECK(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"),
+    OP_TILING_CHECK(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo failed, return false"), return false);
+    OP_TILING_CHECK(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo failed, return false"),
                     return false);
-    OP_TILING_CHECK(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"),
+    OP_TILING_CHECK(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling failed, return false"),
                     return false);
-    OP_TILING_CHECK(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"), return false);
+    OP_TILING_CHECK(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling failed, return false"), return false);
     return true;
 }
 
