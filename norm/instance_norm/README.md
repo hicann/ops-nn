@@ -48,7 +48,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td><ul><li>不支持空Tensor。</li><li>一个1D张量，表示进行InstanceNorm计算的缩放因子（权重），对应公式中的`γ`。</li><li>数据类型默认与x一致；若不一致，则显示设为FLOAT32。</li><li>shape与输入x的C轴保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>一个1D张量，表示进行InstanceNorm计算的缩放因子（权重），对应公式中的`γ`。</li><li>数据类型默认与x一致；若不一致，则显式设为FLOAT32。</li><li>shape与输入x的C轴保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

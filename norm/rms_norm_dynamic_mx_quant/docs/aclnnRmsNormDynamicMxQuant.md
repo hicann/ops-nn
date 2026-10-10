@@ -149,7 +149,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的gamma。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape只能为一维，需要与x最后一维维度匹配。</li><li>数据类型默认与输入x一致；若不一致，则显示设为FLOAT32。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape只能为一维，需要与x最后一维维度匹配。</li><li>数据类型默认与输入x一致；若不一致，则显式设为FLOAT32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1</td>
