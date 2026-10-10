@@ -2520,6 +2520,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/unique_with_counts_and_sorting/README.md">unique_with_counts_and_sorting</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core/AI CPU</td>
+    <td>将输入张量展平后全局去重，可返回反向索引及出现次数。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/unique_with_counts_ext2/README.md">unique_with_counts_ext2</a></td>
     <td>✗</td>
     <td>✗</td>
