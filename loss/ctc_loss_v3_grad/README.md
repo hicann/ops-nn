@@ -42,14 +42,14 @@
       <td>grad_out</td>
       <td>输入</td>
       <td>梯度更新系数。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>log_probs</td>
       <td>输入</td>
       <td>输入的每个时刻每个token的概率。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -77,14 +77,14 @@
       <td>neg_log_likelihood</td>
       <td>输入</td>
       <td>相对于每个节点可微分的损失值。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>log_alpha</td>
       <td>输入</td>
       <td>输入序列追踪到目标序列的概率。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       </tr>
     <tr>
@@ -112,7 +112,7 @@
       <td>grad</td>
       <td>输出</td>
       <td>ctcloss的梯度。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16、DOUBLE</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>

@@ -75,14 +75,14 @@
       <td>xyz1</td>
       <td>输入</td>
       <td>算子正向输入的张量。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>xyz2</td>
       <td>输入</td>
       <td>算子正向输入的张量。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -103,28 +103,28 @@
       <td>grad_dist1</td>
       <td>输入</td>
       <td>正向输出dist1的反向梯度，也是反向算子的初始梯度。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad_dist2</td>
       <td>输入</td>
       <td>正向输出dist2的反向梯度，也是反向算子的初始梯度。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad_xyz1</td>
       <td>输出</td>
       <td>梯度更新之后正向算子输入xyz1对应的梯度。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad_xyz2</td>
       <td>输出</td>
       <td>梯度更新之后正向算子输入xyz2对应的梯度。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
     </tr>
   </tbody></table>
