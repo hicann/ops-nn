@@ -83,18 +83,22 @@
 
 ## 约束说明
 
-- x 为 3D 定长 [T, B, I]；I、H 为正数；H、I 任意（非 16 对齐时按 padded 布局处理，pad 区恒 0）。
+- x 为 3D 定长 [T, B, I]；运行时 T、B、I、H 均须大于 0，不支持计算维度为空的张量。H、I 非 16 对齐时按 padded 布局处理，pad 区恒 0。
+- 输入声明了自动连续化（`AutoContiguous`），kernel 消费连续 ND 布局；非连续输入的图通路行为尚无专项实跑结果。
 - 支持 FLOAT32 与 FLOAT16；两种 dtype 复用同一条 fp32 cube 通路（fp16 仅在输入/输出边界做 Cast，精度以 fp32 累加为准）。
 - 除 seq_length（INT32）、mask（UINT8）外全部浮点输入/输出与 x 的 dtype 一致。
 - `seq_length` 元素满足 0 ≤ seq_length[b] ≤ T；越界值不额外校验，kernel 按 `t < seq_length[b]` 比较天然钳位（大于 T 等价 T、小于 0 等价 0）。
 - 双向、多层（cell_depth>1）、投影（num_proj>0）暂不支持。
 - `keep_prob` 仅接受 1.0/-1.0（dropout 不生效），`cell_clip` 仅接受 -1.0（clip 不生效），其余取值报错。
+- 动态 Shape 示例将 T、B、I 声明为 `-1`，H 保持具体值；不支持 H 全动态。动态 Rank 示例仅将不参与计算的可选输入 `mask` 声明为 `[-2]`，不能据此推断核心计算输入支持未知 Rank。
 
 ## 调用说明
 
-算子以二进制方式发布（`op_host/config/ascend950/dynamic_augru_grad_binary.json`），通过 GE Graph 模式调用：
+算子通过 GE Graph 模式调用。发布二进制由构建流程自动生成，源码目录不提供手写的 binary JSON 配置：
 
 | 调用方式 | 调用样例 | 说明 |
 | -------- | -------- | ---- |
 | GE图模式 | [test_geir_dynamic_augru_grad](examples/arch35/test_geir_dynamic_augru_grad.cpp) | 通过[算子IR](op_graph/dynamic_augru_grad_proto.h)构图并调用DynamicAUGRUGrad算子。 |
-| GE图模式 | [test_geir_dynamic_augru_grad_dynamic](examples/arch35/test_geir_dynamic_augru_grad_dynamic.cpp) | 通过[算子IR](op_graph/dynamic_augru_grad_proto.h)在同一张图中以动态Shape或动态Rank调用DynamicAUGRUGrad算子。 |
+| GE图模式 | [test_geir_dynamic_augru_grad_dynamic](examples/arch35/test_geir_dynamic_augru_grad_dynamic.cpp) | 在同一张图中验证 T/B/I 未知维；另用可选占位输入 mask 验证未知 Rank，核心计算输入仍使用已知 Rank。 |
+
+TF 插件注册的 `OriginOpType` 为 `DynamicAUGRUGrad`。该注册用于 TF 图节点到 GE 算子的映射，不能据此推断存在同名 `tf.raw_ops` 或 TF-Adapter Python 函数。本目录提供 GEIR 调用示例，未提供 TF/ONNX 端到端导入示例。重复执行的逐位确定性尚无专项验证结果。

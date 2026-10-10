@@ -27,7 +27,7 @@ namespace ge {
 * @par Inputs:
 * @li x: 3D Tensor [T, B, I]，前向输入序列。
 * @li weight_input: 2D Tensor [I, 3H]，输入侧权重。
-* @li weight_hidden: 2D Tensor [H, 3H]，隐状态侧权重。
+* @li weight_hidden: 2D Tensor [H, 3H] 或 3D Tensor [1, H, 3H]，隐状态侧权重。
 * @li weight_att: 3D Tensor [T, B, H]，注意力得分（已按H广播）。
 * @li y: 3D Tensor [T, B, H]，前向输出（占位输入，不参与数值计算）。
 * @li init_h: 2D Tensor [B, H]，初始隐状态。
@@ -52,10 +52,10 @@ namespace ge {
 * @li dh_prev: 2D Tensor [B, H]。
 * @li dw_att: 2D Tensor [T, B]。
 
-* @par Attributes（当前实现仅支持默认值语义）:
+* @par Attributes（当前实现支持下列固定值或枚举值）:
 * @li direction: String，默认"UNIDIRECTIONAL"。
 * @li cell_depth: Int，默认1。
-* @li keep_prob: Float，默认-1.0。
+* @li keep_prob: Float，默认-1.0，支持-1.0/1.0，不启用dropout。
 * @li cell_clip: Float，默认-1.0。
 * @li num_proj: Int，默认0。
 * @li time_major: Bool，默认true。
@@ -65,6 +65,7 @@ namespace ge {
 * @par Constraints:
 * @li 仅支持UNIDIRECTIONAL、单层、gate_order为zrh/rzh。
 * @li 上述输入中除x为FLOAT16/FLOAT32外，其余浮点输入与x的dtype一致。
+* @li 运行时T/B/I/H必须大于0；cell_clip仅支持-1.0，不启用clip。
 */
 #ifndef OPS_PROTO_DEF_DYNAMICAUGRUGRAD
 #define OPS_PROTO_DEF_DYNAMICAUGRUGRAD

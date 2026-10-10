@@ -238,6 +238,7 @@
 
 - 仅支持单层、单向、时间维优先的前向计算。
 - 运行时`T`、`B`、`I`、`H`均须大于0，不支持空张量。各输入的关联维度须满足参数说明中的shape关系。
+- 调用时输入按连续ND布局组织；本目录未提供非连续输入的专项调用示例或验证结果。
 - `bias_input`、`bias_hidden`和`init_h`中已提供的张量须使用相同数据类型，七个输出与其保持一致。三者均未提供时，输出类型为FLOAT16。
 - 未提供`seq_length`时，`y`和`output_h`保存当前时间步计算得到的隐藏状态。
 - `seq_length`为INT32张量`[B]`时，对于第`b`个样本的第`t`个时间步：
@@ -254,3 +255,5 @@
 | 调用方式 | 调用样例 | 说明 |
 | --- | --- | --- |
 | 图模式调用 | [test_geir_dynamic_augru](examples/arch35/test_geir_dynamic_augru.cpp) | 通过[算子IR](op_graph/dynamic_augru_proto.h)构图方式调用DynamicAUGRU，验证静态shape、动态shape和动态rank。 |
+
+TF 插件注册的 `OriginOpType` 为 `DynamicAUGRU`。该注册用于 TF 图节点到 GE 算子的映射，不能据此推断存在同名 `tf.raw_ops` 或 TF-Adapter Python 函数。本目录提供 GEIR 调用示例，未提供 TF/ONNX 端到端导入示例。重复执行的逐位确定性尚无专项验证结果。
