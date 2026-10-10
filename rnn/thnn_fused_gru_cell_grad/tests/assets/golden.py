@@ -40,8 +40,8 @@ bias 归约完成后一次性收窄。
 仅通过 ``third_party`` 属性声明，由 TTK 框架在独立子进程隔离执行——
 **切勿在本文件内直接 import / 调用该竞品 API**（aclnn 进程已初始化 aclrt，同进程调用会 SIGSEGV）。
 
-判读：golden 侧不声明 tolerance、不自定义判读——由 TTK 框架默认
-stat_rel_err 口径统一判定（mere<th、mare<10×th，th 按 dtype 阈值表）。
+判读：三 dtype 均声明 cross_check 最严档 L2（mare/mere/rmse 比值 ≤ 2/1.2/1.2，
+NPU 与 third_party 各自对 golden 的误差比值判据，见 TTK resolve.py LEVEL_PRESETS）。
 """
 
 import numpy as np
@@ -58,6 +58,7 @@ __spec__ = {
 _NP_TO_TORCH = {
     np.dtype(np.float32): torch.float32,
     np.dtype(np.float16): torch.float16,
+    np.dtype(np.float64): torch.float64,
 }
 
 
@@ -73,14 +74,14 @@ def _as_bool(value) -> bool:
 
 
 def _to_fp32_torch(x):
-    """输入归一为 fp32 torch.Tensor（H2F 语义，半精度→fp32 为精确拓宽）。
+    """半精度（fp16/bf16）升 fp32 计算，fp32/fp64 保持原始精度。
 
-    返回 ``(fp32_tensor, 原始dtype, 是否torch输入)``：
-      - torch.Tensor：``.to(fp32)``（bf16/fp16 → fp32 精确）；
-      - numpy.ndarray：``from_numpy``；bf16（ml_dtypes）经 int16 位桥无损转 torch.bfloat16。
+    返回 ``(tensor, 原始dtype, 是否torch输入)``。
     """
     if isinstance(x, torch.Tensor):
-        return x.detach().to(torch.float32).contiguous(), x.dtype, True
+        if x.dtype in (torch.float16, torch.bfloat16):
+            return x.detach().to(torch.float32).contiguous(), x.dtype, True
+        return x.detach().contiguous(), x.dtype, True
     arr = np.asarray(x)
     dtype = arr.dtype
     if _is_bf16(dtype):
@@ -92,11 +93,9 @@ def _to_fp32_torch(x):
         raise ValueError(
             f"ThnnFusedGruCellGrad golden 仅支持 float32/float16/bfloat16 输入，got {np_dtype}"
         )
-    return (
-        torch.from_numpy(np.ascontiguousarray(arr).astype(np.float32)),
-        np_dtype,
-        False,
-    )
+    if np_dtype == np.dtype(np.float16):
+        arr = arr.astype(np.float32)
+    return torch.from_numpy(np.ascontiguousarray(arr)), np_dtype, False
 
 
 def _cast_back(t, dtype, torch_out):
@@ -191,3 +190,9 @@ class ThnnFusedGruCellGradTestSpec:
         ]
 
     third_party = {"torch": TorchRefImpl}
+
+    tolerance = {
+        "float32": {"standard": "cross_check", "level": "L2"},
+        "float16": {"standard": "cross_check", "level": "L2"},
+        "bfloat16": {"standard": "cross_check", "level": "L2"},
+    }

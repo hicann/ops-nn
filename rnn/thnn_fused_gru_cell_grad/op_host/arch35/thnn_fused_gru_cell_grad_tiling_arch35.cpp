@@ -422,6 +422,36 @@ ge::graphStatus ComputeGroupSplit(gert::TilingContext* context, ThnnFusedGruCell
     return ge::GRAPH_SUCCESS;
 }
 
+// group 路由 rUbFactor 关键路径择优：不固定取 rIMax，改在 [minRPerCore, rIMax]
+// 候选域按 cost = CeilDiv(aLp × rLp, coreNum) × rUb 择优，使 aLp × rLp → coreNum
+void SelectGroupRUbFactor(gert::TilingContext* context, ThnnFusedGruCellGradTiling& tiling)
+{
+    const int64_t rUbBase = std::min(tiling.rUbFactor, tiling.B);
+    const int64_t rLpBase = tiling.rLoopCntTotal;
+    int64_t minRPerCore = std::max(std::max(int64_t(1), CeilDiv(tiling.B, tiling.coreNum)),
+                                   CeilDiv(7 * tiling.coreNum, 5 * tiling.aUbFactor));
+    minRPerCore = std::min(minRPerCore, rUbBase);
+    const int64_t levelStride = CeilAlign(BIAS_SEG_CNT * tiling.aUbFactor, TREE_LANE_ALIGN);
+    int64_t bestRub = rUbBase;
+    int64_t bestCost = INT64_MAX;
+    for (int64_t cand = rUbBase; cand >= minRPerCore; --cand) {
+        const int64_t rLpCand = CeilDiv(tiling.B, cand);
+        if (CacheCount(rLpCand) * levelStride * FP32_BYTES > CACHE_BUF_BYTES) {
+            continue;
+        }
+        const int64_t cost = CeilDiv(tiling.aLoopCntTotal * rLpCand, tiling.coreNum) * cand;
+        if (cost < bestCost) {
+            bestCost = cost;
+            bestRub = cand;
+        }
+    }
+    tiling.rUbFactor = bestRub;
+    tiling.rLoopCntTotal = CeilDiv(tiling.B, bestRub);
+    OP_LOGI(context,
+            "group-rub-critical-path: rUbFactor %ld -> %ld, rLoopCntTotal %ld -> %ld, cost=%ld (aLp=%ld coreNum=%ld)",
+            rUbBase, tiling.rUbFactor, rLpBase, tiling.rLoopCntTotal, bestCost, tiling.aLoopCntTotal, tiling.coreNum);
+}
+
 // ─── 填 TilingData（base tilingKey=0 / group tilingKey=1 共用 struct）+
 //     全字段 OP_LOGI ───
 ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const ThnnFusedGruCellGradTiling& tiling)
@@ -528,6 +558,7 @@ static ge::graphStatus ThnnFusedGruCellGradTilingFunc(gert::TilingContext* conte
     // ===== Group 判定（先空后组默认基）→ tilingKey=1 / tilingKey=0 =====
     tiling.isGroup = ShouldUseGroup(tiling);
     if (tiling.isGroup) {
+        SelectGroupRUbFactor(context, tiling);    // rUb 择优
         ret = ComputeGroupSplit(context, tiling); // 含 SetScheduleMode(1)
         if (ret != ge::GRAPH_SUCCESS) {
             return ret;

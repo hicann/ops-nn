@@ -141,6 +141,60 @@ static bool RunGruGradTiling(const vector<int64_t>& gradHyShape, const vector<in
     return static_cast<uint32_t>(ret) == static_cast<uint32_t>(ge::GRAPH_SUCCESS);
 }
 
+// 带 blockDim 返回的 tiling 调用（SelectGroupRUbFactor 看护用）
+static bool RunGruGradTilingWithBd(const vector<int64_t>& gradHyShape, const vector<int64_t>& storageShape,
+                                   ge::DataType gradHyDtype, ge::DataType storageDtype, bool hasBias,
+                                   uint64_t* tilingKey, uint32_t* blockDim, int64_t coreNum = 48,
+                                   int64_t ubSize = 262144)
+{
+    gert::StorageShape gradHy = MakeUtStorageShape(gradHyShape);
+    gert::StorageShape storage = MakeUtStorageShape(storageShape);
+    const int64_t B = (gradHyShape.size() == 2) ? gradHyShape[0] : 4;
+    const int64_t H = (gradHyShape.size() == 2) ? gradHyShape[1] : 8;
+    gert::StorageShape gates = MakeUtStorageShape({B, 3 * H});
+    gert::StorageShape hx = MakeUtStorageShape({B, H});
+    gert::StorageShape bias = MakeUtStorageShape({3 * H});
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    ThnnFusedGruCellGradUtCompileInfo compileInfo;
+
+    auto impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ThnnFusedGruCellGrad");
+    if (impl == nullptr || impl->tiling == nullptr) {
+        return false;
+    }
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(16);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("ThnnFusedGruCellGrad")
+                      .NodeIoNum(2, 5)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradHy, &storage})
+                      .OutputShapes({&gates, &gates, &hx, &bias, &bias})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, storageDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, gradHyDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"has_bias", Ops::NN::AnyValue::CreateFrom<bool>(hasBias)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    InitUtPlatformInfo(tilingContext, coreNum, ubSize);
+
+    const auto ret = impl->tiling(tilingContext);
+    *tilingKey = tilingContext->GetTilingKey();
+    *blockDim = tilingContext->GetBlockDim();
+    return static_cast<uint32_t>(ret) == static_cast<uint32_t>(ge::GRAPH_SUCCESS);
+}
+
 // base 分支（tilingKey=0）：标准 shape B=4/H=8/fp32（插件仓 E01 用例）
 TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_tilingkey_0_base)
 {
@@ -214,4 +268,66 @@ TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_reject_dtype_fp64)
 {
     uint64_t tilingKey = 0;
     EXPECT_FALSE(RunGruGradTiling({4, 8}, {4, 40}, ge::DT_DOUBLE, ge::DT_DOUBLE, true, &tilingKey));
+}
+
+// ─── SelectGroupRUbFactor 看护（rUbFactor 关键路径择优，精确值断言）───
+
+// group 路由择优：B=512/H=16/fp32/48 核 → bd=47（基线 rUb=rIMax=201 → bd≪48）
+TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_group_rub_b512_h16_48c)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    const bool ok = RunGruGradTilingWithBd({512, 16}, {512, 80}, ge::DT_FLOAT, ge::DT_FLOAT, true, &tilingKey,
+                                           &blockDim, 48, 262144);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(tilingKey, 1U);
+    EXPECT_EQ(blockDim, 47U);
+}
+
+// group 路由择优：B=512/H=16/fp32/64 核 → bd=64（64 核全填满）
+TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_group_rub_b512_h16_64c)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    const bool ok = RunGruGradTilingWithBd({512, 16}, {512, 80}, ge::DT_FLOAT, ge::DT_FLOAT, true, &tilingKey,
+                                           &blockDim, 64, 262144);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(tilingKey, 1U);
+    EXPECT_EQ(blockDim, 64U);
+}
+
+// group 路由择优：B=196/H=163/fp32/48 核 → bd=48（48 核全填满）
+TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_group_rub_b196_h163_48c)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    const bool ok = RunGruGradTilingWithBd({196, 163}, {196, 815}, ge::DT_FLOAT, ge::DT_FLOAT, true, &tilingKey,
+                                           &blockDim, 48, 262144);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(tilingKey, 1U);
+    EXPECT_EQ(blockDim, 48U);
+}
+
+// base 路由不受 SelectGroupRUbFactor 影响：B=4/H=8/fp32 → bd=1
+TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_base_b4_h8_unaffected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    const bool ok = RunGruGradTilingWithBd({4, 8}, {4, 40}, ge::DT_FLOAT, ge::DT_FLOAT, true, &tilingKey, &blockDim, 48,
+                                           262144);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(tilingKey, 0U);
+    EXPECT_EQ(blockDim, 1U);
+}
+
+// base 路由大 shape 不受影响：B=367/H=2048/fp32/48 核 → bd=32（aLp=32 条带）
+TEST_F(ThnnFusedGruCellGradTiling, thnn_fused_gru_cell_grad_base_b367_h2048_unaffected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    const bool ok = RunGruGradTilingWithBd({367, 2048}, {367, 10240}, ge::DT_FLOAT, ge::DT_FLOAT, true, &tilingKey,
+                                           &blockDim, 48, 262144);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(tilingKey, 0U);
+    EXPECT_EQ(blockDim, 32U);
 }
