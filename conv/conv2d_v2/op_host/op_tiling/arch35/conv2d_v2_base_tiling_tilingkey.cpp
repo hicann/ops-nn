@@ -27,7 +27,14 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
         return static_cast<uint64_t>(flagInfo_.convGroupType);
     }
 
-    if (shapeInfo_.ci != attrInfo_.groups) {
+    if (shapeInfo_.ci != attrInfo_.groups || shapeInfo_.co != shapeInfo_.ci) {
+        return CONV_GROUP_TYPE_OPT_GROUP_CONV;
+    }
+
+    uint64_t dilatedKernelH = (shapeInfo_.kh - 1) * attrInfo_.dilationH + 1;
+    uint64_t dilatedKernelW = (shapeInfo_.kw - 1) * attrInfo_.dilationW + 1;
+    if (dilatedKernelH < attrInfo_.padTop || dilatedKernelH < attrInfo_.padBottom ||
+        dilatedKernelW < attrInfo_.padLeft || dilatedKernelW < attrInfo_.padRight) {
         return CONV_GROUP_TYPE_OPT_GROUP_CONV;
     }
 

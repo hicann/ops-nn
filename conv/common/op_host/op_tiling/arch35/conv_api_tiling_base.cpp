@@ -247,6 +247,24 @@ bool ConvTilingBase::CheckLoad3DLimits()
         LogHelper("filter", ssActual.str(), ssReason.str());
         return false;
     }
+
+    uint64_t dilatedKernelH = (static_cast<uint64_t>(shapeInfo.orgkH) - 1) * static_cast<uint64_t>(attrInfo.dilationH) +
+                              1;
+    uint64_t dilatedKernelW = (static_cast<uint64_t>(shapeInfo.orgkW) - 1) * static_cast<uint64_t>(attrInfo.dilationW) +
+                              1;
+    bool allPadH = static_cast<uint64_t>(attrInfo.padTop) >= dilatedKernelH ||
+                   static_cast<uint64_t>(attrInfo.padBottom) >= dilatedKernelH;
+    bool allPadW = static_cast<uint64_t>(attrInfo.padLeft) >= dilatedKernelW ||
+                   static_cast<uint64_t>(attrInfo.padRight) >= dilatedKernelW;
+    if ((allPadH || allPadW) &&
+        (dilatedKernelH > LOAD3D_ALLPAD_VIRTUAL_LIMIT || dilatedKernelW > LOAD3D_ALLPAD_VIRTUAL_LIMIT)) {
+        std::stringstream ssActual, ssReason;
+        ssActual << "dilatedKernelH=" << dilatedKernelH << ", dilatedKernelW=" << dilatedKernelW;
+        ssReason << "Attrs does not satisfy Load3D's limits: Load3D allPad overflow (dilatedKernel > 511), "
+                    "fall back to DMA.";
+        LogHelper("pads", ssActual.str(), ssReason.str());
+        return false;
+    }
     return true;
 }
 } // namespace conv_tiling
