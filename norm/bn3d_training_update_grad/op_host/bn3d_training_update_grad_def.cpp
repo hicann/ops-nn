@@ -13,8 +13,8 @@
  * \brief BN3DTrainingUpdateGrad 算子定义，声明输入输出、属性与算子配置
  */
 
-#include <vector>                     // std::vector (dtype/format slot lists)
-#include "register/op_def_registry.h" // OpDef base class, OP_ADD macro
+#include <vector> // std::vector (dtype/format slot lists)
+#include "register/op_def_registry.h"
 
 namespace ops {
 

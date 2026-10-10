@@ -21,7 +21,7 @@
 //   - AICore config: 仅 ascend950，PrecisionReduceFlag(false)（fp16 内部 fp32 提升）
 // =============================================================================
 
-#include "register/op_def_registry.h" // OpDef base class, OP_ADD macro
+#include "register/op_def_registry.h"
 
 namespace ops {
 
