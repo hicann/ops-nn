@@ -229,7 +229,7 @@
 - 当output_mask为空时：
   - 参数smooth_scale2有值时，参数smooth_scale1不能为空。
   - y1、y3、y4和scale1始终为有效输出。
-  - y2和scale2只有在smooth_scal1和smooth_scale2均有效时为有效输出，否则为无效输出。
+  - y2和scale2只有在smooth_scale1和smooth_scale2均有效时为有效输出，否则为无效输出。
 
 ## 调用说明
 

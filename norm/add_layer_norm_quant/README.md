@@ -144,21 +144,21 @@
     <tr>
       <td>scales1</td>
       <td>可选输入</td>
-      <td>表示第一个被融合的量化计算子中的scale/smooth输入，对应公式中的`scales1`。</td>
+      <td>表示第一个被融合的量化算子中的scale/smooth输入，对应公式中的`scales1`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales2</td>
       <td>可选输入</td>
-      <td>表示第二个被融合的量化计算子中的scale/smooth输入，对应公式中的`scales2`。</td>
+      <td>表示第二个被融合的量化算子中的scale/smooth输入，对应公式中的`scales2`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>zero_points1</td>
       <td>可选输入</td>
-      <td>表示第一个被融合的量化计算子中的zeroPoints输入，对应公式中的`zeroPoints1`。</td>
+      <td>表示第一个被融合的量化算子中的zeroPoints输入，对应公式中的`zeroPoints1`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
