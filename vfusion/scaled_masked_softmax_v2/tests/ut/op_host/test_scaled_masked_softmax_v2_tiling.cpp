@@ -398,6 +398,65 @@ TEST_F(ScaledMaskedSoftmaxV2Tiling, test_scaled_masked_softmax_tiling_broadcastN
     std::cout << tiling_data_result << std::endl;
 }
 
+TEST_F(ScaledMaskedSoftmaxV2Tiling, invalid_mask_batch_must_fail_tiling)
+{
+    std::string op_type("ScaledMaskedSoftmaxV2");
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 48}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    ScaledMaskedSoftmaxV2CompileInfo compile_info;
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+    ASSERT_NE(param, nullptr);
+
+    gert::StorageShape xShape = {{1, 32, 32, 128}, {1, 32, 32, 128}};
+    gert::StorageShape maskShape = {{2, 32, 32, 128}, {2, 32, 32, 128}};
+    gert::StorageShape yShape = {{1, 32, 32, 128}, {1, 32, 32, 128}};
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &maskShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    auto* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    auto* platform = tiling_context->GetPlatformInfo();
+    ASSERT_NE(platform, nullptr);
+    platform->SetPlatformRes("SoCInfo", soc_infos);
+    platform->SetPlatformRes("AICoreSpec", aicore_spec);
+    platform->SetCoreNumByCoreType("AICore");
+    platform->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
 TEST_F(ScaledMaskedSoftmaxV2Tiling, test_scaled_masked_softmax_tiling_broadcastNC)
 {
     std::string op_type("ScaledMaskedSoftmaxV2");

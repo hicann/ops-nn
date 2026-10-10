@@ -55,7 +55,7 @@ using namespace Ops::NN::OpTiling;
 
 class ScaledMaskedSoftmaxV2Tiling {
 public:
-    explicit ScaledMaskedSoftmaxV2Tiling(gert::TilingContext* tilingContext) : context(tilingContext){};
+    explicit ScaledMaskedSoftmaxV2Tiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
     void TilingDataPrint();
@@ -131,10 +131,10 @@ bool ScaledMaskedSoftmaxV2Tiling::InitPlatformInfo()
 
 ge::graphStatus ScaledMaskedSoftmaxV2Tiling::Init()
 {
-    OP_CHECK_IF(!InitPlatformInfo(), OP_LOGE(context, "InitPlatformInfo failed."), return false);
-    OP_CHECK_IF(!InitAttr(), OP_LOGE(context, "InitAttr failed."), return false);
-    OP_CHECK_IF(!InitInputDtype(), OP_LOGE(context, "InitInputDtype failed."), return false);
-    OP_CHECK_IF(!InitInputShape(), OP_LOGE(context, "InitInputShape failed."), return false);
+    OP_CHECK_IF(!InitPlatformInfo(), OP_LOGE(context, "InitPlatformInfo failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!InitAttr(), OP_LOGE(context, "InitAttr failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!InitInputDtype(), OP_LOGE(context, "InitInputDtype failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!InitInputShape(), OP_LOGE(context, "InitInputShape failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -326,7 +326,10 @@ ge::graphStatus ScaledMaskedSoftmaxV2Tiling::DoTiling()
 ge::graphStatus TilingScaledMaskedSoftmaxV2(gert::TilingContext* context)
 {
     ScaledMaskedSoftmaxV2Tiling tilingObj(context);
-    tilingObj.Init();
+    ge::graphStatus initStatus = tilingObj.Init();
+    if (initStatus != ge::GRAPH_SUCCESS) {
+        return initStatus;
+    }
     return tilingObj.DoTiling();
 }
 
