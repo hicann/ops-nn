@@ -302,7 +302,7 @@ bool RmsNormDynamicQuantTilingHelper::CheckInputShapes()
 
     if (xStorage.GetShapeSize() == 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", "0",
-                                                  "Input x cannnot be an empty tensor");
+                                                  "Input x cannot be an empty tensor");
         return false;
     }
 
