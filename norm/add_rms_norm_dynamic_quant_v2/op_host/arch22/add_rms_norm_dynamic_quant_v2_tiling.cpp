@@ -115,10 +115,10 @@ bool AddRmsNormDynamicQuantV2TilingHelper::DoTiling()
 {
     OP_CHECK_IF((nullptr == context_),
                 OP_LOGE("AddRmsNormDynamicQuantV2Tiling", "Helper context_ get nullptr, return failed."), return false);
-    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
-    OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"), return false);
-    OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
-    OP_CHECK_IF(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"), return false);
+    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo failed, return false"), return false);
+    OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo failed, return false"), return false);
+    OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling failed, return false"), return false);
+    OP_CHECK_IF(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling failed, return false"), return false);
     return true;
 }
 
@@ -342,7 +342,7 @@ bool AddRmsNormDynamicQuantV2TilingHelper::CheckInputOutputShape()
     OP_CHECK_IF(
         (hasZeroDimTensor),
         OP_LOGE(this->context_->GetNodeName(),
-                "Input x1/x2/y1//x/scale1DimNum shape invaild, dim num should not be smaller or equal to zero."),
+                "Input x1/x2/y1//x/scale1DimNum shape invalid, dim num should not be smaller or equal to zero."),
         return false);
     OP_CHECK_IF(((x1DimNum != x2DimNum)),
                 OP_LOGE(this->context_->GetNodeName(), "Input x1/x2 shape dims not equal. Tiling failed. "),
