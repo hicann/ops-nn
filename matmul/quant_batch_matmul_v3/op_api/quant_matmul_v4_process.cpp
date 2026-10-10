@@ -189,6 +189,8 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
         switch (npuArch) {
             case NpuArch::DAV_2201:
             case NpuArch::DAV_3510:
+            case NpuArch::DAV_9201:
+            case NpuArch::DAV_9202:
                 break;
             default: {
                 OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "QuantBatchMatmul support for %s is not implemented in a4w4 scenario.",
@@ -200,6 +202,8 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
         switch (npuArch) {
             case NpuArch::DAV_2201:
             case NpuArch::DAV_3510:
+            case NpuArch::DAV_9201:
+            case NpuArch::DAV_9202:
             case NpuArch::DAV_2002:
                 break;
             default: {
@@ -266,9 +270,11 @@ static aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, 
     bool isNotOneDim = viewShapeDim >= PENULTIMATE_DIM && viewShape[viewShapeDim - 1] != 1 &&
                        viewShape[viewShapeDim - PENULTIMATE_DIM] != 1;
     auto formatX2 = static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat()));
-    // if plateform is not DAV3510 and weight is already in nz format, no need to set contiguous
+    // if platform is not DAV3510, DAV_9201 or DAV_9202 and weight is already in nz format, no need to set contiguous
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (formatX2 != op::Format::FORMAT_FRACTAL_NZ ||
-        (isNotOneDim && op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510)) {
+        (isNotOneDim &&
+         (npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202))) {
         CHECK_RET(TensorContiguousProcess(x2, transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
     }
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ) {
@@ -528,7 +534,9 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
     bool isA8W4F = isA8W4Float(x1, x2);
     bool isA8W4I = isA8W4Int(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4I;
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && !isPseudoQuant) {
+    NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) &&
+        !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto x2DimNum = x2->GetViewShape().GetDimNum();
         if (x1DimNum >= PENULTIMATE_DIM && x2DimNum >= PENULTIMATE_DIM) {

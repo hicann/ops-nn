@@ -15,6 +15,7 @@
 #include "quant_matmul_checker.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "version/metadef_version.h"
 
 using namespace op;
 using namespace ge;
@@ -38,6 +39,7 @@ static const int64_t INT4_NUMS_IN_INT8 = 2;
 static const int64_t MIN_DIM_NUM_ND = 2;
 static const size_t MX_SCALE_DIM = 3;
 static const size_t MX_SCALE_MIN_DIM = 3;
+static const size_t HIFP4_SCALE_DIM = 3;
 static const size_t PENULTIMATE_DIM = 2;
 static const size_t BATCH_TAILENDER_DIM = 3;
 static const size_t NZ_K1_INDEX = 3;
@@ -48,6 +50,7 @@ static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
 static const int64_t PERGROUP_GROUP_SIZE = 32;
 static const int64_t PERGROUP_GROUPSIZEK_SIZE = 256;
+static const int64_t HIFP4_GROUP_SIZE = 64;
 static const int64_t MXFP_DIVISOR_SIZE = 64;
 static const int64_t MXFP_MULTI_BASE_SIZE = 2;
 static const uint64_t PERBLOCK_BLOCK_SIZE = 128;
@@ -95,6 +98,8 @@ static const std::initializer_list<op::DataType> PERTOKEN_OUT_TYPE_SUPPORT_LIST 
                                                                                    op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> BF16_OUT_X2SCALE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
                                                                                   op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> HIFP4_OUT_TYPE_SUPPORT_LIST = {op::DataType::DT_BF16,
+                                                                                op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST = {
@@ -194,6 +199,11 @@ static inline bool IsHif8Input(const aclTensor* x1, const aclTensor* x2)
     return x1->GetDataType() == op::DataType::DT_HIFLOAT8 && x2->GetDataType() == op::DataType::DT_HIFLOAT8;
 }
 
+static inline bool IsHif4Input(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == op::DataType::DT_HIFLOAT4 && x2->GetDataType() == op::DataType::DT_HIFLOAT4;
+}
+
 static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
 {
     if (x1Scale == nullptr) {
@@ -233,6 +243,19 @@ static inline bool CheckMxGroupSize(int64_t groupSize, const GroupSizeMNK& group
             FormatString("%ld, %lu, %lu, %lu", groupSize, groupSizeMnk.m, groupSizeMnk.n, groupSizeMnk.k).c_str(),
             "when the quantization mode is mx, groupSize must be 4295032864 and Torch API group_sizes must be [1, 1, "
             "32]");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckHif4GroupSize(int64_t groupSize, const GroupSizeMNK& groupSizeMnk, const char* apiName)
+{
+    if (groupSizeMnk.k != static_cast<uint64_t>(HIFP4_GROUP_SIZE) || groupSizeMnk.m != 1ULL || groupSizeMnk.n != 1ULL) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName, "groupSize, groupSizeM, groupSizeN, groupSizeK",
+            FormatString("%ld, %lu, %lu, %lu", groupSize, groupSizeMnk.m, groupSizeMnk.n, groupSizeMnk.k).c_str(),
+            "when the quantization mode is hif4, groupSize must be 4295032896 and Torch API group_sizes must be "
+            "[1, 1, 64]");
         return false;
     }
     return true;
@@ -454,7 +477,7 @@ bool QuantMatmulChecker::CheckShapeForWeightNz() const
 
 bool QuantMatmulChecker::CheckMXFP4FP8ParamsNDOrNZ() const
 {
-    // fp4 内轴偶数校验
+    // fp4/hif4 内轴偶数校验
     auto x1DimNum = x1_->GetViewShape().GetDimNum();
     auto x1InnerAxis = x1_->GetViewShape().GetDim(x1DimNum - 1);
     auto x2DimNum = x2_->GetViewShape().GetDimNum();
@@ -462,15 +485,16 @@ bool QuantMatmulChecker::CheckMXFP4FP8ParamsNDOrNZ() const
     if (x1InnerAxis % MICRO_SCALING_ALIGN_NUM != 0 || x2InnerAxis % MICRO_SCALING_ALIGN_NUM != 0) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             apiName_, "x1 inner axis, x2 inner axis", FormatString("%ld, %ld", x1InnerAxis, x2InnerAxis).c_str(),
-            "when the quantization mode is mx and x1 and x2 are FLOAT4_E2M1, the inner axes of x1 and x2 must be even");
+            "when the quantization mode is mx with FLOAT4_E2M1 inputs or hif4 with HIFLOAT4 inputs, the inner axes "
+            "of x1 and x2 must be even");
         return false;
     }
-    // fp4 k轴大于2校验
+    // fp4/hif4 k轴大于2校验
     if (x1KDim_ <= 2 || x2KDim_ <= 2) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "x1 K, x2 K",
                                                FormatString("%ld, %ld", x1KDim_, x2KDim_).c_str(),
-                                               "when the quantization mode is mx and x1 and x2 are FLOAT4_E2M1, the K "
-                                               "dimension of x1 and x2 must be greater than 2");
+                                               "when the quantization mode is mx with FLOAT4_E2M1 inputs or hif4 with "
+                                               "HIFLOAT4 inputs, the K dimension of x1 and x2 must be greater than 2");
         return false;
     }
     return true;
@@ -537,6 +561,72 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
     if (IsFp4Input(x1_, x2_)) {
         CHECK_RET(CheckMXFP4FP8ParamsNDOrNZ(), false);
     }
+    return true;
+}
+
+bool QuantMatmulChecker::CheckDimValueHif4() const
+{
+    auto x1ScaleMDim = transposeX1_ ? 1 : 0;
+    auto x1ScaleKDim = transposeX1_ ? 0 : 1;
+    auto x2ScaleNDim = transposeX2_ ? 0 : 1;
+    auto x2ScaleKDim = transposeX2_ ? 1 : 0;
+
+    bool x1ScaleShapeHasOne = x1Scale_->GetViewShape().GetDim(0) == 1 || x1Scale_->GetViewShape().GetDim(1) == 1;
+    bool x2ScaleShapeHasOne = x2Scale_->GetViewShape().GetDim(0) == 1 || x2Scale_->GetViewShape().GetDim(1) == 1;
+    if ((!x1ScaleShapeHasOne && x1Scale_->GetViewShape().GetDim(x1ScaleMDim) != x1MDim_) ||
+        (!x2ScaleShapeHasOne && x2Scale_->GetViewShape().GetDim(x2ScaleNDim) != x2NDim_)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_,
+            FormatString("x1 M, %s M, x2 N, %s N", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
+            FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1Scale_->GetViewShape().GetDim(x1ScaleMDim), x2NDim_,
+                         x2Scale_->GetViewShape().GetDim(x2ScaleNDim))
+                .c_str(),
+            FormatString("when the quantization mode is hif4, the M dimension of x1 and %s must be equal, and the N "
+                         "dimension of x2 and %s must be equal",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
+
+    if (!x1ScaleShapeHasOne && CeilDiv(x1KDim_, HIFP4_GROUP_SIZE) != x1Scale_->GetViewShape().GetDim(x1ScaleKDim)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, FormatString("x1 K, %s K", GetX1ScaleName().c_str()).c_str(),
+            FormatString("%ld, %ld", x1KDim_, x1Scale_->GetViewShape().GetDim(x1ScaleKDim)).c_str(),
+            FormatString("when the quantization mode is hif4, the K dimension of %s must be equal to the K dimension "
+                         "of x1 ceildivided by 64",
+                         GetX1ScaleName().c_str())
+                .c_str());
+        return false;
+    }
+
+    if (!x2ScaleShapeHasOne && CeilDiv(x2KDim_, HIFP4_GROUP_SIZE) != x2Scale_->GetViewShape().GetDim(x2ScaleKDim)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, FormatString("x2 K, %s K", GetX2ScaleName().c_str()).c_str(),
+            FormatString("%ld, %ld", x2KDim_, x2Scale_->GetViewShape().GetDim(x2ScaleKDim)).c_str(),
+            FormatString("when the quantization mode is hif4, the K dimension of %s must be equal to the K dimension "
+                         "of x2 ceildivided by 64",
+                         GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
+
+    auto x1ScaleLastDim = x1Scale_->GetViewShape().GetDimNum() - 1;
+    auto x2ScaleLastDim = x2Scale_->GetViewShape().GetDimNum() - 1;
+    if (x1Scale_->GetViewShape().GetDim(x1ScaleLastDim) != 1 || x2Scale_->GetViewShape().GetDim(x2ScaleLastDim) != 1) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_,
+            FormatString("%s last dimension, %s last dimension", GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str(),
+            FormatString("%ld, %ld", x1Scale_->GetViewShape().GetDim(x1ScaleLastDim),
+                         x2Scale_->GetViewShape().GetDim(x2ScaleLastDim))
+                .c_str(),
+            FormatString("when the quantization mode is hif4, the last dimension of %s and %s must be 1",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
+
+    CHECK_RET(CheckMXFP4FP8ParamsNDOrNZ(), false);
     return true;
 }
 
@@ -809,6 +899,9 @@ bool QuantMatmulChecker::CheckDimValue() const
     if (x1Scale_ != nullptr) {
         if (IsMicroScaling(x1Scale_, x2Scale_)) {
             CHECK_RET(CheckDimValueMicroScaling(), false);
+            return true;
+        } else if (IsHif4Input(x1_, x2_)) {
+            CHECK_RET(CheckDimValueHif4(), false);
             return true;
         } else if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
             CHECK_RET(CheckDimValuePerblock(), false);
@@ -1088,6 +1181,20 @@ bool QuantMatmulChecker::CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleD
     return true;
 }
 
+bool QuantMatmulChecker::CheckHif4ScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const
+{
+    if (x1ScaleDim != HIFP4_SCALE_DIM || x2ScaleDim != HIFP4_SCALE_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
+            FormatString("%zuD, %zuD", x1ScaleDim, x2ScaleDim).c_str(),
+            FormatString("when the quantization mode is hif4, the shape dims of %s and %s must be %zu",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), HIFP4_SCALE_DIM)
+                .c_str());
+        return false;
+    }
+    return true;
+}
+
 bool QuantMatmulChecker::CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const
 {
     bool isPerblock = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
@@ -1127,6 +1234,8 @@ bool QuantMatmulChecker::CheckScaleDimRange() const
     const uint64_t groupSizeK = static_cast<uint64_t>(groupSize_ & GROUP_MNK_BIT_SIZE);
     if (IsMicroScaling(x1Scale_, x2Scale_)) {
         CHECK_RET(CheckMxScaleDimRange(x1ScaleDim, x2ScaleDim), false);
+    } else if (IsHif4Input(x1_, x2_)) {
+        CHECK_RET(CheckHif4ScaleDimRange(x1ScaleDim, x2ScaleDim), false);
     } else if (IsA4W4PergroupNonSymmetric(groupSizeK)) {
         return true;
     } else {
@@ -1138,12 +1247,14 @@ bool QuantMatmulChecker::CheckScaleDimRange() const
 
 bool QuantMatmulChecker::CheckGroupSize() const
 {
-    if (npuArch_ != NpuArch::DAV_3510) {
+    if (npuArch_ != NpuArch::DAV_3510 && npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
         return true;
     }
     const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
     if (IsA4W4PergroupNonSymmetric(groupSizeMnk.k)) {
         CHECK_RET(CheckA4W4PergroupNonSymmetricGroupSize(groupSizeMnk, apiName_), false);
+    } else if (IsHif4Input(x1_, x2_)) {
+        CHECK_RET(CheckHif4GroupSize(groupSize_, groupSizeMnk, apiName_), false);
     } else if (IsMicroScaling(x1Scale_, x2Scale_)) {
         CHECK_RET(CheckMxGroupSize(groupSize_, groupSizeMnk, apiName_), false);
     } else if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
@@ -1824,6 +1935,56 @@ bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
     return true;
 }
 
+bool QuantMatmulChecker::IsHif4Scale(const aclTensor* x1Scale, const aclTensor* x2Scale) const
+{
+    if (x1Scale == nullptr || x2Scale == nullptr) {
+        return false;
+    }
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+    return x1Scale->GetDataType() == op::DataType::DT_HIFLOAT4_SCALE &&
+           x2Scale->GetDataType() == op::DataType::DT_HIFLOAT4_SCALE;
+#else
+    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
+            "DT_HIFLOAT4_SCALE is only supported in CANN 9.3.0 and later, please install the corresponding version.");
+    return false;
+#endif
+}
+
+bool QuantMatmulChecker::CheckHif4Scaling() const
+{
+    if (npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "QuantBatchMatmul support for %s is not implemented in hif4 scenario.",
+                op::ToString(socVersion_).GetString());
+        return false;
+    }
+
+    if (!(IsHif4Input(x1_, x2_) && IsHif4Scale(x1Scale_, x2Scale_))) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
+            FormatString("%s, %s", x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
+                         x2Scale_ == nullptr ? "null" : op::ToString(x2Scale_->GetDataType()).GetString())
+                .c_str(),
+            FormatString("when x1 and x2 are HIFLOAT4, the dtypes of %s and %s must be HIFLOAT4_SCALE",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
+
+    if (bias_ != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, GetInputName(BIAS_NAME, interfaceType_).c_str(), "not null",
+                                              "when x1 and x2 are HIFLOAT4, bias must be null");
+        return false;
+    }
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, HIFP4_OUT_TYPE_SUPPORT_LIST, apiName_), false);
+    if (x2Offset_ != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, GetX2OffsetName().c_str(), "not null",
+            FormatString("when x1 and x2 are HIFLOAT4, %s must be null", GetX2OffsetName().c_str()).c_str());
+        return false;
+    }
+    return true;
+}
+
 aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
 {
     if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ && !CheckDtype4WeightNz()) {
@@ -1839,6 +2000,8 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsMicroScaling(x1Scale_, x2Scale_)) { // micro scaling
         CHECK_RET(CheckMicroScaling(), ACLNN_ERR_PARAM_INVALID);
+    } else if (IsHif4Input(x1_, x2_)) { // hif4
+        CHECK_RET(CheckHif4Scaling(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsInt4Input(x1_, x2_) && x2Offset_ != nullptr) { // pertoken
         CHECK_RET(CheckL0C2outOrL0C2ubPertokenPergroup(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsInt8Input(x1_, x2_) || IsInt4Input(x1_, x2_)) { // pertoken
@@ -1906,6 +2069,8 @@ aclnnStatus QuantMatmulChecker::CheckDtype() const
             CHECK_RET(CheckDtypeOnlyL0c2out() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
             CHECK_RET(CheckDtypeL0c2outOrL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         case NpuArch::DAV_2002:

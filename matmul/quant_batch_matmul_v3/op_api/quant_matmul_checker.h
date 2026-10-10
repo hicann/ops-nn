@@ -56,6 +56,8 @@ private:
     bool CheckL0c2outOrL0c2ubPertoken() const;
     bool CheckL0C2outOrL0C2ubPertokenPergroup() const;
     bool CheckMicroScaling() const;
+    bool CheckHif4Scaling() const;
+    bool IsHif4Scale(const aclTensor* x1Scale, const aclTensor* x2Scale) const;
     bool CheckL0c2outOrL0c2ubPertensorPerchannel() const;
     bool CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input() const;
     aclnnStatus CheckDtypeOnlyL0c2out() const;
@@ -69,6 +71,7 @@ private:
     bool CheckShape() const;
     bool CheckScaleDimRange() const;
     bool CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
+    bool CheckHif4ScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckMxScaleMinDim(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckMxScaleBatchDimMatch(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
@@ -82,6 +85,7 @@ private:
     bool CheckGroupSizeShape(uint64_t groupSizeM) const;
     bool CheckMXFP4FP8ParamsNDOrNZ() const;
     bool CheckDimValueMicroScaling() const;
+    bool CheckDimValueHif4() const;
     bool CheckShapeForWeightNz() const;
     bool CheckShapeInt4() const;
     bool CheckDtypeValidOnOnlyL0c2outForA4W4() const;
