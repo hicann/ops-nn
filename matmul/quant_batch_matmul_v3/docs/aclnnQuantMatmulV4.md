@@ -431,8 +431,8 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - 确定性说明：
 
-  <!-- npu="910,310p" id12 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：aclnnQuantMatmulV4默认确定性实现。
+  <!-- npu="A3,910b,310p" id12 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>：aclnnQuantMatmulV4默认确定性实现。
   <!-- end id12 -->
   <!-- npu="950" id13 -->
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnQuantMatmulV4默认确定性实现。

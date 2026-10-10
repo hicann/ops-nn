@@ -364,8 +364,8 @@ aclnnStatus aclnnFusedQuantMatmulWeightNz(
 
 - 确定性说明：
 
-  <!-- npu="910,310p" id7 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：aclnnFusedQuantMatmulWeightNz默认确定性实现。
+  <!-- npu="A3,910b" id7 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：aclnnFusedQuantMatmulWeightNz默认确定性实现。
 
   <!-- end id7 -->
 

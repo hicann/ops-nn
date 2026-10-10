@@ -232,8 +232,8 @@ aclnnStatus aclnnMatmulCompress(
 
 - 确定性说明：
 
-  <!-- npu="910,310p" id7 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：aclnnMatmulCompress默认确定性实现。
+  <!-- npu="310p" id7 -->
+  - <term>Atlas推理系列产品</term>：aclnnMatmulCompress默认确定性实现。
 
   <!-- end id7 -->
 
