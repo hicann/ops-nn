@@ -27,8 +27,9 @@ extern "C" {
  * @param [in] x: 输入Tensor，npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND。
  * @param [in] scales: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND。
  * @param [in] zeroPoints: npu device侧的aclTensor，数据类型支持INT32、INT8、UINT8、BFLOAT16，数据格式支持ND。
- * @param [in] axis: Host侧的整型，需要进行量化的轴，指定的轴不能超过输入x的维度数。
  * @param [in] dtype: 量化输出的数据类型，aclDataType类型，数据类型支持INT8、UINT8、INT32，数据格式支持ND。
+ * @param [in] axis: Host侧的整型，需要进行量化的轴，指定的轴不能超过输入x的维度数。
+ * @param [out] out: 输出Tensor，npu device侧的aclTensor，数据类型由dtype指定，shape与x一致，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
