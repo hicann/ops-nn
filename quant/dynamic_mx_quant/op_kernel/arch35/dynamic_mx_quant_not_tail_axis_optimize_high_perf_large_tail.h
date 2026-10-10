@@ -812,7 +812,12 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::RegTensor<yDtype> yOneFP8;
         Reg::RegTensor<yDtype> yZeroFP4;
 
-        Reg::MaskReg pregAll8 = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
+        // Limit packed stores to the output row stride so tail rows do not overlap.
+        uint32_t storeMaskLen = dataLen32Align_ * DIGIT_TWO;
+        if constexpr (IsSame<yDtype, fp4x2_e2m1_t>::value || IsSame<yDtype, fp4x2_e1m2_t>::value) {
+            storeMaskLen = dataLen64Align_ * DIGIT_TWO;
+        }
+        Reg::MaskReg yStoreMask = Reg::UpdateMask<uint8_t>(storeMaskLen);
         Reg::MaskReg pregAll16 = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg pregAll32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
@@ -861,8 +866,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                 Reg::Cast<yDtype, bfloat16_t, castTraitBf16toFp4>(yZeroFP4, (Reg::RegTensor<bfloat16_t>&)x0BF16,
                                                                   pregAll16);
 
-                Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(yAddr + (j * dataLen64Align_ / DIGIT_TWO),
-                                                                         (Reg::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
+                Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(
+                    yAddr + (j * dataLen64Align_ / DIGIT_TWO), (Reg::RegTensor<uint8_t>&)yZeroFP4, yStoreMask);
             } else {
                 Reg::Cast<yDtype, float, castTraitFp32toYdtype>(yZeroFP8, (Reg::RegTensor<float>&)x0FP32, pregAll32);
                 Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)yZeroFP8,
@@ -876,7 +881,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                                 (Reg::RegTensor<uint16_t>&)yZeroFP8, (Reg::RegTensor<uint16_t>&)yOneFP8);
 
                 Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK_B16>(yAddr + (j * dataLen32Align_),
-                                                                        (Reg::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
+                                                                        (Reg::RegTensor<uint8_t>&)yZeroFP8, yStoreMask);
             }
         }
     }
@@ -948,7 +953,12 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::RegTensor<yDtype> yOneFP8;
         Reg::RegTensor<yDtype> yZeroFP4;
 
-        Reg::MaskReg pregAll8 = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
+        // Limit packed stores to the output row stride so tail rows do not overlap.
+        uint32_t storeMaskLen = dataLen32Align_ * DIGIT_TWO;
+        if constexpr (IsSame<yDtype, fp4x2_e2m1_t>::value || IsSame<yDtype, fp4x2_e1m2_t>::value) {
+            storeMaskLen = dataLen64Align_ * DIGIT_TWO;
+        }
+        Reg::MaskReg yStoreMask = Reg::UpdateMask<uint8_t>(storeMaskLen);
         Reg::MaskReg pregAll16 = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg pregAll32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
@@ -975,8 +985,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                 Reg::Mul(valueBF16, x, (Reg::RegTensor<bfloat16_t>&)reversedShareExpBF16, pregAll16);
                 Reg::Cast<yDtype, bfloat16_t, castTraitBf16toFp4>(yZeroFP4, valueBF16, pregAll16);
 
-                Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(yAddr + (j * dataLen64Align_ / DIGIT_TWO),
-                                                                         (Reg::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
+                Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(
+                    yAddr + (j * dataLen64Align_ / DIGIT_TWO), (Reg::RegTensor<uint8_t>&)yZeroFP4, yStoreMask);
             } else {
                 Reg::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0FP32, x, pregAll16);
                 Reg::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1FP32, x, pregAll16);
@@ -995,7 +1005,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                                 (Reg::RegTensor<uint16_t>&)yZeroFP8, (Reg::RegTensor<uint16_t>&)yOneFP8);
 
                 Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_PACK_B16>(yAddr + (j * dataLen32Align_),
-                                                                        (Reg::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
+                                                                        (Reg::RegTensor<uint8_t>&)yZeroFP8, yStoreMask);
             }
         }
     }
