@@ -9,4 +9,17 @@
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(add_rms_norm_cast "ascend910B1" "" rms_norm)
+    # Keep legacy cases on 910B; arch35 cases include the production 950 entry.
+    AddOpTestCase(add_rms_norm_cast "ascend950pr_9599" "-DDTYPE_X1=half" MULTI_KERNEL_TARGET rms_norm norm_common)
+    if(("ascend950" IN_LIST ASCEND_COMPUTE_UNIT OR "ascend950pr_9599" IN_LIST ASCEND_COMPUTE_UNIT)
+        AND TARGET ascendc_kernel_ut_src_copy_add_rms_norm_cast)
+        if(NOT TARGET norm_common_ut_src_copy)
+            add_custom_target(norm_common_ut_src_copy
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    ${PROJECT_SOURCE_DIR}/norm/norm_common/op_kernel
+                    ${CMAKE_BINARY_DIR}/tbe/ascendc/norm_common
+            )
+        endif()
+        add_dependencies(ascendc_kernel_ut_src_copy_add_rms_norm_cast norm_common_ut_src_copy)
+    endif()
 endif()

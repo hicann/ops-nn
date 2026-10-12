@@ -52,14 +52,33 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(uint32_t, isNddma);
 END_TILING_DATA_DEF;
 
+// 空张量(reduce empty)专用 tiling data：归一化维为 0 且行数 > 0 时仅向 rstd 按行写 NaN，
+// 只包含该 kernel 所需字段，避免通用 tiling data 每次多加载 reduce-empty 专用字段。
+// tiling codegen 仅收集本主头文件，专用数据结构与注册需保留在此，不得移出
+BEGIN_TILING_DATA_DEF(AddRmsNormCastReduceEmptyTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, numM);
+TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
+TILING_DATA_FIELD_DEF(uint64_t, rowsPerLoop);
+END_TILING_DATA_DEF;
+
 constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
 constexpr uint32_t TILING_TYPE_MAGIC_AND_WONDERFUL = 2;
 constexpr uint32_t TILING_TYPE_HIGN_PERFORMANCE = 3;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
+constexpr uint64_t TILING_KEY_REDUCE_EMPTY = 8200;
 
 constexpr uint64_t MIGIC_AND_WONDERFUL_BYTES = 128;
+
+// tiling 模板优先级：数值越小优先级越高。空归约兜底模板在前，只由 IsCapable 认领空归约场景；
+// Regbase 模板为兜底(IsCapable 恒 true)，承接其余全部场景
+constexpr int32_t TEMPLATE_REDUCE_EMPTY_PRIORITY = 50;
+constexpr int32_t TEMPLATE_REGBASE_PRIORITY = 100;
+
+// 计算输出相关 tiling 可用 UB 时需为 rstd 对齐预留的字节数，Regbase/ReduceEmpty tiling 共用
+constexpr uint32_t UB_RESERVE_FOR_RSTDALIGN = 1024;
 
 struct AddRmsNormCastCompileInfo {
     uint64_t totalCoreNum = 0;
@@ -73,6 +92,7 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormCast_101, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_102, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_103, AddRmsNormCastRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormCast_199, AddRmsNormCastRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNormCast_8200, AddRmsNormCastReduceEmptyTilingData)
 
 struct AddRmsNormCastRegbaseTilingParams {
     // Platform
@@ -124,7 +144,7 @@ public:
                                     string srcName);
     bool CheckShapeNull();
     bool CheckInputShapeDim();
-    bool CheckInputShapeValue();
+    virtual bool CheckInputShapeValue();
     bool CheckInputDtype();
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);

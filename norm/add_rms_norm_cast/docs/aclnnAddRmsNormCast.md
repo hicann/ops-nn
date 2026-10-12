@@ -281,7 +281,13 @@ aclnnStatus aclnnAddRmsNormCast(
   参数x1、x2、gamma、y1Out、y2Out、rstdOut、xOut的shape中每一维大小都不大于INT32的最大值2147483647。
 
 - 边界值场景说明：
-  - 当前不支持非Norm维度元素总数大于0且Norm维度元素总数为0的空Tensor场景。
+  - 支持空进空出（非Norm维度元素总数为0）。
+  <!-- npu="950" id9 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：支持空归约（非Norm维度元素总数大于0且Norm维度元素总数为0），`y1Out`、`y2Out`和`xOut`为空Tensor，`rstdOut`为NaN。
+  <!-- end id9 -->
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：不支持空归约。
+  <!-- end id10 -->
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 

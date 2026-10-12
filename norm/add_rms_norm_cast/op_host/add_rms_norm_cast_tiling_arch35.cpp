@@ -34,7 +34,6 @@ constexpr uint32_t MAX_DIM_CNT = 8;
 constexpr uint32_t WORKSPACE_COUNT = 1;
 constexpr uint32_t ALING_FACTOR_512 = 512;
 constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
-constexpr uint32_t UB_RESERVE_FOR_RSTDALIGN = 1024;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 constexpr uint32_t ULONG_BIT_LEN = 64;
 
@@ -103,16 +102,7 @@ bool AddRmsNormCastRegbaseTiling::CheckInputShapeValue()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
     const gert::StorageShape* y1Shape = context_->GetOutputShape(Y1_INDEX);
     const gert::StorageShape* y2Shape = context_->GetOutputShape(Y2_INDEX);
-    const gert::StorageShape* rstdShape = context_->GetOutputShape(RSTD_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
-
-    const gert::Shape& x1StorageShape = x1Shape->GetStorageShape();
-    const gert::Shape& rstdStorageShape = rstdShape->GetStorageShape();
-    OP_CHECK_IF(x1StorageShape.GetShapeSize() == 0 && rstdStorageShape.GetShapeSize() > 0,
-                OP_LOGE(nodeName.c_str(),
-                        "The empty tensor case where the non-Norm dimension element count is greater than 0 and the "
-                        "Norm dimension element count is 0 is currently not supported."),
-                return false);
 
     // Check x1&x2&y1&y2&x's shape should be equal
     if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
@@ -192,7 +182,9 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetInputParams()
     OP_CHECK_NULL_WITH_CONTEXT(context_, epsilon);
     tilingParams.epsilon = *epsilon;
     tilingParams.needRun = true;
-    if ((0 == numN) || (0 == numM)) {
+    // 全空输出由执行框架处理，不需要下发计算任务。
+    // 空归约(numN==0 且 numM>0)的识别与接管在 AddRmsNormCastReduceEmptyTiling 子类完成，Regbase 模板不依赖空归约标志
+    if (numM == 0) {
         tilingParams.needRun = false;
     }
     tilingParams.avgFactor = (0 == numN) ? 0.0f : 1.0f / static_cast<float>(numN);
@@ -230,7 +222,12 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AddRmsNormCastRegbaseTiling::IsCapable() { return true; }
+bool AddRmsNormCastRegbaseTiling::IsCapable()
+{
+    // Regbase 模板为兜底：空归约(N=0 且 M>0)已由优先级更高的 AddRmsNormCastReduceEmptyTiling
+    // 模板认领；本模板承接其余通过输入校验的场景。
+    return true;
+}
 
 /* *
  * @brief: Cal base UB total size
@@ -485,4 +482,6 @@ uint64_t AddRmsNormCastRegbaseTiling::GetTilingKey() const
     OP_LOGI(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
     return tilingKey;
 }
+
+REGISTER_OPS_TILING_TEMPLATE(AddRmsNormCast, AddRmsNormCastRegbaseTiling, TEMPLATE_REGBASE_PRIORITY);
 } // namespace optiling

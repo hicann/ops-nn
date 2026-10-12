@@ -17,6 +17,7 @@
 #include "arch35/add_rms_norm_cast_regbase_spilt_reduce.h"
 #include "arch35/add_rms_norm_cast_regbase_single_n.h"
 #include "arch35/add_rms_norm_cast_regbase_high_performance.h"
+#include "arch35/add_rms_norm_cast_regbase_reduce_empty.h"
 
 using namespace AscendC;
 using namespace AddRmsNormCast;
@@ -28,26 +29,37 @@ extern "C" __global__ __aicore__ void add_rms_norm_cast(GM_ADDR x1, GM_ADDR x2, 
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-    GET_TILING_DATA_WITH_STRUCT(AddRmsNormCastRegbaseTilingData, tilingDataIn, tiling);
-    const AddRmsNormCastRegbaseTilingData* __restrict tilingData = &tilingDataIn;
-    if (TILING_KEY_IS(100)) {
-        KernelAddRmsNormCastRegBaseNormal<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+    if (TILING_KEY_IS(8200)) {
+        // 空张量(reduce empty):归一化维为 0 且行数 > 0,仅 rstd 按行填 NaN。使用独立 tiling data(32B),
+        // 不能在链前与通用结构一并解包:8200 场景 tiling 缓冲仅容纳专用结构,通用解包(96B)会越界读。
+        // TILING_KEY_IS 需传字面量:tiling codegen 按文本识别该调用生成对应 tiling 结构
+        GET_TILING_DATA_WITH_STRUCT(AddRmsNormCastReduceEmptyTilingData, tilingDataIn, tiling);
+        const AddRmsNormCastReduceEmptyTilingData* __restrict tilingData = &tilingDataIn;
+        AddRmsNormCast::RegbaseReduceEmpty op(&pipe, tilingData);
+        op.Init(rstd);
         op.Process();
-    } else if (TILING_KEY_IS(101)) {
-        KernelAddRmsNormCastRegBaseSpiltReduce<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(102)) {
-        KernelAddRmsNormCastRegBaseSingleN<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(103)) {
-        KernelAddRmsNormCastRegBaseHighPerformance<DTYPE_X1> op(&pipe);
-        op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(199)) {
-        // Empty kernel
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(AddRmsNormCastRegbaseTilingData, tilingDataIn, tiling);
+        const AddRmsNormCastRegbaseTilingData* __restrict tilingData = &tilingDataIn;
+        if (TILING_KEY_IS(100)) {
+            KernelAddRmsNormCastRegBaseNormal<DTYPE_X1> op(&pipe);
+            op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+            op.Process();
+        } else if (TILING_KEY_IS(101)) {
+            KernelAddRmsNormCastRegBaseSpiltReduce<DTYPE_X1> op(&pipe);
+            op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+            op.Process();
+        } else if (TILING_KEY_IS(102)) {
+            KernelAddRmsNormCastRegBaseSingleN<DTYPE_X1> op(&pipe);
+            op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+            op.Process();
+        } else if (TILING_KEY_IS(103)) {
+            KernelAddRmsNormCastRegBaseHighPerformance<DTYPE_X1> op(&pipe);
+            op.Init(x1, x2, gamma, y1, y2, rstd, x, workspace, tilingData);
+            op.Process();
+        } else if (TILING_KEY_IS(199)) {
+            // Empty kernel
+        }
     }
 #endif
 }

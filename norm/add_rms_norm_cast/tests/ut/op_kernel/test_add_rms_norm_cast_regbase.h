@@ -33,6 +33,15 @@ struct AddRmsNormCastRegbaseTilingData {
     uint64_t mLastCore = 0;
     float epsilon = 0;
     float avgFactor = 0;
+    uint32_t isNddma = 0;
+};
+
+// 空张量(reduce empty)专用 tiling data，与 op_host 侧 AddRmsNormCastReduceEmptyTilingData 布局一致
+struct AddRmsNormCastReduceEmptyTilingData {
+    uint64_t numM = 0;
+    uint64_t mPerCore = 0;
+    uint64_t mLastCore = 0;
+    uint64_t rowsPerLoop = 0;
 };
 
 #pragma pack()
@@ -68,10 +77,21 @@ inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AddRmsNormCastR
     for (auto i = 0; i < sizeof(AddRmsNormCastRegbaseTilingData) / sizeof(int64_t); i++)
         *(dst + i) = *(src + i);
 }
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, AddRmsNormCastReduceEmptyTilingData* constData)
+{
+    const __gm__ int64_t* src = (const __gm__ int64_t*)tiling;
+    int64_t* dst = (int64_t*)constData;
+    for (auto i = 0; i < sizeof(AddRmsNormCastReduceEmptyTilingData) / sizeof(int64_t); i++)
+        *(dst + i) = *(src + i);
+}
 #else
 inline void InitTilingData(uint8_t* tiling, AddRmsNormCastRegbaseTilingData* constData)
 {
     memcpy(constData, tiling, sizeof(AddRmsNormCastRegbaseTilingData));
+}
+inline void InitTilingData(uint8_t* tiling, AddRmsNormCastReduceEmptyTilingData* constData)
+{
+    memcpy(constData, tiling, sizeof(AddRmsNormCastReduceEmptyTilingData));
 }
 #endif
 

@@ -49,12 +49,6 @@ constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
 
-static bool IsArch3510(const gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
-}
-
 static void SetByDtype(ge::DataType dataType, uint32_t& dtypeTey, uint32_t& dataPerBlock)
 {
     switch (dataType) {
@@ -126,8 +120,8 @@ static bool CheckX1X2YShapes(const gert::TilingContext* context, const gert::Sto
                              const gert::StorageShape* rstd_shape, size_t x1DimNum, bool rstdEmpty)
 {
     for (uint32_t i = 0; i < x1DimNum; i++) {
-        // Only the DAV_3510 case with a non-empty rstd is handled by its platform-specific tiling.
-        if (x1_shape->GetStorageShape().GetDim(i) == 0 && (!IsArch3510(context) || rstdEmpty)) {
+        // 全空输出由执行框架处理；Regbase tiling 仅放行 rstd 非空的空归约输入。
+        if (x1_shape->GetStorageShape().GetDim(i) == 0 && (rstdEmpty || !IsRegbaseSocVersion(context))) {
             if (!rstdEmpty) {
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                     context->GetNodeName(), "x1 and rstd",
@@ -265,8 +259,9 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
     }
 
     if (IsRegbaseSocVersion(context)) {
-        AddRmsNormCastRegbaseTiling regbaseTiling(context);
-        return regbaseTiling.DoTiling();
+        // 950(regbase)路径经 tiling 模板注册表按优先级分发：
+        // 空归约兜底模板(50)在前、只认领空归约场景，Regbase 模板(100)兜底(IsCapable 恒 true)
+        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
     ubSize = ubSize - UB_USED;
     uint32_t ubFactor = UB_FACTOR_B16;
