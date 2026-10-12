@@ -130,12 +130,14 @@ main() {
     fi
     local op_type="${pair%%:*}"
     local soc_version="${pair#*:}"
+    local arch=$(cmake -P ${topdir}/cmake/query.cmake Func get_npu_arch_by_soc_version ${soc_version} 2>&1)
+
     local soc_version_lower=${soc_version,,}
 
     local ascendc_config_file="${topdir}/scripts/kernel/binary_config/ascendc_config.json"
     local key_word_in_list="\"name\":\s*\"${op_type}\""
-    local ascendc_op_conf=$(grep ${key_word_in_list} ${ascendc_config_file} | grep -w $soc_version_lower)
-
+    local ascendc_op_conf=$(grep ${key_word_in_list} ${ascendc_config_file} | grep -E "$arch|$soc_version_lower")
+    ascendc_op_conf=${ascendc_op_conf//$arch/$soc_version_lower}
     json_line=$(echo "$ascendc_op_conf" | tr -d '\n\r')
 
     local kernel_config_file=$(get_kernel_option_config_file ${workdir} ${soc_version_lower})
@@ -186,6 +188,7 @@ main() {
     if [ -z "$compile_options" ]; then
       compile_options=$(echo "$json_line" | grep -oE '"compile_options"[[:space:]]*:[[:space:]]*\{[^}]*\}' | sed 's/"compile_options"[[:space:]]*:[[:space:]]*//')
     fi
+    echo $compile_options
 
     call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compile_options"
   done

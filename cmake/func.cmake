@@ -502,16 +502,17 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   endif()
 endfunction()
 
-# usage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP ALLOW_HF32) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
+# usage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES NPU_ARCH TILING_DIR DISABLE_IN_OPP ALLOW_HF32) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
-# COMPUTE_UNIT 设置支持芯片版本号，必须与TILING_DIR一一对应，示例：ascend910b ascend950
-# TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，示例：arch22 arch35
+# NPU_ARCH 设置支持的npuArch列表，必须与TILING_DIR一一对应，示例：dav_2201 dav_3510
+# COMPUTE_UNIT 兼容参数：设置支持芯片版本号（soc列表），必须与TILING_DIR一一对应，内部逐项转换为npuArch后统一按arch匹配；与NPU_ARCH互斥
+# TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与NPU_ARCH（或COMPUTE_UNIT）一一对应，示例：arch22 arch35
 # DISABLE_IN_OPP 设置是否在opp包中编译tiling文件，布尔类型：TRUE，FALSE
 # ALLOW_HF32 配置算子允许HF32执行，取值：enable_hi_float_32_execution / enable_float_32_execution，
 #            配置后记录OPTYPE对应的算子并按OPTYPE去重，用于生成ops_allow_hf32_nn.ini
 # 需一一对应
 function(add_modules_sources)
-  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DIR)
+  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES NPU_ARCH COMPUTE_UNIT TILING_DIR DIR)
   set(oneValueArgs DISABLE_IN_OPP ALLOW_HF32 HOSTCPU)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -581,8 +582,18 @@ function(add_modules_sources)
     target_sources(${OPHOST_NAME}_infer_obj PRIVATE ${OPINFER_SRCS})
   endif()
 
-  # 添加tiling文件
-  find_value_by_key("${MODULE_COMPUTE_UNIT}" "${MODULE_TILING_DIR}" "${ASCEND_COMPUTE_UNIT}" tiling_dir)
+  # 添加tiling文件：NPU_ARCH 与 TILING_DIR 按位置一一配对；兼容旧 COMPUTE_UNIT 参数，
+  # 逐项转换为 npuArch（字符串拼接保留空元素位置，避免 list(APPEND) 丢弃空元素导致错位），
+  # 当前构建芯片同样转换为 npuArch 后统一按 arch 匹配
+  if(MODULE_NPU_ARCH)
+    get_npu_arch_by_soc_version("${ASCEND_COMPUTE_UNIT}" _cur_key)
+    set(_cur_keys "${MODULE_NPU_ARCH}")
+  else()
+    set(_cur_key "${ASCEND_COMPUTE_UNIT}")
+    set(_cur_keys "${MODULE_COMPUTE_UNIT}")
+  endif()
+
+  find_value_by_key("${_cur_keys}" "${MODULE_TILING_DIR}" "${_cur_key}" tiling_dir)
   add_tiling_sources("${SOURCE_DIR}" "${tiling_dir}" "${MODULE_DISABLE_IN_OPP}")
 
   file(GLOB AICPU_SRCS ${SOURCE_DIR}/*_aicpu.cpp)
@@ -764,7 +775,9 @@ endfunction()
 # 2.调用asc_opc工具 算子名.py 中auto_sync与compile_option中的配置项。
 # 格式如下所示：
 # [KERNEL_SRC op_name.cpp]          算子入口文件，缺省为算子名.cpp
-# [COMPUTE_UNITS ascendxx]          soc版本，支持配置多个unit，缺省为配置所有的soc（支持单独配置soc，单独配置优先级更高）
+# [COMPUTE_UNITS ascendxx]          soc版本，支持配置多个unit，缺省为配置所有的soc（兼容参数，
+#                                    内部逐项转换为npuArch后统一按arch匹配；与NPU_ARCH互斥）
+# [NPU_ARCH dav_2201]                   npuArch版本，支持配置多个，缺省为全部支持
 # [SIMPLIFIED_KEY 0/None]           缺省为0，最终的编译参数则是--simplified_key_mode=0，若设置为None，则不会携带该参数
 # [AUTO_SYNC false]                 同步选项，缺省为true
 # [IMPL_MODE high_performance]      高性能模式，缺省为high_performance[,optional] [optional]是可选的
@@ -775,7 +788,7 @@ function(add_kernel_sources)
   endif()
 
   set(oneValueArgs KERNEL_SRC SIMPLIFIED_KEY AUTO_SYNC IMPL_MODE)
-  set(multiValueArgs COMPUTE_UNITS OPTIONS)
+  set(multiValueArgs COMPUTE_UNITS NPU_ARCH OPTIONS)
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   # 兼容两种调用位置：在 op_kernel 目录内调用（旧）或在算子顶层调用（新）
@@ -787,8 +800,18 @@ function(add_kernel_sources)
   get_filename_component(OP_DIR ${SOURCE_DIR} DIRECTORY)
   get_filename_component(op_name ${OP_DIR} NAME)
 
-  if(MODULE_COMPUTE_UNITS)
-    if(NOT "${ASCEND_COMPUTE_UNIT}" IN_LIST MODULE_COMPUTE_UNITS)
+  # 支持芯片过滤：优先 NPU_ARCH（npuArch 列表），兼容旧 COMPUTE_UNITS（soc 列表，逐项转换为
+  # npuArch）；当前构建芯片同样转换为 npuArch 后统一按 arch 匹配，未配置时视为全部支持。
+  # 注意 arch 化后同 arch 的 soc 共享过滤结果（如 ascend950 与 ascend350 同为 dav_3510）
+  set(_arch_list "")
+  if(MODULE_NPU_ARCH)
+    set(_arch_list "${MODULE_NPU_ARCH}")
+    get_npu_arch_by_soc_version("${ASCEND_COMPUTE_UNIT}" _cur_arch)
+    if(NOT "${_cur_arch}" IN_LIST _arch_list)
+      return()
+    endif()
+  elseif(MODULE_COMPUTE_UNITS)
+     if(NOT "${ASCEND_COMPUTE_UNIT}" IN_LIST MODULE_COMPUTE_UNITS)
       return()
     endif()
   else()
@@ -982,6 +1005,41 @@ function(get_target_dir compute_unit_long target_dir)
         set(${target_dir} ${mapped_value} PARENT_SCOPE)
     else()
         set(${target_dir} "" PARENT_SCOPE)
+    endif()
+endfunction()
+
+###################################################################################################
+# get npuArch by socVersion, mapping is consistent with SOC_TO_ARCH in build.sh
+# 映射列表 ASCEND_ALL_COMPUTE_UNIT/SOC_TO_ARCH_VALUES 定义在 variables.cmake，两者按位置一一对应
+# usage: get_npu_arch_by_soc_version(<soc_version> <out_var>)
+# e.g.: get_npu_arch_by_soc_version("ascend910b" npu_arch) -> npu_arch is dav_2201
+# 未匹配的 socVersion（如 ascend910_55）返回空串
+###################################################################################################
+function(get_npu_arch_by_soc_version soc_version npu_arch)
+    string(TOLOWER "${soc_version}" soc_version_lower)
+    list(FIND ASCEND_ALL_COMPUTE_UNIT ${soc_version_lower} index)
+    if(NOT index EQUAL -1)
+        list(GET SOC_TO_ARCH_VALUES ${index} mapped_value)
+        set(${npu_arch} ${mapped_value} PARENT_SCOPE)
+    else()
+        set(${npu_arch} "" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(get_soc_version_by_npu_arch npu_arch soc_version)
+    set(index 0)
+    set(mapped_list)
+    foreach(arch ${SOC_TO_ARCH_VALUES})
+      if("${npu_arch}" STREQUAL "${arch}")
+        list(GET ASCEND_ALL_COMPUTE_UNIT ${index} mapped_value)
+        list(APPEND mapped_list ${mapped_value})
+      endif()
+      math(EXPR index "${index} + 1")
+    endforeach()
+    if(mapped_list)
+        set(${soc_version} ${mapped_list} PARENT_SCOPE)
+    else()
+        set(${soc_version} "" PARENT_SCOPE)
     endif()
 endfunction()
 
@@ -1247,80 +1305,6 @@ macro(add_cube_utils_plugin_sources)
   endif()
 endmacro()
 
-# 设置包和版本号
-function(set_package name)
-  cmake_parse_arguments(VERSION "" "VERSION" "" ${ARGN})
-  set(VERSION "${VERSION_VERSION}")
-  if(NOT name)
-      message(FATAL_ERROR "The name parameter is not set in set_package.")
-  endif()
-  if(NOT VERSION)
-      message(FATAL_ERROR "The VERSION parameter is not set in set_package(${name}).")
-  endif()
-  string(REGEX MATCH "^([0-9]+\\.[0-9]+)" VERSION_MAJOR_MINOR "${VERSION}")
-  set(CANN_VERSION_PACKAGES "${name}" PARENT_SCOPE)
-  set(CANN_VERSION "${VERSION}" PARENT_SCOPE)
-  set(CANN_VERSION_MAJOR_MINOR "${VERSION_MAJOR_MINOR}" PARENT_SCOPE)
-  set(CANN_VERSION_BUILD_DEPS PARENT_SCOPE)
-  set(CANN_VERSION_RUN_DEPS PARENT_SCOPE)
-endfunction()
-
-# 设置构建依赖
-function(set_build_dependencies pkg_name depend)
-  if(NOT CANN_VERSION_PACKAGES)
-      message(FATAL_ERROR "The set_package must be invoked first.")
-  endif()
-  if(NOT pkg_name)
-      message(FATAL_ERROR "The pkg_name parameter is not set in set_build_dependencies.")
-  endif()
-  if(NOT depend)
-      message(FATAL_ERROR "The depend parameter is not set in set_build_dependencies.")
-  endif()
-
-  list(APPEND CANN_VERSION_BUILD_DEPS "${pkg_name}" "${depend}")
-  set(CANN_VERSION_BUILD_DEPS "${CANN_VERSION_BUILD_DEPS}" PARENT_SCOPE)
-endfunction()
-
-# 设置运行依赖
-function(set_run_dependencies pkg_name depend)
-  if(NOT CANN_VERSION_PACKAGES)
-      message(FATAL_ERROR "The set_package must be invoked first.")
-  endif()
-  if(NOT pkg_name)
-      message(FATAL_ERROR "The pkg_name parameter is not set in set_run_dependencies.")
-  endif()
-  if(NOT depend)
-      message(FATAL_ERROR "The depend parameter is not set in set_run_dependencies.")
-  endif()
-
-  list(APPEND CANN_VERSION_RUN_DEPS "${pkg_name}" "${depend}")
-  set(CANN_VERSION_RUN_DEPS "${CANN_VERSION_RUN_DEPS}" PARENT_SCOPE)
-endfunction()
-
-# 检查构建依赖
-function(check_pkg_build_deps pkg_name)
-  execute_process(
-      COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_build_dependencies.py "${ASCEND_DIR}" ${CANN_VERSION_BUILD_DEPS}
-      RESULT_VARIABLE result
-  )
-  if(result)
-      message(FATAL_ERROR "Check ${pkg_name} build dependencies failed!")
-  endif()
-endfunction()
-
-# 添加生成version.info的目标
-# 目标名格式为：version.info
-function(add_version_info_targets)
-  execute_process(
-    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_version_info.py --output ${CMAKE_BINARY_DIR}/version.info
-            "${CANN_VERSION}" ${CANN_VERSION_RUN_DEPS}
-    RESULT_VARIABLE result
-  )
-  if(result)
-      message(FATAL_ERROR "Generate ${pkg_name} version.info failed!")
-  endif()
-endfunction()
-
 # PyTorch extension
 # usage: add_sources()
 # usage: add_sources("file1.cpp;file2.cpp;file3.cpp")
@@ -1402,12 +1386,13 @@ endmacro()
 # ACLNNTYPE aclnn_type          aclnn类型，必填，支持 aclnn/aclnn_inner/aclnn_exclude
 # [DEPENDENCIES dep_op...]      依赖的算子名称列表，缺省为空
 # [COMPUTE_UNIT ascendxx...]    支持的芯片版本号，必须与TILING_DIR一一对应，缺省为配置所有的soc
+# [NPU_ARCH dav_2201 dav_3510]          设置支持的npuArch列表，必须与TILING_DIR一一对应，缺省为配置所有的npuArch
 # [TILING_DIR archxx...]        每种芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，缺省为空
 # [DISABLE_IN_OPP TRUE/FALSE]   是否在opp包中编译tiling文件，缺省为FALSE
 # [ALLOW_HF32 xxx]              配置算子允许HF32执行，取值：enable_hi_float_32_execution / enable_float_32_execution
 macro(add_all_modules_sources)
   set(oneValueArgs DISABLE_IN_OPP HOSTCPU ALLOW_HF32)
-  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR)
+  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT NPU_ARCH TILING_DIR)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -1426,7 +1411,7 @@ macro(add_all_modules_sources)
   endif()
 
   add_modules_sources(DIR ${_HOST_DIR} OPTYPE ${MODULE_OPTYPE} ACLNNTYPE ${MODULE_ACLNNTYPE}
-      DEPENDENCIES ${MODULE_DEPENDENCIES} COMPUTE_UNIT ${MODULE_COMPUTE_UNIT}
+      DEPENDENCIES ${MODULE_DEPENDENCIES} COMPUTE_UNIT ${MODULE_COMPUTE_UNIT} NPU_ARCH ${MODULE_NPU_ARCH}
       TILING_DIR ${MODULE_TILING_DIR} DISABLE_IN_OPP ${MODULE_DISABLE_IN_OPP}
       HOSTCPU ${MODULE_HOSTCPU}
       ALLOW_HF32 ${MODULE_ALLOW_HF32})

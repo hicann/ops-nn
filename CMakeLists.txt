@@ -12,6 +12,7 @@ cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
 set(CANN_3RD_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party CACHE STRING "cann third party lib path")
 include(cmake/third_party/fetch_cann_cmake.cmake)
+include(cmake/soc_arch_variables.cmake)
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${RULE_LAUNCH})
 set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ${RULE_LAUNCH})
 
@@ -96,9 +97,6 @@ set(BUILD_MODE
 set(ASCEND_COMPUTE_UNIT
     "ascend910b"
     CACHE STRING "soc that need to be compiled")
-set(ASCEND_ALL_COMPUTE_UNIT
-    "ascend310p;ascend910;ascend910b;ascend910_93;ascend950;ascend350;ascend960dt;ascend960pr;ascend031;ascend035;ascend310b;ascend910_55;mc62;kirinx90;kirin9030;ascend5162a"
-    CACHE STRING "all soc list")
 set(VENDOR_NAME
     "custom"
     CACHE STRING "vendor name")

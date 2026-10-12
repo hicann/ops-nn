@@ -11,10 +11,12 @@
 set -e
 RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph" "tfplugin")
 
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "ascend960dt" "ascend960pr" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62" "ascend5162a")
-declare -A SOC_TO_ARCH
-SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201"
-            ["ascend950"]="3510" ["ascend350"]="3510" ["ascend960dt"]="9201" ["ascend960pr"]="9202" ["ascend910"]="1001" ["mc62"]="5102")
+export BASE_PATH=$(
+  cd "$(dirname $0)"
+  pwd
+)
+
+SUPPORT_COMPUTE_UNIT_SHORT=($(cmake -P ${BASE_PATH}/cmake/query.cmake Value ASCEND_ALL_COMPUTE_UNIT 2>&1))
 # 对SUPPORT_COMPUTE_UNIT_SHORT按字符串长度从长到短排序，避免前缀匹配时出错
 SUPPORT_COMPUTE_UNIT_SHORT=($(printf '%s\n' "${SUPPORT_COMPUTE_UNIT_SHORT[@]}" | awk '{print length($0) " " $0}' | sort -rn | cut -d ' ' -f2-))
 TRIGER_UTS=()
@@ -1524,11 +1526,12 @@ build_single_example() {
     else
       unit="ascend910b"
     fi
-    if [[ "${SOC_TO_ARCH[${unit}]}x" == "x" ]]; then
+    local arch=$(cmake -P ${BASE_PATH}/cmake/query.cmake Func get_npu_arch_by_soc_version ${unit} 2>&1)
+    if [[ "${arch}x" == "x" ]]; then
       usage "run_example"
       exit 1
     fi
-    SIMULATOR_PATH="${ASCEND_HOME_PATH}/${ARCH_INFO}-linux/simulator/dav_${SOC_TO_ARCH[${unit}]}/lib"
+    SIMULATOR_PATH="${ASCEND_HOME_PATH}/${ARCH_INFO}-linux/simulator/${arch}/lib"
     if [[ ! -f ${SIMULATOR_PATH}/libruntime_camodel.so ]]; then
       echo "[ERROR] ${SIMULATOR_PATH}/libruntime_camodel.so not found."
       exit 1
