@@ -80,7 +80,7 @@
     <tr>
       <td>axis</td>
       <td>属性</td>
-      <td>用来scatter的维度。归一化（负数按updates维度数折算）后的取值必须落在开区间(0, updates维度数)内，即不能指向第0维，也不能越界。</td>
+      <td>用来scatter的维度。归一化（负数按updates维度数折算）后的取值必须落在开区间(0, updates维度数)内，既不能指向第0维，也不能越界。</td>
       <td>int64_t</td>
       <td>-</td>
     </tr>
