@@ -134,4 +134,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_transpose_batch_mat_mul](examples/test_aclnn_transpose_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)<br>- [aclnnTransposeBatchMatMulWeightNz](docs/aclnnTransposeBatchMatMulWeightNZ.md)<br>等方式调用TransposeBatchMatMul算子。|
+| aclnn接口  | [test_aclnn_transpose_batch_mat_mul](examples/test_aclnn_transpose_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)<br>- [aclnnTransposeBatchMatMulWeightNz](docs/aclnnTransposeBatchMatMulWeightNz.md)<br>等方式调用TransposeBatchMatMul算子。|

@@ -451,7 +451,7 @@
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransSparse4to2Para](../../matmul/sparse4to2quant_matmul/docs/aclnnTransSparse4to2Para.md) | 对结构化稀疏的weight矩阵进行压缩预处理，输出压缩后的稀疏矩阵以及对应的索引矩阵。 | 默认确定性实现 | - |
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) | 完成张量x1与张量x2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNZ.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNz.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md) | 完成张量x1与张量x2量化的矩阵乘计算。 | - | 默认确定性实现 |
 | [aclnnTransposeQuantBatchMatMulWeightNz](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMulWeightNz.md) | 完成张量x1与张量x2量化的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | - | 默认确定性实现 |
 | [aclnnTransQuantParam](../../quant/trans_quant_param/docs/aclnnTransQuantParam.md) | 将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。 | 默认确定性实现 | 默认确定性实现 |
