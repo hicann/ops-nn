@@ -309,7 +309,7 @@ aclnnStatus aclnnFusedSgd(
       <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedSgd获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedSgdGetWorkspaceSize获取。</td>
       </tr>
       <tr>
       <td>executor</td>
@@ -341,7 +341,7 @@ aclnnStatus aclnnFusedSgd(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include "acl/acl.h"
 #include "aclnnop/aclnn_fused_sgd.h"
 #include <iostream>
