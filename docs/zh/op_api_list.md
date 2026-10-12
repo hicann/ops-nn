@@ -62,6 +62,7 @@
 | [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAntiMxQuant](../../quant/anti_mx_quant/docs/aclnnAntiMxQuant.md) | 将调用aclnnDynamicMxQuant/aclnnDynamicMxQuantV2量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。 | - | 默认确定性实现 |
+| [aclnnApplyAdam](../../optim/apply_adam/docs/aclnnApplyAdam.md) | 实现adam优化器功能。 | - | 默认确定性实现 |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | - | 默认确定性实现 |
 | [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
