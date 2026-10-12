@@ -10,6 +10,9 @@
 
 #ifndef UNIQUE_WITH_COUNTS_AND_SORTING_TILING_DATA_H
 #define UNIQUE_WITH_COUNTS_AND_SORTING_TILING_DATA_H
+
+#include <cstdint>
+
 #include "sort/unique_sort_tiling_data.h"
 struct UniqueConsecutiveTilingData {
     int64_t totalSize;

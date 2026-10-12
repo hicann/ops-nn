@@ -16,6 +16,8 @@
 #ifndef UNIQUE_SORT_TILING_DATA_H
 #define UNIQUE_SORT_TILING_DATA_H
 
+#include <cstdint>
+
 // Match Sort's resident/batched merge policy constants.
 constexpr uint32_t SORT_BATCH_MERGE_MIN_ROWS = 4;
 constexpr uint32_t SORT_RESIDENT_MERGE_MIN_BLOCKS = 2U;

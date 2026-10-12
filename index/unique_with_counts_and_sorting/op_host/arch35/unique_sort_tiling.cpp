@@ -21,7 +21,6 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
 #include "util/platform_util.h"
 
@@ -248,7 +247,7 @@ void FillTilingDataSort(SortKthTileInfo& info, UniqueSortRegBaseTilingData* sort
     return;
 }
 
-void PrintTilingDataSort(gert::TilingContext* context, const SortKthTileInfo& sortTileInfo)
+void PrintTilingDataSort(const gert::TilingContext* context, const SortKthTileInfo& sortTileInfo)
 {
     OP_LOGI(context->GetNodeName(),
             "realCoreNum %u, numTileDataSize %u, unsortedDimParallel %u, "
@@ -354,20 +353,27 @@ bool TrySmallAxis(gert::TilingContext* context, SortKthTileInfo& sortTileInfo, u
 
 static bool PreferSortMergeMoreCore(const SortKthTileInfo& info)
 {
+    if (info.lastAxis <= 0 || info.unsortedDim <= 0 || info.maxCoreNum == 0U) {
+        return false;
+    }
     uint32_t dataSize = 0U;
     if (!IsMergeMoreCoreProfitable(info.dataType, info.lastAxis, info.unsortedDim, info.maxCoreNum) ||
-        !SelectMergeMoreCoreDataSize(info.lastAxis, info.unsortedDim, info.maxCoreNum, dataSize)) {
+        !SelectMergeMoreCoreDataSize(info.lastAxis, info.unsortedDim, info.maxCoreNum, dataSize) || dataSize == 0U) {
         return false;
     }
     // Native blocks have no local serial merge; keep this path when all rows fit.
     uint64_t coresPerRow = Ops::Base::CeilDiv(static_cast<uint64_t>(info.lastAxis), static_cast<uint64_t>(dataSize));
+    if (coresPerRow == 0U) {
+        return false;
+    }
     if (static_cast<uint64_t>(info.unsortedDim) <= info.maxCoreNum / coresPerRow) {
         return true;
     }
     // Sync blocks must fit all rows in one round. Prefer radix only when its
     // single-round plan gives each row more cores than the sync-merge plan.
     uint32_t syncBlockSize = 0U;
-    if (!SelectMergeSyncMergeBlockSize(info.lastAxis, info.unsortedDim, info.maxCoreNum, syncBlockSize)) {
+    if (!SelectMergeSyncMergeBlockSize(info.lastAxis, info.unsortedDim, info.maxCoreNum, syncBlockSize) ||
+        syncBlockSize == 0U) {
         return false;
     }
     SortKthTileInfo radix = info;

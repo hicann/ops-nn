@@ -17,6 +17,7 @@
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
+#include "util/math_util.h"
 #include "util/platform_util.h"
 
 #include "../../../kth_value/op_host/arch35/kth_value_tiling_common.h"
@@ -42,20 +43,6 @@ constexpr uint32_t CORE_COUNT_STRIDE = 128;
 // Adjacent tiles update histogram/lookback flags independently.
 constexpr uint32_t WORKSPACE_REGION_ALIGNMENT = 512;
 constexpr uint32_t INDEX_QUEUE_ALIGNMENT_SCALE = 2;
-uint64_t DivUp(uint64_t value, uint64_t divisor)
-{
-    if (divisor == 0) {
-        return 0;
-    }
-    return value / divisor + (value % divisor != 0);
-}
-uint64_t Align(uint64_t value, uint64_t alignment)
-{
-    if (alignment == 0) {
-        return 0;
-    }
-    return DivUp(value, alignment) * alignment;
-}
 uint32_t SortTemporary(uint32_t elements)
 {
     AscendC::SortConfig config;
@@ -81,18 +68,19 @@ bool PlanUniqueConsecutive(UniqueWithCountsAndSortingTilingData& data, int64_t c
     unique.totalSize = count;
     unique.useCoreNums = cores;
     if (count <= UC_ONE_CORE_MAX_ELEMENTS) {
-        const uint64_t singleBytes = Align(uint64_t(count) * elementBytes, block) * UC_VALUE_BUFFERS +
-                                     Align(uint64_t(count) * sizeof(int64_t), block) +
-                                     Align(uint64_t(count) * sizeof(int32_t), block) +
-                                     Align(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
+        const uint64_t singleBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * elementBytes, block) *
+                                         UC_VALUE_BUFFERS +
+                                     Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int64_t), block) +
+                                     Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int32_t), block) +
+                                     Ops::Base::CeilAlign<uint64_t>(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
         data.uniqueSingleCore = singleBytes <= usable;
     }
-    unique.tileLengthPerCore = DivUp(count, cores);
+    unique.tileLengthPerCore = Ops::Base::CeilDiv<uint64_t>(count, cores);
     unique.tileLengthTailCore = count - (cores - 1) * unique.tileLengthPerCore;
-    unique.collectingCntBufSize = Align(cores * sizeof(int64_t), block);
+    unique.collectingCntBufSize = Ops::Base::CeilAlign<uint64_t>(cores * sizeof(int64_t), block);
     unique.offsetCntBufSize = unique.collectingCntBufSize;
     unique.prevIdxBufSize = block;
-    unique.shapeBufSize = Align(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
+    unique.shapeBufSize = Ops::Base::CeilAlign<uint64_t>(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
     const uint64_t fixed = unique.collectingCntBufSize + unique.offsetCntBufSize + unique.prevIdxBufSize +
                            unique.shapeBufSize;
     if (fixed >= usable || unique.tileLengthTailCore <= 0) {
@@ -122,10 +110,11 @@ ge::graphStatus TilingGenericUnique(gert::TilingContext* context, int64_t count,
     }
     UniqueWithCountsAndSortingTilingData data{};
     data.sort = plan.tiling;
-    data.valuesBytes = Align(uint64_t(count) * elementBytes, WORKSPACE_REGION_ALIGNMENT);
+    data.valuesBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * elementBytes, WORKSPACE_REGION_ALIGNMENT);
     // The final output is dead until UC. Use its capacity for temporary indices if it is wide enough.
     data.indicesBytes = plan.needsIndices && elementBytes < sizeof(int32_t) ?
-                            Align(uint64_t(count) * sizeof(int32_t), WORKSPACE_REGION_ALIGNMENT) :
+                            Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int32_t),
+                                                           WORKSPACE_REGION_ALIGNMENT) :
                             0;
     cores = plan.cores;
     // Sort's selected template owns the scratch policy. UC is SIMD-only and reuses the UB after Reset.
@@ -226,15 +215,16 @@ bool ComputeCompactTilePlan(int64_t count, uint32_t elementBytes, uint32_t count
     if (tile == 0) {
         return false;
     }
-    uint64_t tiles = DivUp(count, tile);
+    uint64_t tiles = Ops::Base::CeilDiv<uint64_t>(count, tile);
     // Tile IDs stay uint32 in the shared radix kernel. Leave room for its final core-strided increment.
     const uint64_t maxTiles = std::numeric_limits<uint32_t>::max() - uint64_t(cores);
     if (tiles > maxTiles) {
         return false;
     }
     if (tiles % cores != 0) {
-        const uint64_t activeSlots = DivUp(tiles, cores) * cores;
-        tile = std::max<uint64_t>(BINS, Align(DivUp(count, activeSlots), BINS));
+        const uint64_t activeSlots = Ops::Base::CeilDiv<uint64_t>(tiles, cores) * cores;
+        tile = std::max<uint64_t>(
+            BINS, Ops::Base::CeilAlign<uint64_t>(Ops::Base::CeilDiv<uint64_t>(count, activeSlots), BINS));
         temporary = SortTemporary(tile);
     }
     if (tile * tileFactor + ubExtra >= usable) {
@@ -251,7 +241,7 @@ bool ComputeCompactTilePlan(int64_t count, uint32_t elementBytes, uint32_t count
         return false;
     }
     plan.tile = tile;
-    tiles = DivUp(count, tile);
+    tiles = Ops::Base::CeilDiv<uint64_t>(count, tile);
     if (tiles > maxTiles) {
         return false;
     }
@@ -307,21 +297,22 @@ ge::graphStatus TilingUniqueWithCountsAndSorting(gert::TilingContext* context)
     sort.unsortedDimNum = 1;
     sort.tmpUbSize = temporary;
     const uint64_t allHist = uint64_t{BINS} * tiles * elementBytes;
-    const uint64_t clearElementsPerCore = std::max<uint64_t>(DivUp(allHist, cores), block);
+    const uint64_t clearElementsPerCore = std::max<uint64_t>(Ops::Base::CeilDiv<uint64_t>(allHist, cores), block);
     if (clearElementsPerCore > std::numeric_limits<uint32_t>::max()) {
         return ge::GRAPH_FAILED;
     }
     const uint32_t allBins = BINS * elementBytes;
     sort.keyParams5 = static_cast<uint32_t>(clearElementsPerCore);
-    sort.keyParams0 = DivUp(allHist, sort.keyParams5);
-    sort.keyParams3 = DivUp(sort.keyParams5, temporary / counterBytes);
+    sort.keyParams0 = Ops::Base::CeilDiv<uint64_t>(allHist, sort.keyParams5);
+    sort.keyParams3 = Ops::Base::CeilDiv<uint64_t>(sort.keyParams5, temporary / counterBytes);
     sort.keyParams2 = std::min<uint32_t>(sort.keyParams5, temporary / counterBytes);
-    sort.keyParams4 = std::max<uint64_t>(DivUp(allBins, cores), block);
-    sort.keyParams1 = DivUp(allBins, sort.keyParams4);
-    const uint64_t binsBytes = Align(uint64_t(sort.keyParams1) * sort.keyParams4 * counterBytes, block);
-    const uint64_t histBytes = Align(uint64_t(sort.keyParams3) * sort.keyParams2 * sort.keyParams0 * counterBytes,
-                                     block);
-    data.valuesBytes = Align(uint64_t(count) * elementBytes, WORKSPACE_REGION_ALIGNMENT);
+    sort.keyParams4 = std::max<uint64_t>(Ops::Base::CeilDiv<uint64_t>(allBins, cores), block);
+    sort.keyParams1 = Ops::Base::CeilDiv<uint64_t>(allBins, sort.keyParams4);
+    const uint64_t binsBytes = Ops::Base::CeilAlign<uint64_t>(
+        uint64_t(sort.keyParams1) * sort.keyParams4 * counterBytes, block);
+    const uint64_t histBytes = Ops::Base::CeilAlign<uint64_t>(
+        uint64_t(sort.keyParams3) * sort.keyParams2 * sort.keyParams0 * counterBytes, block);
+    data.valuesBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * elementBytes, WORKSPACE_REGION_ALIGNMENT);
     // UC chooses its own single/multi-core family after Sort has synchronized all producers.
     if (!PlanUniqueConsecutive(data, count, cores, elementBytes, block, usable)) {
         return ge::GRAPH_FAILED;
@@ -335,7 +326,7 @@ ge::graphStatus TilingUniqueWithCountsAndSorting(gert::TilingContext* context)
     // Recomputing these in the scatter pass saves workspace but adds vector work on every radix round.
     constexpr uint32_t HISTOGRAM_AND_PREFIX_BUFFERS = 2;
     const uint64_t tileMetadataBytes = uint64_t(tiles) * BINS * sizeof(uint16_t) * HISTOGRAM_AND_PREFIX_BUFFERS;
-    const uint64_t radixBytes = Align(uint64_t(tiles) * tile, block);
+    const uint64_t radixBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(tiles) * tile, block);
     ws[0] = platform.GetLibApiWorkSpaceSize() + data.valuesBytes +
             std::max<uint64_t>(binsBytes + histBytes + tileMetadataBytes + radixBytes, cores * CORE_COUNT_STRIDE);
     auto raw = context->GetRawTilingData();
