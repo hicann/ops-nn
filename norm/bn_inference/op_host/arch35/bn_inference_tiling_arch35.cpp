@@ -89,8 +89,8 @@ constexpr int64_t ATTR_MODE = 2;
 constexpr int64_t PIPE_META_RESERVE = 16 * 1024;
 constexpr int64_t MAX_GENERIC_C_VECTORS = 8;
 constexpr int64_t SMALL_CF_Q_LIMIT = 32;
-constexpr int64_t SMALL_CL_C_LIMIT = 8;
-constexpr int64_t SMALL_CL_MIN_B = 65536;
+// Keep very small row counts on the generic path to avoid packed setup overhead.
+constexpr int64_t SMALL_CL_MIN_B = 64;
 constexpr int64_t MIN_SMALL_CF_N_PER_CORE = 2;
 constexpr int64_t FP32_BYTES = 4;
 constexpr size_t SIMPLIFIED_KEY_CAPACITY = 100;
@@ -580,10 +580,11 @@ bool BNInferenceTiling::TrySelectPackedChannelFirst()
 
 bool BNInferenceTiling::TrySelectPackedChannelLast()
 {
-    if (c_ <= 0 || c_ > SMALL_CL_C_LIMIT || inner_ < SMALL_CL_MIN_B) {
+    // The repeated channel parameters must fit in one FP32 vector.
+    const int64_t vlFp32 = vectorLength_ / FP32_BYTES;
+    if (c_ <= 0 || c_ > vlFp32 || inner_ < SMALL_CL_MIN_B) {
         return false;
     }
-    const int64_t vlFp32 = vectorLength_ / FP32_BYTES;
     const int64_t cacheLen = (vlFp32 / c_) * c_;
     if (cacheLen <= 0) {
         return false;

@@ -274,7 +274,7 @@ TEST(BNInferenceTilingTest, SelectsPreFoldedKeysForPublicFiveDimensionalLayouts)
     EXPECT_TRUE(RunModeCase({2, 3, 2, 4, 5}, ge::FORMAT_NCDHW, 0, true, false, ge::GRAPH_SUCCESS,
                             BNInferenceKey::CF_GENERIC_PRE_FOLDED_BASE + 1));
     EXPECT_TRUE(RunModeCase({2, 2, 4, 5, 3}, ge::FORMAT_NDHWC, 0, true, true, ge::GRAPH_SUCCESS,
-                            BNInferenceKey::CL_GENERIC_PRE_FOLDED_BASE + 3));
+                            BNInferenceKey::CL_PACKED_PRE_FOLDED_BASE + 3));
 }
 
 TEST(BNInferenceTilingTest, RejectsOffsetOnlyInPreFoldedModeIncludingEmptyTensor)
@@ -313,6 +313,75 @@ TEST(BNInferenceTilingTest, SelectsChannelLastPackedPath)
                         ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE));
 }
 
+TEST(BNInferenceTilingTest, SelectsPackedPathForReportedChannelLastCase)
+{
+    EXPECT_TRUE(RunCase({30, 31, 19, 34, 15}, ge::FORMAT_NDHWC, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE + 1, CORE_NUM,
+                        ge::FORMAT_RESERVED, ge::FORMAT_RESERVED, 15, true, false));
+}
+
+TEST(BNInferenceTilingTest, PacksChannelLastParametersThroughOneFp32Vector)
+{
+    for (const int64_t channels : {1, 8, 9, 15, 16, 17, 18, 19, 31, 32, 33, 63, 64}) {
+        SCOPED_TRACE(channels);
+        EXPECT_TRUE(RunCase({1, 1, 65537, channels}, ge::FORMAT_NHWC, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE));
+    }
+}
+
+TEST(BNInferenceTilingTest, KeepsGenericPathAbovePackedChannelLimit)
+{
+    for (const int64_t channels : {65, 127, 128, 129, 513}) {
+        SCOPED_TRACE(channels);
+        EXPECT_TRUE(RunCase({1, 1, 65537, channels}, ge::FORMAT_NHWC, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_GENERIC_BASE));
+    }
+}
+
+TEST(BNInferenceTilingTest, PreservesPackedChannelLastRowThreshold)
+{
+    for (const int64_t channels : {1, 15, 17, 64}) {
+        SCOPED_TRACE(channels);
+        EXPECT_TRUE(RunCase({1, 1, 63, channels}, ge::FORMAT_NHWC, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_GENERIC_BASE));
+        for (const int64_t rows : {64, 65, 65535, 65536}) {
+            SCOPED_TRACE(rows);
+            EXPECT_TRUE(RunCase({1, 1, rows, channels}, ge::FORMAT_NHWC, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                                ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE));
+        }
+    }
+}
+
+TEST(BNInferenceTilingTest, SelectsPackedChannelLastOptionalAndModeKeys)
+{
+    for (const int64_t mode : {0, 15}) {
+        const uint64_t base = mode == 0 ? BNInferenceKey::CL_PACKED_PRE_FOLDED_BASE : BNInferenceKey::CL_PACKED_BASE;
+        for (const int64_t channels : {15, 17, 33, 64}) {
+            for (const int64_t mask : {0, 1, 2, 3}) {
+                if (mode == 0 && mask == 2) {
+                    continue;
+                }
+                SCOPED_TRACE(mode);
+                SCOPED_TRACE(channels);
+                SCOPED_TRACE(mask);
+                EXPECT_TRUE(RunModeCase({1, 1, 65537, channels}, ge::FORMAT_NHWC, mode, (mask & 1) != 0,
+                                        (mask & 2) != 0, ge::GRAPH_SUCCESS, base + mask));
+            }
+        }
+    }
+}
+
+TEST(BNInferenceTilingTest, PacksNdStorageWithChannelLastOrigin)
+{
+    for (const int64_t channels : {15, 17, 64}) {
+        SCOPED_TRACE(channels);
+        EXPECT_TRUE(RunCase({1, 1, 1, 64, channels}, ge::FORMAT_ND, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::GRAPH_SUCCESS, -1, {}, ge::FORMAT_RESERVED,
+                            BNInferenceKey::CL_PACKED_PRE_FOLDED_BASE + 3, 0, ge::FORMAT_NDHWC, ge::FORMAT_RESERVED, 0,
+                            true, true));
+    }
+}
+
 TEST(BNInferenceTilingTest, AcceptsNdRank4AsChannelFirst)
 {
     EXPECT_TRUE(RunCase({2, 3, 4, 5}, ge::FORMAT_ND, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, -1,
@@ -334,7 +403,7 @@ TEST(BNInferenceTilingTest, ResolvesNdStorageFromPublicOriginFormat)
     EXPECT_TRUE(RunCase({2, 3, 2, 4, 5}, ge::FORMAT_ND, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, -1,
                         {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE, 0, ge::FORMAT_NCDHW));
     EXPECT_TRUE(RunCase({2, 2, 4, 5, 3}, ge::FORMAT_ND, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, -1,
-                        {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_GENERIC_BASE, 0, ge::FORMAT_NDHWC));
+                        {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE, 0, ge::FORMAT_NDHWC));
 }
 
 TEST(BNInferenceTilingTest, NdOriginWinsWhenAxisOneAndLastAreBothChannelSized)
@@ -366,7 +435,7 @@ TEST(BNInferenceTilingTest, AcceptsPublicFiveDimensionalFormats)
     EXPECT_TRUE(RunCase({2, 3, 2, 4, 5}, ge::FORMAT_NCDHW, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
                         -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE));
     EXPECT_TRUE(RunCase({2, 2, 4, 5, 3}, ge::FORMAT_NDHWC, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
-                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_GENERIC_BASE));
+                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CL_PACKED_BASE));
 }
 
 TEST(BNInferenceTilingTest, RejectsWrongRankForFormat)
