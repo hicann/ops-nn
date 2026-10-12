@@ -26,12 +26,22 @@ class FunctionTorchLinalgVectorNorm(BaseApi):
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         if self.device == "npu":
             torch.npu.set_compile_mode(jit_compile=False)
-        
+
         func = eval(self.api_name)
 
         if with_output:
-            output = func(input_data.kwargs["self"], input_data.kwargs["ord"], input_data.kwargs["dim"], input_data.kwargs["keepdim"])
+            output = func(
+                input_data.kwargs["self"],
+                input_data.kwargs["ord"],
+                input_data.kwargs["dim"],
+                input_data.kwargs["keepdim"],
+            )
             return output
         else:
-            func(input_data.kwargs["self"], input_data.kwargs["ord"], input_data.kwargs["dim"], input_data.kwargs["keepdim"])
+            func(
+                input_data.kwargs["self"],
+                input_data.kwargs["ord"],
+                input_data.kwargs["dim"],
+                input_data.kwargs["keepdim"],
+            )
             return

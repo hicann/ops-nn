@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -17,8 +17,6 @@ from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-import numpy as np
-import torch
 
 
 @register("aclnn_batch_norm_test")
@@ -32,13 +30,13 @@ class AclnnBatchNorm(AclnnBaseApi):  # SampleApi类型仅需设置唯一即可�
 
     # 默认调用，可省略
     def after_call(self, output_packages):
-        output1,output2,output3 = super().after_call(output_packages)
-        if not self.istrain :
+        output1, output2, output3 = super().after_call(output_packages)
+        if not self.istrain:
             output2.zero_()
             output3.zero_()
             self.istrain = False
 
-        return output1, output2,output3
+        return output1, output2, output3
 
     # 默认调用，可省略
     def get_format(self, input_data: InputDataset, index=None, name=None):
@@ -61,7 +59,6 @@ class BatchNorm(BaseApi):
                 return AclFormat.ACL_FORMAT_NCDHW
         return AclFormat.ACL_FORMAT_ND
 
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         oritype = input_data.kwargs["input"].dtype
         input = input_data.kwargs["input"]
@@ -73,17 +70,33 @@ class BatchNorm(BaseApi):
         momentum = input_data.kwargs["momentum"]
         eps = input_data.kwargs["eps"]
 
-        if self.device == 'cpu' :
+        if self.device == "cpu":
             input = input.to(torch.float32)
             bias = bias.to(torch.float32)
             runningMean = runningMean.to(torch.float32)
             weight = weight.to(torch.float32)
             runningVar = runningVar.to(torch.float32)
-            output= torch.nn.functional.batch_norm(input,runningMean,runningVar,weight,bias,training,momentum,eps)
+            output = torch.nn.functional.batch_norm(
+                input, runningMean, runningVar, weight, bias, training, momentum, eps
+            )
             for i in range(runningMean.shape[0]):
-                runningMean[i] = torch.mean(input[:,i,])
-                runningVar[i] = torch.var(input[:,i,])
-            if training :
-                return output.to(oritype),runningMean.to(oritype),runningVar.to(oritype)
+                runningMean[i] = torch.mean(
+                    input[
+                        :,
+                        i,
+                    ]
+                )
+                runningVar[i] = torch.var(
+                    input[
+                        :,
+                        i,
+                    ]
+                )
+            if training:
+                return (
+                    output.to(oritype),
+                    runningMean.to(oritype),
+                    runningVar.to(oritype),
+                )
             else:
-                return output.to(oritype),runningMean.zero_(),runningVar.zero_()
+                return output.to(oritype), runningMean.zero_(), runningVar.zero_()

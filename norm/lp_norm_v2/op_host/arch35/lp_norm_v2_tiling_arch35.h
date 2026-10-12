@@ -31,7 +31,7 @@ struct LpNormV2TilingKey {
 
 class LpNormV2Tiling {
 public:
-    explicit LpNormV2Tiling(gert::TilingContext* context) : tilingContext_(context){};
+    explicit LpNormV2Tiling(gert::TilingContext* context) : tilingContext_(context) {};
     ge::graphStatus RunTiling(const ReduceOpCompileInfo* compileInfo);
 
 private:

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 import sys
@@ -23,22 +23,22 @@ def gen_golden_data(x_shape, x_dtype, x_format, beta_shape, epsilon, mean_dtype)
         x = np.random.uniform(2, 2, x_shape).astype(bfloat16)
         if mean_dtype == "bfloat16":
             mean = np.random.uniform(1, 1, beta_shape).astype(bfloat16)
-            var = np.random.uniform(1, 1, beta_shape).astype(bfloat16);
+            var = np.random.uniform(1, 1, beta_shape).astype(bfloat16)
         else:
             mean = np.random.uniform(1, 1, beta_shape).astype(mean_dtype)
-            var = np.random.uniform(1, 1, beta_shape).astype(mean_dtype);
-        beta = np.random.uniform(2, 2, beta_shape).astype(bfloat16);
-        gamma = np.random.uniform(2, 2, beta_shape).astype(bfloat16);
+            var = np.random.uniform(1, 1, beta_shape).astype(mean_dtype)
+        beta = np.random.uniform(2, 2, beta_shape).astype(bfloat16)
+        gamma = np.random.uniform(2, 2, beta_shape).astype(bfloat16)
     else:
         x = np.random.uniform(2, 2, x_shape).astype(x_dtype)
         if mean_dtype == "bfloat16":
             mean = np.random.uniform(1, 1, beta_shape).astype(bfloat16)
-            var = np.random.uniform(1, 1, beta_shape).astype(bfloat16);
+            var = np.random.uniform(1, 1, beta_shape).astype(bfloat16)
         else:
             mean = np.random.uniform(1, 1, beta_shape).astype(mean_dtype)
-            var = np.random.uniform(1, 1, beta_shape).astype(mean_dtype);
-        beta = np.random.uniform(2, 2, beta_shape).astype(x_dtype);
-        gamma = np.random.uniform(2, 2, beta_shape).astype(x_dtype);
+            var = np.random.uniform(1, 1, beta_shape).astype(mean_dtype)
+        beta = np.random.uniform(2, 2, beta_shape).astype(x_dtype)
+        gamma = np.random.uniform(2, 2, beta_shape).astype(x_dtype)
 
     x.tofile("./x.bin")
     mean.tofile("./mean.bin")
@@ -60,20 +60,27 @@ def gen_golden_data(x_shape, x_dtype, x_format, beta_shape, epsilon, mean_dtype)
     tensor_gamma = torch.from_numpy(gamma)
 
     if x_format == "NHWC":
-        tensor_x = tensor_x.permute(0,3,1,2)
+        tensor_x = tensor_x.permute(0, 3, 1, 2)
     if x_format == "NDHWC":
-        tensor_x = tensor_x.permute(0,4,1,2,3)
+        tensor_x = tensor_x.permute(0, 4, 1, 2, 3)
 
-    res = torch.ops.aten.native_batch_norm(input=tensor_x, weight=tensor_gamma, bias=tensor_beta,
-                                           running_mean=tensor_mean, running_var=tensor_var,
-                                           training=False, momentum=0.1, eps=float(epsilon))
+    res = torch.ops.aten.native_batch_norm(
+        input=tensor_x,
+        weight=tensor_gamma,
+        bias=tensor_beta,
+        running_mean=tensor_mean,
+        running_var=tensor_var,
+        training=False,
+        momentum=0.1,
+        eps=float(epsilon),
+    )
 
     y = res[0]
-    if x_format == "NHWC" :
-        y = y.permute(0, 2,3,1)
+    if x_format == "NHWC":
+        y = y.permute(0, 2, 3, 1)
     if x_format == "NDHWC":
-        y = y.permute(0,2,3,4,1)
-    y =y.numpy().astype(x_dtype)
+        y = y.permute(0, 2, 3, 4, 1)
+    y = y.numpy().astype(x_dtype)
 
     y.tofile("./golden_y.bin")
 
@@ -86,5 +93,7 @@ def gen_golden_data(x_shape, x_dtype, x_format, beta_shape, epsilon, mean_dtype)
     running_mean.tofile("./golden_running_mean.bin")
     running_var.tofile("./golden_running_var.bin")
     save_mean.tofile("./golden_save_mean.bin")
+
+
 if __name__ == "__main__":
     gen_golden_data(*sys.argv[1:])

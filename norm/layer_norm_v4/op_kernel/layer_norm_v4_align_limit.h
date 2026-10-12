@@ -382,11 +382,11 @@ private:
                                           LocalTensor<float>& rstdLocal, ComputeStruct computeStruct,
                                           uint32_t brcbRepeat)
     {
-        int32_t repeat = computeStruct.repeatTimes; //行数，多行，一行的时候根据长度确认需要多少个元素
-        int32_t dstRepStride = 1; //目的操作数相邻迭代间的地址步长，以一个repeat归约后的长度为单位
-        int32_t srcBlkStride = 1; //单次迭代内datablock的地址步长
+        int32_t repeat = computeStruct.repeatTimes; // 行数，多行，一行的时候根据长度确认需要多少个元素
+        int32_t dstRepStride = 1; // 目的操作数相邻迭代间的地址步长，以一个repeat归约后的长度为单位
+        int32_t srcBlkStride = 1; // 单次迭代内datablock的地址步长
         int32_t srcRepStride = computeStruct
-                                   .repStrid; //源操作数相邻迭代间的地址步长，即源操作数每次迭代跳过的datablock数目
+                                   .repStrid; // 源操作数相邻迭代间的地址步长，即源操作数每次迭代跳过的datablock数目
         Adds(yLocal, xLocal, static_cast<float>(0), tileLength);
         PipeBarrier<PIPE_V>();
         // calculate square and muls coefficient (x-u)^2
@@ -398,9 +398,9 @@ private:
         MultiSelfAdd64(xLocal, computeStruct);
 
         // repeat行数，多行
-        //目的操作数相邻迭代间的地址步长，以一个repeat归约后的长度为单位
-        //单次迭代内datablock的地址步长
-        //源操作数相邻迭代间的地址步长，即源操作数每次迭代跳过的datablock数目
+        // 目的操作数相邻迭代间的地址步长，以一个repeat归约后的长度为单位
+        // 单次迭代内datablock的地址步长
+        // 源操作数相邻迭代间的地址步长，即源操作数每次迭代跳过的datablock数目
         ReduceSumWithModeSameTensor(xLocal, xLocal, repeat, computeStruct.mask, 1, srcBlkStride, srcRepStride);
         PipeBarrier<PIPE_V>();
 

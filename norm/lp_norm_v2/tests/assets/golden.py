@@ -48,7 +48,7 @@ def is_empty_tensor_for_inf(input_tensor, p, axis):
 
 
 def lp_norm_v2_golden(x, *, axes=[], keepdim=False, p=2.0, epsilon=1e-12, **kwargs):
-    '''
+    """
     Golden function for lp_norm_v2.
     All the parameters (names and order) follow @lp_norm_v2_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -59,7 +59,7 @@ def lp_norm_v2_golden(x, *, axes=[], keepdim=False, p=2.0, epsilon=1e-12, **kwar
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
 
     x_type = x.dtype
@@ -71,14 +71,23 @@ def lp_norm_v2_golden(x, *, axes=[], keepdim=False, p=2.0, epsilon=1e-12, **kwar
 
     if empty_tensor_for_inf:
         if not keepdim:
-            res_shape = [x_tensor.shape[i] for i in range(len(x_tensor.shape)) if i not in unique_axis]
+            res_shape = [
+                x_tensor.shape[i]
+                for i in range(len(x_tensor.shape))
+                if i not in unique_axis
+            ]
         else:
-            res_shape = [x_tensor.shape[i] if i not in unique_axis else 1 for i in range(len(x_tensor.shape))]
+            res_shape = [
+                x_tensor.shape[i] if i not in unique_axis else 1
+                for i in range(len(x_tensor.shape))
+            ]
         res_shape = tuple(res_shape)
         fill_val = -float("inf") if p > 0 else float("inf")
         res = torch.full(res_shape, torch.tensor(fill_val, dtype=x_tensor.dtype))
     else:
-        res = torch.linalg.vector_norm(x_tensor, ord=p, dim=unique_axis, keepdim=keepdim)
+        res = torch.linalg.vector_norm(
+            x_tensor, ord=p, dim=unique_axis, keepdim=keepdim
+        )
 
     res_np = res.numpy() if isinstance(res, torch.Tensor) else res
     if x_type == "float16" and epsilon < Constant.CONST_EPSILON_FP16:

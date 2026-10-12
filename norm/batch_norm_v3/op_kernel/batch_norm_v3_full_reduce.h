@@ -34,9 +34,9 @@ using namespace AscendC;
                           ELEM_PER_REP_FP32, I_REMAIN, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                         \
             }                                                                                                         \
             if (J_REMAIN) {                                                                                           \
-                FUNC_IMPL((D_T)[(I_LOOP)*UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP)*ELEM_PER_REP_FP32],                 \
-                          (S0_T)[(I_LOOP)*UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP)*ELEM_PER_REP_FP32],                \
-                          (S1_T)[(J_LOOP)*ELEM_PER_REP_FP32], J_REMAIN, I_REMAIN,                                     \
+                FUNC_IMPL((D_T)[(I_LOOP) * UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP) * ELEM_PER_REP_FP32],             \
+                          (S0_T)[(I_LOOP) * UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP) * ELEM_PER_REP_FP32],            \
+                          (S1_T)[(J_LOOP) * ELEM_PER_REP_FP32], J_REMAIN, I_REMAIN,                                   \
                           {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                                                      \
             }                                                                                                         \
         }                                                                                                             \
