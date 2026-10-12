@@ -34,7 +34,7 @@
 |[swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)|SwiGLU分组激活算子，对输入张量按最后一维拆分为两部分，分别进行clamp和sigmoid操作后相乘，支持可选的权重和分组索引。|-|默认支持确定性计算|
 |[cla_gate_quant](../../activation/cla_gate_quant/docs/torchapi_cla_gate_quant.md)|融合CLA两路head-wise gate加权与MX动态块量化，支持FP8/FP4单轴或双轴量化输出。|-|默认支持确定性计算|
 |[cla_gate_backward](../../activation/cla_gate_backward/docs/torchapi_cla_gate_backward.md)|对应cla_gate_quant反向算子，不做梯度量化。|-|默认支持确定性计算|
-|[clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)|带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算，输出SwiGlu的结果。|-|默认支持确定性计算|
+|[clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)|带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算，输出SwiGlu的结果。|默认支持确定性计算|默认支持确定性计算|
 |[clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)|ClippedSwiglu的反向梯度算子，根据上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x。|-|默认支持确定性计算|
 |[swiglu_group_backward](../../activation/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)|ClampedSwiglu激活函数的反向梯度算子，从上游梯度grad_output和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight。|-|-|
 |[swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)|融合SwiGLU分组激活与量化的算子，在SwiGLU计算基础上支持FP8等多种量化模式输出。|-|默认支持确定性计算|
