@@ -60,8 +60,7 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static inline bool CheckNotNull(aclTensor* data, const aclTensor* indices, const aclTensor* updates)

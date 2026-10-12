@@ -105,8 +105,8 @@ static bool CheckDtypeValid(const op::DataType selfDtype, const op::DataType ind
                             const op::DataType outDtype)
 {
     // 获取芯片支持的数据类型
-    bool isAscend910BSocVersion = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-                                   GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E);
+    bool isAscend910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+                                   Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<op::DataType> dtypeSupportList = isAscend910BSocVersion ?
                                                                      ASCEND910B_DTYPE_SUPPORT_LIST :
                                                                      ASCEND910_DTYPE_SUPPORT_LIST;
