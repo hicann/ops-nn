@@ -170,9 +170,6 @@ ACLNN_API aclnnStatus aclnnInplaceScatter(void* workspace, uint64_t workspaceSiz
  * 0：表示替换操作，将src中的对应位置的值按照index替换到out中的对应位置
  * 1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置
  * 2：表示累乘操作，将src中的对应位置的值按照index累乘到out中的对应位置
- * @param [in] out: npu
- * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。数据格式、数据类型、shape需要与selfRef一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码

@@ -54,7 +54,7 @@
       <td>data</td>
       <td>输入</td>
       <td>公式中的`data`，Device侧的aclTensor。</td>
-      <td>COMPLEX128, COMPLEX64, DOUBLE, FLOAT32, FLOAT16, INT16, INT32, INT64, INT8, QINT32, QINT8, QUINT8, UINT16, UINT32, UINT64, UINT8, BFLOAT16, COMPLEX32</td>
+      <td>BFLOAT16, BOOL, COMPLEX128, COMPLEX64, DOUBLE, FLOAT16, FLOAT32, INT16, INT32, INT64, INT8, UINT16, UINT32, UINT64, UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -75,7 +75,7 @@
       <td>updates</td>
       <td>输入</td>
       <td>公式中的`updates`，Device侧的aclTensor。</td>
-      <td>COMPLEX128, COMPLEX64, DOUBLE, FLOAT32, FLOAT16, INT16, INT32, INT64, INT8, QINT32, QINT8, QUINT8, UINT16, UINT32, UINT64, UINT8, BFLOAT16, COMPLEX32</td>
+      <td>BFLOAT16, BOOL, COMPLEX128, COMPLEX64, DOUBLE, FLOAT16, FLOAT32, INT16, INT32, INT64, INT8, UINT16, UINT32, UINT64, UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -89,7 +89,7 @@
       <td>out</td>
       <td>输出</td>
       <td>公式中的输出。</td>
-      <td>COMPLEX128, COMPLEX64, DOUBLE, FLOAT32, FLOAT16, INT16, INT32, INT64, INT8, QINT32, QINT8, QUINT8, UINT16, UINT32, UINT64, UINT8, BFLOAT16, COMPLEX32</td>
+      <td>BFLOAT16, BOOL, COMPLEX128, COMPLEX64, DOUBLE, FLOAT16, FLOAT32, INT16, INT32, INT64, INT8, UINT16, UINT32, UINT64, UINT8</td>
       <td>ND</td>
     </tr>
   </tbody></table>
