@@ -76,7 +76,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>输入</td>
         <td>输入Tensor。</td>
         <td>shape不能大于selfRef，且需要和selfRef满足<a href="../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td>
-        <td>BOOL、UINT8</td>
+        <td>BOOL</td>
         <td>ND</td>
         <td>-</td>
         <td>-</td>
