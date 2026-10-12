@@ -462,8 +462,7 @@ static ge::graphStatus TilingFuncDequantize(gert::TilingContext* context)
     auto ret = tiling.RunTiling();
     if (ret != GRAPH_SUCCESS)
         return ret;
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    uint32_t sysWorkspaceSize = 0;
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = sysWorkspaceSize;

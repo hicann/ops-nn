@@ -62,7 +62,7 @@ REGISTER_TILING_DATA_CLASS(QuantUpdateScatter, QuantUpdateScatterTilingData)
 
 class QuantUpdateScatterRegbaseTiling {
 public:
-    explicit QuantUpdateScatterRegbaseTiling(gert::TilingContext* context) : context_(context){};
+    explicit QuantUpdateScatterRegbaseTiling(gert::TilingContext* context) : context_(context) {};
     ge::graphStatus DoTiling();
 
 private:
@@ -86,7 +86,7 @@ private:
     static constexpr size_t DIM_2 = 2;
     static constexpr size_t DIM_3 = 3;
     static constexpr size_t RESERVED_BYTES = 16384;
-    static constexpr size_t SYNC_WORKSPACE_SIZE = 16777216; // 16 * 1024 * 1024
+    static constexpr size_t SYNC_WORKSPACE_SIZE = 0;
     static constexpr size_t DIM_NEG_2 = static_cast<size_t>(-2);
     static constexpr size_t DIM_NEG_1 = static_cast<size_t>(-1);
     static constexpr size_t ATTR_REDUCE_INDEX = 0;

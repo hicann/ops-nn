@@ -28,7 +28,7 @@
 using namespace GeluV2Op;
 
 namespace optiling {
-const size_t ASCEND_WORKSPACE = 16777216; // 16M
+const size_t ASCEND_WORKSPACE = 0;        // 0M
 const int64_t ASCEND_API_BUFFER = 122880; // 120K
 const int ATTR_APPROXIMATE_POS = 0;
 

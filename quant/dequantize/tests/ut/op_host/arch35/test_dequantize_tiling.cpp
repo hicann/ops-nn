@@ -29,7 +29,7 @@ TEST_F(DequantizeTilingTest, case1_int8_1d)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "3 128 1 128 1 1 1 0 1 52288 1 1 1 128 3 1 1 1 1 128 1 1 1 1 1 1 1 1 "
                     "0 0 0 1 0 0 0 0 0 0 0 0 1 1 1 128 0 0 0 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case2: uint8 2D [4,8], scalar min/max range, MIN_COMBINED
@@ -45,7 +45,7 @@ TEST_F(DequantizeTilingTest, case2_uint8_2d)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "2 4 1 4 1 1 1 0 2 52288 1 1 4 8 3 1 1 1 4 8 1 1 1 1 1 1 1 1 "
                     "0 0 8 1 0 0 0 0 0 0 0 0 1 1 4 8 0 0 8 1 4287568136795848704 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case3: int32 2D [4,8], scalar min/max range, MIN_COMBINED
@@ -61,7 +61,7 @@ TEST_F(DequantizeTilingTest, case3_int32_2d)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "2 4 1 4 1 1 1 0 2 52288 1 1 4 8 3 1 1 1 4 8 1 1 1 1 1 1 1 1 "
                     "0 0 8 1 0 0 0 0 0 0 0 0 1 1 4 8 0 0 8 1 3422735718126977024 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case4: int8 3D broadcast [2,4,8]+[1,1,8]+[1,1,8], MIN_COMBINED
@@ -77,7 +77,7 @@ TEST_F(DequantizeTilingTest, case4_int8_3d_broadcast)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "1 2 1 2 1 1 1 0 3 52288 1 2 4 8 3 1 1 2 4 8 1 1 1 8 1 1 1 8 "
                     "0 32 8 1 0 0 0 1 0 0 0 1 1 2 4 8 0 32 8 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case5: int8 4D [2,3,4,8], broadcast min/max, MIN_COMBINED
@@ -93,7 +93,7 @@ TEST_F(DequantizeTilingTest, case5_int8_4d)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "0 2 1 2 1 1 1 0 4 52288 2 3 4 8 3 1 2 3 4 8 2 3 4 8 2 3 4 8 "
                     "96 32 8 1 96 32 8 1 96 32 8 1 2 3 4 8 96 32 8 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case6: int8 large [64,1024,256], scalar min/max, MIN_COMBINED
@@ -109,7 +109,7 @@ TEST_F(DequantizeTilingTest, case6_int8_large)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "2 51 21 4 64 1344 21 0 3 52288 1 64 1024 256 3 1 1 64 1024 256 1 1 1 1 1 1 1 1 "
                     "0 262144 256 1 0 0 0 0 0 0 0 0 1 64 1024 256 0 262144 256 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case7: int8 5D [2,2,3,4,2], scalar min/max, MIN_COMBINED -> kRank=8
@@ -126,7 +126,7 @@ TEST_F(DequantizeTilingTest, case7_int8_5d)
     string expect = "3 2 1 2 1 1 1 0 5 52288 1 1 1 2 2 3 4 2 3 1 1 1 1 2 2 3 4 2 1 1 1 2 2 3 4 2 1 1 1 2 2 3 4 2 "
                     "0 0 0 48 24 8 2 1 0 0 0 48 24 8 2 1 0 0 0 48 24 8 2 1 1 1 1 2 2 3 4 2 "
                     "0 0 0 48 24 8 2 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 4, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 4, expect, {{0}});
 }
 
 // case8: int8 broadcast multi [2,4,8]+[4,1]+[1,8], MIN_COMBINED
@@ -142,7 +142,7 @@ TEST_F(DequantizeTilingTest, case8_int8_broadcast_multi)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_COMBINED"))}, &ci);
     string expect = "1 2 1 2 1 1 1 0 3 52288 1 2 4 8 3 1 1 2 4 8 1 1 4 1 1 1 1 8 "
                     "0 32 8 1 0 0 1 0 0 0 0 1 1 2 4 8 0 32 8 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{0}});
 }
 
 // case9: int8 2D [4,8], scalar ranges, SCALED mode
@@ -158,7 +158,7 @@ TEST_F(DequantizeTilingTest, case9_int8_scaled)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("SCALED"))}, &ci);
     string expect = "2 4 1 4 1 1 1 0 2 52288 1 1 4 8 3 1 1 1 4 8 1 1 1 1 1 1 1 1 "
                     "0 0 8 1 0 0 0 0 0 0 0 0 1 1 4 8 0 0 8 1 4323739333455511552 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 2, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 2, expect, {{0}});
 }
 
 // case10: int8 2D [4,8], scalar ranges, MIN_FIRST mode
@@ -174,5 +174,5 @@ TEST_F(DequantizeTilingTest, case10_int8_min_first)
         {gert::TilingContextPara::OpAttr("mode", Ops::NN::AnyValue::CreateFrom<std::string>("MIN_FIRST"))}, &ci);
     string expect = "2 4 1 4 1 1 1 0 2 52288 1 1 4 8 3 1 1 1 4 8 1 1 1 1 1 1 1 1 "
                     "0 0 8 1 0 0 0 0 0 0 0 0 1 1 4 8 0 0 8 1 4287568137919922176 ";
-    ExecuteTestCase(ctx, GRAPH_SUCCESS, 1, expect, {{16777216}});
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 1, expect, {{0}});
 }

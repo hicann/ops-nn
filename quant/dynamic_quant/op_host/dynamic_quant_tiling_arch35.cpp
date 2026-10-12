@@ -40,8 +40,7 @@ constexpr uint32_t OFFSET_INDEX = 2;
 constexpr uint32_t ONE = 1;
 constexpr uint32_t DOUBLE = 2;
 constexpr uint32_t FOURBLE = 4;
-// 16 * 1024 * 1024
-constexpr uint32_t SYS_WORKSPACE_SIZE = 16777216;
+constexpr uint32_t SYS_WORKSPACE_SIZE = 0;
 constexpr uint32_t COMPARE_INT = 255;
 constexpr uint32_t RESERVED_LENGTH = 1024;
 constexpr uint32_t MAX_EXPERT_NUM = 1024;

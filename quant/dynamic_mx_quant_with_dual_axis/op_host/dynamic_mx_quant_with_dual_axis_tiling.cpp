@@ -286,7 +286,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetPlatformInfo()
     OP_CHECK_IF((tilingParams.ubSize <= 0),
                 OP_LOGE(context_->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParams.ubSize),
                 return ge::GRAPH_FAILED);
-    tilingParams.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    tilingParams.workspaceSize = 0;
 
     return ge::GRAPH_SUCCESS;
 }

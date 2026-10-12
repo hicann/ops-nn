@@ -27,7 +27,7 @@ namespace optiling {
 using namespace HardtanhGradOp;
 using namespace Ops::Base;
 
-const uint64_t ASCEND_WORKSPACE = 16777216;
+const uint64_t ASCEND_WORKSPACE = 0;
 const std::int32_t ATTR_HARDTANH_GRAD_MINVAL_POS = 0;
 const std::int32_t ATTR_HARDTANH_GRAD_MAXVAL_POS = 1;
 

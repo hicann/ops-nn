@@ -38,7 +38,7 @@ inline static const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-constexpr uint64_t ASCEND_WORKSPACE = 16777216;
+constexpr uint64_t ASCEND_WORKSPACE = 0;
 
 ge::graphStatus ReluGradV2Tiling::CalcInputDtype()
 {

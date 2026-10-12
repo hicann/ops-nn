@@ -32,7 +32,7 @@ const uint64_t ALPHA_ATTR_IDX = 0;
 const uint64_t SCALE_ATTR_IDX = 1;
 const uint64_t INPUT_SCALE_ATTR_IDX = 2;
 const uint64_t IS_RESULT_ATTR_IDX = 3;
-const int64_t ASCEND_WORKSPACE = 16777216; // 16M
+const int64_t ASCEND_WORKSPACE = 0; // 0M
 
 const gert::Shape g_vec_1_shape = {1};
 /**

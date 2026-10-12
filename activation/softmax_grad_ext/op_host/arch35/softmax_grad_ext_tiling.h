@@ -141,7 +141,7 @@ constexpr uint32_t ROW_SIX_OFFSET = 6;
 constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
+constexpr uint32_t MINIMAL_WORKSPACE = 0;
 
 class SoftmaxGradExtTilingBase : virtual public TilingBaseClass {
 public:

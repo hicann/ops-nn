@@ -27,7 +27,7 @@
 #include <iostream>
 
 namespace optiling {
-const size_t ASCEND_WORKSPACE = 16777216; // 16M
+const size_t ASCEND_WORKSPACE = 0; // 0M
 
 ge::graphStatus SwishGradTiling::SetTilingData() const
 {

@@ -48,7 +48,7 @@ constexpr int64_t N_BUFFER = 2;
 constexpr int64_t EXIST_NODE_NUM = 3;
 constexpr int64_t ATTR_BLOCK_SIZE = 32;
 constexpr int64_t SCALE_DIM_NUM = 3;
-constexpr size_t WORKSPACE_SIZE = 32;
+constexpr size_t WORKSPACE_SIZE = 0;
 
 constexpr float FP4E2M1_MAX = 6.0;
 constexpr float FP4E1M2_MAX = 1.75;

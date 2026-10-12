@@ -25,7 +25,7 @@ using namespace ge;
 using namespace EluGradOp;
 
 namespace optiling {
-const int64_t ASCEND_WORKSPACE = 16777216; // 16M
+const int64_t ASCEND_WORKSPACE = 0; // 0M
 
 const gert::Shape g_vec_1_shape = {1};
 inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
