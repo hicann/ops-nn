@@ -19,7 +19,7 @@
 using namespace AscendC;
 using namespace RmsNorm;
 
-template <typename T, int32_t MODE>
+template <typename T, int32_t MODE, int32_t IS_BATCH_INVARIANT>
 class KernelAddRmsNorm {
 public:
     __aicore__ inline KernelAddRmsNorm(TPipe* pipe) { Ppipe = pipe; }
@@ -122,10 +122,24 @@ private:
 
         if constexpr (is_same<T, half>::value) {
             LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
-            Add(xLocal, x1Local, x2Local, numCol);
-            PipeBarrier<PIPE_V>();
-            Cast(x1_fp32, xLocal, RoundMode::CAST_NONE, numCol);
-            PipeBarrier<PIPE_V>();
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: add in fp32, round to T, then use the rounded sum
+                LocalTensor<float> x2_fp32 = sqxBuf.Get<float>();
+                Cast(x1_fp32, x1Local, RoundMode::CAST_NONE, numCol);
+                Cast(x2_fp32, x2Local, RoundMode::CAST_NONE, numCol);
+                PipeBarrier<PIPE_V>();
+                Add(x1_fp32, x1_fp32, x2_fp32, numCol);
+                PipeBarrier<PIPE_V>();
+                Cast(xLocal, x1_fp32, RoundMode::CAST_NONE, numCol);
+                PipeBarrier<PIPE_V>();
+                Cast(x1_fp32, xLocal, RoundMode::CAST_NONE, numCol);
+                PipeBarrier<PIPE_V>();
+            } else {
+                Add(xLocal, x1Local, x2Local, numCol);
+                PipeBarrier<PIPE_V>();
+                Cast(x1_fp32, xLocal, RoundMode::CAST_NONE, numCol);
+                PipeBarrier<PIPE_V>();
+            }
         } else if constexpr (is_same<T, bfloat16_t>::value) {
             LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
             LocalTensor<float> x2_fp32 = sqxBuf.Get<float>();
@@ -136,6 +150,11 @@ private:
             PipeBarrier<PIPE_V>();
             Cast(xLocal, x1_fp32, RoundMode::CAST_RINT, numCol);
             PipeBarrier<PIPE_V>();
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: use the rounded sum for the following compute
+                Cast(x1_fp32, xLocal, RoundMode::CAST_NONE, numCol);
+                PipeBarrier<PIPE_V>();
+            }
         } else {
             Add(x1Local, x1Local, x2Local, numCol);
             PipeBarrier<PIPE_V>();
@@ -233,10 +252,12 @@ private:
         Muls(x_fp32, x_fp32, rstdValue2, this->numCol);
         PipeBarrier<PIPE_V>();
         LocalTensor<bfloat16_t> yLocal = outQueueY.AllocTensor<bfloat16_t>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_RINT, this->numCol);
-        PipeBarrier<PIPE_V>();
-        Cast(x_fp32, yLocal, RoundMode::CAST_NONE, this->numCol);
-        PipeBarrier<PIPE_V>();
+        if constexpr (IS_BATCH_INVARIANT == 0) {
+            Cast(yLocal, x_fp32, RoundMode::CAST_RINT, this->numCol);
+            PipeBarrier<PIPE_V>();
+            Cast(x_fp32, yLocal, RoundMode::CAST_NONE, this->numCol);
+            PipeBarrier<PIPE_V>();
+        }
         Cast(sqx, gammaLocal, RoundMode::CAST_NONE, numCol); // gamma_fp32 reuse sqx
         PipeBarrier<PIPE_V>();
         Mul(x_fp32, x_fp32, sqx, numCol);
@@ -286,15 +307,29 @@ private:
         Muls(x_fp32, x_fp32, rstdValue3, this->numCol);
         PipeBarrier<PIPE_V>();
         LocalTensor<half> yLocal = outQueueY.AllocTensor<half>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_NONE, this->numCol);
+        if constexpr (IS_BATCH_INVARIANT != 0) {
+            // batch invariant: multiply gamma in fp32, round only once at the end
+            Cast(sqx, gammaLocal, RoundMode::CAST_NONE, numCol);
+            PipeBarrier<PIPE_V>();
+            Mul(x_fp32, sqx, x_fp32, numCol);
+            PipeBarrier<PIPE_V>();
+            Cast(yLocal, x_fp32, RoundMode::CAST_NONE, this->numCol);
+            PipeBarrier<PIPE_V>();
 
-        event_t event_v_mte = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(event_v_mte);
-        WaitFlag<HardEvent::V_MTE2>(event_v_mte);
+            event_t event_v_mte = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+            SetFlag<HardEvent::V_MTE2>(event_v_mte);
+            WaitFlag<HardEvent::V_MTE2>(event_v_mte);
+        } else {
+            Cast(yLocal, x_fp32, RoundMode::CAST_NONE, this->numCol);
 
-        PipeBarrier<PIPE_V>();
-        Mul(yLocal, gammaLocal, yLocal, numCol);
-        PipeBarrier<PIPE_V>();
+            event_t event_v_mte = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+            SetFlag<HardEvent::V_MTE2>(event_v_mte);
+            WaitFlag<HardEvent::V_MTE2>(event_v_mte);
+
+            PipeBarrier<PIPE_V>();
+            Mul(yLocal, gammaLocal, yLocal, numCol);
+            PipeBarrier<PIPE_V>();
+        }
         outQueueY.EnQue<half>(yLocal);
     }
 

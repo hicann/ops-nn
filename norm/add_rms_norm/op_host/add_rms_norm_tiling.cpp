@@ -61,6 +61,8 @@ constexpr int32_t PERFORMANC_DIM_THREE = 3;
 constexpr int32_t PERFORMANC_DIM_ONE_MAX = 512;
 constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
 constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
+constexpr int32_t BATCH_INVARIANT_LEVEL = 3;
+constexpr uint32_t BATCH_INVARIANT_KEY = 10000;
 uint32_t norm_key = 0;
 
 platform_ascendc::SocVersion addRmsNormSocVersion;
@@ -480,9 +482,9 @@ static void SetTilingParameters(AddRMSNormTilingData* tiling, uint32_t num_row, 
 }
 
 static void SaveTilingData(gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t dtype_key,
-                           uint32_t mode_key)
+                           uint32_t mode_key, uint32_t batchInvariantKey)
 {
-    const uint32_t tiling_key = (dtype_key * 10 + mode_key) + norm_key;
+    const uint32_t tiling_key = (dtype_key * 10 + mode_key) + norm_key + batchInvariantKey;
     context->SetTilingKey(tiling_key);
     tiling->SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling->GetDataSize());
@@ -499,9 +501,9 @@ static void SetWorkspaceSize(gert::TilingContext* context)
 }
 
 static void LogTilingResults(gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t mode_key,
-                             uint32_t dtype_key, uint32_t use_core_num, float epsilon)
+                             uint32_t dtype_key, uint32_t use_core_num, float epsilon, uint32_t batchInvariantKey)
 {
-    OP_LOGI(context, "Tiling Key: %u", (dtype_key * TEN + mode_key) + norm_key);
+    OP_LOGI(context, "Tiling Key: %u", (dtype_key * TEN + mode_key) + norm_key + batchInvariantKey);
     OP_LOGI(context, "Block Dim: %u", use_core_num);
     OP_LOGI(context, "usr Workspace: 256");
     OP_LOGI(context,
@@ -553,16 +555,19 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     const gert::Shape x1_shape = context->GetInputShape(0)->GetStorageShape();
     const gert::Shape gamma_shape = context->GetInputShape(2)->GetStorageShape();
     uint8_t isPerformance = getPerformanceFlag(num_col, x1_shape, gamma_shape, dtype_key);
+    bool enableBatchInvariant = (context->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL);
+    OP_LOGD(context, "Tiling4AddRmsNorm enableBatchInvariant: %d", static_cast<int32_t>(enableBatchInvariant));
+    const uint32_t batchInvariantKey = enableBatchInvariant ? BATCH_INVARIANT_KEY : 0U;
     DetermineModeParameters(&tiling, num_col, ub_factor, row_factor, block_factor, latsBlockFactor, data_type,
                             dtype_key, ub_size, data_per_block, numColAlign, mode_key, isPerformance);
 
     SetTilingParameters(&tiling, num_row, num_col, numColAlign, block_factor, latsBlockFactor, row_factor, ub_factor,
                         epsilon);
-    SaveTilingData(context, &tiling, dtype_key, mode_key);
+    SaveTilingData(context, &tiling, dtype_key, mode_key, batchInvariantKey);
 
     SetWorkspaceSize(context);
 
-    LogTilingResults(context, &tiling, mode_key, dtype_key, use_core_num, epsilon);
+    LogTilingResults(context, &tiling, mode_key, dtype_key, use_core_num, epsilon, batchInvariantKey);
     return ge::GRAPH_SUCCESS;
 }
 

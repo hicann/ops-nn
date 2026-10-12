@@ -20,6 +20,7 @@
 
 using namespace AscendC;
 
+// batch invariant tiling keys are base key + BATCH_INVARIANT_KEY(10000)
 #define GENERAL_OP_IMPL(templateClass, ...)                                \
     do {                                                                   \
         templateClass<__VA_ARGS__> op(&inplacePipe);                       \
@@ -33,38 +34,72 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(GM_ADDR x1, GM_ADDR x
     TPipe inplacePipe;
     GET_TILING_DATA(inplaceTilingData, tiling);
     if (TILING_KEY_IS(10)) {
-        GENERAL_OP_IMPL(KernelAddRmsNorm, half, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNorm, half, 1, 0);
+    } else if (TILING_KEY_IS(10010)) {
+        GENERAL_OP_IMPL(KernelAddRmsNorm, half, 1, 1);
     } else if (TILING_KEY_IS(20)) {
-        GENERAL_OP_IMPL(KernelAddRmsNorm, float, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNorm, float, 1, 0);
+    } else if (TILING_KEY_IS(10020)) {
+        GENERAL_OP_IMPL(KernelAddRmsNorm, float, 1, 1);
     } else if (TILING_KEY_IS(30)) {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        GENERAL_OP_IMPL(KernelAddRmsNorm, bfloat16_t, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNorm, bfloat16_t, 1, 0);
+#endif
+    } else if (TILING_KEY_IS(10030)) {
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+        GENERAL_OP_IMPL(KernelAddRmsNorm, bfloat16_t, 1, 1);
 #endif
     } else if (TILING_KEY_IS(11)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, half, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, half, 1, 0);
+    } else if (TILING_KEY_IS(10011)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, half, 1, 1);
     } else if (TILING_KEY_IS(21)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, float, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, float, 1, 0);
+    } else if (TILING_KEY_IS(10021)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, float, 1, 1);
     } else if (TILING_KEY_IS(31)) {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, bfloat16_t, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, bfloat16_t, 1, 0);
+#endif
+    } else if (TILING_KEY_IS(10031)) {
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, bfloat16_t, 1, 1);
 #endif
     } else if (TILING_KEY_IS(12)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, half, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, half, 1, 0);
+    } else if (TILING_KEY_IS(10012)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, half, 1, 1);
     } else if (TILING_KEY_IS(22)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, float, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, float, 1, 0);
+    } else if (TILING_KEY_IS(10022)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, float, 1, 1);
     } else if (TILING_KEY_IS(32)) {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, bfloat16_t, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, bfloat16_t, 1, 0);
+#endif
+    } else if (TILING_KEY_IS(10032)) {
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, bfloat16_t, 1, 1);
 #endif
     } else if (TILING_KEY_IS(13)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, half, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, half, 1, 0);
+    } else if (TILING_KEY_IS(10013)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, half, 1, 1);
     } else if (TILING_KEY_IS(23)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, float, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, float, 1, 0);
+    } else if (TILING_KEY_IS(10023)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, float, 1, 1);
     } else if (TILING_KEY_IS(33)) {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, bfloat16_t, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, bfloat16_t, 1, 0);
+#endif
+    } else if (TILING_KEY_IS(10033)) {
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, bfloat16_t, 1, 1);
 #endif
     } else if (TILING_KEY_IS(14)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMultiN, half, 1);
+        GENERAL_OP_IMPL(KernelAddRmsNormMultiN, half, 1, 0);
+    } else if (TILING_KEY_IS(10014)) {
+        GENERAL_OP_IMPL(KernelAddRmsNormMultiN, half, 1, 1);
     }
 }

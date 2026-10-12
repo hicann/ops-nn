@@ -19,7 +19,7 @@
 using namespace AscendC;
 using namespace RmsNorm;
 
-template <typename T, int32_t MODE>
+template <typename T, int32_t MODE, int32_t IS_BATCH_INVARIANT>
 class KernelAddRmsNormMergeN {
 public:
     __aicore__ inline KernelAddRmsNormMergeN(TPipe* pipe) { Ppipe = pipe; }
@@ -162,9 +162,21 @@ private:
         LocalTensor<T> x1Local = inQueueX.DeQue<T>();
         LocalTensor<T> x2Local = inQueueX.DeQue<T>();
         LocalTensor<T> xLocal = outQueueY.AllocTensor<T>();
-        if constexpr (!is_same<T, bfloat16_t>::value) {
-            Add(xLocal, x1Local, x2Local, elementNum);
-        } else {
+        if constexpr (is_same<T, half>::value) {
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: add in fp32 and round to T
+                LocalTensor<float> x1Fp32 = xFp32Buf.Get<float>();
+                LocalTensor<float> x2Fp32 = sqxBuf.Get<float>();
+                Cast(x1Fp32, x1Local, RoundMode::CAST_NONE, elementNum);
+                Cast(x2Fp32, x2Local, RoundMode::CAST_NONE, elementNum);
+                PipeBarrier<PIPE_V>();
+                Add(x1Fp32, x1Fp32, x2Fp32, elementNum);
+                PipeBarrier<PIPE_V>();
+                Cast(xLocal, x1Fp32, RoundMode::CAST_NONE, elementNum);
+            } else {
+                Add(xLocal, x1Local, x2Local, elementNum);
+            }
+        } else if constexpr (is_same<T, bfloat16_t>::value) {
             LocalTensor<float> x1Fp32 = xFp32Buf.Get<float>();
             LocalTensor<float> x2Fp32 = sqxBuf.Get<float>();
             Cast(x1Fp32, x1Local, RoundMode::CAST_NONE, elementNum);
@@ -173,6 +185,8 @@ private:
             Add(x1Fp32, x1Fp32, x2Fp32, elementNum);
             PipeBarrier<PIPE_V>();
             Cast(xLocal, x1Fp32, RoundMode::CAST_RINT, elementNum);
+        } else {
+            Add(xLocal, x1Local, x2Local, elementNum);
         }
         PipeBarrier<PIPE_V>();
         inQueueX.FreeTensor(x1Local);
@@ -269,27 +283,40 @@ private:
         if constexpr (!is_same<T, float>::value) {
             LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
             repeatByRow<float>(x_fp32, x_fp32, tmpLocal, calc_row_num, ONE_UINT);
-            if constexpr (is_same<T, half>::value) {
-                Cast(yLocal, x_fp32, RoundMode::CAST_NONE, elementNum);
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: multiply gamma in fp32, round only once at the end
+                PipeBarrier<PIPE_V>();
+                LocalTensor<float> sqx = sqxBuf.Get<float>();
+                Cast(sqx, gammaLocal, RoundMode::CAST_NONE, elementNum);
+                PipeBarrier<PIPE_V>();
+                repeatByRow<float>(x_fp32, x_fp32, sqx, calc_row_num, THREE_UINT);
+                if constexpr (is_same<T, half>::value) {
+                    Cast(yLocal, x_fp32, RoundMode::CAST_NONE, elementNum);
+                } else {
+                    Cast(yLocal, x_fp32, RoundMode::CAST_RINT, elementNum);
+                }
             } else {
-                Cast(yLocal, x_fp32, RoundMode::CAST_RINT, elementNum);
+                if constexpr (is_same<T, half>::value) {
+                    Cast(yLocal, x_fp32, RoundMode::CAST_NONE, elementNum);
+                } else {
+                    Cast(yLocal, x_fp32, RoundMode::CAST_RINT, elementNum);
+                }
+                PipeBarrier<PIPE_V>();
+                if constexpr (is_same<T, half>::value) {
+                    repeatByRow<half>(yLocal, yLocal, gammaLocal, calc_row_num, TWO_UINT);
+                } else {
+                    // Only one row of gamma is used by repeatByRow.
+                    LocalTensor<float> sqx = sqxBuf.Get<float>();
+                    Cast(x_fp32, yLocal, RoundMode::CAST_NONE, elementNum);
+                    Cast(sqx, gammaLocal, RoundMode::CAST_NONE, numColAlign);
+                    PipeBarrier<PIPE_V>();
+                    repeatByRow<float>(x_fp32, x_fp32, sqx, calc_row_num, THREE_UINT);
+                    Cast(yLocal, x_fp32, RoundMode::CAST_RINT, elementNum);
+                }
             }
         } else {
             repeatByRow<float>(yLocal, xLocal, tmpLocal, calc_row_num, ONE_UINT);
-        }
-        PipeBarrier<PIPE_V>();
-        if constexpr (is_same<T, half>::value) {
-            repeatByRow<half>(yLocal, yLocal, gammaLocal, calc_row_num, TWO_UINT);
-        } else if constexpr (is_same<T, bfloat16_t>::value) {
-            // Only one row of gamma is used by repeatByRow.
-            LocalTensor<float> sqx = sqxBuf.Get<float>();
-            LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
-            Cast(x_fp32, yLocal, RoundMode::CAST_NONE, elementNum);
-            Cast(sqx, gammaLocal, RoundMode::CAST_NONE, numColAlign);
             PipeBarrier<PIPE_V>();
-            repeatByRow<float>(x_fp32, x_fp32, sqx, calc_row_num, THREE_UINT);
-            Cast(yLocal, x_fp32, RoundMode::CAST_RINT, elementNum);
-        } else {
             repeatByRow<float>(yLocal, yLocal, gammaLocal, calc_row_num, THREE_UINT);
         }
         PipeBarrier<PIPE_V>();

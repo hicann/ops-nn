@@ -19,7 +19,7 @@
 using namespace AscendC;
 using namespace RmsNorm;
 
-template <typename T, int32_t MODE>
+template <typename T, int32_t MODE, int32_t IS_BATCH_INVARIANT>
 class KernelAddRmsNormSplitD {
 public:
     __aicore__ inline KernelAddRmsNormSplitD(TPipe* pipe) { Ppipe = pipe; }
@@ -130,7 +130,22 @@ private:
 
         auto splitX1Local = splitX1X2Local[0];
         auto splitX2Local = splitX1X2Local[this->ubFactor];
-        if constexpr (is_same<T, bfloat16_t>::value) {
+        if constexpr (is_same<T, half>::value) {
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: recompute the same T-rounded sum used by the reduce
+                LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
+                LocalTensor<float> x2_fp32 = splitX1X2Local.template ReinterpretCast<float>();
+                Cast(x1_fp32, splitX1Local, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                Cast(x2_fp32, splitX2Local, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                Add(x1_fp32, x1_fp32, x2_fp32, num);
+                PipeBarrier<PIPE_V>();
+                Cast(splitX1X2Local, x1_fp32, RoundMode::CAST_NONE, num);
+            } else {
+                Add(splitX1X2Local, splitX1Local, splitX2Local, num);
+            }
+        } else if constexpr (is_same<T, bfloat16_t>::value) {
             LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
             LocalTensor<float> x2_fp32 = splitX1X2Local.template ReinterpretCast<float>();
             Cast(x1_fp32, splitX1Local, RoundMode::CAST_NONE, num);
@@ -158,12 +173,26 @@ private:
 
         if constexpr (is_same<T, half>::value) {
             LocalTensor<float> splitX1Fp32 = xFp32Buf.Get<float>();
-
-            Add(splitXLocal, splitX1Local, splitX2Local, num);
-            PipeBarrier<PIPE_V>();
-            Cast(splitX1Fp32, splitXLocal, RoundMode::CAST_NONE, num);
-            PipeBarrier<PIPE_V>();
-            // x1+x2 saved in x1_fp32
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: add in fp32, round to T, then use the rounded sum
+                LocalTensor<float> splitX2Fp32 = splitX1X2Local.template ReinterpretCast<float>();
+                Cast(splitX1Fp32, splitX1Local, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                Cast(splitX2Fp32, splitX2Local, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                Add(splitX1Fp32, splitX1Fp32, splitX2Fp32, num);
+                PipeBarrier<PIPE_V>();
+                Cast(splitXLocal, splitX1Fp32, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                Cast(splitX1Fp32, splitXLocal, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+            } else {
+                Add(splitXLocal, splitX1Local, splitX2Local, num);
+                PipeBarrier<PIPE_V>();
+                Cast(splitX1Fp32, splitXLocal, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+                // x1+x2 saved in x1_fp32
+            }
         } else if constexpr (is_same<T, bfloat16_t>::value) {
             LocalTensor<float> x1_fp32 = xFp32Buf.Get<float>();
             LocalTensor<float> x2_fp32 = splitX1X2Local.template ReinterpretCast<float>();
@@ -177,6 +206,11 @@ private:
             PipeBarrier<PIPE_V>();
             Cast(splitXLocal, x1_fp32, RoundMode::CAST_RINT, num);
             PipeBarrier<PIPE_V>();
+            if constexpr (IS_BATCH_INVARIANT != 0) {
+                // batch invariant: use the rounded sum for the following compute
+                Cast(x1_fp32, splitXLocal, RoundMode::CAST_NONE, num);
+                PipeBarrier<PIPE_V>();
+            }
             // x1+x2 saved in x1_fp32
         } else {
             Add(splitX1Local, splitX1Local, splitX2Local, num);
@@ -297,10 +331,20 @@ private:
         Muls(splitXFp32, splitXFp32, splitRstdValue, num);
         PipeBarrier<PIPE_V>();
         LocalTensor<half> splitYLocal = outQueueY.AllocTensor<half>();
-        Cast(splitYLocal, splitXFp32, RoundMode::CAST_NONE, num);
-        PipeBarrier<PIPE_V>();
-        Mul(splitYLocal, splitGammaLocal, splitYLocal, num);
-        PipeBarrier<PIPE_V>();
+        if constexpr (IS_BATCH_INVARIANT != 0) {
+            // batch invariant: multiply gamma in fp32, round only once at the end
+            Cast(splitSqx, splitGammaLocal, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+            Mul(splitXFp32, splitSqx, splitXFp32, num);
+            PipeBarrier<PIPE_V>();
+            Cast(splitYLocal, splitXFp32, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+        } else {
+            Cast(splitYLocal, splitXFp32, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+            Mul(splitYLocal, splitGammaLocal, splitYLocal, num);
+            PipeBarrier<PIPE_V>();
+        }
         outQueueY.EnQue<half>(splitYLocal);
     }
 
@@ -341,10 +385,12 @@ private:
         Muls(splitXFp32Bf16, splitXFp32Bf16, splitRstdValueBf16, num);
         PipeBarrier<PIPE_V>();
         LocalTensor<bfloat16_t> splitYLocalBf16 = outQueueY.AllocTensor<bfloat16_t>();
-        Cast(splitYLocalBf16, splitXFp32Bf16, RoundMode::CAST_RINT, num);
-        PipeBarrier<PIPE_V>();
-        Cast(splitXFp32Bf16, splitYLocalBf16, RoundMode::CAST_NONE, num);
-        PipeBarrier<PIPE_V>();
+        if constexpr (IS_BATCH_INVARIANT == 0) {
+            Cast(splitYLocalBf16, splitXFp32Bf16, RoundMode::CAST_RINT, num);
+            PipeBarrier<PIPE_V>();
+            Cast(splitXFp32Bf16, splitYLocalBf16, RoundMode::CAST_NONE, num);
+            PipeBarrier<PIPE_V>();
+        }
         Cast(splitSqxBf16, gammaLocal, RoundMode::CAST_NONE, num);
         PipeBarrier<PIPE_V>();
         Mul(splitXFp32Bf16, splitXFp32Bf16, splitSqxBf16, num);
