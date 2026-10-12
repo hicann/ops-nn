@@ -20,10 +20,9 @@ Only one registration key is needed: kernel and GEIR both resolve the snake-case
 operator name and share :class:`INTrainingReduceV2KernelSpec`.  The legacy
 ``__golden__`` entry remains available and calls the same Torch computation core.
 
-The reference math uses Torch competitor operators rather than a NumPy formula.
-As an ``in_training`` large-reduction operator, its CPU true-value core computes
-in FP64.  Promote mode also exposes FP64 outputs to cross-check; no promoted
-FP64 input is ever cast downward.
+The reference math uses Torch operators.  TTK owns floating-point promotion:
+Promote mode uses the supplied input dtype without any input or output casts.
+Other modes follow the kernel's FP32 computation and fixed FP32 output contract.
 """
 
 import numpy as np
@@ -53,23 +52,15 @@ def _kernel_compute_input(x):
     return x
 
 
-def _true_value_input(x):
-    """Use the in_training-family FP64 true-value convention."""
-    if x.dtype == torch.float64:
-        return x
-    return x.to(torch.float64)
-
-
 def _compute(x, **kwargs):
     """Return ``[sum, square_sum]`` as Torch tensors in def.cpp output order.
 
-    This is the sole true-value computation core used by both the TestSpec and
-    the compatibility ``__golden__`` entry.  Long spatial reductions follow
-    the instance/in_training family convention and accumulate in FP64.  This
-    is an upward true-value choice, not an override that lowers Promote input.
+    The framework supplies the promoted tensors for cross-check.  In other
+    modes only the kernel's FP16-to-FP32 computation cast is needed.
     """
-    del kwargs  # INTrainingReduceV2 has no attributes.
-    x_compute = _true_value_input(x)
+    x_compute = (
+        x if kwargs.get("golden_mode") == "Promote" else _kernel_compute_input(x)
+    )
     reduce_dims = tuple(range(2, x_compute.ndim))
 
     if not reduce_dims:
@@ -107,8 +98,9 @@ def _kernel_golden(x, **kwargs):
     result = []
     for index, output in enumerate(outputs):
         array = output.detach().cpu().contiguous().numpy()
-        if index < len(output_dtypes):
-            array = array.astype(output_dtypes[index], copy=False)
+        if kwargs.get("golden_mode") != "Promote":
+            dtype = output_dtypes[index] if index < len(output_dtypes) else "float32"
+            array = array.astype(dtype, copy=False)
         result.append(np.ascontiguousarray(array))
     return result
 
@@ -159,44 +151,13 @@ class _INTrainingReduceV2Compose:
         ]
 
 
-class _INTrainingReduceV2TensorFlowCompose:
-    """Independent TensorFlow reduction used by the remote TF endpoint."""
-
-    def __init__(self, **kwargs):
-        del kwargs
-
-    def __call__(self, x, **kwargs):
-        del kwargs
-        import tensorflow as tf
-
-        x_compute = (
-            tf.cast(x, tf.float32) if x.dtype in (tf.float16, tf.bfloat16) else x
-        )
-        rank = x_compute.shape.rank
-        if rank is None:
-            raise ValueError("INTrainingReduceV2 requires a statically known rank")
-        if rank > 2:
-            reduce_axes = tuple(range(2, rank))
-            sum_out = tf.reduce_sum(x_compute, axis=reduce_axes, keepdims=True)
-            square_sum_out = tf.reduce_sum(
-                tf.square(x_compute), axis=reduce_axes, keepdims=True
-            )
-        else:
-            sum_out = tf.identity(x_compute)
-            square_sum_out = tf.square(x_compute)
-        return [tf.cast(sum_out, tf.float32), tf.cast(square_sum_out, tf.float32)]
-
-
 class INTrainingReduceV2KernelSpec:
     """Shared kernel/GEIR TestSpec; parameters follow def.cpp (``x`` only)."""
 
     def golden(x, **kwargs):
         return _kernel_golden(x, **kwargs)
 
-    third_party = {
-        "torch": _INTrainingReduceV2Compose,
-        "tf": _INTrainingReduceV2TensorFlowCompose,
-    }
+    third_party = {"torch": _INTrainingReduceV2Compose}
     tolerance = _TOL
 
 

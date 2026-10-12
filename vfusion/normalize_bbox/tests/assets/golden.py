@@ -146,55 +146,20 @@ class _NormalizeBBoxCompose:
         return [output.to(dtype=output_dtype)]
 
 
-class _NormalizeBBoxTensorFlowCompose:
-    """Independent TensorFlow composition for the remote TF endpoint."""
-
-    def __init__(self, reversed_box=False, **kwargs):
-        self.reversed_box = _resolve_reversed_box(reversed_box, kwargs)
-
-    def __call__(self, boxes, shape_hw, **kwargs):
-        del kwargs
-        import tensorflow as tf
-
-        output_dtype = boxes.dtype
-        if output_dtype not in (tf.float16, tf.float32):
-            raise TypeError(
-                "NormalizeBBox third_party supports only float16/float32 boxes, "
-                f"got {output_dtype}"
-            )
-        shape_i32 = tf.cast(shape_hw, tf.int32)
-        hw_f32 = tf.cast(shape_i32, tf.float32)
-        hw_compute = (
-            tf.cast(hw_f32, tf.float16) if output_dtype == tf.float16 else hw_f32
-        )
-        divisor4 = tf.stack(
-            (hw_compute[:, 0], hw_compute[:, 1], hw_compute[:, 0], hw_compute[:, 1]),
-            axis=1,
-        )
-        rank = boxes.shape.rank
-        if rank is None or rank < 2:
-            raise ValueError(f"boxes rank must be at least 2, got {rank}")
-        batch = int(boxes.shape[0])
-        if self.reversed_box:
-            divisor_shape = (batch, 4) + (1,) * (rank - 2)
-        else:
-            divisor_shape = (batch,) + (1,) * (rank - 2) + (4,)
-        divisor = tf.reshape(divisor4, divisor_shape)
-        return [tf.cast(tf.math.divide(boxes, divisor), output_dtype)]
-
-
 class NormalizeBBoxKernelSpec:
     """Shared kernel + GEIR TestSpec; both pathways receive NumPy inputs."""
 
     def golden(boxes, shape_hw, reversed_box=False, **kwargs):
         reversed_value = _resolve_reversed_box(reversed_box, kwargs)
         outputs = _compute(boxes, shape_hw, reversed_value)
-        return _numpy_outputs(outputs, kwargs.get("output_dtypes"))
+        output_dtypes = (
+            None
+            if kwargs.get("golden_mode") == "Promote"
+            else kwargs.get("output_dtypes")
+        )
+        return _numpy_outputs(outputs, output_dtypes)
 
-    third_party = {
-        "torch": _NormalizeBBoxCompose,
-        "tf": _NormalizeBBoxTensorFlowCompose,
-    }
+    third_party = {"torch": _NormalizeBBoxCompose}
     tolerance = _TOL
 
 
