@@ -91,8 +91,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss1d
                 yGm_[0] = -xGm_[targetIndex];
             }
         } else {
-            yGm_[0] = -static_cast<T>(static_cast<float>(weightGm_[targetIndex]) *
-                                      static_cast<float>(xGm_[targetIndex]));
+            yGm_[0] = -static_cast<T>(static_cast<float>(curWeight) * static_cast<float>(xGm_[targetIndex]));
         }
     }
 }
