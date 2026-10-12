@@ -105,15 +105,15 @@
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。与输入`dy`的数据类型相同。shape与`mean`的shape相等，为[B…, H, 1]，最后一维固定为1，其他维度与`x`一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。shape与`mean`的shape相等，为[B…, H, 1]，最后一维固定为1，其他维度与`x`一致。</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>表示`x`的均值，对应计算公式中的`mean`。与输入`dy`的数据类型相同。shape与`rstd`的shape相等，为[B…, H, 1]。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示`x`的均值，对应计算公式中的`mean`。shape与`rstd`的shape相等，为[B…, H, 1]。</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
         <tr>
