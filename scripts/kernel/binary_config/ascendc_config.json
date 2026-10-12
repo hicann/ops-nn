@@ -247,7 +247,7 @@
     {"name":"TransformBiasRescaleQkv", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"FatreluMul", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"GeluMul", "compute_units": ["ascend910_93", "ascend910b", "kirinx90", "kirin9030", "ascend950"], "auto_sync" : false},
-    {"name":"Heaviside", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false},
+    {"name":"Heaviside", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030", "ascend350"], "auto_sync" : false},
     {"name":"Segsum", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"ExpSegsumGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"DynamicMxQuant", "compute_units": ["ascend950", "ascend350"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "ascend350": ["--cce-no-dcache-flush"]}},
@@ -556,7 +556,7 @@
     {"name":"ApplyAdamW", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"ApplyAdagradD", "compute_units": ["ascend950", "ascend350"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"], "ascend350": ["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"]}, "impl_mode": ""},
     {"name":"IouV2", "compute_units": ["ascend310p", "ascend910b", "ascend910_93"], "auto_sync" : true},
-    {"name":"GroupQuant", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030", "ascend950"], "auto_sync" : false},
+    {"name":"GroupQuant", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030", "ascend950", "ascend350"], "auto_sync" : false},
     {"name":"SwinTransformerLnQkvQuant", "compute_units": ["ascend310p"], "auto_sync" : false},
     {"name":"BidirectionLSTM", "compute_units": ["ascend310p"], "auto_sync" : false},
     {"name":"BidirectionLSTMV2", "compute_units": ["ascend310p"], "auto_sync" : false},
@@ -661,7 +661,7 @@
     {"name": "ScatterUpdate", "compute_units": ["ascend950", "ascend350"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "ascend350": ["--cce-no-dcache-flush"]}},
     {"name": "SortedSparseSegmentMeanGrad", "compute_units": ["ascend950", "ascend350"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "ascend350": ["--cce-no-dcache-flush"]}},
     {"name":"QuantMax", "compute_units": ["ascend950"], "auto_sync": false},
-    {"name": "GLU", "compute_units": ["ascend950", "ascend960dt", "ascend910b", "ascend910_93"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"], "ascend960dt": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name": "GLU", "compute_units": ["ascend950", "ascend960dt", "ascend910b", "ascend910_93", "ascend350"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"], "ascend960dt": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"], "ascend350": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"SingleLayerLstmGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},
     {"name":"HardSwishGrad", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"PReluGradReduce", "compute_units": ["ascend910_95", "ascend350"], "auto_sync" : true},
@@ -707,5 +707,5 @@
     {"name":"ScatterMax", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"ScatterMin", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"ScatterMul", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"Sleep", "compute_units": ["ascend950"], "auto_sync" : false}
+    {"name":"Sleep", "compute_units": ["ascend950","ascend350"], "auto_sync" : false}
 ]

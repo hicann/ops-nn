@@ -32,6 +32,7 @@ public:
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
         this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend350");
     }
 };
 

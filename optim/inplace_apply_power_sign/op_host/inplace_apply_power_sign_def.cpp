@@ -90,6 +90,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aiCoreConfig);
+        this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };
 

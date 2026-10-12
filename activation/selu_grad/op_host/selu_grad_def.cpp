@@ -54,6 +54,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig950);
+        this->AICore().AddConfig("ascend350", aicoreConfig950);
     }
 };
 OP_ADD(SeluGrad);

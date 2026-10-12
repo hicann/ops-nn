@@ -11,5 +11,5 @@
 
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
 )

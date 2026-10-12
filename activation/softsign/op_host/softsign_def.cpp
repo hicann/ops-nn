@@ -39,6 +39,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "softsign");
         this->AICore().AddConfig("ascend950", aicoreConfig950);
+        this->AICore().AddConfig("ascend350", aicoreConfig950);
     }
 };
 OP_ADD(Softsign);
