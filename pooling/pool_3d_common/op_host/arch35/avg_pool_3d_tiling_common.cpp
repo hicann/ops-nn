@@ -438,7 +438,7 @@ ge::graphStatus GetAvgPool3DShapeAttrsInfo(gert::TilingContext* context_, Pool3D
     OP_TILING_CHECK(CheckOutPutShape(context_, inputData, commInfo) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_, "CheckOutPutShape fail."), return ge::GRAPH_FAILED);
 
-    if (!inputData.divisorOverride || !inputData.countIncludePad) {
+    if (!(!inputData.divisorOverride && inputData.countIncludePad)) {
         RefineShape(inputData);
     }
 
