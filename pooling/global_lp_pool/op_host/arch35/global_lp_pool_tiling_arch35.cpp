@@ -24,19 +24,20 @@ namespace tiling {
 namespace {
 
 // ─── Design Constants (arch35-specific) ───
-// MAX_INNER_A_INIT = cacheLineSize on Ascend950/arch35 = 512 bytes.
-// Used to compute max initial A elements: MAX_INNER_A_INIT_ELEM = 512 / dtypeSize.
-static constexpr int64_t MAX_INNER_A_INIT = 512;
+// NOTE (per reduction paradigm): cacheLineSize MUST come from the platform
+// interface (Ops::Base::GetCacheLineSize) — hard-coding is forbidden.
+// On Ascend950 it is 256 B → fp32 = 64 elements, fp16/bf16 = 128 elements.
 static constexpr int64_t CACHE_BUF_UB_SIZE = 16384; // 16 KB for cache tree
 static constexpr int64_t INNER_A_PROD = 1;          // single A axis: no inner A bundle
 static constexpr int64_t INNER_R_PROD = 1;          // single R axis: no inner R bundle
 
-// UB config per design §6.1
-static constexpr int64_t N_PRE_REUSE = 1;    // 1 preIn reuse slot
-static constexpr int64_t N_PRE_PARALLEL = 0; // 0 parallel slots
-static constexpr int64_t N_OUT = 1;          // 1 output buffer
-static constexpr int64_t N_POST_EXTRA = 0;   // 0 extra post buffers
-static constexpr int64_t DB = 2;             // double buffer depth for preIn
+// UB config per reduction paradigm:
+//   P_pre = 2 (preInBuf + preReduceResult), P_pre_ext = 1 (preReduceResultTail,
+//   which doubles as the Reduce API sharedTmpBuffer), P_post = 1 (outBuf)
+//   Double buffer is NOT enabled.
+static constexpr int64_t P_PRE = 2;
+static constexpr int64_t P_PRE_EXT = 1;
+static constexpr int64_t P_POST = 1;
 
 // ─── Math helpers ───
 inline int64_t CeilDiv(int64_t a, int64_t b) { return (b == 0) ? 0 : (a + b - 1) / b; }
@@ -60,14 +61,16 @@ inline int64_t GetDtypeSize(ge::DataType dtype)
 }
 
 struct TilingCtx {
-    // Platform info (from Ops::Base)
+    // Platform info (from Ops::Base) — all 5 via interfaces, never hard-coded
     uint64_t ubSize;
     uint32_t coreNum;
     uint32_t blockSize;
+    uint32_t cacheLineSize; // Ops::Base::GetCacheLineSize → 256 on Ascend950
 
     // Input info
     ge::DataType dtype;
     int64_t dtypeSize;
+    int64_t maxDtypeSize; // max(sizeof(D_T), sizeof(float)) — byte capacity sizing
     int64_t dimNum;
     int64_t shape[5];
     float p;
@@ -113,6 +116,10 @@ ge::graphStatus GetPlatformInfoFromCtx(gert::TilingContext* ctx, TilingCtx& tc)
         return ge::GRAPH_FAILED;
     }
     tc.blockSize = Ops::Base::GetUbBlockSize(ctx);
+    tc.cacheLineSize = Ops::Base::GetCacheLineSize(ctx);
+    if (tc.cacheLineSize == 0) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -128,6 +135,11 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* ctx, TilingCtx& tc)
     if (tc.dtypeSize == 0) {
         return ge::GRAPH_FAILED;
     }
+    // maxDtypeSize: byte-capacity sizing for buffers (they are allocated wide
+    // enough for fp32 so pre/post slots can be reused across the fp32 compute
+    // domain). bsElem (element rounding) uses sizeof(D_T),
+    // maxDtypeSize (byte capacity) uses max(sizeof(D_T), sizeof(float)) — never mix.
+    tc.maxDtypeSize = std::max(tc.dtypeSize, static_cast<int64_t>(sizeof(float)));
 
     auto inputShape = ctx->GetInputShape(0);
     if (inputShape == nullptr) {
@@ -170,7 +182,7 @@ ge::graphStatus FusedAxis(TilingCtx& tc)
     }
     tc.R = r;
 
-    // Detect empty tensor (ref: reduce-normal-pattern-design §1.1)
+    // Detect empty tensor
     if (tc.A == 0) {
         tc.isEmptyA = true;
         return ge::GRAPH_SUCCESS; // handled in ComputeTiling empty branch
@@ -188,180 +200,144 @@ ge::graphStatus FusedAxis(TilingCtx& tc)
     return ge::GRAPH_SUCCESS;
 }
 
-// ─── 4a. CalcAUbFactor (Step 1) ───
-ge::graphStatus CalcAUbFactor(TilingCtx& tc)
+// ─── 4a. ComputeAUbFactor (Step 1) ───
+//   cachelineTmp = FloorAlign(cacheLineSize / sizeof(D_T), bsElem)   // block aligned
+//   aUbFactor    = min(cachelineTmp, totalA)
+// Fractional-climb is trivial here: the operator is AR (single A axis, single R
+// axis, tail-R), so the A split point is always LastA.
+// tail-R never needs `aUbFactorAlign` — use aUbFactor directly.
+ge::graphStatus ComputeAUbFactor(TilingCtx& tc)
 {
-    int64_t totalA = tc.A;
-    // MAX_INNER_A_INIT_ELEM = MAX_INNER_A_INIT / dtypeSize
-    int64_t maxInitElem = MAX_INNER_A_INIT / tc.dtypeSize;
-    int64_t atmp = std::min(maxInitElem, CeilDiv(totalA, static_cast<int64_t>(tc.coreNum)));
-    tc.aUbFactor = std::min(atmp, totalA);
+    const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
+    const int64_t cachelineTmp = FloorAlign(static_cast<int64_t>(tc.cacheLineSize) / tc.dtypeSize, bsElem);
+    if (cachelineTmp <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    tc.aUbFactor = std::min(cachelineTmp, tc.A);
     // tail-R: A is not burst tail, no CeilAlign needed
     tc.aUbFactorAlign = tc.aUbFactor;
     return ge::GRAPH_SUCCESS;
 }
 
-// ─── 4b. CalcRFromBudget (Step 2) ───
-ge::graphStatus CalcRFromBudget(TilingCtx& tc)
+// ─── 4b. ComputeRUbFactor (Step 2) ───
+//   maxDtypeSize  = max(sizeof(D_T), sizeof(float))
+//   aUnit         = aUbFactor × innerAProdAlign
+//   postBufSize   = CeilAlign(aUnit × maxDtypeSize, blockSize)
+//   aOnlyBytes    = P_post × postBufSize
+//   bytesPerRElem = (P_pre + P_pre_ext) × aUnit × maxDtypeSize
+//   r_i_max       = (ubAvailable − aOnlyBytes) / bytesPerRElem
+// rUbFactorAlign: burst-tail R + split axis == LastR →
+//   multi-chunk: FloorAlign then rUbFactorAlign = rUbFactor
+//   whole-axis : CeilAlign, and if it no longer fits the budget, fall back to
+//                FloorAlign multi-chunk
+ge::graphStatus ComputeRUbFactor(TilingCtx& tc)
 {
     int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
     if (ubAvailable <= 0) {
         return ge::GRAPH_FAILED;
     }
 
-    int64_t aUnit = tc.aUbFactorAlign; // aUbFactorAlign × innerAProdAlign (=1)
-    int64_t bytesPerRElem = (DB * N_PRE_REUSE + N_PRE_PARALLEL) * tc.dtypeSize +
-                            2 * static_cast<int64_t>(sizeof(float));
-    int64_t aOnlyBytes = (N_OUT + N_POST_EXTRA) * tc.dtypeSize * tc.aUbFactorAlign; // padded A size
-    int64_t rIMax = (ubAvailable - aOnlyBytes) / (aUnit * bytesPerRElem);
+    const int64_t aUnit = tc.aUbFactorAlign; // × innerAProdAlign (=1)
+    const int64_t postBufSize = CeilAlign(aUnit * tc.maxDtypeSize, static_cast<int64_t>(tc.blockSize));
+    const int64_t aOnlyBytes = P_POST * postBufSize;
+    const int64_t bytesPerRElem = (P_PRE + P_PRE_EXT) * aUnit * tc.maxDtypeSize;
+    if (bytesPerRElem <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    int64_t rIMax = (ubAvailable - aOnlyBytes) / bytesPerRElem;
     if (rIMax <= 0) {
         return ge::GRAPH_FAILED;
     }
 
     tc.rUbFactor = std::min(rIMax, tc.R);
 
-    // If multi-chunk: FloorAlign for burst tail alignment
-    int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
+    const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
     if (tc.rUbFactor < tc.R) {
+        // multi-chunk: burst tail axis needs block alignment
         tc.rUbFactor = FloorAlign(tc.rUbFactor, bsElem);
         if (tc.rUbFactor == 0) {
             return ge::GRAPH_FAILED;
         }
+        tc.rUbFactorAlign = tc.rUbFactor;
+    } else {
+        // whole axis: CeilAlign, then verify it still fits the budget
+        tc.rUbFactorAlign = CeilAlign(tc.rUbFactor, bsElem);
+        if (tc.rUbFactorAlign <= rIMax) {
+            // keep rUbFactor == R (whole axis, padded row stride)
+        } else {
+            // padding pushed it over budget → fall back to multi-chunk
+            tc.rUbFactor = FloorAlign(tc.rUbFactor, bsElem);
+            if (tc.rUbFactor == 0) {
+                return ge::GRAPH_FAILED;
+            }
+            tc.rUbFactorAlign = tc.rUbFactor;
+        }
     }
-
-    // rSplit==LastR && isTailR: rUbFactorAlign must be CeilAlign'd
-    tc.rUbFactorAlign = CeilAlign(tc.rUbFactor, bsElem);
 
     return ge::GRAPH_SUCCESS;
 }
 
-// ─── 4c. TryExpandA (Step 3) ───
-ge::graphStatus TryExpandA(TilingCtx& tc)
+// ─── 4c. ExpandAIfRFullyLoaded (Step 3) ───
+//   aUnitMax = ubAvailable / (maxDtypeSize × ((P_pre+P_pre_ext) × rPaddedElems + P_post))
+//   aUnitMax = min(aUnitMax, ∏A)                    // all A axes
+//   aUnitMax = min(aUnitMax, cacheBufUbSize / sizeof(float))   // ★ cacheBuf hard clamp
+// tail-R: NO FloorAlign after the clamp (only tail-A needs it — the A axis is
+//         not the burst tail here, so a non-aligned aUbFactor is fine).
+ge::graphStatus ExpandAIfRFullyLoaded(TilingCtx& tc)
 {
     if (tc.rUbFactor != tc.R) {
         return ge::GRAPH_SUCCESS;
     }
 
-    int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
-    int64_t totalA = tc.A;
-    int64_t bytesPerRElem = (DB * N_PRE_REUSE + N_PRE_PARALLEL) * tc.dtypeSize +
-                            2 * static_cast<int64_t>(sizeof(float));
+    const int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
+    const int64_t rPaddedElems = tc.rUbFactorAlign; // × innerRProdAlign (=1)
+    const int64_t coeff = tc.maxDtypeSize * ((P_PRE + P_PRE_EXT) * rPaddedElems + P_POST);
+    if (coeff <= 0) {
+        return ge::GRAPH_FAILED;
+    }
 
-    // Solve aUbFactor from UB budget (R fully loaded, fixed rUbFactorAlign)
-    int64_t atmpNew = ubAvailable / (bytesPerRElem * tc.rUbFactorAlign + (N_OUT + N_POST_EXTRA) * tc.dtypeSize);
-    atmpNew = std::min(atmpNew, totalA);
-    atmpNew = std::min(atmpNew, CACHE_BUF_UB_SIZE / static_cast<int64_t>(sizeof(float)));
+    int64_t aUnitMax = ubAvailable / coeff;
+    aUnitMax = std::min(aUnitMax, tc.A);
+    // ★ cacheBuf hard clamp: when R is fully resident cacheCount == 1, aUnitMax
+    //   must not exceed the cacheBuf capacity, otherwise the bisection tree
+    //   overflows.
+    aUnitMax = std::min(aUnitMax, CACHE_BUF_UB_SIZE / static_cast<int64_t>(sizeof(float)));
 
-    if (atmpNew > tc.aUbFactor) {
-        // tail-R (isTailR=true) + aSplit==LastA → A is NOT burst tail
-        // → aUbFactor is chunk count (not burst tail axis), no FloorAlign needed
-        //   (ref: reduce-normal-pattern-design §5.3: "非 burst-tail 切分轴不 FloorAlign")
-        tc.aUbFactor = atmpNew; // not FloorAlign'd for tail-R
-        // aUbFactorAlign = aUbFactor (tail-R, A not burst tail, no CeilAlign)
-        tc.aUbFactorAlign = tc.aUbFactor;
+    if (aUnitMax > tc.aUbFactor) {
+        tc.aUbFactor = aUnitMax;
+        tc.aUbFactorAlign = tc.aUbFactor; // tail-R: A is not the burst tail
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-// ─── Helper: Shrink aUbFactor and recalc multi-core split ─────────────
-// Extracted from CheckCacheBufConstraint to reduce function size.
-// When the cache tree exceeds cacheBufUbSize, this shrinks aUbFactor
-// and recalculates all dependent buffer sizes and multi-core split.
-// Returns false if even 1 block won't fit (→ group template).
-static bool ShrinkAUbAndRecalc(TilingCtx& tc, int64_t totalLayers, int64_t cacheBudget)
-{
-    int64_t bsF32 = 32 / static_cast<int64_t>(sizeof(float));
-    int64_t maxAElems = cacheBudget / (totalLayers * static_cast<int64_t>(sizeof(float)));
-    maxAElems = FloorAlign(maxAElems, bsF32);
-    if (maxAElems <= 0) {
-        return false;
-    }
-    tc.aUbFactor = std::min(maxAElems, tc.A);
-    tc.aUbFactorAlign = tc.aUbFactor;
-    tc.unit = tc.aUbFactorAlign * tc.rUbFactorAlign;
-    tc.aTotal = tc.aUbFactorAlign;
-    static constexpr int64_t VL_BYTES_B16 = 128;
-    static constexpr int64_t VL_BYTES_F32 = 256;
-    tc.preReduceUbSize = CeilAlign(tc.unit * tc.dtypeSize, static_cast<int64_t>(tc.blockSize)) + VL_BYTES_B16;
-    tc.postReduceUbSize = CeilAlign(tc.aTotal * tc.dtypeSize, static_cast<int64_t>(tc.blockSize));
-    tc.tmpBufUbSize = CeilAlign(tc.unit * static_cast<int64_t>(sizeof(float)), static_cast<int64_t>(tc.blockSize)) +
-                      VL_BYTES_F32;
-    static constexpr int64_t BLOCK_F32 = 32 / static_cast<int64_t>(sizeof(float));
-    tc.cacheLevelStride = CeilAlign(tc.aTotal, BLOCK_F32);
-    tc.aSplitChunkCnt = CeilDiv(tc.A, tc.aUbFactor);
-    int64_t aLoopCntTotal = tc.aSplitChunkCnt;
-    int64_t cn = static_cast<int64_t>(tc.coreNum);
-    tc.aSmallCoreLoopCnt = aLoopCntTotal / cn;
-    tc.aBigCoreCnt = static_cast<int32_t>(aLoopCntTotal % cn);
-    tc.aBigCoreLoopCnt = tc.aSmallCoreLoopCnt + (tc.aBigCoreCnt > 0 ? 1 : 0);
-    tc.usedCoreNum = (tc.aSmallCoreLoopCnt > 0) ? static_cast<int32_t>(cn) : tc.aBigCoreCnt;
-    return true;
-}
+// ─── cacheBuf capacity: 不设运行时校验 ───
+// cacheBuf 容量约束由构造保证：
+//   cacheCount × CeilAlign(aUnit, 8) × sizeof(float) ≤ cacheBufUbSize 恒成立
+//   —— fp32 恒满足（aUnit ≤ cachelineTmp=64 → 最多 64 层）；
+//   b16 需 rLoopCntTotal ≥ 2^32 才违反，实际不可达。
+// R 全驻留（cacheCount == 1）的情形已由 Step 3 的
+// `aUnitMax ≤ cacheBufUbSize / sizeof(float)` 约束（见 ExpandAIfRFullyLoaded）。
 
-// ─── 4c-bis. CheckCacheBufConstraint (needs_bisection=true) ───
-ge::graphStatus CheckCacheBufConstraint(TilingCtx& tc)
-{
-    if (tc.rLoopCntTotal <= 1) {
-        return ge::GRAPH_SUCCESS;
-    }
-    // Host-side FindNearestPower2 and CalLog2 (no AscendC intrinsics)
-    auto hpFindNearestPower2 = [](int64_t v) -> int64_t {
-        if (v <= 0)
-            return 0;
-        if (v <= 2)
-            return 1;
-        if (v <= 4)
-            return 2;
-        int64_t n = v - 1, p = 0;
-        while (n > 0) {
-            n >>= 1;
-            p++;
-        }
-        return static_cast<int64_t>(1) << (p - 1);
-    };
-    auto hpCalLog2 = [](int64_t v) -> int64_t {
-        int64_t r = 0;
-        while (v > 1) {
-            v >>= 1;
-            r++;
-        }
-        return r;
-    };
-    int64_t bisectionPos = hpFindNearestPower2(tc.rLoopCntTotal);
-    int64_t cacheCount = hpCalLog2(bisectionPos) + 1;
-    int64_t totalLayers = cacheCount + 1;
-    int64_t perLayerBytes = tc.cacheLevelStride * static_cast<int64_t>(sizeof(float));
-    if (totalLayers * perLayerBytes > static_cast<int64_t>(CACHE_BUF_UB_SIZE)) {
-        if (!ShrinkAUbAndRecalc(tc, totalLayers, CACHE_BUF_UB_SIZE)) {
-            return ge::GRAPH_FAILED;
-        }
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-// ─── 4d. CalcBufferSizes ───
-void CalcBufferSizes(TilingCtx& tc)
+// ─── 4d. ComputeUbSizes ───
+//   maxDtypeSize   = max(sizeof(D_T), sizeof(float))
+//   aUnit          = aUbFactor × innerAProdAlign
+//   postBufSize    = CeilAlign(aUnit × maxDtypeSize, blockSize)
+//   preBufSize     = aUnit × rUbFactorAlign × innerRProdAlign × maxDtypeSize
+//   cacheBufUbSize = 16 × 1024
+// NOTE: the paradigm defines NO VL padding term. Buffers are sized with
+// maxDtypeSize (fp32 width) so pre/post slots can be reused across the fp32
+// compute domain; that headroom is what absorbs the full-VL LoadAlign over-read.
+void ComputeUbSizes(TilingCtx& tc)
 {
     tc.unit = tc.aUbFactorAlign * tc.rUbFactorAlign;
     tc.aTotal = tc.aUbFactorAlign;
 
-    // ─── VF LoadAlign over-read guard ────────────────────────────────
-    // Reg::LoadAlign<float> always accesses 256B (64 fp32 lanes) and
-    // DIST_UNPACK_B16 accesses 128B (64 half lanes) regardless of mask.
-    // If totalF32 < 64, the last VF iteration LoadAligns beyond the
-    // allocated buffer → VEC_ERROR.
-    //
-    // Fix: add 1 VL of safety padding to preIn (+128B for DIST_UNPACK_B16)
-    // and tmpBuf (+256B for fp32 LoadAlign) so the last LoadAlign stays
-    // within the allocated region. Does NOT change rUbFactorAlign (row stride),
-    // so data layout is unaffected.
-    static constexpr int64_t VL_BYTES_F32 = 256; // 1 VL for fp32 LoadAlign
-    static constexpr int64_t VL_BYTES_B16 = 128; // 1 VL/2 for DIST_UNPACK_B16
-    tc.preReduceUbSize = CeilAlign(tc.unit * tc.dtypeSize, static_cast<int64_t>(tc.blockSize)) + VL_BYTES_B16;
-    tc.postReduceUbSize = CeilAlign(tc.aTotal * tc.dtypeSize, static_cast<int64_t>(tc.blockSize));
-    tc.tmpBufUbSize = CeilAlign(tc.unit * static_cast<int64_t>(sizeof(float)), static_cast<int64_t>(tc.blockSize)) +
-                      VL_BYTES_F32;
+    // preBufSize is a 2D dense buffer: [rows × rowstride] × elemBytes
+    tc.preReduceUbSize = tc.unit * tc.maxDtypeSize;
+    tc.postReduceUbSize = CeilAlign(tc.aTotal * tc.maxDtypeSize, static_cast<int64_t>(tc.blockSize));
+    // All P_pre + P_pre_ext pre-phase slots share preBufSize (same physical size).
+    tc.tmpBufUbSize = tc.preReduceUbSize;
 
     // cacheLevelStride: 32B-aligned per-layer stride for cache tree (fp32 lanes)
     //   When aTotal=1, must CeilAlign to 8 to satisfy VF LoadAlign 32B-alignment
@@ -369,8 +345,8 @@ void CalcBufferSizes(TilingCtx& tc)
     tc.cacheLevelStride = CeilAlign(tc.aTotal, BLOCK_F32);
 }
 
-// ─── 4e. CalcMultiCoreSplit ───
-void CalcMultiCoreSplit(TilingCtx& tc)
+// ─── 4e. ComputeFusedALoopSplit ───
+void ComputeFusedALoopSplit(TilingCtx& tc)
 {
     tc.aSplitChunkCnt = CeilDiv(tc.A, tc.aUbFactor);
     tc.rLoopCntTotal = CeilDiv(tc.R, tc.rUbFactor);
@@ -383,8 +359,8 @@ void CalcMultiCoreSplit(TilingCtx& tc)
     tc.usedCoreNum = (tc.aSmallCoreLoopCnt > 0) ? static_cast<int32_t>(cn) : tc.aBigCoreCnt;
 }
 
-// ─── 5. SetAndPrintTilingData ───
-ge::graphStatus SetAndPrintTilingData(gert::TilingContext* ctx, const TilingCtx& tc)
+// ─── 5. FillAndLogTilingData ───
+ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& tc)
 {
     auto tilingData = ctx->GetTilingData<GlobalLpPoolTilingData>();
     if (tilingData == nullptr) {
@@ -509,7 +485,9 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
     if (td == nullptr)
         return;
     int64_t totalA = tc.A;
-    int64_t maxInitElem = MAX_INNER_A_INIT / tc.dtypeSize;
+    // Same cachelineTmp rule as the normal path (platform cacheLineSize, never hard-coded)
+    const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
+    const int64_t maxInitElem = FloorAlign(static_cast<int64_t>(tc.cacheLineSize) / tc.dtypeSize, bsElem);
     int64_t atmp = std::min(maxInitElem, CeilDiv(totalA, static_cast<int64_t>(tc.coreNum)));
     int64_t aUb = std::min(atmp, totalA);
     int64_t aChunks = CeilDiv(totalA, aUb);
@@ -518,7 +496,7 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
     int32_t bigCnt = static_cast<int32_t>(aChunks % cn);
     int64_t bigLoop = smallLoop + (bigCnt > 0 ? 1 : 0);
     int32_t usedCore = (smallLoop > 0) ? static_cast<int32_t>(cn) : bigCnt;
-    int64_t postUb = CeilAlign(aUb * tc.dtypeSize, static_cast<int64_t>(tc.blockSize));
+    int64_t postUb = CeilAlign(aUb * tc.maxDtypeSize, static_cast<int64_t>(tc.blockSize));
     static constexpr int64_t BLOCK_F32 = 32 / static_cast<int64_t>(sizeof(float));
     td->usedCoreNum = usedCore;
     td->aLoopCntTotal = aChunks;
@@ -543,17 +521,17 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
 // ─── ComputeNormalTiling: extracted from ComputeTiling for size control ──
 static ge::graphStatus ComputeNormalTiling(gert::TilingContext* ctx, TilingCtx& tc)
 {
-    if (CalcAUbFactor(tc) != ge::GRAPH_SUCCESS)
+    if (ComputeAUbFactor(tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
-    if (CalcRFromBudget(tc) != ge::GRAPH_SUCCESS)
+    if (ComputeRUbFactor(tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
-    if (TryExpandA(tc) != ge::GRAPH_SUCCESS)
+    if (ExpandAIfRFullyLoaded(tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
-    CalcBufferSizes(tc);
-    CalcMultiCoreSplit(tc);
-    if (CheckCacheBufConstraint(tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (SetAndPrintTilingData(ctx, tc) != ge::GRAPH_SUCCESS)
+    ComputeUbSizes(tc);
+    ComputeFusedALoopSplit(tc);
+    // No cacheBuf capacity re-check needed: the constraint holds by construction
+    // (cacheCount × CeilAlign(aUnit,8) × 4 ≤ 16KB 恒成立).
+    if (FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
     const uint64_t tilingKey = GET_TPL_TILING_KEY(0, 1);
     if (ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS)
@@ -576,9 +554,26 @@ static ge::graphStatus ComputeEmptyTiling(gert::TilingContext* ctx, TilingCtx& t
         return ge::GRAPH_FAILED;
     auto td = ctx->GetTilingData<GlobalLpPoolTilingData>();
     uint32_t blockDim = (td != nullptr) ? static_cast<uint32_t>(td->usedCoreNum) : 0;
+    // 空 tensor 场景若使用核数为 0，也需要 SetBlockDim(1)，
+    //    kernel 侧通过 usedCoreNum=0 短路处理。
+    if (blockDim == 0) {
+        blockDim = 1;
+    }
     if (ctx->SetBlockDim(blockDim) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
     return ge::GRAPH_SUCCESS;
+}
+
+// ─── 6. SetWorkspaceSize ───
+//   即使不需要使用 workspace，也需要显式设置
+//   ws[0] = sysWorkspaceSize
+// Base template uses no user workspace, so the total is just the framework's
+// libapi workspace. (Group template would add usrWorkspaceBytes.)
+static void SetWorkspaceSize(gert::TilingContext* ctx)
+{
+    size_t* ws = ctx->GetWorkspaceSizes(1);
+    OP_CHECK_IF(ws == nullptr, OP_LOGE("GlobalLpPool", "workspace ptr is nullptr"), return);
+    ws[0] = Ops::Base::GetWorkspaceSize(ctx);
 }
 
 // ─── Main entry: ComputeTiling ───
@@ -587,10 +582,7 @@ ge::graphStatus GlobalLpPoolTilingFunc::ComputeTiling(gert::TilingContext* ctx)
     if (ctx == nullptr)
         return ge::GRAPH_FAILED;
     TilingCtx tc;
-    size_t* workSpaceSize = ctx->GetWorkspaceSizes(1);
-    if (workSpaceSize != nullptr) {
-        workSpaceSize[0] = 0;
-    }
+    SetWorkspaceSize(ctx);
     if (GetPlatformInfoFromCtx(ctx, tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
     if (GetShapeAttrsInfo(ctx, tc) != ge::GRAPH_SUCCESS)

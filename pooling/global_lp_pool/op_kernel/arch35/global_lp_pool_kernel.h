@@ -19,6 +19,16 @@ using namespace AscendC;
 static constexpr int32_t VF_VL_F32 = 64;   // 256 / sizeof(float)
 static constexpr int32_t VF_BLK_SIZE = 32; // bytes per dataBlock
 
+// FTZ_FALSE 档：dav_3510 上 Ln/Exp/Sqrt 的默认 INTRINSIC 档会把次正规输入/输出
+// 冲刷成 0（|x|^p 或 Σ 落次正规区时结果整段失真），故统一改用 FTZ_FALSE 档。
+// mode 仅作编译期模板实参（Reg::Ln/Exp/Sqrt 的 NTTP），不产生运行时访问。
+static constexpr AscendC::Reg::LnSpecificMode kLnFtzFalse = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                             AscendC::LnAlgo::PRECISION_1ULP_FTZ_FALSE};
+static constexpr AscendC::Reg::ExpSpecificMode kExpFtzFalse = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                               AscendC::ExpAlgo::PRECISION_1ULP_FTZ_FALSE};
+static constexpr AscendC::Reg::SqrtSpecificMode kSqrtFtzFalse = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                                 AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
+
 // ─── FindNearestPower2 (using ScalarCountLeadingZero) ──────────────────────
 __aicore__ static inline uint64_t FindNearestPower2(uint64_t value)
 {
@@ -83,6 +93,10 @@ public:
         int64_t rTotal = rLoopCntTotal_;
         bisectionPos_ = static_cast<int64_t>(FindNearestPower2(static_cast<uint64_t>(rTotal)));
         bisectionTail_ = rTotal - bisectionPos_;
+        // treeDepth_ == cacheCount (L = log2(P) + 1).
+        // The tree occupies exactly `treeDepth_` layers, indices [0, treeDepth_-1];
+        // the root lives at (treeDepth_-1) × cacheLevelStride. There is NO extra
+        // scratch layer — ReduceSum writes straight into its own tree layer.
         treeDepth_ = static_cast<int64_t>(CalLog2(static_cast<uint64_t>(bisectionPos_)) + 1);
 
         bufSizePre_ = tilingData->preReduceUbSize;
@@ -92,12 +106,19 @@ public:
         cacheLevelStride_ = tilingData->cacheLevelStride; // 32B-aligned
         // is_fast_path reserved in TilingData for future use
 
-        // UB buffer allocation
-        //   preInQue_  DB=2  double-buffer for MTE/Vector pipeline
-        //   tmpBuf_    copies=2  Phase A main+tail pairing
-        //   cacheBuf_  single  16KB binary accumulation tree
-        //   outQue_    single  output buffer
-        pipe_.InitBuffer(preInQue_, 2, static_cast<uint32_t>(bufSizePre_));
+        // UB buffer allocation — mirrors the reduction paradigm's 5 physical
+        // buffers (P_pre=2 + P_pre_ext=1 pre-phase slots, cacheBuf, outBuf):
+        //   preInQue_  DB=1        preInBuf        (pre-phase slot 0)
+        //   tmpBuf_    copies=2    preReduceResult (slot 1) + preReduceResultTail (slot 2)
+        //                          preReduceResultTail also doubles as the Reduce API
+        //                          sharedTmpBuffer (added when ReduceSum is converted)
+        //   cacheBuf_  single      16KB binary accumulation tree
+        //   outQue_    single      output buffer
+        // Double buffer is NOT enabled: enabling it adds one full pre-phase buffer
+        // and pushes the UB budget over the platform limit.
+        // All three pre-phase slots share preBufSize (sized with maxDtypeSize),
+        // so no per-buffer VL padding is needed or present.
+        pipe_.InitBuffer(preInQue_, 1, static_cast<uint32_t>(bufSizePre_));
         pipe_.InitBuffer(tmpBuf_, static_cast<uint32_t>(bufSizeTmp_ * 2));
         pipe_.InitBuffer(cacheBuf_, static_cast<uint32_t>(bufSizeCache_));
         pipe_.InitBuffer(outQue_, 1, static_cast<uint32_t>(bufSizePost_));
@@ -127,7 +148,7 @@ public:
                 Duplicate<D_T>(outBuf, static_cast<D_T>(0.0f), n);
                 outQue_.EnQue(outBuf);
                 outBuf = outQue_.DeQue<D_T>();
-                CopyOutFn(outBuf, aOff, aLen);
+                CopyOut(outBuf, aOff, aLen);
                 outQue_.FreeTensor(outBuf);
             }
             return;
@@ -149,8 +170,8 @@ public:
 
 private:
     // ─── CopyIn (tail-R, K=2) ─────────────────────────────────────────────
-    __aicore__ inline void CopyInChunk(LocalTensor<D_T>& dst, int64_t aOff, int64_t aLen, int64_t rChunkIdx,
-                                       int64_t rLen)
+    __aicore__ inline void DoCopyInTile(LocalTensor<D_T>& dst, int64_t aOff, int64_t aLen, int64_t rChunkIdx,
+                                        int64_t rLen)
     {
         uint32_t blockLen = static_cast<uint32_t>(rLen * sizeof(D_T));
         uint16_t blockCount = static_cast<uint16_t>(aLen);
@@ -159,22 +180,25 @@ private:
 
         int64_t paddedRowBytes = rUbFactorAlign_ * static_cast<int64_t>(sizeof(D_T));
 
-        // dstStride: skip 32B blocks on UB between rows (partial chunk > 0)
-        //   ref: DESIGN.md §8.4, reduce-design-pitfalls #17
+        // dstStride: skip the 32B-aligned gap between rows on UB. The UB row width
+        // is always CeilAlign(blockLen, 32B) regardless of rightPadding, so
+        // rightPadding stays 0 and the pad lanes are left dirty.
         uint32_t validBytes = blockLen;
         uint32_t alignedBytes = (validBytes + VF_BLK_SIZE - 1) & ~(VF_BLK_SIZE - 1); // CeilAlign(blockLen, 32)
         int64_t dstStride = (paddedRowBytes - static_cast<int64_t>(alignedBytes)) / VF_BLK_SIZE;
-        uint8_t rightPad = static_cast<uint8_t>((alignedBytes - validBytes) / sizeof(D_T));
 
         DataCopyExtParams copyParams(blockCount, blockLen, srcStride, dstStride, 0);
-        DataCopyPadExtParams<D_T> padParams(true, 0, rightPad, static_cast<D_T>(0));
+        // isPad=false, rightPadding=0, paddingValue=0:
+        //    the pad region is dirty and carries no semantics. The kernel clears the
+        //    R-direction pad explicitly via ClearRPadVf before the reduce.
+        DataCopyPadExtParams<D_T> padParams(false, 0, 0, static_cast<D_T>(0));
 
         int64_t gmOff = aOff * axisShape1_ + rChunkIdx * rUbFactor_;
         DataCopyPad(dst, xGm_[gmOff], copyParams, padParams);
     }
 
     // ─── CopyOut (tail-R, single burst) ───────────────────────────────────
-    __aicore__ inline void CopyOutFn(LocalTensor<D_T>& src, int64_t aOff, int64_t aLen)
+    __aicore__ inline void CopyOut(LocalTensor<D_T>& src, int64_t aOff, int64_t aLen)
     {
         uint32_t blockLen = static_cast<uint32_t>(aLen * sizeof(D_T));
         uint16_t blockCount = 1;
@@ -187,13 +211,16 @@ private:
                                              bool needZeroTail)
     {
         auto preIn = preInQue_.AllocTensor<D_T>();
-        CopyInChunk(preIn, aOff, aLen, rIdx, rLen);
+        DoCopyInTile(preIn, aOff, aLen, rIdx, rLen);
         preInQue_.EnQue(preIn);
         preIn = preInQue_.DeQue<D_T>();
         PreElewiseVf(preIn, tmpBufIdx, rLen);
         preInQue_.FreeTensor(preIn);
-        if (needZeroTail && rLen < rUbFactorAlign_)
-            ZeroRowTailVf(tmpBufIdx, rLen);
+        // R_bundle pad clearing (BurstPad + ExtensionPad). Unconditional: the VFs
+        // self-gate (BurstPad only when validR is unaligned, ExtensionPad only for a
+        // partial chunk). CopyIn uses isPad=false so this is the only thing that
+        // makes the pad lanes zero before they are folded into the reduce.
+        ClearRPadVf(tmpBufIdx, rLen);
     }
 
     // ─── Process One A Chunk ──────────────────────────────────────────────
@@ -211,19 +238,19 @@ private:
                 ProcessOneChunkVf(aOff, aLen, rIdx, rLenMain, 0, true);
                 ProcessOneChunkVf(aOff, aLen, tailIdx, rLenTail, 1, true);
                 MergeTmpBufVf();
-                ReduceSumOnTmp0();
+                ReduceSumToCache(rIdx);
             } else {
                 ProcessOneChunkVf(aOff, aLen, rIdx, rLenMain, 0, false);
-                ReduceSumOnTmp0();
+                ReduceSumToCache(rIdx);
             }
-            DoCachingVf(rIdx);
+            DoCaching(rIdx);
         }
         int64_t rootIdx = treeDepth_ - 1;
         auto outBuf = outQue_.AllocTensor<D_T>();
         PostElewiseVf(rootIdx, aLen, outBuf);
         outQue_.EnQue(outBuf);
         outBuf = outQue_.DeQue<D_T>();
-        CopyOutFn(outBuf, aOff, aLen);
+        CopyOut(outBuf, aOff, aLen);
         outQue_.FreeTensor(outBuf);
     }
 
@@ -287,48 +314,26 @@ private:
         }
     }
 
-    // ─── GeneralPowerVf: |x|^p for p∉{1,2} — Abs→Ln→Muls→Exp chain ──
+    // ─── GeneralPowerVf: |x|^p for p∉{1,2} — single fused register chain ──
     __aicore__ inline void GeneralPowerVf(__ubuf__ float* pwrAddr, uint16_t pwrLoopNum, uint32_t pwrRemaining,
                                           float pVal)
     {
         __VEC_SCOPE__
         {
             Reg::RegTensor<float> vx;
+            Reg::RegTensor<float> vp;
             Reg::MaskReg mask;
             uint32_t remain = pwrRemaining;
-            // Abs
             for (uint16_t i = 0; i < pwrLoopNum; i++) {
                 mask = Reg::UpdateMask<float>(remain);
                 Reg::LoadAlign<float>(vx, pwrAddr + static_cast<int32_t>(i) * VF_VL_F32);
                 Reg::Abs(vx, vx, mask);
-                Reg::StoreAlign<float>(pwrAddr + static_cast<int32_t>(i) * VF_VL_F32, vx, mask);
-            }
-            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-            // Ln
-            remain = pwrRemaining;
-            for (uint16_t i = 0; i < pwrLoopNum; i++) {
-                mask = Reg::UpdateMask<float>(remain);
-                Reg::LoadAlign<float>(vx, pwrAddr + static_cast<int32_t>(i) * VF_VL_F32);
-                Reg::Ln(vx, vx, mask);
-                Reg::StoreAlign<float>(pwrAddr + static_cast<int32_t>(i) * VF_VL_F32, vx, mask);
-            }
-            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-            // Muls
-            remain = pwrRemaining;
-            for (uint16_t i = 0; i < pwrLoopNum; i++) {
-                mask = Reg::UpdateMask<float>(remain);
-                Reg::LoadAlign<float>(vx, pwrAddr + static_cast<int32_t>(i) * VF_VL_F32);
+                Reg::Ln<float, &kLnFtzFalse>(vx, vx, mask);
                 Reg::Muls(vx, vx, static_cast<float>(pVal), mask);
-                Reg::StoreAlign<float>(pwrAddr + static_cast<int32_t>(i) * VF_VL_F32, vx, mask);
-            }
-            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-            // Exp
-            remain = pwrRemaining;
-            for (uint16_t i = 0; i < pwrLoopNum; i++) {
-                mask = Reg::UpdateMask<float>(remain);
-                Reg::LoadAlign<float>(vx, pwrAddr + static_cast<int32_t>(i) * VF_VL_F32);
-                Reg::Exp(vx, vx, mask);
-                Reg::StoreAlign<float>(pwrAddr + static_cast<int32_t>(i) * VF_VL_F32, vx, mask);
+                // Exp 必须非原地（dst != src）：FTZ_FALSE 档内部先 vexp(dst,src) 再按 src 重算
+                // 次正规 lane，原地调用会读到已被冲刷的 src，得 exp(0)^2 = 1.0。
+                Reg::Exp<float, &kExpFtzFalse>(vp, vx, mask);
+                Reg::StoreAlign<float>(pwrAddr + static_cast<int32_t>(i) * VF_VL_F32, vp, mask);
             }
         }
     }
@@ -367,8 +372,9 @@ private:
         LocalTensor<float> floatBuf = tmpBuf_.Get<float>();
         LocalTensor<float> workBuf = floatBuf[slotOff];
 
+        // No PipeBarrier between the cast VF and the power VF: on Ascend950
+        // consecutive VF calls are hardware-ordered.
         CastToFloatVf<kNeedCast>(workBuf, preIn, totalF32, totalCount);
-        PipeBarrier<PIPE_V>();
 
         __ubuf__ float* pwrAddr = (__ubuf__ float*)workBuf.GetPhyAddr();
         uint16_t pwrLoopNum = static_cast<uint16_t>(
@@ -425,7 +431,7 @@ private:
                     int32_t off = static_cast<int32_t>(i) * VF_VL_F32;
                     mask = AscendC::Reg::UpdateMask<float>(remaining);
                     AscendC::Reg::LoadAlign(f32Reg, rootPtr + off);
-                    AscendC::Reg::Sqrt(f32Reg, f32Reg, mask);
+                    AscendC::Reg::Sqrt<float, &kSqrtFtzFalse>(f32Reg, f32Reg, mask);
                     PostCastAndStoreVf<D_T, kNeedCast>(f32Reg, mask, outPtr, off);
                 }
             }
@@ -433,16 +439,19 @@ private:
             __VEC_SCOPE__
             {
                 AscendC::Reg::RegTensor<float> f32Reg;
+                AscendC::Reg::RegTensor<float> f32Exp;
                 AscendC::Reg::MaskReg mask;
                 uint32_t remaining = laneN;
                 for (uint16_t i = 0; i < repeatTime; ++i) {
                     int32_t off = static_cast<int32_t>(i) * VF_VL_F32;
                     mask = AscendC::Reg::UpdateMask<float>(remaining);
                     AscendC::Reg::LoadAlign(f32Reg, rootPtr + off);
-                    AscendC::Reg::Ln(f32Reg, f32Reg, mask);
+                    // (Σ)^(1/p) = exp(ln(Σ)/p)，同为 Reg:: 寄存器级链。
+                    AscendC::Reg::Ln<float, &kLnFtzFalse>(f32Reg, f32Reg, mask);
                     AscendC::Reg::Muls(f32Reg, f32Reg, static_cast<float>(invPVal), mask);
-                    AscendC::Reg::Exp(f32Reg, f32Reg, mask);
-                    PostCastAndStoreVf<D_T, kNeedCast>(f32Reg, mask, outPtr, off);
+                    // 同 Pre：FTZ_FALSE 档 Exp 必须非原地（dst != src）。
+                    AscendC::Reg::Exp<float, &kExpFtzFalse>(f32Exp, f32Reg, mask);
+                    PostCastAndStoreVf<D_T, kNeedCast>(f32Exp, mask, outPtr, off);
                 }
             }
         }
@@ -491,93 +500,157 @@ private:
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // ReduceSum (Level 2 API, outside VF scope)
-    // Uses separate dst (cacheBuf slice) to avoid src==dst overlap violation.
+    // ReduceSum → cacheBuf[levelOff]   (Level 2 API, outside VF scope)
+    //
+    //   dst            = cacheBuf[levelOff], levelOff = cacheID × levelStride
+    //                    (the tree slot IS the result slot — no scratch layer,
+    //                     no bounce buffer)
+    //   src            = preReduceResult      (tmpBuf slot 0)
+    //   sharedTmpBuffer= preReduceResultTail  (tmpBuf slot 1; idle after Phase A
+    //                    pairing, so reusing it costs no extra UB)
+    //   srcInnerPad    = true                 (always, tail-R and tail-A alike)
+    //   isReuseSource  = true                 (src may be clobbered; we re-read it
+    //                    only via DoCaching, which reads the cacheBuf slot, not src)
+    // Hard constraints:
+    //    src/dst must not overlap; src base must be 32B aligned;
+    //    sharedTmpBuffer must not overlap src or dst.
+    // Using the 3-arg overload instead would make the API grab "whatever UB is
+    // left after all InitBuffers" via PopStackBuffer — an unbudgeted region.
     // ══════════════════════════════════════════════════════════════════════
-    __aicore__ inline void ReduceSumOnTmp0()
+    __aicore__ inline void ReduceSumToCache(int64_t rIdx)
     {
-        auto reduceSrc = tmpBuf_.Get<float>();
-        // ⚠️ MUST NOT use cacheBuf_[0] as dst — it overlaps with cache layer 0,
-        //    which DoCachingVf reads for cid≥1 (reduce-bisection-algorithm §3.2).
-        //    Use an offset at treeDepth_ * cacheLevelStride_ (past all valid layers).
-        LocalTensor<float> cacheFloat = cacheBuf_.Get<float>();
-        int64_t reduceDstOff = treeDepth_ * cacheLevelStride_;
-        auto reduceDst = cacheFloat[reduceDstOff];
+        const int64_t cacheID = GetCacheID(rIdx);
+        const int64_t levelOff = cacheID * cacheLevelStride_;
 
-        // UB layout is [A_bundle, R_bundle] from CopyInChunk → shape {A, R}
+        LocalTensor<float> cacheFloat = cacheBuf_.Get<float>();
+        LocalTensor<float> floatBuf = tmpBuf_.Get<float>();
+        LocalTensor<float> preReduceResult = floatBuf;
+        LocalTensor<uint8_t> sharedTmp = floatBuf[(bufSizeTmp_ / static_cast<int64_t>(sizeof(float)))]
+                                             .template ReinterpretCast<uint8_t>();
+
+        // UB layout is [A_bundle, R_bundle] from DoCopyInTile → shape {A, R}
         // Pattern::Reduce::AR: first dim (A) kept, second dim (R) reduced
         uint32_t shape[] = {static_cast<uint32_t>(aUbFactorAlign_), static_cast<uint32_t>(rUbFactorAlign_)};
-        ReduceSum<float, Pattern::Reduce::AR, true>(reduceDst, reduceSrc, shape, true);
-
-        // Copy result from cacheBuf offset back to tmpBuf[0]
-        int64_t copyElems = aUbFactorAlign_;
-        uint16_t vfLoopNum2 = static_cast<uint16_t>(
-            (static_cast<uint32_t>(copyElems) + static_cast<uint32_t>(VF_VL_F32) - 1) /
-            static_cast<uint32_t>(VF_VL_F32));
-        uint32_t remaining2 = static_cast<uint32_t>(copyElems);
-
-        __ubuf__ float* dstPtr = (__ubuf__ float*)tmpBuf_.Get<float>().GetPhyAddr();
-        __ubuf__ float* srcPtr = (__ubuf__ float*)cacheBuf_.Get<float>().GetPhyAddr() + reduceDstOff;
-
-        __VEC_SCOPE__
-        {
-            Reg::RegTensor<float> vtmp;
-            Reg::MaskReg mask2;
-            uint32_t rem = remaining2;
-
-            for (uint16_t i = 0; i < vfLoopNum2; i++) {
-                mask2 = Reg::UpdateMask<float>(rem);
-                Reg::LoadAlign<float>(vtmp, srcPtr + static_cast<int32_t>(i) * VF_VL_F32);
-                Reg::StoreAlign<float>(dstPtr + static_cast<int32_t>(i) * VF_VL_F32, vtmp, mask2);
-            }
-        }
+        ReduceSum<float, Pattern::Reduce::AR, true>(cacheFloat[levelOff], preReduceResult, sharedTmp, shape, true);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // ZeroRowTailVf — zero tail of each tmpBuf row for partial R chunks.
+    // R_bundle pad clearing.
     //
-    // When rLen < rUbFactorAlign, CopyInChunk only writes rLen valid R-elements
-    // per row + DataCopyPad rightPad. The tail [rLen+rightPad, rUbFactorAlign)
-    // holds stale data from a previous chunk's PreElewiseVf output.
+    //   CopyIn uses isPad=false, so BurstPad / ExtensionPad carry dirty data.
+    //   The R direction of the pad DOES get folded into the reduce, so it must be
+    //   explicitly cleared (the A direction does not — A lanes are independent —
+    //   and extra A-direction clearing is forbidden).
     //
-    // For large shapes (rLen typically 8-aligned), StoreAlign at offset
-    // rLen is 32B-aligned → safe. For small shapes (rLen not 8-aligned),
-    // VL padding ensures buffer is large enough for the LoadAlign access.
+    //   Two disjoint regions, two VFs:
+    //     BurstPad     [validR, CeilAlign(validR, bsInput))
+    //                  → ClearInnerBurstTailPadVf  (only when validR unaligned)
+    //     ExtensionPad [CeilAlign(validR, bsInput), rUbFactorAlign)
+    //                  → ClearChunkExtensionVf     (only for a partial r chunk)
+    //
+    //   Both share one hard rule: StoreAlign/LoadAlign 起点必须 block 对齐，
+    //   非对齐起点会运行时错 (errcode 340).
+    //   ClearInnerBurstTailPadVf achieves this by starting at FloorAlign(validR, 8)
+    //   and masking the write to [validR%8, padEnd) — it never touches a valid lane
+    //   and never writes into the next row.
     // ══════════════════════════════════════════════════════════════════════
-    __aicore__ inline void ZeroRowTailVf(int32_t tmpBufIdx, int64_t rLen)
+    static constexpr int32_t VF_BLK_F32 = VF_BLK_SIZE / static_cast<int32_t>(sizeof(float)); // = 8
+
+    // ── ClearInnerBurstTailPadVf: clear [validR, CeilAlign(validR, bsInput)) ──
+    // Three-segment mask: maskEnd = [0,padEnd), maskStart = [0,partialStartInBlock),
+    // padMask = maskEnd AND NOT maskStart = [partialStartInBlock, padEnd).
+    // windowOff = FloorAlign(validR, 8) keeps the StoreAlign base 32B aligned.
+    __aicore__ static inline void ClearInnerBurstTailPadVfImpl(__ubuf__ float* base, uint16_t rowCnt, int32_t rowStride,
+                                                               int32_t windowOff, uint32_t padEnd,
+                                                               uint32_t partialStartInBlock)
     {
-        if (rLen >= rUbFactorAlign_)
-            return;
-
-        int64_t tailStart = rLen;
-        int64_t tailCount = rUbFactorAlign_ - rLen;
-        int64_t rowStride = rUbFactorAlign_; // fp32 elements per row
-        int64_t rowCnt = aUbFactorAlign_;    // number of rows (padded)
-
-        int32_t slotOff = tmpBufIdx * static_cast<int32_t>(bufSizeTmp_ / sizeof(float));
-        __ubuf__ float* base = (__ubuf__ float*)tmpBuf_.Get<float>().GetPhyAddr() + slotOff;
-
-        uint16_t rowLoop = static_cast<uint16_t>(rowCnt);
-        uint16_t colLoop = static_cast<uint16_t>(
-            (static_cast<uint32_t>(tailCount) + static_cast<uint32_t>(VF_VL_F32) - 1) /
-            static_cast<uint32_t>(VF_VL_F32));
-        uint32_t colRemaining = static_cast<uint32_t>(tailCount);
-
         __VEC_SCOPE__
         {
             Reg::RegTensor<float> vz;
             Reg::Duplicate<float>(vz, 0.0f);
-            Reg::MaskReg mask;
-            for (uint16_t r = 0; r < rowLoop; r++) {
-                uint32_t remain = colRemaining;
-                for (uint16_t c = 0; c < colLoop; c++) {
-                    mask = Reg::UpdateMask<float>(remain);
-                    int32_t off = static_cast<int32_t>(r) * static_cast<int32_t>(rowStride) +
-                                  static_cast<int32_t>(tailStart) + static_cast<int32_t>(c) * VF_VL_F32;
+
+            uint32_t cntEnd = padEnd;
+            uint32_t cntStart = partialStartInBlock;
+            auto maskEnd = Reg::UpdateMask<float>(cntEnd);
+            auto maskStart = Reg::UpdateMask<float>(cntStart);
+            auto allMask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::MaskReg notStart, padMask;
+            Reg::Not(notStart, maskStart, allMask);
+            Reg::And(padMask, maskEnd, notStart, allMask);
+
+            for (uint16_t row = 0; row < rowCnt; row++) {
+                int32_t rowOff = static_cast<int32_t>(row) * rowStride;
+                Reg::StoreAlign<float>(base + rowOff + windowOff, vz, padMask);
+            }
+        }
+    }
+
+    __aicore__ inline void ClearInnerBurstTailPadVf(__ubuf__ float* base, int64_t rLen)
+    {
+        const uint32_t bsInput = VF_BLK_SIZE / static_cast<uint32_t>(sizeof(D_T));
+        const uint32_t validR = static_cast<uint32_t>(rLen);
+        if (validR % bsInput == 0) {
+            return; // burst tail already block aligned → no BurstPad region
+        }
+        const uint32_t rowStride = static_cast<uint32_t>(rUbFactorAlign_);
+        if (validR >= rowStride) {
+            return; // no padding in this row
+        }
+        const uint32_t padEndInRow = ((validR + bsInput - 1) / bsInput) * bsInput;
+        const uint32_t partialBlockIdx = validR / static_cast<uint32_t>(VF_BLK_F32);
+        const uint32_t partialStartInBlock = validR % static_cast<uint32_t>(VF_BLK_F32);
+        const uint32_t padEnd = padEndInRow - partialBlockIdx * static_cast<uint32_t>(VF_BLK_F32);
+        const int32_t windowOff = static_cast<int32_t>(partialBlockIdx * static_cast<uint32_t>(VF_BLK_F32));
+
+        ClearInnerBurstTailPadVfImpl(base, static_cast<uint16_t>(aUbFactorAlign_), static_cast<int32_t>(rowStride),
+                                     windowOff, padEnd, partialStartInBlock);
+    }
+
+    // ── ClearChunkExtensionVf: clear [CeilAlign(rLen,8), rUbFactorAlign) ──
+    // extStart is CeilAlign'd to 32B, so the StoreAlign base is always aligned.
+    __aicore__ static inline void ClearChunkExtTailRVfImpl(__ubuf__ float* base, uint32_t extStart, uint32_t aStride,
+                                                           uint32_t extLanes, uint16_t aU16, uint16_t repPerA)
+    {
+        __VEC_SCOPE__
+        {
+            Reg::RegTensor<float> vz;
+            Reg::Duplicate<float>(vz, 0.0f);
+            for (uint16_t a = 0; a < aU16; a++) {
+                int32_t aOff = static_cast<int32_t>(a) * static_cast<int32_t>(aStride);
+                uint32_t remaining = extLanes;
+                for (uint16_t r = 0; r < repPerA; r++) {
+                    int32_t off = aOff + static_cast<int32_t>(extStart) + static_cast<int32_t>(r) * VF_VL_F32;
+                    auto mask = Reg::UpdateMask<float>(remaining);
                     Reg::StoreAlign<float>(base + off, vz, mask);
                 }
             }
         }
+    }
+
+    __aicore__ inline void ClearChunkExtensionVf(__ubuf__ float* base, int64_t rLen)
+    {
+        if (rLen >= rUbFactor_) {
+            return; // full chunk → no ExtensionPad
+        }
+        const uint32_t extStart = (static_cast<uint32_t>(rLen) + static_cast<uint32_t>(VF_BLK_F32) - 1) /
+                                  static_cast<uint32_t>(VF_BLK_F32) * static_cast<uint32_t>(VF_BLK_F32);
+        const uint32_t aStride = static_cast<uint32_t>(rUbFactorAlign_);
+        if (extStart >= aStride) {
+            return;
+        }
+        const uint32_t extLanes = aStride - extStart;
+        const uint32_t repPerA = (extLanes + static_cast<uint32_t>(VF_VL_F32) - 1) / static_cast<uint32_t>(VF_VL_F32);
+        ClearChunkExtTailRVfImpl(base, extStart, aStride, extLanes, static_cast<uint16_t>(aUbFactorAlign_),
+                                 static_cast<uint16_t>(repPerA));
+    }
+
+    // ── R_bundle pad clear entry: BurstPad + ExtensionPad ──
+    __aicore__ inline void ClearRPadVf(int32_t tmpBufIdx, int64_t rLen)
+    {
+        const int64_t slotOff = static_cast<int64_t>(tmpBufIdx) * (bufSizeTmp_ / static_cast<int64_t>(sizeof(float)));
+        __ubuf__ float* base = (__ubuf__ float*)tmpBuf_.Get<float>().GetPhyAddr() + static_cast<int32_t>(slotOff);
+        ClearChunkExtensionVf(base, rLen);    // [CeilAlign(rLen,8), rUbFactorAlign)
+        ClearInnerBurstTailPadVf(base, rLen); // [validR, CeilAlign(validR,bsInput))
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -610,14 +683,23 @@ private:
     // ══════════════════════════════════════════════════════════════════════
     // DoCaching VF  (binary-tree accumulation)
     // ══════════════════════════════════════════════════════════════════════
-    __aicore__ inline void DoCachingVf(int64_t rIdx)
+    __aicore__ inline void DoCaching(int64_t rIdx)
     {
+        //   ReduceSum already wrote this chunk's partial sum straight into
+        //   cacheBuf[cid × levelStride]. DoCaching then absorbs ALL lower layers
+        //   [0..cid-1] IN ASCENDING ORDER into that same slot and overwrites it.
+        //   - ascending order matters: cache[j] covers 2^j chunks, so each add
+        //     pairs operands of matching magnitude (best precision). Descending
+        //     order would drop low-order bits.
+        //   - overwrite (not accumulate): the previous value in this slot was
+        //     already absorbed by a higher layer, accumulating it would double-count.
+        // So the accumulator source is cacheBase + cid*levelStride — NOT tmpBuf.
         int64_t cid = GetCacheID(rIdx);
         int64_t lvlStride = cacheLevelStride_; // 32B-aligned per-layer stride
         int64_t laneN = aUbFactorAlign_;       // valid lane count for mask
 
-        __ubuf__ float* reduceOut = (__ubuf__ float*)tmpBuf_.Get<float>().GetPhyAddr();
         __ubuf__ float* cacheBase = (__ubuf__ float*)cacheBuf_.Get<float>().GetPhyAddr();
+        int32_t levelOff = static_cast<int32_t>(cid) * static_cast<int32_t>(lvlStride);
 
         uint32_t remaining = static_cast<uint32_t>(laneN);
         uint16_t repeatTime = static_cast<uint16_t>((remaining + static_cast<uint32_t>(VF_VL_F32) - 1) /
@@ -635,19 +717,17 @@ private:
                 int32_t off = static_cast<int32_t>(k) * VF_VL_F32;
                 mask = Reg::UpdateMask<float>(remain);
 
-                // 1) Load reduce result (in tmpBuf[0])
-                Reg::LoadAlign<float>(va, reduceOut + off);
+                Reg::LoadAlign<float>(va, cacheBase + levelOff + off);
 
-                // 2) Absorb all lower cache layers [0..cid-1]
+                // Absorb all lower cache layers [0..cid-1] in ascending order
+                // (cache[j] covers 2^j chunks, so operands pair by magnitude)
                 for (uint16_t j = 0; j < cidU16; j++) {
                     int32_t jOff = static_cast<int32_t>(j) * static_cast<int32_t>(lvlStride) + off;
                     Reg::LoadAlign<float>(vc, cacheBase + jOff);
                     Reg::Add<float, Reg::MaskMergeMode::ZEROING>(va, va, vc, mask);
                 }
 
-                // 3) Overwrite cache[cid] layer
-                int32_t dstOff = static_cast<int32_t>(cid) * static_cast<int32_t>(lvlStride) + off;
-                Reg::StoreAlign<float>(cacheBase + dstOff, va, mask);
+                Reg::StoreAlign<float>(cacheBase + levelOff + off, va, mask);
             }
         }
     }
@@ -673,7 +753,7 @@ private:
     GlobalTensor<D_T> xGm_;
     GlobalTensor<D_T> yGm_;
     TPipe pipe_;
-    TQue<QuePosition::VECIN, 2> preInQue_;
+    TQue<QuePosition::VECIN, 1> preInQue_; // depth 1: double buffer disabled
     TBuf<QuePosition::VECCALC> tmpBuf_;
     TBuf<QuePosition::VECCALC> cacheBuf_;
     TQue<QuePosition::VECOUT, 1> outQue_;
