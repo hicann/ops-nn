@@ -37,7 +37,7 @@
       <td>stride</td>
       <td>输入</td>
       <td>步长。</td>
-      <td>INT32、INT64</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -51,7 +51,7 @@
       <td>value_size</td>
       <td>输入</td>
       <td>值的大小。</td>
-      <td>INT32、INT64</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
