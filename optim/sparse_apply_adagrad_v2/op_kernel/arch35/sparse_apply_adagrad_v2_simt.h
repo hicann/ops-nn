@@ -78,7 +78,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAd
         float accumNew;
         if (updateSlots != 0) {
             float accumF32 = CastToFloat32<T>(accum[rowOffset]);
-            accumNew = accumF32 + gradF32 * gradF32;
+            volatile float gradSq = gradF32 * gradF32;
+            accumNew = accumF32 + gradSq;
             accum[rowOffset] = CastFromFloat32<T>(accumNew);
         } else {
             accumNew = CastToFloat32<T>(accum[rowOffset]);
@@ -86,7 +87,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAd
 
         float sqrtVal = sqrtf(accumNew);
         float denom = sqrtVal + epsilon_f32;
-        float delta = lr_f32 * (gradF32 / denom);
+        float delta = (lr_f32 * gradF32) / denom;
 
         float varF32 = CastToFloat32<T>(var[rowOffset]);
         var[rowOffset] = CastFromFloat32<T>(varF32 - delta);
