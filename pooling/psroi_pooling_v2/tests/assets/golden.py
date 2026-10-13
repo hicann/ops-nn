@@ -169,19 +169,26 @@ def psroi_pooling_v2_golden(
         spatial_scale: Positive finite coordinate scale.
         output_dim: Positive output channel count.
         group_size: Position-sensitive group size in ``[1, 127]``.
-        **kwargs: TTK metadata such as input/output dtypes and formats.
+        **kwargs: TTK metadata. ``golden_mode="Promote"`` also permits float64.
 
     Returns:
         A one-element list containing the NumPy output array with shape
         ``[N * R, output_dim, group_size, group_size]``.
     """
+    golden_mode = kwargs.get("golden_mode")
     del kwargs
     x = np.asarray(x)
     rois = np.asarray(rois)
 
     supported = (np.dtype(np.float16), np.dtype(np.float32))
+    # TTK promotes float32 to float64 for the high-precision Golden only.
+    if golden_mode == "Promote":
+        supported += (np.dtype(np.float64),)
     if x.dtype not in supported or rois.dtype != x.dtype:
-        raise TypeError("x/rois must have the same float16 or float32 dtype")
+        raise TypeError(
+            "x/rois must have the same float16 or float32 dtype "
+            "(float64 is allowed only in Promote mode)"
+        )
     if x.ndim != 4:
         raise ValueError("x must be a rank-4 ND tensor [N,C,H,W]")
     if rois.ndim != 3 or rois.shape[1] != 5:
