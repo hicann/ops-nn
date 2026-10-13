@@ -65,12 +65,11 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType2, gradInput->GetDataType(), return false);
 
     // 检查promoteType的数据类型是否在支持列表内
-    const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST = (GetCurrentPlatformInfo().GetSocVersion() >=
-                                                                                SocVersion::ASCEND910B &&
-                                                                            GetCurrentPlatformInfo().GetSocVersion() <=
-                                                                                SocVersion::ASCEND910E) ?
-                                                                               ASCEND910B_DTYPE_SUPPORT_LIST :
-                                                                               ASCEND910_DTYPE_SUPPORT_LIST;
+    const bool supportBf16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                              GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
+    const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST = supportBf16 ? ASCEND910B_DTYPE_SUPPORT_LIST :
+                                                                                         ASCEND910_DTYPE_SUPPORT_LIST;
     if (!CheckType(promoteType2, CURRENT_DTYPE_SUPPORT_LIST)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list [%s].",
                 op::ToString(promoteType2).GetString(), op::ToString(CURRENT_DTYPE_SUPPORT_LIST).GetString());
