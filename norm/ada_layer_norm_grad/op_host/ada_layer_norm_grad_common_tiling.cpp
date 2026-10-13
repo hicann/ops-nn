@@ -42,7 +42,7 @@ bool AdaLayerNormGradCommonTiling::IsCapable()
     int64_t bsblockNum = (commonParams.rowSize + 39) / 40;
     int64_t bscoreNum = (commonParams.rowSize + bsblockNum - 1) / bsblockNum;
 
-    if (commonParams.colSize > COMMON_LNG_MAX_COL || bscoreNum > coreNum) {
+    if (commonParams.isRegBase || commonParams.colSize > COMMON_LNG_MAX_COL || bscoreNum > coreNum) {
         OP_LOGI(context_,
                 "AdaLayerNormGradCommonTiling: col value(=%ld) is not support now, "
                 "please check.",
@@ -110,11 +110,11 @@ ge::graphStatus AdaLayerNormGradCommonTiling::DoOpTiling()
 int64_t AdaLayerNormGradCommonTiling::CalculateUbFormer()
 {
     int64_t maxUBSize = commonParams.ubSizePlatForm - td_.get_nlastRBufferBytes() * COMMON_LNG_NLAST_R_BUFFER_NUM -
-                        1024; //除缓冲区外的内存
+                        1024; // 除缓冲区外的内存
     int64_t coff = colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE * COMMON_LNG_WHOLE_BUFFER_NUM +
                    COMMON_LNG_B32_DTYPE_SIZE * COMMON_LNG_LAST_R_BUFFER_NUM + COMMON_LNG_BLOCK_BYTES;
     int64_t curUbFormer = maxUBSize / coff;
-    for (; curUbFormer >= 0; curUbFormer--) { //迭代搜优
+    for (; curUbFormer >= 0; curUbFormer--) { // 迭代搜优
         int64_t wholeBufferBytes = curUbFormer * colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE;
         int64_t lastRBufferBytes = CommonCeilDiv(curUbFormer * COMMON_LNG_B32_DTYPE_SIZE, COMMON_LNG_BLOCK_BYTES) *
                                    COMMON_LNG_BLOCK_BYTES;

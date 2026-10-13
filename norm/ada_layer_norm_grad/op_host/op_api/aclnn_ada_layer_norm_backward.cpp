@@ -304,8 +304,12 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     // 检查weight和bias
     if (!CheckShapeCompatibility(weightOptional, biasOptional, normalizedShape))
         return false;
-    CheckShapeEqual(weightOptional, normalizedShape);
-    CheckShapeEqual(biasOptional, normalizedShape);
+    if (weightOptional != nullptr) {
+        CheckShapeEqual(weightOptional, normalizedShape);
+    }
+    if (biasOptional != nullptr) {
+        CheckShapeEqual(biasOptional, normalizedShape);
+    }
 
     // 检查scale/shift
 
@@ -434,7 +438,8 @@ static aclnnStatus CreateContiguousTensorsAndComputeGrad(
     CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     bool gradCompute = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+                       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
+                       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     if (gradCompute) {
         OP_LOGD("Entering into ada_layer_norm_grad Func.");
         // AdaLayerNormGrad只支持fp32 rstd mean输入，如果不是fp32先转fp32

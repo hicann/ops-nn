@@ -5,7 +5,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&950DT系列产品</term>：不支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3系列产品</term>：支持
@@ -175,7 +175,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第二个输出，表示`input`的均值，对应计算公式中的`mean`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。</li><li>shape与`rstd`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同。</li><li>shape与`rstd`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示`input`的标准差的倒数，对应计算公式中的`rstd`。</td>
-      <td><ul><li>不支持空Tensor。</li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。<li>shape与`mean`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同。</li><li>shape与`mean`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -710,7 +710,7 @@ int main()
     aclDestroyTensor(dw);
     aclDestroyTensor(db);
 
-    // 7. 释放device 资源
+    // 7. 释放device资源
     aclrtFree(dyDeviceAddr);
     aclrtFree(xDeviceAddr);
     aclrtFree(meanDeviceAddr);

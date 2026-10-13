@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string>
 #include "ada_layer_norm_grad_tiling.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 static ge::graphStatus Tiling4AdaLayerNormGrad(gert::TilingContext* context)
@@ -48,7 +49,7 @@ static ge::graphStatus TilingPrepare4AdaLayerNormGrad(gert::TilingParseContext* 
                 OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
                         static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
                 return ge::GRAPH_FAILED);
-    compileInfo->isRegBase = false;
+    compileInfo->isRegBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
 
     OP_LOGD(context->GetNodeName(),
             "TilingPrepare4AdaLayerNormGrad exit, coreNum: %u, blockSize: %ld, ubSize: %ld, vlFp32: %ld.",

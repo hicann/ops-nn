@@ -64,7 +64,7 @@ TILING_DATA_FIELD_DEF(int64_t, wholeBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, lastRBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, nlastRBufferBytes);
 TILING_DATA_FIELD_DEF(int64_t, lastBrcbBufferBytes);
-TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferBytes); //每个block计算batch数的scale行
+TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferBytes); // 每个block计算batch数的scale行
 TILING_DATA_FIELD_DEF(int64_t, wholeBufferElemNums);
 TILING_DATA_FIELD_DEF(int64_t, blockFormerScaleBufferElemNums);
 END_TILING_DATA_DEF;
@@ -169,6 +169,53 @@ REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_412, AdaLayerNormGradTilingDataMerge
 REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_413, AdaLayerNormGradTilingDataMergeBSWorkspace)
 REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_414, AdaLayerNormGradTilingDataMergeBSWorkspace)
 REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_415, AdaLayerNormGradTilingDataMergeBSWorkspace)
+
+// A5 (ascend950) single TilingData structure: unified across the four scheduling tiers.
+BEGIN_TILING_DATA_DEF(AdaLayerNormGradTilingDataArch35)
+TILING_DATA_FIELD_DEF(int64_t, batch);
+TILING_DATA_FIELD_DEF(int64_t, seq);
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(int64_t, colAlignV);
+TILING_DATA_FIELD_DEF(int64_t, colAlignM);
+TILING_DATA_FIELD_DEF(int64_t, blockNum);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, blockTail);
+TILING_DATA_FIELD_DEF(int64_t, colRegime);
+TILING_DATA_FIELD_DEF(int64_t, nAvailInUb);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, dOuterLength);
+TILING_DATA_FIELD_DEF(int64_t, dInnerLength);
+TILING_DATA_FIELD_DEF(int64_t, dInnerLengthTail);
+TILING_DATA_FIELD_DEF(int64_t, dtypeKey);
+TILING_DATA_FIELD_DEF(int64_t, isDeterministicKey);
+TILING_DATA_FIELD_DEF(int64_t, rstdElemNum);
+TILING_DATA_FIELD_DEF(uint64_t, usrWorkspaceSize);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_110, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_120, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_130, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_140, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_150, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_210, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_220, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_230, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_240, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_250, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_310, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_320, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_330, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_340, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_350, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_410, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_420, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_430, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_440, AdaLayerNormGradTilingDataArch35)
+REGISTER_TILING_DATA_CLASS(AdaLayerNormGrad_450, AdaLayerNormGradTilingDataArch35)
 
 // TilingKey生成方式：LNGTemplateKey * 100 + isDeterministicKey * 10 + dtypeKey
 enum class LNGDtypeKey : int {
@@ -321,6 +368,24 @@ private:
     // for mte
     // colAlignM >= colAlignV
     int64_t colAlignM_{-1};
+};
+
+// A5 (ascend950) arch35 tiling: single unified scheduling tier, registered with highest priority.
+class AdaLayerNormGradArch35Tiling : public AdaLayerNormGradTilingBase {
+public:
+    explicit AdaLayerNormGradArch35Tiling(gert::TilingContext* context) : AdaLayerNormGradTilingBase(context) {}
+    ~AdaLayerNormGradArch35Tiling() override = default;
+    AdaLayerNormGradTilingDataArch35 td_;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+
+private:
+    uint64_t tilingKey_{0};
 };
 
 } // namespace optiling

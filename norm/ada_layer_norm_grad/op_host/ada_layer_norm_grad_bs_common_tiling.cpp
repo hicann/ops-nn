@@ -36,7 +36,7 @@ static inline int64_t CommonCeilDiv(int64_t value, int64_t factor)
 
 bool AdaLayerNormGradMergeBSCommonTiling::IsCapable()
 {
-    if (commonParams.colSize > MERGE_BS_COMMON_LNG_MAX_COL) {
+    if (commonParams.isRegBase || commonParams.colSize > MERGE_BS_COMMON_LNG_MAX_COL) {
         OP_LOGI(context_,
                 "AdaLayerNormGradMergeBSCommonTiling: col value(=%ld) is not support now, "
                 "please check.",
@@ -104,12 +104,12 @@ ge::graphStatus AdaLayerNormGradMergeBSCommonTiling::DoOpTiling()
 int64_t AdaLayerNormGradMergeBSCommonTiling::CalculateUbFormer()
 {
     int64_t maxUBSize = commonParams.ubSizePlatForm -
-                        td_.get_nlastRBufferBytes() * MERGE_BS_COMMON_LNG_NLAST_R_BUFFER_NUM - 1024; //除缓冲区外的内存
+                        td_.get_nlastRBufferBytes() * MERGE_BS_COMMON_LNG_NLAST_R_BUFFER_NUM - 1024; // 除缓冲区外的内存
     int64_t coff = colAlignM_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * MERGE_BS_COMMON_LNG_WHOLE_BUFFER_NUM +
                    MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * MERGE_BS_COMMON_LNG_LAST_R_BUFFER_NUM +
                    MERGE_BS_COMMON_LNG_BLOCK_BYTES;
     int64_t curUbFormer = maxUBSize / coff;
-    for (; curUbFormer >= 0; curUbFormer--) { //迭代搜优
+    for (; curUbFormer >= 0; curUbFormer--) { // 迭代搜优
         int64_t wholeBufferBytes = curUbFormer * colAlignM_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE;
         int64_t blockFormerScaleBufferBytes = (CommonCeilDiv(curUbFormer, seq_) + 1) * colAlignM_ *
                                               MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE;

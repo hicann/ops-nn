@@ -37,7 +37,7 @@ bool AdaLayerNormGradWorkspaceTiling::IsCapable()
     int64_t bsblockNum = (commonParams.rowSize + 39) / 40;
     int64_t bscoreNum = (commonParams.rowSize + bsblockNum - 1) / bsblockNum;
 
-    if (bscoreNum > coreNum) {
+    if (commonParams.isRegBase || bscoreNum > coreNum) {
         return false;
     }
     return true;

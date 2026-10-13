@@ -90,6 +90,10 @@ public:
             .ExtendCfgInfo("opFile.value", "ada_layer_norm_grad");
         this->AICore().AddConfig("ascend910b", membaseCfg);
         this->AICore().AddConfig("ascend910_93", membaseCfg);
+
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

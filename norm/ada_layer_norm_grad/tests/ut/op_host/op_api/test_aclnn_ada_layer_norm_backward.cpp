@@ -935,3 +935,37 @@ TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_al
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// optional weight/bias both nullptr: must not dereference them in CheckShapeEqual
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_optional_weight_bias_nullptr)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, in_format).Precision(0.01, 0.01);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, in_format).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, in_format).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, (aclTensor*)nullptr,
+              (aclTensor*)nullptr),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

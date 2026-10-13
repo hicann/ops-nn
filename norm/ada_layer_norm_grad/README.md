@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR&950DT系列产品</term>   |     ×    |
+|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
 |  <term>Atlas A3系列产品</term>   |     √    |
 |  <term>Atlas A2系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
@@ -105,23 +105,24 @@
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。shape与`mean`的shape相等，为[B…, H, 1]，最后一维固定为1，其他维度与`x`一致。</td>
+      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。数据类型固定为FLOAT32。shape与`mean`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`x`一致。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>表示`x`的均值，对应计算公式中的`mean`。shape与`rstd`的shape相等，为[B…, H, 1]。</td>
+      <td>表示`x`的均值，对应计算公式中的`mean`。数据类型固定为FLOAT32。shape与`rstd`的shape相等，为[B…, S, 1]。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
-        <tr>
+    <tr>
       <td>scale</td>
       <td>输入</td>
       <td>表示自适应缩放张量，对应公式中的`scale`。数据类型与`dy`的数据类型一致。shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+    </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
@@ -129,8 +130,7 @@
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
-        </tr>
-        <tr>
+    <tr>
       <td>beta</td>
       <td>输入</td>
       <td>表示偏置张量，对应公式中的`beta`。数据类型与`gamma`的数据类型一致。shape为[H]，H与`dy`中H维一致。</td>
@@ -154,7 +154,7 @@
     <tr>
       <td>pd_shift</td>
       <td>输出</td>
-      <td>表示反向传播自适应偏移系数的梯度，对应计算公式中的`pd_shift`。与输入`scale`的数据类型相同，shape与为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
+      <td>表示反向传播自适应偏移系数的梯度，对应计算公式中的`pd_shift`。与输入`scale`的数据类型相同，shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -176,7 +176,11 @@
 
 ## 约束说明
 
-无
+- 输入`dy`、`x`的行数（batch与seq的乘积）和列数（H维）均需大于等于1。
+- 列数H受UB容量约束，超大的列（如8K及以上）由cutD分块路径支持，但单个分块宽度受可用UB大小限制。
+- aclnn接口支持的最大维度为8维。
+- 支持混合精度：`dy`/`x`/`scale`/`shift`支持FLOAT32、FLOAT16、BFLOAT16；`rstd`/`mean`固定为FLOAT32；`gamma`/`beta`支持FLOAT32、FLOAT16、BFLOAT16（非FLOAT32时与`dy`类型相同）。
+- 不支持空Tensor。
 
 ## 调用说明
 
