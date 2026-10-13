@@ -112,7 +112,6 @@
 - [aclnnEmbedding](../../index/embedding/docs/aclnnEmbedding.md)
 - [aclnnEmbeddingBag](../../index/embedding_bag/docs/aclnnEmbeddingBag.md)
 - [aclnnEmbeddingDenseBackward](../../index/embedding_dense_grad_v2/docs/aclnnEmbeddingDenseBackward.md)
-- [aclnnEmbeddingDenseBackward](../../index/embedding_dense_grad/docs/aclnnEmbeddingDenseBackward.md)
 - [aclnnEmbeddingRenorm](../../norm/renorm/docs/aclnnEmbeddingRenorm.md)
 - [aclnnErfinv&aclnnInplaceErfinv](../../activation/erfinv/docs/aclnnErfinv&aclnnInplaceErfinv.md)
 - [aclnnExpandIntoJaggedPermute](../../index/expand_into_jagged_permute/docs/aclnnExpandIntoJaggedPermute.md)
