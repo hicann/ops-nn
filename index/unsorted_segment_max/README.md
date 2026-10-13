@@ -31,7 +31,7 @@ $$
   - `segment_ids`不需要排序；分段索引，指示当前分段的值加到哪个段上
   - `segment_ids`不需要覆盖整个有效范围内所有值
   - `segment_ids`如果给定ID i为空，则输出data类型的最小值
-  - `segment_ids`如果给定ID i为负值，则改值将被删除并且不会添加到段结果中
+  - `segment_ids`如果给定ID i为负值，则该值将被删除并且不会添加到段结果中
   - `num_segments`是scalar，代表输出的分段个数，应该大于等于实际分段的个数
 
 ## 参数说明
