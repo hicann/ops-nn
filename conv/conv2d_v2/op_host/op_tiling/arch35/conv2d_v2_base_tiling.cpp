@@ -566,6 +566,10 @@ void Conv2dBaseTiling::CalcASWTStrategy()
     if (!supported) {
         return;
     }
+    // Keep small-weight specializations on the original per-core schedule.
+    if (GetSmallWeightVal() != CONV_NOT_SMALL_WEIGHT) {
+        return;
+    }
 
     uint64_t totalM = shapeInfo_.ho * shapeInfo_.wo;
     uint64_t mBlocks = tilingData_.get_innerBatch() > 1 ? 1 : ConvCeilDiv(totalM, tilingData_.get_hoL1());
@@ -577,6 +581,10 @@ void Conv2dBaseTiling::CalcASWTStrategy()
     uint32_t mWindows = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(opInfo_->aicoreNum))));
     mWindows = (mWindows + 1) / 2 * 2;
     mWindows = static_cast<uint32_t>(std::min<uint64_t>(batchBlocks * mBlocks, mWindows));
+    // A single-block window provides no ASWT L2 locality benefit.
+    if (mWindows <= 1) {
+        return;
+    }
     tilingData_.set_mWindows(mWindows);
     flagInfo_.isASWT = true;
     OP_LOGI(context_->GetNodeName(),
