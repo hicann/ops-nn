@@ -606,7 +606,9 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     bool flagRebase = false;
     auto selfType = selfContiguous->GetDataType();
     if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST);
+        // BOOL 仅支持 reduction == "none"（910b/910_93 注册的 binary 均为 none）
+        aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST) ||
+                        (selfType == op::DataType::DT_BOOL && reduction == "none");
         scatterAddRegbaseSupport = CheckType(selfType, SCATTER_ADD_AICORE_REGBASE_DTYPE_SUPPORT_LIST);
         flag910b = !(Ops::NN::AclnnUtil::IsRegbase(curArch));
         flagRebase = Ops::NN::AclnnUtil::IsRegbase(curArch);
