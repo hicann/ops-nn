@@ -26,6 +26,8 @@ constexpr int64_t AR_VECTOR_LEN = platform::GetVRegSize() / sizeof(float);
 constexpr uint16_t AR_CACHE_LEVEL_COUNT = static_cast<uint16_t>(std::numeric_limits<uint64_t>::digits);
 // 保证 workspace 的 MTE3 写在屏障后的 MTE2 读之前完成。
 constexpr SyncAllConfig SPLIT_AR_SYNC_CONFIG = {PIPE_MTE3, PIPE_MTE2};
+// 非 2 次幂 tile 数补齐到下一个 2 次幂的倍增因子。
+constexpr uint64_t SPLIT_AR_NEXT_POW2_FACTOR = 2;
 
 // 商余式向上取整避免 value + divisor - 1 在大 R 下溢出整数范围。
 __aicore__ inline uint64_t SplitARCeilDiv(uint64_t value, uint64_t divisor)
@@ -38,12 +40,6 @@ __aicore__ inline uint64_t GetReduceFoldPoint(uint64_t value)
 {
     if (value <= 1) {
         return 0;
-    }
-    if (value <= 2) {
-        return 1;
-    }
-    if (value <= 4) {
-        return 2;
     }
     uint64_t reduced = value - 1;
     uint64_t power = std::numeric_limits<uint64_t>::digits - 1 - AscendC::ScalarCountLeadingZero(reduced);
@@ -199,7 +195,7 @@ private:
         uint64_t tileCount = SplitARCeilDiv(curRLen, ubFactor);
         uint64_t paddedTileCount = tileCount;
         if ((tileCount & (tileCount - 1)) != 0) {
-            paddedTileCount = GetReduceFoldPoint(tileCount) * 2;
+            paddedTileCount = GetReduceFoldPoint(tileCount) * SPLIT_AR_NEXT_POW2_FACTOR;
         }
 
         // Pass1 先遍历 A，再遍历当前行的 R tile。

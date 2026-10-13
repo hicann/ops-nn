@@ -524,6 +524,11 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
 
     GetCompileParameters(context, num_core, ub_size);
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        // regbase 仅支持普通模式，PRE/POST 的空输出会越界写，统一拦截。
+        OP_CHECK_IF(norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM,
+                    OP_LOGE(context, "AddRmsNorm does not support PreRmsNorm/PostRmsNorm mode on this SoC, "
+                                     "rstdOut and xOut are both required."),
+                    return ge::GRAPH_FAILED);
         return optiling::addRmsNormRegbase::TilingAddRmsNormRegbase(context);
     }
 

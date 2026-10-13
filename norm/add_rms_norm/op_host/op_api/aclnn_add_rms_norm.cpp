@@ -288,7 +288,7 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(const aclTensor* x1, const aclTensor
 
     // 支持空tensor
     bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty();
-    // 950 归约轴为空时 rstd 仍有 A 个元素，必须进入 L0/kernel 由 key=5000 写 NaN。
+    // 950 归约轴为空时 rstd 仍有 A 个元素，必须进入 L0/kernel 由空归约兜底模板写出 NaN。
     bool isRegbaseReduceEmpty = mode == AddRmsNormACLNN::ADD_RMS_NORM_MODE && Ops::NN::AclnnUtil::IsRegbase() &&
                                 gamma->IsEmpty() && !outputTensor.rstdOut->IsEmpty();
     if (anyEmptyTensor && !isRegbaseReduceEmpty) {

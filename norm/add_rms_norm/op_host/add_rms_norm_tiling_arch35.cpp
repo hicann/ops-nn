@@ -74,7 +74,7 @@ ge::graphStatus SetRegbaseWorkspaceSize(gert::TilingContext* context, uint64_t u
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     // 系统 workspace 大小由平台接口提供。
-    const uint64_t systemWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    const uint64_t systemWorkspaceSize = static_cast<uint64_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
     constexpr uint64_t maxWorkspaceSize = std::numeric_limits<size_t>::max();
     OP_CHECK_IF(systemWorkspaceSize > maxWorkspaceSize || userWorkspaceSize > maxWorkspaceSize - systemWorkspaceSize,
                 OP_LOGE(context, "The total workspace size exceeds the size_t range."), return ge::GRAPH_FAILED);
@@ -197,6 +197,34 @@ ge::graphStatus TilingReduceEmpty(gert::TilingContext* context, uint64_t numRow,
     return ge::GRAPH_SUCCESS;
 }
 
+void SaveTransTilingData(gert::TilingContext* context, uint32_t numCore, uint32_t usedCoreNum,
+                         uint64_t targetRowsPerCore, uint64_t numRow, uint64_t numCol, uint64_t rAligned,
+                         uint64_t rTileBase, uint64_t totalTiles, uint64_t tilesPerCore, uint64_t tileALen,
+                         uint64_t tileATail, float epsilon, float avgFactor)
+{
+    AddRMSNormRegbaseTransTilingData tiling;
+    tiling.set_numRow(numRow);
+    tiling.set_numCol(numCol);
+    tiling.set_rAligned(rAligned);
+    tiling.set_rTileBase(rTileBase);
+    tiling.set_totalTiles(totalTiles);
+    tiling.set_tilesPerCore(tilesPerCore);
+    tiling.set_tileALen(tileALen);
+    tiling.set_tileATail(tileATail);
+    tiling.set_epsilon(epsilon);
+    tiling.set_avgFactor(avgFactor);
+    context->SetBlockDim(usedCoreNum);
+    OP_LOGI(context,
+            "TransTiling numCore: %u, numRow: %lu, numCol: %lu, rAligned: %lu, rTileBase: %lu, "
+            "tileALen: %lu, tileATail: %lu, totalTiles: %lu, tilesPerCore: %lu, usedCoreNum: %u, "
+            "targetRowsPerCore: %lu",
+            numCore, numRow, numCol, rAligned, rTileBase, tileALen, tileATail, totalTiles, tilesPerCore, usedCoreNum,
+            targetRowsPerCore);
+    tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->SetTilingKey(MODE_TRANSPOSE);
+    context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
+}
+
 ge::graphStatus TilingTranspose(gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore,
                                 uint64_t ubSize, uint32_t curElementByte, uint64_t ubBlockSize, uint64_t vlfp32,
                                 float epsilon, float avgFactor)
@@ -224,9 +252,10 @@ ge::graphStatus TilingTranspose(gert::TilingContext* context, uint64_t numRow, u
     }
 
     // 每核约分配两个 FP32 VL 的 A 行。
+    // numRow/numCore/vlfp32 均为正，无需下界兜底。
     uint64_t targetRowsPerCore = vlfp32 * NUM_2;
     uint64_t usedCoreNum64 = CeilDiv(numRow, targetRowsPerCore);
-    usedCoreNum64 = std::max(1UL, std::min({usedCoreNum64, numRow, static_cast<uint64_t>(numCore)}));
+    usedCoreNum64 = std::min({usedCoreNum64, numRow, static_cast<uint64_t>(numCore)});
     uint32_t usedCoreNum = static_cast<uint32_t>(usedCoreNum64);
     uint64_t rowsPerCoreMax = CeilDiv(numRow, static_cast<uint64_t>(usedCoreNum));
     // R=一个 B16 block 时保留至少两个 tile 的流水机会。
@@ -243,27 +272,8 @@ ge::graphStatus TilingTranspose(gert::TilingContext* context, uint64_t numRow, u
     uint64_t tileATail = numRow - tileALen * (aOuter - 1);
     uint64_t tilesPerCore = CeilDiv(rowsPerCoreMax, tileALen);
 
-    AddRMSNormRegbaseTransTilingData tiling;
-    tiling.set_numRow(numRow);
-    tiling.set_numCol(numCol);
-    tiling.set_rAligned(rAligned);
-    tiling.set_rTileBase(rTileBase);
-    tiling.set_totalTiles(aOuter);
-    tiling.set_tilesPerCore(tilesPerCore);
-    tiling.set_tileALen(tileALen);
-    tiling.set_tileATail(tileATail);
-    tiling.set_epsilon(epsilon);
-    tiling.set_avgFactor(avgFactor);
-    context->SetBlockDim(usedCoreNum);
-    OP_LOGI(context,
-            "TransTiling numCore: %u, numRow: %lu, numCol: %lu, rAligned: %lu, rTileBase: %lu, "
-            "tileALen: %lu, tileATail: %lu, totalTiles: %lu, tilesPerCore: %lu, usedCoreNum: %u, "
-            "targetRowsPerCore: %lu",
-            numCore, numRow, numCol, rAligned, rTileBase, tileALen, tileATail, aOuter, tilesPerCore, usedCoreNum,
-            targetRowsPerCore);
-    tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
-    context->SetTilingKey(MODE_TRANSPOSE);
-    context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
+    SaveTransTilingData(context, numCore, usedCoreNum, targetRowsPerCore, numRow, numCol, rAligned, rTileBase, aOuter,
+                        tilesPerCore, tileALen, tileATail, epsilon, avgFactor);
     return ge::GRAPH_SUCCESS;
 }
 
