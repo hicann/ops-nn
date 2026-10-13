@@ -51,7 +51,7 @@
       <td>x_grad</td>
       <td>输出</td>
       <td>表示ReduceSum完成的输出tensor。</td>
-      <td>FLOAT、INT32</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
