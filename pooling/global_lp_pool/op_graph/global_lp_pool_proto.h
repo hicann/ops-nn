@@ -39,6 +39,10 @@ namespace ge {
  *
  * @par Third-party framework compatibility
  * Compatible with the ONNX operator GlobalLpPool.
+ *
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS DEPRECATED.
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
  */
 #ifndef OPS_PROTO_DEF_GLOBALLPPOOL
 #define OPS_PROTO_DEF_GLOBALLPPOOL
