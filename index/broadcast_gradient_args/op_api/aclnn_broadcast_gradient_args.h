@@ -23,15 +23,15 @@ extern "C" {
  * @domain aclnn_math
  *
  * 算子功能：在反向传播过程中，根据两个张量在正向传播时的原始形状，自动识别出它们因广播机制而扩展的维度，
- *           并输出需要在哪些维度上对梯度进行约简，以便将梯度从广播后的形状还原为每个原始张量的形状。
+ *           并输出需要在哪些维度上对梯度进行归约，以便将梯度从广播后的形状还原为每个原始张量的形状。
  *
  * @param [in] x1: npu device侧的aclTensor，数据类型支持INT32、INT64，shape必须为1维，
  *                 data是原始张量a的shape。支持非连续的Tensor，数据格式支持ND。
  * @param [in] x2: npu device侧的aclTensor，数据类型与x1一致，shape必须为1维，
  *                 data是原始张量b的shape。支持非连续的Tensor，数据格式支持ND。
- * @param [out] y1: npu device侧的aclTensor，表示x1对应的张量shape中需要广播的索引，
+ * @param [out] y1: npu device侧的aclTensor，表示x1对应的张量shape中需要归约的维度索引，
  *                 数据类型与x1一致，shape必须为1维。数据格式支持ND。
- * @param [out] y2: npu device侧的aclTensor，表示x2对应的张量shape中需要广播的索引，
+ * @param [out] y2: npu device侧的aclTensor，表示x2对应的张量shape中需要归约的维度索引，
  *                 数据类型与x1一致，shape必须为1维。数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。

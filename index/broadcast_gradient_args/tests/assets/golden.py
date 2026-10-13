@@ -113,7 +113,7 @@ def broadcast_gradient_args_golden(x1, x2, **kwargs):
     All the input Tensors are numpy.ndarray.
 
     算子功能：在反向传播过程中，根据两个张量在正向传播时的原始形状，自动识别出它们因广播机制
-    而扩展的维度，并输出需要在哪些维度上对梯度进行约简。
+    而扩展的维度，并输出需要在哪些维度上对梯度进行归约。
 
     Args:
         x1: np.ndarray, 原始张量a的shape，1维。
@@ -123,8 +123,8 @@ def broadcast_gradient_args_golden(x1, x2, **kwargs):
 
     Returns:
         tuple: (y1, y2)
-            y1: np.ndarray, x1对应的张量shape中需要广播的索引。
-            y2: np.ndarray, x2对应的张量shape中需要广播的索引。
+            y1: np.ndarray, x1对应的张量shape中需要归约的维度索引。
+            y2: np.ndarray, x2对应的张量shape中需要归约的维度索引。
     """
     return _tf_broadcast_gradient_args(x1, x2)
 
@@ -142,8 +142,8 @@ def aclnn_broadcast_gradient_args_golden(x1, x2, y1, y2, **kwargs):
     Args:
         x1: 输入张量，原始张量a的shape，1维。
         x2: 输入张量，原始张量b的shape，1维。
-        y1: 输出张量（用于确定 dtype/shape），x1对应的广播索引。
-        y2: 输出张量（用于确定 dtype/shape），x2对应的广播索引。
+        y1: 输出张量（用于确定 dtype/shape），x1对应的归约维度索引。
+        y2: 输出张量（用于确定 dtype/shape），x2对应的归约维度索引。
         kwargs: tensor_{dtypes, formats}, scalar_dtypes, short_soc_version, testcase_name
 
     Returns:
