@@ -154,8 +154,8 @@
 | [aclnnExpandIntoJaggedPermute](../../index/expand_into_jagged_permute/docs/aclnnExpandIntoJaggedPermute.md) | 将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况。 | 默认确定性实现 | - |
 | [aclnnEmbeddingRenorm](../../norm/renorm/docs/aclnnEmbeddingRenorm.md) | 根据给定的maxNorm和normType返回输入tensor在指定indices下的修正结果。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnErfinv&aclnnInplaceErfinv](../../activation/erfinv/docs/aclnnErfinv&aclnnInplaceErfinv.md) | erfinv是高斯误差函数erf的反函数。返回输入Tensor中每个元素对应在标准正态分布函数的分位数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnFakeQuantPerChannelAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerChannelAffineCachemask.md) | 对于输入数据self，使用scale和zero_point对输入self在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnFakeQuantPerTensorAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerTensorAffineCachemask.md) | 对输入self进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnFakeQuantPerChannelAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerChannelAffineCachemask.md) | 对于输入数据self，使用scale和zero_point对输入self在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | - |
+| [aclnnFakeQuantPerTensorAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerTensorAffineCachemask.md) | 对输入self进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | - |
 | [aclnnFastBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnFastBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播（高性能版本）。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | - |
 | [aclnnFastGelu](../../activation/fast_gelu/docs/aclnnFastGelu.md) | 快速高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFastGeluBackward](../../activation/fast_gelu_grad/docs/aclnnFastGeluBackward.md) | FastGelu的反向计算。 | 默认确定性实现 | 默认确定性实现 |
