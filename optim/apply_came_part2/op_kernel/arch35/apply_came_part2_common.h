@@ -12,7 +12,7 @@
 
 /*!
  * \file apply_came_part2_common.h
- * \brief
+ * \brief ApplyCamePart2 kernel 公共常量与对齐/整除工具函数
  */
 #ifndef _APPLY_CAME_PART2_COMMON_H_
 #define _APPLY_CAME_PART2_COMMON_H_
@@ -25,6 +25,7 @@ const int32_t CONFUSION_TRANSPOSE_ALIGHNED_NUM = 16;
 const int32_t CALC_SIZE = 256;
 const int32_t HALF_CALC_SIZE = CALC_SIZE / 2;
 const int32_t INT64_PER_BLOCK = 4;
+const int32_t GLOBAL_SHAPE_NUM = 2;
 const int32_t WORKSPACE_ALIGNED_SIZE = 512;
 const int32_t FLOAT_SIZE = 4;
 
@@ -45,12 +46,6 @@ __aicore__ inline T1 CeilDiv(T1 a, T2 b)
     }
 
     return (a + b - 1) / b;
-};
-
-template <typename T1, typename T2>
-__aicore__ inline T1 Max(T1 a, T2 b)
-{
-    return a > b ? a : b;
 };
 
 #endif // _APPLY_CAME_PART2_COMMON_H_

@@ -12,11 +12,10 @@
 
 /*!
  * \file apply_came_part2_infershape.cpp
- * \brief
+ * \brief ApplyCamePart2 InferShape 注册：grad rank 校验与 4 输出 shape 推导
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include <sstream>
 
 using namespace ge;
 using namespace gert;
@@ -36,23 +35,6 @@ static const size_t INDEX_OUT_SUM_SQUARE_U = 3;
 
 static const size_t MAX_DIM_NUM = 2;
 
-template <typename T>
-static std::string ConcatString(const T& arg)
-{
-    std::ostringstream oss;
-    oss << arg;
-    return oss.str();
-}
-
-template <typename T, typename... Ts>
-static std::string ConcatString(const T& arg, const Ts&... arg_left)
-{
-    std::ostringstream oss;
-    oss << arg;
-    oss << ConcatString(arg_left...);
-    return oss.str();
-}
-
 static ge::graphStatus CopyShapeInput2OutputWithIdxInApply(gert::InferShapeContext* context, int64_t input_idx,
                                                            int64_t output_idx)
 {
@@ -70,11 +52,9 @@ static ge::graphStatus Infershape4ApplyCamePart2(gert::InferShapeContext* contex
     const gert::Shape* gradShape = context->GetInputShape(INDEX_IN_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     size_t gradDimNum = gradShape->GetDimNum();
-    OP_CHECK_IF(
-        gradDimNum != MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "%s",
-                ConcatString("Infershape failed. dim num:", gradDimNum, "of grad must be", MAX_DIM_NUM, ".").c_str()),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(gradDimNum != MAX_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM("ApplyCamePart2", "grad", std::to_string(gradDimNum) + "D", "2D"),
+                return GRAPH_FAILED);
 
     OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_GRAD, INDEX_OUT_U) != GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "%s", "Infershape4ApplyCamePart2 failed!"), return GRAPH_FAILED);

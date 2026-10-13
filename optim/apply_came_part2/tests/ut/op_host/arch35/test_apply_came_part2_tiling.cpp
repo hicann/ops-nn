@@ -128,7 +128,7 @@ TEST_F(ApplyCamePart2TilingTest, Fp32_Standard)
     TilingInfo info;
     ASSERT_TRUE(RunOneCase({4, 8}, {4}, {8}, {4}, {8}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info));
     EXPECT_GE(info.blockNum, 1u);
-    EXPECT_NE(info.tilingKey, -1);
+    EXPECT_EQ(info.tilingKey, 0); // SCH_MODE_NORMAL
 }
 
 TEST_F(ApplyCamePart2TilingTest, Fp16_Standard)
@@ -157,6 +157,7 @@ TEST_F(ApplyCamePart2TilingTest, Fp32_TypicalNet_1024x1024)
     TilingInfo info;
     ASSERT_TRUE(RunOneCase({1024, 1024}, {1024}, {1024}, {1024}, {1024}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info));
     EXPECT_GE(info.blockNum, 1u);
+    EXPECT_EQ(info.tilingKey, 1); // SCH_MODE_TYPICAL
 }
 
 TEST_F(ApplyCamePart2TilingTest, Reject_GradRank1)
@@ -191,6 +192,7 @@ TEST_F(ApplyCamePart2TilingTest, EmptyDim_N0_ReturnsEmpty)
     TilingInfo info;
     ASSERT_TRUE(RunOneCase({0, 8}, {0}, {8}, {0}, {8}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info));
     EXPECT_GE(info.blockNum, 1u);
+    EXPECT_EQ(info.tilingKey, 2); // SCH_MODE_EMPTY
 }
 
 TEST_F(ApplyCamePart2TilingTest, EmptyDim_M0_ReturnsEmpty)
@@ -198,6 +200,7 @@ TEST_F(ApplyCamePart2TilingTest, EmptyDim_M0_ReturnsEmpty)
     TilingInfo info;
     ASSERT_TRUE(RunOneCase({4, 0}, {4}, {0}, {4}, {0}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info));
     EXPECT_GE(info.blockNum, 1u);
+    EXPECT_EQ(info.tilingKey, 2); // SCH_MODE_EMPTY
 }
 
 TEST_F(ApplyCamePart2TilingTest, Reject_R_Rank2)
@@ -235,6 +238,129 @@ TEST_F(ApplyCamePart2TilingTest, Reject_DtypeMismatch)
     optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
     gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo, CORE_NUM, UB_SIZE, TILING_DATA_SIZE);
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+// 构造可定制标量输入（sum_grad_rc/beta2/sum_r/global_shape）shape 与 dtype 的入参，其余输入取合法基准值
+static gert::TilingContextPara MakeScalarPara(const std::vector<int64_t>& sumGradRcShape,
+                                              const std::vector<int64_t>& beta2Shape,
+                                              const std::vector<int64_t>& sumRShape,
+                                              const std::vector<int64_t>& globalShapeShape, ge::DataType sumGradRcDtype,
+                                              ge::DataType beta2Dtype, ge::DataType sumRDtype,
+                                              ge::DataType globalShapeDtype,
+                                              optiling::ApplyCamePart2CompileInfo& compileInfo)
+{
+    gert::StorageShape gradSs = MakeStorageShape({4, 8});
+    gert::StorageShape rSs = MakeStorageShape({4});
+    gert::StorageShape cSs = MakeStorageShape({8});
+    gert::StorageShape sumGradRSs = MakeStorageShape({4});
+    gert::StorageShape sumGradCSs = MakeStorageShape({8});
+    gert::StorageShape sumGradRcSs = MakeStorageShape(sumGradRcShape);
+    gert::StorageShape beta2Ss = MakeStorageShape(beta2Shape);
+    gert::StorageShape sumRSs = MakeStorageShape(sumRShape);
+    gert::StorageShape globalShapeSs = MakeStorageShape(globalShapeShape);
+    std::vector<gert::TilingContextPara::TensorDescription> inputs = {
+        {gradSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},           // grad
+        {sumGradRSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},       // sum_grad_r
+        {sumGradCSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},       // sum_grad_c
+        {sumGradRcSs, sumGradRcDtype, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},    // sum_grad_rc
+        {rSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},              // r
+        {cSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},              // c
+        {beta2Ss, beta2Dtype, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},            // beta2
+        {sumRSs, sumRDtype, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},              // sum_r (optional)
+        {globalShapeSs, globalShapeDtype, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND} // global_shape (optional)
+    };
+    std::vector<gert::TilingContextPara::TensorDescription> outputs = {
+        {rSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},                  // r
+        {cSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},                  // c
+        {gradSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},               // u
+        {MakeStorageShape({1}), ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND} // sum_square_u
+    };
+    std::vector<gert::TilingContextPara::OpAttr> attrs = {};
+    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, &compileInfo, CORE_NUM, UB_SIZE, TILING_DATA_SIZE);
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_SumGradRc_LenNot1)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({3}, {1}, {1}, {2}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64, compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_Beta2_ShapeNot1)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {2}, {1}, {2}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64, compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_SumR_ShapeNot1)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {1}, {2}, {2}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64, compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_GlobalShape_LenNot2)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {1}, {1}, {3}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64, compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_Beta2DtypeNotFloat)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {1}, {1}, {2}, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT64,
+                               compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_SumRDtypeNotFloat)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {1}, {1}, {2}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT64,
+                               compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, Reject_GlobalShapeDtypeNotInt64)
+{
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    auto para = MakeScalarPara({1}, {1}, {1}, {2}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, compileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+TEST_F(ApplyCamePart2TilingTest, OptionalInputs_Absent_Success)
+{
+    gert::StorageShape gradSs = MakeStorageShape({4, 8});
+    gert::StorageShape rSs = MakeStorageShape({4});
+    gert::StorageShape cSs = MakeStorageShape({8});
+    gert::StorageShape sumGradRSs = MakeStorageShape({4});
+    gert::StorageShape sumGradCSs = MakeStorageShape({8});
+    gert::StorageShape scalarSs = MakeStorageShape({1});
+    // sum_r/global_shape 缺省：仅提供前 7 个输入描述，实例数第 8/9 位为 0
+    std::vector<gert::TilingContextPara::TensorDescription> inputs = {
+        {gradSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},     // grad
+        {sumGradRSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND}, // sum_grad_r
+        {sumGradCSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND}, // sum_grad_c
+        {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},   // sum_grad_rc
+        {rSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},        // r
+        {cSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},        // c
+        {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},   // beta2
+    };
+    std::vector<gert::TilingContextPara::TensorDescription> outputs = {
+        {rSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},     // r
+        {cSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},     // c
+        {gradSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND},  // u
+        {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND, false, nullptr, ge::FORMAT_ND} // sum_square_u
+    };
+    std::vector<gert::TilingContextPara::OpAttr> attrs = {};
+    optiling::ApplyCamePart2CompileInfo compileInfo{CORE_NUM, UB_SIZE};
+    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, {1, 1, 1, 1, 1, 1, 1, 0, 0}, {1, 1, 1, 1},
+                                 &compileInfo, CORE_NUM, UB_SIZE, TILING_DATA_SIZE);
+    TilingInfo info;
+    EXPECT_TRUE(ExecuteTiling(para, info));
+    EXPECT_GE(info.blockNum, 1u);
 }
 
 } // namespace ApplyCamePart2TilingUT

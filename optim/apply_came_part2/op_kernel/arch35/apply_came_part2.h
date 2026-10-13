@@ -12,15 +12,13 @@
 
 /*!
  * \file apply_came_part2.h
- * \brief
+ * \brief ApplyCamePart2 fp32 NORMAL 路径 kernel class（行/列 EMA 更新与 r×c 广播乘）
  */
 #ifndef _APPLY_CAME_PART2_H_
 #define _APPLY_CAME_PART2_H_
 
 #include "kernel_operator.h"
 #include "apply_came_part2_common.h"
-
-using namespace AscendC;
 
 template <typename T>
 class ApplyCamePart2 {
@@ -59,18 +57,20 @@ private:
     __aicore__ inline void ComputeU(int64_t curRNumInLoop, int64_t curCNumInLoop);
     __aicore__ inline void CopyInNotAlignedUc(int loopIdx, int64_t dataCount);
     __aicore__ inline void CopyInNotAlignedUr(int loopIdx, int64_t dataCount);
-    __aicore__ inline void ReduceSumU(LocalTensor<T>& src, int64_t dataCount, int64_t curRNumInLoop,
+    __aicore__ inline void ReduceSumU(AscendC::LocalTensor<T>& src, int64_t dataCount, int64_t curRNumInLoop,
                                       int64_t curCNumInLoop);
     __aicore__ inline void CalcU(int rLoopIdx, int cLoopIdx, int64_t curRNumInLoop, int64_t curCNumInLoop);
     __aicore__ inline void GetConfusionTransposeTiling(int64_t numR, int64_t numC, const uint32_t stackBufferSize,
                                                        const uint32_t typeSize, ConfusionTransposeTiling& tiling);
-    __aicore__ inline void BroadcastR(LocalTensor<T>& dst, LocalTensor<T>& src, int64_t numR, int64_t numC);
-    __aicore__ inline void TransposeR(LocalTensor<T>& dst, LocalTensor<T>& src, int64_t numR, int64_t numC);
-    __aicore__ inline void MulRC(LocalTensor<T>& dst, LocalTensor<T>& r, LocalTensor<T>& c, int64_t numR, int64_t numC);
-    __aicore__ inline void CalcRcCycleMode(LocalTensor<T>& dst, LocalTensor<T>& src, LocalTensor<T>& srcScalar,
-                                           int64_t curRNumInLoop, int64_t curCNumInLoop);
-    __aicore__ inline int64_t GetMaxCoreNumToUse();
-    __aicore__ inline void CopyInNotAlignedR(int loopIdx, int64_t dataCount);
+    __aicore__ inline void BroadcastR(AscendC::LocalTensor<T>& dst, AscendC::LocalTensor<T>& src, int64_t numR,
+                                      int64_t numC);
+    __aicore__ inline void TransposeR(AscendC::LocalTensor<T>& dst, AscendC::LocalTensor<T>& src, int64_t numR,
+                                      int64_t numC);
+    __aicore__ inline void MulRC(AscendC::LocalTensor<T>& dst, AscendC::LocalTensor<T>& r, AscendC::LocalTensor<T>& c,
+                                 int64_t numR, int64_t numC);
+    __aicore__ inline void CalcRcCycleMode(AscendC::LocalTensor<T>& dst, AscendC::LocalTensor<T>& src,
+                                           AscendC::LocalTensor<T>& srcScalar, int64_t curRNumInLoop,
+                                           int64_t curCNumInLoop);
     template <typename T1, typename T2>
     __aicore__ inline T1 CeilDiv(T1 a, T2 b)
     {
@@ -81,59 +81,48 @@ private:
         return (a + b - 1) / b;
     };
 
-    template <typename T1, typename T2>
-    __aicore__ inline T1 Max(T1 a, T2 b)
-    {
-        return a > b ? a : b;
-    };
-
     __aicore__ inline void CalcWorkLocal();
     __aicore__ inline void InitTque();
 
 private:
-    TPipe pipe_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueR_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueSumGradR_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueC_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueSumGradC_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueGrad_;
+    AscendC::TPipe pipe_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueR_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueSumGradR_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueC_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueSumGradC_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueGrad_;
 
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueU_;          // shape: (n, m)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueSumSquareU_; // tensor
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueR_;          // shape: (n)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueC_;          // shape: (m)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueSumR_;       // scalar
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueU_;          // shape: (n, m)
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueSumSquareU_; // tensor
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueR_;          // shape: (n)
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueC_;          // shape: (m)
 
     // each tbuf may be used for multiple purposes
-    TBuf<QuePosition::VECCALC> ub1Buf_; // 1. rMatrix after broadcast from r
-    TBuf<QuePosition::VECCALC> ub2Buf_; // 1. rMatrix after transpose; 2. r * c
-    TBuf<QuePosition::VECCALC> ub3Buf_; // grad
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub1Buf_; // 1. rMatrix after broadcast from r
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub2Buf_; // 1. rMatrix after transpose; 2. r * c
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub3Buf_; // grad
 
-    TBuf<QuePosition::VECCALC> scalarBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> scalarBuf_;
 
-    GlobalTensor<T> rInGm_;
-    GlobalTensor<T> sumGradRInGm_;
-    GlobalTensor<T> cInGm_;
-    GlobalTensor<T> sumGradCInGm_;
-    GlobalTensor<T> gradGm_;
-    GlobalTensor<T> rOutGm_;
-    GlobalTensor<T> cOutGm_;
-    GlobalTensor<T> sumSquareUGm_;
-    GlobalTensor<T> uGm_;
+    AscendC::GlobalTensor<T> rInGm_;
+    AscendC::GlobalTensor<T> sumGradRInGm_;
+    AscendC::GlobalTensor<T> cInGm_;
+    AscendC::GlobalTensor<T> sumGradCInGm_;
+    AscendC::GlobalTensor<T> gradGm_;
+    AscendC::GlobalTensor<T> rOutGm_;
+    AscendC::GlobalTensor<T> cOutGm_;
+    AscendC::GlobalTensor<T> sumSquareUGm_;
+    AscendC::GlobalTensor<T> uGm_;
 
-    GlobalTensor<T> sumGradRcGm_;
-    GlobalTensor<T> beta2Gm_;
-    GlobalTensor<T> sumRGm_;
-    GlobalTensor<int64_t> globalShapeGm_;
-
-    // for SyncAll
-    GlobalTensor<int32_t> syncGlobal_;
-    TQue<QuePosition::VECIN, 1> workQueForSyncAll_;
+    AscendC::GlobalTensor<T> sumGradRcGm_;
+    AscendC::GlobalTensor<T> beta2Gm_;
+    AscendC::GlobalTensor<T> sumRGm_;
+    AscendC::GlobalTensor<int64_t> globalShapeGm_;
 
     // for ReduceSum
-    TQue<QuePosition::VECOUT, BUFFER_NUM> reduceSumWorkQueue_;
-    GlobalTensor<T> sumRWorkspace_;
-    GlobalTensor<float> sumSquareUWorkspace_;
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> reduceSumWorkQueue_;
+    AscendC::GlobalTensor<T> sumRWorkspace_;
+    AscendC::GlobalTensor<float> sumSquareUWorkspace_;
     int64_t workLocalNeedSize_;
 
     bool isInputSumR_; // is sum_r in input null?
@@ -143,8 +132,8 @@ private:
     float sumGradRc_;
     float beta2_;
     float sumR_;
-    float M_;
-    float N_;
+    float m_;
+    float n_;
 
     float rcCoefficient_;
     int64_t blockIdx_;
@@ -162,6 +151,6 @@ private:
 
     GM_ADDR workspace_;
 
-    LocalTensor<T> rRcLocalTensor_;
+    AscendC::LocalTensor<T> rRcLocalTensor_;
 };
 #endif // _APPLY_CAME_PART2_H_

@@ -12,7 +12,7 @@
 
 /*!
  * \file apply_came_part2_post.h
- * \brief
+ * \brief ApplyCamePart2 Post kernel：sum_square_u 跨核归约
  */
 #ifndef APPLY_CAME_PART2_POST
 #define APPLY_CAME_PART2_POST
@@ -20,8 +20,6 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "apply_came_part2_common.h"
-
-using namespace AscendC;
 
 template <typename T>
 class ApplyCamePart2Post {
@@ -34,17 +32,13 @@ private:
     __aicore__ inline void ParseTilingData(const ApplyCamePart2TilingData* tilingData);
 
 private:
-    TPipe pipe;
-    TBuf<QuePosition::VECCALC> inputBuf_;
-    TBuf<QuePosition::VECCALC> tmpBuf_;
+    AscendC::TPipe pipe;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> inputBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpBuf_;
 
-    GlobalTensor<float> gmSumSquareU_;
+    AscendC::GlobalTensor<float> gmSumSquareU_;
 
-    GlobalTensor<float> workspaceInnerSumSquareU_;
-
-    // multi-core sync
-    GlobalTensor<int32_t> syncGlobal_;
-    GM_ADDR workspaceAddr_;
+    AscendC::GlobalTensor<float> workspaceInnerSumSquareU_;
 
     // tiling params
     int64_t cLoop_{0};
@@ -90,74 +84,74 @@ __aicore__ inline void ApplyCamePart2Post<T>::Init(GM_ADDR sum_square_u, GM_ADDR
     pipe.InitBuffer(inputBuf_, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 * sizeof(float));
     pipe.InitBuffer(tmpBuf_, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 * sizeof(float));
 
-    if (GetBlockIdx() == 0) {
-        InitOutput<float>(gmSumSquareU_, 1, (float)0);
+    if (AscendC::GetBlockIdx() == 0) {
+        AscendC::InitOutput<float>(gmSumSquareU_, 1, (float)0);
     }
-    SyncAll();
+    AscendC::SyncAll();
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart2Post<T>::Process()
 {
-    if (GetBlockIdx() != 0) {
+    if (AscendC::GetBlockIdx() != 0) {
         return;
     }
-    LocalTensor<float> mComTmpUb = tmpBuf_.Get<float>(ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-    LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
+    AscendC::LocalTensor<float> mComTmpUb = tmpBuf_.Get<float>(ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
+    AscendC::LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
     uint64_t ele_num = (cLoop_ + 1) * (rLoop_ + 1) * usedCoreNum_;
     uint64_t loop_time = (ele_num + 128 * ONCE_HANDLE_NUM64 - 1) / (128 * ONCE_HANDLE_NUM64);
     uint64_t pre_ele_num = (ele_num + loop_time - 1) / loop_time;
     uint64_t last_ele_num = ele_num - pre_ele_num * (loop_time - 1);
 
     if (loop_time == 1) {
-        DataCopyPad(inputLocal, workspaceInnerSumSquareU_, {1, (uint16_t)(last_ele_num * FLOAT_SIZE), 0, 0},
-                    {false, 0, 0, 0});
+        AscendC::DataCopyPad(inputLocal, workspaceInnerSumSquareU_, {1, (uint16_t)(last_ele_num * FLOAT_SIZE), 0, 0},
+                             {false, 0, 0, 0});
 
-        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMte2V);
-        WaitFlag<HardEvent::MTE2_V>(eventMte2V);
-        ReduceSum(inputLocal, inputLocal, mComTmpUb, last_ele_num);
+        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+        AscendC::ReduceSum(inputLocal, inputLocal, mComTmpUb, last_ele_num);
 
-        event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        WaitFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
+        event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+        AscendC::DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
     } else {
         for (int64_t i = 0; i < loop_time - 1; i++) {
-            DataCopyPad(inputLocal, workspaceInnerSumSquareU_[i * pre_ele_num],
-                        {1, (uint16_t)(pre_ele_num * FLOAT_SIZE), 0, 0}, {false, 0, 0, 0});
+            AscendC::DataCopyPad(inputLocal, workspaceInnerSumSquareU_[i * pre_ele_num],
+                                 {1, (uint16_t)(pre_ele_num * FLOAT_SIZE), 0, 0}, {false, 0, 0, 0});
 
-            event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-            SetFlag<HardEvent::MTE2_V>(eventMte2V);
-            WaitFlag<HardEvent::MTE2_V>(eventMte2V);
-            ReduceSum(inputLocal, inputLocal, mComTmpUb, pre_ele_num);
+            event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+            AscendC::ReduceSum(inputLocal, inputLocal, mComTmpUb, pre_ele_num);
 
-            event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-            SetFlag<HardEvent::V_MTE3>(eventV2Mte3);
-            WaitFlag<HardEvent::V_MTE3>(eventV2Mte3);
-            SetAtomicAdd<float>();
-            DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
-            SetAtomicNone();
+            event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+            AscendC::SetAtomicAdd<float>();
+            AscendC::DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
+            AscendC::SetAtomicNone();
 
-            event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-            SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-            WaitFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
+            event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventMte3toMte2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventMte3toMte2);
         }
 
-        DataCopyPad(inputLocal, workspaceInnerSumSquareU_[(loop_time - 1) * pre_ele_num],
-                    {1, (uint16_t)(last_ele_num * FLOAT_SIZE), 0, 0}, {false, 0, 0, 0});
+        AscendC::DataCopyPad(inputLocal, workspaceInnerSumSquareU_[(loop_time - 1) * pre_ele_num],
+                             {1, (uint16_t)(last_ele_num * FLOAT_SIZE), 0, 0}, {false, 0, 0, 0});
 
-        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMte2V);
-        WaitFlag<HardEvent::MTE2_V>(eventMte2V);
-        ReduceSum(inputLocal, inputLocal, mComTmpUb, last_ele_num);
+        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventMte2V);
+        AscendC::ReduceSum(inputLocal, inputLocal, mComTmpUb, last_ele_num);
 
-        event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        WaitFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        SetAtomicAdd<float>();
-        DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
-        SetAtomicNone();
+        event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventV2Mte3);
+        AscendC::SetAtomicAdd<float>();
+        AscendC::DataCopyPad(gmSumSquareU_, inputLocal, {1, (uint16_t)(FLOAT_SIZE), 0, 0});
+        AscendC::SetAtomicNone();
     }
 }
 

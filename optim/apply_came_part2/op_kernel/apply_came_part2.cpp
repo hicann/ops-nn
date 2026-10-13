@@ -12,9 +12,11 @@
 
 /*!
  * \file apply_came_part2.cpp
- * \brief
+ * \brief ApplyCamePart2 kernel 入口：SCH_MODE 模板分发 + Pre/主 kernel/Post 三阶段编排（fp32 类实现）
  */
+#include <type_traits>
 #include "arch35/apply_came_part2.h"
+#include "arch35/apply_came_part2_tiling_key.h"
 #include "arch35/apply_came_part2_float16.h"
 #include "arch35/apply_came_part2_typical_net.h"
 #include "arch35/apply_came_part2_float16_typical_net.h"
@@ -23,10 +25,11 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void apply_came_part2(GM_ADDR grad, GM_ADDR sumGradR, GM_ADDR sumGradC,
-                                                       GM_ADDR sumGradRc, GM_ADDR rIn, GM_ADDR cIn, GM_ADDR beta2,
-                                                       GM_ADDR sumR, GM_ADDR globalShape, GM_ADDR rOut, GM_ADDR cOut,
-                                                       GM_ADDR u, GM_ADDR sumSquareU, GM_ADDR workspace, GM_ADDR tiling)
+template <int SCH_MODE>
+__global__ __aicore__ void apply_came_part2(GM_ADDR grad, GM_ADDR sumGradR, GM_ADDR sumGradC, GM_ADDR sumGradRc,
+                                            GM_ADDR rIn, GM_ADDR cIn, GM_ADDR beta2, GM_ADDR sumR, GM_ADDR globalShape,
+                                            GM_ADDR rOut, GM_ADDR cOut, GM_ADDR u, GM_ADDR sumSquareU,
+                                            GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -38,88 +41,62 @@ extern "C" __global__ __aicore__ void apply_came_part2(GM_ADDR grad, GM_ADDR sum
 
     GET_TILING_DATA(tilingData, tiling);
 
-    if (TILING_KEY_IS(101)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<float> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
-        }
-        ApplyCamePart2<float> applyCamePart2;
-        applyCamePart2.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u,
-                            sumSquareU, userWS, &tilingData);
-        applyCamePart2.Process();
+    using T = DTYPE_R;
+
+    if constexpr (SCH_MODE == SCH_MODE_EMPTY) {
+        // 空 Tensor（n==0 或 m==0）：u 无元素、r/c 一侧为空，仅置 sum_square_u 为 0。
+        // 极简特化分支：以最小 TPipe/TBuf 布局写出标量（对齐 pre/post 的标量输出写法），
+        // 不使用 GlobalTensor::SetValue（API 黑名单接口）。
+        GlobalTensor<float> gmSumSquareU;
+        gmSumSquareU.SetGlobalBuffer((__gm__ float*)sumSquareU);
+        TPipe pipe;
+        TBuf<QuePosition::VECCALC> tmpBuf;
+        pipe.InitBuffer(tmpBuf, ONE_BLK_SIZE);
+        LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
+        tmpLocal.SetValue(0, (float)0);
+        event_t eventVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventVToMte3);
+        WaitFlag<HardEvent::V_MTE3>(eventVToMte3);
+        DataCopyPad(gmSumSquareU, tmpLocal, {1, (uint16_t)sizeof(float), 0, 0});
+        DataCacheCleanAndInvalid<float, AscendC::CacheLine::SINGLE_CACHE_LINE>(gmSumSquareU);
+        return;
     }
 
-    if (TILING_KEY_IS(102)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<half> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
-        }
-        ApplyCamePart2Float16<half> op;
-        op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
-                userWS, &tilingData);
-        op.Process();
+    if (sumR == nullptr) {
+        ApplyCamePart2Pre<T> applyCamePart2Pre;
+        applyCamePart2Pre.Init(rIn, userWS, &tilingData);
+        applyCamePart2Pre.Process();
     }
 
-    if (TILING_KEY_IS(103)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<bfloat16_t> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
+    if constexpr (SCH_MODE == SCH_MODE_NORMAL) {
+        if constexpr (std::is_same_v<T, float>) {
+            ApplyCamePart2<T> op;
+            op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
+                    userWS, &tilingData);
+            op.Process();
+        } else {
+            ApplyCamePart2Float16<T> op;
+            op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
+                    userWS, &tilingData);
+            op.Process();
         }
-        ApplyCamePart2Float16<bfloat16_t> op;
-        op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
-                userWS, &tilingData);
-        op.Process();
+    } else {
+        if constexpr (std::is_same_v<T, float>) {
+            ApplyCamePart2Typical<T> op;
+            op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
+                    userWS, &tilingData);
+            op.Process();
+        } else {
+            ApplyCamePart2Float16Typical<T> op;
+            op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
+                    userWS, &tilingData);
+            op.Process();
+        }
     }
 
-    if (TILING_KEY_IS(201)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<float> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
-        }
-        ApplyCamePart2Typical<float> op;
-        op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
-                userWS, &tilingData);
-        op.Process();
-    }
-
-    if (TILING_KEY_IS(202)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<half> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
-        }
-        ApplyCamePart2Float16Typical<half> op;
-        op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
-                userWS, &tilingData);
-        op.Process();
-    }
-
-    if (TILING_KEY_IS(203)) {
-        if (sumR == nullptr) {
-            ApplyCamePart2Pre<bfloat16_t> applyCamePart2Pre;
-            applyCamePart2Pre.Init(rIn, userWS, &tilingData);
-            applyCamePart2Pre.Process();
-        }
-        ApplyCamePart2Float16Typical<bfloat16_t> op;
-        op.Init(grad, sumGradR, sumGradC, sumGradRc, rIn, cIn, beta2, sumR, globalShape, rOut, cOut, u, sumSquareU,
-                userWS, &tilingData);
-        op.Process();
-    }
     ApplyCamePart2Post<float> opPost;
     opPost.Init(sumSquareU, userWS, &tilingData);
     opPost.Process();
-}
-
-template <typename T>
-__aicore__ inline int64_t ApplyCamePart2<T>::GetMaxCoreNumToUse()
-{
-    int64_t tmpMax = (tilingData_.rCoreNumToUse > tilingData_.cCoreNumToUse) ? tilingData_.rCoreNumToUse :
-                                                                               tilingData_.cCoreNumToUse;
-    return (tmpMax > tilingData_.rRcCoreNumToUse) ? tmpMax : tilingData_.rRcCoreNumToUse;
 }
 
 template <typename T>
@@ -133,7 +110,6 @@ __aicore__ inline void ApplyCamePart2<T>::Init(GM_ADDR grad, GM_ADDR sumGradR, G
     // get tiling data
     CopyTilingData(tilingData);
 
-    int i = 0;
     sumUOffset_ = 0;
     workspace_ = workspace;
     isInputSumR_ = (sumR != nullptr);
@@ -197,7 +173,6 @@ __aicore__ inline void ApplyCamePart2<T>::InitTque()
     pipe_.InitBuffer(inQueSumGradC_, BUFFER_NUM, cBufferLength * sizeof(T));
     pipe_.InitBuffer(outQueR_, BUFFER_NUM, rBufferLength * sizeof(T));
     pipe_.InitBuffer(outQueC_, BUFFER_NUM, cBufferLength * sizeof(T));
-    pipe_.InitBuffer(outQueSumR_, BUFFER_NUM, ONE_BLK_SIZE);
 
     CalcWorkLocal();
     pipe_.InitBuffer(reduceSumWorkQueue_, 1, workLocalNeedSize_ * sizeof(T));
@@ -206,7 +181,6 @@ __aicore__ inline void ApplyCamePart2<T>::InitTque()
 template <typename T>
 __aicore__ inline void ApplyCamePart2<T>::CalcWorkLocal()
 {
-    // can be moved to tiling
     int64_t elementsPerBlock = BLOCK_SIZE / sizeof(T);
     int64_t elementsPerRepeat = CALC_SIZE / sizeof(T);
     int64_t handleNum = tilingData_.rRcNumPerLoop * tilingData_.cRcNumPerLoop;
@@ -277,13 +251,16 @@ __aicore__ inline void ApplyCamePart2<T>::CopyInScalar()
     // copy global_shape
     if (isInputGlobalShape) {
         LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
-        DataCopy(int64Local, globalShapeGm_, INT64_PER_BLOCK);
+        DataCopyPad(int64Local, globalShapeGm_, {1, (uint32_t)(GLOBAL_SHAPE_NUM * sizeof(int64_t)), 0, 0, 0},
+                    {false, 0, 0, 0});
+        int64Local.SetValue(2, 0);
+        int64Local.SetValue(3, 0);
         PipeBarrier<PIPE_ALL>();
         LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
         Cast(floatLocal, int64Local, RoundMode::CAST_ROUND, INT64_PER_BLOCK);
         PipeBarrier<PIPE_ALL>();
-        N_ = floatLocal.GetValue(0);
-        M_ = floatLocal.GetValue(1);
+        n_ = floatLocal.GetValue(0);
+        m_ = floatLocal.GetValue(1);
     } else {
         LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
         int64Local.SetValue(0, tilingData_.n);
@@ -292,8 +269,8 @@ __aicore__ inline void ApplyCamePart2<T>::CopyInScalar()
         LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
         Cast(floatLocal, int64Local, RoundMode::CAST_ROUND, INT64_PER_BLOCK);
         PipeBarrier<PIPE_ALL>();
-        N_ = floatLocal.GetValue(0);
-        M_ = floatLocal.GetValue(1);
+        n_ = floatLocal.GetValue(0);
+        m_ = floatLocal.GetValue(1);
     }
     // copy sum_r
     if (isInputSumR_) {
@@ -418,7 +395,7 @@ __aicore__ inline void ApplyCamePart2<T>::ComputeR(int64_t dataCount)
     LocalTensor<T> rOutLocal = outQueR_.AllocTensor<T>();
 
     Muls(rOutLocal, rLocal, beta2_, dataCount);
-    float scalar = (1 - beta2_) / M_;
+    float scalar = (1 - beta2_) / m_;
     PipeBarrier<PIPE_V>();
     Axpy(rOutLocal, sumGradRLocal, scalar, dataCount);
 
@@ -527,7 +504,7 @@ __aicore__ inline void ApplyCamePart2<T>::ComputeC(int64_t dataCount)
     LocalTensor<T> cOutLocal = outQueC_.AllocTensor<T>();
 
     Muls(cOutLocal, cLocal, beta2_, dataCount);
-    float scalar = (1 - beta2_) / N_;
+    float scalar = (1 - beta2_) / n_;
     PipeBarrier<PIPE_V>();
     Axpy(cOutLocal, sumGradCLocal, scalar, dataCount);
 
@@ -665,7 +642,7 @@ __aicore__ inline void ApplyCamePart2<T>::ProcessU()
     }
 
     // calc denominator, not in cycle
-    T denominator = beta2_ * sumR_ / N_ + (1 - beta2_) * sumGradRc_ / (M_ * N_);
+    T denominator = beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_);
     rcCoefficient_ = 1 / denominator;
 
     rRcBlockOffset_ = blockIdx_ * tilingData_.rRcNumPerCore;
@@ -875,6 +852,8 @@ __aicore__ inline void ApplyCamePart2<T>::CalcRcCycleMode(LocalTensor<T>& dst, L
     WaitFlag<HardEvent::MTE2_S>(eventId);
 
     uint32_t dstOffset = 0;
+    // 逐行 Muls 需 r 标量（srcScalar.GetValue）：行数受 tiling 限制（≤ rRcNumPerLoop，有界）；
+    // 仅非 32B/128B 对齐尾块进入，向量化需 Broadcast/Transpose 矩阵预展开（性能豁免）
     for (int rLoopIdx = 0; rLoopIdx < curRNumInLoop; ++rLoopIdx) {
         dstOffset = rLoopIdx * curCNumInLoop;
         Muls(dst[dstOffset], src, srcScalar.GetValue(rLoopIdx), curCNumInLoop); // curCNumInLoop<(256/typeSize) * 255
@@ -939,12 +918,20 @@ __aicore__ inline void ApplyCamePart2<T>::ReduceSumU(LocalTensor<T>& src, int64_
     LocalTensor<T> sumSquareUOutLocal = outQueSumSquareU_.AllocTensor<T>();
     LocalTensor<T> workLocal = reduceSumWorkQueue_.AllocTensor<T>();
     int64_t alignedCNum = NUM_PER_BLOCK * CeilDiv(curCNumInLoop, NUM_PER_BLOCK);
-    T sum = 0;
-    for (int i = 0; i < curRNumInLoop; ++i) {
-        ReduceSum(sumSquareUOutLocal, src[i * alignedCNum], workLocal, curCNumInLoop);
-        sum += sumSquareUOutLocal.GetValue(0);
+    if (curCNumInLoop == alignedCNum) {
+        // 对齐路径：整块矩阵连续，单次 ReduceSum 合并行内 partial 归约，消除行循环内的 GetValue 标量读。
+        // workLocal 按 handleNum 整块重复数扩容（CalcWorkLocal），repeatTimes ≤ workLocalNeedSize_，容量安全
+        ReduceSum(sumSquareUOutLocal, src, workLocal, dataCount);
+    } else {
+        // 非对齐尾块：行间存在补齐填充须逐行归约；行数受 tiling 限制（≤ rRcNumPerLoop，有界），
+        // 行内 ReduceSum+GetValue 标量累加为有界开销（性能豁免）
+        T sum = 0;
+        for (int i = 0; i < curRNumInLoop; ++i) {
+            ReduceSum(sumSquareUOutLocal, src[i * alignedCNum], workLocal, curCNumInLoop);
+            sum += sumSquareUOutLocal.GetValue(0);
+        }
+        sumSquareUOutLocal.SetValue(0, sum);
     }
-    sumSquareUOutLocal.SetValue(0, sum);
     outQueSumSquareU_.EnQue<T>(sumSquareUOutLocal);
     reduceSumWorkQueue_.FreeTensor(workLocal);
 }

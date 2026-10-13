@@ -12,15 +12,13 @@
 
 /*!
  * \file apply_came_part2_pre.h
- * \brief
+ * \brief ApplyCamePart2 Pre kernel：sum_r 预计算（sumR==nullptr 时触发）
  */
 
 #ifndef ASCENDC_APPLY_CAME_PART2_PRE_H
 #define ASCENDC_APPLY_CAME_PART2_PRE_H
 
 #include "kernel_operator.h"
-
-using namespace AscendC;
 
 template <typename T>
 class ApplyCamePart2Pre {
@@ -34,21 +32,28 @@ private:
     __aicore__ inline void ComputSumR(uint64_t gmOffsets, uint64_t rNum, bool needAtomic);
 
 private:
-    TPipe pipe_;
-    TQue<QuePosition::VECIN, 1> rInQue_;
-    TBuf<QuePosition::VECCALC> castRInBuf_;
-    TBuf<QuePosition::VECCALC> tmpBuf_;
+    AscendC::TPipe pipe_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1> rInQue_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castRInBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpBuf_;
 
-    GlobalTensor<float> sumRWorkspace_;
-    GlobalTensor<T> rInGm_;
+    AscendC::GlobalTensor<float> sumRWorkspace_;
+    AscendC::GlobalTensor<T> rInGm_;
 
     int64_t nShape_ = 0;
     int64_t totalCoreNum_ = 0;
+    uint32_t ubSize_ = 0;
     uint32_t MAX_ONCE_NUM = 0;
     uint32_t CAST_MAX_NUM = 0;
 
     static constexpr bool FLOAT16_SCENE = (sizeof(T) == sizeof(half));
     static constexpr int32_t TMPBUF_MAX_NUM = 2048;
+
+    // UB 单次处理预算（字节）：fp32 路径 128KB；fp16 路径 r 输入 56KB（fp32 cast 中间与 r 输入
+    // 元素数 1:1，见 Init 中 CAST_MAX_NUM = MAX_ONCE_NUM）。按 256KB 档 UB 容量配比推导，
+    // 为 Pre kernel 的最大单次搬运量上限，实际分配时与运行时 ubSize 钳制（见 Init）。
+    static constexpr uint32_t PRE_UB_BUDGET_FP32_BYTES = 128 * 1024;
+    static constexpr uint32_t PRE_UB_BUDGET_FP16_BYTES = 56 * 1024;
 };
 
 template <typename T>
@@ -60,12 +65,23 @@ __aicore__ inline void ApplyCamePart2Pre<T>::Init(GM_ADDR rIn, GM_ADDR userWs,
     rInGm_.SetGlobalBuffer((__gm__ T*)rIn);
 
     // init buffer
-    MAX_ONCE_NUM = 128 * 1024 / sizeof(T);
+    // PERF-2: 固定预算（256KB 档 UB 容量配比推导）与运行时 ubSize 联动钳制，
+    // 实际单次处理量 = min(固定上限, ubSize 扣除 tmpBuf/中间 cast 保留后的可用量)，
+    // 避免更小 UB 平台固定缓冲越界。fp16 场景 r 输入与 fp32 cast 中间共享一次迭代预算。
+    const uint32_t reservedBytes = TMPBUF_MAX_NUM * sizeof(float);
+    const uint32_t availableUb = (ubSize_ > reservedBytes) ? (ubSize_ - reservedBytes) : 0;
+    uint32_t budgetNum = PRE_UB_BUDGET_FP32_BYTES / sizeof(T);
+    uint32_t ubNum = availableUb / sizeof(T);
     if constexpr (FLOAT16_SCENE) {
-        MAX_ONCE_NUM = 56 * 1024 / sizeof(T);
-        CAST_MAX_NUM = 112 * 1024 / sizeof(float);
+        budgetNum = PRE_UB_BUDGET_FP16_BYTES / sizeof(T);
+        ubNum = availableUb / (sizeof(T) + sizeof(float));
+    }
+    MAX_ONCE_NUM = (budgetNum < ubNum) ? budgetNum : ubNum;
+    if constexpr (FLOAT16_SCENE) {
+        CAST_MAX_NUM = MAX_ONCE_NUM;
         pipe_.InitBuffer(castRInBuf_, CAST_MAX_NUM * sizeof(float));
     }
+    MAX_ONCE_NUM = (MAX_ONCE_NUM > 0) ? MAX_ONCE_NUM : 1;
 
     pipe_.InitBuffer(rInQue_, 1, MAX_ONCE_NUM * sizeof(T));
     pipe_.InitBuffer(tmpBuf_, TMPBUF_MAX_NUM * sizeof(float));
@@ -78,16 +94,17 @@ __aicore__ inline void ApplyCamePart2Pre<T>::ParseTilingData(const ApplyCamePart
 {
     nShape_ = tilingData->n;
     totalCoreNum_ = tilingData->totalCoreNum;
+    ubSize_ = static_cast<uint32_t>(tilingData->ubSize);
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart2Pre<T>::Process()
 {
-    if (g_coreType == AIC) {
+    if (g_coreType == AscendC::AIC) {
         return;
     }
-    if (GetBlockIdx() == 0) {
-        InitOutput<float>(sumRWorkspace_, 1, (float)0);
+    if (AscendC::GetBlockIdx() == 0) {
+        AscendC::InitOutput<float>(sumRWorkspace_, 1, (float)0);
         uint64_t loop_time = (nShape_ + MAX_ONCE_NUM - 1) / MAX_ONCE_NUM;
         uint64_t pre_ele_num = (nShape_ + loop_time - 1) / loop_time;
         uint64_t last_ele_num = nShape_ - pre_ele_num * (loop_time - 1);
@@ -104,40 +121,40 @@ __aicore__ inline void ApplyCamePart2Pre<T>::Process()
         }
     }
 
-    SyncAll();
+    AscendC::SyncAll();
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart2Pre<T>::ComputSumR(uint64_t gmOffsets, uint64_t rNum, bool needAtomic)
 {
-    LocalTensor<T> rcInUb = rInQue_.AllocTensor<T>();
-    DataCopyPad(rcInUb, rInGm_[gmOffsets], {1, (uint32_t)(rNum * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+    AscendC::LocalTensor<T> rcInUb = rInQue_.AllocTensor<T>();
+    AscendC::DataCopyPad(rcInUb, rInGm_[gmOffsets], {1, (uint32_t)(rNum * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
     rInQue_.EnQue(rcInUb);
     rInQue_.DeQue<T>();
 
-    LocalTensor<float> workLocal = tmpBuf_.Get<float>();
-    LocalTensor<float> rInUbFp32;
+    AscendC::LocalTensor<float> workLocal = tmpBuf_.Get<float>();
+    AscendC::LocalTensor<float> rInUbFp32;
     if constexpr (FLOAT16_SCENE) {
-        LocalTensor<float> inputCast = castRInBuf_.Get<float>();
-        Cast(inputCast, rcInUb, RoundMode::CAST_NONE, rNum);
-        PipeBarrier<PIPE_V>();
+        AscendC::LocalTensor<float> inputCast = castRInBuf_.Get<float>();
+        AscendC::Cast(inputCast, rcInUb, AscendC::RoundMode::CAST_NONE, rNum);
+        AscendC::PipeBarrier<PIPE_V>();
         rInUbFp32 = inputCast;
     } else {
         rInUbFp32 = rcInUb;
     }
 
-    ReduceSum(rInUbFp32, rInUbFp32, workLocal, rNum);
+    AscendC::ReduceSum(rInUbFp32, rInUbFp32, workLocal, rNum);
 
-    event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
+    event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventIdVToMTE3);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventIdVToMTE3);
 
     if (needAtomic) {
-        SetAtomicAdd<float>();
+        AscendC::SetAtomicAdd<float>();
     }
-    DataCopyPad(sumRWorkspace_, rInUbFp32, {1, (uint16_t)(1 * sizeof(float)), 0, 0});
+    AscendC::DataCopyPad(sumRWorkspace_, rInUbFp32, {1, (uint16_t)(1 * sizeof(float)), 0, 0});
     if (needAtomic) {
-        SetAtomicNone();
+        AscendC::SetAtomicNone();
     }
     rInQue_.FreeTensor(rcInUb);
 }

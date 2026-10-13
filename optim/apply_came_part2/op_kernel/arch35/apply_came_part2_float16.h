@@ -12,15 +12,13 @@
 
 /*!
  * \file apply_came_part2_float16.h
- * \brief
+ * \brief ApplyCamePart2 fp16/bf16 NORMAL 路径 kernel class（Cast fp32 中间精度计算）
  */
 #ifndef _APPLY_CAME_PART2_FLOAT16_H_
 #define _APPLY_CAME_PART2_FLOAT16_H_
 
 #include "kernel_operator.h"
 #include "apply_came_part2_common.h"
-
-using namespace AscendC;
 
 template <typename T>
 class ApplyCamePart2Float16 {
@@ -59,76 +57,72 @@ private:
     __aicore__ inline void ComputeU(int64_t curRNumInLoop, int64_t curCNumInLoop);
     __aicore__ inline void CopyInNotAlignedUc(int loopIdx, int64_t dataCount);
     __aicore__ inline void CopyInNotAlignedUr(int loopIdx, int64_t dataCount);
-    __aicore__ inline void ReduceSumU(LocalTensor<float>& src, int64_t dataCount, int64_t curRNumInLoop,
+    __aicore__ inline void ReduceSumU(AscendC::LocalTensor<float>& src, int64_t dataCount, int64_t curRNumInLoop,
                                       int64_t curCNumInLoop);
     __aicore__ inline void CalcU(int rLoopIdx, int cLoopIdx, int64_t curRNumInLoop, int64_t curCNumInLoop);
     __aicore__ inline void GetConfusionTransposeTiling(int64_t numR, int64_t numC, const uint32_t stackBufferSize,
                                                        const uint32_t typeSize, ConfusionTransposeTiling& tiling);
-    __aicore__ inline void BroadcastR(LocalTensor<float>& dst, LocalTensor<float>& src, int64_t numR, int64_t numC);
-    __aicore__ inline void TransposeR(LocalTensor<float>& dst, LocalTensor<float>& src, int64_t numR, int64_t numC);
-    __aicore__ inline void MulRC(LocalTensor<float>& dst, LocalTensor<float>& r, LocalTensor<float>& c, int64_t numR,
-                                 int64_t numC);
-    __aicore__ inline void CalcRcCycleMode(LocalTensor<float>& dst, LocalTensor<float>& src,
-                                           LocalTensor<float>& srcScalar, int64_t curRNumInLoop, int64_t curCNumInLoop);
-    __aicore__ inline int64_t GetMaxCoreNumToUse();
-    __aicore__ inline void CopyInNotAlignedR(int loopIdx, int64_t dataCount);
+    __aicore__ inline void BroadcastR(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t numR,
+                                      int64_t numC);
+    __aicore__ inline void TransposeR(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src, int64_t numR,
+                                      int64_t numC);
+    __aicore__ inline void MulRC(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& r,
+                                 AscendC::LocalTensor<float>& c, int64_t numR, int64_t numC);
+    __aicore__ inline void CalcRcCycleMode(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& src,
+                                           AscendC::LocalTensor<float>& srcScalar, int64_t curRNumInLoop,
+                                           int64_t curCNumInLoop);
 
     __aicore__ inline void CalcWorkLocal();
 
-    __aicore__ inline void CastIn(LocalTensor<float>& dst, LocalTensor<T>& src, int64_t dataCount);
+    __aicore__ inline void CastIn(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<T>& src, int64_t dataCount);
     __aicore__ inline void InitForCalcU();
 
 private:
-    TPipe pipe_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueR_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueSumGradR_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueC_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueSumGradC_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueGrad_;
+    AscendC::TPipe pipe_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueR_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueSumGradR_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueC_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueSumGradC_;
+    AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueGrad_;
 
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueU_;          // shape: (n, m)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueSumSquareU_; // scalar
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueR_;          // shape: (n)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueC_;          // shape: (m)
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueSumR_;       // scalar
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueU_;          // shape: (n, m)
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueSumSquareU_; // scalar
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueR_;          // shape: (n)
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueC_;          // shape: (m)
 
     // each tbuf may be used for multiple purposes
-    TBuf<QuePosition::VECCALC> ub1Buf_; // 1. rMatrix after broadcast from r
-    TBuf<QuePosition::VECCALC> ub2Buf_; // 1. rMatrix after transpose; 2. r * c
-    TBuf<QuePosition::VECCALC> ub3Buf_; // grad
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub1Buf_; // 1. rMatrix after broadcast from r
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub2Buf_; // 1. rMatrix after transpose; 2. r * c
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> ub3Buf_; // grad
 
-    TBuf<QuePosition::VECCALC> scalarBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> scalarBuf_;
 
     // for cast
-    TBuf<QuePosition::VECCALC> castInRBuf_;
-    TBuf<QuePosition::VECCALC> castOutRBuf_;
-    TBuf<QuePosition::VECCALC> castInCBuf_;
-    TBuf<QuePosition::VECCALC> castOutCBuf_;
-    TBuf<QuePosition::VECCALC> castGradBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castInRBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castOutRBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castInCBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castOutCBuf_;
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> castGradBuf_;
 
-    GlobalTensor<T> rInGm_;
-    GlobalTensor<float> sumGradRInGm_;
-    GlobalTensor<T> cInGm_;
-    GlobalTensor<float> sumGradCInGm_;
-    GlobalTensor<T> gradGm_;
-    GlobalTensor<T> rOutGm_;
-    GlobalTensor<T> cOutGm_;
-    GlobalTensor<float> sumSquareUGm_;
-    GlobalTensor<float> uGm_;
+    AscendC::GlobalTensor<T> rInGm_;
+    AscendC::GlobalTensor<float> sumGradRInGm_;
+    AscendC::GlobalTensor<T> cInGm_;
+    AscendC::GlobalTensor<float> sumGradCInGm_;
+    AscendC::GlobalTensor<T> gradGm_;
+    AscendC::GlobalTensor<T> rOutGm_;
+    AscendC::GlobalTensor<T> cOutGm_;
+    AscendC::GlobalTensor<float> sumSquareUGm_;
+    AscendC::GlobalTensor<float> uGm_;
 
-    GlobalTensor<float> sumGradRcGm_;
-    GlobalTensor<float> beta2Gm_;
-    GlobalTensor<float> sumRGm_;
-    GlobalTensor<int64_t> globalShapeGm_;
-
-    // for SyncAll
-    GlobalTensor<int32_t> syncGlobal_;
-    TQue<QuePosition::VECIN, 1> workQueForSyncAll_;
+    AscendC::GlobalTensor<float> sumGradRcGm_;
+    AscendC::GlobalTensor<float> beta2Gm_;
+    AscendC::GlobalTensor<float> sumRGm_;
+    AscendC::GlobalTensor<int64_t> globalShapeGm_;
 
     // for ReduceSum
-    TQue<QuePosition::VECOUT, BUFFER_NUM> reduceSumWorkQueue_;
-    GlobalTensor<float> sumRWorkspace_;
-    GlobalTensor<float> sumSquareUWorkspace_;
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> reduceSumWorkQueue_;
+    AscendC::GlobalTensor<float> sumRWorkspace_;
+    AscendC::GlobalTensor<float> sumSquareUWorkspace_;
     int64_t workLocalNeedSize_;
 
     bool isInputSumR_; // is sum_r in input null?
@@ -138,8 +132,8 @@ private:
     float sumGradRc_;
     float beta2_;
     float sumR_;
-    float M_;
-    float N_;
+    float m_;
+    float n_;
 
     float rcCoefficient_;
     int64_t blockIdx_;
@@ -158,16 +152,8 @@ private:
 
     GM_ADDR workspace_;
 
-    LocalTensor<T> rRcLocalTensor_;
+    AscendC::LocalTensor<T> rRcLocalTensor_;
 };
-
-template <typename T>
-__aicore__ inline int64_t ApplyCamePart2Float16<T>::GetMaxCoreNumToUse()
-{
-    int64_t tmpMax = (tilingData_.rCoreNumToUse > tilingData_.cCoreNumToUse) ? tilingData_.rCoreNumToUse :
-                                                                               tilingData_.cCoreNumToUse;
-    return (tmpMax > tilingData_.rRcCoreNumToUse) ? tmpMax : tilingData_.rRcCoreNumToUse;
-}
 
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::Init(GM_ADDR grad, GM_ADDR sumGradR, GM_ADDR sumGradC,
@@ -176,11 +162,10 @@ __aicore__ inline void ApplyCamePart2Float16<T>::Init(GM_ADDR grad, GM_ADDR sumG
                                                       GM_ADDR u, GM_ADDR sumSquareU, GM_ADDR workspace,
                                                       const ApplyCamePart2TilingData* tilingData)
 {
-    blockIdx_ = GetBlockIdx();
+    blockIdx_ = AscendC::GetBlockIdx();
     // get tiling data
     CopyTilingData(tilingData);
 
-    int i = 0;
     sumUOffset_ = 0;
     workspace_ = workspace;
     isInputSumR_ = (sumR != nullptr);
@@ -216,8 +201,7 @@ __aicore__ inline void ApplyCamePart2Float16<T>::Init(GM_ADDR grad, GM_ADDR sumG
     pipe_.InitBuffer(inQueSumGradR_, BUFFER_NUM, rBufferLength * sizeof(float));
     pipe_.InitBuffer(inQueSumGradC_, BUFFER_NUM, cBufferLength * sizeof(float));
     pipe_.InitBuffer(outQueR_, BUFFER_NUM, rBufferLength * sizeof(T));
-    pipe_.InitBuffer(outQueC_, BUFFER_NUM, cBufferLength * sizeof(float));
-    pipe_.InitBuffer(outQueSumR_, BUFFER_NUM, ONE_BLK_SIZE);
+    pipe_.InitBuffer(outQueC_, BUFFER_NUM, cBufferLength * sizeof(T));
     InitForCalcU();
     // for cast
     pipe_.InitBuffer(castInRBuf_, rBufferLength * sizeof(float));
@@ -228,11 +212,11 @@ __aicore__ inline void ApplyCamePart2Float16<T>::Init(GM_ADDR grad, GM_ADDR sumG
     int64_t sumSquareUWsNum = CeilAlign(
         tilingData_.rRcCoreNumToUse * (tilingData_.rRcLoopCount + 1) * (tilingData_.cRcLoopCount + 1), 128);
     // set sum_square_u as 0
-    if (GetBlockIdx() == 0) {
-        InitOutput<float>(sumSquareUWorkspace_, sumSquareUWsNum, (float)0);
+    if (AscendC::GetBlockIdx() == 0) {
+        AscendC::InitOutput<float>(sumSquareUWorkspace_, sumSquareUWsNum, (float)0);
     }
     // wait core
-    SyncAll();
+    AscendC::SyncAll();
 }
 
 template <typename T>
@@ -244,7 +228,7 @@ __aicore__ inline void ApplyCamePart2Float16<T>::InitForCalcU()
     int64_t uPerLoopSize = num * sizeof(float);
     pipe_.InitBuffer(inQueGrad_, BUFFER_NUM, uPerLoopSize);
     pipe_.InitBuffer(outQueU_, BUFFER_NUM, uPerLoopSize);
-    pipe_.InitBuffer(outQueSumSquareU_, BUFFER_NUM, ONE_BLK_SIZE);
+    pipe_.InitBuffer(outQueSumSquareU_, BUFFER_NUM, AscendC::ONE_BLK_SIZE);
     pipe_.InitBuffer(reduceSumWorkQueue_, 1, workLocalNeedSize_ * sizeof(float));
 
     pipe_.InitBuffer(castGradBuf_, uPerLoopSize); // for cast
@@ -307,53 +291,56 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyTilingData(const ApplyCameP
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInScalar()
 {
-    pipe_.InitBuffer(scalarBuf_, ONE_BLK_SIZE);
+    pipe_.InitBuffer(scalarBuf_, AscendC::ONE_BLK_SIZE);
     // copy sum_grad_rc
-    LocalTensor<float> inputLocal = scalarBuf_.Get<float>();
-    DataCopyPad(inputLocal, sumGradRcGm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
-    event_t eventMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventMte2S);
-    WaitFlag<HardEvent::MTE2_S>(eventMte2S);
+    AscendC::LocalTensor<float> inputLocal = scalarBuf_.Get<float>();
+    AscendC::DataCopyPad(inputLocal, sumGradRcGm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
+    event_t eventMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_S));
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
     sumGradRc_ = inputLocal.GetValue(0);
     // copy beta3
-    DataCopyPad(inputLocal, beta2Gm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
-    SetFlag<HardEvent::MTE2_S>(eventMte2S);
-    WaitFlag<HardEvent::MTE2_S>(eventMte2S);
+    AscendC::DataCopyPad(inputLocal, beta2Gm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
     beta2_ = inputLocal.GetValue(0);
     // copy global_shape
     if (isInputGlobalShape) {
-        LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
-        DataCopy(int64Local, globalShapeGm_, INT64_PER_BLOCK);
-        PipeBarrier<PIPE_ALL>();
-        LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
-        Cast(floatLocal, int64Local, RoundMode::CAST_ROUND, INT64_PER_BLOCK);
-        PipeBarrier<PIPE_ALL>();
-        N_ = floatLocal.GetValue(0);
-        M_ = floatLocal.GetValue(1);
+        AscendC::LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
+        AscendC::DataCopyPad(int64Local, globalShapeGm_, {1, (uint32_t)(GLOBAL_SHAPE_NUM * sizeof(int64_t)), 0, 0, 0},
+                             {false, 0, 0, 0});
+        int64Local.SetValue(2, 0);
+        int64Local.SetValue(3, 0);
+        AscendC::PipeBarrier<PIPE_ALL>();
+        AscendC::LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
+        AscendC::Cast(floatLocal, int64Local, AscendC::RoundMode::CAST_ROUND, INT64_PER_BLOCK);
+        AscendC::PipeBarrier<PIPE_ALL>();
+        n_ = floatLocal.GetValue(0);
+        m_ = floatLocal.GetValue(1);
     } else {
-        LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
+        AscendC::LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
         int64Local.SetValue(0, tilingData_.n);
         int64Local.SetValue(1, tilingData_.m);
-        PipeBarrier<PIPE_ALL>();
-        LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
-        Cast(floatLocal, int64Local, RoundMode::CAST_ROUND, INT64_PER_BLOCK);
-        PipeBarrier<PIPE_ALL>();
-        N_ = floatLocal.GetValue(0);
-        M_ = floatLocal.GetValue(1);
+        AscendC::PipeBarrier<PIPE_ALL>();
+        AscendC::LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
+        AscendC::Cast(floatLocal, int64Local, AscendC::RoundMode::CAST_ROUND, INT64_PER_BLOCK);
+        AscendC::PipeBarrier<PIPE_ALL>();
+        n_ = floatLocal.GetValue(0);
+        m_ = floatLocal.GetValue(1);
     }
     // copy sum_r
     if (isInputSumR_) {
-        DataCopyPad(inputLocal, sumRGm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
-        SetFlag<HardEvent::MTE2_S>(eventMte2S);
-        WaitFlag<HardEvent::MTE2_S>(eventMte2S);
+        AscendC::DataCopyPad(inputLocal, sumRGm_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
         sumR_ = inputLocal.GetValue(0);
     } else {
-        DataCopyPad(inputLocal, sumRWorkspace_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
-        SetFlag<HardEvent::MTE2_S>(eventMte2S);
-        WaitFlag<HardEvent::MTE2_S>(eventMte2S);
+        AscendC::DataCopyPad(inputLocal, sumRWorkspace_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(eventMte2S);
         sumR_ = inputLocal.GetValue(0);
     }
-    PipeBarrier<PIPE_ALL>();
+    AscendC::PipeBarrier<PIPE_ALL>();
 }
 
 template <typename T>
@@ -368,13 +355,13 @@ __aicore__ inline void ApplyCamePart2Float16<T>::Process()
     ProcessC();
 
     // must synch all core
-    SyncAll();
+    AscendC::SyncAll();
 
     // calc u and sum_square_u (include r*c)
     ProcessU();
 
     // must sync all core
-    SyncAll();
+    AscendC::SyncAll();
 }
 
 template <typename T>
@@ -418,32 +405,6 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ProcessTailCoreR()
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::CopyInNotAlignedR(int loopIdx, int64_t dataCount)
-{
-    LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
-    LocalTensor<float> sumGradRLocal = inQueSumGradR_.AllocTensor<float>();
-    int64_t offset = rBlockOffset_ + loopIdx * tilingData_.rNumPerLoop;
-
-    uint16_t blockCount = 1;
-    uint16_t blockLen = dataCount * sizeof(T);
-    uint16_t srcStride = 0;
-    uint16_t dstStride = 0;
-    DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
-    uint8_t leftPadding = 0;
-    uint8_t rightPadding = NUM_T_PER_BLOCK - dataCount % NUM_T_PER_BLOCK;
-    uint64_t paddingValue = 0;
-    DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
-    DataCopyPad(rLocal, rInGm_[offset], dataCopyParams, padParams);
-
-    uint16_t blockLenFloat = dataCount * sizeof(float);
-    DataCopyParams dataCopyParamsFloat{blockCount, blockLenFloat, srcStride, dstStride};
-    DataCopyPad(sumGradRLocal, sumGradRInGm_[offset], dataCopyParamsFloat, padParams);
-
-    inQueR_.EnQue(rLocal);
-    inQueSumGradR_.EnQue(sumGradRLocal);
-}
-
-template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::ProcessR()
 {
     if (blockIdx_ >= tilingData_.rCoreNumToUse) {
@@ -461,17 +422,17 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ProcessR()
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInR(int loopIdx, int64_t dataCount, bool tail)
 {
-    LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
-    LocalTensor<float> sumGradRLocal = inQueSumGradR_.AllocTensor<float>();
+    AscendC::LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
+    AscendC::LocalTensor<float> sumGradRLocal = inQueSumGradR_.AllocTensor<float>();
     int64_t offset = rBlockOffset_ + loopIdx * tilingData_.rNumPerLoop;
     if (tail) {
         uint32_t blockLen = dataCount * sizeof(T);
         uint32_t blockLenFloat = dataCount * sizeof(float);
-        DataCopyPad(rLocal, rInGm_[offset], {1, blockLen, 0, 0, 0}, {false, 0, 0, 0});
-        DataCopyPad(sumGradRLocal, sumGradRInGm_[offset], {1, blockLenFloat, 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::DataCopyPad(rLocal, rInGm_[offset], {1, blockLen, 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::DataCopyPad(sumGradRLocal, sumGradRInGm_[offset], {1, blockLenFloat, 0, 0, 0}, {false, 0, 0, 0});
     } else {
-        DataCopy(rLocal, rInGm_[offset], dataCount);
-        DataCopy(sumGradRLocal, sumGradRInGm_[offset], dataCount);
+        AscendC::DataCopy(rLocal, rInGm_[offset], dataCount);
+        AscendC::DataCopy(sumGradRLocal, sumGradRInGm_[offset], dataCount);
     }
     inQueR_.EnQue(rLocal);
     inQueSumGradR_.EnQue(sumGradRLocal);
@@ -480,22 +441,22 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInR(int loopIdx, int64_t da
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::ComputeR(int64_t dataCount)
 {
-    LocalTensor<T> rInLocal = inQueR_.DeQue<T>();
-    LocalTensor<float> sumGradRLocal = inQueSumGradR_.DeQue<float>();
-    LocalTensor<T> rOutLocal = outQueR_.AllocTensor<T>();
+    AscendC::LocalTensor<T> rInLocal = inQueR_.DeQue<T>();
+    AscendC::LocalTensor<float> sumGradRLocal = inQueSumGradR_.DeQue<float>();
+    AscendC::LocalTensor<T> rOutLocal = outQueR_.AllocTensor<T>();
 
-    LocalTensor<float> rLocal = castInRBuf_.Get<float>();
-    Cast(rLocal, rInLocal, RoundMode::CAST_NONE, dataCount);
-    LocalTensor<float> outCast = castOutRBuf_.Get<float>();
-    PipeBarrier<PIPE_V>();
+    AscendC::LocalTensor<float> rLocal = castInRBuf_.Get<float>();
+    AscendC::Cast(rLocal, rInLocal, AscendC::RoundMode::CAST_NONE, dataCount);
+    AscendC::LocalTensor<float> outCast = castOutRBuf_.Get<float>();
+    AscendC::PipeBarrier<PIPE_V>();
 
-    Muls(outCast, rLocal, beta2_, dataCount);
-    float scalar = (1 - beta2_) / M_;
-    PipeBarrier<PIPE_V>();
-    Axpy(outCast, sumGradRLocal, scalar, dataCount);
+    AscendC::Muls(outCast, rLocal, beta2_, dataCount);
+    float scalar = (1 - beta2_) / m_;
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Axpy(outCast, sumGradRLocal, scalar, dataCount);
 
-    PipeBarrier<PIPE_V>();
-    Cast(rOutLocal, outCast, RoundMode::CAST_RINT, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Cast(rOutLocal, outCast, AscendC::RoundMode::CAST_RINT, dataCount);
 
     outQueR_.EnQue(rOutLocal);
     inQueR_.FreeTensor(rInLocal);
@@ -505,14 +466,14 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ComputeR(int64_t dataCount)
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyOutR(int loopIdx, int64_t dataCount)
 {
-    LocalTensor<T> rLocal = outQueR_.DeQue<T>();
+    AscendC::LocalTensor<T> rLocal = outQueR_.DeQue<T>();
     int64_t offset = rBlockOffset_ + loopIdx * tilingData_.rNumPerLoop;
     uint16_t blockCount = 1;
     uint16_t blockLen = dataCount * sizeof(T);
     uint16_t srcStride = 0;
     uint16_t dstStride = 0;
-    DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
-    DataCopyPad(rOutGm_[offset], rLocal, dataCopyParams);
+    AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+    AscendC::DataCopyPad(rOutGm_[offset], rLocal, dataCopyParams);
     outQueR_.FreeTensor(rLocal);
 }
 
@@ -573,17 +534,17 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ProcessC()
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInC(int loopIdx, int64_t dataCount, bool tail)
 {
-    LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
-    LocalTensor<float> sumGradCLocal = inQueSumGradC_.AllocTensor<float>();
+    AscendC::LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
+    AscendC::LocalTensor<float> sumGradCLocal = inQueSumGradC_.AllocTensor<float>();
     int64_t offset = cBlockOffset_ + loopIdx * tilingData_.cNumPerLoop;
     if (tail) {
         uint32_t blockLen = dataCount * sizeof(T);
         uint32_t blockLenFloat = dataCount * sizeof(float);
-        DataCopyPad(cLocal, cInGm_[offset], {1, blockLen, 0, 0, 0}, {false, 0, 0, 0});
-        DataCopyPad(sumGradCLocal, sumGradCInGm_[offset], {1, blockLenFloat, 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::DataCopyPad(cLocal, cInGm_[offset], {1, blockLen, 0, 0, 0}, {false, 0, 0, 0});
+        AscendC::DataCopyPad(sumGradCLocal, sumGradCInGm_[offset], {1, blockLenFloat, 0, 0, 0}, {false, 0, 0, 0});
     } else {
-        DataCopy(cLocal, cInGm_[offset], dataCount);
-        DataCopy(sumGradCLocal, sumGradCInGm_[offset], dataCount);
+        AscendC::DataCopy(cLocal, cInGm_[offset], dataCount);
+        AscendC::DataCopy(sumGradCLocal, sumGradCInGm_[offset], dataCount);
     }
     inQueC_.EnQue(cLocal);
     inQueSumGradC_.EnQue(sumGradCLocal);
@@ -592,22 +553,22 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInC(int loopIdx, int64_t da
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::ComputeC(int64_t dataCount)
 {
-    LocalTensor<T> cInLocal = inQueC_.DeQue<T>();
-    LocalTensor<float> sumGradCLocal = inQueSumGradC_.DeQue<float>();
-    LocalTensor<T> cOutLocal = outQueC_.AllocTensor<T>();
+    AscendC::LocalTensor<T> cInLocal = inQueC_.DeQue<T>();
+    AscendC::LocalTensor<float> sumGradCLocal = inQueSumGradC_.DeQue<float>();
+    AscendC::LocalTensor<T> cOutLocal = outQueC_.AllocTensor<T>();
 
-    LocalTensor<float> cLocal = castInCBuf_.Get<float>();
-    Cast(cLocal, cInLocal, RoundMode::CAST_NONE, dataCount);
-    LocalTensor<float> outCast = castOutCBuf_.Get<float>();
-    PipeBarrier<PIPE_V>();
+    AscendC::LocalTensor<float> cLocal = castInCBuf_.Get<float>();
+    AscendC::Cast(cLocal, cInLocal, AscendC::RoundMode::CAST_NONE, dataCount);
+    AscendC::LocalTensor<float> outCast = castOutCBuf_.Get<float>();
+    AscendC::PipeBarrier<PIPE_V>();
 
-    Muls(outCast, cLocal, beta2_, dataCount);
-    float scalar = (1 - beta2_) / N_;
-    PipeBarrier<PIPE_V>();
-    Axpy(outCast, sumGradCLocal, scalar, dataCount);
-    PipeBarrier<PIPE_V>();
+    AscendC::Muls(outCast, cLocal, beta2_, dataCount);
+    float scalar = (1 - beta2_) / n_;
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Axpy(outCast, sumGradCLocal, scalar, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
 
-    Cast(cOutLocal, outCast, RoundMode::CAST_RINT, dataCount);
+    AscendC::Cast(cOutLocal, outCast, AscendC::RoundMode::CAST_RINT, dataCount);
 
     outQueC_.EnQue(cOutLocal);
     inQueC_.FreeTensor(cInLocal);
@@ -617,14 +578,14 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ComputeC(int64_t dataCount)
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyOutC(int loopIdx, int64_t dataCount)
 {
-    LocalTensor<T> cLocal = outQueC_.DeQue<T>();
+    AscendC::LocalTensor<T> cLocal = outQueC_.DeQue<T>();
     int64_t offset = cBlockOffset_ + loopIdx * tilingData_.cNumPerLoop;
     uint16_t blockCount = 1;
     uint16_t blockLen = dataCount * sizeof(T);
     uint16_t srcStride = 0;
     uint16_t dstStride = 0;
-    DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
-    DataCopyPad(cOutGm_[offset], cLocal, dataCopyParams);
+    AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+    AscendC::DataCopyPad(cOutGm_[offset], cLocal, dataCopyParams);
     outQueC_.FreeTensor(cLocal);
 }
 
@@ -743,7 +704,7 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ProcessU()
     }
 
     // calc denominator, not in cycle
-    float denominator = beta2_ * sumR_ / N_ + (1 - beta2_) * sumGradRc_ / (M_ * N_);
+    float denominator = beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_);
     rcCoefficient_ = 1 / denominator;
 
     rRcBlockOffset_ = blockIdx_ * tilingData_.rRcNumPerCore;
@@ -760,7 +721,7 @@ template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInGrad(int rLoopIdx, int cLoopIdx, int64_t curRNumInLoop,
                                                             int64_t curCNumInLoop)
 {
-    LocalTensor<T> gradLocal = inQueGrad_.AllocTensor<T>();
+    AscendC::LocalTensor<T> gradLocal = inQueGrad_.AllocTensor<T>();
     int64_t startRowNum = rRcBlockOffset_ + rLoopIdx * tilingData_.rRcNumPerLoop;
     int64_t startColumnNum = cLoopIdx * tilingData_.cRcNumPerLoop;
     int64_t startOffset = startRowNum * tilingData_.m + startColumnNum;
@@ -770,7 +731,7 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInGrad(int rLoopIdx, int cL
         int64_t srcOffset = startOffset + i * tilingData_.m;
         int64_t dstOffset = i * curCNumInLoop;
         // aligned
-        DataCopy(gradLocal[dstOffset], gradGm_[srcOffset], curCNumInLoop);
+        AscendC::DataCopy(gradLocal[dstOffset], gradGm_[srcOffset], curCNumInLoop);
     }
     inQueGrad_.EnQue(gradLocal);
 }
@@ -779,7 +740,7 @@ template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyOutU(int rLoopIdx, int cLoopIdx, int64_t curRNumInLoop,
                                                           int64_t curCNumInLoop)
 {
-    LocalTensor<float> uLocal = outQueU_.DeQue<float>();
+    AscendC::LocalTensor<float> uLocal = outQueU_.DeQue<float>();
     int64_t startRowNum = rRcBlockOffset_ + rLoopIdx * tilingData_.rRcNumPerLoop;
     int64_t startColumnNum = cLoopIdx * tilingData_.cRcNumPerLoop;
     int64_t startOffset = startRowNum * tilingData_.m + startColumnNum;
@@ -788,7 +749,7 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyOutU(int rLoopIdx, int cLoo
             int64_t dstOffset = startOffset + i * tilingData_.m;
             int64_t srcOffset = i * curCNumInLoop;
             // aligned
-            DataCopy(uGm_[dstOffset], uLocal[srcOffset], curCNumInLoop);
+            AscendC::DataCopy(uGm_[dstOffset], uLocal[srcOffset], curCNumInLoop);
         }
     } else {
         int64_t alignedCNum = NUM_T_PER_BLOCK * CeilDiv(curCNumInLoop, NUM_T_PER_BLOCK);
@@ -796,25 +757,25 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyOutU(int rLoopIdx, int cLoo
         uint16_t blockLen = curCNumInLoop * sizeof(float);
         uint16_t srcStride = 0;
         uint16_t dstStride = 0;
-        DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+        AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
         for (int64_t i = 0; i < curRNumInLoop; ++i) {
             int64_t dstOffset = startOffset + i * tilingData_.m;
             int64_t srcOffset = i * alignedCNum;
-            DataCopyPad(uGm_[dstOffset], uLocal[srcOffset], dataCopyParams);
+            AscendC::DataCopyPad(uGm_[dstOffset], uLocal[srcOffset], dataCopyParams);
         }
     }
 
     outQueU_.FreeTensor(uLocal);
 
-    LocalTensor<float> sumSquareUOutLocal = outQueSumSquareU_.DeQue<float>();
+    AscendC::LocalTensor<float> sumSquareUOutLocal = outQueSumSquareU_.DeQue<float>();
 
     int64_t blockOffset = blockIdx_ * (tilingData_.rRcLoopCount + 1) * (tilingData_.cRcLoopCount + 1);
     uint16_t blockCount = 1;
     uint16_t blockLen = sizeof(float);
     uint16_t srcStride = 0;
     uint16_t dstStride = 0;
-    DataCopyParams copyParams{blockCount, blockLen, srcStride, dstStride};
-    DataCopyPad(sumSquareUWorkspace_[blockOffset + sumUOffset_], sumSquareUOutLocal, copyParams);
+    AscendC::DataCopyParams copyParams{blockCount, blockLen, srcStride, dstStride};
+    AscendC::DataCopyPad(sumSquareUWorkspace_[blockOffset + sumUOffset_], sumSquareUOutLocal, copyParams);
     sumUOffset_ = sumUOffset_ + 1;
     outQueSumSquareU_.FreeTensor(sumSquareUOutLocal);
 }
@@ -823,7 +784,7 @@ template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInNotAlignedGrad(int rLoopIdx, int cLoopIdx, int64_t curRNumInLoop,
                                                                       int64_t curCNumInLoop)
 {
-    LocalTensor<T> gradLocal = inQueGrad_.AllocTensor<T>();
+    AscendC::LocalTensor<T> gradLocal = inQueGrad_.AllocTensor<T>();
     int64_t startRowNum = rRcBlockOffset_ + rLoopIdx * tilingData_.rRcNumPerLoop;
     int64_t startColumnNum = cLoopIdx * tilingData_.cRcNumPerLoop;
     int64_t startOffset = startRowNum * tilingData_.m + startColumnNum;
@@ -836,12 +797,12 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInNotAlignedGrad(int rLoopI
         uint16_t blockLen = curCNumInLoop * sizeof(T);
         uint16_t srcStride = 0;
         uint16_t dstStride = 0;
-        DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+        AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
         uint8_t leftPadding = 0;
         uint8_t rightPadding = alignedCNumInLoop - curCNumInLoop;
         uint64_t paddingValue = 0;
-        DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
-        DataCopyPad(gradLocal[dstOffset], gradGm_[srcOffset], dataCopyParams, padParams);
+        AscendC::DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
+        AscendC::DataCopyPad(gradLocal[dstOffset], gradGm_[srcOffset], dataCopyParams, padParams);
     }
 
     inQueGrad_.EnQue(gradLocal);
@@ -854,15 +815,15 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInNotAlignedUr(int loopIdx,
     uint16_t blockLen = dataCount * sizeof(T);
     uint16_t srcStride = 0;
     uint16_t dstStride = 0;
-    DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+    AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
     uint8_t leftPadding = 0;
     uint8_t rightPadding = NUM_T_PER_BLOCK * CeilDiv(dataCount, NUM_T_PER_BLOCK) - dataCount;
     uint64_t paddingValue = 0;
-    DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
+    AscendC::DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
 
-    LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
+    AscendC::LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
     int64_t offset = rRcBlockOffset_ + loopIdx * tilingData_.rRcNumPerLoop;
-    DataCopyPad(rLocal, rOutGm_[offset], dataCopyParams, padParams);
+    AscendC::DataCopyPad(rLocal, rOutGm_[offset], dataCopyParams, padParams);
     inQueR_.EnQue(rLocal);
     rRcLocalTensor_ = inQueR_.DeQue<T>();
 }
@@ -874,25 +835,25 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInNotAlignedUc(int loopIdx,
     uint16_t blockLen = dataCount * sizeof(T);
     uint16_t srcStride = 0;
     uint16_t dstStride = 0;
-    DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
+    AscendC::DataCopyParams dataCopyParams{blockCount, blockLen, srcStride, dstStride};
     uint8_t leftPadding = 0;
     uint8_t rightPadding = NUM_T_PER_BLOCK * CeilDiv(dataCount, NUM_T_PER_BLOCK) - dataCount;
     uint64_t paddingValue = 0;
-    DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
+    AscendC::DataCopyPadParams padParams{true, leftPadding, rightPadding, paddingValue};
 
-    LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
+    AscendC::LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
     int64_t offset = loopIdx * tilingData_.cRcNumPerLoop;
-    DataCopyPad(cLocal, cOutGm_[offset], dataCopyParams, padParams);
+    AscendC::DataCopyPad(cLocal, cOutGm_[offset], dataCopyParams, padParams);
     inQueC_.EnQue(cLocal);
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInUr(int loopIdx, int64_t dataCount)
 {
-    LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
+    AscendC::LocalTensor<T> rLocal = inQueR_.AllocTensor<T>();
     int64_t offset = rRcBlockOffset_ + loopIdx * tilingData_.rRcNumPerLoop;
     // aligned
-    DataCopy(rLocal, rOutGm_[offset], dataCount);
+    AscendC::DataCopy(rLocal, rOutGm_[offset], dataCount);
     inQueR_.EnQue(rLocal);
     rRcLocalTensor_ = inQueR_.DeQue<T>();
 }
@@ -900,38 +861,40 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInUr(int loopIdx, int64_t d
 template <typename T>
 __aicore__ inline void ApplyCamePart2Float16<T>::CopyInUc(int loopIdx, int64_t dataCount)
 {
-    LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
+    AscendC::LocalTensor<T> cLocal = inQueC_.AllocTensor<T>();
     int64_t offset = loopIdx * tilingData_.cRcNumPerLoop;
     // aligned
-    DataCopy(cLocal, cOutGm_[offset], dataCount);
+    AscendC::DataCopy(cLocal, cOutGm_[offset], dataCount);
     inQueC_.EnQue(cLocal);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::BroadcastR(LocalTensor<float>& dst, LocalTensor<float>& src,
-                                                            int64_t numR, int64_t numC)
+__aicore__ inline void ApplyCamePart2Float16<T>::BroadcastR(AscendC::LocalTensor<float>& dst,
+                                                            AscendC::LocalTensor<float>& src, int64_t numR,
+                                                            int64_t numC)
 {
     for (int i = 0; i < numC; ++i) {
-        DataCopy(dst[i * numR], src, numR);
+        AscendC::DataCopy(dst[i * numR], src, numR);
     }
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::TransposeR(LocalTensor<float>& dst, LocalTensor<float>& src,
-                                                            int64_t numR, int64_t numC)
+__aicore__ inline void ApplyCamePart2Float16<T>::TransposeR(AscendC::LocalTensor<float>& dst,
+                                                            AscendC::LocalTensor<float>& src, int64_t numR,
+                                                            int64_t numC)
 {
     ConfusionTransposeTiling tiling;
     GetConfusionTransposeTiling(numR, numC, src.GetSize(), sizeof(float), tiling);
-    ConfusionTranspose(dst, src, TransposeType::TRANSPOSE_ND2ND_ONLY, tiling);
+    AscendC::ConfusionTranspose(dst, src, AscendC::TransposeType::TRANSPOSE_ND2ND_ONLY, tiling);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::MulRC(LocalTensor<float>& dst, LocalTensor<float>& r,
-                                                       LocalTensor<float>& c, int64_t numR, int64_t numC)
+__aicore__ inline void ApplyCamePart2Float16<T>::MulRC(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<float>& r,
+                                                       AscendC::LocalTensor<float>& c, int64_t numR, int64_t numC)
 {
     // r:(numR, numC)  c:(numC,)
     int64_t rcStride = (numC * sizeof(float)) / BLOCK_SIZE;
-    BinaryRepeatParams binaryRepeatParams;
+    AscendC::BinaryRepeatParams binaryRepeatParams;
     binaryRepeatParams.dstBlkStride = 1;
     binaryRepeatParams.src0BlkStride = 1;
     binaryRepeatParams.src1BlkStride = 1;
@@ -940,29 +903,34 @@ __aicore__ inline void ApplyCamePart2Float16<T>::MulRC(LocalTensor<float>& dst, 
     binaryRepeatParams.src1RepStride = 0;
     uint64_t mask = numC;
     uint8_t repeatTimes = numR;
-    Mul(dst, r, c, mask, repeatTimes, binaryRepeatParams);
+    AscendC::Mul(dst, r, c, mask, repeatTimes, binaryRepeatParams);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::CalcRcCycleMode(LocalTensor<float>& dst, LocalTensor<float>& src,
-                                                                 LocalTensor<float>& srcScalar, int64_t curRNumInLoop,
-                                                                 int64_t curCNumInLoop)
+__aicore__ inline void ApplyCamePart2Float16<T>::CalcRcCycleMode(AscendC::LocalTensor<float>& dst,
+                                                                 AscendC::LocalTensor<float>& src,
+                                                                 AscendC::LocalTensor<float>& srcScalar,
+                                                                 int64_t curRNumInLoop, int64_t curCNumInLoop)
 {
-    event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventId);
-    WaitFlag<HardEvent::MTE2_S>(eventId);
+    event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_S));
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(eventId);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(eventId);
 
     uint32_t dstOffset = 0;
+    // 逐行 Muls 需 r 标量（srcScalar.GetValue）：行数受 tiling 限制（≤ rRcNumPerLoop，有界）；
+    // 仅非 32B/128B 对齐尾块进入，向量化需 Broadcast/Transpose 矩阵预展开（性能豁免）
     for (int rLoopIdx = 0; rLoopIdx < curRNumInLoop; ++rLoopIdx) {
         dstOffset = rLoopIdx * curCNumInLoop;
-        Muls(dst[dstOffset], src, srcScalar.GetValue(rLoopIdx), curCNumInLoop); // curCNumInLoop<(256/typeSize) * 255
+        AscendC::Muls(dst[dstOffset], src, srcScalar.GetValue(rLoopIdx),
+                      curCNumInLoop); // curCNumInLoop<(256/typeSize) * 255
     }
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::CastIn(LocalTensor<float>& dst, LocalTensor<T>& src, int64_t dataCount)
+__aicore__ inline void ApplyCamePart2Float16<T>::CastIn(AscendC::LocalTensor<float>& dst, AscendC::LocalTensor<T>& src,
+                                                        int64_t dataCount)
 {
-    Cast(dst, src, RoundMode::CAST_NONE, dataCount);
+    AscendC::Cast(dst, src, AscendC::RoundMode::CAST_NONE, dataCount);
 }
 
 template <typename T>
@@ -973,50 +941,50 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ComputeU(int64_t curRNumInLoop,
     curCNumInLoop = alignedCNum;
     int64_t dataCount = curCNumInLoop * curRNumInLoop;
     // r*c
-    LocalTensor<float> rLocal = castInRBuf_.Get<float>();
+    AscendC::LocalTensor<float> rLocal = castInRBuf_.Get<float>();
     CastIn(rLocal, rRcLocalTensor_, curRNumInLoop);
 
-    LocalTensor<T> cInLocal = inQueC_.DeQue<T>();
-    LocalTensor<float> cLocal = castInCBuf_.Get<float>();
+    AscendC::LocalTensor<T> cInLocal = inQueC_.DeQue<T>();
+    AscendC::LocalTensor<float> cLocal = castInCBuf_.Get<float>();
     CastIn(cLocal, cInLocal, curCNumInLoop);
 
-    LocalTensor<T> gradInLocal = inQueGrad_.DeQue<T>();
-    LocalTensor<float> gradLocal = castGradBuf_.Get<float>();
+    AscendC::LocalTensor<T> gradInLocal = inQueGrad_.DeQue<T>();
+    AscendC::LocalTensor<float> gradLocal = castGradBuf_.Get<float>();
     CastIn(gradLocal, gradInLocal, dataCount);
 
-    LocalTensor<float> uOutLocal = outQueU_.AllocTensor<float>();
-    LocalTensor<float> ub1 = ub1Buf_.Get<float>();
-    LocalTensor<float> ub2 = ub2Buf_.Get<float>();
-    LocalTensor<float> ub3 = ub3Buf_.Get<float>();
+    AscendC::LocalTensor<float> uOutLocal = outQueU_.AllocTensor<float>();
+    AscendC::LocalTensor<float> ub1 = ub1Buf_.Get<float>();
+    AscendC::LocalTensor<float> ub2 = ub2Buf_.Get<float>();
+    AscendC::LocalTensor<float> ub3 = ub3Buf_.Get<float>();
 
-    PipeBarrier<PIPE_V>();
+    AscendC::PipeBarrier<PIPE_V>();
     // ub3: r*c
     if ((curRNumInLoop % HALF_CALC_SIZE != 0) || (curCNumInLoop % HALF_CALC_SIZE != 0)) {
         CalcRcCycleMode(ub3, cLocal, rLocal, curRNumInLoop, curCNumInLoop);
     } else {
         // ub1: r --> broadcast
         BroadcastR(ub1, rLocal, curRNumInLoop, curCNumInLoop);
-        PipeBarrier<PIPE_V>();
+        AscendC::PipeBarrier<PIPE_V>();
         // ub2: r --> broadcast and transpose
         TransposeR(ub2, ub1, curRNumInLoop, curCNumInLoop);
-        PipeBarrier<PIPE_V>();
+        AscendC::PipeBarrier<PIPE_V>();
         // ub3: r*c
         MulRC(ub3, ub2, cLocal, curRNumInLoop, curCNumInLoop);
     }
 
     // ub1: rc*coefficient
-    PipeBarrier<PIPE_V>();
-    Muls(ub1, ub3, rcCoefficient_, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Muls(ub1, ub3, rcCoefficient_, dataCount);
     // ub2: Rsqrt(ub1)
-    PipeBarrier<PIPE_V>();
-    Sqrt(ub2, ub1, dataCount);
-    PipeBarrier<PIPE_V>();
-    Div(uOutLocal, gradLocal, ub2, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Sqrt(ub2, ub1, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Div(uOutLocal, gradLocal, ub2, dataCount);
 
     // calc sum_square_u
-    PipeBarrier<PIPE_V>();
-    Mul(ub3, uOutLocal, uOutLocal, dataCount);
-    PipeBarrier<PIPE_V>();
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Mul(ub3, uOutLocal, uOutLocal, dataCount);
+    AscendC::PipeBarrier<PIPE_V>();
     ReduceSumU(ub3, dataCount, curRNumInLoop, oriCNum);
 
     outQueU_.EnQue<float>(uOutLocal);
@@ -1025,15 +993,19 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ComputeU(int64_t curRNumInLoop,
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart2Float16<T>::ReduceSumU(LocalTensor<float>& src, int64_t dataCount,
+__aicore__ inline void ApplyCamePart2Float16<T>::ReduceSumU(AscendC::LocalTensor<float>& src, int64_t dataCount,
                                                             int64_t curRNumInLoop, int64_t curCNumInLoop)
 {
-    LocalTensor<float> sumSquareUOutLocal = outQueSumSquareU_.AllocTensor<float>();
-    LocalTensor<float> workLocal = reduceSumWorkQueue_.AllocTensor<float>();
+    AscendC::LocalTensor<float> sumSquareUOutLocal = outQueSumSquareU_.AllocTensor<float>();
+    AscendC::LocalTensor<float> workLocal = reduceSumWorkQueue_.AllocTensor<float>();
     int64_t alignedCNum = NUM_T_PER_BLOCK * CeilDiv(curCNumInLoop, NUM_T_PER_BLOCK);
+    // PERF-1 性能豁免：fp16/bf16 路径保留逐行 ReduceSum + GetValue 标量累加。
+    // 整块单次 ReduceSum 需 workLocal ≥ repeatTimes 个中间元素（每 128 元素一个 repeat），
+    // 当前 workLocal 按 legacy 口径仅 1 个 block（8 floats，见 CalcWorkLocal），仅满足逐行（≤1 repeat）归约；
+    // 扩容 workLocal 会改变既有 UB 预算，需 NPU 环境回归验证后另行调整。
     float sum = 0;
     for (int i = 0; i < curRNumInLoop; ++i) {
-        ReduceSum(sumSquareUOutLocal, src[i * alignedCNum], workLocal, curCNumInLoop);
+        AscendC::ReduceSum(sumSquareUOutLocal, src[i * alignedCNum], workLocal, curCNumInLoop);
         sum += sumSquareUOutLocal.GetValue(0);
     }
     sumSquareUOutLocal.SetValue(0, sum);
@@ -1048,11 +1020,11 @@ __aicore__ inline void ApplyCamePart2Float16<T>::GetConfusionTransposeTiling(int
                                                                              ConfusionTransposeTiling& tiling)
 {
     (void)stackBufferSize;
-    uint32_t blockSize = ONE_BLK_SIZE / typeSize;
+    uint32_t blockSize = AscendC::ONE_BLK_SIZE / typeSize;
     uint32_t height = numC;
     uint32_t width = numR;
-    uint32_t highBlock = height / BLOCK_CUBE;
-    uint32_t stride = height * blockSize * typeSize / ONE_BLK_SIZE;
+    uint32_t highBlock = height / AscendC::BLOCK_CUBE;
+    uint32_t stride = height * blockSize * typeSize / AscendC::ONE_BLK_SIZE;
     uint32_t repeat = width / blockSize;
 
     tiling.param0 = blockSize;
