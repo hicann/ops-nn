@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：用于计算变形卷积（Deformable Convolution）输出的函数。通过引入偏移参数offsets，使得卷积核在输入特征图上的位置可以动态调整，从而适配不规则的集合变化。
+- 算子功能：用于计算变形卷积（Deformable Convolution）输出的函数。通过引入偏移参数offsets，使得卷积核在输入特征图上的位置可以动态调整，从而适配不规则的几何变化。
 - 计算公式：
 
   假定输入input的shape是[N, inH, inW, inC]，输出deformOut的shape为[N, outH\*K_H, outW\*K_W, inC]，根据已有属性计算outH、outW：
