@@ -1,0 +1,4361 @@
+[
+  {
+    "case_name": "G300_nc1_F082",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G301_nc5_F082",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G302_nc7_F082",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G303_nc9_F082",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G304_nc1_F083",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G305_nc5_F083",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G306_nc7_F083",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G307_nc9_F083",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G308_nc1_F085",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G309_nc5_F085",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G310_nc7_F085",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G311_nc9_F085",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G312_nc1_F086",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G313_nc5_F086",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          5,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G314_nc7_F086",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          7,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G315_nc9_F086",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          9,
+          49,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G400_nc64_F172",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G401_nc512_F172",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G402_nc576_F172",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G403_nc1024_F172",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G404_nc1088_F172",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G405_nc64_F173",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G406_nc512_F173",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          512,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G407_nc576_F173",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          576,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G408_nc1024_F173",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1024,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G409_nc1088_F173",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          7,
+          7
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float16",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          4,
+          4
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          1088,
+          49,
+          64
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          7,
+          7
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G500_flat_16_32_32",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          32,
+          32
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          32,
+          32
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          2080
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G501_flat_64_32_32",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          32,
+          32
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          32,
+          32
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          2080
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G502_flat_16_33_32",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          33,
+          32
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          33,
+          32
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          2144
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G503_flat_64_33_32",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          33,
+          32
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          33,
+          32
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          2144
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G504_flat_16_57_56",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          57,
+          56
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          57,
+          56
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          6432
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G505_flat_64_57_56",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          57,
+          56
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          57,
+          56
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          6432
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G506_flat_16_64_80",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          64,
+          80
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          64,
+          80
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          10272
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G507_flat_64_64_80",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          64,
+          80
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          64,
+          80
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          10272
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G508_flat_16_65_80",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          65,
+          80
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          65,
+          80
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          10432
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G509_flat_64_65_80",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          65,
+          80
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          65,
+          80
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          10432
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G510_flat_16_80_64",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          80,
+          64
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          80,
+          64
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          10272
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G511_flat_64_80_64",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          80,
+          64
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          80,
+          64
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          10272
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G512_flat_16_112_112",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G513_flat_64_112_112",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          112,
+          112
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          112,
+          112
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          25120
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G514_flat_16_224_224",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          16,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G515_flat_64_224_224",
+    "op_name": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "data_type": "float",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          224,
+          224
+        ],
+        "err_threshold": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "data_type": "int8",
+        "param_type": "required",
+        "shape": [
+          1,
+          64,
+          9,
+          100384
+        ],
+        "err_threshold": [
+          0,
+          0
+        ]
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "padding",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "param_type": "required",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "param_type": "optional",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "G206_spatial_zero_overlap_odd_core_slices_fp32",
+    "op": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "shape": [
+          1,
+          65,
+          224,
+          224
+        ],
+        "value_range": [
+          -5,
+          5
+        ],
+        "data_type": "float"
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "shape": [
+          1,
+          65,
+          112,
+          112
+        ],
+        "data_type": "float"
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "shape": [
+          1,
+          65,
+          4,
+          25120
+        ],
+        "data_type": "int8"
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "stride",
+        "type": "list_int",
+        "value": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "type": "list_int",
+        "value": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "dilation",
+        "type": "list_int",
+        "value": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "type": "bool",
+        "value": false
+      }
+    ]
+  },
+  {
+    "case_name": "Generalization_nc_spatial_split_bfloat16",
+    "op": "MaxPool2dWithMask",
+    "input_desc": [
+      {
+        "name": "x",
+        "format": "ND",
+        "shape": [
+          2,
+          33,
+          35,
+          51
+        ],
+        "value_range": [
+          -5,
+          5
+        ],
+        "data_type": "bfloat16"
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "format": "ND",
+        "shape": [
+          2,
+          33,
+          18,
+          26
+        ],
+        "data_type": "bfloat16"
+      },
+      {
+        "name": "indices",
+        "format": "ND",
+        "shape": [
+          2,
+          33,
+          9,
+          992
+        ],
+        "data_type": "int8"
+      }
+    ],
+    "attr_desc": [
+      {
+        "name": "kernelSize",
+        "value": [
+          3
+        ]
+      },
+      {
+        "name": "stride",
+        "value": [
+          2
+        ]
+      },
+      {
+        "name": "padding",
+        "value": [
+          1
+        ]
+      },
+      {
+        "name": "dilation",
+        "value": [
+          1
+        ]
+      },
+      {
+        "name": "ceilMode",
+        "value": false
+      }
+    ]
+  }
+]
