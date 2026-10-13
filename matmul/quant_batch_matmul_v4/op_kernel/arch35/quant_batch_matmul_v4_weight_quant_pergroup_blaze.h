@@ -37,8 +37,9 @@ __aicore__ inline void RunWeightQuantPergroupBlaze(GM_ADDR x1, GM_ADDR x2, GM_AD
     using LayoutB = AscendC::Std::conditional_t<IS_WEIGHT_NZ, AscendC::Te::NZLayoutPtn, AscendC::Te::DNExtLayoutPtn>;
     // The B side carries the packed-FP4 weight plus the per-group scale (x2Scale, consumed
     // by the AIV dequant in UB). TCG has no bias input: the trailing BiasType/LayoutBias
-    // slots only satisfy the BlockMmad template signature.
-    using BTypeTuple = AscendC::Std::tuple<DTYPE_X2, DTYPE_X2_SCALE>;
+    // slots only satisfy the BlockMmad template signature. The scale slot types as DTYPE_Y:
+    // T-CG requires the x2Scale and y dtypes to be identical.
+    using BTypeTuple = AscendC::Std::tuple<DTYPE_X2, DTYPE_Y>;
     using BlockMmadType = Blaze::Gemm::Block::BlockMmad<Blaze::Gemm::MatmulWithWeightQuantPergroup, DTYPE_X1, LayoutA,
                                                         BTypeTuple, LayoutB, DTYPE_Y, LayoutC, void, void>;
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t>;
