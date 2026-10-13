@@ -156,19 +156,6 @@ ge::graphStatus BatchMatMulV3Tiling::ValidateOptionalBatchInfo()
     auto biasShape = context_->GetInputShape(2)->GetOriginShape();
     size_t biasDims = biasShape.GetDimNum();
     if (biasDims > NUM_TWO) {
-        if (batchInfo_.batchA0 != batchInfo_.batchB0 || batchInfo_.batchA1 != batchInfo_.batchB1 ||
-            batchInfo_.batchA2 != batchInfo_.batchB2 || batchInfo_.batchA3 != batchInfo_.batchB3) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                args_.opName, "self, mat2",
-                Ops::NN::FormatString("%s, %s",
-                                      Ops::Base::ToString(context_->GetInputShape(0)->GetOriginShape()).c_str(),
-                                      Ops::Base::ToString(context_->GetInputShape(1)->GetOriginShape()).c_str())
-                    .c_str(),
-                Ops::NN::FormatString("When optional parameter %s exists, %s of %s must be the same", "bias",
-                                      "batch-axis", "self, mat2")
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
         auto outputShape = context_->GetOutputShape(0)->GetOriginShape();
         uint64_t batchBias3 = biasDims > NO_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - ONE_BATCH_SHAPE_DIM) : 1UL;
         uint64_t batchBias2 = biasDims > ONE_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - TWO_BATCH_SHAPE_DIM) : 1UL;
