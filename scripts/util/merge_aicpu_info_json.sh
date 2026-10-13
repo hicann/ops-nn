@@ -23,6 +23,7 @@ then
     cp -f $first_json $output_json
 else
     echo "[ERROR] ${first_json} is not a file"
+    rm -f ${output_json}
     exit 1
 fi
 
@@ -30,8 +31,14 @@ for single_json in "$@"
 do
     if [[ -f "${single_json}" ]]
     then
-        python3 ${top_dir}/scripts/util/insert_op_info.py ${single_json} ${output_json}
+        if ! python3 ${top_dir}/scripts/util/insert_op_info.py ${single_json} ${output_json}; then
+            echo "[ERROR] insert_op_info.py failed for ${single_json}"
+            rm -f ${output_json}
+            exit 1
+        fi
     else
         echo "[ERROR] ${single_json} is not a file"
+        rm -f ${output_json}
+        exit 1
     fi
 done

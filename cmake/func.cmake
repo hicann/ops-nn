@@ -251,6 +251,28 @@ function(skip_aicpu_kernel op_type ascend_op_name)
   endif()
 endfunction()
 
+# AICPU built-in package manifest: check whether <op_name> is allowed into the built-in package.
+# Only gates device-side AICPU packaging (op_def/json + kernel .so); host constant folding
+# and UT are not affected. ENABLE_CUSTOM bypasses the manifest.
+# Sets _AICPU_BUILTIN_PKG_ALLOWED (TRUE/FALSE) in the caller's scope.
+function(check_aicpu_builtin_pkg_allowed op_name)
+  set(_allowed FALSE)
+  if(AICPU_BUILTIN_PACKAGE_FORCE_ALL)
+    set(_allowed TRUE)
+  else()
+    foreach(_entry ${AICPU_BUILTIN_PACKAGE_MANIFEST})
+      if(_entry STREQUAL "${op_name}=ON")
+        set(_allowed TRUE)
+        break()
+      endif()
+    endforeach()
+  endif()
+  if(_allowed)
+    message(STATUS "[${op_name}] allowed in AICPU built-in package by manifest")
+  endif()
+  set(_AICPU_BUILTIN_PKG_ALLOWED ${_allowed} PARENT_SCOPE)
+endfunction()
+
 function(add_aicpu_kernel_modules)
   message(STATUS "add_aicpu_kernel_modules")
   if(NOT TARGET ${OPHOST_NAME}_aicpu_obj)

@@ -584,6 +584,11 @@ function(gen_norm_symbol)
   gen_tf_plugin_symbol()
 
   gen_aicpu_const_symbol()
+
+  if(NOT NO_AICPU AND ENABLE_PACKAGE)
+    gen_aicpu_json_symbol(TRUE)
+    gen_aicpu_kernel_symbol(TRUE)
+  endif()
 endfunction()
 
 function(gen_cust_symbol)

@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -23,14 +23,18 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
 
-  # aicpu cust kernel
-  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
-  file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
-  set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
+  check_aicpu_builtin_pkg_allowed(reverse_sequence)
 
-  set(OBJ_NAME reverse_sequence_cust_obj)
-  add_aicpu_cust_kernel_modules(${OBJ_NAME})
-  target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  if (ENABLE_CUSTOM OR _AICPU_BUILTIN_PKG_ALLOWED)
+    # aicpu cust kernel
+    file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
+    file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
+    set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
+
+    set(OBJ_NAME reverse_sequence_cust_obj)
+    add_aicpu_cust_kernel_modules(${OBJ_NAME})
+    target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  endif()
 else()
   add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE reverse_sequence ACLNNTYPE aclnn_exclude)
 endif()

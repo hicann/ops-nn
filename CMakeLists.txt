@@ -175,6 +175,8 @@ endif()
 # ===================================================
 init_tf_plugin_modules()
 
+include(cmake/config/aicpu_builtin_package_manifest.cmake)
+
 if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   add_subdirectory(common)
 endif()

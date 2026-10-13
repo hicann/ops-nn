@@ -1,12 +1,12 @@
-# ---------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-# See LICENSE in root of software repository for full text of the License.
-# ---------------------------------------------------------------------------------------------------------
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------
 set(ASCEND_OP_NAME "" CACHE STRING "Ascend op names to compile")
 set(OP_TYPE "adaptive_max_pool2d")
 
@@ -21,14 +21,18 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
 
-  # aicpu cust kernel
-  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
-  file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
-  set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
+  check_aicpu_builtin_pkg_allowed(adaptive_max_pool2d)
 
-  set(OBJ_NAME adaptive_max_pool2d_cust_obj)
-  add_aicpu_cust_kernel_modules(${OBJ_NAME})
-  target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  if (ENABLE_CUSTOM OR _AICPU_BUILTIN_PKG_ALLOWED)
+    # aicpu cust kernel
+    file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
+    file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
+    set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
+
+    set(OBJ_NAME adaptive_max_pool2d_cust_obj)
+    add_aicpu_cust_kernel_modules(${OBJ_NAME})
+    target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  endif()
 else()
   add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE adaptive_max_pool2d ACLNNTYPE aclnn_exclude)
 endif()

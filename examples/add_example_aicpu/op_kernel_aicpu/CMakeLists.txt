@@ -14,15 +14,19 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
 
-  # aicpu json
-  file(GLOB_RECURSE JSON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/*.json)
-  set_property(GLOBAL APPEND PROPERTY AICPU_JSON_FILES ${JSON_FILE})
+  check_aicpu_builtin_pkg_allowed(add_example_aicpu)
 
-  # aicpu cust kernel
-  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu*.cpp)
-  message(STATUS "[add_example_aicpu] Found aicpu sources: ${AICPU_SRC}, ascend dir: ${ASCEND_DIR}, ophsot name: ${OPHOST_NAME}")
+  if (ENABLE_CUSTOM OR _AICPU_BUILTIN_PKG_ALLOWED)
+    # aicpu json
+    file(GLOB_RECURSE JSON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/*.json)
+    set_property(GLOBAL APPEND PROPERTY AICPU_JSON_FILES ${JSON_FILE})
 
-  set(OBJ_NAME add_example_aicpu_cust_obj)
-  add_aicpu_cust_kernel_modules(${OBJ_NAME})
-  target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+    # aicpu cust kernel
+    file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu*.cpp)
+    message(STATUS "[add_example_aicpu] Found aicpu sources: ${AICPU_SRC}, ascend dir: ${ASCEND_DIR}, ophost name: ${OPHOST_NAME}")
+
+    set(OBJ_NAME add_example_aicpu_cust_obj)
+    add_aicpu_cust_kernel_modules(${OBJ_NAME})
+    target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  endif()
 endif()

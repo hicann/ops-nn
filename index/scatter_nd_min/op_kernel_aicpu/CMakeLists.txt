@@ -23,19 +23,23 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
 
-  # aicpu cust kernel
-  set(AICPU_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/scatter_nd_min_aicpu.cpp
-  )
-  set(AICPU_OPDEF_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/scatter_nd_min_aicpu_def.cpp
-  )
-  set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
-  message(STATUS "[scatter_nd_min] Found aicpu sources: ${AICPU_SRC}, ascend dir: ${ASCEND_DIR}, ophost name: ${OPHOST_NAME}")
+  check_aicpu_builtin_pkg_allowed(scatter_nd_min)
 
-  set(OBJ_NAME scatter_nd_min_cust_obj)
-  add_aicpu_cust_kernel_modules(${OBJ_NAME})
-  target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  if (ENABLE_CUSTOM OR _AICPU_BUILTIN_PKG_ALLOWED)
+    # aicpu cust kernel
+    set(AICPU_SRC
+      ${CMAKE_CURRENT_SOURCE_DIR}/scatter_nd_min_aicpu.cpp
+    )
+    set(AICPU_OPDEF_SRC
+      ${CMAKE_CURRENT_SOURCE_DIR}/scatter_nd_min_aicpu_def.cpp
+    )
+    set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
+    message(STATUS "[scatter_nd_min] Found aicpu sources: ${AICPU_SRC}, ascend dir: ${ASCEND_DIR}, ophost name: ${OPHOST_NAME}")
+
+    set(OBJ_NAME scatter_nd_min_cust_obj)
+    add_aicpu_cust_kernel_modules(${OBJ_NAME})
+    target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})
+  endif()
 else()
   add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE scatter_nd_min ACLNNTYPE aclnn_exclude)
 endif()
