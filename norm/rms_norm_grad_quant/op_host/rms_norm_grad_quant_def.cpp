@@ -97,6 +97,7 @@ public:
         this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_INT8);
 
         this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend350");
     }
 };
 

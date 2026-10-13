@@ -35,6 +35,7 @@ public:
             .DynamicRankSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "sync_batch_norm_backward_elemt_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 
 private:

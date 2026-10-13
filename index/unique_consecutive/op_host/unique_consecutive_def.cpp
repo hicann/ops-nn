@@ -93,6 +93,7 @@ public:
             .NeedCheckSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "unique_consecutive_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(UniqueConsecutive);

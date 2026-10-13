@@ -256,6 +256,7 @@ public:
             .ExtendCfgInfo("opFile.value", "add_rms_norm_quant_apt");
 
         this->AICore().AddConfig("ascend950", configRegbase);
+        this->AICore().AddConfig("ascend350", configRegbase);
     }
 };
 OP_ADD(AddRmsNormQuant);

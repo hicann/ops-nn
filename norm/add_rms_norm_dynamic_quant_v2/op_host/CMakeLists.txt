@@ -10,9 +10,9 @@
 message(STATUS "=== Debug: start norm.add_rms_norm_dynamic_quant_v2.op_host.CMakeLists.txt ")
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "kirinx90" "kirin9030" "ascend950")
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "kirinx90" "kirin9030" "ascend950" "ascend350")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch35")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch35" "arch35")
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE add_rms_norm_dynamic_quant_v2 ACLNNTYPE aclnn_exclude
                     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES add_rms_norm_dynamic_quant norm_common rms_norm)
