@@ -76,7 +76,7 @@ class OpDependenciesParser:
     def __init__(self, build_path):
         self.all_ops_dependency = {}
         self.all_ops_reverse_dependency = {}
-        self.all_ops = ["add_example", "add_example_aicpu"]
+        self.all_ops = ["add_example", "add_example_aicpu", "add_example_pypto"]
         self.all_category_ops = {}
         self.parse_dependency(build_path)
         self.parse_pytorch_extension_ops(build_path)

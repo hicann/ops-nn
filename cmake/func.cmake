@@ -479,7 +479,8 @@ macro(add_category_subdirectory)
     endif()
   endforeach()
 
-  if("${ASCEND_OP_NAME}" STREQUAL "add_example" OR "${ASCEND_OP_NAME}" STREQUAL "add_example_aicpu")
+  if("${ASCEND_OP_NAME}" STREQUAL "add_example" OR "${ASCEND_OP_NAME}" STREQUAL "add_example_aicpu"
+     OR "${ASCEND_OP_NAME}" STREQUAL "add_example_pypto")
     add_subdirectory(examples)
   endif()
 endmacro()
@@ -501,6 +502,177 @@ function(find_value_by_key key_list value_list search_key result)
   set(${result} ${found_value} PARENT_SCOPE)
 endfunction()
 
+
+# ------------------------------------------------------------------------------------------------------------
+# require_pypto_pro(<op_name>)
+#   Require pypto_pro for the current operator. Call at the beginning of an operator's CMakeLists.txt, before
+#   registering any host or kernel build rules. If pypto_pro is unavailable in ASCEND_PYTHON_EXECUTABLE, warn
+#   and return from the caller's CMakeLists.txt so the whole operator is skipped.
+# ------------------------------------------------------------------------------------------------------------
+macro(require_pypto_pro op_name)
+  get_property(_pypto_pro_checked GLOBAL PROPERTY PYPTO_PRO_CHECKED)
+  if(NOT _pypto_pro_checked)
+    execute_process(
+      COMMAND ${ASCEND_PYTHON_EXECUTABLE} -c
+              "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('pypto_pro') else 1)"
+      RESULT_VARIABLE _pypto_pro_check_result
+      OUTPUT_QUIET
+      ERROR_QUIET
+      )
+    if(_pypto_pro_check_result EQUAL 0)
+      set_property(GLOBAL PROPERTY PYPTO_PRO_AVAILABLE TRUE)
+    else()
+      set_property(GLOBAL PROPERTY PYPTO_PRO_AVAILABLE FALSE)
+    endif()
+    set_property(GLOBAL PROPERTY PYPTO_PRO_CHECKED TRUE)
+  endif()
+
+  get_property(_pypto_pro_available GLOBAL PROPERTY PYPTO_PRO_AVAILABLE)
+  if(NOT _pypto_pro_available)
+    message(WARNING "pypto_pro is unavailable in ${ASCEND_PYTHON_EXECUTABLE}; skip operator ${op_name}.")
+    return()
+  endif()
+
+  unset(_pypto_pro_checked)
+  unset(_pypto_pro_check_result)
+  unset(_pypto_pro_available)
+endmacro()
+
+# ------------------------------------------------------------------------------------------------------------
+# enable_pypto_kernel(<op_file>)
+#   Mark an operator whose kernel is written in PyPTO. Call ONCE from the op's CMakeLists.txt, and BEFORE
+#   add_all_modules_sources(...) / add_modules_sources(...) (so the tiling logic can read PYPTO_GEN_DIR).
+# ------------------------------------------------------------------------------------------------------------
+function(enable_pypto_kernel op_file)
+  set(_compute_units ${ASCEND_COMPUTE_UNIT})
+  list(FILTER _compute_units INCLUDE REGEX ".+")
+  if(NOT _compute_units)
+    message(FATAL_ERROR "enable_pypto_kernel: ASCEND_COMPUTE_UNIT is empty")
+  endif()
+
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/op_kernel/${op_file}.py")
+    set(_op_dir "${CMAKE_CURRENT_SOURCE_DIR}")
+  elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../op_kernel/${op_file}.py")
+    get_filename_component(_op_dir "${CMAKE_CURRENT_SOURCE_DIR}/.." REALPATH)
+  else()
+    message(FATAL_ERROR "enable_pypto_kernel: kernel python file not found: "
+                        "${CMAKE_CURRENT_SOURCE_DIR}/op_kernel/${op_file}.py")
+  endif()
+  set(_py "${_op_dir}/op_kernel/${op_file}.py")
+  get_filename_component(_op_name "${_op_dir}" NAME)
+
+  list(FIND ASCEND_OP_NAME ${_op_name} _op_index)
+  if(NOT "${ASCEND_OP_NAME}" STREQUAL "" AND _op_index EQUAL -1)
+    return()
+  endif()
+
+  # Per-soc codegen: generated headers depend on the target arch, so emit one set per compute unit
+  # into binary/<soc>/<op_file>_pypto_gen. The first soc's set drives the shared host tiling include.
+  set(_gen_dirs)
+  foreach(_soc_unit ${_compute_units})
+    set(_gen "${CMAKE_BINARY_DIR}/binary/${_soc_unit}/${op_file}_pypto_gen")
+    message(STATUS "pypto codegen: ${op_file} (${_soc_unit}) -> ${_gen}")
+    execute_process(
+      COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${OPS_NN_DIR}/scripts/util/pypto_codegen.py
+              --py-file "${_py}" --out-dir "${_gen}"
+              --op-file "${op_file}" --soc "${_soc_unit}"
+      RESULT_VARIABLE _rc
+      )
+    if(NOT _rc EQUAL 0)
+      message(FATAL_ERROR "pypto codegen failed for ${op_file} (${_soc_unit}) (exit ${_rc})")
+    endif()
+    list(APPEND _gen_dirs ${_gen})
+  endforeach()
+
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_py})
+
+  list(GET _gen_dirs 0 _primary_gen_dir)
+  set(PYPTO_GEN_DIR ${_primary_gen_dir} PARENT_SCOPE)
+
+  # Keyed by the current configure only: reset the cache before writing so a re-configure with a
+  # different --soc never accumulates stale per-soc dirs.
+  unset(${_op_name}_pypto_gen_dirs CACHE)
+  set(${_op_name}_pypto_gen_dirs "${_gen_dirs}" CACHE INTERNAL "pypto gen dirs for op ${_op_name}")
+  set_property(GLOBAL APPEND PROPERTY PYPTO_ENABLED_OPS ${op_file})
+  set_property(GLOBAL APPEND PROPERTY PYPTO_ENABLED_COMPUTE_UNITS ${_compute_units})
+endfunction()
+
+# ------------------------------------------------------------------------------------------------------------
+# pypto_soc_to_arch(<soc> <out_var>)
+#   Resolve a soc to the pypto PYPTO_JIT_ARCH token. The authoritative mapping lives in
+#   scripts/util/pypto_codegen.py (single source of truth, queried once per configure via --print-arch-map)
+#   so the two sides cannot drift. Unknown socs fail the configure instead of silently producing a
+#   kernel whose arch pypto auto-detected differently.
+# ------------------------------------------------------------------------------------------------------------
+function(pypto_soc_to_arch soc out_var)
+  string(TOLOWER "${soc}" _soc)
+  set(${out_var} "" PARENT_SCOPE)
+
+  get_property(_pypto_arch_lines GLOBAL PROPERTY PYPTO_ARCH_MAP_LINES)
+  if(NOT _pypto_arch_lines)
+    execute_process(
+      COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${OPS_NN_DIR}/scripts/util/pypto_codegen.py --print-arch-map
+      OUTPUT_VARIABLE _pypto_arch_lines
+      RESULT_VARIABLE _pypto_arch_map_rc
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      )
+    if(NOT _pypto_arch_map_rc EQUAL 0)
+      message(FATAL_ERROR "pypto: failed to query soc->arch map from pypto_codegen.py (exit ${_pypto_arch_map_rc})")
+    endif()
+    string(REPLACE "\n" ";" _pypto_arch_lines "${_pypto_arch_lines}")
+    set_property(GLOBAL PROPERTY PYPTO_ARCH_MAP_LINES "${_pypto_arch_lines}")
+  endif()
+
+  foreach(_pypto_line ${_pypto_arch_lines})
+    if(_pypto_line MATCHES "^${_soc}=(.+)$")
+      set(${out_var} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+
+  message(FATAL_ERROR "pypto: no arch mapping for soc '${soc}'; update _ARCH_MAP in "
+                      "scripts/util/pypto_codegen.py (see build.sh SOC_TO_ARCH).")
+endfunction()
+
+# ------------------------------------------------------------------------------------------------------------
+# pypto_jit_arch_env(<soc> <out_var>)
+# ------------------------------------------------------------------------------------------------------------
+function(pypto_jit_arch_env soc out_var)
+  set(${out_var} "" PARENT_SCOPE)
+  get_property(_pypto_ops GLOBAL PROPERTY PYPTO_ENABLED_OPS)
+  if(NOT _pypto_ops)
+    return()
+  endif()
+  # Only socs that actually compile a pypto kernel need PYPTO_JIT_ARCH; other socs in the same build
+  # (e.g. a regular AscendC op's compile unit) must stay untouched.
+  get_property(_pypto_cus GLOBAL PROPERTY PYPTO_ENABLED_COMPUTE_UNITS)
+  string(TOLOWER "${soc}" _soc)
+  list(FIND _pypto_cus ${_soc} _cu_index)
+  if(_cu_index EQUAL -1)
+    return()
+  endif()
+  pypto_soc_to_arch("${soc}" _arch)
+  set(${out_var} export PYPTO_JIT_ARCH=${_arch} && PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------------------------------------
+# pypto_include_tiling_gen()
+#   将 PyPTO codegen 目录(PYPTO_GEN_DIR)以 target_include_directories 的方式注入
+#   tiling 目标的 include 路径。目标级 include 跨目录安全（CMake targets 全局可见），
+#   仅要求 CMake 3.16；tiling 源文件需显式 include 生成的 *_tilingkey.h / *_tiling.h。
+#   替代旧方案（set_source_files_properties + TARGET_DIRECTORY，需 CMake >= 3.18）。
+# ------------------------------------------------------------------------------------------------------------
+function(pypto_include_tiling_gen)
+  if(NOT DEFINED PYPTO_GEN_DIR)
+    return()
+  endif()
+  if(NOT TARGET ${OPHOST_NAME}_tiling_obj)
+    return()
+  endif()
+  target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${PYPTO_GEN_DIR})
+endfunction()
+
 function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   if(NOT disable_in_opp)
     set(disable_in_opp FALSE)
@@ -519,8 +691,10 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
 
   if (OPTILING_SRCS OR SUB_OPTILING_SRC)
     add_tiling_modules()
+    # 注入 PyPTO codegen 头文件的 include 路径（CMake 3.16 兼容；源文件显式 include）
+    pypto_include_tiling_gen()
     target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})
-    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir})
+    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir}/../../ ${source_dir})
   endif()
 endfunction()
 
