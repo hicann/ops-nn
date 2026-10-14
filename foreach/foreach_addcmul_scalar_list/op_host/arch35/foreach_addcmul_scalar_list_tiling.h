@@ -26,6 +26,18 @@ struct ForeachAddcmulScalarListTilingData {
     int32_t tensorCount;
     int32_t needCoreNum;
     int64_t perCoreElements;
+    // Per-tensor element counts filled by host tiling (shapes are known on
+    // host), so kernel does not need to parse GM shape descriptors and
+    // mixed-rank tensor lists are handled correctly.
+    int64_t tensorElements[MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST];
+    // Host-side split of non-empty tensors into small (block-owned) and large
+    // (grid-cooperative) groups. tensorIdxMap holds small tensor indices in
+    // [0, smallTensorNum) and large tensor indices in
+    // [smallTensorNum, smallTensorNum + largeTensorNum). Empty tensors are
+    // excluded from the map so the kernel never touches them.
+    int32_t smallTensorNum;
+    int32_t largeTensorNum;
+    int32_t tensorIdxMap[MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST];
 };
 
 struct ForeachAddcmulScalarListCompileInfo {

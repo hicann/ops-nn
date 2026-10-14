@@ -24,6 +24,14 @@ public:
     int32_t tensorCount;
     int32_t needCoreNum;
     int64_t perCoreElements;
+    // Per-tensor element counts filled by host tiling; must stay layout
+    // compatible with op_host/arch35/foreach_addcmul_scalar_list_tiling.h
+    int64_t tensorElements[128];
+    // small tensors are owned per block; large tensors are processed
+    // cooperatively by all blocks. tensorIdxMap: small indices first.
+    int32_t smallTensorNum;
+    int32_t largeTensorNum;
+    int32_t tensorIdxMap[128];
 };
 
 #endif // FOREACH_ADDCMUL_SCALAR_LIST_TILING_DATA_H

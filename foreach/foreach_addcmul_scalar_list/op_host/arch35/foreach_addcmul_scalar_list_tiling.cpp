@@ -65,6 +65,11 @@ static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::Dat
 
 constexpr int64_t FALLBACK_CORE_NUM = 24;
 constexpr int64_t FALLBACK_UB_SIZE = 1024 * 1024;
+// Must match THREAD_NUM in foreach_addcmul_scalar_list_simt.h
+constexpr int64_t KERNEL_THREAD_NUM = 512;
+// Only spread block-owned small tensors over extra cores when there are
+// enough non-empty tensors to amortize the per-block VF launch cost.
+constexpr int64_t MULTI_CORE_MIN_TENSORS = 8;
 
 static ge::graphStatus GetPlatformInfoFallback(const gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
@@ -106,7 +111,8 @@ static ge::graphStatus ValidateAndGetTensorCount(const gert::TilingContext* cont
 }
 
 static ge::graphStatus ComputeMaxTensorElements(gert::TilingContext* context, uint64_t tensorNum,
-                                                int64_t& maxTensorElements, ge::DataType& dataType)
+                                                int64_t& maxTensorElements, ge::DataType& dataType,
+                                                ForeachAddcmulScalarListTilingData* tilingData)
 {
     maxTensorElements = 0;
     dataType = ge::DT_FLOAT;
@@ -116,6 +122,7 @@ static ge::graphStatus ComputeMaxTensorElements(gert::TilingContext* context, ui
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
         int64_t numel = idxTensorShape.GetShapeSize();
+        tilingData->tensorElements[i] = numel;
         if (numel > maxTensorElements) {
             maxTensorElements = numel;
         }
@@ -125,11 +132,25 @@ static ge::graphStatus ComputeMaxTensorElements(gert::TilingContext* context, ui
             dataType = idxTensorDtypePtr->GetDataType();
         }
     }
+    for (uint64_t i = tensorNum; i < static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST); i++) {
+        tilingData->tensorElements[i] = 0;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeCoreSplit(int64_t maxTensorElements, int64_t coreNum, int64_t& needCoreNum,
-                                        int64_t& perCoreElements)
+static int64_t CountNonEmptyTensors(const ForeachAddcmulScalarListTilingData* tilingData, uint64_t tensorNum)
+{
+    int64_t nonEmpty = 0;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        if (tilingData->tensorElements[i] > 0) {
+            nonEmpty++;
+        }
+    }
+    return nonEmpty;
+}
+
+static ge::graphStatus ComputeCoreSplit(int64_t maxTensorElements, int64_t nonEmptyTensorNum, int64_t coreNum,
+                                        int64_t& needCoreNum, int64_t& perCoreElements)
 {
     needCoreNum = 1;
     perCoreElements = 0;
@@ -139,9 +160,44 @@ static ge::graphStatus ComputeCoreSplit(int64_t maxTensorElements, int64_t coreN
     perCoreElements = std::max(SINGLE_CORE_MIN_ELEMENTS, (maxTensorElements + coreNum - 1) / coreNum);
     perCoreElements = ((perCoreElements + ALIGN_SIZE - 1) / ALIGN_SIZE) * ALIGN_SIZE;
     needCoreNum = (maxTensorElements + perCoreElements - 1) / perCoreElements;
+    // Many small tensors: scale core count with non-empty tensor count so that
+    // block-owned small tensors are spread over all cores.
+    if (nonEmptyTensorNum >= MULTI_CORE_MIN_TENSORS) {
+        needCoreNum = std::max(needCoreNum, std::min(nonEmptyTensorNum, coreNum));
+    }
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
     needCoreNum = std::min(needCoreNum, coreNum);
     return ge::GRAPH_SUCCESS;
+}
+
+// Split non-empty tensors into small (block-owned) and large (grid-cooperative)
+// groups. Tensors no larger than one full grid sweep are owned by a single
+// block; bigger ones are split across all blocks. Empty tensors are excluded.
+// Result: tensorIdxMap = [small indices..., large indices...].
+static void SplitSmallLargeTensors(const ForeachAddcmulScalarListTilingData* tilingData, uint64_t tensorNum,
+                                   int64_t needCoreNum, int32_t& smallTensorNum, int32_t& largeTensorNum,
+                                   int32_t* tensorIdxMap)
+{
+    int64_t largeThreshold = KERNEL_THREAD_NUM * needCoreNum;
+    int32_t smallNum = 0;
+    int32_t largeNum = 0;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        int64_t elemCount = tilingData->tensorElements[i];
+        if (elemCount != 0 && elemCount <= largeThreshold) {
+            tensorIdxMap[smallNum++] = static_cast<int32_t>(i);
+        }
+    }
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        int64_t elemCount = tilingData->tensorElements[i];
+        if (elemCount > largeThreshold) {
+            tensorIdxMap[smallNum + largeNum++] = static_cast<int32_t>(i);
+        }
+    }
+    for (uint32_t i = static_cast<uint32_t>(smallNum + largeNum); i < MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST; i++) {
+        tensorIdxMap[i] = 0;
+    }
+    smallTensorNum = smallNum;
+    largeTensorNum = largeNum;
 }
 
 static ge::graphStatus SetTilingContext(gert::TilingContext* context, int64_t needCoreNum, ge::DataType dataType)
@@ -175,20 +231,23 @@ static ge::graphStatus ForeachAddcmulScalarListTilingFunc(gert::TilingContext* c
         OP_LOGE(context, "Failed to get platform info");
         return ge::GRAPH_FAILED;
     }
+    auto* tilingData = context->GetTilingData<ForeachAddcmulScalarListTilingData>();
     if (ValidateAndGetTensorCount(context, tensorNum) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ComputeMaxTensorElements(context, tensorNum, maxTensorElements, dataType) != ge::GRAPH_SUCCESS) {
+    if (ComputeMaxTensorElements(context, tensorNum, maxTensorElements, dataType, tilingData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ComputeCoreSplit(maxTensorElements, coreNum, needCoreNum, perCoreElements) != ge::GRAPH_SUCCESS) {
+    if (ComputeCoreSplit(maxTensorElements, CountNonEmptyTensors(tilingData, tensorNum), coreNum, needCoreNum,
+                         perCoreElements) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
-    auto* tilingData = context->GetTilingData<ForeachAddcmulScalarListTilingData>();
     tilingData->tensorCount = static_cast<int32_t>(tensorNum);
     tilingData->needCoreNum = static_cast<int32_t>(needCoreNum);
     tilingData->perCoreElements = perCoreElements;
+    SplitSmallLargeTensors(tilingData, tensorNum, needCoreNum, tilingData->smallTensorNum, tilingData->largeTensorNum,
+                           tilingData->tensorIdxMap);
 
     if (SetTilingContext(context, needCoreNum, dataType) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

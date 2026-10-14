@@ -37,12 +37,12 @@ __global__ __aicore__ void foreach_addcmul_scalar_list(GM_ADDR x1, GM_ADDR x2, G
     GET_TILING_DATA_WITH_STRUCT(ForeachAddcmulScalarListTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachAddcmulScalarListTilingKey::TILING_KEY_FP16)) {
-        NsForeachAddcmulScalarList::Process<half, float>(x1, x2, x3, scalars, y, &tilingData);
+        NsForeachAddcmulScalarList::Process<half, float>(x1, x2, x3, scalars, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAddcmulScalarListTilingKey::TILING_KEY_FP32)) {
-        NsForeachAddcmulScalarList::Process<float, float>(x1, x2, x3, scalars, y, &tilingData);
+        NsForeachAddcmulScalarList::Process<float, float>(x1, x2, x3, scalars, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAddcmulScalarListTilingKey::TILING_KEY_INT32)) {
-        NsForeachAddcmulScalarList::Process<int32_t, int32_t>(x1, x2, x3, scalars, y, &tilingData);
+        NsForeachAddcmulScalarList::Process<int32_t, int32_t>(x1, x2, x3, scalars, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAddcmulScalarListTilingKey::TILING_KEY_BF16)) {
-        NsForeachAddcmulScalarList::Process<bfloat16_t, float>(x1, x2, x3, scalars, y, &tilingData);
+        NsForeachAddcmulScalarList::Process<bfloat16_t, float>(x1, x2, x3, scalars, y, tiling, &tilingData);
     }
 }
