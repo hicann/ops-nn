@@ -63,6 +63,7 @@ def gather_v2_golden(
     axis = int(axis)
     axis = axis if axis >= 0 else axis + params_shape_len
 
+    import numpy as np
     import tensorflow as tf
 
     tf.compat.v1.disable_eager_execution()
@@ -76,6 +77,9 @@ def gather_v2_golden(
         params_data = params_data.view("int16")
     elif dtype_size == 1:
         params_data = params_data.view("int8")
+
+    if params_shape[axis] > np.iinfo(np.int32).max:
+        indices_data = indices_data.astype(np.int64)
 
     params = tf.compat.v1.placeholder(dtype=params_data.dtype, shape=params_shape)
     indices = tf.compat.v1.placeholder(dtype=indices_data.dtype, shape=indices_shape)
@@ -121,6 +125,12 @@ def aclnn_gather_v2_golden(self, dim, index, out=None, **kwargs):
 
     if hasattr(dim, "item"):
         dim = dim.item()
+
+    if tensor_x.shape[dim] > np.iinfo(np.int32).max:
+        if isinstance(index, torch.Tensor):
+            index = index.to(torch.int64)
+        else:
+            index = index.astype(np.int64)
 
     tf_out = tf.gather(tensor_x, index, axis=dim)
     np_out = tf_out.numpy()

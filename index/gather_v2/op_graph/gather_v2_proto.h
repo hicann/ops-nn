@@ -50,9 +50,9 @@ Defaults to false.
       Only HIGH_PERCISION mode support negative index, and negative index in HIGH_PERFORMANCE mode may cause precision
 abnormal or aicore error.
 * @li Batch_dims must be in the range [max(-rank(input_tensor),-rank(indices)), min(rank(input_tensor), rank(indices))).
-* @li (batch_dims + rank(input_tensor)) % rank(input_tensor) must be less than or equal to (axis + rank(input_tensor)) %
+* @li (batch_dims + rank(indices)) % rank(indices) must be less than or equal to (axis + rank(input_tensor)) %
 rank(input_tensor).
-* @li The first batch_dims dimensions of params and indices are same.
+* @li The first batch_dims dimensions of x and indices are same.
 
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator GatherV2 .

@@ -105,7 +105,7 @@
 - `default_value`必须是标量，且和`values`保持相同数据类型。
 - 当`validate_indices`为true时，`indices`每一行对应的索引不能重复，且必须按升序排列。
 - 当`validate_indices`为true时，`indices`每一行索引必须在有效范围内。
-- AICPU实现不支持`values`、`default_value`、`y`为BFLOAT16。
+- AI CPU实现不支持`values`、`default_value`、`y`为BFLOAT16。
 
 ## 调用说明
 
