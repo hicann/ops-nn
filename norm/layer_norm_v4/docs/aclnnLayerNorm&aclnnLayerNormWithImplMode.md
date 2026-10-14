@@ -818,9 +818,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
       ret = aclrtSetDevice(deviceId);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
       ret = aclrtCreateStream(stream);
-      CHECK_RET(ret == ACL_SUCCESS,
-          LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
-          aclrtResetDevice(deviceId); aclFinalize(); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); aclrtResetDevice(deviceId);
+                aclFinalize(); return ret);
       return 0;
   }
 
@@ -847,9 +846,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
       }
 
       // 调用aclCreateTensor接口创建aclTensor
-      *tensor = aclCreateTensor(
-          shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-          *deviceAddr);
+      *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                shape.data(), shape.size(), *deviceAddr);
   }
 
   template <typename T>
@@ -926,8 +924,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
       // 调用aclnnLayerNormWithImplMode第一段接口
-      ret = aclnnLayerNormWithImplModeGetWorkspaceSize(
-          x, norm, weight, bias, eps, out, mean, rstd, implMode, &workspaceSize, &executor);
+      ret = aclnnLayerNormWithImplModeGetWorkspaceSize(x, norm, weight, bias, eps, out, mean, rstd, implMode,
+                                                       &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLayerNormWithImplModeGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
       // 根据第一段接口计算出的workspaceSize申请device内存
@@ -947,9 +945,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
       // 5. 获取输出的值，将device侧内存上结果拷贝至host侧，根据具体API修改
       auto size = GetShapeSize(xShape);
       std::vector<float> resultData(size, 0);
-      ret = aclrtMemcpy(
-          resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-          ACL_MEMCPY_DEVICE_TO_HOST);
+      ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                        size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy first result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size; i++) {
@@ -958,9 +955,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
       auto size1 = GetShapeSize(meanShape);
       std::vector<float> resultData1(size1, 0);
-      ret = aclrtMemcpy(
-          resultData1.data(), resultData1.size() * sizeof(resultData1[0]), meanDeviceAddr, size1 * sizeof(resultData1[0]),
-          ACL_MEMCPY_DEVICE_TO_HOST);
+      ret = aclrtMemcpy(resultData1.data(), resultData1.size() * sizeof(resultData1[0]), meanDeviceAddr,
+                        size1 * sizeof(resultData1[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy second result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size1; i++) {
@@ -969,9 +965,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
 
       auto size2 = GetShapeSize(meanShape);
       std::vector<float> resultData2(size2, 0);
-      ret = aclrtMemcpy(
-          resultData2.data(), resultData2.size() * sizeof(resultData2[0]), rstdDeviceAddr, size2 * sizeof(resultData2[0]),
-          ACL_MEMCPY_DEVICE_TO_HOST);
+      ret = aclrtMemcpy(resultData2.data(), resultData2.size() * sizeof(resultData2[0]), rstdDeviceAddr,
+                        size2 * sizeof(resultData2[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy last result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < size2; i++) {
