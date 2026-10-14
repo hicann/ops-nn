@@ -61,7 +61,7 @@ inline static bool IsSupportedPlatform()
                kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
     // 仅 Ascend950 有 MaxPoolV3Grad 二进制，其余平台改写后会得到无实现的算子。
-    bool isSupported = (socVersion == "Ascend950");
+    bool isSupported = (socVersion == "Ascend950" || socVersion == "Ascend350");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_supported: %d", socVersion.c_str(), isSupported);
     return isSupported;
 }
