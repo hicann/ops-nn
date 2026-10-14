@@ -45,7 +45,7 @@ static const std::initializer_list<op::DataType> STEP_DTYPE_SUPPORT_LIST = {op::
 
 static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gradsRef, const aclTensorList* expAvgsRef,
                          const aclTensorList* expAvgSqsRef, const aclTensorList* stateSteps,
-                         const aclTensorList* maxExpAvgSqsRef)
+                         const aclTensorList* maxExpAvgSqsRef, bool amsgrad)
 {
     OP_CHECK_NULL(paramsRef, return false);
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
@@ -67,9 +67,11 @@ static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gr
     for (uint64_t i = 0; i < stateSteps->Size(); i++) {
         OP_CHECK_NULL((*stateSteps)[i], return false);
     }
-    if (maxExpAvgSqsRef != nullptr) {
-        for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
-            OP_CHECK_NULL((*maxExpAvgSqsRef)[i], return false);
+    if (amsgrad == true) {
+        if (maxExpAvgSqsRef != nullptr) {
+            for (uint64_t i = 0; i < maxExpAvgSqsRef->Size(); i++) {
+                OP_CHECK_NULL((*maxExpAvgSqsRef)[i], return false);
+            }
         }
     }
     return true;
@@ -217,7 +219,7 @@ static aclnnStatus CheckParams(const aclTensorList* paramsRef, const aclTensorLi
                                double beta1, double beta2, double weightDecay, double eps, bool amsgrad)
 {
     CHECK_RET(CheckAttr(lr, beta1, beta2, weightDecay, eps, amsgrad, maxExpAvgSqsRef), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckNotNull(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef),
+    CHECK_RET(CheckNotNull(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef, amsgrad),
               ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListCount(paramsRef, gradsRef, expAvgsRef, expAvgSqsRef, stateSteps, maxExpAvgSqsRef, amsgrad),
               ACLNN_ERR_PARAM_INVALID);
