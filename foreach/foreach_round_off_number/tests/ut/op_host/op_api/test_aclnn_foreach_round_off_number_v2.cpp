@@ -119,3 +119,21 @@ TEST_F(l2_foreach_round_off_number_v2_test, ascend910B2_foreach_round_off_number
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
+
+// support non-contiguous input and output
+TEST_F(l2_foreach_round_off_number_v2_test, ascend910B2_foreach_round_off_number_v2_test_non_contiguous)
+{
+    vector<int64_t> selfDims = {2, 4};
+    int8_t val = 1;
+    auto scalar_desc = ScalarDesc(val);
+    vector<int64_t> outDims = {2, 4};
+    auto x = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachRoundOffNumberV2, INPUT(xList, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}

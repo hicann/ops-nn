@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>x2（aclTensorList*）</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>x3（aclTensorList*）</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>scalar（aclScalar*）</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>

@@ -10,6 +10,7 @@
 
 #include "aclnn_foreach_maximum_scalar_v2.h"
 #include "foreach_maximum_scalar_v2.h"
+#include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def_nn.h"
 #include "opdev/platform.h"
@@ -206,15 +207,13 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
         return ACLNN_SUCCESS;
     }
 
-    // self如果非连续，需要转连续
-    std::vector<const aclTensor*> tensorsVec;
-    for (size_t i = 0; i < x->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec.push_back(secondContiguous);
-    }
-    auto contiguousTensors = uniqueExecutor.get()->AllocTensorList(tensorsVec.data(), tensorsVec.size());
+    // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
+    auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
     CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 校验scalar的数值是否满足约束
     ret_2 = CheckScalarValueValid(scalar, (*x)[0]->GetDataType());
@@ -228,9 +227,12 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
     }
 
-    // 调用l0算子ForeachMaximumScalarV2进行计算
-    auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, otherTensor, out, uniqueExecutor.get());
+    // 调用l0算子ForeachMaximumScalarV2进行计算，输出到连续buffer
+    auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, otherTensor, contiguousOut, uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

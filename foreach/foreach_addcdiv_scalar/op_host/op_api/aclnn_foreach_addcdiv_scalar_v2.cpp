@@ -15,6 +15,7 @@
 
 #include "aclnn_foreach_addcdiv_scalar_v2.h"
 #include "foreach_addcdiv_scalar_v2.h"
+#include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -200,33 +201,19 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
         return ACLNN_SUCCESS;
     }
 
-    // self如果非连续，需要转连续
-    std::vector<const aclTensor*> tensorsVec1;
-    std::vector<const aclTensor*> tensorsVec2;
-    std::vector<const aclTensor*> tensorsVec3;
-    for (size_t i = 0; i < x1->Size(); ++i) {
-        auto secondContiguous_1 = l0op::Contiguous((*x1)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec1.push_back(secondContiguous_1);
-    }
-    auto contiguousTensorsX1 = uniqueExecutor.get()->AllocTensorList(tensorsVec1.data(), tensorsVec1.size());
+    // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
+    auto contiguousTensorsX1 = ForeachMakeContiguousTensorList(x1, uniqueExecutor.get());
     CHECK_RET(contiguousTensorsX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    for (size_t i = 0; i < x2->Size(); ++i) {
-        auto secondContiguous_1 = l0op::Contiguous((*x2)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec2.push_back(secondContiguous_1);
-    }
-    auto contiguousTensorsX2 = uniqueExecutor.get()->AllocTensorList(tensorsVec2.data(), tensorsVec2.size());
+    auto contiguousTensorsX2 = ForeachMakeContiguousTensorList(x2, uniqueExecutor.get());
     CHECK_RET(contiguousTensorsX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    for (size_t i = 0; i < x3->Size(); ++i) {
-        auto secondContiguous_1 = l0op::Contiguous((*x3)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec3.push_back(secondContiguous_1);
-    }
-    auto contiguousTensorsX3 = uniqueExecutor.get()->AllocTensorList(tensorsVec3.data(), tensorsVec3.size());
+    auto contiguousTensorsX3 = ForeachMakeContiguousTensorList(x3, uniqueExecutor.get());
     CHECK_RET(contiguousTensorsX3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // sclar to tensor
     const aclTensor* otherTensor;
@@ -236,10 +223,13 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x1)[0]->GetDataType());
     }
 
-    // 调用l0算子ForeachAddcdivScalarV2进行计算
+    // 调用l0算子ForeachAddcdivScalarV2进行计算，输出到连续buffer
     auto result = l0op::ForeachAddcdivScalarV2(contiguousTensorsX1, contiguousTensorsX2, contiguousTensorsX3,
-                                               otherTensor, out, uniqueExecutor.get());
+                                               otherTensor, contiguousOut, uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
