@@ -37,21 +37,21 @@
   <tr>
     <td>x</td>
     <td>输入</td>
-    <td>维度索引张量，取值范围为[-N, N)，N为src_format的字符串长度（1~5，故x取值范围为[-5, 5)）。支持负数索引，-i表示倒数第i维（如-1表示最后一维）。</td>
+    <td>维度索引张量，取值范围为[-N, N)，N为src_format的维度数（4维格式N=4，5维格式N=5，即x取值范围为[-4, 4)或[-5, 5)）。支持负数索引，-i表示倒数第i维（如-1表示最后一维）。</td>
     <td>INT32、INT64</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>src_format</td>
     <td>可选属性</td>
-    <td><ul><li>源数据格式字符串，长度为1~5个字符。常用取值："NCHW"、"NHWC"、"NCDHW"、"NDHWC"，也支持其他自定义维度字符串（字符仅用于区分维度，不限于上述取值）。</li><li>默认值为"NHWC"。</li></ul></td>
+    <td><ul><li>源数据格式，枚举值："NCHW"、"NHWC"、"NCDHW"、"NDHWC"。</li><li>默认值为"NHWC"。</li></ul></td>
     <td>STRING</td>
     <td>-</td>
   </tr>
   <tr>
     <td>dst_format</td>
     <td>可选属性</td>
-    <td><ul><li>目标数据格式字符串，长度为1~5个字符。常用取值："NCHW"、"NHWC"、"NCDHW"、"NDHWC"，也支持其他自定义维度字符串（字符仅用于区分维度，不限于上述取值）。</li><li>默认值为"NCHW"。</li></ul></td>
+    <td><ul><li>目标数据格式，枚举值："NCHW"、"NHWC"、"NCDHW"、"NDHWC"。</li><li>默认值为"NCHW"。</li></ul></td>
     <td>STRING</td>
     <td>-</td>
   </tr>
@@ -66,9 +66,9 @@
 
 ## 约束说明
 
-- src_format和dst_format的字符串长度必须相等，且均为1~5个字符（即最多支持5个维度的格式映射）。
-- src_format和dst_format必须包含相同的字符集（即相同的维度字母，顺序可不同）。
-- 输入x中元素的取值范围为[-N, N)，N为src_format的字符串长度（1~5），超出该范围的输入不保证得到正确的映射结果。
+- src_format和dst_format仅支持枚举取值："NCHW"、"NHWC"（4维）、"NCDHW"、"NDHWC"（5维）。
+- src_format和dst_format必须包含相同的字符集（即相同的维度字母，顺序可不同），即两者需同为4维格式或同为5维格式。
+- 输入x中元素的取值范围为[-N, N)，N为src_format的维度数（4维格式N=4，5维格式N=5），超出该范围的输入不保证得到正确的映射结果。
 - 输入x的shape维度数不超过8。
 
 ## 调用说明
