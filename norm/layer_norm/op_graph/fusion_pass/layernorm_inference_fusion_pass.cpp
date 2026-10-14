@@ -21,6 +21,7 @@
 #include "cube_utils/cube_fp16_t.h"
 #include "es_math_ops.h"
 #include "es_nn_ops.h"
+#include "ge/ge_utils.h"
 #include "platform/platform_info.h"
 
 namespace ops {
@@ -317,8 +318,10 @@ std::unique_ptr<Graph> LayerNormInferenceFusionPass::Replacement(const std::uniq
     auto graph_builder = es::EsGraphBuilder("replacement");
     std::vector<es::EsTensorHolder> replacement_inputs;
     std::vector<TensorDesc> boundary_descs;
+    std::vector<Shape> input_shapes;
     replacement_inputs.reserve(kInputNum);
     boundary_descs.reserve(kInputNum);
+    input_shapes.reserve(kInputNum);
     for (size_t i = 0U; i < kInputNum; ++i) {
         const auto node_inputs = subgraph_inputs[i].GetAllInputs();
         if (node_inputs.empty()) {
@@ -335,7 +338,14 @@ std::unique_ptr<Graph> LayerNormInferenceFusionPass::Replacement(const std::uniq
         replacement_inputs.emplace_back(graph_builder.CreateInput(static_cast<int64_t>(i), input_name.c_str(),
                                                                   desc.GetDataType(), desc.GetFormat(),
                                                                   desc.GetShape().GetDims()));
+        auto* input_node = replacement_inputs.back().GetProducer();
+        if ((input_node == nullptr) || (input_node->UpdateInputDesc(0, desc) != GRAPH_SUCCESS) ||
+            (input_node->UpdateOutputDesc(0, desc) != GRAPH_SUCCESS)) {
+            OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot initialize boundary Data descriptor.");
+            return nullptr;
+        }
         boundary_descs.emplace_back(desc);
+        input_shapes.emplace_back(desc.GetShape());
     }
 
     auto layer_norm = es::LayerNorm(replacement_inputs[kInputX], replacement_inputs[kInputGamma],
@@ -369,8 +379,18 @@ std::unique_ptr<Graph> LayerNormInferenceFusionPass::Replacement(const std::uniq
         return nullptr;
     }
 
-    OPS_LOG_D(kPassName.c_str(), "replacement_done.");
-    return graph_builder.BuildAndReset({layer_norm.y});
+    auto graph = graph_builder.BuildAndReset({layer_norm.y});
+    if (graph == nullptr) {
+        OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot build replacement graph.");
+        return nullptr;
+    }
+    const auto status = GeUtils::InferShape(*graph, input_shapes);
+    if (status != SUCCESS) {
+        OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot infer replacement graph, status=%u.",
+                  static_cast<unsigned int>(status));
+        return nullptr;
+    }
+    return graph;
 }
 
 REG_FUSION_PASS(LayerNormInferenceFusionPass).Stage(CustomPassStage::kAfterBuiltinFusionPass);

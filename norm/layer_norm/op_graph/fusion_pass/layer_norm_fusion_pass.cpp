@@ -21,6 +21,7 @@
 #include "cube_utils/cube_fp16_t.h"
 #include "es_math_ops.h"
 #include "es_nn_ops.h"
+#include "ge/ge_utils.h"
 #include "platform/platform_info.h"
 
 namespace ops {
@@ -401,6 +402,7 @@ std::unique_ptr<Graph> LayerNormFusionPass::Replacement(const std::unique_ptr<Ma
     auto graph_builder = es::EsGraphBuilder("replacement");
     std::vector<es::EsTensorHolder> replacement_inputs;
     std::vector<TensorDesc> boundary_descs;
+    std::vector<Shape> input_shapes;
     replacement_inputs.reserve(kInputNum);
     boundary_descs.reserve(kInputNum);
     for (size_t i = 0U; i < kInputNum; ++i) {
@@ -419,13 +421,20 @@ std::unique_ptr<Graph> LayerNormFusionPass::Replacement(const std::unique_ptr<Ma
         replacement_inputs.emplace_back(graph_builder.CreateInput(static_cast<int64_t>(i), input_name.c_str(),
                                                                   desc.GetDataType(), desc.GetFormat(),
                                                                   desc.GetShape().GetDims()));
+        auto* input_node = replacement_inputs.back().GetProducer();
+        if ((input_node == nullptr) || (input_node->UpdateInputDesc(0, desc) != GRAPH_SUCCESS) ||
+            (input_node->UpdateOutputDesc(0, desc) != GRAPH_SUCCESS)) {
+            OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot initialize boundary Data descriptor.");
+            return nullptr;
+        }
         boundary_descs.emplace_back(desc);
+        input_shapes.emplace_back(desc.GetShape());
     }
 
     auto layer_norm = es::LayerNorm(replacement_inputs[kInputX], replacement_inputs[kInputGamma],
                                     replacement_inputs[kInputBeta], matched.axes0[0], kBeginParamsAxis, epsilon);
 
-    // 注册阶段在 InferShape 之后，三个输出的 desc 从被消除的节点直接拷贝，不做 shape 推导。
+    // Initialize output descriptors from the matched nodes.
     GNode* layer_norm_node = layer_norm.y.GetProducer();
     if (layer_norm_node == nullptr) {
         OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot get producer of LayerNorm.");
@@ -454,8 +463,18 @@ std::unique_ptr<Graph> LayerNormFusionPass::Replacement(const std::unique_ptr<Ma
         return nullptr;
     }
 
-    OPS_LOG_D(kPassName.c_str(), "replacement_done.");
-    return graph_builder.BuildAndReset({layer_norm.y});
+    auto graph = graph_builder.BuildAndReset({layer_norm.y});
+    if (graph == nullptr) {
+        OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot build replacement graph.");
+        return nullptr;
+    }
+    const auto status = GeUtils::InferShape(*graph, input_shapes);
+    if (status != SUCCESS) {
+        OPS_LOG_E(kPassName.c_str(), "replacement_rejected : cannot infer replacement graph, status=%u.",
+                  static_cast<unsigned int>(status));
+        return nullptr;
+    }
+    return graph;
 }
 
 REG_FUSION_PASS(LayerNormFusionPass).Stage(CustomPassStage::kAfterBuiltinFusionPass);
