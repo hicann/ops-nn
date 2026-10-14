@@ -5,14 +5,17 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-"""TTK LSTM forward: CPU FP64 golden and same-dtype CUDA reference."""
+"""TTK LSTM forward: CPU FP64 golden and same-dtype PyTorch reference.
+
+TTK places the third-party inputs on the configured reference device.
+"""
 
 import contextlib
 import warnings
 
 import torch
 
-__spec__ = {"npu_vf_testkits.lstm": "VfLstmTestSpec"}
+__spec__ = {"torch._VF.lstm": "VfLstmTestSpec"}
 
 
 def _wide(value):
@@ -55,7 +58,7 @@ def forward_golden(*args, **kwargs):
     return _forward(_fp64(args))
 
 
-class _ForwardCuda:
+class TorchRefImpl:
     def __call__(
         self,
         input,
@@ -69,8 +72,6 @@ class _ForwardCuda:
         batch_first,
         **kwargs,
     ):
-        if input.device.type != "cuda":
-            raise ValueError("The third-party reference must run on CUDA")
         args = (
             input,
             hx,
@@ -88,7 +89,7 @@ class _ForwardCuda:
 
 class VfLstmTestSpec:
     golden = staticmethod(forward_golden)
-    third_party = {"torch": _ForwardCuda}
+    third_party = {"torch": TorchRefImpl}
     tolerance = {
         name: {"standard": "cross_check", "level": "L2"}
         for name in ("float32", "float16", "bfloat16")

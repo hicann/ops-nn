@@ -40,6 +40,11 @@ constexpr int64_t SMALL_MAX_CORES = 16;
 constexpr int64_t SMALL_UB_RESERVE = 16 * 1024; // TPipe meta + safety margin
 constexpr int64_t BIAS_COMPONENT_COUNT = 2;
 constexpr int64_t REPLAY_PLANES = 7; // i, j, f, o, tanh(c), c, h
+constexpr int64_t GATE_COUNT = 4;
+constexpr int64_t FP32_ELEMENT_BYTES = 4;
+constexpr int64_t NARROW_ELEMENT_BYTES = 2;
+constexpr int64_t BLOCK_SEARCH_DIVISOR = 2;
+constexpr int64_t TIME_SEARCH_JUMP_OFFSET = 2; // loop decrement leaves guess + 1
 
 constexpr size_t IDX_X = 0;
 constexpr size_t IDX_W = 1;
@@ -87,7 +92,7 @@ bool InputShapeIs3D(const gert::TilingContext* context, size_t idx, int64_t d0, 
 bool ValidateSmallPathShapes(const gert::TilingContext* context, int64_t timeStep, int64_t batch, int64_t inputSize,
                              int64_t hidden, bool isBias)
 {
-    const int64_t gates = 4 * hidden;
+    const int64_t gates = GATE_COUNT * hidden;
     if (!InputShapeIs2D(context, IDX_W, gates, inputSize + hidden)) {
         return false;
     }
@@ -152,7 +157,7 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16) {
         return ge::GRAPH_SUCCESS;
     }
-    const int64_t dtypeSize = (dtype == ge::DT_FLOAT) ? 4 : 2;
+    const int64_t dtypeSize = (dtype == ge::DT_FLOAT) ? FP32_ELEMENT_BYTES : NARROW_ELEMENT_BYTES;
 
     const gert::Shape& xShape = xShapePtr->GetStorageShape();
     const gert::Shape& initHShape = initHShapePtr->GetStorageShape();
@@ -249,9 +254,9 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     int64_t bBlock = 0;
     int64_t gBlock = 0;
     int64_t chunkCols = 0;
-    for (int64_t cc = SMALL_CHUNK_COLS; cc >= SMALL_MIN_CHUNK_COLS && tBlock == 0; cc /= 2) {
-        for (int64_t gb = hidden; gb >= 1 && tBlock == 0; gb = (gb > 1) ? ((gb + 1) / 2) : 0) {
-            for (int64_t bb = batch; bb >= 1 && tBlock == 0; bb = (bb > 1) ? ((bb + 1) / 2) : 0) {
+    for (int64_t cc = SMALL_CHUNK_COLS; cc >= SMALL_MIN_CHUNK_COLS && tBlock == 0; cc /= BLOCK_SEARCH_DIVISOR) {
+        for (int64_t gb = hidden; gb >= 1 && tBlock == 0; gb = (gb > 1) ? ((gb + 1) / BLOCK_SEARCH_DIVISOR) : 0) {
+            for (int64_t bb = batch; bb >= 1 && tBlock == 0; bb = (bb > 1) ? ((bb + 1) / BLOCK_SEARCH_DIVISOR) : 0) {
                 for (int64_t tb = timeStep; tb >= 1; --tb) {
                     const int64_t rows = tb * bb;
                     const int64_t mb = (rows < SMALL_M_BLOCK) ? rows : SMALL_M_BLOCK;
@@ -269,7 +274,7 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
                         const int64_t per = layout.totalBytes / tb;
                         const int64_t guess = (per > 0) ? (budget / per) : 1;
                         if (guess >= 1 && guess < tb - 1) {
-                            tb = guess + 2; // the decrement then lands on guess+1 and the walk continues
+                            tb = guess + TIME_SEARCH_JUMP_OFFSET;
                         }
                     }
                 }
@@ -312,7 +317,7 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     tilingData->numIChunks = numIChunks;
     tilingData->bBlock = bBlock;
     tilingData->gBlock = gBlock;
-    tilingData->biasComponents = isBias ? biasShape->GetStorageShape().GetDim(0) / (4 * hidden) : 0;
+    tilingData->biasComponents = isBias ? biasShape->GetStorageShape().GetDim(0) / (GATE_COUNT * hidden) : 0;
 
     context->SetTilingKey(LSTM_GRAD_TILING_KEY_REGBASE_SMALL);
     context->SetBlockDim(static_cast<uint32_t>(usedCores));

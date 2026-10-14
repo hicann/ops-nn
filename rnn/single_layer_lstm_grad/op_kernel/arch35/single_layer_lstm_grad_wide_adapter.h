@@ -14,6 +14,12 @@
 #include "../../single_layer_lstm/arch35/single_layer_lstm_gate_math.h"
 
 namespace LstmGradWide {
+constexpr int32_t VECTOR_CORES_PER_CUBE = 2;
+constexpr int32_t PROJECTION_SOURCE_COUNT = 2;
+constexpr int32_t GATE_SLOT_F = 2;
+constexpr int32_t GATE_SLOT_O = 3;
+constexpr uint32_t FP32_BLOCK_ELEMENTS = 8; // one 32-byte UB block
+
 namespace Micro = AscendC::MicroAPI;
 
 template <AscendC::HardEvent Event>
@@ -26,6 +32,22 @@ __aicore__ inline void SyncPipe()
 
 template <typename T>
 class Adapter {
+    static constexpr uint32_t TILE = 64;
+    static constexpr uint32_t COPY_ELEMENTS = 4096;
+    static constexpr uint32_t SCRATCH_BYTES = 32 * 1024;
+    static constexpr uint32_t RAW = 0;
+    static constexpr uint32_t WIDE = 8192;
+    static constexpr uint32_t WEIGHTS = 0; // 64x64 FP32 tile, reused after whole-input conversion
+    static constexpr uint32_t INPUT = 16384;
+    static constexpr uint32_t GATES = INPUT + TILE * sizeof(float);
+    static constexpr uint32_t CELL = GATES + GATE_COUNT * TILE * sizeof(float);
+    static constexpr uint32_t HIDDEN = CELL + TILE * sizeof(float);
+    static constexpr uint32_t TANHC = HIDDEN + TILE * sizeof(float);
+    static constexpr uint32_t TMP1 = TANHC + TILE * sizeof(float);
+    static constexpr uint32_t TMP2 = TMP1 + TILE * sizeof(float);
+    static constexpr uint32_t TMP3 = TMP2 + TILE * sizeof(float);
+    static constexpr uint32_t MASK = TMP3 + TILE * sizeof(float);
+
 public:
     Workspace layout;
     __aicore__ inline void Init(GM_ADDR workspace, int64_t time, int64_t batch, int64_t input, int64_t hidden,
@@ -57,7 +79,7 @@ public:
             pipe_->InitBuffer(scratch_, SCRATCH_BYTES);
             Widen(x, layout.x, layout.inputElements);
             Widen(w, layout.w, layout.weightElements);
-            Widen(bias, layout.bias, static_cast<uint64_t>(parts_) * 4 * h_);
+            Widen(bias, layout.bias, static_cast<uint64_t>(parts_) * GATE_COUNT * h_);
             Widen(initH, layout.initH, layout.stateElements);
             Widen(initC, layout.initC, layout.stateElements);
             Widen(dy, layout.dy, layout.planeElements);
@@ -70,7 +92,8 @@ public:
         for (int64_t step = 0; step < t_; ++step) {
             if (g_coreType == AscendC::AIV) {
                 const int64_t tiles = (h_ + TILE - 1) / TILE;
-                for (int64_t task = AscendC::GetBlockIdx(); task < b_ * tiles; task += AscendC::GetBlockNum() * 2) {
+                for (int64_t task = AscendC::GetBlockIdx(); task < b_ * tiles;
+                     task += AscendC::GetBlockNum() * VECTOR_CORES_PER_CUBE) {
                     ReplayTile(step, task / tiles, (task % tiles) * TILE);
                 }
                 AscendC::PipeBarrier<PIPE_ALL>();
@@ -93,28 +116,13 @@ public:
         Narrow(dx, layout.dx, layout.inputElements);
         Narrow(dw, layout.dw, layout.weightElements);
         if (parts_ != 0) {
-            Narrow(db, layout.db, static_cast<uint64_t>(4) * h_);
+            Narrow(db, layout.db, static_cast<uint64_t>(GATE_COUNT) * h_);
         }
         Narrow(dh, layout.dhPrev, layout.stateElements);
         Narrow(dc, layout.dcPrev, layout.stateElements);
     }
 
 private:
-    static constexpr uint32_t TILE = 64;
-    static constexpr uint32_t COPY_ELEMENTS = 4096;
-    static constexpr uint32_t SCRATCH_BYTES = 32 * 1024;
-    static constexpr uint32_t RAW = 0;
-    static constexpr uint32_t WIDE = 8192;
-    static constexpr uint32_t WEIGHTS = 0; // 64x64 FP32 tile, reused after whole-input conversion
-    static constexpr uint32_t INPUT = 16384;
-    static constexpr uint32_t GATES = INPUT + TILE * sizeof(float);
-    static constexpr uint32_t CELL = GATES + 4 * TILE * sizeof(float);
-    static constexpr uint32_t HIDDEN = CELL + TILE * sizeof(float);
-    static constexpr uint32_t TANHC = HIDDEN + TILE * sizeof(float);
-    static constexpr uint32_t TMP1 = TANHC + TILE * sizeof(float);
-    static constexpr uint32_t TMP2 = TMP1 + TILE * sizeof(float);
-    static constexpr uint32_t TMP3 = TMP2 + TILE * sizeof(float);
-    static constexpr uint32_t MASK = TMP3 + TILE * sizeof(float);
     GM_ADDR base_;
     int64_t t_, b_, i_, h_, parts_, order_;
     bool reverse_;
@@ -136,7 +144,7 @@ private:
         AscendC::GlobalTensor<T> src;
         src.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(input));
         for (uint64_t pos = static_cast<uint64_t>(AscendC::GetBlockIdx()) * COPY_ELEMENTS; pos < elements;
-             pos += AscendC::GetBlockNum() * 2 * COPY_ELEMENTS) {
+             pos += AscendC::GetBlockNum() * VECTOR_CORES_PER_CUBE * COPY_ELEMENTS) {
             const uint32_t n = elements - pos < COPY_ELEMENTS ? elements - pos : COPY_ELEMENTS;
             AscendC::PipeBarrier<PIPE_ALL>();
             const AscendC::DataCopyExtParams narrowCopy{1, static_cast<uint32_t>(n * sizeof(T)), 0, 0, 0};
@@ -155,7 +163,7 @@ private:
         AscendC::GlobalTensor<T> dst;
         dst.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(output));
         for (uint64_t pos = static_cast<uint64_t>(AscendC::GetBlockIdx()) * COPY_ELEMENTS; pos < elements;
-             pos += AscendC::GetBlockNum() * 2 * COPY_ELEMENTS) {
+             pos += AscendC::GetBlockNum() * VECTOR_CORES_PER_CUBE * COPY_ELEMENTS) {
             const uint32_t n = elements - pos < COPY_ELEMENTS ? elements - pos : COPY_ELEMENTS;
             AscendC::PipeBarrier<PIPE_ALL>();
             const AscendC::DataCopyExtParams floatCopy{1, n * uint32_t{sizeof(float)}, 0, 0, 0};
@@ -190,14 +198,14 @@ private:
                                uint32_t rows)
     {
         const int64_t time = reverse_ ? t_ - 1 - step : step;
-        for (int32_t source = 0; source < 2; ++source) {
+        for (int32_t source = 0; source < PROJECTION_SOURCE_COUNT; ++source) {
             const int64_t width = source == 0 ? i_ : h_;
             for (int64_t col = 0; col < width; col += TILE) {
                 const uint32_t n = width - col < TILE ? width - col : TILE;
                 uint64_t input = layout.x + ((time * b_ + batch) * i_ + col) * sizeof(float);
                 if (source != 0) {
                     input = step == 0 ? layout.initH + (batch * h_ + col) * sizeof(float) :
-                                        CacheOffset(6, reverse_ ? time + 1 : time - 1, batch, col);
+                                        CacheOffset(HIDDEN_CACHE_PLANE, reverse_ ? time + 1 : time - 1, batch, col);
                 }
                 Load(INPUT, input, n);
                 SyncPipe<AscendC::HardEvent::V_MTE2>();
@@ -211,7 +219,7 @@ private:
                 auto* xp = (__local_mem__ float*)Local(INPUT).GetPhyAddr();
                 auto* wp = (__local_mem__ float*)Local(WEIGHTS).GetPhyAddr();
                 auto* gp = (__local_mem__ float*)Local(gateOffset).GetPhyAddr();
-                const uint32_t pitch = (n + 7) / 8 * 8;
+                const uint32_t pitch = (n + FP32_BLOCK_ELEMENTS - 1) / FP32_BLOCK_ELEMENTS * FP32_BLOCK_ELEMENTS;
                 __VEC_SCOPE__
                 {
                     uint32_t count = n;
@@ -236,33 +244,34 @@ private:
     {
         const int64_t time = reverse_ ? t_ - 1 - step : step;
         const uint32_t n = h_ - h0 < TILE ? h_ - h0 : TILE;
-        const int64_t slots[4] = {0, order_ == 0 ? 1 : 2, order_ == 0 ? 2 : 1, 3};
-        for (int32_t gate = 0; gate < 4; ++gate) {
+        const int64_t slots[GATE_COUNT] = {0, order_ == 0 ? 1 : GATE_SLOT_F, order_ == 0 ? GATE_SLOT_F : 1,
+                                           GATE_SLOT_O};
+        for (int32_t gate = 0; gate < GATE_COUNT; ++gate) {
             const uint32_t off = GATES + gate * TILE * sizeof(float);
             AscendC::Duplicate(Local(off), 0.0f, TILE);
             for (int64_t part = 0; part < parts_; ++part) {
-                Load(INPUT, layout.bias + (part * 4 * h_ + slots[gate] * h_ + h0) * sizeof(float), n);
+                Load(INPUT, layout.bias + (part * GATE_COUNT * h_ + slots[gate] * h_ + h0) * sizeof(float), n);
                 AscendC::Add(Local(off), Local(off), Local(INPUT), n);
                 AscendC::PipeBarrier<PIPE_V>();
             }
             Dot(off, slots[gate], step, batch, h0, n);
         }
         const uint64_t previousC = step == 0 ? layout.initC + (batch * h_ + h0) * sizeof(float) :
-                                               CacheOffset(5, reverse_ ? time + 1 : time - 1, batch, h0);
+                                               CacheOffset(CELL_CACHE_PLANE, reverse_ ? time + 1 : time - 1, batch, h0);
         Load(CELL, previousC, n);
         SingleLayerLstmVec::SingleLayerLstmGates(
-            Local(GATES), Local(GATES + 2 * TILE * sizeof(float)), Local(GATES + TILE * sizeof(float)),
-            Local(GATES + 3 * TILE * sizeof(float)), Local(CELL), Local(HIDDEN), Local(TANHC), Local(TMP1), Local(TMP2),
-            Local(TMP3), Local<uint8_t>(MASK), TILE);
+            Local(GATES), Local(GATES + GATE_SLOT_F * TILE * sizeof(float)), Local(GATES + TILE * sizeof(float)),
+            Local(GATES + GATE_SLOT_O * TILE * sizeof(float)), Local(CELL), Local(HIDDEN), Local(TANHC), Local(TMP1),
+            Local(TMP2), Local(TMP3), Local<uint8_t>(MASK), TILE);
         SyncPipe<AscendC::HardEvent::V_MTE3>();
-        const uint32_t offsets[7] = {GATES,
-                                     GATES + TILE * sizeof(float),
-                                     GATES + 2 * TILE * sizeof(float),
-                                     GATES + 3 * TILE * sizeof(float),
-                                     TANHC,
-                                     CELL,
-                                     HIDDEN};
-        for (uint32_t plane = 0; plane < 7; ++plane) {
+        const uint32_t offsets[Workspace::PLANES] = {GATES,
+                                                     GATES + TILE * sizeof(float),
+                                                     GATES + GATE_SLOT_F * TILE * sizeof(float),
+                                                     GATES + GATE_SLOT_O * TILE * sizeof(float),
+                                                     TANHC,
+                                                     CELL,
+                                                     HIDDEN};
+        for (uint32_t plane = 0; plane < Workspace::PLANES; ++plane) {
             const AscendC::DataCopyExtParams copy{1, n * uint32_t{sizeof(float)}, 0, 0, 0};
             AscendC::DataCopyPad(gm_[CacheOffset(plane, time, batch, h0) / sizeof(float)], Local(offsets[plane]), copy);
         }

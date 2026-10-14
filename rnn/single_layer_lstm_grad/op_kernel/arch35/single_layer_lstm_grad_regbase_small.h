@@ -64,6 +64,15 @@ constexpr int32_t OFFSET_I = 0;
 constexpr int32_t OFFSET_J = 1;
 constexpr int32_t OFFSET_F = 2;
 constexpr int32_t OFFSET_O = 3;
+constexpr int32_t PROJECTION_SOURCE_COUNT = 2; // input and recurrent projections
+constexpr int32_t REDUCTION_PAIR_SIZE = 2;
+constexpr int32_t REPLAY_TEMP_LAST_INDEX = 2;
+constexpr int32_t CELL_CACHE_PLANE = 5;
+constexpr int32_t HIDDEN_CACHE_PLANE = 6;
+constexpr int64_t REPLAY_PLANES = 7;
+constexpr int32_t DEFAULT_CHUNK_COLS = 64;
+constexpr int32_t DEFAULT_M_BLOCK = 64;
+constexpr int32_t PREVIOUS_TIME_STEP = -1;
 constexpr int64_t FP32_SIZE = 4; // the accumulators dw, db and dx are summed in are always fp32
 
 constexpr Micro::CastTrait LSTM_CAST_UP_TRAIT = {
@@ -399,7 +408,7 @@ private:
     // input and weight storage are narrow; recurrent h never leaves FP32 here.
     __aicore__ inline void ReplayDot(int32_t actT, int32_t b, int32_t slot, int64_t gateOff)
     {
-        for (int32_t source = 0; source < 2; ++source) {
+        for (int32_t source = 0; source < PROJECTION_SOURCE_COUNT; ++source) {
             const int32_t width = source == 0 ? inputSize_ : hidden_;
             for (int32_t c0 = 0; c0 < width; c0 += chunkCols_) {
                 const int32_t cw = width - c0 < chunkCols_ ? width - c0 : chunkCols_;
@@ -476,12 +485,12 @@ private:
                     UbTensor<float>(layout_.initHOff + stateOff), UbTensor<float>(layout_.tanhOff),
                     UbTensor<float>(layout_.replayScratchOff),
                     UbTensor<float>(layout_.replayScratchOff + layout_.replayPitch),
-                    UbTensor<float>(layout_.replayScratchOff + 2 * layout_.replayPitch),
+                    UbTensor<float>(layout_.replayScratchOff + REPLAY_TEMP_LAST_INDEX * layout_.replayPitch),
                     UbTensor<uint8_t>(layout_.replayMaskOff), gateElements);
                 PipeSync<AscendC::HardEvent::V_MTE3>();
                 AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(hidden_ * sizeof(float)), 0, 0, 0};
                 for (int32_t plane = 0; plane < REPLAY_PLANES; ++plane) {
-                    const int64_t src = offsets[plane] + (plane >= 5 ? stateOff : 0);
+                    const int64_t src = offsets[plane] + (plane >= CELL_CACHE_PLANE ? stateOff : 0);
                     const int64_t dst = plane * replayPlaneSize_ + (static_cast<int64_t>(actT) * bBlock_ + b) * hidden_;
                     AscendC::DataCopyPad(replayGm_[dst], UbTensor<float>(src), p);
                 }
@@ -510,8 +519,10 @@ private:
         } else {
             const int32_t outsideT = backward_ ? blkA0_ + blkSteps_ : blkA0_ - 1;
             const int64_t row = static_cast<int64_t>(outsideT) * bBlock_;
-            CopyInRows(layout_.initHOff, replayGm_, bCur_, hidden_, 6 * replayPlaneSize_ / hidden_ + row);
-            CopyInRows(layout_.initCOff, replayGm_, bCur_, hidden_, 5 * replayPlaneSize_ / hidden_ + row);
+            CopyInRows(layout_.initHOff, replayGm_, bCur_, hidden_,
+                       HIDDEN_CACHE_PLANE * replayPlaneSize_ / hidden_ + row);
+            CopyInRows(layout_.initCOff, replayGm_, bCur_, hidden_,
+                       CELL_CACHE_PLANE * replayPlaneSize_ / hidden_ + row);
         }
         PipeSync<AscendC::HardEvent::MTE2_V>();
     }
@@ -726,8 +737,8 @@ private:
              * the gate-math scope above because it issues a DMA, and __VEC_SCOPE__ is vector-only. */
             for (int32_t c0 = 0; c0 < hidden_; c0 += chunkCols_) {
                 const int32_t cw = ((hidden_ - c0) < chunkCols_) ? (hidden_ - c0) : chunkCols_;
-                const uint32_t cwAlign = static_cast<uint32_t>(AlignUpI64(static_cast<int64_t>(cw) * sizeof(T), 32) /
-                                                               sizeof(T));
+                const uint32_t cwAlign = static_cast<uint32_t>(
+                    AlignUpI64(static_cast<int64_t>(cw) * sizeof(T), UB_BLOCK_BYTES) / sizeof(T));
                 const uint32_t cwU = static_cast<uint32_t>(cw);
                 const uint32_t c0U = static_cast<uint32_t>(c0);
                 ZeroDhDst(dhDst, c0U, cwU);
@@ -756,8 +767,8 @@ private:
                              * swapping roles: the textbook form ends each step with `s = t`, and
                              * unrolling twice lets the even step accumulate s -> t and the odd step
                              * t -> s, so that move disappears. */
-                            const uint16_t gPairs = static_cast<uint16_t>(gLoop / 2);
-                            const uint16_t gTail = static_cast<uint16_t>(gLoop - gPairs * 2);
+                            const uint16_t gPairs = static_cast<uint16_t>(gLoop / REDUCTION_PAIR_SIZE);
+                            const uint16_t gTail = static_cast<uint16_t>(gLoop - gPairs * REDUCTION_PAIR_SIZE);
                             for (uint16_t b = 0; b < B; ++b) {
                                 uint32_t go = gateBase + static_cast<uint32_t>(b) * LSTM_GATE_NUM * haF + slotBase;
                                 uint32_t bo = static_cast<uint32_t>(b) * haF + c0U;
@@ -765,7 +776,7 @@ private:
                                 Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(sum, dhDst + bo);
                                 Micro::Duplicate(comp, 0.0f);
                                 for (uint16_t q = 0; q < gPairs; ++q) {
-                                    uint16_t k = static_cast<uint16_t>(q * 2);
+                                    uint16_t k = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
                                     LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k) * cwAlign);
                                     Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + go + k);
                                     Micro::Mul(prod, wRow, sc, mW);
@@ -785,7 +796,7 @@ private:
                                  * what the accumulator dropped; adding it back is the last chance
                                  * to keep it, and costs one operation per row. */
                                 for (uint16_t u = 0; u < gTail; ++u) {
-                                    uint16_t k = static_cast<uint16_t>(gPairs * 2);
+                                    uint16_t k = static_cast<uint16_t>(gPairs * REDUCTION_PAIR_SIZE);
                                     LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k) * cwAlign);
                                     Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + go + k);
                                     Micro::Mul(prod, wRow, sc, mW);
@@ -848,9 +859,11 @@ private:
      * row of the block; the weight chunk is what is re-staged. */
     __aicore__ inline void ProcessOneChunk(int32_t col0, int32_t w)
     {
-        const int32_t wAlign = static_cast<int32_t>(AlignUpI64(static_cast<int64_t>(w) * sizeof(T), 32) / sizeof(T));
+        const int32_t wAlign = static_cast<int32_t>(AlignUpI64(static_cast<int64_t>(w) * sizeof(T), UB_BLOCK_BYTES) /
+                                                    sizeof(T));
         // x is fp32, so its chunk has its own 32-byte-rounded pitch
-        const int32_t xAlign = static_cast<int32_t>(AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, 32) / FP32_SIZE);
+        const int32_t xAlign = static_cast<int32_t>(AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, UB_BLOCK_BYTES) /
+                                                    FP32_SIZE);
         __local_mem__ T* wChunkU = UbPtr<T>(layout_.wChunkOff);
         __local_mem__ float* xChunkU = UbPtr<float>(layout_.xChunkOff);
         __local_mem__ float* dwAccU = UbPtr<float>(layout_.dwAccOff);
@@ -892,8 +905,8 @@ private:
                      * 0.60x to 3.98x, so individual elements move both ways. Where a real gain was
                      * needed -- dh_next, whose error the recurrence compounds -- compensated
                      * summation is used instead, 12.78x at the same length. */
-                    const uint16_t gPairs = static_cast<uint16_t>(gLoop / 2);
-                    const uint16_t gTail = static_cast<uint16_t>(gLoop - gPairs * 2);
+                    const uint16_t gPairs = static_cast<uint16_t>(gLoop / REDUCTION_PAIR_SIZE);
+                    const uint16_t gTail = static_cast<uint16_t>(gLoop - gPairs * REDUCTION_PAIR_SIZE);
                     for (uint16_t mi = 0; mi < mLoop; ++mi) {
                         // Compensated summation, in the form spelled out at dh_next's reduction.
                         Micro::RegTensor<float> sum, nxt, comp, wRow, sc, prod, y;
@@ -902,7 +915,7 @@ private:
                         Micro::Duplicate(comp, 0.0f);
                         uint32_t gOff = static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase;
                         for (uint16_t q = 0; q < gPairs; ++q) {
-                            uint16_t k = static_cast<uint16_t>(q * 2);
+                            uint16_t k = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
                             LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k) * wAlignU);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + gOff + k);
                             Micro::Mul(prod, wRow, sc, mW);
@@ -919,7 +932,7 @@ private:
                             Micro::Sub(comp, comp, y, mW);
                         }
                         for (uint16_t u = 0; u < gTail; ++u) {
-                            uint16_t k = static_cast<uint16_t>(gPairs * 2);
+                            uint16_t k = static_cast<uint16_t>(gPairs * REDUCTION_PAIR_SIZE);
                             LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k) * wAlignU);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + gOff + k);
                             Micro::Mul(prod, wRow, sc, mW);
@@ -952,10 +965,10 @@ private:
                         Micro::Duplicate(comp, 0.0f);
                         /* Every for inside a __VEC_SCOPE__ needs its own initialiser, so the
                          * unrolled body and the tail are counted rather than sharing a cursor. */
-                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / 2);
-                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * 2);
+                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / REDUCTION_PAIR_SIZE);
+                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * REDUCTION_PAIR_SIZE);
                         for (uint16_t q = 0; q < mPairs; ++q) {
-                            uint16_t mi = static_cast<uint16_t>(q * 2);
+                            uint16_t mi = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
                             uint32_t g0 = static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase + k;
                             LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi) * xAlignU);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + g0);
@@ -974,7 +987,7 @@ private:
                             Micro::Sub(comp, comp, y, mW);
                         }
                         for (uint16_t u = 0; u < mTail; ++u) {
-                            uint16_t mi = static_cast<uint16_t>(mPairs * 2);
+                            uint16_t mi = static_cast<uint16_t>(mPairs * REDUCTION_PAIR_SIZE);
                             LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi) * xAlignU);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(
                                 sc, dgateU + static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase + k);
@@ -1101,11 +1114,11 @@ private:
     __aicore__ inline void StoreDwAcc(int32_t gRow0, int32_t col0, int32_t w, int32_t gCur)
     {
         PipeSync<AscendC::HardEvent::V_MTE3>();
-        const int64_t burst = AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, 32);
+        const int64_t burst = AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, UB_BLOCK_BYTES);
         AscendC::DataCopyExtParams p;
         p.blockCount = static_cast<uint16_t>(gCur);
         p.blockLen = static_cast<uint32_t>(w * FP32_SIZE);
-        p.srcStride = static_cast<uint32_t>((static_cast<int64_t>(chunkCols_) * FP32_SIZE - burst) / 32);
+        p.srcStride = static_cast<uint32_t>((static_cast<int64_t>(chunkCols_) * FP32_SIZE - burst) / UB_BLOCK_BYTES);
         p.dstStride = static_cast<uint32_t>((cols_ - w) * FP32_SIZE);
         if (b0_ != 0 || blkLt0_ != ((timeStep_ - 1) / tBlock_) * tBlock_) {
             AscendC::SetAtomicAdd<float>();
@@ -1157,7 +1170,7 @@ private:
                     const int32_t ltIn0 = backward_ ? 0 : 1;
                     const int32_t ltInN = backward_ ? (blkSteps_ - 1) : blkSteps_;
                     const int32_t ltEdge = backward_ ? (blkSteps_ - 1) : 0;
-                    const int32_t hShift = backward_ ? 1 : -1;
+                    const int32_t hShift = backward_ ? 1 : PREVIOUS_TIME_STEP;
                     const uint32_t rowStrideS = static_cast<uint32_t>(bCur_) * haF;
                     const uint32_t gateStride = static_cast<uint32_t>(bCur_) * LSTM_GATE_NUM * haF;
                     __VEC_SCOPE__
@@ -1253,10 +1266,10 @@ private:
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(sum, dbStage + slotOff);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(comp, dbComp + slotOff);
                         }
-                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / 2);
-                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * 2);
+                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / REDUCTION_PAIR_SIZE);
+                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * REDUCTION_PAIR_SIZE);
                         for (uint16_t q = 0; q < mPairs; ++q) {
-                            uint16_t m = static_cast<uint16_t>(q * 2);
+                            uint16_t m = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
                             uint32_t o0 = static_cast<uint32_t>(m) * LSTM_GATE_NUM * haF + slotOff;
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(r, dgateU + o0);
                             Micro::Sub(y, r, comp, mH);
@@ -1270,7 +1283,7 @@ private:
                             Micro::Sub(comp, comp, y, mH);
                         }
                         for (uint16_t u = 0; u < mTail; ++u) {
-                            uint16_t m = static_cast<uint16_t>(mPairs * 2);
+                            uint16_t m = static_cast<uint16_t>(mPairs * REDUCTION_PAIR_SIZE);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(
                                 r, dgateU + static_cast<uint32_t>(m) * LSTM_GATE_NUM * haF + slotOff);
                             Micro::Sub(y, r, comp, mH);
@@ -1375,9 +1388,9 @@ private:
             (void)w;
             return;
         } else {
-            const int32_t wAlign = static_cast<int32_t>(AlignUpI64(static_cast<int64_t>(w) * sizeof(T), 32) /
-                                                        sizeof(T));
-            const int64_t burst = AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, 32);
+            const int32_t wAlign = static_cast<int32_t>(
+                AlignUpI64(static_cast<int64_t>(w) * sizeof(T), UB_BLOCK_BYTES) / sizeof(T));
+            const int64_t burst = AlignUpI64(static_cast<int64_t>(w) * FP32_SIZE, UB_BLOCK_BYTES);
             for (int32_t slot = 0; slot < static_cast<int32_t>(LSTM_GATE_NUM); ++slot) {
                 for (int32_t g0 = 0; g0 < hidden_; g0 += gBlock_) {
                     const int32_t gCur = ((hidden_ - g0) < gBlock_) ? (hidden_ - g0) : gBlock_;
@@ -1390,7 +1403,7 @@ private:
                         p.blockLen = static_cast<uint32_t>(w * FP32_SIZE);
                         p.srcStride = static_cast<uint32_t>((cols_ - w) * FP32_SIZE);
                         p.dstStride = static_cast<uint32_t>((static_cast<int64_t>(chunkCols_) * FP32_SIZE - burst) /
-                                                            32);
+                                                            UB_BLOCK_BYTES);
                         AscendC::DataCopyPadExtParams<float> pad{false, 0, 0, 0};
                         AscendC::DataCopyPad(UbTensor<float>(layout_.dwAccOff), dwAccGm_[gRow0 * cols_ + col0], p, pad);
                     }
@@ -1478,7 +1491,6 @@ private:
     }
 
 private:
-    static constexpr int64_t REPLAY_PLANES = 7;
     int32_t biasComponents_{0};
     int64_t replayPlaneSize_{0};
     int32_t timeStep_{0};
@@ -1508,8 +1520,8 @@ private:
     int32_t slotJ_{OFFSET_J};
     int32_t slotF_{OFFSET_F};
     int32_t usedCores_{1};
-    int32_t chunkCols_{64};
-    int32_t mBlock_{64};
+    int32_t chunkCols_{DEFAULT_CHUNK_COLS};
+    int32_t mBlock_{DEFAULT_M_BLOCK};
     int32_t numIChunks_{1};
     int32_t blockIdx_{0};
     int32_t finalParity_{0};

@@ -89,6 +89,7 @@ struct LstmGradRegbaseSmallUbLayout {
     static constexpr int64_t REGION_ALIGN = 64;    // bytes; region bases use a stricter 64B alignment
     static constexpr int64_t PING_PONG_NUM = 2;    // dh/dc recurrent state alternates between two buffers
     static constexpr int64_t PREV_STATE_NUM = 2;   // staged final outputs: dh_prev and dc_prev
+    static constexpr int64_t REPLAY_SCRATCH_PLANES = 3;
     static constexpr int64_t TAIL_PAD_BYTES = 256; // one vector register width (VL): full-VL loads may read
                                                    // up to VL-1 elements past the last region
 
@@ -186,8 +187,9 @@ struct LstmGradRegbaseSmallUbLayout {
         dgateOff = off;
         replayPitch = AlignUpI64(hidden * FP32_BYTES, TAIL_PAD_BYTES);
         replayScratchOff = dgateOff;
-        replayMaskOff = replayScratchOff + 3 * replayPitch;
-        const int64_t replayBytes = 3 * replayPitch + AlignUpI64(replayPitch / FP32_BYTES, REGION_ALIGN);
+        replayMaskOff = replayScratchOff + REPLAY_SCRATCH_PLANES * replayPitch;
+        const int64_t replayBytes = REPLAY_SCRATCH_PLANES * replayPitch +
+                                    AlignUpI64(replayPitch / FP32_BYTES, REGION_ALIGN);
         const int64_t dgateBytes = AlignUpI64(rows * GATE_NUM * hAlignF * FP32_BYTES, REGION_ALIGN);
         // Replay finishes before ProcessChain produces dgate. Sharing storage
         // avoids adding three H-wide planes to the large-hidden UB budget.

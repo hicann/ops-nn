@@ -1337,7 +1337,7 @@ private:
             DataCopyExtParams dataCopyInDhNextParams{
                 static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
                 static_cast<uint32_t>((tiling.hiddenSize - curCopyNLength) * FLOAT_BYTES),
-                static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / 8), 0};
+                static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR), 0};
 
             DataCopyPad(dhNextFp32Ub,
                         outputGm.dhPrevFp32Gm[taskIdx * tiling.hiddenSize * dxhHiddenTiling.copyMLines +

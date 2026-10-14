@@ -18,6 +18,15 @@
 #endif
 
 namespace LstmGradWide {
+constexpr int32_t GATE_COUNT = 4;
+constexpr int32_t MAX_BIAS_COMPONENTS = 2;
+constexpr int32_t CELL_CACHE_PLANE = 5;
+constexpr int32_t HIDDEN_CACHE_PLANE = 6;
+constexpr int32_t WORKSPACE_VALUE_BITS = 63;
+constexpr int32_t KERNEL_EXTENT_VALUE_BITS = 31;
+constexpr uint64_t MAX_WORKSPACE_BYTES = (uint64_t{1} << WORKSPACE_VALUE_BITS) - 1;
+constexpr uint64_t MAX_KERNEL_EXTENT = (uint64_t{1} << KERNEL_EXTENT_VALUE_BITS) - 1;
+
 // Private FP32 storage only: none of these regions is an operator output tensor.
 struct Workspace {
     static constexpr uint64_t ALIGN = 512;
@@ -29,12 +38,11 @@ struct Workspace {
 
     LSTM_WIDE_INLINE bool Region(uint64_t elements, uint64_t& offset)
     {
-        constexpr uint64_t limit = (uint64_t{1} << 63) - 1;
-        if (elements > (limit - ALIGN) / FLOAT_BYTES || bytes > limit - ALIGN) {
+        if (elements > (MAX_WORKSPACE_BYTES - ALIGN) / FLOAT_BYTES || bytes > MAX_WORKSPACE_BYTES - ALIGN) {
             return false;
         }
         const uint64_t length = (elements * FLOAT_BYTES + ALIGN - 1) / ALIGN * ALIGN;
-        if (length > limit - bytes) {
+        if (length > MAX_WORKSPACE_BYTES - bytes) {
             return false;
         }
         offset = bytes;
@@ -45,28 +53,29 @@ struct Workspace {
     LSTM_WIDE_INLINE bool Fill(int64_t t, int64_t b, int64_t i, int64_t h, int64_t biasParts)
     {
         // Kernel dimensions are signed 32-bit; reject overflow before evaluating products.
-        constexpr uint64_t extentLimit = (uint64_t{1} << 31) - 1;
-        if (t <= 0 || b <= 0 || i <= 0 || h <= 0 || biasParts < 0 || biasParts > 2 ||
-            static_cast<uint64_t>(t) > extentLimit || static_cast<uint64_t>(b) > extentLimit ||
-            static_cast<uint64_t>(i) + h > extentLimit / FLOAT_BYTES || static_cast<uint64_t>(h) > extentLimit / 4 ||
-            static_cast<uint64_t>(t) * b > extentLimit) {
+        if (t <= 0 || b <= 0 || i <= 0 || h <= 0 || biasParts < 0 || biasParts > MAX_BIAS_COMPONENTS ||
+            static_cast<uint64_t>(t) > MAX_KERNEL_EXTENT || static_cast<uint64_t>(b) > MAX_KERNEL_EXTENT ||
+            static_cast<uint64_t>(i) + h > MAX_KERNEL_EXTENT / FLOAT_BYTES ||
+            static_cast<uint64_t>(h) > MAX_KERNEL_EXTENT / GATE_COUNT ||
+            static_cast<uint64_t>(t) * b > MAX_KERNEL_EXTENT) {
             return false;
         }
         const uint64_t rows = static_cast<uint64_t>(t) * b;
         stateElements = static_cast<uint64_t>(b) * h;
         planeElements = rows * h;
         inputElements = rows * i;
-        weightElements = uint64_t{4} * h * (i + h);
+        weightElements = uint64_t{GATE_COUNT} * h * (i + h);
         bytes = 0;
-        if (!Region(inputElements, x) || !Region(weightElements, w) || !Region(uint64_t{4} * h * biasParts, bias) ||
-            !Region(stateElements, initH) || !Region(stateElements, initC) || !Region(planeElements, dy) ||
-            !Region(stateElements, dh) || !Region(stateElements, dc) || !Region(PLANES * planeElements, cache) ||
-            !Region(inputElements, dx) || !Region(weightElements, dw) || !Region(uint64_t{4} * h, db) ||
-            !Region(stateElements, dhPrev) || !Region(stateElements, dcPrev)) {
+        if (!Region(inputElements, x) || !Region(weightElements, w) ||
+            !Region(uint64_t{GATE_COUNT} * h * biasParts, bias) || !Region(stateElements, initH) ||
+            !Region(stateElements, initC) || !Region(planeElements, dy) || !Region(stateElements, dh) ||
+            !Region(stateElements, dc) || !Region(PLANES * planeElements, cache) || !Region(inputElements, dx) ||
+            !Region(weightElements, dw) || !Region(uint64_t{GATE_COUNT} * h, db) || !Region(stateElements, dhPrev) ||
+            !Region(stateElements, dcPrev)) {
             return false;
         }
         // Existing FP32 matmul kernel: dgate + dxh + xh, in that order.
-        const uint64_t legacyElements = rows * uint64_t{4} * h + (rows + b) * (static_cast<uint64_t>(i) + h);
+        const uint64_t legacyElements = rows * uint64_t{GATE_COUNT} * h + (rows + b) * (static_cast<uint64_t>(i) + h);
         return Region(legacyElements, legacy);
     }
 };

@@ -21,6 +21,28 @@
 #include "single_layer_lstm_grad_wide_adapter.h"
 using namespace AscendC;
 
+namespace {
+constexpr int32_t TANHC_CACHE_PLANE = 4;
+} // namespace
+
+// CANN extracts tiling keys before C++ constant evaluation; keep macro-expanded integers.
+#define TILING_KEY_WEIGHT_HUGE 10
+#define TILING_KEY_GATE_WEIGHT_HUGE 11
+#define TILING_KEY_CONCAT_SMALL_BASE 100
+#define TILING_KEY_CONCAT_SMALL_GATE_HUGE 101
+#define TILING_KEY_CONCAT_SMALL_WEIGHT_HUGE 110
+#define TILING_KEY_CONCAT_SMALL_GATE_WEIGHT_HUGE 111
+#define TILING_KEY_SPLIT_SMALL_BASE 1000
+#define TILING_KEY_SPLIT_SMALL_GATE_HUGE 1001
+#define TILING_KEY_SPLIT_SMALL_WEIGHT_HUGE 1010
+#define TILING_KEY_SPLIT_SMALL_GATE_WEIGHT_HUGE 1011
+#define TILING_KEY_CONCAT_SPLIT_SMALL_BASE 1100
+#define TILING_KEY_CONCAT_SPLIT_SMALL_GATE_HUGE 1101
+#define TILING_KEY_CONCAT_SPLIT_SMALL_WEIGHT_HUGE 1110
+#define TILING_KEY_CONCAT_SPLIT_SMALL_GATE_WEIGHT_HUGE 1111
+#define LSTM_GRAD_REGBASE_SMALL_TASK_KEY 20000
+static_assert(LSTM_GRAD_REGBASE_SMALL_TASK_KEY == LSTM_GRAD_TILING_KEY_REGBASE_SMALL);
+
 // Hundreds select XH_HUGE; thousands select DXH_HUGE.
 #define LSTM_KEY_CONCAT_SMALL_FLAGS false, true
 #define LSTM_KEY_SPLIT_SMALL_FLAGS true, false
@@ -42,8 +64,8 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
                                                              GM_ADDR workspace, GM_ADDR rnnGradTiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
-    KERNEL_TASK_TYPE(20000, KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(20000)) {
+    KERNEL_TASK_TYPE(LSTM_GRAD_REGBASE_SMALL_TASK_KEY, KERNEL_TYPE_AIV_ONLY);
+    if (TILING_KEY_IS(LSTM_GRAD_REGBASE_SMALL_TASK_KEY)) {
         // Path S owns an accumulator workspace for narrow weights. The public
         // framework pointer includes a reserved prefix; never use it as data.
         if (g_coreType == AscendC::AIC) {
@@ -87,11 +109,11 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
         dc = replay.At(replay.layout.dc);
         i = replay.Plane(0);
         j = replay.Plane(1);
-        f = replay.Plane(2);
-        o = replay.Plane(3);
-        tanhct = replay.Plane(4);
-        c = replay.Plane(5);
-        h = replay.Plane(6);
+        f = replay.Plane(LstmGradWide::GATE_SLOT_F);
+        o = replay.Plane(LstmGradWide::GATE_SLOT_O);
+        tanhct = replay.Plane(TANHC_CACHE_PLANE);
+        c = replay.Plane(LstmGradWide::CELL_CACHE_PLANE);
+        h = replay.Plane(LstmGradWide::HIDDEN_CACHE_PLANE);
         y = h;
         dx = replay.At(replay.layout.dx);
         dw = replay.At(replay.layout.dw);
@@ -104,33 +126,33 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_CFG, false, false);
     } else if (TILING_KEY_IS(1)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_CFG, false, false);
-    } else if (TILING_KEY_IS(10)) {
+    } else if (TILING_KEY_IS(TILING_KEY_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_HUGE_CFG, false, false);
-    } else if (TILING_KEY_IS(11)) {
+    } else if (TILING_KEY_IS(TILING_KEY_GATE_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_HUGE_CFG, false, false);
-    } else if (TILING_KEY_IS(100)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SMALL_BASE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_CFG, LSTM_KEY_CONCAT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(101)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SMALL_GATE_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_CFG, LSTM_KEY_CONCAT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(110)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SMALL_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_HUGE_CFG, LSTM_KEY_CONCAT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(111)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SMALL_GATE_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_HUGE_CFG, LSTM_KEY_CONCAT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(1000)) {
+    } else if (TILING_KEY_IS(TILING_KEY_SPLIT_SMALL_BASE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_CFG, LSTM_KEY_SPLIT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(1001)) {
+    } else if (TILING_KEY_IS(TILING_KEY_SPLIT_SMALL_GATE_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_CFG, LSTM_KEY_SPLIT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(1010)) {
+    } else if (TILING_KEY_IS(TILING_KEY_SPLIT_SMALL_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_HUGE_CFG, LSTM_KEY_SPLIT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(1011)) {
+    } else if (TILING_KEY_IS(TILING_KEY_SPLIT_SMALL_GATE_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_HUGE_CFG, LSTM_KEY_SPLIT_SMALL_FLAGS);
-    } else if (TILING_KEY_IS(1100)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SPLIT_SMALL_BASE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_CFG, true, true);
-    } else if (TILING_KEY_IS(1101)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SPLIT_SMALL_GATE_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_CFG, true, true);
-    } else if (TILING_KEY_IS(1110)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SPLIT_SMALL_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_CFG, MM_HUGE_CFG, true, true);
-    } else if (TILING_KEY_IS(1111)) {
+    } else if (TILING_KEY_IS(TILING_KEY_CONCAT_SPLIT_SMALL_GATE_WEIGHT_HUGE)) {
         GENERAL_OP_IMPL(RNNGrad, float, MM_HUGE_CFG, MM_HUGE_CFG, true, true);
     }
     if constexpr (!std::is_same<DTYPE_W, float>::value) {

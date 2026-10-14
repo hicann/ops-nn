@@ -7,17 +7,35 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 """TTK LSTM forward/backward with explicit dy, dh_n and dc_n inputs.
 
-Tensor arguments: input, hx, params, dy, dh_n, dc_n; then the six VF attributes.
+``lstm_training_e2e_golden.lstm_train`` is a Python entry point for a complete
+LSTM forward/backward run, rather than a built-in PyTorch operator or a
+standalone backward call. Its semantics are ``torch._VF.lstm(..., train=True)``
+followed by ``torch.autograd.grad`` with the supplied upstream gradients.
+The NPU call uses the installed torch_npu/op-plugin dispatch and autograd;
+it requires versions that support the tested LSTM configuration. This module
+does not override that dispatch or load a private operator extension.
+
+Tensor arguments are input, hx=[h0, c0], params, dy, dh_n and dc_n, followed by
+has_biases, num_layers, dropout, train, bidirectional and batch_first.
+dy, dh_n and dc_n are independent test inputs corresponding to y, h_n and c_n;
+the adapter does not generate them. Forward execution produces the saved states
+consumed by backward. This test requires train=True and dropout=0.
+The returned tuple is (y, h_n, c_n, dx, dh0, dc0, *dparams), with parameter
+gradients in the same order as params.
+
+The __spec__ key matches the adapter API name in the test-case CSV.
 The harness supplies identical declared-dtype inputs to all three backends.
 Only the CPU golden widens those supplied values to FP64.
+TTK places the third-party inputs on the configured reference device.
 """
 
 import contextlib
 import warnings
+from typing import List
 
 import torch
 
-__spec__ = {"npu_vf_testkits.lstm_train": "VfLstmTrainTestSpec"}
+__spec__ = {"lstm_training_e2e_golden.lstm_train": "VfLstmTrainTestSpec"}
 
 
 def _wide(value):
@@ -109,7 +127,40 @@ def backward_golden(*args, **kwargs):
     return _train(_fp64(args))
 
 
-class _BackwardCuda:
+def lstm_train(
+    input: torch.Tensor,
+    hx: List[torch.Tensor],
+    params: List[torch.Tensor],
+    dy: torch.Tensor,
+    dh_n: torch.Tensor,
+    dc_n: torch.Tensor,
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    train: bool,
+    bidirectional: bool,
+    batch_first: bool,
+):
+    """Run native VF forward and autograd with the supplied upstream gradients."""
+    return _train(
+        (
+            input,
+            hx,
+            params,
+            dy,
+            dh_n,
+            dc_n,
+            has_biases,
+            num_layers,
+            dropout,
+            train,
+            bidirectional,
+            batch_first,
+        )
+    )
+
+
+class TorchRefImpl:
     def __call__(
         self,
         input,
@@ -126,8 +177,6 @@ class _BackwardCuda:
         batch_first,
         **kwargs,
     ):
-        if input.device.type != "cuda":
-            raise ValueError("The third-party reference must run on CUDA")
         args = (
             input,
             hx,
@@ -147,7 +196,7 @@ class _BackwardCuda:
 
 class VfLstmTrainTestSpec:
     golden = staticmethod(backward_golden)
-    third_party = {"torch": _BackwardCuda}
+    third_party = {"torch": TorchRefImpl}
     tolerance = {
         name: {"standard": "cross_check", "level": "L2"}
         for name in ("float32", "float16", "bfloat16")

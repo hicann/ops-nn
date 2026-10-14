@@ -18,6 +18,7 @@
 #include "tiling/tiling_api.h"
 
 namespace optiling {
+constexpr int64_t LSTM_GRAD_DEFAULT_ELEMENT_BYTES = 4;
 enum class GateOrder : int64_t { IJFO = 0, IFJO };
 
 struct CutBatchTilingParam {
@@ -165,12 +166,12 @@ struct SingleLayerLstmGradPlanRequest {
     int64_t direction{0}; // UNIDIRECTIONAL
     float cellClip{0.0f};
     float forgetBias{0.0f};
-    int64_t elemBytes{4};        // 4 for float, 2 for half and bfloat16
-    int64_t aicCoreNum{0};       // platform AIC count, before the regbase cap
-    int64_t ubSizePlatForm{0};   // platform UB bytes, before the regbase dcache reserve
-    int64_t sysWorkspaceSize{0}; // platform library workspace, added to workspaceSize
-    bool isRegbase{false};       // Ascend950 and later
-    int64_t biasComponents{1};   // Original same-dtype bias vectors for private 950 replay
+    int64_t elemBytes{LSTM_GRAD_DEFAULT_ELEMENT_BYTES}; // 4 for float, 2 for half and bfloat16
+    int64_t aicCoreNum{0};                              // platform AIC count, before the regbase cap
+    int64_t ubSizePlatForm{0};                          // platform UB bytes, before the regbase dcache reserve
+    int64_t sysWorkspaceSize{0};                        // platform library workspace, added to workspaceSize
+    bool isRegbase{false};                              // Ascend950 and later
+    int64_t biasComponents{1};                          // Original same-dtype bias vectors for private 950 replay
 };
 
 struct SingleLayerLstmGradPlanResult {

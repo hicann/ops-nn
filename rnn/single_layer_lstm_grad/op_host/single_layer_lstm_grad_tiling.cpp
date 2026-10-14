@@ -29,67 +29,69 @@
 
 namespace optiling {
 const std::string OP_NAME = "SingleLayerLstmGrad";
-const int32_t GATES_NUM = 4;
-const int64_t AIV_DOUBLE = 2;
-const int64_t FP32_BYTES = 4;
-const int64_t GM2L1_CHECK = 65535;
-const int64_t INPUT_NUM = 17;
-const int64_t OUTPUT_NUM = 5;
-const int64_t OPT_INPUT_B = 2;
-const int64_t OPT_INPUT_Y = 3;
-const int64_t OPT_INPUT_SEQ = 16;
-const int64_t INPUT_DIM_NUM = 3;
-const int64_t DEFAULT_UB_RESERVE_SIZE = 1024;
-const int64_t REGBASE_DCACHE_SIZE = 40 * 1024;
-const uint32_t REGBASE_FALLBACK_AIC_NUM = 8;
-const int64_t BLOCK_BYTES = 32;
-const int64_t DEFAULT_ALIGNED_FP16 = 16;
-const int64_t DEFAULT_ALIGNED_FP32 = 8;
-const int64_t DEFAULT_BUFFER_SPACE = -1;
-const int64_t MATRIX_DIM_M = 0;
-const int64_t MATRIX_DIM_N = 1;
-const int64_t MATRIX_DIM_K = 2;
-const int64_t DEFAULT_SPLIT_FACTOR = 4;
-const int64_t DEFAULT_REDUCE_N_LIMIT = 128;
-const int64_t DEFAULT_COPY_FACTOR_FP32 = 4;
-const int64_t DEFAULT_COPY_FACTOR_FP16 = 6;
-const int64_t HIDDEN_UB_NUM_WITH_SEQ = 20;
-const int64_t HIDDEN_UB_NUM_WITHOUT_SEQ = 19;
-const int64_t MM_GATE_KEY_FACTOR = 1000;
-const int64_t MM_WEIGHT_KEY_FACTOR = 10;
-const int64_t SMALL_FLAG_MULTIPLIER = 1000;
-const int64_t SMALL_FLAG_MULTIPLIER_CONCAT = 100;
-const int64_t INPUT_X_INDEX = 0;
-const int64_t INPUT_WEIGHT_INDEX = 1;
-const int64_t INPUT_BIAS_INDEX = 2;
-const int64_t INPUT_Y_INDEX = 3;
-const int64_t INPUT_INIT_H_INDEX = 4;
-const int64_t INPUT_INIT_C_INDEX = 5;
-const int64_t INPUT_H_INDEX = 6;
-const int64_t INPUT_C_INDEX = 7;
-const int64_t INPUT_DY_INDEX = 8;
-const int64_t INPUT_DH_INDEX = 9;
-const int64_t INPUT_DC_INDEX = 10;
-const int64_t INPUT_I_INDEX = 11;
-const int64_t INPUT_J_INDEX = 12;
-const int64_t INPUT_F_INDEX = 13;
-const int64_t INPUT_O_INDEX = 14;
-const int64_t INPUT_TANHC_INDEX = 15;
-const int64_t INPUT_SEQ_LENGTH_INDEX = 16;
-const int64_t OUTPUT_DW_INDEX = 0;
-const int64_t OUTPUT_DB_INDEX = 1;
-const int64_t OUTPUT_DX_INDEX = 2;
-const int64_t OUTPUT_DINIT_H_INDEX = 3;
-const int64_t OUTPUT_DINIT_C_INDEX = 4;
-const int64_t ATTR_DIRECTION_INDEX = 0;
-const int64_t ATTR_GATE_ORDER_INDEX = 1;
-const int64_t ZERO_DIM_TENSOR_FLAG = 0;
-const int64_t MAX_REDUCE_ROWS_FACTOR = 4;
-const int64_t WORKSPACE_FP32_MULTIPLIER = 2;
-const int64_t B_INDEX = 1;
-const int64_t T_INDEX = 0;
-const int64_t SIZE_INDEX = 2;
-const int64_t SEQ_UB_NUM = 3;
+constexpr int32_t GATES_NUM = 4;
+constexpr int64_t AIV_DOUBLE = 2;
+constexpr int64_t FP32_BYTES = 4;
+constexpr int64_t GM2L1_CHECK = 65535;
+constexpr int64_t INPUT_NUM = 17;
+constexpr int64_t OUTPUT_NUM = 5;
+constexpr int64_t OPT_INPUT_B = 2;
+constexpr int64_t OPT_INPUT_Y = 3;
+constexpr int64_t OPT_INPUT_SEQ = 16;
+constexpr int64_t INPUT_DIM_NUM = 3;
+constexpr int64_t DEFAULT_UB_RESERVE_SIZE = 1024;
+constexpr int64_t REGBASE_DCACHE_SIZE = 40 * 1024;
+constexpr uint32_t REGBASE_FALLBACK_AIC_NUM = 8;
+constexpr int64_t BLOCK_BYTES = 32;
+constexpr int64_t DEFAULT_ALIGNED_FP16 = 16;
+constexpr int64_t DEFAULT_ALIGNED_FP32 = 8;
+constexpr int64_t DEFAULT_BUFFER_SPACE = -1;
+constexpr int64_t MATRIX_DIM_M = 0;
+constexpr int64_t MATRIX_DIM_N = 1;
+constexpr int64_t MATRIX_DIM_K = 2;
+constexpr int64_t DEFAULT_SPLIT_FACTOR = 4;
+constexpr int64_t DEFAULT_REDUCE_N_LIMIT = 128;
+constexpr int64_t DEFAULT_COPY_FACTOR_FP32 = 4;
+constexpr int64_t DEFAULT_COPY_FACTOR_FP16 = 6;
+constexpr int64_t HIDDEN_UB_NUM_WITH_SEQ = 20;
+constexpr int64_t HIDDEN_UB_NUM_WITHOUT_SEQ = 19;
+constexpr int64_t MM_GATE_KEY_FACTOR = 1000;
+constexpr int64_t MM_WEIGHT_KEY_FACTOR = 10;
+constexpr int64_t SMALL_FLAG_MULTIPLIER = 1000;
+constexpr int64_t SMALL_FLAG_MULTIPLIER_CONCAT = 100;
+constexpr int64_t INPUT_X_INDEX = 0;
+constexpr int64_t INPUT_WEIGHT_INDEX = 1;
+constexpr int64_t INPUT_BIAS_INDEX = 2;
+constexpr int64_t INPUT_Y_INDEX = 3;
+constexpr int64_t INPUT_INIT_H_INDEX = 4;
+constexpr int64_t INPUT_INIT_C_INDEX = 5;
+constexpr int64_t INPUT_H_INDEX = 6;
+constexpr int64_t INPUT_C_INDEX = 7;
+constexpr int64_t INPUT_DY_INDEX = 8;
+constexpr int64_t INPUT_DH_INDEX = 9;
+constexpr int64_t INPUT_DC_INDEX = 10;
+constexpr int64_t INPUT_I_INDEX = 11;
+constexpr int64_t INPUT_J_INDEX = 12;
+constexpr int64_t INPUT_F_INDEX = 13;
+constexpr int64_t INPUT_O_INDEX = 14;
+constexpr int64_t INPUT_TANHC_INDEX = 15;
+constexpr int64_t INPUT_SEQ_LENGTH_INDEX = 16;
+constexpr int64_t OUTPUT_DW_INDEX = 0;
+constexpr int64_t OUTPUT_DB_INDEX = 1;
+constexpr int64_t OUTPUT_DX_INDEX = 2;
+constexpr int64_t OUTPUT_DINIT_H_INDEX = 3;
+constexpr int64_t OUTPUT_DINIT_C_INDEX = 4;
+constexpr int64_t ATTR_DIRECTION_INDEX = 0;
+constexpr int64_t ATTR_GATE_ORDER_INDEX = 1;
+constexpr int64_t ZERO_DIM_TENSOR_FLAG = 0;
+constexpr int64_t MAX_REDUCE_ROWS_FACTOR = 4;
+constexpr int64_t WORKSPACE_FP32_MULTIPLIER = 2;
+constexpr int64_t B_INDEX = 1;
+constexpr int64_t T_INDEX = 0;
+constexpr int64_t SIZE_INDEX = 2;
+constexpr int64_t SEQ_UB_NUM = 3;
+constexpr int64_t ORIGINAL_BIAS_COMPONENTS = 2;
+constexpr int32_t MATMUL_TILING_FAILURE = -1;
 const std::vector<std::string> SUPPORT_DIRECTION = {"UNIDIRECTIONAL", "REDIRECTIONAL"};
 
 class SingleLayerLstmGradTiling {
@@ -154,33 +156,34 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMDgateTiling()
     rnnParams_.usedCoreNum = rnnParams_.sysAivCoreNum;
     auto ret = rnnMatmul1.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                                    matmul_tiling::DataType::DT_FLOAT);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetAType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetAType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                               matmul_tiling::DataType::DT_FLOAT);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetBType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetBType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                               matmul_tiling::DataType::DT_FLOAT);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetCType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetCType fail."),
                     return ge::GRAPH_FAILED);
 
     ret = rnnMatmul1.SetDim(rnnParams_.sysAivCoreNum);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetDim fail."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetDim fail."),
+                    return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetOrgShape(rnnParams_.batch, rnnParams_.inputSize + rnnParams_.hiddenSize,
                                  rnnParams_.hiddenSize * GATES_NUM);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetOrgShape fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetOrgShape fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetShape(rnnParams_.batch, rnnParams_.inputSize + rnnParams_.hiddenSize,
                               rnnParams_.hiddenSize * GATES_NUM);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 Set single shape fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 Set single shape fail."), return ge::GRAPH_FAILED);
     ret = rnnMatmul1.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetBufferSpace fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetBufferSpace fail."), return ge::GRAPH_FAILED);
 
     ret = rnnMatmul1.GetTiling(tilingData_.dgateMMParam);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 GetTiling fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 GetTiling fail."),
                     return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -191,32 +194,33 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMDwTiling()
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul2;
     auto ret = rnnMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                                    matmul_tiling::DataType::DT_FLOAT, true);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetAType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetAType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                               matmul_tiling::DataType::DT_FLOAT);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetBType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetBType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                               matmul_tiling::DataType::DT_FLOAT);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetCType fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetCType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetDim(rnnParams_.sysAivCoreNum);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetDim fail."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetDim fail."),
+                    return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetOrgShape(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.hiddenSize + rnnParams_.inputSize,
                                  rnnParams_.batch * rnnParams_.timeStep);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetOrgShape fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetOrgShape fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetShape(rnnParams_.hiddenSize * GATES_NUM, rnnParams_.hiddenSize + rnnParams_.inputSize,
                               rnnParams_.batch * rnnParams_.timeStep);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 Set single shape fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 Set single shape fail."), return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetBufferSpace fail."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetBufferSpace fail."), return ge::GRAPH_FAILED);
 
     ret = rnnMatmul2.GetTiling(tilingData_.dwMMParam);
-    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 GetTiling fail."),
+    OP_TILING_CHECK(ret == MATMUL_TILING_FAILURE, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 GetTiling fail."),
                     return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -408,8 +412,8 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
         biasComponents_ = 1;
         const auto& shape = context_->GetInputShape(INPUT_BIAS_INDEX)->GetStorageShape();
         if (isRegbase_ && context_->GetInputDesc(INPUT_X_INDEX)->GetDataType() != ge::DT_FLOAT &&
-            shape.GetDimNum() == 1 && shape.GetDim(0) == 2 * biasDim[0]) {
-            biasComponents_ = 2;
+            shape.GetDimNum() == 1 && shape.GetDim(0) == ORIGINAL_BIAS_COMPONENTS * biasDim[0]) {
+            biasComponents_ = ORIGINAL_BIAS_COMPONENTS;
         }
         ret = ret && ValidateInputShape(INPUT_BIAS_INDEX, {biasComponents_ * biasDim[0]}) &&
               ValidateOutputShape(OUTPUT_DB_INDEX, biasDim);
