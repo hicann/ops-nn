@@ -39,11 +39,15 @@
 
 ## 约束说明
 
+* x
+    - N、C、D、H和W维度的取值范围必须在 [1,2147483647] 之间。
 * filter_size
     - W、H维度的取值范围必须在 [1,511] 之间。
     - 可输入的轴序列如下：
         - [out_channels, in_channels, filter_depth, filter_height, filter_width]
         - [out_channels, filter_depth, filter_height, filter_width, in_channels]
+* out_backprop
+    - N、C、D、H和W维度的取值范围必须在 [1,2147483647] 之间。
 * strides
     - N和C的维度必须为1。
     - Ascend 950PR&950DT系列产品：D、H和W维度的取值必须范围在 [1,2147483646] 之间。
