@@ -27,7 +27,7 @@ static const gert::Shape g_vec_1_shape = {1};
 
 static bool IsRegbaseNpuArch(NpuArch npuArch)
 {
-    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102};
+    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102, NpuArch::DAV_9201};
     return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
 }
 
