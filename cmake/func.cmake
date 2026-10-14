@@ -694,7 +694,8 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
     # 注入 PyPTO codegen 头文件的 include 路径（CMake 3.16 兼容；源文件显式 include）
     pypto_include_tiling_gen()
     target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})
-    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir}/../../ ${source_dir})
+    get_filename_component(_tiling_parent_inc "${source_dir}/../.." ABSOLUTE)
+    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${_tiling_parent_inc} ${source_dir})
   endif()
 endfunction()
 
