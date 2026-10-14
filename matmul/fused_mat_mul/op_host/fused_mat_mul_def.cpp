@@ -73,8 +73,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicConfig);
         this->AICore().AddConfig("ascend350", aicConfig);
     }
