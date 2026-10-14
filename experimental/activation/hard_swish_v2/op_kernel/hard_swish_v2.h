@@ -9,13 +9,12 @@
  * - Pei Haobo<@xiaopei-1>
  * - Su Tonghua <@sutonghua>
  *
- * This program is free software: you can redistribute it and/or modify it.
- * Licensed under the CANN Open Software License Agreement Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * See the LICENSE file at the root of the repository for the full text of the License.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -117,12 +116,11 @@ __aicore__ inline void HardSwishV2<T>::Compute(int32_t progress)
 {
     AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
     AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
-    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value || AscendC::Std::is_same<T, float16_t>::value) {
+    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value) {
         AscendC::LocalTensor<float> tmp0 = tmpBuf0.Get<float>();
         AscendC::LocalTensor<float> tmp1 = tmpBuf1.Get<float>();
         // 将输入从bfloat16转换为float
         AscendC::Cast(tmp0, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Cast(tmp1, zLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         PipeBarrier<PIPE_V>();
         // 执行计算 (使用float类型)
         AscendC::Adds(tmp1, tmp0, 3.0f, this->processDataNum);
@@ -131,18 +129,12 @@ __aicore__ inline void HardSwishV2<T>::Compute(int32_t progress)
         PipeBarrier<PIPE_V>();
         AscendC::Mins(tmp1, tmp1, 6.0f, this->processDataNum);
         PipeBarrier<PIPE_V>();
-        AscendC::Duplicate<float>(tmp0, 6.0f, this->processDataNum);
-        PipeBarrier<PIPE_V>();
-        AscendC::Div(tmp1, tmp1, tmp0, this->processDataNum);
+        AscendC::Muls(tmp1, tmp1, 1.0f / 6.0f, this->processDataNum);
         PipeBarrier<PIPE_V>();
         AscendC::Mul(tmp1, tmp0, tmp1, this->processDataNum); // 使用原始x值
         PipeBarrier<PIPE_V>();
-        // 将结果从float转换回bfloat16或float16
-        if (AscendC::Std::is_same<T, bfloat16_t>::value) {
-            AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_RINT, this->processDataNum);
-        } else {
-            AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        }
+        // 将结果从float转换回bfloat16
+        AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_RINT, this->processDataNum);
     } else {
         AscendC::LocalTensor<T> tmp0 = tmpBuf0.Get<T>();
         AscendC::Adds(zLocal, xLocal, (T)3.0f, this->processDataNum);
