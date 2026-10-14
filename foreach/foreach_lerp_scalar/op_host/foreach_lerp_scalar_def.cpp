@@ -52,6 +52,7 @@ public:
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseCfg);
+        this->AICore().AddConfig("ascend960dt", regbaseCfg);
         this->AICore().AddConfig("ascend350", regbaseCfg);
 
         this->AICore().AddConfig("ascend910_93");
