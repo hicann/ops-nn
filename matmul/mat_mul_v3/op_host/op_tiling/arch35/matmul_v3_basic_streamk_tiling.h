@@ -27,9 +27,10 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3BasicStreamKTiling : public MatMulV3BaseTiling {
 public:
-    MatMulV3BasicStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg){};
+    MatMulV3BasicStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg) {};
 
-    ~MatMulV3BasicStreamKTiling() override{};
+    ~MatMulV3BasicStreamKTiling() override {};
 
 protected:
     bool IsCapable() override;
@@ -48,6 +49,10 @@ private:
     bool CheckStreamKDPSKTiling() const;
 
     MatMulV3L0C2Out GetL0C2OutFlag() const;
+
+    bool IsHalveBaseProfitable(bool halveN) const;
+
+    uint64_t GetPaddedFixWidth(uint64_t nValue, uint64_t nCnt) const;
 
     uint64_t mCnt_{1};
     uint64_t nCnt_{1};

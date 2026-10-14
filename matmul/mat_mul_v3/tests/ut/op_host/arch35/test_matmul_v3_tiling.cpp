@@ -705,7 +705,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4178UL,
-     "32 224 192 3952 224 192 256 224 192 64 124 1 1 1 1 0 0 16843264 0 224 1 0 "},
+     "32 224 192 3952 112 192 256 112 192 64 247 1 1 1 1 0 0 16843264 0 112 1 0 "},
     {"MatMulV3_950_streamK_fp16_test21",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -3669,7 +3669,9 @@ TEST_F(MatMulV3StreamKTilingDirectTest, IsCapable_Dav3510_SktEnablePositiveContr
 }
 
 // L91：DAV_2201下GetL0C2OutFlag回落Default返回ON_THE_FLY（经totalMNCnt_=1 <= aicNum/2分支触发）；
-// 同时baseM(128)!=baseN(256)，L201调平分支与L207 bias分支均不进入（对照路径）
+// totalMNCnt_=1<=2且baseN(256)>=baseM(128)命中减半分支，IsHalveBaseProfitable(true)判定fixup节省
+// (kCnt 8->4，1MB)大于A矩阵重复读代价(128KB)，nCnt_翻倍至2后baseN减半为128==baseM；
+// 此时depthB1(4)!=depthA1(4)*2，L264调平分支不进入；totalMNCnt_(2)<=aicNum(8)，L270 bias分支亦不进入（对照路径）
 TEST_F(MatMulV3StreamKTilingDirectTest, DoOpTiling_Non3510Arch_GetL0C2OutDefault_LevelingNotTaken)
 {
     compileInfo_.npuArch = NpuArch::DAV_2201;
@@ -3678,16 +3680,15 @@ TEST_F(MatMulV3StreamKTilingDirectTest, DoOpTiling_Non3510Arch_GetL0C2OutDefault
     auto tiling = CreateTiling();
     ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(tiling->GetRunInfoBaseM(), 128UL);
-    EXPECT_EQ(tiling->GetRunInfoBaseN(), 256UL);
-    EXPECT_NE(tiling->GetRunInfoBaseM(), tiling->GetRunInfoBaseN()); // 调平分支条件不成立
-    EXPECT_EQ(tiling->GetRunInfoKCnt(), 8UL);                        // FloorDiv(aicNum=8, totalMNCnt_=1)
-    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), 64UL);                // CeilDiv(k=512, kCnt=8)
-    EXPECT_EQ(tiling->GetRunInfoBaseK(), 64UL);                      // min(singleCoreK=64, kValueMax=128)
-    // CalL1TilingDefault产生的depthA1==depthB1且非0，调平未生效
-    EXPECT_EQ(tiling->GetRunInfoDepthA1(), 8UL);
-    EXPECT_EQ(tiling->GetRunInfoDepthB1(), 8UL);
-    EXPECT_EQ(tiling->GetRunInfoStepKa(), 4UL);
-    EXPECT_EQ(tiling->GetRunInfoStepKb(), 4UL);
+    EXPECT_EQ(tiling->GetRunInfoBaseN(), 128UL);       // 盈亏门禁通过后baseN由256减半
+    EXPECT_EQ(tiling->GetRunInfoKCnt(), 4UL);          // FloorDiv(aicNum=8, totalMNCnt_=2)
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), 128UL); // CeilDiv(k=512, kCnt=4)
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 128UL);       // min(singleCoreK=128, kValueMax=FloorAlign(64K/2/2/128,64)=128)
+    // CalL1TilingDefault产生depthA1==depthB1且非0，baseM==baseN但depthB1!=2*depthA1，调平未生效
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), 4UL);
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), 4UL);
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 2UL);
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), 2UL);
     // tilingkey的L0C2Out域来自GetL0C2OutFlagDefault返回的ON_THE_FLY（模型STREAM_K、张量API级）
     uint64_t expectedKey = optiling::matmul_v3_advanced::MatMulV3TilingKey()
                                .SetTrans(false, false)

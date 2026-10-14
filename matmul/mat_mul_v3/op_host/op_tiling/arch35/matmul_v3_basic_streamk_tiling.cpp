@@ -136,6 +136,53 @@ MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
     return iter(args_);
 }
 
+// ND_FIXPIPE_1_2场景partial在workspace按32元素(128B)对齐宽度读写，计算n方向cnt个tile的对齐宽度总和
+uint64_t MatMulV3BasicStreamKTiling::GetPaddedFixWidth(uint64_t nValue, uint64_t nCnt) const
+{
+    uint64_t baseN = ops::CeilAlign(MathUtil::CeilDivision(nValue, nCnt), BASIC_BLOCK_SIZE_16);
+    // baseN向上对齐后满块数可能少于nCnt-1，按实际块数推导，防止tailN无符号下溢
+    uint64_t fullCnt = MathUtil::CeilDivision(nValue, baseN) - 1;
+    uint64_t tailN = nValue - fullCnt * baseN;
+    return fullCnt * ops::CeilAlign(baseN, BLOCK_BYTE_SIZE) + ops::CeilAlign(tailN, BLOCK_BYTE_SIZE);
+}
+
+// 减半base的盈亏门禁：halveN为true表示nCnt_*2(减半baseN，A矩阵被重复读的份数翻倍)，false对应mCnt_*2(B矩阵)
+// 收益 = fixup流量减少(每份partial写m*n*4B、AIV按fixWidth宽度读m*fixWidth*4B，份数为kCnt)
+// 代价 = 被重复读操作数新增一份流量，一律按HBM全价计：实测L2对跨tile重复读的吸收在21%/35%/81%占用率下均失效
+// ND_FIXPIPE_1_2路径另存在流量模型未覆盖的按tile结构代价，要求2倍收益裕量
+bool MatMulV3BasicStreamKTiling::IsHalveBaseProfitable(bool halveN) const
+{
+    uint64_t kCntOld = ops::FloorDiv(compileInfo_.aicNum, totalMNCnt_);
+    uint64_t kCntNew = ops::FloorDiv(compileInfo_.aicNum, totalMNCnt_ * NUM_TWO);
+    if (kCntNew == 0UL || kCntNew >= kCntOld) {
+        return false;
+    }
+    // fp32场景singleCoreK翻倍跨过精度切K阈值会切换到SK_SPLIT_K原子加路径
+    if (args_.aDtypeSize == DATA_SIZE_FP32 && !args_.isHf32 &&
+        MathUtil::CeilDivision(args_.kValue, kCntNew) >= FP32_SPLIT_K_THRESHOLD) {
+        return false;
+    }
+    bool isNdFixpipe = GetL0C2OutFlag() == MatMulV3L0C2Out::ND_FIXPIPE_1_2;
+    uint64_t fixWidthOld = args_.nValue;
+    uint64_t fixWidthNew = args_.nValue;
+    if (isNdFixpipe) {
+        fixWidthOld = GetPaddedFixWidth(args_.nValue, nCnt_);
+        fixWidthNew = halveN ? GetPaddedFixWidth(args_.nValue, nCnt_ * NUM_TWO) : fixWidthOld;
+    }
+    uint64_t fixupOld = kCntOld * (args_.nValue + fixWidthOld);
+    uint64_t fixupNew = kCntNew * (args_.nValue + fixWidthNew);
+    if (fixupNew >= fixupOld) {
+        return false; // ND_FIXPIPE_1_2对齐padding侵蚀后fixup流量不降反升
+    }
+    uint64_t saveBytes = NUM_FOUR * args_.mValue * (fixupOld - fixupNew);
+    uint64_t dupBytes = halveN ? nCnt_ * args_.mValue * args_.kValue * args_.aDtypeSize :
+                                 mCnt_ * args_.nValue * args_.kValue * args_.bDtypeSize;
+    if (isNdFixpipe) {
+        return saveBytes > dupBytes * NUM_TWO;
+    }
+    return saveBytes > dupBytes;
+}
+
 bool MatMulV3BasicStreamKTiling::IsCapable()
 {
     // batch一致性控制，当开关等级为2或3时，拒绝切k模板，达到强一致性和batch一致性
@@ -173,6 +220,22 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
             nCnt_ = compileInfo_.aicNum / NUM_TWO;
         }
         totalMNCnt_ = mCnt_ * nCnt_;
+        if (totalMNCnt_ <= NUM_TWO) {
+            // kCnt过大时减半baseM/baseN中更大者以降低k方向切分，base减半后仍需16对齐，base已为16时无法再减半；
+            // 减半会使另一操作数被重复读的份数翻倍，需通过盈亏门禁避免新增MTE2流量超过fixup节省流量
+            uint64_t baseMTmp = ops::CeilAlign(MathUtil::CeilDivision(args_.mValue, mCnt_), BASIC_BLOCK_SIZE_16);
+            uint64_t baseNTmp = ops::CeilAlign(MathUtil::CeilDivision(args_.nValue, nCnt_), BASIC_BLOCK_SIZE_16);
+            if (baseNTmp >= baseMTmp && baseNTmp > BASIC_BLOCK_SIZE_16) {
+                if (IsHalveBaseProfitable(true)) {
+                    nCnt_ *= NUM_TWO;
+                }
+            } else if (baseMTmp > BASIC_BLOCK_SIZE_16) {
+                if (IsHalveBaseProfitable(false)) {
+                    mCnt_ *= NUM_TWO;
+                }
+            }
+            totalMNCnt_ = mCnt_ * nCnt_;
+        }
         runInfo_.baseM = ops::CeilAlign(MathUtil::CeilDivision(args_.mValue, mCnt_), BASIC_BLOCK_SIZE_16);
         runInfo_.baseN = ops::CeilAlign(MathUtil::CeilDivision(args_.nValue, nCnt_), BASIC_BLOCK_SIZE_16);
         runInfo_.tailInfo.kCnt = ops::FloorDiv(compileInfo_.aicNum, totalMNCnt_);
