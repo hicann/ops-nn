@@ -9,13 +9,12 @@
  * - Liang Yanglin <@liang-yanglin>
  * - Su Tonghua <@sutonghua>
  *
- * This program is free software: you can redistribute it and/or modify it.
- * Licensed under the CANN Open Software License Agreement Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * See the LICENSE file at the root of the repository for the full text of the License.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,
+ * This program is free software: you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -88,9 +87,17 @@ static ge::graphStatus ScatterupdateV2TilingFunc(gert::TilingContext* context)
     // 1. platform
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
+    auto updatesShape = context->GetInputShape(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesShape);
+    const auto updatesStorageShape = updatesShape->GetStorageShape();
+    OP_CHECK_IF(updatesStorageShape.GetDimNum() == 0, OP_LOGE(context, "updates must have at least one dimension"),
+                return ge::GRAPH_FAILED);
+    const int64_t updatesDim0 = updatesStorageShape.GetDim(0);
+    OP_CHECK_IF(updatesDim0 <= 0 || updatesStorageShape.GetShapeSize() <= 0,
+                OP_LOGE(context, "updates must not be empty"), return ge::GRAPH_FAILED);
     uint32_t totalIndicesNum = context->GetInputShape(1)->GetStorageShape().GetShapeSize();
-    uint32_t totalUpdatesNum = context->GetInputShape(2)->GetStorageShape().GetShapeSize();
-    uint32_t stride = totalUpdatesNum / (context->GetInputShape(2)->GetStorageShape().GetDim(0));
+    uint32_t totalUpdatesNum = updatesStorageShape.GetShapeSize();
+    uint32_t stride = totalUpdatesNum / static_cast<uint32_t>(updatesDim0);
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
     uint32_t typeLength = 0;
