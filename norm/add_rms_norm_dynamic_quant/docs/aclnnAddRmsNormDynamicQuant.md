@@ -241,7 +241,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>scale2Out（aclTensor*）</td>
@@ -251,7 +251,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
