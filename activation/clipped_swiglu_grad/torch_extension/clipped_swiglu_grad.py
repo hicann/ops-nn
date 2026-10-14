@@ -23,7 +23,7 @@ class ClippedSwigluGradOpBuilder(OpBuilder):
     def schema(self):
         return (
             "clipped_swiglu_grad(Tensor grad_y, Tensor x, "
-            "Tensor? group_index=None, int dim=-1, float alpha=1.702, "
+            "*, Tensor? group_index=None, int dim=-1, float alpha=1.702, "
             "float limit=7.0, float bias=1.0, bool interleaved=True, "
             "int clamp_mode=0) -> Tensor"
         )

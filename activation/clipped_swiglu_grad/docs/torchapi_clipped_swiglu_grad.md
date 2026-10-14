@@ -102,13 +102,21 @@ cann_ops_nn.clipped_swiglu_grad(
   ```python
   import torch
   import torch_npu
-  import cann_ops_nn.ops
+  import cann_ops_nn
 
   x = torch.randn(8, 512, dtype=torch.float16).npu()
   grad_y = torch.randn(8, 256, dtype=torch.float16).npu()
 
-  grad_x = torch.ops.cann_ops_nn.clipped_swiglu_grad(
-      grad_y, x, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True)
+  grad_x = cann_ops_nn.clipped_swiglu_grad(
+      grad_y, x,
+      group_index=None,
+      dim=-1,
+      alpha=1.702,
+      limit=7.0,
+      bias=1.0,
+      interleaved=True,
+      clamp_mode=0,
+  )
   print(grad_x.shape, grad_x.dtype)
   ```
 
@@ -118,11 +126,20 @@ cann_ops_nn.clipped_swiglu_grad(
   import torch
   import torch_npu
   import torchair
-  import cann_ops_nn.ops
+  import cann_ops_nn
 
   class Model(torch.nn.Module):
       def forward(self, grad_y, x):
-          return torch.ops.cann_ops_nn.clipped_swiglu_grad(grad_y, x)
+          return cann_ops_nn.clipped_swiglu_grad(
+              grad_y, x,
+              group_index=None,
+              dim=-1,
+              alpha=1.702,
+              limit=7.0,
+              bias=1.0,
+              interleaved=True,
+              clamp_mode=0,
+          )
 
   model = torch.compile(Model().npu(), backend=torchair.get_npu_backend(), dynamic=False)
   grad_y = torch.randn(8, 256, dtype=torch.float16).npu()

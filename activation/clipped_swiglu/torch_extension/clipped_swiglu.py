@@ -25,8 +25,8 @@ class ClippedSwigluOpBuilder(OpBuilder):
     def schema(self) -> str:
         return (
             "clipped_swiglu("
-            "Tensor x, *, Tensor? group_index=None, "
-            "int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved=True, int clamp_mode=0"
+            "Tensor x, Tensor? group_index=None, "
+            "*, int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved=True, int clamp_mode=0"
             ") -> Tensor "
         )
 
@@ -34,8 +34,8 @@ class ClippedSwigluOpBuilder(OpBuilder):
         @impl(get_as_library(), self.name, "Meta")
         def clipped_swiglu_meta(
             x: torch.Tensor,
-            *,
             group_index=None,
+            *,
             dim=-1,
             alpha=1.702,
             limit=7.0,
@@ -66,8 +66,8 @@ clipped_swiglu_builder._ensure_initialized()
 @impl(get_as_library(), clipped_swiglu_builder.name, "PrivateUse1")
 def clipped_swiglu(
     x: torch.Tensor,
-    *,
     group_index=None,
+    *,
     dim=-1,
     alpha=1.702,
     limit=7.0,
@@ -79,3 +79,46 @@ def clipped_swiglu(
     return op_module.clipped_swiglu(
         x, group_index, dim, alpha, limit, bias, interleaved, clamp_mode
     )
+
+
+def _clipped_swiglu_backward_autograd(ctx, grad_y):
+    saved_x, saved_group_index = ctx.saved_tensors
+    if ctx.clamp_mode != 0:
+        raise RuntimeError(
+            "ClippedSwigluGrad (V1) only supports clamp_mode=0, but got "
+            f"{ctx.clamp_mode}. The backward of clipped_swiglu with clamp_mode!=0 "
+            "is not supported yet."
+        )
+    return (
+        torch.ops.cann_ops_nn.clipped_swiglu_grad(
+            grad_y,
+            saved_x,
+            group_index=saved_group_index,
+            dim=ctx.dim,
+            alpha=ctx.alpha,
+            limit=ctx.limit,
+            bias=ctx.bias,
+            interleaved=ctx.interleaved,
+            clamp_mode=ctx.clamp_mode,
+        ),
+        None,
+    )
+
+
+def _clipped_swiglu_setup_context(ctx, inputs, keyword_only_inputs, output):
+    (x, group_index) = inputs
+    ctx.save_for_backward(x, group_index)
+    ctx.dim = keyword_only_inputs["dim"]
+    ctx.alpha = keyword_only_inputs["alpha"]
+    ctx.limit = keyword_only_inputs["limit"]
+    ctx.bias = keyword_only_inputs["bias"]
+    ctx.interleaved = keyword_only_inputs["interleaved"]
+    ctx.clamp_mode = keyword_only_inputs["clamp_mode"]
+
+
+torch.library.register_autograd(
+    "cann_ops_nn::clipped_swiglu",
+    _clipped_swiglu_backward_autograd,
+    setup_context=_clipped_swiglu_setup_context,
+    lib=get_as_library(),
+)
