@@ -29,7 +29,6 @@ const int64_t INPUT_ASSIST1_IDX = 1;
 const int64_t INPUT_ASSIST2_IDX = 2;
 const int64_t OUTPUT_Y_IDX = 0;
 const int64_t MIN_DATA_SIZE = 1024;
-const int64_t ASCEND_WORKSPACE = 16 * 1024 * 1024;
 const uint64_t TILING_KEY_COMMON = 200;
 const uint64_t ALIGN_SIZE = 512;
 
@@ -150,7 +149,7 @@ uint64_t IndexFillDTiling::GetTilingKey() const { return TILING_KEY_COMMON; }
 
 ge::graphStatus IndexFillDTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = ASCEND_WORKSPACE;
+    workspaceSize_ = 0;
     return ge::GRAPH_SUCCESS;
 }
 

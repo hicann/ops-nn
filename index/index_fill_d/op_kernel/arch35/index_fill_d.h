@@ -23,7 +23,7 @@ class IndexFillD {
 public:
     __aicore__ inline IndexFillD(const IndexFillDTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, GM_ADDR workspace);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y);
     __aicore__ inline void CopyIn(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyOut(int64_t offset, int64_t dataLen);
     __aicore__ inline void Compute(int64_t dataLen);
@@ -43,7 +43,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void IndexFillD<T>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void IndexFillD<T>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y)
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;

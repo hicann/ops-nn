@@ -55,7 +55,7 @@ const int INPUT_3 = 3;
 namespace optiling {
 class ScatterAddWithSortedTiling {
 public:
-    explicit ScatterAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ScatterAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -85,7 +85,7 @@ private:
     uint64_t lastTail = 0;
     uint64_t maxSize = 0;
     uint64_t dataAlign = 32;
-    uint64_t workspaceSize = 1024 * 1024 * 16;
+    uint64_t workspaceSize = 0;
     uint64_t max_ub = 20480;
 };
 

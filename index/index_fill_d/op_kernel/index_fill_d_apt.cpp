@@ -23,17 +23,13 @@ using namespace AscendC;
 extern "C" __global__ __aicore__ void index_fill_d(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y,
                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
     if (TILING_KEY_IS(TILING_KEY_COMMON)) {
         IndexFillD<DTYPE_X> op(tilingData, pipe);
-        op.Init(x, assist1, assist2, y, userWS);
+        op.Init(x, assist1, assist2, y);
         op.Process();
     }
     return;
