@@ -79,11 +79,12 @@ struct TilingCtx {
     bool isEmptyA = false; // A==0 → EMPTY_A
     bool isEmptyR = false; // R==0 && A>0 → EMPTY_R
 
-    // After FusedAxis: AR pattern (axisNum=2)
-    int64_t A;       // axisShape[0] = N*C
-    int64_t R;       // axisShape[1] = H*W or D0*D1*D2
-    int64_t strideA; // axisStride[0] = R (stride between A elements in GM)
-    int64_t strideR; // axisStride[1] = 1
+    // After FusedAxis: AR pattern (axisNum=2) or ARA pattern (axisNum=3)
+    bool isTailA = false; // R==1 && A>1 → prepend [A=1, R=1], pattern ARA (tail-A)
+    int64_t A;            // AR: axisShape[0]; ARA: axisShape[2] = N*C
+    int64_t R;            // AR: axisShape[1]; ARA: R==1
+    int64_t strideA;      // axisStride[0] = R (stride between A elements in GM)
+    int64_t strideR;      // axisStride[1] = 1
 
     // After CalcTilingInfo
     int64_t aUbFactor;
@@ -191,6 +192,11 @@ ge::graphStatus FusedAxis(TilingCtx& tc)
         tc.isEmptyR = true;       // A > 0, R == 0
         return ge::GRAPH_SUCCESS; // handled in ComputeTiling empty branch
     }
+
+    // R 轴全为 1 且 A>1：前置 [A=1, R=1] 走 ARA（tail-A），让真实数据落在 burst 尾轴
+    // （A>1 的纯 A 场景禁止末尾补 R=1 的 AR：tail R=1 会使每个 A 元素独占 1 个元素
+    //   burst，搬运效率坍塌；A==1 全 1 退化仍走 AR）。
+    tc.isTailA = (tc.R == 1 && tc.A > 1);
 
     // axisStride[0] = product of R dims = R (stride between A elements in GM)
     // axisStride[1] = 1 (innermost R stride)
@@ -367,17 +373,33 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
         return ge::GRAPH_FAILED;
     }
 
-    // Pattern: axisNum=2, AR
-    tilingData->axisNum = 2;
-    tilingData->axisShape[0] = tc.A;
-    tilingData->axisShape[1] = tc.R;
-    for (int32_t i = 2; i < 9; ++i) {
-        tilingData->axisShape[i] = 1;
-    }
-    tilingData->axisStride[0] = tc.strideA;
-    tilingData->axisStride[1] = tc.strideR;
-    for (int32_t i = 2; i < 9; ++i) {
-        tilingData->axisStride[i] = 0;
+    // Pattern: AR (axisNum=2, tail-R) or ARA (axisNum=3, tail-A)
+    if (tc.isTailA) {
+        tilingData->axisNum = 3;
+        tilingData->axisShape[0] = 1;
+        tilingData->axisShape[1] = tc.R; // = 1
+        tilingData->axisShape[2] = tc.A;
+        for (int32_t i = 3; i < 9; ++i) {
+            tilingData->axisShape[i] = 1;
+        }
+        tilingData->axisStride[0] = tc.A;
+        tilingData->axisStride[1] = tc.A;
+        tilingData->axisStride[2] = 1;
+        for (int32_t i = 3; i < 9; ++i) {
+            tilingData->axisStride[i] = 0;
+        }
+    } else {
+        tilingData->axisNum = 2;
+        tilingData->axisShape[0] = tc.A;
+        tilingData->axisShape[1] = tc.R;
+        for (int32_t i = 2; i < 9; ++i) {
+            tilingData->axisShape[i] = 1;
+        }
+        tilingData->axisStride[0] = tc.strideA;
+        tilingData->axisStride[1] = tc.strideR;
+        for (int32_t i = 2; i < 9; ++i) {
+            tilingData->axisStride[i] = 0;
+        }
     }
 
     // Multi-core split
@@ -389,7 +411,7 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
     tilingData->usedCoreNum = tc.usedCoreNum;
 
     // UB split
-    tilingData->aSplitAxisIdx = 0;
+    tilingData->aSplitAxisIdx = tc.isTailA ? 2 : 0;
     tilingData->rSplitAxisIdx = 1;
     tilingData->aUbFactor = tc.aUbFactor;
     tilingData->aUbFactorAlign = tc.aUbFactorAlign;
@@ -415,12 +437,12 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
     tilingData->p = tc.p;
     tilingData->invP = (tc.p != 0.0f) ? (1.0f / tc.p) : 0.0f;
 
-    OP_LOGD(ctx->GetNodeName(),
-            "TILING: A=%ld R=%ld aUb=%ld/%ld rUb=%ld/%ld "
+    OP_LOGI(ctx->GetNodeName(),
+            "TILING: axisNum=%d isTailA=%d A=%ld R=%ld aUb=%ld/%ld rUb=%ld/%ld "
             "cores=%d used=%d preUb=%ld postUb=%ld tmpUb=%ld cacheLvl=%ld p=%.1f invP=%.3f",
-            tc.A, tc.R, tc.aUbFactor, tc.aUbFactorAlign, tc.rUbFactor, tc.rUbFactorAlign, (int)tc.coreNum,
-            tc.usedCoreNum, tc.preReduceUbSize, tc.postReduceUbSize, tc.tmpBufUbSize, tc.cacheLevelStride, tc.p,
-            (tc.p != 0.0f) ? (1.0f / tc.p) : 0.0f);
+            tilingData->axisNum, static_cast<int>(tc.isTailA), tc.A, tc.R, tc.aUbFactor, tc.aUbFactorAlign,
+            tc.rUbFactor, tc.rUbFactorAlign, (int)tc.coreNum, tc.usedCoreNum, tc.preReduceUbSize, tc.postReduceUbSize,
+            tc.tmpBufUbSize, tc.cacheLevelStride, tc.p, (tc.p != 0.0f) ? (1.0f / tc.p) : 0.0f);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -518,6 +540,60 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
 
 } // anonymous namespace
 
+// ─── ComputeAraTiling: R 全为 1 的纯 A 退化场景，前置 [A=1, R=1] 走 ARA ──
+// Pattern: [A0=1, R0=1, A1=A]（axisNum=3, tail-A），aSplitAxisIdx=2, rSplitIdx=1。
+// R 全驻（rUbFactor=rUbFactorAlign=1，无 R 方向 pad），UB 预算全部给 A：
+//   coeff = maxDtypeSize × ((P_pre+P_pre_ext) × rPaddedElems(=1) + P_post)
+//   aUnitMax = ubAvailable / coeff，再受 ∏A 与 cacheBuf 容量（cacheCount==1）钳制，
+//   tail-A burst 尾轴方向 FloorAlign 到 block 对齐。
+static ge::graphStatus ComputeAraTiling(gert::TilingContext* ctx, TilingCtx& tc)
+{
+    const int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
+    if (ubAvailable <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    const int64_t coeff = tc.maxDtypeSize * ((P_PRE + P_PRE_EXT) + P_POST);
+    if (coeff <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    int64_t aUnitMax = ubAvailable / coeff;
+    aUnitMax = std::min(aUnitMax, tc.A);
+    // ★ cacheBuf 硬约束：R 全驻即 cacheCount==1，aUnitMax 不能超过 cacheBuf 容量
+    aUnitMax = std::min(aUnitMax, CACHE_BUF_UB_SIZE / static_cast<int64_t>(sizeof(float)));
+    const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
+    // tail-A：burst 尾轴方向优先 block 对齐。若 A 不足一个 block，FloorAlign 会砍到 0，
+    // 此时退化为单 chunk：aUbFactor=A（burst 尾非对齐由 DataCopyPad 兜底，kernel 已支持
+    // 非对齐 aLen 尾块），aUbFactorAlign 仍按 block 对齐以保证 UB 行宽/dstStride 合法。
+    const int64_t aUbFloor = FloorAlign(aUnitMax, bsElem);
+    if (aUbFloor > 0) {
+        tc.aUbFactor = aUbFloor;
+        tc.aUbFactorAlign = aUbFloor;
+    } else {
+        tc.aUbFactor = aUnitMax;
+        tc.aUbFactorAlign = CeilAlign(aUnitMax, bsElem);
+    }
+    if (tc.aUbFactor <= 0) {
+        return ge::GRAPH_FAILED;
+    }
+    tc.rUbFactor = 1;
+    tc.rUbFactorAlign = 1;
+    ComputeUbSizes(tc);
+    ComputeFusedALoopSplit(tc);
+    if (FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // ARA 复用 AR 的模板选择，tail 类型由 kernel 侧按 axisNum 奇偶运行期判定
+    // （tiling key = 0 是框架保留值，不能被 JIT 编译使用）。
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(0, 1);
+    if (ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (ctx->SetBlockDim(static_cast<uint32_t>(tc.usedCoreNum)) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 // ─── ComputeNormalTiling: extracted from ComputeTiling for size control ──
 static ge::graphStatus ComputeNormalTiling(gert::TilingContext* ctx, TilingCtx& tc)
 {
@@ -591,6 +667,8 @@ ge::graphStatus GlobalLpPoolTilingFunc::ComputeTiling(gert::TilingContext* ctx)
         return ge::GRAPH_FAILED;
     if (tc.isEmptyA || tc.isEmptyR)
         return ComputeEmptyTiling(ctx, tc);
+    if (tc.isTailA)
+        return ComputeAraTiling(ctx, tc);
     return ComputeNormalTiling(ctx, tc);
 }
 

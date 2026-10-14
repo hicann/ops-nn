@@ -87,6 +87,11 @@ public:
         aSmallCoreLoopCnt_ = tilingData->aSmallCoreLoopCnt;
         axisShape0_ = tilingData->axisShape[0];
         axisShape1_ = tilingData->axisShape[1];
+        axisShape2_ = tilingData->axisShape[2];
+        aSplitAxisIdx_ = tilingData->aSplitAxisIdx;
+        aSplitSize_ = tilingData->axisShape[aSplitAxisIdx_];
+        // tail 类型运行期判定：偶数轴 → tail-R (AR)；奇数轴 → tail-A (ARA)
+        isTailR_ = (tilingData->axisNum % 2 == 0);
         p_ = tilingData->p;
         invP_ = tilingData->invP;
 
@@ -163,7 +168,7 @@ public:
 
         for (int64_t aIdx = aLoopStart; aIdx < aLoopEnd; aIdx++) {
             int64_t aOff = aIdx * aUbFactor_;
-            int64_t aLen = (aOff + aUbFactor_ <= axisShape0_) ? aUbFactor_ : (axisShape0_ - aOff);
+            int64_t aLen = (aOff + aUbFactor_ <= aSplitSize_) ? aUbFactor_ : (aSplitSize_ - aOff);
             ProcessAChunk(aOff, aLen);
         }
     }
@@ -173,28 +178,49 @@ private:
     __aicore__ inline void DoCopyInTile(LocalTensor<D_T>& dst, int64_t aOff, int64_t aLen, int64_t rChunkIdx,
                                         int64_t rLen)
     {
-        uint32_t blockLen = static_cast<uint32_t>(rLen * sizeof(D_T));
-        uint16_t blockCount = static_cast<uint16_t>(aLen);
-
-        int64_t srcStride = axisShape1_ * static_cast<int64_t>(sizeof(D_T)) - static_cast<int64_t>(blockLen);
-
-        int64_t paddedRowBytes = rUbFactorAlign_ * static_cast<int64_t>(sizeof(D_T));
-
-        // dstStride: skip the 32B-aligned gap between rows on UB. The UB row width
-        // is always CeilAlign(blockLen, 32B) regardless of rightPadding, so
-        // rightPadding stays 0 and the pad lanes are left dirty.
-        uint32_t validBytes = blockLen;
-        uint32_t alignedBytes = (validBytes + VF_BLK_SIZE - 1) & ~(VF_BLK_SIZE - 1); // CeilAlign(blockLen, 32)
-        int64_t dstStride = (paddedRowBytes - static_cast<int64_t>(alignedBytes)) / VF_BLK_SIZE;
-
-        DataCopyExtParams copyParams(blockCount, blockLen, srcStride, dstStride, 0);
-        // isPad=false, rightPadding=0, paddingValue=0:
-        //    the pad region is dirty and carries no semantics. The kernel clears the
-        //    R-direction pad explicitly via ClearRPadVf before the reduce.
         DataCopyPadExtParams<D_T> padParams(false, 0, 0, static_cast<D_T>(0));
+        if (isTailR_) {
+            // tail-R: UB = [A_bundle, R_bundle]，burst 尾轴是 R（最内层）
+            uint32_t blockLen = static_cast<uint32_t>(rLen * sizeof(D_T));
+            uint16_t blockCount = static_cast<uint16_t>(aLen);
 
-        int64_t gmOff = aOff * axisShape1_ + rChunkIdx * rUbFactor_;
-        DataCopyPad(dst, xGm_[gmOff], copyParams, padParams);
+            int64_t srcStride = axisShape1_ * static_cast<int64_t>(sizeof(D_T)) - static_cast<int64_t>(blockLen);
+
+            int64_t paddedRowBytes = rUbFactorAlign_ * static_cast<int64_t>(sizeof(D_T));
+
+            // dstStride: skip the 32B-aligned gap between rows on UB. The UB row width
+            // is always CeilAlign(blockLen, 32B) regardless of rightPadding, so
+            // rightPadding stays 0 and the pad lanes are left dirty.
+            uint32_t validBytes = blockLen;
+            uint32_t alignedBytes = (validBytes + VF_BLK_SIZE - 1) & ~(VF_BLK_SIZE - 1); // CeilAlign(blockLen, 32)
+            int64_t dstStride = (paddedRowBytes - static_cast<int64_t>(alignedBytes)) / VF_BLK_SIZE;
+
+            DataCopyExtParams copyParams(blockCount, blockLen, srcStride, dstStride, 0);
+            // isPad=false, rightPadding=0, paddingValue=0:
+            //    the pad region is dirty and carries no semantics. The kernel clears the
+            //    R-direction pad explicitly via ClearRPadVf before the reduce.
+            int64_t gmOff = aOff * axisShape1_ + rChunkIdx * rUbFactor_;
+            DataCopyPad(dst, xGm_[gmOff], copyParams, padParams);
+        } else {
+            // tail-A (ARA): UB = [R_bundle, A_bundle]，burst 尾轴是 A（最内层）。
+            // A 方向的 BurstPad/stale 不参与 R 方向 Reduce，无需清零；R 方向无
+            // ExtensionPad（R 全驻，rLen == rUbFactor == 1）。
+            uint32_t blockLen = static_cast<uint32_t>(aLen * sizeof(D_T));
+            uint16_t blockCount = static_cast<uint16_t>(rLen);
+
+            int64_t srcStride = (blockCount > 1) ?
+                                    (axisShape2_ * static_cast<int64_t>(sizeof(D_T)) - static_cast<int64_t>(blockLen)) :
+                                    0;
+
+            int64_t paddedRowBytes = aUbFactorAlign_ * static_cast<int64_t>(sizeof(D_T));
+            uint32_t alignedBytes = (blockLen + VF_BLK_SIZE - 1) & ~(VF_BLK_SIZE - 1);
+            int64_t dstStride = (paddedRowBytes - static_cast<int64_t>(alignedBytes)) / VF_BLK_SIZE;
+
+            DataCopyExtParams copyParams(blockCount, blockLen, srcStride, dstStride, 0);
+            // R0 行 stride = A（axisShape2_），A1 stride = 1
+            int64_t gmOff = aOff + rChunkIdx * rUbFactor_ * axisShape2_;
+            DataCopyPad(dst, xGm_[gmOff], copyParams, padParams);
+        }
     }
 
     // ─── CopyOut (tail-R, single burst) ───────────────────────────────────
@@ -216,11 +242,14 @@ private:
         preIn = preInQue_.DeQue<D_T>();
         PreElewiseVf(preIn, tmpBufIdx, rLen);
         preInQue_.FreeTensor(preIn);
-        // R_bundle pad clearing (BurstPad + ExtensionPad). Unconditional: the VFs
-        // self-gate (BurstPad only when validR is unaligned, ExtensionPad only for a
-        // partial chunk). CopyIn uses isPad=false so this is the only thing that
-        // makes the pad lanes zero before they are folded into the reduce.
-        ClearRPadVf(tmpBufIdx, rLen);
+        if (isTailR_) {
+            // tail-R only: R_bundle pad clearing (BurstPad + ExtensionPad). The VFs
+            // self-gate (BurstPad only when validR is unaligned, ExtensionPad only for a
+            // partial chunk). CopyIn uses isPad=false so this is the only thing that
+            // makes the pad lanes zero before they are folded into the reduce.
+            // tail-A 下 BurstPad/stale 都在 A 方向，不参与 R 方向 Reduce，无需清零。
+            ClearRPadVf(tmpBufIdx, rLen);
+        }
     }
 
     // ─── Process One A Chunk ──────────────────────────────────────────────
@@ -528,10 +557,17 @@ private:
         LocalTensor<uint8_t> sharedTmp = floatBuf[(bufSizeTmp_ / static_cast<int64_t>(sizeof(float)))]
                                              .template ReinterpretCast<uint8_t>();
 
-        // UB layout is [A_bundle, R_bundle] from DoCopyInTile → shape {A, R}
-        // Pattern::Reduce::AR: first dim (A) kept, second dim (R) reduced
-        uint32_t shape[] = {static_cast<uint32_t>(aUbFactorAlign_), static_cast<uint32_t>(rUbFactorAlign_)};
-        ReduceSum<float, Pattern::Reduce::AR, true>(cacheFloat[levelOff], preReduceResult, sharedTmp, shape, true);
+        if (isTailR_) {
+            // UB layout is [A_bundle, R_bundle] from DoCopyInTile → shape {A, R}
+            // Pattern::Reduce::AR: first dim (A) kept, second dim (R) reduced
+            uint32_t shape[] = {static_cast<uint32_t>(aUbFactorAlign_), static_cast<uint32_t>(rUbFactorAlign_)};
+            ReduceSum<float, Pattern::Reduce::AR, true>(cacheFloat[levelOff], preReduceResult, sharedTmp, shape, true);
+        } else {
+            // tail-A: UB layout is [R_bundle, A_bundle] from DoCopyInTile → shape {R, A}
+            // Pattern::Reduce::RA: first dim (R) reduced, second dim (A) kept
+            uint32_t shape[] = {static_cast<uint32_t>(rUbFactorAlign_), static_cast<uint32_t>(aUbFactorAlign_)};
+            ReduceSum<float, Pattern::Reduce::RA, true>(cacheFloat[levelOff], preReduceResult, sharedTmp, shape, true);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -771,6 +807,10 @@ private:
     int64_t aSmallCoreLoopCnt_ = 0;
     int64_t axisShape0_ = 0;
     int64_t axisShape1_ = 0;
+    int64_t axisShape2_ = 1;
+    int32_t aSplitAxisIdx_ = 0;
+    int64_t aSplitSize_ = 0;
+    bool isTailR_ = true;
     float p_ = 2.0f;
     float invP_ = 0.5f;
 

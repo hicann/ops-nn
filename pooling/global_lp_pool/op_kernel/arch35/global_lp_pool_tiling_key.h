@@ -16,7 +16,8 @@ namespace tiling {
 ASCENDC_TPL_ARGS_DECL(GlobalLpPool, ASCENDC_TPL_BOOL_DECL(isEmptyTensor, 0, 1), ASCENDC_TPL_BOOL_DECL(isTailR, 0, 1), );
 
 ASCENDC_TPL_SEL(
-    // normal template: isEmptyTensor=0, isTailR=1 (AR pattern)
+    // normal template: isEmptyTensor=0, isTailR=1 (AR/ARA pattern; tail type is
+    // decided at runtime from tilingData.axisNum parity inside the kernel)
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 0), ASCENDC_TPL_BOOL_SEL(isTailR, 1), ),
     // empty tensor template: isEmptyTensor=1, isTailR=0
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 1), ASCENDC_TPL_BOOL_SEL(isTailR, 0), ), );
