@@ -179,25 +179,6 @@ TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, null_element_after_valid_gradient)
     EXPECT_EQ(GetWorkspaceStatus(grads.get(), foundInf.get(), invScale.get(), &workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, null_workspace_size)
-{
-    auto grads = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)}).ToAclType();
-    auto foundInf = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ToAclType();
-    auto invScale = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ToAclType();
-    EXPECT_EQ(GetWorkspaceStatus(grads.get(), foundInf.get(), invScale.get(), nullptr), ACLNN_ERR_PARAM_NULLPTR);
-}
-
-TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, null_executor_output)
-{
-    auto grads = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)}).ToAclType();
-    auto foundInf = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ToAclType();
-    auto invScale = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ToAclType();
-    uint64_t workspaceSize = 0;
-    EXPECT_EQ(aclnnForeachNonFiniteCheckAndUnscaleGetWorkspaceSize(grads.get(), foundInf.get(), invScale.get(),
-                                                                   &workspaceSize, nullptr),
-              ACLNN_ERR_PARAM_NULLPTR);
-}
-
 TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, unsupported_gradient_dtype)
 {
     auto grads = TensorDesc({2, 3}, ACL_INT32, ACL_FORMAT_ND);

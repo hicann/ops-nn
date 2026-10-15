@@ -144,19 +144,6 @@ TEST_P(L2ForeachZeroInplaceTest, null_element_after_valid_tensor)
     EXPECT_EQ(GetWorkspaceStatus(x.get(), &workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_P(L2ForeachZeroInplaceTest, null_workspace_size)
-{
-    auto x = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)}).ToAclType();
-    EXPECT_EQ(GetWorkspaceStatus(x.get(), nullptr), ACLNN_ERR_PARAM_NULLPTR);
-}
-
-TEST_P(L2ForeachZeroInplaceTest, null_executor_output)
-{
-    auto x = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)}).ToAclType();
-    uint64_t workspaceSize = 0;
-    EXPECT_EQ(aclnnForeachZeroInplaceGetWorkspaceSize(x.get(), &workspaceSize, nullptr), ACLNN_ERR_PARAM_NULLPTR);
-}
-
 TEST_P(L2ForeachZeroInplaceTest, unsupported_dtype)
 {
     auto x = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);

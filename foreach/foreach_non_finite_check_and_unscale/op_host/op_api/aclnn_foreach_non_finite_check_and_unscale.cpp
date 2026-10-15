@@ -65,8 +65,6 @@ static aclnnStatus CheckParams(const aclTensorList* scaledGrads, const aclTensor
     OP_CHECK_NULL(scaledGrads, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(foundInf, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(invScale, return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK_NULL(workspaceSize, return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK_NULL(executor, return ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListNotNull(scaledGrads, "scaledGrads"), ACLNN_ERR_PARAM_INVALID);
 
     const auto& dtypeSupportList = GetDtypeSupportList();

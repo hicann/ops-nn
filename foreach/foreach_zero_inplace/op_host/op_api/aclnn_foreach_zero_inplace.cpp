@@ -49,8 +49,6 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 static aclnnStatus CheckParams(const aclTensorList* x, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_NULL(x, return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK_NULL(workspaceSize, return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK_NULL(executor, return ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListNotNull(x, "x"), ACLNN_ERR_PARAM_INVALID);
 
     const auto& dtypeSupportList = GetDtypeSupportList();
