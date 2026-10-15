@@ -57,10 +57,8 @@ static bool InputShapeCheck(const gert::InferShapeContext* context, const gert::
 
 static bool InputOneShapeCheck(gert::InferShapeContext* context, const gert::Shape* beta1Shape)
 {
-    std::vector<int64_t> inputList1 = {
-        LR_IDX, BETA_2_IDX, EPSILON_IDX, MAX_GRAD_NORM_IDX, GLOBAL_GRAD_NORM_IDX, WEIGHT_DECAY_IDX};
-    std::vector<std::string> inputNameList1 = {"lr",          "beta2", "epsilon", "max_grad_norm", "global_grad_norm",
-                                               "weight_decay"};
+    std::vector<int64_t> requiredInputList = {LR_IDX, BETA_2_IDX, EPSILON_IDX, GLOBAL_GRAD_NORM_IDX, WEIGHT_DECAY_IDX};
+    std::vector<std::string> requiredInputNames = {"lr", "beta2", "epsilon", "global_grad_norm", "weight_decay"};
 
     auto attrs = context->GetAttrs();
     if (attrs == nullptr) {
@@ -69,19 +67,31 @@ static bool InputOneShapeCheck(gert::InferShapeContext* context, const gert::Sha
     }
     const char* adamPtr = attrs->GetAttrPointer<char>(ADAM_MODE_ATTR_IDX);
     OP_LOGD(OP_NAME, "Get adam mode successfully.");
-    if ((adamPtr != nullptr) && (strcmp(adamPtr, "mbart_adam") == 0)) {
+    const bool isMbartAdam = (adamPtr != nullptr) && (strcmp(adamPtr, "mbart_adam") == 0);
+    if (isMbartAdam) {
         OP_LOGD(context->GetNodeName(), "get adam mode as mbart_adam");
-        inputList1.push_back(STEP_SIZE_IDX);
-        inputNameList1.push_back("step_size");
     }
-    for (size_t i = 0; i < inputList1.size(); i++) {
-        const gert::Shape* input1Shape = context->GetInputShape(inputList1[i]);
+    for (size_t i = 0; i < requiredInputList.size(); i++) {
+        const gert::Shape* input1Shape = context->GetRequiredInputShape(requiredInputList[i]);
         if (input1Shape == nullptr) {
-            OP_LOGE(OP_NAME, "input[%ld] shape is null", inputList1[i]);
+            OP_LOGE(OP_NAME, "required input[%ld] shape is null", requiredInputList[i]);
             return false;
         }
         if (*input1Shape != *beta1Shape) {
-            OP_LOGD(OP_NAME, "invalid input one shape of %s", inputNameList1[i].c_str());
+            OP_LOGD(OP_NAME, "invalid input one shape of %s", requiredInputNames[i].c_str());
+            return false;
+        }
+    }
+
+    const gert::Shape* maxGradNormShape = context->GetOptionalInputShape(MAX_GRAD_NORM_IDX);
+    if (maxGradNormShape != nullptr && *maxGradNormShape != *beta1Shape) {
+        OP_LOGD(OP_NAME, "invalid input one shape of max_grad_norm");
+        return false;
+    }
+    if (isMbartAdam) {
+        const gert::Shape* stepSizeShape = context->GetOptionalInputShape(STEP_SIZE_IDX);
+        if (stepSizeShape != nullptr && *stepSizeShape != *beta1Shape) {
+            OP_LOGD(OP_NAME, "invalid input one shape of step_size");
             return false;
         }
     }

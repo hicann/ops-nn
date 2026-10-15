@@ -61,3 +61,22 @@ TEST_F(ApplyAdamV2InferShape, infershape_rank_6)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(ApplyAdamV2InferShape, optional_inputs_can_be_omitted)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdamV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape varShape = {{8, 16}, {8, 16}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(10, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0}, {1, 1, 1})
+                      .InputShapes({&varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &varShape, &scalarShape, &scalarShape})
+                      .Attr("adam_mode", AscendString("mbart_adam"))
+                      .OutputShapes({&varShape, &varShape, &varShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
