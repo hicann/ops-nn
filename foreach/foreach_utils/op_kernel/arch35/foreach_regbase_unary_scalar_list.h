@@ -95,7 +95,11 @@ public:
         copyInParams.blockLen = dataCount * sizeof(T);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
+#if __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
+        DataCopyPad(dataLocal, inTensorGM[1ULL * index * maxDataCount], copyInParams, dataCopyPadExtParams, true);
+#else
         DataCopyPad(dataLocal, inTensorGM[1ULL * index * maxDataCount], copyInParams, dataCopyPadExtParams);
+#endif
         inQueue.EnQue(dataLocal);
     }
 

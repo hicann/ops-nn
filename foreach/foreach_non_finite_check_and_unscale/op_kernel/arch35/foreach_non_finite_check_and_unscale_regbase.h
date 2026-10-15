@@ -102,6 +102,7 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::Init(
     pipe_.InitBuffer(tempValQueue_, BUFFER_NUM, reduceTempValUbSize_);
     pipe_.InitBuffer(maxBuf_, TEM_BUFFER_REMAIN);
     pipe_.InitBuffer(minBuf_, TEM_BUFFER_REMAIN);
+    AscendC::WaitPreTaskEnd();
     invScaleVal_ = invScaleGM_.GetValue(0);
     perBlockCount_ = BYTE_BLOCK / sizeof(T);
     maxDataCount_ = scaledGradsUbSize_ / sizeof(T);

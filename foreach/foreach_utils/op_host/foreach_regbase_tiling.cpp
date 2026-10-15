@@ -38,6 +38,7 @@ static constexpr uint64_t TILING_KEY_FLOAT = 10002;
 static constexpr uint64_t TILING_KEY_INT = 10003;
 static constexpr uint64_t TILING_KEY_BF16 = 10004;
 static constexpr int64_t SINGLE_CORE_PROCESS_DATA = 4096;
+static constexpr int64_t MIN_SINGLE_CORE_PROCESS_DATA = 256;
 static constexpr int64_t FIRST_INPUT_IDX = 0;
 static constexpr int64_t SECOND_INPUT_IDX = 1;
 static constexpr int64_t THIRD_INPUT_IDX = 2;
@@ -235,12 +236,20 @@ ge::graphStatus ForeachRegbaseTiling::CheckScalarListSameDtype(int64_t scalarIdx
     return ge::GRAPH_SUCCESS;
 }
 
+int64_t ForeachRegbaseTiling::GetSingleCoreProcessData()
+{
+    if (isAscend960) {
+        return MIN_SINGLE_CORE_PROCESS_DATA;
+    }
+    return SINGLE_CORE_PROCESS_DATA;
+}
+
 ge::graphStatus ForeachRegbaseTiling::DoOpTiling()
 {
     int64_t sizePerElem = ge::GetSizeByDataType(dataType_);
     OP_CHECK_IF(sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem),
                 return ge::GRAPH_FAILED);
-    int64_t elementsPerBlock = SINGLE_CORE_PROCESS_DATA / sizePerElem;
+    int64_t elementsPerBlock = GetSingleCoreProcessData() / sizePerElem;
 
     numBlocks_ = std::min<uint64_t>(aicoreParams_.numBlocks, MAX_CORE_CONT_950);
     uint32_t tempCoreNum = Ops::Base::CeilDiv(totalDataCount_, elementsPerBlock);

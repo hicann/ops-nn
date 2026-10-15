@@ -49,6 +49,7 @@ protected:
     ge::graphStatus CheckScalarListInt(int64_t scalarIdx);
     ge::graphStatus CheckScalarListSameDtype(int64_t scalarIdx);
     // 3、计算数据切分TilingData
+    int64_t GetSingleCoreProcessData();
     ge::graphStatus DoOpTiling() override;
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;

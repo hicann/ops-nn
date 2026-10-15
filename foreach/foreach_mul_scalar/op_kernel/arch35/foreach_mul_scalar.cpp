@@ -27,6 +27,7 @@ __aicore__ inline void ForeachMulScalarImpl(GM_ADDR inputs, GM_ADDR scalar, GM_A
     op.Process();
 }
 
+#if defined(__DAV_VEC__)
 extern "C" __global__ __aicore__ void foreach_mul_scalar(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
                                                          GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -42,3 +43,4 @@ extern "C" __global__ __aicore__ void foreach_mul_scalar(GM_ADDR inputs, GM_ADDR
     }
     pipeOp.Destroy();
 }
+#endif

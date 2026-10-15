@@ -52,7 +52,7 @@ TEST_F(ForeachAddcmulListRegbaseTiling, tiling_fp32)
                                               {/* attrs */}, &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 10002; // FP32
     string expectTilingData = EMPTY_EXPECT_TILING_DATA;
-    std::vector<size_t> expectWorkspaces = {32};
+    std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
 
@@ -72,7 +72,7 @@ TEST_F(ForeachAddcmulListRegbaseTiling, tiling_fp16)
                                               {/* attrs */}, &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 10001; // FP16
     string expectTilingData = EMPTY_EXPECT_TILING_DATA;
-    std::vector<size_t> expectWorkspaces = {32};
+    std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
 
@@ -92,7 +92,7 @@ TEST_F(ForeachAddcmulListRegbaseTiling, tiling_int32)
                                               {/* attrs */}, &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 10003; // INT32
     string expectTilingData = EMPTY_EXPECT_TILING_DATA;
-    std::vector<size_t> expectWorkspaces = {32};
+    std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
 
@@ -112,6 +112,6 @@ TEST_F(ForeachAddcmulListRegbaseTiling, tiling_bf16)
                                               {/* attrs */}, &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 10004; // BF16
     string expectTilingData = EMPTY_EXPECT_TILING_DATA;
-    std::vector<size_t> expectWorkspaces = {32};
+    std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }

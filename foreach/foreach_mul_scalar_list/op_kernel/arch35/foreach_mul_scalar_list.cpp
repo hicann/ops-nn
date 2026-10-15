@@ -24,6 +24,7 @@ __aicore__ inline void ForeachMulScalarListImpl(GM_ADDR tensor1, GM_ADDR scalars
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachMulScalarListRegbase<T, ScalarT, ForeachSoloTilingDataRegbase> op;
     op.Init(tensor1, scalars, outputs, workspace, tilingData, tPipe);
+    AscendC::WaitPreTaskEnd();
     op.Process();
 }
 

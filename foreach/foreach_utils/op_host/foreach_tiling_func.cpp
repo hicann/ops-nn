@@ -130,6 +130,8 @@ ge::graphStatus ForeachBaseClass::GetPlatformInfo()
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
+        isAscend960 = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                       ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
     } else {
         auto compileInfoPtr = context_->GetCompileInfo<ForeachSoloCompileInfo>();
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);

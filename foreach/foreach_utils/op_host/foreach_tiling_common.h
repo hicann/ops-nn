@@ -52,6 +52,7 @@ protected:
     ge::graphStatus DoLibApiTiling() override;
 
     platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
+    bool isAscend960 = false;
 };
 
 } // namespace optiling

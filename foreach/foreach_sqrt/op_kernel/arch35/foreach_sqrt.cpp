@@ -23,9 +23,11 @@ __aicore__ inline void ForeachSqrtImpl(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR 
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachSqrtRegbase<T, ForeachSoloTilingDataRegbase> op;
     op.Init(inputs, outputs, workspace, tilingData, tPipe);
+    AscendC::WaitPreTaskEnd();
     op.Process();
 }
 
+#if defined(__DAV_VEC__)
 extern "C" __global__ __aicore__ void foreach_sqrt(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
@@ -38,3 +40,4 @@ extern "C" __global__ __aicore__ void foreach_sqrt(GM_ADDR inputs, GM_ADDR outpu
     }
     pipeOp.Destroy();
 }
+#endif
