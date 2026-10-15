@@ -17,7 +17,7 @@
 
 - 计算公式：
 
-  假定输入的shape为($N,C_{in},D_{in},H_{in},W_{in}$)、输出的shape为($N,C_{out},D_{out},H_{out},W_{out}$)，那么他们与卷积步长($stride$)、卷积核大小($kernel\_size，kD,kH,kW$)、膨胀参数($dilation$)的关系是：
+  假定输入的shape为($N,C_{in},D_{in},H_{in},W_{in}$)、输出的shape为($N,C_{out},D_{out},H_{out},W_{out}$)，那么它们与卷积步长($stride$)、卷积核大小($kernel\_size，kD,kH,kW$)、膨胀参数($dilation$)的关系是：
 
   $$
     D_{out}=(D_{in} - 1) * stride[0] - 2*padding[0] + dilation[0] * (kernel\_size[0] - 1) + output\_padding[0] + 1
