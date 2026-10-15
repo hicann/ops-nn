@@ -1,7 +1,5 @@
 # aclnnInplaceAddRmsNorm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/inplace_add_rms_norm)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

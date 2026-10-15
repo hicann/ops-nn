@@ -1,7 +1,5 @@
 # aclnnAdaLayerNormBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/ada_layer_norm_grad)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

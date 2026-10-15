@@ -1,7 +1,5 @@
 # aclnnFastBatchNormBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/batch_norm_grad_v3)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

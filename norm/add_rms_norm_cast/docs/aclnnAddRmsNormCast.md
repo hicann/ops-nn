@@ -1,7 +1,5 @@
 # aclnnAddRmsNormCast
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_cast)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

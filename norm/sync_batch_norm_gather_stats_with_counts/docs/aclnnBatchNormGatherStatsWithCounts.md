@@ -1,7 +1,5 @@
 # aclnnBatchNormGatherStatsWithCounts
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/sync_batch_norm_gather_stats_with_counts)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

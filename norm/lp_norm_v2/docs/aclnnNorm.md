@@ -1,7 +1,5 @@
 # aclnnNorm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/lp_norm_v2)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

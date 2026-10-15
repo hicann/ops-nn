@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  设x的shape为[N, C, H, W]，num = N * H * W（样本数），batch_variance在有偏估计下计算，Bessel修正仅用于running variance更新：
+  设x的shape为[N, C, H, W]，num = N \* H \* W（样本数），batch_variance在有偏估计下计算，Bessel修正仅用于running variance更新：
 
   $$
   batch\_mean = {sum\over num}
