@@ -126,7 +126,7 @@ public:
     }
 
 private:
-    __aicore__ inline void ProcessUB(int64_t aOffset, int64_t currentANum)
+    __aicore__ __attribute__((noinline)) void ProcessUB(int64_t aOffset, int64_t currentANum)
     {
         CopyInX(aOffset, currentANum);
         LocalTensor<T1> xInUb = xQueue.template DeQue<T1>();
