@@ -92,6 +92,26 @@ TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_rank_one_inputs)
     EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[1]");
 }
 
+TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_rank_zero_inputs)
+{
+    auto x1_shape = gert::Shape{};
+    auto x2_shape = gert::Shape{2};
+    std::vector<int32_t> x1_value = {1};
+    std::vector<int32_t> x2_value = {1, 2};
+    std::unique_ptr<uint8_t[]> x1_tensor_holder;
+    std::unique_ptr<uint8_t[]> x2_tensor_holder;
+    gert::KernelRunContextHolder holder;
+
+    auto context = BuildContext(x1_shape, x1_value, x2_shape, x2_value, x1_tensor_holder, x2_tensor_holder, holder);
+    ASSERT_NE(context, nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    EXPECT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[2]");
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[1]");
+}
+
 TEST_F(BroadcastGradientArgsOpUT, BroadcastGradientArgs_x1_rank_not_one)
 {
     auto x1_shape = gert::Shape{2, 1};
@@ -168,6 +188,48 @@ TEST_F(BroadcastGradientArgsOpUT, rt2_shaperange_test)
     gert::Shape x2_in_max{
         5,
     };
+    gert::Shape null1{};
+    gert::Shape null2{};
+
+    gert::Range<gert::Shape> x1_range(&x1_in_min, &x1_in_max);
+    gert::Range<gert::Shape> x2_range(&x2_in_min, &x2_in_max);
+    gert::Range<gert::Shape> out_shape_range(&null1, &null2);
+
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs"), nullptr);
+    auto shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BroadcastGradientArgs")->infer_shape_range;
+    ASSERT_NE(shape_range_func, nullptr);
+
+    auto context_holder = gert::InferShapeRangeContextFaker()
+                              .IrInputNum(2)
+                              .NodeIoNum(2, 2)
+                              .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .InputShapeRanges({&x1_range, &x2_range})
+                              .OutputShapeRanges({&out_shape_range, &out_shape_range})
+                              .Build();
+
+    auto context = context_holder.GetContext<gert::InferShapeRangeContext>();
+    EXPECT_EQ(shape_range_func(context), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(context->GetOutputShapeRange(0)->GetMin()->GetDim(0), 0);
+    EXPECT_EQ(context->GetOutputShapeRange(1)->GetMin()->GetDim(0), 0);
+    EXPECT_EQ(context->GetOutputShapeRange(0)->GetMax()->GetDim(0), 5);
+    EXPECT_EQ(context->GetOutputShapeRange(1)->GetMax()->GetDim(0), 5);
+}
+
+// rank-0 range 输入：GetDim(0) 读到的是未初始化/残留值，必须按 0 处理
+// 通过 SetDim(0, 999) 在 rank-0 shape 上注入残留 dim（dim_num_ 仍为 0），
+// 模拟真实运行时 range 缓冲区脏内存：修复前 outMax 会被未初始化值污染，修复后取 x2 的 5
+TEST_F(BroadcastGradientArgsOpUT, rt2_shaperange_test_rank_zero)
+{
+    gert::Shape x1_in_min{};
+    gert::Shape x1_in_max{};
+    x1_in_max.SetDim(0, 999); // 注入残留 dims_[0]=999，rank 仍为 0
+    ASSERT_EQ(x1_in_max.GetDimNum(), 0U);
+    gert::Shape x2_in_min{5};
+    gert::Shape x2_in_max{5};
     gert::Shape null1{};
     gert::Shape null2{};
 

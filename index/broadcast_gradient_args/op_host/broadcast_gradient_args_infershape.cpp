@@ -14,6 +14,7 @@
  */
 
 #include "log/log.h"
+#include "op_common/log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "op_api/op_util.h"
@@ -84,8 +85,8 @@ static ge::graphStatus InferShape4BroadcastGradientArgsImpl(const gert::InferSha
         return ge::GRAPH_SUCCESS;
     }
 
-    size_t x1_shape_len = x1_shape->GetDim(0);
-    size_t x2_shape_len = x2_shape->GetDim(0);
+    size_t x1_shape_len = (x1_shape->GetDimNum() == 0U) ? 0U : static_cast<size_t>(x1_shape->GetDim(0));
+    size_t x2_shape_len = (x2_shape->GetDimNum() == 0U) ? 0U : static_cast<size_t>(x2_shape->GetDim(0));
     size_t max_shape_len = std::max(x1_shape_len, x2_shape_len);
 
     if (max_shape_len == 0) {
@@ -139,9 +140,11 @@ graphStatus InferShape4BroadcastGradientArgs(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, y1_shape);
     gert::Shape* y2_shape = context->GetOutputShape(BROADCASTGRADIENTARGS_OUT_IDX_Y2);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2_shape);
-    if (x1_shape->GetDimNum() != 1 || x2_shape->GetDimNum() != 1) {
-        OP_LOGE(context->GetNodeName(), "x1 and x2 shape tensors must be 1D, got rank %zu and %zu",
-                x1_shape->GetDimNum(), x2_shape->GetDimNum());
+    if (x1_shape->GetDimNum() > 1 || x2_shape->GetDimNum() > 1) {
+        std::string incorrectDims = std::to_string(x1_shape->GetDimNum()) + ", " +
+                                    std::to_string(x2_shape->GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "x1, x2", incorrectDims.c_str(),
+                                                  "x1 and x2 shape tensors must be 0D or 1D");
         return ge::GRAPH_FAILED;
     }
     ge::DataType x1_dtype = x1_tensor->GetDataType();
@@ -194,8 +197,8 @@ ge::graphStatus InferShapeRange4BroadcastGradientArgs(gert::InferShapeRangeConte
     OP_CHECK_NULL_WITH_CONTEXT(context, y1_range->GetMin());
     OP_CHECK_NULL_WITH_CONTEXT(context, y2_range->GetMin());
 
-    int64_t x1Max = x1_range->GetMax()->GetDim(0);
-    int64_t x2Max = x2_range->GetMax()->GetDim(0);
+    int64_t x1Max = (x1_range->GetMax()->GetDimNum() == 0U) ? 0 : x1_range->GetMax()->GetDim(0);
+    int64_t x2Max = (x2_range->GetMax()->GetDimNum() == 0U) ? 0 : x2_range->GetMax()->GetDim(0);
     int64_t outMax = x1Max > x2Max ? x1Max : x2Max;
 
     y1_range->GetMax()->SetDimNum(1);
