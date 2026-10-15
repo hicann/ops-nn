@@ -15,6 +15,7 @@
 
 #include "aclnn_unsorted_segment_sum.h"
 #include "unsorted_segment_sum.h"
+#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "level0/fill.h"
@@ -119,10 +120,19 @@ static aclnnStatus FillOutWithZeros(const aclTensor* out, aclOpExecutor* executo
     CHECK_RET(fillDimTensor != nullptr, ACLNN_ERR_RUNTIME_ERROR);
     const aclScalar* zeroScalar = executor->AllocScalar(0);
     CHECK_RET(zeroScalar != nullptr, ACLNN_ERR_RUNTIME_ERROR);
-    const aclTensor* zeroTensor = executor->ConvertToTensor(zeroScalar, out->GetDataType());
+    // Fill算子二进制不支持UINT32/UINT64，先以INT64全0填充，再Cast到out的dtype
+    op::DataType fillDtype = (out->GetDataType() == op::DataType::DT_UINT32 ||
+                              out->GetDataType() == op::DataType::DT_UINT64) ?
+                                 op::DataType::DT_INT64 :
+                                 out->GetDataType();
+    const aclTensor* zeroTensor = executor->ConvertToTensor(zeroScalar, fillDtype);
     CHECK_RET(zeroTensor != nullptr, ACLNN_ERR_RUNTIME_ERROR);
     const aclTensor* zeroFillTensor = l0op::Fill(fillDimTensor, zeroTensor, fillDimsArray, executor);
     CHECK_RET(zeroFillTensor != nullptr, ACLNN_ERR_RUNTIME_ERROR);
+    if (fillDtype != out->GetDataType()) {
+        zeroFillTensor = l0op::Cast(zeroFillTensor, out->GetDataType(), executor);
+        CHECK_RET(zeroFillTensor != nullptr, ACLNN_ERR_RUNTIME_ERROR);
+    }
     CHECK_RET(l0op::ViewCopy(zeroFillTensor, out, executor) != nullptr, ACLNN_ERR_RUNTIME_ERROR);
     return ACLNN_SUCCESS;
 }
