@@ -318,11 +318,11 @@ private:
 private:
     // 管道对象，用于管理数据流（拷贝和计算的流水线）
     TPipe pipe_;
-    // 输入队列X，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buff达到流水并行，为2
+    // 输入队列X，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buffer达到流水并行，为2
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueX_;
-    // 输入队列Y，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buff达到流水并行，为2
+    // 输入队列Y，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buffer达到流水并行，为2
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueY_;
-    // 输出队列Z，从LM拷贝到GM，BUFFER_NUM表示buffer数量，这里开启double buff达到流水并行，为2
+    // 输出队列Z，从LM拷贝到GM，BUFFER_NUM表示buffer数量，这里开启double buffer达到流水并行，为2
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueueZ_;
 
     // 输入X的GM地址
