@@ -84,11 +84,11 @@ aclnnStatus aclnnForeachZeroInplace(
       <td>x（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示进行置0运算的输入和输出张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor和空TensorList。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -135,20 +135,23 @@ aclnnStatus aclnnForeachZeroInplace(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x是空指针。</td>
+      <td>传入的x、workspaceSize或executor是空指针。</td>
     </tr>
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>x的数据类型不在支持的范围之内。</td>
+      <td>x的数据类型不在支持的范围之内，或TensorList中存在空指针元素，或Tensor使用私有格式。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
+      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="3">561002</td>
       <td>x中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
       <td>x中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x的长度超过256个。</td>
     </tr>
   </tbody></table>
 
@@ -197,6 +200,9 @@ aclnnStatus aclnnForeachZeroInplace(
 
 ## 约束说明
 
+- aclnnForeachZeroInplace在Atlas A2/A3系列产品上支持非连续Tensor的原地清零，仅更新各Tensor逻辑view对应的元素，shape、stride和offset保持不变，view范围之外的storage数据保持不变。
+- x为空TensorList或所有Tensor均为空时，执行成功空操作。
+- 调用方需保证可写Tensor的逻辑元素以及列表中各Tensor的可写区域不重叠；共享storage的多个互不重叠view可以使用。
 - 确定性计算：
   - aclnnForeachZeroInplace默认确定性实现。
 

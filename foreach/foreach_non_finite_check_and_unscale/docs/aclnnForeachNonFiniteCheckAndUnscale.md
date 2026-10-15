@@ -88,21 +88,21 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>scaledGrads（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示进行反缩放计算的输入和输出张量列表，对应公式中的`scaledGrads`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
+      <td><ul><li>不支持空Tensor或空TensorList。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>foundInf（aclTensor*）</td>
       <td>输入/输出</td>
-      <td>表示用来标记输入scaledGrads中是否存在Inf或NaN的张量，对应公式中的`foundInf`。</td>
+      <td>表示用来标记输入scaledGrads中是否存在Inf或NaN的张量，对应公式中的`foundInf`。发现非有限输入时设为1.0，否则保留调用前值。</td>
       <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>invScale（aclTensor*）</td>
@@ -159,23 +159,29 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的scaledGrads、foundInf、invScale是空指针。</td>
+      <td>传入的scaledGrads、foundInf、invScale、workspaceSize或executor是空指针。</td>
     </tr>
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>scaledGrads、foundInf、invScale的数据类型不在支持的范围之内。</td>
+      <td>scaledGrads、foundInf、invScale的数据类型不在支持的范围之内，或TensorList中存在空指针元素，或Tensor使用私有格式。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>scaledGrads长度超过限制。</td>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
+      <td>scaledGrads的长度不在1至256个的范围内。</td>
     </tr>
     <tr>
       <td>scaledGrads中的Tensor数据类型不相同。</td>
     </tr>
     <tr>
       <td>foundInf或invScale中的元素个数不为1。</td>
+    </tr>
+    <tr>
+      <td>scaledGrads中存在空Tensor。</td>
+    </tr>
+    <tr>
+      <td>scaledGrads、foundInf或invScale中的Tensor维度超过8维。</td>
     </tr>
   </tbody></table>
 
@@ -224,6 +230,10 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
 
 ## 约束说明
 
+- aclnnForeachNonFiniteCheckAndUnscale在Atlas A2/A3系列产品上支持非连续scaledGrads的原地反缩放，仅检查和更新各Tensor逻辑view对应的元素，view范围之外的storage数据保持不变。
+- foundInf和invScale支持带非零offset、共享较大storage的单元素子视图；foundInf的原值在未发现非有限输入时保留，invScale始终只读。各Tensor的shape、stride和offset保持不变。
+- 调用方需保证梯度的可写逻辑元素及各可写参数区域不重叠，且与invScale的读取区域不重叠；共享storage中的互不重叠view可以使用。
+- 多次调用共享scaledGrads或foundInf时，调用方需建立stream执行先后关系。
 - 确定性计算：
   - aclnnForeachNonFiniteCheckAndUnscale默认确定性实现。
 
