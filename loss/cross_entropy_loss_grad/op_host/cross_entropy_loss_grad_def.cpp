@@ -124,6 +124,7 @@ public:
             .Format(dataFormat);
         aicoreRegbaseConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
+        this->AICore().AddConfig("ascend350", aicoreRegbaseConfig);
     }
 };
 OP_ADD(CrossEntropyLossGrad);

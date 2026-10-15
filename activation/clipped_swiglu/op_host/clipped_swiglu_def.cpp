@@ -63,6 +63,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "clipped_swiglu_apt");
         this->AICore().AddConfig("ascend950", regbaseConfig);
+        this->AICore().AddConfig("ascend350", regbaseConfig);
     }
 };
 OP_ADD(ClippedSwiglu);

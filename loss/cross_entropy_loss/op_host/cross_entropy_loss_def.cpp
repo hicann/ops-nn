@@ -107,6 +107,7 @@ public:
 
         regbaseConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseConfig);
+        this->AICore().AddConfig("ascend350", regbaseConfig);
     }
 };
 OP_ADD(CrossEntropyLoss);

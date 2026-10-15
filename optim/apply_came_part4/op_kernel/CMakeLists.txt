@@ -11,5 +11,5 @@
 
 add_kernel_sources(
     KERNEL_SRC apply_came_part4.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
 )

@@ -10,8 +10,8 @@
 
 message(STATUS "=== Debug: start ops.optim.apply_came_part4.op_host.CMakeLists.txt ")
 
-set(SUPPORT_COMPUTE_UNIT "ascend950")
-set(SUPPORT_TILING_DIR "arch35")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350")
+set(SUPPORT_TILING_DIR "arch35" "arch35")
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
                     OPTYPE apply_came_part4 ACLNNTYPE aclnn_exclude

@@ -64,6 +64,7 @@ public:
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opInterface.value", "apply_ftrl");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

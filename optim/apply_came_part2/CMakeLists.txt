@@ -9,9 +9,9 @@
 # ----------------------------------------------------------------------------
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35")
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
@@ -20,5 +20,5 @@ add_all_modules_sources(
 )
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
 )
