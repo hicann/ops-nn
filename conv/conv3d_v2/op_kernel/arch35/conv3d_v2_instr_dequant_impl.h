@@ -80,7 +80,9 @@ public:
                 self_->ctx.mmadResUbTensor, self_->ctx.cl0[srcOffset], fixpipeParams);
             CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_FIX>(subBlockId * VEC_ID_MAX + CV_SYNC_ID_FIXP_V);
 
-            subBlockId ^= 1;
+            if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+                subBlockId ^= 1;
+            }
             isFirst = false;
             if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
                 srcOffset += mStride;

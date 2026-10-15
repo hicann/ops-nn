@@ -206,7 +206,12 @@ public:
         copyParams.dstStride = self_->ctx.convTilingData->nBL1 - self_->ctx.currentUbNStepAilgn;
 
         uint64_t dstOffset = self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep * Intf::k0;
-        if (self_->ctx.vecId == 1) {
+        if constexpr (VEC_NUM == SINGLE_VEC_CORE && Intf::bL1DBFlag) {
+            if (self_->ctx.pingPongFlag) {
+                dstOffset += self_->ctx.bL1SpaceSize;
+            }
+        }
+        if (self_->ctx.vecId == SINGLE_VEC_CORE) {
             if constexpr (Intf::bL1DBFlag) {
                 dstOffset += self_->ctx.bL1SpaceSize;
             } else {

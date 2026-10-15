@@ -81,6 +81,14 @@ uint32_t ConvTilingBase::GetBandWidthCof() const
         return 1;
     }
 
+    auto npuArch = platformInfo.npuArch;
+    if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
+        if (descInfo.weightType.format == ConvFormat::NHWC || descInfo.weightType.format == ConvFormat::NDHWC) {
+            return 1;
+        }
+        return BAND_WIDTH_COEFF;
+    }
+
     if (descInfo.fMapType.format == ConvFormat::NCHW || descInfo.fMapType.format == ConvFormat::NCDHW) {
         return BAND_WIDTH_COEFF;
     }

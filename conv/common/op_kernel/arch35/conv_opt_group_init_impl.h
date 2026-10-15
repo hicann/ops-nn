@@ -275,8 +275,17 @@ __aicore__ inline void OptGroupInitBuf(Intf* self)
     self->ctx.ubBufSize = self->ctx.ci1Opt * self->ctx.convTilingData->kernelHxkernelWxkernelD * self->ctx.co1Opt *
                           Intf::k0 * BLOCK_L0_N;
     self->ctx.pipe.InitBuffer(self->ctx.ndUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
-    self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
-    self->ctx.pipe.InitBuffer(self->ctx.indexUbBuf, REG_SIZE);
+    if (self->ctx.vselrFlag) {
+        // vscatter offset size: ci1Opt * kh * kw * 17 * 32B
+        uint64_t nzOffsetSize = VSCATTER_OFFSET * Intf::k0 * self->ctx.convTilingData->kernelHxkernelW *
+                                self->ctx.ci1Opt;
+        self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, (self->ctx.ubBufSize + nzOffsetSize) * Intf::sizeOfWeight);
+        self->ctx.pipe.InitBuffer(self->ctx.indexUbBuf, REG_SIZE);
+        self->ctx.pipe.InitBuffer(self->ctx.indexUbVscatterBuf, REG_SIZE);
+    } else {
+        self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
+        self->ctx.pipe.InitBuffer(self->ctx.indexUbBuf, REG_SIZE);
+    }
 
     self->ctx.nzTensor = self->ctx.nzUbBuf.template Get<typename Intf::WeightT>();
 
@@ -327,6 +336,11 @@ __aicore__ inline void OptGroupVecInit(Intf* self)
 
     if constexpr (Intf::isConv3D) {
         self->ctx.singleCoreDo = self->ctx.convTilingData->singleCoreDo;
+    } else if constexpr (VEC_NUM == SINGLE_VEC_CORE && !Intf::isQuantScene) {
+        if (self->ctx.convTilingData->kernelH == VSELR_KERNEL_SIZE &&
+            self->ctx.convTilingData->kernelW == VSELR_KERNEL_SIZE && self->ctx.coOptAlign <= VSELR_COUT_OPT_SIZE) {
+            self->ctx.vselrFlag = true;
+        }
     }
 
     OptGroupInitBuf<Intf>(self);

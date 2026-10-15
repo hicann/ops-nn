@@ -98,14 +98,24 @@ const static uint8_t CV_SYNC_ID_FIXP_V = 1;
 
 // Opt Group
 const static uint16_t REG_SIZE = 256;
-const static uint16_t CO0_LOOP_TIMES = 2;
+const static uint16_t CO0_LOOP_TIMES = 512 / REG_SIZE;
 const static uint16_t B8_CO0_LOOP_TIMES = 4;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+const static uint8_t VEC_NUM = 1;
+const static uint8_t VEC_ID_MAX = 2;
+const static uint8_t VEC_ID_BUFFER_OFFSET = 2;
+#else
 const static uint8_t VEC_NUM = 2;
 const static uint8_t VEC_ID_MAX = 16;
+const static uint8_t VEC_ID_BUFFER_OFFSET = 0;
+#endif
+const static uint8_t SINGLE_VEC_CORE = 1;
+const static uint8_t DOUBLE_VEC_CORE = 2;
 const static uint8_t CV_SYNC_ID_MTE3_MTE1 = 0;
 const static uint8_t CV_SYNC_ID_MTE1_MTE3 = 1;
 const static uint8_t CV_SYUC_ID_V_ROTATE = 2;
 const static uint8_t NDDMA_DIMS_BASE = 1;
+const static uint8_t NDDMA_DIMS_NO_TRANS = 2;
 const static uint8_t NDDMA_DIMS = 3;
 const static uint8_t NDDMA_DIMS_LOAD_FMAP = 3;
 const static uint8_t NDDMA_HWC_DIMS = 4;
@@ -114,6 +124,10 @@ const static uint8_t NDDMA_LOOP1_INDEX = 1;
 const static uint8_t NDDMA_LOOP2_INDEX = 2;
 const static uint8_t NDDMA_LOOP3_INDEX = 3;
 const static uint8_t CV_ENHANCE_MODE = 4;
+const static uint32_t VSELR_KERNEL_SIZE = 3;
+const static uint32_t VSCATTER_OFFSET = 17;
+const static uint32_t VSELR_COUT_OPT_SIZE = 511;
+const static uint16_t VSELR_CI0_DIV_NUM = 2;
 
 // Load3d parameters offset
 const static uint8_t MSTEP_OFFSET = 16;

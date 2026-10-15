@@ -31,6 +31,13 @@ using namespace Conv3DV2Key;
 
 #if (__CCE_AICORE__ > 300)
 
+#if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NDHWC && \
+    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCDHW
+constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
+constexpr ConvFormat filterFormat = ConvFormat::NDHWC;
+constexpr ConvFormat outputFormat = ConvFormat::NCDHW;
+#endif
+
 #if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCDHW
 constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
 constexpr ConvFormat filterFormat = ConvFormat::NCDHW;

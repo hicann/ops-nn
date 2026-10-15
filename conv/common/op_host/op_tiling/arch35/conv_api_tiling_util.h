@@ -190,6 +190,8 @@ constexpr int8_t ROUND_MODE_RINT = 1;
 constexpr int8_t ROUND_MODE_ROUND = 2;
 constexpr int8_t ROUND_MODE_HYBRID = 3;
 
+constexpr uint32_t OPT_GROUP_ENLARGE_COEFF = 2;
+
 constexpr uint32_t FORMAT_FM_INDEX = 0;
 constexpr uint32_t FORMAT_WEIGHT_INDEX = 1;
 constexpr uint32_t FORMAT_BIAS_INDEX = 2;

@@ -111,7 +111,7 @@ void Conv3dBaseTilingV2::GetCachedTilingData() { cachedTilingData_ = tilingData_
 void Conv3dBaseTilingV2::TranslateCachedTilingData()
 {
     tilingData_ = cachedTilingData_;
-    tilingData_.hasScale = static_cast<uint8_t>(flagInfo_.quantFlag);
+    tilingData_.hasScale = (flagInfo_.quantFlag || flagInfo_.isConv3dDequant);
     tilingData_.offsetx = attrInfo_.offsetx;
     tilingData_.roundMode = attrInfo_.roundMode;
     flagInfo_.mSplitModeFlag = cachedTilingData_.outputOrder == 0 ? false : true; // 0: HWmode, 1: Mmode

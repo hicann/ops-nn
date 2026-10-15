@@ -95,6 +95,13 @@ struct Conv3dIntf {
     constexpr static bool isConv3D = true;
     constexpr static bool groupOptPreloadFlag = false;
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    constexpr static bool preAllocateFlag = !(ConvParam::groupType ==
+                                              static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV));
+#else
+    constexpr static bool preAllocateFlag = false;
+#endif
+
     constexpr static uint8_t sizeOfFmap = sizeof(FmapT);
     constexpr static uint8_t sizeOfWeight = sizeof(WeightT);
     constexpr static uint8_t sizeOfBias = sizeof(BiasT);

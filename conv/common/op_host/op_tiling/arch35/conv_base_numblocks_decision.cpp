@@ -544,7 +544,8 @@ uint64_t ConvBaseDeci::GetMinBurstNum() { return MIN_L2_BAND_WIDTH / dtypeSizeTa
 
 uint32_t ConvBaseDeci::GetWeightBandWidthCoeff()
 {
-    if (descInfo_.fMapFormat == ge::Format::FORMAT_NCDHW || descInfo_.fMapFormat == ge::Format::FORMAT_NCHW) {
+    if ((descInfo_.fMapFormat == ge::Format::FORMAT_NCDHW || descInfo_.fMapFormat == ge::Format::FORMAT_NCHW) &&
+        (descInfo_.weightFormat != ge::Format::FORMAT_NHWC && descInfo_.weightFormat != ge::Format::FORMAT_NDHWC)) {
         if (IsWeightNZFormat(descInfo_.weightFormat)) {
             return BW_COEFF_UB;
         }

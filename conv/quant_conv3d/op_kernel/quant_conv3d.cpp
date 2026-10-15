@@ -18,9 +18,16 @@
 #include "../conv3d_v2/arch35/conv3d_v2_tilingkey.h"
 using namespace AscendC;
 
+#if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NDHWC && \
+    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCDHW
+constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
+constexpr ConvFormat weightFormat = ConvFormat::NDHWC;
+constexpr ConvFormat outputFormat = ConvFormat::NCDHW;
+#else
 constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
 constexpr ConvFormat weightFormat = ConvFormat::NCDHW;
 constexpr ConvFormat outputFormat = ConvFormat::NCDHW;
+#endif
 constexpr ConvFormat biasFormat = ConvFormat::ND;
 constexpr ConvFormat scaleFormat = ConvFormat::ND;
 

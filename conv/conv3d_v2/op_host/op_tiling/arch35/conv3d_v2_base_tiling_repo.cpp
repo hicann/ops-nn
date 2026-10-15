@@ -267,7 +267,7 @@ bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     tilingData_.aL1SpaceSize = CalcAL1SpaceSize(convRepoTiling);
     tilingData_.roundMode = attrInfo_.roundMode;
     tilingData_.hasBias = flagInfo_.hasBias;
-    tilingData_.hasScale = flagInfo_.quantFlag;
+    tilingData_.hasScale = (flagInfo_.quantFlag || flagInfo_.isConv3dDequant);
     tilingData_.offsetx = attrInfo_.offsetx;
     tilingData_.hf32Enable = convRepoTiling->hf32Enable;
     tilingData_.hf32TransMode = convRepoTiling->hf32TransMode;

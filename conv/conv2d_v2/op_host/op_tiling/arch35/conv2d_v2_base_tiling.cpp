@@ -103,8 +103,35 @@ bool Conv2dBaseTiling::EnableOptGroup()
         return true;
     }
 
+    if ((opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
+        optGroupInfo_.enlarge == 1) {
+        return false;
+    }
+
     auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
     auto n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX);
+    uint64_t coutOptAlign = ConvAlignB(optGroupInfo_.coutOpt, n0);
+    /*
+     * When the soc is Ascend960DT, if kh = kw = 3, vector will use vselr to transform the weight format.
+     * On the previous basis, it is necessary to increase the index size and the offset size of vscatter.
+     * index size: 256B
+     * offset size: ci1Opt * kh * kw * 17 * 32B
+     */
+    if ((apiInputPlatformInfo.npuArch == NpuArch::DAV_9201 || apiInputPlatformInfo.npuArch == NpuArch::DAV_9202) &&
+        shapeInfo_.kh == VSELR_KERNEL_SIZE && shapeInfo_.kw == VSELR_KERNEL_SIZE &&
+        coutOptAlign <= VSELR_COUT_OPT_SIZE) {
+        bool vselrFlag = ConvAlignB(optGroupInfo_.cinOpt, k0) * shapeInfo_.kh * shapeInfo_.kw * coutOptAlign *
+                                 WEIGHT_UB_NUMS * dtypeSizeTab.at(descInfo_.weightDtype) +
+                             ConvCeilDiv(optGroupInfo_.cinOpt, k0) * shapeInfo_.kh * shapeInfo_.kw * VSELR_OFFSET_SIZE *
+                                 C0_BYTE_SIZE <=
+                         (apiInputPlatformInfo.ubSize - OPT_GROUP_RESERVED_SIZE * INDEX_UB_NUMS);
+        if (vselrFlag) {
+            OP_LOGD(context_->GetNodeName(), "%s AscendC: Opt Group use vselr to trans weight.",
+                    paramInfo_.nodeType.c_str());
+        }
+        return vselrFlag;
+    }
+
     return ConvAlignB(optGroupInfo_.cinOpt, k0) * shapeInfo_.kh * shapeInfo_.kw *
                ConvAlignB(optGroupInfo_.coutOpt, n0) * WEIGHT_UB_NUMS * dtypeSizeTab.at(descInfo_.weightDtype) <=
            (apiInputPlatformInfo.ubSize - OPT_GROUP_RESERVED_SIZE);
@@ -230,7 +257,7 @@ bool Conv2dBaseTiling::IsEnableC04()
         return descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
     }
 
-    if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
+    if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG || descInfo_.weightFormat == ge::Format::FORMAT_NHWC) {
         return false;
     }
 

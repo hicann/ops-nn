@@ -131,7 +131,13 @@ public:
     {
         self_ = self;
 
-        indexTensor = self_->ctx.indexUbBuf.template Get<IndexT>();
+        if (self_->ctx.vselrFlag) {
+            InitVselrParams();
+            indexTensorVselr = self_->ctx.indexUbBuf.template Get<VselrIndexT>();
+            indexTensorVscatter = self_->ctx.indexUbVscatterBuf.template Get<IndexT>();
+        } else {
+            indexTensor = self_->ctx.indexUbBuf.template Get<IndexT>();
+        }
         ndTensor = self_->ctx.ndUbBuf.template Get<SrcT>();
 
         if constexpr (Intf::isQuantScene) {
@@ -146,14 +152,22 @@ public:
     __aicore__ inline void TransND2NZ()
     {
         if (unlikely(self_->ctx.groupOptIter == self_->ctx.vecId)) {
-            SetIndex();
+            if (self_->ctx.vselrFlag) {
+                SetIndexVselr();
+            } else {
+                SetIndex();
+            }
         }
 
         // Due to the VF compile, reusing code it's bound to make scalar increase.
         if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
             TransNCDHW2NZ();
         } else if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
-            TransNCHW2NZ();
+            if (self_->ctx.vselrFlag) {
+                TransNCHW2NZVselr();
+            } else {
+                TransNCHW2NZ();
+            }
         } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC) {
             TransNDHWC2NZ();
         } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
@@ -186,6 +200,106 @@ private:
             nStride = static_cast<IndexT>(1);
         }
         SetIndexVf(indexAddr, repeatTimes, nStride, static_cast<uint8_t>(Intf::k0));
+    }
+
+    __aicore__ inline void InitVselrParams()
+    {
+        uint64_t khkwNums = REG_SIZE / Intf::sizeOfWeight / self_->ctx.convTilingData->kernelHxkernelW;
+        if (khkwNums >= Intf::k0) {
+            ciPerReg = Intf::k0;
+            ci0LoopTimes = 1;
+            ci1LoopTimes = self_->ctx.ci1Opt;
+        } else {
+            for (uint16_t idx = Intf::k0 / VSELR_CI0_DIV_NUM; idx > 0; idx = idx / VSELR_CI0_DIV_NUM) {
+                if (khkwNums >= idx) {
+                    ciPerReg = idx;
+                    ci0LoopTimes = Intf::k0 / idx;
+                    ci1LoopTimes = self_->ctx.ci1Opt;
+                    break;
+                }
+            }
+        }
+    }
+
+    __aicore__ inline void SetIndexVselr()
+    {
+        VselrIndexT vselrIndex = 0;
+        IndexT scatterIndex = 0;
+        uint32_t tensorIdx = 0;
+        // Vscatter offset by 17 * 32B to avoid bank conflicts.
+        IndexT scatterStride = static_cast<IndexT>(Intf::k0 * (self_->ctx.coOptAlign + VSCATTER_OFFSET));
+        for (uint16_t khkwIdx = 0; khkwIdx < self_->ctx.convTilingData->kernelHxkernelW; ++khkwIdx) {
+            for (uint16_t ciIdx = 0; ciIdx < ciPerReg; ++ciIdx) {
+                vselrIndex = khkwIdx * static_cast<VselrIndexT>(1) + ciIdx * self_->ctx.convTilingData->kernelHxkernelW;
+                scatterIndex = khkwIdx * scatterStride + ciIdx * static_cast<IndexT>(1);
+                indexTensorVselr.SetValue(tensorIdx, vselrIndex);
+                indexTensorVscatter.SetValue(tensorIdx, scatterIndex);
+                tensorIdx++;
+            }
+        }
+    }
+
+    /**
+     * use vselr to transform NCHW to nZ.
+     * There are a total of 3 layers of loops, from inner to outer they are: ci0, ci1Opt, coutOpt.
+     * Data flow: ndTensor -> ureg -> srcReg -> dstReg -> nzTensor
+     */
+    __aicore__ inline void TransNCHW2NZVselr()
+    {
+        // coutOpt loop times
+        uint16_t nLoopTimes = self_->ctx.coOptAlign;
+
+        // Src stride of continuous unalign moving in, (ciPerReg * kh * kw) pieces of data each time.
+        uint32_t srcCi0Stride = ciPerReg * self_->ctx.convTilingData->kernelHxkernelW;
+        // DstNStride is k0 because of data layout is nZ.
+        uint32_t dstNStride = Intf::k0;
+        /*
+         * DstCi1Stride is (k0 * kh * kw * coOptAlign) before offset.
+         * The offset size is (k0 * kh * kw * VSCATTER_OFFSET).
+         * Subtracting ciPerReg is because the loop of ci0 has been eliminated.
+         */
+        uint32_t dstCi1Stride = Intf::k0 * self_->ctx.convTilingData->kernelHxkernelW *
+                                    (self_->ctx.coOptAlign + VSCATTER_OFFSET) -
+                                Intf::k0;
+        uint32_t dstCi0Stride = ciPerReg;
+        // mask: only (ciPerReg * kh * kw) valid data
+        uint32_t maskL = ciPerReg * self_->ctx.convTilingData->kernelHxkernelW;
+
+        __VEC_SCOPE__
+        {
+            MicroAPI::RegTensor<SrcT> srcReg;
+            MicroAPI::RegTensor<DstT> dstReg;
+            MicroAPI::RegTensor<VselrIndexT> vselrIndexReg;
+            MicroAPI::RegTensor<IndexT> scatterIndexReg;
+            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<DstT>(maskL);
+            MicroAPI::UnalignReg ureg;
+
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ VselrIndexT* vselrIndexAddr = (__local_mem__ VselrIndexT*)indexTensorVselr.GetPhyAddr();
+            __local_mem__ IndexT* scatterIndexAddr = (__local_mem__ IndexT*)indexTensorVscatter.GetPhyAddr();
+
+            // Move index data from LocalTensor to RegTensor
+            MicroAPI::DataCopy<VselrIndexT>(vselrIndexReg, vselrIndexAddr);
+            MicroAPI::DataCopy<IndexT>(scatterIndexReg, scatterIndexAddr);
+
+            __local_mem__ DstT* dst = dstAddr;
+            MicroAPI::DataCopyUnAlignPre(ureg, srcAddr);
+            for (uint16_t nIndex = 0; nIndex < nLoopTimes; nIndex++) {
+                dst = dstAddr + nIndex * dstNStride;
+                for (uint16_t ci1Index = 0; ci1Index < ci1LoopTimes; ci1Index++) {
+                    for (uint16_t ci0Index = 0; ci0Index < ci0LoopTimes; ci0Index++) {
+                        // Data flow: ndTensor -> ureg -> srcReg. Auto Update srcAddr: srcAddr += srcCi0Stride
+                        MicroAPI::DataCopyUnAlign(srcReg, ureg, srcAddr, srcCi0Stride);
+                        // vselr not support fp32, so here use API: GatherImpl
+                        GatherImpl(dstReg, srcReg, vselrIndexReg);
+                        MicroAPI::DataCopyScatter<DstT, IndexT>(dst, dstReg, scatterIndexReg, maskReg);
+                        dst += dstCi0Stride;
+                    }
+                    dst += dstCi1Stride;
+                }
+            }
+        }
     }
 
     __aicore__ inline void TransNCHW2NZ()
@@ -248,12 +362,18 @@ private:
     using RegT = typename Conditional<Intf::isQuantScene, int16_t, typename Intf::WeightT>::type;
     using IndexT = typename Conditional<AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t,
                                         uint16_t>::type;
+    using VselrIndexT = typename Conditional<Intf::isQuantScene, uint8_t, IndexT>::type;
 
     LocalTensor<SrcT> ndTensor;
     LocalTensor<IndexT> indexTensor;
+    LocalTensor<VselrIndexT> indexTensorVselr;
+    LocalTensor<IndexT> indexTensorVscatter;
 
     uint16_t coOptLoopTimes = 0;
     uint16_t coPerReg = 0;
+    uint16_t ciPerReg = 0;
+    uint16_t ci0LoopTimes = 0;
+    uint16_t ci1LoopTimes = 0;
 
     __aicore__ inline void FillCommonNd2NzParams(TransND2NZVfParams<SrcT, DstT, IndexT>& params)
     {
@@ -300,6 +420,10 @@ private:
             copyParams.blockCount = self_->ctx.convTilingData->kBL1 / Intf::k0;
             copyParams.blockLen = self_->ctx.convTilingData->nBL1;
             copyParams.srcStride = self_->ctx.co1Opt * BLOCK_L0_N - self_->ctx.convTilingData->nBL1;
+            // Increase the offset size of vscatter: 17 * 32B
+            if (self_->ctx.vselrFlag) {
+                copyParams.srcStride += VSCATTER_OFFSET;
+            }
         }
 
         if constexpr (Intf::isKL1NL0FullLoad) {
@@ -308,6 +432,10 @@ private:
         } else {
             srcOffset = (self_->ctx.coStartPos + self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1) * Intf::k0 +
                         self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 * self_->ctx.coOptAlign;
+        }
+        // Increase the offset size of vscatter: kBL1Iter * (kBL1 / k0) * 17 * k0
+        if (self_->ctx.vselrFlag) {
+            srcOffset += self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 * VSCATTER_OFFSET;
         }
     }
 

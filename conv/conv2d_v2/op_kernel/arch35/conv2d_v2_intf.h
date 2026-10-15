@@ -130,6 +130,15 @@ struct Conv2dIntf {
                                            formatWeight == ConvFormat::FRACTAL_Z;
     constexpr static bool isConv3D = false;
     constexpr static bool bigKernelFlag = false;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    constexpr static bool preAllocateFlag = !(
+        ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) ||
+        ConvParam::enableSmallChannel == static_cast<int8_t>(ConvEnableSmallChannel::OPEN) ||
+        ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) ||
+        ConvParam::fmapCopyMode == static_cast<int8_t>(ConvFmapCopyMode::DMA));
+#else
+    constexpr static bool preAllocateFlag = false;
+#endif
     constexpr static bool isDeQuantFlag = false;
     constexpr static bool disContinuousFlag = ConvParam::disContinuous ==
                                               static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);

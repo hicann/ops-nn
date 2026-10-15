@@ -23,6 +23,8 @@ using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
 CONV_REGISTER_TILING_TEMPLATE(QuantConv3D, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_3510), 0);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv3D, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_9201), 1);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv3D, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_9202), 2);
 
 IMPL_OP_OPTILING(QuantConv3D).Tiling(ConvTilingFunc).TilingParse<ConvTilingParseInfo>(TilingPrepareForConv);
 } // namespace optiling

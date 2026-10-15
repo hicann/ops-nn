@@ -63,16 +63,20 @@ public:
         }
 
         CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE1_MTE3);
-        if (self->ctx.convTilingData->cinAInCore > Intf::k0) {
-            CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
+        if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+            if (self->ctx.convTilingData->cinAInCore > Intf::k0) {
+                CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
+            }
         }
     }
 
     __aicore__ inline void DmaSyncWait(Intf* self)
     {
         CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-        if (self->ctx.convTilingData->cinAInCore > Intf::k0) {
-            CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+        if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+            if (self->ctx.convTilingData->cinAInCore > Intf::k0) {
+                CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+            }
         }
         self->ctx.loadUB2L1Iter++;
     }
@@ -119,7 +123,8 @@ public:
         self->ctx.kAL1Tail = (AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW) %
                              self->ctx.convTilingData->kAL1;
         self->ctx.kAL1Tail = self->ctx.kAL1Tail == 0 ? self->ctx.convTilingData->kAL1 : self->ctx.kAL1Tail;
-        if (self->ctx.vecId == 0 && CeilDiv(self->ctx.convTilingData->cinATailInCore, Intf::k0) > 1) {
+        if (VEC_NUM == DOUBLE_VEC_CORE && self->ctx.vecId == 0 &&
+            CeilDiv(self->ctx.convTilingData->cinATailInCore, Intf::k0) > 1) {
             self->ctx.ciTail = Intf::k0;
         } else {
             self->ctx.ciTail = self->ctx.singleCoreCi % Intf::k0;

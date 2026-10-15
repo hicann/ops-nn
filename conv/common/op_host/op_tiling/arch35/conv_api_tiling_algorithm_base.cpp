@@ -163,7 +163,8 @@ bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
 
 void ConvTilingAlgorithmBase::SetPBufferRes()
 {
-    bool resetOptGroupFlag = CheckOptGroupPreload();
+    auto npuArch = tilingIns_->platformInfo.npuArch;
+    bool resetOptGroupFlag = CheckOptGroupPreload() && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202;
     ResetOptGroupDoubleBuffer(resetOptGroupFlag);
 
     tilingIns_->dbValue.pBufferFlag = 0;

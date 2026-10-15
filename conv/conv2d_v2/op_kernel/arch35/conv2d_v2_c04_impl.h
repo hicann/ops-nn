@@ -77,8 +77,10 @@ public:
             } else {
                 CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE1_MTE3);
                 // Each core deal with half of nBL1 at least n0, when nBL1 <= n0, vec1 doesn't have data to deal.
-                if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
-                    CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
+                if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+                    if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
+                        CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
+                    }
                 }
             }
         }
@@ -311,8 +313,16 @@ public:
         WaitFlag<HardEvent::MTE3_V>(eventId);
         self->ctx.c04TransFractalZC04Tools.TransFractalZC04();
 
-        if (self->ctx.vecNIter == 0 && !self->ctx.isFirstIterate) {
-            CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE1_MTE3);
+        if constexpr (VEC_NUM == DOUBLE_VEC_CORE || (VEC_NUM == SINGLE_VEC_CORE && !Intf::bL1DBFlag)) {
+            if (self->ctx.vecNIter == 0 && !self->ctx.isFirstIterate) {
+                CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE3>(self->ctx.pingPongFlag * VEC_ID_BUFFER_OFFSET +
+                                                              CV_SYNC_ID_MTE1_MTE3);
+            }
+        } else {
+            if (self->ctx.vecNIter == 0 && !self->ctx.isFirstIterateDB) {
+                CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE3>(self->ctx.pingPongFlag * VEC_ID_BUFFER_OFFSET +
+                                                              CV_SYNC_ID_MTE1_MTE3);
+            }
         }
 
         // For ub2l1 wait nd2nz
@@ -322,7 +332,12 @@ public:
         self->ctx.c04LoadUB2L1Tools.LoadUB2L1();
 
         if (self->ctx.vecNIter == self->ctx.maxVecNIter) {
-            CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE3_MTE1);
+            if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+                CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE3_MTE1);
+            } else if constexpr (VEC_NUM == SINGLE_VEC_CORE) {
+                CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE3>(self->ctx.pingPongFlag * VEC_ID_BUFFER_OFFSET +
+                                                             CV_SYNC_ID_MTE3_MTE1);
+            }
         }
     }
 
@@ -338,10 +353,10 @@ public:
         C04UB2L1IterInit(self);
         while (C04UB2L1Iter(self)) {
             if constexpr (Intf::bL1DBFlag) {
-                if (self->ctx.pingPongFlag != self->ctx.vecId) {
+                if (VEC_NUM == DOUBLE_VEC_CORE && self->ctx.pingPongFlag != self->ctx.vecId) {
                     continue;
                 }
-            } else {
+            } else if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
                 if (unlikely(self->ctx.currentNBL1 == 0 && self->ctx.vecNIter == 0)) {
                     if (!self->ctx.isFirstIterate) {
                         CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE3>(CV_SYNC_ID_MTE1_MTE3);
@@ -356,6 +371,11 @@ public:
             C04UBImpl(self);
 
             self->ctx.isFirstIterate = false;
+            if constexpr (VEC_NUM == SINGLE_VEC_CORE && Intf::bL1DBFlag) {
+                if (self->ctx.isFirstIterateDB) {
+                    self->ctx.isFirstIterateDB = self->ctx.pingPongFlag == 1 ? false : true;
+                }
+            }
         }
 
         return false;

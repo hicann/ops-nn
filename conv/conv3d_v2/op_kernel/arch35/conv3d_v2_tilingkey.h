@@ -45,11 +45,11 @@ ASCENDC_TPL_ARGS_DECL(
 #if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_INT8 && defined(ORIG_DTYPE_BIAS) &&                 \
     (ORIG_DTYPE_BIAS == DT_FLOAT16 || ORIG_DTYPE_BIAS == DT_BF16 || ORIG_DTYPE_BIAS == DT_FLOAT) && \
     defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NDHWC
-#define CONV3D_KERNEL_TYPE_SEL ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2)
+#define CONV3D_KERNEL_TYPE_SEL ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_AUTO)
 #define CONV3D_OPT_GROUP_SEL()
 #define CONV3D_ORI_GROUP_SEL()
 #define CONV3D_BIG_KERNEL_SEL()                                                                                      \
-    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                            \
+    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_AUTO),                                                           \
         ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                               \
         ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
         ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_OPEN),                            \
@@ -62,8 +62,8 @@ ASCENDC_TPL_ARGS_DECL(
         ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_BIG_KERNEL)
 #else
 #define CONV3D_KERNEL_TYPE_SEL ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY)
-#define CONV3D_OPT_GROUP_SEL()                                                         \
-    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), CONV_COMMON_OPT_GROUP_SEL(), \
+#define CONV3D_OPT_GROUP_SEL()                                                          \
+    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_AUTO), CONV_COMMON_OPT_GROUP_SEL(), \
         ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
 #define CONV3D_ORI_GROUP_SEL()                                                      \
@@ -71,7 +71,7 @@ ASCENDC_TPL_ARGS_DECL(
         ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
 #define CONV3D_BIG_KERNEL_SEL()                                                                                      \
-    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                            \
+    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_AUTO),                                                           \
         ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                               \
         ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
         ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_OPEN),                            \

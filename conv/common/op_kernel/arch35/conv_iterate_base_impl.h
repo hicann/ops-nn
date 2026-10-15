@@ -219,8 +219,10 @@ __aicore__ inline void LoadBL1BaseModule(Intf* self)
                                                               CV_SYNC_ID_MTE3_MTE1);
             } else {
                 CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-                if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
-                    CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+                if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+                    if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
+                        CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+                    }
                 }
             }
             self->ctx.loadUB2L1Iter++;
@@ -244,8 +246,10 @@ __aicore__ inline void LoadBL1BaseModule(Intf* self, TempIters& tempIters)
             CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.pingPongFlag * VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
         } else {
             CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-            if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
-                CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+            if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+                if (self->ctx.convTilingData->nBL1 > BLOCK_L0_N) {
+                    CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
+                }
             }
         }
         self->ctx.loadUB2L1Iter++;

@@ -366,22 +366,32 @@ void ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32
     hf32Mode = static_cast<uint32_t>(*enableHf32Ptr ? 1 : 0);
 }
 
-void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, std::stringstream& ss,
+void ConvBase::GetSupportedFormats(bool is2dFlag, std::stringstream& ss,
                                    std::vector<std::vector<ge::Format>>& supportFormats)
 {
     const std::string& nodeType = context_->GetNodeType();
     bool extendConvFlag = nodeType == "ExtendConv2D";
+    bool quantFlag = nodeType == "QuantConv2D" || nodeType == "QuantConv3D";
     auto platformInfoPtr = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
+    NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
+    std::string archKey;
+    if (npuArch == NpuArch::DAV_3510) {
+        archKey = NPU_ARCH_KEY_3510;
+    } else if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
+        archKey = NPU_ARCH_KEY_9201;
+    }
+
+    if (!archKey.empty()) {
         if (extendConvFlag) {
-            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_3510);
+            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP.at(archKey);
         } else if (quantFlag) {
-            supportFormats = is2dFlag ? SUPPORT_QUANT_CONV2D_FORMAT_LIST : SUPPORT_QUANT_CONV3D_FORMAT_LIST;
-        } else if (!quantFlag && (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 ||
-                                  descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8)) {
-            supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_3510) :
-                                        SUPPORT_CONV3D_FORMAT_LIST;
+            supportFormats = is2dFlag ? SUPPORT_QUANT_CONV2D_FORMAT_LIST_MAP.at(archKey) :
+                                        SUPPORT_QUANT_CONV3D_FORMAT_LIST_MAP.at(archKey);
+        } else if (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 ||
+                   descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8) {
+            supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST_MAP.at(archKey) :
+                                        SUPPORT_CONV3D_FORMAT_LIST_MAP.at(archKey);
         } else {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
         }

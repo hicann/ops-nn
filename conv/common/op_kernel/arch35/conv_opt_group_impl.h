@@ -114,7 +114,11 @@ __aicore__ inline void OptGroupSyncSet(Intf* self, const uint64_t& kIter)
     if ((self->ctx.groupOptIter != self->ctx.singleGroupOpt - 1)) {
         // Vec0 and Vec1 alternate load groupOpt, such as vec0-groupOpt0 -> vec1-groupOpt1 -> vec0-groupOpt2...
         // Notify next vec start mov ub to l1
-        CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>((self->ctx.vecId ^ VEC_ID_MAX) + CV_SYUC_ID_V_ROTATE);
+        if constexpr (VEC_NUM == SINGLE_VEC_CORE) {
+            CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.vecId + CV_SYUC_ID_V_ROTATE);
+        } else {
+            CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>((self->ctx.vecId ^ VEC_ID_MAX) + CV_SYUC_ID_V_ROTATE);
+        }
     }
 }
 

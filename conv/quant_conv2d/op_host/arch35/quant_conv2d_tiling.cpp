@@ -21,6 +21,8 @@ using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
 CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_3510), 1000);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_9201), 1001);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_9202), 1002);
 
 IMPL_OP_OPTILING(QuantConv2D).Tiling(ConvTilingFunc).TilingParse<ConvTilingParseInfo>(TilingPrepareForConv);
 } // namespace optiling

@@ -142,6 +142,26 @@ ge::graphStatus Conv3dBaseTilingV2::CheckDataCopyLimits()
             return ge::GRAPH_FAILED;
         }
     }
+
+    if (descInfo_.weightFormat == ge::Format::FORMAT_NDHWC) {
+        uint64_t loadBL1srcDValue = shapeInfo_.kh * shapeInfo_.kw * shapeInfo_.kd * shapeInfo_.ci;
+        if (loadBL1srcDValue > MAX_16_BIT_NUM) {
+            stringstream ss;
+            ss << "If the format of input filter is NDHWC, ";
+            ss << "the constraint of instruction %s must be met: ";
+            ss << "shape[%zu] * shape[%zu] * shape[%zu] * shape[%zu] ≤ %ld";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeType(), "filter",
+                VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
+                FormatString(ss.str().c_str(), "DataCopy",
+                             paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX],
+                             paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX],
+                             paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX],
+                             paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], MAX_16_BIT_NUM)
+                    .c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 

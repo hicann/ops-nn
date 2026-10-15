@@ -429,7 +429,7 @@ ge::graphStatus Conv2dBaseTiling::CheckInputDesc()
     bool formatMatchTag = false;
     std::vector<std::vector<ge::Format>> supportFormats;
     std::stringstream ss;
-    convBase_.GetSupportedFormats(flagInfo_.quantFlag, true, ss, supportFormats);
+    convBase_.GetSupportedFormats(true, ss, supportFormats);
     for (uint8_t kindId = 0; kindId < supportFormats.size(); kindId++) {
         if (ConvArrMatch(paramInfo_.paramsFormat, supportFormats[kindId], paramInfo_.paramsFormat.size())) {
             formatMatchTag = true;

@@ -324,6 +324,13 @@ ge::graphStatus Conv3dBaseTilingV2::ParseGroupLegal()
         }
     }
 
+    if ((apiInputPlatformInfo_.npuArch == NpuArch::DAV_9201 || apiInputPlatformInfo_.npuArch == NpuArch::DAV_9202) &&
+        descInfo_.weightFormat == ge::FORMAT_NDHWC && oriShapeAttrInfo_.oriGroups != 1) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: weight NDHWC format not support groups > 1.",
+                paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
     if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context_->GetNodeType(), "groups", std::to_string(oriShapeAttrInfo_.oriGroups).c_str(),

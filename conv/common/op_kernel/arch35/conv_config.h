@@ -304,6 +304,7 @@ public:
         TBuf<TPosition::VECIN> ndUbBuf;
         TBuf<TPosition::VECOUT> nzUbBuf;
         TBuf<TPosition::VECCALC> indexUbBuf;
+        TBuf<TPosition::VECCALC> indexUbVscatterBuf;
         TBuf<TPosition::B1> bL1TBuf;
 
         LocalTensor<typename ConvDataType::WeightT> nzTensor;
@@ -313,6 +314,7 @@ public:
         uint32_t bL1SpaceSize = 0; // Weight载入L1的大小
 
         uint8_t pingPongFlag = 0;
+        uint8_t vselrFlag = false; // 是否使用vselr指令的标志
 
         // Used in opt group mode(groups > 1)
         uint32_t enlarge = 0;
@@ -346,7 +348,8 @@ public:
         uint64_t singleCoreCo = 0; // 单核上处理的Co大小
 
         // Iterate Var
-        uint8_t isFirstIterate = true; // 是否第一次Iterate
+        uint8_t isFirstIterate = true;   // 是否第一次Iterate
+        uint8_t isFirstIterateDB = true; // cv 1:1 db vector iterate
         uint8_t kAL1fullload = false;
         uint8_t kBL1fullload = false;
         uint8_t loadAL1Flag = true;   // 是否载入AL1的标志

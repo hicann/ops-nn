@@ -343,7 +343,7 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
                         !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
                         !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) &&
                         l1TilingInfo.kBL1 != weightKSize && dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
-    if (weightUbFlag) {
+    if (weightUbFlag && platformInfo.npuArch != NpuArch::DAV_9201 && platformInfo.npuArch != NpuArch::DAV_9202) {
         ConvWeightUbTransParams params = {l1TilingInfo.nBL1,
                                           l1TilingInfo.kBL1,
                                           static_cast<uint64_t>(shapeInfo.orgkH),
@@ -659,9 +659,16 @@ void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
     uint32_t n0 = CUBE_MKN_TAB.GetMKN(oriGroupInfo.weightDtype, MKN_N_INDEX);
     uint32_t k0 = CUBE_MKN_TAB.GetMKN(oriGroupInfo.weightDtype, MKN_K_INDEX);
 
-    optGroupInfo.enlarge = std::min(Lcm(Lcm(oriGroupInfo.ciPerGroup, k0) / oriGroupInfo.ciPerGroup,
-                                        Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup),
-                                    static_cast<uint64_t>(oriGroupInfo.groups));
+    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+        optGroupInfo.enlarge = std::min(
+            Lcm(Lcm(oriGroupInfo.ciPerGroup, k0 * OPT_GROUP_ENLARGE_COEFF) / oriGroupInfo.ciPerGroup,
+                Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup),
+            static_cast<uint64_t>(oriGroupInfo.groups));
+    } else {
+        optGroupInfo.enlarge = std::min(Lcm(Lcm(oriGroupInfo.ciPerGroup, k0) / oriGroupInfo.ciPerGroup,
+                                            Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup),
+                                        static_cast<uint64_t>(oriGroupInfo.groups));
+    }
     optGroupInfo.groupOpt = CeilDiv(oriGroupInfo.groups, optGroupInfo.enlarge);
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
     optGroupInfo.cinOpt = oriGroupInfo.ciPerGroup * optGroupInfo.enlarge;
@@ -902,10 +909,17 @@ bool Conv2dTiling::CheckShape()
 
 bool Conv2dTiling::CheckFormat()
 {
-    std::set<std::pair<ConvFormat, ConvFormat>> conv2dSupportFormatSet = {
-        {ConvFormat::NCHW, ConvFormat::NCHW},      {ConvFormat::NHWC, ConvFormat::HWCN},
-        {ConvFormat::NCHW, ConvFormat::FRACTAL_Z}, {ConvFormat::NCHW, ConvFormat::FRACTAL_Z_C04},
-        {ConvFormat::NHWC, ConvFormat::FRACTAL_Z}, {ConvFormat::NHWC, ConvFormat::FRACTAL_Z_C04}};
+    std::set<std::pair<ConvFormat, ConvFormat>> conv2dSupportFormatSet;
+    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+        conv2dSupportFormatSet = {{ConvFormat::NCHW, ConvFormat::NCHW},
+                                  {ConvFormat::NCHW, ConvFormat::NHWC},
+                                  {ConvFormat::NHWC, ConvFormat::HWCN}};
+    } else {
+        conv2dSupportFormatSet = {
+            {ConvFormat::NCHW, ConvFormat::NCHW},      {ConvFormat::NHWC, ConvFormat::HWCN},
+            {ConvFormat::NCHW, ConvFormat::FRACTAL_Z}, {ConvFormat::NCHW, ConvFormat::FRACTAL_Z_C04},
+            {ConvFormat::NHWC, ConvFormat::FRACTAL_Z}, {ConvFormat::NHWC, ConvFormat::FRACTAL_Z_C04}};
+    }
 
     if (conv2dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv2dSupportFormatSet.end()) {

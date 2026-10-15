@@ -228,6 +228,14 @@ ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, groupsPtr);
     oriShapeAttrInfo_.oriGroups = *groupsPtr;
 
+    // weight format groups != 1 case not supported yet
+    if (oriShapeAttrInfo_.oriGroups != 1 && descInfo_.weightFormat == ge::FORMAT_NHWC &&
+        (apiInputPlatformInfo.npuArch == NpuArch::DAV_9201 || apiInputPlatformInfo.npuArch == NpuArch::DAV_9202)) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: weight NHWC format unsupport groups (%ld) != 1.",
+                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriGroups);
+        return ge::GRAPH_FAILED;
+    }
+
     if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context_->GetNodeType(), "groups", std::to_string(oriShapeAttrInfo_.oriGroups).c_str(),

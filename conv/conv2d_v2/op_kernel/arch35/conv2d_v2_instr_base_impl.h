@@ -312,6 +312,12 @@ public:
             } else {
                 LoadBL1Data(kBL1Iter, nBL1Iter);
             }
+        } else if constexpr (Intf::formatWeight == ConvFormat::NHWC) {
+            if constexpr (Intf::isDmaFlag) {
+                LoadBL1DataKernelSpiltNHWC(kBL1Iter, nBL1Iter);
+            } else {
+                LoadBL1DataNHWC(kBL1Iter, nBL1Iter);
+            }
         } else {
             if constexpr (Intf::isDmaFlag) {
                 LoadBL1DataKernelSplitHWC(kBL1Iter, nBL1Iter);
@@ -359,6 +365,62 @@ private:
         intriParams.dstNzNStride = self_->ctx.convTilingData->nBL1;
         intriParams.dstNzMatrixStride = Intf::k0;
         DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], intriParams);
+    }
+
+    __aicore__ inline void LoadBL1DataNHWC(uint64_t kBL1Iter, uint64_t nBL1Iter)
+    {
+        uint64_t bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->cinBInCore;
+        if constexpr (Intf::hasNL1IterFlag) {
+            bL1GmOffset += nBL1Iter * self_->ctx.convTilingData->nBL1 * self_->ctx.convTilingData->coutOffsetBlock;
+            self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ? self_->ctx.nBL1Tail :
+                                                                          self_->ctx.convTilingData->nBL1;
+        }
+
+        Nd2NzParams intriParams;
+        intriParams.ndNum = self_->ctx.convTilingData->kernelHxkernelW;
+        intriParams.nValue = self_->ctx.currentNBL1;
+        intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ? self_->ctx.convTilingData->cinBTailInCore :
+                                                                  self_->ctx.convTilingData->cinBInCore;
+        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->orgCi / self_->ctx.convTilingData->groups;
+        intriParams.srcDValue = self_->ctx.convTilingData->kernelHxkernelW *
+                                (self_->ctx.convTilingData->orgCi / self_->ctx.convTilingData->groups);
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.convTilingData->nBL1;
+        intriParams.dstNzNStride = 1;
+        intriParams.dstNzMatrixStride = self_->ctx.convTilingData->nBL1 * Intf::k0;
+        DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], intriParams);
+    }
+
+    __aicore__ inline void LoadBL1DataKernelSpiltNHWC(uint64_t kBL1Iter, uint64_t nBL1Iter)
+    {
+        uint64_t bL1GmOffset = self_->ctx.cinBL1Iter * self_->ctx.convTilingData->cinBInCore +
+                               self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 *
+                                   self_->ctx.convTilingData->kernelW * self_->ctx.convTilingData->orgCi +
+                               self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 *
+                                   self_->ctx.convTilingData->orgCi;
+        if constexpr (Intf::hasNL1IterFlag) {
+            bL1GmOffset += nBL1Iter * self_->ctx.convTilingData->nBL1 * self_->ctx.convTilingData->coutOffsetBlock;
+            self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ? self_->ctx.nBL1Tail :
+                                                                          self_->ctx.convTilingData->nBL1;
+        }
+
+        Nd2NzParams intriParams;
+        intriParams.ndNum = self_->ctx.convTilingData->kwL1;
+        intriParams.nValue = self_->ctx.currentNBL1;
+        intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ? self_->ctx.convTilingData->cinBTailInCore :
+                                                                  self_->ctx.convTilingData->cinBInCore;
+        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->orgCi / self_->ctx.convTilingData->groups;
+        intriParams.srcDValue = self_->ctx.convTilingData->kernelHxkernelW *
+                                (self_->ctx.convTilingData->orgCi / self_->ctx.convTilingData->groups);
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->kwL1 * self_->ctx.convTilingData->khL1 *
+                                    self_->ctx.convTilingData->nBL1;
+        intriParams.dstNzNStride = 1;
+        intriParams.dstNzMatrixStride = self_->ctx.convTilingData->nBL1 * Intf::k0;
+        uint64_t bl1DstOffset = 0;
+        for (uint16_t khIterIdx = 0; khIterIdx < self_->ctx.convTilingData->khL1; khIterIdx++) {
+            bl1DstOffset = khIterIdx * self_->ctx.convTilingData->kwL1 * self_->ctx.convTilingData->nBL1 * Intf::k0;
+            DataCopy<typename Intf::WeightT>(self_->ctx.bl1[bl1DstOffset], self_->ctx.bgm[bL1GmOffset], intriParams);
+            bL1GmOffset += self_->ctx.convTilingData->kernelW * self_->ctx.convTilingData->orgCi;
+        }
     }
 
     __aicore__ inline void LoadBL1DataHWC(uint64_t kBL1Iter, uint64_t nBL1Iter)

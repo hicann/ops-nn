@@ -177,7 +177,9 @@ __aicore__ inline bool DeQuantIterUpdate(Intf* self)
         return true;
     }
 
-    self->ctx.pingPongFlag ^= 1;
+    if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+        self->ctx.pingPongFlag ^= 1;
+    }
 
     self->ctx.mUbIter++;
     if (self->ctx.mUbIter == self->ctx.l0C2UbLoopM) {
@@ -224,8 +226,10 @@ __aicore__ inline bool DeQuantVecImpl(Intf* self)
             loadParamsFlag = loadParamsFlag || (self->ctx.isFirstIterate || self->ctx.mUbIter == 0);
         }
 
-        if (self->ctx.pingPongFlag != self->ctx.vecId) {
-            continue;
+        if constexpr (VEC_NUM == DOUBLE_VEC_CORE) {
+            if (self->ctx.pingPongFlag != self->ctx.vecId) {
+                continue;
+            }
         }
 
         if (unlikely(self->ctx.isFirstIterate)) {

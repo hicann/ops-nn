@@ -107,10 +107,17 @@ void Conv3dTiling::Infer5hdShape()
 
 bool Conv3dTiling::CheckInputFormat()
 {
-    std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet = {
-        {ConvFormat::NCDHW, ConvFormat::NCDHW},
-        {ConvFormat::NDHWC, ConvFormat::DHWCN},
-        {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}};
+    std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
+    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+        conv3dSupportFormatSet = {{ConvFormat::NCDHW, ConvFormat::NCDHW},
+                                  {ConvFormat::NCDHW, ConvFormat::NDHWC},
+                                  {ConvFormat::NDHWC, ConvFormat::DHWCN},
+                                  {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}};
+    } else {
+        conv3dSupportFormatSet = {{ConvFormat::NCDHW, ConvFormat::NCDHW},
+                                  {ConvFormat::NDHWC, ConvFormat::DHWCN},
+                                  {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}};
+    }
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv3dSupportFormatSet.end()) {
@@ -421,7 +428,8 @@ bool Conv3dTiling::CheckInputShape()
 
 bool Conv3dTiling::CheckSoc()
 {
-    if (this->platformInfo.npuArch != NpuArch::DAV_3510) {
+    if (this->platformInfo.npuArch != NpuArch::DAV_3510 && this->platformInfo.npuArch != NpuArch::DAV_9201 &&
+        this->platformInfo.npuArch != NpuArch::DAV_9202) {
         OP_LOGE(nodeType, "current Soc Version does not support");
         return false;
     }

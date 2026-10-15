@@ -182,7 +182,9 @@ void ConvTilingAlgorithmBBmode::CalcAvalibleL1Size()
 void ConvTilingAlgorithmBBmode::CalcWeightCoeff()
 {
     if (!tilingIns_->optGroupFlag) {
-        if (tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW == KERNEL_1X1) {
+        if (tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW == KERNEL_1X1 ||
+            tilingIns_->descInfo.weightType.format == ConvFormat::NHWC ||
+            tilingIns_->descInfo.weightType.format == ConvFormat::NDHWC) {
             weightCoeff = FMAP_WEIGHT_BANDWIDTH_COEFF_1V1; // 1: hyperparameter due to ND2NZ
         } else if (tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW > KERNEL_3X3) {
             weightCoeff = FMAP_WEIGHT_BANDWIDTH_COEFF_6V1; // 6: hyperparameter

@@ -338,6 +338,12 @@ uint64_t Conv2dBaseTiling::GetFmapCopyMode()
 
 void Conv2dBaseTiling::ReSetTilingKeyPara()
 {
+    auto npuArch = apiInputPlatformInfo.npuArch;
+    if ((npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) &&
+        flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
+        return;
+    }
+
     if (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ||
         tilingKeyPara_.groupType == CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV) {
         return;
