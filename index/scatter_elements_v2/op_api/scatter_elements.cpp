@@ -109,20 +109,6 @@ static bool ShouldPreferScatterElementsV2OnArch22(const std::string& reduction)
     return IsArch22SocVersion() && IsArch22ScatterElementsV2Reduction(reduction);
 }
 
-// BOOL 仅支持 reduction == "none"：
-//   - op_host/config/ascend910b/scatter_elements_v2_binary.json 中 910b/910_93 注册的 binary
-//     全部为 reduction = "none"（含 bool float16/float32/bfloat16/int8/uint8/int32 双 indices 组合）；
-//   - add/mul/min/max/mean 下放行 BOOL 会导致 host tiling 找不到对应 binary，
-//     ScatterElementsV2 下发失败并返回 ACLNN_ERR_INNER_NULLPTR。
-// 因此这里按 reduction 有条件放行 BOOL，使其脱离 legacy ScatterElements(AICPU) 慢路径。
-static bool IsAicore910BScatterV2Dtype(const op::DataType dtype, const std::string& reduction)
-{
-    if (CheckType(dtype, AICORE_910B_DTYPE_SUPPORT_LIST)) {
-        return true;
-    }
-    return dtype == op::DataType::DT_BOOL && reduction == "none";
-}
-
 // 判断是否可以合轴： 当data_shape和indices_shape仅在axis取值不一致时可以合轴
 bool CanCombineAxis(const aclTensor* data, const aclTensor* indices, int64_t axis)
 {
@@ -308,9 +294,8 @@ bool UseScatterElementsV2(const aclTensor* data, const aclTensor* indices, const
         return UseAicore310P(data, indices, axis, dataDimSize, reduction);
     }
 
-    // 如果dtype不支持（BOOL 仅在 reduction == "none" 下支持）
-    if (!IsAicore910BScatterV2Dtype(data->GetDataType(), reduction)) {
-        OP_LOGD("ScatterElementsV2 not support this self dtype for reduction %s.", reduction.c_str());
+    // 如果dtype不支持
+    if (!CheckType(data->GetDataType(), AICORE_910B_DTYPE_SUPPORT_LIST)) {
         return false;
     }
 
