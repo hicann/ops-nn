@@ -15,6 +15,7 @@
 #include <vector>
 #include "op_host/tiling_util.h"
 #include "add_layer_norm_quant_tiling.h"
+#include "add_layer_norm_quant_v2_tiling_arch35.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -732,6 +733,29 @@ static ge::graphStatus Tiling4AddLayerNormQuant(gert::TilingContext* context)
 
 static ge::graphStatus Tiling4AddLayerNormQuantV2(gert::TilingContext* context)
 {
+    OP_CHECK_IF(nullptr == context, OP_LOGE("Tiling4AddLayerNormQuantV2", "TilingContext is NULL, failed"),
+                return ge::GRAPH_FAILED);
+    bool useRegbase = false;
+    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
+                return ge::GRAPH_FAILED);
+    if (useRegbase) {
+        uint32_t tmp_cols = 1;
+        uint32_t tmp_rows = 1;
+        UpdateShapeInfo(context, tmp_cols, tmp_rows);
+        if (tmp_cols == 0 && tmp_rows != 0) {
+            OP_LOGW(context, "AddLayerNormQuantV2 Empty Input tiling start");
+            AddLayerNormQuantEmptyTiling addLayerNormEmptyTiling(context);
+            return addLayerNormEmptyTiling.DoTiling();
+        }
+        OP_LOGW(context, "AddLayerNormQuantV2 Regbase tiling start");
+        AddLayerNormQuantV2RegbaseTiling addLayerNormQuantV2RegTiling(context);
+        OP_CHECK_IF(!(addLayerNormQuantV2RegTiling.DoTiling()), OP_LOGE(context, "Tiling failed."),
+                    return ge::GRAPH_FAILED);
+        OP_LOGW(context, "AddLayerNormQuantV2 Regbase tiling success, set tiling data");
+        AddLayerNormQuantRegbaseTilingData tiling;
+        addLayerNormQuantV2RegTiling.SetTilingDataAndTilingKeyAndWorkSpace(&tiling);
+        return ge::GRAPH_SUCCESS;
+    }
     return Tiling4AddLayerNormQuantV2Membase(context);
 }
 
@@ -803,5 +827,6 @@ IMPL_OP_OPTILING(AddLayerNormQuant)
 
 IMPL_OP_OPTILING(AddLayerNormQuantV2)
     .Tiling(Tiling4AddLayerNormQuantV2)
-    .TilingParse<AddLayerNormQuantCompileInfo>(TilingPrepare4AddLayerNormQuant);
+    .TilingParse<AddLayerNormQuantCompileInfo>(TilingPrepare4AddLayerNormQuant)
+    .GenSimplifiedKey(GenSimplifiedKey4AddLayerNormQuant);
 } // namespace optiling

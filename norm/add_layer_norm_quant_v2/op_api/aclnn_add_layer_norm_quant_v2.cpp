@@ -332,27 +332,15 @@ aclnnStatus ComputeAddLayerNormQuantV2(const aclTensor* x1, const aclTensor* x2,
     aclTensor* outScales1ComputeOut = nullptr;
     aclTensor* outScales2ComputeOut = nullptr;
 
-    if (Ops::NN::AclnnUtil::IsRegbase(GetCurrentPlatformInfo().GetCurNpuArch())) {
-        auto addLayerNormQuantV2Outs = l0op::AddLayerNormQuant(
-            x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
-            zeroPoints2Optional, quantMode, epsilon, additionalOutput, divMode, executor);
-        y1ComputeOut = std::get<IDX_0>(addLayerNormQuantV2Outs);
-        y2ComputeOut = std::get<IDX_1>(addLayerNormQuantV2Outs);
-        xComputeOut = std::get<IDX_2>(addLayerNormQuantV2Outs);
-        layernormComputeOut = executor->AllocTensor(x1->GetViewShape(), x1->GetDataType(), op::Format::FORMAT_ND);
-        outScales1ComputeOut = std::get<IDX_3>(addLayerNormQuantV2Outs);
-        outScales2ComputeOut = std::get<IDX_4>(addLayerNormQuantV2Outs);
-    } else {
-        auto addLayerNormQuantV2Outs = l0op::AddLayerNormQuantV2(
-            x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
-            zeroPoints2Optional, quantMode, epsilon, additionalOutput, divMode, executor);
-        y1ComputeOut = std::get<IDX_0>(addLayerNormQuantV2Outs);
-        y2ComputeOut = std::get<IDX_1>(addLayerNormQuantV2Outs);
-        xComputeOut = std::get<IDX_2>(addLayerNormQuantV2Outs);
-        layernormComputeOut = std::get<IDX_3>(addLayerNormQuantV2Outs);
-        outScales1ComputeOut = std::get<IDX_4>(addLayerNormQuantV2Outs);
-        outScales2ComputeOut = std::get<IDX_5>(addLayerNormQuantV2Outs);
-    }
+    auto addLayerNormQuantV2Outs = l0op::AddLayerNormQuantV2(x1, x2, gamma, beta, biasOptional, scales1Optional,
+                                                             scales2Optional, zeroPoints1Optional, zeroPoints2Optional,
+                                                             quantMode, epsilon, additionalOutput, divMode, executor);
+    y1ComputeOut = std::get<IDX_0>(addLayerNormQuantV2Outs);
+    y2ComputeOut = std::get<IDX_1>(addLayerNormQuantV2Outs);
+    xComputeOut = std::get<IDX_2>(addLayerNormQuantV2Outs);
+    layernormComputeOut = std::get<IDX_3>(addLayerNormQuantV2Outs);
+    outScales1ComputeOut = std::get<IDX_4>(addLayerNormQuantV2Outs);
+    outScales2ComputeOut = std::get<IDX_5>(addLayerNormQuantV2Outs);
 
     CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr &&
                   layernormComputeOut != nullptr && outScales1ComputeOut != nullptr && outScales2ComputeOut != nullptr,
@@ -373,10 +361,8 @@ aclnnStatus ComputeAddLayerNormQuantV2(const aclTensor* x1, const aclTensor* x2,
     CHECK_RET(viewCopyXResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将 layernormComputeOut 结果拷贝到 layernormRes 上
-    if (!Ops::NN::AclnnUtil::IsRegbase(GetCurrentPlatformInfo().GetCurNpuArch())) {
-        auto viewCopyLayerNormResult = l0op::ViewCopy(layernormComputeOut, layernormRes, executor);
-        CHECK_RET(viewCopyLayerNormResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
+    auto viewCopyLayerNormResult = l0op::ViewCopy(layernormComputeOut, layernormRes, executor);
+    CHECK_RET(viewCopyLayerNormResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (IsDynamicQuantV2(quantMode)) {
         // 将 outScales1ComputeOut 结果拷贝到 outScales1 上
