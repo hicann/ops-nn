@@ -151,6 +151,11 @@ CH_BOTH uint32_t PickRowsPerBlock(uint32_t b, uint32_t maxBlocks)
  * ------------------------------------------------------------------------------------------- */
 struct Layout {
     uint32_t b, hid, steps;  // b = REAL batch: GM row stride and the clamp bound for reads
+    uint32_t stepsRun;       // steps the recurrence actually computes: min(steps, seqLen).
+                             // steps stays the REAL T (the scatter zeroes dead-step output
+                             // rows); stepsRun clamps every compute loop -- dead steps'
+                             // igates/recurrence/mirror writes are pure waste (TF parity:
+                             // t >= seqLen outputs are zero).
     uint32_t mAll;           // PADDED batch (blockDim*mBlk) -- WS plane row stride. Distinct
                              // from both `b` and `m` on purpose.
     uint32_t m, k, n;        // the per-gate GEMM as ONE CLUSTER sees it: [mBlk, H] x [H, H]
@@ -158,6 +163,7 @@ struct Layout {
     uint32_t rowsMax, plane; // per-AIV allocation
     uint32_t aElems, bElems, cElems;
     uint32_t bOff[GATES], cOff[GATES], l1Bytes;
+    uint32_t cAbsorbOff; // L0C throwaway slot for the last-mmad absorb (see ctor)
     uint32_t cub[GATES];
     uint32_t gi, gf, gg, go, cc, hh, co, t1, t2, t3, t4, msk, ubBytes;
     uint32_t tBuf;          // dtype-T staging plane: GM<->fp32 chain boundary.
@@ -181,10 +187,11 @@ struct Layout {
      * both dtypes and rowsMax is CeilDiv(mBlk,2) unconditionally. tBuf is the one T-sized plane:
      * the Cast staging between the fp32 chain and the T-typed GM/WS/L1 operands. */
     CH_BOTH Layout(uint32_t bIn, uint32_t hIn, uint32_t tIn, uint32_t mBlk, uint32_t dtypeSize = sizeof(float),
-                   uint32_t mAllIn = 0)
+                   uint32_t mAllIn = 0, uint32_t stepsRunIn = 0)
         : b(bIn),
           hid(hIn),
           steps(tIn),
+          stepsRun(stepsRunIn ? stepsRunIn : tIn),
           mAll(mAllIn ? mAllIn : bIn),
           m(mBlk),
           k(hIn),
@@ -215,6 +222,11 @@ struct Layout {
         for (uint32_t g = 0; g < GATES; ++g) {
             cOff[g] = l0c.TakeT<float>(cElems); // L0C accumulator is always float
         }
+        /* ABSORB slot: the M-pipe's LAST mmad of a round intermittently corrupts one
+         * L0C cell (hardware corner, ~1/8 launches, data-dependent visibility). A
+         * throwaway 5th mmad after the gate loop takes the hit; its result is never
+         * drained. Budgeted here so RecurrenceFits' L0C gate (x5) stays honest. */
+        cAbsorbOff = l0c.TakeT<float>(cElems);
 
         ch::Bump ub;
         for (uint32_t g = 0; g < GATES; ++g) {
@@ -381,8 +393,13 @@ struct BlockLstmTilingData {
     uint64_t offHAll;   // [T+1, B, padH]   slot 0 = h_prev
     uint64_t offCAll;   // [T+1, B, padH]   slot 0 = cs_prev
     uint64_t offStore;  // [T, B, 4*padH]   i, f, ci(g), o post-activation
-    uint64_t offCo;     // [T+1, B, padH]   co post-activation (slot t+1, odd-shape
-                        //                   scatter source; T+1 matches hAll/cAll)
+    uint64_t offCo;
+    uint64_t offHAllF;
+    uint64_t offHLo; // fp16 LO-capture plane for the slab cube's second mmad round
+    uint64_t offStoreF;
+    uint64_t offCoAllF;
+    uint64_t wsBytes; // [T+1, B, padH]   co post-activation (slot t+1, odd-shape
+                      //                   scatter source; T+1 matches hAll/cAll)
 
     // ---- wave tiling: decouples B/I/H from whole-operand on-chip residency ----
     // The resident pickers demand the A tile whole-K resident in L1, all four gate B-tiles

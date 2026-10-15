@@ -40,6 +40,12 @@ using std::map;
 using std::string;
 using std::vector;
 
+/* Host copies of every fed tensor, keyed by input name, so the CPU golden below
+ * runs on bit-identical data to what the graph is fed. */
+static std::map<std::string, std::vector<float>> g_host;
+
+static void ApplyImpulsePattern(const char* name, float* buf, size_t n);
+
 static uint32_t GetDataTypeSize(DataType dt)
 {
     if (dt == ge::DT_FLOAT)
@@ -49,7 +55,8 @@ static uint32_t GetDataTypeSize(DataType dt)
     return 1;
 }
 
-static int32_t GenRandomFloat(vector<int64_t>& shapes, Tensor& tensor, TensorDesc& desc, float scale, int seed)
+static int32_t GenRandomFloat(vector<int64_t>& shapes, Tensor& tensor, TensorDesc& desc, float scale, int seed,
+                              const char* name)
 {
     desc.SetRealDimCnt(shapes.size());
     desc.SetFormat(FORMAT_ND);
@@ -61,11 +68,13 @@ static int32_t GenRandomFloat(vector<int64_t>& shapes, Tensor& tensor, TensorDes
     srand(seed);
     for (size_t i = 0; i < size; ++i)
         buf[i] = scale * ((float)rand() / RAND_MAX * 2.0f - 1.0f);
+    ApplyImpulsePattern(name, buf, size);
+    g_host[name].assign(buf, buf + size);
     tensor = Tensor(desc, reinterpret_cast<uint8_t*>(buf), data_len);
     return SUCCESS;
 }
 
-static int32_t GenZeroData(vector<int64_t>& shapes, Tensor& tensor, TensorDesc& desc, DataType dt)
+static int32_t GenZeroData(vector<int64_t>& shapes, Tensor& tensor, TensorDesc& desc, DataType dt, const char* name)
 {
     desc.SetRealDimCnt(shapes.size());
     desc.SetFormat(FORMAT_ND);
@@ -75,6 +84,13 @@ static int32_t GenZeroData(vector<int64_t>& shapes, Tensor& tensor, TensorDesc& 
     uint32_t data_len = size * GetDataTypeSize(dt);
     uint8_t* buf = new uint8_t[data_len];
     memset(buf, 0, data_len);
+    if (dt == ge::DT_FLOAT) {
+        float* fbuf = reinterpret_cast<float*>(buf);
+        ApplyImpulsePattern(name, fbuf, size);
+        g_host[name].assign(fbuf, fbuf + size);
+    } else {
+        g_host[name].assign(size, 0.0f);
+    }
     tensor = Tensor(desc, buf, data_len);
     return SUCCESS;
 }
@@ -90,6 +106,100 @@ static int32_t GenScalarInt64(int64_t val, Tensor& tensor, TensorDesc& desc)
 }
 
 int T = 4, B = 4, I_sz = 16, H = 32;
+int g_seedOff = 0;                /* diagnostic: shifts every input seed to test data-dependence */
+int g_zeroGrad = 0;               /* diagnostic: feed cs_grad/h_grad as zeros -> all outputs must be 0 */
+int g_impulse = 0;                /* diagnostic: impulse response, reads the kernel's column mapping out of b_grad */
+int g_t0 = 0, g_b0 = 0, g_c0 = 0; /* the impulse position (t, b, c) in h_grad */
+int g_wrow = 0, g_wcol = 0;       /* mode 6: the single 1.0's position (row, flatcol) in real w */
+
+/* Impulse pattern, applied to the generated buffer BEFORE the ge::Tensor is built and
+ * BEFORE g_host records it, so the golden sees exactly what the graph is fed.
+ *
+ * With w = 0 and x = 0: x_grad = dG*Wx^T = 0, h_prev_grad = dG*W_hh = 0, w_grad = 0,
+ * while b_grad[g*H+c] = sum_{t,b} dgate[g][c] survives. b_grad therefore becomes a
+ * DIRECT READOUT of dG's (gate, column) placement: if phase 0's odd-row restage shifts
+ * the window, the non-zeros land at c != g_c0 and the shift is readable off the index.
+ * Gate caches are a 0.5 constant so every dgate term is non-zero and distinguishable. */
+static void ApplyImpulsePattern(const char* name, float* buf, size_t n)
+{
+    if (g_impulse == 0) {
+        return;
+    }
+    const bool isGate = (strcmp(name, "i") == 0) || (strcmp(name, "cs") == 0) || (strcmp(name, "f") == 0) ||
+                        (strcmp(name, "o") == 0) || (strcmp(name, "ci") == 0) || (strcmp(name, "co") == 0) ||
+                        (strcmp(name, "h") == 0);
+    if (isGate) {
+        for (size_t k = 0; k < n; ++k) {
+            buf[k] = 0.5f;
+        }
+        return;
+    }
+    if (strcmp(name, "w") == 0 && g_impulse == 3) {
+        /* mode 3 keeps the RANDOM w so W_hh != 0: that is the only way to exercise the
+         * dh carry (dhPrev = dG*W_hh) and the dx path (dx = dG*Wx^T). mode 2 zeroes w,
+         * which silently skips both -- and h_prev_grad is exactly the output that fails
+         * 100% on the random-data runs. x stays 0 so w_grad (= xh^T*dG) stays 0.
+         * MUST return before the zeroing loop below. */
+        return;
+    }
+    for (size_t k = 0; k < n; ++k) {
+        buf[k] = 0.0f;
+    }
+    if (strcmp(name, "w") == 0 && g_impulse == 4) {
+        /* mode 4: W_hh[j, gate 0, c] = delta(c, j), everything else 0. Then
+         * h_prev_grad[j] = sum_g sum_c dgate[g][c] * W_hh[j,g,c] = di[j], which for the
+         * c0 impulse is exactly 0.046875 at j == c0 and 0 elsewhere. Any non-zero at
+         * j != c0 names the row/column the w restage actually landed on, i.e. it prints
+         * the mis-indexing instead of merely proving it exists. */
+        const size_t n4 = (size_t)4 * H;
+        for (int j = 0; j < H; ++j) {
+            const size_t row = (size_t)I_sz + (size_t)j; /* W_hh row j == real w row I+j */
+            const size_t idx = row * n4 + 0 * (size_t)H + (size_t)j;
+            if (idx < n) {
+                buf[idx] = 1.0f;
+            }
+        }
+        return;
+    }
+    if (strcmp(name, "w") == 0 && g_impulse == 5) {
+        /* mode 5: W_hh block's GATE-0 slice all ones (real rows [I,I+H), cols [0,H)),
+         * everything else 0. Because h_prev_grad[j] = sum_g v_g * Wpad[16+j][g*padH+c0]
+         * with v = (3/64, 0, 9/64, 8/64) -- distinct, subset-sum-unique -- sweeping
+         * c0 = 0..H-1 and reading the h_prev_grad values reconstructs the ENTIRE padded
+         * W plane slot-by-slot (each slot is 0 or 1). This is the printf-free readout of
+         * what phase 0's w restage actually wrote. */
+        const size_t n4 = (size_t)4 * H;
+        for (int r = I_sz; r < I_sz + H; ++r) {
+            for (int c = 0; c < H; ++c) {
+                const size_t idx = (size_t)r * n4 + 0 * (size_t)H + (size_t)c;
+                if (idx < n) {
+                    buf[idx] = 1.0f;
+                }
+            }
+        }
+        return;
+    }
+    if (strcmp(name, "w") == 0 && g_impulse == 6) {
+        /* mode 6: a SINGLE 1.0 at real w[wRowArg][wColArg] (g_t0 = row, g_b0 = col here),
+         * zeros elsewhere. Where it lands in the padded plane discriminates the two models
+         * that both fit the mode-4 diagonal data: (A) gate0 row+1 -> fires at c0=C, j=R-15;
+         * (B) gate0 col-1 -> fires at c0=C-1, j=R-16. */
+        const size_t n4 = (size_t)4 * H;
+        const size_t idx = (size_t)g_wrow * n4 + (size_t)g_wcol;
+        if (idx < n) {
+            buf[idx] = 1.0f;
+        }
+        return;
+    }
+    if (strcmp(name, "h_grad") == 0) {
+        const size_t idx = ((size_t)g_t0 * B + (size_t)g_b0) * (size_t)H + (size_t)g_c0;
+        if (idx < n) {
+            buf[idx] = 1.0f;
+        } else {
+            printf("IMPULSE position (%d,%d,%d) out of range (n=%zu)\n", g_t0, g_b0, g_c0, n);
+        }
+    }
+}
 
 op::BlockLstmGrad block_lstm_grad_op("test_geir_block_lstm_grad");
 Graph* g_graph = nullptr;
@@ -109,21 +219,21 @@ Graph* g_graph = nullptr;
         block_lstm_grad_op.update_input_desc_##name(_desc);               \
     } while (0)
 
-#define ADD_DATA_INPUT(name, dtype, shape, scale, seed)                   \
-    do {                                                                  \
-        vector<int64_t> _shp = shape;                                     \
-        auto _data = op::Data("data_" #name);                             \
-        _data.set_attr_index(0);                                          \
-        TensorDesc _desc = TensorDesc(ge::Shape(_shp), FORMAT_ND, dtype); \
-        _desc.SetPlacement(ge::kPlacementHost);                           \
-        _desc.SetFormat(FORMAT_ND);                                       \
-        Tensor _tensor;                                                   \
-        GenRandomFloat(_shp, _tensor, _desc, scale, seed);                \
-        _data.update_input_desc_x(_desc);                                 \
-        input_tensors.push_back(_tensor);                                 \
-        g_graph->AddOp(_data);                                            \
-        block_lstm_grad_op.set_input_##name(_data);                       \
-        input_ops.push_back(_data);                                       \
+#define ADD_DATA_INPUT(name, dtype, shape, scale, seed)                       \
+    do {                                                                      \
+        vector<int64_t> _shp = shape;                                         \
+        auto _data = op::Data("data_" #name);                                 \
+        _data.set_attr_index(0);                                              \
+        TensorDesc _desc = TensorDesc(ge::Shape(_shp), FORMAT_ND, dtype);     \
+        _desc.SetPlacement(ge::kPlacementHost);                               \
+        _desc.SetFormat(FORMAT_ND);                                           \
+        Tensor _tensor;                                                       \
+        GenRandomFloat(_shp, _tensor, _desc, scale, seed + g_seedOff, #name); \
+        _data.update_input_desc_x(_desc);                                     \
+        input_tensors.push_back(_tensor);                                     \
+        g_graph->AddOp(_data);                                                \
+        block_lstm_grad_op.set_input_##name(_data);                           \
+        input_ops.push_back(_data);                                           \
     } while (0)
 
 #define ADD_ZERO_INPUT(name, dtype, shape)                                \
@@ -135,7 +245,7 @@ Graph* g_graph = nullptr;
         _desc.SetPlacement(ge::kPlacementHost);                           \
         _desc.SetFormat(FORMAT_ND);                                       \
         Tensor _tensor;                                                   \
-        GenZeroData(_shp, _tensor, _desc, dtype);                         \
+        GenZeroData(_shp, _tensor, _desc, dtype, #name);                  \
         _data.update_input_desc_x(_desc);                                 \
         input_tensors.push_back(_tensor);                                 \
         g_graph->AddOp(_data);                                            \
@@ -149,12 +259,218 @@ Graph* g_graph = nullptr;
         block_lstm_grad_op.update_output_desc_##name(_desc);               \
     } while (0)
 
+/* The eight grads in output order. */
+struct BackwardGolden {
+    std::vector<double> xGrad;
+    std::vector<double> csPrevGrad;
+    std::vector<double> hPrevGrad;
+    std::vector<double> wGrad;
+    std::vector<double> wciGrad;
+    std::vector<double> wcfGrad;
+    std::vector<double> wcoGrad;
+    std::vector<double> bGrad;
+};
+
+/* Standard LSTM BPTT over the PROVIDED gate values (the op is a pure backward: it
+ * never recomputes the forward). Reverse sweep, per batch, carrying dcs and dh
+ * across timesteps; the t=0 carries land in cs_prev_grad / h_prev_grad.
+ * Ported from test_geir_block_lstm_grad_dynamic.cpp ComputeBackwardGolden, and
+ * specialised to this example's attrs: gate_order="ifco", use_peephole=false.
+ * Accumulated in double; each output is rounded once, at the check below. */
+static BackwardGolden ComputeBackwardGolden(int t, int b, int i, int h)
+{
+    const std::vector<float>& x = g_host["x"];
+    const std::vector<float>& csPrev = g_host["cs_prev"];
+    const std::vector<float>& hPrev = g_host["h_prev"];
+    const std::vector<float>& w = g_host["w"];
+    const std::vector<float>& gi = g_host["i"];
+    const std::vector<float>& gcs = g_host["cs"];
+    const std::vector<float>& gf = g_host["f"];
+    const std::vector<float>& go = g_host["o"];
+    const std::vector<float>& gci = g_host["ci"];
+    const std::vector<float>& gco = g_host["co"];
+    const std::vector<float>& gh = g_host["h"];
+    const std::vector<float>& csGrad = g_host["cs_grad"];
+    const std::vector<float>& hGrad = g_host["h_grad"];
+
+    BackwardGolden out;
+    const size_t plane = static_cast<size_t>(b) * h;
+    const size_t xPlane = static_cast<size_t>(b) * i;
+    out.xGrad.assign(static_cast<size_t>(t) * xPlane, 0.0);
+    out.csPrevGrad.assign(plane, 0.0);
+    out.hPrevGrad.assign(plane, 0.0);
+    out.wGrad.assign(static_cast<size_t>(i + h) * 4 * h, 0.0);
+    /* use_peephole=false: the three peephole grads are exactly zero. */
+    out.wciGrad.assign(h, 0.0);
+    out.wcfGrad.assign(h, 0.0);
+    out.wcoGrad.assign(h, 0.0);
+    out.bGrad.assign(static_cast<size_t>(4) * h, 0.0);
+
+    std::vector<double> carryCs(plane, 0.0);
+    std::vector<double> carryH(plane, 0.0);
+    for (int tt = t - 1; tt >= 0; --tt) {
+        for (int bb = 0; bb < b; ++bb) {
+            const size_t goff = (static_cast<size_t>(tt) * b + bb) * h;
+            const float* iv = &gi[goff];
+            const float* fv = &gf[goff];
+            const float* gv = &gci[goff];
+            const float* ov = &go[goff];
+            const float* cov = &gco[goff];
+            /* dh at tt = h_grad[tt] + feedback from step tt+1. */
+            std::vector<double> dh(h);
+            for (int j = 0; j < h; ++j) {
+                dh[static_cast<size_t>(j)] = hGrad[goff + j] + carryH[static_cast<size_t>(bb) * h + j];
+            }
+            /* dct = dh*o*(1-co^2) + cs_grad + carry. */
+            std::vector<double> dct(h);
+            for (int j = 0; j < h; ++j) {
+                const double co = cov[j];
+                dct[static_cast<size_t>(j)] = dh[static_cast<size_t>(j)] * ov[j] * (1.0 - co * co) + csGrad[goff + j] +
+                                              carryCs[static_cast<size_t>(bb) * h + j];
+            }
+            /* cs_{t-1} and h_{t-1} for this (t,b). */
+            const float* csPrevRow = (tt == 0) ? &csPrev[static_cast<size_t>(bb) * h] :
+                                                 &gcs[(static_cast<size_t>(tt - 1) * b + bb) * h];
+            const float* hPrevRow = (tt == 0) ? &hPrev[static_cast<size_t>(bb) * h] :
+                                                &gh[(static_cast<size_t>(tt - 1) * b + bb) * h];
+            /* Pre-activation grads. */
+            std::vector<double> di(h), df(h), dg(h), do_(h);
+            for (int j = 0; j < h; ++j) {
+                di[static_cast<size_t>(j)] = dct[j] * gv[j] * iv[j] * (1.0 - iv[j]);
+                df[static_cast<size_t>(j)] = dct[j] * csPrevRow[j] * fv[j] * (1.0 - fv[j]);
+                dg[static_cast<size_t>(j)] = dct[j] * iv[j] * (1.0 - gv[j] * gv[j]);
+                do_[static_cast<size_t>(j)] = dh[j] * cov[j] * ov[j] * (1.0 - ov[j]);
+            }
+            const double* dgate[4] = {di.data(), df.data(), dg.data(), do_.data()};
+            /* x-side rows: dx and dW. */
+            const float* xRow = &x[(static_cast<size_t>(tt) * b + bb) * i];
+            for (int j = 0; j < i; ++j) {
+                double acc = 0.0;
+                for (int g = 0; g < 4; ++g) {
+                    const float* wRow = &w[static_cast<size_t>(j) * 4 * h + static_cast<size_t>(g) * h];
+                    double wRowSum = 0.0;
+                    for (int c = 0; c < h; ++c) {
+                        wRowSum += dgate[g][c] * wRow[c];
+                        out.wGrad[static_cast<size_t>(j) * 4 * h + static_cast<size_t>(g) * h + c] += xRow[j] *
+                                                                                                      dgate[g][c];
+                    }
+                    acc += wRowSum;
+                }
+                out.xGrad[(static_cast<size_t>(tt) * b + bb) * i + j] = acc;
+            }
+            /* h-side rows: dW and the dh feedback (carry to t-1). */
+            std::vector<double> dhPrev(h, 0.0);
+            for (int j = 0; j < h; ++j) {
+                for (int g = 0; g < 4; ++g) {
+                    const float* wRow = &w[static_cast<size_t>(i + j) * 4 * h + static_cast<size_t>(g) * h];
+                    for (int c = 0; c < h; ++c) {
+                        dhPrev[j] += dgate[g][c] * wRow[c];
+                        out.wGrad[static_cast<size_t>(i + j) * 4 * h + static_cast<size_t>(g) * h + c] += hPrevRow[j] *
+                                                                                                          dgate[g][c];
+                    }
+                }
+            }
+            /* b grad and the carries. */
+            for (int c = 0; c < h; ++c) {
+                out.bGrad[static_cast<size_t>(c)] += di[c];
+                out.bGrad[static_cast<size_t>(h + c)] += df[c];
+                out.bGrad[static_cast<size_t>(2 * h + c)] += dg[c];
+                out.bGrad[static_cast<size_t>(3 * h + c)] += do_[c];
+                carryCs[static_cast<size_t>(bb) * h + c] = dct[c] * fv[c];
+                carryH[static_cast<size_t>(bb) * h + c] = dhPrev[c];
+            }
+            if (tt == 0) {
+                for (int c = 0; c < h; ++c) {
+                    out.csPrevGrad[static_cast<size_t>(bb) * h + c] = carryCs[static_cast<size_t>(bb) * h + c];
+                    out.hPrevGrad[static_cast<size_t>(bb) * h + c] = carryH[static_cast<size_t>(bb) * h + c];
+                }
+            }
+        }
+    }
+    return out;
+}
+
+/* Same tolerance as test_geir_block_lstm_grad_dynamic.cpp (kAtol/kRtol = 1e-3). */
+static const float kAtol = 1.0e-3F;
+static const float kRtol = 1.0e-3F;
+
+static bool CheckTensor(const ge::Tensor& tensor, const vector<int64_t>& expectShape, const std::vector<double>& golden,
+                        const char* name)
+{
+    const TensorDesc& desc = tensor.GetTensorDesc();
+    const Shape& actual = desc.GetShape();
+    if (actual.GetDimNum() != expectShape.size()) {
+        printf("%s rank mismatch: %zu vs %zu\n", name, actual.GetDimNum(), expectShape.size());
+        return false;
+    }
+    for (size_t index = 0; index < expectShape.size(); ++index) {
+        if (actual.GetDim(index) != expectShape[index]) {
+            printf("%s dim[%zu] mismatch: %ld vs %ld\n", name, index, (long)actual.GetDim(index),
+                   (long)expectShape[index]);
+            return false;
+        }
+    }
+    if (desc.GetDataType() != ge::DT_FLOAT) {
+        printf("%s dtype mismatch\n", name);
+        return false;
+    }
+    const size_t count = golden.size();
+    if (tensor.GetSize() != count * sizeof(float)) {
+        printf("%s byte size mismatch: %zu vs %zu\n", name, tensor.GetSize(), count * sizeof(float));
+        return false;
+    }
+    const float* values = reinterpret_cast<const float*>(tensor.GetData());
+    size_t bad = 0;
+    std::vector<size_t> badIdx;
+    for (size_t index = 0; index < count; ++index) {
+        const float got = values[index];
+        const float want = static_cast<float>(golden[index]);
+        const float tolerance = kAtol + kRtol * std::fabs(want);
+        if (!std::isfinite(got) || std::fabs(got - want) > tolerance) {
+            if (bad < 5) {
+                printf("%s value mismatch at %zu: %.9g vs golden %.9g (tol %.9g)\n", name, index, got, want, tolerance);
+            }
+            ++bad;
+            badIdx.push_back(index);
+        }
+    }
+    if (bad != 0) {
+        printf("%s: %zu/%zu elements out of tolerance\n", name, bad, count);
+        /* DIAGNOSTIC: which column-within-H (i.e. which hidden unit) is wrong.
+         * x_grad is [T,B,I] so its columns are I-wide, not H-wide; skip it. */
+        if (H > 0 && count % (size_t)H == 0 && strcmp(name, "x_grad") != 0) {
+            std::vector<int> colBad(H, 0);
+            for (size_t index : badIdx) {
+                colBad[index % (size_t)H]++;
+            }
+            printf("%s: wrong-column map (col:hits, rows=%zu):\n  ", name, count / (size_t)H);
+            for (int c = 0; c < H; ++c) {
+                if (colBad[c] > 0) {
+                    printf("%d:%d ", c, colBad[c]);
+                }
+            }
+            printf("\n");
+        }
+        return false;
+    }
+    return true;
+}
+
 int main(int argc, char* argv[])
 {
     T = argc > 1 ? atoi(argv[1]) : 4;
     B = argc > 2 ? atoi(argv[2]) : 4;
     I_sz = argc > 3 ? atoi(argv[3]) : 16;
     H = argc > 4 ? atoi(argv[4]) : 32;
+    g_seedOff = argc > 5 ? atoi(argv[5]) : 0;
+    const int mode = argc > 6 ? atoi(argv[6]) : 0;
+    g_zeroGrad = (mode == 1) ? 1 : 0;
+    g_impulse = (mode >= 2 && mode <= 6) ? mode : 0;
+    g_t0 = argc > 7 ? atoi(argv[7]) : 0;
+    g_b0 = argc > 8 ? atoi(argv[8]) : 0;
+    g_c0 = argc > 9 ? atoi(argv[9]) : 0;
+    g_wrow = argc > 10 ? atoi(argv[10]) : 0;
+    g_wcol = argc > 11 ? atoi(argv[11]) : 0;
 
     const int K = I_sz + H;
     const int N = 4 * H;
@@ -197,8 +513,16 @@ int main(int argc, char* argv[])
     ADD_DATA_INPUT(ci, DT_FLOAT, out_shape, 0.3f, 209);
     ADD_DATA_INPUT(co, DT_FLOAT, out_shape, 0.3f, 210);
     ADD_DATA_INPUT(h, DT_FLOAT, out_shape, 0.5f, 211);
-    ADD_DATA_INPUT(cs_grad, DT_FLOAT, out_shape, 0.3f, 212);
-    ADD_DATA_INPUT(h_grad, DT_FLOAT, out_shape, 1.0f, 213);
+    if (g_zeroGrad != 0) {
+        /* DIAGNOSTIC: cs_grad = h_grad = 0 forces dG == 0, so ALL eight outputs must be
+         * exactly zero. Any non-zero output is stale/uninitialised memory or a mis-restaged
+         * input, not a rounding difference (patterns/uninitialized-memory.md). */
+        ADD_ZERO_INPUT(cs_grad, DT_FLOAT, out_shape);
+        ADD_ZERO_INPUT(h_grad, DT_FLOAT, out_shape);
+    } else {
+        ADD_DATA_INPUT(cs_grad, DT_FLOAT, out_shape, 0.3f, 212);
+        ADD_DATA_INPUT(h_grad, DT_FLOAT, out_shape, 1.0f, 213);
+    }
 
     ADD_OUTPUT(x_grad, DT_FLOAT, x_shape);
     ADD_OUTPUT(cs_prev_grad, DT_FLOAT, prev_shape);
@@ -244,20 +568,104 @@ int main(int argc, char* argv[])
     }
 
     printf("RunGraph success, output count=%zu\n", output.size());
+    if (output.size() != 8) {
+        printf("output count mismatch: expected 8\n");
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
+
+    const BackwardGolden golden = ComputeBackwardGolden(T, B, I_sz, H);
     const char* out_names[8] = {"x_grad",   "cs_prev_grad", "h_prev_grad", "w_grad",
                                 "wci_grad", "wcf_grad",     "wco_grad",    "b_grad"};
-    for (size_t i = 0; i < output.size() && i < 8; ++i) {
-        int64_t sz = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        float* data = (float*)output[i].GetData();
+    const std::vector<double>* goldens[8] = {&golden.xGrad,   &golden.csPrevGrad, &golden.hPrevGrad, &golden.wGrad,
+                                             &golden.wciGrad, &golden.wcfGrad,    &golden.wcoGrad,   &golden.bGrad};
+    const vector<int64_t>* outShapes[8] = {&x_shape, &prev_shape, &prev_shape, &w_shape,
+                                           &h_shape, &h_shape,    &h_shape,    &b_shape};
+    bool allOk = true;
+    for (size_t i = 0; i < 8; ++i) {
+        const bool ok = CheckTensor(output[i], *outShapes[i], *goldens[i], out_names[i]);
+        const float* data = reinterpret_cast<const float*>(output[i].GetData());
         float mx = 0.0f;
-        for (int64_t j = 0; j < sz; ++j)
-            if (std::abs(data[j]) > mx)
-                mx = std::abs(data[j]);
-        printf("  output[%zu] %s: shape_size=%ld max_abs=%f\n", i, out_names[i], sz, mx);
+        for (size_t j = 0; j < goldens[i]->size(); ++j) {
+            if (std::fabs(data[j]) > mx) {
+                mx = std::fabs(data[j]);
+            }
+        }
+        printf("  output[%zu] %s: shape_size=%zu max_abs=%f  %s\n", i, out_names[i], goldens[i]->size(), mx,
+               ok ? "OK" : "MISMATCH");
+        allOk = allOk && ok;
+    }
+
+    if (g_impulse != 0) {
+        /* Read the kernel's (gate, column) placement straight out of b_grad, and the
+         * (batch, column) placement out of cs_prev_grad. Expected: non-zeros ONLY at
+         * col == g_c0. A non-zero at col != g_c0 is a restage window shift, and the
+         * distance is the shift. */
+        printf("IMPULSE h_grad[t=%d,b=%d,c=%d]=1, gates=0.5, w=x=cs_prev=h_prev=b=peep=cs_grad=0\n", g_t0, g_b0, g_c0);
+        const size_t idxB[3] = {7, 1, 2};
+        const char* nmB[3] = {"b_grad[gate,col]", "cs_prev_grad[batch,col]", "h_prev_grad[batch,col]"};
+        /* x_grad readout ([T,B,I], nonzero only at the impulse's (t0,b0)): which Wx ROW
+         * the plant reached. j is the Wx row index directly. */
+        {
+            const float* d = reinterpret_cast<const float*>(output[0].GetData());
+            const std::vector<double>& gd = *goldens[0];
+            printf("  x_grad[t=%d,b=%d,row] nonzeros:", g_t0, g_b0);
+            size_t shown = 0;
+            for (size_t j = 0; j < gd.size(); ++j) {
+                const size_t t = j / ((size_t)B * I_sz);
+                const size_t rem = j % ((size_t)B * I_sz);
+                const size_t b = rem / (size_t)I_sz;
+                const size_t r = rem % (size_t)I_sz;
+                if ((int)t == g_t0 && (int)b == g_b0 && std::fabs(d[j]) > 1.0e-6F) {
+                    printf(" [row=%zu]=%.6g", r, d[j]);
+                    ++shown;
+                }
+            }
+            printf("  total=%zu\n", shown);
+        }
+        for (int k = 0; k < 3; ++k) {
+            const float* d = reinterpret_cast<const float*>(output[idxB[k]].GetData());
+            const std::vector<double>& gd = *goldens[idxB[k]];
+            printf("  %s nonzeros (|v|>1e-6):", nmB[k]);
+            size_t shown = 0;
+            for (size_t j = 0; j < gd.size(); ++j) {
+                if (std::fabs(d[j]) > 1.0e-6F) {
+                    if (shown < 64) {
+                        printf(" [%zu,%zu]=%.6g(gold %.6g)", j / (size_t)H, j % (size_t)H, d[j], gd[j]);
+                    }
+                    ++shown;
+                }
+            }
+            if (shown == 0) {
+                printf(" <none>");
+            }
+            printf("  total=%zu\n", shown);
+            size_t gshown = 0;
+            printf("  %s GOLDEN nonzeros:", nmB[k]);
+            for (size_t j = 0; j < gd.size(); ++j) {
+                if (std::fabs(gd[j]) > 1.0e-9) {
+                    if (gshown < 64) {
+                        printf(" [%zu,%zu]=%.6g", j / (size_t)H, j % (size_t)H, gd[j]);
+                    }
+                    ++gshown;
+                }
+            }
+            if (gshown == 0) {
+                printf(" <none>");
+            }
+            printf("  total=%zu\n", gshown);
+        }
     }
 
     delete session;
     ge::GEFinalize();
+    if (!allOk) {
+        printf("GEIR BlockLstmGrad: FAILED\n");
+        return FAILED;
+    }
+    printf("Shape, dtype and values PASSED for T=%d B=%d I=%d H=%d (all 8 outputs, atol/rtol=%g)\n", T, B, I_sz, H,
+           kAtol);
     printf("GEIR BlockLstmGrad: PASS\n");
     return SUCCESS;
 }

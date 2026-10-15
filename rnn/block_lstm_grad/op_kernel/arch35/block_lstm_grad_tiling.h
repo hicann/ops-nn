@@ -104,10 +104,19 @@ constexpr uint32_t REC_VEC_TAIL_MAX = 48; /* scalar tree-fold bound on the post-
 constexpr uint32_t NUM_VEC_PLANES = 11;   /* phase-A vector planes */
 constexpr uint32_t NUM_PEEP_BUFS = 6;     /* dwci, dwcf, dwco, wci, wcf, wco */
 constexpr uint32_t UB_BUF_PER_PLANE = 16; /* UB words per vector-plane row */
-constexpr uint32_t UB_EXTRA_BUFS = 12;    /* db, zbuf, xtmp, xgat + alignment slack */
-constexpr uint32_t ALIGN_SLACK = 16;      /* scalar-safe alignment margin */
-constexpr uint32_t CT_REPACK_SLACK = 32;  /* CT repack staging guard */
-constexpr uint32_t CT_STAGE_SLACK = 64;   /* CT staging cast-scratch guard */
+constexpr uint32_t UB_VEC_PLANES = 11;    /* dh dc cprev gi gf gg go gco t1 t2 t3 */
+/* Column-block width for the BLOCKED xh^T staging (see MakeLayout's xhtBlocked). Kept
+ * small on purpose: the blocked path exists only to let mBlk stay large on wide-I shapes,
+ * not to be faster than the full-width tile -- so it is used ONLY when full width does not
+ * fit (PickGradRowChunk tries full width first). */
+constexpr uint32_t XHT_BLK = 256;
+/* Columns per batched xh^T MTE3, and the UB element cap for the batch buffer (~4KB). */
+constexpr uint32_t XHT_NC = 16;
+constexpr uint32_t XGAT_MAX_ELEMS = 1024;
+constexpr uint32_t UB_EXTRA_BUFS = 12;   /* db, zbuf, xtmp, xgat + alignment slack */
+constexpr uint32_t ALIGN_SLACK = 16;     /* scalar-safe alignment margin */
+constexpr uint32_t CT_REPACK_SLACK = 32; /* CT repack staging guard */
+constexpr uint32_t CT_STAGE_SLACK = 64;  /* CT staging cast-scratch guard */
 
 constexpr uint32_t GATES = 4;
 
@@ -198,8 +207,6 @@ struct Layout {
                    // segment >= C0F once kW > kRow). kW stays the FULL K
                    // extent one (t0, gate) round covers; kW > 16 shapes
                    // (row-chunked clusters) budget their tiles at kRow.
-    uint32_t kTot; // T*mClus -- the flattened (t, b) extent ONE CLUSTER owns,
-                   // i.e. the row pitch of its xh^T slice (all its chunks)
     /* dwB1 (the L1 tile) and dwB2 (the L0B tile) are DIFFERENT NUMBERS.
      * dwB1 (the L1 tile) and dwB2 (the L0B tile) are DIFFERENT NUMBERS. Phase C's B side goes
      */
@@ -215,9 +222,21 @@ struct Layout {
     bool recVec;         // recurrence carry on the VECTOR side (small shapes)
                          /* split-K segment count (non-slab only; 1 = single chain). */
     uint32_t dxSplit;    // same for the dX GEMM (dxCub[seg])
-    uint32_t xtmp, xgat; // xh^T staging: [rowsMax, max(I,H)] and a [rowsMax] gather
-    uint32_t db;         // [GATES*H] -- survives all three phases
-    uint32_t zbuf;       // max(I, H) zeros -- ditto
+    uint32_t xtmp, xgat; // RecVector's `io` staging [rowsMax, xhtBlk or max(I,H)] + a vestigial gather row
+    /* 0 = xtmp is sized for the FULL [count, in] row width. Non-zero = it is sized for
+     * [count, xhtBlk] column blocks instead. Full width is always preferred; the narrow form
+     * exists because the full-width tile is rowsMax*padI floats, which on wide-I shapes caps
+     * mBlk (at I=4097 it exceeds the whole UB), and a small mBlk wastes the dX cube's fractal
+     * utilisation. */
+    /* VESTIGIAL -- the xh^T staging phase they parameterised is gone (phase C now reads the
+     * padded x / h planes directly, see blg::LoadDwA). Retained ONLY because xtmp and xgat
+     * are still carved out of the UB bump allocator at exactly these sizes; freeing them
+     * lets the phase-B search widen iChunk, which is not reliably faster. Reclaiming them
+     * is a separate, separately-validated change. */
+    uint32_t xhtBlk;
+    uint32_t xhtNC, xhtSlotE;
+    uint32_t db;                                             // [GATES*H] -- survives all three phases
+    uint32_t zbuf;                                           // max(I, H) zeros -- ditto
     uint32_t dh, dc, cprev, gi, gf, gg, go, gco, t1, t2, t3; // phase A planes
     uint32_t dwci, dwcf, dwco, wciUB, wcfUB, wcoUB;          // peephole grad accumulators + weights
     uint32_t dxCub;                                          // phase B drain [rowsMaxX, iChunk]
@@ -233,7 +252,7 @@ struct Layout {
  * tiling blob, overriding only seqMax with the runtime seq_len_max value. */
 CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn, uint32_t smIn, uint32_t mBlkIn,
                           uint32_t tcXIn, uint32_t iChunkIn, uint32_t tcWIn, uint32_t jChunkIn, uint32_t mClusIn,
-                          uint32_t rowChunksIn, uint32_t recKCIn, uint32_t bRealIn = 0)
+                          uint32_t rowChunksIn, uint32_t recKCIn, uint32_t bRealIn = 0, bool xhtBlocked = false)
 {
     Layout l{};
     l.b = bIn;
@@ -290,7 +309,6 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
         uint32_t& jChunk = l.jChunk;
         uint32_t& kW = l.kW;
         uint32_t& kRow = l.kRow;
-        uint32_t& kTot = l.kTot;
         uint32_t& dwA1 = l.dwA1;
         uint32_t& dwA2 = l.dwA2;
         uint32_t& dwB1 = l.dwB1;
@@ -306,6 +324,9 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
         bool& recVec = l.recVec;
         uint32_t& dxSplit = l.dxSplit;
         uint32_t& xtmp = l.xtmp;
+        uint32_t& xhtBlk = l.xhtBlk;
+        uint32_t& xhtNC = l.xhtNC;
+        uint32_t& xhtSlotE = l.xhtSlotE;
         uint32_t& xgat = l.xgat;
         uint32_t& db = l.db;
         uint32_t& zbuf = l.zbuf;
@@ -354,7 +375,6 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
         rowsMaxX = SPLIT ? ch::CeilDiv(mX, 2) : mX;
         /* dW's K axis is the CLUSTER's (t, row) extent, not one chunk's: the phase-C. */
         kW = tcW * mClus;
-        kTot = steps * mClus;
 
         /* phase A -----------------------------------------------------------------------. */
         recA1 = NzElems(mBlk, n4);
@@ -376,8 +396,13 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
                     recBOff[g] = l1.TakeT<float>(recB); // W_hh, gate by gate, RESIDENT
                 }
             } else {
-                /* gate: the streamed mode still keeps the WHOLE [mBlk, 4H] dG. */
-                if (recA1 * sizeof(float) > ch::CAP_L1 - ch::CAP_L0B) {
+                /* gate: the streamed mode still keeps the WHOLE [mBlk, 4H] dG.
+                 * The slab path is ALSO required when the non-slab vector planes would not
+                 * fit UB on their own (a shape whose recA1 fits L1 but whose 11 [rowsMax,
+                 * hid] planes do not fit UB must slab, not reject). Slabbing makes the
+                 * planes [rowsMax, recHS], decoupled from hid. */
+                const uint64_t nonSlabPlanes = (uint64_t)UB_VEC_PLANES * rowsMax * hid * sizeof(float);
+                if (recA1 * sizeof(float) > ch::CAP_L1 - ch::CAP_L0B || nonSlabPlanes > ch::CAP_UB / 2) {
                     const uint32_t rowsAlign = ch::CeilAlign(mBlk, ch::CUBE_BLOCK);
                     /* recHS: bounded by L0C (rowsAlign x recHS <= 64K elems) and the UB.
                      * recHS must be a CUBE_BLOCK (16) MULTIPLE and so must every slab
@@ -575,6 +600,19 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
                 if (nsCap > hid) {
                     nsCap = hid;
                 }
+                /* Keep the phase-C tile near-SQUARE. Its L1 traffic is
+                 *     4*kW * [ (in+hid)*ceil(hid/dwNS)  +  hid*ceil((in+hid)/jChunk) ]
+                 * (A is re-read once per N slab, B once per j chunk), i.e. symmetric in the two
+                 * and minimised when they are equal -- while the product jChunk*dwNS is pinned
+                 * by L0C and, in practice, by the UB drain buffer dwCub ~= jChunk*dwNS/2. The
+                 * caps above are all product-shaped, so without this one `nsCap` runs to the
+                 * L0B/L0C ceiling and the picker lands on a badly skewed tile with many j
+                 * chunks, each re-reading the whole B operand. Capping the slab at jChunk
+                 * makes the large-jChunk candidates affordable, so the descending search
+                 * stops near sqrt(P). */
+                if (nsCap > jCa) {
+                    nsCap = jCa;
+                }
                 const uint32_t ns = WedgeSafeWidth(nsCap, hid);
                 if (ns == 0) {
                     return l;
@@ -680,8 +718,31 @@ CH_BOTH Layout MakeLayout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t tIn
         dxSplit = 1;
         db = ub.TakeT<float>(recSlab ? GATES * recHS : n4 * accInter); // below every phase's scratch
         zbuf = ub.TakeT<float>(Max2(in, hid));                         // a row of zeros, for the x_grad tail
-        xtmp = ub.TakeT<float>(rowsMax * Max2(in, paW));
-        xgat = ub.TakeT<float>(rowsMax);
+        xhtBlk = xhtBlocked ? XHT_BLK : 0u;
+        /* OVER-ALLOCATED, DELIBERATELY -- right-sizing it is not a win. This is still sized
+         * for a whole [count, in] row because the xh^T staging phase that parked one here is
+         * gone; its only remaining consumer is RecVector's `io`, which needs just
+         * `work = stripe.count * hid` elements of T, and the H-slabbed recurrence does not
+         * touch it at all (that branch returns before the io code). Sizing it
+         * `recSlab ? 0 : rowsMax*hid` frees UB that the phase-B search spends on a wider
+         * iChunk / tcX, which does not convert into speed (net neutral across the slow +
+         * precision-critical shape subset). The reclaim stays on the table until phase B's
+         * "wider iChunk is always better" preference is revisited. */
+        xtmp = ub.TakeT<float>(rowsMax * (xhtBlocked ? Max2(XHT_BLK, paW) : Max2(in, paW)));
+        /* VESTIGIAL, kept at its exact validated size -- see the note on Layout::xhtBlk. This
+         * was the batched xh^T store buffer; the staging phase it served is gone, so nothing
+         * reads it. It is still allocated because the UB bump allocator's offsets downstream
+         * are what the 99/100 tiling budget was measured against. */
+        xhtSlotE = ch::CeilAlign(rowsMax * (uint32_t)sizeof(float), ch::C0_BYTES) / (uint32_t)sizeof(float);
+        xhtNC = XHT_NC;
+        while (xhtNC > 1u && xhtNC * xhtSlotE > XGAT_MAX_ELEMS) {
+            xhtNC /= 2u;
+        }
+        if (xhtNC * xhtSlotE > XGAT_MAX_ELEMS) {
+            xhtNC = 0u;
+            xhtSlotE = rowsMax;
+        }
+        xgat = ub.TakeT<float>(xhtNC != 0u ? (xhtNC * xhtSlotE) : rowsMax);
         const uint32_t ubBase = ub.cur;
 
         dh = ub.TakeT<float>(plane);
@@ -787,7 +848,6 @@ struct BlockLstmGradTilingData {
     uint64_t offPadHp;    // [B, padH] h_prev
 
     uint64_t offDg;      // [T, B, 4*padH]
-    uint64_t offXhT;     // [blockDim, padI+padH, T*rowsPerBlock]
     uint64_t offWPar;    // [blockDim, padI+padH, 4*padH] w_grad partials per cluster
     uint64_t offBPar;    // [blockDim, 4*padH] b_grad partials per cluster
     uint64_t offPeepPar; // [blockDim, 3*padH] peephole grad partials per cluster

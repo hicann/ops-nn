@@ -97,7 +97,9 @@ inline bool PickProjTiling(uint32_t mBlk, uint32_t inSize, uint32_t hid, uint32_
         const uint32_t l1Bytes = ch::CeilAlign(a1Elems * FSZ, ch::C0_BYTES) + bBytes;
         const uint32_t ubBytes = ch::CeilAlign(tc * rows * hid * FSZ, ch::C0_BYTES)     // drained plane
                                  + ch::CeilAlign(fwd::GATES * hid * FSZ, ch::C0_BYTES); // the bias row
-        if (a2Elems * FSZ <= ch::CAP_L0A && cElems * FSZ <= ch::CAP_L0C && l1Bytes <= ch::CAP_L1 &&
+        /* L0C: four gate tiles + the ABSORB scratch = 5 slots (the resident projection
+         * allocates 4 cOff slots; the absorb mmad lands past gate 3). */
+        if (a2Elems * FSZ <= ch::CAP_L0A && 5ULL * cElems * FSZ <= ch::CAP_L0C && l1Bytes <= ch::CAP_L1 &&
             ubBytes <= ch::CAP_UB) {
             *tChunk = tc;
             *kChunk = kb;
@@ -122,10 +124,12 @@ inline bool RecurrenceFits(uint32_t B, uint32_t H, uint32_t T, uint32_t mBlk, ui
         return false;
     }
     /* H is the PADDED extent here (caller passes padH). The Layout math itself is
-     * CeilDiv-based and needs no gate. */
+     * CeilDiv-based and needs no gate. L0C: FIVE fp32 slots -- four accumulators
+     * plus the last-mmad ABSORB slot (see the Layout ctor); budgeted honestly in
+     * BYTES (the old operand-dtypeSize scaling under-counted fp16 2x). */
     const fwd::Layout L(B, H, T, mBlk, dtypeSize);
     return L.aElems * dtypeSize <= ch::CAP_L0A && L.bElems * dtypeSize <= ch::CAP_L0B &&
-           L.cElems * dtypeSize <= ch::CAP_L0C && L.l1Bytes <= ch::CAP_L1 && L.ubBytes <= ch::CAP_UB;
+           5ULL * L.cElems * 4 <= ch::CAP_L0C && L.l1Bytes <= ch::CAP_L1 && L.ubBytes <= ch::CAP_UB;
 }
 
 /* ---- wave pickers: the B/I/H decoupling ------------------------------------------
@@ -188,10 +192,11 @@ inline bool PickProjWave(uint32_t mBlk, uint32_t padI, uint32_t padH, uint32_t d
         uint32_t kt = (padI == 0) ? c0 : (padI < ktCap ? padI : ktCap);
         kt = kt / c0 * c0;
         for (; kt >= c0; kt = kt / 2 / c0 * c0) {
-            /* M bounds. L0C: four gate slots, all live: 4 * CeilAlign(m,16) *
-             * CeilAlign(nt,16) * 4B (fp32 accum) <= CAP_L0C. L0A/L1: the [m, kt] A tile. */
+            /* M bounds. L0C: four gate slots + the ABSORB scratch, all live:
+             * 5 * CeilAlign(m,16) * CeilAlign(nt,16) * 4B (fp32 accum) <= CAP_L0C.
+             * L0A/L1: the [m, kt] A tile. */
             const uint32_t nAl = ch::CeilAlign(nt, ch::CUBE_BLOCK);
-            uint32_t mCapC = (ch::CAP_L0C / 4) / (4 * nAl);
+            uint32_t mCapC = (ch::CAP_L0C / 5) / (4 * nAl);
             mCapC = (mCapC / ch::CUBE_BLOCK) * ch::CUBE_BLOCK;
             uint32_t mCapA = (ch::CAP_L0A / esz) / (ch::CeilDiv(kt, c0) * c0);
             uint32_t m = mBlk < (mCapA < mCapC ? mCapA : mCapC) ? mBlk : (mCapA < mCapC ? mCapA : mCapC);

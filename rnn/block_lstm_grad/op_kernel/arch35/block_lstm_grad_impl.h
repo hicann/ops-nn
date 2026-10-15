@@ -32,6 +32,11 @@ constexpr float FP16_MAX = 65504.0f;
 
 constexpr float SIGMOID_SAFE_EXP = 20.0f; /* exp(2x) stays within fp32 for x <= 20 */
 constexpr uint32_t PEEP_MAX_SEG = 8192;   /* peep scatter staging upper bound */
+constexpr uint32_t BRED_BATCH_SLOTS = 32; /* ReduceBGrad batch: per-row UB slots cap */
+/* Batched-reduction UB budget (fp32 elems): acc + scratch must stay inside the
+ * 256KB VECCALC. segW*32 alone is 257KB at H=2049 (padH 2056) -- an out-of-UB
+ * write and an EZ9999 device fault. */
+constexpr uint32_t RED_UB_ELEMS = 65536 - 512;
 
 /* cube_helper.h -- the AIC-side datapath of the raw Ascend 950PR (dav_3510) kernels. */
 
@@ -76,6 +81,26 @@ __aicore__ inline void CopyInNd2Nz(const AscendC::LocalTensor<T>& l1, const Asce
     p.nValue = rows;
     p.dValue = cols;
     p.srcNdMatrixStride = 0;
+    p.srcDValue = srcRowStride;
+    p.dstNzC0Stride = CeilAlign(parentRows, CUBE_BLOCK);
+    p.dstNzNStride = 1;
+    p.dstNzMatrixStride = 0;
+    AscendC::DataCopy(l1, gm, p);
+}
+
+/* The SAME NZ tile in L1 as CopyInNd2Nz, but the GM source's CONTIGUOUS axis is `rows` (n)
+ * instead of `cols` (d): the transposed operand, converted in transit by MTE2. Arguments are
+ * drop-in for CopyInNd2Nz; `srcRowStride` is the pitch between consecutive `cols` values.
+ * arch35 intrinsic Intrinsic_data_move_out2l1_dn2nz (f32 supported). */
+template <typename T>
+__aicore__ inline void CopyInDn2Nz(const AscendC::LocalTensor<T>& l1, const AscendC::GlobalTensor<T>& gm, uint32_t rows,
+                                   uint32_t cols, uint32_t srcRowStride, uint32_t parentRows)
+{
+    AscendC::Dn2NzParams p;
+    p.dnNum = 1;
+    p.nValue = rows;
+    p.dValue = cols;
+    p.srcDnMatrixStride = 0;
     p.srcDValue = srcRowStride;
     p.dstNzC0Stride = CeilAlign(parentRows, CUBE_BLOCK);
     p.dstNzNStride = 1;
@@ -380,6 +405,46 @@ CH_BOTH bool RowsAligned(uint32_t n, uint32_t esz) { return (n * esz) % BLK == 0
 
 /* Aligned-chunk read of one row (element-aligned scalar slide). `stage` must hold
  * rowElems + 16 elements; `zero` is unused (kept for signature parity with the fwd). */
+/* VF shift-copy: dst[0..n) = src[0..n), SRC byte-unaligned, dst aligned. Vectorized
+ * replacement for the per-element scalar slide (Reg::LoadUnAlign/StoreAlign -- the CANN
+ * pad_3510 production idiom). Same helper as block_lstm's odda::ShiftCopyVF. */
+template <typename T>
+__simd_vf__ inline void ShiftCopyVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, uint32_t count, uint32_t oneRepeatSize,
+                                    uint32_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<T> regT;
+    AscendC::Reg::UnalignRegForLoad uregIn;
+    for (uint32_t i = 0; i < repeatTimes; ++i) {
+        const uint32_t off = i * oneRepeatSize;
+        uint32_t rem = count - off;
+        uint32_t n = (rem < oneRepeatSize) ? rem : oneRepeatSize;
+        AscendC::Reg::MaskReg mask = AscendC::Reg::UpdateMask<T>(n);
+        /* POST_MODE_UPDATE's pointer write-back does not survive the loop-carried
+         * parameter: every rep i>=1 re-read the slide base. Advance the source
+         * EXPLICITLY and let the Pre re-lock the advanced unaligned base each rep.
+         * The advance is a whole number of 256B reps, so the byte shift mod 32 is
+         * rep-invariant. */
+        __ubuf__ T* src = srcAddr + off;
+        AscendC::Reg::LoadUnAlignPre(uregIn, src);
+        AscendC::Reg::LoadUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(regT, uregIn, src, n);
+        AscendC::Reg::StoreAlign(dstAddr + off, regT, mask);
+    }
+}
+
+template <typename T>
+__aicore__ inline void ShiftCopyVec(const AscendC::LocalTensor<T>& dst, uint32_t dstOff,
+                                    const AscendC::LocalTensor<T>& src, uint32_t srcOff, uint32_t n)
+{
+    if (n == 0) {
+        return;
+    }
+    __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr() + dstOff;
+    __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr() + srcOff;
+    constexpr uint32_t oneRep = AscendC::GetVecLen() / sizeof(T);
+    const uint16_t repTimes = AscendC::CeilDivision(static_cast<uint64_t>(n), oneRep);
+    asc_vf_call<ShiftCopyVF<T>>(dstAddr, srcAddr, n, oneRep, repTimes);
+}
+
 template <typename T>
 __aicore__ inline void ReadRowUnaligned(const AscendC::GlobalTensor<T>& gm, uint32_t byteStart, uint32_t rowElems,
                                         uint32_t tensorByteEnd, const AscendC::LocalTensor<T>& dst,
@@ -403,16 +468,36 @@ __aicore__ inline void ReadRowUnaligned(const AscendC::GlobalTensor<T>& gm, uint
     p.srcStride = 0;
     p.dstStride = 0;
     AscendC::DataCopyPad(stage, gm[lo / esz], p, AscendC::DataCopyPadExtParams<T>());
-    AscendC::PipeBarrier<PIPE_ALL>();
+    /* MTE2 (chunk landed in stage) -> V (the VF slide reads it). */
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
 
     const uint32_t shiftE = headSkip / esz;
     const uint32_t n = (want / esz < (end - byteStart) / esz) ? want / esz : (end - byteStart) / esz;
-    /* SCALAR slide on both branches: a vector Add with an unaligned src base raises an
-     * AIV exception, and UB->UB DataCopy with an odd element count corrupts data. */
-    for (uint32_t i = 0; i < n; ++i) {
-        dst.SetValue(i, stage.GetValue(shiftE + i));
+    /* VF shift-copy replaces the per-element scalar slide (the odd path's dominant
+     * aiv_scalar cost): Reg::LoadUnAlign absorbs the unaligned source base. */
+    ShiftCopyVec<T>(dst, 0, stage, shiftE, n);
+    /* V -> MTE3: the caller's aligned row write reads dst. V -> MTE2: the NEXT call's
+     * chunk load overwrites stage. */
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
+}
+
+/* One CT->IT conversion with the +-inf saturation the scatter contract demands.
+ * Byte-for-byte the expression the per-segment gather below uses, factored out so the
+ * row-chunked path's boundary/tail assembly cannot drift from it. */
+template <typename IT>
+__aicore__ inline IT ScatterCastOne(float v)
+{
+    if constexpr (sizeof(IT) == 2) {
+        const IT lim = static_cast<IT>(FP16_MAX);
+        const IT infP = static_cast<IT>(lim + lim);
+        return (v > FP16_MAX) ? infP : (v < -FP16_MAX) ? static_cast<IT>(-infP) : static_cast<IT>(v);
+    } else {
+        return static_cast<IT>(v);
     }
-    AscendC::PipeBarrier<PIPE_ALL>();
 }
 
 /* Global 32B-segment scatter with dtype conversion: real GM tensor [rowsReal, wReal]. */
@@ -498,11 +583,204 @@ __aicore__ inline void ScatterTensor(const AscendC::GlobalTensor<IT>& gm, const 
     const uint32_t totalB = (size_t)rowsReal * rowB;
     const uint32_t segs = (totalB + 31) / 32;
     AscendC::LocalTensor<IT> ibuf = buf.template ReinterpretCast<IT>();
+
+    /* ---- ROW-CHUNKED PATH ---------------------------------------------------------
+     * Odd rows (rowB % 32 != 0) land here: the in-row MTE2 fast path requires rowB % 32 == 0,
+     * and the per-element gather dominates the scatter cost. Work is amortised over a whole
+     * row chunk rather than a 32B segment, because a pipe drain per segment costs more than
+     * it saves and the async VF engine is only fenced by PIPE_ALL.
+     *
+     * Byte ownership per 32B block (rowB >= 32 guarded below):
+     *   middle(r)   = [ceil32(start_r), floor32(end_r)) -- row r's worker, aligned bursts
+     *                 of chunkE*esz bytes (a multiple of 32 by construction)
+     *   boundary(r) = [floor32(start_r), +32)           -- row r's worker, scalar, <= 32/esz
+     *   final tail  = [floor32(totalB), totalB)         -- LAST row's worker
+     * Every byte has exactly one writer. r == 0 skips its boundary (no predecessor); an
+     * aligned start_r makes boundary(r) and middle(r) overlap -- same worker, idempotent. */
+    const uint32_t kRegions = 5u; /* CT regions sized per chunk element (worst case IT==CT) */
+    uint32_t chunkE = 0;
+    if (rowsReal > 0 && rowB >= BLK && bufElems >= 256u) {
+        chunkE = (bufElems - 160u) / kRegions;
+        chunkE = (chunkE / 16u) * 16u; /* vector-repeat granularity */
+        if (chunkE > wReal) {
+            chunkE = wReal;
+        }
+        if (chunkE * esz > 32768u) {
+            chunkE = 32768u / esz;
+        }
+        /* The middle bursts step GM in chunkE*esz bytes from a 32B-aligned base, so every
+         * step must stay 32B-aligned: the wReal and 32768 clamps can break the /16 sizing's
+         * alignment. A misaligned MTE3 burst silently corrupts small odd rows and
+         * device-faults large ones. Re-align to whole 32B units AFTER the clamps; rows
+         * narrower than one unit (chunkE < 16) fall back to the segment path. */
+        chunkE = (chunkE / (32u / esz)) * (32u / esz);
+        if (chunkE < 16u) {
+            chunkE = 0;
+        }
+    }
+    if (chunkE > 0) {
+        const uint32_t itE = (chunkE * esz + 3u) / 4u; /* chunkE IT elements, in CT units */
+        const uint32_t oCt = 0u;
+        const uint32_t oRd = oCt + ((chunkE + 7u) / 8u) * 8u;
+        const uint32_t oScr = oRd + ((chunkE + 96u + 7u) / 8u) * 8u; /* VF over-read slack */
+        const uint32_t oIt = oScr + ((chunkE + 7u) / 8u) * 8u;
+        const uint32_t oDd = oIt + ((itE + 7u) / 8u) * 8u;
+        const uint32_t oBnd = oDd + ((itE + 7u) / 8u) * 8u;
+        if (oBnd + 8u <= bufElems) {
+            AscendC::LocalTensor<CT> ctDst = buf[oCt];
+            AscendC::LocalTensor<CT> rdStage = buf[oRd];
+            AscendC::LocalTensor<CT> scr = buf[oScr];
+            AscendC::LocalTensor<IT> itDd = buf[oDd].template ReinterpretCast<IT>();
+            AscendC::LocalTensor<IT> bnd = buf[oBnd].template ReinterpretCast<IT>();
+            /* IT == CT: ReadRowUnaligned already landed the store type, so the burst reads
+             * straight out of ctDst; fp16: it reads the saturation-corrected cast result. */
+            AscendC::LocalTensor<IT> outBuf = buf[(sizeof(IT) == sizeof(CT)) ? oCt : oIt]
+                                                  .template ReinterpretCast<IT>();
+            const uint64_t wsTensEnd = ((uint64_t)ScatterWsRow(rowsReal - 1, gapAt, gapSize, rowsPerT, srcRowsPerT) +
+                                        1ull) *
+                                       wPad * sizeof(CT);
+            const uint32_t chunkB = chunkE * esz;
+            for (uint32_t r = workerId; r < rowsReal; r += workers) {
+                const uint64_t start = (uint64_t)r * rowB;
+                const uint64_t midLo = (start + BLK - 1u) & ~(uint64_t)(BLK - 1u);
+                const uint64_t midHi = (start + rowB) & ~(uint64_t)(BLK - 1u);
+                const uint32_t wsRow = ScatterWsRow(r, gapAt, gapSize, rowsPerT, srcRowsPerT);
+
+                if (r > 0) {
+                    /* boundary block: row r-1's tail then row r's head, <= 32/esz each. */
+                    const uint64_t bndLo = start & ~(uint64_t)(BLK - 1u);
+                    const uint32_t tailE = (uint32_t)((start - bndLo) / esz);
+                    const uint32_t headE = (BLK / esz) - tailE;
+                    const uint32_t prevRow = ScatterWsRow(r - 1, gapAt, gapSize, rowsPerT, srcRowsPerT);
+                    for (uint32_t i = 0; i < tailE; ++i) {
+                        bnd.SetValue(i, ScatterCastOne<IT>(ws.GetValue((size_t)prevRow * wPad + (wReal - tailE) + i)));
+                    }
+                    for (uint32_t i = 0; i < headE; ++i) {
+                        bnd.SetValue(tailE + i, ScatterCastOne<IT>(ws.GetValue((size_t)wsRow * wPad + i)));
+                    }
+                    AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                    AscendC::DataCopyExtParams bp;
+                    bp.blockCount = 1;
+                    bp.blockLen = BLK;
+                    bp.srcStride = 0;
+                    bp.dstStride = 0;
+                    AscendC::DataCopyPad(gm[bndLo / esz], bnd, bp);
+                    AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
+                }
+
+                for (uint64_t c = midLo; c < midHi; c += chunkB) {
+                    const uint32_t nB = (uint32_t)((midHi - c < chunkB) ? (midHi - c) : chunkB);
+                    const uint32_t nE = nB / esz;
+                    const uint64_t srcByte = ((uint64_t)wsRow * wPad + (c - start) / esz) * sizeof(CT);
+                    odda::ReadRowUnaligned<CT>(ws, (uint32_t)srcByte, nE, (uint32_t)wsTensEnd, ctDst, rdStage);
+                    /* PIPE_ALL, not a named pair: the VF shift inside ReadRowUnaligned is
+                     * async and only a full drain gates it against the V ops below. */
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                    if constexpr (sizeof(IT) != sizeof(CT)) {
+                        /* same +-inf correction the aligned path uses: clamp, take the
+                         * residual, cast both halves, add -- out-of-range lands on +-inf. */
+                        AscendC::Maxs(scr, ctDst, -FP16_MAX, nE);
+                        AscendC::Mins(scr, scr, FP16_MAX, nE);
+                        AscendC::Sub(scr, ctDst, scr, nE);
+                        AscendC::Cast(outBuf, ctDst, AscendC::RoundMode::CAST_RINT, nE);
+                        AscendC::Cast(itDd, scr, AscendC::RoundMode::CAST_RINT, nE);
+                        AscendC::Add(outBuf, outBuf, itDd, nE);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                    AscendC::DataCopyExtParams mp;
+                    mp.blockCount = 1;
+                    mp.blockLen = nB;
+                    mp.srcStride = 0;
+                    mp.dstStride = 0;
+                    AscendC::DataCopyPad(gm[c / esz], outBuf, mp);
+                    AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(EVENT_ID0);
+                }
+
+                if (r == rowsReal - 1) {
+                    /* final partial block: [floor32(totalB), totalB), all inside the last row. */
+                    const uint64_t tLo = (uint64_t)totalB & ~(uint64_t)(BLK - 1u);
+                    if ((uint64_t)totalB > tLo) {
+                        const uint32_t tailB = (uint32_t)((uint64_t)totalB - tLo);
+                        const uint32_t tailE = tailB / esz;
+                        const uint64_t lastStart = (uint64_t)(rowsReal - 1) * rowB;
+                        const uint32_t e0 = (uint32_t)((tLo - lastStart) / esz);
+                        for (uint32_t i = 0; i < tailE; ++i) {
+                            bnd.SetValue(i, ScatterCastOne<IT>(ws.GetValue((size_t)wsRow * wPad + e0 + i)));
+                        }
+                        AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                        AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                        AscendC::DataCopyExtParams tp;
+                        tp.blockCount = 1;
+                        tp.blockLen = tailB; /* byte-granular from an ALIGNED base */
+                        tp.srcStride = 0;
+                        tp.dstStride = 0;
+                        AscendC::DataCopyPad(gm[tLo / esz], bnd, tp);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                }
+            }
+            return;
+        }
+        chunkE = 0; /* UB too narrow for the layout -- fall through to the segment path */
+    }
+
     for (uint32_t k = workerId; k < segs; k += workers) {
         const uint32_t s = k * 32;
         uint32_t len = 32;
         if (s + len > totalB) {
             len = totalB - s;
+        }
+        /* IN-ROW FAST PATH: when the whole 32B segment lies inside ONE source row, the copy
+         * is a single aligned WS->UB MTE2 (the WS row pitch wPad is 8-aligned, so every
+         * in-row 32B span is 32B-aligned in WS) followed by ONE MTE3. Segments straddling a
+         * row boundary (1 in rowB/32) fall back to the scalar loop. fp16: the MTE2 brings
+         * fp32 into the ct view, then ONE vector Cast (+inf mapping preserved) lands IT. */
+        const uint32_t absByte0 = s;
+        const uint32_t row0 = absByte0 / rowB;
+        const uint32_t coff0 = absByte0 - row0 * rowB;
+        const bool inRow = (coff0 + len <= rowB) && (rowB % 32 == 0);
+        if (inRow) {
+            const uint32_t takeE = len / esz;
+            const uint32_t coffE = coff0 / esz;
+            const uint32_t wsRow = ScatterWsRow(row0, gapAt, gapSize, rowsPerT, srcRowsPerT);
+            /* WS partials are ALWAYS fp32 (CT == float for both variants), and `ws`
+             * here is GlobalTensor<CT> -- the MTE2 below reads fp32 directly. */
+            AscendC::DataCopyParams cp;
+            cp.blockCount = 1;
+            cp.blockLen = (uint16_t)(len / AscendC::ONE_BLK_SIZE);
+            cp.srcStride = 0;
+            cp.dstStride = 0;
+            if constexpr (sizeof(IT) == 2) {
+                /* fp16: MTE2 lands the fp32 segment in the SECOND half of the staging
+                 * region (disjoint from ibuf -- Cast dst/src must not alias); ONE
+                 * MTE2->V pair fences the load against the Cast, ONE V->MTE3 pair
+                 * fences the Cast against the store. */
+                AscendC::LocalTensor<float> cbuf = buf[(bufElems / 2) & ~7u];
+                AscendC::DataCopy(cbuf, ws[(size_t)wsRow * wPad + coffE], cp);
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                AscendC::Cast(ibuf, cbuf, AscendC::RoundMode::CAST_RINT, takeE);
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+            } else {
+                /* fp32: the MTE3 store below reads what this MTE2 wrote -- the fence
+                 * must be MTE2->MTE3 (MTE2_V does NOT order MTE3). */
+                AscendC::DataCopy(ibuf, ws[(size_t)wsRow * wPad + coffE], cp);
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE3>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE3>(EVENT_ID0);
+            }
+            AscendC::DataCopyExtParams p;
+            p.blockCount = 1;
+            p.blockLen = len;
+            p.srcStride = 0;
+            p.dstStride = 0;
+            AscendC::DataCopyPad(gm[s / esz], ibuf, p);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID0);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID0);
+            continue;
         }
         uint32_t done = 0;
         while (done < len) {
@@ -517,9 +795,6 @@ __aicore__ inline void ScatterTensor(const AscendC::GlobalTensor<IT>& gm, const 
                 const float v = ws.GetValue((size_t)wsRow * wPad + coffE + i);
                 IT cv;
                 if constexpr (sizeof(IT) == 2) {
-                    /* TF fp32->fp16 maps out-of-range to +/-inf (not saturation).
-                     * Build the infinities arithmetically: FP16_MAX + FP16_MAX
-                     * overflows fp16 addition to +inf. */
                     const IT lim = static_cast<IT>(FP16_MAX);
                     const IT infP = static_cast<IT>(lim + lim);
                     cv = (v > FP16_MAX) ? infP : (v < -FP16_MAX) ? static_cast<IT>(-infP) : static_cast<IT>(v);
@@ -782,10 +1057,11 @@ __aicore__ inline void FeedbackToL1(const AscendC::LocalTensor<T>& l1, const Asc
 
 namespace sh {
 
-/* BATCH SCHEDULING (`__schedmode__` / `SetScheduleMode`) -- WHAT IT IS, AND WHY IT IS OFF HERE.
- * NOTHING ELSE IN THE TOOLKIT USES THE ATTRIBUTE -- a grep over the whole of $ASCEND_HOME_PATH
- * AND WE DO NOT SET IT, ANYWHERE. Measured on the BlockLstmV2 probe (a MIX(1,2) kernel whose
- */
+/* BATCH SCHEDULING (`__schedmode__` / `SetScheduleMode`): the host tiling calls
+ * context->SetScheduleMode(1), which guarantees every launched core is co-resident -- the
+ * precondition for the cross-core grid barrier (SyncAll -> ffts_cross_core_sync) on a fully
+ * packed grid. Without it a core may be left undispatched and the barrier never completes.
+ * Hence the grid bound is aicNum, not aicNum-1. */
 
 /* Intra-core: order one pipe against another, within a single core. */
 template <AscendC::HardEvent E>
@@ -797,9 +1073,19 @@ __aicore__ inline void PipeWait(event_t id = EVENT_ID0)
 
 __aicore__ inline void WaitMte2ToMte1() { PipeWait<AscendC::HardEvent::MTE2_MTE1>(); } // GM->L1 before L1->L0
 __aicore__ inline void WaitMte1ToM() { PipeWait<AscendC::HardEvent::MTE1_M>(); }       // L1->L0/BT before Mmad
-__aicore__ inline void WaitMToFix() { PipeWait<AscendC::HardEvent::M_FIX>(); }         // Mmad before the drain
-__aicore__ inline void WaitFixToM() { PipeWait<AscendC::HardEvent::FIX_M>(); }         // drain read before reusing L0C
-__aicore__ inline void WaitVToMte3() { PipeWait<AscendC::HardEvent::V_MTE3>(); }       // vector math before UB->GM/L1
+/* Point-to-point WAR guards for a SINGLE-buffered L1/L0 tile stream. Together they replace a
+ * PipeBarrier<PIPE_ALL> per K segment, which drained every pipe and serialised GM->L1, L1->L0
+ * and the Mmad into one another. With these, segment i+1's MTE2 issues as soon as segment i's
+ * MTE1 has released L1 -- while segment i's Mmad is still running -- so the load hides behind
+ * the multiply. */
+__aicore__ inline void WaitMte1ToMte2()
+{
+    PipeWait<AscendC::HardEvent::MTE1_MTE2>();
+} // L1 read done before refilling it
+__aicore__ inline void WaitMToMte1() { PipeWait<AscendC::HardEvent::M_MTE1>(); } // L0A/L0B read done before refilling
+__aicore__ inline void WaitMToFix() { PipeWait<AscendC::HardEvent::M_FIX>(); }   // Mmad before the drain
+__aicore__ inline void WaitFixToM() { PipeWait<AscendC::HardEvent::FIX_M>(); }   // drain read before reusing L0C
+__aicore__ inline void WaitVToMte3() { PipeWait<AscendC::HardEvent::V_MTE3>(); } // vector math before UB->GM/L1
 
 /* Needed when the cube pushes L1 -> UB (MTE1) and then raises the cross-core flag, which is
  * raised FROM THE FIX PIPE and therefore orders only FIX work. Without this the AIV reads the UB
@@ -1669,7 +1955,7 @@ __aicore__ inline void RecVector(
                          * (half a multiple of 8 floats); the guard keeps wf a 16
                          * multiple so every issued half qualifies. The remaining <= 40
                          * lanes fold on the scalar unit -- a vector op at a sub-32B
-                         * offset is an alignment fault (measured: aivec error 340). */
+                         * offset is an alignment fault. */
                         uint32_t wf = L.n4;
                         while (wf >= 16 && (wf & 15u) == 0) {
                             const uint32_t half = wf >> 1;
@@ -1679,9 +1965,8 @@ __aicore__ inline void RecVector(
                         }
                         /* The scalar tail folds as a TREE, not a sequential chain: the
                          * tail lanes are same-magnitude partial sums of a cancelling dot
-                         * (ortho draws), so a wf-deep rounding chain amplified the carry
-                         * error 2.2x over the pairwise fold (measured against the fp64
-                         * golden). Tree depth is log2(wf). */
+                         * (ortho draws), so a wf-deep rounding chain amplifies the carry
+                         * error ~2x over the pairwise fold. Tree depth is log2(wf). */
                         float tail[REC_VEC_TAIL_MAX];
                         for (uint32_t e = 0; e < wf; ++e) {
                             tail[e] = prod.GetValue(e);
@@ -1921,7 +2206,12 @@ __aicore__ inline void DxCube(AscendC::GlobalTensor<T> wGM, AscendC::GlobalTenso
         const uint32_t iSz = (L.in - i0 < L.iChunk) ? (L.in - i0) : L.iChunk;
         for (uint32_t g = 0; g < GATES; ++g) {
             AscendC::LocalTensor<T> b1(AscendC::TPosition::B1, L.dxBOff[g], L.dxB);
-            ch::CopyInNd2Nz<T>(b1, wGM[i0 * L.n4 + gCol[g] * L.hid], iSz, L.hid, L.n4, L.iChunk);
+            /* parentRows MUST be iSz, not L.iChunk: SplitBFromNK derives the L1 source
+             * stride from iSz, while CopyInNd2Nz lays out the NZ tile with
+             * dstNzC0Stride = CeilAlign(parentRows, CUBE_BLOCK). They disagree on every
+             * short last chunk (iSz < iChunk). The L1 region stays budgeted at the full
+             * iChunk, so the smaller footprint only wastes space, never overruns. */
+            ch::CopyInNd2Nz<T>(b1, wGM[i0 * L.n4 + gCol[g] * L.hid], iSz, L.hid, L.n4, iSz);
         }
         sh::WaitMte2ToMte1();
 
@@ -2038,95 +2328,36 @@ __aicore__ inline void DxVector(AscendC::GlobalTensor<T> oXGM, uint32_t blockBas
     }
 }
 
-/* xhT[j][t*mBlk + r] = xh[t, base+r][j], for the rows THIS AIV owns.
- * THE GATHER IS SCALAR, IN UB, AND THAT IS THE CHEAP PART. Only whole runs of `count` floats
- * A strided DataCopyPad cannot replace the gather either: its source stride counts 32-BYTE
- */
+/* dW's A operand, straight from the phase-0 padded planes.
+ *
+ * A is xh^T[j, k] with M=j and K=k=(t, cluster-row). The padded x / h planes hold row k as
+ * [., j] with j CONTIGUOUS and pitch L.in (x) or L.hid (h) -- precisely the DN view of that
+ * A tile, so the GM->L1 load transposes in transit and no xh^T plane ever has to exist.
+ *
+ * No new synchronisation: these planes are written only by phase 0, which ends in an
+ * ENTIRE_DATA_CACHE clean+invalidate and a SyncAll<true>(), so they are immutable and
+ * globally visible before any compute phase.
+ *
+ * half 0 is the x columns, half 1 the h columns; h at t==0 is the h_prev INPUT, afterwards
+ * the forward's saved h plane (fhGM indexes t-1). */
 template <typename T>
-__aicore__ inline void BuildXhT(AscendC::GlobalTensor<T> xGM, AscendC::GlobalTensor<T> hPrevGM,
-                                AscendC::GlobalTensor<T> fhGM, AscendC::GlobalTensor<T> xhTGM,
-                                const ch::RowStripe& stripe, uint32_t blockBase, const Layout& L)
+__aicore__ inline void LoadDwA(const AscendC::LocalTensor<T>& a1, const AscendC::GlobalTensor<T>& xGM,
+                               const AscendC::GlobalTensor<T>& hPrevGM, const AscendC::GlobalTensor<T>& fhGM,
+                               const uint32_t half, const uint32_t t, const uint32_t row, const uint32_t j0,
+                               const uint32_t jSz, const uint32_t kNow, const Layout& L)
 {
-    if (stripe.count == 0) {
-        return;
+    if (half == 0) {
+        ch::CopyInDn2Nz<T>(a1, xGM[((size_t)t * L.mAll + row) * L.in + j0], jSz, kNow, L.in, jSz);
+    } else if (t == 0) {
+        ch::CopyInDn2Nz<T>(a1, hPrevGM[(size_t)row * L.hid + j0], jSz, kNow, L.hid, jSz);
+    } else {
+        ch::CopyInDn2Nz<T>(a1, fhGM[((size_t)(t - 1) * L.mAll + row) * L.hid + j0], jSz, kNow, L.hid, jSz);
     }
-    AscendC::LocalTensor<T> tmp(AscendC::TPosition::VECCALC, L.xtmp, L.rowsMax * Max2(L.in, L.hid));
-    AscendC::LocalTensor<T> gat(AscendC::TPosition::VECCALC, L.xgat, L.rowsMax);
-    const uint32_t gRow = blockBase + stripe.base;
-    /* row chunks: xhT's k axis is (t, cluster-row) over the CLUSTER's full row
-     * set (kTot = T*mClus), so a chunk's rows start at `clusRel` within each t's
-     * column span and the t-stride is mClus, not mBlk. */
-    const uint32_t clusRel = blockBase % L.mClus;
-
-    AscendC::DataCopyExtParams cp;
-    cp.blockCount = 1;
-    cp.blockLen = (uint32_t)(stripe.count * sizeof(T)); // exact bytes, not 32B multiples
-    cp.srcStride = 0;
-    cp.dstStride = 0;
-
-    for (uint32_t t = 0; t < L.seqMax; ++t) {
-        AscendC::DataCopy(tmp, xGM[(t * L.mAll + gRow) * L.in], stripe.count * L.in);
-        AscendC::PipeBarrier<PIPE_ALL>();
-        for (uint32_t j = 0; j < L.in; ++j) {
-            for (uint32_t r = 0; r < stripe.count; ++r) {
-                gat.SetValue(r, tmp.GetValue(r * L.in + j));
-            }
-            AscendC::PipeBarrier<PIPE_ALL>();
-            AscendC::DataCopyPad(xhTGM[j * L.kTot + t * L.mClus + clusRel + stripe.base], gat, cp);
-            AscendC::PipeBarrier<PIPE_ALL>();
-        }
-        /* h_{t-1}: the `h_prev` INPUT at t == 0, the forward's saved `h` plane afterwards.
-         * at slab scale the [count, H] load would overflow the [count, recHS]-sized
-         * staging region, so the h half moves in recHS-wide slabs (the x half always fit
-         * -- in <= the region by construction). Same gather, slab-local row pitch. */
-        if (L.recSlab) {
-            for (uint32_t hs0 = 0; hs0 < L.hid; hs0 += L.recHS) {
-                const uint32_t ns = (L.hid - hs0 < L.recHS) ? (L.hid - hs0) : L.recHS;
-                if (t == 0) {
-                    Slab2D<T>(hPrevGM[(size_t)gRow * L.hid + hs0], L.hid, tmp, stripe.count, ns, true);
-                } else {
-                    Slab2D<T>(fhGM[((size_t)(t - 1) * L.mAll + gRow) * L.hid + hs0], L.hid, tmp, stripe.count, ns,
-                              true);
-                }
-                AscendC::PipeBarrier<PIPE_ALL>();
-                for (uint32_t jj = 0; jj < ns; ++jj) {
-                    for (uint32_t r = 0; r < stripe.count; ++r) {
-                        gat.SetValue(r, tmp.GetValue(r * ns + jj));
-                    }
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    AscendC::DataCopyPad(xhTGM[(L.in + hs0 + jj) * L.kTot + t * L.mClus + clusRel + stripe.base], gat,
-                                         cp);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                }
-            }
-        } else {
-            if (t == 0) {
-                AscendC::DataCopy(tmp, hPrevGM[gRow * L.hid], stripe.count * L.hid);
-            } else {
-                AscendC::DataCopy(tmp, fhGM[((t - 1) * L.mAll + gRow) * L.hid], stripe.count * L.hid);
-            }
-            AscendC::PipeBarrier<PIPE_ALL>();
-            for (uint32_t j = 0; j < L.hid; ++j) {
-                for (uint32_t r = 0; r < stripe.count; ++r) {
-                    gat.SetValue(r, tmp.GetValue(r * L.hid + j));
-                }
-                AscendC::PipeBarrier<PIPE_ALL>();
-                AscendC::DataCopyPad(xhTGM[(L.in + j) * L.kTot + t * L.mClus + clusRel + stripe.base], gat, cp);
-                AscendC::PipeBarrier<PIPE_ALL>();
-            }
-        }
-    }
-    /* Flush on the PRODUCER, for the buffer this core wrote -- the cube reads it next, and its
-     * tiles do not follow this AIV's row split. */
-    AscendC::DataCacheCleanAndInvalid<T, AscendC::CacheLine::ENTIRE_DATA_CACHE>(xhTGM);
 }
 
-/* Phase C -- dW[j, n] += sum over (t, b) of xh[t,b,j] * dG[t,b,n].
- * THE A SIDE IS THE TRANSPOSED ONE, AND IT HAS TO BE MATERIALISED. Mmad's A operand must come
- * The slice is PER CLUSTER and its k axis is (t, b) with b restricted to this cluster's rows, so
- */
 template <typename T>
-__aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTensor<T> dgGM, uint32_t blockBase,
+__aicore__ inline void DwCube(AscendC::GlobalTensor<T> xGM, AscendC::GlobalTensor<T> hPrevGM,
+                              AscendC::GlobalTensor<T> fhGM, AscendC::GlobalTensor<T> dgGM, uint32_t blockBase,
                               const Layout& L)
 {
     AscendC::LocalTensor<T> a1(AscendC::TPosition::A1, 0, L.dwA1);
@@ -2163,13 +2394,13 @@ __aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTen
                                     if (kNow < DtypeTraits<T>::C0K || kNow > L.kRow) {
                                         kNow = rem; /* cannot split fractal-safely: one round */
                                     }
-                                    ch::CopyInNd2Nz<T>(
-                                        a1, xhTGM[(jBase + j0) * L.kTot + t0 * L.mClus + t * L.mClus + clusRelS + r0],
-                                        jSz, kNow, L.kTot, jSz);
+                                    sh::WaitMte1ToMte2();
+                                    LoadDwA<T>(a1, xGM, hPrevGM, fhGM, half, tt, blockBase + r0, j0, jSz, kNow, L);
                                     ch::CopyInNd2Nz<T>(b1,
                                                        dgGM[(tt * L.mAll + blockBase + r0) * L.n4 + g * L.hid + ns0],
                                                        kNow, ns, L.n4, L.kRow);
                                     sh::WaitMte2ToMte1();
+                                    sh::WaitMToMte1();
                                     ch::SplitA<T>(a2, a1, jSz, kNow);
                                     ch::SplitB<T>(b2, b1, L.kRow, ns);
                                     sh::WaitMte1ToM();
@@ -2179,7 +2410,6 @@ __aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTen
                                     } else {
                                         ch::MmadAccum(c, a2, b2, jSz, ns, kNow);
                                     }
-                                    AscendC::PipeBarrier<PIPE_ALL>();
                                     r0 += kNow;
                                 }
                             }
@@ -2231,12 +2461,12 @@ __aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTen
                             if (kNow < DtypeTraits<T>::C0K || kNow > L.kRow) {
                                 kNow = rem; /* cannot split fractal-safely: one round */
                             }
-                            ch::CopyInNd2Nz<T>(a1,
-                                               xhTGM[(jBase + j0) * L.kTot + t0 * L.mClus + t * L.mClus + clusRel + r0],
-                                               jSz, kNow, L.kTot, jSz);
+                            sh::WaitMte1ToMte2();
+                            LoadDwA<T>(a1, xGM, hPrevGM, fhGM, half, tt, blockBase + r0, j0, jSz, kNow, L);
                             ch::CopyInNd2Nz<T>(b1, dgGM[(tt * L.mAll + blockBase + r0) * L.n4 + g * L.hid], kNow, L.hid,
                                                L.n4, L.kRow);
                             sh::WaitMte2ToMte1();
+                            sh::WaitMToMte1();
                             ch::SplitA<T>(a2, a1, jSz, kNow);
                             ch::SplitB<T>(b2, b1, L.kRow, L.hid);
                             sh::WaitMte1ToM();
@@ -2246,7 +2476,6 @@ __aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTen
                             } else {
                                 ch::MmadAccum(c, a2, b2, jSz, L.hid, kNow);
                             }
-                            AscendC::PipeBarrier<PIPE_ALL>();
                             r0 += kNow;
                         }
                     }
@@ -2280,6 +2509,23 @@ __aicore__ inline void DwCube(AscendC::GlobalTensor<T> xhTGM, AscendC::GlobalTen
     }
 }
 
+/* One multi-block strided MTE3 for the whole row stripe, instead of one `ns`-float burst per
+ * row each followed by a PipeBarrier<PIPE_ALL>. The destination rows are n4 apart and the
+ * source is contiguous at pitch ns, so blockCount=st.count / blockLen=ns*4 / srcStride=0 /
+ * dstStride=(n4-ns)/8 expresses the whole stripe in one instruction.
+ *
+ * STRIDE UNITS DIFFER PER SIDE, and getting this wrong fails SILENTLY: in DataCopyExtParams
+ * the GM side counts bytes while the UB side counts 32B units. This is a CopyOut, so dstStride
+ * is the GM side and takes plain bytes: (n4 - ns) * sizeof(T). srcStride is the UB side, and
+ * since blockLen is already 32B-aligned its gap is 0.
+ *
+ * Legal because ns is always a multiple of C0F=8 (WedgeSafeWidth steps down by C0F and every
+ * cap feeding it is a CUBE_BLOCK/C0F multiple or padH), so blockLen is a whole number of 32B
+ * units. Both the source base and every destination row base are 32B-aligned.
+ *
+ * Bit-exact: same bytes to same addresses, only the instruction grouping changes. The
+ * accumulating variant (rowChunks > 1) keeps the per-row read-modify-write -- batching it
+ * would need a st.count*ns UB buffer the budget does not provide. */
 template <typename T>
 __aicore__ inline void DwVector(AscendC::GlobalTensor<T> wParGM, AscendC::GlobalTensor<float> wParFGM, uint32_t subIdx,
                                 const Layout& L, uint32_t gateOrder, bool accum = false)
@@ -2352,37 +2598,44 @@ __aicore__ inline void DwVector(AscendC::GlobalTensor<T> wParGM, AscendC::Global
                          * columns; n4/2 halved the true stride and made rows overlap:
                          * (4000+ drifting inf observed). */
                         const uint32_t n4F = GATES * L.hid;
-                        AscendC::DataCopyExtParams pf;
-                        pf.blockCount = 1;
-                        pf.blockLen = ns * sizeof(float);
-                        pf.srcStride = 0;
-                        pf.dstStride = 0;
-                        for (uint32_t r = 0; r < st.count; ++r) {
-                            const size_t dstF = (size_t)(jBase + j0 + st.base + r) * n4F + gCol[g] * L.hid + ns0;
-                            if (accum) {
+                        if (accum) {
+                            for (uint32_t r = 0; r < st.count; ++r) {
+                                const size_t dstF = (size_t)(jBase + j0 + st.base + r) * n4F + gCol[g] * L.hid + ns0;
                                 AscendC::LocalTensor<float> accF(AscendC::TPosition::VECCALC, L.t1, ns);
                                 AscendC::DataCopy(accF, wParFGM[dstF], ns);
                                 AscendC::PipeBarrier<PIPE_ALL>();
                                 AscendC::Add(accF, accF, cubF2[r * ns], ns);
                                 AscendC::PipeBarrier<PIPE_ALL>();
                                 AscendC::DataCopy(wParFGM[dstF], accF, ns);
-                            } else {
-                                AscendC::DataCopyPad(wParFGM[dstF], cubF2[r * ns], pf);
                             }
+                        } else {
+                            AscendC::DataCopyExtParams pf;
+                            pf.blockCount = (uint16_t)st.count;
+                            pf.blockLen = ns * sizeof(float);
+                            pf.srcStride = 0; // UB side, and blockLen is 32B-aligned so the gap is 0
+                            pf.dstStride = (n4F - ns) * sizeof(float);
+                            const size_t dstF0 = (size_t)(jBase + j0 + st.base) * n4F + gCol[g] * L.hid + ns0;
+                            AscendC::DataCopyPad(wParFGM[dstF0], cubF2[0], pf);
                         }
                         AscendC::PipeBarrier<PIPE_ALL>();
                     } else {
-                        for (uint32_t r = 0; r < st.count; ++r) {
-                            const size_t dst = (size_t)(jBase + j0 + st.base + r) * L.n4 + gCol[g] * L.hid + ns0;
-                            if (accum) {
+                        if (accum) {
+                            for (uint32_t r = 0; r < st.count; ++r) {
+                                const size_t dst = (size_t)(jBase + j0 + st.base + r) * L.n4 + gCol[g] * L.hid + ns0;
                                 AscendC::DataCopy(acc, wParGM[dst], ns);
                                 AscendC::PipeBarrier<PIPE_ALL>();
                                 AscendC::Add(acc, acc, cub[r * ns], ns);
                                 AscendC::PipeBarrier<PIPE_ALL>();
                                 AscendC::DataCopy(wParGM[dst], acc, ns);
-                            } else {
-                                AscendC::DataCopy(wParGM[dst], cub[r * ns], ns);
                             }
+                        } else {
+                            AscendC::DataCopyExtParams pf;
+                            pf.blockCount = (uint16_t)st.count;
+                            pf.blockLen = ns * sizeof(T);
+                            pf.srcStride = 0; // UB side, and blockLen is 32B-aligned so the gap is 0
+                            pf.dstStride = (L.n4 - ns) * sizeof(T);
+                            const size_t dst0 = (size_t)(jBase + j0 + st.base) * L.n4 + gCol[g] * L.hid + ns0;
+                            AscendC::DataCopyPad(wParGM[dst0], cub[0], pf);
                         }
                         AscendC::PipeBarrier<PIPE_ALL>();
                     }
@@ -2397,10 +2650,24 @@ __aicore__ inline void DwVector(AscendC::GlobalTensor<T> wParGM, AscendC::Global
  * Each reads per-cluster partials from workspace and sums them in a fixed order.
  * =========================================================================================== */
 
+/* How many `pitch`-wide UB slots fit alongside the two hid-wide working rows, capped at
+ * blockDim. The c0 chunk loop folds whatever does not fit, in c-ascending order, so the sum
+ * stays bit-deterministic. */
+__aicore__ inline uint32_t UbFitSlots(const uint32_t ubFloats, const uint32_t pitch, const uint32_t blockDim)
+{
+    if (blockDim <= 1u) {
+        return blockDim;
+    }
+    const uint32_t fit = (ubFloats > 2u * pitch + blg::ALIGN_SLACK) ?
+                             (ubFloats - 2u * pitch - blg::ALIGN_SLACK) / pitch :
+                             0u;
+    return (blockDim <= fit) ? blockDim : ((fit > 1u) ? fit : 1u);
+}
+
 template <typename T>
 __aicore__ inline void ReduceWGrad(AscendC::GlobalTensor<T> oWRedGM, AscendC::GlobalTensor<T> wsGM,
                                    AscendC::GlobalTensor<float> wParFGM, const BlockLstmGradTilingData& tdp,
-                                   const Layout& L)
+                                   const Layout& L, uint32_t workerId, uint32_t workers)
 {
     AscendC::LocalTensor<T> acc(AscendC::TPosition::VECCALC, L.t1, L.hid);
     AscendC::LocalTensor<T> tmp(AscendC::TPosition::VECCALC, L.t2, L.hid);
@@ -2422,46 +2689,111 @@ __aicore__ inline void ReduceWGrad(AscendC::GlobalTensor<T> oWRedGM, AscendC::Gl
     const uint32_t hReal = tdp.hiddenSize;
     const uint32_t rowW = GATES * hReal; // packed real row width
 
+    /* PARALLEL REDUCTION: the real-row space [0, iReal+hReal) is striped across ALL workers;
+     * a single-core form would serialise GBs of GM reads between two SyncAlls. Per-element
+     * cluster order (c = 0..blockDim-1) is unchanged, so the sum stays bit-deterministic. */
+    const uint32_t realRows = iReal + hReal;
+    const uint32_t rowsPerW = (realRows + workers - 1u) / workers;
+    const uint32_t rLo = workerId * rowsPerW;
+    const uint32_t rHi = (rLo + rowsPerW < realRows) ? (rLo + rowsPerW) : realRows;
+
     if (L.recSlab) {
-        /* the [hid]-wide accumulators do not survive at slab scale (t1/t2 are. */
+        /* SLAB-BATCH reduction: one (row, gate, segment) round issues ALL blockDim
+         * cluster-partial MTE2 copies into per-cluster UB slots back-to-back (the MTE2
+         * pipe is in-order, no interleaved sync needed), then ONE MTE2->V flag pair,
+         * then the in-order vector Add chain, then the write. Per-element cluster order
+         * (c ascending) is unchanged => the sum stays bit-deterministic. */
         const uint32_t segW = (L.hid < PEEP_MAX_SEG) ? L.hid : PEEP_MAX_SEG;
+        /* UB-BUDGETED SLOTS: slots must be capped at what fits -- blockDim=31 with
+         * segW=2056 fp32 needs 257KB and OVERFLOWS the 248KB VECCALC. The c0 chunk
+         * loop below folds blockDim in ceil(blockDim/slots) chunks, accF carries
+         * across chunks, cluster order stays c-ascending => deterministic. */
+        const uint32_t ubFloats = static_cast<uint32_t>(ch::CAP_UB / sizeof(float));
+        uint32_t slots = tdp.blockDim;
+        if (slots > 1) {
+            const uint32_t fit = (ubFloats > 2u * segW + blg::ALIGN_SLACK) ?
+                                     (ubFloats - 2u * segW - blg::ALIGN_SLACK) / segW :
+                                     0u;
+            if (slots > fit) {
+                slots = (fit > 1) ? fit : 1;
+            }
+        }
         AscendC::LocalTensor<float> accF(AscendC::TPosition::VECCALC, 0, segW);
-        AscendC::LocalTensor<float> tmpF(AscendC::TPosition::VECCALC, segW * sizeof(float), segW);
+        AscendC::LocalTensor<float> tmpF(AscendC::TPosition::VECCALC, segW * sizeof(float),
+                                         (uint32_t)segW * slots + blg::ALIGN_SLACK);
         const uint32_t n4F = GATES * L.hid;
         const size_t cStride = (size_t)(L.in + L.hid) * n4F;
-        for (uint32_t half = 0; half < 2; ++half) {
-            const uint32_t jTot = (half == 0) ? L.in : L.hid;
-            const uint32_t jBase = (half == 0) ? 0 : L.in;
-            const uint32_t jReal = (half == 0) ? iReal : hReal;
-            for (uint32_t j = 0; j < jTot; ++j) {
-                if (j >= jReal) {
-                    continue; // pad row: no GM row exists
-                }
-                const uint32_t wsRow = (half == 0) ? j : (L.in + j);
-                for (uint32_t g = 0; g < GATES; ++g) {
-                    for (uint32_t s0 = 0; s0 < L.hid; s0 += segW) {
-                        const uint32_t sn = (L.hid - s0 < segW) ? (L.hid - s0) : segW;
-                        const uint32_t snR = (hReal > s0) ? ((hReal - s0 < sn) ? (hReal - s0) : sn) : 0;
-                        if (snR == 0) {
-                            continue; // pad-only segment
-                        }
-                        AscendC::DataCopy(accF, wParFGM[(jBase + j) * n4F + gCol[g] * L.hid + s0], sn);
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                        for (uint32_t c = 1; c < tdp.blockDim; ++c) {
-                            AscendC::DataCopy(
-                                tmpF, wParFGM[(size_t)c * cStride + (jBase + j) * n4F + gCol[g] * L.hid + s0], sn);
-                            AscendC::PipeBarrier<PIPE_ALL>();
-                            AscendC::Add(accF, accF, tmpF, sn);
-                            AscendC::PipeBarrier<PIPE_ALL>();
-                        }
-                        AscendC::DataCopyExtParams po;
-                        po.blockCount = 1;
-                        po.blockLen = snR * sizeof(float);
-                        po.srcStride = 0;
-                        po.dstStride = 0;
-                        AscendC::DataCopyPad(oWRedGM[(size_t)wsRow * rowW + gCol[g] * hReal + s0], accF, po);
-                        AscendC::PipeBarrier<PIPE_ALL>();
+        for (uint32_t rr = rLo; rr < rHi; ++rr) {
+            /* flat real row -> partial/ws row index: half 0 (I rows) maps rr -> rr;
+             * half 1 (H rows) maps rr -> L.in + (rr - iReal). The pad-row gap
+             * [iReal, L.in) has no GM row and is skipped by construction. */
+            const uint32_t rowIdx = (rr < iReal) ? rr : (L.in + (rr - iReal));
+            const uint32_t wsRow = rowIdx;
+            for (uint32_t g = 0; g < GATES; ++g) {
+                for (uint32_t s0 = 0; s0 < L.hid; s0 += segW) {
+                    const uint32_t sn = (L.hid - s0 < segW) ? (L.hid - s0) : segW;
+                    const uint32_t snR = (hReal > s0) ? ((hReal - s0 < sn) ? (hReal - s0) : sn) : 0;
+                    if (snR == 0) {
+                        continue; // pad-only segment
                     }
+                    { /* chunk-0 preload: up to `slots` partials fit the budgeted scratch */
+                        const uint32_t cEnd0 = (slots < tdp.blockDim) ? slots : tdp.blockDim;
+                        for (uint32_t c = 0; c < cEnd0; ++c) {
+                            AscendC::DataCopy(tmpF[(size_t)c * segW],
+                                              wParFGM[(size_t)c * cStride + rowIdx * n4F + gCol[g] * L.hid + s0], sn);
+                        }
+                    }
+                    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    if (tdp.blockDim == 1) {
+                        /* B=1 degenerate shapes: the single partial row IS the
+                         * sum. The pairwise Add below would read the
+                         * UNINITIALIZED slot 1 -- stale VECCALC data. */
+                        AscendC::DataCopy(accF, tmpF[0], sn); /* sn: multiple of 8 (padH), 32B-safe */
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    } else {
+                        /* c0-CHUNKED fold: blockDim partials arrive in ceil(blockDim/slots)
+                         * chunks; first chunk seeds accF, later chunks accumulate.
+                         * Cluster order stays c-ascending across chunks => deterministic. */
+                        bool accValid = false;
+                        for (uint32_t c0 = 0; c0 < tdp.blockDim; c0 += slots) {
+                            const uint32_t cEnd = (c0 + slots < tdp.blockDim) ? (c0 + slots) : tdp.blockDim;
+                            if (!accValid) {
+                                if (cEnd - c0 == 1) {
+                                    AscendC::DataCopy(accF, tmpF[(size_t)(c0 - 0) * segW], sn);
+                                } else {
+                                    AscendC::Add(accF, tmpF[0], tmpF[segW], sn);
+                                    for (uint32_t c = c0 + 2; c < cEnd; ++c) {
+                                        AscendC::Add(accF, accF, tmpF[(size_t)(c - c0) * segW], sn);
+                                    }
+                                }
+                                accValid = true;
+                            } else {
+                                for (uint32_t c = c0; c < cEnd; ++c) {
+                                    AscendC::Add(accF, accF, tmpF[(size_t)(c - c0) * segW], sn);
+                                }
+                            }
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                            if (c0 + slots < tdp.blockDim) {
+                                const uint32_t cNext = c0 + slots;
+                                const uint32_t cEndN = (cNext + slots < tdp.blockDim) ? (cNext + slots) : tdp.blockDim;
+                                for (uint32_t c = cNext; c < cEndN; ++c) {
+                                    AscendC::DataCopy(
+                                        tmpF[(size_t)(c - cNext) * segW],
+                                        wParFGM[(size_t)c * cStride + rowIdx * n4F + gCol[g] * L.hid + s0], sn);
+                                }
+                                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                            }
+                        }
+                    }
+                    AscendC::DataCopyExtParams po;
+                    po.blockCount = 1;
+                    po.blockLen = snR * sizeof(float);
+                    po.srcStride = 0;
+                    po.dstStride = 0;
+                    AscendC::DataCopyPad(oWRedGM[(size_t)wsRow * rowW + gCol[g] * hReal + s0], accF, po);
+                    AscendC::PipeBarrier<PIPE_ALL>();
                 }
             }
         }
@@ -2479,44 +2811,187 @@ __aicore__ inline void ReduceWGrad(AscendC::GlobalTensor<T> oWRedGM, AscendC::Gl
     prF.blockLen = L.hid * sizeof(float);
     prF.srcStride = 0;
     prF.dstStride = 0;
-    for (uint32_t half = 0; half < 2; ++half) {
-        const uint32_t jTot = (half == 0) ? L.in : L.hid;
-        const uint32_t jBase = (half == 0) ? 0 : L.in;
-        const uint32_t jReal = (half == 0) ? iReal : hReal;
-        for (uint32_t j = 0; j < jTot; ++j) {
-            if (j >= jReal) {
-                continue; // pad row: no GM row exists
-            }
-            const uint32_t wsRow = (half == 0) ? j : (L.in + j);
-            for (uint32_t g = 0; g < GATES; ++g) {
-                if constexpr (sizeof(T) == 2) {
-                    /* fp16: partials are stored FP32 (n4/2-strided rows); reduce in
-                     * fp32, single Cast on the packed-T write below. */
-                    AscendC::Duplicate<float>(accF, 0.0f, L.hid);
-                    const uint32_t n4F = GATES * L.hid; // fp32 partial row stride
-                    const uint32_t cStride = (size_t)(L.in + L.hid) * n4F;
-                    for (uint32_t c = 0; c < tdp.blockDim; ++c) {
-                        AscendC::DataCopyPad(tmpF, wParFGM[(size_t)c * cStride + (jBase + j) * n4F + gCol[g] * L.hid],
-                                             prF, AscendC::DataCopyPadExtParams<float>());
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                        AscendC::Add(accF, accF, tmpF, L.hid);
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                    }
-                    AscendC::Cast(acc, accF, AscendC::RoundMode::CAST_RINT, L.hid);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                } else {
-                    AscendC::Duplicate<T>(acc, static_cast<T>(0), L.hid);
-                    for (uint32_t c = 0; c < tdp.blockDim; ++c) {
-                        AscendC::DataCopyPad(tmp,
-                                             wsGM[tdp.offWPar + (size_t)c * (L.in + L.hid) * L.n4 + (jBase + j) * L.n4 +
-                                                  gCol[g] * L.hid],
-                                             pr, AscendC::DataCopyPadExtParams<T>());
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                        AscendC::Add(acc, acc, tmp, L.hid);
-                        AscendC::PipeBarrier<PIPE_ALL>();
+
+    /* ROW-BLOCKED, GATE-MERGED reduction -- taken when the partials are small enough that a
+     * whole block of rows fits in UB twice over.
+     *
+     * WHY: the narrow path reads one (row, gate) of every cluster partial before moving on,
+     * so the DRAM sees `blockDim` interleaved streams that each advance hid*4 bytes and jump
+     * away -- issue/locality-bound, not bandwidth-bound. Reading RB consecutive rows per
+     * cluster visit turns those into few contiguous streams, and merging the four gates
+     * (contiguous in GM: n4F = GATES*hid) cuts the copy and Add count by 4x.
+     *
+     * BIT-EXACT: cluster 0 seeds the accumulator and the rest fold in c-ascending order, so
+     * every output element sees the identical sequence of fp32 adds as the narrow path
+     * (seeding with 0.0f instead would turn -0.0 into +0.0). Gates are independent elements,
+     * so widening the vector reorders nothing.
+     *
+     * GATED on UbFitSlots(n4F) == blockDim -- the same "partials are small" regime where the
+     * reduction is issue-bound. Bandwidth-bound shapes keep the validated path below
+     * byte-for-byte. */
+    {
+        const uint32_t n4F = GATES * L.hid;
+        const size_t cStride = (size_t)(L.in + L.hid) * n4F;
+        const uint32_t ubFloats = static_cast<uint32_t>(ch::CAP_UB / sizeof(float));
+        /* accB / tmpB / acc4 are anchored at VECCALC 0 and must stop below L.t1, where the
+         * function-scope `acc` and `tmp` rows live. */
+        const uint32_t acc4Bytes = GATES * L.hid * sizeof(T);
+        const uint32_t rbReserve = acc4Bytes + 96u;
+        const uint32_t rbCap = (L.t1 > rbReserve) ? (uint32_t)((L.t1 - rbReserve) / sizeof(float)) / (2u * n4F) : 0u;
+        const uint32_t RB = (rbCap > 32u) ? 32u : rbCap; /* 32 rows is already ~34KB per visit */
+        if (UbFitSlots(ubFloats, n4F, tdp.blockDim) == tdp.blockDim && RB >= 2u) {
+            AscendC::LocalTensor<float> accB(AscendC::TPosition::VECCALC, 0, RB * n4F);
+            AscendC::LocalTensor<float> tmpB(AscendC::TPosition::VECCALC, (size_t)RB * n4F * sizeof(float) + 32,
+                                             RB * n4F);
+            /* one Cast slot PER GATE, so the four stores of a row issue back to back with a
+             * single V->MTE3 fence between the casts and the stores, and only one drain per
+             * row for the WAR before the next row's casts. */
+            AscendC::LocalTensor<T> acc4(AscendC::TPosition::VECCALC, (size_t)2u * RB * n4F * sizeof(float) + 64,
+                                         GATES * L.hid);
+            for (uint32_t rr0 = rLo; rr0 < rHi;) {
+                uint32_t rb = rHi - rr0;
+                if (rb > RB) {
+                    rb = RB;
+                }
+                /* never straddle the [iReal, L.in) pad gap -- rowIdx is not contiguous across it */
+                if (rr0 < iReal && rr0 + rb > iReal) {
+                    rb = iReal - rr0;
+                }
+                const uint32_t rowIdx0 = (rr0 < iReal) ? rr0 : (L.in + (rr0 - iReal));
+                const uint32_t n = rb * n4F;
+                const size_t base0 = (size_t)rowIdx0 * n4F;
+                AscendC::DataCopy(accB, wParFGM[base0], n);
+                for (uint32_t c = 1; c < tdp.blockDim; ++c) {
+                    AscendC::DataCopy(tmpB, wParFGM[(size_t)c * cStride + base0], n);
+                    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    AscendC::Add(accB, accB, tmpB, n);
+                    if (c + 1 < tdp.blockDim) { /* WAR: the next cluster refills tmpB */
+                        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
+                        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
                     }
                 }
-                AscendC::DataCopyPad(oWRedGM[(size_t)wsRow * rowW + gCol[g] * hReal], acc, pr);
+                AscendC::PipeBarrier<PIPE_ALL>();
+                for (uint32_t r = 0; r < rb; ++r) {
+                    const size_t rowOff = (size_t)r * n4F;
+                    const size_t dstRow = (size_t)(rowIdx0 + r) * rowW;
+                    if constexpr (sizeof(T) == 2) {
+                        for (uint32_t g = 0; g < GATES; ++g) {
+                            AscendC::Cast(acc4[(size_t)g * L.hid], accB[rowOff + (size_t)gCol[g] * L.hid],
+                                          AscendC::RoundMode::CAST_RINT, L.hid);
+                        }
+                        sh::WaitVToMte3();
+                        for (uint32_t g = 0; g < GATES; ++g) {
+                            AscendC::DataCopyPad(oWRedGM[dstRow + gCol[g] * hReal],
+                                                 acc4[(size_t)g * L.hid].template ReinterpretCast<T>(), pr);
+                        }
+                    } else {
+                        /* fp32: no rounding step, the folded row is written straight out */
+                        for (uint32_t g = 0; g < GATES; ++g) {
+                            AscendC::DataCopyPad(oWRedGM[dstRow + gCol[g] * hReal],
+                                                 accB[rowOff + (size_t)gCol[g] * L.hid].template ReinterpretCast<T>(),
+                                                 pr);
+                        }
+                    }
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                }
+                rr0 += rb;
+            }
+            AscendC::PipeBarrier<PIPE_ALL>();
+            return;
+        }
+    }
+    /* NON-SLAB BATCH reduction (see the slab branch's note): all blockDim cluster
+     * partials are MTE2'd into per-cluster UB slots back-to-back, ONE MTE2->V pair
+     * fences them, the in-order Add chain folds, ONE write per (row, gate). Cluster
+     * order c ascending is preserved => bit-deterministic. The per-cluster slots live
+     * on a widened fp32 scratch (wPar partials are ALWAYS fp32); both dtypes fold in
+     * fp32. */
+    {
+        /* UB-BUDGETED SLOTS (parity with the slab branch): foldF was blockDim*L.hid
+         * raw -- blockDim 31 * hid 2056 * 4B = 257KB OVERFLOWS the 248KB
+         * VECCALC on 32-AIC devices. Cap at what fits; the c0 chunk loop folds
+         * the remainder, order stays c-ascending => deterministic. */
+        const uint32_t ubFloats = static_cast<uint32_t>(ch::CAP_UB / sizeof(float));
+        uint32_t slots = tdp.blockDim;
+        if (slots > 1) {
+            const uint32_t fit = (ubFloats > 2u * L.hid + blg::ALIGN_SLACK) ?
+                                     (ubFloats - 2u * L.hid - blg::ALIGN_SLACK) / L.hid :
+                                     0u;
+            if (slots > fit) {
+                slots = (fit > 1) ? fit : 1;
+            }
+        }
+        AscendC::LocalTensor<float> foldF(AscendC::TPosition::VECCALC, 0, (uint32_t)L.hid * slots + blg::ALIGN_SLACK);
+        AscendC::LocalTensor<float> acc2(AscendC::TPosition::VECCALC, (size_t)L.hid * slots * sizeof(float) + 32,
+                                         L.hid);
+        const uint32_t n4F = GATES * L.hid;
+        const size_t cStride = (size_t)(L.in + L.hid) * n4F;
+        for (uint32_t rr = rLo; rr < rHi; ++rr) {
+            /* flat real row -> partial/ws row index (see the slab path note). */
+            const uint32_t rowIdx = (rr < iReal) ? rr : (L.in + (rr - iReal));
+            const uint32_t wsRow = rowIdx;
+            for (uint32_t g = 0; g < GATES; ++g) {
+                { /* chunk-0 preload */
+                    const uint32_t cEnd0 = (slots < tdp.blockDim) ? slots : tdp.blockDim;
+                    for (uint32_t c = 0; c < cEnd0; ++c) {
+                        AscendC::DataCopy(foldF[(size_t)c * L.hid],
+                                          wParFGM[(size_t)c * cStride + rowIdx * n4F + gCol[g] * L.hid], L.hid);
+                    }
+                }
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                if (tdp.blockDim == 1) {
+                    /* B=1 degenerate shapes: the single partial row IS the sum;
+                     * the pairwise Add below would read the never-copied slot 1
+                     * (stale VECCALC data). Mirrors the slab branch's guard. */
+                    AscendC::DataCopy(acc2, foldF[0], L.hid); /* hid: multiple of 8, 32B-safe */
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                } else {
+                    /* c0-CHUNKED fold (see the slab branch): slots-capped batches,
+                     * acc2 carries across chunks, order stays c-ascending. */
+                    bool accValid = false;
+                    for (uint32_t c0 = 0; c0 < tdp.blockDim; c0 += slots) {
+                        const uint32_t cEnd = (c0 + slots < tdp.blockDim) ? (c0 + slots) : tdp.blockDim;
+                        if (!accValid) {
+                            if (cEnd - c0 == 1) {
+                                AscendC::DataCopy(acc2, foldF[0], L.hid);
+                            } else {
+                                AscendC::Add(acc2, foldF[0], foldF[L.hid], L.hid);
+                                for (uint32_t c = c0 + 2; c < cEnd; ++c) {
+                                    AscendC::Add(acc2, acc2, foldF[(size_t)(c - c0) * L.hid], L.hid);
+                                }
+                            }
+                            accValid = true;
+                        } else {
+                            for (uint32_t c = c0; c < cEnd; ++c) {
+                                AscendC::Add(acc2, acc2, foldF[(size_t)(c - c0) * L.hid], L.hid);
+                            }
+                        }
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        if (c0 + slots < tdp.blockDim) {
+                            const uint32_t cNext = c0 + slots;
+                            const uint32_t cEndN = (cNext + slots < tdp.blockDim) ? (cNext + slots) : tdp.blockDim;
+                            for (uint32_t c = cNext; c < cEndN; ++c) {
+                                AscendC::DataCopy(foldF[(size_t)(c - cNext) * L.hid],
+                                                  wParFGM[(size_t)c * cStride + rowIdx * n4F + gCol[g] * L.hid], L.hid);
+                            }
+                            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                        }
+                    }
+                }
+                if constexpr (sizeof(T) == 2) {
+                    AscendC::Cast(acc, acc2, AscendC::RoundMode::CAST_RINT, L.hid);
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                } else {
+                    /* fp32: acc aliases acc2's bytes via a same-base float view; the
+                     * padded row stride of the wPar region makes a direct DataCopy
+                     * from acc2 equivalent to the old acc path. */
+                }
+                AscendC::DataCopyPad(
+                    oWRedGM[(size_t)wsRow * rowW + gCol[g] * hReal],
+                    (sizeof(T) == 2) ? acc.template ReinterpretCast<T>() : acc2.template ReinterpretCast<T>(), pr);
                 AscendC::PipeBarrier<PIPE_ALL>();
             }
         }
@@ -2544,21 +3019,54 @@ __aicore__ inline void ReduceBGrad(AscendC::GlobalTensor<IT> oBGM, AscendC::Glob
     if (L.recSlab) {
         /* the [4H] packed staging row cannot exist at slab scale (it alone is. */
         const uint32_t segW = (L.hid < PEEP_MAX_SEG) ? L.hid : PEEP_MAX_SEG;
+        /* BATCH: all rows' MTE2 copies into per-row UB slots back-to-back, ONE
+         * MTE2->V pair, in-order Add chain, one write -- replaces the per-row
+         * DataCopy+Add+PIPE_ALL triple (worker-0-only path, ~3 barriers x rows).
+         * Row order c ascending preserved => bit-deterministic. */
         AscendC::LocalTensor<float> accS(AscendC::TPosition::VECCALC, 0, segW);
-        AscendC::LocalTensor<float> tmpS(AscendC::TPosition::VECCALC, segW * sizeof(float), segW);
         const uint32_t cStrideS = GATES * L.hid; // fp32 partial row stride
-        /* rows are (s, chunk, worker)-disjoint -- sum the whole
-         * [workers * steps * rowChunks] set. */
         const uint32_t rows = tdp.blockDim * 2 * L.steps * L.rowChunks;
+        /* chunk the row set so slotN*segW stays inside a bounded scratch;
+         * ubSlots bounds accS + tmpS to RED_UB_ELEMS (see its note) */
+        const uint32_t ubSlots = (RED_UB_ELEMS > 2 * segW) ? ((RED_UB_ELEMS - 2 * segW) / segW) : 1;
+        uint32_t slotCap = (rows < (BRED_BATCH_SLOTS)) ? rows : BRED_BATCH_SLOTS;
+        if (slotCap > ubSlots) {
+            slotCap = ubSlots;
+        }
+        if (slotCap < 1) {
+            slotCap = 1;
+        }
+        AscendC::LocalTensor<float> tmpS(AscendC::TPosition::VECCALC, segW * sizeof(float),
+                                         (uint32_t)segW * slotCap + blg::ALIGN_SLACK);
         for (uint32_t s0 = 0; s0 < L.n4; s0 += segW) {
             const uint32_t sn = (L.n4 - s0 < segW) ? (L.n4 - s0) : segW;
-            AscendC::DataCopy(accS, bParFGM[s0], sn);
-            AscendC::PipeBarrier<PIPE_ALL>();
-            for (uint32_t c = 1; c < rows; ++c) {
-                AscendC::DataCopy(tmpS, bParFGM[(size_t)c * cStrideS + s0], sn);
-                AscendC::PipeBarrier<PIPE_ALL>();
-                AscendC::Add(accS, accS, tmpS, sn);
-                AscendC::PipeBarrier<PIPE_ALL>();
+            for (uint32_t c0 = 0; c0 < rows; c0 += slotCap) {
+                const uint32_t cn = (rows - c0 < slotCap) ? (rows - c0) : slotCap;
+                for (uint32_t c = 0; c < cn; ++c) {
+                    AscendC::DataCopy(tmpS[(size_t)c * segW], bParFGM[(size_t)(c0 + c) * cStrideS + s0], sn);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                /* Chunk-fold structure (mirrors ReducePeepGrad's): c0==0 INITIALISES
+                 * accS for this segment, c0>0 ACCUMULATES into it. */
+                if (c0 == 0) {
+                    if (cn < 2) {
+                        AscendC::DataCopy(accS, tmpS[0], sn);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    } else {
+                        AscendC::Add(accS, tmpS[0], tmpS[segW], sn);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        for (uint32_t c = 2; c < cn; ++c) {
+                            AscendC::Add(accS, accS, tmpS[(size_t)c * segW], sn);
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    }
+                } else {
+                    for (uint32_t c = 0; c < cn; ++c) {
+                        AscendC::Add(accS, accS, tmpS[(size_t)c * segW], sn);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                }
             }
             AscendC::DataCopy(bParFGM[s0], accS, sn);
             AscendC::PipeBarrier<PIPE_ALL>();
@@ -2572,16 +3080,44 @@ __aicore__ inline void ReduceBGrad(AscendC::GlobalTensor<IT> oBGM, AscendC::Glob
     AscendC::LocalTensor<IT> all = allF.template ReinterpretCast<IT>();
     const uint32_t hReal = tdp.hiddenSize;
     const uint32_t cStride = GATES * L.hid; // fp32 partial row stride
-    for (uint32_t g = 0; g < GATES; ++g) {
-        AscendC::Duplicate<float>(acc, 0.0f, L.hid);
-        for (uint32_t c = 0; c < tdp.blockDim * 2; ++c) {
-            AscendC::DataCopy(tmp, bParFGM[(size_t)c * cStride + g * L.hid], L.hid);
-            AscendC::PipeBarrier<PIPE_ALL>();
-            AscendC::Add(acc, acc, tmp, L.hid);
-            AscendC::PipeBarrier<PIPE_ALL>();
+    {
+        /* BATCH (see the slab branch's note): blockDim*2 partial rows into slots,
+         * one MTE2->V pair, in-order Add chain. */
+        const uint32_t rows2 = tdp.blockDim * 2;
+        uint32_t cap2 = (rows2 < BRED_BATCH_SLOTS) ? rows2 : BRED_BATCH_SLOTS;
+        const uint32_t ubSlots2 = (RED_UB_ELEMS > L.hid) ? (RED_UB_ELEMS / L.hid) : 1;
+        if (cap2 > ubSlots2) {
+            cap2 = ubSlots2;
         }
-        for (uint32_t j = 0; j < hReal; ++j) {
-            all.SetValue(gCol[g] * hReal + j, static_cast<IT>(acc.GetValue(j)));
+        if (cap2 < 1) {
+            cap2 = 1;
+        }
+        AscendC::LocalTensor<float> foldB(AscendC::TPosition::VECCALC, 0, (uint32_t)L.hid * cap2 + blg::ALIGN_SLACK);
+        for (uint32_t g = 0; g < GATES; ++g) {
+            for (uint32_t c0 = 0; c0 < rows2; c0 += cap2) {
+                const uint32_t cnt = (rows2 - c0 < cap2) ? (rows2 - c0) : cap2;
+                for (uint32_t c = 0; c < cnt; ++c) {
+                    AscendC::DataCopy(foldB[(size_t)c * L.hid], bParFGM[(size_t)(c0 + c) * cStride + g * L.hid], L.hid);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                if (c0 == 0) {
+                    AscendC::Add(acc, foldB[0], foldB[L.hid], L.hid);
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                    for (uint32_t c = 2; c < cnt; ++c) {
+                        AscendC::Add(acc, acc, foldB[(size_t)c * L.hid], L.hid);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                } else {
+                    for (uint32_t c = 0; c < cnt; ++c) {
+                        AscendC::Add(acc, acc, foldB[(size_t)c * L.hid], L.hid);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                }
+            }
+            for (uint32_t j = 0; j < hReal; ++j) {
+                all.SetValue(gCol[g] * hReal + j, static_cast<IT>(acc.GetValue(j)));
+            }
         }
     }
     AscendC::PipeBarrier<PIPE_ALL>();
@@ -2622,17 +3158,51 @@ __aicore__ inline void ReducePeepGrad(__gm__ IT* wciOut, __gm__ IT* wcfOut, __gm
             pp.blockCount = 1;
             pp.srcStride = 0;
             pp.dstStride = 0;
+            /* BATCH (see ReduceWGrad/ReduceBGrad's note): all workers' partial rows
+             * into per-row UB slots back-to-back, ONE MTE2->V pair, in-order Add
+             * chain -- replaces the per-row DataCopy+Add+PIPE_ALL triples. Worker
+             * order c ascending preserved => bit-deterministic. */
+            uint32_t pCap = (workers < BRED_BATCH_SLOTS) ? workers : BRED_BATCH_SLOTS;
+            /* foldP MUST start after accS/tmpS/ostF (3*segW): at offset 0 it overlays
+             * accS and every chunk's slot-0 copy clobbers the accumulated sum. The
+             * other batched reductions all place their slot array strictly after the
+             * accumulator. */
+            const uint32_t ubSlotsP = (RED_UB_ELEMS > 5 * segW) ? ((RED_UB_ELEMS - 5 * segW) / segW) : 1;
+            if (pCap > ubSlotsP) {
+                pCap = ubSlotsP; /* keep accS+tmpS+ostF+foldP inside RED_UB_ELEMS */
+            }
+            if (pCap < 1) {
+                pCap = 1;
+            }
+            /* 4*segW: past accS(0) + tmpS(segW) + ostF(2*segW, size segW+ALIGN_SLACK
+             * -- 3*segW is NOT enough, its ALIGN_SLACK tail reaches into 3*segW+16). */
+            AscendC::LocalTensor<float> foldP(AscendC::TPosition::VECCALC, 4 * segW * sizeof(float),
+                                              (uint32_t)segW * pCap + blg::ALIGN_SLACK);
             for (uint32_t s0 = 0; s0 < L.hid; s0 += segW) {
                 const uint32_t sn = (L.hid - s0 < segW) ? (L.hid - s0) : segW;
                 const uint32_t snR = (tdp.hiddenSize > s0) ? ((tdp.hiddenSize - s0 < sn) ? (tdp.hiddenSize - s0) : sn) :
                                                              0;
-                AscendC::DataCopy(accS, peepFGM[(size_t)p * L.hid + s0], sn);
-                AscendC::PipeBarrier<PIPE_ALL>();
-                for (uint32_t c = 1; c < workers; ++c) {
-                    AscendC::DataCopy(tmpS, peepFGM[(size_t)c * 3 * L.hid + p * L.hid + s0], sn);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    AscendC::Add(accS, accS, tmpS, sn);
-                    AscendC::PipeBarrier<PIPE_ALL>();
+                for (uint32_t c0 = 0; c0 < workers; c0 += pCap) {
+                    const uint32_t cnt = (workers - c0 < pCap) ? (workers - c0) : pCap;
+                    for (uint32_t c = 0; c < cnt; ++c) {
+                        AscendC::DataCopy(foldP[(size_t)c * segW],
+                                          peepFGM[(size_t)(c0 + c) * 3 * L.hid + p * L.hid + s0], sn);
+                    }
+                    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                    if (c0 == 0) {
+                        AscendC::Add(accS, foldP[0], foldP[segW], sn);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        for (uint32_t c = 2; c < cnt; ++c) {
+                            AscendC::Add(accS, accS, foldP[(size_t)c * segW], sn);
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    } else {
+                        for (uint32_t c = 0; c < cnt; ++c) {
+                            AscendC::Add(accS, accS, foldP[(size_t)c * segW], sn);
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    }
                 }
                 if (snR == 0) {
                     continue; // pad-only segment: no output columns

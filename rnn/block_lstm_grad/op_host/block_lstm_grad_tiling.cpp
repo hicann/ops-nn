@@ -332,22 +332,27 @@ static ge::graphStatus TilingFuncGrad(gert::TilingContext* context)
      * kernel (the binary pipeline injects DTYPE_X per variant; the compute chain is
      * always fp32), so there is no runtime dtype left to key on. */
 
-    /* The grid upper bound is the probed AIC (cube) core count MINUS ONE. The hardware
-     * cross-core grid barrier (SyncAll -> ffts_cross_core_sync) deadlocks when the grid
-     * is FULLY packed (blockDim == coreCount: 28 AIC / 56 AIV on 957x, none spare), so
-     * one AIC is left idle for the barrier. blockDim 27 is clean, 28 hangs, on 957x. */
+    /* The grid upper bound is the probed AIC (cube) core count -- ALL of it.
+     *
+     * A flag-counting grid barrier (SyncAll -> ffts_cross_core_sync) only reaches its count
+     * if every launched core is resident, and on 950 the stream scheduler may not dispatch
+     * the last one -- hence the historical aicNum-1 with one AIC idle. The batch schedule
+     * mode requested below (SetScheduleMode(1)) guarantees all launched cores are
+     * co-resident, so the full pack is stable and keeping a spare core idle was costing a
+     * quarter of the kernel. */
     uint32_t aicNum = 0;
     const auto* gradCi = context->GetCompileInfo<BlockLstmGradCompileInfo>();
     if (gradCi != nullptr && gradCi->coreNumAic > 0) {
         aicNum = static_cast<uint32_t>(gradCi->coreNumAic);
     }
-    const uint32_t hangSafeCores = (aicNum > 1) ? (aicNum - 1) : ((aicNum == 1) ? 1 : blg::MAX_CLUSTERS);
+    const uint32_t hangSafeCores = (aicNum > 1) ? (aicNum) :
+                                                  ((aicNum == 1) ? 1 : blg::MAX_CLUSTERS); /* EXPERIMENT: full pack */
     /* RAGGED batch split (regbase arch35-rnn-tiling-strategy §1.1 "host 手算"): each core
      * carries ceil(B/usedCore) rows, blockDim = ceil(B/mBlkFull) exactly covers B (no idle
      * core, only a ragged LAST core). blockDim = min(B, cap) is WRONG -- it OVER-PROVISIONS
      * cores when B < cap*mBlkFull, leaving idle cores that trap the device. */
-    const uint32_t mBlkFull = (B + hangSafeCores - 1) / hangSafeCores; // ceil(B / cap)
-    const uint32_t blockDim = (B + mBlkFull - 1) / mBlkFull;           // ceil(B/mBlkFull), no idle
+    uint32_t mBlkFull = (B + hangSafeCores - 1) / hangSafeCores; // ceil(B / cap)
+    uint32_t blockDim = (B + mBlkFull - 1) / mBlkFull;           // ceil(B/mBlkFull), no idle
     /* PAD-TO-DIVISIBLE (regbase example/README.md tail contract: pad-M-up, never read the
      * padding; bwd_loop_impl.h: "mBlk MUST divide the batch exactly -- the host picks a
      * divisor instead"): the batch axis of every batch-strided WS plane is padded up to
@@ -355,16 +360,62 @@ static ge::graphStatus TilingFuncGrad(gert::TilingContext* context)
      * runs at the CONSTANT mBlk/mClus (runtime mBlkActual/mClusActual shrinking broke the
      * parent-vs-child NZ stride). Phase 0 zero-fills the [B, paddedB) tail; GM-output
      * writes clamp at the real B. */
-    const uint32_t paddedB = blockDim * mBlkFull;
+    uint32_t paddedB = blockDim * mBlkFull;
     uint32_t mBlk = 0, tcX = 0, iChunk = 0, tcW = 0, jChunk = 0;
     OP_CHECK_IF(mBlkFull == 0, OP_LOGE(context->GetNodeName(), "[BlockLstmGrad] no rows-per-cluster for this batch"),
                 return ge::GRAPH_FAILED);
     /* Find the largest UB-feasible CHUNK mBlk (a divisor of mBlkFull, so a cluster tiles
      * into exact chunks; the LAST cluster's ragged remainder is clamped in the kernel). */
-    OP_CHECK_IF(!blg::PickGradRowChunk(B, padI, padH, T, seqLenMax, mBlkFull, &mBlk, &tcX, &iChunk, &tcW, &jChunk, c0),
+    bool xhtBlocked = false;
+    OP_CHECK_IF(!blg::PickGradRowChunk(B, padI, padH, T, seqLenMax, mBlkFull, &mBlk, &tcX, &iChunk, &tcW, &jChunk, c0,
+                                       &xhtBlocked),
                 OP_LOGE(context->GetNodeName(),
                         "[BlockLstmGrad] no row-chunked tiling fits on chip (even with the K-streamed recurrence)"),
                 return ge::GRAPH_FAILED);
+    /* DEGENERATE-DIVISOR RESCUE: ceil(B/cores) can be divisor-hostile -- e.g. B16384/28
+     * = 586 = 2*293, every divisor above 2 overruns UB, so the search collapses to mBlk=2
+     * and the whole B axis runs as hundreds of rounds of M=2 micro-GEMMs with per-round
+     * W-restage, handshakes and drains. Rounding mBlkFull up a few rows reaches smooth
+     * numbers whose mBlk fits UB, collapsing rowChunks/recSplit/accInter to ~1. pad-to-
+     * divisible already carries extra rows (phase-0 zero-fill + GM-write clamp), so the
+     * only cost is ~2% padding compute. Engaged ONLY when the base layout is degenerate
+     * (mBlk < 16); healthy layouts keep their exact previous tiling bit-for-bit. TRIGGER
+     * is divisor-COLLAPSE only (mBlk < mBlkFull): a small mBlk that EQUALS mBlkFull is
+     * the healthy per-core row floor of a small batch, not a pathology. mBlkFull >= base
+     * keeps blockDim <= hangSafeCores by construction. Probes write scratch outputs only;
+     * the winner re-runs PickGradRowChunk so tcX/iChunk/tcW/jChunk stay consistent with
+     * the chosen mBlkFull. */
+    if (mBlk < 16u && mBlk < mBlkFull) {
+        uint32_t bestFull = mBlkFull;
+        uint32_t bestBlk = mBlk;
+        for (uint32_t add = 1; add <= 128u; ++add) {
+            const uint32_t mf = mBlkFull + add;
+            uint32_t probeBlk = 0;
+            uint32_t pTcX = 0, pIChunk = 0, pTcW = 0, pJChunk = 0; /* scratch: never touch the live outputs */
+            bool pXht = false;
+            if (!blg::PickGradRowChunk(B, padI, padH, T, seqLenMax, mf, &probeBlk, &pTcX, &pIChunk, &pTcW, &pJChunk, c0,
+                                       &pXht)) {
+                continue;
+            }
+            if (probeBlk >= 16u && probeBlk > bestBlk) {
+                bestBlk = probeBlk;
+                bestFull = mf;
+                if (probeBlk >= 64u) {
+                    break; /* big enough: stop padding rows away */
+                }
+            }
+        }
+        if (bestFull != mBlkFull) {
+            mBlkFull = bestFull;
+            blockDim = (B + mBlkFull - 1) / mBlkFull;
+            paddedB = blockDim * mBlkFull;
+            OP_CHECK_IF(!blg::PickGradRowChunk(B, padI, padH, T, seqLenMax, mBlkFull, &mBlk, &tcX, &iChunk, &tcW,
+                                               &jChunk, c0, &xhtBlocked),
+                        OP_LOGE(context->GetNodeName(),
+                                "[BlockLstmGrad] degenerate-divisor rescue failed to re-pick the tiling"),
+                        return ge::GRAPH_FAILED);
+        }
+    }
     OP_CHECK_IF(
         mBlkFull % mBlk != 0,
         OP_LOGE(context->GetNodeName(), "[BlockLstmGrad] the UB-feasible chunk does not divide the cluster rows"),
@@ -390,7 +441,7 @@ static ge::graphStatus TilingFuncGrad(gert::TilingContext* context)
      * seqMax with the runtime seq_len_max value (sizes are T-driven, so any
      * runtime seqLenMax <= T stays in budget). */
     td->layout = blg::MakeLayout(paddedB, padI, padH, T, seqLenMax, mBlk, tcX, iChunk, tcW, jChunk, mBlkFull, rowChunks,
-                                 0, B);
+                                 0, B, xhtBlocked);
     OP_CHECK_IF(!td->layout.ok,
                 OP_LOGE(context->GetNodeName(), "[BlockLstmGrad] the on-chip layout does not fit (recheck)"),
                 return ge::GRAPH_FAILED);
@@ -436,11 +487,8 @@ static ge::graphStatus TilingFuncGrad(gert::TilingContext* context)
 
     td->offDg = off;
     off += (size_t)T * paddedB * blg::GATES * padH;
-    td->offXhT = off;
-    /* per-cluster xh^T staging holds the CLUSTER's full rows (rowsPerBlock = mBlkFull),
-     * not just one recurrence chunk -- all the cluster's chunks accumulate into it. */
-    const size_t xhTSize = (size_t)td->blockDim * (padI + padH) * T * td->rowsPerBlock;
-    off += xhTSize;
+    /* No xh^T staging plane: phase C reads the padded x / h planes directly and the GM->L1
+     * load transposes in transit (Dn2Nz). See blg::LoadDwA. */
     td->offWPar = off;
     /* w_grad partials are FP32 in WS for BOTH dtypes (CT == fp32 since the fp32-chain. */
     off += (size_t)td->blockDim * (padI + padH) * blg::GATES * padH;

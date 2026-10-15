@@ -45,10 +45,10 @@ constexpr int kSuccess = 0;
 constexpr int kFailed = -1;
 constexpr float kAtol = 1.0e-4F;
 constexpr float kRtol = 1.0e-4F;
-constexpr int kT = 4;
-constexpr int kB = 4;
-constexpr int kI = 16;
-constexpr int kH = 32;
+int kT = 4;
+int kB = 4;
+int kI = 16;
+int kH = 32;
 
 using ShapeVector = std::vector<int64_t>;
 
@@ -242,8 +242,13 @@ bool CheckTensor(const ge::Tensor& tensor, const ShapeVector& shape, const std::
 
 } // namespace
 
-int main()
+int main(int argc, char* argv[])
 {
+    kT = argc > 1 ? std::atoi(argv[1]) : 4;
+    kB = argc > 2 ? std::atoi(argv[2]) : 4;
+    kI = argc > 3 ? std::atoi(argv[3]) : 16;
+    kH = argc > 4 ? std::atoi(argv[4]) : 32;
+
     std::map<ge::AscendString, ge::AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     ge::Status status = ge::GEInitialize(globalOptions);
     if (status != kSuccess) {
@@ -367,7 +372,8 @@ int main()
         return kFailed;
     }
 
-    std::cout << "Shape, dtype and values PASSED for [4,4,32] (all 7 outputs, T=4 B=4 I=16 H=32)" << std::endl;
+    std::cout << "Shape, dtype and values PASSED (all 7 outputs, T=" << kT << " B=" << kB << " I=" << kI << " H=" << kH
+              << ", atol/rtol=" << kAtol << ")" << std::endl;
     std::cout << "BlockLstm static GEIR verification PASSED" << std::endl;
     return kSuccess;
 }

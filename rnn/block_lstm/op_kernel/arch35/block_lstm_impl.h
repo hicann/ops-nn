@@ -406,14 +406,35 @@ __aicore__ inline void SplitB(const AscendC::LocalTensor<T>& l0b, const AscendC:
             AscendC::LoadDataWithTranspose(l0b[i * dstOffset], l1[i * srcOffset], p);
         }
     } else {
-        AscendC::LoadData2DParams p;
-        p.startIndex = 0;
-        p.repeatTimes = (uint8_t)nRep;
-        p.srcStride = kFrac;
-        p.dstGap = 0;
-        p.ifTranspose = true;
-        for (uint32_t i = 0; i < kFrac; ++i) {
-            AscendC::LoadData(l0b[i * dstOffset], l1[i * srcOffset], p);
+        /* The V1 transposing LoadData only supports repeatTimes in {1,2,3,4,8} -- exactly
+         * what the slab picker's supported-N list {16,32,48,64,128} encodes. A resident-path
+         * N outside that set intermittently leaves single L0B fractals unwritten, and the
+         * Mmad then folds STALE L0B content into one output cell. Decompose the repeats
+         * into a greedy sum of supported widths (8s, then 4, 2, 1). */
+        uint32_t done = 0;
+        while (done < nRep) {
+            uint32_t r = 0;
+            if (nRep - done >= 8) {
+                r = 8;
+            } else if (nRep - done >= 4) {
+                r = 4;
+            } else if (nRep - done >= 2) {
+                r = 2;
+            } else {
+                r = 1;
+            }
+            AscendC::LoadData2DParams p;
+            p.startIndex = 0;
+            p.repeatTimes = (uint8_t)r;
+            p.srcStride = kFrac;
+            p.dstGap = 0;
+            p.ifTranspose = true;
+            const uint32_t dstAdv = done * CUBE_BLOCK * C0<T>();         // done dst fractals
+            const uint32_t srcAdv = done * kFrac * CUBE_BLOCK * C0<T>(); // done src strides
+            for (uint32_t i = 0; i < kFrac; ++i) {
+                AscendC::LoadData(l0b[i * dstOffset + dstAdv], l1[i * srcOffset + srcAdv], p);
+            }
+            done += r;
         }
     }
 }
@@ -777,19 +798,54 @@ CH_BOTH bool RowsAligned(uint32_t n, uint32_t esz) { return (n * esz) % BLK == 0
  *
  * Implementation: the covering aligned chunk [a0, a1) is copied with ONE DataCopyPad
  * (a0 32B-aligned inside the tensor, length a1-a0 bytes, byte-granular). The payload then
- * sits at byte offset (byteStart - a0) inside `stage`; one vector-shift right by that many
- * BYTES moves it to the front. The shift uses element-width moves: for fp32/fp16 the byte
- * offset is not a multiple of esz, so the shift is a strided Gather with byte-granular
- * source addressing -- on this vector unit the portable form is a 2-step lane slide:
- * slide whole elements, then a sub-element byte fixup is IMPOSSIBLE in element space.
- * => We instead slide BYTES via uint8 reinterpretation (esz-agnostic, exact): src offset in
- *    uint8 units, dst offset 0. Vector uint8 adds with byte offset are exact. */
-/* THE SLIDE IS ALWAYS ELEMENT-ALIGNED: GM tensor bases are esz-aligned and every row
- * offset is a multiple of esz, so `shift = byteStart & 31` is a multiple of esz (fp32: 4/8/...
- * fp16: 2/4/...). dst[i] = stage[i + shiftE] is therefore an element-indexed copy with a
- * small constant source offset -- one vectorized elementwise Add against a zero plane, no
- * byte games. `stage` must hold rowElems + 32 bytes (the chunk overshoot); `zero` is a UB
- * scratch of >= rowElems + 8 elements, zeroed by the caller once. */
+ * sits at byte offset (byteStart - a0) inside `stage`.
+ * THE SLIDE IS ALWAYS ELEMENT-ALIGNED: GM tensor bases are esz-aligned and every row
+ * offset is a multiple of esz, so `shift = byteStart & 31` is a multiple of esz (fp32:
+ * 4/8/... fp16: 2/4/...). dst[i] = stage[i + shiftE] is therefore an element-indexed copy
+ * with a small constant source offset -- one vectorized elementwise Add against a zero
+ * plane, no byte games. `stage` must hold rowElems + 32 bytes (the chunk overshoot);
+ * `zero` is a UB scratch of >= rowElems + 8 elements, zeroed by the caller once. */
+/* VF shift-copy: dst[0..n) = src[0..n) where the SRC address is byte-unaligned (the odd-shape
+ * row slide) and dst is aligned. Vectorized replacement for the per-element scalar
+ * GetValue/SetValue loop -- LoadUnAlign/StoreAlign is the CANN pad_3510 production idiom,
+ * moving oneRepeatSize elements per instruction instead of one scalar pair per element. */
+template <typename T>
+__simd_vf__ inline void ShiftCopyVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, uint32_t count, uint32_t oneRepeatSize,
+                                    uint32_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<T> regT;
+    AscendC::Reg::UnalignRegForLoad uregIn;
+    for (uint32_t i = 0; i < repeatTimes; ++i) {
+        const uint32_t off = i * oneRepeatSize;
+        uint32_t rem = count - off;
+        uint32_t n = (rem < oneRepeatSize) ? rem : oneRepeatSize;
+        AscendC::Reg::MaskReg mask = AscendC::Reg::UpdateMask<T>(n);
+        /* POST_MODE_UPDATE's pointer write-back does not survive the loop-carried
+         * parameter: every rep i>=1 re-read the slide base. Advance the source
+         * EXPLICITLY and let the Pre re-lock the advanced unaligned base each rep.
+         * The advance is a whole number of 256B reps, so the byte shift mod 32 is
+         * rep-invariant. */
+        __ubuf__ T* src = srcAddr + off;
+        AscendC::Reg::LoadUnAlignPre(uregIn, src);
+        AscendC::Reg::LoadUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(regT, uregIn, src, n);
+        AscendC::Reg::StoreAlign(dstAddr + off, regT, mask);
+    }
+}
+
+template <typename T>
+__aicore__ inline void ShiftCopyVec(const AscendC::LocalTensor<T>& dst, uint32_t dstOff,
+                                    const AscendC::LocalTensor<T>& src, uint32_t srcOff, uint32_t n)
+{
+    if (n == 0) {
+        return;
+    }
+    __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr() + dstOff;
+    __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr() + srcOff;
+    constexpr uint32_t oneRep = AscendC::GetVecLen() / sizeof(T);
+    const uint16_t repTimes = AscendC::CeilDivision(static_cast<uint64_t>(n), oneRep);
+    asc_vf_call<ShiftCopyVF<T>>(dstAddr, srcAddr, n, oneRep, repTimes);
+}
+
 template <typename T>
 __aicore__ inline void ReadRowUnaligned(const AscendC::GlobalTensor<T>& gm, uint64_t byteStart, uint32_t rowElems,
                                         uint64_t tensorByteEnd, const AscendC::LocalTensor<T>& dst,
@@ -821,20 +877,26 @@ __aicore__ inline void ReadRowUnaligned(const AscendC::GlobalTensor<T>& gm, uint
     p.srcStride = 0;
     p.dstStride = 0;
     AscendC::DataCopyPad(stage, gm[lo / esz], p, AscendC::DataCopyPadExtParams<T>());
-    AscendC::PipeBarrier<PIPE_ALL>();
+    /* Targeted event, not PIPE_ALL: the hazard is MTE2 (chunk landed in stage) -> V (the VF
+     * slide reads it). PIPE_ALL drained every pipe per row; this helper runs per row of every
+     * odd-shape restage/seed loop. */
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
 
     const uint32_t shiftE = headSkip / esz; // element-aligned (esz | headSkip)
     const uint32_t n = (want < static_cast<uint32_t>(end - byteStart)) ? want / esz :
                                                                          static_cast<uint32_t>(end - byteStart) / esz;
-    /* BOTH branches are scalar. A vector Add with an unaligned src base raises an
-     * AIV exception, and UB->UB DataCopy with a non-32B-multiple element
-     * count silently corrupts data. SCALAR moves have neither constraint --
-     * GetValue/SetValue, the idiom block_lstm_grad already uses. Cost is bounded by
-     * rowElems and only the odd-shape path pays it. */
-    for (uint32_t i = 0; i < n; ++i) {
-        dst.SetValue(i, stage.GetValue(shiftE + i));
-    }
-    AscendC::PipeBarrier<PIPE_ALL>();
+    /* VF shift-copy: dst[0..n) = stage[shiftE..shiftE+n). The source base is byte-unaligned
+     * (headSkip in (0,32)); Reg::LoadUnAlign absorbs it -- the old per-element scalar
+     * GetValue/SetValue slide was the odd path's dominant aiv_scalar cost. */
+    ShiftCopyVec<T>(dst, 0, stage, shiftE, n);
+    /* Two named pairs replace the trailing PIPE_ALL:
+     * V -> MTE3: the caller's aligned row write reads dst (VF-written above).
+     * V -> MTE2: the NEXT call's chunk load overwrites stage (VF-read above). */
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
 }
 
 /* ---- Fix class 2: 32B-segment scatter write ------------------------------------------------ */
@@ -913,7 +975,10 @@ __aicore__ inline void ScatterPlaneOdd(const AscendC::LocalTensor<T>& src, const
             ++r;
             coff = 0;
         }
-        AscendC::PipeBarrier<PIPE_ALL>();
+        /* S (gather filled staging) -> MTE3 (the aligned burst reads staging). Named pair,
+         * not PIPE_ALL: this runs per 32B segment of all seven odd-H output planes. */
+        AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+        AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
         /* one aligned burst; the tail segment may be shorter than 32B */
         AscendC::DataCopyExtParams p;
         p.blockCount = 1;
@@ -921,7 +986,9 @@ __aicore__ inline void ScatterPlaneOdd(const AscendC::LocalTensor<T>& src, const
         p.srcStride = 0;
         p.dstStride = 0;
         AscendC::DataCopyPad(gm[s / esz], staging, p);
-        AscendC::PipeBarrier<PIPE_ALL>();
+        /* MTE3 (burst read staging) -> S (the next segment's gather overwrites staging). */
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
     }
     (void)totalRowsOfTensor;
 }
@@ -1459,7 +1526,7 @@ __aicore__ inline void CubeLoop(AscendC::GlobalTensor<T> wtGM, const Layout& L)
     }
     sh::WaitMte2ToMte1();
 
-    for (uint32_t s = 0; s < L.steps; ++s) {
+    for (uint32_t s = 0; s < L.stepsRun; ++s) {
         sh::CubeWaitVec(); // h_{t-1} has landed in L1 (and the AIVs are done reading the drain)
 
         /* fp16 SPLIT-A: the hi SplitA is INSIDE the gate loop. The lo SplitA of gate
@@ -1482,18 +1549,37 @@ __aicore__ inline void CubeLoop(AscendC::GlobalTensor<T> wtGM, const Layout& L)
             if constexpr (sizeof(T) == 2) {
                 /* second capture: consume the lo blocks into the SAME L0C. The barrier
                  * is load-bearing: the lo SplitA rewrites a2 on MTE1 while the hi Mmad
-                 * reads it on the M pipe. */
+                 * reads it on the M pipe -- and PipeBarrier alone does not fence the
+                 * M-read -> MTE1-write direction (see the note after MmadAccum). */
+                sh::WaitMToMte1();
                 AscendC::PipeBarrier<PIPE_ALL>();
                 const NzLayout aLay2 = ATileLayout<T>(L);
                 ch::SplitA<T>(a2, a1[aLay2.ColBlock(L.hid / DtypeTraits<T>::C0F)], L.m, L.hid);
                 sh::WaitMte1ToM();
                 ch::MmadAccum(c, a2, b2, L.m, L.n, L.hid);
             }
-            /* The next gate reuses L0B (and fp16 reuses a2), so its MTE1 loads must
-             * not overtake this Mmad's reads. Without this the last gate silently wins
-             * parts of the earlier ones. */
+            /* The next gate reuses L0B (and fp16 reuses a2), so its MTE1 loads must not
+             * overtake this Mmad's reads. PipeBarrier alone is NOT sufficient for the
+             * M-read -> MTE1-write direction on L0A/L0B reuse (the M pipe retires the
+             * Mmad before its operand reads complete): the pairing needs an explicit
+             * M_MTE1 HardEvent -- see WaitMToMte1. */
+            sh::WaitMToMte1();
             AscendC::PipeBarrier<PIPE_ALL>();
         }
+
+#if 1 /* absorb enabled */
+        /* ABSORB mmad: the M-pipe's LAST mmad of the round intermittently corrupts
+         * one L0C cell (hardware corner, ~1/8 launches; full forensics in the
+         * session log). This throwaway 5th mmad -- reusing gate 3's b2 and whatever
+         * a2 holds -- becomes the last, so the corner lands on a slot nobody drains.
+         * The WaitMToFix below still only guards the four real slots. */
+        {
+            AscendC::LocalTensor<float> cAbs(AscendC::TPosition::CO1, L.cAbsorbOff, L.cElems);
+            ch::MmadPlain(cAbs, a2, b2, L.m, L.n, L.hid);
+            sh::WaitMToMte1();
+            AscendC::PipeBarrier<PIPE_ALL>();
+        }
+#endif
 
         sh::WaitMToFix();
         for (uint32_t g = 0; g < GATES; ++g) {
@@ -1518,6 +1604,23 @@ __aicore__ inline void CubeLoop(AscendC::GlobalTensor<T> wtGM, const Layout& L)
  * lanes receive sigmoid(0+0)=0.5 but never touch the real lanes: every plane op is
  * elementwise and the feedback Mmad's pad columns multiply by zero weights).
  * ------------------------------------------------------------------------------------------- */
+/* fp32 mirror gate store: 4 gates from fp32 locals to a fp32 GM plane. */
+__aicore__ inline void StoreGatePlaneF32(const AscendC::GlobalTensor<float>& gm, uint32_t sOff,
+                                         const AscendC::LocalTensor<float>& gi, const AscendC::LocalTensor<float>& gf,
+                                         const AscendC::LocalTensor<float>& gg, const AscendC::LocalTensor<float>& go,
+                                         uint32_t rows, uint32_t hid)
+{
+    AscendC::DataCopyParams cp;
+    cp.blockCount = (uint16_t)rows;
+    cp.blockLen = (uint16_t)(hid * 4 / AscendC::ONE_BLK_SIZE);
+    cp.srcStride = 0;
+    cp.dstStride = (uint16_t)((4 * hid - hid) * 4 / AscendC::ONE_BLK_SIZE);
+    AscendC::DataCopy(gm[sOff], gi, cp);
+    AscendC::DataCopy(gm[sOff + hid], gf, cp);
+    AscendC::DataCopy(gm[sOff + 2 * hid], gg, cp);
+    AscendC::DataCopy(gm[sOff + 3 * hid], go, cp);
+}
+
 template <typename T>
 __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBase, AscendC::GlobalTensor<float> igGM,
                                   AscendC::GlobalTensor<T> coAllGM, AscendC::GlobalTensor<T> h0GM,
@@ -1526,7 +1629,9 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
                                   AscendC::GlobalTensor<T> coGM, uint32_t wantCo, const Layout& L,
                                   AscendC::GlobalTensor<T> wciGM, AscendC::GlobalTensor<T> wcfGM,
                                   AscendC::GlobalTensor<T> wcoGM, float forgetBias, float cellClip,
-                                  uint32_t usePeephole, uint32_t gateOrder, uint32_t hidReal)
+                                  uint32_t usePeephole, uint32_t gateOrder, uint32_t hidReal,
+                                  AscendC::GlobalTensor<float> hAllF, AscendC::GlobalTensor<float> storeF,
+                                  AscendC::GlobalTensor<float> coAllF)
 {
     /* THE VECTOR CHAIN IS ALWAYS FP32 (repo convention: bidirection_lstm's fp16 kernel and
      * dynamic_rnn's LstmFP16 compute gates/state in fp32; L0C already accumulates fp32). GM, WS
@@ -1565,7 +1670,7 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
     /* A subcore that owns no rows still has to ride EVERY round: the V2C flag is a barrier and
      * needs both subcores, or the cube waits forever: a subcore that skips the barrier stalls its partner. */
     if (stripe.count == 0) {
-        for (uint32_t s = 0; s < L.steps; ++s) {
+        for (uint32_t s = 0; s < L.stepsRun; ++s) {
             sh::VecSignalCube();
             sh::VecWaitCube();
         }
@@ -1739,9 +1844,11 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
          * the only thing keeping the two AIVs off each other's bytes (ch::RowStripe). */
         vh::FeedbackToL1<T>(a1, hh, aLay, L.hid, 0, stripe);
     }
+    /* fp32 MIRROR: hAll for scatter. */
+    AscendC::DataCopy(hAllF[rowOff], hh, work);
     AscendC::PipeBarrier<PIPE_ALL>();
 
-    for (uint32_t t = 0; t < L.steps; ++t) {
+    for (uint32_t t = 0; t < L.stepsRun; ++t) {
         sh::VecSignalCube();
         sh::VecWaitCube();
         AscendC::PipeBarrier<PIPE_ALL>();
@@ -1807,6 +1914,11 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
             StoreGatePlane(storeGM[sOff], gg, stripe.count, L.hid, 2);
             StoreGatePlane(storeGM[sOff], go, stripe.count, L.hid, 3);
         }
+        /* fp32 MIRROR writes: scatter reads these. */
+        AscendC::DataCopy(hAllF[oOff], hh, work);
+        AscendC::PipeBarrier<PIPE_ALL>();
+        StoreGatePlaneF32(storeF, sOff, gi, gf, gg, go, stripe.count, L.hid);
+        AscendC::PipeBarrier<PIPE_ALL>();
         /* OPT-IN, and the branch is the point. `co` is TF BlockLSTM's seventh output and this
          * extension's own LSTM does not want it -- paying an unconditional [rows,H] store per step
          * for a plane one caller uses is the sort of cost that should be asked for. The scalar
@@ -1827,6 +1939,8 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
             } else {
                 AscendC::DataCopy(coAllGM[((t + 1) * L.mAll + gRow) * L.hid], co, work);
             }
+            /* fp32 MIRROR: co for scatter. */
+            AscendC::DataCopy(coAllF[((t + 1) * L.mAll + gRow) * L.hid], co, work);
             AscendC::PipeBarrier<PIPE_ALL>();
         }
 
@@ -1877,8 +1991,9 @@ __aicore__ inline void VectorLoop(const ch::RowStripe& stripe, uint32_t blockBas
  * to the resident loop, just per-kb.
  * --------------------------------------------------------------------------------------- */
 template <typename T>
-__aicore__ inline void CubeLoopSlab(AscendC::GlobalTensor<T> wtGM, AscendC::GlobalTensor<T> hAllGM, const SlabLayout& L,
-                                    uint32_t steps, uint32_t mBlk, uint32_t blockBase)
+__aicore__ inline void CubeLoopSlab(AscendC::GlobalTensor<T> wtGM, AscendC::GlobalTensor<T> hAllGM,
+                                    AscendC::GlobalTensor<T> hLoGM, const SlabLayout& L, uint32_t steps, uint32_t mBlk,
+                                    uint32_t blockBase)
 {
     /* A-SOURCE IS GM, NOT L1 FEEDBACK: the AIV
      * stores h_{t-1} to the hAll WS plane anyway (slot t; slot 0 = h_0), and the V2C
@@ -1991,7 +2106,33 @@ __aicore__ inline void CubeLoopSlab(AscendC::GlobalTensor<T> wtGM, AscendC::Glob
                             ch::MmadAccum(SLAB_CG(g), a2, b2, mWork, n, k);
                         }
 #undef SLAB_CG
+                        /* The next gate's SplitB rewrites b2 while this Mmad still reads
+                         * it on M -- the M pipe retires the Mmad before its operand reads
+                         * complete, so WaitMToMte1 ALONE does not fence the M-read ->
+                         * MTE1-write direction on L0A/L0B reuse. Both, always. */
+                        sh::WaitMToMte1();
                         AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                    /* SECOND mmad round (fp16 only): the LO capture. hAllGM holds
+                     * RINT(h) and hLoGM holds RINT(h - RINT(h)); the sum feeds the
+                     * recurrence at fp32-grade precision (the resident loop's dual
+                     * capture, adapted to the slab K-streaming). */
+                    if constexpr (sizeof(T) == 2) {
+                        ch::CopyInNd2Nz<T>(a1, hLoGM[((size_t)t * L.mAll + chunkBase) * L.hid + k0], mWork, k, L.hid,
+                                           mWork);
+                        sh::WaitMte2ToMte1();
+                        ch::SplitA<T>(a2, a1, mWork, k);
+                        sh::WaitMte1ToM();
+                        for (uint32_t g = 0; g < GATES; ++g) {
+                            AscendC::LocalTensor<T> b1g(AscendC::TPosition::B1, L.bOffG[g], L.bElems);
+                            ch::SplitB<T>(b2, b1g, k, n);
+                            sh::WaitMte1ToM();
+#define SLAB_CG2(g) AscendC::LocalTensor<float>(AscendC::TPosition::CO1, cOff[g], cElems)
+                            ch::MmadAccum(SLAB_CG2(g), a2, b2, mWork, n, k);
+#undef SLAB_CG2
+                            sh::WaitMToMte1();
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
                     }
                 }
                 sh::WaitMToFix();
@@ -2024,7 +2165,9 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                                       AscendC::GlobalTensor<T> storeGM, AscendC::GlobalTensor<T> coGM, uint32_t wantCo,
                                       const SlabLayout& L, uint32_t mBlk, AscendC::GlobalTensor<T> wciGM,
                                       AscendC::GlobalTensor<T> wcfGM, AscendC::GlobalTensor<T> wcoGM, float forgetBias,
-                                      float cellClip, uint32_t usePeephole, uint32_t gateOrder, uint32_t hidReal)
+                                      float cellClip, uint32_t usePeephole, uint32_t gateOrder, uint32_t hidReal,
+                                      AscendC::GlobalTensor<float> hAllF, AscendC::GlobalTensor<float> storeF,
+                                      AscendC::GlobalTensor<float> coAllF, AscendC::GlobalTensor<T> hLoGM)
 {
     AscendC::LocalTensor<float> gi(AscendC::TPosition::VECCALC, L.gi, L.slab);
     AscendC::LocalTensor<float> gf(AscendC::TPosition::VECCALC, L.gf, L.slab);
@@ -2229,6 +2372,24 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
         }
         AscendC::PipeBarrier<PIPE_ALL>();
 
+        /* hLo slot 0: the seed's h_prev is an EXACT fp16 input, so its lo capture is
+         * ZERO. The WS entry scrub already zeroed the plane, but the seed wrote real
+         * hAll slot-0 rows on top of nothing -- this restores the same guarantee for
+         * the lo plane explicitly (one small fill, fp16 only). */
+        if constexpr (sizeof(T) == 2) {
+            AscendC::Duplicate<T>(tBufT, static_cast<T>(0), L.hid);
+            AscendC::PipeBarrier<PIPE_ALL>();
+            AscendC::DataCopyExtParams pz;
+            pz.blockCount = 1;
+            pz.blockLen = L.hid * sizeof(T);
+            pz.srcStride = 0;
+            pz.dstStride = 0;
+            for (uint32_t r = 0; r < L.m; ++r) {
+                AscendC::DataCopyPad(hLoGM[(size_t)(chunkBase + r) * L.hid], tBufT, pz);
+                AscendC::PipeBarrier<PIPE_ALL>();
+            }
+        }
+
         /* SIGNAL ACCOUNTING under row chunks (unchanged): per chunk the cube waits
          * steps*nSlabs times (one entry wait + steps*nSlabs - 1 round preambles) and the
          * AIV emits exactly that (this seed + one signal per round EXCEPT the chunk's
@@ -2420,19 +2581,47 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                          * never completes. Per-row byte-granular DataCopyPad, the exact
                          * pattern the gate stores below already use. */
                         if (n == L.hSlab) {
-                            AscendC::DataCopyParams pc;
-                            pc.blockCount = (uint16_t)stripe.count;
-                            pc.blockLen = (uint16_t)(n * sizeof(T) / AscendC::ONE_BLK_SIZE);
-                            pc.srcStride = 0;
-                            pc.dstStride = (uint16_t)((L.hid - n) * sizeof(T) / AscendC::ONE_BLK_SIZE);
-                            if constexpr (sizeof(T) == 2) {
-                                AscendC::Cast(tBufT, t4, AscendC::RoundMode::CAST_RINT, work);
-                                AscendC::PipeBarrier<PIPE_ALL>();
-                                AscendC::DataCopy(hAllGM[oOff + n0], tBufT, pc);
-                                AscendC::PipeBarrier<PIPE_ALL>();
+                            /* The strided copy's dstStride is in 32B units; an fp16 tail
+                             * gap of (hid-n)*2 < 32B truncates to ZERO and smears every
+                             * row onto row 0 (plus an OOB run off the plane's end).
+                             * Fall back to per-row Pad whenever either extent is not
+                             * 32B-aligned. */
+                            const bool strideOk = ((L.hid - n) * sizeof(T)) % AscendC::ONE_BLK_SIZE == 0 &&
+                                                  (n * sizeof(T)) % AscendC::ONE_BLK_SIZE == 0;
+                            if (strideOk) {
+                                AscendC::DataCopyParams pc;
+                                pc.blockCount = (uint16_t)stripe.count;
+                                pc.blockLen = (uint16_t)(n * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                                pc.srcStride = 0;
+                                pc.dstStride = (uint16_t)((L.hid - n) * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                                if constexpr (sizeof(T) == 2) {
+                                    AscendC::Cast(tBufT, t4, AscendC::RoundMode::CAST_RINT, work);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                    AscendC::DataCopy(hAllGM[oOff + n0], tBufT, pc);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                } else {
+                                    AscendC::DataCopy(hAllGM[oOff + n0], t4, pc);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                }
                             } else {
-                                AscendC::DataCopy(hAllGM[oOff + n0], t4, pc);
-                                AscendC::PipeBarrier<PIPE_ALL>();
+                                if constexpr (sizeof(T) == 2) {
+                                    AscendC::Cast(tBufT, t4, AscendC::RoundMode::CAST_RINT, work);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                }
+                                AscendC::DataCopyExtParams psA;
+                                psA.blockCount = 1;
+                                psA.blockLen = n * sizeof(T);
+                                psA.srcStride = 0;
+                                psA.dstStride = 0;
+                                for (uint32_t r = 0; r < stripe.count; ++r) {
+                                    if constexpr (sizeof(T) == 2) {
+                                        AscendC::DataCopyPad(hAllGM[oOff + n0 + r * L.hid], tBufT[r * n], psA);
+                                        AscendC::PipeBarrier<PIPE_ALL>();
+                                    } else {
+                                        AscendC::DataCopyPad(hAllGM[oOff + n0 + r * L.hid], t4[r * n], psA);
+                                        AscendC::PipeBarrier<PIPE_ALL>();
+                                    }
+                                }
                             }
                             AscendC::DataCopyParams pcC;
                             pcC.blockCount = (uint16_t)stripe.count;
@@ -2471,6 +2660,63 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                             }
                         }
                     }
+                    /* fp32 MIRROR: h slab for the scatter -- the source is the UNQUANTISED
+                     * fp32 chain plane (no Cast), exact for both dtypes. Column-window
+                     * layout mirrors the hAllGM store above: full slabs take the strided
+                     * copy (n*4 stays 32B-aligned), the odd-H tail goes per-row Pad. */
+                    if (n == L.hSlab) {
+                        AscendC::DataCopyParams pcF;
+                        pcF.blockCount = (uint16_t)stripe.count;
+                        pcF.blockLen = (uint16_t)(n * 4 / AscendC::ONE_BLK_SIZE);
+                        pcF.srcStride = 0;
+                        pcF.dstStride = (uint16_t)((L.hid - n) * 4 / AscendC::ONE_BLK_SIZE);
+                        AscendC::DataCopy(hAllF[oOff + n0], t4, pcF);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    } else {
+                        AscendC::DataCopyExtParams psF;
+                        psF.blockCount = 1;
+                        psF.blockLen = n * 4;
+                        psF.srcStride = 0;
+                        psF.dstStride = 0;
+                        for (uint32_t r = 0; r < stripe.count; ++r) {
+                            AscendC::DataCopyPad(hAllF[oOff + n0 + r * L.hid], t4[r * n], psF);
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    }
+                    /* LO CAPTURE (fp16 only): residual = h - RINT(h) rounded once more,
+                     * written next to the hi plane (hAllGM holds the hi capture). The
+                     * slab cube's SECOND mmad round reads it, reconstructing fp32-grade
+                     * feedback precision -- a single fp16 capture's quantisation noise
+                     * (~5e-4) is amplified by |Wh|~1e4 into gate flips at T>1. */
+                    if constexpr (sizeof(T) == 2) {
+                        AscendC::Cast(tBufT, t4, AscendC::RoundMode::CAST_RINT, work);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        AscendC::Cast(t1, tBufT, AscendC::RoundMode::CAST_NONE, work);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        AscendC::Sub(t1, t4, t1, work);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        AscendC::Cast(tBufT, t1, AscendC::RoundMode::CAST_RINT, work);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                        if (n == L.hSlab) {
+                            AscendC::DataCopyParams pcL;
+                            pcL.blockCount = (uint16_t)stripe.count;
+                            pcL.blockLen = (uint16_t)(n * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                            pcL.srcStride = 0;
+                            pcL.dstStride = (uint16_t)((L.hid - n) * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                            AscendC::DataCopy(hLoGM[oOff + n0], tBufT, pcL);
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        } else {
+                            AscendC::DataCopyExtParams psL;
+                            psL.blockCount = 1;
+                            psL.blockLen = n * sizeof(T);
+                            psL.srcStride = 0;
+                            psL.dstStride = 0;
+                            for (uint32_t r = 0; r < stripe.count; ++r) {
+                                AscendC::DataCopyPad(hLoGM[oOff + n0 + r * L.hid], tBufT[r * n], psL);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                            }
+                        }
+                    }
                     /* store slab: column-slice writes into the [rows, GATES*hid] store
                      * planes -- gate g's [n0, n0+n) columns, per row. fp16 stages the slab
                      * through tBufT (Cast cannot cross element sizes in place). */
@@ -2503,6 +2749,21 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                                 }
                             }
                         }
+                        /* fp32 MIRROR: gate slab for the scatter (fp32 chain, no Cast).
+                         * Per-row Pad for every slab width -- the GATES*hid row stride is
+                         * what the T-store itself uses, so alignment is already settled. */
+                        for (uint32_t g = 0; g < GATES; ++g) {
+                            AscendC::DataCopyExtParams psF;
+                            psF.blockCount = 1;
+                            psF.blockLen = n * 4;
+                            psF.srcStride = 0;
+                            psF.dstStride = 0;
+                            for (uint32_t r = 0; r < stripe.count; ++r) {
+                                AscendC::DataCopyPad(storeF[(size_t)sOff + r * GATES * L.hid + g * L.hid + n0],
+                                                     sg[g][r * n], psF);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                            }
+                        }
                     }
                     AscendC::PipeBarrier<PIPE_ALL>();
                 }
@@ -2512,17 +2773,42 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                      * (packed source + blockLen==1 strided copy is both wrong-data and
                      * an MTE hang, see the hAll/cAll note). */
                     if (n == L.hSlab) {
-                        AscendC::DataCopyParams po2;
-                        po2.blockCount = (uint16_t)stripe.count;
-                        po2.blockLen = (uint16_t)(n * sizeof(T) / AscendC::ONE_BLK_SIZE);
-                        po2.srcStride = 0;
-                        po2.dstStride = (uint16_t)((L.hid - n) * sizeof(T) / AscendC::ONE_BLK_SIZE);
-                        if constexpr (sizeof(T) == 2) {
-                            AscendC::Cast(tBufT, co, AscendC::RoundMode::CAST_RINT, L.slab);
-                            AscendC::PipeBarrier<PIPE_ALL>();
-                            AscendC::DataCopy(coAllGM[oOff + ns * L.hSlab], tBufT, po2);
+                        /* Same 32B-alignment guard as the hAll store: an fp16 tail gap
+                         * truncates dstStride to zero and smears the plane. */
+                        const bool coStrideOk = ((L.hid - n) * sizeof(T)) % AscendC::ONE_BLK_SIZE == 0 &&
+                                                (n * sizeof(T)) % AscendC::ONE_BLK_SIZE == 0;
+                        if (coStrideOk) {
+                            AscendC::DataCopyParams po2;
+                            po2.blockCount = (uint16_t)stripe.count;
+                            po2.blockLen = (uint16_t)(n * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                            po2.srcStride = 0;
+                            po2.dstStride = (uint16_t)((L.hid - n) * sizeof(T) / AscendC::ONE_BLK_SIZE);
+                            if constexpr (sizeof(T) == 2) {
+                                AscendC::Cast(tBufT, co, AscendC::RoundMode::CAST_RINT, L.slab);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                                AscendC::DataCopy(coAllGM[oOff + ns * L.hSlab], tBufT, po2);
+                            } else {
+                                AscendC::DataCopy(coAllGM[oOff + ns * L.hSlab], co, po2);
+                            }
                         } else {
-                            AscendC::DataCopy(coAllGM[oOff + ns * L.hSlab], co, po2);
+                            if constexpr (sizeof(T) == 2) {
+                                AscendC::Cast(tBufT, co, AscendC::RoundMode::CAST_RINT, work);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                            }
+                            AscendC::DataCopyExtParams ps2;
+                            ps2.blockCount = 1;
+                            ps2.blockLen = n * sizeof(T);
+                            ps2.srcStride = 0;
+                            ps2.dstStride = 0;
+                            for (uint32_t r = 0; r < stripe.count; ++r) {
+                                if constexpr (sizeof(T) == 2) {
+                                    AscendC::DataCopyPad(coAllGM[oOff + ns * L.hSlab + r * L.hid], tBufT[r * n], ps2);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                } else {
+                                    AscendC::DataCopyPad(coAllGM[oOff + ns * L.hSlab + r * L.hid], co[r * n], ps2);
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                }
+                            }
                         }
                     } else {
                         if constexpr (sizeof(T) == 2) {
@@ -2540,6 +2826,27 @@ __aicore__ inline void VectorLoopSlab(const ch::RowStripe& stripe, uint32_t bloc
                             } else {
                                 AscendC::DataCopyPad(coAllGM[oOff + ns * L.hSlab + r * L.hid], co[r * n], ps2);
                             }
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    }
+                    /* fp32 MIRROR: co slab for the scatter (fp32 chain, no Cast). Same
+                     * full/partial split as the coAllGM store above. */
+                    if (n == L.hSlab) {
+                        AscendC::DataCopyParams poF;
+                        poF.blockCount = (uint16_t)stripe.count;
+                        poF.blockLen = (uint16_t)(n * 4 / AscendC::ONE_BLK_SIZE);
+                        poF.srcStride = 0;
+                        poF.dstStride = (uint16_t)((L.hid - n) * 4 / AscendC::ONE_BLK_SIZE);
+                        AscendC::DataCopy(coAllF[oOff + n0], co, poF);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    } else {
+                        AscendC::DataCopyExtParams psF;
+                        psF.blockCount = 1;
+                        psF.blockLen = n * 4;
+                        psF.srcStride = 0;
+                        psF.dstStride = 0;
+                        for (uint32_t r = 0; r < stripe.count; ++r) {
+                            AscendC::DataCopyPad(coAllF[oOff + n0 + r * L.hid], co[r * n], psF);
                             AscendC::PipeBarrier<PIPE_ALL>();
                         }
                     }
@@ -2598,18 +2905,29 @@ namespace proj {
  * reads of x/w/b, which keep the true strides and zero-fill the pad columns. */
 struct Layout {
     uint32_t mBlk, tChunk, kChunk, inSize, hid, batch, steps;
-    uint32_t wsBatch; // PADDED batch (blockDim*mBlk): stride of the WS planes.
-                      // `batch` is the stride of xSrc, which is the REAL B under
-                      // xDirect and wsBatch otherwise -- they are NOT the same.
-    uint32_t m;       // rows in one chunk = tChunk * mBlk
+    uint32_t stepsRun; // chunks with t0 >= stepsRun are SKIPPED whole (both halves
+                       // symmetrically -- the per-chunk V2C/C2V handshake stays matched).
+                       // A straddling chunk (t0 < stepsRun < t0+tc) runs UNCLAMPED: its
+                       // tc and A-tile layout stay byte-identical to the unclamped run,
+                       // because the projection's per-element sums are only split-invariant
+                       // at a FIXED tc.
+    uint32_t wsBatch;  // PADDED batch (blockDim*mBlk): stride of the WS planes.
+                       // `batch` is the stride of xSrc, which is the REAL B under
+                       // xDirect and wsBatch otherwise -- they are NOT the same.
+    uint32_t m;        // rows in one chunk = tChunk * mBlk
     uint32_t a1Elems, bElems, cElems;
     uint32_t rowsMax, plane;
-    uint32_t bOff, biasL1Off, btOff; // L1 / BT offsets
-    uint32_t cubOff;                 // UB
+    uint32_t bOff, biasL1Off; // L1 offsets
+    uint32_t btOffArr[4];     // C2: PER-GATE BT slots -- a single shared slot
+                              // bleeds content between the projection's gate
+                              // rounds (same finding as the wave loop's fix);
+                              // the residue reaches the MmadBias as stale bias.
+    uint32_t cubOff;          // UB
     uint32_t l1Bytes, ubBytes;
 
     __aicore__ inline Layout(uint32_t mBlkIn, uint32_t tcIn, uint32_t kcIn, uint32_t iIn, uint32_t hIn, uint32_t bIn,
-                             uint32_t tIn, uint32_t dtypeSize = sizeof(float), uint32_t wsBatchIn = 0)
+                             uint32_t tIn, uint32_t dtypeSize = sizeof(float), uint32_t wsBatchIn = 0,
+                             uint32_t stepsRunIn = 0)
         : mBlk(mBlkIn),
           tChunk(tcIn),
           kChunk(kcIn),
@@ -2617,6 +2935,7 @@ struct Layout {
           hid(hIn),
           batch(bIn),
           steps(tIn),
+          stepsRun(stepsRunIn ? stepsRunIn : tIn),
           wsBatch(wsBatchIn ? wsBatchIn : bIn),
           m(tcIn * mBlkIn)
     {
@@ -2634,7 +2953,11 @@ struct Layout {
         l1Bytes = l1.cur;
 
         Bump bt;
-        btOff = bt.TakeT<float>(BtElems(hid));
+        uint32_t btOffG = 0;
+        for (uint32_t g = 0; g < 4; ++g) {
+            btOffArr[g] = btOffG;
+            btOffG += ch::CeilAlign(ch::BtElems(hid) * 4, ch::C0_BYTES);
+        }
 
         Bump ub;
         cubOff = ub.Take(plane * 4); // drain destination is ALWAYS fp32 (DrainToF32):
@@ -2657,7 +2980,6 @@ __aicore__ inline void CubeProject(AscendC::GlobalTensor<T> xGM, AscendC::Global
     AscendC::LocalTensor<T> a2(AscendC::TPosition::A2, 0, L.a1Elems);
     AscendC::LocalTensor<T> b2(AscendC::TPosition::B2, 0, L.bElems);
     AscendC::LocalTensor<float> c(AscendC::TPosition::CO1, 0, L.cElems);
-    AscendC::LocalTensor<float> bt(AscendC::TPosition::C2, L.btOff, BtElems(L.hid));
     AscendC::LocalTensor<float> cub(AscendC::TPosition::VECOUT, L.cubOff, L.plane);
 
     const uint32_t nChunk = CeilDiv(L.steps, L.tChunk);
@@ -2666,6 +2988,9 @@ __aicore__ inline void CubeProject(AscendC::GlobalTensor<T> xGM, AscendC::Global
 
     for (uint32_t ci = 0; ci < nChunk; ++ci) {
         const uint32_t t0 = ci * L.tChunk;
+        if (t0 >= L.stepsRun) {
+            break; // dead chunk: both halves skip symmetrically (handshake stays matched)
+        }
         const uint32_t tc = (t0 + L.tChunk <= L.steps) ? L.tChunk : (L.steps - t0);
         const uint32_t mNow = tc * L.mBlk;
 
@@ -2702,7 +3027,8 @@ __aicore__ inline void CubeProject(AscendC::GlobalTensor<T> xGM, AscendC::Global
             }
             ch::CopyInFlat<T>(bl1, bGM[g * L.hid], BtElems(L.hid));
             sh::WaitMte2ToMte1();
-            ch::LoadBiasToBT(bt, bl1, L.hid);
+            AscendC::LocalTensor<float> btg(AscendC::TPosition::C2, L.btOffArr[g], ch::BtElems(L.hid));
+            ch::LoadBiasToBT(btg, bl1, L.hid);
 
             for (uint32_t kb = 0; kb < kBlocks; ++kb) {
                 /* w rows [kb*kChunk, +kChunk), columns [g*H, +H). Row range of a [I+H, 4H]
@@ -2717,7 +3043,7 @@ __aicore__ inline void CubeProject(AscendC::GlobalTensor<T> xGM, AscendC::Global
                 ch::SplitB<T>(b2, b1, L.kChunk, L.hid);
                 sh::WaitMte1ToM();
                 if (kb == 0) {
-                    ch::MmadBias(c, a2, b2, bt, mNow, L.hid, L.kChunk); // bias seeds L0C
+                    ch::MmadBias(c, a2, b2, btg, mNow, L.hid, L.kChunk); // bias seeds L0C
                 } else {
                     ch::MmadAccum(c, a2, b2, mNow, L.hid, L.kChunk);
                 }
@@ -2755,6 +3081,9 @@ __aicore__ inline void VectorProject(AscendC::GlobalTensor<float> igGM, AscendC:
 
     for (uint32_t ci = 0; ci < nChunk; ++ci) {
         const uint32_t t0 = ci * L.tChunk;
+        if (t0 >= L.stepsRun) {
+            break; // dead chunk: mirrors CubeProject's skip (handshake stays matched)
+        }
         const uint32_t tc = (t0 + L.tChunk <= L.steps) ? L.tChunk : (L.steps - t0);
         const uint32_t mNow = tc * L.mBlk;
         const ch::RowStripe stripe = ch::DrainStripe(mNow, fwd::SPLIT, AscendC::GetSubBlockIdx());

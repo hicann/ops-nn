@@ -40,7 +40,7 @@ namespace blg {
  */
 inline bool PickGradTiling(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint32_t seqMax, uint32_t mBlk,
                            uint32_t* tcX, uint32_t* iChunk, uint32_t* tcW, uint32_t* jChunk, uint32_t c0Step = C0F,
-                           uint32_t minM = 1, uint32_t minK = 1, uint32_t mClusIn = 0)
+                           uint32_t minM = 1, uint32_t minK = 1, uint32_t mClusIn = 0, bool xhtBlocked = false)
 {
     *tcX = 0;
     *iChunk = 0;
@@ -59,10 +59,13 @@ inline bool PickGradTiling(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint3
      * iChunk must DIVIDE padI. It need not -- a short last chunk is handled -- but the L0B tile is
      */
     bool foundB = false;
+    /* iChunk need NOT divide padI: DxCube's resident path clamps the B tile with
+     * iSz (the short last chunk), DxVector stages cub rows at iSz width, and the
+     * B-tile's NZ footprint is budgeted at the FULL iChunk rows anyway (aligned
+     * up to CUBE_BLOCK) -- a short tail never grows the budget. A divisibility
+     * gate would force ic=8 on padI=8*prime shapes (I=2049 -> padI=2056=8*257),
+     * multiplying the per-i0 handshake rounds by 257. */
     for (uint32_t ic = I; ic >= c0Step && !foundB; ic -= c0Step) {
-        if (I % ic != 0) {
-            continue;
-        }
         for (uint32_t tc = T; tc >= 1; --tc) {
             /* minM gates the RUNTIME first-block width; with minM == 1 (the GEMV path
              * owns mNow == 1 on the AIV side) every width is admissible. seqMax == 0
@@ -71,7 +74,7 @@ inline bool PickGradTiling(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint3
             if (tcEff * mBlk < minM) {
                 break;
             }
-            const Layout probe = MakeLayout(B, I, H, T, seqMax, mBlk, tc, ic, 1, C0F, mClusIn, 1, 0);
+            const Layout probe = MakeLayout(B, I, H, T, seqMax, mBlk, tc, ic, 1, C0F, mClusIn, 1, 0, 0, xhtBlocked);
             if (probe.ok) {
                 *tcX = tc;
                 *iChunk = ic;
@@ -84,20 +87,44 @@ inline bool PickGradTiling(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint3
         return false;
     }
 
-    /* phase C: (tcW, jChunk), largest first ------------------------------------------------. */
+    /* phase C: (tcW, jChunk), scored by ROUND COUNT ----------------------------------------.
+     * Phase C's wall cost is driven by how many rounds it runs, not by how big each tile is:
+     * every (j0, gate, n-slab) round is a full cube<->vector handshake (VecSignalCube /
+     * VecWaitCube against CubeWaitVec / CubeSignalVec) plus a PIPE_ALL on the vector side.
+     *
+     * rounds = (ceil(I/jc) + ceil(H/jc)) * GATES * ceil(H/dwNS), and dwNS SHRINKS as jc grows
+     * because L0C bounds the product jc*dwNS. So "largest jc" is not "fewest rounds". Score
+     * every feasible jc and take the minimum; ties go to the larger jc because the scan
+     * descends. tc keeps its old meaning (largest feasible for the chosen jc), so only the
+     * jc selection changes. */
     const uint32_t jMax = (I > H) ? I : H;
+    uint32_t bestJc = 0;
+    uint32_t bestTc = 0;
+    uint64_t bestRounds = UINT64_MAX;
     for (uint32_t jc = ch::CeilAlign(jMax, ch::CUBE_BLOCK); jc >= C0F; jc -= C0F) {
         for (uint32_t tc = T; tc >= 1; --tc) {
             if (tc * mBlk < minK) {
                 break;
             }
-            const Layout probe = MakeLayout(B, I, H, T, seqMax, mBlk, *tcX, *iChunk, tc, jc, mClusIn, 1, 0);
+            const Layout probe = MakeLayout(B, I, H, T, seqMax, mBlk, *tcX, *iChunk, tc, jc, mClusIn, 1, 0, 0,
+                                            xhtBlocked);
             if (probe.ok) {
-                *tcW = tc;
-                *jChunk = jc;
-                return true;
+                const uint32_t nJ = ch::CeilDiv(I, jc) + ch::CeilDiv(H, jc);
+                const uint32_t nN = (probe.dwSlab && probe.dwNS > 0) ? ch::CeilDiv(H, probe.dwNS) : 1u;
+                const uint64_t rounds = (uint64_t)nJ * GATES * nN;
+                if (rounds < bestRounds) {
+                    bestRounds = rounds;
+                    bestJc = jc;
+                    bestTc = tc;
+                }
+                break;
             }
         }
+    }
+    if (bestJc != 0) {
+        *tcW = bestTc;
+        *jChunk = bestJc;
+        return true;
     }
     return false;
 }
@@ -114,7 +141,7 @@ inline bool RecurrenceFits(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint3
 /* row-chunked large-B support ------------------------------------------------. */
 inline bool PickGradRowChunk(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uint32_t seqMax, uint32_t mBlkFull,
                              uint32_t* mBlkOut, uint32_t* tcX, uint32_t* iChunk, uint32_t* tcW, uint32_t* jChunk,
-                             uint32_t c0Step = C0F)
+                             uint32_t c0Step = C0F, bool* xhtBlockedOut = nullptr)
 {
     /* mBlkFull is NOT always a power of two: PickRowsPerBlock returns b/nb for the.
      * mBlkFull is NOT always a power of two: PickRowsPerBlock returns b/nb for the
@@ -127,9 +154,20 @@ inline bool PickGradRowChunk(uint32_t B, uint32_t I, uint32_t H, uint32_t T, uin
         const Layout slabProbe = MakeLayout(B, I, H, T, seqMax, m, T, I, 1, C0F, mBlkFull, 1, 0);
         const uint32_t minM = (m == mBlkFull || m == 1 || !slabProbe.recSlab) ? 1 : 2;
         const uint32_t minK = 1;
-        if (PickGradTiling(B, I, H, T, seqMax, m, tcX, iChunk, tcW, jChunk, c0Step, minM, minK, mBlkFull)) {
-            *mBlkOut = m;
-            return true;
+        /* FULL WIDTH FIRST, blocked only as the fallback. Shrinking the xh^T staging frees
+         * UB, and the phase-B search spends every byte it is given on a wider iChunk (and
+         * sometimes a larger dxSplit), which is slower on shapes that already fit full
+         * width. Trying full width first keeps those shapes' layouts bit-identical to
+         * before and only buys the extra mBlk where full width genuinely does not fit. */
+        for (int blk = 0; blk < 2; ++blk) {
+            if (PickGradTiling(B, I, H, T, seqMax, m, tcX, iChunk, tcW, jChunk, c0Step, minM, minK, mBlkFull,
+                               blk == 1)) {
+                *mBlkOut = m;
+                if (xhtBlockedOut != nullptr) {
+                    *xhtBlockedOut = (blk == 1);
+                }
+                return true;
+            }
         }
     }
     return false;

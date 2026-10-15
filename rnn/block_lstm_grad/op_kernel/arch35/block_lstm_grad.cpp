@@ -17,7 +17,8 @@
  * phase 0 pad restage: x/w/peep/gates/cs_prev/h_prev/grads -> zero-padded ws copies
  * phase A reverse recurrence -> dG, dh/dcs carries, db accumulated in UB
  * phase B dX = dG @ w[0:I]^T
- * phase C dW += xh^T @ dG (workspace partial + SyncAll<true> + deterministic sum)
+ * phase C dW += xh^T @ dG (A read straight from the padded x/h planes via Dn2Nz, so no xh^T
+ *                          plane exists; workspace partial + SyncAll<true> + deterministic sum)
  *
  * V1+V2 unified via gate_order attribute. Peephole gradients are computed when use_peephole=true.
  * cell_clip derivative is deliberately ignored (reproduces TF's own inconsistency).
@@ -25,8 +26,7 @@
  * DETERMINISTIC REDUCTION: w_grad, b_grad, and peephole grads are written as per-cluster partials
  * to workspace. After all AIVs finish, SyncAll<true>() syncs only AIVs across clusters (AIC is
  * not involved -- it returns immediately from SyncAll<true>()). Cluster 0's AIV-0 then reads all
- * partials and sums them in a fixed order, producing a deterministic result. This replaces the
- * non-deterministic atomic-add approach.
+ * partials and sums them in a fixed order, producing a deterministic result.
  *
  * TF PARITY / ODD SHAPES: the op accepts ANY I and H. Phase 0 restages every REAL-extent user
  * input into a zero-padded workspace copy (padI/padH = extents rounded up to the dtype's C0),
@@ -72,8 +72,8 @@ __aicore__ inline void PadOut(AscendC::GlobalTensor<T> gm, const AscendC::LocalT
 /* One [T,B,W] plane (user dtype IT) -> padded fp32 ws copy (compute dtype CT), this. */
 template <typename IT, typename CT>
 __aicore__ inline void PadTBW(__gm__ CT* ws, uint32_t off, AscendC::GlobalTensor<IT> src, uint32_t wReal, uint32_t wPad,
-                              uint32_t sub, uint32_t r0, uint32_t r1, uint32_t Tsteps, uint32_t B, uint32_t dstB,
-                              AscendC::LocalTensor<IT>& itStage, uint32_t itStageElems,
+                              uint32_t sub, uint32_t r0, uint32_t r1, uint32_t Tsteps, uint32_t tLive, uint32_t B,
+                              uint32_t dstB, AscendC::LocalTensor<IT>& itStage, uint32_t itStageElems,
                               AscendC::LocalTensor<CT>& ctStage)
 {
     AscendC::GlobalTensor<CT> dst;
@@ -81,6 +81,11 @@ __aicore__ inline void PadTBW(__gm__ CT* ws, uint32_t off, AscendC::GlobalTensor
     /* Odd rows: GM row bases (t*B+r)*wReal*esz are NOT 32B-aligned when wReal*esz%32. */
     const bool oddRow = !odda::RowsAligned(wReal, sizeof(IT));
     const uint32_t tensEnd = (uint32_t)((size_t)Tsteps * B * wReal * sizeof(IT));
+    /* tLive: every consumer (RecVector / DxCube / DwCube) reads only
+     * t < seqMax, so restaging rows beyond it is dead work -- skip them. */
+    if (tLive < Tsteps) {
+        Tsteps = tLive;
+    }
     const uint32_t rowDst = itStageElems + blg::ALIGN_SLACK;
     const uint32_t castN = (wPad + 15) & ~15u;
     if (wReal == 0) {
@@ -141,19 +146,25 @@ __aicore__ inline void PadTBW(__gm__ CT* ws, uint32_t off, AscendC::GlobalTensor
     }
 }
 
+/* Phase-0 batch staging knobs: elements budget for the W whole-row batch
+ * (chunk + slots), and the row cap. Sized to stay well inside the UB while
+ * amortising the per-round MTE2/flag/PIPE_ALL fixed cost over KW rows. */
+constexpr uint32_t WS_BATCH_ELEMS = 24576;
+constexpr uint32_t WS_BATCH_ROWS = 16;
+
 /* Phase 0: restage this cluster's share of the REAL inputs into padded fp32 ws copies. */
 template <typename IT, typename CT>
 __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingData& tdp, uint32_t cluster, uint32_t sub,
                                      uint32_t blockBase, uint32_t mBlk, uint32_t B, uint32_t I, uint32_t H,
-                                     uint32_t padI, uint32_t padH, uint32_t Tsteps, AscendC::GlobalTensor<IT> xReal,
-                                     AscendC::GlobalTensor<IT> wReal, AscendC::GlobalTensor<IT> wciReal,
-                                     AscendC::GlobalTensor<IT> wcfReal, AscendC::GlobalTensor<IT> wcoReal,
-                                     AscendC::GlobalTensor<IT> iReal, AscendC::GlobalTensor<IT> fReal,
-                                     AscendC::GlobalTensor<IT> oReal, AscendC::GlobalTensor<IT> ciReal,
-                                     AscendC::GlobalTensor<IT> coReal, AscendC::GlobalTensor<IT> hReal,
-                                     AscendC::GlobalTensor<IT> csReal, AscendC::GlobalTensor<IT> csGradReal,
-                                     AscendC::GlobalTensor<IT> hGradReal, AscendC::GlobalTensor<IT> csPrevReal,
-                                     AscendC::GlobalTensor<IT> hPrevReal)
+                                     uint32_t padI, uint32_t padH, uint32_t Tsteps, uint32_t tLive,
+                                     AscendC::GlobalTensor<IT> xReal, AscendC::GlobalTensor<IT> wReal,
+                                     AscendC::GlobalTensor<IT> wciReal, AscendC::GlobalTensor<IT> wcfReal,
+                                     AscendC::GlobalTensor<IT> wcoReal, AscendC::GlobalTensor<IT> iReal,
+                                     AscendC::GlobalTensor<IT> fReal, AscendC::GlobalTensor<IT> oReal,
+                                     AscendC::GlobalTensor<IT> ciReal, AscendC::GlobalTensor<IT> coReal,
+                                     AscendC::GlobalTensor<IT> hReal, AscendC::GlobalTensor<IT> csReal,
+                                     AscendC::GlobalTensor<IT> csGradReal, AscendC::GlobalTensor<IT> hGradReal,
+                                     AscendC::GlobalTensor<IT> csPrevReal, AscendC::GlobalTensor<IT> hPrevReal)
 {
     const uint32_t r0 = blockBase;
     /* PAD-TO-DIVISIBLE: every batch-strided WS plane is [T, padBatch, W] with
@@ -183,35 +194,80 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
     const bool oddH2 = !odda::RowsAligned(H, sizeof(IT));
     const bool oddW = !odda::RowsAligned(blg::GATES * H, sizeof(IT));
     const bool anyOdd = oddX || oddH2 || oddW;
-    const uint32_t itStageElems = anyOdd ? (2 * itElems + blg::ALIGN_SLACK) : itElems;
+    /* BATCH staging budget: the whole-row W restage below processes KW rows per
+     * MTE2 (chunk KW*4H + slots KW*wRow), which needs more than the single-row
+     * dual region. VECCALC and VECOUT are the same physical buffer and phase 0
+     * is the only AIV activity at this point, so growing the transient region is
+     * free up to the UB cap. */
+    uint32_t itStageElems = anyOdd ? (2 * itElems + blg::ALIGN_SLACK) : itElems;
+    /* W whole-row batch gate: UN-ROW-CHUNKED layouts only. Row-chunked shapes crash the
+     * aicore with the batch active (even with kw clamped to 1), while the same shapes run
+     * clean on the per-gate restage. The staging region is therefore grown ONLY when the
+     * batch runs; row-chunked layouts keep the pre-batch region and the per-gate restage. */
+    const bool wBatchOk = !wSlab && tdp.layout.rowChunks == 1;
+    if (wBatchOk) {
+        const uint32_t wRawW = blg::GATES * H;
+        const uint32_t perRowW = wRawW + wRow;
+        uint32_t kw = (perRowW > 0) ? (WS_BATCH_ELEMS / perRowW) : 0;
+        if (kw > WS_BATCH_ROWS) {
+            kw = WS_BATCH_ROWS;
+        }
+        if (kw < 1) {
+            kw = 1;
+        }
+        /* slot base MUST be 32B-aligned (VF slide dst + PadOut src contract):
+         * wRawW*sizeof is only 16B-aligned for odd-4H shapes (H=257 -> wRawW=1028
+         * -> 4112B = 16 mod 32), so kw*wRawW lands 16B off whenever kw is odd --
+         * an AIV trap that hangs the pipe and surfaces as EZ9999 "notify wait". */
+        const uint32_t alignE = 32 / sizeof(IT);
+        const uint32_t need = ch::CeilAlign(kw * wRawW + blg::ALIGN_SLACK, alignE) + kw * wRow;
+        if (need > itStageElems) {
+            itStageElems = (need + 15) / 16 * 16;
+        }
+    }
     AscendC::LocalTensor<IT> itStage(AscendC::TPosition::VECCALC, 0, itStageElems);
     /* LocalTensor(pos, offset, size): offset is BYTES, size is ELEMENTS. */
     const uint32_t itBytes = (itStageElems * sizeof(IT) + 31) / 32 * 32;
     const uint32_t ctBaseBytes = itBytes;
-    const uint32_t ctStageElems = wSlab ? (stageElems + blg::CT_STAGE_SLACK) : (2 * stageElems + blg::CT_STAGE_SLACK);
+    uint32_t ctStageElems = wSlab ? (stageElems + blg::CT_STAGE_SLACK) : (2 * stageElems + blg::CT_STAGE_SLACK);
+    if (wBatchOk) {
+        /* fp16 W batch: one ct row per batch row (cast(i+1) must not overwrite the
+         * row PadOut(i) is still reading -- the MTE3->V pair is not a VF/V fence). */
+        const uint32_t wRawW0 = blg::GATES * H;
+        uint32_t kw0 = WS_BATCH_ELEMS / (wRawW0 + wRow);
+        if (kw0 > WS_BATCH_ROWS) {
+            kw0 = WS_BATCH_ROWS;
+        }
+        if (kw0 < 1) {
+            kw0 = 1;
+        }
+        const uint32_t ctNeed = kw0 * wRow + blg::CT_STAGE_SLACK;
+        if (ctNeed > ctStageElems) {
+            ctStageElems = (ctNeed + 15) / 16 * 16;
+        }
+    }
     AscendC::LocalTensor<CT> ctStage(AscendC::TPosition::VECCALC, ctBaseBytes, ctStageElems);
-    const uint32_t ctRepack = stageElems + blg::CT_REPACK_SLACK; // CT repack-out region base
 
     /* the 7 forward gate planes live in ONE padded region [7, T, B, padH], internal order
      * i, f, o, ci, co, h, cs (the order RecVector consumes them in). */
     const uint32_t gateT = (size_t)Tsteps * padBatch * padH;
-    PadTBW(ws, tdp.offPadX, xReal, I, padI, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems, ctStage);
-    PadTBW(ws, tdp.offPadGates + 0 * gateT, iReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadX, xReal, I, padI, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems, ctStage);
+    PadTBW(ws, tdp.offPadGates + 0 * gateT, iReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 1 * gateT, fReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 1 * gateT, fReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 2 * gateT, oReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 2 * gateT, oReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 3 * gateT, ciReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 3 * gateT, ciReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 4 * gateT, coReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 4 * gateT, coReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 5 * gateT, hReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 5 * gateT, hReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadGates + 6 * gateT, csReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems,
+    PadTBW(ws, tdp.offPadGates + 6 * gateT, csReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems,
            ctStage);
-    PadTBW(ws, tdp.offPadCsG, csGradReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems, ctStage);
-    PadTBW(ws, tdp.offPadHG, hGradReal, H, padH, sub, r0, r1, Tsteps, B, padBatch, itStage, itElems, ctStage);
+    PadTBW(ws, tdp.offPadCsG, csGradReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems, ctStage);
+    PadTBW(ws, tdp.offPadHG, hGradReal, H, padH, sub, r0, r1, Tsteps, tLive, B, padBatch, itStage, itElems, ctStage);
 
     /* [B, H] pair, rows split by subcore parity. Odd H: chunk read + scalar slide +
      * scalar tail-zero (same oddda discipline as PadTBW). */
@@ -276,14 +332,15 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
         zg.SetGlobalBuffer(ws + tdp.offPadGates);
         zc.SetGlobalBuffer(ws + tdp.offPadCsP);
         zh.SetGlobalBuffer(ws + tdp.offPadHp);
-        for (uint32_t t = 0; t < Tsteps; ++t) {
+        const uint32_t zT = (tLive < Tsteps) ? tLive : Tsteps;
+        for (uint32_t t = 0; t < zT; ++t) {
             for (uint32_t r = r1 + sub; r < zEnd; r += 2) {
                 PadOut(zx[(size_t)(t * padBatch + r) * zPadI], zrow, zPadI);
             }
             AscendC::PipeBarrier<PIPE_ALL>();
         }
         for (uint32_t p = 0; p < 9; ++p) {
-            for (uint32_t t = 0; t < Tsteps; ++t) {
+            for (uint32_t t = 0; t < zT; ++t) {
                 for (uint32_t r = r1 + sub; r < zEnd; r += 2) {
                     PadOut(zg[(size_t)p * gateT + (size_t)(t * padBatch + r) * zPadH], zrow, zPadH);
                 }
@@ -297,8 +354,15 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
         AscendC::PipeBarrier<PIPE_ALL>();
     }
 
-    if (blockBase == 0) {
-        if (sub == 0) {
+    /* PARALLEL W RESTAGE: the rows of W are striped across ALL AIV workers instead of
+     * running on cluster0/sub0 alone while every other cluster idles at the phase-0
+     * SyncAll. Workers write disjoint dstRow ranges, so the split is race-free. No
+     * cluster is ever idle here (L.b is the PADDED batch = blockDim*mClus), so all
+     * blockDim*2 workers reach this point. */
+    const uint32_t wWorkers = tdp.blockDim * 2u;
+    const uint32_t wId = cluster * 2u + sub;
+    {
+        {
             /* w: [I+H, 4H] (IT) -> [padI+padH, 4*padH] (CT).
              * Row mapping: real Wx row r (< I) -> padW row r; real Whh row q -> padI+q.
              * Per-gate repack when padH > H: the raw row is flat [g0|g1|g2|g3]. */
@@ -308,9 +372,34 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
             const uint32_t rowsPad = padI + padH;
             const uint32_t wTensEnd = (uint32_t)((size_t)rowsReal * blg::GATES * H * sizeof(IT));
             const uint32_t rowDstW = oddW ? (itElems + blg::ALIGN_SLACK) : 0;
+            /* Stripe boundaries are kept on GM cache-line boundaries: two workers
+             * writing the SAME line can lose one of them -- a partial-line write
+             * fetches the line first, and the later ENTIRE_DATA_CACHE write-back then
+             * pushes the fetcher's stale half over whatever the neighbour landed
+             * there. padW's row pitch is wRow*sizeof(CT) bytes, so a row starts on a
+             * 512B line every P = 512/gcd(pitch,512) rows; rounding rowsPerW up to a
+             * multiple of P makes every boundary line-aligned (P is 1 or 2 on the
+             * perf-bar shapes, so the rounding costs no measurable parallelism). */
+            const uint32_t rowPitchB = wRow * (uint32_t)sizeof(CT);
+            uint32_t gcdA = rowPitchB, gcdB = 512u;
+            while (gcdB != 0u) {
+                const uint32_t t = gcdA % gcdB;
+                gcdA = gcdB;
+                gcdB = t;
+            }
+            const uint32_t lineRows = (gcdA > 0u) ? (512u / gcdA) : 1u;
+            uint32_t rowsPerW = (rowsReal + wWorkers - 1u) / wWorkers;
+            rowsPerW = ((rowsPerW + lineRows - 1u) / lineRows) * lineRows;
+            const uint32_t rowLo = wId * rowsPerW;
+            const uint32_t rowHi = (rowLo + rowsPerW < rowsReal) ? (rowLo + rowsPerW) : rowsReal;
+            /* The two padW row GAPS sit adjacent to dst rows I-1 and padI+H-1, so they
+             * belong to the workers owning those rows -- not to a fixed worker, which
+             * would re-introduce the shared-line hazard at both gap edges. */
+            const uint32_t gapAOwner = (I > 0u) ? ((I - 1u) / rowsPerW) : 0u;
+            const uint32_t gapBOwner = (rowsReal > 0u) ? ((rowsReal - 1u) / rowsPerW) : 0u;
             if (wSlab) {
                 /* block-slabbed w restage (H >= ~4K): per (row, gate, block) the. */
-                for (uint32_t row = 0; row < rowsReal; ++row) {
+                for (uint32_t row = rowLo; row < rowHi; ++row) {
                     const uint32_t dstRow = (row < I) ? row : (padI + (row - I));
                     for (uint32_t g = 0; g < blg::GATES; ++g) {
                         for (uint32_t cb0 = 0; cb0 < padH; cb0 += nsW) {
@@ -359,10 +448,12 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
                         }
                     }
                 }
-                if (padI > I || padH > H) {
+                /* each gap is written only by the worker owning the adjacent real row;
+                 * the bounds degenerate to an empty range for the gap it does not own. */
+                if ((padI > I || padH > H) && (wId == gapAOwner || wId == gapBOwner)) {
                     AscendC::Duplicate<CT>(ctStage, static_cast<CT>(0), nsW);
                     AscendC::PipeBarrier<PIPE_ALL>();
-                    for (uint32_t row = I; row < padI; ++row) {
+                    for (uint32_t row = (wId == gapAOwner) ? I : padI; row < ((wId == gapAOwner) ? padI : I); ++row) {
                         for (uint32_t g = 0; g < blg::GATES; ++g) {
                             for (uint32_t cb0 = 0; cb0 < padH; cb0 += nsW) {
                                 const uint32_t wW = (padH - cb0 < nsW) ? (padH - cb0) : nsW;
@@ -371,7 +462,7 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
                             }
                         }
                     }
-                    for (uint32_t row = padI + H; row < rowsPad; ++row) {
+                    for (uint32_t row = (wId == gapBOwner) ? (padI + H) : rowsPad; row < rowsPad; ++row) {
                         for (uint32_t g = 0; g < blg::GATES; ++g) {
                             for (uint32_t cb0 = 0; cb0 < padH; cb0 += nsW) {
                                 const uint32_t wW = (padH - cb0 < nsW) ? (padH - cb0) : nsW;
@@ -385,7 +476,7 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
             /* peephole weights: [3, H] (IT) -> [3, padH] (CT).
              * : this block used to be the ELSE of `if (wSlab)` -- i.e. it
              */
-            {
+            if (wId == 1) {
                 const AscendC::GlobalTensor<IT>* srcPeep[3] = {&wciReal, &wcfReal, &wcoReal};
                 AscendC::GlobalTensor<CT> dst;
                 dst.SetGlobalBuffer(ws + tdp.offPadPeep);
@@ -410,68 +501,161 @@ __aicore__ inline void PadGradInputs(__gm__ CT* ws, const BlockLstmGradTilingDat
                     AscendC::PipeBarrier<PIPE_ALL>();
                 }
             }
-            /* : this ROW-WISE restage must ONLY run when !wSlab.
-             * : this ROW-WISE restage must ONLY run when !wSlab. The wSlab
-             */
             if (!wSlab) {
-                const uint32_t wCastN = (blg::GATES * H + 15) & ~15u;
-                for (uint32_t row = 0; row < rowsReal; ++row) {
-                    const uint32_t dstRow = (row < I) ? row : (padI + (row - I));
-                    if (oddW) {
-                        odda::ReadRowUnaligned<IT>(wReal, (uint32_t)((size_t)row * blg::GATES * H * sizeof(IT)),
-                                                   blg::GATES * H, wTensEnd, itStage[rowDstW], itStage[0]);
-                    } else {
-                        PadIn(itStage[rowDstW], wReal[(size_t)row * blg::GATES * H], blg::GATES * H);
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                    }
-                    /* promote the flat IT row to CT once (fp32 path: the same bytes, no
-                     * cast) -- then per-gate repack in CT when padding inserts gaps. */
-                    if constexpr (sizeof(IT) != sizeof(CT)) {
-                        AscendC::Cast(ctStage, itStage[rowDstW], AscendC::RoundMode::CAST_NONE, wCastN);
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                        if (padH > H) {
-                            for (uint32_t g = 0; g < blg::GATES; ++g) {
-                                for (uint32_t j = 0; j < H; ++j) {
-                                    ctStage.SetValue(ctRepack + g * padH + j, ctStage.GetValue(g * H + j));
+                if constexpr (sizeof(IT) == sizeof(CT)) {
+                    /* WHOLE-ROW BATCHED restage (fp32 lane): KW rows per round. Per round: ONE MTE2
+                     * (the flat [KW, 4H] source block is contiguous), KW*4 VF slides (gate g of
+                     * row i lands at slot_i + g*padH -- the padded row layout), ONE S->MTE3 +
+                     * V->MTE3 pair set, KW whole-row PadOuts, ONE PIPE_ALL. Reads of the VF
+                     * slides' destination stay on MTE3 (the V->MTE3 pair fences it); the block's
+                     * trailing PIPE_ALL carries the slot/chunk reuse WAR -- the MTE3->V HardEvent
+                     * pair does NOT fence the async VF engine. */
+                    if (wBatchOk) {
+                        const uint32_t wRawW = blg::GATES * H;
+                        const uint32_t perRowW = wRawW + wRow;
+                        uint32_t kw = (perRowW > 0) ? (WS_BATCH_ELEMS / perRowW) : 0;
+                        if (kw > WS_BATCH_ROWS) {
+                            kw = WS_BATCH_ROWS;
+                        }
+                        if (kw < 1) {
+                            kw = 1;
+                        }
+                        const uint32_t chunkBase = 0; /* raw flat rows */
+                        const uint32_t slotBase = ch::CeilAlign(
+                            kw * wRawW + blg::ALIGN_SLACK,
+                            32 / sizeof(IT)); /* padded rows, 32B-aligned (see the budget note) */
+                        const uint32_t tailW = padH - H;
+                        for (uint32_t row0 = rowLo; row0 < rowHi; row0 += kw) {
+                            const uint32_t rk = (rowHi - row0 < kw) ? (rowHi - row0) : kw;
+                            /* ONE aligned-chunk MTE2 covering the rk flat rows */
+                            {
+                                const uint64_t byteStart = (uint64_t)row0 * wRawW * sizeof(IT);
+                                const uint32_t lo = (uint32_t)(byteStart & ~static_cast<uint64_t>(31));
+                                uint32_t bend = (uint32_t)(byteStart + (uint64_t)rk * wRawW * sizeof(IT));
+                                if (bend > wTensEnd) {
+                                    bend = wTensEnd;
                                 }
-                                for (uint32_t j = H; j < padH; ++j) {
-                                    ctStage.SetValue(ctRepack + g * padH + j, static_cast<CT>(0));
+                                if (bend > lo) {
+                                    AscendC::DataCopyExtParams p;
+                                    p.blockCount = 1;
+                                    p.blockLen = bend - lo;
+                                    p.srcStride = 0;
+                                    p.dstStride = 0;
+                                    AscendC::DataCopyPad(itStage[chunkBase], wReal[lo / sizeof(IT)], p,
+                                                         AscendC::DataCopyPadExtParams<IT>());
+                                }
+                                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+                            }
+                            const uint32_t headE0 = (uint32_t)(((uint64_t)row0 * wRawW * sizeof(IT) &
+                                                                ~static_cast<uint64_t>(31)) /
+                                                               sizeof(IT));
+                            const uint32_t headBase = (uint32_t)((uint64_t)row0 * wRawW) - headE0;
+                            for (uint32_t i = 0; i < rk; ++i) {
+                                const uint32_t row = row0 + i;
+                                const uint32_t dstRow = (row < I) ? row : (padI + (row - I));
+                                const uint32_t slot = slotBase + i * wRow;
+                                const uint32_t srcE = headBase + i * wRawW;
+                                for (uint32_t g = 0; g < blg::GATES; ++g) {
+                                    odda::ShiftCopyVec<IT>(itStage[slot], g * padH, itStage[chunkBase], srcE + g * H,
+                                                           H);
+                                }
+                                if (tailW > 0) {
+                                    for (uint32_t g = 0; g < blg::GATES; ++g) {
+                                        for (uint32_t e = H; e < padH; ++e) {
+                                            itStage.SetValue(slot + g * padH + e, static_cast<IT>(0));
+                                        }
+                                    }
                                 }
                             }
-                            AscendC::PipeBarrier<PIPE_ALL>();
-                            PadOut(dst[(size_t)dstRow * wRow], ctStage[ctRepack], wRow);
-                        } else {
-                            PadOut(dst[(size_t)dstRow * wRow], ctStage, wRow);
-                        }
-                        AscendC::PipeBarrier<PIPE_ALL>();
-                    } else {
-                        if (padH > H) {
-                            for (uint32_t g = 0; g < blg::GATES; ++g) {
-                                for (uint32_t j = 0; j < H; ++j) {
-                                    ctStage.SetValue(ctRepack + g * padH + j, itStage[rowDstW].GetValue(g * H + j));
-                                }
-                                for (uint32_t j = H; j < padH; ++j) {
-                                    ctStage.SetValue(ctRepack + g * padH + j, static_cast<CT>(0));
+                            AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                            AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(EVENT_ID0);
+                            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+                            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+                            for (uint32_t i = 0; i < rk; ++i) {
+                                const uint32_t row = row0 + i;
+                                const uint32_t dstRow = (row < I) ? row : (padI + (row - I));
+                                if constexpr (sizeof(IT) != sizeof(CT)) {
+                                    /* per-row INDEPENDENT ct slot: cast(i+1) never touches
+                                     * the row PadOut(i) reads (the MTE3->V pair is not a
+                                     * V-pipe fence, so slot reuse inside the block is out). */
+                                    AscendC::Cast(ctStage[i * wRow], itStage[slotBase + i * wRow],
+                                                  AscendC::RoundMode::CAST_NONE, (wRow + 15) & ~15u);
+                                    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+                                    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+                                    PadOut(dst[(size_t)dstRow * wRow], ctStage[i * wRow], wRow);
+                                } else {
+                                    PadOut(dst[(size_t)dstRow * wRow], itStage[slotBase + i * wRow], wRow);
                                 }
                             }
+                            /* slot + chunk region reuse WAR for the NEXT block: the one
+                             * barrier per KW rows (the MTE3->V pair is not a VF fence). */
                             AscendC::PipeBarrier<PIPE_ALL>();
-                            PadOut(dst[(size_t)dstRow * wRow], ctStage[ctRepack], wRow);
-                        } else {
-                            PadOut(dst[(size_t)dstRow * wRow], itStage[rowDstW], wRow);
                         }
-                        AscendC::PipeBarrier<PIPE_ALL>();
                     }
                 }
-                /* zero-fill BOTH gaps: rows [I, padI) and [padI+H, padI+padH) */
-                AscendC::Duplicate<CT>(ctStage, static_cast<CT>(0), wRow);
-                AscendC::PipeBarrier<PIPE_ALL>();
-                for (uint32_t row = I; row < padI; ++row) {
-                    PadOut(dst[(size_t)row * wRow], ctStage, wRow);
-                    AscendC::PipeBarrier<PIPE_ALL>();
+                if (!(sizeof(IT) == sizeof(CT) && wBatchOk)) {
+                    /* PER-GATE restage (fp16 lane, and the fp32 fallback when the whole-row
+                     * batch is off -- see the wBatchOk note at the staging budget): each gate's H
+                     * elements slide into rowDstW (a 32B-aligned base) and leave through ONE
+                     * aligned PadOut to dst[dstRow*wRow + g*padH]. Landing each gate separately
+                     * keeps every read of the VF destination on the MTE3 pipe: nothing fences
+                     * async VF stores against scalar reads (the V->MTE3 flag pair only orders
+                     * the FOLLOWING MTE3 op), so the read side must stay on MTE3 -- the same
+                     * discipline as PadTBW and the wSlab branch above. */
+                    const uint32_t castN = (H + 15) & ~15u;
+                    for (uint32_t row = rowLo; row < rowHi; ++row) {
+                        const uint32_t dstRow = (row < I) ? row : (padI + (row - I));
+                        for (uint32_t g = 0; g < blg::GATES; ++g) {
+                            if (oddW) {
+                                odda::ReadRowUnaligned<IT>(wReal,
+                                                           (uint32_t)(((size_t)row * blg::GATES + g) * H * sizeof(IT)),
+                                                           H, wTensEnd, itStage[rowDstW], itStage[0]);
+                            } else {
+                                PadIn(itStage[rowDstW], wReal[(size_t)row * blg::GATES * H + g * H], H);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                            }
+                            if constexpr (sizeof(IT) != sizeof(CT)) {
+                                /* promote this gate's IT elements to CT once; the cast
+                                 * over-reads [H, castN) staging garbage, which the tail
+                                 * zero below overwrites before the store. */
+                                AscendC::Cast(ctStage, itStage[rowDstW], AscendC::RoundMode::CAST_NONE, castN);
+                                AscendC::PipeBarrier<PIPE_ALL>();
+                                if (padH > H) {
+                                    for (uint32_t j = H; j < padH; ++j) {
+                                        ctStage.SetValue(j, static_cast<CT>(0));
+                                    }
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                }
+                                PadOut(dst[(size_t)dstRow * wRow + g * padH], ctStage, padH);
+                            } else {
+                                if (padH > H) {
+                                    for (uint32_t j = H; j < padH; ++j) {
+                                        itStage.SetValue(rowDstW + j, static_cast<IT>(0));
+                                    }
+                                    AscendC::PipeBarrier<PIPE_ALL>();
+                                }
+                                PadOut(dst[(size_t)dstRow * wRow + g * padH], itStage[rowDstW], padH);
+                            }
+                            AscendC::PipeBarrier<PIPE_ALL>();
+                        }
+                    }
                 }
-                for (uint32_t row = padI + H; row < rowsPad; ++row) {
-                    PadOut(dst[(size_t)row * wRow], ctStage, wRow);
+                /* zero-fill BOTH gaps: rows [I, padI) and [padI+H, padI+padH) -- each gap
+                 * is written by the worker that owns the adjacent real row (see gapAOwner).
+                 * The bounds below degenerate to an empty range for the gap this worker
+                 * does NOT own (padI >= I and rowsPad >= padI+H always hold). */
+                if (wId == gapAOwner || wId == gapBOwner) {
+                    AscendC::Duplicate<CT>(ctStage, static_cast<CT>(0), wRow);
                     AscendC::PipeBarrier<PIPE_ALL>();
+                    for (uint32_t row = (wId == gapAOwner) ? I : padI; row < ((wId == gapAOwner) ? padI : I); ++row) {
+                        PadOut(dst[(size_t)row * wRow], ctStage, wRow);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
+                    for (uint32_t row = (wId == gapBOwner) ? (padI + H) : rowsPad; row < rowsPad; ++row) {
+                        PadOut(dst[(size_t)row * wRow], ctStage, wRow);
+                        AscendC::PipeBarrier<PIPE_ALL>();
+                    }
                 }
             }
         }
@@ -490,13 +674,79 @@ __aicore__ inline void ZeroFillOutput(GM_ADDR out, uint64_t elems)
     }
     AscendC::GlobalTensor<IT> gm;
     gm.SetGlobalBuffer((__gm__ IT*)out);
-    constexpr uint32_t kBlk = 8192; // elements per chunk
+    constexpr uint32_t kBlk = 8192;         // elements per chunk
+    const uint32_t unit = 32u / sizeof(IT); /* 32B granularity: plain DataCopy silently
+        truncates a non-block-multiple length (1028 -> drops the last 4 fp16 elements,
+        caught in npusim as 1.0 prefills surviving on b_grad) */
     AscendC::LocalTensor<IT> z(AscendC::TPosition::VECCALC, 0, kBlk);
     AscendC::Duplicate<IT>(z, static_cast<IT>(0), kBlk);
     AscendC::PipeBarrier<PIPE_ALL>();
     uint64_t done = 0;
     while (done < elems) {
-        const uint32_t n = (elems - done < kBlk) ? static_cast<uint32_t>(elems - done) : kBlk;
+        uint32_t n = (elems - done < kBlk) ? static_cast<uint32_t>(elems - done) : kBlk;
+        n = (n / unit) * unit;
+        if (n == 0) {
+            /* sub-32B tail: byte-granular Pad copy from the aligned base */
+            AscendC::DataCopyExtParams p;
+            p.blockCount = 1;
+            p.blockLen = (elems - done) * sizeof(IT);
+            p.srcStride = 0;
+            p.dstStride = 0;
+            AscendC::DataCopyPad(gm[done], z, p);
+            done = elems;
+            break;
+        }
+        AscendC::DataCopy(gm[done], z, n);
+        done += n;
+    }
+    AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+/* Worker-striped zero fill: elems spread across (workerId, workers) -- every
+ * AIV subcore of every cluster fills its own stripe, so a 100 MB w_grad does
+ * not serialize on one core. The per-worker stripe is rounded UP to whole 32B
+ * units so every chunk start stays block-aligned, and a sub-32B final tail
+ * goes through a byte-granular DataCopyPad (see the unit comment inside). */
+template <typename IT>
+__aicore__ inline void WorkerZeroFill(GM_ADDR out, uint64_t elems, uint32_t workerId, uint32_t workers)
+{
+    if (out == 0 || elems == 0 || workerId >= workers) {
+        return;
+    }
+    /* per-worker stripe in WHOLE 32B units: the old 8-element rounding left every
+     * other stripe start at a 16-BYTE offset for fp16, and the tail chunk used a
+     * plain DataCopy with a non-block-multiple length -- a misaligned/short MTE3
+     * burst, the same fault class the scatter chunkE fix addresses (device- and
+     * timing-dependent hangs on the B>=513 shapes, plus dropped tail elements
+     * caught in npusim as surviving 1.0 prefills). */
+    const uint32_t unit = 32u / sizeof(IT);
+    const uint64_t per = ((((elems + workers - 1) / workers) + unit - 1) / unit) * unit;
+    const uint64_t lo = (uint64_t)workerId * per;
+    const uint64_t hi = (lo + per < elems) ? (lo + per) : elems;
+    if (lo >= hi) {
+        return;
+    }
+    AscendC::GlobalTensor<IT> gm;
+    gm.SetGlobalBuffer((__gm__ IT*)out);
+    constexpr uint32_t kBlk = 8192; // elements per chunk
+    AscendC::LocalTensor<IT> z(AscendC::TPosition::VECCALC, 0, kBlk);
+    AscendC::Duplicate<IT>(z, static_cast<IT>(0), kBlk);
+    AscendC::PipeBarrier<PIPE_ALL>();
+    uint64_t done = lo;
+    while (done < hi) {
+        uint32_t n = (hi - done < kBlk) ? static_cast<uint32_t>(hi - done) : kBlk;
+        n = (n / unit) * unit;
+        if (n == 0) {
+            /* sub-32B tail: byte-granular Pad copy from the unit-aligned base */
+            AscendC::DataCopyExtParams p;
+            p.blockCount = 1;
+            p.blockLen = (hi - done) * sizeof(IT);
+            p.srcStride = 0;
+            p.dstStride = 0;
+            AscendC::DataCopyPad(gm[done], z, p);
+            done = hi;
+            break;
+        }
         AscendC::DataCopy(gm[done], z, n);
         done += n;
     }
@@ -520,7 +770,28 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
      * falls through to the normal padded path. */
     if (tdp.zeroMode != 0u && tdp.zeroMode != 4u) {
         if (tdp.zeroMode == 1u) {
-            return; /* B == 0: every output is empty -- nothing to write. */
+            /* B == 0: the three batch-carried outputs (x_grad [T,0,I],
+             * cs_prev_grad/h_prev_grad [0,H]) are empty, but the five
+             * parameter grads are NON-EMPTY empty sums (sums over zero
+             * (t,b) pairs) -- they must be written as ZERO, because a caller
+             * that does not pre-zero its output buffers reads back stale
+             * bytes. Mirrors the T == 0 branch's sub0/sub1 split below. */
+            if ASCEND_IS_AIV {
+                const uint32_t sub = AscendC::GetSubBlockIdx();
+                const uint64_t wg = (uint64_t)(tdp.inputSize + tdp.hiddenSize) * blg::GATES * tdp.hiddenSize;
+                const uint64_t hg = (uint64_t)tdp.hiddenSize;
+                const uint64_t bg = (uint64_t)blg::GATES * tdp.hiddenSize;
+                if (sub == 0) {
+                    ZeroFillOutput<IT>(w_grad, wg);
+                    ZeroFillOutput<IT>(wci_grad, hg);
+                    ZeroFillOutput<IT>(b_grad, bg);
+                } else {
+                    ZeroFillOutput<IT>(wcf_grad, hg);
+                    ZeroFillOutput<IT>(wco_grad, hg);
+                }
+                AscendC::PipeBarrier<PIPE_ALL>();
+            }
+            return;
         }
         if ASCEND_IS_AIV {
             const uint32_t sub = AscendC::GetSubBlockIdx();
@@ -565,6 +836,33 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
         }
     }
 
+    /* seq_len_max == 0: every (t, b) pair is masked out of the sums, so all
+     * eight gradients are EMPTY SUMS -- exactly zero, bit-agreeing with the
+     * fp64 golden. Zero-fill the outputs worker-striped and return. BOTH
+     * engine sides exit here, BEFORE the first V2C/C2V handshake round, so no
+     * cross-core wait is left dangling. */
+    if (seqLenMaxOv == 0) {
+        if ASCEND_IS_AIV {
+            const uint32_t cl = AscendC::GetBlockIdx() / AscendC::GetTaskRation();
+            const uint32_t wId = cl * 2 + AscendC::GetSubBlockIdx();
+            const uint32_t wN = tdp.blockDim * 2;
+            WorkerZeroFill<IT>(x_grad, (uint64_t)tdp.timeStep * tdp.batch * tdp.inputSize, wId, wN);
+            WorkerZeroFill<IT>(w_grad, (uint64_t)(tdp.inputSize + tdp.hiddenSize) * blg::GATES * tdp.hiddenSize, wId,
+                               wN);
+            WorkerZeroFill<IT>(cs_prev_grad, (uint64_t)tdp.batch * tdp.hiddenSize, wId, wN);
+            WorkerZeroFill<IT>(h_prev_grad, (uint64_t)tdp.batch * tdp.hiddenSize, wId, wN);
+            if (wId == 0) {
+                ZeroFillOutput<IT>(b_grad, (uint64_t)blg::GATES * tdp.hiddenSize);
+                ZeroFillOutput<IT>(wci_grad, tdp.hiddenSize);
+            } else if (wId == 1) {
+                ZeroFillOutput<IT>(wcf_grad, tdp.hiddenSize);
+                ZeroFillOutput<IT>(wco_grad, tdp.hiddenSize);
+            }
+            AscendC::PipeBarrier<PIPE_ALL>();
+        }
+        return;
+    }
+
     const uint32_t I = tdp.inputSize, H = tdp.hiddenSize, B = tdp.batch;
     const uint32_t padI = tdp.padI, padH = tdp.padH;
 
@@ -602,7 +900,7 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
 
     /* WS staging planes the compute phases and the final scatter read/write: CT. */
     AscendC::GlobalTensor<CT> xGM, csPrevGM, hPrevGM, wGM, fiGM, fcsGM, ffGM, foGM, fciGM, fcoGM, fhGM, csGradGM,
-        hGradGM, dgGM, xhTGM, oXGM, oCspGM, oHpGM;
+        hGradGM, dgGM, oXGM, oCspGM, oHpGM;
     AscendC::GlobalTensor<CT> wciGM, wcfGM, wcoGM;
     AscendC::GlobalTensor<CT> wParGM, bParGM;
     AscendC::GlobalTensor<float> oWciGF, oWcfGF, oWcoGF; /* peep partials: FP32 in WS */
@@ -634,7 +932,6 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
     {
         const uint32_t gateT = (size_t)tdp.timeStep * L.b * padH;
         dgGM.SetGlobalBuffer(ws + tdp.offDg);
-        xhTGM.SetGlobalBuffer(ws + tdp.offXhT + (size_t)cluster * (padI + padH) * L.kTot);
         xGM.SetGlobalBuffer(ws + tdp.offPadX);
         fiGM.SetGlobalBuffer(ws + tdp.offPadGates + 0 * gateT);  // i
         ffGM.SetGlobalBuffer(ws + tdp.offPadGates + 1 * gateT);  // f
@@ -668,12 +965,22 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
 
     wParGM.SetGlobalBuffer(ws + tdp.offWPar + (size_t)cluster * (padI + padH) * L.n4);
     /* The partial planes are CT (= fp32) for every dtype now; the float view is the
-     * same bytes. Cluster stride likewise. */
+     * same bytes. Cluster stride likewise. This view carries THIS cluster's plane
+     * offset and is what DwVector WRITES its partials through. The reduction below
+     * must NOT use it: ReduceWGrad indexes all blockDim planes with c*cStride from
+     * the view base, so a cluster-k reader would reach (k + blockDim-1)*planeStride
+     * and run past the region end. The reduction gets the REGION base instead; the
+     * local plane is simply c == cluster. */
     AscendC::GlobalTensor<float> wParFGM;
     {
         __gm__ float* wsF = (__gm__ float*)ws;
         wParFGM.SetGlobalBuffer(wsF + (tdp.offWPar * sizeof(CT)) / 4 +
                                 (size_t)cluster * (padI + padH) * blg::GATES * padH);
+    }
+    AscendC::GlobalTensor<float> wParRegionFGM;
+    {
+        __gm__ float* wsF = (__gm__ float*)ws;
+        wParRegionFGM.SetGlobalBuffer(wsF + (tdp.offWPar * sizeof(CT)) / 4);
     }
 
     AscendC::LocalTensor<float> cUB(AscendC::TPosition::VECOUT, L.recCub,
@@ -683,9 +990,9 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
         /* Phase 0: padded restage. */
         const uint32_t sub = AscendC::GetSubBlockIdx();
         if (!idle) {
-            PadGradInputs(ws, tdp, cluster, sub, blockBase, L.mClus, B, I, H, padI, padH, tdp.timeStep, xReal, wReal,
-                          wciReal, wcfReal, wcoReal, iReal, fReal, oReal, ciReal, coReal, hReal, csReal, csGradReal,
-                          hGradReal, csPrevReal, hPrevReal);
+            PadGradInputs(ws, tdp, cluster, sub, blockBase, L.mClus, B, I, H, padI, padH, tdp.timeStep, L.seqMax, xReal,
+                          wReal, wciReal, wcfReal, wcoReal, iReal, fReal, oReal, ciReal, coReal, hReal, csReal,
+                          csGradReal, hGradReal, csPrevReal, hPrevReal);
             {
                 AscendC::GlobalTensor<CT> padXGM;
                 padXGM.SetGlobalBuffer(ws + tdp.offPadX);
@@ -715,7 +1022,7 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
         }
         /* dW is ROW-INDEPENDENT (w_grad sums every row's contribution), so it runs ONCE. */
         if (!idle) {
-            blg::DwCube(xhTGM, dgGM, blockBase, L);
+            blg::DwCube(xGM, hPrevGM, fhGM, dgGM, blockBase, L);
         }
     }
     if ASCEND_IS_AIV {
@@ -817,9 +1124,8 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
             }
 
             blg::DxVector(oXGM, ckBase, sub, L, I, dgGM, wGM, tdp.gateOrder);
-            /* xh^T staging stays per-chunk (each chunk writes its own row span of the
-             * cluster's xhT); dW itself moved OUT of the loop -- see the AIC side. */
-            blg::BuildXhT(xGM, hPrevGM, fhGM, xhTGM, ch::DrainStripe(L.mBlkActual, blg::SPLIT, sub), ckBase, L);
+            /* No xh^T staging: DwCube reads the padded x / h planes directly and the GM->L1
+             * load transposes in transit (Dn2Nz). See blg::LoadDwA. */
         }
         if (!idle) {
             blg::DwVector(wParGM, wParFGM, sub, L, tdp.gateOrder, false);
@@ -838,43 +1144,85 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
             AscendC::PipeBarrier<PIPE_ALL>();
         }
 
-        AscendC::DataCacheCleanAndInvalid<CT, AscendC::CacheLine::ENTIRE_DATA_CACHE>(dgGM);
+        /* PRODUCER-SIDE flush per cross-core buffer (arch35-rnn-cv-sync-rounds.md rule 5:
+         * flush on the writing core, for the specific buffer, before the barrier; consumer-
+         * side fixes are counterproductive). Each AIV flushes the WS planes IT wrote
+         * that OTHER clusters will read after the barrier. */
+        AscendC::PipeBarrier<PIPE_ALL>();
+        {
+            /* dgGM: RecVector gate-gradients (read cross-core by RecCube/DwCube on AIC) */
+            AscendC::DataCacheCleanAndInvalid<CT, AscendC::CacheLine::ENTIRE_DATA_CACHE>(dgGM);
+            /* wParFGM: DwVector w_grad partials (read cross-core by ReduceWGrad on all AIVs) */
+            __gm__ float* wsF0 = (__gm__ float*)ws;
+            AscendC::GlobalTensor<float> wParF_GM;
+            wParF_GM.SetGlobalBuffer(wsF0 + (tdp.offWPar * sizeof(CT)) / 4);
+            AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::ENTIRE_DATA_CACHE>(wParF_GM);
+            /* bParFGM: b_grad partials (read cross-core by ReduceBGrad on worker 0) */
+            AscendC::GlobalTensor<float> bParF_GM;
+            bParF_GM.SetGlobalBuffer(wsF0 + (tdp.offBPar * sizeof(CT)) / 4);
+            AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::ENTIRE_DATA_CACHE>(bParF_GM);
+            /* peepFGM: peephole partials (read cross-core by ReducePeepGrad on worker 1) */
+            AscendC::GlobalTensor<float> peepF_GM;
+            peepF_GM.SetGlobalBuffer(wsF0 + (tdp.offPeepPar * sizeof(CT)) / 4);
+            AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::ENTIRE_DATA_CACHE>(peepF_GM);
+        }
         AscendC::PipeBarrier<PIPE_ALL>();
 
         AscendC::SyncAll<true>();
 
-        if (cluster == 0 && sub == 0) {
+        {
+            /* PARALLEL deterministic reduction: every worker sums its stripe of the
+             * w_grad real-row space (per-element cluster order unchanged => the result
+             * stays bit-identical to the old cluster0/AIV-0 serial sum, which profiled
+             * as the kernel's dominant all-cores-idle stall). db/peep are tiny: one
+             * worker each, after its w_grad stripe. */
+            const uint32_t rWorkerId = cluster * 2 + sub;
+            const uint32_t rWorkers = tdp.blockDim * 2;
             AscendC::GlobalTensor<CT> wsGM;
             wsGM.SetGlobalBuffer(ws);
             AscendC::GlobalTensor<CT> wRedGM;
             wRedGM.SetGlobalBuffer(ws + tdp.offWRed);
-            blg::ReduceWGrad(wRedGM, wsGM, wParFGM, tdp, L);
-            {
+            blg::ReduceWGrad(wRedGM, wsGM, wParRegionFGM, tdp, L, rWorkerId, rWorkers);
+            if (rWorkerId == 0) {
                 __gm__ float* wsF = (__gm__ float*)ws;
                 AscendC::GlobalTensor<float> bParFGM;
                 bParFGM.SetGlobalBuffer(wsF + (tdp.offBPar * sizeof(CT)) / 4);
                 blg::ReduceBGrad<CT, IT>(oBGM, bParFGM, tdp, L);
             }
-            if (tdp.usePeephole) {
-                __gm__ float* wsF = (__gm__ float*)ws;
-                AscendC::GlobalTensor<float> peepFGM;
-                peepFGM.SetGlobalBuffer(wsF + (tdp.offPeepPar * sizeof(CT)) / 4);
-                blg::ReducePeepGrad<CT, IT>((__gm__ IT*)wci_grad, (__gm__ IT*)wcf_grad, (__gm__ IT*)wco_grad, peepFGM,
-                                            tdp, L);
-            } else {
-                /* No peephole: the three peep outputs are exactly zero. The zero row is
-                 * IT-typed (byte-reinterpreted off the L.db float region); Duplicate
-                 * count rounded to 16 so the half lane stays on 32B boundaries. */
-                AscendC::LocalTensor<CT> zeroF(AscendC::TPosition::VECCALC, L.db, L.hid);
-                AscendC::LocalTensor<IT> zero = zeroF.template ReinterpretCast<IT>();
-                const uint32_t zeroN = (L.hid + 15) & ~15u;
-                AscendC::Duplicate<IT>(zero, static_cast<IT>(0), zeroN);
-                AscendC::PipeBarrier<PIPE_ALL>();
-                PadOut(oWciG, zero, H);
-                PadOut(oWcfG, zero, H);
-                PadOut(oWcoG, zero, H);
-                AscendC::PipeBarrier<PIPE_ALL>();
+            if (rWorkerId == 1) {
+                if (tdp.usePeephole) {
+                    __gm__ float* wsF = (__gm__ float*)ws;
+                    AscendC::GlobalTensor<float> peepFGM;
+                    peepFGM.SetGlobalBuffer(wsF + (tdp.offPeepPar * sizeof(CT)) / 4);
+                    blg::ReducePeepGrad<CT, IT>((__gm__ IT*)wci_grad, (__gm__ IT*)wcf_grad, (__gm__ IT*)wco_grad,
+                                                peepFGM, tdp, L);
+                } else {
+                    /* No peephole: the three peep outputs are exactly zero. The zero row is
+                     * IT-typed (byte-reinterpreted off the L.db float region); Duplicate
+                     * count rounded to 16 so the half lane stays on 32B boundaries. */
+                    AscendC::LocalTensor<CT> zeroF(AscendC::TPosition::VECCALC, L.db, L.hid);
+                    AscendC::LocalTensor<IT> zero = zeroF.template ReinterpretCast<IT>();
+                    const uint32_t zeroN = (L.hid + 15) & ~15u;
+                    AscendC::Duplicate<IT>(zero, static_cast<IT>(0), zeroN);
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                    PadOut(oWciG, zero, H);
+                    PadOut(oWcfG, zero, H);
+                    PadOut(oWcoG, zero, H);
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                }
             }
+            /* PRODUCER-SIDE FLUSH, same discipline as the dgGM flush before the barrier
+             * above. This reduction writes wRedGM (EVERY worker, in CONTIGUOUS row stripes)
+             * and, in slab mode, bPar row 0 (worker 0). The scatter past the barrier reads
+             * both CROSS-CORE, and with a DIFFERENT striping: ScatterTensor walks rows
+             * round-robin (r = workerId; r += workers), so a worker reads wRed rows other
+             * workers wrote. SyncAll<true> only orders pipes (PipeBarrier +
+             * ffts_cross_core_sync) and does NO cache maintenance, so without this flush
+             * the readers can hit stale lines. ENTIRE_DATA_CACHE: one call covers wRedGM
+             * and bPar whoever wrote them. */
+            AscendC::PipeBarrier<PIPE_ALL>();
+            AscendC::DataCacheCleanAndInvalid<CT, AscendC::CacheLine::ENTIRE_DATA_CACHE>(wRedGM);
+            AscendC::PipeBarrier<PIPE_ALL>();
         }
 
         /* Grid barrier then global segment scatter: the scatter reads WS rows that other clusters wrote. */
@@ -882,12 +1230,20 @@ __aicore__ inline void block_lstm_grad_impl(const BlockLstmGradTilingData& tdp, 
         {
             const uint32_t workerId = cluster * 2 + sub;
             const uint32_t workers = tdp.blockDim * 2;
-            /* in slab mode the [n4]-wide scatter staging cannot exist (a [4H]
-             * row is UB-sized at 16K hidden); the scatter rows then move in
-             * [max(I,H)]-wide segments through the zbuf region (full width by
-             * construction, and idle here). */
-            const uint32_t sbufElems = L.recSlab ? blg::Max2(L.in, L.hid) : L.n4;
-            const uint32_t sbufOff = L.recSlab ? L.zbuf : L.t3;
+            /* THE WHOLE UB, because at this point the whole UB is idle: this block runs after
+             * the final SyncAll, and every other region (recCub, the RecVector plane set,
+             * dwCub, t1..t3) belongs to a phase that has already retired. bufElems is the
+             * ONLY lever on the odd-row path's chunk width:
+             *     chunkE = (bufElems - 160) / 5     (kRegions = 5 CT scratch regions)
+             * and a narrow slice forces many VF-rebase rounds per row -- the exact cost the
+             * row-chunked path exists to amortise.
+             *
+             * ScatterTensor self-limits: chunkE is clamped to wReal and to 32768/esz, and the
+             * region layout is re-checked against bufElems before the row-chunked path is
+             * taken, so a huge bufElems on a huge-hidden slab shape degrades to the old
+             * behaviour rather than overrunning. */
+            const uint32_t sbufElems = (uint32_t)(ch::CAP_UB / sizeof(CT));
+            const uint32_t sbufOff = 0;
             AscendC::LocalTensor<CT> sbuf(AscendC::TPosition::VECCALC, sbufOff, sbufElems);
             AscendC::GlobalTensor<IT> xgGM, cspgGM, hpgGM;
             AscendC::GlobalTensor<CT> wRedGM;

@@ -345,11 +345,14 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
      * the [B, paddedB) tail of every batch-strided WS plane, GM reads clamp their source row at
      * B-1, and the scatter clamps its GM writes at B. */
     uint32_t mBlk = (B + hangSafeCores - 1) / hangSafeCores; // ceil(B / cap)
-    /* INVARIANT: mBlk >= 2 (only B==1 genuinely needs mBlk==1). SPLIT halves a cluster's rows
-     * across its two AIVs, so mBlk==1 hands AIV1 an empty stripe -- it only rides the V2C/C2V
-     * barriers while AIV0 does all the work, leaving half the vector side idle for one extra
-     * cluster. Raising mBlk can only LOWER blockDim, so the hangSafe bound above still holds. */
-    if (mBlk < 2 && B >= 2) {
+    /* INVARIANT: mBlk >= 2, UNCONDITIONALLY. The Mmad M axis has a hardware floor of
+     * 2 -- mp.m == 1 RETURNS GARBAGE silently (see MmadM). B == 1 must also ride
+     * mBlk == 2: blockDim stays 1, paddedB becomes 2, phase 0 zero-fills the pad row
+     * and the scatter clamps at B, so the extra row is computed-but-discarded.
+     * (SPLIT halves a cluster's rows across its two AIVs, so mBlk == 1 would also
+     * hand AIV1 an empty stripe.) Raising mBlk can only LOWER blockDim, so the
+     * hangSafe bound above still holds. */
+    if (mBlk < 2) {
         mBlk = 2;
     }
     if (mBlk == 0) {
@@ -364,7 +367,13 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
      * which kernel loops run; tChunk/kChunk/rowsPerBlock stay meaningful in both regimes
      * (tChunk=kChunk=0 under waves). */
     uint32_t tChunk = 0, kChunk = 0;
-    if (blv2::RecurrenceFits(B, padH, T, mBlk, dtypeSize) &&
+    /* The fp16 V1 SplitB wedge at nRep > 8 was fixed by the supported-width
+     * decomposition in SplitB (greedy {8,4,2,1} chunks). The resident path is now
+     * safe for ALL padH -- let RecurrenceFits decide naturally. A forced wave
+     * routing on fp16 padH > 128 was a 3-4x performance regression on large-I
+     * shapes (wave 204+ rounds vs resident ~48 at I=2049 H=129). */
+    const bool residentNarrowOk = true;
+    if (residentNarrowOk && blv2::RecurrenceFits(B, padH, T, mBlk, dtypeSize) &&
         blv2::PickProjTiling(mBlk, padI, padH, T, &tChunk, &kChunk, dtypeSize)) {
         td->tiledA = 0;
         td->tiledB = 0;
@@ -388,8 +397,9 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
         td->kTileA = ktA;
         td->nTileA = ntA;
         /* Phase B stays on the resident loop whenever it fits; the slab path serves large H /
-         * large B. INVARIANT: slab widths stay <= 128 -- larger H rides more, narrower slabs. */
-        if (blv2::RecurrenceFits(B, padH, T, mBlk, dtypeSize)) {
+         * large B. INVARIANT: slab widths stay <= 128 -- larger H rides more, narrower slabs.
+         * residentNarrowOk gates the fp16 padH > 128 wedge here too (see above). */
+        if (residentNarrowOk && blv2::RecurrenceFits(B, padH, T, mBlk, dtypeSize)) {
             td->tiledB = 0;
         } else {
             td->tiledB = 1;
@@ -492,6 +502,16 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     /* The off fields are u64, so the only real bound left is the device HBM, which
      * the runtime reports as an allocation failure, not a silent wrap. */
 
+    /* fp32 MIRROR planes (RNN paradigm §1): ADDITIONAL fp32 copies for the SCATTER. */
+    td->offHAllF = off;
+    off += static_cast<size_t>(T + 1) * paddedB * padH * 4;
+    td->offHLo = off;
+    off += static_cast<size_t>(T + 1) * paddedB * padH * dtypeSize;
+    td->offStoreF = off;
+    off += static_cast<size_t>(T) * paddedB * fwd::GATES * padH * 4;
+    td->offCoAllF = off;
+    off += static_cast<size_t>(T + 1) * paddedB * padH * 4;
+    td->wsBytes = off;
     context->SetBlockDim(td->blockDim);
     (void)context->SetScheduleMode(1U);
     /* Framework's own API workspace (libapi scratch). The probe overrides it when a
