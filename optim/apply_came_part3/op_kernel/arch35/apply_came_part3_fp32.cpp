@@ -106,7 +106,7 @@ __aicore__ inline void ApplyCamePart3FP32::InitInBuffers(CamePart3InOut camePart
     beta1Gm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(beta1), SCALAR_INPUT_SIZE);
     clipThresholdGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(clipThreshold), SCALAR_INPUT_SIZE);
     sumSquareUGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumSquareU), SCALAR_INPUT_SIZE);
-    globalShapeGm.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(globalShape), SCALAR_INPUT_SIZE);
+    globalShapeGm.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(globalShape), GLOBAL_SHAPE_ELEMENT_COUNT);
 }
 
 __aicore__ inline void ApplyCamePart3FP32::InitOutBuffers(CamePart3InOut camePart3InOut, GM_ADDR workspace)
@@ -121,9 +121,7 @@ __aicore__ inline void ApplyCamePart3FP32::InitOutBuffers(CamePart3InOut camePar
     sumURCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumURC), 1 * sizeof(float));
     mOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(mOut + blockOffset * sizeof(float)), curN * curM);
 
-    workspaceSumGradRC_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE));
-    workspaceSumGradC_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ float*>(workspace + workspaceRCSize * sizeof(float) + DET_WORKSPACE_BYTE));
+    workspaceSumGradC_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE));
     gmDetWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(workspace));
 
     float initValue = 0.0;
@@ -152,17 +150,9 @@ __aicore__ inline void ApplyCamePart3FP32::CalcGMOffset()
     auto mCoreIndx = GetBlockIdx() % temp0;
 
     // workspace gm offset
-    int64_t cTailNumCalc = curM - cNumCalc * (cCoreNum - 1);
-    int64_t cOneCoreBaseNum = DivCeil(cNumCalc, baseM);
-    int64_t cTailCoreBaseNum = DivCeil(cTailNumCalc, baseM);
     int64_t rOneCoreBaseNum = DivCeil(rNumCalc, baseN);
 
     tilingBaseM = baseM;
-    cBlockNum = cOneCoreBaseNum * (cCoreNum - 1) + cTailCoreBaseNum;
-    // workspace 中RC的空间, 尾核也按照整核算，大于实际的值
-    workspaceRCSize = cOneCoreBaseNum * rCoreNum * rOneCoreBaseNum * cCoreNum;
-    // workspace中RC和C的核偏移
-    workspaceRCOffset = nCoreIndx * rOneCoreBaseNum * cBlockNum + mCoreIndx * cOneCoreBaseNum;
     workspaceCOffset = nCoreIndx * rOneCoreBaseNum * curM + mCoreIndx * cNumCalc;
 
     // gm nd format
@@ -210,10 +200,7 @@ __aicore__ inline void ApplyCamePart3FP32::CalcOneOffset(int64_t mIdx, int64_t n
         baseN = oriBaseN;
     }
 
-    // workspace offset of C/RC
-    workspaceRCOffsetBase = workspaceRCOffset + nIdx * cBlockNum + mIdx;
     workspaceCOffsetBase = workspaceCOffset + nIdx * curM + mIdx * tilingBaseM;
-    PipeBarrier<PIPE_ALL>();
 }
 
 __aicore__ inline void ApplyCamePart3FP32::ProcessNormal()
@@ -229,10 +216,12 @@ __aicore__ inline void ApplyCamePart3FP32::ProcessNormal()
     }
 
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
-    int64_t detLoop = maxMLoop * maxNLoop - nLoop * mLoop;
-    for (int64_t detIdx = 0; detIdx < detLoop; detIdx++) {
-        WaitPreBlock(gmDetWorkspace, ubDetWorkspace);
-        NotifyNextBlock(gmDetWorkspace, ubDetWorkspace);
+    if (cCoreNum > 1) {
+        int64_t detLoop = maxMLoop * maxNLoop - nLoop * mLoop;
+        for (int64_t detIdx = 0; detIdx < detLoop; detIdx++) {
+            WaitPreBlock(gmDetWorkspace, ubDetWorkspace);
+            NotifyNextBlock(gmDetWorkspace, ubDetWorkspace);
+        }
     }
 #endif
 }
@@ -247,28 +236,39 @@ __aicore__ inline void ApplyCamePart3FP32::CopyInTensorInput(LocalTensor<float>&
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
     }
 
+    const int64_t srcStrideBytes = (curM - baseM) * sizeof(float);
     if (baseM % FP32_ONE_BLOCK_COUNT) {
-        DataCopyParams copyParamsLast;
-        copyParamsLast.blockCount = baseN;
-        copyParamsLast.blockLen = baseM * sizeof(float);
-        copyParamsLast.srcStride = (curM - baseM) * sizeof(float);
-        copyParamsLast.dstStride = 0;
-
         DataCopyPadParams padParamsLast;
         padParamsLast.isPad = true;
         padParamsLast.leftPadding = 0;
         padParamsLast.paddingValue = 0;
         padParamsLast.rightPadding = (baseM / FP32_ONE_BLOCK_COUNT + 1) * FP32_ONE_BLOCK_COUNT - baseM;
-
-        DataCopyPad(ubLocalIn, tensorGm[outMOffset], copyParamsLast, padParamsLast);
+        if (srcStrideBytes <= MAX_DATA_COPY_STRIDE) {
+            DataCopyParams copyParamsLast{static_cast<uint16_t>(baseN), static_cast<uint16_t>(baseM * sizeof(float)),
+                                          static_cast<uint16_t>(srcStrideBytes), 0};
+            DataCopyPad(ubLocalIn, tensorGm[outMOffset], copyParamsLast, padParamsLast);
+        } else {
+            // DataCopyParams stride is 16-bit. Use 64-bit row addresses for
+            // very wide matrices while preserving the fast 2D copy otherwise.
+            DataCopyParams copyParamsLast{1, static_cast<uint16_t>(baseM * sizeof(float)), 0, 0};
+            const int64_t ubRowStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
+            for (int64_t row = 0; row < baseN; ++row) {
+                DataCopyPad(ubLocalIn[row * ubRowStride], tensorGm[outMOffset + row * curM], copyParamsLast,
+                            padParamsLast);
+            }
+        }
     } else {
-        DataCopyParams intriParams;
-        intriParams.blockCount = baseN;
-        intriParams.blockLen = baseM * sizeof(float);
-        intriParams.srcStride = (curM - baseM) * sizeof(float);
-        intriParams.dstStride = 0;
         DataCopyPadParams padParamsNormal{false, 0, 0, 0};
-        DataCopyPad(ubLocalIn, tensorGm[outMOffset], intriParams, padParamsNormal);
+        if (srcStrideBytes <= MAX_DATA_COPY_STRIDE) {
+            DataCopyParams intriParams{static_cast<uint16_t>(baseN), static_cast<uint16_t>(baseM * sizeof(float)),
+                                       static_cast<uint16_t>(srcStrideBytes), 0};
+            DataCopyPad(ubLocalIn, tensorGm[outMOffset], intriParams, padParamsNormal);
+        } else {
+            DataCopyParams intriParams{1, static_cast<uint16_t>(baseM * sizeof(float)), 0, 0};
+            for (int64_t row = 0; row < baseN; ++row) {
+                DataCopyPad(ubLocalIn[row * baseM], tensorGm[outMOffset + row * curM], intriParams, padParamsNormal);
+            }
+        }
     }
 
     inQueue.EnQue(ubLocalIn);
@@ -417,11 +417,6 @@ __aicore__ inline void ApplyCamePart3FP32::CalcSumUR(LocalTensor<float>& ubLocal
     CalcSumURReduce(ubLocal2, ubLocal4, src0RepStride);
 }
 
-__aicore__ inline void ApplyCamePart3FP32::CalcSumURC(LocalTensor<float>& ubLocal4, LocalTensor<float>& ubLocal3)
-{
-    ApplyCamePart3ReduceVector(ubLocal3, ubLocal4, baseM);
-}
-
 __aicore__ inline void ApplyCamePart3FP32::CalcAddEps(LocalTensor<float>& ubLocal2)
 {
     if (baseM % FP32_ONE_BLOCK_COUNT && baseM < ONE_VECTOR_FP32_SIZE) {
@@ -468,10 +463,6 @@ __aicore__ inline void ApplyCamePart3FP32::ProcessOneLoop(int64_t mIdx, int64_t 
 
     CopyInTensorInput(ubLocal2, uGm);
     CopyInTensorInput(ubLocal3, mInputGm);
-    // Preserve m_in before CalcOutM overwrites the working buffer.
-    if (!useFirstMoment) {
-        CopyOutM(mOutputGm, ubLocal3, outMOffset);
-    }
     CalcOutM(ubLocal2, ubLocal3, ubLocal4);
     if (useFirstMoment) {
         CopyOutM(mOutputGm, ubLocal3, outMOffset);
@@ -486,9 +477,6 @@ __aicore__ inline void ApplyCamePart3FP32::ProcessOneLoop(int64_t mIdx, int64_t 
 
     CalcSumUC(ubLocal2, ubLocal4);
     CopyUB2Workspace(workspaceSumGradC_, ubLocal4, workspaceCOffsetBase, baseM);
-
-    CalcSumURC(ubLocal4, ubLocal3);
-    CopyUB2Workspace(workspaceSumGradRC_, ubLocal3, workspaceRCOffsetBase, 1);
 
     CalcSumUR(ubLocal2, ubLocal3, ubLocal4);
     CopyUB2Out(sumURGm, ubLocal4, nOffset, baseN);
@@ -515,20 +503,20 @@ __aicore__ inline void ApplyCamePart3FP32::SetNM()
 {
     if (isGlobalShape) {
         LocalTensor<int64_t> ubLocalIn = inQueue.AllocTensor<int64_t>();
-        DataCopy(ubLocalIn, globalShapeGm, INT64_ONE_BLOCK_COUNT);
+        DataCopyPad(ubLocalIn, globalShapeGm,
+                    {1, static_cast<uint32_t>(GLOBAL_SHAPE_ELEMENT_COUNT * sizeof(int64_t)), 0, 0, 0},
+                    {true, 0, static_cast<uint8_t>(INT64_ONE_BLOCK_COUNT - GLOBAL_SHAPE_ELEMENT_COUNT), 0});
         inQueue.EnQue(ubLocalIn);
         ubLocalIn = inQueue.DeQue<int64_t>();
-
-        Cast(ubLocal2, ubLocalIn, RoundMode::CAST_ROUND, INT64_ONE_BLOCK_COUNT);
-        event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(eventIdVToS);
-        WaitFlag<HardEvent::V_S>(eventIdVToS);
-        globalN = ubLocal2.GetValue(0);
-        globalM = ubLocal2.GetValue(1);
+        event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+        SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        globalN = ubLocalIn.GetValue(0);
+        globalM = ubLocalIn.GetValue(1);
         inQueue.FreeTensor(ubLocalIn);
     } else {
-        globalN = static_cast<float>(curN);
-        globalM = static_cast<float>(curM);
+        globalN = curN;
+        globalM = curM;
     }
 }
 
@@ -539,12 +527,15 @@ __aicore__ inline void ApplyCamePart3FP32::CalcScalar()
     CopyScalar(clipThresholdGm, clipThreshold);
     CopyScalar(sumSquareUGm, sumSquareU);
     SetNM();
-    if (!(globalM > 0.0f) || !(globalN > 0.0f) || !(clipThreshold > 0.0f)) {
+    // Invalid runtime scale inputs must keep the neutral scale instead of
+    // producing Inf/NaN through a zero or negative denominator.
+    if (globalM <= 0 || globalN <= 0 || !(clipThreshold > 0.0f)) {
         maxValue = 1.0f;
         beta2 = 1 - beta1;
         return;
     }
-    float scaleRes = sumSquareU / (globalM * globalN) / clipThreshold;
+    const float normalizationSize = static_cast<float>(globalM) * static_cast<float>(globalN);
+    float scaleRes = sumSquareU / normalizationSize / clipThreshold;
     if (scaleRes > 1) {
         maxValue = scaleRes;
     }
@@ -556,7 +547,9 @@ __aicore__ inline void ApplyCamePart3FP32::CopyOut(GlobalTensor<float>& outGloba
     auto tmp = outQueue.DeQue<float>();
 
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
-    WaitPreBlock(gmDetWorkspace, ubDetWorkspace);
+    if (cCoreNum > 1) {
+        WaitPreBlock(gmDetWorkspace, ubDetWorkspace);
+    }
 #endif
     if (size == 1) {
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -578,7 +571,9 @@ __aicore__ inline void ApplyCamePart3FP32::CopyOut(GlobalTensor<float>& outGloba
     }
 
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
-    NotifyNextBlock(gmDetWorkspace, ubDetWorkspace);
+    if (cCoreNum > 1) {
+        NotifyNextBlock(gmDetWorkspace, ubDetWorkspace);
+    }
 #endif
     outQueue.FreeTensor(tmp);
 }
@@ -606,7 +601,11 @@ __aicore__ inline void ApplyCamePart3FP32::CopyUB2Workspace(GlobalTensor<float>&
     MoveOut(ubLocal, size);
 
     auto tmp = outQueue.DeQue<float>();
-    DataCopyPad(outGlobal[offset], tmp, {1, static_cast<uint16_t>(size * sizeof(float)), 0, 0});
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(size * sizeof(float)), 0, 0, 0};
+    DataCopyPad<float, PaddingMode::Compact>(outGlobal[offset], tmp, copyParams);
+    event_t eventMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventMte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventMte3ToMte2);
     outQueue.FreeTensor(tmp);
 }
 
@@ -617,28 +616,12 @@ __aicore__ inline void ApplyCamePart3FP32::CopyOutM(GlobalTensor<float>& outGlob
     MoveOut(ubLocal, bufSize);
     auto tmp = outQueue.DeQue<float>();
 
-    if (baseM < FP32_ONE_BLOCK_COUNT) {
-        event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(eventVToS);
-        WaitFlag<HardEvent::V_S>(eventVToS);
-        const int64_t sourceRowStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
-        for (int64_t row = 0; row < baseN; ++row) {
-            for (int64_t column = 0; column < baseM; ++column) {
-                outGlobal.SetValue(offset + row * curM + column, tmp.GetValue(row * sourceRowStride + column));
-            }
-        }
-        event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-        SetFlag<HardEvent::S_MTE3>(eventSToMte3);
-        WaitFlag<HardEvent::S_MTE3>(eventSToMte3);
-        outQueue.FreeTensor(tmp);
-        return;
-    }
-
     if (baseM % FP32_ONE_BLOCK_COUNT != 0) {
         const int64_t sourceRowStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
-        DataCopyParams rowCopyParams{1, static_cast<uint16_t>(baseM * sizeof(float)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(baseM * sizeof(float)), 0, 0, 0};
         for (int64_t row = 0; row < baseN; ++row) {
-            DataCopyPad(outGlobal[offset + row * curM], tmp[row * sourceRowStride], rowCopyParams);
+            DataCopyPad<float, PaddingMode::Compact>(outGlobal[offset + row * curM], tmp[row * sourceRowStride],
+                                                     copyParams);
         }
         event_t eventMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMte3ToMte2);
@@ -647,12 +630,17 @@ __aicore__ inline void ApplyCamePart3FP32::CopyOutM(GlobalTensor<float>& outGlob
         return;
     }
 
-    DataCopyParams intriParams;
-    intriParams.blockCount = baseN;
-    intriParams.blockLen = baseM * sizeof(float);
-    intriParams.srcStride = 0;
-    intriParams.dstStride = (curM - baseM) * sizeof(float);
-    DataCopyPad(outGlobal[offset], tmp, intriParams);
+    const int64_t dstStrideBytes = (curM - baseM) * sizeof(float);
+    if (dstStrideBytes <= MAX_DATA_COPY_STRIDE) {
+        DataCopyParams intriParams{static_cast<uint16_t>(baseN), static_cast<uint16_t>(baseM * sizeof(float)), 0,
+                                   static_cast<uint16_t>(dstStrideBytes)};
+        DataCopyPad(outGlobal[offset], tmp, intriParams);
+    } else {
+        DataCopyParams intriParams{1, static_cast<uint16_t>(baseM * sizeof(float)), 0, 0};
+        for (int64_t row = 0; row < baseN; ++row) {
+            DataCopyPad(outGlobal[offset + row * curM], tmp[row * baseM], intriParams);
+        }
+    }
 
     // The output may alias m input. Ensure the GM write is visible before the
     // tensor is released and a following tile can read the same buffer.

@@ -27,6 +27,8 @@ struct ApplyCamePart1TilingData {
     int64_t usedCoreNum = 0;
     int64_t nCoreNum = 0;
     int64_t mCoreNum = 0;
+    int64_t batchCoreNum = 1;
+    int64_t directBatchMode = 0;
 #define APPLY_CAME_TILING_ACCESSOR(name)        \
     int64_t get_##name() const { return name; } \
     void set_##name(int64_t value) { name = value; }
@@ -44,6 +46,8 @@ struct ApplyCamePart1TilingData {
     APPLY_CAME_TILING_ACCESSOR(usedCoreNum)
     APPLY_CAME_TILING_ACCESSOR(nCoreNum)
     APPLY_CAME_TILING_ACCESSOR(mCoreNum)
+    APPLY_CAME_TILING_ACCESSOR(batchCoreNum)
+    APPLY_CAME_TILING_ACCESSOR(directBatchMode)
 #undef APPLY_CAME_TILING_ACCESSOR
 };
 #endif // OPS_NN_APPLY_CAME_PART1_TILING_DATA_H

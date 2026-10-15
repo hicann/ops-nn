@@ -8,6 +8,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
+import ml_dtypes
 import numpy as np
 import torch
 
@@ -16,6 +17,8 @@ __spec__ = {"apply_came_part1": "ApplyCamePart1KernelSpec"}
 
 
 def _dtype_name(tensor):
+    if isinstance(tensor, torch.Tensor):
+        return str(tensor.dtype).replace("torch.", "").lower()
     return getattr(
         np.asarray(tensor).dtype, "name", str(np.asarray(tensor).dtype)
     ).lower()
@@ -44,7 +47,15 @@ def _compute(grad, eps, *, match_kernel=False):
 
 
 def _to_numpy(outputs):
-    return [output.detach().cpu().numpy() for output in outputs]
+    arrays = []
+    for output in outputs:
+        result = output.detach().cpu().contiguous()
+        if result.dtype == torch.bfloat16:
+            bits = result.view(torch.uint16).numpy().copy()
+            arrays.append(bits.view(ml_dtypes.bfloat16))
+        else:
+            arrays.append(result.numpy())
+    return arrays
 
 
 def apply_came_part1_golden(grad, eps, **kwargs):

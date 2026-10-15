@@ -9,6 +9,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 """Torch composition reference for ApplyCamePart3."""
 
+import ml_dtypes
 import numpy as np
 import torch
 
@@ -43,6 +44,9 @@ def _normalize_dtype_name(dtype):
 
 def _to_numpy(value):
     result = value.detach().cpu().contiguous()
+    if result.dtype == torch.bfloat16:
+        bits = result.view(torch.uint16).numpy().copy()
+        return bits.view(ml_dtypes.bfloat16)
     return result.numpy()
 
 
@@ -63,8 +67,13 @@ def _compute(
     global_shape=None,
     use_first_moment=False,
 ):
-    u = _torch(u)
-    m = _torch(m)
+    original_m = _torch(m)
+    m_dtype = original_m.dtype
+    u = _lift_low_precision(u)
+    m = _lift_low_precision(original_m)
+    compute_dtype = torch.promote_types(u.dtype, m.dtype)
+    u = u.to(compute_dtype)
+    m = m.to(compute_dtype)
     work = m
 
     def scalar(value):
@@ -75,12 +84,22 @@ def _compute(
     clip_threshold = scalar(clip_threshold)
     sum_square_u = scalar(sum_square_u)
     if global_shape is None:
-        global_n, global_m = u.shape[-2], u.shape[-1]
+        global_n = torch.as_tensor(u.shape[-2], dtype=compute_dtype, device=u.device)
+        global_m = torch.as_tensor(u.shape[-1], dtype=compute_dtype, device=u.device)
     else:
         shape = _torch(global_shape).reshape(-1)
-        global_n, global_m = shape[0], shape[1]
-    scale = sum_square_u / (global_n * global_m) / clip_threshold
-    scale = torch.where(scale > 1, scale, torch.ones_like(scale))
+        global_n = shape[0].to(compute_dtype)
+        global_m = shape[1].to(compute_dtype)
+    valid_scale_inputs = (global_n > 0) & (global_m > 0) & (clip_threshold > 0)
+    safe_global_n = torch.where(global_n > 0, global_n, torch.ones_like(global_n))
+    safe_global_m = torch.where(global_m > 0, global_m, torch.ones_like(global_m))
+    safe_clip_threshold = torch.where(
+        clip_threshold > 0, clip_threshold, torch.ones_like(clip_threshold)
+    )
+    raw_scale = sum_square_u / (safe_global_n * safe_global_m) / safe_clip_threshold
+    scale = torch.where(
+        valid_scale_inputs & (raw_scale > 1), raw_scale, torch.ones_like(raw_scale)
+    )
     beta2 = 1 - beta1
     scaled_u = u / scale
     updated_m = beta2 * scaled_u + beta1 * work
@@ -88,8 +107,13 @@ def _compute(
     m_out = updated_m if use_first_moment else work
     diff = scaled_u - m_used
     squared = torch.square(diff) + eps
-    global_sum = squared.sum((-2, -1))
-    return (m_out, squared.sum(-1), squared.sum(-2), global_sum)
+    global_sum = squared.sum((-2, -1)).reshape(1)
+    return (
+        m_out.to(m_dtype),
+        squared.sum(-1).to(torch.float32),
+        squared.sum(-2).to(torch.float32),
+        global_sum.to(torch.float32),
+    )
 
 
 def apply_came_part3_golden(
@@ -164,9 +188,17 @@ def _compute_third_party(
         global_n = shape[0].to(compute_dtype)
         global_m = shape[1].to(compute_dtype)
 
-    scale = torch.div(sum_square_value, global_n * global_m)
-    scale = torch.div(scale, clip_value)
-    scale = torch.where(scale > 1, scale, torch.ones_like(scale))
+    valid_scale_inputs = (global_n > 0) & (global_m > 0) & (clip_value > 0)
+    safe_global_n = torch.where(global_n > 0, global_n, torch.ones_like(global_n))
+    safe_global_m = torch.where(global_m > 0, global_m, torch.ones_like(global_m))
+    safe_clip_value = torch.where(
+        clip_value > 0, clip_value, torch.ones_like(clip_value)
+    )
+    raw_scale = torch.div(sum_square_value, safe_global_n * safe_global_m)
+    raw_scale = torch.div(raw_scale, safe_clip_value)
+    scale = torch.where(
+        valid_scale_inputs & (raw_scale > 1), raw_scale, torch.ones_like(raw_scale)
+    )
     scaled_u = torch.div(u_tensor, scale)
     updated_m = torch.add(
         torch.mul(scaled_u, 1 - beta1_value),
@@ -178,7 +210,7 @@ def _compute_third_party(
     m_output = updated_m if use_first_moment else m_tensor
     sum_u_r = torch.sum(squared, dim=-1)
     sum_u_c = torch.sum(squared, dim=-2)
-    sum_u_rc = torch.sum(squared, dim=(-2, -1))
+    sum_u_rc = torch.sum(squared, dim=(-2, -1)).reshape(1)
     return [
         m_output.to(m_dtype),
         sum_u_r.to(torch.float32),

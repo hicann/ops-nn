@@ -35,6 +35,10 @@ constexpr int64_t N_NUM_PER_CORE = 64;
 constexpr int64_t M_NUM_PER_CORE = 64;
 constexpr int64_t BLOCK_SIZE = 8;
 constexpr int32_t BATCH_MODE = 1;
+constexpr int64_t DIRECT_BATCH_ALIGNMENT = 8;
+constexpr int64_t MAX_DIRECT_MATRIX_ELEMENTS = 8192;
+constexpr size_t MIN_USER_WORKSPACE_BYTES = 32;
+constexpr size_t WORKSPACE_ALIGNMENT_BYTES = 512;
 constexpr uint64_t FLOAT16_TILING_KEY = 1;
 constexpr uint64_t BF16_TILING_KEY = 27;
 
@@ -54,6 +58,42 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
 }
 
 inline static int64_t CeilAlign(int64_t value, int64_t factor) { return CeilDiv(value, factor) * factor; }
+
+inline static bool CheckedCeilAlign(size_t value, size_t factor, size_t& alignedValue)
+{
+    if (factor == 0) {
+        return false;
+    }
+    const size_t remainder = value % factor;
+    if (remainder == 0) {
+        alignedValue = value;
+        return true;
+    }
+    const size_t padding = factor - remainder;
+    if (value > std::numeric_limits<size_t>::max() - padding) {
+        return false;
+    }
+    alignedValue = value + padding;
+    return true;
+}
+
+inline static bool CheckedMultiply(size_t lhs, size_t rhs, size_t& result)
+{
+    if (rhs != 0 && lhs > std::numeric_limits<size_t>::max() / rhs) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
+}
+
+inline static bool CheckedAdd(size_t lhs, size_t rhs, size_t& result)
+{
+    if (lhs > std::numeric_limits<size_t>::max() - rhs) {
+        return false;
+    }
+    result = lhs + rhs;
+    return true;
+}
 
 // n方向如果 (n / t + 1) > 48，那么n方向进行t *= 2，直至满足小于48的场景，此时t为最终单核上有效的nNormalCoreNum_
 inline static int64_t CeilMul(int64_t InputNum, int64_t normalValue, int64_t totalCore)
@@ -83,7 +123,9 @@ static ge::graphStatus ApplyCamePart1SetTilingData(gert::TilingContext* context,
     OP_TILING_CHECK(ret != EOK, VECTOR_INNER_ERR_REPORT_TILIING(context, "copy tiling data failed"),
                     return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(tilingData));
-    context->SetScheduleMode(BATCH_MODE);
+    if (tilingData.get_directBatchMode() == 0) {
+        context->SetScheduleMode(BATCH_MODE);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -107,44 +149,45 @@ static inline ge::graphStatus CalcNdimTiling(const gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
+static inline ge::graphStatus CalcBatchSplit(const gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
+{
+    OP_LOGD(context->GetNodeName(), "TilingApplyCamePart1 Enter CalcBatchSplit.");
+    const int64_t sliceCoreNum = tilingData.get_nCoreNum() * tilingData.get_mCoreNum();
+    OP_TILING_CHECK(
+        sliceCoreNum <= 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 slice core num is invalid."),
+        return ge::GRAPH_FAILED);
+    // Assign independent batch groups to disjoint workspace regions.
+    int64_t batchCoreNum = 1;
+    if (tilingData.get_totalCoreNum() > sliceCoreNum && tilingData.get_batchCount() > 1) {
+        batchCoreNum = std::min(tilingData.get_totalCoreNum() / sliceCoreNum, tilingData.get_batchCount());
+    }
+    tilingData.set_batchCoreNum(batchCoreNum);
+    tilingData.set_usedCoreNum(sliceCoreNum * batchCoreNum);
+    return ge::GRAPH_SUCCESS;
+}
+
 static inline ge::graphStatus CalcMdimTiling(const gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
 {
     OP_LOGD(context->GetNodeName(), "TilingApplyCamePart1 Enter CalcMdimTiling.");
-    int64_t mNormalCoreNum = 1;
-    int64_t mTailCoreNum = 0;
-    int64_t mCoreNum = 1;
-    int64_t mLoopNumCore = 1;
-    auto upperBound = tilingData.get_totalCoreNum();
-    auto lowerBound = tilingData.get_totalCoreNum() / 2;
-    if (((tilingData.get_nCoreNum() <= upperBound) && (tilingData.get_nCoreNum() > lowerBound)) ||
-        (tilingData.get_M() <= M_NUM_PER_CORE) || (tilingData.get_nNormalCoreNum() <= N_NUM_PER_CORE)) {
-        mNormalCoreNum = tilingData.get_M();
-        mLoopNumCore = CeilDiv(mNormalCoreNum, M_NUM_PER_CORE);
-        tilingData.set_mLoopNumCore(mLoopNumCore);
-        tilingData.set_mNormalCoreNum(mNormalCoreNum);
-        tilingData.set_mTailCoreNum(0);
-        tilingData.set_mCoreNum(1);
-    } else {
-        // CeilMul currently keeps nCoreNum above totalCoreNum / 2 whenever
-        // this branch could be selected. The m-axis split remains explicit
-        // here so the layout stays extensible if the n-axis policy changes.
-        int64_t mShapeLength = tilingData.get_M();
-        OP_TILING_CHECK(
-            tilingData.get_nCoreNum() == 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 get_nCoreNum is 0."),
-            return ge::GRAPH_FAILED);
-        mCoreNum = tilingData.get_totalCoreNum() / tilingData.get_nCoreNum(); // 向下取整
-        OP_TILING_CHECK(mCoreNum == 0,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 mCoreNum is 0."),
-                        return ge::GRAPH_FAILED);
-        mNormalCoreNum = std::max(CeilAlign(mShapeLength / mCoreNum, M_NUM_PER_CORE), static_cast<int64_t>(1));
-        mTailCoreNum = mShapeLength % mNormalCoreNum;
-        mLoopNumCore = CeilDiv(mNormalCoreNum, M_NUM_PER_CORE);
-        tilingData.set_mLoopNumCore(mLoopNumCore);
-        tilingData.set_mNormalCoreNum(mNormalCoreNum);
-        tilingData.set_mTailCoreNum(mTailCoreNum);
-        tilingData.set_mCoreNum(mCoreNum);
-    }
+    const int64_t nCoreNum = tilingData.get_nCoreNum();
+    OP_TILING_CHECK(
+        nCoreNum <= 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 nCoreNum is invalid."),
+        return ge::GRAPH_FAILED);
+
+    const int64_t columnTileCount = CeilDiv(tilingData.get_M(), M_NUM_PER_CORE);
+    const int64_t availableMCoreNum = std::max<int64_t>(1, tilingData.get_totalCoreNum() / nCoreNum);
+    int64_t mCoreNum = std::min(columnTileCount, availableMCoreNum);
+    const int64_t columnsPerCore = CeilDiv(tilingData.get_M(), mCoreNum);
+    const int64_t mNormalCoreNum = CeilAlign(columnsPerCore, M_NUM_PER_CORE);
+    mCoreNum = CeilDiv(tilingData.get_M(), mNormalCoreNum);
+    const int64_t mTailCoreNum = tilingData.get_M() - mNormalCoreNum * (mCoreNum - 1);
+
+    tilingData.set_mLoopNumCore(CeilDiv(mNormalCoreNum, M_NUM_PER_CORE));
+    tilingData.set_mNormalCoreNum(mNormalCoreNum);
+    tilingData.set_mTailCoreNum(mTailCoreNum);
+    tilingData.set_mCoreNum(mCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -165,7 +208,7 @@ static inline ge::graphStatus UpdateTilingMsg(const gert::TilingContext* context
     return ge::GRAPH_SUCCESS;
 }
 
-static bool CheckParamsShape(const gert::TilingContext* context)
+static ge::graphStatus CheckParamsShape(const gert::TilingContext* context)
 {
     auto inputShape0 = context->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, inputShape0);
@@ -175,11 +218,10 @@ static bool CheckParamsShape(const gert::TilingContext* context)
                return ge::GRAPH_FAILED);
 
     auto gradDimNum = gradShape.GetDimNum();
-
     OP_TILING_CHECK(gradDimNum < GRAD_DIM_NUM,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
                                                     "grad shape dim must be at least 2, but got %zu", gradDimNum),
-                    return false);
+                    return ge::GRAPH_FAILED);
 
     auto epsShapeInput = context->GetInputShape(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, epsShapeInput);
@@ -188,85 +230,177 @@ static bool CheckParamsShape(const gert::TilingContext* context)
         epsShape.GetShapeSize() != 1,
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "eps must contain exactly one element, but got %s",
                                         Ops::Base::ToString(epsShape).c_str()),
-        return false);
+        return ge::GRAPH_FAILED);
 
-    return true;
+    return ge::GRAPH_SUCCESS;
+}
+
+static bool ShouldUseDirectBatch(const ApplyCamePart1TilingData& tilingData)
+{
+    const int64_t n = tilingData.get_N();
+    const int64_t m = tilingData.get_M();
+    if (n <= 0 || m <= 0 || n > MAX_DIRECT_MATRIX_ELEMENTS / m) {
+        return false;
+    }
+    const int64_t matrixElements = n * m;
+    if (matrixElements > MAX_DIRECT_MATRIX_ELEMENTS) {
+        return false;
+    }
+    const bool singleVectorTile = n <= N_NUM_PER_CORE && m <= M_NUM_PER_CORE;
+    const int64_t alignedBatchGroupCount = CeilDiv(tilingData.get_batchCount(), DIRECT_BATCH_ALIGNMENT);
+    const bool enoughIndependentBatchGroups = alignedBatchGroupCount >= tilingData.get_totalCoreNum();
+    return singleVectorTile || enoughIndependentBatchGroups;
+}
+
+static ge::graphStatus CalculateDirectBatchWorkspace(gert::TilingContext* context)
+{
+    auto platformInfo = context->GetPlatformInfo();
+    OPS_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    const size_t sysWorkspaceSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
+    size_t workspaceSize = 0;
+    OP_TILING_CHECK(
+        !CheckedAdd(sysWorkspaceSize, MIN_USER_WORKSPACE_BYTES, workspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 direct workspace size overflows."),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        !CheckedCeilAlign(workspaceSize, WORKSPACE_ALIGNMENT_BYTES, workspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 direct workspace alignment overflows."),
+        return ge::GRAPH_FAILED);
+    size_t* userWorkspaceSize = context->GetWorkspaceSizes(1);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, userWorkspaceSize);
+    userWorkspaceSize[0] = workspaceSize;
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus CalculateApplyCamePart1Workspace(gert::TilingContext* context,
                                                         ApplyCamePart1TilingData& tilingData)
 {
-    const auto usedCoreNum = tilingData.get_nCoreNum() * tilingData.get_mCoreNum();
-    tilingData.set_usedCoreNum(usedCoreNum);
-    const uint64_t maxSize = std::numeric_limits<size_t>::max();
-    const uint64_t nCoreNum = static_cast<uint64_t>(tilingData.get_nCoreNum());
-    const uint64_t mCoreNum = static_cast<uint64_t>(tilingData.get_mCoreNum());
-    const uint64_t mLoopNumCore = static_cast<uint64_t>(tilingData.get_mLoopNumCore());
-    OP_TILING_CHECK(nCoreNum == 0 || mCoreNum == 0 || tilingData.get_nLoopNormCore() <= 0 || mLoopNumCore == 0 ||
-                        nCoreNum - 1 > maxSize / static_cast<uint64_t>(tilingData.get_nLoopNormCore()),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace size overflows."),
-                    return ge::GRAPH_FAILED);
-    const uint64_t normalLoopCount = (nCoreNum - 1U) * static_cast<uint64_t>(tilingData.get_nLoopNormCore());
-    const uint64_t tailLoopCount = static_cast<uint64_t>(tilingData.get_nLoopTailCore());
-    OP_TILING_CHECK(normalLoopCount > maxSize - tailLoopCount,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace size overflows."),
-                    return ge::GRAPH_FAILED);
-    const uint64_t nLoopCount = normalLoopCount + tailLoopCount;
-    OP_TILING_CHECK(nLoopCount > maxSize / mCoreNum,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace size overflows."),
-                    return ge::GRAPH_FAILED);
-    const uint64_t rElements = nLoopCount * mCoreNum;
-    OP_TILING_CHECK(rElements > maxSize / mLoopNumCore,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace size overflows."),
-                    return ge::GRAPH_FAILED);
-    const uint64_t rcElements = rElements * mLoopNumCore;
-    constexpr uint64_t rcSlotSize = 8;
-    const uint64_t rcReducePartialCount = (static_cast<uint64_t>(tilingData.get_N()) + 8192U - 1U) / 8192U;
+    const size_t nCoreNum = static_cast<size_t>(tilingData.get_nCoreNum());
+    const size_t mCoreNum = static_cast<size_t>(tilingData.get_mCoreNum());
+    const size_t nLoopNormCore = static_cast<size_t>(tilingData.get_nLoopNormCore());
+    const size_t nLoopTailCore = static_cast<size_t>(tilingData.get_nLoopTailCore());
+    const size_t mLoopNumCore = static_cast<size_t>(tilingData.get_mLoopNumCore());
+    OP_TILING_CHECK(
+        nCoreNum == 0 || mCoreNum == 0 || nLoopNormCore == 0 || nLoopTailCore == 0 || mLoopNumCore == 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace dimensions are invalid."),
+        return ge::GRAPH_FAILED);
+
+    size_t normalLoopCount = 0;
+    size_t nLoopCount = 0;
+    size_t rElements = 0;
+    size_t rcElements = 0;
+    const size_t totalColumnTileCount = static_cast<size_t>(CeilDiv(tilingData.get_M(), M_NUM_PER_CORE));
+    OP_TILING_CHECK(
+        !CheckedMultiply(nCoreNum - 1, nLoopNormCore, normalLoopCount) ||
+            !CheckedAdd(normalLoopCount, nLoopTailCore, nLoopCount) ||
+            !CheckedMultiply(nLoopCount, mCoreNum, rElements) ||
+            !CheckedMultiply(nLoopCount, totalColumnTileCount, rcElements),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace element count overflows."),
+        return ge::GRAPH_FAILED);
+
+    constexpr size_t rcSlotSize = 8;
+    const size_t rcReducePartialCount = static_cast<size_t>(CeilDiv(tilingData.get_N(), static_cast<int64_t>(8192)));
     OP_TILING_CHECK(rcElements < rcReducePartialCount,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
                                                     "ApplyCamePart1 workspace cannot hold scalar reduction partials."),
                     return ge::GRAPH_FAILED);
+
+    size_t rcStorageElements = 0;
+    size_t rWorkspaceBytes = 0;
+    size_t cWorkspaceBytes = 0;
     OP_TILING_CHECK(
-        rcElements > maxSize / (M_NUM_PER_CORE * sizeof(float)) ||
-            rElements > maxSize / (N_NUM_PER_CORE * sizeof(float)) || rcElements > maxSize - 127U ||
-            rElements > maxSize - 127U,
+        !CheckedMultiply(rcElements, rcSlotSize, rcStorageElements) ||
+            !CheckedMultiply(rElements, static_cast<size_t>(N_NUM_PER_CORE * sizeof(float)), rWorkspaceBytes) ||
+            !CheckedMultiply(rcElements, static_cast<size_t>(M_NUM_PER_CORE * sizeof(float)), cWorkspaceBytes),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace byte size overflows."),
         return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(rcElements > maxSize / rcSlotSize || rcElements * rcSlotSize > maxSize - 127U,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 RC slot size overflows."),
-                    return ge::GRAPH_FAILED);
-    const size_t rcStorageElements = static_cast<size_t>(rcElements * rcSlotSize);
-    const size_t rcAlignedElements = CeilAlign(rcStorageElements, 128);
+
+    size_t rcAlignedElements = 0;
+    size_t rWorkspaceSize = 0;
+    size_t cWorkspaceSize = 0;
+    size_t rcWorkspaceSize = 0;
     OP_TILING_CHECK(
-        rcAlignedElements > maxSize / (2U * sizeof(float)),
-        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 RC workspace byte size overflows."),
+        !CheckedCeilAlign(rcStorageElements, 128U, rcAlignedElements) ||
+            !CheckedCeilAlign(rWorkspaceBytes, 512U, rWorkspaceSize) ||
+            !CheckedCeilAlign(cWorkspaceBytes, 512U, cWorkspaceSize) ||
+            !CheckedMultiply(rcAlignedElements, 2U * sizeof(float), rcWorkspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace alignment overflows."),
         return ge::GRAPH_FAILED);
-    const size_t rcWorkspaceSize = rcAlignedElements * 2U * sizeof(float);
-    const size_t rWorkspaceSize = CeilAlign(static_cast<size_t>(rElements * N_NUM_PER_CORE * sizeof(float)), 512);
-    const size_t cWorkspaceSize = CeilAlign(static_cast<size_t>(rcElements * M_NUM_PER_CORE * sizeof(float)), 512);
-    const size_t syncWorkspaceSize = static_cast<size_t>(tilingData.get_totalCoreNum()) * 32U + 32U;
+
+    size_t syncWorkspaceSize = 0;
     OP_TILING_CHECK(
-        rcWorkspaceSize > maxSize - rWorkspaceSize || rWorkspaceSize > maxSize - rcWorkspaceSize - cWorkspaceSize ||
-            syncWorkspaceSize > maxSize - rcWorkspaceSize - rWorkspaceSize - cWorkspaceSize,
+        !CheckedMultiply(static_cast<size_t>(tilingData.get_totalCoreNum()), 32U, syncWorkspaceSize) ||
+            !CheckedAdd(syncWorkspaceSize, 32U, syncWorkspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 sync workspace size overflows."),
+        return ge::GRAPH_FAILED);
+
+    const size_t batchCoreNum = static_cast<size_t>(tilingData.get_batchCoreNum());
+    size_t totalRcWorkspaceSize = 0;
+    size_t totalRWorkspaceSize = 0;
+    size_t totalCWorkspaceSize = 0;
+    OP_TILING_CHECK(
+        batchCoreNum == 0 || !CheckedMultiply(rcWorkspaceSize, batchCoreNum, totalRcWorkspaceSize) ||
+            !CheckedMultiply(rWorkspaceSize, batchCoreNum, totalRWorkspaceSize) ||
+            !CheckedMultiply(cWorkspaceSize, batchCoreNum, totalCWorkspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 batch workspace size overflows."),
+        return ge::GRAPH_FAILED);
+
+    size_t userSize = 0;
+    OP_TILING_CHECK(
+        !CheckedAdd(syncWorkspaceSize, totalRcWorkspaceSize, userSize) ||
+            !CheckedAdd(userSize, totalRWorkspaceSize, userSize) ||
+            !CheckedAdd(userSize, totalCWorkspaceSize, userSize),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 total workspace byte size overflows."),
         return ge::GRAPH_FAILED);
-    const size_t userSize = syncWorkspaceSize + rcWorkspaceSize + rWorkspaceSize + cWorkspaceSize;
-    constexpr size_t sysWorkspaceSize = 16 * 1024 * 1024;
+
+    auto platformInfo = context->GetPlatformInfo();
+    OPS_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    const size_t sysWorkspaceSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
+    size_t totalWorkspaceSize = 0;
+    OP_TILING_CHECK(
+        !CheckedAdd(userSize, sysWorkspaceSize, totalWorkspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 system workspace size overflows."),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        !CheckedCeilAlign(totalWorkspaceSize, WORKSPACE_ALIGNMENT_BYTES, totalWorkspaceSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace alignment overflows."),
+        return ge::GRAPH_FAILED);
     size_t* userWorkspaceSize = context->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, userWorkspaceSize);
-    userWorkspaceSize[0] = userSize + sysWorkspaceSize;
+    userWorkspaceSize[0] = totalWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InitializeApplyCamePart1Tiling(gert::TilingContext* context,
                                                       ApplyCamePart1TilingData& tilingData, ge::DataType& dataType)
 {
-    OP_TILING_CHECK(!CheckParamsShape(context),
+    OP_TILING_CHECK(CheckParamsShape(context) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1Tiling check shape failed."),
                     return ge::GRAPH_FAILED);
 
     auto input = context->GetInputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, input);
+    auto epsInput = context->GetInputDesc(1);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, epsInput);
+    OP_TILING_CHECK(epsInput->GetDataType() != ge::DT_FLOAT,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 eps must be float32."),
+                    return ge::GRAPH_FAILED);
+    dataType = input->GetDataType();
+    int64_t inputElementBytes = 0;
+    if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
+        inputElementBytes = 2;
+        OP_LOGI(context->GetNodeName(), "Current dataType is [float16] or [bfloat16].");
+    } else if (dataType == ge::DT_FLOAT) {
+        inputElementBytes = sizeof(float);
+        OP_LOGI(context->GetNodeName(), "Current dataType is [float32].");
+    } else {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad", Ops::Base::ToString(dataType).c_str(),
+                                  "float16, bfloat16 or float32");
+        return ge::GRAPH_FAILED;
+    }
+
     auto storageInputShape = context->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, storageInputShape);
     auto inputShape = storageInputShape->GetStorageShape();
@@ -287,35 +421,59 @@ static ge::graphStatus InitializeApplyCamePart1Tiling(gert::TilingContext* conte
             return ge::GRAPH_FAILED);
         inputNum *= dim;
     }
+    constexpr int64_t kOutputElementBytes = sizeof(float);
+    const int64_t maxTensorBytes = std::numeric_limits<int64_t>::max();
+    const int64_t sumGradRElements = inputNum / M;
+    const int64_t sumGradCElements = inputNum / N;
+    const int64_t batchCount = inputNum / (N * M);
+    OP_TILING_CHECK(
+        inputNum > maxTensorBytes / inputElementBytes || sumGradRElements > maxTensorBytes / kOutputElementBytes ||
+            sumGradCElements > maxTensorBytes / kOutputElementBytes ||
+            batchCount > maxTensorBytes / kOutputElementBytes,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 tensor byte size overflows."),
+        return ge::GRAPH_FAILED);
     tilingData.set_N(N);
     tilingData.set_M(M);
-    tilingData.set_batchCount(inputNum / (N * M));
+    tilingData.set_batchCount(batchCount);
 
     OP_TILING_CHECK(UpdateTilingMsg(context, tilingData) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "UpdateTilingMsg fail."),
                     return ge::GRAPH_FAILED);
-
-    dataType = input->GetDataType();
-    if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
-        OP_LOGI(context->GetNodeName(), "Current dataType is [float16] or [bfloat16].");
-    } else if (dataType == ge::DT_FLOAT) {
-        OP_LOGI(context->GetNodeName(), "Current dataType is [float32].");
-    } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad", Ops::Base::ToString(dataType).c_str(),
-                                  "float16, bfloat16 or float32");
-        return ge::GRAPH_FAILED;
-    }
 
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus CalculateApplyCamePart1Tiling(gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
 {
+    if (ShouldUseDirectBatch(tilingData)) {
+        tilingData.set_directBatchMode(1);
+        tilingData.set_nNormalCoreNum(tilingData.get_N());
+        tilingData.set_nTailCoreNum(tilingData.get_N());
+        tilingData.set_nCoreNum(1);
+        tilingData.set_nLoopNormCore(1);
+        tilingData.set_nLoopTailCore(1);
+        tilingData.set_mNormalCoreNum(tilingData.get_M());
+        tilingData.set_mTailCoreNum(0);
+        tilingData.set_mCoreNum(1);
+        tilingData.set_mLoopNumCore(CeilDiv(tilingData.get_M(), M_NUM_PER_CORE));
+        const int64_t alignedBatchGroupCount = CeilDiv(tilingData.get_batchCount(), DIRECT_BATCH_ALIGNMENT);
+        const int64_t candidateCoreNum = std::min(tilingData.get_totalCoreNum(), alignedBatchGroupCount);
+        const int64_t groupsPerCore = CeilDiv(alignedBatchGroupCount, candidateCoreNum);
+        const int64_t activeCoreNum = CeilDiv(alignedBatchGroupCount, groupsPerCore);
+        tilingData.set_batchCoreNum(std::max<int64_t>(1, activeCoreNum));
+        tilingData.set_usedCoreNum(tilingData.get_batchCoreNum());
+        return CalculateDirectBatchWorkspace(context);
+    }
+
+    tilingData.set_directBatchMode(0);
     OP_TILING_CHECK(CalcNdimTiling(context, tilingData) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "CalcNdimTiling fail."),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CalcMdimTiling(context, tilingData) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "CalcMdimTiling fail."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CalcBatchSplit(context, tilingData) != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "CalcBatchSplit fail."),
                     return ge::GRAPH_FAILED);
 
     return CalculateApplyCamePart1Workspace(context, tilingData);
@@ -325,7 +483,10 @@ static void LogApplyCamePart1Tiling(const ApplyCamePart1TilingData& tilingData, 
 {
     OP_LOGI("[ApplyCamePart1]", "[nCoreNum]: %ld", tilingData.get_nCoreNum());
     OP_LOGI("[ApplyCamePart1]", "[mCoreNum]: %ld", tilingData.get_mCoreNum());
+    OP_LOGI("[ApplyCamePart1]", "[batchCount]: %ld", tilingData.get_batchCount());
+    OP_LOGI("[ApplyCamePart1]", "[batchCoreNum]: %ld", tilingData.get_batchCoreNum());
     OP_LOGI("[ApplyCamePart1]", "[usedCoreNum]: %ld", tilingData.get_usedCoreNum());
+    OP_LOGI("[ApplyCamePart1]", "[directBatchMode]: %ld", tilingData.get_directBatchMode());
     OP_LOGI("[ApplyCamePart1]", "[totalCoreNum]: %ld", tilingData.get_totalCoreNum());
     OP_LOGI("[ApplyCamePart1]", "[N]: %ld", tilingData.get_N());
     OP_LOGI("[ApplyCamePart1]", "[M]: %ld", tilingData.get_M());

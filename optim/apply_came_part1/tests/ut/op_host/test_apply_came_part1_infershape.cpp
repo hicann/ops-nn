@@ -8,6 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <array>
+#include <utility>
 #include <gtest/gtest.h>
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
@@ -160,10 +162,19 @@ TEST(ApplyCamePart1InferShape, RejectsOneDimensionalGrad)
     EXPECT_EQ(InferApplyCamePart1Shape(grad), ge::GRAPH_FAILED);
 }
 
-TEST(ApplyCamePart1InferShape, DoesNotValidateEpsShape)
+TEST(ApplyCamePart1InferShape, ValidatesEpsShape)
 {
-    for (const auto& epsShape : {gert::StorageShape({{}, {}}), gert::StorageShape({{1}, {1}}),
-                                 gert::StorageShape({{2}, {2}}), gert::StorageShape({{-2}, {-2}})}) {
+    const std::array<std::pair<gert::StorageShape, ge::graphStatus>, 9> cases = {
+        std::make_pair(gert::StorageShape({{}, {}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{1}, {1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{1, 1}, {1, 1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{2}, {2}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{2147483648LL}, {2147483648LL}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{4294967296LL}, {4294967296LL}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{-1}, {-1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{-1, 2}, {-1, 2}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{-2}, {-2}}), ge::GRAPH_SUCCESS)};
+    for (const auto& [epsShape, expected] : cases) {
         gert::StorageShape grad = {{4, 8}, {-1, -1}};
         gert::StorageShape eps = epsShape;
         gert::StorageShape sumR = {{}, {}};
@@ -176,11 +187,31 @@ TEST(ApplyCamePart1InferShape, DoesNotValidateEpsShape)
                           .InputShapes({&grad, &eps})
                           .OutputShapes({&sumR, &sumC, &sumRC})
                           .Build();
-        ASSERT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+        ASSERT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), expected);
+        if (expected != ge::GRAPH_SUCCESS) {
+            continue;
+        }
         EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(0), 4);
         EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(0), 8);
         EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDimNum(), 0);
     }
+}
+
+TEST(ApplyCamePart1InferShape, UnknownGradRankDoesNotHideInvalidEps)
+{
+    gert::StorageShape grad = {{-2}, {-2}};
+    gert::StorageShape eps = {{2147483648LL}, {2147483648LL}};
+    gert::StorageShape sumR = {{}, {}};
+    gert::StorageShape sumC = {{}, {}};
+    gert::StorageShape sumRC = {{}, {}};
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 3)
+                      .IrInstanceNum({2, 3})
+                      .InputShapes({&grad, &eps})
+                      .OutputShapes({&sumR, &sumC, &sumRC})
+                      .Build();
+    EXPECT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
 TEST(ApplyCamePart1InferShape, RejectsZeroRowDimension)
@@ -207,6 +238,18 @@ TEST(ApplyCamePart1InferShape, RejectsZeroBatchDimension)
     EXPECT_EQ(InferApplyCamePart1Shape(grad), ge::GRAPH_FAILED);
 }
 
+TEST(ApplyCamePart1InferShape, RejectsZeroNonLeadingBatchDimension)
+{
+    gert::StorageShape grad = {{2, 0, 4, 8}, {2, 0, 4, 8}};
+    EXPECT_EQ(InferApplyCamePart1Shape(grad), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart1InferShape, RejectsMultipleZeroDimensions)
+{
+    gert::StorageShape grad = {{2, 0, 0, 8}, {2, 0, 0, 8}};
+    EXPECT_EQ(InferApplyCamePart1Shape(grad), ge::GRAPH_FAILED);
+}
+
 TEST(ApplyCamePart1InferShape, UnknownRankPropagatesToAllOutputs)
 {
     gert::StorageShape grad = {{-2}, {-2}};
@@ -227,5 +270,28 @@ TEST(ApplyCamePart1InferShape, UnknownRankPropagatesToAllOutputs)
         ASSERT_NE(output, nullptr);
         EXPECT_EQ(output->GetDimNum(), 1);
         EXPECT_EQ(output->GetDim(0), -2);
+    }
+}
+
+TEST(ApplyCamePart1InferShape, InfersFloatOutputsForAllGradTypes)
+{
+    for (const auto inputType : {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT}) {
+        std::array<ge::DataType, 2> inputs = {inputType, ge::DT_FLOAT};
+        std::array<ge::DataType, 3> outputs = {ge::DT_UNDEFINED, ge::DT_UNDEFINED, ge::DT_UNDEFINED};
+        auto holder = gert::InferDataTypeContextFaker()
+                          .IrInputNum(2)
+                          .NodeIoNum(2, 3)
+                          .IrInstanceNum({2, 3})
+                          .InputDataTypes({&inputs[0], &inputs[1]})
+                          .OutputDataTypes({&outputs[0], &outputs[1], &outputs[2]})
+                          .Build();
+        auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1");
+        ASSERT_NE(impl, nullptr);
+        ASSERT_NE(impl->infer_datatype, nullptr);
+        auto* context = holder.GetContext<gert::InferDataTypeContext>();
+        ASSERT_EQ(impl->infer_datatype(context), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+        EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
+        EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT);
     }
 }

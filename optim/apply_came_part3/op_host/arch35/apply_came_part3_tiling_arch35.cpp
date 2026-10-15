@@ -23,10 +23,11 @@ constexpr int64_t kVectorBlockBytes = 256;
 constexpr int64_t kGmCacheLineBytes = 64;
 constexpr int64_t kFp32Bytes = 4;
 constexpr int64_t kFp32PerVectorBlock = kVectorBlockBytes / kFp32Bytes;
-constexpr int64_t kWorkspaceBytes = 20 * 1024 * 1024;
+constexpr int64_t kFp32PerDataBlock = 32 / kFp32Bytes;
+constexpr int64_t kMaxRepeatStrideBlocks = 255;
+constexpr int64_t kMaxRepeatStrideElements = kMaxRepeatStrideBlocks * kFp32PerDataBlock;
 constexpr int64_t kDetWorkspaceBytes = 1568;
 constexpr int64_t kGlobalShapeIndex = 6;
-constexpr int64_t kMaxSupportedDimension = std::numeric_limits<int32_t>::max();
 
 int64_t CeilDiv(int64_t value, int64_t factor)
 {
@@ -51,42 +52,58 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, const ApplyCamePart3
 {
     auto* raw = context->GetRawTilingData();
     OPS_CHECK_NULL_WITH_CONTEXT(context, raw);
-    OP_TILING_CHECK(sizeof(data) > raw->GetCapacity(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 tiling data exceeds capacity"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        sizeof(data) > raw->GetCapacity(),
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 tiling data exceeds capacity"),
+        return ge::GRAPH_FAILED);
     auto ret = memcpy_s(raw->GetData(), raw->GetCapacity(), &data, sizeof(data));
-    OP_TILING_CHECK(ret != EOK, VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 copy tiling data failed"),
+    OP_TILING_CHECK(ret != EOK,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 copy tiling data failed"),
                     return ge::GRAPH_FAILED);
     raw->SetDataSize(sizeof(data));
     context->SetScheduleMode(1);
     return ge::GRAPH_SUCCESS;
 }
 
-bool CheckInputParams(const gert::TilingContext* context, const gert::CompileTimeTensorDesc* uDesc,
-                      const gert::CompileTimeTensorDesc* mDesc, const gert::Shape& uShape, const gert::Shape& mShape)
+ge::graphStatus CheckInputParams(const gert::TilingContext* context, const gert::CompileTimeTensorDesc* uDesc,
+                                 const gert::CompileTimeTensorDesc* mDesc, const gert::Shape& uShape,
+                                 const gert::Shape& mShape)
 {
     OP_TILING_CHECK(
         uShape.GetDimNum() != 2 || mShape.GetDimNum() != 2 || uShape.GetDim(0) <= 0 || uShape.GetDim(1) <= 0 ||
-            uShape.GetDim(0) > kMaxSupportedDimension || uShape.GetDim(1) > kMaxSupportedDimension || mShape != uShape,
-        VECTOR_INNER_ERR_REPORT_TILIING(context, "u and m must be equal non-empty rank-2 shapes"), return false);
+            mShape != uShape,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "u and m must be equal non-empty rank-2 shapes"),
+        return ge::GRAPH_FAILED);
+    const int64_t n = uShape.GetDim(0);
+    const int64_t m = uShape.GetDim(1);
+    constexpr int64_t kMaxTensorBytes = std::numeric_limits<int64_t>::max();
+    OP_TILING_CHECK(
+        n > kMaxTensorBytes / m || n * m > kMaxTensorBytes / kFp32Bytes,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 tensor byte size overflows"),
+        return ge::GRAPH_FAILED);
     for (int32_t i = 2; i <= 5; ++i) {
         const auto* shape = context->GetInputShape(i);
         OPS_CHECK_NULL_WITH_CONTEXT(context, shape);
         OP_TILING_CHECK(!IsOneElementTensorShape(shape->GetStorageShape()),
-                        VECTOR_INNER_ERR_REPORT_TILIING(context, "scalar input must have one element"), return false);
+                        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "scalar input must have one element"),
+                        return ge::GRAPH_FAILED);
     }
     OP_TILING_CHECK(uDesc->GetDataType() != ge::DT_FLOAT ||
                         (mDesc->GetDataType() != ge::DT_FLOAT && mDesc->GetDataType() != ge::DT_FLOAT16 &&
                          mDesc->GetDataType() != ge::DT_BF16),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "unsupported ApplyCamePart3 dtype"), return false);
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "unsupported ApplyCamePart3 dtype"),
+                    return ge::GRAPH_FAILED);
     for (int32_t i = 2; i <= 5; ++i) {
-        OP_TILING_CHECK(context->GetInputDesc(i)->GetDataType() != ge::DT_FLOAT,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context, "scalar inputs must be float32"), return false);
+        const auto* scalarDesc = context->GetInputDesc(i);
+        OPS_CHECK_NULL_WITH_CONTEXT(context, scalarDesc);
+        OP_TILING_CHECK(scalarDesc->GetDataType() != ge::DT_FLOAT,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "scalar inputs must be float32"),
+                        return ge::GRAPH_FAILED);
     }
-    return true;
+    return ge::GRAPH_SUCCESS;
 }
 
-bool ParseAttributes(const gert::TilingContext* context, ApplyCamePart3TilingData& data)
+ge::graphStatus ParseAttributes(const gert::TilingContext* context, ApplyCamePart3TilingData& data)
 {
     const auto* attrs = context->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -96,25 +113,30 @@ bool ParseAttributes(const gert::TilingContext* context, ApplyCamePart3TilingDat
     const auto* globalShape = context->GetOptionalInputShape(kGlobalShapeIndex);
     if (globalShape != nullptr) {
         const auto& globalShapeStorage = globalShape->GetStorageShape();
-        OP_TILING_CHECK(globalShapeStorage.GetDimNum() != 1 || globalShapeStorage.GetDim(0) != 2,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context, "global_shape must be a 1D tensor with 2 elements"),
-                        return false);
-        OP_TILING_CHECK(context->GetInputDesc(kGlobalShapeIndex)->GetDataType() != ge::DT_INT64,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context, "global_shape must be int64"), return false);
+        OP_TILING_CHECK(
+            globalShapeStorage.GetDimNum() != 1 || globalShapeStorage.GetDim(0) != 2,
+            VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "global_shape must be a 1D tensor with 2 elements"),
+            return ge::GRAPH_FAILED);
+        const auto* globalShapeDesc = context->GetInputDesc(kGlobalShapeIndex);
+        OPS_CHECK_NULL_WITH_CONTEXT(context, globalShapeDesc);
+        OP_TILING_CHECK(globalShapeDesc->GetDataType() != ge::DT_INT64,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "global_shape must be int64"),
+                        return ge::GRAPH_FAILED);
         data.isGlobalShape = 1;
     }
-    return true;
+    return ge::GRAPH_SUCCESS;
 }
 
-bool ComputeTileShape(const gert::TilingContext* context, ApplyCamePart3TilingData& data,
-                      const gert::CompileTimeTensorDesc* mDesc)
+ge::graphStatus ComputeTileShape(const gert::TilingContext* context, ApplyCamePart3TilingData& data,
+                                 const gert::CompileTimeTensorDesc* mDesc)
 {
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     const int64_t coreNum = static_cast<int64_t>(platform.GetCoreNumAiv());
     uint64_t ubSize = 0;
     platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_TILING_CHECK(coreNum <= 0 || ubSize < kVectorBlockBytes,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "invalid Ascend950 platform resources"), return false);
+    OP_TILING_CHECK(coreNum <= 0 || ubSize <= static_cast<uint64_t>(kDetWorkspaceBytes),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "invalid Ascend950 platform resources"),
+                    return ge::GRAPH_FAILED);
 
     data.rCoreNum = std::min<int64_t>(data.curN, coreNum);
     data.rNumCalc = CeilAlign(CeilDiv(data.curN, data.rCoreNum), kFp32PerVectorBlock);
@@ -125,19 +147,30 @@ bool ComputeTileShape(const gert::TilingContext* context, ApplyCamePart3TilingDa
     data.cNumCalc = std::min(data.cNumCalc, data.curM);
     data.cCoreNum = CeilDiv(data.curM, data.cNumCalc);
     const int64_t bytesPerElement = mDesc->GetDataType() == ge::DT_FLOAT ? 4 : 2;
-    // The first-moment output can alias m. If a row is not cache-line aligned,
-    // column cores would write different parts of the same GM cache line and
-    // could overwrite each other. Keep each row on one column core.
+    // Only the first-moment path writes m_out. If a row is not cache-line
+    // aligned, adjacent column cores can update different logical columns in
+    // the same physical GM cache line through DataCopyPad. Keep each written
+    // row on one column core and retain parallelism along N. The other path
+    // preserves the REF input in place and can keep column parallelism.
     if (data.useFirstMoment != 0 && data.curM * bytesPerElement % kGmCacheLineBytes != 0) {
         data.cCoreNum = 1;
         data.cNumCalc = data.curM;
     }
     data.baseN = data.rNumCalc;
     data.baseM = data.cNumCalc;
-    const int64_t maxUbElements = static_cast<int64_t>(ubSize) / (5 * kFp32Bytes);
-    while (CeilAlign(data.baseM, bytesPerElement == 4 ? 8 : 16) * CeilAlign(data.baseN, bytesPerElement == 4 ? 8 : 16) >
-           maxUbElements) {
-        if (data.baseM >= data.baseN && data.baseM > kFp32PerVectorBlock) {
+    // Kernel UB layout is inQueue + outQueue + three FP32 calculation planes,
+    // plus an unconditional deterministic helper buffer. Derive the tile from
+    // the complete allocation instead of accepting an overcommitted tile.
+    const int64_t maxUbElements = static_cast<int64_t>(ubSize - static_cast<uint64_t>(kDetWorkspaceBytes)) /
+                                  (5 * kFp32Bytes);
+    const int64_t tileAlignment = bytesPerElement == 4 ? 8 : 16;
+    auto tileElements = [&data, tileAlignment]() {
+        return CeilAlign(data.baseM, tileAlignment) * CeilAlign(data.baseN, tileAlignment);
+    };
+    while (data.baseM > kMaxRepeatStrideElements || tileElements() > maxUbElements) {
+        // Several vector APIs encode repeat stride in uint8_t blocks. Cap baseM
+        // at 255 FP32 blocks even on future platforms with a larger UB.
+        if (data.baseM > kMaxRepeatStrideElements || (data.baseM >= data.baseN && data.baseM > kFp32PerVectorBlock)) {
             data.baseM = CeilAlign(CeilDiv(data.baseM, 2), kFp32PerVectorBlock);
         } else if (data.baseN > kFp32PerVectorBlock) {
             data.baseN = CeilAlign(CeilDiv(data.baseN, 2), kFp32PerVectorBlock);
@@ -145,28 +178,51 @@ bool ComputeTileShape(const gert::TilingContext* context, ApplyCamePart3TilingDa
             break;
         }
     }
+    OP_TILING_CHECK(data.baseM > kMaxRepeatStrideElements || tileElements() > maxUbElements,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                    "ApplyCamePart3 tile exceeds vector stride or UB limits"),
+                    return ge::GRAPH_FAILED);
     data.usedCoreNum = data.rCoreNum * data.cCoreNum;
     OP_TILING_CHECK(data.usedCoreNum <= 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 used core count is zero"), return false);
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 used core count is zero"),
+                    return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+bool CheckedMultiply(size_t lhs, size_t rhs, size_t& result)
+{
+    if (rhs != 0 && lhs > std::numeric_limits<size_t>::max() / rhs) {
+        return false;
+    }
+    result = lhs * rhs;
     return true;
 }
 
-bool ComputeWorkspaceSize(const ApplyCamePart3TilingData& data, size_t& workspaceSize)
+bool CheckedAdd(size_t lhs, size_t rhs, size_t& result)
 {
-    constexpr size_t kFloatBytes = sizeof(float);
-    const size_t maxSize = std::numeric_limits<size_t>::max();
-    const auto n = static_cast<size_t>(data.curN);
-    const auto m = static_cast<size_t>(data.curM);
-    if (m != 0 && n > maxSize / m) {
+    if (lhs > std::numeric_limits<size_t>::max() - rhs) {
         return false;
     }
-    const size_t elementCount = n * m;
-    if (elementCount >
-        (maxSize - static_cast<size_t>(kWorkspaceBytes) - static_cast<size_t>(kDetWorkspaceBytes)) / kFloatBytes) {
+    result = lhs + rhs;
+    return true;
+}
+
+bool ComputeWorkspaceSize(const ApplyCamePart3TilingData& data, size_t systemWorkspaceSize, size_t& workspaceSize)
+{
+    const size_t rOneCoreBlocks = static_cast<size_t>(CeilDiv(data.rNumCalc, data.baseN));
+    const int64_t rTailNumCalc = data.curN - data.rNumCalc * (data.rCoreNum - 1);
+    const size_t rBlockCount = static_cast<size_t>(data.rCoreNum - 1) * rOneCoreBlocks +
+                               static_cast<size_t>(CeilDiv(rTailNumCalc, data.baseN));
+    size_t workspaceCElements = 0;
+    if (!CheckedMultiply(rBlockCount, static_cast<size_t>(data.curM), workspaceCElements)) {
         return false;
     }
-    workspaceSize = static_cast<size_t>(kWorkspaceBytes) + static_cast<size_t>(kDetWorkspaceBytes) +
-                    elementCount * kFloatBytes;
+    size_t userBytes = 0;
+    if (!CheckedMultiply(workspaceCElements, sizeof(float), userBytes) ||
+        !CheckedAdd(userBytes, static_cast<size_t>(kDetWorkspaceBytes), userBytes) ||
+        !CheckedAdd(systemWorkspaceSize, userBytes, workspaceSize)) {
+        return false;
+    }
     return true;
 }
 } // namespace
@@ -184,23 +240,26 @@ ge::graphStatus TilingApplyCamePart3(gert::TilingContext* context)
     OPS_CHECK_NULL_WITH_CONTEXT(context, mShapePtr);
     const auto uShape = uShapePtr->GetStorageShape();
     const auto mShape = mShapePtr->GetStorageShape();
-    OP_TILING_CHECK(!CheckInputParams(context, uDesc, mDesc, uShape, mShape),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 input check failed"),
+    OP_TILING_CHECK(CheckInputParams(context, uDesc, mDesc, uShape, mShape) != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 input check failed"),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(!ParseAttributes(context, data),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 attribute check failed"),
+    OP_TILING_CHECK(ParseAttributes(context, data) != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 attribute check failed"),
                     return ge::GRAPH_FAILED);
 
     data.curN = uShape.GetDim(0);
     data.curM = uShape.GetDim(1);
-    OP_TILING_CHECK(!ComputeTileShape(context, data, mDesc),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 tile shape calculation failed"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        ComputeTileShape(context, data, mDesc) != ge::GRAPH_SUCCESS,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 tile shape calculation failed"),
+        return ge::GRAPH_FAILED);
     size_t* workspace = context->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, workspace);
+    auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    const size_t systemWorkspaceSize = static_cast<size_t>(platform.GetLibApiWorkSpaceSize());
     size_t workspaceSize = 0;
-    OP_TILING_CHECK(!ComputeWorkspaceSize(data, workspaceSize),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context, "ApplyCamePart3 workspace size overflows"),
+    OP_TILING_CHECK(!ComputeWorkspaceSize(data, systemWorkspaceSize, workspaceSize),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 workspace size overflows"),
                     return ge::GRAPH_FAILED);
     workspace[0] = workspaceSize;
     context->SetBlockDim(data.usedCoreNum);

@@ -48,7 +48,6 @@ private:
     GlobalTensor<float> gmSumGradC_;
     GlobalTensor<float> gmSumGradRC_;
 
-    GlobalTensor<float> workspaceSumGradRC_;
     GlobalTensor<float> workspaceSumGradC_;
 
     // multi-core sync
@@ -71,7 +70,6 @@ private:
     bool useFirstMoment{false};
 
     // part1 params
-    int64_t baseRCSize{0};
     int64_t baseCSize{0};
     int64_t mLoopNumCore_{0};
 
@@ -144,18 +142,12 @@ __aicore__ inline void ApplyCamePart3Post<T>::Init(CamePart3InOut camePart3InOut
     gmSumGradRC_.SetGlobalBuffer((__gm__ float*)(camePart3InOut.sumURC));
 
     // workspace vars
-    int64_t cTailNumCalc = curM - cNumCalc_ * (cCoreNum_ - 1);
-    int64_t cBlockNum = DivCeil(cNumCalc_, baseM) * (cCoreNum_ - 1) + DivCeil(cTailNumCalc, baseM);
     int64_t rTailNumCalc = curN - rNumCalc_ * (rCoreNum_ - 1);
     int64_t rBlockNum = DivCeil(rNumCalc_, baseN) * (rCoreNum_ - 1) + DivCeil(rTailNumCalc, baseN);
-    baseRCSize = cBlockNum * rBlockNum;
     baseCSize = rBlockNum;
 
-    int64_t workspaceRCSize = DivCeil(cNumCalc_, baseM) * rCoreNum_ * DivCeil(rNumCalc_, baseN) * cCoreNum_;
-
     // workspace地址
-    workspaceSumGradRC_.SetGlobalBuffer((__gm__ float*)workspace + DET_WORKSPACE_SIZE);
-    workspaceSumGradC_.SetGlobalBuffer((__gm__ float*)workspace + workspaceRCSize + DET_WORKSPACE_SIZE);
+    workspaceSumGradC_.SetGlobalBuffer((__gm__ float*)workspace + DET_WORKSPACE_SIZE);
 
     pipe.InitBuffer(inputBuf, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 * sizeof(float));
 }
@@ -167,12 +159,11 @@ __aicore__ inline void ApplyCamePart3Post<T>::StoreAccumulated(LocalTensor<float
     // Only block 0 executes the post stage.  Use atomic block copies for the
     // aligned body and scalar atomics for the prefix/tail so no DMA writes
     // outside the logical output tensor.
-    event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    SetFlag<HardEvent::V_S>(eventVToS);
-    WaitFlag<HardEvent::V_S>(eventVToS);
     int64_t i = 0;
+    bool hasScalarWrite = false;
     while (i < count && (outputOffset + i) % FP32_ONE_BLOCK_COUNT != 0) {
         AtomicAdd(gmSumGradC_.GetPhyAddr(outputOffset + i), inputLocal.GetValue(i));
+        hasScalarWrite = true;
         ++i;
     }
     const int64_t alignedCount = (count - i) / FP32_ONE_BLOCK_COUNT * FP32_ONE_BLOCK_COUNT;
@@ -191,11 +182,15 @@ __aicore__ inline void ApplyCamePart3Post<T>::StoreAccumulated(LocalTensor<float
     i += alignedCount;
     while (i < count) {
         AtomicAdd(gmSumGradC_.GetPhyAddr(outputOffset + i), inputLocal.GetValue(i));
+        hasScalarWrite = true;
         ++i;
     }
-    event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-    SetFlag<HardEvent::S_MTE3>(eventSToMte3);
-    WaitFlag<HardEvent::S_MTE3>(eventSToMte3);
+    if (hasScalarWrite) {
+        // Complete the transfer fence before reusing the UB region.
+        event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(eventSToMte3);
+        WaitFlag<HardEvent::S_MTE3>(eventSToMte3);
+    }
 }
 
 template <typename T>
@@ -232,8 +227,8 @@ __aicore__ inline void ApplyCamePart3Post<T>::Process()
 
     mLoopNumCore_ = DivCeil(curM, ONCE_HANDLE_NUM64);
     uint64_t core_loop = DivCeil(mLoopNumCore_, ONCE_HANDLE_NUM512 - 1);
-    uint64_t pre_core_m = mLoopNumCore_ / core_loop * ONCE_HANDLE_NUM64;
-    uint64_t last_core_m = (mLoopNumCore_ - pre_core_m * (core_loop - 1)) * ONCE_HANDLE_NUM64;
+    // Use ceiling division so every workspace chunk fits the input buffer.
+    uint64_t pre_core_m = DivCeil(mLoopNumCore_, core_loop) * ONCE_HANDLE_NUM64;
     uint64_t gmOffsets = 0;
     uint64_t base_m = 0;
 
@@ -266,33 +261,12 @@ __aicore__ inline void ApplyCamePart3Post<T>::Pre_Core_Compute(uint64_t gmOffset
     uint64_t last_loop_n = baseCSize - (loop_time - 1) * pre_loop_n;
     LocalTensor<float> inputLocal = inputBuf.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
 
-    event_t eventMte3toS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
-    SetFlag<HardEvent::MTE3_S>(eventMte3toS);
-    WaitFlag<HardEvent::MTE3_S>(eventMte3toS);
-
-    constexpr float scalarValue = 0;
-    Duplicate(inputLocal, scalarValue, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
-
-    event_t eventS2Mte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
-    SetFlag<HardEvent::S_MTE2>(eventS2Mte2);
-    WaitFlag<HardEvent::S_MTE2>(eventS2Mte2);
-
     for (int64_t i = 0; i < loop_time - 1; i++) {
         CalcSumC(inputLocal, gmOffsets, i, pre_loop_n, pre_loop_n, cal_m);
 
         event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-    }
-
-    if (loop_time > 1) {
-        SetFlag<HardEvent::MTE3_S>(eventMte3toS);
-        WaitFlag<HardEvent::MTE3_S>(eventMte3toS);
-
-        Duplicate(inputLocal, scalarValue, pre_loop_n * Ceil(cal_m, FP32_ONE_BLOCK_COUNT));
-
-        SetFlag<HardEvent::S_MTE2>(eventS2Mte2);
-        WaitFlag<HardEvent::S_MTE2>(eventS2Mte2);
     }
 
     CalcSumC(inputLocal, gmOffsets, loop_time - 1, pre_loop_n, last_loop_n, cal_m);
@@ -322,13 +296,18 @@ __aicore__ inline void ApplyCamePart3Post<T>::CalcSumC(LocalTensor<float> inputL
                 DataCopy(inputLocal[i * MAX_BLOCK_LEN_SIZE_FP32],
                          workspaceSumGradC_[rowOffset + i * MAX_BLOCK_LEN_SIZE_FP32], MAX_BLOCK_LEN_SIZE_FP32);
             }
-            DataCopyPad(inputLocal[loop * MAX_BLOCK_LEN_SIZE_FP32],
-                        workspaceSumGradC_[rowOffset + loop * MAX_BLOCK_LEN_SIZE_FP32],
-                        {static_cast<uint16_t>(1), static_cast<uint16_t>(tail * sizeof(float)), 0, 0},
-                        {false, 0, 0, 0});
+            if (tail > 0) {
+                DataCopyPad(inputLocal[loop * MAX_BLOCK_LEN_SIZE_FP32],
+                            workspaceSumGradC_[rowOffset + loop * MAX_BLOCK_LEN_SIZE_FP32],
+                            {static_cast<uint16_t>(1), static_cast<uint16_t>(tail * sizeof(float)), 0, 0},
+                            {false, 0, 0, 0});
+            }
             event_t eventMte2toMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
             SetFlag<HardEvent::MTE2_MTE3>(eventMte2toMte3);
             WaitFlag<HardEvent::MTE2_MTE3>(eventMte2toMte3);
+            event_t eventMte2toS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+            SetFlag<HardEvent::MTE2_S>(eventMte2toS);
+            WaitFlag<HardEvent::MTE2_S>(eventMte2toS);
             StoreAccumulated(inputLocal, gmOffsets, calcM);
             event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
             SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
@@ -354,6 +333,9 @@ __aicore__ inline void ApplyCamePart3Post<T>::CalcSumC(LocalTensor<float> inputL
         event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventV2Mte3);
         WaitFlag<HardEvent::V_MTE3>(eventV2Mte3);
+        event_t eventV2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventV2S);
+        WaitFlag<HardEvent::V_S>(eventV2S);
 
         StoreAccumulated(inputLocal, gmOffsets, calcM);
     }
@@ -388,11 +370,11 @@ __aicore__ inline void ApplyCamePart3Post<T>::CalcSumURC()
 
         const float chunkHigh = high.GetValue(0);
         const float chunkLow = low.GetValue(0);
-        const float sum = totalHigh + chunkHigh;
-        const float split = sum - totalHigh;
-        const float error = (totalHigh - (sum - split)) + (chunkHigh - split);
-        totalHigh = sum;
-        totalLow += chunkLow + error;
+        float nextHigh = 0.0f;
+        float nextLow = 0.0f;
+        ApplyCamePart3CompensatedAdd(totalHigh, totalLow, chunkHigh, chunkLow, nextHigh, nextLow);
+        totalHigh = nextHigh;
+        totalLow = nextLow;
     }
     gmSumGradRC_.SetValue(0, totalHigh + totalLow);
     event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));

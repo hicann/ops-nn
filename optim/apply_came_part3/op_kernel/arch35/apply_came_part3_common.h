@@ -25,10 +25,49 @@ constexpr int64_t ONE_BLOCK_INT32_COUNT = 8;
 constexpr int64_t SPLIT_PART = 2;
 constexpr int64_t ONE_VECTOR_FP32_SIZE = 64;
 constexpr int64_t MAX_REPEAT_TIME = 255;
+constexpr int64_t MAX_DATA_COPY_STRIDE = 65535;
 constexpr int64_t INT64_ONE_BLOCK_COUNT = 4;
+constexpr int64_t GLOBAL_SHAPE_ELEMENT_COUNT = 2;
 constexpr int64_t MAX_POST_BUFFER_SIZE = 16384;
 constexpr uint32_t DET_WORKSPACE_SIZE = 392;  // 8 * 49
 constexpr uint32_t DET_WORKSPACE_BYTE = 1568; // 32B * 49
+constexpr float APPLY_CAME_PART3_MAX_FINITE = 3.402823466e+38F;
+
+__aicore__ inline bool ApplyCamePart3IsFinite(float value)
+{
+    return value >= -APPLY_CAME_PART3_MAX_FINITE && value <= APPLY_CAME_PART3_MAX_FINITE;
+}
+
+__aicore__ inline void ApplyCamePart3CompensatedAdd(float leftHigh, float leftLow, float rightHigh, float rightLow,
+                                                    float& resultHigh, float& resultLow)
+{
+    const float sum = leftHigh + rightHigh;
+    if (!ApplyCamePart3IsFinite(sum)) {
+        resultHigh = sum;
+        resultLow = 0.0f;
+        return;
+    }
+    const float split = sum - leftHigh;
+    const float error = (leftHigh - (sum - split)) + (rightHigh - split);
+    resultHigh = sum;
+    resultLow = leftLow + rightLow + error;
+}
+
+__aicore__ inline void ApplyCamePart3NormalizeCompensation(AscendC::LocalTensor<float> high,
+                                                           AscendC::LocalTensor<float> low,
+                                                           AscendC::LocalTensor<float> scratch,
+                                                           AscendC::LocalTensor<float> maskStorage, uint64_t count)
+{
+    AscendC::LocalTensor<uint8_t> finiteMask = maskStorage.ReinterpretCast<uint8_t>();
+    AscendC::Abs(scratch, high, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Compares(finiteMask, scratch, APPLY_CAME_PART3_MAX_FINITE, AscendC::CMPMODE::LE, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Duplicate(scratch, static_cast<float>(0), count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(low, finiteMask, low, scratch, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, count);
+    AscendC::PipeBarrier<PIPE_V>();
+}
 
 __aicore__ inline void ApplyCamePart3WaitMte3ToS()
 {
@@ -187,6 +226,9 @@ __aicore__ inline void ApplyCamePart3ReduceVector(AscendC::LocalTensor<float>& v
     for (int64_t index = 0; index < activeCount; ++index) {
         sum += values.GetValue(index);
     }
+    event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::S_V));
+    AscendC::SetFlag<AscendC::HardEvent::S_V>(eventIdSToV);
+    AscendC::WaitFlag<AscendC::HardEvent::S_V>(eventIdSToV);
     AscendC::Duplicate(values, sum, 1);
     AscendC::PipeBarrier<PIPE_V>();
 }
@@ -219,6 +261,7 @@ __aicore__ inline void ApplyCamePart3CompensatedReduce(AscendC::LocalTensor<floa
         AscendC::Add(low, low, high, pairCount);
         AscendC::Adds(high, sumTmp, static_cast<float>(0), pairCount);
         AscendC::PipeBarrier<PIPE_V>();
+        ApplyCamePart3NormalizeCompensation(high, low, high[leftCount], recoveredTmp, pairCount);
         currentCount = leftCount;
     }
 
@@ -231,10 +274,10 @@ __aicore__ inline void ApplyCamePart3CompensatedReduce(AscendC::LocalTensor<floa
         for (uint64_t index = 0; index < pairCount; ++index) {
             const float left = high.GetValue(index);
             const float right = high.GetValue(rightCount + index);
-            const float sum = left + right;
-            const float split = sum - left;
-            const float error = (left - (sum - split)) + (right - split);
-            const float lowSum = low.GetValue(index) + low.GetValue(rightCount + index) + error;
+            float sum = 0.0f;
+            float lowSum = 0.0f;
+            ApplyCamePart3CompensatedAdd(left, low.GetValue(index), right, low.GetValue(rightCount + index), sum,
+                                         lowSum);
             high.SetValue(index, sum);
             low.SetValue(index, lowSum);
         }

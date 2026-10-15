@@ -10,7 +10,10 @@
 
 /*!
  * \file test_geir_apply_came_part3.cpp
- * \brief ApplyCamePart3 GE IR graph-mode verification.
+ * \brief ApplyCamePart3 GE IR graph-mode verification with static shapes.
+ *
+ * 输出 m 与输入 m 使用 GE REF 语义共享存储。本示例使用普通静态 shape 构图，
+ * 并校验原位更新后的 m 以及三个归约输出。
  */
 
 #include <algorithm>
@@ -49,7 +52,7 @@ bool SameShape(const ge::TensorDesc& desc, const std::vector<int64_t>& expected)
 }
 
 bool VerifyTensor(const ge::Tensor& tensor, const std::vector<int64_t>& expectedShape,
-                  const std::vector<float>& expected, const char* name)
+                  const std::vector<float>& expected, const char* name, float relTolerance)
 {
     const ge::TensorDesc desc = tensor.GetTensorDesc();
     if (!SameShape(desc, expectedShape)) {
@@ -63,13 +66,27 @@ bool VerifyTensor(const ge::Tensor& tensor, const std::vector<int64_t>& expected
     }
 
     const float* actual = reinterpret_cast<const float*>(tensor.GetData());
+    double maxAbsDiff = 0.0;
+    double maxRelDiff = 0.0;
     for (size_t i = 0; i < expected.size(); ++i) {
-        if (std::fabs(actual[i] - expected[i]) > kTolerance) {
+        // 大规模归约用相对容差: 累加值可达百万级, 绝对 1e-5 不适用
+        const float scaleTol = std::max(kTolerance, relTolerance * std::fabs(expected[i]));
+        const double diff = std::fabs(static_cast<double>(actual[i]) - expected[i]);
+        if (diff > scaleTol) {
             std::cerr << name << " value mismatch at " << i << ": actual=" << actual[i] << ", expected=" << expected[i]
-                      << std::endl;
+                      << ", relDiff=" << (diff / std::fabs(expected[i])) << std::endl;
             return false;
         }
+        if (diff > maxAbsDiff) {
+            maxAbsDiff = diff;
+        }
+        const double rel = diff / std::max(1e-30, std::fabs(static_cast<double>(expected[i])));
+        if (rel > maxRelDiff) {
+            maxRelDiff = rel;
+        }
     }
+    std::cout << name << " verify OK: maxAbsDiff=" << maxAbsDiff << ", maxRelDiff=" << maxRelDiff
+              << ", count=" << expected.size() << std::endl;
     return true;
 }
 
@@ -82,14 +99,15 @@ ge::TensorDesc MakeDesc(const std::vector<int64_t>& shape, ge::DataType dtype)
 }
 
 void AddInput(ge::Graph& graph, const char* name, uint32_t index, const ge::TensorDesc& desc,
-              const std::vector<uint8_t>& bytes, std::vector<ge::Tensor>& input, std::vector<ge::Operator>& inputs)
+              const ge::TensorDesc& feedDesc, const std::vector<uint8_t>& bytes, std::vector<ge::Tensor>& input,
+              std::vector<ge::Operator>& inputs)
 {
     ge::op::Data data(name);
     data.set_attr_index(index);
     data.update_input_desc_x(desc);
     data.update_output_desc_y(desc);
     graph.AddOp(data);
-    input.emplace_back(desc, const_cast<uint8_t*>(bytes.data()), bytes.size());
+    input.emplace_back(feedDesc, const_cast<uint8_t*>(bytes.data()), bytes.size());
     inputs.push_back(data);
 }
 
@@ -108,14 +126,25 @@ void ComputeExpected(const std::vector<float>& u, const std::vector<float>& m, s
     expectedCol.assign(static_cast<size_t>(kCols), 0.0F);
     expectedAll.assign(1, 0.0F);
     const float scale = std::max(1.0F, kSumSquareU / (static_cast<float>(kRows * kCols) * kClipThreshold));
+    // 期望值用 double 累加, 避免 4 千万元素级 CPU 端浮点累加误差淹没校验
+    std::vector<double> rowSum(static_cast<size_t>(kRows), 0.0);
+    std::vector<double> colSum(static_cast<size_t>(kCols), 0.0);
+    double allSum = 0.0;
     for (size_t i = 0; i < u.size(); ++i) {
         expectedM[i] = (1.0F - kBeta1) * (u[i] / scale) + kBeta1 * m[i];
         const float delta = u[i] / scale - expectedM[i];
         const float value = delta * delta + kEps;
-        expectedRow[i / static_cast<size_t>(kCols)] += value;
-        expectedCol[i % static_cast<size_t>(kCols)] += value;
-        expectedAll[0] += value;
+        rowSum[i / static_cast<size_t>(kCols)] += value;
+        colSum[i % static_cast<size_t>(kCols)] += value;
+        allSum += value;
     }
+    for (size_t i = 0; i < rowSum.size(); ++i) {
+        expectedRow[i] = static_cast<float>(rowSum[i]);
+    }
+    for (size_t i = 0; i < colSum.size(); ++i) {
+        expectedCol[i] = static_cast<float>(colSum[i]);
+    }
+    expectedAll[0] = static_cast<float>(allSum);
 }
 
 void AddApplyCamePart3(ge::Graph& graph, std::vector<ge::Operator>& inputs, std::vector<ge::Operator>& outputs)
@@ -177,13 +206,13 @@ int BuildGraph(ge::Graph& graph, std::vector<ge::Tensor>& input, std::vector<ge:
     const ge::TensorDesc matrixDesc = MakeDesc({kRows, kCols}, ge::DT_FLOAT);
     const ge::TensorDesc scalarDesc = MakeDesc({1}, ge::DT_FLOAT);
     const ge::TensorDesc globalShapeDesc = MakeDesc({2}, ge::DT_INT64);
-    AddInput(graph, "u", 0, matrixDesc, storage[0], input, inputs);
-    AddInput(graph, "m", 1, matrixDesc, storage[1], input, inputs);
-    AddInput(graph, "eps", 2, scalarDesc, storage[2], input, inputs);
-    AddInput(graph, "beta1", 3, scalarDesc, storage[3], input, inputs);
-    AddInput(graph, "clip_threshold", 4, scalarDesc, storage[4], input, inputs);
-    AddInput(graph, "sum_square_u", 5, scalarDesc, storage[5], input, inputs);
-    AddInput(graph, "global_shape", 6, globalShapeDesc, storage[6], input, inputs);
+    AddInput(graph, "u", 0, matrixDesc, matrixDesc, storage[0], input, inputs);
+    AddInput(graph, "m", 1, matrixDesc, matrixDesc, storage[1], input, inputs);
+    AddInput(graph, "eps", 2, scalarDesc, scalarDesc, storage[2], input, inputs);
+    AddInput(graph, "beta1", 3, scalarDesc, scalarDesc, storage[3], input, inputs);
+    AddInput(graph, "clip_threshold", 4, scalarDesc, scalarDesc, storage[4], input, inputs);
+    AddInput(graph, "sum_square_u", 5, scalarDesc, scalarDesc, storage[5], input, inputs);
+    AddInput(graph, "global_shape", 6, globalShapeDesc, globalShapeDesc, storage[6], input, inputs);
     AddApplyCamePart3(graph, inputs, outputs);
     return kSuccess;
 }
@@ -210,10 +239,11 @@ int ExecuteGraph(ge::Graph& graph, const std::vector<ge::Tensor>& input, const s
         std::cerr << "Expected four outputs, got " << output.size() << std::endl;
         return kFailed;
     }
-    return VerifyTensor(output[0], {kRows, kCols}, expectedM, "m") &&
-                   VerifyTensor(output[1], {kRows}, expectedRow, "sum_u_r") &&
-                   VerifyTensor(output[2], {kCols}, expectedCol, "sum_u_c") &&
-                   VerifyTensor(output[3], {1}, expectedAll, "sum_u_rc") ?
+    // m_out 为逐元素计算, 用紧容差; 三个归约输出为 fp32 跨 tile 原子累加, 用相对容差
+    return VerifyTensor(output[0], {kRows, kCols}, expectedM, "m", 1.0e-5F) &&
+                   VerifyTensor(output[1], {kRows}, expectedRow, "sum_u_r", 5.0e-3F) &&
+                   VerifyTensor(output[2], {kCols}, expectedCol, "sum_u_c", 5.0e-3F) &&
+                   VerifyTensor(output[3], {1}, expectedAll, "sum_u_rc", 5.0e-3F) ?
                kSuccess :
                kFailed;
 }

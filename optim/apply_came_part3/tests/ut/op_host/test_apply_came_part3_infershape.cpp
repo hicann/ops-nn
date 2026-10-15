@@ -9,6 +9,7 @@
  */
 
 #include <array>
+#include <utility>
 #include <gtest/gtest.h>
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
@@ -111,17 +112,115 @@ TEST(ApplyCamePart3InferShape, RejectsMismatchedShapes)
     EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
 }
 
-TEST(ApplyCamePart3InferShape, DoesNotValidateControlInputShape)
+TEST(ApplyCamePart3InferShape, RejectsOneDimensionalInput)
 {
-    for (const auto& scalarShape : {gert::StorageShape({{}, {}}), gert::StorageShape({{1}, {1}}),
-                                    gert::StorageShape({{2}, {2}}), gert::StorageShape({{-2}, {-2}})}) {
+    ShapeCase shapes;
+    shapes.u = gert::StorageShape({{0}, {0}});
+    shapes.m = gert::StorageShape({{0}, {0}});
+    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsZeroRowDimension)
+{
+    ShapeCase shapes;
+    shapes.u = gert::StorageShape({{0, 67}, {0, 67}});
+    shapes.m = gert::StorageShape({{0, 67}, {0, 67}});
+    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsZeroColumnDimension)
+{
+    ShapeCase shapes;
+    shapes.u = gert::StorageShape({{65, 0}, {65, 0}});
+    shapes.m = gert::StorageShape({{65, 0}, {65, 0}});
+    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsBothZeroDimensions)
+{
+    ShapeCase shapes;
+    shapes.u = gert::StorageShape({{0, 0}, {0, 0}});
+    shapes.m = gert::StorageShape({{0, 0}, {0, 0}});
+    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, ResolvesCompatibleDynamicDimensions)
+{
+    const std::array<std::pair<gert::StorageShape, gert::StorageShape>, 2> cases = {
+        std::make_pair(gert::StorageShape({{-1, 67}, {-1, 67}}), gert::StorageShape({{65, -1}, {65, -1}})),
+        std::make_pair(gert::StorageShape({{-1, -1}, {-1, -1}}), gert::StorageShape({{-1, -1}, {-1, -1}}))};
+    const std::array<gert::Shape, 2> expected = {gert::Shape({65, 67}), gert::Shape({-1, -1})};
+    for (size_t i = 0; i < cases.size(); ++i) {
+        ShapeCase shapes;
+        shapes.u = cases[i].first;
+        shapes.m = cases[i].second;
+        ASSERT_EQ(RunInferShape(shapes), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(shapes.mOut.GetStorageShape(), expected[i]);
+        EXPECT_EQ(shapes.sumUR.GetStorageShape(), gert::Shape({expected[i].GetDim(0)}));
+        EXPECT_EQ(shapes.sumUC.GetStorageShape(), gert::Shape({expected[i].GetDim(1)}));
+        EXPECT_EQ(shapes.sumURC.GetStorageShape(), gert::Shape({1}));
+    }
+}
+
+TEST(ApplyCamePart3InferShape, RejectsKnownConflictsInDynamicShapes)
+{
+    for (const auto& [uShape, mShape] : std::array<std::pair<gert::StorageShape, gert::StorageShape>, 3>{
+             std::make_pair(gert::StorageShape({{-1, 67}, {-1, 67}}), gert::StorageShape({{65, 66}, {65, 66}})),
+             std::make_pair(gert::StorageShape({{64, -1}, {64, -1}}), gert::StorageShape({{65, 67}, {65, 67}})),
+             std::make_pair(gert::StorageShape({{-1, 67}, {-1, 67}}), gert::StorageShape({{0, 67}, {0, 67}}))}) {
+        ShapeCase shapes;
+        shapes.u = uShape;
+        shapes.m = mShape;
+        EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+    }
+}
+
+TEST(ApplyCamePart3InferShape, ValidatesControlInputShape)
+{
+    const std::array<std::pair<gert::StorageShape, ge::graphStatus>, 9> cases = {
+        std::make_pair(gert::StorageShape({{}, {}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{1}, {1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{1, 1}, {1, 1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{2}, {2}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{2147483648LL}, {2147483648LL}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{4294967296LL}, {4294967296LL}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{-1}, {-1}}), ge::GRAPH_SUCCESS),
+        std::make_pair(gert::StorageShape({{-1, 2}, {-1, 2}}), ge::GRAPH_FAILED),
+        std::make_pair(gert::StorageShape({{-2}, {-2}}), ge::GRAPH_SUCCESS)};
+    for (const auto& [scalarShape, expected] : cases) {
         ShapeCase shapes;
         shapes.scalar = scalarShape;
-        ASSERT_EQ(RunInferShape(shapes), ge::GRAPH_SUCCESS);
+        ASSERT_EQ(RunInferShape(shapes), expected);
+        if (expected != ge::GRAPH_SUCCESS) {
+            continue;
+        }
         EXPECT_EQ(shapes.mOut.GetStorageShape(), gert::Shape({65, 67}));
         EXPECT_EQ(shapes.sumUR.GetStorageShape(), gert::Shape({65}));
         EXPECT_EQ(shapes.sumUC.GetStorageShape(), gert::Shape({67}));
         EXPECT_EQ(shapes.sumURC.GetStorageShape(), gert::Shape({1}));
+    }
+}
+
+TEST(ApplyCamePart3InferShape, UnknownInputRankDoesNotHideInvalidControls)
+{
+    ShapeCase shapes;
+    shapes.u = gert::StorageShape({{-2}, {-2}});
+    shapes.m = gert::StorageShape({{-2}, {-2}});
+    shapes.scalar = gert::StorageShape({{2}, {2}});
+    EXPECT_EQ(RunInferShape(shapes), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, ValidatesDynamicGlobalShape)
+{
+    for (const auto& [globalShape, expected] : std::array<std::pair<gert::StorageShape, ge::graphStatus>, 5>{
+             std::make_pair(gert::StorageShape({{2}, {2}}), ge::GRAPH_SUCCESS),
+             std::make_pair(gert::StorageShape({{0}, {0}}), ge::GRAPH_FAILED),
+             std::make_pair(gert::StorageShape({{-1}, {-1}}), ge::GRAPH_SUCCESS),
+             std::make_pair(gert::StorageShape({{-2}, {-2}}), ge::GRAPH_SUCCESS),
+             std::make_pair(gert::StorageShape({{3}, {3}}), ge::GRAPH_FAILED)}) {
+        ShapeCase shapes;
+        shapes.globalShape = globalShape;
+        EXPECT_EQ(RunInferShape(shapes), expected);
     }
 }
 

@@ -42,7 +42,6 @@ protected:
     __aicore__ inline void CopyScalar(AscendC::GlobalTensor<float>& scaleGm, float& scaleValue);
     __aicore__ inline void SetNM();
 
-    __aicore__ inline void CalcSumURC(AscendC::LocalTensor<float>& ubLocal4, AscendC::LocalTensor<float>& ubLocal3);
     __aicore__ inline void CalcSumUR(AscendC::LocalTensor<float>& ubLocal2, AscendC::LocalTensor<float>& ubLocal3,
                                      AscendC::LocalTensor<float>& ubLocal4);
     __aicore__ inline void CalcSumURReduce(AscendC::LocalTensor<float>& ubLocal3, AscendC::LocalTensor<float>& ubLocal4,
@@ -81,7 +80,6 @@ protected:
     AscendC::GlobalTensor<float> sumUCGm;
     AscendC::GlobalTensor<float> sumURCGm;
 
-    AscendC::GlobalTensor<float> workspaceSumGradRC_;
     AscendC::GlobalTensor<float> workspaceSumGradC_;
     AscendC::GlobalTensor<int32_t> gmDetWorkspace; // workspace gm for deterministic algorithm
 
@@ -101,11 +99,7 @@ protected:
     int64_t blockOffset;
     int64_t outMOffset;
 
-    int64_t workspaceRCSize;
-    int64_t workspaceRCOffset;
     int64_t workspaceCOffset;
-    int64_t cBlockNum;
-    int64_t workspaceRCOffsetBase;
     int64_t workspaceCOffsetBase;
     int64_t tilingBaseM;
 
@@ -114,8 +108,8 @@ protected:
     float beta2;
     float clipThreshold;
     float sumSquareU;
-    float globalM;
-    float globalN;
+    int64_t globalM;
+    int64_t globalN;
     float maxValue = 1;
 
     int64_t mLoop;

@@ -144,7 +144,8 @@ int32_t WriteDataToFile(const string& binFile, uint64_t dataSize, const uint8_t*
 
 template <typename SetterFn>
 int32_t AddDataInput(int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape,
-                     float fillValue, Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
+                     const vector<int64_t>& realShape, float fillValue, Graph& graph, std::vector<ge::Tensor>& input,
+                     std::vector<Operator>& inputs)
 {
     std::string name = "placeholder" + std::to_string(placeholderIndex);
     auto data = op::Data(name.c_str()).set_attr_index(placeholderIndex);
@@ -152,8 +153,12 @@ int32_t AddDataInput(int placeholderIndex, SetterFn portSetter, DataType dtype, 
     desc.SetFormat(FORMAT_ND);
     desc.SetOriginFormat(FORMAT_ND);
     desc.SetOriginShape(ge::Shape(shape));
+    TensorDesc feedDesc = TensorDesc(ge::Shape(realShape), FORMAT_ND, dtype);
+    feedDesc.SetFormat(FORMAT_ND);
+    feedDesc.SetOriginFormat(FORMAT_ND);
+    feedDesc.SetOriginShape(ge::Shape(realShape));
     Tensor tensor;
-    Status ret = GenFloatData(shape, tensor, desc, dtype, fillValue);
+    Status ret = GenFloatData(realShape, tensor, feedDesc, dtype, fillValue);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate input data failed for %s\n", GetTime().c_str(), name.c_str());
         return FAILED;
@@ -172,48 +177,50 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
 {
     auto rmsprop = op::InplaceApplyRMSProp("inplace_apply_rms_prop1");
 
-    std::vector<int64_t> tensorShape = {2, 4, 4, 4};
+    // Use a dynamic graph shape and the concrete storage shape for runtime data.
+    std::vector<int64_t> tensorShape = {-2};
+    std::vector<int64_t> realTensorShape = {2, 4, 4, 4};
     std::vector<int64_t> scalarShape = {1};
 
     int idx = 0;
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_var(d); }, inDtype, tensorShape, 1.0f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_var(d); }, inDtype, tensorShape, realTensorShape, 1.0f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_ms(d); }, inDtype, tensorShape, 0.1f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_ms(d); }, inDtype, tensorShape, realTensorShape, 0.1f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_mom(d); }, inDtype, tensorShape, 0.0f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_mom(d); }, inDtype, tensorShape, realTensorShape, 0.0f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_lr(d); }, inDtype, scalarShape, 0.01f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_lr(d); }, inDtype, scalarShape, scalarShape, 0.01f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_rho(d); }, inDtype, scalarShape, 0.9f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_rho(d); }, inDtype, scalarShape, scalarShape, 0.9f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_momentum(d); }, inDtype, scalarShape, 0.0f, graph, input,
-            inputs) != SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_momentum(d); }, inDtype, scalarShape, scalarShape, 0.0f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f, graph, input,
-            inputs) != SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_epsilon(d); }, inDtype, scalarShape, scalarShape, 1e-7f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
     if (AddDataInput(
-            idx++, [&](Operator& d) { rmsprop.set_input_grad(d); }, inDtype, tensorShape, 0.2f, graph, input, inputs) !=
-        SUCCESS) {
+            idx++, [&](Operator& d) { rmsprop.set_input_grad(d); }, inDtype, tensorShape, realTensorShape, 0.2f, graph,
+            input, inputs) != SUCCESS) {
         return FAILED;
     }
 

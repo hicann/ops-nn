@@ -17,13 +17,35 @@ using namespace ge;
 namespace ops {
 namespace {
 constexpr size_t kGradIndex = 0;
+constexpr size_t kEpsIndex = 1;
 constexpr size_t kSumGradRIndex = 0;
 constexpr size_t kSumGradCIndex = 1;
 constexpr size_t kSumGradRCIndex = 2;
 constexpr size_t kMinGradRank = 2;
 } // namespace
 
-static ge::graphStatus CheckApplyCamePart1Inputs(const gert::InferShapeContext* context, const gert::Shape& gradShape)
+static ge::graphStatus CheckEpsShape(const gert::InferShapeContext* context)
+{
+    const gert::Shape* epsShape = context->GetInputShape(kEpsIndex);
+    OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
+    if (Ops::Base::IsUnknownRank(*epsShape) || epsShape->GetDimNum() == 0) {
+        return ge::GRAPH_SUCCESS;
+    }
+    for (size_t i = 0; i < epsShape->GetDimNum(); ++i) {
+        const int64_t dim = epsShape->GetDim(i);
+        if (dim < 0) {
+            continue;
+        }
+        if (dim != 1) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "eps", Ops::Base::ToString(*epsShape).c_str(),
+                                                  "eps must contain exactly one element");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckGradShape(const gert::InferShapeContext* context, const gert::Shape& gradShape)
 {
     if (gradShape.GetDimNum() < kMinGradRank) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad", std::to_string(gradShape.GetDimNum()),
@@ -45,13 +67,16 @@ static ge::graphStatus InferShape4ApplyCamePart1(gert::InferShapeContext* contex
 {
     const gert::Shape* gradShape = context->GetInputShape(kGradIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    if (CheckEpsShape(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (Ops::Base::IsUnknownRank(*gradShape)) {
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradRIndex));
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradCIndex));
         Ops::Base::SetUnknownRank(*context->GetOutputShape(kSumGradRCIndex));
         return ge::GRAPH_SUCCESS;
     }
-    if (CheckApplyCamePart1Inputs(context, *gradShape) != ge::GRAPH_SUCCESS) {
+    if (CheckGradShape(context, *gradShape) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -76,5 +101,13 @@ static ge::graphStatus InferShape4ApplyCamePart1(gert::InferShapeContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyCamePart1).InferShape(InferShape4ApplyCamePart1);
+static ge::graphStatus InferDataType4ApplyCamePart1(gert::InferDataTypeContext* context)
+{
+    context->SetOutputDataType(kSumGradRIndex, ge::DT_FLOAT);
+    context->SetOutputDataType(kSumGradCIndex, ge::DT_FLOAT);
+    context->SetOutputDataType(kSumGradRCIndex, ge::DT_FLOAT);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(ApplyCamePart1).InferShape(InferShape4ApplyCamePart1).InferDataType(InferDataType4ApplyCamePart1);
 } // namespace ops

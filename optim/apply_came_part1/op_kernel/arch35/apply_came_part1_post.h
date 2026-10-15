@@ -28,8 +28,8 @@ class ApplyCamePart1Post {
 public:
     __aicore__ inline ApplyCamePart1Post(){};
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sum_grad_r, GM_ADDR sum_grad_c, GM_ADDR sum_grad_rc,
-                                GM_ADDR workspace, const ApplyCamePart1TilingData* tilingData, int64_t batchIdx);
-    __aicore__ inline void Process();
+                                GM_ADDR workspace, const ApplyCamePart1TilingData* tilingData);
+    __aicore__ inline void ProcessBatch(int64_t batchIdx);
 
 private:
     __aicore__ inline void ParseTilingData(const ApplyCamePart1TilingData* tilingData);
@@ -40,7 +40,11 @@ private:
                                                  LocalTensor<float> low, LocalTensor<float> lowRight,
                                                  LocalTensor<float> sumTmp, LocalTensor<float> recoveredTmp,
                                                  uint64_t leftOffset, uint64_t rightOffset, uint64_t copyCount);
+    __aicore__ inline void ReduceWorkspaceRCOdd(LocalTensor<float> inputLocal, uint64_t oddIndex, uint64_t destination);
+    __aicore__ inline void ReduceWorkspaceRCFinal(LocalTensor<float> inputLocal);
     __aicore__ inline void ReduceWorkspaceRC();
+    __aicore__ inline void CopyWorkspaceCChunk(LocalTensor<float> inputLocal, uint64_t rowBase, uint64_t rowCount,
+                                               uint64_t gmOffsets, uint64_t calM);
     __aicore__ inline void ReduceAdd(LocalTensor<float> accuUb, int64_t n, int64_t m);
     __aicore__ inline void StoreFloatAligned(GlobalTensor<float>& output, int64_t index, float value,
                                              LocalTensor<float> scratch);
@@ -84,6 +88,7 @@ private:
     int64_t nCoreNum_{0};
     int64_t mCoreNum_{0};
     int64_t mLoopNumCore_{0};
+    int64_t totalColumnTileCount_{0};
 
     bool IsContainsTailN{false};
     bool IsContainsTailM{false};
@@ -113,6 +118,7 @@ __aicore__ inline void ApplyCamePart1Post<T>::ParseTilingData(const ApplyCamePar
     nLoopNormCore_ = tilingData->nLoopNormCore;
     nLoopTailCore_ = tilingData->nLoopTailCore;
     mLoopNumCore_ = tilingData->mLoopNumCore;
+    totalColumnTileCount_ = CeilDivApplyCamePart1(M, ONCE_HANDLE_NUM64);
 
     // 使用核数 && 总核数 [totalCoreNum_, usedCoreNum_]
     totalCoreNum_ = tilingData->totalCoreNum;
@@ -126,23 +132,22 @@ __aicore__ inline void ApplyCamePart1Post<T>::ParseTilingData(const ApplyCamePar
 template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sum_grad_r, GM_ADDR sum_grad_c,
                                                    GM_ADDR sum_grad_rc, GM_ADDR workspace,
-                                                   const ApplyCamePart1TilingData* tilingData, int64_t batchIdx)
+                                                   const ApplyCamePart1TilingData* tilingData)
 {
-    // 初始化tiling
+    (void)grad;
+    (void)eps;
     ParseTilingData(tilingData);
-    batchIdx_ = batchIdx;
 
-    // gmInput分核 && 输入偏移初始化
     gmSumGradR_.SetGlobalBuffer((__gm__ float*)sum_grad_r);
     gmSumGradC_.SetGlobalBuffer((__gm__ float*)sum_grad_c);
     gmSumGradRC_.SetGlobalBuffer((__gm__ float*)sum_grad_rc);
 
-    // workspace地址
+    const int64_t groupIdx = GetBlockIdx() / (nCoreNum_ * mCoreNum_);
     int64_t workspaceOffsets = 0;
     workspaceSumGradRC_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);
-    int64_t nLoopCount = (usedCoreNum_ / mCoreNum_ - 1) * nLoopNormCore_ + nLoopTailCore_;
+    int64_t nLoopCount = (nCoreNum_ - 1) * nLoopNormCore_ + nLoopTailCore_;
     constexpr int64_t kScalarSlotSize = 8;
-    int64_t rcPartialCount = nLoopCount * mCoreNum_ * mLoopNumCore_;
+    int64_t rcPartialCount = nLoopCount * totalColumnTileCount_;
     int64_t rPartialCount = nLoopCount * mCoreNum_;
     int64_t rcOffsets = (rcPartialCount * kScalarSlotSize + 128 - 1) / 128 * 128;
     workspaceOffsets = workspaceOffsets + rcOffsets;
@@ -152,9 +157,17 @@ __aicore__ inline void ApplyCamePart1Post<T>::Init(GM_ADDR grad, GM_ADDR eps, GM
     int64_t rOffsets = (rPartialCount * ONCE_HANDLE_NUM64 + 128 - 1) / 128 * 128;
     workspaceSumGradR_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);
     workspaceOffsets = workspaceOffsets + rOffsets;
+    int64_t cOffsets = (rcPartialCount * ONCE_HANDLE_NUM64 + 128 - 1) / 128 * 128;
     workspaceSumGradC_.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffsets);
+    int64_t regionFloats = workspaceOffsets + cOffsets;
+    if (groupIdx > 0) {
+        auto* regionBase = reinterpret_cast<__gm__ float*>(workspace) + groupIdx * regionFloats;
+        workspaceSumGradRC_.SetGlobalBuffer(regionBase);
+        workspaceSumGradRCLow_.SetGlobalBuffer(regionBase + rcOffsets);
+        workspaceSumGradR_.SetGlobalBuffer(regionBase + 2 * rcOffsets);
+        workspaceSumGradC_.SetGlobalBuffer(regionBase + 2 * rcOffsets + rOffsets);
+    }
 
-    // buffer申请初始化
     pipe.InitBuffer(inputBuf_, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 * sizeof(float));
     pipe.InitBuffer(outputScratchBuf_, 2 * ONCE_ONE_SIZE8 * sizeof(float));
 }
@@ -164,38 +177,35 @@ __aicore__ inline void ApplyCamePart1Post<T>::StoreFloatAligned(GlobalTensor<flo
                                                                 LocalTensor<float> scratch)
 {
     (void)scratch;
-    // There is one final producer for each row.  A scalar GM store avoids a
-    // read-modify-write transaction at an unaligned batch boundary.
-    output.SetValue(index, value);
+    // Use atomic updates because adjacent batch groups may share a GM block.
+    AtomicAdd(output.GetPhyAddr(static_cast<uint64_t>(index)), value);
     event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
     WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart1Post<T>::Process()
+__aicore__ inline void ApplyCamePart1Post<T>::ProcessBatch(int64_t batchIdx)
 {
-    SyncAll();
-    if (GetBlockIdx() == 0) {
-        ReduceWorkspaceR();
-        uint64_t core_loop = (mLoopNumCore_ + ONCE_HANDLE_NUM512 - 1) / ONCE_HANDLE_NUM512;
-        uint64_t pre_core_m = (mLoopNumCore_ + core_loop - 1) / core_loop * ONCE_HANDLE_NUM64;
-        uint64_t last_core_m = (mLoopNumCore_ - pre_core_m * (core_loop - 1) / ONCE_HANDLE_NUM64) * ONCE_HANDLE_NUM64;
-        uint64_t gmOffsets = 0;
-        uint64_t base_m = 0;
+    // 由本组的首核调用: 归约本组 workspace 分区, 写出该 batch 的三个输出.
+    // 产者/归约阶段的同步由内核入口统一负责, 此处不再做全局屏障.
+    batchIdx_ = batchIdx;
+    ReduceWorkspaceR();
+    uint64_t core_loop = (totalColumnTileCount_ + ONCE_HANDLE_NUM512 - 1) / ONCE_HANDLE_NUM512;
+    uint64_t pre_core_m = (totalColumnTileCount_ + core_loop - 1) / core_loop * ONCE_HANDLE_NUM64;
+    uint64_t last_core_m = (totalColumnTileCount_ - pre_core_m * (core_loop - 1) / ONCE_HANDLE_NUM64) *
+                           ONCE_HANDLE_NUM64;
+    uint64_t gmOffsets = 0;
+    uint64_t base_m = 0;
 
-        for (int64_t core_loop_idx = 0; core_loop_idx < core_loop - 1; core_loop_idx++) {
-            gmOffsets = core_loop_idx * pre_core_m;
-            Pre_Core_Compute(gmOffsets, pre_core_m, pre_core_m);
-        }
-        gmOffsets = (core_loop - 1) * pre_core_m;
-        base_m = M - pre_core_m * (core_loop - 1);
-        Pre_Core_Compute(gmOffsets, last_core_m, base_m);
+    for (int64_t core_loop_idx = 0; core_loop_idx < core_loop - 1; core_loop_idx++) {
+        gmOffsets = core_loop_idx * pre_core_m;
+        Pre_Core_Compute(gmOffsets, pre_core_m, pre_core_m);
     }
-    SyncAll();
-    if (GetBlockIdx() == 0) {
-        ReduceWorkspaceRC();
-    }
+    gmOffsets = (core_loop - 1) * pre_core_m;
+    base_m = M - pre_core_m * (core_loop - 1);
+    Pre_Core_Compute(gmOffsets, last_core_m, base_m);
+    ReduceWorkspaceRC();
 }
 
 template <typename T>
@@ -213,9 +223,13 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRPartial(LocalTenso
             DataCopy(inputLocal, workspaceSumGradR_[base + offset * rowWidth], copyRows * rowWidth);
             DataCopy(inputLocal[copyRows * rowWidth], workspaceSumGradR_[base + (rightRows + offset) * rowWidth],
                      copyRows * rowWidth);
-            PipeBarrier<PIPE_ALL>();
+            event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+            WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Add(inputLocal, inputLocal[copyRows * rowWidth], inputLocal, copyRows * rowWidth);
-            PipeBarrier<PIPE_ALL>();
+            event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+            SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+            WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             DataCopy(workspaceSumGradR_[base + offset * rowWidth], inputLocal, copyRows * rowWidth);
             event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
             SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
@@ -224,7 +238,9 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRPartial(LocalTenso
         if ((activeRows & 1) != 0) {
             const int64_t oddIndex = rightRows - 1;
             DataCopy(inputLocal, workspaceSumGradR_[base + oddIndex * rowWidth], rowWidth);
-            PipeBarrier<PIPE_ALL>();
+            event_t eventIdMte2ToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
+            SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
+            WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
             DataCopy(workspaceSumGradR_[base + pairRows * rowWidth], inputLocal, rowWidth);
             event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
             SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
@@ -257,14 +273,12 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceR()
             event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
             SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
             WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-            // Use scalar stores so an unaligned output base is handled without
-            // a partial-block read-modify-write transaction.
-            event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIdVToS);
-            WaitFlag<HardEvent::V_S>(eventIdVToS);
             for (int64_t i = 0; i < rowCount; ++i) {
                 StoreFloatAligned(gmSumGradR_, rowOffset + i, inputLocal.GetValue(i), outputScratchBuf_.Get<float>());
             }
+            event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+            SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+            WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
         }
     }
 }
@@ -281,7 +295,9 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCPair(
     DataCopy(highRight, workspaceSumGradRC_[rightOffset * kScalarSlotSize], copyElements);
     DataCopy(low, workspaceSumGradRCLow_[leftOffset * kScalarSlotSize], copyElements);
     DataCopy(lowRight, workspaceSumGradRCLow_[rightOffset * kScalarSlotSize], copyElements);
-    PipeBarrier<PIPE_ALL>();
+    event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
     Add(sumTmp, high, highRight, copyElements);
     PipeBarrier<PIPE_V>();
@@ -297,13 +313,55 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCPair(
     PipeBarrier<PIPE_V>();
     Add(low, low, high, copyElements);
     Adds(high, sumTmp, static_cast<float>(0), copyElements);
-    PipeBarrier<PIPE_ALL>();
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    PipeBarrier<PIPE_V>();
+    NormalizeCompensationApplyCamePart1(high, low, highRight, recoveredTmp, copyElements);
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
 
     DataCopy(workspaceSumGradRC_[leftOffset * kScalarSlotSize], high, copyElements);
     DataCopy(workspaceSumGradRCLow_[leftOffset * kScalarSlotSize], low, copyElements);
     event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCOdd(LocalTensor<float> inputLocal, uint64_t oddIndex,
+                                                                   uint64_t destination)
+{
+    constexpr uint64_t kScalarSlotSize = 8;
+    DataCopy(inputLocal, workspaceSumGradRC_[oddIndex * kScalarSlotSize], kScalarSlotSize);
+    LocalTensor<float> lowLocal = inputLocal[kScalarSlotSize];
+    DataCopy(lowLocal, workspaceSumGradRCLow_[oddIndex * kScalarSlotSize], kScalarSlotSize);
+    event_t eventIdMte2ToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
+    SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
+    WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
+    DataCopy(workspaceSumGradRC_[destination * kScalarSlotSize], inputLocal, kScalarSlotSize);
+    DataCopy(workspaceSumGradRCLow_[destination * kScalarSlotSize], lowLocal, kScalarSlotSize);
+    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCFinal(LocalTensor<float> inputLocal)
+{
+    constexpr uint64_t kScalarSlotSize = 8;
+    LocalTensor<float> lowLocal = inputLocal[kScalarSlotSize];
+    DataCopy(inputLocal, workspaceSumGradRC_, kScalarSlotSize);
+    DataCopy(lowLocal, workspaceSumGradRCLow_, kScalarSlotSize);
+    event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    Add(inputLocal, inputLocal, lowLocal, kScalarSlotSize);
+    event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventIdVToS);
+    WaitFlag<HardEvent::V_S>(eventIdVToS);
+    StoreFloatAligned(gmSumGradRC_, batchIdx_, inputLocal.GetValue(0), outputScratchBuf_.Get<float>());
+    event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+    SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+    WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
 }
 
 template <typename T>
@@ -319,8 +377,8 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRC()
     LocalTensor<float> lowRight = inputLocal[3 * kMaxPairElements];
     LocalTensor<float> sumTmp = inputLocal[4 * kMaxPairElements];
     LocalTensor<float> recoveredTmp = inputLocal[5 * kMaxPairElements];
-    const uint64_t nLoopCount = (usedCoreNum_ / mCoreNum_ - 1) * nLoopNormCore_ + nLoopTailCore_;
-    uint64_t activeCount = nLoopCount * mCoreNum_ * mLoopNumCore_;
+    const uint64_t nLoopCount = (nCoreNum_ - 1) * nLoopNormCore_ + nLoopTailCore_;
+    uint64_t activeCount = nLoopCount * totalColumnTileCount_;
 
     while (activeCount > 1) {
         const uint64_t rightCount = (activeCount + 1) / 2;
@@ -331,73 +389,40 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRC()
                                   copyCount);
         }
         if ((activeCount & 1U) != 0U) {
-            const uint64_t oddIndex = rightCount - 1;
-            const uint64_t destination = pairCount;
-            DataCopy(high, workspaceSumGradRC_[oddIndex * kScalarSlotSize], kScalarSlotSize);
-            DataCopy(low, workspaceSumGradRCLow_[oddIndex * kScalarSlotSize], kScalarSlotSize);
-            PipeBarrier<PIPE_ALL>();
-            DataCopy(workspaceSumGradRC_[destination * kScalarSlotSize], high, kScalarSlotSize);
-            DataCopy(workspaceSumGradRCLow_[destination * kScalarSlotSize], low, kScalarSlotSize);
-            event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-            SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-            WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+            ReduceWorkspaceRCOdd(inputLocal, rightCount - 1, pairCount);
         }
         activeCount = rightCount;
     }
-
-    DataCopy(high, workspaceSumGradRC_, kScalarSlotSize);
-    DataCopy(low, workspaceSumGradRCLow_, kScalarSlotSize);
-    PipeBarrier<PIPE_ALL>();
-    Add(high, high, low, kScalarSlotSize);
-    PipeBarrier<PIPE_ALL>();
-    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    StoreFloatAligned(gmSumGradRC_, batchIdx_, high.GetValue(0), outputScratchBuf_.Get<float>());
-}
-
-template <typename T>
-__aicore__ inline void StoreFloatAlignedApplyCamePart1(GlobalTensor<float>& output, int64_t index, float value,
-                                                       LocalTensor<float> scratch, bool accumulate)
-{
-    constexpr int64_t kFloatsPerBlock = 8;
-    const int64_t alignedIndex = index / kFloatsPerBlock * kFloatsPerBlock;
-    const int64_t elementOffset = index - alignedIndex;
-    // Keep the read-modify-write transaction at one 32B block.  This path is
-    // used for scalar updates into an unaligned batch output.
-    DataCopyParams copyParams{1, static_cast<uint16_t>(kFloatsPerBlock * sizeof(float)), 0, 0};
-    DataCopy(scratch, output[alignedIndex], copyParams);
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    if (accumulate) {
-        scratch.SetValue(elementOffset, scratch.GetValue(elementOffset) + value);
-    } else {
-        scratch.SetValue(elementOffset, value);
-    }
-    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-    DataCopy(output[alignedIndex], scratch, copyParams);
-    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    ReduceWorkspaceRCFinal(inputLocal);
 }
 
 template <typename T>
 __aicore__ inline void CopyOutApplyCamePart1C(GlobalTensor<float>& output, LocalTensor<float> input, uint64_t offset,
                                               uint64_t count, LocalTensor<float> scratch, bool accumulate)
 {
-    // Merge n chunks in program order using one 32B GM transaction per
-    // element.  This matches Part3's single-owner final merge and remains
-    // correct for unaligned batch bases and arbitrary tail lengths without
-    // depending on GM atomic ordering.
+    (void)scratch;
+    (void)accumulate;
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     for (uint64_t i = 0; i < count; ++i) {
-        StoreFloatAlignedApplyCamePart1<T>(output, static_cast<int64_t>(offset + i), input.GetValue(i), scratch,
-                                           accumulate);
+        AtomicAdd(output.GetPhyAddr(offset + i), input.GetValue(i));
+    }
+    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+    SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+    WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart1Post<T>::CopyWorkspaceCChunk(LocalTensor<float> inputLocal, uint64_t rowBase,
+                                                                  uint64_t rowCount, uint64_t gmOffsets, uint64_t calM)
+{
+    const uint64_t workspaceRowStride = totalColumnTileCount_ * ONCE_HANDLE_NUM64;
+    for (uint64_t row = 0; row < rowCount; ++row) {
+        DataCopy(inputLocal[row * calM], workspaceSumGradC_[(rowBase + row) * workspaceRowStride + gmOffsets], calM);
     }
 }
 
@@ -419,11 +444,12 @@ __aicore__ inline void ApplyCamePart1Post<T>::Pre_Core_Compute(uint64_t gmOffset
     uint64_t loop_time = (total_n + pre_loop_n - 1) / pre_loop_n;
     uint64_t last_loop_n = total_n - (loop_time - 1) * pre_loop_n;
     LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
-    PipeBarrier<PIPE_ALL>();
+    event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+    SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+    WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
 
     for (int64_t i = 0; i < loop_time - 1; i++) {
-        DataCopy(inputLocal, workspaceSumGradC_[gmOffsets + i * pre_loop_n * mLoopNumCore_ * ONCE_HANDLE_NUM64],
-                 pre_loop_n * cal_m);
+        CopyWorkspaceCChunk(inputLocal, i * pre_loop_n, pre_loop_n, gmOffsets, cal_m);
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -435,10 +461,10 @@ __aicore__ inline void ApplyCamePart1Post<T>::Pre_Core_Compute(uint64_t gmOffset
 
     constexpr float scalarValue = 0;
     Duplicate(inputLocal, scalarValue, pre_loop_n * cal_m);
-    PipeBarrier<PIPE_ALL>();
-    DataCopy(inputLocal,
-             workspaceSumGradC_[gmOffsets + (loop_time - 1) * pre_loop_n * mLoopNumCore_ * ONCE_HANDLE_NUM64],
-             last_loop_n * cal_m);
+    event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+    SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+    WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+    CopyWorkspaceCChunk(inputLocal, (loop_time - 1) * pre_loop_n, last_loop_n, gmOffsets, cal_m);
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
