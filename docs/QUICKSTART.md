@@ -77,6 +77,14 @@ Self-extractable archive "cann-ops-nn-custom_linux-${arch}.run" successfully cre
 ./build_out/cann-ops-nn-*linux*.run
 ```
 
+> **说明**：安装自定义算子包时会进行共享库依赖检查。若依赖库不在默认搜索路径，可能提示`shared library validation failed`并中止安装。请先确认当前CANN版本与构建环境兼容；确认兼容后，可执行以下命令跳过共享库依赖检查：
+>
+> ```bash
+> ./build_out/cann-ops-nn-*linux*.run --force
+> ```
+>
+> 错误使用`--force`可能导致算子在运行时加载失败，因此不建议默认使用。
+
 `AddExample`安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录。
 
 ### 4. 配置环境变量
@@ -198,13 +206,11 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
   该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
 
+  在`AddExample<T>::Init`函数中，紧接`ubLength_ = tilingData->ubFactor;`语句之后添加打印：
+
   ```cpp
-  blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
-  tileNum_ = tilingData->tileNum;
-  tileLength_ = ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) ?
-        ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) : 1;
-  // 打印当前核计算Block长度
-  AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
+  // 打印当前核计算的Block长度
+  AscendC::printf("Tiling blockLength is %lld\n", blockLength_);
   ```
 
 - **DumpTensor**

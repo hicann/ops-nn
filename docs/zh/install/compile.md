@@ -240,7 +240,7 @@
 > 说明：执行UT用例依赖googletest单元测试框架，详细介绍参见[googletest官网](https://google.github.io/googletest/advanced.html#running-a-subset-of-the-tests)。
 
 ```bash
-# 安装根目录下test相关requirements.txt依赖
+# 安装UT测试依赖，其中已包含项目根目录requirements.txt中的依赖约束
 pip3 install -r tests/requirements.txt
 # 方式1: 编译并执行指定算子和对应功能的UT测试用例（选其一）
 bash build.sh -u --[opapi|ophost|opkernel] --ops=transpose_batch_mat_mul

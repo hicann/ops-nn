@@ -133,10 +133,18 @@
     bash install_deps.sh
     ```
 
-    再通过项目根目录`requirements.txt`继续安装python三方库依赖，命令如下。
+    再根据使用场景安装Python三方库依赖：
+
+    - 仅编译项目时，安装项目根目录`requirements.txt`中的依赖。
 
     ```bash
     pip3 install -r requirements.txt
+    ```
+
+    - 执行UT用例时，安装`tests/requirements.txt`中的依赖。该文件已包含项目根目录`requirements.txt`中的依赖约束，无需重复执行上述命令。
+
+    ```bash
+    pip3 install -r tests/requirements.txt
     ```
 
 ## 环境验证

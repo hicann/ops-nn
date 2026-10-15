@@ -44,12 +44,11 @@
 
   该接口支持打印Scalar类型数据，如整数、字符、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
 
-  ```c++
-  blockLength_ = tilingData->totalLength / AscendC::GetBlockNum();
-  tileNum_ = tilingData->tileNum;
-  tileLength_ = blockLength_ / tileNum_ / BUFFER_NUM;
-  // 打印当前核计算Block长度
-  AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
+  在`AddExample<T>::Init`函数中，紧接`ubLength_ = tilingData->ubFactor;`语句之后添加打印：
+
+  ```cpp
+  // 打印当前核计算的Block长度
+  AscendC::printf("Tiling blockLength is %lld\n", blockLength_);
   ```
 
 * **DumpTensor**
