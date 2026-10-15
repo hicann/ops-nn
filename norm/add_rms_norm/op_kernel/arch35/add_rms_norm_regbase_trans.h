@@ -245,8 +245,8 @@ private:
                     uint32_t rowOff = r * tileALen + aOff;
                     LoadAlign(xSumReg, xAddInUb + rowOff);
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(gammaReg, gammaFp32Tmp + r);
-                    Mul(yReg, xSumReg, gammaReg, pregLoop);
-                    Mul(yReg, yReg, rstdReg, pregLoop);
+                    Mul(yReg, xSumReg, rstdReg, pregLoop);
+                    Mul(yReg, yReg, gammaReg, pregLoop);
                     StoreRegForDtype<T>(yInUb, yReg, pregLoop, rowOff);
                 }
             }
