@@ -33,7 +33,7 @@ __global__ __aicore__ void max_pool3d_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_AD
         return;
     }
     TPipe pipe;
-    REGISTER_TILING_DEFAULT(Pool3DGradNCDHWTilingData);
+    REGISTER_TILING_DEFAULT(Pool3DGradNDHWCTilingData);
 
     if constexpr (IS_SIMT == 0 && IS_CHANNEL_LAST == 0 && INDEX_DTYPE == TPL_INT32) {
         GET_TILING_DATA_WITH_STRUCT(Pool3DGradNCDHWTilingData, tilingData, tiling);
