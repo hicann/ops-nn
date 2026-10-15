@@ -14,47 +14,47 @@ import os
 import sys
 import logging
 from dependency_parser import OpDependenciesParser
+from changed_ops import resolve_changed_op
 from parse_changed_files import file_filter
 
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 OP_CATEGORY_LIST = []
-BASE_PATH = os.getenv('BASE_PATH')
+BASE_PATH = os.getenv("BASE_PATH")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     changed_files_info_file = sys.argv[1]
-    is_experimental = sys.argv[2] == 'TRUE'
+    is_experimental = sys.argv[2] == "TRUE"
     changed_files = []
     if not os.path.exists(changed_files_info_file):
-        logging.error("[ERROR] change file is not exist, can not get file change info in this pull request.")
+        logging.error(
+            "[ERROR] change file is not exist, can not get file change info in this pull request."
+        )
         exit(1)
     with open(changed_files_info_file) as or_f:
         changed_files = or_f.readlines()
-    parser = OpDependenciesParser(os.getenv('BUILD_PATH'))
+    parser = OpDependenciesParser(os.getenv("BUILD_PATH"))
     OP_CATEGORY_LIST.extend(parser.get_category_list())
     ops = set()
     for changed_file in changed_files:
-        if not os.path.exists(r'{}'.format(changed_file.strip())):
+        if not os.path.exists(r"{}".format(changed_file.strip())):
             continue
         changed_file = str(os.path.relpath(changed_file, BASE_PATH)).strip()
         if file_filter(changed_file) is False:
             continue
-        files = changed_file.split('/')
-        if not is_experimental and len(files) > 2 and files[0] in OP_CATEGORY_LIST:
-            op_name = files[1]
-            if op_name == 'common':
-                op_name = files[0] + '.common'
-            ops.add(op_name)
-        elif is_experimental and len(files) > 3 and files[0] == "experimental" and files[1] in OP_CATEGORY_LIST:
-            op_name = files[2]
-            if op_name == 'common':
-                op_name = files[1] + '.common'
-            ops.add(op_name)
+        resolved = resolve_changed_op(
+            changed_file.split("/"), set(OP_CATEGORY_LIST), is_experimental
+        )
+        if resolved is None:
+            continue
+        prefix, second, is_common = resolved
+        ops.add(f"{prefix.split('/')[-1]}.common" if is_common else second)
 
-    (_, reverse_op_dependencies) = parser.get_dependencies_by_ops(ops) # 获取反向依赖
-    (op_dependencies, _) = parser.get_dependencies_by_ops(reverse_op_dependencies) # 根据反向依赖，获取编译依赖
-    compile_ops = ';'.join(list(set(op_dependencies)))
-    print('%s:%s' % (';'.join(reverse_op_dependencies), compile_ops))
+    (_, reverse_op_dependencies) = parser.get_dependencies_by_ops(ops)  # 获取反向依赖
+    (op_dependencies, _) = parser.get_dependencies_by_ops(
+        reverse_op_dependencies
+    )  # 根据反向依赖，获取编译依赖
+    compile_ops = ";".join(list(set(op_dependencies)))
+    print("%s:%s" % (";".join(reverse_op_dependencies), compile_ops))

@@ -192,6 +192,21 @@ case "${task_name}" in
             touch build_out/cann-ops-nn-experimental_linux-aarch64.run
         fi
         ;;
+    Check_Example)
+        check_example_log=$(python3 scripts/ci/check_examples_ut.py "pr_filelist.txt" 2>&1) && check_example_ret=0 || check_example_ret=$?
+        echo "${check_example_log}"
+        if [ -f "build/check_examples_ut.csv" ] && [ "$(wc -l < "build/check_examples_ut.csv")" -gt 1 ]; then
+            mkdir -p build_out
+            cp -f "build/check_examples_ut.csv" "build_out/check_examples_ut.csv"
+            echo "check_example_csv=1" >> "${ATOMGIT_OUTPUT}"
+        fi
+        if [ "${check_example_ret}" -ne 0 ]; then
+            missing_ops=$(echo "${check_example_log}" | grep -oP '^check_example_failed=\K\S+' | paste -sd, -)
+            echo "check_example_failed=${missing_ops}" >> "${ATOMGIT_OUTPUT}"
+        fi
+        DP_ASSERT_EQUAL "${check_example_ret}" 0 "check example ${task_name}"
+        echo "exec cmd: [python3 scripts/ci/check_examples_ut.py pr_filelist.txt]"
+        ;;
     Compile_Ascend_ARM_950)
         export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
         bash scripts/ci/compile_ascend950_pkg.sh "pr_filelist.txt" "-j16" "-force_jit" "--no_force"
