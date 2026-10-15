@@ -162,8 +162,8 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     ADD_INPUT_ATTR(narrow_range, false);
 
     ADD_OUTPUT(1, backprops_wrt_x, inDtype, shape);
-    ADD_OUTPUT(2, backprop_wrt_min, inDtype, minMaxShape);
-    ADD_OUTPUT(3, backprop_wrt_max, inDtype, minMaxShape);
+    ADD_OUTPUT(2, backprops_wrt_min, inDtype, minMaxShape);
+    ADD_OUTPUT(3, backprops_wrt_max, inDtype, minMaxShape);
 
     outputs.push_back(fakeQuantGradOp);
     return SUCCESS;
@@ -262,7 +262,7 @@ int main(int argc, char* argv[])
             }
             LOG_PRINT("===================================================================\n");
         } else {
-            LOG_PRINT("backprop_wrt_%s = %f\n", (i == 1 ? "min" : "max"), resultData[0]);
+            LOG_PRINT("backprops_wrt_%s = %f\n", (i == 1 ? "min" : "max"), resultData[0]);
         }
     }
 

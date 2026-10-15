@@ -13,7 +13,7 @@
  * \brief Operator definition for fake_quant_with_min_max_vars_gradient
  *
  * 4 inputs: gradients(float32,ND), x(float32,ND), min(float32,shape(1,)), max(float32,shape(1,))
- * 3 outputs: backprops_wrt_x(float32,ND), backprop_wrt_min(float32,shape(1,)), backprop_wrt_max(float32,shape(1,))
+ * 3 outputs: backprops_wrt_x(float32,ND), backprops_wrt_min(float32,shape(1,)), backprops_wrt_max(float32,shape(1,))
  * 2 attrs: num_bits(int,[2,16],default=8), narrow_range(bool,default=false)
  */
 #include "register/op_def_registry.h"
@@ -53,12 +53,12 @@ public:
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        this->Output("backprop_wrt_min")
+        this->Output("backprops_wrt_min")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        this->Output("backprop_wrt_max")
+        this->Output("backprops_wrt_max")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})

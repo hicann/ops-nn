@@ -13,7 +13,7 @@
  * \brief IR operator definition for FakeQuantWithMinMaxVarsGradient
  *
  * 4 inputs: gradients(float32), x(float32), min(float32,shape(1,)), max(float32,shape(1,))
- * 3 outputs: backprops_wrt_x(float32), backprop_wrt_min(float32,shape(1,)), backprop_wrt_max(float32,shape(1,))
+ * 3 outputs: backprops_wrt_x(float32), backprops_wrt_min(float32,shape(1,)), backprops_wrt_max(float32,shape(1,))
  * 2 attrs: num_bits(int,[2,16],default=8), narrow_range(bool,default=false)
  */
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_H_
@@ -23,7 +23,7 @@
 namespace ge {
 /**
  * @brief Gradient of FakeQuantWithMinMaxVars for quantization-aware training.
- *        Computes backprops_wrt_x, backprop_wrt_min, backprop_wrt_max.
+ *        Computes backprops_wrt_x, backprops_wrt_min, backprops_wrt_max.
  *
  * @par Inputs:
  * @li gradients: A tensor of type float32. Backpropagated gradients.
@@ -37,8 +37,8 @@ namespace ge {
  *
  * @par Outputs:
  * @li backprops_wrt_x: A tensor of type float32, same shape as x.
- * @li backprop_wrt_min: A tensor of type float32, shape (1,).
- * @li backprop_wrt_max: A tensor of type float32, shape (1,).
+ * @li backprops_wrt_min: A tensor of type float32, shape (1,).
+ * @li backprops_wrt_max: A tensor of type float32, shape (1,).
  *
  * @par Third-party framework compatibility:
  * Aligned with TensorFlow `tf.raw_ops.FakeQuantWithMinMaxVarsGradient`.
@@ -51,8 +51,8 @@ REG_OP(FakeQuantWithMinMaxVarsGradient)
     .INPUT(min, TensorType({DT_FLOAT}))
     .INPUT(max, TensorType({DT_FLOAT}))
     .OUTPUT(backprops_wrt_x, TensorType({DT_FLOAT}))
-    .OUTPUT(backprop_wrt_min, TensorType({DT_FLOAT}))
-    .OUTPUT(backprop_wrt_max, TensorType({DT_FLOAT}))
+    .OUTPUT(backprops_wrt_min, TensorType({DT_FLOAT}))
+    .OUTPUT(backprops_wrt_max, TensorType({DT_FLOAT}))
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVarsGradient)

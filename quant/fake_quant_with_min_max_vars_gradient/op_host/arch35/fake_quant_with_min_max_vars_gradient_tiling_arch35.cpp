@@ -155,8 +155,8 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::CalcTiling()
 ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::CalcWorkspace()
 {
     // workspace = 2 * max(numCore, 1) * sizeof(float)
-    // Used for reduce: [0, numCore) for backprop_wrt_min local sums,
-    //                  [numCore, 2*numCore) for backprop_wrt_max local sums
+    // Used for reduce: [0, numCore) for backprops_wrt_min local sums,
+    //                  [numCore, 2*numCore) for backprops_wrt_max local sums
     size_t wsSize = 2 * static_cast<size_t>(numCore_ > 0 ? numCore_ : 1) * sizeof(float);
 
     size_t* workspaceSizes = context_->GetWorkspaceSizes(1);

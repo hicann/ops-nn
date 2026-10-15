@@ -62,7 +62,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "backprop_wrt_min",
+          "name": "backprops_wrt_min",
           "index": 1,
           "dtype": "float32",
           "format": "ND",
@@ -73,7 +73,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "backprop_wrt_max",
+          "name": "backprops_wrt_max",
           "index": 2,
           "dtype": "float32",
           "format": "ND",

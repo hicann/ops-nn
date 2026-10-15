@@ -16,7 +16,8 @@
  *
  * Schema (aligned to spec.yaml and op_host def.cpp):
  *   Inputs  (4): gradients(float32,ND), x(float32,ND), min(float32,shape(1,)), max(float32,shape(1,))
- *   Outputs (3): backprops_wrt_x(float32,ND), backprop_wrt_min(float32,shape(1,)), backprop_wrt_max(float32,shape(1,))
+ *   Outputs (3): backprops_wrt_x(float32,ND), backprops_wrt_min(float32,shape(1,)),
+ *                backprops_wrt_max(float32,shape(1,))
  *   Attrs   (2): num_bits(int,[2,16],default=8), narrow_range(bool,default=false)
  *
  * Test coverage:
@@ -127,11 +128,11 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_case_0_3d)
     EXPECT_EQ(outYDims[1], 3);
     EXPECT_EQ(outYDims[2], 4);
 
-    // backprop_wrt_min shape = (1,)
+    // backprops_wrt_min shape = (1,)
     ASSERT_EQ(outMinDims.size(), 1u);
     EXPECT_EQ(outMinDims[0], 1);
 
-    // backprop_wrt_max shape = (1,)
+    // backprops_wrt_max shape = (1,)
     ASSERT_EQ(outMaxDims.size(), 1u);
     EXPECT_EQ(outMaxDims[0], 1);
 }

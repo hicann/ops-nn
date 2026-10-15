@@ -34,13 +34,13 @@
 
   $$backprops\_wrt\_x = gradients \times mask$$
 
-  $$backprop\_wrt\_min = \sum_{i: x_i < nudgedMin} gradients_i$$
+  $$backprops\_wrt\_min = \sum_{i: x_i < nudgedMin} gradients_i$$
 
-  $$backprop\_wrt\_max = \sum_{i: x_i > nudgedMax} gradients_i$$
+  $$backprops\_wrt\_max = \sum_{i: x_i > nudgedMax} gradients_i$$
 
   - 当`x`为NaN时，`mask = 0`（NaN比较结果为false）；当`gradients`为NaN时，NaN通过乘法自然传播（IEEE754: NaN × 0/1 = NaN）。
   - 乘法后对所有元素执行sign-bit OR（`vOut_u32 |= vG_u32 & 0x80000000`），修复Ascend Mul可能丢失-0符号位的问题；对正常数值和NaN该操作幂等无副作用。
-  - 当`|min| + |max| < 1e-10`（退化）时：`backprops_wrt_x = gradients`（全透传），`backprop_wrt_min = 0`，`backprop_wrt_max = 0`。
+  - 当`|min| + |max| < 1e-10`（退化）时：`backprops_wrt_x = gradients`（全透传），`backprops_wrt_min = 0`，`backprops_wrt_max = 0`。
 
 ## 参数说明
 
@@ -110,14 +110,14 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>backprop_wrt_min</td>
+      <td>backprops_wrt_min</td>
       <td>输出</td>
       <td><ul><li>表示min的梯度，即x &lt; nudgedMin的元素对应的gradients之和；</li><li>shape固定为(1,)。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>backprop_wrt_max</td>
+      <td>backprops_wrt_max</td>
       <td>输出</td>
       <td><ul><li>表示max的梯度，即x &gt; nudgedMax的元素对应的gradients之和；</li><li>shape固定为(1,)。</li></ul></td>
       <td>FLOAT</td>
@@ -131,7 +131,7 @@
 - 输入`gradients`、`x`的数据类型仅支持FLOAT32，shape必须完全一致（rank与每维大小均相同）。
 - 输入`min`、`max`的数据类型为FLOAT32，shape必须为(1,)。
 - `num_bits`取值范围为[2, 16]。
-- 当`|min| + |max| < 1e-10`时走退化路径：`backprops_wrt_x`直接透传`gradients`，`backprop_wrt_min`和`backprop_wrt_max`输出为0。
+- 当`|min| + |max| < 1e-10`时走退化路径：`backprops_wrt_x`直接透传`gradients`，`backprops_wrt_min`和`backprops_wrt_max`输出为0。
 
 ## 调用说明
 

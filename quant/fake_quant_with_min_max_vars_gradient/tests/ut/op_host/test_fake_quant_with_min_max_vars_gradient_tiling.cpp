@@ -15,7 +15,7 @@
  * \brief Tiling UT for FakeQuantWithMinMaxVarsGradient operator.
  *
  * Differences from args version:
- *   - 4 inputs (gradients, x, min, max) + 3 outputs (y, backprop_min, backprop_max)
+ *   - 4 inputs (gradients, x, min, max) + 3 outputs (backprops_wrt_x, backprops_wrt_min, backprops_wrt_max)
  *   - min/max are tensor inputs, NOT attributes; Tiling does NOT read tensor values
  *   - TilingData has numBits/narrowRange instead of nudgedMin/nudgedMax
  *   - num_bits and narrow_range are the only attributes

@@ -16,7 +16,7 @@
  *  - gradients and x have identical shape
  *  - min and max have shape (1,)
  *  - backprops_wrt_x shape = x shape
- *  - backprop_wrt_min/max shape = (1,)
+ *  - backprops_wrt_min/max shape = (1,)
  *  - All outputs are float32
  */
 #include "register/op_impl_registry.h"

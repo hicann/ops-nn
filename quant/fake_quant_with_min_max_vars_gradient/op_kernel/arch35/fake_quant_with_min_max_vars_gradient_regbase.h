@@ -41,7 +41,7 @@ public:
     {}
 
     __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minGm, GM_ADDR maxGm, GM_ADDR backpropsWrtX,
-                                GM_ADDR backpropWrtMin, GM_ADDR backpropWrtMax);
+                                GM_ADDR backpropsWrtMin, GM_ADDR backpropsWrtMax);
     __aicore__ inline void Process();
 
 private:
@@ -79,16 +79,16 @@ template <uint64_t SchMode>
 __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::Init(GM_ADDR gradients, GM_ADDR x,
                                                                              GM_ADDR minGm, GM_ADDR maxGm,
                                                                              GM_ADDR backpropsWrtX,
-                                                                             GM_ADDR backpropWrtMin,
-                                                                             GM_ADDR backpropWrtMax)
+                                                                             GM_ADDR backpropsWrtMin,
+                                                                             GM_ADDR backpropsWrtMax)
 {
     blockIdx_ = GetBlockIdx();
 
     gGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(gradients));
     xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(x));
     yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(backpropsWrtX));
-    minOutGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(backpropWrtMin));
-    maxOutGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(backpropWrtMax));
+    minOutGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(backpropsWrtMin));
+    maxOutGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(backpropsWrtMax));
 
     if (GetBlockIdx() == 0) {
         InitGlobalMemory<float>(maxOutGm_, 1, static_cast<float>(0));
