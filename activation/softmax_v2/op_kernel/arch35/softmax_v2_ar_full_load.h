@@ -266,8 +266,12 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormComputePost(const Loc
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src0 + i * static_cast<uint32_t>(stride));
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * static_cast<uint32_t>(stride));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, aReg, bReg, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 Duplicate(dReg, bReg, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -350,8 +354,12 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormCompute(const LocalTe
                 AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadAlign(aReg, (__ubuf__ float*)tailSrcA + i * outerLoopStride + j * innerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)tailSrcB + i * outerLoopStride + j * innerLoopStride);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, aReg, bReg, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }

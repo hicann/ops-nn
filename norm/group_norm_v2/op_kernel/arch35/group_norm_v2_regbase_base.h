@@ -66,6 +66,15 @@ constexpr static AscendC::Reg::CastTrait castTraitB322B16Odd = {
     AscendC::RoundMode::CAST_RINT,
 };
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+constexpr static AscendC::Reg::CastTrait castTraitB322B16Odd_Dav920x = {
+    AscendC::Reg::RegLayout::ONE,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::MERGING,
+    AscendC::RoundMode::CAST_RINT,
+};
+#endif
+
 __aicore__ inline uint32_t CeilDiv(uint32_t x, uint32_t y)
 {
     if (y > 0) {
@@ -156,14 +165,22 @@ __aicore__ inline void VFInnerWelfordParallelUpdateWithInit(__ubuf__ T* x1Local,
             LoadInputData<T>(x1, x1Local, pregLoop, i * VL_FP32);
             Duplicate(tmpMean, 0.0, pregLoop);
             Sub(delta1, x1, tmpMean, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            Axpy(tmpMean, delta1, scale, pregLoop);
+#else
             Muls(delta2, delta1, scale, pregLoop);
             Add(tmpMean, tmpMean, delta2, pregLoop);
+#endif
             StoreAlign(tmpMeanLocal + i * VL_FP32, tmpMean, pregLoop);
 
             Duplicate(tmpVar, 0.0, pregLoop);
             Sub(delta3, x1, tmpMean, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            MulAddDst<float, MaskMergeMode::ZEROING>(tmpVar, delta1, delta3, pregLoop);
+#else
             Mul(delat4, delta1, delta3, pregLoop);
             Add(tmpVar, tmpVar, delat4, pregLoop);
+#endif
             StoreAlign(tmpVarLocal + i * VL_FP32, tmpVar, pregLoop);
         }
     }
@@ -199,14 +216,22 @@ __aicore__ inline void VFInnerWelfordParallelUpdate(__ubuf__ T* x1Local, __ubuf_
             LoadInputData<T>(x1, x1Local, pregLoop, i * VL_FP32);
             LoadAlign(tmpMean, tmpMeanLocal + i * VL_FP32);
             Sub(delta1, x1, tmpMean, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            Axpy(tmpMean, delta1, scale, pregLoop);
+#else
             Muls(delta2, delta1, scale, pregLoop);
             Add(tmpMean, tmpMean, delta2, pregLoop);
+#endif
             StoreAlign(tmpMeanLocal + i * VL_FP32, tmpMean, pregLoop);
 
             LoadAlign(tmpVar, tmpVarLocal + i * VL_FP32);
             Sub(delta3, x1, tmpMean, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            MulAddDst<float, MaskMergeMode::ZEROING>(tmpVar, delta1, delta3, pregLoop);
+#else
             Mul(delat4, delta1, delta3, pregLoop);
             Add(tmpVar, tmpVar, delat4, pregLoop);
+#endif
             StoreAlign(tmpVarLocal + i * VL_FP32, tmpVar, pregLoop);
         }
     }
@@ -1135,10 +1160,16 @@ __aicore__ inline void VFInnerNormalize(RegTensor<float>& x, RegTensor<float>& m
                                         RegTensor<float>& gamma, RegTensor<float>& beta, RegTensor<float>& y,
                                         MaskReg& preg)
 {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    Sub(y, x, mean, preg);
+    Mul(y, y, rstd, preg);
+    MulDstAdd<float, MaskMergeMode::ZEROING>(y, gamma, beta, preg);
+#else
     Sub(x, x, mean, preg);
     Mul(x, x, rstd, preg);
     Mul(x, x, gamma, preg);
     Add(y, x, beta, preg);
+#endif
 }
 
 template <typename T1, typename T2>
@@ -1183,10 +1214,15 @@ __aicore__ inline void VFNormalizeUnAlign(__ubuf__ T1* xLocal, __ubuf__ T2* gamm
                     Cast<float, T1, castTraitB162B32Odd>(xOdd, xTmp, pregMain);
                     VFInnerNormalize(xEven, mean, rstd, gamma, beta, yEven, pregMain);
                     VFInnerNormalize(xOdd, mean, rstd, gamma, beta, yOdd, pregMain);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Cast<T1, float, castTraitB322B16Even>(yTmp, yEven, pregMain);
+                    Cast<T1, float, castTraitB322B16Odd_Dav920x>(yTmp, yOdd, pregMain);
+#else
                     Cast<T1, float, castTraitB322B16Even>(yEvenTmp, yEven, pregMain);
                     Cast<T1, float, castTraitB322B16Odd>(yOddTmp, yOdd, pregMain);
                     Or((RegTensor<int16_t>&)yTmp, (RegTensor<int16_t>&)yEvenTmp, (RegTensor<int16_t>&)yOddTmp,
                        pregMain);
+#endif
                     StoreUnAlign(yLocal, yTmp, uDst, VL);
                 }
                 uint32_t sreg0 = tailNum;
@@ -1197,10 +1233,15 @@ __aicore__ inline void VFNormalizeUnAlign(__ubuf__ T1* xLocal, __ubuf__ T2* gamm
                     Cast<float, T1, castTraitB162B32Odd>(xOdd, xTmp, pregLoop);
                     VFInnerNormalize(xEven, mean, rstd, gamma, beta, yEven, pregLoop);
                     VFInnerNormalize(xOdd, mean, rstd, gamma, beta, yOdd, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Cast<T1, float, castTraitB322B16Even>(yTmp, yEven, pregLoop);
+                    Cast<T1, float, castTraitB322B16Odd_Dav920x>(yTmp, yOdd, pregLoop);
+#else
                     Cast<T1, float, castTraitB322B16Even>(yEvenTmp, yEven, pregLoop);
                     Cast<T1, float, castTraitB322B16Odd>(yOddTmp, yOdd, pregLoop);
                     Or((RegTensor<int16_t>&)yTmp, (RegTensor<int16_t>&)yEvenTmp, (RegTensor<int16_t>&)yOddTmp,
                        pregLoop);
+#endif
                     StoreUnAlign(yLocal, yTmp, uDst, tailNum);
                 }
                 StoreUnAlignPost(yLocal, uDst, 0);

@@ -60,6 +60,8 @@ public:
             .ExtendCfgInfo("opFile.value", "layer_norm_v3_apt");
         this->AICore().AddConfig("ascend950", regbaseCfg);
         this->AICore().AddConfig("ascend350", regbaseCfg);
+        this->AICore().AddConfig("ascend960dt", regbaseCfg);
+        this->AICore().AddConfig("ascend960pr", regbaseCfg);
     }
 };
 

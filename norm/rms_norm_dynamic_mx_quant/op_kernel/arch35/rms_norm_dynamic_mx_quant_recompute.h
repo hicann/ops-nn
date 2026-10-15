@@ -34,7 +34,7 @@ public:
         tilingData_ = tilingData;
         blockIdx_ = GetBlockIdx();
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         oriOverflowMode_ = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
@@ -392,7 +392,7 @@ private:
 
         xInQueue_.FreeTensor(xLocal);
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
         if (tilingData_->roundMode == MODE_RINT) {
@@ -405,7 +405,7 @@ private:
             ComputeMxQuantAndOutputOneRow<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
                 normOutLocal, xOffset, scaleOutOffset, static_cast<int64_t>(curN), isLastN);
         }
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode_);
 #endif
     }
@@ -434,6 +434,9 @@ private:
             RegTensor<float> gammaReg;
             RegTensor<float> betaReg;
             RegTensor<float> yReg;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            RegTensor<float> xRstdReg;
+#endif
             MaskReg pregMask;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
 
@@ -443,6 +446,18 @@ private:
                 pregMask = UpdateMask<float>(sreg);
                 uint32_t off = j * VL_FP32;
                 LoadTensorForDtypeT(xAddr, xReg, pregMask, off);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                LoadTensorForDtypeT(gammaAddr, gammaReg, pregMask, off);
+                if constexpr (hasInputBeta) {
+                    LoadTensorForDtypeT(betaAddr, betaReg, pregMask, off);
+                    Mul(xRstdReg, xReg, RstdReg, pregMask);
+                    Move(yReg, betaReg);
+                    MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
+                } else {
+                    Mul(yReg, xReg, RstdReg, pregMask);
+                    Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
+                }
+#else
                 Mul(yReg, xReg, RstdReg, pregMask);
                 LoadTensorForDtypeT(gammaAddr, gammaReg, pregMask, off);
                 Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
@@ -450,6 +465,7 @@ private:
                     LoadTensorForDtypeT(betaAddr, betaReg, pregMask, off);
                     Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                 }
+#endif
                 StoreTensorForDtypeT(yAddr, yReg, pregFull, off);
             }
         }
@@ -573,7 +589,7 @@ private:
     TBuf<TPosition::VECCALC> maxhalfScaleBuffer_;
 
     int64_t blockIdx_{0};
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     int64_t oriOverflowMode_{0};
 #endif
 };

@@ -253,6 +253,10 @@ ge::graphStatus SoftmaxV2TilingBase::GetPlatformInfo()
         uint64_t ubSizeTemp = 0;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
         aicoreParams_.ubSize = static_cast<int64_t>(ubSizeTemp);
+        // Detect target soc at tiling runtime via GetCurNpuArch, consistent with
+        // gather_nd / scatter_update / scatter_nd_update / index_fill / unsorted_segment_*.
+        isDav920x_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                      ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
     }
     return ge::GRAPH_SUCCESS;
 }

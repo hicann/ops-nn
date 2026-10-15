@@ -181,8 +181,12 @@ private:
                     LoadTensorForDtypeT(x0Local, x0Reg, pregMask, xOffset);
 
                     LoadAlign(x1Reg, tmpAddr2 + xOffset);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    FusedMulSubDst(x1Reg, x0Reg, sumReg, pregMask);
+#else
                     Neg(x0Reg, x0Reg, pregMask);
                     MulAddDst(x1Reg, x0Reg, sumReg, pregMask);
+#endif
 
                     if constexpr (xToFp32_) {
                         Reg::StoreAlign(tmpAddrTy + xOffset, x1Reg, pregMask);

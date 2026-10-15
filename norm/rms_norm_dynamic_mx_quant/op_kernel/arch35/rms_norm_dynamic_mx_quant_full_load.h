@@ -34,7 +34,7 @@ public:
         tilingData_ = tilingData;
         blockIdx_ = GetBlockIdx();
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         // Init中获取原始SPR配置，避免循环内反复获取
         oriOverflowMode_ = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
@@ -202,7 +202,7 @@ public:
             ComputeY<false>(xLocal, gammaLocal_, betaLocal_, rstdLocal, yLocal, curM);
         }
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
         if (tilingData_->roundMode == MODE_RINT) {
@@ -212,7 +212,7 @@ public:
         } else if (tilingData_->roundMode == MODE_FLOOR) {
             ComputeMxQuantAndOutput<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(yLocal, curM, xOffset, scaleOffset);
         }
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode_);
 #endif
         xInQueue_.FreeTensor(xLocal);
@@ -245,6 +245,9 @@ public:
                 RegTensor<float> gammaReg;
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                RegTensor<float> xRstdReg;
+#endif
 
                 uint32_t sreg = nNum;
                 MaskReg pregMask = UpdateMask<float>(sreg);
@@ -253,6 +256,18 @@ public:
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     uint32_t xElemOffset = i * xInputStride;
                     LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, 0);
+                    if constexpr (hasInputBeta) {
+                        LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, 0);
+                        Mul(xRstdReg, xReg, RstdReg, pregMask);
+                        Move(yReg, betaReg);
+                        MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
+                    } else {
+                        Mul(yReg, xReg, RstdReg, pregMask);
+                        Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
+                    }
+#else
                     Mul(yReg, xReg, RstdReg, pregMask);
                     LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, 0);
                     // 有效数据后面补0到64对齐
@@ -261,6 +276,7 @@ public:
                         LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, 0);
                         Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                     }
+#endif
 
                     StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                 }
@@ -274,6 +290,9 @@ public:
                 RegTensor<float> gammaReg;
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                RegTensor<float> xRstdReg;
+#endif
                 MaskReg pregMask;
                 AscendC::Reg::MaskReg pregFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
@@ -284,7 +303,18 @@ public:
                         uint32_t gammaElemOffset = j * VL_FP32;
                         uint32_t xElemOffset = i * xInputStride + gammaElemOffset;
                         LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
-
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                        LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
+                        if constexpr (hasInputBeta) {
+                            LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
+                            Mul(xRstdReg, xReg, RstdReg, pregMask);
+                            Move(yReg, betaReg);
+                            MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
+                        } else {
+                            Mul(yReg, xReg, RstdReg, pregMask);
+                            Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
+                        }
+#else
                         Mul(yReg, xReg, RstdReg, pregMask);
                         LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
                         // 有效数据后面补0到64对齐
@@ -293,6 +323,7 @@ public:
                             LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
                             Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                         }
+#endif
 
                         StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                     }
@@ -409,7 +440,7 @@ private:
     TBuf<QuePosition::VECCALC> maxhalfScaleBuffer_;
 
     int64_t blockIdx_ = 0;
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     int64_t oriOverflowMode_ = 0; // 存储原始SPR配置
 #endif
 };

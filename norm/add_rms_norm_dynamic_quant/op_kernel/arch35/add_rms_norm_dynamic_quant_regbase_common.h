@@ -214,15 +214,22 @@ __aicore__ inline void ComputeYAndAbsMaxVF(RegTensor<float>& xRegFp32, RegTensor
                                            uint16_t idx)
 {
     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-    Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-    if constexpr (Y3_MODE) {
-        StoreRegForDtype<float>(y3Addr, xRegFp32, maskReg, idx * V_LENGTH);
-    }
-    if constexpr (Y4_MODE) {
-        StoreRegForDtype<T_GAMMA>(y4Addr, xRegFp32, maskReg, idx * V_LENGTH);
-    }
-    if constexpr (HAS_BETA) {
-        Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    if constexpr (HAS_BETA && !Y3_MODE && !Y4_MODE) {
+        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
+    } else
+#endif
+    {
+        Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+        if constexpr (Y3_MODE) {
+            StoreRegForDtype<float>(y3Addr, xRegFp32, maskReg, idx * V_LENGTH);
+        }
+        if constexpr (Y4_MODE) {
+            StoreRegForDtype<T_GAMMA>(y4Addr, xRegFp32, maskReg, idx * V_LENGTH);
+        }
+        if constexpr (HAS_BETA) {
+            Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+        }
     }
     if constexpr (HAS_SMOOTH_SCALE) {
         Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);

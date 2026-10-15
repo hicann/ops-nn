@@ -12,7 +12,8 @@
  * \file add_rms_norm_quant_apt.cpp
  * \brief
  */
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920) || \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
 #include "arch35/add_rms_norm_quant_regbase.h"
 #include "arch35/add_rms_norm_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_quant_regbase_split_reduce.h"
@@ -22,7 +23,8 @@
 #include "add_rms_norm_quant_single_n.h"
 #endif
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920) || \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
 using namespace AddRmsNormQuant;
 #endif
 using namespace AscendC;
@@ -47,7 +49,8 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(GM_ADDR x1, GM_ADDR x2,
                                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920) || \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
     GET_TILING_DATA_WITH_STRUCT(AddRmsNormQuantRegbaseTilingData, tilingDataIn, tiling);
     const AddRmsNormQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);

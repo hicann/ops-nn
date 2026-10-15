@@ -429,22 +429,31 @@ private:
                         NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
                     }
                     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-                    Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                     Mul(xRegFp32One, xRegFp32One, rstdReg1, maskReg);
-                    Mul(xRegFp32One, xRegFp32One, gammaRegFp32, maskReg);
-                    if constexpr (Y3_MODE) {
-                        StoreRegForDtype<float>(y3Addr + curA * NUM_TWO * m32Stride, xRegFp32, maskReg, idx * V_LENGTH);
-                        StoreRegForDtype<float>(y3Addr + (curA * NUM_TWO + NUM_ONE) * m32Stride, xRegFp32One, maskReg,
-                                                idx * V_LENGTH);
-                    }
-                    if constexpr (Y4_MODE) {
-                        StoreRegForDtype<T_X>(y4Addr + curA * NUM_TWO * mStride, xRegFp32, maskReg, idx * V_LENGTH);
-                        StoreRegForDtype<T_X>(y4Addr + (curA * NUM_TWO + NUM_ONE) * mStride, xRegFp32One, maskReg,
-                                              idx * V_LENGTH);
-                    }
-                    if constexpr (HAS_BETA) {
-                        Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
-                        Add(xRegFp32One, xRegFp32One, betaRegFp32, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_BETA && !Y3_MODE && !Y4_MODE) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32One, gammaRegFp32, betaRegFp32, maskReg);
+                    } else
+#endif
+                    {
+                        Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                        Mul(xRegFp32One, xRegFp32One, gammaRegFp32, maskReg);
+                        if constexpr (Y3_MODE) {
+                            StoreRegForDtype<float>(y3Addr + curA * NUM_TWO * m32Stride, xRegFp32, maskReg,
+                                                    idx * V_LENGTH);
+                            StoreRegForDtype<float>(y3Addr + (curA * NUM_TWO + NUM_ONE) * m32Stride, xRegFp32One,
+                                                    maskReg, idx * V_LENGTH);
+                        }
+                        if constexpr (Y4_MODE) {
+                            StoreRegForDtype<T_X>(y4Addr + curA * NUM_TWO * mStride, xRegFp32, maskReg, idx * V_LENGTH);
+                            StoreRegForDtype<T_X>(y4Addr + (curA * NUM_TWO + NUM_ONE) * mStride, xRegFp32One, maskReg,
+                                                  idx * V_LENGTH);
+                        }
+                        if constexpr (HAS_BETA) {
+                            Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+                            Add(xRegFp32One, xRegFp32One, betaRegFp32, maskReg);
+                        }
                     }
                     if constexpr (HAS_SMOOTH_SCALE) {
                         Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
@@ -503,15 +512,22 @@ private:
                         NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
                     }
                     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-                    Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-                    if constexpr (Y3_MODE) {
-                        StoreRegForDtype<float>(y3Addr + remainderM * m32Stride, xRegFp32, maskReg, idx * V_LENGTH);
-                    }
-                    if constexpr (Y4_MODE) {
-                        StoreRegForDtype<T_X>(y4Addr + remainderM * mStride, xRegFp32, maskReg, idx * V_LENGTH);
-                    }
-                    if constexpr (HAS_BETA) {
-                        Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_BETA && !Y3_MODE && !Y4_MODE) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
+                    } else
+#endif
+                    {
+                        Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                        if constexpr (Y3_MODE) {
+                            StoreRegForDtype<float>(y3Addr + remainderM * m32Stride, xRegFp32, maskReg, idx * V_LENGTH);
+                        }
+                        if constexpr (Y4_MODE) {
+                            StoreRegForDtype<T_X>(y4Addr + remainderM * mStride, xRegFp32, maskReg, idx * V_LENGTH);
+                        }
+                        if constexpr (HAS_BETA) {
+                            Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+                        }
                     }
                     if constexpr (HAS_SMOOTH_SCALE) {
                         Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);

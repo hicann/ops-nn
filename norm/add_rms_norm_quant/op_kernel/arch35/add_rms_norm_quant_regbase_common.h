@@ -233,22 +233,36 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                     LoadAlign(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
                 }
                 Mul(xReg, xReg, rstdReg, maskReg);
-                Mul(xReg, xReg, gammaReg, maskReg);
-                if constexpr (HAS_RESOUT) {
-                    StoreAlign<float>(resOutAddr + i * V_LENGTH, xReg, maskReg);
-                }
-                if constexpr (HAS_BETA) {
-                    Add(xReg, xReg, betaReg, maskReg);
-                }
-                if constexpr (HAS_SCALES) {
-                    if constexpr (DIV_MODE) {
-                        Div(xReg, xReg, scalesReg, maskReg);
-                    } else {
-                        Mul(xReg, xReg, scalesReg, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                if constexpr (!HAS_SCALES && HAS_ZEROPOINTS && !HAS_RESOUT && !HAS_BETA) {
+                    MulDstAdd<float, MaskMergeMode::ZEROING>(xReg, gammaReg, zeroPointsReg, maskReg);
+                } else
+#endif
+                {
+                    Mul(xReg, xReg, gammaReg, maskReg);
+                    if constexpr (HAS_RESOUT) {
+                        StoreAlign<float>(resOutAddr + i * V_LENGTH, xReg, maskReg);
                     }
-                }
-                if constexpr (HAS_ZEROPOINTS) {
-                    Add(xReg, xReg, zeroPointsReg, maskReg);
+                    if constexpr (HAS_BETA) {
+                        Add(xReg, xReg, betaReg, maskReg);
+                    }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_SCALES && HAS_ZEROPOINTS && !DIV_MODE) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xReg, scalesReg, zeroPointsReg, maskReg);
+                    } else
+#endif
+                    {
+                        if constexpr (HAS_SCALES) {
+                            if constexpr (DIV_MODE) {
+                                Div(xReg, xReg, scalesReg, maskReg);
+                            } else {
+                                Mul(xReg, xReg, scalesReg, maskReg);
+                            }
+                        }
+                        if constexpr (HAS_ZEROPOINTS) {
+                            Add(xReg, xReg, zeroPointsReg, maskReg);
+                        }
+                    }
                 }
                 if constexpr (IsSameType<T_Y, int8_t>::value) {
                     Cast<int32_t, float, castTraitFp322Int32>(yRegInt32, xReg, maskReg);
@@ -327,24 +341,38 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                     LoadAlign<float>(xRegFp32, xOutFp32Addr + i * V_LENGTH);
                 }
                 Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-                Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-                if constexpr (HAS_RESOUT) {
-                    RegTensor<T_X> resOutReg;
-                    Cast<T_X, float, NormCommon::castTraitB322B16>(resOutReg, xRegFp32, maskReg);
-                    StoreAlign<T_X, StoreDist::DIST_PACK_B32>(resOutAddr + i * V_LENGTH, resOutReg, maskReg);
-                }
-                if constexpr (HAS_BETA) {
-                    Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
-                }
-                if constexpr (HAS_SCALES) {
-                    if constexpr (DIV_MODE) {
-                        Div(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
-                    } else {
-                        Mul(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                if constexpr (!HAS_SCALES && HAS_ZEROPOINTS && !HAS_RESOUT && !HAS_BETA) {
+                    MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, zeroPointsRegFp32, maskReg);
+                } else
+#endif
+                {
+                    Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                    if constexpr (HAS_RESOUT) {
+                        RegTensor<T_X> resOutReg;
+                        Cast<T_X, float, NormCommon::castTraitB322B16>(resOutReg, xRegFp32, maskReg);
+                        StoreAlign<T_X, StoreDist::DIST_PACK_B32>(resOutAddr + i * V_LENGTH, resOutReg, maskReg);
                     }
-                }
-                if constexpr (HAS_ZEROPOINTS) {
-                    Add(xRegFp32, xRegFp32, zeroPointsRegFp32, maskReg);
+                    if constexpr (HAS_BETA) {
+                        Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+                    }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_SCALES && HAS_ZEROPOINTS && !DIV_MODE) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, scalesRegFp32, zeroPointsRegFp32, maskReg);
+                    } else
+#endif
+                    {
+                        if constexpr (HAS_SCALES) {
+                            if constexpr (DIV_MODE) {
+                                Div(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
+                            } else {
+                                Mul(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
+                            }
+                        }
+                        if constexpr (HAS_ZEROPOINTS) {
+                            Add(xRegFp32, xRegFp32, zeroPointsRegFp32, maskReg);
+                        }
+                    }
                 }
                 if constexpr (IsSameType<T_Y, int8_t>::value) {
                     Cast<int32_t, float, castTraitFp322Int32>(yRegInt32, xRegFp32, maskReg);

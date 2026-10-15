@@ -227,8 +227,12 @@ __aicore__ inline void LogSoftmaxGradAR<T>::NormCompute(const LocalTensor<T>& ds
                 LoadTensorForDtypeTIn(tailGradA, reg0, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(tailGradB, reg1, pMask, i * outerLoopStride + j * innerLoopStride);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
@@ -311,8 +315,12 @@ __aicore__ inline void LogSoftmaxGradAR<T>::NormComputePostWithMul(const LocalTe
                 LoadTensorForDtypeTIn(x_1, reg1_1, pMask, i * rAligned);
 
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2_1, reg0, pFull);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg0_1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_2, reg0, reg0_1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg2_2, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
 
@@ -399,8 +407,12 @@ __aicore__ inline void LogSoftmaxGradAR<T>::NormComputePost(
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmpA + i * stride);
                 LoadAlign(reg1, (__ubuf__ float*)sumTmpB + i * stride);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);

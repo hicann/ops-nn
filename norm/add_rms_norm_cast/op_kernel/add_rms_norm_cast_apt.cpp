@@ -27,7 +27,7 @@ extern "C" __global__ __aicore__ void add_rms_norm_cast(GM_ADDR x1, GM_ADDR x2, 
 {
     TPipe pipe;
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     if (TILING_KEY_IS(8200)) {
         // 空张量(reduce empty):归一化维为 0 且行数 > 0,仅 rstd 按行填 NaN。使用独立 tiling data(32B),

@@ -146,10 +146,15 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
                 uint32_t tmpOffset = static_cast<uint32_t>(i) * tmpStride;
                 DataCopy(xReg, tmpPtr + tmpOffset);
                 DataCopy(xFoldReg, tmpPtr + tmpOffset + V_LENGTH);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(xReg, xReg, xFoldReg, pregLast);
+                ReduceSum(reduceReg, xReg, pregLast);
+#else
                 ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
                            pregLast);
                 Add(sumReg, xReg, xFoldReg, pregFull);
                 ReduceSum(reduceReg, sumReg, pregFull);
+#endif
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + i, reduceReg, pregOne);
             }
         }

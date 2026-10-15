@@ -23,14 +23,15 @@ using namespace AscendC;
 
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;
 #endif
 }
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310 && __CCE_AICORE__ != 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310 && __CCE_AICORE__ != 220 && \
+    __CCE_AICORE__ != 920
 #define bfloat16_t int16_t
 #endif
 constexpr int32_t NUM_PER_BLK_FP32 = 8;

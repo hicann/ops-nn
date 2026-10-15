@@ -128,6 +128,7 @@ public:
             .ExtendCfgInfo("opFile.value", "add_rms_norm_dynamic_mx_quant_apt");
         this->AICore().AddConfig("ascend950", config950);
         this->AICore().AddConfig("ascend350", config950);
+        this->AICore().AddConfig("ascend960dt", config950);
     }
 };
 OP_ADD(AddRmsNormDynamicMxQuant);

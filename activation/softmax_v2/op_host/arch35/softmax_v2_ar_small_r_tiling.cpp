@@ -62,7 +62,18 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
 
     // 切a0
     int64_t a0TileNumTmp = CeilDiv(a0New, a0TileBase); // a基础块的数量
-    int64_t a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
+    int64_t a0TileNum;
+    if (isDav920x_) {
+        // target-soc: flatten paradigm — actively shrink tileA0Len to fill more cores. a0FactorMax is the
+        // finest-grained block count; a0InnerMax is per-core block count after flattening.
+        int64_t a0FactorMax = a0TileNumTmp;
+        int64_t a0InnerMax = CeilDiv(a0FactorMax, static_cast<int64_t>(aicoreParams_.numBlocks));
+        a0TileNum = a0TileNumMax < a0InnerMax ? a0TileNumMax : a0InnerMax;
+        a0TileNum = a0TileNum < a0FactorMax ? a0TileNum : a0FactorMax;
+    } else {
+        // non-target-soc: original greedy logic.
+        a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
+    }
     int64_t tileA0Len = a0TileNum * a0TileBase;  // UB内能放下的tiling块，UB块
     int64_t a0Outer = CeilDiv(a0New, tileA0Len); // UB块的数量
     int64_t tileA0Tail = a0New - tileA0Len * (a0Outer - 1);

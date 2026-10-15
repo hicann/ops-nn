@@ -173,9 +173,14 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pMask);
                 Duplicate(reg2, reg2, pFull);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Mul(reg1, reg0, reg1, pMask);
+                FusedMulSubDst(reg1, reg0, reg2, pMask);
+#else
                 Mul(reg1, reg0, reg1, pMask);
                 Neg(reg0, reg0, pMask);
                 MulAddDst(reg1, reg0, reg2, pMask);
+#endif
 
                 StoreTensorForDtypeTOut(dst, reg1, pMask, i * rAligned);
             }
@@ -203,11 +208,25 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 Mul(reg2, reg0, reg1, pFull);
                 Mul(reg2_1, reg0_1, reg1_1, pMask);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                // On the target arch, Add<MERGING> fuses Add<ZEROING>(reg2_1=reg2+reg2_1) + Copy<MERGING>(reg2=reg2_1)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2, reg2_1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 Duplicate(reg2, reg2, pFull);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Mul(reg1, reg0, reg1, pFull);
+                FusedMulSubDst(reg1, reg0, reg2, pFull);
+                StoreTensorForDtypeTOut(dst, reg1, pFull, i * rAligned);
+
+                Mul(reg1_1, reg0_1, reg1_1, pMask);
+                FusedMulSubDst(reg1_1, reg0_1, reg2, pMask);
+                StoreTensorForDtypeTOut(dst, reg1_1, pMask, i * rAligned + VL_FP32);
+#else
                 Mul(reg1, reg0, reg1, pFull);
                 Neg(reg0, reg0, pFull);
                 MulAddDst(reg1, reg0, reg2, pFull);
@@ -217,6 +236,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 Neg(reg0_1, reg0_1, pMask);
                 MulAddDst(reg1_1, reg0_1, reg2, pMask);
                 StoreTensorForDtypeTOut(dst, reg1_1, pMask, i * rAligned + VL_FP32);
+#endif
             }
         }
     }
@@ -304,8 +324,12 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
                 Mul(reg2, reg0, reg0_1, pFull);
                 Mul(reg2_1, reg1, reg1_1, pMask);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2, reg2_1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
@@ -370,9 +394,14 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
                     uint32_t offset = j * VL_FP32 + i * oriRAligned;
                     LoadTensorForDtypeTIn(x0, reg0, maskOri, offset);
                     LoadTensorForDtypeTIn(x1, reg1, maskOri, offset);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Mul(reg1, reg0, reg1, maskOri);
+                    FusedMulSubDst(reg1, reg0, reg2, maskOri);
+#else
                     Mul(reg1, reg0, reg1, maskOri);
                     Neg(reg0, reg0, maskOri);
                     MulAddDst(reg1, reg0, reg2, maskOri);
+#endif
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, offset);
                 }
             }
@@ -395,8 +424,12 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmpA + i * static_cast<uint32_t>(stride));
                 LoadAlign(reg1, (__ubuf__ float*)sumTmpB + i * static_cast<uint32_t>(stride));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -407,9 +440,14 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
                     LoadTensorForDtypeTIn(x0, reg0, maskOri, offset);
                     LoadTensorForDtypeTIn(x1, reg1, maskOri, offset);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Mul(reg1, reg0, reg1, maskOri);
+                    FusedMulSubDst(reg1, reg0, reg2, maskOri);
+#else
                     Mul(reg1, reg0, reg1, maskOri);
                     Neg(reg0, reg0, maskOri);
                     MulAddDst(reg1, reg0, reg2, maskOri);
+#endif
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, offset);
                 }
             }

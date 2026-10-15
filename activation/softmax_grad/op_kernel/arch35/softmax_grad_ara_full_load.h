@@ -173,9 +173,14 @@ private:
                     LoadTensorForDtypeT(x0Local, x0Reg, pregMask, xOffset);
                     LoadTensorForDtypeT(x1Local, x1Reg, pregMask, xOffset);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Mul(x1Reg, x0Reg, x1Reg, pregMask);
+                    FusedMulSubDst(x1Reg, x0Reg, sumReg, pregMask);
+#else
                     Mul(x1Reg, x0Reg, x1Reg, pregMask);
                     Neg(x0Reg, x0Reg, pregMask);
                     MulAddDst(x1Reg, x0Reg, sumReg, pregMask);
+#endif
 
                     if constexpr (IsSameType<T, float>::value) {
                         StoreAlign(((__ubuf__ float*)yLocal) + xOffset, x1Reg, pregMask);

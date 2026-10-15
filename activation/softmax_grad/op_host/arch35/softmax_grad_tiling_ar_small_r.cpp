@@ -49,7 +49,18 @@ ge::graphStatus SoftmaxGradTilingARSmallR::DoOpTiling()
 
     // 切a0
     int64_t a0TileNumTmp = Ops::Base::CeilDiv(a0New, a0TileBase);
-    int64_t a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
+    int64_t a0TileNum;
+    if (isDav920x_) {
+        // target-soc: flatten paradigm — actively shrink tileA0Len to fill more cores. a0FactorMax is the
+        // finest-grained block count; a0InnerMax is per-core block count after flattening.
+        int64_t a0FactorMax = a0TileNumTmp;
+        int64_t a0InnerMax = Ops::Base::CeilDiv(a0FactorMax, static_cast<int64_t>(aicoreParams_.numBlocks));
+        a0TileNum = a0TileNumMax < a0InnerMax ? a0TileNumMax : a0InnerMax;
+        a0TileNum = a0TileNum < a0FactorMax ? a0TileNum : a0FactorMax;
+    } else {
+        // non-target-soc: original greedy logic.
+        a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
+    }
     int64_t tileA0Len = a0TileNum * a0TileBase;
     int64_t a0Outer = Ops::Base::CeilDiv(a0New, tileA0Len);
     int64_t tileA0Tail = a0New - tileA0Len * (a0Outer - 1);

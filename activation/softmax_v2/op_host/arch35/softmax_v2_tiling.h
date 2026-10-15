@@ -240,6 +240,7 @@ protected:
     int64_t blockSize_;
     int64_t vlFp32_;
     int64_t vlFp16_;
+    bool isDav920x_{false};
 
     ge::DataType xDtype_{ge::DataType::DT_FLOAT};
     ge::DataType yDtype_{ge::DataType::DT_FLOAT};

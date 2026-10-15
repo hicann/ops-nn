@@ -84,7 +84,8 @@ static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* input, const
 static inline bool isBatchNormSupportNcdhw(void)
 {
     return ((GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ||
-            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002));
+            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002) ||
+            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201));
 }
 
 static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
@@ -190,7 +191,8 @@ static bool CheckAttr(int64_t C, int64_t group)
     OP_CHECK(C % group == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C can be divided by group, but got false."),
              return false);
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
         // 检查C//GROUP是否超过8000
         OP_CHECK(C / group <= UPPER_CARRYING_LIMIT,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C / group <= 8000 to be true, but got false."),

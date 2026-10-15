@@ -38,21 +38,52 @@ ge::graphStatus SoftmaxGradARATiling::DoOpTiling()
                         a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, factorMax),
                 return ge::GRAPH_PARAM_INVALID);
 
-    // 不切r轴，先切a0
-    int64_t a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase);
-    int64_t a0Inner = factorMax < a0FactorMax ? factorMax : a0FactorMax;
-    int64_t tileA0Len = a0Inner * a0TileBase;
-    int64_t a0Outer = Ops::Base::CeilDiv(a0_, tileA0Len);
-    int64_t tileA0Tail = a0_ - tileA0Len * (a0Outer - 1);
+    int64_t a0FactorMax;
+    int64_t a0Inner;
+    int64_t tileA0Len;
+    int64_t a0Outer;
+    int64_t tileA0Tail;
+    int64_t a1Inner;
+    int64_t a1Outer;
+    int64_t a1Tail;
+    int64_t totalTiles;
 
-    // 再切a1
-    int64_t a1FactorMax = (aicoreParams_.ubSize - tileA0Len * FLOAT32_BYTES) / (tileA0Len * factor0);
-    int64_t a1Inner = a1_ < a1FactorMax ? a1_ : a1FactorMax;
-    int64_t a1Outer = Ops::Base::CeilDiv(a1_, a1Inner);
-    int64_t a1Tail = a1_ - a1Inner * (a1Outer - 1);
+    if (isDav920x_) {
+        // target-soc: flatten paradigm — actively shrink a0 tile to fill more cores (refer to the
+        // softmax_v2 ar_small_r tiling flatten paradigm). Treat a1*a0FactorMax as the finest-grained
+        // tile count and derive per-core tile via CeilDiv(totalTilesMax, numBlocks).
+        a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase);
+        int64_t totalTilesMax = a1_ * a0FactorMax;
+        int64_t a0InnerMax = Ops::Base::CeilDiv(totalTilesMax, static_cast<int64_t>(aicoreParams_.numBlocks));
+        a0Inner = a0InnerMax < factorMax ? a0InnerMax : factorMax;
+        a0Inner = a0Inner < a0FactorMax ? a0Inner : a0FactorMax;
+        tileA0Len = a0Inner * a0TileBase;
+        a0Outer = Ops::Base::CeilDiv(a0_, tileA0Len);
+        tileA0Tail = a0_ - tileA0Len * (a0Outer - 1);
+
+        // a1: keep a1Inner=1 to preserve full a1 parallelism (aligned with softmax_v2 side).
+        a1Inner = 1;
+        a1Outer = a1_;
+        a1Tail = a1Inner;
+        totalTiles = a1Outer * a0Outer;
+    } else {
+        // non-target-soc: original greedy logic (keep legacy platform behaviour unchanged).
+        // 不切r轴，先切a0
+        a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase);
+        a0Inner = factorMax < a0FactorMax ? factorMax : a0FactorMax;
+        tileA0Len = a0Inner * a0TileBase;
+        a0Outer = Ops::Base::CeilDiv(a0_, tileA0Len);
+        tileA0Tail = a0_ - tileA0Len * (a0Outer - 1);
+
+        // 再切a1
+        int64_t a1FactorMax = (aicoreParams_.ubSize - tileA0Len * FLOAT32_BYTES) / (tileA0Len * factor0);
+        a1Inner = a1_ < a1FactorMax ? a1_ : a1FactorMax;
+        a1Outer = Ops::Base::CeilDiv(a1_, a1Inner);
+        a1Tail = a1_ - a1Inner * (a1Outer - 1);
+        totalTiles = a1Outer * a0Outer;
+    }
 
     // 然后分核
-    int64_t totalTiles = a1Outer * a0Outer;
     int64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, static_cast<int64_t>(aicoreParams_.numBlocks));
     usedCoreNums_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
 

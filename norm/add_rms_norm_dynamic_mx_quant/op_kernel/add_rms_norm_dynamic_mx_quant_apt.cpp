@@ -35,7 +35,7 @@ __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(GM_ADDR x1, GM_ADDR x2,
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202 || __CCE_AICORE__ == 920)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
@@ -56,7 +56,7 @@ __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(GM_ADDR x1, GM_ADDR x2,
         op.Process();
     }
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202 || __CCE_AICORE__ == 920)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

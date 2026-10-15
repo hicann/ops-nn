@@ -143,6 +143,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "batch_norm_grad_apt");
         this->AICore().AddConfig("ascend950", regbaseCfg);
+        this->AICore().AddConfig("ascend960dt", regbaseCfg);
     }
 };
 

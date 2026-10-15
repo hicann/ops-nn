@@ -514,9 +514,13 @@ public:
                     RegTensor<float> shlReg;
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
                     LoadAlign(x2, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + VL_B32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(x1, x1, x2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregFull);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
@@ -605,9 +609,13 @@ public:
                 for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
                     LoadAlign(x2, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + VL_B32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(x1, x1, x2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(var, x1, pregFull);
                     Muls(var, var, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);

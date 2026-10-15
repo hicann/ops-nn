@@ -75,6 +75,8 @@ public:
             .ExtendCfgInfo("opFile.value", "rms_norm_apt");
         this->AICore().AddConfig("ascend950", config_regbase);
         this->AICore().AddConfig("ascend350", config_regbase);
+        this->AICore().AddConfig("ascend960dt", config_regbase);
+        this->AICore().AddConfig("ascend960pr", config_regbase);
 
         OpAICoreConfig config_without_bf16;
         config_without_bf16.Input("x")

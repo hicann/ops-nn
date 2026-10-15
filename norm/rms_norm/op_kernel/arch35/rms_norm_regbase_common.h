@@ -47,7 +47,7 @@ constexpr AscendC::Reg::CastTrait castTraitFp322Hifp8 = {
 template <typename T_Y>
 __aicore__ inline uint64_t GetOverflowMode()
 {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value ||
                   IsSameType<T_Y, hifloat8_t>::value) {
         return AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
@@ -59,7 +59,7 @@ __aicore__ inline uint64_t GetOverflowMode()
 template <typename T_Y>
 __aicore__ inline void SetOverflowMode(uint64_t mode)
 {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value ||
                   IsSameType<T_Y, hifloat8_t>::value) {
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(mode);

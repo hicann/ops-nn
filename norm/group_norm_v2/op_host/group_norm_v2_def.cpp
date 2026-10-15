@@ -94,6 +94,8 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->AICore().AddConfig("ascend950", config950);
         this->AICore().AddConfig("ascend350", config950);
+        this->AICore().AddConfig("ascend960dt", config950);
+        this->AICore().AddConfig("ascend960pr", config950);
     }
 };
 

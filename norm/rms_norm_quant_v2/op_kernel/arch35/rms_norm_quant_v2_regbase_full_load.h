@@ -674,6 +674,47 @@ private:
                         LoadTensorForDtypeTIn(xAddr, xReg, pregCurLoop, (i * sregxGammaBetaAlign + j * vectorLenB32));
                         Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                         LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, (j * vectorLenB32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                        if constexpr (HAS_BETA) {
+                            LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, (j * vectorLenB32));
+                            MulDstAdd<float, MaskMergeMode::ZEROING>(mul1Reg, gammaReg, betaReg, pregCurLoop);
+                        } else {
+                            Mul(mul1Reg, mul1Reg, gammaReg, pregCurLoop);
+                        }
+                        if constexpr (IS_SCALES_DIV) {
+                            Div(scales1ResultReg, mul1Reg, scales1Reg, pregCurLoop);
+                        } else {
+                            Mul(scales1ResultReg, mul1Reg, scales1Reg, pregCurLoop);
+                        }
+
+                        if constexpr (HAS_ZEROPINTS1) {
+                            Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
+                        }
+
+                        StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4,
+                                                (i * sregyAlign + j * vectorLenB32));
+
+                        if constexpr (HAS_SCALES2) {
+                            if constexpr (IS_SCALES_DIV) {
+                                Div(scales2ResultReg, mul1Reg, scales2Reg, pregCurLoop);
+                                if constexpr (HAS_ZEROPINTS2) {
+                                    Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
+                                }
+                                StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                        (i * sregyAlign + j * vectorLenB32));
+                            } else {
+                                if constexpr (HAS_ZEROPINTS2) {
+                                    MulDstAdd(mul1Reg, scales2Reg, zeroPoints2Reg, pregCurLoop);
+                                    StoreTensorForDtypeTOut(y2Addr, mul1Reg, pregCurLoop, mask4Int4,
+                                                            (i * sregyAlign + j * vectorLenB32));
+                                } else {
+                                    Mul(scales2ResultReg, mul1Reg, scales2Reg, pregCurLoop);
+                                    StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                            (i * sregyAlign + j * vectorLenB32));
+                                }
+                            }
+                        }
+#else
                         Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
                         if constexpr (HAS_BETA) {
                             LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, (j * vectorLenB32));
@@ -706,6 +747,7 @@ private:
                             StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
                                                     (i * sregyAlign + j * vectorLenB32));
                         }
+#endif
                     }
                 }
             }
@@ -729,6 +771,61 @@ private:
                         LoadTensorForDtypeTIn(xAddr, xReg, pregCurLoop, (i * sregxGammaBetaAlign + j * vectorLenB32));
                         Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                         LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, j * vectorLenB32);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                        if constexpr (HAS_BETA) {
+                            LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
+                            MulDstAdd<float, MaskMergeMode::ZEROING>(mul1Reg, gammaReg, betaReg, pregCurLoop);
+                        } else {
+                            Mul(mul1Reg, mul1Reg, gammaReg, pregCurLoop);
+                        }
+                        LoadTensorForDtypeTIn(scales1Addr, scales1Reg, pregCurLoop, j * vectorLenB32);
+                        if constexpr (IS_SCALES_DIV) {
+                            Div(scales1ResultReg, mul1Reg, scales1Reg, pregCurLoop);
+                            if constexpr (HAS_ZEROPINTS1) {
+                                LoadTensorForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregCurLoop, j * vectorLenB32);
+                                Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
+                            }
+                            StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4,
+                                                    (i * sregyAlign + j * vectorLenB32));
+                        } else {
+                            if constexpr (HAS_ZEROPINTS1) {
+                                LoadTensorForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregCurLoop, j * vectorLenB32);
+                                MulDstAdd(scales1Reg, mul1Reg, zeroPoints1Reg, pregCurLoop);
+                                StoreTensorForDtypeTOut(y1Addr, scales1Reg, pregCurLoop, mask4Int4,
+                                                        (i * sregyAlign + j * vectorLenB32));
+                            } else {
+                                Mul(scales1ResultReg, mul1Reg, scales1Reg, pregCurLoop);
+                                StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4,
+                                                        (i * sregyAlign + j * vectorLenB32));
+                            }
+                        }
+
+                        if constexpr (HAS_SCALES2) {
+                            LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
+                            if constexpr (IS_SCALES_DIV) {
+                                Div(scales2ResultReg, mul1Reg, scales2Reg, pregCurLoop);
+                                if constexpr (HAS_ZEROPINTS2) {
+                                    LoadTensorForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregCurLoop,
+                                                          j * vectorLenB32);
+                                    Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
+                                }
+                                StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                        (i * sregyAlign + j * vectorLenB32));
+                            } else {
+                                if constexpr (HAS_ZEROPINTS2) {
+                                    LoadTensorForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregCurLoop,
+                                                          j * vectorLenB32);
+                                    MulDstAdd(mul1Reg, scales2Reg, zeroPoints2Reg, pregCurLoop);
+                                    StoreTensorForDtypeTOut(y2Addr, mul1Reg, pregCurLoop, mask4Int4,
+                                                            (i * sregyAlign + j * vectorLenB32));
+                                } else {
+                                    Mul(scales2ResultReg, mul1Reg, scales2Reg, pregCurLoop);
+                                    StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                            (i * sregyAlign + j * vectorLenB32));
+                                }
+                            }
+                        }
+#else
                         Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
                         if constexpr (HAS_BETA) {
                             LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
@@ -765,6 +862,7 @@ private:
                             StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
                                                     (i * sregyAlign + j * vectorLenB32));
                         }
+#endif
                     }
                 }
             }

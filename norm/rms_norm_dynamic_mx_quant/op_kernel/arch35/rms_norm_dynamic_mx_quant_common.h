@@ -67,6 +67,7 @@ constexpr int64_t MODE_RINT = 4;
 constexpr uint16_t FP4_E1M2_MAX_EXP = 0x0000;
 constexpr uint16_t FP8_E4M3_MAX_EXP = 0x0400; // elem_emax右移7位(BF16E8M7)
 constexpr uint16_t FP8_E5M2_MAX_EXP = 0x0780;
+constexpr uint16_t BF16_ONE = 0x3f80;
 constexpr int32_t FP32_BIAS = 127;
 constexpr int32_t FP32_BIAS_NEG = -127;
 constexpr int32_t NEG_ONE = -1;
@@ -268,7 +269,6 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
     } else {
         dtypeEmax = FP4_E1M2_MAX_EXP;
     }
-
     __VEC_SCOPE__
     {
         AscendC::Reg::RegTensor<uint16_t> vdMaxExp;
@@ -279,6 +279,9 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
         AscendC::Reg::Duplicate(expMask, MAX_EXP_FOR_BF16);
         AscendC::Reg::RegTensor<uint16_t> maxExpValue;
         AscendC::Reg::Duplicate(maxExpValue, dtypeEmax);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::Reg::Duplicate(maxExpValue, static_cast<uint16_t>(BF16_ONE - dtypeEmax));
+#endif
         AscendC::Reg::RegTensor<uint16_t> sharedExp;
         AscendC::Reg::RegTensor<uint16_t> scaleValue;
         AscendC::Reg::RegTensor<uint16_t> scaleBias;
@@ -299,6 +302,14 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
             AscendC::Reg::LoadAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(vdMaxExp, maxExpAddr,
                                                                                            VL_B16);
             AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale); // INF/NAN
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            AscendC::Reg::Mul<bfloat16_t>((AscendC::Reg::RegTensor<bfloat16_t>&)sharedExp,
+                                          (AscendC::Reg::RegTensor<bfloat16_t>&)vdMaxExp,
+                                          (AscendC::Reg::RegTensor<bfloat16_t>&)maxExpValue, preMaskScale);
+            AscendC::Reg::Cast<fp8_e8m0_t, bfloat16_t, castTraitBf16ToE8m0>(
+                (AscendC::Reg::RegTensor<fp8_e8m0_t>&)scaleValue, (AscendC::Reg::RegTensor<bfloat16_t>&)sharedExp,
+                preMaskScale);
+#else
             AscendC::Reg::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
 
             AscendC::Reg::Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
@@ -308,6 +319,7 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
 
             AscendC::Reg::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
 
+#endif
             AscendC::Reg::StoreAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
                                      AscendC::Reg::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue,
                                                                              VL_B16 / NUM_TWO, preMaskScale);

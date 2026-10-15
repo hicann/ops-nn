@@ -29,7 +29,7 @@ public:
                                 GM_ADDR mxscale, GM_ADDR workspace, GM_ADDR rstd,
                                 const AddRmsNormDynamicMxQuantTilingData* tiling)
     {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202 || __CCE_AICORE__ == 920)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
@@ -250,44 +250,77 @@ private:
 
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * i);
-                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (DIGIT_TWO * i + 1));
+                AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * i);
+                AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (DIGIT_TWO * i + 1));
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset1 = (DIGIT_TWO * i) * numColAlign + r * VL_F32;
                     uint32_t offset2 = (DIGIT_TWO * i + 1) * numColAlign + r * VL_F32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x1Reg, regCurLoop, offset1);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x2Reg, regCurLoop, offset2);
-                    AscendC::MicroAPI::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
-                    AscendC::MicroAPI::Mul(mul1UnrollReg, x2Reg, rstd2Reg, regCurLoop);
+                    AscendC::Reg::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
+                    AscendC::Reg::Mul(mul1UnrollReg, x2Reg, rstd2Reg, regCurLoop);
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
-                    AscendC::MicroAPI::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
-                    AscendC::MicroAPI::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
                     if constexpr (hasBeta) {
                         LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
-                        AscendC::MicroAPI::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
-                        AscendC::MicroAPI::Add(mul2UnrollReg, mul2UnrollReg, betaReg, regCurLoop);
+                        AscendC::Reg::Move(mul2UnrollReg, betaReg);
+                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(betaReg, mul1Reg, gammaReg,
+                                                                                             regCurLoop);
+                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(
+                            mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
+                    } else {
+                        AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
+                        AscendC::Reg::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
                     }
-                    StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset1);
-                    StoreTensorForDtypeTOut<T_X>(yInUb, mul2UnrollReg, regCurLoop, offset2);
+#else
+                    AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
+                    AscendC::Reg::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
+                    if constexpr (hasBeta) {
+                        LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
+                        AscendC::Reg::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
+                        AscendC::Reg::Add(mul2UnrollReg, mul2UnrollReg, betaReg, regCurLoop);
+                    }
+#endif
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (hasBeta) {
+                        StoreTensorForDtypeTOut<T_X>(yInUb, betaReg, regCurLoop, offset1);
+                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2UnrollReg, regCurLoop, offset2);
+                    } else
+#endif
+                    {
+                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset1);
+                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2UnrollReg, regCurLoop, offset2);
+                    }
                 }
             }
             for (uint16_t i = 0; i < loopRowsHasLast; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg,
-                                                                            rstdInUb + DIGIT_TWO * loopRowsFold);
+                AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * loopRowsFold);
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset = (DIGIT_TWO * loopRowsFold) * numColAlign + r * VL_F32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x1Reg, regCurLoop, offset);
-                    AscendC::MicroAPI::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
+                    AscendC::Reg::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
-                    AscendC::MicroAPI::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
                     if constexpr (hasBeta) {
                         LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
-                        AscendC::MicroAPI::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
+                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(betaReg, mul1Reg, gammaReg,
+                                                                                             regCurLoop);
+                        StoreTensorForDtypeTOut<T_X>(yInUb, betaReg, regCurLoop, offset);
+                    } else {
+                        AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
+                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset);
+                    }
+#else
+                    AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
+                    if constexpr (hasBeta) {
+                        LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
+                        AscendC::Reg::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
                     }
                     StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset);
+#endif
                 }
             }
         }

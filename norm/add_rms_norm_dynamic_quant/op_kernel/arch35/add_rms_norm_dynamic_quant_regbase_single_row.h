@@ -227,15 +227,32 @@ private:
 
     __aicore__ inline void ReduceMaxInplace(const AscendC::LocalTensor<float>& srcLocal1, int32_t count)
     {
+        constexpr uint64_t MAX_ONCE_REPEAT = 255;
         uint64_t repsFp32 = count >> ELEM_PER_REP_FP32_SHIFT;
         uint64_t offsetsFp32 = repsFp32 << ELEM_PER_REP_FP32_SHIFT;
         uint64_t remsFp32 = count & ELEM_PER_REP_FP32_MASK;
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        if (likely(repsFp32 > 1)) {
+            uint64_t foldRepeats = repsFp32 - 1;
+            uint64_t srcOffset = ELEM_PER_REP_FP32;
+            while (foldRepeats > 0) {
+                uint64_t onceRepeats = (foldRepeats > MAX_ONCE_REPEAT) ? MAX_ONCE_REPEAT : foldRepeats;
+                AscendC::Max(srcLocal1, srcLocal1[srcOffset], srcLocal1, ELEM_PER_REP_FP32,
+                             static_cast<uint8_t>(onceRepeats), {1, 1, 1, 0, BLOCK_PER_REP, 0});
+                PipeBarrier<PIPE_V>();
+                srcOffset += onceRepeats * ELEM_PER_REP_FP32;
+                foldRepeats -= onceRepeats;
+            }
+        }
+
+#else
         if (likely(repsFp32 > 1)) {
             AscendC::Max(srcLocal1, srcLocal1[ELEM_PER_REP_FP32], srcLocal1, ELEM_PER_REP_FP32, repsFp32 - 1,
                          {1, 1, 1, 0, BLOCK_PER_REP, 0});
             PipeBarrier<PIPE_V>();
         }
+#endif
         if (unlikely(remsFp32 > 0)) {
             AscendC::Max(srcLocal1, srcLocal1[offsetsFp32], srcLocal1, remsFp32, 1, {1, 1, 1, 0, BLOCK_PER_REP, 0});
             PipeBarrier<PIPE_V>();

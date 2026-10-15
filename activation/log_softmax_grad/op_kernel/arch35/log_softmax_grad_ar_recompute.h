@@ -349,8 +349,12 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::FoldBlockVF(const LocalTens
 
             Reg::LoadAlign(vreg1, grad1Addr);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            Reg::Add<float, Reg::MaskMergeMode::MERGING>(vreg1, vreg1, vreg2, mask);
+#else
             Reg::Add(vreg3, vreg1, vreg2, mask);
             Reg::Move<float, Reg::MaskMergeMode::MERGING>(vreg1, vreg3, mask);
+#endif
 
             Reg::StoreAlign(grad1Addr, vreg1, maskFull);
         }

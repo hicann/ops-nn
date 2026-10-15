@@ -236,8 +236,12 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::FoldBlockVF(__ubuf__ 
 
             AscendC::Reg::LoadAlign(reg0, dst + offset);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg1, pregMask);
+#else
             AscendC::Reg::Add(reg1, reg0, reg1, pregMask);
             AscendC::Reg::Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pregMask);
+#endif
 
             AscendC::Reg::StoreAlign(dst + offset, reg0, maskFull);
         }

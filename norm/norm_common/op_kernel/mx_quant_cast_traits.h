@@ -81,6 +81,13 @@ constexpr AscendC::Reg::CastTrait castTraitB322B16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
+// bf16 -> fp8_e8m0 exponent-extraction cast used by the MX scale path on the target arch (9201/9202
+// hardware e8m0 cast). Trait values follow the locally-defined variant in the quant/dynamic_mx_quant
+// family: keeps only the exponent (mantissa truncated), no saturation, zeroing merge mode.
+constexpr AscendC::Reg::CastTrait castTraitBf16ToE8m0 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                         AscendC::Reg::MaskMergeMode::ZEROING,
+                                                         AscendC::RoundMode::CAST_TRUNC};
+
 } // namespace MxQuantCastTraits
 
 #endif // MX_QUANT_CAST_TRAITS_H

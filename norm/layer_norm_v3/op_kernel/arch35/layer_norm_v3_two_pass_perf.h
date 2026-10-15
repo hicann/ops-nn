@@ -258,8 +258,13 @@ private:
                 LoadRegForDtype(xInUb + VL_B32, x2, pregTail, (a * aStride));
                 Muls(meanSum1, x1, n, pregFull);
                 Muls(meanSum2, x2, n, pregTail);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(meanSum1, meanSum1, meanSum2, pregTail);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum1, pregFull);
+#else
                 Add(meanSum, meanSum1, meanSum2, pregFull);
                 Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregFull);
+#endif
                 Muls(mean, mean, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + a, mean, pregOne);
 
@@ -272,8 +277,13 @@ private:
                 Mul(square2, xMeanSub2, xMeanSub2, pregTail);
                 Muls(varSum1, square1, n, pregFull);
                 Muls(varSum2, square2, n, pregTail);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(varSum1, varSum1, varSum2, pregTail);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum1, pregFull);
+#else
                 Add(varSum, varSum1, varSum2, pregFull);
                 Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregFull);
+#endif
                 Muls(var, var, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + a, var, pregOne);
             }
@@ -335,8 +345,13 @@ private:
                                     (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(x1, x1, x2, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregFull);
+#else
                     Add(meanSum, x1, x2, pregFull);
                     Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregFull);
+#endif
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), mean,
                         pregOne);
@@ -368,9 +383,13 @@ private:
                 for (uint16_t a = 0; a < currentANum; a++) {
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     LoadAlign(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(x1, x1, x2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregFull);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + a, mean, pregOne);
@@ -429,8 +448,13 @@ private:
                     Mul(square2, xMeanSub2, xMeanSub2, pregLoop);
                     Muls(square1, square1, n, pregFull);
                     Muls(square2, square2, n, pregLoop);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(square1, square1, square2, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, square1, pregFull);
+#else
                     Add(varSum, square1, square2, pregFull);
                     Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregFull);
+#endif
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), var,
                         pregOne);
@@ -466,9 +490,13 @@ private:
                 for (uint16_t a = 0; a < currentANum; a++) {
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     LoadAlign(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(x1, x1, x2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(var, x1, pregFull);
                     Muls(var, var, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + a, var, pregOne);

@@ -518,6 +518,39 @@ public:
                         LoadTensorForDtypeTIn<T_X>(betaAddr, betaRegFp32, maskReg, i * VL_FP32);
                     }
                     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_BETA) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
+                    } else {
+                        Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                    }
+                    if constexpr (DIV_MODE) {
+                        Div(y1Reg, xRegFp32, scales1RegFp32, maskReg);
+                    } else {
+                        Mul(y1Reg, xRegFp32, scales1RegFp32, maskReg);
+                    }
+                    if constexpr (HAS_ZEROPOINTS1) {
+                        Add(y1Reg, y1Reg, zeroPoints1RegFp32, maskReg);
+                    }
+                    StoreTensorForDtypeTOut<yCopyDtype>(y1Addr, y1Reg, maskReg, mask4Int4, i * VL_FP32);
+                    if constexpr (HAS_SCALES2) {
+                        if constexpr (DIV_MODE) {
+                            Div(y2Reg, xRegFp32, scales2RegFp32, maskReg);
+                            if constexpr (HAS_ZEROPOINTS2) {
+                                Add(y2Reg, y2Reg, zeroPoints2RegFp32, maskReg);
+                            }
+                            StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
+                        } else {
+                            if constexpr (HAS_ZEROPOINTS2) {
+                                MulDstAdd(xRegFp32, scales2RegFp32, zeroPoints2RegFp32, maskReg);
+                                StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, xRegFp32, maskReg, mask4Int4, i * VL_FP32);
+                            } else {
+                                Mul(y2Reg, xRegFp32, scales2RegFp32, maskReg);
+                                StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
+                            }
+                        }
+                    }
+#else
                     Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                     if constexpr (HAS_BETA) {
                         Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
@@ -544,6 +577,7 @@ public:
                     if constexpr (HAS_SCALES2) {
                         StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
                     }
+#endif
                 }
             }
         } else {
@@ -574,6 +608,46 @@ public:
                         LoadTensorForDtypeTIn<T_X>(betaAddr, betaRegFp32, maskReg, i * VL_FP32);
                     }
                     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (HAS_BETA) {
+                        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
+                    } else {
+                        Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                    }
+                    if constexpr (DIV_MODE) {
+                        Div(y1Reg, xRegFp32, scales1RegFp32, maskReg);
+                        if constexpr (HAS_ZEROPOINTS1) {
+                            Add(y1Reg, y1Reg, zeroPoints1RegFp32, maskReg);
+                        }
+                        StoreTensorForDtypeTOut<yCopyDtype>(y1Addr, y1Reg, maskReg, mask4Int4, i * VL_FP32);
+                    } else {
+                        if constexpr (HAS_ZEROPOINTS1) {
+                            MulDstAdd(scales1RegFp32, xRegFp32, zeroPoints1RegFp32, maskReg);
+                            StoreTensorForDtypeTOut<yCopyDtype>(y1Addr, scales1RegFp32, maskReg, mask4Int4,
+                                                                i * VL_FP32);
+                        } else {
+                            Mul(y1Reg, xRegFp32, scales1RegFp32, maskReg);
+                            StoreTensorForDtypeTOut<yCopyDtype>(y1Addr, y1Reg, maskReg, mask4Int4, i * VL_FP32);
+                        }
+                    }
+                    if constexpr (HAS_SCALES2) {
+                        if constexpr (DIV_MODE) {
+                            Div(y2Reg, xRegFp32, scales2RegFp32, maskReg);
+                            if constexpr (HAS_ZEROPOINTS2) {
+                                Add(y2Reg, y2Reg, zeroPoints2RegFp32, maskReg);
+                            }
+                            StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
+                        } else {
+                            if constexpr (HAS_ZEROPOINTS2) {
+                                MulDstAdd(xRegFp32, scales2RegFp32, zeroPoints2RegFp32, maskReg);
+                                StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, xRegFp32, maskReg, mask4Int4, i * VL_FP32);
+                            } else {
+                                Mul(y2Reg, xRegFp32, scales2RegFp32, maskReg);
+                                StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
+                            }
+                        }
+                    }
+#else
                     Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                     if constexpr (HAS_BETA) {
                         Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
@@ -600,6 +674,7 @@ public:
                     if constexpr (HAS_SCALES2) {
                         StoreTensorForDtypeTOut<yCopyDtype>(y2Addr, y2Reg, maskReg, mask4Int4, i * VL_FP32);
                     }
+#endif
                 }
             }
         }

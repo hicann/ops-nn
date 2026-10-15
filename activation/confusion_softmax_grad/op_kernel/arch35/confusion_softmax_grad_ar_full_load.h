@@ -103,7 +103,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::Init(GM_ADDR grad, GM_ADDR x, 
     pipe_->InitBuffer(this->gradQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(this->yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
 
-    pipe_->InitBuffer(this->binaryAddLocalBuffer_, tl_->binaryTmpSize);
+    pipe_->InitBuffer(this->binaryAddLocalBuffer_, static_cast<uint32_t>(tl_->binaryTmpSize));
 }
 
 template <typename T>
@@ -214,8 +214,12 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
                 AscendC::Reg::Mul(reg2, reg0, reg1, pFull);
                 AscendC::Reg::Mul(reg2_1, reg0_1, reg1_1, pMask);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2, reg2_1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 Duplicate(reg2, reg2, pFull);
 
@@ -315,9 +319,12 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
 
                 AscendC::Reg::Mul(reg2, reg0, reg0_1, pFull);
                 AscendC::Reg::Mul(reg2_1, reg1, reg1_1, pMask);
-
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2, reg2_1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
@@ -400,8 +407,12 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
                 LoadAlign(reg0, (__ubuf__ float*)sumTmpA + i * stride);
                 LoadAlign(reg1, (__ubuf__ float*)sumTmpB + i * stride);
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg0, reg1, pMask);
+#else
                 Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pMask);
+#endif
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
