@@ -44,12 +44,13 @@ if __name__ == "__main__":
         changed_file = str(os.path.relpath(changed_file, BASE_PATH)).strip()
         if file_filter(changed_file) is False:
             continue
-        resolved = resolve_changed_op(
-            changed_file.split("/"), set(OP_CATEGORY_LIST), is_experimental
-        )
+        resolved = resolve_changed_op(changed_file.split("/"), set(OP_CATEGORY_LIST))
         if resolved is None:
             continue
         prefix, second, is_common = resolved
+        # 本构建模式(is_experimental)只取对应命名空间：experimental编译不收主类目路径
+        if prefix.startswith("experimental/") != is_experimental:
+            continue
         ops.add(f"{prefix.split('/')[-1]}.common" if is_common else second)
 
     (_, reverse_op_dependencies) = parser.get_dependencies_by_ops(ops)  # 获取反向依赖

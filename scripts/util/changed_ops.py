@@ -58,27 +58,21 @@ def get_op_categories(repo_root: str) -> List[str]:
 
 
 def resolve_changed_op(
-    parts: List[str], categories: Set[str], include_experimental: bool = True
+    parts: List[str], categories: Set[str]
 ) -> Optional[Tuple[str, str, bool]]:
     """按路径段解析变更路径所属算子。
 
     返回(prefix, second, is_common)：prefix为'<category>'或'experimental/<category>'，
     second为算子目录名（类目公共目录时second为'common'且is_common=True）；
-    不属于任何类目返回None。仅做路径段判定，不做目录存在性校验。
-    include_experimental=False时与parse_compile_changed_files.py的is_experimental=FALSE语义一致，
-    experimental路径返回None。
+    不属于任何类目返回None。仅做路径段判定，不做目录存在性校验；
+    构建模式（主类目/experimental）的命名空间过滤由调用方按prefix自行完成。
     """
     if len(parts) < 2:
         return None
     category, second = parts[0], parts[1]
     if category in categories and len(parts) >= 3:
         return (category, second, second == "common")
-    if (
-        include_experimental
-        and category == "experimental"
-        and len(parts) >= 4
-        and parts[1] in categories
-    ):
+    if category == "experimental" and len(parts) >= 4 and parts[1] in categories:
         # prefix须用parts[1]拼接——此处category仍为'experimental'，不能直接引用
         return (f"experimental/{parts[1]}", parts[2], parts[2] == "common")
     return None
