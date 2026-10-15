@@ -66,7 +66,7 @@ ${op_name}                              # 替换为实际算子名的小写下�
 
   ```bash
   if(ENABLE_EXPERIMENTAL)
-      # genop新增experimenta算子分类
+      # genop新增experimental算子分类
       # add_subdirectory(${op_class})
       add_subdirectory(experimental/nn)
   else()
