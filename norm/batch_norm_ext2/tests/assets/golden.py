@@ -12,8 +12,8 @@
 """
 TTK golden plugin for batch_norm_ext2 in the TestSpec multi-path format.
 
-**Implemented with torch tensor ops** (torch.mean / torch.rsqrt / addcmul), not hand-written
-numpy formulas — the semantics were validated against tf.raw_ops.FusedBatchNormV2 on GPU:
+**Implemented with torch tensor ops** (torch.mean / torch.rsqrt / torch.mul + torch.add two-step),
+not hand-written numpy formulas — the semantics were validated against tf.raw_ops.FusedBatchNormV2 on GPU:
   training : output_mean = batch mean (biased), output_variance = unbiased var (Bessel),
              reserve_space_1 = batch mean, reserve_space_2 = rstd = 1/sqrt(var+eps)
   inference: y = scale*(x-mean)*rsqrt(var+eps)+offset; the 4 stats outputs equal the
@@ -170,15 +170,19 @@ def _golden_batch_norm_ext2(
         mean_t, var_t = _spatial_mean_var(xt, data_format)
         rstd_t = torch.rsqrt(var_t + eps)
         # y = scale * (x - mean) * rstd + offset  (competing-op composition, same algorithm)
-        y_t = torch.addcmul(
+        # 两步拼接(禁 addcmul 这类 FMA 融合算子):先逐元素乘、再逐个加,
+        # 保持运算序列可分离(golden_standard.md §三 / 旧模板「禁用融合算子」条款)。
+        bias_t = (
             ot.reshape(1, 1, 1, -1)
             if data_format == "NHWC"
-            else ot.reshape(1, -1, 1, 1),
-            (xt - mean_t) * rstd_t,
+            else ot.reshape(1, -1, 1, 1)
+        )
+        scale_t = (
             st.reshape(1, 1, 1, -1)
             if data_format == "NHWC"
-            else st.reshape(1, -1, 1, 1),
+            else st.reshape(1, -1, 1, 1)
         )
+        y_t = torch.add(torch.mul((xt - mean_t) * rstd_t, scale_t), bias_t)
         batch_mean = mean_t.reshape(-1).numpy()
         batch_var = var_t.reshape(-1).numpy()
         rstd = rstd_t.reshape(-1).numpy()
@@ -195,17 +199,15 @@ def _golden_batch_norm_ext2(
         vt = torch.from_numpy(var_in.astype(compute_dtype))
         rstd_t = torch.rsqrt(vt + eps)
         if data_format == "NHWC":
-            y_t = torch.addcmul(
-                ot.reshape(1, 1, 1, -1),
-                (xt - mt.reshape(1, 1, 1, -1)) * rstd_t.reshape(1, 1, 1, -1),
-                st.reshape(1, 1, 1, -1),
-            )
+            bias_t = ot.reshape(1, 1, 1, -1)
+            scale_t = st.reshape(1, 1, 1, -1)
+            centered = (xt - mt.reshape(1, 1, 1, -1)) * rstd_t.reshape(1, 1, 1, -1)
         else:  # NCHW
-            y_t = torch.addcmul(
-                ot.reshape(1, -1, 1, 1),
-                (xt - mt.reshape(1, -1, 1, 1)) * rstd_t.reshape(1, -1, 1, 1),
-                st.reshape(1, -1, 1, 1),
-            )
+            bias_t = ot.reshape(1, -1, 1, 1)
+            scale_t = st.reshape(1, -1, 1, 1)
+            centered = (xt - mt.reshape(1, -1, 1, 1)) * rstd_t.reshape(1, -1, 1, 1)
+        # 两步拼接(禁 addcmul/FMA),同训练分支。
+        y_t = torch.add(torch.mul(centered, scale_t), bias_t)
         out_mean = mean_in
         out_variance = var_in
         out_rs1 = mean_in

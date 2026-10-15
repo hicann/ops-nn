@@ -41,10 +41,24 @@ Backend priority ladder (spec reference_oracle = {framework: torch, absent: true
     torch.reshape, torch.square, torch.sum.
   * tiers 4 (TensorFlow composition) / 5 (numpy) — not reached: tier 3 holds.
 
-Float64 accumulation rule (workflow-mandated; overrides the spec accumulator_dtype
-float32): every input is lifted with .to(torch.float64), the reduction accumulates
-entirely in float64, and each output is cast back once to the target output dtype
-(float32).  No fp16/fp32 accumulation happens anywhere in the reduction.
+Accumulation rule — **follow the NPU's widening ladder** (golden_standard.md §三/§五,
+"浮点 + 两方泛化": NPU 不宽 → 也不宽, NPU 宽到哪 → 就宽到哪, 出口跟随其窄回行为):
+the arch35 kernel widens fp16/bf16 inputs to fp32 (Cast<float, DType, CAST_NONE> /
+DIST_UNPACK_B16) and keeps a plain fp32 lane otherwise, accumulates in fp32 registers
+throughout, and stores both outputs as fp32 with **no narrowing**
+(`op_kernel/arch35/gn_training_reduce_base.h:63-107,485-486,1075-1079`,
+`gn_training_reduce_onepass.h:170-192`; both outputs are declared DT_FLOAT in
+`op_host/gn_training_reduce_def.cpp:35,42`).  The golden mirrors exactly that ladder —
+lift fp16/bf16 to fp32, keep fp32 as fp32, accumulate in fp32 — and never widens
+fp32 → fp64 on its own.  The Σx path additionally pre-scales by SUM_ACC_SCALE = 2^-32
+and unscales on write-out (`..._base.h:55-56,81,1042`): that is an exact power-of-two
+overflow guard, bit-identical to unscaled fp32 accumulation for every finite result,
+so it is an implementation detail and is deliberately not reproduced here.
+Each output is cast once — **to the dtype TTK hands down in `output_dtypes`** (never
+hard-coded): Promote/three-party mode hands down the lifted fp64, so a hard
+`.to(torch.float32)` would cut the truth back (golden_standard.md §八#2); when
+`output_dtypes` is absent the fallback is the operator contract dtype fp32
+(spec.yaml accumulator_dtype float32 — the ladder above agrees with it).
 
 Tolerance derivation (spec.yaml, never the operator name):
   * default by op.paradigms [Reduction] (float output) = stat_rel_err;
@@ -56,8 +70,11 @@ third_party: spec reference_oracle is absent (no single framework API), so the c
 is declared here as the torch reduction composition — an independent computation form
 (ones-vector multiply-accumulate, not torch.sum) reached only through this declaration.
 The competitor runs at the operator's fp32 contract precision (mirroring the arch35
-kernel), NOT at the golden's fp64 precision: cross_check compares peer error levels, so
-an fp64 competitor would be exact and collapse the ratio denominator.
+kernel): cross_check compares peer error levels, so an fp64 competitor would be exact
+and collapse the ratio denominator.  The golden/competitor pair is now dtype-symmetric
+on that rung — both lift only fp16/bf16 to fp32 and both keep a promoted fp64 as-is —
+so the ratio measures summation-form differences, not an artificial fp64-vs-fp32 width
+gap.
 
 cross_check applicability (both outputs are raw moments): the `rmse` leg of cross_check
 is an *absolute* RMS ratio against a floor-clamped denominator, so it is only stable when
@@ -138,13 +155,24 @@ def _grouped_view(shape, num_groups, fmt):
 
 
 def _torch_group_reduce(x, num_groups, fmt):
-    """tier-3 golden body: torch.reshape + torch.square + torch.sum, all in float64."""
+    """tier-3 golden body: torch.reshape + torch.square + torch.sum, at the NPU's width.
+
+    加宽档**跟随 NPU**(golden_standard.md §三/§五「浮点 + 两方泛化」):arch35 内核的
+    累加寄存器与输出恒为 fp32 —— fp16/bf16 入口升 fp32、fp32 入口原样,两级归约与
+    cache 缓冲全是 `<float>`,出口直接写 fp32 不窄回(`gn_training_reduce_base.h:63-107,
+    485-486,1075-1079`;输出声明恒 DT_FLOAT,`gn_training_reduce_def.cpp:35,42`)。
+    故此处只对 fp16/bf16 抬 fp32;**不无条件抬 fp64**(NPU 从不宽到 fp64)。
+    Promote(三方档)下入参与 output_dtypes 均已被 TTK 抬到 fp64,原样保留 = 零 cast
+    (§三/§四「浮点 + 三方」格),故抬档判断只看入参 dtype,不写死任何档位。
+    出口**不写死 fp32**:dtype 由 `_group_reduce` 按 TTK **下发**的 output_dtypes 决定 ——
+    Promote(三方档)下下发值是抬档后的 fp64,写死 fp32 会把真值砍回(golden_standard.md §八#2)。
+    """
+    if x.dtype in (torch.float16, torch.bfloat16):
+        x = x.to(torch.float32)
     view, axes = _grouped_view(tuple(x.shape), num_groups, fmt)
-    xg = torch.reshape(x.to(torch.float64), view)
-    sum_out = torch.sum(xg, dim=axes, keepdim=True).to(torch.float32)
-    square_sum_out = torch.sum(torch.square(xg), dim=axes, keepdim=True).to(
-        torch.float32
-    )
+    xg = torch.reshape(x, view)
+    sum_out = torch.sum(xg, dim=axes, keepdim=True)
+    square_sum_out = torch.sum(torch.square(xg), dim=axes, keepdim=True)
     return sum_out, square_sum_out
 
 
@@ -202,12 +230,48 @@ except Exception:  # pragma: no cover - torch.compile optional
     pass
 
 
-def _group_reduce(x, num_groups, fmt):
-    """Dispatch on the input container: torch (ACLNN) vs numpy (Kernel/GEIR)."""
-    if isinstance(x, torch.Tensor):
-        return list(_torch_group_reduce(x, num_groups, fmt))
-    x_t = torch.from_numpy(np.asarray(x))
-    return [out.numpy() for out in _torch_group_reduce(x_t, num_groups, fmt)]
+_STAT_DTYPE_ALIAS = {
+    "float16": torch.float16,
+    "half": torch.float16,
+    "bfloat16": torch.bfloat16,
+    "float32": torch.float32,
+    "float": torch.float32,
+    "float64": torch.float64,
+    "double": torch.float64,
+}
+
+
+def _normalize_dtype_name(dtype):
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0] if dtype else None
+    if dtype is None:
+        return None
+    return str(dtype).lower().replace("torch.", "").replace("numpy.", "")
+
+
+def _dtype_from_token(token):
+    return _STAT_DTYPE_ALIAS.get(_normalize_dtype_name(token))
+
+
+def _group_reduce(x, num_groups, fmt, output_dtypes=None):
+    """Dispatch on the input container: torch (ACLNN) vs numpy (Kernel/GEIR).
+
+    出口 dtype 取 TTK **下发**的 `output_dtypes`(Promote 下已被抬高,§八#2);
+    下发缺省时回落到算子契约 dtype fp32(两方泛化档跟 NPU 输出 dtype)。
+    不读算子"声明"的 dtype —— 那会把 Promote 抬上去的精度砍回来。
+    """
+    is_torch = isinstance(x, torch.Tensor)
+    x_t = x if is_torch else torch.from_numpy(np.asarray(x))
+    outs = list(_torch_group_reduce(x_t, num_groups, fmt))
+    names = [_normalize_dtype_name(d) for d in (output_dtypes or ())]
+    result = []
+    for index, out in enumerate(outs):
+        target = _dtype_from_token(names[index]) if index < len(names) else None
+        if target is None:
+            target = torch.float32
+        out = out.to(target)
+        result.append(out if is_torch else out.numpy())
+    return result
 
 
 class GNTrainingReduceTorchOracle:
@@ -239,7 +303,7 @@ class GNTrainingReduceTestSpec:
 
     def golden(x, num_groups=2, sumOut=None, squareSumOut=None, **kwargs):
         fmt = _resolve_format(kwargs)
-        return _group_reduce(x, num_groups, fmt)
+        return _group_reduce(x, num_groups, fmt, kwargs.get("output_dtypes"))
 
     third_party = {"torch": GNTrainingReduceTorchOracle}
 
