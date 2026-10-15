@@ -109,6 +109,7 @@ enum class QuantMode : std::uint8_t {
 
 bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 opType);
 bool IsSocVersionFuse(const gert::TilingContext* context);
+bool IsArchAfter35(const gert::TilingContext* context);
 } // namespace Conv
 } // namespace NN
 } // namespace Ops

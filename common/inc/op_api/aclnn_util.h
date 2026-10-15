@@ -32,13 +32,15 @@ using namespace op;
 inline static bool IsRegbase()
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102};
+    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102, NpuArch::DAV_9201,
+                                                      NpuArch::DAV_9202};
     return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
 }
 
 inline static bool IsRegbase(NpuArch npuArch)
 {
-    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102};
+    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102, NpuArch::DAV_9201,
+                                                      NpuArch::DAV_9202};
     return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
 }
 

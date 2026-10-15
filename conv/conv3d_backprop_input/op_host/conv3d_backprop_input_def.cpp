@@ -109,6 +109,8 @@ public:
             .ExtendCfgInfo("sgatKeyAttr.list", "strides,dilations,groups")
             .ExtendCfgInfo("prebuildPattern.value", "Conv3d_backprop_input");
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend960dt", aicore_config);
+        this->AICore().AddConfig("ascend960pr", aicore_config);
     }
 };
 

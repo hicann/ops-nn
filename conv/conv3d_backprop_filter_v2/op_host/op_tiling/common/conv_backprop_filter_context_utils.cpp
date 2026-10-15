@@ -107,7 +107,9 @@ static inline bool CheckRange(T val, T lower, T upper)
 namespace {
 static bool IsArchAfter35(const gert::TilingContext* context)
 {
-    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
+    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
 }
 
 bool SetStridesAttr(const gert::TilingContext* context, Conv3dBpFilterV2RunInfo& runInfoV2)

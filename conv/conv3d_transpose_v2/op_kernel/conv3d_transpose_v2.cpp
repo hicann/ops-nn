@@ -12,9 +12,10 @@
  * \file conv3d_transpose_v2.cpp
  * \brief
  */
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #include "conv3d_transpose_v2_arch35_tiling_key.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102)
+#if defined(__NPU_ARCH__) && \
+    (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "arch35/conv3d_transpose_v2_arch35.h"
 #endif
 #else
@@ -34,13 +35,14 @@
 
 using namespace AscendC;
 
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
           uint8_t loadB1Condition>
 __global__ __aicore__ void conv3d_transpose_v2(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102)
+#if defined(__NPU_ARCH__) && \
+    (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     conv3d_transpose_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBasicBlockTiling, loadB1Condition>(
         input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     return;

@@ -53,7 +53,7 @@ const size_t FILTER_INDEX = 1;
 const size_t OUTPUT_BP_INDEX = 2;
 const size_t TRANSPOSE_X_INDEX = 1;
 const size_t TRANSPOSE_FILTER_INDEX = 2;
-const size_t BAIS_INDEX = 3;
+const size_t BIAS_INDEX = 3;
 const size_t SCALE0_INDEX = 4;
 const size_t SCALE1_INDEX = 5; // MDC双输出场景下的第二个output对应的Scale1 input索引
 const size_t ENABLE_HF32_INDEX = 5;
@@ -210,6 +210,7 @@ protected:
         const uint32_t scale1Count = runInfo_.quantMode1 == static_cast<uint8_t>(QuantMode::VECTOR_QUANT) ? 1U : 0U;
         return scale0Count + scale1Count;
     }
+    bool IsSocVersion960() const;
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;

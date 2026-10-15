@@ -93,7 +93,7 @@ protected:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
 
-    bool IsSocVersion91095() const;
+    bool IsArchAfter35() const;
     void Reset();
     void SetShapeTiling(TConv3DDwTiling& dwt);
     void SetAttrTiling(TConv3DDwTiling& dwt);

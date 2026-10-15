@@ -245,8 +245,9 @@ __aicore__ inline void C04TransdataWeight(Intf* self, const uint32_t kIdx, uint3
 {
     WaitForCubeBeforeLoadToB1<Intf>(self);
     LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
-
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (GetSubBlockIdx() == (self->ctx.c04LoadToB1IterIdx_ & 1)) {
+#endif
         uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         uint32_t b1CinSize = CalcCurCinSizeB1(self, curCinIdx);
         uint64_t srcGmOffset = static_cast<uint64_t>(curCinIdx) * self->ctx.tiling_->dkHkWk;
@@ -261,8 +262,9 @@ __aicore__ inline void C04TransdataWeight(Intf* self, const uint32_t kIdx, uint3
             }
             C04TransdataWeightCore<Intf>(self, b1CinSize, srcGmOffset, useB1Tbuf, curDkIdx);
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     }
-
+#endif
     NotifyCubeAfterLoadToB1<Intf>(self);
 }
 

@@ -73,7 +73,7 @@ ge::graphStatus Conv3DDXV2VecTiling::GetShapeAttrsInfo()
         OP_LOGE(context_->GetNodeName(), "GetCompileInfo returned nullptr in VecTiling");
         return ge::GRAPH_FAILED;
     }
-    if (compileInfo->npuArch == NpuArch::DAV_3510) {
+    if (IsArchAfter35(context_)) {
         return ge::GRAPH_SUCCESS;
     }
 

@@ -226,7 +226,7 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::GetPlatformInfo() { return ge::GRAP
 
 ge::graphStatus Conv3DBackpropInputV2Tiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+    if (IsArchAfter35(context_)) {
         return ge::GRAPH_SUCCESS;
     }
     opName_ = context_->GetNodeName();
@@ -237,7 +237,7 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::GetShapeAttrsInfo()
 
 bool Conv3DBackpropInputV2Tiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+    if (IsArchAfter35(context_)) {
         return false;
     }
     // FP16/BF16/FP32 + NCDHW格式filter 由 Conv3DDXV2VecTiling (priority 2) 处理，跳过 Cube 路径

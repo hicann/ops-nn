@@ -30,8 +30,7 @@ namespace Conv {
 
 bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return false;
     }
 

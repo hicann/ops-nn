@@ -52,7 +52,7 @@ __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADD
                               tilingData.useUbAccumForSplitK || tilingData.singleIterateDk != tilingData.dk)) {
         return;
     }
-#if defined(__DAV_310R6__)
+#if defined(__DAV_310R6__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);

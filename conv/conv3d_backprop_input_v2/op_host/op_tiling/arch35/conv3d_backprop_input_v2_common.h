@@ -21,7 +21,6 @@ namespace Conv {
 
 constexpr uint32_t HIF8_DATA_SIZE = 1;
 constexpr uint32_t C04_COUT_SIZE = 4;
-constexpr int32_t VECTOR_REG_WIDTH = 256;
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr uint32_t BYTE_BLOCK = 32;
 constexpr uint64_t TWO = 2;

@@ -73,7 +73,7 @@ namespace NN {
 namespace Conv {
 ge::graphStatus Conv3DDWV2BasicBlockTiling::GetShapeAttrsInfo()
 {
-    if (IsSocVersion91095()) {
+    if (IsArchAfter35()) {
         return ge::GRAPH_SUCCESS;
     }
     opName_ = context_->GetNodeName();
@@ -120,7 +120,7 @@ void Conv3DDWV2BasicBlockTiling::SetBasicBlockAttrsTiling()
 bool Conv3DDWV2BasicBlockTiling::IsCapable()
 {
     // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
-    if (IsSocVersion91095()) {
+    if (IsArchAfter35()) {
         return false;
     }
 

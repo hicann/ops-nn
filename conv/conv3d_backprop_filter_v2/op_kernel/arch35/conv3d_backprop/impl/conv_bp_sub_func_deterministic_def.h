@@ -15,7 +15,6 @@
 
 #ifndef CONV3D_BP_FILTER_SUB_FUNC_DETERMINISTIC_DEF_H
 #define CONV3D_BP_FILTER_SUB_FUNC_DETERMINISTIC_DEF_H
-constexpr uint8_t SREG_PROC_NUM = 64;
 
 namespace ConvolutionBackpropFunc {
 constexpr uint8_t SYNC_MODE0 = 0;

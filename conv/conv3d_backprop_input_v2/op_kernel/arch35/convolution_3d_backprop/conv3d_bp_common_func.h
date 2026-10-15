@@ -21,7 +21,7 @@
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "../../../inc/macro.h"
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
 #include "impl/conv_bp_input_sub_func.h"
 #endif
 namespace Convolution3DBackpropFunc {

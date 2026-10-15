@@ -301,7 +301,8 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf* self, cons
     uint64_t srcSize = cutMNSize.curNSize * coutNum;
     auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
     uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    uint32_t sreg = 64; // 64: reg处理的数目
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
+    uint32_t sreg = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     uint32_t tailNum = coutNum % C0_PER_REG;
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
 

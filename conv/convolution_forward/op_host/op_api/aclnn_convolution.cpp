@@ -46,6 +46,7 @@
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "../../../../matmul/common/op_host/op_api/matmul_util.h"
 #include "../../../../matmul/common/op_host/op_api/batch_matmul_util.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 using namespace ge;
@@ -180,7 +181,7 @@ static const aclTensor* ConvL0Warper(std::map<std::string, L0FUNCTION> l0Functio
 
 namespace op {
 
-static bool IsSupportND() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
+static bool IsSupportND() { return Ops::NN::AclnnUtil::IsRegbase(); }
 
 static const aclTensor* L0FuncWarperByOpType(std::map<std::string, L0FUNCTION> l0Functions, std::string functionType,
                                              const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
@@ -1347,7 +1348,7 @@ public:
         }
 
         // 针对 2d transpose error msg is: backprop pad value invalid 提前拦截
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && !(padBinaryValid(engine))) {
+        if (!Ops::NN::AclnnUtil::IsRegbase() && !(padBinaryValid(engine))) {
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1374,7 +1375,7 @@ private:
 
     static aclnnStatus CheckTransposedFormat(ConvEngine& engine)
     {
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
         auto inputFormat = engine.meta.input.format;
@@ -1414,7 +1415,7 @@ private:
 
     static aclnnStatus CheckEmptyTensorTransposed(ConvEngine& engine)
     {
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
 
@@ -1718,7 +1719,7 @@ private:
                     "shape[" + std::to_string(i + inputSpaceDimIndex) + "] of x must be greater than or equal to 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && transposed && weight.IsZeroTensor()) {
+            if (op::IsSupportND() && transposed && weight.IsZeroTensor()) {
                 continue;
             }
             int64_t weightShapeSpace = weightShape[i + weightSpaceDimIndex];
@@ -2088,8 +2089,7 @@ public:
     aclnnStatus Check(ConvEngine& engine) override
     {
         size_t inputDim = engine.meta.input.shape.size();
-        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-            OP_LOGD("Get Current NpuArch: DAV_3510.");
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
         // 除了910A 910B 310P，其余暂不支持
@@ -2132,8 +2132,7 @@ public:
     ~TemporarySoftwareLimitCheckerTbc() override = default;
     aclnnStatus Check([[maybe_unused]] ConvEngine& engine) override
     { // 3D暂不支持
-        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-            OP_LOGD("Get Current NpuArch: DAV_3510.");
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
         // 除了910A 910B 310P，其余暂不支持
@@ -2601,11 +2600,10 @@ static void UpdateInputDtype(const aclTensor* input, const aclTensor* bias, stru
     opInfo.weightDtype = upperDtype;
     if (bias != nullptr) {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
         if (transposed) {
             if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
                 upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
-            } else if (isDAV3510) {
+            } else if (Ops::NN::AclnnUtil::IsRegbase()) {
                 // Ascend950 force convert bias to float
                 // L0C [conv3dBpInput(xDtype) + bias(float)] --> CAST [out(xDtype)]
                 upperDtype = op::DataType::DT_FLOAT;
@@ -4022,7 +4020,7 @@ static aclnnStatus GenInOutByConvTranspose1DToBmm(ConvEngine engine,
 
 static bool IsSupportConvTranspose1DToBmm(ConvEngine engine)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     if (engine.meta.input.format != op::Format::FORMAT_NCL) {
@@ -4060,8 +4058,8 @@ static ConvTranspose1DToBmmMode GetConvTranspose1DToBmmMode(ConvEngine engine)
 static bool IsSupportConvToBmm(ConvEngine engine)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isNotDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510;
-    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 && isNotDAV3510) {
+    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
+        !Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
 
@@ -5093,8 +5091,7 @@ public:
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-        if (bias && !isDAV3510) {
+        if (bias && !Ops::NN::AclnnUtil::IsRegbase()) {
             op::Shape biasShape = bias->GetViewShape();
             int64_t biasLength = biasShape.GetDim(0);
             if (dstFormat == op::Format::FORMAT_NDHWC) {
@@ -5485,7 +5482,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(const aclTensor* self, const aclTensor*
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         ret = CheckParamsEmpty(entityName, output, bias);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }

@@ -35,7 +35,7 @@ static __aicore__ inline bool GetIsNeedAddFlag(Intf* self, const uint64_t coreAd
                                                                ((coreRelatedIndex < self->ctx.deterAddCoreNum_) &&
                                                                 self->ctx.subCoreInx_ < RELATED_CORE_NUM)));
     return needAddFlag;
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     // CV 1:1, 只需判断被累加核超过累加核数量
     uint64_t coreRelatedIndex = coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_;
     return (coreRelatedIndex < self->ctx.deterAddCoreNum_);
@@ -70,7 +70,7 @@ static __aicore__ inline uint64_t GetRelatedCore(Intf* self, const uint64_t core
             coreRelatedIndexTotal = coreIndexTotal - coreAddCnt;
         }
     }
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     // CV1:1无需根据cl0Pbuffer区分切块
     // 首层累加: 首层为同一个cube核对应的vec核累加
     // 非首层累加: 二叉累加向后寻找对应的计算核
@@ -148,7 +148,7 @@ static __aicore__ inline bool IsCoreNonCalc(Intf* self, const uint64_t coreAddCn
     // streamk场景会有一些核需要跳过，不参与确定性计算
     return coreAddCnt >= self->ctx.deterAddCoreNum_ || deterShape.mSize[self->ctx.subCoreInx_] == 0 ||
            deterShape.nSize[self->ctx.subCoreInx_] == 0 || self->ctx.isNoDeterministic_;
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     bool isLastCoreOdd = (self->ctx.deterAddCoreIndex_ == self->ctx.deterAddCoreNum_ - 1) &&
                          (self->ctx.deterAddCoreNum_ & 1) != 0;
     // 超出累加核数量，或者累加核shape为0，通知vec结束。
@@ -182,7 +182,7 @@ static __aicore__ inline void InitSubCoreInx(Intf* self)
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     uint64_t isOddCore = (self->ctx.deterAddCoreIndex_ & 1) == 0 ? 0 : 1; // 标记当前核是否为奇数核
     self->ctx.subCoreInx_ = (isOddCore << 1) + GetSubBlockIdx();
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     // 奇数核负责L0C切块数据的计算，调整addCoreIndex
     self->ctx.subCoreInx_ = GetBlockIdx() % PINGPONG_NUM;
     self->ctx.deterAddCoreIndex_ = self->ctx.deterAddCoreIndex_ - (self->ctx.deterAddCoreIndex_ & 1);

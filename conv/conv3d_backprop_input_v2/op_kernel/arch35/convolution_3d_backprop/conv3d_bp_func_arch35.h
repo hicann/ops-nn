@@ -197,6 +197,12 @@ __aicore__ inline void InitC04Params(Intf* self)
             uint32_t c04UbBufSize = (AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH - MASK_REG_WIDTH -
                                      AscendC::ONE_BLOCK_SIZE) >>
                                     1;
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
+            if constexpr (std::is_same<typename Intf::SrcT, bfloat16_t>::value ||
+                          std::is_same<typename Intf::SrcT, half>::value) {
+                c04UbBufSize = BIT16_GATHER_MAX_BUF_SIZE;
+            }
+#endif
             uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcBT>(c04UbBufSize);
             uint32_t tmpVal1 = self->ctx.tiling_->dkHkWk << C04_SHIFT_SIZE;
             uint32_t tmpVal2 = AlignUp((self->ctx.tiling_->hkWk << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
@@ -210,7 +216,7 @@ __aicore__ inline void InitC04Params(Intf* self)
 template <class Intf>
 __aicore__ inline void InitParamsPart3(Intf* self)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
     self->ctx.dstB2Stride_ = 0;
     self->ctx.startAddrOffset_ = 0;
     self->ctx.headWi_ = 0;
@@ -326,7 +332,7 @@ __aicore__ inline void InitParams(Intf* self)
     } else {
         InitParamsForNormal<Intf>(self);
     }
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
     self->ctx.hoWo_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
     self->ctx.doHoWo_ = self->ctx.tiling_->dout * self->ctx.hoWo_;
     self->ctx.hiWi_ = static_cast<uint64_t>(self->ctx.tiling_->hi) * self->ctx.tiling_->wi;

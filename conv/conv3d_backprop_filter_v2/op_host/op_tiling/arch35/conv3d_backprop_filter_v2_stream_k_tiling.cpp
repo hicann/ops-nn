@@ -38,7 +38,7 @@ constexpr uint64_t SINGLE_BLOCK_ADD_THRESHOLD = 65536; // 与kernel侧SINGLE_BLO
 
 bool Conv3DBackpropFilterV2StreamKTiling::IsCapable()
 {
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         return false;
     }
 

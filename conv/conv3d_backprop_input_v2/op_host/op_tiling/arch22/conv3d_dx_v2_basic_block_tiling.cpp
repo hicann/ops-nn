@@ -57,7 +57,7 @@ namespace Conv {
 
 ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+    if (IsArchAfter35(context_)) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -101,7 +101,7 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 
 bool Conv3DDXV2BasicBlockTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+    if (IsArchAfter35(context_)) {
         return false;
     }
     // FP16/BF16 + NCDHW 原始格式 filter 由 Conv3DDXV2VecTiling (priority 2) 处理，basic block 让位

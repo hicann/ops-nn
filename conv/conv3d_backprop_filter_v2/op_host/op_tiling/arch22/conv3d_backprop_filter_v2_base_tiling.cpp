@@ -111,9 +111,11 @@ int32_t CalcHo(int64_t k, int32_t wo, const std::string& op_type)
 namespace Ops {
 namespace NN {
 namespace Conv {
-bool Conv3DBackpropFilterV2Tiling::IsSocVersion91095() const
+bool Conv3DBackpropFilterV2Tiling::IsArchAfter35() const
 {
-    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
+    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ||
+           context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
+           context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
 }
 
 void Conv3DBackpropFilterV2Tiling::Reset()
@@ -135,9 +137,7 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::GetShapeAttrsInfo()
 
 bool Conv3DBackpropFilterV2Tiling::IsCapable()
 {
-    // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
-    // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
-    if (IsSocVersion91095()) {
+    if (IsArchAfter35()) {
         return false;
     }
     return true;

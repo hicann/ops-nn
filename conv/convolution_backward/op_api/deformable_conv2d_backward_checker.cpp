@@ -11,6 +11,7 @@
 #include "convolution_backward_checker.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "op_api/aclnn_util.h"
 
 namespace Ops {
 namespace NN {
@@ -303,10 +304,10 @@ bool DeformableConv2dBackwardChecker::CheckShape()
 
 aclnnStatus DeformableConv2dBackwardChecker::CheckParams()
 {
-    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(npuArch_),
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(),
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "npuarch",
                                                    std::to_string(static_cast<uint32_t>(npuArch_)).c_str(),
-                                                   "npuarch must be 3510 or 5102"),
+                                                   "npuarch match failed"),
              return ACLNN_ERR_PARAM_INVALID);
 
     CHECK_COND(CheckNotNull(), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");

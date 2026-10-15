@@ -47,9 +47,16 @@ bool CheckRangeInt64(int64_t value, int32_t value_low, int32_t value_up)
 
 bool IsArchAfter35(const gert::TilingContext* context)
 {
-    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
+    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
 }
 
+static bool IsSocVersion960(const gert::TilingContext* context)
+{
+    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
+}
 static bool IsFilterDxStorageNcdhw(const gert::TilingContext* context)
 {
     return ge::GetPrimaryFormat(context->GetInputDesc(static_cast<size_t>(FILTER_INDEX))->GetStorageFormat()) ==
@@ -1269,12 +1276,16 @@ static bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runIn
 
             constexpr uint32_t ENLARGE_BUFFER_NUM = 2;
             constexpr uint32_t REG_SIZE = 256;
+            uint32_t availableUbSize = context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
+            if (IsSocVersion960(context) && runInfoV2.b_dtype_bytes == ge::GetSizeByDataType(ge::DT_BF16)) {
+                availableUbSize = 262400; // 262400 = (65535 + 1) * sizeof(bfloat16) * BUFFER_NUM_TWO + 256
+            }
             bool disableGroupEnlarge = static_cast<uint64_t>(ENLARGE_BUFFER_NUM) *
                                                (otherParams.co1g * otherParams.b_shape.h * otherParams.b_shape.w *
                                                 otherParams.ci1g * kBlockSize * otherParams.b_shape.c0) *
                                                runInfoV2.b_dtype_bytes +
                                            REG_SIZE >
-                                       context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
+                                       static_cast<uint64_t>(availableUbSize);
 
             bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
                                      filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
@@ -1812,6 +1823,27 @@ bool IsSocVersionFuse(const gert::TilingContext* context)
     return false;
 }
 
+bool CheckTransposeOutputShape(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
+                               const OtherParams& otherParams)
+{
+    int64_t do_expect = (otherParams.a_shape.d - 1) * runInfoV2.stride_d - runInfoV2.pad_h - runInfoV2.pad_t +
+                        runInfoV2.dilation_d * (otherParams.b_shape.d - 1) +
+                        otherParams.output_padding.output_padding_d + 1;
+    int64_t ho_expect = (otherParams.a_shape.h - 1) * runInfoV2.stride_h - runInfoV2.pad_u - runInfoV2.pad_d +
+                        runInfoV2.dilation_h * (otherParams.b_shape.h - 1) +
+                        otherParams.output_padding.output_padding_h + 1;
+    int64_t wo_expect = (otherParams.a_shape.w - 1) * runInfoV2.stride_w - runInfoV2.pad_l - runInfoV2.pad_r +
+                        runInfoV2.dilation_w * (otherParams.b_shape.w - 1) +
+                        otherParams.output_padding.output_padding_w + 1;
+    OP_CHECK_IF(
+        do_expect != otherParams.c_shape.d || ho_expect != otherParams.c_shape.h || wo_expect != otherParams.c_shape.w,
+        OP_LOGE(context->GetNodeName(),
+                "transpose's output shape dhw [%ld,%ld,%ld] is not equal to inferred shape dhw [%ld,%ld,%ld]",
+                otherParams.c_shape.d, otherParams.c_shape.h, otherParams.c_shape.w, do_expect, ho_expect, wo_expect),
+        return false);
+    return true;
+}
+
 bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 opType)
 {
     OtherParams otherParams;
@@ -1835,7 +1867,8 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
 
     if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
          opType == optiling::OpTypeV2::kExtendConvTransposeV2) &&
-        (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams))) {
+        (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams) ||
+         !CheckTransposeOutputShape(context, runInfoV2, otherParams))) {
         OP_LOGW(context, "params is invalid");
         return false;
     }

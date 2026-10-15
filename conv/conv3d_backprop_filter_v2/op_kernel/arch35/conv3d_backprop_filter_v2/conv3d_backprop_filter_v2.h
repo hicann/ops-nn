@@ -93,7 +93,7 @@ protected:
         groupFlag_ = tiling_->group > 1;
 
         // TilingData init different for 1971 and 1982
-#if defined(__DAV_C310__)
+#if defined(__DAV_C310__) || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
         // 判断条件为是否为分组卷积，而不是是否cin和dk分轴
         if (groupFlag_) {
             m_ = tiling_->cout1G;
@@ -108,7 +108,7 @@ protected:
 #endif
     }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     __aicore__ inline void CalcBlockOffsetA(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint64_t hoCal)
     {
         uint64_t groupOffsetA = 0;

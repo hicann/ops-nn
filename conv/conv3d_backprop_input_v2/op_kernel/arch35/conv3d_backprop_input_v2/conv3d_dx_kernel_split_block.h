@@ -80,7 +80,7 @@ public:
         this->dedx_.Init(tilingData, this->hasBias_);
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
         InitMixCoreBuffer(workSpace);
 #endif
     }

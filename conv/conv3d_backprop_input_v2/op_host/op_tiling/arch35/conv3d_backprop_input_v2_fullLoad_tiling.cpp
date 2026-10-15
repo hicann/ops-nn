@@ -31,8 +31,7 @@ namespace Conv {
 
 bool Conv3DDXV2FullLoadTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return false;
     }
 
@@ -55,6 +54,11 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     if (is8bit && filter_format != ge::FORMAT_NDHWC) {
         return false;
     }
+    return CheckFullLoadCapable();
+}
+
+bool Conv3DDXV2FullLoadTiling::CheckFullLoadCapable()
+{
     // 当前只支持右矩阵全载, 且左矩阵能载入L1的场景
     if (runInfo_.kernel_d > 1 || tilingRunInfo_.mValue <= tilingRunInfo_.nValue ||
         runInfo_.dedx_w > static_cast<int32_t>(BASIC_BLOCK_SIZE_512)) {
@@ -77,9 +81,8 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     bestBaseN = std::min(bestBaseN, tilingRunInfo_.nValue);
     if (tilingRunInfo_.kValue * bestBaseN * dtypeByteL0b_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
         tilingRunInfo_.enableFullLoadTiling = true;
-        return true;
     }
-    return false;
+    return tilingRunInfo_.enableFullLoadTiling;
 }
 
 ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()

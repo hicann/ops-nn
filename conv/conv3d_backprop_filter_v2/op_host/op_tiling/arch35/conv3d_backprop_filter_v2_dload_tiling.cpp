@@ -127,7 +127,7 @@ bool Conv3DBackpropFilterV2DLoadTiling::CheckShape()
 
 bool Conv3DBackpropFilterV2DLoadTiling::IsCapable()
 {
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         return false;
     }
     if (!CheckFormat()) {

@@ -50,11 +50,15 @@ const int32_t enabelHF32Index = 3;
 namespace Ops {
 namespace NN {
 namespace Conv {
-bool Conv3DDWV2BasicBlockTilingArch35::IsSocVersion91095() { return platformInfo_.npuArch == NpuArch::DAV_3510; }
+bool Conv3DDWV2BasicBlockTilingArch35::IsArchAfter35()
+{
+    return platformInfo_.npuArch == NpuArch::DAV_3510 || platformInfo_.npuArch == NpuArch::DAV_9201 ||
+           platformInfo_.npuArch == NpuArch::DAV_9202;
+}
 
 bool Conv3DDWV2BasicBlockTilingArch35::CheckVectorCoreNum()
 {
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         return true;
     }
 
@@ -67,9 +71,14 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckVectorCoreNum()
         OP_LOGE(opName_, "CheckVectorCoreNum failed, aicCoreCount is 0");
         return false;
     }
-    if (aivCoreCount < aicCoreCount * AIC_AIV_RATIO_1_2) {
-        OP_LOGE(opName_, "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than 2:1",
-                aivCoreCount, aicCoreCount);
+    uint64_t aicAivRatio = 1;
+    if (platformInfo_.npuArch == NpuArch::DAV_3510) {
+        aicAivRatio = 2;
+    }
+    if (aivCoreCount < aicCoreCount * aicAivRatio) {
+        OP_LOGE(opName_,
+                "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than [%lu]:1",
+                aivCoreCount, aicCoreCount, aicAivRatio);
         return false;
     }
     return true;
@@ -125,7 +134,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -270,7 +279,7 @@ void Conv3DDWV2BasicBlockTilingArch35::SetBasicBlockAttrsTiling()
     mmInfo_.mValue = static_cast<uint64_t>(runInfo_.cout1_g) * static_cast<uint64_t>(BLOCK_CUBE);
     mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw * runInfo_.cin1_g *
                      static_cast<uint64_t>(BLOCK_CUBE);
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         mmInfo_.nValue *= runInfo_.kd;
     }
     mmInfo_.kValue = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
@@ -354,7 +363,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::GetBaseK(uint64_t baseM, uint64_t bas
 
 void Conv3DDWV2BasicBlockTilingArch35::InitBaseMNK()
 {
-    if (IsSocVersion91095()) {
+    if (IsArchAfter35()) {
         InitBaseBlock();
     }
 }

@@ -443,7 +443,7 @@ static bool CheckV2DoutCoreDim(int64_t dout)
 
 static bool IsConv3DTransposeUseV2(const Conv3DTransPoseV2Prarams& params)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return true;
     }
 
@@ -505,20 +505,13 @@ bool IsSupportConv3DToConv3DV2()
     return socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || isDAV3510;
 }
 
-bool IsSupportConv1DTransposeTo3D()
-{
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        return true;
-    }
-
-    return false;
-}
+bool IsSupportConv1DTransposeTo3D() { return Ops::NN::AclnnUtil::IsRegbase(); }
 
 bool IsSupportConv2DTransposeTo3D(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
                                   const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
                                   const aclIntArray* outputPadding, const int64_t groups, aclTensor* output)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return true;
     }
     SocVersion soc = GetCurrentPlatformInfo().GetSocVersion();
@@ -748,7 +741,7 @@ static aclnnStatus Conv3dWithFlag(const aclTensor* input, const aclTensor* weigh
 static aclIntArray* ConstructConv3DNewPad(const aclIntArray* padding, aclOpExecutor* executor)
 {
     FVector<int64_t> newPad;
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         if (padding->Size() < DIM_3) {
             newPad = {0};
         } else {
@@ -772,7 +765,7 @@ static aclIntArray* ConstructConv3DNewPad(const aclIntArray* padding, aclOpExecu
 
 static aclnnStatus ResetStorageShape(const aclTensor* input, aclTensor*& output)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return ACLNN_SUCCESS;
     }
     if (input->GetDataType() == output->GetDataType()) {
@@ -1282,7 +1275,7 @@ bool CheckTransposeN2HEnable(const aclTensor* input, const aclTensor* weight, ac
 bool CheckPreTransposeEnable(const aclTensor* weight, int groups)
 {
     OP_LOGD("enter CheckPreTransposeEnable.");
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
@@ -1463,7 +1456,7 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor* input, const aclTens
     if (groups > 1 || params.input->GetDataType() == DataType::DT_FLOAT ||
         IsConv3DTransposeV2WhiteListCase(caseInfo, CONV3D_TRANSPOSE_V2_WHITE_LIST) || IsConv3DTransposeUseV2(params)) {
         OP_LOGD("conv3dtranspose: useHf32 is: %d, hf32 is %ld", useHf32, hf32);
-        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTransposeV2, OP_INPUT(inputSize, input, weight, bias, nullptr),
                                               OP_OUTPUT(output),
                                               OP_ATTR(adptParams.adaptStride, pad5, dilation5, groups, dataFormat,

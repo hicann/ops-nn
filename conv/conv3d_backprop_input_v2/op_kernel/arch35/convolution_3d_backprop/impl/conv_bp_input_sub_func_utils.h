@@ -51,6 +51,10 @@ constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true};
 constexpr uint32_t UB_SIZE = AscendC::TOTAL_UB_SIZE;
 constexpr uint32_t SHIFT_BIT_4 = 4;
 constexpr uint8_t SHIFT_VALUE_LEN = 58;
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
+constexpr uint32_t
+    BIT16_GATHER_MAX_BUF_SIZE = 131072; // (65535 + 1) * sizeof(bfoat16), 16bit情况下 vgather index能取到的最大值为65535
+#endif
 
 static __aicore__ inline uint32_t Div16(uint32_t a) { return a >> SHIFT_BIT_4; }
 

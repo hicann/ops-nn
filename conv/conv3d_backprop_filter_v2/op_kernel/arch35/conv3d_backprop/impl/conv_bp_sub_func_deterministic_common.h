@@ -186,7 +186,7 @@ static __aicore__ inline uint64_t GetRdGmAddr(Intf* self, const uint64_t coreRel
     uint64_t cubeUserGmSize = GetBlockNum() * CUBE_WORKSPACE; // cube输出gm总大小
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     return cubeUserGmSize + ((coreRelatedIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     uint64_t addCoreRdGmAddr = 0;
     if ((coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_ == self->ctx.deterAddCoreNum_ - 1) &&
         (self->ctx.deterAddCoreNum_ & 1) != 0) { // 最后一个奇数核需要从CUBE_WORKSPACE搬入
@@ -204,7 +204,7 @@ static __aicore__ inline uint64_t GetStGmAddr(Intf* self, const uint64_t cubeUse
     uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_; // 当前核的索引
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     return cubeUserGmSize + ((coreIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
-#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     return cubeUserGmSize + ((coreIndexTotal << 1) + self->ctx.subCoreInx_) * HALF_CUBE_WORKSPACE;
 #endif
 }

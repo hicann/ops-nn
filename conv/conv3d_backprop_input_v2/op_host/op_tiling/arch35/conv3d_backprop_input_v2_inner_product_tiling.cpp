@@ -28,6 +28,7 @@
 #include "runtime_kb_api.h"
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
+#include "op_common/op_host/util/platform_util.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -327,7 +328,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
+    auto biasShape = context_->GetOptionalInputShape(BIAS_INDEX);
     auto scale0Shape = context_->GetOptionalInputShape(SCALE0_INDEX);
     const auto scale1Shape = opType_ == optiling::OpTypeV2::kExtendConvTransposeV2 ?
                                  context_->GetOptionalInputShape(SCALE1_INDEX) :
@@ -615,8 +616,7 @@ bool Conv3DDXV2InnerProductTiling::AnalyzeDtype() const
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -653,8 +653,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfoBase()
 {
     opName_ = context_->GetNodeName();
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
     if (SetCoreMemSizeInfo() != ge::GRAPH_SUCCESS) {
@@ -704,7 +703,7 @@ bool Conv3DDXV2InnerProductTiling::NeedVectorCore()
 
 bool Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510) {
+    if (!IsArchAfter35(context_)) {
         return true;
     }
 
@@ -722,9 +721,14 @@ bool Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()
         OP_LOGE(opName_, "CheckVectorCoreNum failed, aicCoreCount is 0");
         return false;
     }
-    if (aivCoreCount < aicCoreCount * AIC_AIV_RATIO_1_2) {
-        OP_LOGE(opName_, "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than 2:1",
-                aivCoreCount, aicCoreCount);
+    uint64_t aicAivRatio = 1;
+    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
+        aicAivRatio = 2;
+    }
+    if (aivCoreCount < aicCoreCount * aicAivRatio) {
+        OP_LOGE(opName_,
+                "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than [%lu]:1",
+                aivCoreCount, aicCoreCount, aicAivRatio);
         return false;
     }
     return true;
@@ -742,7 +746,13 @@ bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
         return false;
     }
 
-    int64_t c04HalfUbSize = (platformInfo_.ub_size - VECTOR_REG_WIDTH - (VECTOR_REG_WIDTH >> 3) - ONE_BLOCK_SIZE) >> 1;
+    int64_t c04HalfUbSize = (platformInfo_.ub_size - Ops::Base::GetVRegSize(context_) -
+                             (Ops::Base::GetVRegSize(context_) >> 3) - ONE_BLOCK_SIZE) >>
+                            1;
+    if (IsSocVersion960() && static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_BF16)) {
+        c04HalfUbSize = 131072; // 131072: (65535 + 1) * sizeof(bfloat16), 16bit情况下 vgather
+                                // index能取到的最大值为65535
+    }
     int64_t minNdUbSize = static_cast<int64_t>(C04_COUT_SIZE) * BLOCK_CUBE * runInfo_.kernel_d * runInfo_.kernel_h *
                           runInfo_.kernel_w * dtypeByteL0b_;
     int64_t minNzUbSize = Ops::Base::CeilAlign(
@@ -797,7 +807,7 @@ bool Conv3DDXV2InnerProductTiling::IsOneDimSplitInputAdmitted() const
     if (runInfo_.batch_n != 1) {
         return false;
     }
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510) {
+    if (!IsArchAfter35(context_)) {
         return false;
     }
     const auto* outputBackpropDesc = context_->GetInputDesc(OUTPUT_BP_INDEX);
@@ -809,7 +819,7 @@ bool Conv3DDXV2InnerProductTiling::IsOneDimSplitInputAdmitted() const
     if (!isBf16 || !hasBiasFlag_) {
         return isBf16;
     }
-    const auto* biasDesc = context_->GetOptionalInputDesc(BAIS_INDEX);
+    const auto* biasDesc = context_->GetOptionalInputDesc(BIAS_INDEX);
     return biasDesc != nullptr && biasDesc->GetDataType() == ge::DT_FLOAT;
 }
 
@@ -1037,8 +1047,7 @@ bool Conv3DDXV2InnerProductTiling::ApplyBalancedMSplit(CoreTilingParams& corePar
 
 bool Conv3DDXV2InnerProductTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return false;
     }
 
@@ -2034,7 +2043,7 @@ bool Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params
     if (biasSize > BT_BUFFER_SIZE) {
         l1Params.isBiasFullLoad = 0U;
         OP_LOGD(opName_, "biasSize: %lu, BT_BUFFER_SIZE: %lu, isBiasFullLoad: false", biasSize, BT_BUFFER_SIZE);
-        if (hasBiasFlag_ && context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+        if (hasBiasFlag_ && IsArchAfter35(context_)) {
             OP_LOGE(opName_, "bias size exceeds BT buffer limit, not support");
             return false;
         }
@@ -2490,6 +2499,12 @@ void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(optiling::Conv3DBac
     dxt.set_hkWk(static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w);
 }
 
+bool Conv3DDXV2InnerProductTiling::IsSocVersion960() const
+{
+    return context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
+           context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
+}
+
 void Conv3DDXV2InnerProductTiling::SetBackpropPadInfo(optiling::Conv3DBackpropInputArch35TilingData& dxt)
 {
     int64_t bpPadTail = runInfo_.dedx_d - (static_cast<int64_t>(runInfo_.dedy_d - 1) * runInfo_.stride_d + 1) +
@@ -2534,10 +2549,10 @@ bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(optiling::Conv3DBackpropInpu
     auto weightInfo = GetTensorInfo(context_, weight_index, true, kConv3DbpDim);
     auto dedyInfo = GetTensorInfo(context_, dedy_x_index, true, kConv3DbpDim);
     auto outputInfo = GetTensorInfo(context_, Y_INDEX, false, kConv3DbpDim);
-    auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
+    auto biasShape = context_->GetOptionalInputShape(BIAS_INDEX);
     TensorInfo biasInfo;
     if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0) {
-        biasInfo = GetTensorInfo(context_, BAIS_INDEX, true, 1);
+        biasInfo = GetTensorInfo(context_, BIAS_INDEX, true, 1);
     }
     OP_LOGD(
         op_name,

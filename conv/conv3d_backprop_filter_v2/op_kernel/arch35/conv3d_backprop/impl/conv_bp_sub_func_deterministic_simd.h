@@ -68,8 +68,9 @@ static __aicore__ inline ScatterDeterCtx<typename Intf::DstT> InitScatterDeterCt
     uint64_t srcSize = cutMNSize.curNSize * ctx.coutNum;
     ctx.dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
     ctx.c0PerReg = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    ctx.sreg = 64;
+    ctx.sreg = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     uint32_t tailNum = ctx.coutNum % ctx.c0PerReg;
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
     ctx.tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
     return ctx;
 }
@@ -156,7 +157,7 @@ __simd_vf__ inline void Rearrange2GmScatterBaseNUndividedSimdVf(__ubuf__ DstT* s
     Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
     Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
     Reg::LoadAlign(vIndexReg, indexPtr);
-
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(DstT);
     for (uint16_t wkIndex = 0; wkIndex < iterWk; wkIndex++) {
         uint32_t wkSrcOffset = wkIndex * wkSrcStride;
         uint32_t wkDstOffset = wkIndex * BLOCK_CUBE;
@@ -187,7 +188,7 @@ __simd_vf__ inline void Rearrange2GmScatterDeterForNDHWCSimdVf(__ubuf__ DstT* sr
     Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
     Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
     Reg::LoadAlign(vIndexReg, indexPtr);
-
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(DstT);
     for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
         uint32_t cinSrcOffset = cinIndex * cinSrcStride;
         uint32_t cinDstOffset = cinIndex * BLOCK_CUBE;
@@ -222,7 +223,7 @@ __simd_vf__ inline void Rearrange2GmScatterDeterForDHWCNSimdVf(__ubuf__ DstT* sr
     Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
     Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
     Reg::LoadAlign(vIndexReg, indexPtr);
-
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(DstT);
     for (uint32_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
         uint32_t cinSrcOffset = cinIndex * cinSrcStride;
         uint64_t cinDstOffset = cinIndex * BLOCK_CUBE * coutNum;
@@ -256,7 +257,7 @@ __simd_vf__ inline void Rearrange2GmScatterDeterSimdVf(__ubuf__ DstT* srcPtr, __
     Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
     Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
     Reg::LoadAlign(vIndexReg, indexPtr);
-
+    constexpr uint8_t SREG_PROC_NUM = AscendC::VECTOR_REG_WIDTH / sizeof(DstT);
     for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
         uint32_t cinSrcOffset = cinIndex * cinSrcStride;
         uint32_t cinDstOffset = cinIndex * cinDstStride;

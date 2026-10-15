@@ -49,6 +49,8 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
                   isBasicBlockTiling && loadB1Condition == TPL_SMALL_KERNEL) {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
+#else
+        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
         CONV3D_DX_INPUT_RUN_OP(Conv3dDxSmallKernel<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
                                                    DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS, loadB2Condition,
@@ -58,6 +60,8 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
+#else
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
 
     if (tilingData.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {

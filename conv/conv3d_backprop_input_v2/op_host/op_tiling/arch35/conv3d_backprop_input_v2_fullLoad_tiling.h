@@ -43,6 +43,7 @@ protected:
 
     void AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt, uint64_t& nCnt,
                               uint64_t baseM);
+    bool CheckFullLoadCapable();
 };
 
 } // namespace Conv

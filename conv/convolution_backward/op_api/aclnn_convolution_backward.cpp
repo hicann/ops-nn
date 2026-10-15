@@ -1552,7 +1552,7 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor& input
     OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase(curArch)),
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                  ACLNN_CONVOLUTION_BACKWARD_NAME, "npuarch", std::to_string(static_cast<uint32_t>(curArch)).c_str(),
-                 "the value of npuarch must not be 3510, No kernel for Conv2DBackwardFiler"),
+                 "the value of npuarch is invalid, No kernel for Conv2DBackwardFiler"),
              return ACLNN_ERR_INNER_NULLPTR);
     // Index 为 2：进行bias grad运算
     aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
@@ -1741,7 +1741,7 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
     OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase()),
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                  ACLNN_CONVOLUTION_BACKWARD_NAME, "npuarch", std::to_string(static_cast<uint32_t>(curArch)).c_str(),
-                 "the value of npuarch must not be 3510, No kernel for Conv2DBackwardFiler"),
+                 "the value of npuarch is invalid, No kernel for Conv2DBackwardFiler"),
              return ACLNN_ERR_INNER_NULLPTR);
     // Index 为 2：进行bias grad运算
     aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
@@ -3510,7 +3510,7 @@ static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor& inputTensor
     OP_CHECK(curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch),
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "npuArch",
                                                    std::to_string(static_cast<uint32_t>(curArch)).c_str(),
-                                                   "the value of npuarch must not be 2201 or 3510"),
+                                                   "the value of npuarch is invalid"),
              return ACLNN_ERR_PARAM_INVALID);
     auto ret = CheckCubeMathTypeFor3D(inputTensor, params);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
@@ -4074,8 +4074,7 @@ static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& ten
                      tensorName.c_str()),
              return ACLNN_ERR_INNER_NULLPTR);
 
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (!Ops::NN::AclnnUtil::IsRegbase(curArch) || tensorName != "weight") {
+    if (!Ops::NN::AclnnUtil::IsRegbase() || tensorName != "weight") {
         std::vector<int64_t> valuePerm;
         if (isInput) {
             valuePerm = {0, 2, 3, 1};
@@ -4091,7 +4090,7 @@ static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& ten
                  return ACLNN_ERR_INNER_NULLPTR);
     }
 
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch) && tensorName != "weight") {
+    if (Ops::NN::AclnnUtil::IsRegbase() && tensorName != "weight") {
         // l0op返回const指针，此处仅需修改tensor的format元数据
         aclTensor* mutableTensor = const_cast<aclTensor*>(inputTensor);
         if (isInput) {

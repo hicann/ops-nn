@@ -155,7 +155,7 @@ bool GetSingleShapeTileHW(Conv3DBackpropFilterV2WinogradTiling::SingleShapeTile 
 
 bool Conv3DBackpropFilterV2WinogradTiling::IsCapable()
 {
-    if (!IsSocVersion91095()) {
+    if (!IsArchAfter35()) {
         return false;
     }
 

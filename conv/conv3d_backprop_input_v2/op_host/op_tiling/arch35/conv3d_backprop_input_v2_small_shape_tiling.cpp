@@ -30,8 +30,7 @@ namespace Conv {
 
 bool Conv3DDXV2SmallShapeTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
-        !IsSocVersionFuse(context_)) {
+    if (!IsArchAfter35(context_) && !IsSocVersionFuse(context_)) {
         return false;
     }
 
@@ -67,9 +66,14 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
                                   tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
                                   static_cast<uint64_t>(platformInfo_.l0_c_size)) *
                               runInfo_.batch_n * runInfo_.dedx_d * runInfo_.real_g;
-    if (expectedMaxCnt < (static_cast<uint64_t>(coreNum_) * 5U / 2U) &&
-        expectedMaxCnt % static_cast<uint64_t>(coreNum_) != 0U) {
-        return true; // 经验值，平均任务伦次小于2.5且不能均分时负载均衡矛盾占主导
+    // 经验值，平均任务伦次小于2.5且不能均分时负载均衡矛盾占主导
+    auto thresholdCnt = (static_cast<uint64_t>(coreNum_) * 5U / 2U);
+    if (IsSocVersion960()) {
+        // 经验值，ASCEND960平均任务伦次小于1.5且不能均分时负载均衡矛盾占主导
+        thresholdCnt = (static_cast<uint64_t>(coreNum_) * 3U / 2U);
+    }
+    if (expectedMaxCnt < thresholdCnt && expectedMaxCnt % static_cast<uint64_t>(coreNum_) != 0U) {
+        return true;
     }
     return false;
 }
@@ -87,14 +91,46 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 
     // 更新并设置L0基本块
     L0TilingParams l0Params;
-    InitBaseMNK(l0Params);
-
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitL1Params(l1Params, l0Params);
 
     // 设置MN和循环轴的核间切分策略, 允许重写BaseMNK
     CoreTilingParams coreParams;
+    if (CalcAndValidateTiling(l0Params, l1Params, coreParams) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // smallShape 接入 fullLoad 后, 部分shape下单缓冲串行代价超过 B1 复用收益, 需复核
+    // 复核不通过时回退到非 fullLoad 路径
+    if (tilingRunInfo_.enableFullLoadTiling && !IsEnableFullLoad(l1Params)) {
+        OP_LOGD(opName_, "SmallShape fullLoad not beneficial, fallback");
+        tilingRunInfo_.enableFullLoadTiling = false;
+        L0TilingParams l0ParamsFallback;
+        L1TilingParams l1ParamsFallback;
+        CoreTilingParams coreParamsFallback;
+        if (CalcAndValidateTiling(l0ParamsFallback, l1ParamsFallback, coreParamsFallback) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        l0Params = l0ParamsFallback;
+        l1Params = l1ParamsFallback;
+        coreParams = coreParamsFallback;
+    }
+
+    SetTilingCondition(coreParams, l1Params, l0Params);
+    if (!Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
+        return ge::GRAPH_FAILED;
+    }
+    SetTilingData(coreParams, l1Params, l0Params);
+    PrintTilingSummary();
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv3DDXV2SmallShapeTiling::CalcAndValidateTiling(L0TilingParams& l0Params, L1TilingParams& l1Params,
+                                                                  CoreTilingParams& coreParams)
+{
+    InitBaseMNK(l0Params);
+    InitL1Params(l1Params, l0Params);
     AdjustSingleCoreAndL0Info(coreParams, l0Params);
 
     // 更新并设置K方向的L1载入策略
@@ -103,20 +139,12 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
     if (!IsL1ParamsValid(l1Params, l0Params)) {
         LegalProtection(l1Params, l0Params); // L1合法性兜底, 兜底也不行就报错
         if (IsL1ParamsValid(l1Params, l0Params)) {
-            Conv3DDXV2InnerProductTiling::SetSingleCoreInfo(coreParams,
-                                                            l0Params); // 重新设置核间切分数据，只允许调小baseMN
+            SetSingleCoreInfo(coreParams, l0Params); // 重新设置核间切分数据，只允许调小baseMN
         } else {
             CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
         }
     }
-    Conv3DDXV2InnerProductTiling::SetTilingCondition(coreParams, l1Params, l0Params);
-    if (!Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()) {
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
-        return ge::GRAPH_FAILED;
-    }
-    Conv3DDXV2InnerProductTiling::SetTilingData(coreParams, l1Params, l0Params);
-    Conv3DDXV2InnerProductTiling::PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -137,6 +165,14 @@ void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uin
     if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
         return;
     }
+    if (tilingRunInfo_.enableFullLoadTiling) {
+        uint64_t fullLoadB1Size = tilingRunInfo_.kValue * tmpBaseN * dtypeByteL0b_;
+        uint64_t fullLoadA1Size = dtypeByteL0a_ * static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
+                                  runInfo_.stride_w * runInfo_.dedy_cout;
+        if (fullLoadB1Size + fullLoadA1Size > platformInfo_.l1_size) {
+            return;
+        }
+    }
     uint64_t tmpTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, tmpSingleCoreM) *
                            Ops::Base::CeilDiv(tilingRunInfo_.nValue, tmpBaseN) * runInfo_.real_g;
     uint64_t tmpMaxTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
@@ -148,6 +184,11 @@ void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uin
     uint64_t tmpL1LoadSize = dtypeByteL0b_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout) +
                              dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
                                               runInfo_.stride_w * runInfo_.dedy_cout);
+    if (tilingRunInfo_.enableFullLoadTiling) {
+        tmpL1LoadSize = dtypeByteL0b_ * (tilingRunInfo_.kValue * tmpBaseN) +
+                        dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
+                                         runInfo_.stride_w * runInfo_.dedy_cout);
+    }
     if (tmpMaxTotalCnt < maxTotalCnt || (tmpTotalCnt >= minTotalCnt && tmpL1LoadSize <= minL1LoadSize)) {
         maxTotalCnt = tmpMaxTotalCnt;
         minTotalCnt = tmpTotalCnt;
@@ -156,6 +197,23 @@ void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uin
         l0Params.baseN = tmpBaseN;
         singleCoreM = tmpSingleCoreM;
     }
+}
+
+bool Conv3DDXV2SmallShapeTiling::IsEnableFullLoad(const L1TilingParams& l1Params)
+{
+    if (l1Params.bl1Pbuffer != DB_OFF) {
+        return true;
+    }
+
+    // K过小时单块CUBE计算量极小,B1单缓冲暴露的MTE2启动串行占比高,且B1全载省下的重复载入绝对字节也少,
+    // 全载复用收益不抵单缓冲代价。 K大于下界时CUBE计算强度足以掩盖MTE2启动, 全载才真正有益(经验阈值, 实测标定:
+    // kValue<=64 劣化, kValue=144 受益)
+    if (tilingRunInfo_.kValue <= FULLLOAD_MIN_KVALUE) {
+        OP_LOGD(opName_, "IsFullLoadBeneficial: kValue=%lu <= %u, fullLoad not beneficial", tilingRunInfo_.kValue,
+                FULLLOAD_MIN_KVALUE);
+        return false;
+    }
+    return true;
 }
 
 void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& coreParams, L0TilingParams& l0Params)
@@ -174,11 +232,19 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t minL1LoadSize = dtypeByteL0b_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout) +
                              dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
                                               runInfo_.stride_w * runInfo_.dedy_cout);
-    // 基本块小于64进入MTE1和scalar bound的区间，暂不从这个区间寻找负载均衡收益
+    if (tilingRunInfo_.enableFullLoadTiling) {
+        minL1LoadSize = dtypeByteL0b_ * (tilingRunInfo_.kValue * l0Params.baseN) +
+                        dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
+                                         runInfo_.stride_w * runInfo_.dedy_cout);
+    }
     uint32_t maxBaseM = tilingRunInfo_.nValue <= static_cast<uint64_t>(tilingRunInfo_.n0) ? BASIC_BLOCK_SIZE_512 :
                                                                                             MAX_BASE_MN;
     uint32_t maxBaseN = tilingRunInfo_.mValue <= static_cast<uint64_t>(tilingRunInfo_.m0) ? BASIC_BLOCK_SIZE_512 :
                                                                                             MAX_BASE_MN;
+    if (tilingRunInfo_.enableFullLoadTiling) {
+        uint64_t fullLoadMaxBaseN = platformInfo_.l1_size / (tilingRunInfo_.kValue * dtypeByteL0b_);
+        maxBaseN = std::min(static_cast<uint64_t>(maxBaseN), fullLoadMaxBaseN);
+    }
     uint64_t minMCnt = Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(maxBaseM));
     uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(BASIC_BLOCK_SIZE_64));
     uint64_t minNCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(maxBaseN));
@@ -192,6 +258,56 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     AdjustBaseMNK(l0Params, tilingRunInfo_);
     coreParams.singleCoreCin = l0Params.baseN;
     coreParams.singleCoreDin = ONE_U32;
+}
+
+void Conv3DDXV2SmallShapeTiling::InitBaseMNK(L0TilingParams& l0Params)
+{
+    if (!tilingRunInfo_.enableFullLoadTiling) {
+        Conv3DDXV2InnerProductTiling::InitBaseMNK(l0Params);
+        return;
+    }
+
+    Conv3DDXV2FullLoadTiling::InitBaseMNK(l0Params);
+}
+
+void Conv3DDXV2SmallShapeTiling::CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    if (!tilingRunInfo_.enableFullLoadTiling) {
+        Conv3DDXV2InnerProductTiling::CalStepK(l1Params, l0Params);
+        return;
+    }
+
+    Conv3DDXV2FullLoadTiling::CalStepK(l1Params, l0Params);
+}
+
+void Conv3DDXV2SmallShapeTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params)
+{
+    if (!tilingRunInfo_.enableFullLoadTiling) {
+        Conv3DDXV2InnerProductTiling::SetSingleCoreInfo(coreParams, l0Params);
+        return;
+    }
+
+    Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(coreParams, l0Params);
+}
+
+void Conv3DDXV2SmallShapeTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    if (!tilingRunInfo_.enableFullLoadTiling) {
+        Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNK(l1Params, l0Params);
+        return;
+    }
+
+    Conv3DDXV2FullLoadTiling::EqualL1MatchStepMNK(l1Params, l0Params);
+}
+
+void Conv3DDXV2SmallShapeTiling::LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    if (!tilingRunInfo_.enableFullLoadTiling) {
+        Conv3DDXV2InnerProductTiling::LadderMatchStepMNK(l1Params, l0Params);
+        return;
+    }
+
+    Conv3DDXV2FullLoadTiling::LadderMatchStepMNK(l1Params, l0Params);
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DDXV2SmallShapeTiling, 99);

@@ -775,7 +775,7 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context)
         if (!CheckOffsetXAndOffsetW(opName, context, attrs)) {
             return false;
         }
-        auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
+        auto biasShape = context->GetOptionalInputShape(BIAS_INDEX);
         if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0) {
             OP_LOGE_WITH_INVALID_ATTR(opName, "biasShape", "null", "non_empty_value");
             return false;
@@ -790,13 +790,13 @@ bool CheckBiasParams(gert::TilingContext* context, const OtherParams& otherParam
         return true;
     }
 
-    auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
+    auto biasShape = context->GetOptionalInputShape(BIAS_INDEX);
     if (biasShape == nullptr || biasShape->GetStorageShape().GetShapeSize() == 0) {
         return true;
     }
 
     const auto op_name = context->GetNodeName();
-    auto biasDesc = context->GetOptionalInputDesc(BAIS_INDEX);
+    auto biasDesc = context->GetOptionalInputDesc(BIAS_INDEX);
     if (biasDesc == nullptr) {
         CUBE_INNER_ERR_REPORT(op_name, "failed to get bias tensor desc from context");
         return false;

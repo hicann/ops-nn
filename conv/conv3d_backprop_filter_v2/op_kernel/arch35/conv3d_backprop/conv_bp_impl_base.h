@@ -112,7 +112,7 @@ public:
         DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
         DEFINE_STUCT_FIELD(uint8_t, useL0PingPong_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         DEFINE_STUCT_FIELD(bool, isSplitWo_);
 #endif
         using LocalTnesor = LocalTensor<typename Intf::SrcT>;
@@ -124,7 +124,7 @@ public:
         DEFINE_STUCT_FIELD(GlobalTnesor, outBackPropGlobal_);
         DEFINE_STUCT_FIELD(GlobalTnesor, fmapGlobal_);
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, vecBuf_, TPosition::VECIN);
         using ubDstLocalTensor = LocalTensor<typename Intf::DstT>;
         DEFINE_STUCT_FIELD(ubDstLocalTensor, vecOutBuf_);

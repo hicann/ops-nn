@@ -27,7 +27,7 @@ using AscendC::LoadData3DParamsV2;
 using AscendC::MmadParams;
 using AscendC::TPipe;
 using AscendC::TQue;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
 using AscendC::LoadData2DParamsV2;
 #endif
 
@@ -187,7 +187,7 @@ public:
 #endif
         DEFINE_STUCT_FIELD(GlobalTensor<float>, l0cOutGm_); // tmp workspace to store result data with fp32
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::DstT>, l0cOutWorkspace_); // tmp workspace for kernel split
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPing_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPong_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, vecBuf_, TPosition::VECIN);

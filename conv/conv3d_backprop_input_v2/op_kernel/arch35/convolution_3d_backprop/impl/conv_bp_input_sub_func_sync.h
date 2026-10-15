@@ -130,7 +130,9 @@ __aicore__ inline void CrossCoreSetHeadForMix(Intf* self)
     if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
             CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_MTE3>(self, FLAG_MTE1_ID_2 + CROSS_CORE_FLAG_ID_MAX);
+#endif
         }
     }
 #endif

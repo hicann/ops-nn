@@ -112,7 +112,7 @@ constexpr int32_t GROUPS_LOW = 1;
 constexpr int32_t GROUPS_UP = 65535;
 constexpr int32_t PAD_DIM_UP = 255;
 constexpr int32_t PAD_DIM_LOW = 0;
-constexpr size_t BAIS_INDEX = 3;
+constexpr size_t BIAS_INDEX = 3;
 constexpr size_t OFFSET_W_INDEX = 4;
 constexpr size_t OFFSET_X_INDEX = 6;
 constexpr size_t OUTPUT_PADDING_INDEX = 5;
@@ -174,7 +174,6 @@ struct OtherParams {
 };
 
 bool CheckRangeInt64(int64_t value, int32_t value_low, int32_t value_up);
-bool IsArchAfter35(const gert::TilingContext* context);
 bool IsSupportedDtypeForOutputPadding(const ge::DataType dtype);
 bool ValidateConvBackpropContext(const gert::TilingContext* context);
 bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* dilations);

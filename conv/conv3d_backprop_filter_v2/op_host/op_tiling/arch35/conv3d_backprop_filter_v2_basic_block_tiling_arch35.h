@@ -132,7 +132,7 @@ protected:
     // Conv3DBackpropFilterV2Tiling orginial methods
     void Reset();
 
-    bool IsSocVersion91095();
+    bool IsArchAfter35();
 
     bool CheckVectorCoreNum();
 
@@ -239,6 +239,7 @@ protected:
     PlatformCompileInfo platformInfo_;
     uint32_t channelVal_ = 0;
     uint32_t libApiWorkSpaceSize_ = 0;
+    uint32_t coreNum_ = 1;
     bool isHiF8Flag_ = false;
     int32_t dtypeByte_ = 2;
     const char* opName_ = "";

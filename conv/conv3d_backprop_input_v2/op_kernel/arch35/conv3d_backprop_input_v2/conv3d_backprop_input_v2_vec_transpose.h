@@ -22,7 +22,7 @@ static constexpr uint8_t SYNC_MODE0 = 0;
 static constexpr uint8_t SYNC_MODE2 = 2;
 static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
 static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
-#if __CUBE_VECTOR_FUSION_ONLY__
+#if (__CUBE_VECTOR_FUSION_ONLY__ || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 static constexpr uint32_t MULTIPLE_AIV_TO_AIC = 1;
 #else
 static constexpr uint32_t MULTIPLE_AIV_TO_AIC = 2;

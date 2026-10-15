@@ -23,7 +23,7 @@ namespace Convolution3DBackpropFunc {
 template <class Intf>
 __aicore__ inline void InitUbByteSize(Intf* self)
 {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) || __DAV_35_FAMILY__
     // 切K场景非fp32需要初始化AIV
     if (self->ctx.useUbAccumForSplitK_) {
         if (GetSubBlockIdx() != 0) {
@@ -48,16 +48,28 @@ __aicore__ inline void InitUbByteSize(Intf* self)
         }
     } else if (EnableVecGroupEnlarge(self)) {
         if ASCEND_IS_AIV_SCALAR {
-            constexpr uint32_t GROUP_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH) / HALF_FACTOR;
+            uint32_t GROUP_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH) / HALF_FACTOR;
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
+            if constexpr (std::is_same<typename Intf::SrcT, bfloat16_t>::value ||
+                          std::is_same<typename Intf::SrcT, half>::value) {
+                GROUP_UB_BUF_SIZE = BIT16_GATHER_MAX_BUF_SIZE;
+            }
+#endif
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, GROUP_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, GROUP_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);
         }
     } else if constexpr (Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SCALAR {
-            constexpr uint32_t C04_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH - MASK_REG_WIDTH -
-                                                  AscendC::ONE_BLOCK_SIZE) >>
-                                                 1;
+            uint32_t C04_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH - MASK_REG_WIDTH -
+                                        AscendC::ONE_BLOCK_SIZE) >>
+                                       1;
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
+            if constexpr (std::is_same<typename Intf::SrcT, bfloat16_t>::value ||
+                          std::is_same<typename Intf::SrcT, half>::value) {
+                C04_UB_BUF_SIZE = BIT16_GATHER_MAX_BUF_SIZE;
+            }
+#endif
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, C04_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, C04_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);

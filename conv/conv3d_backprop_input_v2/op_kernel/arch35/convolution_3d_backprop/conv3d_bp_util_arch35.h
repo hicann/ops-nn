@@ -35,7 +35,7 @@
 static __aicore__ inline uint64_t GetAicBlockIdx()
 {
     if ASCEND_IS_AIV_SCALAR {
-#if __CUBE_VECTOR_FUSION_ONLY__
+#if (__CUBE_VECTOR_FUSION_ONLY__ || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         int64_t blockIdx = AscendC::GetBlockIdx();
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         int64_t blockIdx = AscendC::GetBlockIdx() >> 1;
