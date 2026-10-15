@@ -51,6 +51,24 @@ static constexpr int64_t INDEXPUT_INDEX_IDX = 4;
 static constexpr int32_t NUM_FOUR = 4;
 static constexpr int32_t NUM_EIGHT = 8;
 
+bool IndexNonContinuousTiling::IsOffsetOverlength(const gert::Shape& shape, const gert::Stride& stride) const
+{
+    uint64_t maxOffset = 0;
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        if (shape.GetDim(i) <= 1 || stride[i] == 0) {
+            continue;
+        }
+        const uint64_t extent = static_cast<uint64_t>(shape.GetDim(i) - 1);
+        const uint64_t dimStride = static_cast<uint64_t>(stride[i]);
+        // Check before multiplying so the range calculation cannot overflow.
+        if (extent > (UINT32_MAX - maxOffset) / dimStride) {
+            return true;
+        }
+        maxOffset += extent * dimStride;
+    }
+    return false;
+}
+
 bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType& x)
 {
     std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,     ge::DT_INT8,
@@ -486,7 +504,11 @@ uint64_t IndexNonContinuousTiling::GetTilingKey() const
     uint32_t isPerf = 0;
     uint32_t xDtype = 0;
     if (isIndexPut_) { // IndexPutV2
-        isOverlength = inputLength_ > UINT32_MAX || outputLength_ > UINT32_MAX;
+        isOverlength = inputLength_ > UINT32_MAX || outputLength_ > UINT32_MAX ||
+                       IsOffsetOverlength(xShape_, xStride_) || IsOffsetOverlength(valueShape_, valueStride_);
+        for (int64_t i = 0; i < tensorNum_ && i < MAX_SUPPORT_DIM_NUM && !isOverlength; ++i) {
+            isOverlength = IsOffsetOverlength(indexShape_, isCoalesced_ ? indexStride1_ : indexstrideList[i]);
+        }
     } else { // Index
         auto idxDtype = context_->GetInputDesc(paramIndicesIdx_)->GetDataType();
         isOverlength = inputLength_ > UINT32_MAX || outputLength_ > UINT32_MAX || idxDtype == ge::DT_INT64;

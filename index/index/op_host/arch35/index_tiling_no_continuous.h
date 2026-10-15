@@ -46,6 +46,7 @@ protected:
 
     // protected 供 IndexNoConBroadcastTiling（bc_nocon 模板）复用 stride 提取/连续性判定，行为不变
 private:
+    bool IsOffsetOverlength(const gert::Shape& shape, const gert::Stride& stride) const;
     ge::graphStatus GetContinuousTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut);
     void GetContinuousStrideInfo(gert::Shape& shape, gert::Stride& stride);
     bool isDimCanKeep(int64_t dim_idx, const TensorMeta& tensor);

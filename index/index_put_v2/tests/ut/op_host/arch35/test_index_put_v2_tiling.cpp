@@ -26,6 +26,7 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "../../../../../index/op_host/arch35/index_tiling.h"
+#include "../../../../../index/op_host/arch35/index_tiling_no_continuous.h"
 #include "../../../../op_host/arch35/index_put_v2_simd_tiling.h"
 #include "any_value.h"
 
@@ -101,7 +102,7 @@ struct SimdTilingResult {
 SimdTilingResult RunSimdTiling(std::initializer_list<int64_t> xDims, std::initializer_list<int64_t> valueDims,
                                const std::vector<int64_t>& indexedSizes, int64_t indexLength, ge::DataType valueDtype,
                                bool accumulate, bool provideTilingData = true, bool useRegisteredEntry = false,
-                               bool provideCompileInfo = true)
+                               bool provideCompileInfo = true, ge::DataType indexDtype = ge::DT_INT64)
 {
     SimdTilingResult result;
     optiling::IndexCompileInfo compileInfo{};
@@ -145,7 +146,7 @@ SimdTilingResult RunSimdTiling(std::initializer_list<int64_t> xDims, std::initia
         .NodeInputTd(1, valueDtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(4, indexDtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeOutputTd(0, valueDtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeAttrs({{"accumulate", Ops::NN::AnyValue::CreateFrom<bool>(accumulate)}})
         .ConstInput(constTensors)
@@ -444,4 +445,102 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0)
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::string expect_tiling = "26214400 0 4096 0 4096 0 2 1 2 1 4096 0 6400 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
     ASSERT_EQ(expect_tiling, tiling_data_result);
+}
+
+// Exercise the actual non-contiguous tiler with view metadata, without allocating
+// multi-gigabyte tensors on the host.
+TEST_F(IndexPutV2Tiling, NonContinuousOffsetRangeSelectsIndexWidth)
+{
+    struct Case {
+        const char* name;
+        std::initializer_list<int64_t> xShape;
+        std::initializer_list<int64_t> xStride;
+        std::initializer_list<int64_t> valueShape;
+        std::initializer_list<int64_t> valueStride;
+        std::initializer_list<int64_t> indexShape;
+        std::initializer_list<int64_t> indexStride;
+        bool overlength;
+    };
+    const int64_t limit = UINT32_MAX;
+    const Case cases[] = {
+        {"customer", {20000, 16896}, {228352, 1}, {1, 16896}, {16896, 1}, {1}, {1}, true},
+        {"small_view", {4, 8}, {16, 1}, {1, 8}, {8, 1}, {1}, {1}, false},
+        {"exact_uint32_max", {2, 2}, {limit - 1, 1}, {1, 2}, {2, 1}, {1}, {1}, false},
+        {"axis_sum_overflow", {2, 2}, {limit, 1}, {1, 2}, {2, 1}, {1}, {1}, true},
+        {"singleton_stride", {1, 2}, {limit + 1, 2}, {1, 2}, {2, 1}, {1}, {1}, false},
+        {"value_view", {4, 2}, {2, 1}, {1, 2}, {0, limit + 1}, {1}, {1}, true},
+        {"index_view", {4, 2}, {2, 1}, {2, 2}, {2, 1}, {2}, {limit + 1}, true},
+        {"coalesced_index_view", {4, 2}, {2, 1}, {2, 2, 2}, {4, 2, 1}, {2, 2}, {2 * (limit + 1), limit + 1}, true},
+    };
+    for (const auto indexDtype : {ge::DT_INT32, ge::DT_INT64}) {
+        for (const auto& test : cases) {
+            SCOPED_TRACE(test.name);
+            SCOPED_TRACE(static_cast<int>(indexDtype));
+            optiling::IndexCompileInfo compileInfo{};
+            compileInfo.core_num = DEFAULT_CORE_NUM;
+            compileInfo.ubSize = DEFAULT_UB_SIZE;
+            map<string, string> socInfos, aicoreSpec, intrinsics;
+            GetPlatFormInfos(DEFAULT_COMPILE_INFO, socInfos, aicoreSpec, intrinsics);
+            fe::PlatFormInfos platformInfo;
+            platformInfo.Init();
+            auto rawTilingData = gert::TilingData::CreateCap(4096);
+            auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+            auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+            gert::StorageShape y(test.xShape, test.xShape);
+            gert::TensorV2 x({test.xShape, test.xShape}, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                             gert::TensorPlacement::kOnHost, ge::DT_UINT8, nullptr, nullptr);
+            gert::TensorV2 value({test.valueShape, test.valueShape},
+                                 {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+                                 ge::DT_UINT8, nullptr, nullptr);
+            gert::TensorV2 sizes({{2}, {2}}, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                 gert::TensorPlacement::kOnHost, ge::DT_INT64, nullptr, nullptr);
+            gert::TensorV2 strides({{2}, {2}}, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                   gert::TensorPlacement::kOnHost, ge::DT_INT64, nullptr, nullptr);
+            gert::TensorV2 indices({test.indexShape, test.indexShape},
+                                   {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()},
+                                   gert::TensorPlacement::kOnHost, indexDtype, nullptr, nullptr);
+            x.MutableStride() = gert::Stride(test.xStride);
+            value.MutableStride() = gert::Stride(test.valueStride);
+            indices.MutableStride() = gert::Stride(test.indexStride);
+            auto holder = gert::TilingContextFaker()
+                              .SetOpType("IndexPutV2")
+                              .IrInstanceNum({1, 1, 1, 1, 1}, {1})
+                              .InputTensors({&x, &value, &sizes, &strides, &indices})
+                              .OutputShapes({&y})
+                              .CompileInfo(&compileInfo)
+                              .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                              .NodeOutputTd(0, ge::DT_UINT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeAttrs({{"accumulate", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                              .TilingData(rawTilingData.get())
+                              .Workspace(workspace)
+                              .Build();
+            auto context = holder.GetContext<gert::TilingContext>();
+            ASSERT_NE(context, nullptr);
+            context->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+            context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+            context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+            context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+            optiling::IndexNonContinuousTiling tiling(context);
+            ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+            EXPECT_EQ(context->GetTilingKey(), test.overlength ? 1310720UL : 262144UL);
+        }
+    }
+}
+
+TEST_F(IndexPutV2Tiling, SimdRejectsInt32LinearOffsetOverflow)
+{
+    auto largeInt32 = RunSimdTiling({20000, 228352}, {1, 228352}, {1, 0}, 1, ge::DT_UINT8, false, true, false, true,
+                                    ge::DT_INT32);
+    // Signed SIMD offsets already overflow above INT32_MAX, before UINT32_MAX.
+    auto signedOverflow = RunSimdTiling({10000, 228352}, {1, 228352}, {1, 0}, 1, ge::DT_UINT8, false, true, false, true,
+                                        ge::DT_INT32);
+    auto smallInt32 = RunSimdTiling({4, 512}, {1, 512}, {1, 0}, 1, ge::DT_UINT8, false, true, false, true,
+                                    ge::DT_INT32);
+    auto largeInt64 = RunSimdTiling({20000, 228352}, {1, 228352}, {1, 0}, 1, ge::DT_UINT8, false);
+    EXPECT_EQ(largeInt32.status, ge::GRAPH_PARAM_INVALID);
+    EXPECT_EQ(signedOverflow.status, ge::GRAPH_PARAM_INVALID);
+    ASSERT_EQ(smallInt32.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(smallInt32.tilingKey, SIMD_TILING_KEY);
+    ASSERT_EQ(largeInt64.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(largeInt64.tilingKey, SIMD_TILING_KEY);
 }

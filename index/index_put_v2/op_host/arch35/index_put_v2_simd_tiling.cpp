@@ -42,6 +42,11 @@ bool IndexPutV2SimdTiling::IsCapable()
 {
     auto valueType = context_->GetInputDesc(VALUE_IDX)->GetDataType();
     auto indicesType = context_->GetInputDesc(INDICES_IDX)->GetDataType();
+    // SIMD accumulates linear offsets in the signed indices type. Use SIMT
+    // when an int32 index can address an element beyond that range.
+    if (indicesType == ge::DT_INT32 && inputLength_ > INT32_MAX) {
+        return false;
+    }
     valueTypeSize = ge::GetSizeByDataType(valueType);
     indicesTypeSize = ge::GetSizeByDataType(indicesType);
 
