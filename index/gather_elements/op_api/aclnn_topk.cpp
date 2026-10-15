@@ -136,8 +136,8 @@ static bool CheckParamValid(const aclTensor* self, int64_t k, int64_t dim)
         return false;
     } else if (tmpDim > 0 && (dim < -tmpDim || dim >= tmpDim)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dimension out of range (expected to be in range of [-%ld, %ld], "
-                "but got %ld)",
+                "Dimension out of range (expected to be in range of [-%ld, %ld],"
+                " but got %ld)",
                 tmpDim, tmpDim - 1, dim);
         return false;
     }
@@ -147,8 +147,8 @@ static bool CheckParamValid(const aclTensor* self, int64_t k, int64_t dim)
     int64_t tmpK = (tmpDim > 0) ? inputShape.GetDim(positiveDim) : 1;
     if (k < 0 || k > tmpK) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Selected index k out of range (max num of self.size(%ld) is %ld, "
-                "but k is %ld)",
+                "Selected index k out of range (max num of self.size(%ld) is %ld,"
+                " but k is %ld)",
                 tmpDim, tmpK, k);
         return false;
     }
@@ -578,7 +578,9 @@ static bool IsDataTypeDouble(op::DataType xDataType)
 //   2. 输入数据类型为 FP16 或 BF16（Radix TopK 仅支持这两种低精度类型）
 //   3. 最后一维长度 sortLen 与 k 的比例满足阈值要求（见下方 shapeCheck 分支）
 //   4. k > 1000（Radix TopK 仅在大 k 场景下相比排序方案有收益）
-static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
+// 例外：sortLen > int32 上限时走 RadixTopK int64 模板，此时 k 只要求 > 0，
+//       与 ops-math math/topk/op_api/topk.cpp 的同名门控保持一致。
+static bool IsRadixTopKSupported(const aclTensor* self, int64_t k, bool sorted, op::DataType indicesDType)
 {
     SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
     auto inputShape = self->GetViewShape();
@@ -588,7 +590,15 @@ static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
     bool dtypeCheck = self->GetDataType() == op::DataType::DT_FLOAT16 || self->GetDataType() == op::DataType::DT_BF16;
     bool shapeCheck = false;
     if (sortLen > MAX_INT32_INPUTSIZE) {
-        shapeCheck = false;
+        // 超过 int32 上限走 RadixTopK int64 模板（TopKV2 在该量级会 59.5GB workspace OOM，
+        // 比例门控失去意义），要求 indices 输出为 int64，k 比例不设限
+        // 注：indicesDType 在 aclnn 入口已被 CheckDtypeValid 强制为 int64，此处判断恒为真；
+        // 保留它是为了在将来放宽 indices 输出类型时，该分支仍能拦住非 int64 组合（int64 模板
+        // 无法把 >2^31 的索引写进 int32），并与 ops-math 侧 l0op::Topk 的入参语义对齐。
+        // k 门控同步放宽为 > 0：该量级下替代路径是 TopKV2 的 workspace OOM，而不是更慢的方案，
+        // 因此"仅大 k 才有收益"的收益门控在此不适用（与 ops-math 的改动一致）。
+        // 且此种情况，无法进行sort后gather_elements_v2，故不支持sorted为true的情况。
+        return socCheck && dtypeCheck && (indicesDType == op::DataType::DT_INT64) && k > 0 && !sorted;
     } else if (sortLen >= RADIX_TOP_K_S_THRESHOLD_2) {
         shapeCheck = sortLen > RADIX_TOP_K_S_K_RATIO_2 * k;
     } else if (sortLen >= RADIX_TOP_K_S_THRESHOLD_1) {
@@ -731,7 +741,8 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
     auto selfReshape = TopkAdaptInputZeroDimTensor(selfContiguous, dimNum, uniqueExecutor.get());
     CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* indicesCastInt32 = nullptr;
+    // RadixTopK int64 大 shape 路径下这里可能持有 int64 索引，故用中性名字
+    const aclTensor* indicesTopkOut = nullptr;
     const aclTensor* valuesTopkOut = nullptr;
 
     // 在910上,当输入fp32时,路径3的ge侧会插入cast,转换到fp16.此处修改与路径3保持一致。
@@ -774,7 +785,7 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
         topkOut = TopkWithPolicyCheck(selfCast, k, positiveDim, largest, sorted, indicesDType, sortPolicy,
                                       uniqueExecutor.get());
         valuesTopkOut = std::get<0>(topkOut);
-        indicesCastInt32 = std::get<1>(topkOut);
+        indicesTopkOut = std::get<1>(topkOut);
     } else if (positiveDim != lastDim) {
         aclIntArray* axes = GetDimTransposeArray(dimNum, lastDim, positiveDim, uniqueExecutor.get());
         CHECK_RET(axes != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -796,18 +807,26 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
             OP_LOGD("sort and topk, positiveDim not equal lastDim.");
             topkOut = SortAndTopK(selfTranspose, k, lastDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
             isHasCasted = true;
-        } else if (IsRadixTopKSupported(selfTranspose, k)) {
+        } else if (IsRadixTopKSupported(selfTranspose, k, sorted, indicesDType)) {
             OP_LOGD("radix topk supported, positiveDim not equal lastDim.");
             auto topkOutFirst = l0op::Topk(selfTranspose, k, lastDim, largest, sorted, indicesDType,
                                            uniqueExecutor.get());
             valuesTopkOut = std::get<0>(topkOutFirst);
             aclTensor* indicesCast = std::get<1>(topkOutFirst);
-
-            auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
-            valuesTopkOut = std::get<0>(sortOut);
-            aclTensor* indicesSort = std::get<1>(sortOut);
-            indicesCastInt32 = l0op::GatherElementsV2(indicesCast, indicesSort, lastDim, uniqueExecutor.get());
-            topkOut = std::tie(valuesTopkOut, indicesCastInt32);
+            if (indicesCast->GetDataType() == op::DataType::DT_INT64) {
+                // 与 positiveDim == lastDim 分支保持一致：GatherElementsV2 只接受 int32 索引、
+                // self 也不支持 int64（见 index/gather_elements_v2/op_host/op_api/gather_elements_v2.cpp），
+                // 且 A2/A3 上 l0op::Sort 的索引输出恒为 int32（math/sort/op_api/sort.cpp），
+                // IsRadixTopKSupported 已拦截sorted为true的情况
+                OP_LOGD("radix topk int64 indices passthrough, positiveDim not equal lastDim.");
+                indicesTopkOut = indicesCast;
+            } else {
+                auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+                valuesTopkOut = std::get<0>(sortOut);
+                aclTensor* indicesSort = std::get<1>(sortOut);
+                indicesTopkOut = l0op::GatherElementsV2(indicesCast, indicesSort, lastDim, uniqueExecutor.get());
+            }
+            topkOut = std::tie(valuesTopkOut, indicesTopkOut);
         } else {
             OP_LOGD("topk, positiveDim not equal lastDim.");
             topkOut = TopkWithPolicyCheck(selfTranspose, k, lastDim, largest, sorted, indicesDType, sortPolicy,
@@ -820,7 +839,7 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
         valuesTopkOut = l0op::Transpose(std::get<0>(topkOut), axes, uniqueExecutor.get());
 
         // 将结果indices_transpose进行transpose，转换成正确的shape
-        indicesCastInt32 = l0op::Transpose(std::get<1>(topkOut), axes, uniqueExecutor.get());
+        indicesTopkOut = l0op::Transpose(std::get<1>(topkOut), axes, uniqueExecutor.get());
     } else {
         if (k > 0 && k < MAX_AICORE_CALC_DIM && !Ops::NN::AclnnUtil::IsRegbase()) {
             int64_t kFirst = std::min(PARALLEL_K, selfContiguous->GetViewShape().GetDim(positiveDim));
@@ -835,7 +854,7 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
             valuesTopkOut = std::get<0>(topkOut);
             aclTensor* indicesCast = std::get<1>(topkOut);
 
-            indicesCastInt32 = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
+            indicesTopkOut = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
         } else {
             std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
             if (IsSort(sortDimValue, k, selfCast) && !IsDataTypeDouble(xDType) &&
@@ -849,31 +868,37 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
                 topkOut = SortAndTopK(selfCast, k, positiveDim, sortDimValue, largest, indicesDType,
                                       uniqueExecutor.get());
                 isHasCasted = true;
-            } else if (IsRadixTopKSupported(selfCast, k)) {
+            } else if (IsRadixTopKSupported(selfCast, k, sorted, indicesDType)) {
                 OP_LOGD("radix topk supported, positiveDim equal lastDim.");
                 auto topkOutFirst = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType,
                                                uniqueExecutor.get());
                 valuesTopkOut = std::get<0>(topkOutFirst);
                 aclTensor* indicesCast = std::get<1>(topkOutFirst);
-
-                auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
-                valuesTopkOut = std::get<0>(sortOut);
-                aclTensor* indicesSort = std::get<1>(sortOut);
-                indicesCastInt32 = l0op::GatherElementsV2(indicesCast, indicesSort, positiveDim, uniqueExecutor.get());
-                topkOut = std::tie(valuesTopkOut, indicesCastInt32);
+                if (indicesCast->GetDataType() == op::DataType::DT_INT64) {
+                    // int64 大 shape 路径直接透传 RadixTopK 的 int64 索引，Sort/GatherElementsV2 组合暂不接管
+                    // IsRadixTopKSupported 已拦截sorted为true的情况
+                    indicesTopkOut = indicesCast;
+                } else {
+                    auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+                    valuesTopkOut = std::get<0>(sortOut);
+                    aclTensor* indicesSort = std::get<1>(sortOut);
+                    indicesTopkOut = l0op::GatherElementsV2(indicesCast, indicesSort, positiveDim,
+                                                            uniqueExecutor.get());
+                }
+                topkOut = std::tie(valuesTopkOut, indicesTopkOut);
             } else {
                 OP_LOGD("topk, positiveDim equal lastDim.");
                 topkOut = TopkWithPolicyCheck(selfCast, k, positiveDim, largest, sorted, indicesDType, sortPolicy,
                                               uniqueExecutor.get());
             }
             valuesTopkOut = std::get<0>(topkOut);
-            indicesCastInt32 = std::get<1>(topkOut);
+            indicesTopkOut = std::get<1>(topkOut);
         }
     }
-    CHECK_RET(valuesTopkOut != nullptr && indicesCastInt32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(valuesTopkOut != nullptr && indicesTopkOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     CHECK_RET(CheckReduceOutShape(valuesOut, valuesTopkOut), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckReduceOutShape(indicesOut, indicesCastInt32), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckReduceOutShape(indicesOut, indicesTopkOut), ACLNN_ERR_PARAM_INVALID);
 
     // 在910上，输入fp32转换到fp16计算完后需要重新转换到fp32。
     auto valuesCast = TopkAdaptGeCastTensor(selfReshape, valuesTopkOut, k, op::DataType::DT_FLOAT,
@@ -884,15 +909,16 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
     auto viewCopyValuesResult = l0op::ViewCopy(valuesCast, valuesOut, uniqueExecutor.get());
     CHECK_RET(viewCopyValuesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (!indicesOutNeedsCast(k, sorted, isHasCasted)) {
-        auto viewCopyIndicesResult = l0op::ViewCopy(indicesCastInt32, indicesOut, uniqueExecutor.get());
+    // int64 索引（大 shape 透传路径）本身已与 indicesOut 同类型，无需再做 int64→int64 的 Cast
+    if (!indicesOutNeedsCast(k, sorted, isHasCasted) || indicesTopkOut->GetDataType() == op::DataType::DT_INT64) {
+        auto viewCopyIndicesResult = l0op::ViewCopy(indicesTopkOut, indicesOut, uniqueExecutor.get());
         CHECK_RET(viewCopyIndicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        // 将结果indices_cast_int32进行cast，转换成int64类型
-        auto indicesCastInt64 = l0op::Cast(indicesCastInt32, op::DataType::DT_INT64, uniqueExecutor.get());
+        // 将结果索引 cast 成 int64 类型
+        auto indicesCastInt64 = l0op::Cast(indicesTopkOut, op::DataType::DT_INT64, uniqueExecutor.get());
         CHECK_RET(indicesCastInt64 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        // 将indices_cast_int64结果拷贝到values上
+        // 将 indices_cast_int64 结果拷贝到 indicesOut 上
         auto viewCopyIndicesResult = l0op::ViewCopy(indicesCastInt64, indicesOut, uniqueExecutor.get());
         CHECK_RET(viewCopyIndicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
