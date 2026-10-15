@@ -186,19 +186,21 @@ ge::graphStatus GemmSyrkTiling::ValidateShape() const
                                               "support broadcast"),
                         return ge::GRAPH_FAILED);
     }
-    auto isValidDimValue = [](uint64_t dim) -> bool { return dim > 0UL && dim <= INT32_MAX_LIMIT; };
+    auto isValidDimValue = [](uint64_t dim) -> bool { return dim <= INT32_MAX_LIMIT; };
     // The batch value is the flattened product of all leading axes (up to 4
     // axes with 6D inputs) and is narrowed into the uint32 GemmSyrkTilingData
     // field, so it needs its own upper bound next to the per-dim checks.
     OP_TILING_CHECK(!isValidDimValue(m_) || !isValidDimValue(k_) || !isValidDimValue(n_) || !isValidDimValue(batch_),
                     CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
                                           "m, k, n of a, c and the product of the batch axes must be within the "
-                                          "range (0, INT32_MAX], got m=%lu, k=%lu, n=%lu, batch=%lu",
+                                          "range [0, INT32_MAX], got m=%lu, k=%lu, n=%lu, batch=%lu",
                                           m_, k_, n_, batch_),
                     return ge::GRAPH_FAILED);
-    // The Blaze syrk path accumulates over k; k == 0 is handled by aclnnGemmSyrk
-    // with an elementwise beta * C scaling instead of this kernel.
-    OP_TILING_CHECK(k_ == 0UL,
+    // The Blaze syrk path accumulates over k; k == 0 never reaches this kernel
+    // via aclnnGemmSyrk (routed to an elementwise beta * C scaling), and the
+    // empty-tensor no-op path in DoTiling tolerates any k, so k == 0 is only
+    // rejected when the kernel would actually run.
+    OP_TILING_CHECK(k_ == 0UL && m_ > 0UL && batch_ > 0UL,
                     CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
                                           "the k-axis of a must be a positive number for the GemmSyrk kernel"),
                     return ge::GRAPH_FAILED);
@@ -326,6 +328,24 @@ ge::graphStatus GemmSyrkTiling::DoTiling()
                     OP_LOGE(context_->GetNodeName(), "GetShapeAttrsInfo failed"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetPlatformInfo failed"),
                     return ge::GRAPH_FAILED);
+    // 空张量 no-op：m == 0 或 batch == 0 时输出无元素（与 aclnnGemmSyrk 的空张量
+    // 路径一致），上三角槽位数为 0，kernel 各核在访问任何 GM 前直接返回。tiling
+    // 数据退化为 m == n == 0 的安全几何 —— batch == 0 时调度器会把 batch 钳位到
+    // 1，不能依赖 batch 本身让槽位数归零。ASW 基础 tiling 的成本模型不定义
+    // m/batch 为 0 的行为，一并跳过。
+    if (m_ == 0UL || batch_ == 0UL) {
+        tilingData_ = {};
+        tilingData_.k = static_cast<uint32_t>(k_);
+        tilingData_.batch = static_cast<uint32_t>(batch_);
+        tilingData_.baseBlock = static_cast<uint32_t>(BASIC_BLOCK_SIZE_16);
+        tilingData_.baseK = static_cast<uint32_t>(BASIC_BLOCK_SIZE_16);
+        tilingData_.kL1 = static_cast<uint32_t>(BASIC_BLOCK_SIZE_16);
+        tilingData_.usedCoreNum = 1U;
+        tilingData_.alpha = alpha_;
+        tilingData_.beta = beta_;
+        context_->SetTilingKey(GetTilingKey());
+        return PostTiling();
+    }
     BuildMatmulArgs();
     OP_TILING_CHECK(RunBasicTilingByStrategy() != ge::GRAPH_SUCCESS,
                     OP_LOGE(context_->GetNodeName(), "RunBasicTilingByStrategy failed"), return ge::GRAPH_FAILED);

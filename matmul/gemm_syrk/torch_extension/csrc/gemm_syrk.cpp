@@ -35,15 +35,33 @@ namespace {
 constexpr int64_t MIN_DIM_NUM = 2;
 constexpr int64_t MAX_DIM_NUM = 6;
 
-aclScalar* CreateOptionalFloatScalar(const c10::optional<double>& value)
+// CreateOptionalFloatScalar 的三态结果：
+//   NOT_PROVIDED —— 用户未传该参数，scalar 为 nullptr（aclnnGemmSyrk 按默认 1.0 处理）；
+//   OK           —— 创建成功，scalar 持有合法的 aclScalar*（调用方负责 Release）；
+//   FAILED       —— 用户传入了参数但 aclCreateScalar 创建失败。必须显式报错终止，
+//                   不得把 nullptr 当"未传参"静默降级，否则 alpha/beta 会变成 1.0
+//                   产生错误计算结果。
+struct OptionalScalar {
+    enum class Status { NOT_PROVIDED, OK, FAILED };
+    Status status = Status::NOT_PROVIDED;
+    aclScalar* scalar = nullptr; // 仅 status == OK 时有效
+};
+
+OptionalScalar CreateOptionalFloatScalar(const c10::optional<double>& value)
 {
     if (!value.has_value()) {
-        return nullptr; // aclnnGemmSyrk: nullptr 时默认 1.0
+        return {OptionalScalar::Status::NOT_PROVIDED, nullptr};
     }
     static const auto aclCreateScalar = GET_OP_API_FUNC(CreateScalar);
-    TORCH_CHECK(aclCreateScalar != nullptr, "aclCreateScalar is not available");
+    if (aclCreateScalar == nullptr) {
+        return {OptionalScalar::Status::FAILED, nullptr};
+    }
     float scalarValue = static_cast<float>(value.value());
-    return aclCreateScalar(&scalarValue, ACL_FLOAT);
+    aclScalar* scalar = aclCreateScalar(&scalarValue, ACL_FLOAT);
+    if (scalar == nullptr) {
+        return {OptionalScalar::Status::FAILED, nullptr};
+    }
+    return {OptionalScalar::Status::OK, scalar};
 }
 
 // 构造 ACL_FORMAT_ND 的 aclTensor（绕开 ConvertType 对 3D 的 NCL 自动映射）。
@@ -108,10 +126,19 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
         aclrtUseStreamResInCurrentThread(aclStream);
     }
 
+    // 先创建并校验标量：FAILED 时在分配 aclTensor 之前报错，避免异常路径泄漏。
+    OptionalScalar alphaResult = CreateOptionalFloatScalar(alpha);
+    OptionalScalar betaResult = CreateOptionalFloatScalar(beta);
+    TORCH_CHECK(alphaResult.status != OptionalScalar::Status::FAILED,
+                "failed to create aclScalar for user-specified alpha=", alpha.value());
+    TORCH_CHECK(betaResult.status != OptionalScalar::Status::FAILED,
+                "failed to create aclScalar for user-specified beta=", beta.value());
+
     aclTensor* aclA = CreateAclTensorND(a);
     aclTensor* aclC = CreateAclTensorND(c);
-    aclScalar* alphaScalar = CreateOptionalFloatScalar(alpha);
-    aclScalar* betaScalar = CreateOptionalFloatScalar(beta);
+    // NOT_PROVIDED 时保持 nullptr，aclnnGemmSyrk 按默认 1.0 处理。
+    aclScalar* alphaScalar = alphaResult.status == OptionalScalar::Status::OK ? alphaResult.scalar : nullptr;
+    aclScalar* betaScalar = betaResult.status == OptionalScalar::Status::OK ? betaResult.scalar : nullptr;
     const char* fillModeCStr = fillMode.c_str();
 
     InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);

@@ -33,8 +33,10 @@
     Mmad 链产出 C[i,j]，AIV sub0 以 nz2nd fixpipe 写出 (i,j)、AIV sub1 以
     nz2dn fixpipe（硬件转置）写出镜像 (j,i)，无 GM 回读、无软件转置，
     cube 计算量约为通用矩阵乘的一半；
-  - 特殊路径：k = 0 或 α = 0 时由 aclnn 层路由为逐元素C = β × C（`l0op::Muls`），不启动 matmul kernel
+  - 特殊路径：k = 0 或 α = 0 时由 aclnn 层路由为逐元素C = β × C（`l0op::Muls`），不启动 matmul kernel；
     m 或 batch 为 0 时直接返回成功（空张量 no-op）。
+  - cuBLAS 语义对齐：β = 0 时不读取 C（C 无需为有效输入，其中的 NaN/Inf 不会传播到输出），
+    输出为 α × (A @ A^T)；k = 0 或 α = 0 且 β = 0 时输出全 0（`l0op::ZerosLike`）。
 
 ## 参数说明
 
@@ -53,7 +55,7 @@
 - a 与 c 数据类型必须一致（FLOAT16 或 BFLOAT16），格式仅支持 ND。
 - c 的最后两维必须相等且等于 a 的 m 轴（transpose_x 为 true 时 m 为 a 的最后一维）；
   batch 轴必须与 a 一致（原地更新不支持广播）。
-- m、k、n各维度及多维batch乘积的取值范围为 (0, 2147483647)。
+- m、k、n各维度及多维batch乘积的取值范围为 [0, 2147483647]。
 - 暂不支持图模式直接调用（proto IR 已定义但 infer-shape 未注册，构图期输出 shape 无法推导）；
   请使用 aclnn 或 torch 接口。
 - `fill_mode` 当前仅支持 "full"（完整对称矩阵输出）；"up"/"low" 在 aclnn/tiling 层

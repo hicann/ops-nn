@@ -56,7 +56,13 @@ def gemm_syrk_golden(
 ):
     a_t = _np_to_torch(a).float()
     c_t = _np_to_torch(c).float()
-    out = alpha * _matmul_syrk(a_t, transpose_x) + beta * c_t
+    aat = alpha * _matmul_syrk(a_t, transpose_x)
+    if beta != 0:
+        out = aat + beta * c_t
+    else:
+        # cuBLAS contract: beta == 0 -> C is not read, NaN/Inf in C must not
+        # propagate; out = alpha * (A @ A^T).
+        out = aat
     out = out.to(_np_to_torch(a).dtype)
     return [_torch_to_np_like(out, a)]
 

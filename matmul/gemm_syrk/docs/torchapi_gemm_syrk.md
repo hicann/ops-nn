@@ -163,7 +163,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
 - 建议输入c为对称矩阵：beta不为0时输出矩阵的对称性依赖输入c对称。
 - 支持非连续Tensor，无需额外做contiguous。
 - m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
-- m、k、n各维度及多维batch乘积的取值范围为(0, 2147483647)。
+- m、k、n各维度及多维batch乘积的取值范围为[0, 2147483647]。
 
 ## 确定性计算
 

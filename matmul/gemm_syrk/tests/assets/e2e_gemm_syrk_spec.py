@@ -57,5 +57,11 @@ class E2eGemmSyrkTestSpec:
     ):
         a_t = a.float()
         c_t = c.float()
-        out = alpha * _matmul_syrk(a_t, transpose_x) + beta * c_t
+        aat = alpha * _matmul_syrk(a_t, transpose_x)
+        if beta != 0:
+            out = aat + beta * c_t
+        else:
+            # cuBLAS contract: beta == 0 -> C is not read, NaN/Inf in C must
+            # not propagate; out = alpha * (A @ A^T).
+            out = aat
         return [out.to(a.dtype)]

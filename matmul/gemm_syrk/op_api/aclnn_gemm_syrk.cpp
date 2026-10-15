@@ -17,6 +17,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/muls.h"
+#include "level0/zero_op.h"
 #include "gemm_syrk.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
@@ -159,7 +160,8 @@ static aclnnStatus CheckParams(const GemmSyrkParams& params)
 
 static aclnnStatus GemmSyrkGetWorkspaceSizeCommon(const GemmSyrkParams& params, aclOpExecutor* executor)
 {
-    CHECK_RET(CheckParams(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    auto ret = CheckParams(params);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     const float alphaValue = params.alphaOptional == nullptr ? GEMM_SYRK_DEFAULT_SCALE_VALUE :
                                                                params.alphaOptional->ToFloat();
@@ -188,10 +190,20 @@ static aclnnStatus GemmSyrkGetWorkspaceSizeCommon(const GemmSyrkParams& params, 
 
     if (k == 0 || alphaValue == 0.0F) {
         // A @ A^T is the m x m zero matrix: C = beta * C in place.
-        auto scaled = l0op::Muls(cContig, betaValue, executor);
-        CHECK_RET(scaled != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto viewCopyResult = l0op::ViewCopy(scaled, params.cRef, executor);
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (betaValue != 0.0F) {
+            auto scaled = l0op::Muls(cContig, betaValue, executor);
+            CHECK_RET(scaled != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto viewCopyResult = l0op::ViewCopy(scaled, params.cRef, executor);
+            CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        } else {
+            // cuBLAS contract: beta == 0 means C is not read at all ("C does
+            // not have to be a valid input"), and the A @ A^T term is zero, so
+            // the output is all zeros regardless of (possibly NaN/Inf) C.
+            auto zeros = l0op::ZerosLike(cContig, executor);
+            CHECK_RET(zeros != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto viewCopyResult = l0op::ViewCopy(zeros, params.cRef, executor);
+            CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
         return ACLNN_SUCCESS;
     }
 

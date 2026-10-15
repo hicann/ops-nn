@@ -262,8 +262,9 @@ aclnnStatus aclnnGemmSyrk(
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnGemmSyrk默认确定性实现（每个输出tile由单条Mmad链按固定顺序累加，无原子操作与切K归约）。
   <!-- end id11 -->
 
-- m、k、n各维度及多维batch乘积的取值范围为(0, 2147483647)。
-- k为0或alpha为0时，接口自动路由为逐元素计算C = β × C（`l0op::Muls`），不进入matmul计算路径。
+- m、k、n各维度及多维batch乘积的取值范围为[0, 2147483647]。
+- k为0或alpha为0时，接口自动路由为逐元素计算C = β × C（`l0op::Muls`），不进入matmul计算路径；此时若β为0则输出全0（`l0op::ZerosLike`）。
+- β为0时对齐cuBLAS语义：不读取C，输出为α × (A @ A<sup>T</sup>)。
 - m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
 - 建议输入C为对称矩阵：β ≠ 0时输出矩阵的对称性依赖输入C对称。
 

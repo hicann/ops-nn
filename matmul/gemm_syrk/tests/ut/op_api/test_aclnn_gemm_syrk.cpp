@@ -92,6 +92,52 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_6d)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// cuBLAS 语义对齐: beta = 0 时主路径不读取 C，输出 = alpha * (A @ A^T)
+TEST_F(l2_gemm_syrk_test, gemm_syrk_beta_zero_main_path)
+{
+    op::SocVersionManager socVersionManager(op::SocVersion::ASCEND950);
+    auto a_desc = TensorDesc({128, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto c_desc = TensorDesc({128, 128}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto alpha_desc = ScalarDesc(0.5f);
+    auto beta_desc = ScalarDesc(0.0f);
+
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), false, "full");
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// k = 0 且 beta != 0: 路由为逐元素 C = beta * C (l0op::Muls)
+TEST_F(l2_gemm_syrk_test, gemm_syrk_k_zero_beta_nonzero)
+{
+    op::SocVersionManager socVersionManager(op::SocVersion::ASCEND950);
+    auto a_desc = TensorDesc({32, 0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto beta_desc = ScalarDesc(2.0f);
+
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full");
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// k = 0 且 beta = 0: cuBLAS 语义 C 不被读取, 输出全 0 (l0op::ZerosLike)
+TEST_F(l2_gemm_syrk_test, gemm_syrk_k_zero_beta_zero)
+{
+    op::SocVersionManager socVersionManager(op::SocVersion::ASCEND950);
+    auto a_desc = TensorDesc({32, 0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto beta_desc = ScalarDesc(0.0f);
+
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full");
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
 // 拒绝: 1D (低于最小维度)
 TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_1d)
 {
@@ -231,5 +277,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_null_a)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // 空指针入参按 CANN aclnn 规范返回 ACLNN_ERR_PARAM_NULLPTR（修复前被
+    // 掩码为 ACLNN_ERR_PARAM_INVALID，GemmSyrkGetWorkspaceSizeCommon 现透传真实错误码）。
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }

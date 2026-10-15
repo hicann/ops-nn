@@ -56,7 +56,9 @@ def gen_gemm_syrk_data(
     c, c_fp32 = _cast_input(c_sym, dtype)
 
     aat = np.matmul(a_fp32, np.transpose(a_fp32, (0, 2, 1)))
-    golden_fp32 = alpha * aat + beta * c_fp32
+    # cuBLAS contract: beta == 0 -> C is not read (NaN/Inf in C must not
+    # propagate); golden = alpha * A @ A^T.
+    golden_fp32 = alpha * aat if beta == 0 else alpha * aat + beta * c_fp32
     golden = (
         golden_fp32.astype(np.float16)
         if dtype == "float16"

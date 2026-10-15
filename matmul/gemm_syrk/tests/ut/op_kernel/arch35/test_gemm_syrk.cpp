@@ -221,6 +221,13 @@ TEST_F(gemm_syrk_test, gemm_syrk_alpha_only) { RunGemmSyrkCase({1, 8, 4, 1, 2.0F
 
 TEST_F(gemm_syrk_test, gemm_syrk_beta_only) { RunGemmSyrkCase({2, 3, 8, 1, 1.0F, 2.0F}); }
 
+TEST_F(gemm_syrk_test, gemm_syrk_beta_zero)
+{
+    // cuBLAS contract: beta == 0 -> the C addend is not read and not added;
+    // output = alpha * (A @ A^T) regardless of the (possibly NaN/Inf) C input.
+    RunGemmSyrkCase({1, 32, 16, 1, 1.5F, 0.0F});
+}
+
 TEST_F(gemm_syrk_test, gemm_syrk_m1_sync)
 {
     // m == 1: the second AIV of the MIX pair has no valid rows and only keeps
