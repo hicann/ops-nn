@@ -157,4 +157,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_rms_norm_quant](../rms_norm_quant/examples/test_aclnn_rms_norm_quant.cpp) | 通过[aclnnRmsNormQuant](../rms_norm_quant/docs/aclnnRmsNormQuant.md)接口方式调用RmsNormQuantV2算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/rms_norm_quant_v2_proto.h)构图方式调用RmsNormQuantV2算子。         |
+| 图模式 | [test_geir_rms_norm_quant_v2](examples/test_geir_rms_norm_quant_v2.cpp) | 通过[算子IR](op_graph/rms_norm_quant_v2_proto.h)构图方式调用RmsNormQuantV2算子。 |
