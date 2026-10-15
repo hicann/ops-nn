@@ -138,7 +138,7 @@
 <tr>
 <td>groups</td>
 <td>可选属性</td>
-<td>从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
+<td>从输入通道到输出通道的块连接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>

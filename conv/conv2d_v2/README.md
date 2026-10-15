@@ -24,21 +24,19 @@
 ## 功能说明
 
 - 算子功能：实现2D卷积功能。
-
 - 计算公式：
 
   - 假定输入（`x`）的shape是 $(N, C_{\text{in}}, H, W)$ ，（`filter`）的shape是 $(C_{\text{out}}, C_{\text{in}}, K_h, K_w)$，输出（`y`）的shape是 $(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})$
-
   - 输出表示为：
 
   $$
-    \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
+  \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
   其中，$\star$ 表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$ 代表`batch size`，$C$ 代表通道数，$H$ 和 $W$ 分别代表高和宽，相应输出维度的计算公式如下：
 
   $$
-    H_{\text{out}} = (H + \text{pad\_top} + \text{pad\_bottom} - (\text{dilation\_h} \times (K_h - 1) + 1)) / \text{stride\_h} + 1 \\
+  H_{\text{out}} = (H + \text{pad\_top} + \text{pad\_bottom} - (\text{dilation\_h} \times (K_h - 1) + 1)) / \text{stride\_h} + 1 \\
     W_{\text{out}} = (W + \text{pad\_left} + \text{pad\_right} - (\text{dilation\_w} \times (K_w - 1) + 1)) / \text{stride\_w} + 1
   $$
 
@@ -111,7 +109,7 @@
 <tr>
 <td>groups</td>
 <td>可选属性</td>
-<td>从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
+<td>从输入通道到输出通道的块连接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -148,11 +146,13 @@
 ## 约束说明
 
 - Ascend 950PR&950DT系列产品：
+
   - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCHW`。
   - `x`、`filter`、`bias`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
   - `strides`、`dilations`的值应该在[1, 1000000]范围内。
   - `pads`的值应该在[0, 1000000]范围内。
   - 支持的数据类型和Format组合如下表：
+
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -200,12 +200,11 @@
   <td style="text-align:center">NHWC</td>
   </tr>
   </table>
-
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                             |
-|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_conv2d_v2](./examples/test_aclnn_conv2d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv2DV2算子。    |
+| 调用方式  | 调用样例                                                   | 说明                                                                                              |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| aclnn调用 | [test_aclnn_conv2d_v2](./examples/test_aclnn_conv2d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv2DV2算子。 |

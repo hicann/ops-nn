@@ -44,7 +44,7 @@
 | strides | 属性 | 卷积扫描步长，包括stride_h, stride_w。| INT32 | - |
 | pads | 必选属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
 | dilations | 可选属性 | 卷积核中元素的间隔，包括dilation_h, dilation_w。| INT32 | - |
-| groups | 可选属性 | 从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。 | INT32 | - |
+| groups | 可选属性 | 从输入通道到输出通道的块连接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。 | INT32 | - |
 | data_format | 可选属性 | 输入数据格式，仅支持"NCHW"。 | STRING | - |
 | offset_x | 可选属性 | 量化算法中的偏移，用于pad的填充值。支持范围 [-128, 127]。当`x`类型为`HIFLOAT8`或`FLOAT8_E4M3FN`时，仅支持配置为0。 | INT32 | - |
 | round_mode | 可选属性 | 表述输出的舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。 | STRING | - |
