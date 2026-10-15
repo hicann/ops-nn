@@ -66,11 +66,9 @@ static aclTensor* NonzeroAiCore(const aclTensor* self, aclTensor* out, bool tran
         CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
         return out;
     }
-    // outShapeTensor用于执行期放置实际shape，并用于刷新out的大小。
-    Shape outShapeShape{static_cast<int64_t>(out->GetViewShape().GetDimNum()) + 1};
-    auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT32, Format::FORMAT_ND);
-    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将NonZero算子加入任务队列
-    // NonZero是算子的OpType，self是算子的输入，out是算子的输出
+    // outShapeTensor 用于执行期放置实际 shape，框架执行后据此刷新 out 的 view shape。
+    Shape outShapeShape{NONZERO_TENSOR_DIMS_MAX + 1};
+    auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(NonZero, OP_INPUT(self), OP_OUTPUT(out),
                                            OP_ATTR(transpose, out->GetDataType()), OP_OUTSHAPE({outShapeTensor, 0}));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
