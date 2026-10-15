@@ -10,7 +10,7 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_addcmul_scalar.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_addcmul_scalar ACLNNTYPE aclnn DEPENDENCIES foreach_utils)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_addcmul_scalar ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
 
 # Add foreach_utils include directory for op_api common helper
 get_filename_component(FOREACH_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../foreach_utils ABSOLUTE)
