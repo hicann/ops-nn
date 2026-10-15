@@ -179,6 +179,7 @@ static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType indices_dtype,
     // These legacy cases do not enter adaptive add. Dedicated public-tiling
     // tests cover the enabled flag; all older tiling fields stay unchanged.
     expectTilingData += "0 ";
+    expectTilingData += updateStorageShape.GetShapeSize() == 1 ? "1 " : "0 ";
     auto actualFields = ParseTilingData(tiling_data_result);
     auto expectedFields = ParseTilingData(expectTilingData);
     // Slot 34 packs rank/dim in the low 32 bits and the SortLib-owned temporary-buffer size in the high 32 bits.

@@ -71,19 +71,22 @@ static const std::initializer_list<op::DataType> AICORE_310P_DTYPE_SUPPORT_LIST 
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
     op::DataType::DT_UINT8};
 
+// The backing arrays must outlive the map's initializer_list copies.
+static const std::initializer_list<op::DataType> REGBASE_NONE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_UINT8,
+    op::DataType::DT_INT8,  op::DataType::DT_INT16,   op::DataType::DT_INT32,  op::DataType::DT_INT64,
+    op::DataType::DT_BOOL,  op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> REGBASE_ADD_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8,
+    op::DataType::DT_INT8,  op::DataType::DT_INT16,   op::DataType::DT_INT32,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> REGBASE_MUL_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8, op::DataType::DT_INT8,
+    op::DataType::DT_INT16, op::DataType::DT_INT32,   op::DataType::DT_INT64, op::DataType::DT_BF16};
 static const map<string, std::initializer_list<op::DataType>> REGBASE_DTYPE_SUPPORT_LIST = {
-    {"none",
-     {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_UINT8,
-      op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-      op::DataType::DT_BOOL, op::DataType::DT_BF16}},
-    {"add",
-     {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8, op::DataType::DT_INT8,
-      op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BOOL,
-      op::DataType::DT_BF16}},
-    {"mul",
-     {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_UINT8, op::DataType::DT_INT8,
-      op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BF16}},
-};
+    {"none", REGBASE_NONE_DTYPE_SUPPORT_LIST},
+    {"add", REGBASE_ADD_DTYPE_SUPPORT_LIST},
+    {"mul", REGBASE_MUL_DTYPE_SUPPORT_LIST}};
 
 namespace l0op {
 OP_TYPE_REGISTER(ScatterElements);

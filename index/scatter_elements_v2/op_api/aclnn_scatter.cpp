@@ -156,16 +156,20 @@ static const std::string& GetReduceStr(int64_t reduce)
     return REDUCTION_NONE;
 }
 
-// 除了dim维度以外的每个维度 a <= b 返回true, 否则返回false。 a, b的维度数一样
+// Compare logical shapes; zero-dimensional tensors are treated as shape [1].
 static bool CompareTensorShape(const aclTensor* a, const aclTensor* b, int64_t dim = -1)
 {
-    auto aDimSize = a->GetViewShape().GetDimNum();
-    auto bDimSize = b->GetViewShape().GetDimNum();
-    aDimSize = aDimSize < bDimSize ? aDimSize : bDimSize;
+    const auto& aShape = a->GetViewShape();
+    const auto& bShape = b->GetViewShape();
+    auto aDimSize = std::max<size_t>(aShape.GetDimNum(), 1);
+    auto bDimSize = std::max<size_t>(bShape.GetDimNum(), 1);
+    if (aDimSize != bDimSize) {
+        return false;
+    }
     for (int64_t i = 0; i < static_cast<int64_t>(aDimSize); i++) {
         if (i != dim) {
-            auto aDim = (a->GetViewShape())[i];
-            auto bDim = (b->GetViewShape())[i];
+            auto aDim = aShape.GetDimNum() == 0 ? 1 : aShape[i];
+            auto bDim = bShape.GetDimNum() == 0 ? 1 : bShape[i];
             if (bDim < aDim) {
                 return false;
             }
@@ -250,23 +254,15 @@ static bool CheckUseAicpu(const aclTensor* data, const aclTensor* indices, const
            (!l0op::UseScatterElements(data, indices, updates, axis, reduction));
 }
 
-static bool CheckShape(const aclTensor* self, const aclTensor* index, const aclTensor* src, const aclTensor* out,
-                       int64_t dim)
+static bool CheckShape(const aclTensor* self, const aclTensor* index, const aclTensor* out, int64_t dim)
 {
     // 检查 self 与 out的 shape是否相同
     if (out->GetViewShape().GetDimNum() != 0) {
         OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     }
 
-    int64_t dimSize = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+    int64_t dimSize = std::max<int64_t>(self->GetViewShape().GetDimNum(), 1);
     int64_t finalDim = GetFinalDim(dim, dimSize);
-
-    // index.shape <= src.shape
-    if (!CompareTensorShape(index, src)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expect index shape %s should be smaller than src shape %s in each dimension.",
-                op::ToString(index->GetViewShape()).GetString(), op::ToString(src->GetViewShape()).GetString());
-        return false;
-    }
 
     // index除dim的维度长 <= self.shape
     if (!CompareTensorShape(index, self, finalDim)) {
@@ -318,8 +314,11 @@ static aclnnStatus CheckParams2(const aclTensor* self, const aclTensor* index, c
     // 3. self/index/src的维度数应该一致
     CHECK_COND(CheckTensorDim(self, index, src), ACLNN_ERR_PARAM_INVALID, "CheckTensorDim failed!");
 
-    // 4. self.shape = out.shape + 除了dim以外的维度，index.shape <= self.shape + index.shape <= src.shape
-    CHECK_COND(CheckShape(self, index, src, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
+    // 4. Tensor updates must cover index.shape in every dimension.
+    CHECK_COND(CompareTensorShape(index, src), ACLNN_ERR_PARAM_INVALID,
+               "Expect index shape %s should be smaller than src shape %s in each dimension.",
+               op::ToString(index->GetViewShape()).GetString(), op::ToString(src->GetViewShape()).GetString());
+    CHECK_COND(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
 
     // 5. 检查dim是否为 [-N, N-1] 范围内
     CHECK_COND(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID, "dim must in [-N, N-1]!");
@@ -871,6 +870,34 @@ static void CheckFormat(const aclTensor* self)
     }
 }
 
+// src is the single-element tensor converted from the Scalar API's value.
+static aclnnStatus ExecScatterScalar(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src,
+                                     int64_t reduce, aclTensor* out, aclOpExecutor* executor)
+{
+    auto ret = CheckParams(self, index, src, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_COND(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
+    CHECK_COND(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID, "dim must in [-N, N-1]!");
+
+    auto selfContiguous = InitializeTensor(self, executor);
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto indexContiguous = InitializeTensor(index, executor);
+    CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto srcContiguous = InitializeTensor(src, executor);
+    CHECK_RET(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto dimFinal = GetFinalDim(dim, selfContiguous->GetViewShape().GetDimNum());
+    auto scatterRes = DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimFinal,
+                                        self->GetData() != out->GetData(), GetReduceStr(reduce), executor);
+    CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (self->GetViewShape().GetDimNum() == 0) {
+        scatterRes = l0op::SqueezeNd(scatterRes, int64_t{0}, executor);
+        CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
+    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
                                                     const aclScalar* value, int64_t reduce, aclTensor* out,
                                                     uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -901,19 +928,26 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
     }
 
     auto src = uniqueExecutor.get()->ConvertToTensor(value, self->GetDataType());
-    bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
-    if (self->GetViewShape().GetDimNum() != 0 && !supportNoTranspose) {
-        auto indexShape = GetTensorShape(index, uniqueExecutor.get());
-        CHECK_COND(indexShape != nullptr, ACLNN_ERR_INNER_NULLPTR, "get indexShape failed!");
-        src = l0op::BroadcastTo(src, indexShape, uniqueExecutor.get());
-        CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "value broadcast failed!");
-    }
-
+    CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor value failed!");
     aclnnStatus res;
-    if (supportNoTranspose) {
-        res = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get());
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
+        l0op::UseScatterElementsV2(self, index, src, dim, self->GetViewShape().GetDimNum(), GetReduceStr(reduce))) {
+        res = ExecScatterScalar(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        CHECK_RET(res == ACLNN_SUCCESS, res);
     } else {
-        res = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
+        if (self->GetViewShape().GetDimNum() != 0 && !supportNoTranspose) {
+            auto indexShape = GetTensorShape(index, uniqueExecutor.get());
+            CHECK_COND(indexShape != nullptr, ACLNN_ERR_INNER_NULLPTR, "get indexShape failed!");
+            src = l0op::BroadcastTo(src, indexShape, uniqueExecutor.get());
+            CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "value broadcast failed!");
+        }
+
+        if (supportNoTranspose) {
+            res = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        } else {
+            res = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        }
     }
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);

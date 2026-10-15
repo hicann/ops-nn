@@ -160,7 +160,7 @@ ge::graphStatus ScatterElementsV2AscTiling::GetShapeAttrsInfo()
     bool isDetermDtype = (reduction_ == REDUCTION_NONE) ||
                          (reduction_ == REDUCTION_ADD &&
                           SCAT_ELE_ADD_DETERM_DTYPE.find(dtype_) != SCAT_ELE_ADD_DETERM_DTYPE.end());
-    if (context_->GetDeterministic() && isDetermDtype) {
+    if (!isScalarUpdates_ && context_->GetDeterministic() && isDetermDtype) {
         isDeterministic_ = 1;
     }
 
@@ -169,7 +169,7 @@ ge::graphStatus ScatterElementsV2AscTiling::GetShapeAttrsInfo()
     bool isSortDetermDtype = (reduction_ == REDUCTION_NONE) ||
                              (reduction_ == REDUCTION_ADD &&
                               SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end());
-    if (context_->GetDeterministic() && isSortDetermDtype) {
+    if (!isScalarUpdates_ && context_->GetDeterministic() && isSortDetermDtype) {
         isSortDeterministic_ = 1;
     }
 
@@ -356,6 +356,7 @@ ge::graphStatus ScatterElementsV2AscTiling::CheckInputShape()
     auto updatesShape = updatesShapePtr->GetStorageShape();
     int16_t updatesDimNum = static_cast<int16_t>(updatesShape.GetDimNum());
     updatesAxis_ = updatesShape.GetShapeSize();
+    isScalarUpdates_ = updatesAxis_ == 1;
 
     if (indicesDimNum != rank_) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
@@ -364,14 +365,14 @@ ge::graphStatus ScatterElementsV2AscTiling::CheckInputShape()
         return ge::GRAPH_FAILED;
     }
 
-    if (indicesDimNum != updatesDimNum) {
+    if (!isScalarUpdates_ && indicesDimNum != updatesDimNum) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             opName_, "indices, updates", (std::to_string(indicesDimNum) + ", " + std::to_string(updatesDimNum)).c_str(),
             "the dimNum of indices and updates must be same");
         return ge::GRAPH_FAILED;
     }
 
-    if (!CompareShape(indicesShape, updatesShape)) {
+    if (!isScalarUpdates_ && !CompareShape(indicesShape, updatesShape)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "indices, data", "indices_shape, data_shape",
                                                "each indices shape dim must be less than data shape");
         return ge::GRAPH_FAILED;
@@ -385,15 +386,17 @@ ge::graphStatus ScatterElementsV2AscTiling::CheckInputShape()
     }
 
     // Compare the original shapes before ComputeShape folds trailing axes.
-    indicesUpdatesSameShape_ = true;
-    for (int16_t i = 0; i < indicesDimNum; ++i) {
+    indicesUpdatesSameShape_ = !isScalarUpdates_;
+    for (int16_t i = 0; indicesUpdatesSameShape_ && i < indicesDimNum; ++i) {
         if (indicesShape.GetDim(i) != updatesShape.GetDim(i)) {
             indicesUpdatesSameShape_ = false;
             break;
         }
     }
 
-    ComputeShape(dataShape, indicesShape, updatesShape);
+    // Coalescing uses the logical broadcast shape. The physical updates count
+    // remains one and never contributes an updates workspace in scalar mode.
+    ComputeShape(dataShape, indicesShape, isScalarUpdates_ ? indicesShape : updatesShape);
     ComputeStride();
 
     // shapeMode：逐维比较原始 storage shape，任一维 data != indices → SUBSET(1)
@@ -707,6 +710,7 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
     tilingData_.set_allAxis(allAxis_);
     tilingData_.set_dataAxis(dataAxis_);
     tilingData_.set_updatesAxis(updatesAxis_);
+    tilingData_.set_isScalarUpdates(isScalarUpdates_);
     tilingData_.set_indicesUpdatesSameShape(indicesUpdatesSameShape_);
     tilingData_.set_dataStride(dataStride_);
     tilingData_.set_indicesStride(indicesStride_);
@@ -764,7 +768,7 @@ ge::graphStatus ScatterElementsV2AscTiling::GetWorkspaceSize()
         workspaceSize_ += wsUserSize_; // 排序模板 userWs（SortLib ws + linearIdx/sorted/perm[+srcPos]）
     } else if (castTypeSize_ != 0) {
         int64_t dataWsSize = Ops::Base::CeilAlign(dataAxis_ * castTypeSize_, GM_ALIGN);
-        int64_t updatesWsSize = Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
+        int64_t updatesWsSize = isScalarUpdates_ ? 0 : Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
         workspaceSize_ += dataWsSize + updatesWsSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -839,6 +843,7 @@ void ScatterElementsV2AscTiling::DumpTilingInfo()
     info << ", allAxis: " << tilingData_.get_allAxis();
     info << ", dataAxis: " << tilingData_.get_dataAxis();
     info << ", updatesAxis: " << tilingData_.get_updatesAxis();
+    info << ", isScalarUpdates: " << tilingData_.get_isScalarUpdates();
     info << ", indicesUpdatesSameShape: " << tilingData_.get_indicesUpdatesSameShape();
     info << ", enableAdaptiveReduce: " << tilingData_.get_enableAdaptiveReduce();
     info << ", preAxis: " << tilingData_.get_preAxis();

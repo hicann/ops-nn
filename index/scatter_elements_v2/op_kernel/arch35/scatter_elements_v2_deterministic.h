@@ -19,7 +19,7 @@
 
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
-#include "scatter_elements_v2_multi.h"
+#include "scatter_elements_v2_common.h"
 #include "simt_api/device_warp_functions.h"
 #include "simt_api/device_sync_functions.h"
 

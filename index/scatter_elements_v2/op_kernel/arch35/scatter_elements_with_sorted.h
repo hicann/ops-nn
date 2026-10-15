@@ -19,6 +19,7 @@
 #include <type_traits>
 
 #include "kernel_operator.h"
+#include "scatter_elements_v2_common.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "simt_api/common_functions.h"
@@ -29,7 +30,6 @@
 
 namespace ScatterElements {
 
-// REDU_NONE/REDU_ADD/REDU_MUL 已在 scatter_elements_v2_multi.h 定义
 constexpr uint32_t REDU_LAST = 3;
 
 constexpr uint32_t WITH_SORTED_THREAD_NUM = 1024;

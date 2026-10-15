@@ -77,6 +77,7 @@ TILING_DATA_FIELD_DEF(uint32_t, sortSharedBufSize);
 TILING_DATA_FIELD_DEF_STRUCT(ScatterElementsV2SortTilingData, sortTiling);
 TILING_DATA_FIELD_DEF(int64_t, indicesUpdatesSameShape);
 TILING_DATA_FIELD_DEF(int64_t, enableAdaptiveReduce);
+TILING_DATA_FIELD_DEF(int64_t, isScalarUpdates);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2AscTilingData)
@@ -125,6 +126,7 @@ private:
     int64_t allAxis_ = 1;
     int64_t dataAxis_ = 1;
     int64_t updatesAxis_ = 1;
+    bool isScalarUpdates_ = false;
     bool indicesUpdatesSameShape_ = false;
     bool enableAdaptiveReduce_ = false;
     int64_t castTypeSize_ = 0;

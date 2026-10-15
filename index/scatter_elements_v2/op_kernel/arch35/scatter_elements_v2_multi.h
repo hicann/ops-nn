@@ -15,109 +15,27 @@
 #ifndef ASCENDC_SCATTER_ELEMENTS_V2_MULTI_H_
 #define ASCENDC_SCATTER_ELEMENTS_V2_MULTI_H_
 
-#include "kernel_operator.h"
-
-#include "../inc/platform.h"
-#include "../inc/kernel_utils.h"
-#include "simt_api/asc_simt.h"
-#include "simt_api/device_atomic_functions.h"
-#include "simt_api/asc_fp16.h"
-#include "simt_api/asc_bf16.h"
+#include "scatter_elements_v2_common.h"
+#include "scatter_elements_v2_scalar.h"
 
 namespace ScatterElements {
 using namespace AscendC;
 
-constexpr int16_t DIM_1 = 1;
-constexpr int16_t DIM_2 = 2;
-constexpr int16_t DIM_3 = 3;
-constexpr int16_t DIM_4 = 4;
-constexpr int16_t DIM_5 = 5;
-constexpr int16_t DIM_6 = 6;
-constexpr int16_t DIM_7 = 7;
-constexpr int16_t DIM_8 = 8;
-constexpr uint32_t REDU_NONE = 0;
-constexpr uint32_t REDU_ADD = 1;
-constexpr uint32_t REDU_MUL = 2;
-constexpr uint32_t USED_THREAD = 512;
-constexpr uint32_t USED_THREAD1024 = 1024;
-constexpr uint32_t VECTOR_LENGTH = platform::GetVRegSize();
-constexpr uint32_t VL_B32 = VECTOR_LENGTH / sizeof(uint32_t);
-constexpr uint32_t PARAM_DIM5_NUM = 8;
-constexpr uint32_t PARAM_DIM6_NUM = 10;
-constexpr uint32_t PARAM_DIM7_NUM = 12;
-constexpr uint32_t PARAM_DIM8_NUM = 14;
-constexpr uint32_t PARAM_UB_NUM = 16;
-constexpr uint32_t TILING_DATA_UINT64_NUM = 21;
-constexpr uint32_t TILING_DATA_UB_NUM = 24;
-constexpr int64_t DB_BUFFER = 1;
-constexpr int64_t GM_ALIGN = 512;
-constexpr int16_t TILING_ARRAY_LEN = 7;
-constexpr int16_t TWO_TILING_ARRAY_LEN = 14;
-constexpr int16_t THREE_TILING_ARRAY_LEN = 21;
-constexpr int64_t THREAD_SUM = 32768;
-
-static constexpr Reg::CastTrait castTraitB8B162B32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
-                                                      Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-
-template <typename COMP_T>
-struct ScatterElementsQuickDivParamDim8 {
-    COMP_T m0{1};
-    COMP_T m1{1};
-    COMP_T m2{1};
-    COMP_T m3{1};
-    COMP_T m4{1};
-    COMP_T m5{1};
-    COMP_T m6{1};
-    COMP_T shift0{1};
-    COMP_T shift1{1};
-    COMP_T shift2{1};
-    COMP_T shift3{1};
-    COMP_T shift4{1};
-    COMP_T shift5{1};
-    COMP_T shift6{1};
-};
-
-template <typename COMP_T>
-struct ScatterElementsQuickDivParamDim7 {
-    COMP_T m0{1};
-    COMP_T m1{1};
-    COMP_T m2{1};
-    COMP_T m3{1};
-    COMP_T m4{1};
-    COMP_T m5{1};
-    COMP_T shift0{1};
-    COMP_T shift1{1};
-    COMP_T shift2{1};
-    COMP_T shift3{1};
-    COMP_T shift4{1};
-    COMP_T shift5{1};
-};
-
-template <typename COMP_T>
-struct ScatterElementsQuickDivParamDim6 {
-    COMP_T m0{1};
-    COMP_T m1{1};
-    COMP_T m2{1};
-    COMP_T m3{1};
-    COMP_T m4{1};
-    COMP_T shift0{1};
-    COMP_T shift1{1};
-    COMP_T shift2{1};
-    COMP_T shift3{1};
-    COMP_T shift4{1};
-};
-
-template <typename COMP_T>
-struct ScatterElementsQuickDivParamDim5 {
-    COMP_T m0{1};
-    COMP_T m1{1};
-    COMP_T m2{1};
-    COMP_T m3{1};
-    COMP_T shift0{1};
-    COMP_T shift1{1};
-    COMP_T shift2{1};
-    COMP_T shift3{1};
-};
+template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, uint32_t REDU, uint16_t RANK, uint16_t DIM>
+__simt_callee__ __aicore__ inline void ComputeTensorUpdates(__gm__ IDX_T* indices, __gm__ DATA_T* updates,
+                                                            __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspace,
+                                                            __gm__ CAST_T* dataWorkspace, COMP_T count,
+                                                            const ScatterOffsetParams<COMP_T, RANK, true>& params)
+{
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += gridDim.x * blockDim.x) {
+        auto offsets = CalcScatterOffsets<RANK, DIM, true>(i, static_cast<COMP_T>(indices[i]), params);
+        if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
+            UpdateScatterValue<REDU>(dataWorkspace + offsets.output, updatesWorkspace[offsets.updates]);
+        } else {
+            UpdateScatterValue<REDU>(y + offsets.output, updates[offsets.updates]);
+        }
+    }
+}
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
           const uint32_t THREAD_USED>
@@ -166,51 +84,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim8(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params);
 
-template <typename DATA_T, typename COMP_T, typename CAST_T, const uint32_t REDU>
-__simt_callee__ __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y,
-                                                  __gm__ CAST_T* updatesWorkspaceGm, __gm__ CAST_T* xWorkspaceGm,
-                                                  COMP_T yOffset, COMP_T updatesOffset);
-
-template <typename DATA_T, typename CAST_T>
-__simd_vf__ inline void CastToInt32Vf(__ubuf__ DATA_T* srcAddr, __ubuf__ CAST_T* dstAddr, uint32_t dataLen,
-                                      uint16_t loopTimes)
-{
-    Reg::RegTensor<DATA_T> srcValue;
-    Reg::RegTensor<CAST_T> dstValue;
-    Reg::MaskReg preg;
-    uint32_t sregMask = dataLen;
-    for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = Reg::UpdateMask<uint32_t>(sregMask);
-        if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            Reg::LoadAlign<DATA_T, Reg::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
-        } else {
-            Reg::LoadAlign<DATA_T, Reg::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
-        }
-        Reg::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-        Reg::StoreAlign<CAST_T, Reg::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
-    }
-}
-
-template <typename DATA_T, typename CAST_T>
-__simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ DATA_T* dstAddr, uint32_t dataLen,
-                                       uint16_t loopTimes)
-{
-    Reg::RegTensor<CAST_T> srcValue;
-    Reg::MaskReg preg;
-    uint32_t sregMask = dataLen;
-    for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = Reg::UpdateMask<uint32_t>(sregMask);
-        Reg::LoadAlign<CAST_T, Reg::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
-        if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            Reg::StoreAlign<DATA_T, Reg::StoreDist::DIST_PACK_B32>(dstAddr + VL_B32 * j,
-                                                                   (Reg::RegTensor<DATA_T>&)srcValue, preg);
-        } else {
-            Reg::StoreAlign<DATA_T, Reg::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j,
-                                                                    (Reg::RegTensor<DATA_T>&)srcValue, preg);
-        }
-    }
-}
-
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
           const uint32_t TEMPLATE_V2 = 0>
 class KernelScatterElements {
@@ -218,19 +91,20 @@ public:
     __aicore__ inline KernelScatterElements(TPipe& pipe) : pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
                                 const ScatterElementsV2AscTilingData* tilingData);
-    __aicore__ inline void CopyToY(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyToWs(GlobalTensor<DATA_T>& inGm, GlobalTensor<CAST_T>& outGm, int64_t offset,
                                     int64_t dataLen);
     __aicore__ inline void CopyWsToY(int64_t offset, int64_t dataLen);
     __aicore__ inline void CastToInt32(LocalTensor<CAST_T>& dstLocal, LocalTensor<DATA_T>& srcLocal, uint32_t dataLen);
     __aicore__ inline void CastToOrigin(LocalTensor<DATA_T>& dstLocal, LocalTensor<CAST_T>& srcLocal, uint32_t dataLen);
-    __aicore__ inline void CopyDataToY();
     __aicore__ inline void CopyDataToWs();
     __aicore__ inline void CopyUpdatesToWs();
     __aicore__ inline void CopyResToY();
     __aicore__ inline void Process();
 
 private:
+    template <auto TENSOR_KERNEL, uint16_t RANK, uint16_t DIM, uint32_t THREADS, typename... DIV_PARAMS>
+    __aicore__ inline void LaunchCompute(LocalTensor<uint64_t>& strides, DIV_PARAMS... divisionParams);
+
     GlobalTensor<DATA_T> y_;
     GlobalTensor<DATA_T> x_;
     GlobalTensor<DATA_T> updates_;
@@ -282,11 +156,12 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
     y_.SetGlobalBuffer((__gm__ DATA_T*)(y));
     updates_.SetGlobalBuffer((__gm__ DATA_T*)(updates));
     indices_.SetGlobalBuffer((__gm__ IDX_T*)(indices));
-    if constexpr ((REDU == REDU_ADD) && (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
-                                         IsSameType<DATA_T, int16_t>::value)) {
+    if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
         xWorkspaceGm_.SetGlobalBuffer((__gm__ CAST_T*)workspace);
-        updatesWorkspaceGm_.SetGlobalBuffer((__gm__ CAST_T*)workspace +
-                                            ops::Aligned(dataAxis_, static_cast<int64_t>(GM_ALIGN / sizeof(CAST_T))));
+        if (!tilingData_->isScalarUpdates) {
+            updatesWorkspaceGm_.SetGlobalBuffer(
+                (__gm__ CAST_T*)workspace + ops::Aligned(dataAxis_, static_cast<int64_t>(GM_ALIGN / sizeof(CAST_T))));
+        }
     }
 
     blockIdx_ = GetBlockIdx();
@@ -299,45 +174,24 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
     loopNum_ = curCoreData / loopLength_;
     tailLoopLength_ = curCoreData - loopNum_ * loopLength_;
 
-    normBlockData2_ = ops::CeilDiv(updatesAxis_, static_cast<int64_t>(blockNum_));
-    usedCoreNum2_ = ops::CeilDiv(updatesAxis_, normBlockData2_);
-    int64_t tailBlockData2 = updatesAxis_ - (usedCoreNum2_ - 1) * normBlockData2_;
-    int64_t curCoreData2 = blockIdx_ != (usedCoreNum2_ - 1) ? normBlockData2_ : tailBlockData2;
-    loopNum2_ = curCoreData2 / loopLength_;
-    tailLoopLength2_ = curCoreData2 - loopNum2_ * loopLength_;
+    if (!tilingData_->isScalarUpdates) {
+        normBlockData2_ = ops::CeilDiv(updatesAxis_, static_cast<int64_t>(blockNum_));
+        usedCoreNum2_ = ops::CeilDiv(updatesAxis_, normBlockData2_);
+        int64_t tailBlockData2 = updatesAxis_ - (usedCoreNum2_ - 1) * normBlockData2_;
+        int64_t curCoreData2 = blockIdx_ != (usedCoreNum2_ - 1) ? normBlockData2_ : tailBlockData2;
+        loopNum2_ = curCoreData2 / loopLength_;
+        tailLoopLength2_ = curCoreData2 - loopNum2_ * loopLength_;
+    }
 
-    if constexpr ((REDU == REDU_ADD) && (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
-                                         IsSameType<DATA_T, int16_t>::value)) {
+    if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
         pipe_.InitBuffer(dataQueue_, DB_BUFFER, loopLength_ * sizeof(DATA_T));
         pipe_.InitBuffer(outQueue_, DB_BUFFER, loopLength_ * sizeof(CAST_T));
-    } else {
-        if constexpr (TEMPLATE_V2 == 0) {
-            pipe_.InitBuffer(dataQueue_, DB_BUFFER, loopLength_ * sizeof(DATA_T));
-        }
     }
     pipe_.InitBuffer(tilingDataUint64Buf_, TILING_DATA_UB_NUM * sizeof(uint64_t));
     pipe_.InitBuffer(paramDim5Buf_, PARAM_DIM5_NUM * sizeof(COMP_T));
     pipe_.InitBuffer(paramDim6Buf_, PARAM_UB_NUM * sizeof(COMP_T));
     pipe_.InitBuffer(paramDim7Buf_, PARAM_UB_NUM * sizeof(COMP_T));
     pipe_.InitBuffer(paramDim8Buf_, PARAM_UB_NUM * sizeof(COMP_T));
-}
-
-template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
-          const uint32_t TEMPLATE_V2>
-__aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::CopyToY(int64_t offset,
-                                                                                                        int64_t dataLen)
-{
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(DATA_T)),
-                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<DATA_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
-                                              static_cast<DATA_T>(0)};
-    LocalTensor<DATA_T> xLocal = dataQueue_.AllocTensor<DATA_T>();
-    DataCopyPad(xLocal, x_[offset], copyParams, padParams);
-    dataQueue_.EnQue(xLocal);
-
-    LocalTensor<DATA_T> yLocal = dataQueue_.DeQue<DATA_T>();
-    DataCopyPad(y_[offset], yLocal, copyParams);
-    dataQueue_.FreeTensor(yLocal);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
@@ -436,22 +290,6 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
           const uint32_t TEMPLATE_V2>
-__aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::CopyDataToY()
-{
-    int64_t offset = 0;
-    for (int64_t idx = 0; idx < loopNum_; idx++) {
-        offset = static_cast<int64_t>(blockIdx_) * normBlockData_ + idx * loopLength_;
-        CopyToY(offset, loopLength_);
-    }
-
-    if (tailLoopLength_ > 0) {
-        offset = static_cast<int64_t>(blockIdx_) * normBlockData_ + loopNum_ * loopLength_;
-        CopyToY(offset, tailLoopLength_);
-    }
-}
-
-template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
-          const uint32_t TEMPLATE_V2>
 __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::CopyDataToWs()
 {
     int64_t offset = 0;
@@ -498,25 +336,6 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
     }
 }
 
-template <typename DATA_T, typename COMP_T, typename CAST_T, const uint32_t REDU>
-__simt_callee__ __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y,
-                                                  __gm__ CAST_T* updatesWorkspaceGm, __gm__ CAST_T* xWorkspaceGm,
-                                                  COMP_T yOffset, COMP_T updatesOffset)
-{
-    if constexpr (REDU == REDU_ADD) {
-        if constexpr (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
-                      IsSameType<DATA_T, int16_t>::value) {
-            asc_atomic_add(xWorkspaceGm + yOffset, updatesWorkspaceGm[updatesOffset]);
-        } else {
-            asc_atomic_add(y + yOffset, updates[updatesOffset]);
-        }
-    } else if constexpr (REDU == REDU_MUL) {
-        y[yOffset] = y[yOffset] * updates[updatesOffset];
-    } else {
-        y[yOffset] = updates[updatesOffset];
-    }
-}
-
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
           const uint32_t THREAD_USED>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_USED) inline void SimtComputeDim1(__gm__ IDX_T* indices,
@@ -525,10 +344,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_USED) inline void SimtComputeDim1(__g
                                                                              __gm__ CAST_T* xWorkspaceGm,
                                                                              COMP_T allAxis)
 {
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T yOffset = static_cast<COMP_T>(indices[i]);
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, i);
-    }
+    ScatterOffsetParams<COMP_T, 1, true> offsetParams;
+    LoadScatterStrides(offsetParams, nullptr);
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, 0>(indices, updates, y, updatesWorkspaceGm,
+                                                                    xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM,
@@ -537,32 +356,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_USED) inline void SimtComputeDim2(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, COMP_T m0, COMP_T shift0)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
-    }
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim1Idx = i - dim0Idx * indicesStride[0];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ScatterOffsetParams<COMP_T, 2, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+    offsetParams.magic[0] = m0;
+    offsetParams.shift[0] = shift0;
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM,
@@ -572,37 +371,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_USED) inline void SimtComputeDim3(
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, COMP_T m0, COMP_T shift0, COMP_T m1,
     COMP_T shift1)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
-    }
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim2Idx = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] + dim2Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] + dim2Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ScatterOffsetParams<COMP_T, 3, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+    offsetParams.magic[0] = m0;
+    offsetParams.shift[0] = shift0;
+    offsetParams.magic[1] = m1;
+    offsetParams.shift[1] = shift1;
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM>
@@ -611,47 +387,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim4(
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, COMP_T m0, COMP_T shift0, COMP_T m1,
     COMP_T shift1, COMP_T m2, COMP_T shift2)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
-    }
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim1Rem = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T dim2Idx = Simt::UintDiv(dim1Rem, m2, shift2);
-        COMP_T dim3Idx = dim1Rem - dim2Idx * indicesStride[DIM_2];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx;
-        } else if constexpr (DIM == 2) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_2] + dim3Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] +
-                               dim2Idx * updatesStride[DIM_2] + dim3Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ScatterOffsetParams<COMP_T, 4, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+    offsetParams.magic[0] = m0;
+    offsetParams.shift[0] = shift0;
+    offsetParams.magic[1] = m1;
+    offsetParams.shift[1] = shift1;
+    offsetParams.magic[2] = m2;
+    offsetParams.shift[2] = shift2;
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM>
@@ -659,62 +404,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim5(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
+    ScatterOffsetParams<COMP_T, 5, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+#pragma unroll
+    for (uint16_t d = 0; d < 4; ++d) {
+        offsetParams.magic[d] = params[d];
+        offsetParams.shift[d] = params[4 + d];
     }
-
-    COMP_T m0 = params[0];
-    COMP_T m1 = params[1];
-    COMP_T m2 = params[2];
-    COMP_T m3 = params[3];
-    COMP_T shift0 = params[4];
-    COMP_T shift1 = params[5];
-    COMP_T shift2 = params[6];
-    COMP_T shift3 = params[7];
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim1Rem = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T dim2Idx = Simt::UintDiv(dim1Rem, m2, shift2);
-        COMP_T dim2Rem = dim1Rem - dim2Idx * indicesStride[DIM_2];
-
-        COMP_T dim3Idx = Simt::UintDiv(dim2Rem, m3, shift3);
-        COMP_T dim4Idx = dim2Rem - dim3Idx * indicesStride[DIM_3];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx;
-        } else if constexpr (DIM == 2) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx;
-        } else if constexpr (DIM == 3) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_3] + dim4Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] +
-                               dim2Idx * updatesStride[DIM_2] + dim3Idx * updatesStride[DIM_3] + dim4Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM>
@@ -722,72 +420,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim6(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
+    ScatterOffsetParams<COMP_T, 6, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+#pragma unroll
+    for (uint16_t d = 0; d < 5; ++d) {
+        offsetParams.magic[d] = params[d];
+        offsetParams.shift[d] = params[5 + d];
     }
-
-    COMP_T m0 = params[0];
-    COMP_T m1 = params[1];
-    COMP_T m2 = params[2];
-    COMP_T m3 = params[3];
-    COMP_T m4 = params[4];
-    COMP_T shift0 = params[5];
-    COMP_T shift1 = params[6];
-    COMP_T shift2 = params[7];
-    COMP_T shift3 = params[8];
-    COMP_T shift4 = params[9];
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim1Rem = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T dim2Idx = Simt::UintDiv(dim1Rem, m2, shift2);
-        COMP_T dim2Rem = dim1Rem - dim2Idx * indicesStride[DIM_2];
-
-        COMP_T dim3Idx = Simt::UintDiv(dim2Rem, m3, shift3);
-        COMP_T dim3Rem = dim2Rem - dim3Idx * indicesStride[DIM_3];
-
-        COMP_T dim4Idx = Simt::UintDiv(dim3Rem, m4, shift4);
-        COMP_T dim5Idx = dim3Rem - dim4Idx * indicesStride[DIM_4];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx;
-        } else if constexpr (DIM == 2) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] +
-                      dim4Idx * dataStride[DIM_4] + dim5Idx;
-        } else if constexpr (DIM == 3) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx;
-        } else if constexpr (DIM == 4) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_4] + dim5Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] +
-                               dim2Idx * updatesStride[DIM_2] + dim3Idx * updatesStride[DIM_3] +
-                               dim4Idx * updatesStride[DIM_4] + dim5Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM>
@@ -795,86 +436,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim7(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
+    ScatterOffsetParams<COMP_T, 7, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+#pragma unroll
+    for (uint16_t d = 0; d < 6; ++d) {
+        offsetParams.magic[d] = params[d];
+        offsetParams.shift[d] = params[6 + d];
     }
-
-    COMP_T m0 = params[0];
-    COMP_T m1 = params[1];
-    COMP_T m2 = params[2];
-    COMP_T m3 = params[3];
-    COMP_T m4 = params[4];
-    COMP_T m5 = params[5];
-    COMP_T shift0 = params[6];
-    COMP_T shift1 = params[7];
-    COMP_T shift2 = params[8];
-    COMP_T shift3 = params[9];
-    COMP_T shift4 = params[10];
-    COMP_T shift5 = params[11];
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim1Rem = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T dim2Idx = Simt::UintDiv(dim1Rem, m2, shift2);
-        COMP_T dim2Rem = dim1Rem - dim2Idx * indicesStride[DIM_2];
-
-        COMP_T dim3Idx = Simt::UintDiv(dim2Rem, m3, shift3);
-        COMP_T dim3Rem = dim2Rem - dim3Idx * indicesStride[DIM_3];
-
-        COMP_T dim4Idx = Simt::UintDiv(dim3Rem, m4, shift4);
-        COMP_T dim4Rem = dim3Rem - dim4Idx * indicesStride[DIM_4];
-
-        COMP_T dim5Idx = Simt::UintDiv(dim4Rem, m5, shift5);
-        COMP_T dim6Idx = dim4Rem - dim5Idx * indicesStride[DIM_5];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx;
-        } else if constexpr (DIM == 2) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] +
-                      dim4Idx * dataStride[DIM_4] + dim5Idx * dataStride[DIM_5] + dim6Idx;
-        } else if constexpr (DIM == 3) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx;
-        } else if constexpr (DIM == 4) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx;
-        } else if constexpr (DIM == 5) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_5] + dim6Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx * dataStride[DIM_5] +
-                      static_cast<COMP_T>(indices[i]);
-        }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] +
-                               dim2Idx * updatesStride[DIM_2] + dim3Idx * updatesStride[DIM_3] +
-                               dim4Idx * updatesStride[DIM_4] + dim5Idx * updatesStride[DIM_5] + dim6Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
-    }
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 7, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint16_t DIM>
@@ -882,95 +452,62 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim8(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, __ubuf__ uint64_t* TilingUint64Ub, COMP_T allAxis, __ubuf__ COMP_T* params)
 {
-    COMP_T dataStride[TILING_ARRAY_LEN] = {};
-    COMP_T indicesStride[TILING_ARRAY_LEN] = {};
-    COMP_T updatesStride[TILING_ARRAY_LEN] = {};
-    for (uint32_t i = 0; i < TILING_DATA_UINT64_NUM; i++) {
-        if (i < TILING_ARRAY_LEN) {
-            dataStride[i] = TilingUint64Ub[i];
-        } else if (i < TWO_TILING_ARRAY_LEN) {
-            indicesStride[i - TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        } else if (i < THREE_TILING_ARRAY_LEN) {
-            updatesStride[i - TWO_TILING_ARRAY_LEN] = TilingUint64Ub[i];
-        }
+    ScatterOffsetParams<COMP_T, 8, true> offsetParams;
+    LoadScatterStrides(offsetParams, TilingUint64Ub);
+#pragma unroll
+    for (uint16_t d = 0; d < 7; ++d) {
+        offsetParams.magic[d] = params[d];
+        offsetParams.shift[d] = params[7 + d];
     }
+    ComputeTensorUpdates<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 8, DIM>(indices, updates, y, updatesWorkspaceGm,
+                                                                      xWorkspaceGm, allAxis, offsetParams);
+}
 
-    COMP_T m0 = params[0];
-    COMP_T m1 = params[1];
-    COMP_T m2 = params[2];
-    COMP_T m3 = params[3];
-    COMP_T m4 = params[4];
-    COMP_T m5 = params[5];
-    COMP_T m6 = params[6];
-    COMP_T shift0 = params[7];
-    COMP_T shift1 = params[8];
-    COMP_T shift2 = params[9];
-    COMP_T shift3 = params[10];
-    COMP_T shift4 = params[11];
-    COMP_T shift5 = params[12];
-    COMP_T shift6 = params[13];
-
-    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis; i += gridDim.x * blockDim.x) {
-        COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
-        COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
-
-        COMP_T dim1Idx = Simt::UintDiv(dim0Rem, m1, shift1);
-        COMP_T dim1Rem = dim0Rem - dim1Idx * indicesStride[DIM_1];
-
-        COMP_T dim2Idx = Simt::UintDiv(dim1Rem, m2, shift2);
-        COMP_T dim2Rem = dim1Rem - dim2Idx * indicesStride[DIM_2];
-
-        COMP_T dim3Idx = Simt::UintDiv(dim2Rem, m3, shift3);
-        COMP_T dim3Rem = dim2Rem - dim3Idx * indicesStride[DIM_3];
-
-        COMP_T dim4Idx = Simt::UintDiv(dim3Rem, m4, shift4);
-        COMP_T dim4Rem = dim3Rem - dim4Idx * indicesStride[DIM_4];
-
-        COMP_T dim5Idx = Simt::UintDiv(dim4Rem, m5, shift5);
-        COMP_T dim5Rem = dim4Rem - dim5Idx * indicesStride[DIM_5];
-
-        COMP_T dim6Idx = Simt::UintDiv(dim5Rem, m6, shift6);
-        COMP_T dim7Idx = dim5Rem - dim6Idx * indicesStride[DIM_6];
-
-        COMP_T yOffset = 0;
-        if constexpr (DIM == 0) {
-            yOffset = static_cast<COMP_T>(indices[i]) * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 1) {
-            yOffset = dim0Idx * dataStride[0] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_1] +
-                      dim2Idx * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 2) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_2] + dim3Idx * dataStride[DIM_3] +
-                      dim4Idx * dataStride[DIM_4] + dim5Idx * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 3) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 4) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + static_cast<COMP_T>(indices[i]) * dataStride[DIM_4] +
-                      dim5Idx * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 5) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_5] + dim6Idx * dataStride[DIM_6] + dim7Idx;
-        } else if constexpr (DIM == 6) {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx * dataStride[DIM_5] +
-                      static_cast<COMP_T>(indices[i]) * dataStride[DIM_6] + dim7Idx;
-        } else {
-            yOffset = dim0Idx * dataStride[0] + dim1Idx * dataStride[DIM_1] + dim2Idx * dataStride[DIM_2] +
-                      dim3Idx * dataStride[DIM_3] + dim4Idx * dataStride[DIM_4] + dim5Idx * dataStride[DIM_5] +
-                      dim6Idx * dataStride[DIM_6] + static_cast<COMP_T>(indices[i]);
+template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU,
+          const uint32_t TEMPLATE_V2>
+template <auto TENSOR_KERNEL, uint16_t RANK, uint16_t DIM, uint32_t THREADS, typename... DIV_PARAMS>
+__aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::LaunchCompute(
+    LocalTensor<uint64_t>& strides, DIV_PARAMS... divisionParams)
+{
+    auto indices = (__gm__ IDX_T*)indices_.GetPhyAddr();
+    auto updates = (__gm__ DATA_T*)updates_.GetPhyAddr();
+    auto output = (__gm__ DATA_T*)y_.GetPhyAddr();
+    auto strideAddr = (__ubuf__ uint64_t*)strides.GetPhyAddr();
+    __gm__ CAST_T* dataWorkspace = nullptr;
+    if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
+        dataWorkspace = (__gm__ CAST_T*)xWorkspaceGm_.GetPhyAddr();
+    }
+    if (tilingData_->isScalarUpdates) {
+        __ubuf__ COMP_T* scalarParams = nullptr;
+        if constexpr (RANK >= DIM_5) {
+            __ubuf__ COMP_T* packed[] = {divisionParams...};
+            scalarParams = packed[0];
+        } else if constexpr (RANK > DIM_1) {
+            COMP_T packed[] = {divisionParams...};
+            auto paramsUb = paramDim8Buf_.Get<COMP_T>();
+            for (uint16_t d = 0; d < RANK - 1; ++d) {
+                paramsUb.SetValue(d, packed[2 * d]);
+                paramsUb.SetValue(RANK - 1 + d, packed[2 * d + 1]);
+            }
+            DataSyncBarrier<MemDsbT::UB>();
+            scalarParams = (__ubuf__ COMP_T*)paramsUb.GetPhyAddr();
         }
-        COMP_T updatesOffset = dim0Idx * updatesStride[0] + dim1Idx * updatesStride[DIM_1] +
-                               dim2Idx * updatesStride[DIM_2] + dim3Idx * updatesStride[DIM_3] +
-                               dim4Idx * updatesStride[DIM_4] + dim5Idx * updatesStride[DIM_5] +
-                               dim6Idx * updatesStride[DIM_6] + dim7Idx;
-        ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, updatesOffset);
+        // Materialize dimensions at the call site to avoid reusing a hoisted VF launch configuration.
+        volatile uint32_t scalarThreadCount = SCALAR_THREAD_NUM;
+        asc_vf_call<SimtComputeScalar<DATA_T, IDX_T, COMP_T, CAST_T, REDU, RANK, DIM>>(
+            dim3(scalarThreadCount), indices, updates, output, dataWorkspace, strideAddr, allAxis_, scalarParams);
+    } else {
+        __gm__ CAST_T* updatesWorkspace = nullptr;
+        if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
+            updatesWorkspace = (__gm__ CAST_T*)updatesWorkspaceGm_.GetPhyAddr();
+        }
+        if constexpr (RANK == DIM_1) {
+            asc_vf_call<TENSOR_KERNEL>(dim3(THREADS), indices, updates, output, updatesWorkspace, dataWorkspace,
+                                       allAxis_);
+        } else {
+            asc_vf_call<TENSOR_KERNEL>(dim3(THREADS), indices, updates, output, updatesWorkspace, dataWorkspace,
+                                       strideAddr, allAxis_, divisionParams...);
+        }
     }
 }
 
@@ -979,25 +516,15 @@ template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, con
 __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::Process()
 {
     if (tilingData_->allAxis == 0) {
-        if constexpr (TEMPLATE_V2 == 0) {
-            CopyDataToY();
-        }
         return;
     }
 
-    if constexpr ((REDU == REDU_ADD) && (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
-                                         IsSameType<DATA_T, int16_t>::value)) {
+    if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
         if (blockIdx_ < usedCoreNum_) {
             CopyDataToWs();
         }
-        if (blockIdx_ < usedCoreNum2_) {
+        if (!tilingData_->isScalarUpdates && blockIdx_ < usedCoreNum2_) {
             CopyUpdatesToWs();
-        }
-    } else {
-        if (blockIdx_ < usedCoreNum_) {
-            if constexpr (TEMPLATE_V2 == 0) {
-                CopyDataToY();
-            }
         }
     }
     SyncAll();
@@ -1014,55 +541,53 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
     }
     DataSyncBarrier<MemDsbT::UB>();
 
-    bool useThread1024 = false;
-    if (tilingData_->rank >= DIM_1 && tilingData_->rank <= DIM_3 && tilingData_->rank == tilingData_->dim + 1 &&
-        dataAxis_ > THREAD_SUM) {
-        useThread1024 = true;
+    // Limit the wider launch to the verified 32-bit payload/offset path.
+    // 64-bit offsets spill registers at 2048 threads in the rank-2/3 kernels.
+    // Keep the launch bound and runtime thread count identical.
+    constexpr bool useWideNone = TEMPLATE_V2 == 1 && REDU == REDU_NONE && sizeof(DATA_T) == sizeof(uint32_t) &&
+                                 sizeof(IDX_T) == sizeof(int64_t) && sizeof(COMP_T) == sizeof(uint32_t);
+    constexpr uint32_t wideThreadCount = useWideNone ? 2048 : USED_THREAD1024;
+    bool useWideThreads = false;
+    if (tilingData_->rank >= DIM_1 && tilingData_->rank <= DIM_3) {
+        if (tilingData_->rank == DIM_1) {
+            if constexpr (useWideNone) {
+                useWideThreads = true;
+            } else {
+                useWideThreads = tilingData_->rank == tilingData_->dim + 1 && dataAxis_ > THREAD_SUM;
+            }
+        } else {
+            // Keep the existing 512/1024 policy for rank-2 and rank-3 kernels.
+            useWideThreads = tilingData_->rank == tilingData_->dim + 1 && dataAxis_ > THREAD_SUM;
+        }
     }
 
     if (tilingData_->rank == DIM_1) {
-        if (useThread1024) {
-            asc_vf_call<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU, USED_THREAD1024>>(
-                dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), allAxis_);
+        if (useWideThreads) {
+            LaunchCompute<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU, wideThreadCount>, DIM_1, 0,
+                          wideThreadCount>(TilingUint64Ub);
         } else {
-            asc_vf_call<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU, USED_THREAD>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), allAxis_);
+            LaunchCompute<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU, USED_THREAD>, DIM_1, 0, USED_THREAD>(
+                TilingUint64Ub);
         }
     } else if (tilingData_->rank == DIM_2) {
         COMP_T m0 = 1;
         COMP_T shift0 = 1;
         GetUintDivMagicAndShift(m0, shift0, static_cast<COMP_T>(tilingData_->indicesStride[0]));
         if (tilingData_->dim == 0) {
-            if (useThread1024) {
-                asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD1024>>(
-                    dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
-                    (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m0, shift0);
+            if (useWideThreads) {
+                LaunchCompute<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD1024>, DIM_2, 0,
+                              USED_THREAD1024>(TilingUint64Ub, m0, shift0);
             } else {
-                asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD>>(
-                    dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                    allAxis_, m0, shift0);
+                LaunchCompute<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD>, DIM_2, 0,
+                              USED_THREAD>(TilingUint64Ub, m0, shift0);
             }
         } else {
-            if (useThread1024) {
-                asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD1024>>(
-                    dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
-                    (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m0, shift0);
+            if (useWideThreads) {
+                LaunchCompute<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD1024>, DIM_2, 1,
+                              USED_THREAD1024>(TilingUint64Ub, m0, shift0);
             } else {
-                asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD>>(
-                    dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                    allAxis_, m0, shift0);
+                LaunchCompute<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD>, DIM_2, 1,
+                              USED_THREAD>(TilingUint64Ub, m0, shift0);
             }
         }
     } else if (tilingData_->rank == DIM_3) {
@@ -1071,49 +596,28 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         GetUintDivMagicAndShift(m_[0], shift_[0], static_cast<COMP_T>(tilingData_->indicesStride[0]));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<COMP_T>(tilingData_->indicesStride[DIM_1]));
         if (tilingData_->dim == 0) {
-            if (useThread1024) {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD1024>>(
-                    dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
-                    (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1],
-                    shift_[DIM_1]);
+            if (useWideThreads) {
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD1024>, DIM_3, 0,
+                              USED_THREAD1024>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             } else {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD>>(
-                    dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                    allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0, USED_THREAD>, DIM_3, 0,
+                              USED_THREAD>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             }
         } else if (tilingData_->dim == 1) {
-            if (useThread1024) {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD1024>>(
-                    dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
-                    (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1],
-                    shift_[DIM_1]);
+            if (useWideThreads) {
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD1024>, DIM_3, 1,
+                              USED_THREAD1024>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             } else {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD>>(
-                    dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                    allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1, USED_THREAD>, DIM_3, 1,
+                              USED_THREAD>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             }
         } else {
-            if (useThread1024) {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2, USED_THREAD1024>>(
-                    dim3(USED_THREAD1024), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
-                    (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1],
-                    shift_[DIM_1]);
+            if (useWideThreads) {
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2, USED_THREAD1024>, DIM_3, 2,
+                              USED_THREAD1024>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             } else {
-                asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2, USED_THREAD>>(
-                    dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                    (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                    (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                    allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
+                LaunchCompute<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2, USED_THREAD>, DIM_3, 2,
+                              USED_THREAD>(TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
             }
         }
     } else if (tilingData_->rank == DIM_4) {
@@ -1123,29 +627,17 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<COMP_T>(tilingData_->indicesStride[DIM_1]));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<COMP_T>(tilingData_->indicesStride[DIM_2]));
         if (tilingData_->dim == 0) {
-            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
+            LaunchCompute<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>, DIM_4, 0, USED_THREAD>(
+                TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
         } else if (tilingData_->dim == 1) {
-            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
+            LaunchCompute<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>, DIM_4, 1, USED_THREAD>(
+                TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
         } else if (tilingData_->dim == 2) {
-            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
+            LaunchCompute<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>, DIM_4, 2, USED_THREAD>(
+                TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
         } else {
-            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
+            LaunchCompute<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>, DIM_4, 3, USED_THREAD>(
+                TilingUint64Ub, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1], m_[DIM_2], shift_[DIM_2]);
         }
     } else if (tilingData_->rank == DIM_5) {
         ScatterElementsQuickDivParamDim5<COMP_T> params;
@@ -1159,35 +651,20 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>, DIM_5, 0, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>, DIM_5, 1, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>, DIM_5, 2, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>, DIM_5, 3, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else {
-            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>, DIM_5, 4, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         }
     } else if (tilingData_->rank == DIM_6) {
         ScatterElementsQuickDivParamDim6<COMP_T> params;
@@ -1202,41 +679,23 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>, DIM_6, 0, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>, DIM_6, 1, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>, DIM_6, 2, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>, DIM_6, 3, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>, DIM_6, 4, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else {
-            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>, DIM_6, 5, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         }
     } else if (tilingData_->rank == DIM_7) {
         ScatterElementsQuickDivParamDim7<COMP_T> params;
@@ -1252,47 +711,26 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>, DIM_7, 0, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>, DIM_7, 1, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>, DIM_7, 2, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>, DIM_7, 3, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>, DIM_7, 4, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 5) {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>, DIM_7, 5, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else {
-            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>, DIM_7, 6, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         }
     } else if (tilingData_->rank == DIM_8) {
         ScatterElementsQuickDivParamDim8<COMP_T> params;
@@ -1309,58 +747,33 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>, DIM_8, 0, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>, DIM_8, 1, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>, DIM_8, 2, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>, DIM_8, 3, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>, DIM_8, 4, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 5) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>, DIM_8, 5, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 6) {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>, DIM_8, 6, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else {
-            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 7>>(
-                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
-                (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()),
-                allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
+            LaunchCompute<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 7>, DIM_8, 7, USED_THREAD>(
+                TilingUint64Ub, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         }
     }
 
-    if constexpr ((REDU == REDU_ADD) && (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
-                                         IsSameType<DATA_T, int16_t>::value)) {
+    if constexpr (SCATTER_USE_WORKSPACE<DATA_T, REDU>) {
         SyncAll();
         if (blockIdx_ < usedCoreNum_) {
             CopyResToY();
