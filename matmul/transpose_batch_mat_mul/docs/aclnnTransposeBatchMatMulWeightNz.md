@@ -1,6 +1,5 @@
 # aclnnTransposeBatchMatMulWeightNz
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/transpose_batch_mat_mul)
 
 ## 产品支持情况
 

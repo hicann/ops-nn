@@ -1,6 +1,5 @@
 # aclnnIndexPutImpl
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/index_put_v2)
 
 ## 产品支持情况
 

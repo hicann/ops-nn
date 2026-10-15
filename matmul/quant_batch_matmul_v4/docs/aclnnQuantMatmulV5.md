@@ -1,6 +1,5 @@
 # aclnnQuantMatmulV5
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/quant_batch_matmul_v4)
 
 ## 产品支持情况
 

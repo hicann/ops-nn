@@ -1,6 +1,5 @@
 # aclnnRepeatInterleave
 
-📄 [查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/repeat_interleave)
 
 ## 产品支持情况
 

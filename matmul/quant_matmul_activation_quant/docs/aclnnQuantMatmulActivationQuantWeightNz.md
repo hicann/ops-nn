@@ -1,6 +1,5 @@
 # aclnnQuantMatmulActivationQuantWeightNz
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/quant_matmul_activation_quant)
 
 ## 产品支持情况
 

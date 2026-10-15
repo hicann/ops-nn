@@ -2,7 +2,6 @@
 
 ## 产品支持情况
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_max_pool3d)
 
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR&950DT系列产品</term>：支持

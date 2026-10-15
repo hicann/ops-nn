@@ -1,6 +1,5 @@
 # aclnnDeformableConv2d
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/conv/deformable_conv2d)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnConvertWeightToINT4Pack
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/convert_weight_to_int4_pack)
 
 ## 产品支持情况
 

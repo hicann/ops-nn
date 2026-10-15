@@ -1,6 +1,5 @@
 # aclnnHardsigmoidBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/experimental/activation/hard_sigmoid_grad)
 
 ## 产品支持情况
 

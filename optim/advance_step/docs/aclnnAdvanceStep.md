@@ -1,6 +1,5 @@
 # aclnnAdvanceStep
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/optim/advance_step)
 
 ## 产品支持情况
 

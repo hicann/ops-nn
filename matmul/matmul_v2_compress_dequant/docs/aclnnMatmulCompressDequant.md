@@ -1,6 +1,5 @@
 # aclnnMatmulCompressDequant
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/matmul_v2_compress_dequant)
 
 ## 产品支持情况
 

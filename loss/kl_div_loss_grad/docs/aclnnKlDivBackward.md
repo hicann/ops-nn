@@ -1,6 +1,5 @@
 # aclnnKlDivBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/fused_cross_entropy_loss_with_max_sum)
 
 ## 产品支持情况
 

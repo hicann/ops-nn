@@ -20,7 +20,6 @@
 
 # aclnnMaxPoolingGrad
 
-[查看源码](https://gitcode.com/cann/ops-nn/tree/master/experimental/pooling/max_pooling_grad)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnBinaryCrossEntropy
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/binary_cross_entropy)
 
 ## 产品支持情况
 

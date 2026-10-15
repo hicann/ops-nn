@@ -1,6 +1,5 @@
 # aclnnMaxUnpool2dBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_elements)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnAdaptiveAvgPool2dBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool2d_grad)
 
 ## 产品支持情况
 

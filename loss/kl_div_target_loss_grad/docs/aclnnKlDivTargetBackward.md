@@ -1,6 +1,5 @@
 # aclnnKlDivTargetBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/kl_div_target_loss_grad)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnMaxPool2dWithMaskBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/max_pool3d_grad_with_argmax)
 
 ## 产品支持情况
 

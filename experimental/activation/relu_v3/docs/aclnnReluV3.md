@@ -1,6 +1,5 @@
 # aclnnReluV3
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/experimental/activation/relu_v3)
 
 ## 产品支持情况
 

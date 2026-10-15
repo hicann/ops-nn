@@ -1,6 +1,5 @@
 # aclnnCtcLossBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/ctc_loss_v2_grad)
 
 ## 产品支持情况
 

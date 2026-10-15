@@ -1,6 +1,5 @@
 # aclnnBinaryCrossEntropyWithLogitsBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/sigmoid_cross_entropy_with_logits_grad_v2)
 
 ## 产品支持情况
 

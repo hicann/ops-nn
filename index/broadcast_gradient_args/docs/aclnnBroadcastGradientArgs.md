@@ -1,6 +1,5 @@
 # aclnnBroadcastGradientArgs
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/broadcast_gradient_args)
 
 ## 产品支持情况
 

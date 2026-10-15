@@ -1,6 +1,5 @@
 # aclnnQuantize
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/experimental/quant/quantize)
 
 ## 产品支持情况
 

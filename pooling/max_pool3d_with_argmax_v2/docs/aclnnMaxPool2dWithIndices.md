@@ -1,6 +1,5 @@
 # aclnnMaxPool2dWithIndices
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/max_pool3d_with_argmax_v2)
 
 ## 产品支持情况
 

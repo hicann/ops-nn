@@ -1,6 +1,5 @@
 # aclnnAdaptiveAvgPool2d
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool2d)
 
 ## 产品支持情况
 

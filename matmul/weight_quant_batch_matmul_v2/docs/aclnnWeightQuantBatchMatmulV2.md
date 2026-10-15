@@ -1,6 +1,5 @@
 # aclnnWeightQuantBatchMatmulV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/weight_quant_batch_matmul_v2)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnGatherV3
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
 
 ## 产品支持情况
 

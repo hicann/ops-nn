@@ -1,6 +1,5 @@
 # aclnnCrossEntropySumExpAndIndexLogit
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/cross_entropy_sum_exp_and_index_logit)
 
 ## 产品支持情况
 

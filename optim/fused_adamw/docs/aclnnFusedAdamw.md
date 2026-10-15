@@ -1,6 +1,5 @@
 # aclnnFusedAdamw
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/optim/fused_adamw)
 
 ## 产品支持情况
 

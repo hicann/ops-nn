@@ -1,6 +1,5 @@
 # aclnnQuantBatchMatmulInplaceAdd
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/quant_batch_matmul_inplace_add)
 
 ## 产品支持情况
 

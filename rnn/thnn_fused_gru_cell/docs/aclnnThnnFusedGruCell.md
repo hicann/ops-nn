@@ -1,6 +1,5 @@
 # aclnnThnnFusedGruCell
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/rnn/thnn_fused_gru_cell)
 
 ## 产品支持情况
 

@@ -1,6 +1,5 @@
 # aclnnSoftplus
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/experimental/activation/softplus_v2)
 
 ## 产品支持情况
 

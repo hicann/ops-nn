@@ -1,6 +1,5 @@
 # aclnnSmoothL1LossBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/smooth_l1_loss_grad_v2)
 
 ## 产品支持情况
 

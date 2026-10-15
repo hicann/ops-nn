@@ -1,6 +1,5 @@
 # aclnnMseLossOut
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/mse_loss)
 
 ## 产品支持情况
 

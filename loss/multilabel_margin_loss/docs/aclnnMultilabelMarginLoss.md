@@ -1,6 +1,5 @@
 # aclnnMultilabelMarginLoss
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/multilabel_margin_loss)
 
 ## 产品支持情况
 
