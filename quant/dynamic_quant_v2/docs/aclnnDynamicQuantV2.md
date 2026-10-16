@@ -187,7 +187,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>INT4、INT8、INT32、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>大于1维</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>scaleOut（aclTensor*）</td>
@@ -197,7 +197,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>大于0维</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>offsetOut（aclTensor*）</td>
@@ -207,7 +207,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>大于0维</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>

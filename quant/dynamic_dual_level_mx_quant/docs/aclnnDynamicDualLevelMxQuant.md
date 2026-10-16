@@ -174,7 +174,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       <td>FLOAT4_E2M1</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>level0ScaleOut (aclTensor*)</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>level1ScaleOut (aclTensor*)</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
