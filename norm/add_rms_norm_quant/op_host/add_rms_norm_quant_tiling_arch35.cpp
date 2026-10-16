@@ -39,6 +39,12 @@ constexpr uint32_t X_BUF_CNT = 3;
 constexpr uint32_t REDUCE_VREG_PER_REPEAT = 2;
 constexpr float DEFAULT_EPSILON = 1e-6F;
 const gert::Shape g_vec_1_shape = {1};
+
+static bool IsArch3510(gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
+}
 /**
  * Ensure that the returned shape is non-scalar.
  * When the dim num of shape is 0, this shape is considered to express a scalar.
@@ -496,12 +502,13 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetInputParams()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
     tilingParams.epsilon = (epsilon == nullptr) ? DEFAULT_EPSILON : *epsilon;
-    if (0 == numN) {
+    if (numN == 0 && !IsArch3510(context_)) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(nodeName.c_str(), "gamma", "0",
                                                   "The shape size of gamma should be greater than 0.");
         return ge::GRAPH_FAILED;
     }
-    tilingParams.avgFactor = 1.0f / static_cast<float>(numN);
+    // On Ascend 950, empty normalized suffixes and leading dimensions are a no-op.
+    tilingParams.avgFactor = numN == 0 ? 0.0f : 1.0f / static_cast<float>(numN);
 
     const bool* divModePtr = attrs->GetBool(DIV_MODE_ATTR_INDEX);
     tilingParams.divMode = (divModePtr == nullptr) ? true : *divModePtr;
@@ -713,6 +720,17 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
 ge::graphStatus AddRmsNormQuantRegbaseTiling::DoOpTiling()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormQuantRegbaseTiling DoOpTiling.");
+    if ((tilingParams.numM == 0 || tilingParams.numN == 0) && IsArch3510(context_)) {
+        // A legal launch still needs one block. The kernel returns before any
+        // buffer initialization or GM access, using an existing NORMAL key.
+        tilingParams.usedCoreNum = 1;
+        tilingParams.mPerCore = 1;
+        tilingParams.baseM = 1;
+        tilingParams.baseN = 1;
+        SetTilingData();
+        PrintTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
     if (tilingParams.needGetCompileInfo) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
         tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();

@@ -347,7 +347,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     </tr>
     <tr>
       <td>
-      输入或输出的数据类型不在支持的范围之内。
+      输入或输出的数据类型不在支持范围内，rank 或维长超出接口限制，或参数组合不受当前产品支持。
       </td>
     </tr>
   </tbody></table>
@@ -397,9 +397,15 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 ## 约束说明
 
+- 本接口接收具体的 Tensor shape，rank 为1-8；动态 shape/rank 的 `-1`、`[-2]` 属于 GE 图定义，调用本接口前必须具体化。rank=0标量不在支持范围内。
+- `scales2Optional` 与 `zeroPoints2Optional` 同时为空指针时，第二路量化未启用。`y2Out` 仍须满足参数表的非空、shape、dtype约束，但不写入有效量化结果，不应作为有效输出读取。图模式对应 `y2` 为 shape `[1]` 的占位输出。
+- 参数表中标注支持非连续的输入由本接口连续化，启用的输出回写到调用者提供的视图；GE 图通路的布局约定参见[算子说明](../README.md)。
+
+- Ascend 950 的 RMS 归约覆盖 `gamma` 对应的完整归一化尾轴；`axis=-1` 不把多维 `gamma` 的归约限制为最后一维。元素值约束（如除法量化的 scale 非零）由调用方保证，API 不逐元素扫描 Tensor 并返回专用参数错误码。
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
 <!-- npu="950" id13 -->
+- <term>Ascend 950PR&950DT系列产品</term>：`xOut`为必选输出，不支持传入空指针，缺失时返回`ACLNN_ERR_PARAM_NULLPTR`；`rmsNormOut`为可选输出，支持传入空指针。是否计算`rmsNormOut`仅由该输出是否请求决定。
 - <term>Ascend 950PR&950DT系列产品</term>：支持`scales2Optional`传入空指针且`zeroPoints2Optional`非空。此时第二路量化的`scales2`按1处理，即无论`divMode`取值为True还是False，均有$y2Out=round(y+zero\_points2)$，且`y2Out`的shape与`x1`保持一致。
 <!-- end id13 -->
 
@@ -411,7 +417,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 - <term>Atlas推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`的长度必须大于等于32 Bytes。
 <!-- end id9 -->
 
-- `betaOptional`与`rmsNormOut`相互独立：
+- Ascend 950 上`betaOptional`与`rmsNormOut`相互独立：
   - `rmsNormOut`输出时，`betaOptional`可以有，也可以没有。
   - `rmsNormOut`不输出（传入空指针）时，`betaOptional`也可以有，可以没有。
   - `rmsNormOut`的计算结果为$\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * g_i$，不包含beta计算。

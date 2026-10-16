@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ OP_TYPE_REGISTER(AddRmsNormQuantV2);
 const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM_V2> AddRmsNormQuantV2(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* bias, const aclTensor* scales1,
     const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    aclTensor* resOut, aclTensor* xOut, int64_t axis, double epsilon, bool divMode, int dstType,
+    aclTensor* xOut, aclTensor* resOut, int64_t axis, double epsilon, bool divMode, int dstType,
     aclOpExecutor* executor)
 {
     OP_LOGD("AddRmsNormQuantV2 L0 Start.");

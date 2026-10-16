@@ -416,6 +416,9 @@ static bool SimpleCheckNotNull(AddRmsNormQuantV2InputTensor& inputTensor, AddRms
     OP_CHECK_NULL(inputTensor.scales1, return false);
     OP_CHECK_NULL(outputTensor.y1Out, return false);
     OP_CHECK_NULL(outputTensor.y2Out, return false);
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_CHECK_NULL(outputTensor.xOut, return false);
+    }
     return true;
 }
 

@@ -506,7 +506,7 @@ private:
                             StoreTensorForDtypeTOut(y1Addr, scales1Reg, pregCurLoop,
                                                     (i * sregyAlign + j * vectorLenB32));
                         } else {
-                            Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
+                            QuantDiv(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                             Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
                             StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop,
                                                     (i * sregyAlign + j * vectorLenB32));
@@ -515,7 +515,7 @@ private:
 #endif
                     {
                         if (divMode) {
-                            Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
+                            QuantDiv(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         } else {
                             Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         }
@@ -540,7 +540,7 @@ private:
                                     StoreTensorForDtypeTOut(y2Addr, scales2Reg, pregCurLoop,
                                                             (i * sregyAlign + j * vectorLenB32));
                                 } else {
-                                    Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
+                                    QuantDiv(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                     Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
                                     StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop,
                                                             (i * sregyAlign + j * vectorLenB32));
@@ -556,7 +556,7 @@ private:
                             if constexpr (HAS_SCALE2) {
                                 LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
                                 if (divMode) {
-                                    Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
+                                    QuantDiv(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 } else {
                                     Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 }

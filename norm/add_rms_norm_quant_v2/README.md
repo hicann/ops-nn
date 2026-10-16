@@ -49,6 +49,8 @@
     y2=round((y*scales2)+zero\_points2)
     $$
 
+`round` 表示按输出数据类型进行舍入及饱和处理。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -212,6 +214,13 @@
 
 ## 约束说明
 
+- Ascend 950 的 ACLNN 接口要求非空指针 Tensor 的 rank 为1–8，实际维长不大于 INT32_MAX；图模式运行时 rank 不大于8。`gamma` 对应完整归一化尾轴。历史 `[1,N]` gamma/beta 别名的兼容处理属于 ACLNN 接口，不改变图模式的尾轴归约规则。
+- Ascend 950 的 ACLNN 接口要求 `xOut` 为非空指针；`rmsNormOut` 为可选输出，与 `betaOptional` 相互独立。图模式通过 `output_res` 决定是否输出 `resOut`；`resOut` 是加偏置、量化之前的归一化结果。`scales2` 或 `zero_points2` 任一存在时启用第二路量化；两者均缺省时，图模式的 `y2` 为 shape `[1]` 的无效占位输出，ACLNN 的 `y2Out` 不写入有效量化结果，不应参与数值比对。
+- GE 图定义中未知维用 `-1`、未知 rank 用 `[-2]` 表示，执行前必须具体化并满足对应产品的 shape 约束；ACLNN 接口只接收具体的 Tensor 描述。Ascend 950 图模式按连续 ND 存储处理；ACLNN 支持参数表中的非连续输入、输出视图，由接口连续化输入并回写启用的输出。
+- Ascend 950 支持 shape 合法的空 Tensor，不执行元素计算，输出保留形状推导结果。
+
+以下四条输出及量化参数组合限制适用于 Atlas A2/A3 和 Atlas 推理系列产品：
+
 - 可选输出`x`和`resOut`，必须且只能选择其一进行输出。
 - 当需要输出`y2`时，此时要求`gamma`与`scale1`的shape保持一致，且需要与`x1`需要Norm的维度保持一致，可选输出只能输出`x`。
 - 当需要输出`x`时，且参数`scales1`和`zero_points1`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维时，此时`scales2`和`zero_points2`不生效。
@@ -224,6 +233,9 @@
 - **数据格式说明**
 
     所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
+
+- Ascend 950 的 RMS 归约覆盖 `gamma` 对应的完整尾轴，归约元素数为这些维度的乘积；`axis=-1` 是量化接口的属性，不把多维 `gamma` 的 RMS 归约收窄为最后一维。bias 存在时其 shape 与 gamma 一致。
+- Kernel/GEIR 参数校验失败通过图构建或 tiling 的失败状态和诊断信息报告；ACLNN 的 161001、161002 为该 API 层返回码，不作为 Kernel/GEIR 的统一返回码。
 
 ## 调用说明
 

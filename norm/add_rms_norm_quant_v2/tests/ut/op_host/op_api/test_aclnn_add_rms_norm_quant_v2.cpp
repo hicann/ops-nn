@@ -89,6 +89,77 @@ static aclnnStatus RunAscend950DtypeCase(const Ascend950DtypeCase& testCase)
     return ut.TestGetWorkspaceSize(&workspaceSize);
 }
 
+static aclnnStatus RunOutputContractCase(op::SocVersion socVersion, bool hasXOut, bool hasResOut, bool hasBeta,
+                                         bool divMode = true)
+{
+    op::SocVersionManager versionManager(socVersion);
+    const vector<int64_t> quantShape = socVersion == op::SocVersion::ASCEND950 ? vector<int64_t>{64} :
+                                                                                 vector<int64_t>{1};
+    auto x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scales1 = TensorDesc(quantShape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto zeroPoints1 = TensorDesc(quantShape, ACL_INT32, ACL_FORMAT_ND);
+    auto beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto xOut = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto resOut = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    aclTensor* betaPtr = hasBeta ? beta.ToAclTypeRawPtr() : nullptr;
+    aclTensor* xOutPtr = hasXOut ? xOut.ToAclTypeRawPtr() : nullptr;
+    aclTensor* resOutPtr = hasResOut ? resOut.ToAclTypeRawPtr() : nullptr;
+    auto ut = OP_API_UT(aclnnAddRmsNormQuantV2,
+                        INPUT(x1, x2, gamma, scales1, (aclTensor*)nullptr, zeroPoints1, (aclTensor*)nullptr, betaPtr,
+                              -1L, 1e-5, divMode),
+                        OUTPUT(y1, y2, xOutPtr, resOutPtr));
+    uint64_t workspaceSize = 0;
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_requires_x_out_with_optional_res_and_beta)
+{
+    for (bool hasResOut : {false, true}) {
+        for (bool hasBeta : {false, true}) {
+            for (bool divMode : {false, true}) {
+                SCOPED_TRACE(testing::Message() << "res=" << hasResOut << " beta=" << hasBeta << " div=" << divMode);
+                EXPECT_EQ(RunOutputContractCase(op::SocVersion::ASCEND950, false, hasResOut, hasBeta, divMode),
+                          ACLNN_ERR_PARAM_NULLPTR);
+            }
+        }
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_accepts_x_out_with_optional_res_and_beta)
+{
+    for (bool hasResOut : {false, true}) {
+        for (bool hasBeta : {false, true}) {
+            for (bool divMode : {false, true}) {
+                SCOPED_TRACE(testing::Message() << "res=" << hasResOut << " beta=" << hasBeta << " div=" << divMode);
+                EXPECT_EQ(RunOutputContractCase(op::SocVersion::ASCEND950, true, hasResOut, hasBeta, divMode),
+                          ACLNN_SUCCESS);
+            }
+        }
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, legacy_res_only_output_remains_supported)
+{
+    for (auto soc : {op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93, op::SocVersion::ASCEND310P}) {
+        SCOPED_TRACE(testing::Message() << "soc=" << static_cast<int>(soc));
+        EXPECT_EQ(RunOutputContractCase(soc, false, true, false), ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, legacy_output_contract_rejects_invalid_combinations)
+{
+    for (auto soc : {op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93, op::SocVersion::ASCEND310P}) {
+        SCOPED_TRACE(testing::Message() << "soc=" << static_cast<int>(soc));
+        EXPECT_EQ(RunOutputContractCase(soc, false, false, false), ACLNN_ERR_PARAM_NULLPTR);
+        EXPECT_EQ(RunOutputContractCase(soc, true, true, false), ACLNN_ERR_PARAM_NULLPTR);
+        EXPECT_EQ(RunOutputContractCase(soc, false, true, true), ACLNN_ERR_PARAM_NULLPTR);
+    }
+}
+
 TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_910b_compatibility)
 {
     EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND910B, {1, 64}, {1}), ACLNN_SUCCESS);

@@ -49,6 +49,28 @@ constexpr uint64_t B8_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(int8_t);
 // reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
 constexpr uint64_t REDUCE_VREG_PER_REPEAT = 2;
 
+__simd_callee__ inline void QuantDiv(RegTensor<float>& dst, RegTensor<float>& numerator, RegTensor<float>& denominator,
+                                     MaskReg& mask)
+{
+    RegTensor<float> numeratorAbs, denominatorAbs, minNormal;
+    RegTensor<float> numeratorScaled, denominatorScaled, numeratorSafe, denominatorSafe;
+    MaskReg numeratorSmall, denominatorSmall, eitherSmall;
+    Duplicate(minNormal, 0x1p-126f, mask);
+    Abs(numeratorAbs, numerator, mask);
+    Abs(denominatorAbs, denominator, mask);
+    Compare<float, CMPMODE::LT>(numeratorSmall, numeratorAbs, minNormal, mask);
+    Compare<float, CMPMODE::LT>(denominatorSmall, denominatorAbs, minNormal, mask);
+    Or(eitherSmall, numeratorSmall, denominatorSmall, mask);
+    // Scale both operands exactly so nonzero subnormals reach the normal range.
+    // Overflow of the other operand only occurs when the original quotient
+    // already overflows or underflows FP32. Normal input pairs stay unchanged.
+    Muls(numeratorScaled, numerator, 0x1p24f, eitherSmall);
+    Muls(denominatorScaled, denominator, 0x1p24f, eitherSmall);
+    Select(numeratorSafe, numeratorScaled, numerator, eitherSmall);
+    Select(denominatorSafe, denominatorScaled, denominator, eitherSmall);
+    Div(dst, numeratorSafe, denominatorSafe, mask);
+}
+
 constexpr AscendC::Reg::CastTrait castTraitF162F32 = {
     AscendC::Reg::RegLayout::ZERO,
     AscendC::Reg::SatMode::UNKNOWN,
@@ -254,7 +276,7 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                     {
                         if constexpr (HAS_SCALES) {
                             if constexpr (DIV_MODE) {
-                                Div(xReg, xReg, scalesReg, maskReg);
+                                QuantDiv(xReg, xReg, scalesReg, maskReg);
                             } else {
                                 Mul(xReg, xReg, scalesReg, maskReg);
                             }
@@ -364,7 +386,7 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                     {
                         if constexpr (HAS_SCALES) {
                             if constexpr (DIV_MODE) {
-                                Div(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
+                                QuantDiv(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
                             } else {
                                 Mul(xRegFp32, xRegFp32, scalesRegFp32, maskReg);
                             }

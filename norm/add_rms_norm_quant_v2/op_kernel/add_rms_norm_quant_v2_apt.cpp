@@ -42,6 +42,11 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant_v2(GM_ADDR x1, GM_ADDR 
     GET_TILING_DATA_WITH_STRUCT(AddRmsNormQuantRegbaseTilingData, tilingDataIn, tiling);
     const AddRmsNormQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    if (tilingData->numM == 0 || tilingData->numN == 0) {
+        return;
+    }
+#endif
 #if !defined(ORIG_DTYPE_BIAS) && !defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && \
     !defined(ORIG_DTYPE_ZERO_POINTS2)
     if (TILING_KEY_IS(1000)) {
