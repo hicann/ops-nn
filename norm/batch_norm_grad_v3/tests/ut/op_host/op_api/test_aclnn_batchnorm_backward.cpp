@@ -734,7 +734,7 @@ TEST_F(l2BatchNormBackwardTest, l2_batch_norm_backward_empty_mask)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 
     // ut.TestPrecision();
 }

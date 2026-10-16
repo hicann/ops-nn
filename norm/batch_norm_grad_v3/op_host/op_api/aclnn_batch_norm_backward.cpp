@@ -73,32 +73,31 @@ static bool CheckInputNotNull(const aclTensor* gradOut, const aclTensor* input)
     return true;
 }
 
-static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
+static aclnnStatus CheckMask(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
                              const aclBoolArray* outputMask)
 {
-    OP_CHECK_NULL(outputMask, return false);
+    OP_CHECK_NULL(outputMask, return ACLNN_ERR_PARAM_NULLPTR);
     if (outputMask->Size() < GRAD_WEIGHT_INDEX) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not be less than 1.");
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        OP_CHECK_NULL(outputMask, return false);
         if (outputMask->Size() != BN_GRAD_V3_RESULT_CNT) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should be %zu, but got %zu.", BN_GRAD_V3_RESULT_CNT,
                     outputMask->Size());
-            return false;
+            return ACLNN_ERR_PARAM_INVALID;
         }
     }
     if ((*outputMask)[0]) {
-        OP_CHECK_NULL(gradInput, return false);
+        OP_CHECK_NULL(gradInput, return ACLNN_ERR_PARAM_NULLPTR);
     }
     if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
-        OP_CHECK_NULL(gradWeight, return false);
+        OP_CHECK_NULL(gradWeight, return ACLNN_ERR_PARAM_NULLPTR);
     }
     if ((*outputMask)[GRAD_BIAS_INDEX]) {
-        OP_CHECK_NULL(gradBias, return false);
+        OP_CHECK_NULL(gradBias, return ACLNN_ERR_PARAM_NULLPTR);
     }
-    return true;
+    return ACLNN_SUCCESS;
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
@@ -363,7 +362,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input,
                                const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar,
                                const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
 {
-    CHECK_RET(CheckMaskNotNull(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_NULLPTR);
+    const auto maskStatus = CheckMask(gradInput, gradWeight, gradBias, outputMask);
+    CHECK_RET(maskStatus == ACLNN_SUCCESS, maskStatus);
 
     CHECK_RET(CheckDtypeValid(gradOut, input), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckGradDtypeValid(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_INVALID);
