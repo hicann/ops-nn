@@ -44,18 +44,6 @@ static ge::graphStatus UnsortedSegmentInferShapeImpl(const int64_t& first_dim, c
             "the rank of segment_ids must not be greater than the rank of x"),
         return ge::GRAPH_FAILED);
 
-    // a dim is skipped when either side is unknown (-1), to stay compatible with dynamic shape
-    for (size_t i = 0; i < segment_ids_rank; i++) {
-        const int64_t x_dim = x_shape->GetDim(i);
-        const int64_t ids_dim = segment_ids_shape->GetDim(i);
-        OP_CHECK_IF(
-            x_dim >= 0 && ids_dim >= 0 && x_dim != ids_dim,
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                nodeName, "x, segment_ids", (Shape2String(*x_shape) + ", " + Shape2String(*segment_ids_shape)).c_str(),
-                "segment_ids.shape must be a prefix of x.shape"),
-            return ge::GRAPH_FAILED);
-    }
-
     size_t output_rank = x_rank - segment_ids_rank + 1;
     output_shape->SetDimNum(output_rank);
     output_shape->SetDim(0, first_dim);
@@ -97,12 +85,17 @@ static graphStatus InferShape4UnsortedSegment(gert::InferShapeContext* context)
     }
 
     // dynamic shape is -1 and not dynamic shape
+    // pre-check const-ness to avoid misleading ERROR logs from GetConstInt on non-const inputs
     int64_t num_segments = 0;
-    if (!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments)) {
+    const gert::Tensor* numSegmentsTensor = context->GetInputTensor(INPUT_NUM_SEGMENTS_IDX);
+    const bool numSegmentsIsConst = numSegmentsTensor != nullptr && numSegmentsTensor->GetAddr() != nullptr;
+    if (!numSegmentsIsConst) {
+        OP_LOGD(context->GetNodeName(), "num_segments is not a const tensor, set num_segments to -1");
+        num_segments = UNKNOWN_DIM_VALUE_;
+    } else if (!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments)) {
         OP_LOGD(context->GetNodeName(), "get num_segments_tensor unsuccessful, set num_segments to -1");
         num_segments = UNKNOWN_DIM_VALUE_;
     }
-
     return UnsortedSegmentInferShapeImpl(num_segments, x_shape, segment_ids_shape, output_shape,
                                          context->GetNodeName());
 }
