@@ -152,8 +152,8 @@ __aicore__ inline void RegbaseWelfordMultiParamsImpl(GM_ADDR x, GM_ADDR gamma, G
 }
 
 template <bool IsOutRstd>
-__aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout,
-                                       GM_ADDR workspace, GM_ADDR tiling)
+static __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                              GM_ADDR lastout, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

@@ -34,8 +34,9 @@
 #define TILING_REDUCE_EMPTY 8200
 
 template <typename Y_TYPE>
-__aicore__ inline void AddLayerNormImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y,
-                                        GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
+static __aicore__ inline void AddLayerNormImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias,
+                                               GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA_WITH_STRUCT(AddLayerNormRegbaseTilingData, tilingDataIn, tiling);
