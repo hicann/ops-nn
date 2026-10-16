@@ -498,11 +498,11 @@ aclnnStatus aclnnDynamicBlockQuant(
 
   void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
     auto size = GetShapeSize(shape);
-    std::vector<float> resultData(size, 0);
+    std::vector<int8_t> resultData(size, 0);
     auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-      LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);
+      LOG_PRINT("result[%ld] is: %d\n", i, static_cast<int32_t>(resultData[i]));
     }
   }
 
@@ -560,8 +560,8 @@ aclnnStatus aclnnDynamicBlockQuant(
     aclTensor* y = nullptr;
     aclTensor* scale = nullptr;
 
-    std::vector<float> xHostData = {1, 2, 3, 4, 5, 6, 7, 8};
-    std::vector<float> yHostData(8, 0);
+    std::vector<aclFloat16> xHostData = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int8_t> yHostData(8, 0);
     std::vector<float> scaleHostData = {0, 0, 0, 0};
 
     // 创建x aclTensor
