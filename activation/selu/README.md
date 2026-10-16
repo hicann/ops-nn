@@ -78,3 +78,4 @@
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_selu](./examples/test_aclnn_selu.cpp) | 通过[aclnnSelu&aclnnInplaceSelu](./docs/aclnnSelu&aclnnInplaceSelu.md)接口方式调用Selu算子。 |
 | aclnn调用 | [test_aclnn_inplace_selu](./examples/test_aclnn_inplace_selu.cpp) | 通过[aclnnSelu&aclnnInplaceSelu](./docs/aclnnSelu&aclnnInplaceSelu.md)接口方式调用Selu算子。 |
+| GE图模式 | [test_geir_selu](./examples/test_geir_selu.cpp) | 通过[算子IR](./op_graph/selu_proto.h)构图方式调用Selu算子。 |

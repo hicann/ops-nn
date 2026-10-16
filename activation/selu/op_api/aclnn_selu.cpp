@@ -63,6 +63,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
+    OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
     return true;
 }
 
@@ -134,16 +135,21 @@ aclnnStatus ExecSeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint
         auto allDimValue = self->Size();
         int64_t allDim[1] = {allDimValue};
         auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
+        CHECK_RET(shape1d != nullptr, ACLNN_ERR_INNER_NULLPTR);
         reshapeSelf = ReshapeLongTensor(selfContiguous, uniqueExecutor.get(), dimSize, shape1d);
+        CHECK_RET(reshapeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto seluOut = l0op::Selu(reshapeSelf, uniqueExecutor.get());
     CHECK_RET(seluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto reshapeSeluOut = seluOut;
     if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        CHECK_RET(shapeOriDetail != nullptr, ACLNN_ERR_INNER_NULLPTR);
         reshapeSeluOut = ReshapeLongTensor(seluOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
+        CHECK_RET(reshapeSeluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto castSeluOut = l0op::Cast(reshapeSeluOut, out->GetDataType(), uniqueExecutor.get());
+    CHECK_RET(castSeluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyOut = l0op::ViewCopy(castSeluOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

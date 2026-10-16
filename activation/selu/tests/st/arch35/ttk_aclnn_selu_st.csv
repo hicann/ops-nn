@@ -1,0 +1,51 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,tensor_storage_shapes,tensor_view_offsets,tensor_view_strides,scalar_dtypes,attributes,output_tensor_indexes,precision_tolerances,absolute_precision,input_data_ranges,scalar_data_ranges,remark
+L0_aclnnSelu_001,aclnnSelu,"((),(),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((nan,nan,),)",,
+L0_aclnnSelu_002,aclnnSelu,"((2,2,2,2,655222,),(2,2,2,2,655222,),)","('float16','float16',)","('ND','ND',)",,,,,,"(1,)",,,"((-65504.0,-65504.0,),)",,
+L0_aclnnSelu_003,aclnnSelu,"((89987837,),(89987837,),)","('bfloat16','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((0.01,1,),)",,
+L0_aclnnSelu_004,aclnnSelu,"((157,175,23,),(157,175,23,),)","('int32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-2147483648,2147483647,),)",,
+L0_aclnnSelu_005,aclnnSelu,"((49045,8891,),(49045,8891,),)","('int8','int8',)","('ND','ND',)",,,,,,"(1,)",,,"((-128,-128,),)",,
+L1_aclnnSelu_nc_self_transpose,aclnnSelu,"((122405,60,),(122405,60,),)","('int8','int8',)","('ND','ND',)","((60,122405,),(122405,60,),)","(0, 0,)","((1,122405,),(60,1,),)",,,"(1,)",,,"((2,10,),)",,non_contiguous_self_transpose
+L1_aclnnSelu_nc_self_broadcast,aclnnSelu,"((315167,5,5,),(315167,5,5,),)","('float16','float16',)","('ND','ND',)","((1,),(315167,5,5,),)","(0, 0,)","((0,0,0,),(25,5,1,),)",,,"(1,)",,,"((-0.0078125,0.0078125,),)",,non_contiguous_self_broadcast
+L1_aclnnSelu_nc_self_slice,aclnnSelu,"((2,2,2,407945,),(2,2,2,407945,),)","('bfloat16','bfloat16',)","('ND','ND',)","((16,2,2,407945,),(2,2,2,407945,),)","(3263560, 0,)","((3263560,815890,407945,1,),(1631780,815890,407945,1,),)",,,"(1,)",,,"((0.01,1,),)",,non_contiguous_self_slice
+L1_aclnnSelu_nc_self_asstrided,aclnnSelu,"((5,23363,5,7,),(5,23363,5,7,),)","('int32','int32',)","('ND','ND',)","((8177062,),(5,23363,5,7,),)","(0, 0,)","((1635410,70,14,1,),(817705,35,7,1,),)",,,"(1,)",,,"((1,2,),)",,non_contiguous_self_asstrided
+L1_aclnnSelu_nc_out_transpose,aclnnSelu,"((3,2,2,2,132988,),(3,2,2,2,132988,),)","('int8','int8',)","('ND','ND',)","((3,2,2,2,132988,),(132988,2,2,2,3,),)","(0, 0,)","((1063904,531952,265976,132988,1,),(1,3,6,12,24,),)",,,"(1,)",,,"((-10,10,),)",,non_contiguous_out_transpose
+L1_aclnnSelu_nc_out_broadcast,aclnnSelu,"((2,2,2207,380,2,2,),(2,2,2207,380,2,2,),)","('float32','float32',)","('ND','ND',)","((2,2,2207,380,2,2,),(1,),)","(0, 0,)","((6709280,3354640,1520,4,2,1,),(0,0,0,0,0,0,),)",,,"(1,)",,,"((0,0,),)",,non_contiguous_out_broadcast
+L1_aclnnSelu_nc_out_slice,aclnnSelu,"((7,7,3,8,2,5,),(7,7,3,8,2,5,),)","('float16','float16',)","('ND','ND',)","((7,7,3,8,2,5,),(26,7,3,8,2,5,),)","(0, 3360,)","((1680,240,80,10,5,1,),(3360,240,80,10,5,1,),)",,,"(1,)",,,"((2,10,),)",,non_contiguous_out_slice
+L1_aclnnSelu_nc_out_asstrided,aclnnSelu,"((19,14,15,13,12,13,),(19,14,15,13,12,13,),)","('int8','int8',)","('ND','ND',)","((19,14,15,13,12,13,),(16183446,),)","(0, 0,)","((425880,30420,2028,156,13,1,),(851760,60840,4056,312,26,1,),)",,,"(1,)",,,"((-100,100,),)",,non_contiguous_out_asstrided
+L1_aclnnSelu_empty_190,aclnnSelu,"((0,),(0,),)","('int32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((1,2,),)",,
+L1_aclnnSelu_empty_191,aclnnSelu,"((0,4,),(0,4,),)","('bfloat16','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((-1000,-10,),)",,
+L1_aclnnSelu_001,aclnnSelu,"((),(),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,
+L1_aclnnSelu_007,aclnnSelu,"((40696260,),(40696260,),)","('float16','float16',)","('ND','ND',)",,,,,,"(1,)",,,"((-1,1,),)",,
+L1_aclnnSelu_011,aclnnSelu,"((65,487811,),(65,487811,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((10,1000,),)",,
+L1_aclnnSelu_017,aclnnSelu,"((315167,5,5,),(315167,5,5,),)","('float16','float16',)","('ND','ND',)",,,,,,"(1,)",,,"((-0.0078125,0.0078125,),)",,
+L1_aclnnSelu_021,aclnnSelu,"((93,95,84,77,),(93,95,84,77,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((-1.1754943508e-38,-1.1754943508e-38,),)",,
+L1_aclnnSelu_026,aclnnSelu,"((5,5,5,84,2892,),(5,5,5,84,2892,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((-0.01,-0.001,),)",,
+L1_aclnnSelu_031,aclnnSelu,"((2,2,2207,380,2,2,),(2,2,2207,380,2,2,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((0,0,),)",,
+L1_aclnnSelu_038,aclnnSelu,"((1,1,1,1,1,237754147,1,),(1,1,1,1,1,237754147,1,),)","('bfloat16','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((-1000,-10,),)",,
+L1_aclnnSelu_041,aclnnSelu,"((2,2,2,2,2,2,663164,2,),(2,2,2,2,2,2,663164,2,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((-10,-2,),)",,
+L1_aclnnSelu_bound_166,aclnnSelu,"((1,1,1,),(1,1,1,),)","('int8','int8',)","('ND','ND',)",,,,,,"(1,)",,,"((-128,127,),)",,
+L1_aclnnSelu_bound_196,aclnnSelu,"((2,1,1,3,1,1,1,4,),(2,1,1,3,1,1,1,4,),)","('int8','int8',)","('ND','ND',)",,,,,,"(1,)",,,"((0,0,),)",,
+L1_aclnnSelu_bound_201,aclnnSelu,"((4,8,),(4,8,),)","('float16','float16',)","('ND','ND',)",,,,,,"(1,)",,,"((6.103515625e-05,6.103515625e-05,),)",,
+L1_aclnnSelu_bound_202,aclnnSelu,"((4,8,),(4,8,),)","('bfloat16','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((3.3895313892515355e+38,3.3895313892515355e+38,),)",,
+L1_aclnnSelu_bound_203,aclnnSelu,"((4,8,),(4,8,),)","('int32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-2147483648,2147483647,),)",,
+L2_aclnnSelu_exc_dtype_001,aclnnSelu,"((2,2,2,2358964,2,2,),(2,2,2,2358964,2,2,),)","('bool','int8',)","('ND','ND',)",,,,,,"(1,)",,,"((-65504.0,-65504.0,),)",,dtype不在合法域; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_002,aclnnSelu,"((15,18,464,32,5,),(15,18,464,32,5,),)","('complex128','int8',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,dtype不在合法域; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_005,aclnnSelu,"((3240354,7,),(3240354,7,),)","('float64','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((0.001,0.01,),)",,EX-S1; 约束违反; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_023,aclnnSelu,"((),(),)","('int16','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((0.001,0.01,),)",,EX-S19; 约束违反; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_043,aclnnSelu,"((28,37,22,24,27,),(28,37,22,24,27,),)","('uint8','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((-1,0,),)",,EX-S39; 约束违反; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_003,aclnnSelu,"((4,11,9,6,5,7,230,),(4,11,9,6,5,7,230,),)","('bfloat16','bool',)","('ND','ND',)",,,,,,"(1,)",,,"((2147483647,2147483647,),)",,dtype不在合法域; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_dtype_004,aclnnSelu,"((),(),)","('bfloat16','complex128',)","('ND','ND',)",,,,,,"(1,)",,,"((-10,-2,),)",,dtype不在合法域; expect ACL_ERROR_DTYPES_NOT_MATCH
+L2_aclnnSelu_exc_null_001,aclnnSelu,"(None,(5181,5704,1,1,),)","('int32','float16',)","('ND','ND',)",,,,,,"(1,)",,,"((-10,-2,),)",,必选参数缺失; expect ACL_ERROR_INVALID_PARAM
+L2_aclnnSelu_exc_null_003,aclnnSelu,"((108,131,112,131,),None,)","('int32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,EX-S102; 约束违反; expect ACL_ERROR_INVALID_PARAM
+L2_aclnnSelu_exc_null_004,aclnnSelu,"(None,None,)","('float32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,EX-S103; 约束违反; expect ACL_ERROR_INVALID_PARAM
+L2_aclnnSelu_exc_shape_001,aclnnSelu,"((7,6,5866986,),(),)","('float32','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((-128,127,),)",,输出shape与期望不匹配; expect ACL_ERROR_SHAPE_NOT_MATCH
+L2_aclnnSelu_exc_rank_001,aclnnSelu,"((2,2,2,2,2,2,2,2,2,),(2,1668274,2,2,2,2,2,2,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((6.103515625e-05,6.103515625e-05,),)",,EX-S106; 约束违反; expect ACL_ERROR_INVALID_DIMENSION
+L2_aclnnSelu_exc_format_004,aclnnSelu,"((676,582,),(676,582,),)","('int8','int8',)","('NCHW','ND',)",,,,,,"(1,)",,,"((nan,nan,),)",,EX-S92; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L2_aclnnSelu_exc_format_005,aclnnSelu,"((7,16,26,30,27,),(7,16,26,30,27,),)","('float16','int32',)","('NHWC','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,EX-S93; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L1_aclnnSelu_mixed_dtype_006,aclnnSelu,"((),(),)","('int8','int32',)","('NHWC','ND',)",,,,,,"(1,)",,,"((-2,-1,),)",,EX-S94; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L2_aclnnSelu_exc_format_007,aclnnSelu,"((25,173,2,2,2,441,2,2,),(25,173,2,2,2,441,2,2,),)","('float16','int32',)","('NC1HWC0','ND',)",,,,,,"(1,)",,,"((1,2,),)",,EX-S95; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L1_aclnnSelu_mixed_dtype_008,aclnnSelu,"((5695,5,5,),(5695,5,5,),)","('int8','int32',)","('NC1HWC0','ND',)",,,,,,"(1,)",,,"((0.01,1,),)",,EX-S96; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L1_aclnnSelu_mixed_dtype_009,aclnnSelu,"((2,1646,2,2,2,2,2,),(2,1646,2,2,2,2,2,),)","('float16','bfloat16',)","('FRACTAL_Z','ND',)",,,,,,"(1,)",,,"((-6.103515625e-05,-6.103515625e-05,),)",,EX-S97; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L1_aclnnSelu_mixed_dtype_010,aclnnSelu,"((30,8,24,29,4,),(30,8,24,29,4,),)","('int8','float16',)","('FRACTAL_Z','ND',)",,,,,,"(1,)",,,"((-10,-2,),)",,EX-S98; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L1_aclnnSelu_mixed_dtype_011,aclnnSelu,"((),(),)","('float16','bfloat16',)","('FRACTAL_NZ','ND',)",,,,,,"(1,)",,,"((-1000,-10,),)",,EX-S99; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
+L2_aclnnSelu_exc_format_012,aclnnSelu,"((54860123,),(54860123,),)","('int8','int8',)","('FRACTAL_NZ','ND',)",,,,,,"(1,)",,,"((-10,-2,),)",,EX-S100; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT

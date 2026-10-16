@@ -178,7 +178,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>self和out的shape不匹配。</td>
     </tr>
     <tr>
-      <td>self和out的type不匹配。</td>
+      <td>参数out的数据类型不是self可转换的。</td>
     </tr>
    </tbody></table>
 

@@ -136,6 +136,38 @@ TEST_F(selu_test, test_selu_inconsistent_dtype)
     EXPECT_EQ(getWorkspaceout, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(selu_test, test_selu_mixed_dtype_cast)
+{
+    vector<aclDataType> selfList = {ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_INT32};
+    vector<aclDataType> outList = {ACL_FLOAT16, ACL_BF16, ACL_FLOAT, ACL_INT8};
+
+    int length = selfList.size();
+    vector<int64_t> input_dim = {2, 16};
+    vector<int64_t> result_dim = {2, 16};
+
+    for (int i = 0; i < length; i++) {
+        auto inputDesc = TensorDesc(input_dim, selfList[i], ACL_FORMAT_ND).ValueRange(-1, 1);
+        auto outDesc = TensorDesc(result_dim, outList[i], ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+        auto ut = OP_API_UT(aclnnSelu, INPUT(inputDesc), OUTPUT(outDesc));
+        uint64_t workspaceSize = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(selu_test, test_selu_dtype_not_castable)
+{
+    auto inputDesc = TensorDesc({2, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto outDesc = TensorDesc({2, 16}, ACL_INT32, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnSelu, INPUT(inputDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceout = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceout, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(selu_test, test_selu_empty_input)
 {
     auto inputDesc = TensorDesc({0, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
