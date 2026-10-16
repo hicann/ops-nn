@@ -9,25 +9,16 @@
  */
 
 /*!
- * \file bn3_d_training_update_tiling_arch35.h
- * \brief
+ * \file bn3_d_training_update_tiling_key.h
+ * \brief BN3DTrainingUpdate arch35 TilingKey。
  */
-#ifndef BN3_D_TRAINING_UPDATE_TILING_ARCH35_H
-#define BN3_D_TRAINING_UPDATE_TILING_ARCH35_H
 
-#include "exe_graph/runtime/tiling_context.h" // gert::TilingContext
-#include "graph/types.h"                      // ge::graphStatus
+#ifndef BN3_D_TRAINING_UPDATE_TILING_KEY_H
+#define BN3_D_TRAINING_UPDATE_TILING_KEY_H
 
-namespace optiling {
+// x 的 format 为 NCHW / NCDHW(通道轴 = 1)。
+#define BN3D_TRAINING_UPDATE_KEY_CHANNEL_FIRST 2000
+// x 的 format 为 NHWC / NDHWC(通道轴 = 末轴)。
+#define BN3D_TRAINING_UPDATE_KEY_CHANNEL_LAST 3000
 
-struct BN3DTrainingUpdateCompileInfo {
-    int64_t coreNum = 0;
-    int64_t ubSize = 0;
-};
-
-ge::graphStatus TilingFuncBN3DTrainingUpdate(gert::TilingContext* context);
-ge::graphStatus TilingPrepareForBN3DTrainingUpdate(gert::TilingParseContext* context);
-
-} // namespace optiling
-
-#endif
+#endif // BN3_D_TRAINING_UPDATE_TILING_KEY_H

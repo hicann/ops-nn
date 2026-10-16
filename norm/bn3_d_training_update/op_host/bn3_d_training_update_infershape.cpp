@@ -10,41 +10,47 @@
 
 /*!
  * \file bn3_d_training_update_infershape.cpp
- * \brief
+ * \brief BN3DTrainingUpdate shape inference。
  */
+
+#include "log/log.h"
 #include "register/op_impl_registry.h" // IMPL_OP_INFERSHAPE, gert::InferShapeContext
 #include "util/shape_util.h"           // Ops::Base::IsUnknownRank / SetUnknownRank
 
 using namespace ge;
 
 namespace ops {
+namespace {
+constexpr size_t kInputX = 0;
+constexpr size_t kInputSum = 1;
+constexpr size_t kOutputY = 0;
+constexpr size_t kOutputStatFirst = 1;
+constexpr size_t kOutputStatLast = 4;
+
+inline void CopyShapeWithUnknownRank(const gert::Shape* src, gert::Shape* dst)
+{
+    if (Ops::Base::IsUnknownRank(*src)) {
+        Ops::Base::SetUnknownRank(*dst);
+    } else {
+        *dst = *src;
+    }
+}
+} // namespace
 
 static ge::graphStatus InferShapeForBN3DTrainingUpdate(gert::InferShapeContext* context)
 {
-    // y (output 0) follows x (input 0) shape. UNKNOWN_RANK(-2) propagates as
-    // unknown rank (plain copy would materialize the -2 marker into a bogus
-    // rank-1 shape).
-    const gert::Shape* xShape = context->GetInputShape(0);
-    gert::Shape* yShape = context->GetOutputShape(0);
-    if (xShape != nullptr && yShape != nullptr) {
-        if (Ops::Base::IsUnknownRank(*xShape)) {
-            Ops::Base::SetUnknownRank(*yShape);
-        } else {
-            *yShape = *xShape;
-        }
-    }
+    const gert::Shape* xShape = context->GetInputShape(kInputX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    gert::Shape* yShape = context->GetOutputShape(kOutputY);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+    CopyShapeWithUnknownRank(xShape, yShape);
 
-    // Statistics outputs (1..4) follow sum (input 1) shape (-1/-2 same rule).
-    const gert::Shape* sumShape = context->GetInputShape(1);
-    for (size_t i = 1; i < 5; ++i) {
+    const gert::Shape* sumShape = context->GetInputShape(kInputSum);
+    OP_CHECK_NULL_WITH_CONTEXT(context, sumShape);
+    for (size_t i = kOutputStatFirst; i <= kOutputStatLast; ++i) {
         gert::Shape* outShape = context->GetOutputShape(i);
-        if (sumShape != nullptr && outShape != nullptr) {
-            if (Ops::Base::IsUnknownRank(*sumShape)) {
-                Ops::Base::SetUnknownRank(*outShape);
-            } else {
-                *outShape = *sumShape;
-            }
-        }
+        OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+        CopyShapeWithUnknownRank(sumShape, outShape);
     }
     return GRAPH_SUCCESS;
 }

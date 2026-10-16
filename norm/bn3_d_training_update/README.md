@@ -21,7 +21,8 @@
 
 - 计算公式：
 
-  记通道数 `C = sum.shape[0]`，reduce域元素个数 `num = x.size / C`，逐通道有：
+  记通道数 `C = sum.shape[0]`，reduce域元素个数 `num = x.size / C`（下式均要求 `C >= 1`；
+  当 `C == 0` 时该式为 `0/0` 无定义，`num` 不参与计算，直接走空张量分支，见下文），逐通道有：
 
   $$
   \mu = \frac{sum}{num}
@@ -52,9 +53,14 @@
   batch\_mean = \mu, \quad batch\_variance = \sigma^2_{biased}
   $$
 
-  当 `num == 0`（x任一非通道轴为0，即空batch）时，按零统计契约输出：`batch_mean`、
+  当 `C >= 1` 且 `num == 0`（x任一非通道轴为0，即空batch）时，按零统计契约输出：`batch_mean`、
   `batch_variance`均为0，`mean_out = (1 - factor) \cdot mean`、
   `variance_out = (1 - factor) \cdot variance`，y无元素输出。
+
+  当 `C == 0`（空通道）时，x与6路统计量均为空张量（如 `x=(2,0,1,28)`，各统计量为 `(0,)`），
+  无相X/相S单元，内核两相均优雅空跑且无任何访存，产出全空输出：`y` 与 x 同形（含0维），
+  4路统计量输出 `mean_out`、`variance_out`、`batch_mean`、`batch_variance` 均为 `(C,)` 即 `(0,)`。
+  该路径与上述 `num == 0` 的零统计契约相互独立（`C == 0` 时 `num` 无定义，不适用零统计契约）。
 
 ## 参数说明
 

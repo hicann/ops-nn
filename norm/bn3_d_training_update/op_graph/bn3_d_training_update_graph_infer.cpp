@@ -10,22 +10,28 @@
 
 /*!
  * \file bn3_d_training_update_graph_infer.cpp
- * \brief
+ * \brief BN3DTrainingUpdate 图模式数据类型推导。
  */
+
 #include "register/op_impl_registry.h" // IMPL_OP, gert::InferDataTypeContext
 
 using namespace ge;
 
 namespace ops {
+namespace {
+constexpr size_t kInputX = 0;
+constexpr size_t kInputSum = 1;
+constexpr size_t kOutputY = 0;
+constexpr size_t kOutputStatFirst = 1;
+constexpr size_t kOutputStatLast = 4;
+} // namespace
 
 static ge::graphStatus InferDataTypeForBN3DTrainingUpdate(gert::InferDataTypeContext* context)
 {
-    // y (output 0) follows x (input 0) dtype.
-    context->SetOutputDataType(0, context->GetInputDataType(0));
-    // Statistics outputs (1..4) follow sum (input 1) dtype.
-    const ge::DataType sumDtype = context->GetInputDataType(1);
-    for (size_t i = 1; i < 5; ++i) {
-        context->SetOutputDataType(i, sumDtype);
+    context->SetOutputDataType(kOutputY, context->GetInputDataType(kInputX));
+    const ge::DataType statDtype = context->GetInputDataType(kInputSum);
+    for (size_t i = kOutputStatFirst; i <= kOutputStatLast; ++i) {
+        context->SetOutputDataType(i, statDtype);
     }
     return ge::GRAPH_SUCCESS;
 }
