@@ -685,7 +685,7 @@
     {"name":"AdaptiveMaxPool3dGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"MaxPoolV2", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"AvgPoolV2Grad", "compute_units": ["ascend950"], "auto_sync" : true},
-    {"name":"SigmoidCrossEntropyWithLogitsV2", "compute_units": ["ascend950", "ascend350"], "auto_sync" : true},
+    {"name":"SigmoidCrossEntropyWithLogitsV2", "compute_units": ["ascend950", "ascend960dt", "ascend350"], "auto_sync" : true},
     {"name":"FusedCrossEntropyLossWithMaxSum", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"SparseSoftmaxCrossEntropyWithLogits", "compute_units": ["ascend950", "ascend350"], "auto_sync" : true},
     {"name":"ApplyAdamWQuant", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
