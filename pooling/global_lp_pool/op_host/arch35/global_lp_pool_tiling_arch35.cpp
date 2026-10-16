@@ -9,6 +9,7 @@
  */
 #include <algorithm>
 #include <cstdint>
+#include <string>
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/tiling_context.h"
@@ -30,6 +31,14 @@ namespace {
 static constexpr int64_t CACHE_BUF_UB_SIZE = 16384; // 16 KB for cache tree
 static constexpr int64_t INNER_A_PROD = 1;          // single A axis: no inner A bundle
 static constexpr int64_t INNER_R_PROD = 1;          // single R axis: no inner R bundle
+
+// 支持的输入维度：4D NCHW / 5D NCD0D1D2；MAX_SHAPE_DIM 为 TilingCtx::shape 数组长度
+static constexpr int64_t DIM_NUM_4D = 4;
+static constexpr int64_t DIM_NUM_5D = 5;
+static constexpr int64_t MAX_SHAPE_DIM = 5;
+
+// fp32 元素字节数：maxDtypeSize / blockF32 / cacheLevelStride 的换算基准
+static constexpr int64_t FP32_SIZE = 4;
 
 // UB config per reduction paradigm:
 //   P_pre = 2 (preInBuf + preReduceResult), P_pre_ext = 1 (preReduceResultTail,
@@ -72,14 +81,15 @@ struct TilingCtx {
     int64_t dtypeSize;
     int64_t maxDtypeSize; // max(sizeof(D_T), sizeof(float)) — byte capacity sizing
     int64_t dimNum;
-    int64_t shape[5];
+    int64_t shape[MAX_SHAPE_DIM];
     float p;
 
     // Empty tensor flags (set by FusedAxis)
     bool isEmptyA = false; // A==0 → EMPTY_A
     bool isEmptyR = false; // R==0 && A>0 → EMPTY_R
 
-    // After FusedAxis: AR pattern (axisNum=2) or ARA pattern (axisNum=3)
+    // After FusedAxis: AR pattern (axisNum=GLLP_AXIS_NUM_AR) or ARA pattern
+    // (axisNum=GLLP_AXIS_NUM_ARA)
     bool isTailA = false; // R==1 && A>1 → prepend [A=1, R=1], pattern ARA (tail-A)
     int64_t A;            // AR: axisShape[0]; ARA: axisShape[2] = N*C
     int64_t R;            // AR: axisShape[1]; ARA: R==1
@@ -109,18 +119,24 @@ struct TilingCtx {
 ge::graphStatus GetPlatformInfoFromCtx(gert::TilingContext* ctx, TilingCtx& tc)
 {
     tc.ubSize = Ops::Base::GetUbSize(ctx);
-    if (tc.ubSize == 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(tc.ubSize == 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "platform.ubSize", "GetUbSize returned 0"),
+                return ge::GRAPH_FAILED);
     tc.coreNum = Ops::Base::GetAivCoreNum(ctx);
-    if (tc.coreNum == 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        tc.coreNum == 0,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "platform.coreNum", "GetAivCoreNum returned 0"),
+        return ge::GRAPH_FAILED);
     tc.blockSize = Ops::Base::GetUbBlockSize(ctx);
     tc.cacheLineSize = Ops::Base::GetCacheLineSize(ctx);
-    if (tc.cacheLineSize == 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(tc.blockSize == 0 || tc.cacheLineSize == 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                    ctx->GetNodeName(), "platform.blockSize/cacheLineSize",
+                    "GetUbBlockSize=" + std::to_string(tc.blockSize) +
+                        " or GetCacheLineSize=" + std::to_string(tc.cacheLineSize) + " is 0"),
+                return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "platform: ubSize=%lu coreNum=%u blockSize=%u cacheLineSize=%u", tc.ubSize, tc.coreNum, tc.blockSize,
+            tc.cacheLineSize);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -128,43 +144,49 @@ ge::graphStatus GetPlatformInfoFromCtx(gert::TilingContext* ctx, TilingCtx& tc)
 ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* ctx, TilingCtx& tc)
 {
     auto inputDesc = ctx->GetInputDesc(0);
-    if (inputDesc == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(inputDesc == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "x", "GetInputDesc(0) returned nullptr"),
+                return ge::GRAPH_FAILED);
     tc.dtype = inputDesc->GetDataType();
     tc.dtypeSize = GetDtypeSize(tc.dtype);
-    if (tc.dtypeSize == 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        tc.dtypeSize == 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(ctx->GetNodeName(), "x", std::to_string(static_cast<int>(tc.dtype)),
+                                              "only fp16(1)/bf16(27)/fp32(0) are supported"),
+        return ge::GRAPH_FAILED);
     // maxDtypeSize: byte-capacity sizing for buffers (they are allocated wide
     // enough for fp32 so pre/post slots can be reused across the fp32 compute
     // domain). bsElem (element rounding) uses sizeof(D_T),
     // maxDtypeSize (byte capacity) uses max(sizeof(D_T), sizeof(float)) — never mix.
-    tc.maxDtypeSize = std::max(tc.dtypeSize, static_cast<int64_t>(sizeof(float)));
+    tc.maxDtypeSize = std::max(tc.dtypeSize, FP32_SIZE);
 
     auto inputShape = ctx->GetInputShape(0);
-    if (inputShape == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(inputShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "x", "GetInputShape(0) returned nullptr"),
+                return ge::GRAPH_FAILED);
     const auto& storageShape = inputShape->GetStorageShape();
     tc.dimNum = storageShape.GetDimNum();
-    if (tc.dimNum != 4 && tc.dimNum != 5) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        tc.dimNum != DIM_NUM_4D && tc.dimNum != DIM_NUM_5D,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(ctx->GetNodeName(), "x", std::to_string(tc.dimNum), "4 (NCHW) or 5 (NCD0D1D2)"),
+        return ge::GRAPH_FAILED);
     for (int64_t i = 0; i < tc.dimNum; ++i) {
         tc.shape[i] = storageShape.GetDim(static_cast<size_t>(i));
     }
 
     auto attrs = ctx->GetAttrs();
-    if (attrs == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(attrs == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "attrs", "GetAttrs returned nullptr"),
+                return ge::GRAPH_FAILED);
     const float* pPtr = attrs->GetAttrPointer<float>(0);
-    if (pPtr == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        pPtr == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "p", "GetAttrPointer<float>(0) returned nullptr"),
+        return ge::GRAPH_FAILED);
     tc.p = *pPtr;
 
+    OP_LOGD(ctx, "input: shape=%s dtype=%d dimNum=%ld dtypeSize=%ld p=%.6f", Ops::Base::ToString(storageShape).c_str(),
+            static_cast<int>(tc.dtype), tc.dimNum, tc.dtypeSize, tc.p);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -212,13 +234,16 @@ ge::graphStatus FusedAxis(TilingCtx& tc)
 // Fractional-climb is trivial here: the operator is AR (single A axis, single R
 // axis, tail-R), so the A split point is always LastA.
 // tail-R never needs `aUbFactorAlign` — use aUbFactor directly.
-ge::graphStatus ComputeAUbFactor(TilingCtx& tc)
+ge::graphStatus ComputeAUbFactor(gert::TilingContext* ctx, TilingCtx& tc)
 {
     const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
     const int64_t cachelineTmp = FloorAlign(static_cast<int64_t>(tc.cacheLineSize) / tc.dtypeSize, bsElem);
-    if (cachelineTmp <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(cachelineTmp <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                    ctx->GetNodeName(), "cachelineTmp",
+                    "cacheLineSize=" + std::to_string(tc.cacheLineSize) + " dtypeSize=" + std::to_string(tc.dtypeSize) +
+                        " blockSize=" + std::to_string(tc.blockSize) + " yields cachelineTmp<=0"),
+                return ge::GRAPH_FAILED);
     tc.aUbFactor = std::min(cachelineTmp, tc.A);
     // tail-R: A is not burst tail, no CeilAlign needed
     tc.aUbFactorAlign = tc.aUbFactor;
@@ -236,24 +261,33 @@ ge::graphStatus ComputeAUbFactor(TilingCtx& tc)
 //   multi-chunk: FloorAlign then rUbFactorAlign = rUbFactor
 //   whole-axis : CeilAlign, and if it no longer fits the budget, fall back to
 //                FloorAlign multi-chunk
-ge::graphStatus ComputeRUbFactor(TilingCtx& tc)
+ge::graphStatus ComputeRUbFactor(gert::TilingContext* ctx, TilingCtx& tc)
 {
     int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
-    if (ubAvailable <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(ubAvailable <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "ubAvailable",
+                                                         "ubSize=" + std::to_string(tc.ubSize) + " minus cacheBuf=" +
+                                                             std::to_string(CACHE_BUF_UB_SIZE) + " is not positive"),
+                return ge::GRAPH_FAILED);
 
     const int64_t aUnit = tc.aUbFactorAlign; // × innerAProdAlign (=1)
     const int64_t postBufSize = CeilAlign(aUnit * tc.maxDtypeSize, static_cast<int64_t>(tc.blockSize));
     const int64_t aOnlyBytes = P_POST * postBufSize;
     const int64_t bytesPerRElem = (P_PRE + P_PRE_EXT) * aUnit * tc.maxDtypeSize;
-    if (bytesPerRElem <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(bytesPerRElem <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "bytesPerRElem",
+                                                         "aUbFactorAlign=" + std::to_string(aUnit) +
+                                                             " maxDtypeSize=" + std::to_string(tc.maxDtypeSize) +
+                                                             " yields bytesPerRElem<=0"),
+                return ge::GRAPH_FAILED);
     int64_t rIMax = (ubAvailable - aOnlyBytes) / bytesPerRElem;
-    if (rIMax <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        rIMax <= 0,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+            ctx->GetNodeName(), "rIMax",
+            "r_i_max=" + std::to_string(rIMax) + " < 1 (aUbFactorAlign=" + std::to_string(aUnit) +
+                " postBufSize=" + std::to_string(postBufSize) + " ubAvailable=" + std::to_string(ubAvailable) + ")"),
+        return ge::GRAPH_FAILED);
 
     tc.rUbFactor = std::min(rIMax, tc.R);
 
@@ -261,9 +295,11 @@ ge::graphStatus ComputeRUbFactor(TilingCtx& tc)
     if (tc.rUbFactor < tc.R) {
         // multi-chunk: burst tail axis needs block alignment
         tc.rUbFactor = FloorAlign(tc.rUbFactor, bsElem);
-        if (tc.rUbFactor == 0) {
-            return ge::GRAPH_FAILED;
-        }
+        OP_CHECK_IF(tc.rUbFactor == 0,
+                    OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                        ctx->GetNodeName(), "rUbFactor",
+                        "rUbFactor floor-aligned to 0 (tail-R burst alignment, bsElem=" + std::to_string(bsElem) + ")"),
+                    return ge::GRAPH_FAILED);
         tc.rUbFactorAlign = tc.rUbFactor;
     } else {
         // whole axis: CeilAlign, then verify it still fits the budget
@@ -273,13 +309,18 @@ ge::graphStatus ComputeRUbFactor(TilingCtx& tc)
         } else {
             // padding pushed it over budget → fall back to multi-chunk
             tc.rUbFactor = FloorAlign(tc.rUbFactor, bsElem);
-            if (tc.rUbFactor == 0) {
-                return ge::GRAPH_FAILED;
-            }
+            OP_CHECK_IF(tc.rUbFactor == 0,
+                        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                            ctx->GetNodeName(), "rUbFactor",
+                            "rUbFactor floor-aligned to 0 (retry after CeilAlign overflow, bsElem=" +
+                                std::to_string(bsElem) + ")"),
+                        return ge::GRAPH_FAILED);
             tc.rUbFactorAlign = tc.rUbFactor;
         }
     }
 
+    OP_LOGD(ctx, "ComputeRUbFactor: rIMax=%ld rUbFactor=%ld rUbFactorAlign=%ld aUbFactorAlign=%ld", rIMax, tc.rUbFactor,
+            tc.rUbFactorAlign, tc.aUbFactorAlign);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -289,7 +330,7 @@ ge::graphStatus ComputeRUbFactor(TilingCtx& tc)
 //   aUnitMax = min(aUnitMax, cacheBufUbSize / sizeof(float))   // ★ cacheBuf hard clamp
 // tail-R: NO FloorAlign after the clamp (only tail-A needs it — the A axis is
 //         not the burst tail here, so a non-aligned aUbFactor is fine).
-ge::graphStatus ExpandAIfRFullyLoaded(TilingCtx& tc)
+ge::graphStatus ExpandAIfRFullyLoaded(gert::TilingContext* ctx, TilingCtx& tc)
 {
     if (tc.rUbFactor != tc.R) {
         return ge::GRAPH_SUCCESS;
@@ -298,9 +339,12 @@ ge::graphStatus ExpandAIfRFullyLoaded(TilingCtx& tc)
     const int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
     const int64_t rPaddedElems = tc.rUbFactorAlign; // × innerRProdAlign (=1)
     const int64_t coeff = tc.maxDtypeSize * ((P_PRE + P_PRE_EXT) * rPaddedElems + P_POST);
-    if (coeff <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(coeff <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "coeff",
+                                                         "maxDtypeSize=" + std::to_string(tc.maxDtypeSize) +
+                                                             " rPaddedElems=" + std::to_string(rPaddedElems) +
+                                                             " yields coeff<=0"),
+                return ge::GRAPH_FAILED);
 
     int64_t aUnitMax = ubAvailable / coeff;
     aUnitMax = std::min(aUnitMax, tc.A);
@@ -312,6 +356,7 @@ ge::graphStatus ExpandAIfRFullyLoaded(TilingCtx& tc)
     if (aUnitMax > tc.aUbFactor) {
         tc.aUbFactor = aUnitMax;
         tc.aUbFactorAlign = tc.aUbFactor; // tail-R: A is not the burst tail
+        OP_LOGD(ctx, "ExpandAIfRFullyLoaded: triggered, aUnitMax=%ld aUbFactor=%ld", aUnitMax, tc.aUbFactor);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -347,8 +392,10 @@ void ComputeUbSizes(TilingCtx& tc)
 
     // cacheLevelStride: 32B-aligned per-layer stride for cache tree (fp32 lanes)
     //   When aTotal=1, must CeilAlign to 8 to satisfy VF LoadAlign 32B-alignment
-    static constexpr int64_t BLOCK_F32 = 32 / static_cast<int64_t>(sizeof(float)); // = 8
-    tc.cacheLevelStride = CeilAlign(tc.aTotal, BLOCK_F32);
+    // cacheLevelStride: 32B-aligned per-layer stride for cache tree (fp32 lanes)
+    //   When aTotal=1, must CeilAlign to block lanes to satisfy VF LoadAlign 32B-alignment
+    const int64_t blockF32 = static_cast<int64_t>(tc.blockSize) / FP32_SIZE;
+    tc.cacheLevelStride = CeilAlign(tc.aTotal, blockF32);
 }
 
 // ─── 4e. ComputeFusedALoopSplit ───
@@ -369,35 +416,33 @@ void ComputeFusedALoopSplit(TilingCtx& tc)
 ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& tc)
 {
     auto tilingData = ctx->GetTilingData<GlobalLpPoolTilingData>();
-    if (tilingData == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(tilingData == nullptr, OP_LOGE(ctx, "GetTilingData returned nullptr"), return ge::GRAPH_FAILED);
 
-    // Pattern: AR (axisNum=2, tail-R) or ARA (axisNum=3, tail-A)
+    // Pattern: AR (axisNum=GLLP_AXIS_NUM_AR, tail-R) or ARA (axisNum=GLLP_AXIS_NUM_ARA, tail-A)
     if (tc.isTailA) {
-        tilingData->axisNum = 3;
+        tilingData->axisNum = GLLP_AXIS_NUM_ARA;
         tilingData->axisShape[0] = 1;
         tilingData->axisShape[1] = tc.R; // = 1
         tilingData->axisShape[2] = tc.A;
-        for (int32_t i = 3; i < 9; ++i) {
+        for (int32_t i = GLLP_AXIS_NUM_ARA; i < GLLP_MAX_AXIS_NUM; ++i) {
             tilingData->axisShape[i] = 1;
         }
         tilingData->axisStride[0] = tc.A;
         tilingData->axisStride[1] = tc.A;
         tilingData->axisStride[2] = 1;
-        for (int32_t i = 3; i < 9; ++i) {
+        for (int32_t i = GLLP_AXIS_NUM_ARA; i < GLLP_MAX_AXIS_NUM; ++i) {
             tilingData->axisStride[i] = 0;
         }
     } else {
-        tilingData->axisNum = 2;
+        tilingData->axisNum = GLLP_AXIS_NUM_AR;
         tilingData->axisShape[0] = tc.A;
         tilingData->axisShape[1] = tc.R;
-        for (int32_t i = 2; i < 9; ++i) {
+        for (int32_t i = GLLP_AXIS_NUM_AR; i < GLLP_MAX_AXIS_NUM; ++i) {
             tilingData->axisShape[i] = 1;
         }
         tilingData->axisStride[0] = tc.strideA;
         tilingData->axisStride[1] = tc.strideR;
-        for (int32_t i = 2; i < 9; ++i) {
+        for (int32_t i = GLLP_AXIS_NUM_AR; i < GLLP_MAX_AXIS_NUM; ++i) {
             tilingData->axisStride[i] = 0;
         }
     }
@@ -411,8 +456,8 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
     tilingData->usedCoreNum = tc.usedCoreNum;
 
     // UB split
-    tilingData->aSplitAxisIdx = tc.isTailA ? 2 : 0;
-    tilingData->rSplitAxisIdx = 1;
+    tilingData->aSplitAxisIdx = tc.isTailA ? (GLLP_AXIS_NUM_ARA - 1) : 0; // ARA: last axis; AR: axis 0
+    tilingData->rSplitAxisIdx = 1;                                        // R axis is odd index 1
     tilingData->aUbFactor = tc.aUbFactor;
     tilingData->aUbFactorAlign = tc.aUbFactorAlign;
     tilingData->rUbFactor = tc.rUbFactor;
@@ -437,12 +482,18 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
     tilingData->p = tc.p;
     tilingData->invP = (tc.p != 0.0f) ? (1.0f / tc.p) : 0.0f;
 
-    OP_LOGI(ctx->GetNodeName(),
-            "TILING: axisNum=%d isTailA=%d A=%ld R=%ld aUb=%ld/%ld rUb=%ld/%ld "
-            "cores=%d used=%d preUb=%ld postUb=%ld tmpUb=%ld cacheLvl=%ld p=%.1f invP=%.3f",
-            tilingData->axisNum, static_cast<int>(tc.isTailA), tc.A, tc.R, tc.aUbFactor, tc.aUbFactorAlign,
-            tc.rUbFactor, tc.rUbFactorAlign, (int)tc.coreNum, tc.usedCoreNum, tc.preReduceUbSize, tc.postReduceUbSize,
-            tc.tmpBufUbSize, tc.cacheLevelStride, tc.p, (tc.p != 0.0f) ? (1.0f / tc.p) : 0.0f);
+    // 全量 INFO 日志：pattern / UB 切分 / 多核 / buffer 一次打全，便于问题定位
+    OP_LOGI(ctx, "tiling pattern: axisNum=%d isTailA=%d A=%ld R=%ld aSplitAxisIdx=%d rSplitAxisIdx=%d",
+            tilingData->axisNum, static_cast<int>(tc.isTailA), tc.A, tc.R, tilingData->aSplitAxisIdx,
+            tilingData->rSplitAxisIdx);
+    OP_LOGI(ctx, "  split: aUbFactor=%ld aUbFactorAlign=%ld rUbFactor=%ld rUbFactorAlign=%ld", tc.aUbFactor,
+            tc.aUbFactorAlign, tc.rUbFactor, tc.rUbFactorAlign);
+    OP_LOGI(ctx, "  loop: aSplitChunkCnt=%ld rLoopCntTotal=%ld", tc.aSplitChunkCnt, tc.rLoopCntTotal);
+    OP_LOGI(ctx, "  multicore: coreNum=%u usedCoreNum=%d aBigCoreCnt=%d aBigCoreLoopCnt=%ld aSmallCoreLoopCnt=%ld",
+            tc.coreNum, tc.usedCoreNum, tc.aBigCoreCnt, tc.aBigCoreLoopCnt, tc.aSmallCoreLoopCnt);
+    OP_LOGI(ctx, "  ub(bytes): preReduce=%ld postReduce=%ld tmpBuf=%ld cacheBuf=%ld cacheLevelStride=%ld",
+            tc.preReduceUbSize, tc.postReduceUbSize, tc.tmpBufUbSize, CACHE_BUF_UB_SIZE, tc.cacheLevelStride);
+    OP_LOGI(ctx, "  attr: p=%.6f invP=%.6f", tc.p, tilingData->invP);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -454,16 +505,15 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* ctx, const TilingCtx& 
 static void FillEmptyTilingCommon(gert::TilingContext* ctx, TilingCtx& tc)
 {
     auto td = ctx->GetTilingData<GlobalLpPoolTilingData>();
-    if (td == nullptr)
-        return;
-    td->axisNum = 2;
+    OP_CHECK_IF(td == nullptr, OP_LOGE(ctx, "GetTilingData returned nullptr"), return);
+    td->axisNum = GLLP_AXIS_NUM_AR;
     td->axisShape[0] = tc.A;
     td->axisShape[1] = tc.R;
-    for (int32_t i = 2; i < 9; ++i)
+    for (int32_t i = GLLP_AXIS_NUM_AR; i < GLLP_MAX_AXIS_NUM; ++i)
         td->axisShape[i] = 1;
     td->axisStride[0] = (tc.R > 0) ? tc.R : 1;
     td->axisStride[1] = 1;
-    for (int32_t i = 2; i < 9; ++i)
+    for (int32_t i = GLLP_AXIS_NUM_AR; i < GLLP_MAX_AXIS_NUM; ++i)
         td->axisStride[i] = 0;
     td->aSplitAxisIdx = 0;
     td->rSplitAxisIdx = 1;
@@ -479,8 +529,7 @@ static void FillEmptyATilingData(gert::TilingContext* ctx, TilingCtx& tc)
 {
     FillEmptyTilingCommon(ctx, tc);
     auto td = ctx->GetTilingData<GlobalLpPoolTilingData>();
-    if (td == nullptr)
-        return;
+    OP_CHECK_IF(td == nullptr, OP_LOGE(ctx, "GetTilingData returned nullptr"), return);
     td->usedCoreNum = 0;
     td->aLoopCntTotal = 0;
     td->aSplitChunkCnt = 0;
@@ -496,7 +545,7 @@ static void FillEmptyATilingData(gert::TilingContext* ctx, TilingCtx& tc)
     td->postReduceUbSize = 0;
     td->tmpBufUbSize = 0;
     td->cacheBufUbSize = CACHE_BUF_UB_SIZE;
-    td->cacheLevelStride = 8;
+    td->cacheLevelStride = static_cast<int64_t>(tc.blockSize) / FP32_SIZE; // 32B lane count
     td->is_fast_path = 1;
 }
 
@@ -504,8 +553,7 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
 {
     FillEmptyTilingCommon(ctx, tc);
     auto td = ctx->GetTilingData<GlobalLpPoolTilingData>();
-    if (td == nullptr)
-        return;
+    OP_CHECK_IF(td == nullptr, OP_LOGE(ctx, "GetTilingData returned nullptr"), return);
     int64_t totalA = tc.A;
     // Same cachelineTmp rule as the normal path (platform cacheLineSize, never hard-coded)
     const int64_t bsElem = static_cast<int64_t>(tc.blockSize) / tc.dtypeSize;
@@ -519,7 +567,7 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
     int64_t bigLoop = smallLoop + (bigCnt > 0 ? 1 : 0);
     int32_t usedCore = (smallLoop > 0) ? static_cast<int32_t>(cn) : bigCnt;
     int64_t postUb = CeilAlign(aUb * tc.maxDtypeSize, static_cast<int64_t>(tc.blockSize));
-    static constexpr int64_t BLOCK_F32 = 32 / static_cast<int64_t>(sizeof(float));
+    const int64_t blockF32 = static_cast<int64_t>(tc.blockSize) / FP32_SIZE;
     td->usedCoreNum = usedCore;
     td->aLoopCntTotal = aChunks;
     td->aSplitChunkCnt = aChunks;
@@ -535,7 +583,7 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
     td->postReduceUbSize = postUb;
     td->tmpBufUbSize = 0;
     td->cacheBufUbSize = CACHE_BUF_UB_SIZE;
-    td->cacheLevelStride = CeilAlign(aUb, BLOCK_F32);
+    td->cacheLevelStride = CeilAlign(aUb, blockF32);
 }
 
 } // anonymous namespace
@@ -549,13 +597,17 @@ static void FillEmptyRTilingData(gert::TilingContext* ctx, TilingCtx& tc)
 static ge::graphStatus ComputeAraTiling(gert::TilingContext* ctx, TilingCtx& tc)
 {
     const int64_t ubAvailable = static_cast<int64_t>(tc.ubSize) - CACHE_BUF_UB_SIZE;
-    if (ubAvailable <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(ubAvailable <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "ubAvailable",
+                                                         "ubSize=" + std::to_string(tc.ubSize) + " minus cacheBuf=" +
+                                                             std::to_string(CACHE_BUF_UB_SIZE) + " is not positive"),
+                return ge::GRAPH_FAILED);
     const int64_t coeff = tc.maxDtypeSize * ((P_PRE + P_PRE_EXT) + P_POST);
-    if (coeff <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(
+        coeff <= 0,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+            ctx->GetNodeName(), "coeff", "maxDtypeSize=" + std::to_string(tc.maxDtypeSize) + " yields coeff<=0"),
+        return ge::GRAPH_FAILED);
     int64_t aUnitMax = ubAvailable / coeff;
     aUnitMax = std::min(aUnitMax, tc.A);
     // ★ cacheBuf 硬约束：R 全驻即 cacheCount==1，aUnitMax 不能超过 cacheBuf 容量
@@ -571,49 +623,53 @@ static ge::graphStatus ComputeAraTiling(gert::TilingContext* ctx, TilingCtx& tc)
     } else {
         tc.aUbFactor = aUnitMax;
         tc.aUbFactorAlign = CeilAlign(aUnitMax, bsElem);
+        OP_LOGD(ctx, "ComputeAraTiling: A=%ld < bsElem=%ld, single unaligned chunk (aUbFactor=%ld aUbFactorAlign=%ld)",
+                tc.A, bsElem, tc.aUbFactor, tc.aUbFactorAlign);
     }
-    if (tc.aUbFactor <= 0) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(tc.aUbFactor <= 0,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "aUbFactor",
+                                                         "aUbFactor=0 (A=" + std::to_string(tc.A) +
+                                                             " ubAvailable=" + std::to_string(ubAvailable) +
+                                                             " coeff=" + std::to_string(coeff) + ")"),
+                return ge::GRAPH_FAILED);
     tc.rUbFactor = 1;
     tc.rUbFactorAlign = 1;
     ComputeUbSizes(tc);
     ComputeFusedALoopSplit(tc);
-    if (FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "FillAndLogTilingData failed"),
+                return ge::GRAPH_FAILED);
     // ARA 复用 AR 的模板选择，tail 类型由 kernel 侧按 axisNum 奇偶运行期判定
     // （tiling key = 0 是框架保留值，不能被 JIT 编译使用）。
     const uint64_t tilingKey = GET_TPL_TILING_KEY(0, 1);
-    if (ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (ctx->SetBlockDim(static_cast<uint32_t>(tc.usedCoreNum)) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetTilingKey failed, key=%lu", tilingKey), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ctx->SetBlockDim(static_cast<uint32_t>(tc.usedCoreNum)) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetBlockDim failed, blockDim=%d", tc.usedCoreNum), return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "ComputeAraTiling done: usedCoreNum=%d tilingKey=%lu", tc.usedCoreNum, tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 
 // ─── ComputeNormalTiling: extracted from ComputeTiling for size control ──
 static ge::graphStatus ComputeNormalTiling(gert::TilingContext* ctx, TilingCtx& tc)
 {
-    if (ComputeAUbFactor(tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (ComputeRUbFactor(tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (ExpandAIfRFullyLoaded(tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(ComputeAUbFactor(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "ComputeAUbFactor failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeRUbFactor(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "ComputeRUbFactor failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ExpandAIfRFullyLoaded(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "ExpandAIfRFullyLoaded failed"),
+                return ge::GRAPH_FAILED);
     ComputeUbSizes(tc);
     ComputeFusedALoopSplit(tc);
     // No cacheBuf capacity re-check needed: the constraint holds by construction
     // (cacheCount × CeilAlign(aUnit,8) × 4 ≤ 16KB 恒成立).
-    if (FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(FillAndLogTilingData(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "FillAndLogTilingData failed"),
+                return ge::GRAPH_FAILED);
     const uint64_t tilingKey = GET_TPL_TILING_KEY(0, 1);
-    if (ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (ctx->SetBlockDim(static_cast<uint32_t>(tc.usedCoreNum)) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetTilingKey failed, key=%lu", tilingKey), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ctx->SetBlockDim(static_cast<uint32_t>(tc.usedCoreNum)) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetBlockDim failed, blockDim=%d", tc.usedCoreNum), return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "ComputeNormalTiling done: usedCoreNum=%d tilingKey=%lu", tc.usedCoreNum, tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -626,8 +682,8 @@ static ge::graphStatus ComputeEmptyTiling(gert::TilingContext* ctx, TilingCtx& t
         FillEmptyRTilingData(ctx, tc);
     }
     const uint64_t tilingKey = GET_TPL_TILING_KEY(1, 0);
-    if (ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(ctx->SetTilingKey(tilingKey) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetTilingKey failed, key=%lu", tilingKey), return ge::GRAPH_FAILED);
     auto td = ctx->GetTilingData<GlobalLpPoolTilingData>();
     uint32_t blockDim = (td != nullptr) ? static_cast<uint32_t>(td->usedCoreNum) : 0;
     // 空 tensor 场景若使用核数为 0，也需要 SetBlockDim(1)，
@@ -635,8 +691,10 @@ static ge::graphStatus ComputeEmptyTiling(gert::TilingContext* ctx, TilingCtx& t
     if (blockDim == 0) {
         blockDim = 1;
     }
-    if (ctx->SetBlockDim(blockDim) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(ctx->SetBlockDim(blockDim) != ge::GRAPH_SUCCESS,
+                OP_LOGE(ctx, "SetBlockDim failed, blockDim=%u", blockDim), return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "ComputeEmptyTiling done: isEmptyA=%d A=%ld R=%ld blockDim=%u tilingKey=%lu",
+            static_cast<int>(tc.isEmptyA), tc.A, tc.R, blockDim, tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -655,21 +713,32 @@ static void SetWorkspaceSize(gert::TilingContext* ctx)
 // ─── Main entry: ComputeTiling ───
 ge::graphStatus GlobalLpPoolTilingFunc::ComputeTiling(gert::TilingContext* ctx)
 {
-    if (ctx == nullptr)
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(ctx == nullptr, OP_LOGE("GlobalLpPool", "TilingContext is nullptr"), return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "Begin GlobalLpPool ComputeTiling");
     TilingCtx tc;
     SetWorkspaceSize(ctx);
-    if (GetPlatformInfoFromCtx(ctx, tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (GetShapeAttrsInfo(ctx, tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (FusedAxis(tc) != ge::GRAPH_SUCCESS)
-        return ge::GRAPH_FAILED;
-    if (tc.isEmptyA || tc.isEmptyR)
-        return ComputeEmptyTiling(ctx, tc);
-    if (tc.isTailA)
-        return ComputeAraTiling(ctx, tc);
-    return ComputeNormalTiling(ctx, tc);
+    OP_CHECK_IF(GetPlatformInfoFromCtx(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "GetPlatformInfo failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(ctx, tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "GetShapeAttrsInfo failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(FusedAxis(tc) != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "FusedAxis failed"), return ge::GRAPH_FAILED);
+    OP_LOGD(ctx, "FusedAxis: A=%ld R=%ld isEmptyA=%d isEmptyR=%d isTailA=%d", tc.A, tc.R, static_cast<int>(tc.isEmptyA),
+            static_cast<int>(tc.isEmptyR), static_cast<int>(tc.isTailA));
+
+    ge::graphStatus status;
+    if (tc.isEmptyA || tc.isEmptyR) {
+        OP_LOGD(ctx, "route: %s", tc.isEmptyA ? "EMPTY_A" : "EMPTY_R");
+        status = ComputeEmptyTiling(ctx, tc);
+    } else if (tc.isTailA) {
+        OP_LOGD(ctx, "route: ARA tail-A (R=1, A=%ld)", tc.A);
+        status = ComputeAraTiling(ctx, tc);
+    } else {
+        OP_LOGD(ctx, "route: AR tail-R (A=%ld, R=%ld)", tc.A, tc.R);
+        status = ComputeNormalTiling(ctx, tc);
+    }
+    OP_CHECK_IF(status != ge::GRAPH_SUCCESS, OP_LOGE(ctx, "GlobalLpPool tiling failed"), return status);
+    OP_LOGD(ctx, "End GlobalLpPool ComputeTiling: success");
+    return ge::GRAPH_SUCCESS;
 }
 
 } // namespace tiling

@@ -90,8 +90,9 @@ public:
         axisShape2_ = tilingData->axisShape[2];
         aSplitAxisIdx_ = tilingData->aSplitAxisIdx;
         aSplitSize_ = tilingData->axisShape[aSplitAxisIdx_];
-        // tail 类型运行期判定：偶数轴 → tail-R (AR)；奇数轴 → tail-A (ARA)
-        isTailR_ = (tilingData->axisNum % 2 == 0);
+        // tail 类型运行期判定：按 A/R 规整的固定间距（偶位 A / 奇位 R），
+        // 偶数轴 → tail-R (AR)；奇数轴 → tail-A (ARA)。
+        isTailR_ = ((tilingData->axisNum % GLLP_AXIS_INTERVAL) == 0);
         p_ = tilingData->p;
         invP_ = tilingData->invP;
 

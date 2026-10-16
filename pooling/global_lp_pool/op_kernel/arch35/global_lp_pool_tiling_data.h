@@ -10,11 +10,17 @@
 #pragma once
 #include <cstdint>
 
+// ─── A/R 规整模式常量（host tiling 与 kernel 共用）───
+constexpr int32_t GLLP_MAX_AXIS_NUM = 9;  // axisShape / axisStride 定长数组长度
+constexpr int32_t GLLP_AXIS_INTERVAL = 2; // 规整后偶位 A、奇位 R 的固定间距
+constexpr int32_t GLLP_AXIS_NUM_AR = 2;   // tail-R(AR) 模式轴数：[A, R]
+constexpr int32_t GLLP_AXIS_NUM_ARA = 3;  // tail-A(ARA) 模式轴数：前置 [A=1, R=1] + [A]
+
 struct GlobalLpPoolTilingData {
     // ─── pattern description ───
-    int32_t axisNum;       // = 2 (axis count after merge)
-    int64_t axisShape[9];  // axis sizes after merge: [A, R, 1, ...]
-    int64_t axisStride[9]; // GM strides in elements: [C*H*W, W, 0, ...]
+    int32_t axisNum;                       // = GLLP_AXIS_NUM_AR / GLLP_AXIS_NUM_ARA
+    int64_t axisShape[GLLP_MAX_AXIS_NUM];  // axis sizes after merge: [A, R, 1, ...]
+    int64_t axisStride[GLLP_MAX_AXIS_NUM]; // GM strides in elements: [C*H*W, W, 0, ...]
 
     // ─── multi-core split ───
     int64_t aLoopCntTotal;     // = aSplitChunkCnt (only one outer A axis)
