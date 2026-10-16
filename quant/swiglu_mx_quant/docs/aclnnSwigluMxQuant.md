@@ -222,7 +222,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor（shape[0]=0会被拒绝，与不传该参数不同）。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
+      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，所有值的和必须大于0，且必须小于等于x经SwiGLU操作后的总行数（即SwiGLU输出yOut的总行数：activateDim为尾轴时等于x除尾轴之外剩余轴的乘积，activateDim为非尾轴时等于x总行数的一半）。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor（shape[0]=0会被拒绝，与不传该参数不同）。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -501,7 +501,7 @@ aclnnStatus aclnnSwigluMxQuant(
 - swigluMode为2或3时，axis必须为-1（仅支持尾轴量化）。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
-- groupIndexOptional的每个元素必须为大于等于0的整数，且所有元素之和不能大于需要量化的x的总行数（即输入x除尾轴之外的剩余轴的乘积）。
+- groupIndexOptional的每个元素必须为大于等于0的整数，所有元素之和必须大于0，且不能大于x经SwiGLU操作后的总行数（即SwiGLU输出yOut的总行数：activateDim为尾轴时等于x除尾轴之外剩余轴的乘积，activateDim为非尾轴时等于x总行数的一半）。
 - 输出yOut/mxscaleOut由调用方按接口推导的形状分配内存，算子将量化结果完整写回输出Tensor；超出groupIndexOptional所有元素之和覆盖范围的输出部分不清理，为垃圾数据。
 - 输入与输出的内存空间不能重叠，不支持原地修改（inplace）场景。
 - 算子执行过程中不修改任何输入数据。

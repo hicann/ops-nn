@@ -31,8 +31,10 @@ namespace ge {
 * Supports 2-7 dimensional tensors.
 * @li group_index: An optional tensor. Must be one of the following types: int32, int64.
 * If provided, group_index must be 1-dimensional and its shape must be greater than 0 and less than or equal to 256.
-* Each element must be a non-negative integer, and the sum of all elements must not exceed the
-* total number of rows of x to be quantized.
+* Each element must be a non-negative integer, the sum of all elements must be greater than 0, and the sum
+* must not exceed the total number of rows of x after the SwiGLU operation (i.e., the total row count of the
+* SwiGLU output y: when activate_dim is the last axis, it equals the product of the sizes of all axes of x
+* except the last one; when activate_dim is not the last axis, it equals half of the total rows of x).
 
 * @par Attributes:
 * @li activate_dim: An optional int. Dimension along which to split input for SwiGLU.
@@ -85,8 +87,10 @@ namespace ge {
 * @li When activate_dim or axis is not the last axis, if group_index is provided, input x shape must be 2-dimensional.
 * @li If group_index is provided, it must be 1-dimensional and its shape must be greater than 0 and less than or
 * equal to 256.
-* Each element must be a non-negative integer, and the sum of all elements must not exceed
-* the total number of rows of x to be quantized.
+* Each element must be a non-negative integer, the sum of all elements must be greater than 0, and the sum
+* must not exceed the total number of rows of x after the SwiGLU operation (i.e., the total row count of the
+* SwiGLU output y: when activate_dim is the last axis, it equals the product of the sizes of all axes of x
+* except the last one; when activate_dim is not the last axis, it equals half of the total rows of x).
 * @li When dst_type is FP4 (40 or 41), scale_alg must be 0.
 * @li When activate_dim is not the last axis, swiglu_mode must be 0.
 * @li When swiglu_mode is 2 or 3, axis must be -1.
