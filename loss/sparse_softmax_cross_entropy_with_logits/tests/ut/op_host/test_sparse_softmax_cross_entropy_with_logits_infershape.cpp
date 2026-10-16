@@ -42,3 +42,25 @@ TEST_F(tset_sparse_softmax_cross_entropy_with_logits_infershape, test_infershape
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(tset_sparse_softmax_cross_entropy_with_logits_infershape, test_infershape_rank1_features_fail)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSoftmaxCrossEntropyWithLogits"), nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance()
+                              .GetOpImpl("SparseSoftmaxCrossEntropyWithLogits")
+                              ->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+    gert::StorageShape featuresShape = {{256}, {256}};
+    gert::StorageShape labelsShape = {{}, {}};
+    gert::StorageShape lossShape = {{}, {}};
+    gert::StorageShape backpropShape = {{256}, {256}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&featuresShape, &labelsShape})
+                      .OutputShapes({&lossShape, &backpropShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}

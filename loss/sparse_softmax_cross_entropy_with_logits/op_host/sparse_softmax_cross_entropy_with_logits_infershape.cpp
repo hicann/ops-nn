@@ -41,6 +41,8 @@ static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferSha
     OP_CHECK_NULL_WITH_CONTEXT(context, backpropShape);
 
     if (!Ops::Base::IsUnknownRank(*featuresShape) && !Ops::Base::IsUnknownRank(*labelsShape)) {
+        OP_CHECK_IF(featuresShape->GetDimNum() < DIM_NUM_2,
+                    OP_LOGE(context, "Features must be at least 2D matrix [N, C]."), return ge::GRAPH_FAILED);
         OP_CHECK_IF(labelsShape->GetDimNum() != (featuresShape->GetDimNum() - 1),
                     OP_LOGE(context, "Labels.dimNum must equal featuresShape.dimNum - 1."), return ge::GRAPH_FAILED);
 
