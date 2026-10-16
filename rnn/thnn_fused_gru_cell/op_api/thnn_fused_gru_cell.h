@@ -19,7 +19,6 @@
 #include <array>
 
 #include "opdev/common_types.h"
-#include "opdev/op_errno.h"
 #include "opdev/op_executor.h"
 
 namespace l0op {

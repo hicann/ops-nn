@@ -90,6 +90,25 @@ constexpr int64_t HMAJOR_R_MAX = 768;
 constexpr double HMAJOR_UB_SAFETY = 0.85;
 constexpr int64_t HMAJOR_UB_FIXED_BYTES = 512; // bias 双段等固定开销
 
+// ─── biasFlags 位图辅助 ───
+// 字段以 int64_t 存储（Host/Kernel 共享 ABI）；位运算按 G.EXP.27 要求在无符号域进行，
+// 标志位仅 bit0/bit1，无符号中转后回存与原写法逐位等值
+constexpr uint64_t EncodeBiasFlags(bool inputBiasPresent, bool hiddenBiasPresent)
+{
+    return (inputBiasPresent ? static_cast<uint64_t>(INPUT_BIAS_FLAG) : 0U) |
+           (hiddenBiasPresent ? static_cast<uint64_t>(HIDDEN_BIAS_FLAG) : 0U);
+}
+// 位图测试：显式布尔结果（G.EXP.36），位与在无符号域进行（G.EXP.27）
+constexpr bool HasBiasFlag(int64_t biasFlags, int64_t flagBit)
+{
+    return (static_cast<uint64_t>(biasFlags) & static_cast<uint64_t>(flagBit)) != 0U;
+}
+// 32B 向下对齐：入参为非负字节数，掩码运算在无符号域进行（G.EXP.27），回存与原写法等值
+constexpr int64_t AlignDownUbBytes(int64_t bytes)
+{
+    return static_cast<int64_t>(static_cast<uint64_t>(bytes) & static_cast<uint64_t>(UB_ALIGN_MASK));
+}
+
 static std::vector<int64_t> ShapeDims(const gert::StorageShape* shape)
 {
     std::vector<int64_t> dims;
@@ -124,7 +143,7 @@ static void PadAndSqueezeGateSpace(const std::vector<std::vector<int64_t>>& rawI
     const int64_t batch = rawInputShapes[INPUT_GATES_IDX][0]; // == hx.shape[0]（校验已锁定）
     const int64_t hidden = rawInputShapes[HX_IDX][1];         // 输出分配锚点
     (void)rawOutputShapes;                                    // 输出视图由 (B,H) 确定性推导
-    auto padToRank = [&](int64_t d0, int64_t d1) {            // 左补 1 至 RANK=4
+    auto padToRank = [&RANK](int64_t d0, int64_t d1) {        // 左补 1 至 RANK=4
         std::vector<int64_t> p(static_cast<size_t>(RANK - 2), 1);
         p.push_back(d0);
         p.push_back(d1);
@@ -386,8 +405,9 @@ public:
                 const int64_t hmTileCount = (hmBatch + rowsPerTile - 1) / rowsPerTile; // ceil(B/R)
                 hmTiling->hmajorPadGates = hmPadGates;
                 hmTiling->hmajorPadStorage = hmPadStorage;
-                hmTiling->biasFlags = (inputBiasPresent_ ? INPUT_BIAS_FLAG : 0) |
-                                      (hiddenBiasPresent_ ? HIDDEN_BIAS_FLAG : 0); // 与原路径同位编码
+                hmTiling->biasFlags = static_cast<int64_t>(
+                    thnn_fused_gru_cell::EncodeBiasFlags(inputBiasPresent_, hiddenBiasPresent_));
+                // 与原路径同位编码
                 (void)hmElemBytes; // 仅路由/日志用，kernel 由 dtype 模板推导
                 // 多核均分：前 coresTail 核各多 1 tile（任意两核 tile 数差 ≤ 1）
                 const int64_t hmTotalTiles = hmTileCount;
@@ -683,7 +703,7 @@ private:
         tiling->multicore.numCores = 0;
         tiling->multicore.tilesMain = 0;
         tiling->multicore.coresTail = 0;
-        tiling->perBufBytes = (static_cast<int64_t>(ubSize_) / PHYS_NODES) & thnn_fused_gru_cell::UB_ALIGN_MASK;
+        tiling->perBufBytes = thnn_fused_gru_cell::AlignDownUbBytes(static_cast<int64_t>(ubSize_) / PHYS_NODES);
         tiling->tileElems = 0;
         tiling->paddedHidden = 0;
         return ge::GRAPH_SUCCESS;
@@ -714,7 +734,7 @@ private:
                                                  tiling->multicore)) {
             return ge::GRAPH_FAILED;
         }
-        tiling->perBufBytes = (ubPerCore / PHYS_NODES) & thnn_fused_gru_cell::UB_ALIGN_MASK; // 3 fp32 work bufs
+        tiling->perBufBytes = thnn_fused_gru_cell::AlignDownUbBytes(ubPerCore / PHYS_NODES); // 3 fp32 work bufs
         tiling->tileElems = ubPerCore / thnn_fused_gru_cell::PerTileElemBytes(dtype_);
         tiling->paddedHidden = paddedHidden;
 
@@ -725,9 +745,11 @@ private:
         }
 
         // 3) biasFlags / numInputs / numOutputs（bit0=input_bias 槽 3、bit1=hidden_bias 槽 4）
-        tiling->biasFlags = (inputBiasPresent_ ? INPUT_BIAS_FLAG : 0) | (hiddenBiasPresent_ ? HIDDEN_BIAS_FLAG : 0);
-        tiling->numInputs = REQUIRED_INPUT_COUNT + ((tiling->biasFlags & INPUT_BIAS_FLAG) ? 1 : 0) +
-                            ((tiling->biasFlags & HIDDEN_BIAS_FLAG) ? 1 : 0);
+        tiling->biasFlags = static_cast<int64_t>(
+            thnn_fused_gru_cell::EncodeBiasFlags(inputBiasPresent_, hiddenBiasPresent_));
+        tiling->numInputs = REQUIRED_INPUT_COUNT +
+                            (thnn_fused_gru_cell::HasBiasFlag(tiling->biasFlags, INPUT_BIAS_FLAG) ? 1 : 0) +
+                            (thnn_fused_gru_cell::HasBiasFlag(tiling->biasFlags, HIDDEN_BIAS_FLAG) ? 1 : 0);
         tiling->numOutputs = MAX_OUTPUT_SLOTS; // hy / storage
 
         // 4) inputShapes / inputStrides：RANK=4 左补 1 形态直接写入；
@@ -757,7 +779,7 @@ private:
     }
 
     // 维测日志（外部参数 + TilingData 全量，只读）
-    void LogTilingData(const ThnnFusedGruCellTilingDataRank4* tiling)
+    void LogTilingData(const ThnnFusedGruCellTilingDataRank4* tiling) const
     {
         OP_LOGI(ctx_->GetNodeName(),
                 "TilingData: perBufBytes=%ld paddedHidden=%ld rank=%ld biasFlags=%ld maxBroShape=%s "

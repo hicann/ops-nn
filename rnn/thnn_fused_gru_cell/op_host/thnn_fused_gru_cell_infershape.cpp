@@ -14,7 +14,6 @@
 
 #include <cstdint>
 
-#include "graph/types.h"
 #include "op_common/op_host/util/shape_util.h"
 
 using namespace ge;

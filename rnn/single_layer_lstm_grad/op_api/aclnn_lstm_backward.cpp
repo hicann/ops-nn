@@ -53,6 +53,11 @@ constexpr int64_t DIM_THREE = 3;
 
 // LSTM特定常量
 constexpr int64_t GATE_COUNT = 4; // i, j, f, o 四个门
+constexpr double DROPOUT_ZERO_TOLERANCE = 1e-6;
+inline bool IsDropoutZero(double dropout)
+{
+    return dropout >= -DROPOUT_ZERO_TOLERANCE && dropout <= DROPOUT_ZERO_TOLERANCE;
+}
 constexpr int64_t SINGLE_DIRECTION = 1;
 constexpr int64_t BI_DIRECTION = 2;
 constexpr int64_t HC_TENSOR_COUNT = 2; // h和c两个张量
@@ -1718,7 +1723,7 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
         // Do not fall through to legacy packed/dropout/empty success paths:
         // those do not implement this candidate's forward/backward contract.
         const int64_t hiddenSize = (*hx)[0]->GetViewShape().GetDim(2);
-        OP_CHECK(batchSizesOptional == nullptr && !bidirectional && dropout == 0.0 && train && numLayers > 0 &&
+        OP_CHECK(batchSizesOptional == nullptr && !bidirectional && IsDropoutZero(dropout) && train && numLayers > 0 &&
                      input->GetViewShape().GetDim(batchFirst ? 1 : 0) > 0 && input->GetViewShape().GetDim(2) >= 0 &&
                      hiddenSize >= 0,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,

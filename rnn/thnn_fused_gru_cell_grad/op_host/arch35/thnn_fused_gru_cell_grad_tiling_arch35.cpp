@@ -71,12 +71,12 @@ inline int64_t LargestPow2StrictlyBelow(int64_t n)
     return p;
 }
 
-// CalLog2 = floor(log2(x))（x ≥ 1）
+// CalLog2 = floor(log2(x))（x ≥ 1；循环条件 x > 1 保证入参恒正，按无符号移位规避有符号右移，G.EXP.27）
 inline int64_t FloorLog2(int64_t x)
 {
     int64_t r = 0;
     while (x > 1) {
-        x >>= 1;
+        x = static_cast<int64_t>(static_cast<uint64_t>(x) >> 1);
         ++r;
     }
     return r;
@@ -362,6 +362,11 @@ ge::graphStatus ComputeUbSplit(gert::TilingContext* context, ThnnFusedGruCellGra
         // Step 2：UB 预算反解 rUbFactor；rIMax<1 → OP_LOGE + TILING_FAIL
         const int64_t postBufSize = CeilAlign(BIAS_SEG_CNT * aUnit * tiling.maxDtypeSize, tiling.blockSize);
         const int64_t bytesPerRElem = (P_PRE + P_PRE_EXT) * aUnit * tiling.maxDtypeSize; // 19 份额
+        // 除零保护（G.EXP.22）：aUnit / maxDtypeSize 异常为 0 时直接判 tiling 失败，避免无定义行为
+        OP_CHECK_IF(bytesPerRElem == 0,
+                    OP_LOGE(context, "UbSize is too small: bytesPerRElem=0 (aUnit=%ld, maxDtypeSize=%ld)", aUnit,
+                            tiling.maxDtypeSize),
+                    return ge::GRAPH_FAILED);
         const int64_t rIMax = (tiling.ubAvailable - postBufSize) / bytesPerRElem;
         OP_CHECK_IF(rIMax < 1,
                     OP_LOGE(context,
