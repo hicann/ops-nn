@@ -157,7 +157,7 @@ aclnnStatus aclnnScatterAdd(
         <td>BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
         <td>-</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>out（aclTensor*）</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnScatterAdd(
         <td>BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
         <td>-</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>workspaceSize（uint64_t*）</td>
