@@ -87,6 +87,7 @@ int Foo()
 ```CPP
 const int A_CONST = 100;       // 此处两行注释属于同类
 const int ANOTHER_CONST = 200; // 可保持左侧对齐
+```
 
 ## 【错误示例】
 
