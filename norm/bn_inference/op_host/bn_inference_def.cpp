@@ -123,6 +123,7 @@ private:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "bn_inference");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

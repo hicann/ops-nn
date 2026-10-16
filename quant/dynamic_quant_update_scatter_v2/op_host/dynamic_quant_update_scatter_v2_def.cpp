@@ -77,6 +77,7 @@ public:
             .ExtendCfgInfo("opFile.value", "dynamic_quant_update_scatter_v2")
             .ExtendCfgInfo("opInterface.value", "dynamic_quant_update_scatter_v2");
         this->AICore().AddConfig("ascend950", aicore_config950);
+        this->AICore().AddConfig("ascend350", aicore_config950);
     }
 
 private:

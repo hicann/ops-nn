@@ -1,0 +1,98 @@
+{
+    "op_type": "ForeachCos",
+    "op_list": [
+        {
+            "bin_filename": "ForeachCos_3e9c1f3cb4f802c4af5651902e0627ca",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachCos_28eb38e31b0f0b03396edc58c4b49adc",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachCos_5c5b8a8786a081299bb992dcddd29e00",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        }
+    ]
+}

@@ -56,6 +56,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
         case SocVersion::ASCEND910B:
         case SocVersion::ASCEND910_93:
         case SocVersion::ASCEND950:
+        case SocVersion::ASCEND350:
             return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
         default:
             return EMPTY_LIST;

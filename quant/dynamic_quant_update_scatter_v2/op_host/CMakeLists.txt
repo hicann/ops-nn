@@ -8,8 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950")
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
+set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950" "ascend350")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35" "arch35")
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
                     OPTYPE dynamic_quant_update_scatter_v2 ACLNNTYPE aclnn_exclude

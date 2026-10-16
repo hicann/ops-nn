@@ -1,0 +1,5616 @@
+{
+  "op_type": "BNInference",
+  "optional_input_mode": "gen_placeholder",
+  "op_list": [
+    {
+      "bin_filename": "BNInference_NCHW_01_f32_f32_f32_f32",
+      "simplified_key": "diy,0/2/2/2/2/2/0/0/0/0/0/0/0/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_02_f16_f32_f32_f16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/1/0/0/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_03_bf16_f32_f32_bf16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/27/0/0/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_04_f16_f16_f16_f16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/1/1/1/1/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_05_f16_f16_f32_f16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/1/1/1/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_06_bf16_bf16_bf16_bf16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/27/27/27/27/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_07_bf16_bf16_f32_bf16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/27/27/27/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_08_f16_f32_f32_f32",
+      "simplified_key": "diy,0/2/2/2/2/2/0/1/0/0/0/0/0/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_09_bf16_f32_f32_f32",
+      "simplified_key": "diy,0/2/2/2/2/2/0/27/0/0/0/0/0/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_10_bf16_f16_f16_f16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/27/1/1/1/1/1/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCHW_11_f32_f16_f16_f16",
+      "simplified_key": "diy,0/2/2/2/2/2/0/0/1/1/1/1/1/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_01_f32_f32_f32_f32",
+      "simplified_key": "diy,30/2/2/2/2/2/30/0/0/0/0/0/0/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_02_f16_f32_f32_f16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/1/0/0/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_03_bf16_f32_f32_bf16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/27/0/0/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_04_f16_f16_f16_f16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/1/1/1/1/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_05_f16_f16_f32_f16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/1/1/1/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_06_bf16_bf16_bf16_bf16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/27/27/27/27/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_07_bf16_bf16_f32_bf16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/27/27/27/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_08_f16_f32_f32_f32",
+      "simplified_key": "diy,30/2/2/2/2/2/30/1/0/0/0/0/0/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_09_bf16_f32_f32_f32",
+      "simplified_key": "diy,30/2/2/2/2/2/30/27/0/0/0/0/0/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_10_bf16_f16_f16_f16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/27/1/1/1/1/1/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NCDHW_11_f32_f16_f16_f16",
+      "simplified_key": "diy,30/2/2/2/2/2/30/0/1/1/1/1/1/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_01_f32_f32_f32_f32",
+      "simplified_key": "diy,1/2/2/2/2/2/1/0/0/0/0/0/0/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_02_f16_f32_f32_f16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/1/0/0/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_03_bf16_f32_f32_bf16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/27/0/0/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_04_f16_f16_f16_f16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/1/1/1/1/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_05_f16_f16_f32_f16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/1/1/1/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_06_bf16_bf16_bf16_bf16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/27/27/27/27/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_07_bf16_bf16_f32_bf16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/27/27/27/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_08_f16_f32_f32_f32",
+      "simplified_key": "diy,1/2/2/2/2/2/1/1/0/0/0/0/0/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_09_bf16_f32_f32_f32",
+      "simplified_key": "diy,1/2/2/2/2/2/1/27/0/0/0/0/0/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_10_bf16_f16_f16_f16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/27/1/1/1/1/1/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NHWC_11_f32_f16_f16_f16",
+      "simplified_key": "diy,1/2/2/2/2/2/1/0/1/1/1/1/1/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_01_f32_f32_f32_f32",
+      "simplified_key": "diy,27/2/2/2/2/2/27/0/0/0/0/0/0/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_02_f16_f32_f32_f16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/1/0/0/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_03_bf16_f32_f32_bf16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/27/0/0/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_04_f16_f16_f16_f16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/1/1/1/1/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_05_f16_f16_f32_f16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/1/1/1/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_06_bf16_bf16_bf16_bf16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/27/27/27/27/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_07_bf16_bf16_f32_bf16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/27/27/27/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_08_f16_f32_f32_f32",
+      "simplified_key": "diy,27/2/2/2/2/2/27/1/0/0/0/0/0/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_09_bf16_f32_f32_f32",
+      "simplified_key": "diy,27/2/2/2/2/2/27/27/0/0/0/0/0/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_10_bf16_f16_f16_f16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/27/1/1/1/1/1/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_NDHWC_11_f32_f16_f16_f16",
+      "simplified_key": "diy,27/2/2/2/2/2/27/0/1/1/1/1/1/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDHWC",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_01_f32_f32_f32_f32",
+      "simplified_key": "diy,2/2/2/2/2/2/2/0/0/0/0/0/0/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_02_f16_f32_f32_f16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/1/0/0/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_03_bf16_f32_f32_bf16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/27/0/0/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_04_f16_f16_f16_f16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/1/1/1/1/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_05_f16_f16_f32_f16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/1/1/1/0/1/1/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_06_bf16_bf16_bf16_bf16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/27/27/27/27/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_07_bf16_bf16_f32_bf16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/27/27/27/0/27/27/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_08_f16_f32_f32_f32",
+      "simplified_key": "diy,2/2/2/2/2/2/2/1/0/0/0/0/0/1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_09_bf16_f32_f32_f32",
+      "simplified_key": "diy,2/2/2/2/2/2/2/27/0/0/0/0/0/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_10_bf16_f16_f16_f16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/27/1/1/1/1/1/27",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "BNInference_ND_11_f32_f16_f16_f16",
+      "simplified_key": "diy,2/2/2/2/2/2/2/0/1/1/1/1/1/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "mean",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "variance",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "momentum",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "scale",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        },
+        {
+          "name": "offset",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatDefault"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "epsilon",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "use_global_stats",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "mode",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

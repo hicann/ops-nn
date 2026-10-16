@@ -10,6 +10,6 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/cosine_embedding_loss.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )

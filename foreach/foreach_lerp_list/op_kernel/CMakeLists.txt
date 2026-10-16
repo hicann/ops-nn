@@ -18,6 +18,6 @@ add_kernel_sources(
 # arch35: ascend950 uses arch35 kernel entry
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_lerp_list.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )

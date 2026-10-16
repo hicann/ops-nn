@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/centralization.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     SIMPLIFIED_KEY None
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"

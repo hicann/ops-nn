@@ -9,9 +9,9 @@
 # ----------------------------------------------------------------------------
 
 # 算子定义支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350")
 # 算子 tiling 文件所在子目录（op_host/<TILING_DIR>）
-set(SUPPORT_TILING_DIR "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
                     OPTYPE fake_quant_with_min_max_args ACLNNTYPE aclnn_exclude
                     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR}

@@ -15,6 +15,6 @@ add_kernel_sources(
 # arch35 (Ascend950) native RegBase kernel.
 add_kernel_sources(
     KERNEL_SRC arch35/dynamic_quant_update_scatter_v2.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )
