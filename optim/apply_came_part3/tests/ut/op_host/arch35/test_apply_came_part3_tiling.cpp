@@ -67,6 +67,7 @@ TilingResult RunTiling(int64_t n, int64_t m, ge::DataType momentType, bool useFi
 
     TilingResult result;
     EXPECT_TRUE(ExecuteTiling(para, result.info));
+    EXPECT_EQ(result.info.tilingKey, 0);
     EXPECT_EQ(result.info.tilingDataSize, sizeof(result.data));
     if (result.info.tilingDataSize == sizeof(result.data)) {
         std::memcpy(&result.data, result.info.tilingData.get(), sizeof(result.data));

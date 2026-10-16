@@ -156,3 +156,48 @@ TEST_F(BNInferKernelTest, fp32TilingKey900000NHWC)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
+
+TEST_F(BNInferKernelTest, fp32TilingKey902000InitializesAlignedOffsetTail)
+{
+    constexpr int64_t b = 2;
+    constexpr int64_t c = 3;
+    constexpr int64_t total = b * c;
+
+    auto* x = reinterpret_cast<float*>(AscendC::GmAlloc(total * sizeof(float)));
+    auto* scale = reinterpret_cast<float*>(AscendC::GmAlloc(c * sizeof(float)));
+    auto* offset = reinterpret_cast<float*>(AscendC::GmAlloc(c * sizeof(float)));
+    auto* mean = reinterpret_cast<float*>(AscendC::GmAlloc(c * sizeof(float)));
+    auto* variance = reinterpret_cast<float*>(AscendC::GmAlloc(c * sizeof(float)));
+    auto* y = reinterpret_cast<float*>(AscendC::GmAlloc(total * sizeof(float)));
+    auto* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(WORKSPACE_BYTES));
+    auto* tiling = reinterpret_cast<BNInferLastChannelTilingData*>(
+        AscendC::GmAlloc(sizeof(BNInferLastChannelTilingData)));
+
+    for (int64_t i = 0; i < total; ++i) {
+        x[i] = -0.4f + 0.2f * i;
+        y[i] = 0.0f;
+    }
+    FillParams(scale, offset, mean, variance, c);
+    *tiling = {1, 1, c, 1, 1, c, c, 0, b, b, EPSILON};
+
+    ICPU_SET_TILING_KEY(902000);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(bn_infer, 1, reinterpret_cast<GM_ADDR>(x), reinterpret_cast<GM_ADDR>(scale),
+                reinterpret_cast<GM_ADDR>(offset), reinterpret_cast<GM_ADDR>(mean), reinterpret_cast<GM_ADDR>(variance),
+                reinterpret_cast<GM_ADDR>(y), reinterpret_cast<GM_ADDR>(workspace), reinterpret_cast<GM_ADDR>(tiling));
+
+    vector<float> expected(total);
+    for (int64_t i = 0; i < total; ++i) {
+        expected[i] = Golden(x[i], scale[i % c], offset[i % c], mean[i % c], variance[i % c]);
+    }
+    CheckClose(y, expected);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(offset);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(variance);
+    AscendC::GmFree(y);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}

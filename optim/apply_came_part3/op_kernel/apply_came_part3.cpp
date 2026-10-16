@@ -13,11 +13,11 @@
 #include "arch35/apply_came_part3_fp16.cpp"
 #include "arch35/apply_came_part3_post.h"
 
-template <typename D_T>
 __global__ __aicore__ void apply_came_part3(GM_ADDR u, GM_ADDR m_in, GM_ADDR eps, GM_ADDR beta1, GM_ADDR clip_threshold,
                                             GM_ADDR sum_square_u, GM_ADDR global_shape, GM_ADDR m_out, GM_ADDR sum_u_r,
                                             GM_ADDR sum_u_c, GM_ADDR sum_u_rc, GM_ADDR workspace, GM_ADDR cameTiling)
 {
+    using D_T = DTYPE_M;
     if (workspace == nullptr) {
         return;
     }

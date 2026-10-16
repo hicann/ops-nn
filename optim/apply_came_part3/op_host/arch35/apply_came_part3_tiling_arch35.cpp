@@ -15,7 +15,6 @@
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "apply_came_part3_tiling_arch35.h"
-#include "../../op_kernel/arch35/apply_came_part3_tiling_key.h"
 
 namespace optiling {
 namespace {
@@ -263,7 +262,7 @@ ge::graphStatus TilingApplyCamePart3(gert::TilingContext* context)
                     return ge::GRAPH_FAILED);
     workspace[0] = workspaceSize;
     context->SetBlockDim(data.usedCoreNum);
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(mDesc->GetDataType()));
+    context->SetTilingKey(0);
     return SetTilingData(context, data);
 }
 

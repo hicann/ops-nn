@@ -10,17 +10,7 @@
 #ifndef OPS_NN_APPLY_CAME_PART1_TILING_KEY_H
 #define OPS_NN_APPLY_CAME_PART1_TILING_KEY_H
 
-#include "ascendc/host_api/tiling/template_argument.h"
-
-#ifdef ASCENDC_CPU_DEBUG
-#include "graph/c_types.h"
-#endif
-
-ASCENDC_TPL_ARGS_DECL(ApplyCamePart1,
-                      ASCENDC_TPL_DATATYPE_DECL(D_T, C_DT_FLOAT, C_DT_FLOAT16, C_DT_BF16, ASCENDC_TPL_INPUT(0)));
-
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16)));
+// DTYPE_GRAD is injected from the input dtype profile. TilingKey only represents
+// algorithm branches independent of dtype, and ApplyCamePart1 has a single path.
 
 #endif // OPS_NN_APPLY_CAME_PART1_TILING_KEY_H

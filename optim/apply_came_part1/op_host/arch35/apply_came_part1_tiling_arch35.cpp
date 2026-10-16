@@ -22,7 +22,6 @@
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "apply_came_part1_tiling_arch35.h"
-#include "../../op_kernel/arch35/apply_came_part1_tiling_key.h"
 
 namespace optiling {
 
@@ -39,8 +38,6 @@ constexpr int64_t DIRECT_BATCH_ALIGNMENT = 8;
 constexpr int64_t MAX_DIRECT_MATRIX_ELEMENTS = 8192;
 constexpr size_t MIN_USER_WORKSPACE_BYTES = 32;
 constexpr size_t WORKSPACE_ALIGNMENT_BYTES = 512;
-constexpr uint64_t FLOAT16_TILING_KEY = 1;
-constexpr uint64_t BF16_TILING_KEY = 27;
 
 inline static int64_t CeilDiv(int64_t value, int64_t factor)
 {
@@ -517,16 +514,7 @@ ge::graphStatus TilingApplyCamePart1(gert::TilingContext* context)
     LogApplyCamePart1Tiling(tilingData, dataType);
 
     context->SetBlockDim(tilingData.get_usedCoreNum());
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType));
-    // Keep the host selector aligned with the canonical dtype keys used by the
-    // Ascend950 kernel objects shipped in the package.
-    uint64_t canonicalKey = 0;
-    if (dataType == ge::DT_FLOAT16) {
-        canonicalKey = FLOAT16_TILING_KEY;
-    } else if (dataType == ge::DT_BF16) {
-        canonicalKey = BF16_TILING_KEY;
-    }
-    context->SetTilingKey(canonicalKey);
+    context->SetTilingKey(0);
     return ge::GRAPH_SUCCESS;
 }
 

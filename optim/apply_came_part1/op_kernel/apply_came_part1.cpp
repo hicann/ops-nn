@@ -22,10 +22,10 @@
 
 using namespace ApplyCamePart1;
 
-template <typename D_T>
 __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR sum_grad_r, GM_ADDR sum_grad_c,
                                             GM_ADDR sum_grad_rc, GM_ADDR workspace, GM_ADDR tiling)
 {
+    using D_T = DTYPE_GRAD;
     if (workspace == nullptr) {
         return;
     }

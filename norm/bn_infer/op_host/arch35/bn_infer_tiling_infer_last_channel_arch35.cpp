@@ -68,6 +68,24 @@ inline bool TryMul(int64_t lhs, int64_t rhs, int64_t& result)
     result = lhs * rhs;
     return true;
 }
+
+inline bool TryAdd(int64_t lhs, int64_t rhs, int64_t& result)
+{
+    if (lhs < 0 || rhs < 0 || lhs > INT64_MAX - rhs) {
+        return false;
+    }
+    result = lhs + rhs;
+    return true;
+}
+
+inline bool TryAlignUp(int64_t value, int64_t alignment, int64_t& result)
+{
+    if (value < 0 || alignment <= 0) {
+        return false;
+    }
+    const int64_t remainder = value % alignment;
+    return remainder == 0 ? (result = value, true) : TryAdd(value, alignment - remainder, result);
+}
 } // namespace
 
 class BNInferLastChannelTiling : public Ops::NN::Optiling::TilingBaseClass {
@@ -144,6 +162,7 @@ private:
     ge::graphStatus DoSmallLastChannelTiling();
     ge::graphStatus DoContinuousLastChannelTiling();
     ge::graphStatus DoGeneralLastChannelTiling();
+    bool CanFitContinuousLastChannel() const;
     ge::graphStatus FillGeneralLastChannelTiling(int64_t bInner, int64_t bOuter, int64_t tileBlockBTail);
     bool IsLastChannelUnaligned() const;
     int64_t GetBaseTilingAOuter() const;
@@ -527,6 +546,33 @@ ge::graphStatus BNInferLastChannelTiling::DoContinuousLastChannelTiling()
     return FillLastChannelTilingForBSplit(paramBytes, paramCacheBytes);
 }
 
+bool BNInferLastChannelTiling::CanFitContinuousLastChannel() const
+{
+    int64_t paramAlignLen = 0;
+    if (!TryAlignUp(fusedALen, static_cast<int64_t>(vlFp32), paramAlignLen)) {
+        return false;
+    }
+
+    const int64_t paramBytesPerElement = MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement;
+    int64_t paramBytes = 0;
+    int64_t cacheBytes = 0;
+    int64_t tileBytes = 0;
+    if (!TryMul(DOUBLE_BUFFER * paramBytesPerElement, paramAlignLen, paramBytes) ||
+        !TryMul((MEAN_VAR_NUM + WEIGHT_BIAS_NUM) * FLOAT32_BYTES, paramAlignLen, cacheBytes) ||
+        !TryMul(fusedALen, bytesPerElement, tileBytes) ||
+        !TryAlignUp(paramBytes, static_cast<int64_t>(blockSize), paramBytes) ||
+        !TryAlignUp(cacheBytes, static_cast<int64_t>(blockSize), cacheBytes) ||
+        !TryAlignUp(tileBytes, static_cast<int64_t>(blockSize), tileBytes)) {
+        return false;
+    }
+
+    int64_t ioBytes = 0;
+    int64_t requiredBytes = 0;
+    return TryMul(tileBytes, INPUT_OUTPUT_NUM * DOUBLE_BUFFER, ioBytes) &&
+           TryAdd(paramBytes, cacheBytes, requiredBytes) && TryAdd(requiredBytes, ioBytes, requiredBytes) &&
+           requiredBytes <= static_cast<int64_t>(aicoreParams_.ubSize);
+}
+
 ge::graphStatus BNInferLastChannelTiling::FillGeneralLastChannelTiling(int64_t bInner, int64_t bOuter,
                                                                        int64_t tileBlockBTail)
 {
@@ -569,7 +615,8 @@ ge::graphStatus BNInferLastChannelTiling::DoGeneralLastChannelTiling()
     bool meetsContinuousShape = dataType == ge::DT_FLOAT ?
                                     fusedALen > MIN_CONTINUOUS_A_LEN :
                                     fusedALen > MIN_CONTINUOUS_A_LEN && fusedBLen > MIN_SMALL_A_B_LEN;
-    isContinuousLastChannel = isUnalignedLastChannel || (meetsContinuousShape && canUseContinuousA);
+    const bool preferContinuousLastChannel = isUnalignedLastChannel || (meetsContinuousShape && canUseContinuousA);
+    isContinuousLastChannel = preferContinuousLastChannel && CanFitContinuousLastChannel();
     if (isContinuousLastChannel) {
         return DoContinuousLastChannelTiling();
     }

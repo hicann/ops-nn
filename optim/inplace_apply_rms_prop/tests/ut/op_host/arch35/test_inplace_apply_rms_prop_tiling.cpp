@@ -505,7 +505,7 @@ TEST_F(TestInplaceApplyRMSPropTiling, inplace_apply_rms_prop_ub_factor_alignment
     EXPECT_GT(result.ubFactor, 0);
     constexpr int64_t kFp32AlignElements = 32 / sizeof(float);
     constexpr int64_t kFp32DoubleBufferBytesPerElement = 64;
-    constexpr int64_t kFp32ScalarBufferBytes = 128;
+    constexpr int64_t kFp32ScalarBufferBytes = 256;
     constexpr int64_t kUbSize = 245760;
     EXPECT_EQ(result.ubFactor % kFp32AlignElements, 0);
     EXPECT_LE(result.ubFactor * kFp32DoubleBufferBytesPerElement + kFp32ScalarBufferBytes, kUbSize);

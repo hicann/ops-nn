@@ -120,7 +120,8 @@ private:
         LocalTensor<uint32_t> offset = offsetBuf_.Get<uint32_t>();
         uint32_t aLen = static_cast<uint32_t>(tilingData_->tileBlockALen);
         uint32_t paramCacheElemLen = GetSmallLastChannelParamCacheElemLen();
-        for (uint32_t i = 0; i < paramCacheElemLen; i++) {
+        uint32_t offsetLen = static_cast<uint32_t>(AlignUp(paramCacheElemLen, BLOCK_SIZE / sizeof(uint32_t)));
+        for (uint32_t i = 0; i < offsetLen; i++) {
             offset.SetValue(i, i % aLen);
         }
     }

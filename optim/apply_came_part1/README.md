@@ -100,7 +100,7 @@
 - <term>Ascend 950PR&950DT系列产品</term>：
   - `grad`的rank不小于2，最后两维为`[N, M]`，其余维度为批次维度。
   - `grad`所有维度大小的乘积不能超过INT64的最大值。
-  - `eps`支持标量或shape为`[1]`的一维张量。
+  - `eps`支持任意仅含一个元素的ND张量。
   - `sum_grad_r`、`sum_grad_c`和`sum_grad_rc`的shape分别为`[batch..., N]`、`[batch..., M]`和`[batch...]`；当`grad`的rank为2时，`sum_grad_rc`为标量。
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - `grad`仅支持shape为`[N, M]`的二维张量。

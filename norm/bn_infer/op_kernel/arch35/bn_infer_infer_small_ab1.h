@@ -104,7 +104,8 @@ private:
         uint32_t abLen = static_cast<uint32_t>(tilingData_->totalALen * tilingData_->totalB1Len);
         uint32_t b1Len = static_cast<uint32_t>(tilingData_->totalB1Len);
         uint32_t paramCacheElemLen = GetSmallAB1ParamCacheElemLen();
-        for (uint32_t i = 0; i < paramCacheElemLen; i++) {
+        uint32_t offsetLen = static_cast<uint32_t>(AlignUp(paramCacheElemLen, VL_FP32));
+        for (uint32_t i = 0; i < offsetLen; i++) {
             offset.SetValue(i, (i % abLen) / b1Len);
         }
     }

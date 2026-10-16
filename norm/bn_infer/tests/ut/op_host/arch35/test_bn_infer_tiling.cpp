@@ -13,6 +13,7 @@
  * \brief BNInfer arch35 tiling UT.
  */
 
+#include <cstring>
 #include <gtest/gtest.h>
 #include <map>
 #include <string>
@@ -62,7 +63,8 @@ gert::StorageShape MakeStorageShape(const vector<int64_t>& dims)
 }
 
 ge::graphStatus RunBNInferTiling(const vector<int64_t>& xDims, ge::DataType xDtype, ge::Format xFormat,
-                                 uint64_t* tilingKey = nullptr, uint64_t* blockDim = nullptr)
+                                 uint64_t* tilingKey = nullptr, uint64_t* blockDim = nullptr,
+                                 BNInferLastChannelTilingData* lastChannelTilingData = nullptr)
 {
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("BNInfer");
     if (opImpl == nullptr || opImpl->tiling == nullptr) {
@@ -135,6 +137,14 @@ ge::graphStatus RunBNInferTiling(const vector<int64_t>& xDims, ge::DataType xDty
         }
         if (blockDim != nullptr) {
             *blockDim = tilingContext->GetBlockDim();
+        }
+        if (lastChannelTilingData != nullptr) {
+            auto* rawTilingData = tilingContext->GetRawTilingData();
+            if (rawTilingData == nullptr || rawTilingData->GetData() == nullptr ||
+                rawTilingData->GetDataSize() < sizeof(*lastChannelTilingData)) {
+                return ge::GRAPH_FAILED;
+            }
+            std::memcpy(lastChannelTilingData, rawTilingData->GetData(), sizeof(*lastChannelTilingData));
         }
     }
     return status;
@@ -209,10 +219,30 @@ TEST_F(BNInferTilingTest, nhwcFloatContinuousATilingKey901000)
     EXPECT_EQ(tilingKey, 901000);
 }
 
-TEST_F(BNInferTilingTest, rejectLastChannelWhenChannelCacheExceedsUb)
+TEST_F(BNInferTilingTest, largeLastChannelFallsBackToASplit)
 {
-    auto status = RunBNInferTiling({1, 1, 1, 4096}, ge::DT_FLOAT, ge::FORMAT_NHWC);
-    EXPECT_EQ(status, ge::GRAPH_FAILED);
+    struct LargeChannelCase {
+        vector<int64_t> dims;
+        ge::DataType dtype;
+        ge::Format format;
+    };
+    const vector<LargeChannelCase> cases = {
+        {{2, 2, 6, 2, 832127}, ge::DT_FLOAT, ge::FORMAT_NDHWC},  {{2, 2, 2, 2, 5185225}, ge::DT_BF16, ge::FORMAT_NDHWC},
+        {{4, 8, 3, 3, 32237}, ge::DT_BF16, ge::FORMAT_NDHWC},    {{5, 3, 10, 545433}, ge::DT_BF16, ge::FORMAT_NHWC},
+        {{3, 3, 3, 3, 1192304}, ge::DT_FLOAT, ge::FORMAT_NDHWC},
+    };
+
+    for (const auto& testCase : cases) {
+        uint64_t tilingKey = 0;
+        BNInferLastChannelTilingData tilingData{};
+        auto status = RunBNInferTiling(testCase.dims, testCase.dtype, testCase.format, &tilingKey, nullptr,
+                                       &tilingData);
+        ASSERT_EQ(status, ge::GRAPH_SUCCESS);
+        EXPECT_EQ(tilingKey, 900000);
+        EXPECT_GT(tilingData.aOuter, 1);
+        EXPECT_LT(tilingData.tileBlockALen, tilingData.totalALen);
+        EXPECT_GT(tilingData.tileBlockALen, 0);
+    }
 }
 
 TEST_F(BNInferTilingTest, nhwcSmallATilingKey902000)
