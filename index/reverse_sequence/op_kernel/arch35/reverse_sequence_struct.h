@@ -39,6 +39,8 @@ public:
     int64_t xTailUbLoopSize;
     int64_t xTailCoreLoop;
     int64_t xTailCoreTailLoopSize;
+    int64_t threadNum;
+    int64_t mergeFactor;
 };
 
 class ReverseSequenceBSATilingData {

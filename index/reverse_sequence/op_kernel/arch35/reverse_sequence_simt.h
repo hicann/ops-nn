@@ -120,6 +120,38 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtCompute(
     }
 }
 
+template <typename T, typename SeqType, typename CompType, typename MergeType>
+__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtComputeMerged(
+    __gm__ T* xGm, __gm__ SeqType* seqGm, __ubuf__ T* outLocal, CompType curOffset, CompType xUbSize, CompType batchDim,
+    CompType seqDim, CompType reverseSize, CompType mergeFactor, CompType m0, CompType m1, CompType m2, CompType m3,
+    CompType shift0, CompType shift1, CompType shift2, CompType shift3)
+{
+    __gm__ MergeType* xGmMerged = reinterpret_cast<__gm__ MergeType*>(xGm);
+    __local_mem__ MergeType* outLocalMerged = reinterpret_cast<__local_mem__ MergeType*>(outLocal);
+    CompType mergedUbSize = xUbSize / mergeFactor;
+    for (CompType i = Simt::GetThreadIdx(); i < mergedUbSize; i += Simt::GetThreadNum()) {
+        CompType elemOffset = curOffset + i * mergeFactor;
+        CompType batchPreAxis = Simt::UintDiv(elemOffset, m0, shift0);
+        CompType batchIdx = Simt::UintDiv(batchPreAxis, m1, shift1);
+        CompType batchDimIdx = batchPreAxis - batchIdx * batchDim;
+        CompType reverseNum = static_cast<CompType>(seqGm[batchDimIdx]);
+        CompType seqPreAxis = Simt::UintDiv(elemOffset, m2, shift2);
+        CompType reverseSizeMod = elemOffset - seqPreAxis * reverseSize;
+        CompType seqIdx = Simt::UintDiv(seqPreAxis, m3, shift3);
+        CompType seqDimIdx = seqPreAxis - seqIdx * seqDim;
+        if (reverseNum > seqDim) {
+            reverseNum = seqDim;
+        }
+        if (seqDimIdx < reverseNum) {
+            CompType reverseOffset = (reverseNum - seqDimIdx - 1) * reverseSize + seqIdx * seqDim * reverseSize +
+                                     reverseSizeMod;
+            outLocalMerged[i] = xGmMerged[reverseOffset / mergeFactor];
+        } else {
+            outLocalMerged[i] = xGmMerged[elemOffset / mergeFactor];
+        }
+    }
+}
+
 template <typename T, typename SeqType, typename CompType>
 __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::ReverseCompute(CompType curOffset, CompType xUBSize)
 {
@@ -131,11 +163,64 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::ReverseCompute
     GetUintDivMagicAndShift(params.m2, params.shift2, static_cast<CompType>(tilingData_->reverseSize));
     GetUintDivMagicAndShift(params.m3, params.shift3, static_cast<CompType>(tilingData_->seqDim));
 
-    asc_vf_call<ReverseSimtCompute<T, SeqType, CompType>>(
-        dim3(USED_THREAD), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__ubuf__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim,
-        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
-        params.shift2, params.shift3);
+    CompType mergeFactor = static_cast<CompType>(tilingData_->mergeFactor);
+    CompType threadNum = static_cast<CompType>(tilingData_->threadNum);
+    if (mergeFactor > 1) {
+        CompType mergeBytes = mergeFactor * static_cast<CompType>(sizeof(T));
+        if (mergeBytes == 16) {
+            if (sizeof(T) == 8) {
+                Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, longlong2>>(
+                    Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                    (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                    tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2,
+                    params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
+            } else {
+                Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, int4>>(
+                    Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                    (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                    tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2,
+                    params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
+            }
+        } else if (mergeBytes == 8) {
+            if (sizeof(T) == 4) {
+                Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, int2>>(
+                    Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                    (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                    tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2,
+                    params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
+            } else {
+                Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, short4>>(
+                    Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                    (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                    tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2,
+                    params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
+            }
+        } else if (mergeBytes == 4) {
+            Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, char4>>(
+                Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2, params.m3,
+                params.shift0, params.shift1, params.shift2, params.shift3);
+        } else if (mergeBytes == 2) {
+            Simt::VF_CALL<ReverseSimtComputeMerged<T, SeqType, CompType, char2>>(
+                Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                tilingData_->seqDim, tilingData_->reverseSize, mergeFactor, params.m0, params.m1, params.m2, params.m3,
+                params.shift0, params.shift1, params.shift2, params.shift3);
+        } else {
+            Simt::VF_CALL<ReverseSimtCompute<T, SeqType, CompType>>(
+                Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+                (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim,
+                tilingData_->seqDim, tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3,
+                params.shift0, params.shift1, params.shift2, params.shift3);
+        }
+    } else {
+        Simt::VF_CALL<ReverseSimtCompute<T, SeqType, CompType>>(
+            Simt::Dim3(threadNum), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+            (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim,
+            tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
+            params.shift2, params.shift3);
+    }
 
     outQue_.EnQue(outLocal);
 }

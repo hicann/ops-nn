@@ -17,6 +17,7 @@
 #include <array>
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "error_util.h"
 #include "../../op_kernel/arch35/reverse_sequence_struct.h"
@@ -34,6 +35,17 @@ static constexpr int64_t MIN_UB_SIZE = 128;
 static constexpr int64_t TEMPLATE_MODE = 9;
 static constexpr int64_t DCACHE_SIZE = 131072; // 128k
 
+static constexpr int64_t SIMT_THREAD_MAX = 512;
+static constexpr int64_t SIMT_THREAD_HALF = 256;
+static constexpr int64_t SIMT_THREAD_QUARTER = 128;
+static constexpr int64_t SIMT_THREAD_MIN = 64;
+static constexpr int64_t SIMT_PACK_BYTES_2 = 2;
+static constexpr int64_t SIMT_PACK_BYTES_4 = 4;
+static constexpr int64_t SIMT_PACK_BYTES_8 = 8;
+static constexpr int64_t SIMT_PACK_BYTES_16 = 16;
+
+static constexpr int64_t SIMT_MIN_ELEM_PER_THREAD = 8;
+
 template <typename T>
 static std::string ToString(const T* value, size_t size)
 {
@@ -46,6 +58,44 @@ static std::string ToString(const T* value, size_t size)
 }
 
 bool ReverseSequenceSimtTiling::IsCapable() { return true; }
+
+static int64_t CalcThreadNum(int64_t perCoreHandleNums)
+{
+    const int64_t candidates[] = {SIMT_THREAD_MAX, SIMT_THREAD_HALF, SIMT_THREAD_QUARTER, SIMT_THREAD_MIN};
+    for (auto t : candidates) {
+        if (perCoreHandleNums / t >= SIMT_MIN_ELEM_PER_THREAD) {
+            return t;
+        }
+    }
+    return SIMT_THREAD_MIN;
+}
+
+static int64_t CalcMergeFactor(int64_t reverseSize, int64_t batchSize, int64_t dtypeSize,
+                               const ReverseSequenceSimtTiling* tiling)
+{
+    if (dtypeSize <= 0 || dtypeSize >= SIMT_PACK_BYTES_16) {
+        return 1;
+    }
+    const int64_t targets[] = {SIMT_PACK_BYTES_16, SIMT_PACK_BYTES_8, SIMT_PACK_BYTES_4, SIMT_PACK_BYTES_2};
+    for (auto target : targets) {
+        if (dtypeSize >= target) {
+            continue;
+        }
+        int64_t mf = target / dtypeSize;
+        if (reverseSize % mf != 0 || batchSize % mf != 0) {
+            continue;
+        }
+        if (tiling->perCoreHandleNums_ % mf != 0 || tiling->tailCoreHandleNums_ % mf != 0) {
+            continue;
+        }
+        if (tiling->xUbFactor_ % mf != 0 || tiling->xTailUbLoopSize_ % mf != 0 ||
+            tiling->xTailCoreTailLoopSize_ % mf != 0) {
+            continue;
+        }
+        return mf;
+    }
+    return 1;
+}
 
 ge::graphStatus ReverseSequenceSimtTiling::DoReverseSequenceSimtTiling()
 {
@@ -72,6 +122,14 @@ ge::graphStatus ReverseSequenceSimtTiling::DoReverseSequenceSimtTiling()
     xTailUbLoopSize_ = perCoreHandleNums_ - (xUbLoop_ - 1) * ubFactorAlign;
     xTailCoreLoop_ = Ops::Base::CeilDiv(tailCoreHandleNums_, ubFactorAlign);
     xTailCoreTailLoopSize_ = tailCoreHandleNums_ - (xTailCoreLoop_ - 1) * ubFactorAlign;
+
+    threadNum_ = CalcThreadNum(perCoreHandleNums_);
+
+    if (isDv121_) {
+        mergeFactor_ = CalcMergeFactor(inputData.reverseSize, inputData.batchSize, inputData.xDtypeSize, this);
+    } else {
+        mergeFactor_ = 1;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -141,6 +199,8 @@ void ReverseSequenceSimtTiling::SetTilingData() const
     tilingData->xTailUbLoopSize = xTailUbLoopSize_;
     tilingData->xTailCoreLoop = xTailCoreLoop_;
     tilingData->xTailCoreTailLoopSize = xTailCoreTailLoopSize_;
+    tilingData->threadNum = threadNum_;
+    tilingData->mergeFactor = mergeFactor_;
     OP_LOGD(context_, "ReverseSequenceSimtTiling::SetTilingData tilingData->batchDim=%ld", tilingData->batchDim);
 }
 
@@ -160,6 +220,8 @@ void ReverseSequenceSimtTiling::DumpTilingInfo()
     str += " xTailUbLoopSize:" + std::to_string(tilingData->xTailUbLoopSize);
     str += " xTailCoreLoop:" + std::to_string(tilingData->xTailCoreLoop);
     str += " xTailCoreTailLoopSize:" + std::to_string(tilingData->xTailCoreTailLoopSize);
+    str += " threadNum:" + std::to_string(tilingData->threadNum);
+    str += " mergeFactor:" + std::to_string(tilingData->mergeFactor);
     str += " inputDims:" + ToString(inputData.inputDim, allDims);
     OP_LOGI(context_, "%s", str.c_str());
 }
@@ -167,6 +229,10 @@ void ReverseSequenceSimtTiling::DumpTilingInfo()
 //////////////////////////////// ReverseSequenceSimtTiling /////////////////////////////////
 ge::graphStatus ReverseSequenceSimtTiling::GetPlatformInfo()
 {
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    isDv121_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201);
     return GetReverseSequencePlatformInfo(context_, ubSize, coreNum);
 }
 

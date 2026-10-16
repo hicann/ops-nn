@@ -66,6 +66,9 @@ public:
     int64_t xTailCoreLoop_ = 0;
     int64_t xTailCoreTailLoopSize_ = 0;
     int64_t addrRange_ = 0;
+    int64_t threadNum_ = 512;
+    int64_t mergeFactor_ = 1;
+    bool isDv121_ = false;
 };
 } // namespace optiling
 #endif
