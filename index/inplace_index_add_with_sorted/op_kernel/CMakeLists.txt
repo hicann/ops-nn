@@ -15,7 +15,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/inplace_index_add_with_sorted.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )
