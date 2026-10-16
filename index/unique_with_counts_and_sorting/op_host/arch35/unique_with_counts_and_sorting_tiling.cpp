@@ -67,32 +67,49 @@ bool PlanUniqueConsecutive(UniqueWithCountsAndSortingTilingData& data, int64_t c
     auto& unique = data.unique;
     unique.totalSize = count;
     unique.useCoreNums = cores;
-    if (count <= UC_ONE_CORE_MAX_ELEMENTS) {
-        const uint64_t singleBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * elementBytes, block) *
-                                         UC_VALUE_BUFFERS +
-                                     Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int64_t), block) +
-                                     Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int32_t), block) +
-                                     Ops::Base::CeilAlign<uint64_t>(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
-        data.uniqueSingleCore = singleBytes <= usable;
+    const uint64_t shapeBytes = Ops::Base::CeilAlign<uint64_t>(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
+    const uint64_t collectingBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t{cores} * sizeof(int64_t), block);
+    // CeilAlign may return the unsigned maximum on overflow. Bound sizes before summing or narrowing.
+    if (shapeBytes > usable || collectingBytes > usable) {
+        return false;
     }
-    unique.tileLengthPerCore = Ops::Base::CeilDiv<uint64_t>(count, cores);
+    if (count <= UC_ONE_CORE_MAX_ELEMENTS) {
+        const uint64_t valueBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * elementBytes, block);
+        const uint64_t countBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int64_t), block);
+        const uint64_t indexBytes = Ops::Base::CeilAlign<uint64_t>(uint64_t(count) * sizeof(int32_t), block);
+        data.uniqueSingleCore = false;
+        if (valueBytes <= usable && countBytes <= usable && indexBytes <= usable) {
+            const uint64_t singleBytes = valueBytes * UC_VALUE_BUFFERS + countBytes + indexBytes + shapeBytes;
+            data.uniqueSingleCore = singleBytes <= usable;
+        }
+    }
+    unique.tileLengthPerCore = Ops::Base::CeilDiv<int64_t>(count, cores);
+    if (cores > 1 && unique.tileLengthPerCore > (count - 1) / (cores - 1)) {
+        return false;
+    }
     unique.tileLengthTailCore = count - (cores - 1) * unique.tileLengthPerCore;
-    unique.collectingCntBufSize = Ops::Base::CeilAlign<uint64_t>(cores * sizeof(int64_t), block);
+    unique.collectingCntBufSize = static_cast<int64_t>(collectingBytes);
     unique.offsetCntBufSize = unique.collectingCntBufSize;
     unique.prevIdxBufSize = block;
-    unique.shapeBufSize = Ops::Base::CeilAlign<uint64_t>(SHAPE_STORAGE_ELEMENTS * sizeof(uint64_t), block);
-    const uint64_t fixed = unique.collectingCntBufSize + unique.offsetCntBufSize + unique.prevIdxBufSize +
-                           unique.shapeBufSize;
+    unique.shapeBufSize = static_cast<int64_t>(shapeBytes);
+    const uint64_t fixed = collectingBytes * UC_COUNT_BUFFERS + block + shapeBytes;
     if (fixed >= usable || unique.tileLengthTailCore <= 0) {
         return false;
     }
-    const uint64_t tile = (usable - fixed) / (elementBytes * UC_VALUE_BUFFERS + sizeof(int64_t) * UC_COUNT_BUFFERS);
-    unique.valueQueueSize = tile * elementBytes / block * block;
-    unique.countQueueSize = tile * sizeof(int64_t) / block * block;
-    unique.idxQueueSize = tile * sizeof(int64_t) / (block * INDEX_QUEUE_ALIGNMENT_SCALE) *
-                          (block * INDEX_QUEUE_ALIGNMENT_SCALE);
-    unique.adjUbTileLength = std::min(uint64_t(unique.valueQueueSize) / elementBytes,
-                                      uint64_t(unique.countQueueSize) / sizeof(int64_t));
+    const uint64_t tile = (usable - fixed) /
+                          (uint64_t{elementBytes} * UC_VALUE_BUFFERS + sizeof(int64_t) * UC_COUNT_BUFFERS);
+    const uint64_t valueQueueSize = tile * elementBytes / block * block;
+    const uint64_t countQueueSize = tile * sizeof(int64_t) / block * block;
+    const uint64_t indexAlignment = uint64_t{block} * INDEX_QUEUE_ALIGNMENT_SCALE;
+    const uint64_t idxQueueSize = tile * sizeof(int64_t) / indexAlignment * indexAlignment;
+    if (valueQueueSize > usable || countQueueSize > usable || idxQueueSize > usable) {
+        return false;
+    }
+    unique.valueQueueSize = static_cast<int64_t>(valueQueueSize);
+    unique.countQueueSize = static_cast<int64_t>(countQueueSize);
+    unique.idxQueueSize = static_cast<int64_t>(idxQueueSize);
+    unique.adjUbTileLength = std::min(unique.valueQueueSize / elementBytes,
+                                      unique.countQueueSize / static_cast<int64_t>(sizeof(int64_t)));
     return unique.adjUbTileLength > 1;
 }
 ge::graphStatus TilingGenericUnique(gert::TilingContext* context, int64_t count, ge::DataType dtype, uint32_t ub,
@@ -192,9 +209,12 @@ struct CompactTilePlan {
 bool ComputeCompactTilePlan(int64_t count, uint32_t elementBytes, uint32_t counterBytes, uint32_t usable,
                             uint32_t cores, uint32_t block, CompactTilePlan& plan)
 {
-    const uint32_t ubExtra = BINS * (counterBytes * BIN_COUNTER_BUFFERS + sizeof(uint16_t) * BIN_U16_BUFFERS);
-    if (count <= 0 || elementBytes == 0 || cores == 0 || block == 0 || usable <= ubExtra ||
+    if (count <= 0 || elementBytes == 0 || cores == 0 || block == 0 ||
         (counterBytes != sizeof(uint32_t) && counterBytes != sizeof(int64_t))) {
+        return false;
+    }
+    const uint32_t ubExtra = BINS * (counterBytes * BIN_COUNTER_BUFFERS + sizeof(uint16_t) * BIN_U16_BUFFERS);
+    if (usable <= ubExtra) {
         return false;
     }
     // Input values, output indices, two byte queues (outValue/inputB8).
@@ -202,12 +222,18 @@ bool ComputeCompactTilePlan(int64_t count, uint32_t elementBytes, uint32_t count
     // values-only instances, which compile that queue out.
     constexpr uint32_t TILE_U32_BUFFERS = 2;
     constexpr uint32_t TILE_U8_BUFFERS = 2;
-    const uint32_t tileFactor = elementBytes + sizeof(uint32_t) * TILE_U32_BUFFERS + sizeof(uint8_t) * TILE_U8_BUFFERS;
-    uint32_t tile = (usable - ubExtra) / tileFactor / BINS * BINS;
+    const uint64_t tileFactor = uint64_t{elementBytes} + sizeof(uint32_t) * TILE_U32_BUFFERS +
+                                sizeof(uint8_t) * TILE_U8_BUFFERS;
+    const uint64_t maxTile = (usable - ubExtra) / tileFactor / BINS * BINS;
+    if (maxTile > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+    uint32_t tile = static_cast<uint32_t>(maxTile);
     uint32_t temporary = 0;
     while (tile != 0) {
         temporary = SortTemporary(tile);
-        if (temporary != 0 && std::max(temporary, tile * elementBytes) <= usable - ubExtra - tile * tileFactor) {
+        if (temporary != 0 &&
+            std::max<uint64_t>(temporary, uint64_t{tile} * elementBytes) <= usable - ubExtra - tile * tileFactor) {
             break;
         }
         tile -= BINS;
@@ -223,21 +249,25 @@ bool ComputeCompactTilePlan(int64_t count, uint32_t elementBytes, uint32_t count
     }
     if (tiles % cores != 0) {
         const uint64_t activeSlots = Ops::Base::CeilDiv<uint64_t>(tiles, cores) * cores;
-        tile = std::max<uint64_t>(
+        const uint64_t adjustedTile = std::max<uint64_t>(
             BINS, Ops::Base::CeilAlign<uint64_t>(Ops::Base::CeilDiv<uint64_t>(count, activeSlots), BINS));
+        if (adjustedTile > std::numeric_limits<uint32_t>::max() || adjustedTile > tile) {
+            return false;
+        }
+        tile = static_cast<uint32_t>(adjustedTile);
         temporary = SortTemporary(tile);
     }
-    if (tile * tileFactor + ubExtra >= usable) {
+    if (tile * tileFactor >= usable - ubExtra) {
         return false;
     }
-    const uint32_t remain = usable - ubExtra - tile * tileFactor;
+    const uint32_t remain = static_cast<uint32_t>(usable - ubExtra - tile * tileFactor);
     if (temporary == 0 || temporary > remain) {
         return false;
     }
     uint32_t padding = remain - temporary;
     padding = padding > block ? padding - block : 0;
     temporary += padding / block * block;
-    if (temporary < tile * elementBytes) {
+    if (temporary < uint64_t{tile} * elementBytes) {
         return false;
     }
     plan.tile = tile;
