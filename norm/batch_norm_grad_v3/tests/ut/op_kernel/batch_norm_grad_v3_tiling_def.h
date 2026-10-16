@@ -113,6 +113,32 @@ struct BatchNormGradV3RARecomputeTilingData {
     float reciprocal = 0;
 };
 
+struct BatchNormGradV3RASplitRTilingData {
+    int64_t rDim = 0;
+    int64_t aDim = 0;
+    int64_t usedCoreNum = 0;
+    int64_t rLoopFactor = 0;
+    int64_t blockFactor = 0;
+    int64_t tailBlockFactor = 0;
+    int64_t binaryBlockCnt = 0;
+    int64_t binaryFoldPoint = 0;
+    int64_t binaryBlockTail = 0;
+    int64_t lastCoreBlockCnt = 0;
+    int64_t lastCoreFoldPoint = 0;
+    int64_t lastCoreLoopTail = 0;
+    int64_t aFactor = 0;
+    int64_t aFactorAlign = 0;
+    int64_t aFactorTail = 0;
+    int64_t aLoopTimes = 0;
+    int64_t dxLoopFactor = 0;
+    int64_t dxLoopTail = 0;
+    int64_t dxLoopTimes = 0;
+    int64_t dxLastCoreFactor = 0;
+    int64_t dxLastCoreTail = 0;
+    int64_t dxLastCoreTimes = 0;
+    int64_t cacheBuffCnt = 0;
+};
+
 struct BatchNormGradV3RARSplitCoreR1TilingData {
     BatchNormGradV3BaseTilingData baseTilingData;
     int64_t r1Dim = 0;
@@ -125,6 +151,7 @@ struct BatchNormGradV3RARSplitCoreR1TilingData {
     int64_t r0InnerStg0 = 0;
     int64_t r0OuterStg0 = 0;
     int64_t r0TailStg0 = 0;
+    int64_t r0TailAlignedStg0 = 0;
     int64_t r1InnerInnerStg0 = 0;
     int64_t r1InnerOuterStg0 = 0;
     int64_t r1InnerTailStg0 = 0;
@@ -140,6 +167,7 @@ struct BatchNormGradV3RARSplitCoreR1TilingData {
     int64_t r0InnerStg2 = 0;
     int64_t r0OuterStg2 = 0;
     int64_t r0TailStg2 = 0;
+    int64_t r0TailAlignedStg2 = 0;
     int64_t r1InnerInnerStg2 = 0;
     int64_t r1InnerOuterStg2 = 0;
     int64_t r1InnerTailStg2 = 0;
@@ -149,6 +177,13 @@ struct BatchNormGradV3RARSplitCoreR1TilingData {
     int64_t aInnerAlignedStg2 = 0;
     int64_t aOuterStg2 = 0;
     int64_t aTailStg2 = 0;
+    int64_t binAddBasicBlockLoop = 0;
+    int64_t binAddMainFoldCount = 0;
+    int64_t binAddCacheBufferCount = 0;
+    int64_t binAddResultCacheID = 0;
+    int64_t lastCoreBinAddBasicBlockLoop = 0;
+    int64_t lastCoreBinAddMainFoldCount = 0;
+    int64_t lastCoreBinAddResultCacheID = 0;
 };
 
 struct BatchNormGradV3InferChannelLastTilingData {

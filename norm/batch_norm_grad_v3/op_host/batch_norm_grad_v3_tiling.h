@@ -164,6 +164,8 @@ TILING_DATA_FIELD_DEF(int64_t, cacheBuffCnt);      // cacheBuffer个数
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_50000000, BatchNormGradV3RASplitRTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_51000000, BatchNormGradV3RASplitRTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_52000000, BatchNormGradV3RASplitRTilingData);
 
 // inference - channel last format tiling data (NHWC format)
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferChannelLastTilingData)
