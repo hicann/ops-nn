@@ -315,6 +315,7 @@ protected:
     float epsilon_{0};
     float exponentialAvgFactor_{0};
     bool isTraining_{true};
+    NpuArch arch = NpuArch::DAV_3510;
 
     ge::DataType xDtype_;
     ge::Format xFormat_;

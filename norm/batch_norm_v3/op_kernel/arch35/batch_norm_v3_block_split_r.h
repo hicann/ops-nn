@@ -605,7 +605,7 @@ private:
                     }
                     Sub(x1, x1, mean, mask0);
                     Mul(x1, x1, rstd, mask0);
-                    // 保持原分组 ((x-mean)*rstd)*gamma+beta,仅把最后的乘加融成一条 FusedMulDstAdd(dst=dst*gamma+beta):
+                    // 保持原分组 ((x-mean)*rstd)*gamma+beta,仅把最后的乘加融成一条 MulDstAdd(dst=dst*gamma+beta):
                     // gamma 仍乘在 (x-mean)*rstd 上,gamma=0 且该值为 inf 时融合乘内部 0*inf 照样得 nan,inf/nan 行为不变
                     MulDstAdd(x1, gamma, beta, mask0);
                     if constexpr (IsSameType<T, half>::value) {

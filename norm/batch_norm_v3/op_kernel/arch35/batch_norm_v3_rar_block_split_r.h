@@ -500,7 +500,8 @@ private:
         __ubuf__ float* m2TensorAddr = (__ubuf__ float*)m2Tensor.GetPhyAddr();
         __ubuf__ T* xTensorAddr = (__ubuf__ T*)xTensor.GetPhyAddr();
 
-        uint64_t processRAlignNum = CEIL_ALIGN(processR0Num * processR1Num, T_BLOCK_ALIGN_SIZE);
+        uint32_t processRAlignNum = CEIL_ALIGN(processR0Num * processR1Num, T_BLOCK_ALIGN_SIZE);
+        uint32_t formerRAlignNumB32 = static_cast<uint32_t>(formerRAlignNum);
         uint16_t loopCount = CEIL_DIV(processR0Num * processR1Num, VL_F32);
 
         uint16_t processALoopCount = static_cast<uint16_t>(processANum);
@@ -518,23 +519,25 @@ private:
                 uint32_t sreg0 = processR0Num * processR1Num;
                 for (uint16_t i = 0; i < loopCount; i++) {
                     mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
+                    AscendC::Reg::AddrReg regAddr = AscendC::Reg::CreateAddrReg<float>(a_idx, formerRAlignNumB32, i,
+                                                                                       VL_F32);
                     LoadOneTensorForDtypeT(xTensorAddr, x1, mask0, a_idx * processRAlignNum + i * VL_F32);
-                    LoadAlign(tmpMean, meanTensorAddr + a_idx * formerRAlignNum + i * VL_F32);
-                    LoadAlign(tmpM2, m2TensorAddr + a_idx * formerRAlignNum + i * VL_F32);
+                    LoadAlign(tmpMean, meanTensorAddr, regAddr);
+                    LoadAlign(tmpM2, m2TensorAddr, regAddr);
                     // delata1 = x1 - mean
                     Sub(delta1, x1, tmpMean, mask0);
                     // delta2 = delta1 * scale
                     Muls(delta2, delta1, scale, mask0);
                     // mean = mean + delta2
                     Add(tmpMean, tmpMean, delta2, mask0);
-                    StoreAlign(meanTensorAddr + a_idx * formerRAlignNum + i * VL_F32, tmpMean, mask0);
+                    StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM>(meanTensorAddr, tmpMean, regAddr, mask0);
                     // delta3 = x1 - mean
                     Sub(delta3, x1, tmpMean, mask0);
                     // delta4 = delta1 * delta3
                     Mul(delta4, delta1, delta3, mask0);
                     // M2 = M2 + delta4
                     Add(tmpM2, tmpM2, delta4, mask0);
-                    StoreAlign(m2TensorAddr + a_idx * formerRAlignNum + i * VL_F32, tmpM2, mask0);
+                    StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM>(m2TensorAddr, tmpM2, regAddr, mask0);
                 }
             }
         }
@@ -563,11 +566,18 @@ private:
                                               batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
             WelfordRARFinalizeVarVF<NUM_ONE>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
                                              batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
-        } else {
+        } else if (numRAlign < VL_F32 * VL_F32 * NUM_TWO * NUM_TWO) {
             WelfordRARFinalizeMeanVF<NUM_TWO>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
                                               batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
             WelfordRARFinalizeVarVF<NUM_TWO>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
                                              batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
+        } else {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            WelfordRARFinalizeMeanVF<NUM_FOUR>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
+                                               batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
+            WelfordRARFinalizeVarVF<NUM_FOUR>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
+                                              batchRstdInUbAddr, tmpUbAddr, curAUbFactor, numR, numRAlign);
+#endif
         }
     }
 
@@ -669,14 +679,35 @@ private:
                 for (uint16_t i = 0; i < curAloops; i++) {
                     LoadAlign(xReg1, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign));
                     LoadAlign(xReg2, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(addReg, xReg1, xReg2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shiftLeft, (RegTensor<uint32_t>&)xReg2, static_cast<int16_t>(0),
                                pregLast);
                     Add(addReg, xReg1, shiftLeft, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(sumReg, addReg, pregFull);
                     Muls(sumReg, sumReg, scaleCorrection, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(batchMeanInUbAddr + i, sumReg, pregOne);
                 }
             }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            else if constexpr (LAST_LOOP_NUMS == 4) {
+                RegTensor<float> xReg4;
+                for (uint16_t i = 0; i < curAloops; i++) {
+                    LoadAlign(xReg1, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign));
+                    LoadAlign(xReg2, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32));
+                    Add(xReg1, xReg1, xReg2, pregFull);
+                    LoadAlign(xReg3, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32 * 2));
+                    LoadAlign(xReg4, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32 * 3));
+                    Add(xReg3, xReg3, xReg4, pregFull);
+                    Add(xReg1, xReg1, xReg3, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(sumReg, xReg1, pregFull);
+                    Muls(sumReg, sumReg, scaleCorrection, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(batchMeanInUbAddr + i, sumReg, pregOne);
+                }
+            }
+#endif
         }
     }
 
@@ -799,14 +830,35 @@ private:
                 for (uint16_t i = 0; i < curAloops; i++) {
                     LoadAlign(xReg1, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign));
                     LoadAlign(xReg2, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32));
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    Add<float, AscendC::Reg::MaskMergeMode::MERGING>(addReg, xReg1, xReg2, pregLast);
+#else
                     ShiftLefts((RegTensor<uint32_t>&)shiftLeft, (RegTensor<uint32_t>&)xReg2, static_cast<int16_t>(0),
                                pregLast);
                     Add(addReg, xReg1, shiftLeft, pregFull);
+#endif
                     Reduce<AscendC::Reg::ReduceType::SUM>(sumReg, addReg, pregFull);
                     Muls(sumReg, sumReg, scaleCorrection, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(batchRstdInUbAddr + i, sumReg, pregOne);
                 }
             }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+            else if constexpr (LAST_LOOP_NUMS == 4) {
+                RegTensor<float> xReg4;
+                for (uint16_t i = 0; i < curAloops; i++) {
+                    LoadAlign(xReg1, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign));
+                    LoadAlign(xReg2, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32));
+                    Add(xReg1, xReg1, xReg2, pregFull);
+                    LoadAlign(xReg3, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32 * 2));
+                    LoadAlign(xReg4, tmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + VL_F32 * 3));
+                    Add(xReg3, xReg3, xReg4, pregFull);
+                    Add(xReg1, xReg1, xReg3, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(sumReg, xReg1, pregFull);
+                    Muls(sumReg, sumReg, scaleCorrection, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(batchRstdInUbAddr + i, sumReg, pregOne);
+                }
+            }
+#endif
         }
     }
 
@@ -1081,6 +1133,8 @@ private:
     static constexpr uint32_t ROW_FOUR_OFFSET = 4;
     static constexpr int32_t NUM_ONE = 1;
     static constexpr int32_t NUM_TWO = 2;
+    static constexpr int32_t NUM_THREE = 3;
+    static constexpr int32_t NUM_FOUR = 4;
     static constexpr uint32_t FIRST_VCADD_RESULT_MAX_NUM = 2 * VL_F32;
     /* ascendc variable */
     TQue<QuePosition::VECIN, 1> xQueue;

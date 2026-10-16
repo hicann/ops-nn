@@ -629,7 +629,7 @@ function(gen_ops_info_and_python)
   )
 
   set(ascendc_impl_gen_depends ascendc_kernel_src_copy common_copy gen_kernel_options)
-  foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
+  foreach(compute_unit ${ASCEND_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos
     if(ENABLE_CUSTOM)
       set(ops_info_suffix "ops-info.json")

@@ -55,6 +55,55 @@ static int64_t FindBinaryQuotient(int64_t len)
     return binaryQuotient;
 }
 
+struct RCoreSplitParam {
+    int64_t coreNums = 0;
+    int64_t rUbFactor = 0;
+    int64_t tailR = 0;
+    int64_t formerCoreBlockFactor = 0;
+    int64_t tailCoreBlockFactor = 0;
+    int64_t tailCoreNums = 0;
+    int64_t formerCoreNums = 0;
+};
+
+static RCoreSplitParam FindRCoreSplit(int64_t patternR, int64_t blockDim, int64_t rUbFactorMax, int64_t aAlignSize,
+                                      int64_t inOutNodeNum, int64_t ubSizeCanUse)
+{
+    RCoreSplitParam split;
+    int64_t bestBlockFactor = patternR;
+    int64_t bestCost = patternR + 1;
+    for (int64_t rUbFactor = RA_BINARY_ADD_THRESHOLD; rUbFactor <= rUbFactorMax; rUbFactor += RA_BINARY_ADD_THRESHOLD) {
+        int64_t groups = Ops::Base::FloorDiv(patternR, rUbFactor);
+        int64_t coreNums = std::min(groups, blockDim);
+        int64_t tailR = patternR - groups * rUbFactor;
+        int64_t blockFactor = Ops::Base::CeilDiv(groups, coreNums);
+        int64_t tailCoreNums = blockFactor * coreNums - groups;
+
+        int64_t cost = blockFactor * rUbFactor + (tailCoreNums == 0 ? tailR : 0);
+        bool better = (blockFactor < bestBlockFactor) ||
+                      ((blockFactor == bestBlockFactor) &&
+                       ((cost < bestCost) || (cost == bestCost && coreNums > split.coreNums)));
+
+        if (!better) {
+            continue;
+        }
+
+        int64_t tBufUbFactor = std::max(rUbFactor, coreNums);
+        if ((rUbFactor * inOutNodeNum + tBufUbFactor * TBUF_NODE_NUM) * aAlignSize > ubSizeCanUse) {
+            continue;
+        }
+        bestBlockFactor = blockFactor;
+        bestCost = cost;
+        split.coreNums = coreNums;
+        split.rUbFactor = rUbFactor;
+        split.tailR = tailR;
+        split.formerCoreBlockFactor = blockFactor;
+        split.tailCoreBlockFactor = blockFactor - 1;
+        split.tailCoreNums = tailCoreNums;
+        split.formerCoreNums = coreNums - tailCoreNums;
+    }
+    return split;
+}
+
 namespace optiling {
 class BatchNormV3BlockSplitRTiling : public BatchNormV3RegbaseTilingBase {
 public:
@@ -173,30 +222,66 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
                              aUbFactor * FP32_BYTE;
     int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize - allMeanVarSize -
                            aAlignSize * (runningMeanVarNodeNum + gammaBetaNodeNum + BATCH_MEAN_VAR_NODE_NUM);
-    int64_t rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
-    rUbFactor = std::min(rUbFactor, batchNormV3TilingData.get_patternR());
-    rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
-    OP_CHECK_IF(rUbFactor == 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
-                return ge::GRAPH_PARAM_INVALID);
-    int64_t rGroups = Ops::Base::FloorDiv(batchNormV3TilingData.get_patternR(), rUbFactor);
-    usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
-    int64_t tBufUbFactor = std::max(rUbFactor, usedCoreNum);
-    // LastFinalize tbuf无法复用，重新计算rFactor
-    while (((rUbFactor * inOutNodeNum + tBufUbFactor * TBUF_NODE_NUM) * aAlignSize > ubSizeCanUse)) {
-        rUbFactor -= RA_BINARY_ADD_THRESHOLD;
-        rUbFactor = std::min(rUbFactor, batchNormV3TilingData.get_patternR());
-        rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
-        rGroups = Ops::Base::FloorDiv(batchNormV3TilingData.get_patternR(), rUbFactor);
-        usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
+
+    int64_t rUbFactor = 0;
+    int64_t tBufUbFactor = 0;
+    int64_t formerCoreBlockFactor = 0;
+    int64_t tailCoreBlockFactor = 0;
+    int64_t tailCoreNums = 0;
+    int64_t formerCoreNums = 0;
+    int64_t tailR = 0;
+    const int64_t patternR = batchNormV3TilingData.get_patternR();
+    const int64_t blockDim = static_cast<int64_t>(aicoreParams_.numBlocks);
+
+    if (arch == NpuArch::DAV_9201 || arch == NpuArch::DAV_9202) {
+        int64_t rUbFactorMax = Ops::Base::FloorAlign(
+            std::min(Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM)), patternR),
+            RA_BINARY_ADD_THRESHOLD);
+
+        OP_CHECK_IF(rUbFactorMax == 0,
+                    OP_LOGI(context_->GetNodeName(), "BatchNormBlockSplitRTiling rUbFactor %ld == 0", rUbFactorMax),
+                    return ge::GRAPH_PARAM_INVALID);
+
+        RCoreSplitParam split = FindRCoreSplit(patternR, blockDim, rUbFactorMax, aAlignSize, inOutNodeNum,
+                                               ubSizeCanUse);
+        OP_CHECK_IF(split.coreNums == 0,
+                    OP_LOGI(context_->GetNodeName(), "BatchNormBlockSplitRTiling coreNums == 0", rUbFactorMax),
+                    return ge::GRAPH_PARAM_INVALID);
+
+        rUbFactor = split.rUbFactor;
+        usedCoreNum = split.coreNums;
         tBufUbFactor = std::max(rUbFactor, usedCoreNum);
+        formerCoreBlockFactor = split.formerCoreBlockFactor;
+        tailCoreBlockFactor = split.tailCoreBlockFactor;
+        tailCoreNums = split.tailCoreNums;
+        formerCoreNums = split.formerCoreNums;
+        tailR = split.tailR;
+    } else {
+        rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
+        rUbFactor = std::min(rUbFactor, patternR);
+        rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
+        OP_CHECK_IF(rUbFactor == 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
+                    return ge::GRAPH_PARAM_INVALID);
+        int64_t rGroups = Ops::Base::FloorDiv(patternR, rUbFactor);
+        usedCoreNum = std::min(rGroups, blockDim);
+        tBufUbFactor = std::max(rUbFactor, usedCoreNum);
+        // LastFinalize tbuf无法复用，重新计算rFactor
+        while (((rUbFactor * inOutNodeNum + tBufUbFactor * TBUF_NODE_NUM) * aAlignSize > ubSizeCanUse)) {
+            rUbFactor -= RA_BINARY_ADD_THRESHOLD;
+            rUbFactor = std::min(rUbFactor, patternR);
+            rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
+            rGroups = Ops::Base::FloorDiv(patternR, rUbFactor);
+            usedCoreNum = std::min(rGroups, blockDim);
+            tBufUbFactor = std::max(rUbFactor, usedCoreNum);
+        }
+        OP_CHECK_IF(rUbFactor <= 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
+                    return ge::GRAPH_PARAM_INVALID);
+        formerCoreBlockFactor = Ops::Base::CeilDiv(rGroups, usedCoreNum);
+        tailCoreBlockFactor = formerCoreBlockFactor - 1;
+        tailCoreNums = formerCoreBlockFactor * usedCoreNum - rGroups;
+        formerCoreNums = usedCoreNum - tailCoreNums;
+        tailR = patternR - rGroups * rUbFactor;
     }
-    OP_CHECK_IF(rUbFactor <= 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
-                return ge::GRAPH_PARAM_INVALID);
-    int64_t formerCoreBlockFactor = Ops::Base::CeilDiv(rGroups, usedCoreNum);
-    int64_t tailCoreBlockFactor = formerCoreBlockFactor - 1;
-    int64_t tailCoreNums = formerCoreBlockFactor * usedCoreNum - rGroups;
-    int64_t formerCoreNums = usedCoreNum - tailCoreNums;
-    int64_t tailR = batchNormV3TilingData.get_patternR() - rGroups * rUbFactor;
     int64_t binaryAddQuotient = FindBinaryQuotient(rUbFactor);
     int64_t binaryAddNum = binaryAddQuotient / RA_BINARY_ADD_THRESHOLD;
     int64_t binaryAddK = 0;

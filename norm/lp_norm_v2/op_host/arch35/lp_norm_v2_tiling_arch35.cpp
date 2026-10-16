@@ -15,6 +15,7 @@
 
 #include "lp_norm_v2_tiling_arch35.h"
 #include "tiling/tiling_api.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
@@ -394,6 +395,15 @@ ge::graphStatus LpNormV2Tiling::RunTiling(const ReduceOpCompileInfo* compileInfo
 
     OP_CHECK_IF(TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
                 OP_LOGE(tilingContext_->GetNodeName(), "do tilingData_ failed for reduce"), return ge::GRAPH_FAILED);
+
+    auto platformInfo = tilingContext_->GetPlatformInfo();
+    if (platformInfo != nullptr) {
+        std::string fullSocVersion;
+        platformInfo->GetPlatformRes("version", "SoC_version", fullSocVersion);
+        if (!fullSocVersion.empty()) {
+            platform_ascendc::PlatformAscendCManager::GetInstance(fullSocVersion.c_str());
+        }
+    }
 
     return SetTilingData();
 }

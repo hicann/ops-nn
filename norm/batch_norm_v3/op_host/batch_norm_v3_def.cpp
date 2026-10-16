@@ -341,6 +341,7 @@ public:
             .ExtendCfgInfo("opFile.value", "batch_norm_v3_apt");
         this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend350", config_950);
+        this->AICore().AddConfig("ascend960dt", config_950);
     }
 };
 

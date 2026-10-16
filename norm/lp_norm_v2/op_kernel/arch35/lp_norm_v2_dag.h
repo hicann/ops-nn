@@ -44,25 +44,333 @@ constexpr int VAR_INDEX_2 = 2;
 
 using namespace AscendC;
 
+#ifdef __CCE_AICORE__
+namespace Regbase {
+
+using AscendC::Reg::RegTensor;
+
+constexpr Reg::CastTrait CAST_16_TO_32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                          RoundMode::UNKNOWN};
+constexpr Reg::CastTrait CAST_32_TO_16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING,
+                                          RoundMode::CAST_RINT};
+
+constexpr uint32_t VREG_BYTES = Ops::Base::GetVRegSize();
+
+template <typename T, typename U>
+__aicore__ inline void CalcCastNonZeroVF(__ubuf__ U* dst, __ubuf__ T* src, uint32_t totalLen, uint32_t oneRepeat,
+                                         uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regZero;
+        RegTensor<U> regOne;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+        Reg::MaskReg pregIsZero;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            } else {
+                RegTensor<T> regPacked;
+                RegTensor<T> regWide;
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regPacked, src, (int32_t)oneRepeat);
+                Reg::UnPack((RegTensor<int32_t>&)regWide, (RegTensor<int16_t>&)regPacked);
+                Reg::Cast<U, T, CAST_16_TO_32>(regIn, regWide, pregUp);
+            }
+            Reg::Compares<U, CMPMODE::EQ>(pregIsZero, regIn, (U)0, pregUp);
+            Reg::Duplicate(regZero, (U)0, pregUp);
+            Reg::Duplicate(regOne, (U)1, pregUp);
+
+            Reg::Select<U>(regOut, regZero, regOne, pregIsZero);
+
+            Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+        }
+    }
+}
+
+// 融合 DAG 节点 Cast0 + Abs0: y = |x|
+template <typename T, typename U>
+__aicore__ inline void CalcCastAbsVF(__ubuf__ U* dst, __ubuf__ T* src, uint32_t totalLen, uint32_t oneRepeat,
+                                     uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            } else {
+                RegTensor<T> regPacked;
+                RegTensor<T> regWide;
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regPacked, src, (int32_t)oneRepeat);
+                Reg::UnPack((RegTensor<int32_t>&)regWide, (RegTensor<int16_t>&)regPacked);
+                Reg::Cast<U, T, CAST_16_TO_32>(regIn, regWide, pregUp);
+            }
+            Reg::Abs(regOut, regIn, pregUp);
+
+            Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+        }
+    }
+}
+
+// 融合 DAG 节点 Cast0 + Mul0（p == 2）: y = x * x
+template <typename T, typename U>
+__aicore__ inline void CalcCastSquareVF(__ubuf__ U* dst, __ubuf__ T* src, uint32_t totalLen, uint32_t oneRepeat,
+                                        uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            } else {
+                RegTensor<T> regPacked;
+                RegTensor<T> regWide;
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regPacked, src, (int32_t)oneRepeat);
+                Reg::UnPack((RegTensor<int32_t>&)regWide, (RegTensor<int16_t>&)regPacked);
+                Reg::Cast<U, T, CAST_16_TO_32>(regIn, regWide, pregUp);
+            }
+            Reg::Mul(regOut, regIn, regIn, pregUp);
+
+            Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+        }
+    }
+}
+
+// 融合 DAG 节点 Cast0 + Abs0 + Mul0 + Mul1（p == 3）: y = |x| * |x| * |x|
+template <typename T, typename U>
+__aicore__ inline void CalcCastCubeVF(__ubuf__ U* dst, __ubuf__ T* src, uint32_t totalLen, uint32_t oneRepeat,
+                                      uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regAbs;
+        RegTensor<U> regSquare;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            } else {
+                RegTensor<T> regPacked;
+                RegTensor<T> regWide;
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regPacked, src, (int32_t)oneRepeat);
+                Reg::UnPack((RegTensor<int32_t>&)regWide, (RegTensor<int16_t>&)regPacked);
+                Reg::Cast<U, T, CAST_16_TO_32>(regIn, regWide, pregUp);
+            }
+            Reg::Abs(regAbs, regIn, pregUp);
+            Reg::Mul(regSquare, regAbs, regAbs, pregUp);
+            Reg::Mul(regOut, regSquare, regAbs, pregUp);
+
+            Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+        }
+    }
+}
+
+// 融合 DAG 节点 OpMaxs + Cast1: y = cast(max(x, eps))
+template <typename T, typename U>
+__aicore__ inline void CalcMaxsCastVF(__ubuf__ T* dst, __ubuf__ U* src, U epsilon, uint32_t totalLen,
+                                      uint32_t oneRepeat, uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            Reg::Maxs(regOut, regIn, epsilon, pregUp);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+            } else {
+                RegTensor<T> regNarrow;
+                RegTensor<T> regPacked;
+                Reg::MaskReg pregNarrow;
+                Reg::Cast<T, U, CAST_32_TO_16>(regNarrow, regOut, pregUp);
+                Reg::Pack((RegTensor<uint16_t>&)regPacked, (RegTensor<uint32_t>&)regNarrow);
+                Reg::Pack(pregNarrow, pregUp);
+                Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regPacked, (int32_t)oneRepeat, pregNarrow);
+            }
+        }
+    }
+}
+
+// 融合 DAG 节点 Sqrt0 + OpMaxs + Cast1（p == 2）: y = cast(max(sqrt(x), eps))
+template <typename T, typename U>
+__aicore__ inline void CalcSqrtMaxsCastVF(__ubuf__ T* dst, __ubuf__ U* src, U epsilon, uint32_t totalLen,
+                                          uint32_t oneRepeat, uint16_t repeatTimes)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<U> regIn;
+        RegTensor<U> regSqrt;
+        RegTensor<U> regOut;
+        Reg::MaskReg pregUp;
+
+        for (uint16_t loop = 0; loop < repeatTimes; loop++) {
+            pregUp = Reg::UpdateMask<U>(totalLen);
+
+            Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(regIn, src, (int32_t)oneRepeat);
+            Reg::Sqrt(regSqrt, regIn, pregUp);
+            Reg::Maxs(regOut, regSqrt, epsilon, pregUp);
+
+            if constexpr (IsSameType<T, U>::value) {
+                Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regOut, (int32_t)oneRepeat, pregUp);
+            } else {
+                RegTensor<T> regNarrow;
+                RegTensor<T> regPacked;
+                Reg::MaskReg pregNarrow;
+                Reg::Cast<T, U, CAST_32_TO_16>(regNarrow, regOut, pregUp);
+                Reg::Pack((RegTensor<uint16_t>&)regPacked, (RegTensor<uint32_t>&)regNarrow);
+                Reg::Pack(pregNarrow, pregUp);
+                Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dst, regPacked, (int32_t)oneRepeat, pregNarrow);
+            }
+        }
+    }
+}
+
+} // namespace Regbase
+#endif // __CCE_AICORE__
+
+// p == 0: sum(x != 0) 的前置链
+template <typename T, typename CalcT>
+struct LpNormV2NonZeroOp : public Ops::Base::Vec::ElemwiseUnaryOP<CalcT, T> {
+    __aicore__ inline LpNormV2NonZeroOp(Ops::Base::LocalTensor<CalcT>& dst, Ops::Base::LocalTensor<T>& src,
+                                        int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcCastNonZeroVF<T, CalcT>((__ubuf__ CalcT*)dst.GetPhyAddr(), (__ubuf__ T*)src.GetPhyAddr(), totalLen,
+                                             oneRepeat, repeatTimes);
+#endif
+    }
+};
+
+// p == 1 / p == inf / p == -inf / p == other: 前置链 y = |x|
+template <typename T, typename CalcT>
+struct LpNormV2CastAbsOp : public Ops::Base::Vec::ElemwiseUnaryOP<CalcT, T> {
+    __aicore__ inline LpNormV2CastAbsOp(Ops::Base::LocalTensor<CalcT>& dst, Ops::Base::LocalTensor<T>& src,
+                                        int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcCastAbsVF<T, CalcT>((__ubuf__ CalcT*)dst.GetPhyAddr(), (__ubuf__ T*)src.GetPhyAddr(), totalLen,
+                                         oneRepeat, repeatTimes);
+#endif
+    }
+};
+
+// p == 2: 前置链 y = x * x
+template <typename T, typename CalcT>
+struct LpNormV2CastSquareOp : public Ops::Base::Vec::ElemwiseUnaryOP<CalcT, T> {
+    __aicore__ inline LpNormV2CastSquareOp(Ops::Base::LocalTensor<CalcT>& dst, Ops::Base::LocalTensor<T>& src,
+                                           int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcCastSquareVF<T, CalcT>((__ubuf__ CalcT*)dst.GetPhyAddr(), (__ubuf__ T*)src.GetPhyAddr(), totalLen,
+                                            oneRepeat, repeatTimes);
+#endif
+    }
+};
+
+// p == 3: 前置链 y = |x|^3
+template <typename T, typename CalcT>
+struct LpNormV2CastCubeOp : public Ops::Base::Vec::ElemwiseUnaryOP<CalcT, T> {
+    __aicore__ inline LpNormV2CastCubeOp(Ops::Base::LocalTensor<CalcT>& dst, Ops::Base::LocalTensor<T>& src,
+                                         int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcCastCubeVF<T, CalcT>((__ubuf__ CalcT*)dst.GetPhyAddr(), (__ubuf__ T*)src.GetPhyAddr(), totalLen,
+                                          oneRepeat, repeatTimes);
+#endif
+    }
+};
+
+// 所有模板共用的后置链 y = cast(max(x, eps))
+// 输入 1 个 LocalTensor<CalcT> + 1 个标量（Placeholder:Var<CalcT, 0>）
+template <typename OutT, typename CalcT>
+struct LpNormV2MaxsCastOp : public Ops::Base::Vec::ElemwiseBinaryOP<OutT, CalcT, CalcT> {
+    __aicore__ inline LpNormV2MaxsCastOp(Ops::Base::LocalTensor<OutT>& dst, Ops::Base::LocalTensor<CalcT>& src,
+                                         CalcT& epsilon, int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcMaxsCastVF<OutT, CalcT>((__ubuf__ OutT*)dst.GetPhyAddr(), (__ubuf__ CalcT*)src.GetPhyAddr(),
+                                             epsilon, totalLen, oneRepeat, repeatTimes);
+#endif
+    }
+};
+
+// p == 2: 后置链 y = cast(max(sqrt(x), eps))
+template <typename OutT, typename CalcT>
+struct LpNormV2SqrtMaxsCastOp : public Ops::Base::Vec::ElemwiseBinaryOP<OutT, CalcT, CalcT> {
+    __aicore__ inline LpNormV2SqrtMaxsCastOp(Ops::Base::LocalTensor<OutT>& dst, Ops::Base::LocalTensor<CalcT>& src,
+                                             CalcT& epsilon, int32_t count)
+    {
+#ifdef __CCE_AICORE__
+        uint32_t oneRepeat = Regbase::VREG_BYTES / sizeof(CalcT);
+        uint32_t totalLen = static_cast<uint32_t>(count);
+        uint16_t repeatTimes = (uint16_t)((totalLen + oneRepeat - 1) / oneRepeat);
+
+        Regbase::CalcSqrtMaxsCastVF<OutT, CalcT>((__ubuf__ OutT*)dst.GetPhyAddr(), (__ubuf__ CalcT*)src.GetPhyAddr(),
+                                                 epsilon, totalLen, oneRepeat, repeatTimes);
+#endif
+    }
+};
+
 // sum(x!=0)
 template <typename T, typename PromoteT, typename OutT>
 struct LpNormV2P0Dag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using ConstZero = MAKE_CONST(PromoteT, 0);
-    using OpMask = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, Cast0, ConstZero>; // EQ
-    using ConstOne = MAKE_CONST(PromoteT, 1);
-    using DupZero = Bind<Vec::Duplicate<PromoteT>, ConstZero>;
-    using OpSel = Bind<Vec::Select<uint8_t, PromoteT, SEL_MODE_TENSOR_SCALAR>, OpMask, DupZero,
-                       ConstOne>; // tensor scalar
-    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpSel>;
+    // Cast0 + OpMask + DupZero + OpSel 融合为 1 个节点
+    using OpNonZero = Bind<LpNormV2NonZeroOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpNonZero>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
@@ -73,15 +381,14 @@ template <typename T, typename PromoteT, typename OutT>
 struct LpNormV2P1Dag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Abs0 = Bind<Vec::Abs<PromoteT>, Cast0>;
-    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, Abs0>;
+    // Cast0 + Abs0 融合为 1 个节点
+    using OpAbs = Bind<LpNormV2CastAbsOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpAbs>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
@@ -92,16 +399,14 @@ template <typename T, typename PromoteT, typename OutT>
 struct LpNormV2P2Dag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Mul0 = Bind<Vec::Mul<PromoteT>, Cast0, Cast0>;
-    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, Mul0>;
-    using Sqrt0 = Bind<Vec::Sqrt<PromoteT>, ReduceOp0>;
+    // Cast0 + Mul0 融合为 1 个节点
+    using OpSquare = Bind<LpNormV2CastSquareOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpSquare>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, Sqrt0, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, OpMaxs>;
+    // Sqrt0 + OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2SqrtMaxsCastOp<OutT, PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
@@ -112,37 +417,33 @@ template <typename T, typename PromoteT, typename OutT>
 struct LpNormV2P3Dag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Abs0 = Bind<Vec::Abs<PromoteT>, Cast0>;
-    using Mul0 = Bind<Vec::Mul<PromoteT>, Abs0, Abs0>;
-    using Mul1 = Bind<Vec::Mul<PromoteT>, Mul0, Abs0>;
-    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, Mul1>;
+    // Cast0 + Abs0 + Mul0 + Mul1 融合为 1 个节点
+    using OpCube = Bind<LpNormV2CastCubeOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpCube>;
     using Pow1 = Bind<Vec::Power<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, VAR_INDEX_1>>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, Pow1, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, Pow1, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
-// // inf: max(abs(x))
+// inf: max(abs(x))
 template <typename T, typename PromoteT = T, typename OutT = T>
 struct LpNormV2PInfDag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Abs0 = Bind<Vec::Abs<PromoteT>, Cast0>;
-    using ReduceOp0 = Bind<Vec::ReduceMaxOp<PromoteT>, Abs0>;
+    // Cast0 + Abs0 融合为 1 个节点（fp16 场景 T == PromoteT，节点内部退化为纯 Abs）
+    using OpAbs = Bind<LpNormV2CastAbsOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceMaxOp<PromoteT>, OpAbs>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, 1>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
@@ -153,15 +454,14 @@ template <typename T, typename PromoteT = T, typename OutT = T>
 struct LpNormV2PNInfDag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Abs0 = Bind<Vec::Abs<PromoteT>, Cast0>;
-    using ReduceOp0 = Bind<Vec::ReduceMinOp<PromoteT>, Abs0>;
+    // Cast0 + Abs0 融合为 1 个节点（fp16 场景 T == PromoteT，节点内部退化为纯 Abs）
+    using OpAbs = Bind<LpNormV2CastAbsOp<T, PromoteT>, OpCopyIn0>;
+    using ReduceOp0 = Bind<Vec::ReduceMinOp<PromoteT>, OpAbs>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, 1>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
@@ -172,17 +472,16 @@ template <typename T, typename PromoteT, typename OutT>
 struct LpNormV2POtherDag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
 
-    using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
-    using Abs0 = Bind<Vec::Abs<PromoteT>, Cast0>;
-    using Pow0 = Bind<Vec::Power<PromoteT>, Abs0, Placeholder::Var<PromoteT, VAR_INDEX_1>>;
+    // Cast0 + Abs0 融合为 1 个节点
+    using OpAbs = Bind<LpNormV2CastAbsOp<T, PromoteT>, OpCopyIn0>;
+    using Pow0 = Bind<Vec::Power<PromoteT>, OpAbs, Placeholder::Var<PromoteT, VAR_INDEX_1>>;
     using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, Pow0>;
     using Pow1 = Bind<Vec::Power<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, VAR_INDEX_2>>;
 
-    // 竞品没有max, epsilon通过tiling参数传递
-    using OpMaxs = Bind<Vec::Maxs<PromoteT>, Pow1, Placeholder::Var<PromoteT, 0>>;
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, OpMaxs>;
+    // OpMaxs + Cast1 融合为 1 个节点: epsilon 通过 tiling 参数传递
+    using OpMaxs = Bind<LpNormV2MaxsCastOp<OutT, PromoteT>, Pow1, Placeholder::Var<PromoteT, 0>>;
 
-    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
+    using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, OpMaxs>;
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
