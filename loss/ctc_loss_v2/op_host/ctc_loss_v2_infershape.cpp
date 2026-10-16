@@ -105,6 +105,46 @@ static ge::graphStatus CheckTarget(const gert::InferShapeContext* context, int64
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckLengthsShape(const gert::InferShapeContext* context, int64_t batchSize)
+{
+    auto const inputLengthsShape = context->GetInputShape(INPUT_LENGTHS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputLengthsShape);
+    auto const targetLengthsShape = context->GetInputShape(TARGET_LENGTHS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, targetLengthsShape);
+
+    // Check input_lengths: must be 1-D with first dimension equal to batchSize
+    if (!Ops::Base::IsUnknownRank(*inputLengthsShape)) {
+        if (inputLengthsShape->GetDimNum() != 1) {
+            OP_LOGE(context->GetNodeName(), "input_lengths must be 1-D tensor, but got %ld dimensions.",
+                    inputLengthsShape->GetDimNum());
+            return ge::GRAPH_FAILED;
+        }
+        int64_t inputLengthsSize = inputLengthsShape->GetDim(0);
+        if ((inputLengthsSize >= 0) && (batchSize >= 0) && (inputLengthsSize != batchSize)) {
+            OP_LOGE(context->GetNodeName(), "input_lengths first dimension must equal batch size (%ld), but got %ld.",
+                    batchSize, inputLengthsSize);
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    // Check target_lengths: must be 1-D with first dimension equal to batchSize
+    if (!Ops::Base::IsUnknownRank(*targetLengthsShape)) {
+        if (targetLengthsShape->GetDimNum() != 1) {
+            OP_LOGE(context->GetNodeName(), "target_lengths must be 1-D tensor, but got %ld dimensions.",
+                    targetLengthsShape->GetDimNum());
+            return ge::GRAPH_FAILED;
+        }
+        int64_t targetLengthsSize = targetLengthsShape->GetDim(0);
+        if ((targetLengthsSize >= 0) && (batchSize >= 0) && (targetLengthsSize != batchSize)) {
+            OP_LOGE(context->GetNodeName(), "target_lengths first dimension must equal batch size (%ld), but got %ld.",
+                    batchSize, targetLengthsSize);
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus CTCLossV2InferShapeFunc(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "CTCLossV2InferShape run.");
@@ -129,6 +169,11 @@ static ge::graphStatus CTCLossV2InferShapeFunc(gert::InferShapeContext* context)
 
     int64_t const timeStep = logProbsShape->GetDim(0);  // time step size info
     int64_t const batchSize = logProbsShape->GetDim(1); // batch size size info
+
+    // Validate lengths tensors before reading their data
+    if (CheckLengthsShape(context, batchSize) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     negLossShape->SetDimNum(1);
     negLossShape->SetDim(0, batchSize);

@@ -409,4 +409,111 @@ TEST_F(CTCLossV2ProtoTest, ctc_loss_v2_infer_shape_test4_failed)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
+
+// Regression test for issue #6566: lengths tensor shape validation
+TEST_F(CTCLossV2ProtoTest, ctc_loss_v2_infer_shape_test_lengths_mismatch_failed)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("CTCLossV2")->infer_shape;
+
+    int N = 8;
+    int T = 16;
+    int C = 24;
+    int S = 8;
+
+    gert::Shape logProbsShape = {T, N, C};
+    gert::Shape targetsShape = {N, S};
+    gert::Shape lengthsShape = {N};
+    gert::Shape badLengthsShape = {1}; // Wrong: should be [N] but is [1]
+
+    gert::Shape output_shape_0 = {};
+    gert::Shape output_shape_1 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&logProbsShape, &targetsShape, &lengthsShape, &badLengthsShape})
+                      .OutputShapes({&output_shape_0, &output_shape_1})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    // Should fail due to target_lengths shape mismatch (batch=8 but lengths=[1])
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(CTCLossV2ProtoTest, ctc_loss_v2_infer_shape_test_lengths_2d_failed)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("CTCLossV2")->infer_shape;
+
+    int N = 8;
+    int T = 16;
+    int C = 24;
+    int S = 8;
+
+    gert::Shape logProbsShape = {T, N, C};
+    gert::Shape targetsShape = {N, S};
+    gert::Shape lengthsShape = {N};
+    gert::Shape badLengths2DShape = {N, 1}; // Wrong: should be [N] but is [N, 1]
+
+    gert::Shape output_shape_0 = {};
+    gert::Shape output_shape_1 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&logProbsShape, &targetsShape, &badLengths2DShape, &lengthsShape})
+                      .OutputShapes({&output_shape_0, &output_shape_1})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    // Should fail due to input_lengths having 2 dimensions instead of 1
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(CTCLossV2ProtoTest, ctc_loss_v2_infer_shape_test_dynamic_batch_success)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("CTCLossV2")->infer_shape;
+
+    int T = 16;
+    int C = 24;
+
+    // Dynamic batch size: log_probs has shape [T, -1, C], lengths have shape [-1]
+    gert::Shape logProbsShape = {T, -1, C};
+    gert::Shape targetsShape = {-1, -1};
+    gert::Shape lengthsShape = {-1};
+
+    gert::Shape output_shape_0 = {};
+    gert::Shape output_shape_1 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&logProbsShape, &targetsShape, &lengthsShape, &lengthsShape})
+                      .OutputShapes({&output_shape_0, &output_shape_1})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    // Should succeed: dynamic batch size allows dynamic lengths dimensions
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
+}
 } // namespace
