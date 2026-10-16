@@ -23,8 +23,6 @@ class MatMulV3BasicAswtTiling : public MatMulV3AswTiling {
 public:
     MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg) {};
     ~MatMulV3BasicAswtTiling() override = default;
-    bool CheckFp32SplitK() const;
-    void CheckApiLevelAndModel();
 
 protected:
     bool IsCapable() override;
@@ -38,6 +36,7 @@ protected:
     MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
     MatMulV3Model model_{MatMulV3Model::BASIC};
     bool isSlice_{false};
+    bool isSplitK_{false};
 
 private:
     void ResetFullLoadLoadBalance();
@@ -46,6 +45,7 @@ private:
     void CalcTailBasicBlockAL1Full();
     bool CheckBL1FullLoad() const;
     bool CheckAL1FullLoad() const;
+    void CheckApiLevelAndModel();
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

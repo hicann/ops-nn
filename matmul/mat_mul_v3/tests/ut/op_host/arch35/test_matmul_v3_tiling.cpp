@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <cstdlib>
 #include <vector>
 #include <thread>
 #include <nlohmann/json.hpp>
@@ -42,6 +43,9 @@ string get_map_string(const std::map<string, string>& map, const string& key)
 
 bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingKey)
 {
+    if (std::getenv("UT_DUMP_ALL_TILINGDATA") != nullptr) {
+        return true;
+    }
     // 0-18 23-27 30-32 48-57 表示mm实际用到的tilingdata
     // 新增rowStride后原字段innerBatch的index=22 按照之前设计, 非连续字段不在参数化用例中验证，单独设计ut验证即可
     // 特修改此处index >= 23UL，跳过innerBatch slice rowStride这些字段
@@ -411,7 +415,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4096 1280 8192 256 256 256 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 "},
+     "32 4096 1280 8192 256 256 256 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 "},
     {"MatMulV3_950_perf_tmp_1280_16384_x_16384_32_fp32",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -438,9 +442,9 @@ static TilingTestParam ascend950_cases_params[] = {
      false,
      0,
      0,
-     27,
-     24578UL,
-     "27 1280 32 16384 48 32 256 48 32 128 16384 1 1 1 1 0 0 33686016 ",
+     32,
+     28674UL,
+     "32 1280 32 16384 256 32 128 256 32 32 2731 1 1 1 1 0 0 16843264 0 256 1 16384 0 128 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_basic_testNZ_streamk_fp32",
@@ -471,7 +475,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 248 39 10448 256 48 128 256 48 32 328 1 1 1 1 0 0 16843264 0 256 1 0 ",
+     "32 248 39 10448 256 48 128 256 48 32 328 1 1 1 1 0 0 16843264 0 256 1 10448 0 1 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_basic_testNZ_bFullLoad",
@@ -502,7 +506,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      31,
      18UL,
-     "31 11665 47 89 384 48 128 384 48 32 89 1 1 1 1 0 0 33686016 "},
+     "31 11665 47 89 384 48 128 384 48 32 89 1 1 1 1 0 0 33686016 0 384 1 1 0 89 "},
     {"MatMulV3_950_basic_testNZ_aFullLoad",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -531,7 +535,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      31,
      82UL,
-     "31 32 8400 16 32 272 16 32 272 16 16 1 1 1 1 0 0 33686016 0 32 1 0 "},
+     "31 32 8400 16 32 272 16 32 272 16 16 1 1 1 1 0 0 33686016 0 32 1 1 0 16 "},
     {"MatMulV3_950_basic_testNZ_aswt",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -560,7 +564,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      28,
      18UL,
-     "28 8906 2 15083 320 16 192 320 16 48 15083 1 1 1 1 0 0 33686016 "},
+     "28 8906 2 15083 320 16 192 320 16 48 15083 1 1 1 1 0 0 33686016 0 320 1 1 0 15083 "},
     {"MatMulV3_950_basic_test15",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -589,7 +593,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4096 1280 8192 256 256 256 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 "},
+     "32 4096 1280 8192 256 256 256 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 "},
     {"MatMulV3_950_basic_test16",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -618,7 +622,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 "},
+     "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 "},
     {"MatMulV3_950_streamK_fp16_test17",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -647,7 +651,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4 1280 8192 16 256 256 16 256 64 1366 1 1 1 1 0 0 16843264 0 16 1 0 "},
+     "32 4 1280 8192 16 256 256 16 256 64 1366 1 1 1 1 0 0 16843264 0 16 1 8192 0 1 "},
     {"MatMulV3_950_streamK2aswt_fp16_test18",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -676,7 +680,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      27,
      66UL,
-     "27 4 1280 8192 16 48 512 16 48 256 8192 1 1 1 1 0 0 33686016 "},
+     "27 4 1280 8192 16 48 512 16 48 256 8192 1 1 1 1 0 0 33686016 0 16 1 8192 0 8192 "},
     {"MatMulV3_950_basic_test20",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -705,7 +709,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4178UL,
-     "32 224 192 3952 112 192 256 112 192 64 247 1 1 1 1 0 0 16843264 0 112 1 0 "},
+     "32 224 192 3952 112 192 256 112 192 64 247 1 1 1 1 0 0 16843264 0 112 1 1 0 1 "},
     {"MatMulV3_950_streamK_fp16_test21",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -734,7 +738,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2101250UL,
-     "32 523 246 10866 176 256 256 176 256 64 1087 1 1 1 1 0 0 16843264 0 176 1 0 "},
+     "32 523 246 10866 176 256 256 176 256 64 1087 1 1 1 1 0 0 16843264 0 176 1 10866 0 1 "},
     {"MatMulV3_950_al1_full_load_22",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -763,7 +767,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      30,
      66UL,
-     "30 48 3306 953 48 112 256 48 112 128 953 1 1 1 1 0 0 33686016 0 48 1 0 "},
+     "30 48 3306 953 48 112 256 48 112 128 953 1 1 1 1 0 0 33686016 0 48 1 953 0 953 "},
     // {
     //   "MatMulV3_950_al1_full_load_23", "MatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -808,7 +812,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      27,
      66UL,
-     "27 190 2130 16 64 256 16 64 256 16 16 1 1 1 1 0 0 33686016 "},
+     "27 190 2130 16 64 256 16 64 256 16 16 1 1 1 1 0 0 33686016 0 64 1 16 0 16 "},
     {"MatMulV3_950_abl1_full_load_04",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -837,7 +841,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      66UL,
-     "32 304 3152 112 160 208 128 160 208 64 112 1 1 1 1 0 0 33620480 0 160 1 0 "},
+     "32 304 3152 112 160 208 128 160 208 64 112 1 1 1 1 0 0 33620480 0 160 1 112 0 112 "},
     {"MatMulV3_950_al1_full_load_05",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
@@ -866,7 +870,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65602UL,
-     "32 4 32000 8192 16 336 128 16 336 32 8192 1 1 1 1 0 0 33686016 2 16 1 0 "},
+     "32 4 32000 8192 16 336 128 16 336 32 8192 1 1 1 1 0 0 33686016 2 16 1 8192 0 1 "},
     {"MatMulV3_950_stream_k_black_24",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -895,7 +899,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      24642UL,
-     "32 1024 2048 8192 256 256 128 256 256 32 8192 1 1 1 1 0 0 16843264 0 256 1 0 ",
+     "32 1024 2048 8192 256 256 128 256 256 32 8192 1 1 1 1 0 0 16843264 0 256 1 8192 0 64 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_stream_k_fp16_black_25",
@@ -926,7 +930,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4114UL,
-     "32 821 32 5120 208 32 128 208 32 64 640 1 1 1 1 0 0 16843264 0 208 1 0 ",
+     "32 821 32 5120 208 32 128 208 32 64 640 1 1 1 1 0 0 16843264 0 208 1 1 0 1 ",
      ge::DT_FLOAT16,
      ge::DT_FLOAT16},
     {"MatMulV3_950_stream_k_fp32_white_26",
@@ -957,7 +961,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4098UL,
-     "32 32 64 8192 32 64 256 32 64 128 256 1 1 1 1 0 0 16843264 0 32 1 0 ",
+     "32 32 64 8192 32 64 256 32 64 128 256 1 1 1 1 0 0 16843264 0 32 1 8192 0 1 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_stream_k_dpsk_tf32_white_27",
@@ -988,7 +992,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4098UL,
-     "32 1024 2304 8192 256 256 256 256 256 64 1024 1 1 1 1 0 0 16843264 0 256 1 0 ",
+     "32 1024 2304 8192 256 256 256 256 256 64 1024 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 ",
      ge::DT_FLOAT16,
      ge::DT_FLOAT16},
     {"MatMulV3_950_stream_k_dpsk_fp16_black_28",
@@ -1019,7 +1023,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      24578UL,
-     "32 1024 2048 8192 256 256 128 256 256 32 8192 1 1 1 1 0 0 16843264 0 256 1 0 ",
+     "32 1024 2048 8192 256 256 128 256 256 32 8192 1 1 1 1 0 0 16843264 0 256 1 8192 0 64 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     // ASWT大于一轮切换基础API
@@ -1051,7 +1055,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      24578UL,
-     "32 1024 2303 8192 256 256 128 256 256 32 8192 4 2 1 1 0 0 16843264 0 256 1 0 ",
+     "32 1024 2303 8192 256 256 128 256 256 32 8192 4 2 1 1 0 0 16843264 0 256 1 8192 0 64 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_bl1_full_load_26",
@@ -1082,7 +1086,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      27,
      66UL,
-     "27 560 80 953 64 32 512 64 32 256 953 1 1 1 1 0 0 33686016 0 64 1 0 "},
+     "27 560 80 953 64 32 512 64 32 256 953 1 1 1 1 0 0 33686016 0 64 1 953 0 953 "},
     {"MatMulV3_950_abl1_full_load_27",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0, "opImplMode":0},
@@ -1111,7 +1115,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      20,
      18UL,
-     "20 640 480 32 128 128 128 128 128 32 32 1 1 1 1 0 0 33686016 "},
+     "20 640 480 32 128 128 128 128 128 32 32 1 1 1 1 0 0 33686016 0 128 1 1 0 32 "},
     {"MatMulV3_950_abl1_full_load_28",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -1139,8 +1143,8 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     131138UL,
-     "32 512 16 1024 16 16 1024 16 16 512 1024 1 1 1 1 0 0 33686528 ",
+     24642UL,
+     "32 512 16 1024 16 16 1024 16 16 512 1024 1 1 1 1 0 0 33686016 0 16 1 1024 0 512 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_abl1_full_load_29",
@@ -1171,7 +1175,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      24,
      18UL,
-     "24 560 20 300 48 16 640 48 16 160 300 1 1 1 1 0 0 33686016 ",
+     "24 560 20 300 48 16 640 48 16 160 300 1 1 1 1 0 0 33686016 0 48 1 1 0 300 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_abl1_full_load_31",
@@ -1202,7 +1206,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      30,
      66UL,
-     "30 944 80 48 32 80 48 32 80 48 48 1 1 1 1 0 0 33686016 0 32 1 0 "},
+     "30 944 80 48 32 80 48 32 80 48 48 1 1 1 1 0 0 33686016 0 32 1 48 0 48 "},
     {"MatMulV3_950_bl1_full_load_32",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -1230,8 +1234,8 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     18UL,
-     "32 1022 25 1024 32 32 1024 32 32 256 1024 1 1 1 1 0 0 33686016 0 32 1 0 ",
+     24594UL,
+     "32 1022 25 1024 32 32 1024 32 32 256 1024 1 1 1 1 0 0 33686016 0 32 1 1 0 256 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_fixpipe_opti_01",
@@ -1262,7 +1266,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      1048642UL,
-     "32 1024 4090 128 256 256 128 256 256 64 128 1 1 1 1 0 0 16843264 0 256 1 0 "},
+     "32 1024 4090 128 256 256 128 256 256 64 128 1 1 1 1 0 0 16843264 0 256 1 128 0 1 "},
     {"MatMulV3_950_fixpipe_opti_02",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
@@ -1291,7 +1295,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2097154UL,
-     "32 10256 720 32 224 256 32 224 256 32 32 3 1 1 1 0 0 33620480 0 224 1 0 ",
+     "32 10256 720 32 224 256 32 224 256 32 32 3 1 1 1 0 0 33620480 0 224 1 32 0 1 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_asw_big_k_01",
@@ -1320,9 +1324,9 @@ static TilingTestParam ascend950_cases_params[] = {
      false,
      0,
      0,
-     20,
-     24578UL,
-     "20 160 128 2080000 32 32 512 32 32 256 2080000 1 1 1 1 0 0 33686016 0 32 1 0 ",
+     32,
+     28674UL,
+     "32 160 128 2080000 160 128 128 160 128 32 65000 1 1 1 1 0 0 16843264 3 160 1 2080000 0 256 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     // ASWT大于一轮切换基础API
@@ -1354,7 +1358,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2097154UL,
-     "32 1188 2524 64 208 256 64 208 256 32 64 1 1 1 1 0 0 33620480 0 208 1 0 ",
+     "32 1188 2524 64 208 256 64 208 256 32 64 1 1 1 1 0 0 33620480 0 208 1 64 0 1 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT},
     {"MatMulV3_950_matmul_to_mul",
@@ -1416,7 +1420,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 1024 1024 8192 256 256 128 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 0",
+     "32 1024 1024 8192 256 256 128 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 ",
      DT_FLOAT16,
      DT_FLOAT16,
      {},
@@ -1456,7 +1460,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65538UL,
-     "32 1 135021 9398 16 384 64 16 384 32 9398 1 1 1 1 0 0 33686528 0 16 1 0 ",
+     "32 1 135021 9398 16 384 64 16 384 32 9398 1 1 1 1 0 0 33686528 0 16 1 9398 0 1 ",
      DT_FLOAT16,
      DT_FLOAT16,
      {},
@@ -1527,7 +1531,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65618UL,
-     "32 8 229678 351 16 480 128 16 480 32 351 1 1 1 1 0 0 33686528 0 16 1 0 ",
+     "32 8 229678 351 16 480 128 16 480 32 351 1 1 1 1 0 0 33686528 0 16 1 1 0 1 ",
      DT_FLOAT16,
      DT_FLOAT16,
      {},
@@ -3226,7 +3230,7 @@ TEST_F(MatMulV3TilingRuntime, 950_slice_non_contiguous_case)
     uint32_t block_dim = tiling_context->GetBlockDim();
     string case_name = "950_slice_non_contiguous_case";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
-    auto golden_tiling_data = GenGoldenTilingData("1 10 4 7 16 16 16 16 16 16 7 1 1 1 1 0 0 33686016 0 2 0 0",
+    auto golden_tiling_data = GenGoldenTilingData("1 10 4 7 16 16 16 16 16 16 7 1 1 1 1 0 0 33686016 0 2 0 0 0 7",
                                                   case_name, tiling_key);
     cout << "===== 950_slice_non_contiguous_case:" << tiling_key << " === \n" << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 20482);
@@ -3323,8 +3327,8 @@ TEST_F(MatMulV3TilingRuntime, 950_rowstride_continuous_transpose)
     uint32_t block_dim = tiling_context->GetBlockDim();
     string case_name = "950_rowstride_continuous_transpose";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
-    auto golden_tiling_data = GenGoldenTilingData("4 256 64 128 64 64 512 64 64 128 128 1 1 1 1 0 0 33686016",
-                                                  case_name, tiling_key);
+    auto golden_tiling_data = GenGoldenTilingData(
+        "4 256 64 128 64 64 512 64 64 128 128 1 1 1 1 0 0 33686016 0 64 1 1 0 128", case_name, tiling_key);
     cout << "===== " << case_name << ":" << tiling_key << " === \n" << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 18UL);
     ASSERT_EQ(block_dim, 4);
@@ -3418,8 +3422,8 @@ TEST_F(MatMulV3TilingRuntime, 950_rowstride_continuous_no_transpose)
     uint32_t block_dim = tiling_context->GetBlockDim();
     string case_name = "950_rowstride_continuous_no_transpose";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
-    auto golden_tiling_data = GenGoldenTilingData("8 128 64 256 16 64 256 16 64 256 256 1 1 1 1 0 0 33686016",
-                                                  case_name, tiling_key);
+    auto golden_tiling_data = GenGoldenTilingData(
+        "8 128 64 256 16 64 256 16 64 256 256 1 1 1 1 0 0 33686016 0 16 1 256 0 256", case_name, tiling_key);
     cout << "===== " << case_name << ":" << tiling_key << " === \n" << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 2UL);
     ASSERT_EQ(block_dim, 8);
@@ -3515,8 +3519,8 @@ TEST_F(MatMulV3TilingRuntime, 950_rowstride_noncontiguous_2d_slice)
     uint32_t block_dim = tiling_context->GetBlockDim();
     string case_name = "950_rowstride_noncontiguous_2d_slice";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
-    auto golden_tiling_data = GenGoldenTilingData("8 128 32 64 16 32 64 16 32 64 64 1 1 1 1 0 0 33686016", case_name,
-                                                  tiling_key);
+    auto golden_tiling_data = GenGoldenTilingData(
+        "8 128 32 64 16 32 64 16 32 64 64 1 1 1 1 0 0 33686016 0 16 1 64 0 64", case_name, tiling_key);
     cout << "===== " << case_name << ":" << tiling_key << " === \n" << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 2UL);
     ASSERT_EQ(block_dim, 8);

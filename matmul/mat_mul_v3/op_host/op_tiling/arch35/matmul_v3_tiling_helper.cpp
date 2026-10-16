@@ -156,13 +156,13 @@ const static std::map<NpuArch, ResetBaseFunc> ResetBaseFuncMap = {
 
 // ------------------------------ GetL0C2Out -------------------------------------------//
 MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */,
-                                  const MatMulV3RunInfo& /* runInfo */)
+                                  const MatMulV3RunInfo& /* runInfo */, bool /* isSplitK */)
 {
     return MatMulV3L0C2Out::ON_THE_FLY;
 }
 
 MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                  const MatMulV3RunInfo& runInfo)
+                                  const MatMulV3RunInfo& runInfo, bool isSplitK)
 {
     bool isValidMKN = args.kValue <= BASIC_BLOCK_SIZE_256 && args.mValue >= BASIC_BLOCK_SIZE_256;
     uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.singleCoreM);
@@ -173,7 +173,7 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const 
     // 128: SMALL_SHAPE_LOWER_THRES
     bool isUnalignedN = args.nValue * cDtypeSize % 128UL != 0 && args.nValue * cDtypeSize > BASIC_BLOCK_SIZE_256;
     bool fixpipeBound = isValidMKN && isMultiRound && isUnalignedN;
-    if (!fixpipeBound || (compileInfo.aivNum != (compileInfo.aicNum * NUM_TWO))) {
+    if (!fixpipeBound || (compileInfo.aivNum != (compileInfo.aicNum * NUM_TWO)) || isSplitK) {
         return MatMulV3L0C2Out::ON_THE_FLY;
     }
     if (args.aType == ge::DT_FLOAT16 || args.aType == ge::DT_BF16) {
@@ -182,7 +182,8 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const 
     return MatMulV3L0C2Out::ND_FIXPIPE_1_2;
 }
 
-using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, const MatMulV3RunInfo&);
+using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, const MatMulV3RunInfo&,
+                                           bool);
 
 const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {NpuArch::DAV_3510, GetL0C2OutDav3510},
@@ -298,13 +299,51 @@ void MatMulV3TilingHelper::CalL1Tiling(const MatmulV3CompileInfo& compileInfo, c
     iter(compileInfo, args, runInfo);
 }
 
+uint64_t MatMulV3TilingHelper::SelectSplitKBase(const gert::TilingContext* context, uint64_t mValue, uint64_t nValue,
+                                                uint64_t kValue, uint64_t baseK)
+{
+    static const uint64_t splitKBaseList[] = {64, 128, 256, 512, 1024, 2048, 4096, 8192};
+    // 一致性场景，M、N不能影响splitKBaseList选择，小MNK提升base仅在非强一致性场景生效
+    bool isSmallMNK = ops::CeilAlign(mValue, BASIC_BLOCK_SIZE_16) * ops::CeilAlign(nValue, BASIC_BLOCK_SIZE_16) <=
+                          BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 &&
+                      kValue < FP32_SPLIT_K_BASE_FACTOR * splitKBaseList[0] * splitKBaseList[0] &&
+                      context->GetDeterministicLevel() <= 1;
+    if (isSmallMNK) {
+        return std::max(splitKBaseList[1], baseK);
+    }
+    // splitKBase 候选取值列表（升序）。阈值统一由 3*前一个base^2 推导。
+    static const int splitKBaseCount = (int)(sizeof(splitKBaseList) / sizeof(splitKBaseList[0]));
+    for (int i = 0; i < splitKBaseCount - 1; ++i) {
+        uint64_t threshold = FP32_SPLIT_K_BASE_FACTOR * splitKBaseList[i] * splitKBaseList[i];
+        if (kValue < threshold) {
+            return std::max(splitKBaseList[i], baseK);
+        }
+    }
+    // K >= 3*4096^2
+    return std::max(splitKBaseList[splitKBaseCount - 1], baseK);
+}
+
 MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                                 const MatMulV3RunInfo& runInfo)
+                                                 const MatMulV3RunInfo& runInfo, bool isSplitK)
 {
     auto iter = (GetL0C2OutFuncMap.find(compileInfo.npuArch) == GetL0C2OutFuncMap.end()) ?
                     GetL0C2OutDefault :
                     GetL0C2OutFuncMap.at(compileInfo.npuArch);
-    return iter(compileInfo, args, runInfo);
+    return iter(compileInfo, args, runInfo, isSplitK);
+}
+
+// SK场景需要传入singleCoreK
+bool MatMulV3TilingHelper::IsSplitSingleCoreK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                              bool isTensorApi, uint64_t singleCoreK)
+{
+    bool isNdFormat = args.aFormat == ge::FORMAT_ND && args.bFormat == ge::FORMAT_ND;
+    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
+    uint64_t realSingleCoreK = singleCoreK != 0 ? singleCoreK : args.kValue;
+    if (isFp32 && isNdFormat && isTensorApi && (realSingleCoreK >= compileInfo.aicNum * BASIC_BLOCK_SIZE_16)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* context)

@@ -28,8 +28,12 @@ class MatMulV3TilingHelper {
 public:
     static void ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
     static void CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo);
+    static uint64_t SelectSplitKBase(const gert::TilingContext* context, uint64_t mValue, uint64_t nValue,
+                                     uint64_t kValue, uint64_t baseK);
     static MatMulV3L0C2Out GetL0C2Out(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                      const MatMulV3RunInfo& runInfo);
+                                      const MatMulV3RunInfo& runInfo, bool isSplitK = false);
+    static bool IsSplitSingleCoreK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, bool isTensorApi,
+                                   uint64_t singleCoreK = 0);
     static uint64_t GetStepSmallK(bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                   MatMulV3RunInfo& runInfo);
     static void AdjustBL1TilingCommon(uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo,

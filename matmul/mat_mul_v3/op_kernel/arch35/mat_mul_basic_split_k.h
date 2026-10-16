@@ -60,7 +60,7 @@ __aicore__ inline void MatMulBasicSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
     Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
                      {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1,
                       tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB,
-                      tilingData.k, tilingData.rowStride},
+                      tilingData.k, tilingData.rowStride, tilingData.splitSingleCoreKBase},
                      {}, // epilogue args
                      {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN,
                       tilingData.baseK, tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt,

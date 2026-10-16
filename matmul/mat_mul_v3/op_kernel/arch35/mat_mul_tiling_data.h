@@ -99,6 +99,7 @@ struct BatchMatMulV3TilingData {
     uint32_t iterBatchL0 = 1;
     uint32_t broadcastAxisA = 4;
     uint32_t broadcastAxisB = 4;
+    uint32_t splitSingleCoreKBase = 0; // 单核切K基准值
 };
 #pragma pack(pop)
 
@@ -131,6 +132,7 @@ struct MatMulV3BasicTilingData {
     uint32_t srcNdStride;                                       // 非连续3d slice场景b轴stride
     uint32_t rowStride = 1;                                     // 非连续场景m轴stride
     uint32_t innerBatch = 1;                                    // 非连续transpose场景内轴batch值
+    uint32_t splitSingleCoreKBase = 0;
 };
 #pragma pack(pop)
 

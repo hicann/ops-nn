@@ -380,6 +380,7 @@ protected:
         tilingData.cBatchDim3 = batchInfo_->batchC3;
         tilingData.iterBatch = runInfo_.bmmRunInfo.iterBatch;
         tilingData.batchOutNum = runInfo_.bmmRunInfo.batchOutNum;
+        tilingData.splitSingleCoreKBase = runInfo_.splitKBase;
         tilingData.mL1 = static_cast<uint32_t>(
             std::min(ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16), runInfo_.baseM * runInfo_.stepM));
         tilingData.nL1 = static_cast<uint32_t>(
@@ -427,6 +428,7 @@ protected:
         stepKa = std::min(STEPKA_THERSHOLD, stepKa);
         tilingData.kL1 = runInfo_.baseK * static_cast<uint32_t>(stepKa);
         tilingData.skSingleCoreK = runInfo_.singleCoreK;
+        tilingData.splitSingleCoreKBase = runInfo_.splitKBase;
         tilingData.baseM = runInfo_.baseM;
         tilingData.baseN = runInfo_.baseN;
         tilingData.baseK = runInfo_.baseK;

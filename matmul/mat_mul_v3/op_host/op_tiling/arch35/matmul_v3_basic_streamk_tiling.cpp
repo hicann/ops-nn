@@ -66,14 +66,27 @@ bool CheckStreamKSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const M
         return false;
     }
 
+    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_8);
     uint64_t alignValue = BASIC_BLOCK_SIZE_256;
     if (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32) {
-        alignValue = BLOCK_BYTE_SIZE; // 如果是Fp32 基本块判断要用32
+        if (kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum) {
+            alignValue = FP32_MIN_BASE_BLOCK;
+        } else {
+            alignValue = BLOCK_BYTE_SIZE;
+        }
     }
+    // FP32场景MN小K大走SK模板提升精度
+    bool isNdFormat = args.aFormat == ge::FORMAT_ND && args.bFormat == ge::FORMAT_ND;
+    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
+    bool isSKSupport = mAlignedValue * nAlignedValue < FP32_MN_SHAPE_THRESHOLD &&
+                       kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum && isFp32 &&
+                       isNdFormat;
     // 判断mn是否需要已经能切32份及以上
     uint64_t mCnt = MathUtil::CeilDivision(args.mValue, alignValue);
     uint64_t nCnt = MathUtil::CeilDivision(args.nValue, alignValue);
-    if (mCnt * nCnt > compileInfo.aicNum / NUM_TWO) {
+    if (mCnt * nCnt > compileInfo.aicNum / NUM_TWO && !isSKSupport) {
         OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK mCnt[%lu], nCnt[%lu]", mCnt, nCnt);
         return false;
     }
@@ -159,7 +172,7 @@ bool MatMulV3BasicStreamKTiling::IsHalveBaseProfitable(bool halveN) const
     }
     // fp32场景singleCoreK翻倍跨过精度切K阈值会切换到SK_SPLIT_K原子加路径
     if (args_.aDtypeSize == DATA_SIZE_FP32 && !args_.isHf32 &&
-        MathUtil::CeilDivision(args_.kValue, kCntNew) >= FP32_SPLIT_K_THRESHOLD) {
+        (MathUtil::CeilDivision(args_.kValue, kCntNew) >= compileInfo_.aicNum * BASIC_BLOCK_SIZE_16)) {
         return false;
     }
     bool isNdFixpipe = GetL0C2OutFlag() == MatMulV3L0C2Out::ND_FIXPIPE_1_2;
@@ -271,6 +284,14 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
         runInfo_.stepKb = NUM_THREE; // reserve L1 space for bias
         runInfo_.stepKa = NUM_THREE;
     }
+    // fusedMatMul do not checkout to tensor api
+    bool basicApi = std::string_view(context_->GetNodeType()) == "FusedMatMul" || args_.isAvoidTensorApi;
+    isSplitK_ = MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, !basicApi, runInfo_.singleCoreK);
+    if (isSplitK_) {
+        model_ = MatMulV3Model::SK_SPLIT_K;
+        runInfo_.splitKBase = MatMulV3TilingHelper::SelectSplitKBase(context_, args_.mValue, args_.nValue,
+                                                                     runInfo_.singleCoreK, runInfo_.baseK);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -285,13 +306,10 @@ uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
 {
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
-    bool isSplitSinglecoreK = std::string_view(context_->GetNodeType()) == "MatMulV3" &&
-                              (runInfo_.singleCoreK >= FP32_SPLIT_K_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32 &&
-                               !args_.isHf32);
     // fusedMatMul do not checkout to tensor api
     bool basicApi = std::string_view(context_->GetNodeType()) == "FusedMatMul" || args_.isAvoidTensorApi;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel((isSplitSinglecoreK && !basicApi) ? MatMulV3Model::SK_SPLIT_K : MatMulV3Model::STREAM_K)
+        .SetModel(model_)
         .SetL0C2Out(l0C2Out_)
         .SetApiLevel(basicApi ? MatMulV3ApiLevel::BASIC_LEVEL : MatMulV3ApiLevel::TENSOR_LEVEL)
         .GetTilingKey();

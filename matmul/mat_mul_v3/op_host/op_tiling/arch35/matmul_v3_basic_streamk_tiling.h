@@ -58,6 +58,8 @@ private:
     uint64_t nCnt_{1};
     uint64_t totalMNCnt_{1};
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
+    MatMulV3Model model_{MatMulV3Model::STREAM_K};
+    bool isSplitK_{false};
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

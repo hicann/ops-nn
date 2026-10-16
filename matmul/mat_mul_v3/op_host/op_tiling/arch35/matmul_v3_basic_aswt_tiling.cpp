@@ -45,12 +45,12 @@ void MatMulV3BasicAswtTiling::ResetFullLoadLoadBalance()
 
 bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 {
-    // batch一致性下a全载不支持核内切k
-    if (context_->GetDeterministicLevel() > 1 && CheckFp32SplitK()) {
-        return false;
-    }
     // 非连续slice不支持全载
     if (isSlice_) {
+        return false;
+    }
+    // FP32切K不支持全载
+    if (isSplitK_) {
         return false;
     }
     // 不支持Fixpipe优化
@@ -89,12 +89,12 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 
 bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
 {
-    // batch一致性下b全载不支持核内切k
-    if (context_->GetDeterministicLevel() > 1 && CheckFp32SplitK()) {
-        return false;
-    }
     // 非连续slice不支持全载
     if (isSlice_) {
+        return false;
+    }
+    // FP32切K不支持全载
+    if (isSplitK_) {
         return false;
     }
     // 不支持CubeBound
@@ -302,18 +302,6 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     return;
 }
 
-bool MatMulV3BasicAswtTiling::CheckFp32SplitK() const
-{
-    // FP32切K判断
-    bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
-    bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
-    // 连续且非全载场景才支持切K
-    if (!isSlice_ && isFp32 && !args_.isHf32 && isNdFormat && (args_.kValue >= FP32_SPLIT_K_THRESHOLD)) {
-        return true;
-    }
-    return false;
-}
-
 void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
 {
     bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
@@ -323,7 +311,6 @@ void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
     if (isSlice_ && selfDimNum == NUM_THREE) {
         model_ = MatMulV3Model::SLICE;
     }
-
     // DAV_RESV当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
@@ -336,7 +323,10 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
     MatMulV3AswTiling::DoOpTiling();
     // Slice标记需要在全载和Fixpipe分支选择前统一初始化，避免分支遗漏拦截
     isSlice_ = MatMulV3TilingHelper::IsSelfNonContiguous(context_);
-    l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
+    bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
+    bool isTensorApi = isMatmul && !args_.isAvoidTensorApi && compileInfo_.npuArch != NpuArch::DAV_RESV;
+    isSplitK_ = MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, isTensorApi);
+    l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_, isSplitK_);
     if (CheckAL1FullLoad()) {
         DoAL1FullLoad();
         CheckApiLevelAndModel();
@@ -354,8 +344,12 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
             runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
             runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
         }
-        if (CheckFp32SplitK()) {
+        if (isSplitK_) {
+            runInfo_.splitKBase = MatMulV3TilingHelper::SelectSplitKBase(context_, args_.mValue, args_.nValue,
+                                                                         args_.kValue, runInfo_.baseK);
             model_ = MatMulV3Model::BASIC_SPLIT_K;
+        } else {
+            runInfo_.splitKBase = args_.kValue;
         }
         CheckApiLevelAndModel();
     } else {
