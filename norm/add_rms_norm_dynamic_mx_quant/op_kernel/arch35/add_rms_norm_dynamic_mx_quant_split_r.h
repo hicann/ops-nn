@@ -95,13 +95,9 @@ public:
         } else {
             quantYBufSize = CeilAlign(baseN_ * sizeof(T_Y), UB_BLOCK_SIZE);
         }
-        // MxQuantComputeScaleOCP loads VL_F32 uint16_t elements (128 bytes) via LoadAlign per iteration.
-        // Ensure buffer can accommodate at least one such load even when baseNBlockSize is small.
-        constexpr uint64_t minScaleBufSize = static_cast<uint64_t>(VL_F32) * sizeof(uint16_t);
-        uint64_t maxExpBufSize = CeilAlign(baseNBlockSize_ * sizeof(uint16_t), UB_BLOCK_SIZE);
-        if (maxExpBufSize < minScaleBufSize) {
-            maxExpBufSize = minScaleBufSize;
-        }
+        // OCP LoadAlign reads VL_B16 elements even when its arithmetic mask is shorter.
+        constexpr uint64_t scaleVectorBytes = static_cast<uint64_t>(VL_B16) * sizeof(uint16_t);
+        uint64_t maxExpBufSize = CeilAlign(baseNBlockSize_ * sizeof(uint16_t), scaleVectorBytes);
         uint64_t halfScaleBufSize = maxExpBufSize;
         uint64_t scaleBufSize = CeilAlign(baseNBlockSize_ * sizeof(uint8_t), UB_BLOCK_SIZE);
 
@@ -359,7 +355,7 @@ private:
         {
             RegTensor<float> a;
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            LoadAlign<float, LoadDist::DIST_NORM>(a, cachePtr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(a, cachePtr);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + rowIndex, a, pregOne);
         }
     }

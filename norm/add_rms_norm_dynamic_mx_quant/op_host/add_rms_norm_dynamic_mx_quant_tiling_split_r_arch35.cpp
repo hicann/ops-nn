@@ -62,12 +62,16 @@ uint64_t AddRmsNormDynamicMxQuantSplitRTiling::GetMaxBaseN(uint64_t initialN)
         }
         uint64_t xOutBuf = candidateN * xDtypeSize_ * DOUBLE_BUFFER;
         uint64_t mxScaleBuf = Ops::Base::CeilAlign(
-            Ops::Base::CeilDiv(candidateN, static_cast<uint64_t>(MX_BLOCK_SIZE_32)) * sizeof(uint8_t), ubBlockSize_);
+                                  Ops::Base::CeilDiv(candidateN, static_cast<uint64_t>(MX_BLOCK_SIZE_32)) *
+                                      sizeof(uint8_t),
+                                  ubBlockSize_) *
+                              DOUBLE_BUFFER;
 
         uint64_t xFp32Buf = Ops::Base::CeilAlign(candidateN * FP32_SIZE, ubBlockSize_);
         uint64_t yTmpBuf = Ops::Base::CeilAlign(candidateN * xDtypeSize_, ubBlockSize_);
         uint64_t maxExpBuf = Ops::Base::CeilAlign(
-            Ops::Base::CeilDiv(candidateN, static_cast<uint64_t>(MX_BLOCK_SIZE_32)) * sizeof(uint16_t), ubBlockSize_);
+            Ops::Base::CeilDiv(candidateN, static_cast<uint64_t>(MX_BLOCK_SIZE_32)) * sizeof(uint16_t),
+            vlfp32 * FP32_SIZE);
         uint64_t halfScaleBuf = maxExpBuf;
 
         uint64_t totalNDependent = xInputBuf + gammaBetaBuf + yBuf + xOutBuf + mxScaleBuf + xFp32Buf + yTmpBuf +

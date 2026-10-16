@@ -79,7 +79,12 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalFixedCost(uint64_t rowFacto
                              mxStepProcessNum;
     uint64_t quantYCost = DOUBLE_BUFFER * quantYBufSize;
 
-    return rstdXReduceCost + quantYCost;
+    // Per-row scale temporaries are counted in CalUBTotalSize. The kernel aligns
+    // each complete temporary to one vector register so a masked tail load stays inside UB.
+    uint64_t scaleBaseBytes = Ops::Base::CeilAlign(blockNumInColAxis_ * xDtypeSize_, ubBlockSize_) * rowFactor;
+    uint64_t scalePaddingCost = NUM_TWO * (Ops::Base::CeilAlign(scaleBaseBytes, mxStepProcessNum) - scaleBaseBytes);
+
+    return rstdXReduceCost + quantYCost + scalePaddingCost;
 }
 
 ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
@@ -117,12 +122,18 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
         }
     }
 
+    rowFactor = std::min(rowFactor, blockFactor_);
+    // Alignment padding can change after the two-pass estimate; check the exact final budget.
+    while (rowFactor > 0 && rowFactor * perRowCost + CalFixedCost(rowFactor) > availableUb) {
+        --rowFactor;
+    }
+
     if (rowFactor < 1) {
         OP_LOGI(context_->GetNodeName(), "Cannot fit even 1 row in UB for R-full-load. R=%lu.", numCol_);
         return ge::GRAPH_PARAM_INVALID; // R轴不能全载，继续调下个模板
     }
 
-    rowFactor_ = std::min(rowFactor, blockFactor_);
+    rowFactor_ = rowFactor;
 
     OP_LOGI(context_->GetNodeName(), "R-full-load: rowFactor=%lu, numCol=%lu, numColAlign=%lu.", rowFactor_, numCol_,
             numColAlign_);

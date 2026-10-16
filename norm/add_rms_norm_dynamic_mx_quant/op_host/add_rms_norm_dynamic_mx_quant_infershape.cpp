@@ -47,7 +47,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
 
     const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
-    OP_CHECK_IF(x1Shape->GetDimNum() < 1 || x1Shape->GetDimNum() > INPUT_MAX_DIM_NUM,
+    OP_CHECK_IF(!IsUnknownRank(*x1Shape) && (x1Shape->GetDimNum() < 1 || x1Shape->GetDimNum() > INPUT_MAX_DIM_NUM),
                 OP_LOGE(context->GetNodeName(), "Input x1 rank[%lu] should be in [1, 7].", x1Shape->GetDimNum()),
                 return ge::GRAPH_FAILED);
     const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
@@ -60,6 +60,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     OP_CHECK_NULL_WITH_CONTEXT(context, mxscaleShape);
     gert::Shape* xShape = context->GetOutputShape(X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    gert::Shape* rstdShape = context->GetOutputShape(RSTD_IDX);
 
     // Attr
     auto attrs = context->GetAttrs();
@@ -69,6 +70,11 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     if (output_rstd != nullptr) {
         rstd_enable = *output_rstd;
     }
+    // Complete an available disabled-output descriptor without tightening its validation.
+    if (!rstd_enable && rstdShape != nullptr) {
+        rstdShape->SetDimNum(1);
+        rstdShape->SetDim(0, 0);
+    }
 
     // y and x output shapes = x1 shape
     *yShape = *x1Shape;
@@ -77,9 +83,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     // Handle unknown rank
     if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
         SetUnknownRank(*mxscaleShape);
-        // rstd (optional)
         if (rstd_enable) {
-            gert::Shape* rstdShape = context->GetOutputShape(RSTD_IDX);
             OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
             SetUnknownRank(*rstdShape);
         }
@@ -105,9 +109,8 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     mxscaleShape->SetDim(dim, dimSize);
     mxscaleShape->AppendDim(ALIGN_NUM);
 
-    // rstd shape (optional): same dims as x1, trailing gamma dims set to 1
+    // Enabled rstd: same dims as x1, trailing gamma dims set to 1.
     if (rstd_enable) {
-        gert::Shape* rstdShape = context->GetOutputShape(RSTD_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
         rstdShape->SetDimNum(x1DimNum);
         for (size_t i = 0; i < x1DimNum; i++) {

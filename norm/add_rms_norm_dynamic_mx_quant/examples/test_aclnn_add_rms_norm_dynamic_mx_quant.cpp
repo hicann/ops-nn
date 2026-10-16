@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -260,6 +261,7 @@ int main()
               Finalize(deviceId, stream); return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧
+    bool resultsMatch = true;
     {
         // 拷贝y_out结果
         auto size = GetShapeSize(y_out_shape);
@@ -269,6 +271,11 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
+        // FP16归一化结果为1；OCP scale=2^-8，E4M3FN编码256为0x78。
+        const bool yMatches = std::all_of(y_out_result.begin(), y_out_result.end(),
+                                          [](uint8_t value) { return value == 0x78; });
+        resultsMatch &= yMatches;
+        LOG_PRINT("Check yOut: %s, elements=%zu\n", yMatches ? "PASS" : "FAIL", y_out_result.size());
         LOG_PRINT("Output yOut (first 10 values):\n");
         for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
             LOG_PRINT("  yOut[%ld] = 0x%02x\n", i, y_out_result[i]);
@@ -282,6 +289,10 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy x_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
+        const bool xMatches = std::all_of(x_out_result.begin(), x_out_result.end(),
+                                          [](uint16_t value) { return value == 0x4000; });
+        resultsMatch &= xMatches;
+        LOG_PRINT("Check xOut: %s, elements=%zu\n", xMatches ? "PASS" : "FAIL", x_out_result.size());
         LOG_PRINT("Output xOut (first 10 values):\n");
         for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
             LOG_PRINT("  xOut[%ld] = 0x%04x\n", i, x_out_result[i]);
@@ -295,6 +306,13 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscale_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
+        // 每行只有一个32元素块；E8M0编码-8+127=119，第二个槽位为补零。
+        bool scaleMatches = true;
+        for (size_t i = 0; i < mxscale_out_result.size(); ++i) {
+            scaleMatches &= mxscale_out_result[i] == (i % 2 == 0 ? 0x77 : 0x00);
+        }
+        resultsMatch &= scaleMatches;
+        LOG_PRINT("Check mxscaleOut: %s, elements=%zu\n", scaleMatches ? "PASS" : "FAIL", mxscale_out_result.size());
         LOG_PRINT("MX scale values:\n");
         for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("  mxscaleOut[%ld] = 0x%02x\n", i, mxscale_out_result[i]);
@@ -308,16 +326,23 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy rstd_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
+        const double expectedRstd = 1.0 / std::sqrt(2.0 * 2.0 + epsilon);
+        const bool rstdMatches = std::all_of(
+            rstd_out_result.begin(), rstd_out_result.end(), [expectedRstd](float value) {
+                return std::isfinite(value) && std::abs(value - expectedRstd) <= 1e-6 * expectedRstd;
+            });
+        resultsMatch &= rstdMatches;
+        LOG_PRINT("Check rstdOut: %s, elements=%zu\n", rstdMatches ? "PASS" : "FAIL", rstd_out_result.size());
         LOG_PRINT("Rstd values:\n");
         for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("  rstdOut[%ld] = %f\n", i, rstd_out_result[i]);
         }
     }
 
-    LOG_PRINT("\n=== AddRmsNormDynamicMxQuant Test PASSED ===\n");
+    LOG_PRINT("All valid outputs: %s\n", resultsMatch ? "PASS" : "FAIL");
 
     // 6. 资源自动释放
     Finalize(deviceId, stream);
 
-    return 0;
+    return resultsMatch ? 0 : 1;
 }

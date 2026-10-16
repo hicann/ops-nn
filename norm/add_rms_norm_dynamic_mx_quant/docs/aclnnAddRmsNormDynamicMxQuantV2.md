@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：与`aclnnAddRmsNormDynamicMxQuant`功能一致，新增可选输入x3Optional，支持三路残差加法；当x3Optional为空指针时，V2接口行为与`aclnnAddRmsNormDynamicMxQuant`完全一致。本接口将Add算子、RmsNorm归一化（相比LayerNorm算子去掉了减去均值的部分）与DynamicMxQuant动态MX量化融合为一次计算，减少搬入搬出操作：先对输入做加法，再做RmsNorm归一化，最后在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果yOut、加法结果xOut、量化尺度mxscaleOut及标准差倒数rstdOut。mxscaleOut的计算算法由scaleAlg指定（dstType为FP8时支持OCP与cuBLAS两种实现，FP4时仅支持OCP），具体计算过程见下方计算公式。
+- 接口功能：与`aclnnAddRmsNormDynamicMxQuant`功能一致，新增可选输入x3Optional，支持三路残差加法；当x3Optional为空指针时，V2接口行为与`aclnnAddRmsNormDynamicMxQuant`完全一致。本接口将Add算子、RmsNorm归一化（相比LayerNorm算子去掉了减去均值的部分）与DynamicMxQuant动态MX量化融合为一次计算，减少搬入搬出操作：先对输入做加法，再做RmsNorm归一化，最后在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果yOut、加法结果xOut、量化尺度mxscaleOut及均方根倒数rstdOut。mxscaleOut的计算算法由scaleAlg指定（dstType为FP8时支持OCP与cuBLAS两种实现，FP4时仅支持OCP），具体计算过程见下方计算公式。
 - 计算公式：
 
   当x3Optional为空时：
@@ -95,7 +95,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用`aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnAddRmsNormDynamicMxQuantV2`接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize(
   const aclTensor *x1,
   const aclTensor *x2,
@@ -115,7 +115,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize(
   aclOpExecutor  **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -150,7 +150,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1（aclTensor*）</td>
+      <td>x1（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的x1。</td>
       <td><ul><li>支持空Tensor。</li><li>具体约束详见约束说明。</li></ul></td>
@@ -160,7 +160,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2（aclTensor*）</td>
+      <td>x2（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的x2。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与x1保持一致。</li></ul></td>
@@ -170,7 +170,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma（aclTensor*）</td>
+      <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的gamma。</td>
       <td><ul><li>支持空Tensor。</li><li>shape只能为一维，需要与x1最后一维维度匹配。</li><li>数据类型默认与输入x1一致；若不一致，则显式设为FLOAT32。</li></ul></td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta（aclTensor*）</td>
+      <td>beta（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的beta。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>如果提供，shape和数据类型需要与gamma保持一致。</li></ul></td>
@@ -190,10 +190,10 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>x3Optional（aclTensor*）</td>
+      <td>x3Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示加法计算中的可选输入，残差路径。对应公式中的x3Optional。</td>
-      <td><ul><li>可选参数，支持传入空指针。</li><li>当传入空指针时，V2接口行为与aclnnAddRmsNormDynamicMxQuant完全一致。</li><li>当不为空时，计算公式变为 x = (x3Optional + x1) + x2，shape和数据类型需要与x1保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>当传入空指针时，V2接口行为与aclnnAddRmsNormDynamicMxQuant完全一致。</li><li>当不为空时，计算公式变为 x = (x3Optional + x1) + x2，shape和数据类型需要与x1保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -282,8 +282,8 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参x1保持一致，除最后一维外各维度与x1对应维度保持一致，最后一维为1。rstdOut shape与x1 shape关系举例：若x1 shape为(2,3,4,8)，则rstdOut shape为(2,3,4,1)。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
+      <td>表示输入加法结果的均方根倒数（含 epsilon）。对应公式中Rms(x)的倒数。</td>
+      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参x1保持一致，除最后一维外各维度与x1对应维度保持一致，最后一维为1。rstdOut shape与x1 shape关系举例：若x1 shape为(2,3,4,8)，则rstdOut shape为(2,3,4,1)。</li><li>当outputRstd为False时，允许传入nullptr；传入非空指针时，其内容也不能作为有效计算结果读取。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -334,21 +334,23 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
       <td rowspan="2">161001</td>
-      <td>传入的x1、x2、gamma、yOut、xOut和mxscaleOut是空指针。</td>
+      <td>传入的x1、x2、gamma、yOut、xOut、mxscaleOut或roundMode是空指针。</td>
     </tr>
     <tr>
       <td>当outputRstd为True时，传入rstdOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="9">ACLNN_ERR_INNER_NULLPTR</td>
-      <td rowspan="9">561103</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>当x3Optional不为空指针且x1除最后一维外各维长度均非零时，x3Optional的shape或数据类型与x1不一致。</td>
+    </tr>
+    <tr>
+      <td rowspan="8">ACLNN_ERR_INNER_NULLPTR</td>
+      <td rowspan="8">561103</td>
       <td>输入或输出参数的维度数和数据类型不在范围之内，dstType和yOut的数据类型不匹配。</td>
     </tr>
     <tr>
       <td>输入x1、x2和输出yOut、xOut的shape不是完全相同的shape。</td>
-    </tr>
-    <tr>
-      <td>当x3Optional不为空指针时，x3Optional的shape或数据类型与x1不一致。</td>
     </tr>
     <tr>
       <td>gamma、beta(若存在)的shape不是完全相同的shape，或二者的维度数不为1，或轴长不等于x1的尾轴大小，或者类型不相同。</td>
@@ -357,7 +359,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>gamma的维度和x1的需要做norm的维度不相同，或rstdOut的维度和x1的不需要norm的维度不相同，或rstdOut对应x1归一化维度的轴长不为1。</td>
     </tr>
     <tr>
-      <td>scaleAlg不是0或1，或roundMode为空指针，或roundMode不属于{"rint", "floor", "round"}。</td>
+      <td>scaleAlg不是0或1，或roundMode不属于{"rint", "floor", "round"}。</td>
     </tr>
     <tr>
       <td>dstType为FP8时，roundMode不是"rint"。</td>
@@ -415,9 +417,15 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
 
 ## 约束说明
 
+- 输入Tensor的shape须为调用时已确定的具体形状，各维长度须为非负整数。
+
+- **空Tensor说明**
+  - 除最后一维外，x1任一维长度为0时，有效输出均为空Tensor，接口返回成功，workspaceSize为0。
+  - x1仅最后一维长度为0时，yOut、xOut和mxscaleOut为空Tensor；若outputRstd为True，rstdOut最后一维长度为1，其余维度与x1一致，元素填充NaN。例如x1为`(2,0)`时，rstdOut为`(2,1)`。outputRstd为False时不产生有效的rstdOut。
+
 - **边界值场景说明**
-  - 当输入是Inf时：1、输出yOut为0；2、输出xOut为Inf；3、输出mxscaleOut为255，偶数pad填充值为0；4、输出rstdOut为0。
-  - 当输入是NaN时：1、输出yOut为0；2、输出xOut为Nan；3、输出mxscaleOut为255，偶数pad填充值为0；4、输出rstdOut为NaN。
+  - 当输入是Inf时：1、输出yOut为0；2、输出xOut为Inf；3、输出mxscaleOut为255，偶数pad填充值为0；4、outputRstd为True时，输出rstdOut为0。
+  - 当输入是NaN时：1、输出yOut为0；2、输出xOut为NaN；3、输出mxscaleOut为255，偶数pad填充值为0；4、outputRstd为True时，输出rstdOut为NaN。
   - 上述边界值规则对x3Optional、x1、x2均适用。
 
 - **数据格式说明**
@@ -471,9 +479,23 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+通用编译流程参见[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。以下步骤适用于已安装本仓源码构建的`custom_nn`算子包：将下方代码保存为`example.cpp`，在其所在目录执行。`CANN_INSTALL_DIR`替换为实际CANN安装目录，`CUSTOM_OP_DIR`指向该版本的自定义算子包目录；头文件和库须来自同一套安装。需要g++及Ascend 950设备，示例使用设备0。
 
-```Cpp
+```bash
+CANN_INSTALL_DIR=/path/to/Ascend/cann
+CUSTOM_OP_DIR="${CANN_INSTALL_DIR}/vendors/custom_nn"
+source "${CANN_INSTALL_DIR}/set_env.sh"
+source "${CUSTOM_OP_DIR}/bin/set_env.bash"
+g++ -std=c++11 -O2 example.cpp -o example \
+    -I"${CANN_INSTALL_DIR}/include" -I"${CUSTOM_OP_DIR}/op_api/include" \
+    -L"${CUSTOM_OP_DIR}/op_api/lib" -L"${CANN_INSTALL_DIR}/lib64" \
+    -Wl,-rpath,"${CUSTOM_OP_DIR}/op_api/lib" -Wl,-rpath,"${CANN_INSTALL_DIR}/lib64" \
+    -lcust_opapi -lnnopbase -lascendcl
+./example
+```
+
+```cpp
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -506,9 +528,10 @@ int Init(int32_t deviceId, aclrtStream* stream)
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
 
     return 0;
 }
@@ -545,7 +568,7 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = Init(deviceId, &stream);
     // check根据自己的需要处理
     CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -643,6 +666,32 @@ int main()
         LOG_PRINT("result[%ld] is: %d\n", i, yRet[i]);
     }
 
+    // 对本示例固定输入校验全部有效输出。outputRstd=false，不读取无效rstd。
+    // x=2.0，gamma=1.5，归一化结果转FP16后为1.5；OCP scale=2^-8。
+    // y=384的E4M3FN编码为0x7c，scale的E8M0编码为-8+127=0x77。
+    const bool yMatches = std::all_of(yRet.begin(), yRet.end(), [](int8_t value) { return value == 0x7c; });
+    std::vector<short> xRet(xShapeSize, 0);
+    ret = aclrtMemcpy(xRet.data(), xRet.size() * sizeof(xRet[0]), xDeviceAddr,
+                      xRet.size() * sizeof(xRet[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    const bool xMatches = ret == ACL_SUCCESS &&
+        std::all_of(xRet.begin(), xRet.end(), [](short value) { return value == 0x4000; });
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("copy x from device to host failed. ERROR: %d\n", ret);
+    }
+    std::vector<int8_t> mxscaleRet(mxscaleShapeSize, 0);
+    ret = aclrtMemcpy(mxscaleRet.data(), mxscaleRet.size() * sizeof(mxscaleRet[0]), mxscaleDeviceAddr,
+                      mxscaleRet.size() * sizeof(mxscaleRet[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    const bool scaleMatches = ret == ACL_SUCCESS &&
+        std::all_of(mxscaleRet.begin(), mxscaleRet.end(), [](int8_t value) { return value == 0x77; });
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("copy mxscale from device to host failed. ERROR: %d\n", ret);
+    }
+    const bool resultsMatch = yMatches && xMatches && scaleMatches;
+    LOG_PRINT("Check yOut: %s, elements=%zu\n", yMatches ? "PASS" : "FAIL", yRet.size());
+    LOG_PRINT("Check xOut: %s, elements=%zu\n", xMatches ? "PASS" : "FAIL", xRet.size());
+    LOG_PRINT("Check mxscaleOut: %s, elements=%zu\n", scaleMatches ? "PASS" : "FAIL", mxscaleRet.size());
+    LOG_PRINT("All valid outputs: %s\n", resultsMatch ? "PASS" : "FAIL");
+
     // 6. 释放aclTensor
     aclDestroyTensor(x1);
     aclDestroyTensor(x2);
@@ -667,6 +716,6 @@ int main()
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
-    return 0;
+    return resultsMatch ? 0 : 1;
 }
 ```

@@ -253,9 +253,10 @@ __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const Lo
         RegTensor<float> aReg, bReg;
         MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
-        LoadAlign(aReg, (__ubuf__ float*)src);
+        // Each cache slot contains one scalar, not a complete vector register.
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(aReg, src);
         for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-            LoadAlign(bReg, dst + j * innerLoopStride);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(bReg, dst + j * innerLoopStride);
             AscendC::Reg::Add(aReg, aReg, bReg, pregOne);
         }
         StoreAlign((__ubuf__ float*)cache, aReg, pregOne);

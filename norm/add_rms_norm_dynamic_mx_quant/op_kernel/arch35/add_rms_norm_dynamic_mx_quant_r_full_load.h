@@ -81,13 +81,11 @@ public:
                                              UB_BLOCK_SIZE) *
                                    rowFactor_;
 
-        // MxQuantComputeScaleOCP loads VL_F32 uint16_t elements (128 bytes) via LoadAlign per iteration.
-        // Ensure buffer can accommodate at least one such load even when blockNumInColAxis is small.
-        constexpr uint64_t minScaleBufSize = static_cast<uint64_t>(VL_F32) * sizeof(uint16_t);
-        uint64_t maxExpBufSize = CeilAlign(blockNumInColAxis_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_;
-        if (maxExpBufSize < minScaleBufSize) {
-            maxExpBufSize = minScaleBufSize;
-        }
+        // Align the entire span: every OCP LoadAlign reads a full B16 register,
+        // including the final iteration when the valid scale count is not a multiple of VL_B16.
+        constexpr uint64_t scaleVectorBytes = static_cast<uint64_t>(VL_B16) * sizeof(uint16_t);
+        uint64_t maxExpBufSize = CeilAlign(CeilAlign(blockNumInColAxis_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_,
+                                           scaleVectorBytes);
         uint64_t halfScaleBufSize = maxExpBufSize;
 
         uint64_t quantYBufSize;

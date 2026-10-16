@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-    融合Add、RMS Normalization与MX动态量化，封装aclnnAddRmsNormDynamicMxQuantV2（内部始终调用V2接口，当x3不传入时行为与aclnnAddRmsNormDynamicMxQuant一致）。将输入x1、x2（可选x3，支持三路残差加法）相加后做RmsNorm归一化（可选加beta偏置），再在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果y、加法结果x、块量化尺度mxscale及标准差倒数rstd。
+    融合Add、RMS Normalization与MX动态量化，封装aclnnAddRmsNormDynamicMxQuantV2（内部始终调用V2接口，当x3不传入时行为与aclnnAddRmsNormDynamicMxQuant一致）。将输入x1、x2（可选x3，支持三路残差加法）相加后做RmsNorm归一化（可选加beta偏置），再在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果y、加法结果x、块量化尺度mxscale及均方根倒数rstd。
 
 - 计算公式：
 
@@ -257,7 +257,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>rstd</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>归一化后标准差的倒数，公式中Rms(x)的倒数。output_rstd为True时输出有效值；为False时为无效占位输出（内容未定义）。shape为x1.shape[:-1]拼接(1,)。</td>
+        <td>输入加法结果的均方根倒数（含 epsilon），公式中Rms(x)的倒数。output_rstd为True时输出有效值；为False时为无效占位输出（内容未定义）。shape为x1.shape[:-1]拼接(1,)。</td>
         <td>float32</td>
         <td>(..., 1)</td>
     </tr>
@@ -274,6 +274,8 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
 - 参数类型严格校验（eager直调，即`cann_ops_nn.add_rms_norm_dynamic_quant`、`cann_ops_nn.ops.add_rms_norm_dynamic_quant`或直接导入本函数时）：x1/x2/gamma须为`torch.Tensor`，beta/x3须为`torch.Tensor`或`None`；标量参数中dst_type、scale_alg仅接受Python原生int（bool拒绝，`enum.IntEnum`因其为int子类而接受），round_mode仅接受精确str，output_rstd仅接受精确bool，epsilon仅接受精确int/float。传入torch.dtype、numpy标量（含`np.float64`、`np.str_`这类Python内建类型的子类）等第三方类型会在入口直接抛出指名参数的TypeError（如`dst_type=torch.float8_e5m2`被拒绝），不做隐式转换或归一化。
 - 直接经`torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant`调用时（绕过公开入口），标量参数会先由torch dispatcher按schema完成类型转换：torch.dtype会被框架转换为其内部枚举序号（如`torch.float8_e5m2 -> 23`、`torch.int4 -> 40`），入口类型拦截在该路径不生效，由dst_type值域校验兜底。为避免歧义，请显式传入int枚举值（35/36/40/41）。
 - mxscale输出shape约束：rank(mxscale) = rank(x1) + 1，mxscale.shape[-2] = ceil(ceil(x1.shape[-1] / 32) / 2)，mxscale.shape[-1] = 2，其他维度与x1一致。
+- 空Tensor：x1除最后一维外的任一维长度为0时，所有返回Tensor均为空；仅最后一维长度为0时，y、x、mxscale为空，output_rstd为True时rstd元素为NaN。FP4的y仍按返回值说明使用uint8打包，空尾轴长度为0。
+- output_rstd为False时，rstd仍按返回值说明返回占位Tensor，其内容未定义，不能作为有效计算结果读取。
 
 ## 确定性计算
 

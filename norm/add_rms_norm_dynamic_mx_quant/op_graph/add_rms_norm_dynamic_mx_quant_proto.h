@@ -60,12 +60,13 @@ namespace ge {
 *     A tensor. Support dtype: float16, bfloat16, support format: ND.
 * @li mxscale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * - rank(mxscale) = rank(x) + 1.
-* - axis_change = axis if axis >= 0 else axis + rank(x).
-* - mxscale.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2.
+* - The quantization axis is fixed to rank(x) - 1; there is no axis attribute.
+* - mxscale.shape[rank(x) - 1] = ceil(ceil(x.shape[rank(x) - 1] / 32) / 2).
 * - mxscale.shape[rank(x)] = 2.
 * - Other dimensions match input x.
-* @li rstd: A tensor. Describing the reciprocal of (x1 + x2)'s standard deviation.
-*           Support dtype: float32, support format: ND.
+* @li rstd: Reciprocal root mean square of x with epsilon, not centered standard deviation.
+*           Support dtype: float32, support format: ND. Values are valid only when output_rstd is true;
+*           otherwise this required graph output has the empty placeholder shape [0].
 
 * @attention Constraints:
 * @li When dst_type is DT_FLOAT8_E5M2 or DT_FLOAT8_E4M3FN, round_mode only supports "rint".
