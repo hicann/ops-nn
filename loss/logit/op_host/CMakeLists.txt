@@ -9,4 +9,6 @@
 # ----------------------------------------------------------------------------
 message(STATUS "=== Debug: start ops.loss.logit.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE logit ACLNNTYPE aclnn)
+get_filename_component(LOGIT_OP_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${LOGIT_OP_ROOT_DIR} OPTYPE logit
+    ACLNNTYPE aclnn_exclude)

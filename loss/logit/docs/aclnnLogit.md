@@ -116,11 +116,11 @@ aclnnStatus aclnnLogit(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量，公式中的输出y。</td>
-      <td>输出的数据类型、数据格式和shape与输入input保持一致。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT、INT16、INT8、UINT8</td>
+      <td>数据格式和shape与输入input保持一致。input为浮点类型时，out与input的数据类型一致；input为INT16、INT8或UINT8时，out的数据类型为FLOAT。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
       <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -170,9 +170,9 @@ aclnnStatus aclnnLogit(
       <td>传入的input或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>input的数据类型不在支持的范围之内。</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>产品型号不支持，或input/out的数据类型、数据格式、维度、shape不符合上述要求。</td>
     </tr>
   </tbody></table>
 

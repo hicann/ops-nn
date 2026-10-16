@@ -125,7 +125,7 @@ aclnnStatus aclnnLogitGrad(
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
      <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -175,9 +175,9 @@ aclnnStatus aclnnLogitGrad(
       <td>传入的x、dy或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>x、dy或out的数据类型不在支持的范围之内。</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>产品型号不支持，或x/dy/out的数据类型、数据格式、维度、shape不符合上述要求。</td>
     </tr>
   </tbody></table>
 
