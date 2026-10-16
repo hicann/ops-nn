@@ -19,6 +19,7 @@
 
     <file_info value="op_graph" copy_type="delivery" src_path="" dst_path="opp/built-in/op_graph/inc" install_path="opp/built-in/op_graph/inc" install_type="all">
         <file value="ops_proto_nn.h" install_mod="555"/>
+        <file value="op_const_def_nn.h" install_mod="555"/>
     </file_info>
 
     <file_info value="ops_info" src_path="op_host" dst_path="opp/built-in/op_impl/ai_core/tbe" install_path="opp/built-in/op_impl/ai_core/tbe">

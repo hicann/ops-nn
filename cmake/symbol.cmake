@@ -200,6 +200,11 @@ function(gen_opgraph_symbol)
     DESTINATION ${OPGRAPH_INC_INSTALL_DIR}
     OPTIONAL
     )
+  install(
+    FILES ${PROJECT_SOURCE_DIR}/common/inc/op_host/op_const_def_nn.h
+    DESTINATION ${OPGRAPH_INC_INSTALL_DIR}
+    OPTIONAL
+    )
 
 endfunction()
 
