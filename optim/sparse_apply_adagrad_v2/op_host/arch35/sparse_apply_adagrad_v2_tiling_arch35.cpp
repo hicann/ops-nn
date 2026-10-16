@@ -33,6 +33,7 @@ namespace optiling {
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int64_t MIN_ELEMENTS_PER_CORE = 1024;
+constexpr int64_t UNKNOWN_DIM = -1;
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -119,15 +120,19 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
                     return ge::GRAPH_FAILED);
     }
 
+    // lr 应为标量（shape 为空或 [1]）；动态 shape 下 [−1] 也视为合法标量（与 InferShape 一致）
     auto lrDimNum = lrStorageShape.GetDimNum();
-    OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && lrStorageShape.GetDim(0) == 1),
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "lr", std::to_string(lrDimNum).c_str(),
-                                                         "lr must be a scalar (shape empty or [1])"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        lrDimNum != 0 && !(lrDimNum == 1 && (lrStorageShape.GetDim(0) == 1 || lrStorageShape.GetDim(0) == UNKNOWN_DIM)),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "lr", std::to_string(lrDimNum).c_str(),
+                                                 "lr must be a scalar (shape empty or [1])"),
+        return ge::GRAPH_FAILED);
 
+    // epsilon 应为标量（shape 为空或 [1]）；动态 shape 下 [−1] 也视为合法标量（与 InferShape 一致）
     auto epsDimNum = epsilonStorageShape.GetDimNum();
     OP_CHECK_IF(
-        epsDimNum != 0 && !(epsDimNum == 1 && epsilonStorageShape.GetDim(0) == 1),
+        epsDimNum != 0 &&
+            !(epsDimNum == 1 && (epsilonStorageShape.GetDim(0) == 1 || epsilonStorageShape.GetDim(0) == UNKNOWN_DIM)),
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(epsDimNum).c_str(),
                                                  "epsilon must be a scalar (shape empty or [1])"),
         return ge::GRAPH_FAILED);
@@ -209,6 +214,16 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
         innerDim *= varStorageShape.GetDim(i);
     }
+
+    // tiling 阶段要求参与切分计算的维度均为具体值：var 各维、indices 长度未解析(-1)时拒绝，
+    // 否则切分计算会静默产出垃圾 tiling 数据；lr/epsilon 的动态标量 [-1] 不参与切分计算，已放行
+    for (size_t i = 0; i < varStorageShape.GetDimNum(); i++) {
+        OP_CHECK_IF(varStorageShape.GetDim(i) == UNKNOWN_DIM,
+                    OP_LOGE(context, "var dim[%zu] is unresolved (-1), tiling requires concrete dims", i),
+                    return ge::GRAPH_FAILED);
+    }
+    OP_CHECK_IF(N == UNKNOWN_DIM, OP_LOGE(context, "indices length is unresolved (-1), tiling requires concrete dims"),
+                return ge::GRAPH_FAILED);
 
     bool updateSlots = GetUpdateSlotsAttr(context);
 

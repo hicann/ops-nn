@@ -63,8 +63,8 @@ static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& s
 static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr,
                    gert::StorageShape& epsilon, gert::StorageShape& grad, gert::StorageShape& indices,
                    gert::StorageShape& var_out, gert::StorageShape& accum_out, ge::DataType varDtype,
-                   ge::DataType indicesDtype, ge::Format format, bool updateSlots, bool useLocking, string& expectData,
-                   std::vector<size_t>& expectWorkspaces)
+                   ge::DataType indicesDtype, ge::Format format, bool updateSlots, bool useLocking,
+                   ge::graphStatus expectStatus, string& expectData, std::vector<size_t>& expectWorkspaces)
 {
     optiling::SparseApplyAdagradV2CompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -113,7 +113,11 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
     tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingFunc(tilingContext), expectStatus);
+
+    if (expectStatus != ge::GRAPH_SUCCESS) {
+        return;
+    }
 
     auto tilingDataResult = TilingData2Str(tilingContext->GetRawTilingData());
     EXPECT_EQ(tilingDataResult, expectData);
@@ -140,5 +144,106 @@ TEST_F(SparseApplyAdagradV2TilingTest, tiling_float32_int32)
     std::vector<size_t> expectWorkspaces = {16777216};
 
     DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
-           useLocking, expectData, expectWorkspaces);
+           useLocking, ge::GRAPH_SUCCESS, expectData, expectWorkspaces);
+}
+
+// 动态标量：lr/epsilon 为 {-1}（1D 未知值），与 InferShape S005 约定一致，tiling 应放行
+TEST_F(SparseApplyAdagradV2TilingTest, tiling_dynamic_scalar_lr_epsilon_unknown)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto indicesDtype = ge::DT_INT32;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+
+    gert::StorageShape var = {{4, 3}, {4, 3}};
+    gert::StorageShape accum = {{4, 3}, {4, 3}};
+    gert::StorageShape lr = {{-1}, {-1}};
+    gert::StorageShape epsilon = {{-1}, {-1}};
+    gert::StorageShape grad = {{2, 3}, {2, 3}};
+    gert::StorageShape indices = {{2}, {2}};
+    gert::StorageShape var_out = {{4, 3}, {4, 3}};
+    gert::StorageShape accum_out = {{4, 3}, {4, 3}};
+
+    string expectData = "1 6 2 3 4 1 ";
+    std::vector<size_t> expectWorkspaces = {16777216};
+
+    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
+           useLocking, ge::GRAPH_SUCCESS, expectData, expectWorkspaces);
+}
+
+// 负例：lr 为 {2}（已知非标量 shape），tiling 应拒绝
+TEST_F(SparseApplyAdagradV2TilingTest, tiling_lr_shape_two_rejected)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto indicesDtype = ge::DT_INT32;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+
+    gert::StorageShape var = {{4, 3}, {4, 3}};
+    gert::StorageShape accum = {{4, 3}, {4, 3}};
+    gert::StorageShape lr = {{2}, {2}};
+    gert::StorageShape epsilon = {{}, {}};
+    gert::StorageShape grad = {{2, 3}, {2, 3}};
+    gert::StorageShape indices = {{2}, {2}};
+    gert::StorageShape var_out = {{4, 3}, {4, 3}};
+    gert::StorageShape accum_out = {{4, 3}, {4, 3}};
+
+    string expectData = "";
+    std::vector<size_t> expectWorkspaces = {};
+
+    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
+           useLocking, ge::GRAPH_FAILED, expectData, expectWorkspaces);
+}
+
+// 负例：epsilon 为 {2}（已知非标量 shape），tiling 应拒绝
+TEST_F(SparseApplyAdagradV2TilingTest, tiling_epsilon_shape_two_rejected)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto indicesDtype = ge::DT_INT32;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+
+    gert::StorageShape var = {{4, 3}, {4, 3}};
+    gert::StorageShape accum = {{4, 3}, {4, 3}};
+    gert::StorageShape lr = {{}, {}};
+    gert::StorageShape epsilon = {{2}, {2}};
+    gert::StorageShape grad = {{2, 3}, {2, 3}};
+    gert::StorageShape indices = {{2}, {2}};
+    gert::StorageShape var_out = {{4, 3}, {4, 3}};
+    gert::StorageShape accum_out = {{4, 3}, {4, 3}};
+
+    string expectData = "";
+    std::vector<size_t> expectWorkspaces = {};
+
+    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
+           useLocking, ge::GRAPH_FAILED, expectData, expectWorkspaces);
+}
+
+// 负例：全动态 shape（var/grad/indices 维度均为 -1 未解析），tiling 应拒绝，
+// 避免切分计算静默产出垃圾 tiling 数据（N/innerDim/firstDim 为负值的场景）
+TEST_F(SparseApplyAdagradV2TilingTest, tiling_unresolved_dynamic_shape_rejected)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto indicesDtype = ge::DT_INT32;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+
+    gert::StorageShape var = {{-1, -1}, {-1, -1}};
+    gert::StorageShape accum = {{-1, -1}, {-1, -1}};
+    gert::StorageShape lr = {{-1}, {-1}};
+    gert::StorageShape epsilon = {{-1}, {-1}};
+    gert::StorageShape grad = {{-1, -1}, {-1, -1}};
+    gert::StorageShape indices = {{-1}, {-1}};
+    gert::StorageShape var_out = {{-1, -1}, {-1, -1}};
+    gert::StorageShape accum_out = {{-1, -1}, {-1, -1}};
+
+    string expectData = "";
+    std::vector<size_t> expectWorkspaces = {};
+
+    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
+           useLocking, ge::GRAPH_FAILED, expectData, expectWorkspaces);
 }
