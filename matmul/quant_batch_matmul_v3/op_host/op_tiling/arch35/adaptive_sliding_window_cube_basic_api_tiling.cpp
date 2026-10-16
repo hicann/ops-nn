@@ -30,8 +30,9 @@ constexpr uint64_t MAX_REDUCED_STEP_K = 8UL;
 // Keep A full-load if repeated A reads exceed this share of estimated non-full-load A/B traffic.
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
-                                               static_cast<int32_t>(NpuArch::DAV_RESV)};
+const std::vector<int32_t> supportedNpuArch = {
+    static_cast<int32_t>(NpuArch::DAV_3510), static_cast<int32_t>(NpuArch::DAV_9201),
+    static_cast<int32_t>(NpuArch::DAV_9202), static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::CUBE_BASIC_API_ASW;
 } // namespace
 
@@ -68,8 +69,8 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowCubeBasicAPITiling::IsWithoutBatchTilingData() const
 {
     // The software S4S4 fallback needs AIV preprocessing and the full tiling data layout.
-    return compileInfo_.npuArch == NpuArch::DAV_3510 && IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
-           !isSupportS4S4_;
+    return (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+           IsTensorApiEnabled() && inputParams_.batchC == 1UL && !isSupportS4S4_;
 }
 
 bool AdaptiveSlidingWindowCubeBasicAPITiling::IsCapable()
@@ -132,7 +133,8 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetKernelType() const
 uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     switch (npuArch) {
-        case NpuArch::DAV_3510: {
+        case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201: {
             const bool tensorApiEnabled = IsTensorApiEnabled();
             if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && !tensorApiEnabled) {
                 return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
@@ -140,6 +142,8 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) c
             return tensorApiEnabled ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                                       static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
         }
+        case NpuArch::DAV_9202:
+            return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
         case NpuArch::DAV_RESV:
             if (inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
                 inputParams_.bFormat == ge::FORMAT_ND) {

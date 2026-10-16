@@ -105,7 +105,8 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL false
 #endif
 
-#if defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ)
+#if defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(__NPU_ARCH__) && \
+    (__NPU_ARCH__ == 3510)
 #define SUPPORT_NON_MX_STREAMK_TILING_KEY                                                                        \
     (!QBMMV3_IS_MX_DTYPE_TPL && (QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL || QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL) && \
      (FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ))
@@ -301,8 +302,8 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
-#if ((!defined(__CCE_AICORE__)) ||                                   \
-     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && IS_BLAZE && \
+#if ((!defined(__CCE_AICORE__)) ||                                                           \
+     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201) && IS_BLAZE && \
       (QBMMV3_IS_MX_DTYPE_TPL || QBMMV3_IS_NON_MX_CUBE_ND_TPL || QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL)))
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1} * api level {2} * ATRANS {0, 1} * BTRANS {0, 1}
 #ifdef IS_A4W4I
@@ -317,8 +318,9 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
-#if ((!defined(__CCE_AICORE__)) || \
-     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && (QBMMV3_IS_MX_DTYPE_TPL || QBMMV3_IS_NON_MX_CUBE_ND_TPL)))
+#if ((!defined(__CCE_AICORE__)) ||                                                                       \
+     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && \
+      (QBMMV3_IS_MX_DTYPE_TPL || QBMMV3_IS_NON_MX_CUBE_ND_TPL)))
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1} * api level {1} * ATRANS {0, 1} * BTRANS {0, 1}
 #ifdef IS_A4W4I
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),

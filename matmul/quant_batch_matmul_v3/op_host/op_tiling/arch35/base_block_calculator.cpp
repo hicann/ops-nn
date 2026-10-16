@@ -347,6 +347,8 @@ bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode
     }
     switch (compileInfo_.npuArch) {
         case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
             return mode == BaseBlockMode::PERBLOCK ? AdjustBaseBlockPerblock() : AdjustBaseBlockDefault();
         case NpuArch::DAV_RESV:
             return AdjustBaseBlockMmadS8S4(oriBlock);

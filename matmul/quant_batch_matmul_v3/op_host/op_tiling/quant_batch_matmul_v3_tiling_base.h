@@ -96,6 +96,7 @@ public:
     bool isMxPerGroup = false;
     bool isPerBlock = false;
     bool isPerBlockPerToken = false;
+    bool isHif4PerGroup = false;
     bool isLut = false;
     int64_t outDtype = 0L;
     uint32_t libApiWorkSpaceSize = 0U;

@@ -18,6 +18,7 @@
 #include "error_util.h"
 #include "quant_batch_matmul_v3_checker.h"
 #include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
+#include "quant_batch_matmul_v3_checker_arch_9201.h"
 
 namespace optiling {
 namespace {
@@ -166,6 +167,9 @@ bool QuantBatchMatMulV3TilingUtil::CheckDtype(gert::TilingContext* context, cons
     switch (compileInfo.npuArch) {
         case NpuArch::DAV_3510:
             return CheckDtypeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams);
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
+            return CheckDtypeWithChecker<QuantBatchMatmulV3CheckerArch9201>(context, inputParams);
         case NpuArch::DAV_RESV:
             return CheckDtypeWithChecker<QuantBatchMatmulV3Checker4MmadS8S4>(context, inputParams);
         default:
@@ -186,6 +190,10 @@ bool QuantBatchMatMulV3TilingUtil::CheckShape(gert::TilingContext* context, cons
         case NpuArch::DAV_3510:
             return CheckShapeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams, mandatoryShape, biasShape,
                                                                     pertokenShape, dimValueOfMKN);
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
+            return CheckShapeWithChecker<QuantBatchMatmulV3CheckerArch9201>(context, inputParams, mandatoryShape,
+                                                                            biasShape, pertokenShape, dimValueOfMKN);
         case NpuArch::DAV_RESV:
             return CheckShapeWithChecker<QuantBatchMatmulV3Checker4MmadS8S4>(context, inputParams, mandatoryShape,
                                                                              biasShape, pertokenShape, dimValueOfMKN);

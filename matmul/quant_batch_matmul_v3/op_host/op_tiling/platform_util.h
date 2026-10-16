@@ -22,7 +22,8 @@
 #include "quant_batch_matmul_v3_compile_info.h"
 
 namespace optiling {
-const std::initializer_list<NpuArch> AdvancedArch = {NpuArch::DAV_3510, NpuArch::DAV_RESV};
+const std::initializer_list<NpuArch> AdvancedArch = {NpuArch::DAV_3510, NpuArch::DAV_9201, NpuArch::DAV_9202,
+                                                     NpuArch::DAV_RESV};
 
 class PlatformUtil {
 public:

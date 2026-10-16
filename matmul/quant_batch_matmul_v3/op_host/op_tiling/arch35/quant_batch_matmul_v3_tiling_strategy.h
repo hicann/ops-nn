@@ -33,15 +33,20 @@ constexpr int32_t MX_STREAMK = 8L;
 inline const std::vector<int32_t>& GetQuantBatchMatmulV3Priorities(NpuArch npuArch)
 {
     static const std::vector<int32_t> dav3510Priorities = {
+        strategy::MX_STREAMK,        strategy::MX_BASIC_API_ASW, strategy::CUBE_BASIC_API_ASW,    strategy::CUBE_ASW,
+        strategy::MIX_BASIC_API_ASW, strategy::MIX_ASW,          strategy::PERBLOCK_BASIC_API_ASW};
+    static const std::vector<int32_t> dav9201Priorities = {
         strategy::MX_STREAMK, strategy::MX_BASIC_API_ASW, strategy::CUBE_BASIC_API_ASW,
-        strategy::CUBE_ASW, strategy::MIX_BASIC_API_ASW,   strategy::MIX_ASW,
-        strategy::PERBLOCK_BASIC_API_ASW};
+        strategy::CUBE_ASW,   strategy::MIX_ASW,          strategy::PERBLOCK_BASIC_API_ASW};
     static const std::vector<int32_t> davResvPriorities = {strategy::ITER_BATCH, strategy::CUBE_BASIC_API_ASW,
                                                            strategy::CUBE_ASW};
     static const std::vector<int32_t> emptyPriorities = {};
     switch (npuArch) {
         case NpuArch::DAV_3510:
             return dav3510Priorities;
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
+            return dav9201Priorities;
         case NpuArch::DAV_RESV:
             return davResvPriorities;
         default:

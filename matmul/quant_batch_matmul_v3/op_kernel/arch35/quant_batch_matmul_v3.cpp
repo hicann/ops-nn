@@ -561,7 +561,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
         }
 #endif
         if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) { // Batch Mode = WITH_BATCH
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #if CUBE_TEMPLATE_ND
 #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
