@@ -32,6 +32,13 @@ constexpr size_t HIDDEN_BIAS_IDX = 4U;
 constexpr size_t HY_IDX = 0U;
 constexpr size_t STORAGE_IDX = 1U;
 
+// GRU 门控数：门控张量沿 H 维三等分（reset/update/new），列宽恒为 3H
+constexpr int64_t GATE_CNT_PER_HIDDEN = 3;
+// GRU storage 每隐藏单元保存的中间值份数，storage 列宽恒为 5H
+constexpr int64_t STORAGE_CNT_PER_HIDDEN = 5;
+// hx / hy / storage / gates 均为 2D 张量（B, H）
+constexpr size_t RANK_2D = 2U;
+
 // 未知 rank 判定/传播统一使用 Ops::Base::IsUnknownRank / SetUnknownRank（shape_util.h）
 
 // 已知维度值 >= 0，-1 表示未知维
@@ -105,7 +112,7 @@ static ge::graphStatus InferShapeForThnnFusedGruCell(gert::InferShapeContext* co
         }
         // 列数 == 3H，门控三等分与 H 对齐
         if (IsKnownDim(hidden)) {
-            if (!DimsCompatible(gates->GetDim(1), 3 * hidden)) {
+            if (!DimsCompatible(gates->GetDim(1), GATE_CNT_PER_HIDDEN * hidden)) {
                 return GRAPH_FAILED;
             }
         }
@@ -119,22 +126,22 @@ static ge::graphStatus InferShapeForThnnFusedGruCell(gert::InferShapeContext* co
         if (bias->GetDimNum() != 1U) {
             return GRAPH_FAILED;
         }
-        if (IsKnownDim(hidden) && !DimsCompatible(bias->GetDim(0), 3 * hidden)) {
+        if (IsKnownDim(hidden) && !DimsCompatible(bias->GetDim(0), GATE_CNT_PER_HIDDEN * hidden)) {
             return GRAPH_FAILED;
         }
     }
 
     // hy = hx.shape = (B, H)，空 Tensor（B == 0 / H == 0）合法
-    hy->SetDimNum(2);
+    hy->SetDimNum(RANK_2D);
     hy->SetDim(0, batch);
     hy->SetDim(1, hidden);
 
     // storage = (B, 5H)，未知 H（-1）保持未知而不是 -5
     int64_t storageHidden = hidden;
     if (IsKnownDim(storageHidden)) {
-        storageHidden = 5 * storageHidden;
+        storageHidden = STORAGE_CNT_PER_HIDDEN * storageHidden;
     }
-    storage->SetDimNum(2);
+    storage->SetDimNum(RANK_2D);
     storage->SetDim(0, batch);
     storage->SetDim(1, storageHidden);
     return GRAPH_SUCCESS;

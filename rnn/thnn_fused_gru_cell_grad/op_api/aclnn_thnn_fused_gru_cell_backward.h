@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 /* funtion: aclnnThnnFusedGruCellBackwardGetWorkspaceSize
- * parameters :
  * gradHy : required
  * storage : required
  * hasBias : required
@@ -41,7 +40,6 @@ extern "C" {
  * @domain aclnn_ops_train
  *
  * 算子功能：GRU单元融合反向，一次计算输出五路梯度（input/hidden门梯度、对初始隐藏状态梯度、两路bias梯度）。
- * 参数描述：
  * @param [in] gradHy: device的aclTensor，上游梯度，形状(B,H)，支持FLOAT32, FLOAT16, BFLOAT16
  * @param [in] storage: device的aclTensor，前向 _thnn_fused_gru_cell 保存的中间结果，形状(B,5H)，类型同gradHy
  * @param [in] hasBias: 属性，前向是否携带bias，数据类型bool
@@ -62,7 +60,6 @@ __attribute__((visibility("default"))) aclnnStatus aclnnThnnFusedGruCellBackward
     const aclTensor* gradHiddenBiasOutOptional, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /* funtion: aclnnThnnFusedGruCellBackward
- * parameters :
  * workspace : workspace memory addr(input).
  * workspaceSize : size of workspace(input).
  * executor : executor context(input).

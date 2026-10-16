@@ -16,6 +16,11 @@
 namespace ops {
 using namespace ge;
 
+namespace {
+// 反向五路输出：grad_input_gates / grad_hidden_gates / grad_hx / grad_input_bias / grad_hidden_bias
+constexpr size_t OUTPUT_NUM = 5U;
+} // namespace
+
 static ge::graphStatus InferDataTypeThnnFusedGruCellGrad(gert::InferDataTypeContext* context)
 {
     const ge::DataType gradHyDtype = context->GetInputDataType(0);
@@ -46,7 +51,7 @@ static ge::graphStatus InferDataTypeThnnFusedGruCellGrad(gert::InferDataTypeCont
     // 若输出 dtype 已显式设置（非 DT_UNDEFINED）且与 grad_hy 不一致，拒绝
     // （对应 aclnn 侧 ACL_ERROR_DTYPES_NOT_MATCH 语义，使 L2 负向用例在
     // GEIR InferDataType 阶段被正确拒收，而非 SUPPRESSED 通过）。
-    for (size_t i = 0; i < 5; ++i) {
+    for (size_t i = 0; i < OUTPUT_NUM; ++i) {
         const ge::DataType outDtype = context->GetOutputDataType(i);
         if (outDtype != ge::DT_UNDEFINED && outDtype != gradHyDtype) {
             OP_LOGE(context, "[InferDataType] output[%zu] dtype [%d] != grad_hy dtype [%d].", i,
@@ -56,7 +61,7 @@ static ge::graphStatus InferDataTypeThnnFusedGruCellGrad(gert::InferDataTypeCont
     }
 
     // ── 五输出 dtype 随 grad_hy ──
-    for (size_t i = 0; i < 5; ++i) {
+    for (size_t i = 0; i < OUTPUT_NUM; ++i) {
         if (context->SetOutputDataType(i, gradHyDtype) != GRAPH_SUCCESS) {
             OP_LOGE(context, "[InferDataType] SetOutputDataType(%zu) failed.", i);
             return GRAPH_FAILED;

@@ -51,6 +51,17 @@ constexpr int64_t FP32_BYTES = 4;
 constexpr int64_t FP16_BYTES = 2;                        // bf16 / fp16 元素字节数（DtypeElemBytes 用）
 constexpr int64_t UB_ALIGN_BYTES = 32;                   // 32B 对齐粒度（TBuf 硬件要求）
 constexpr int64_t UB_ALIGN_MASK = ~(UB_ALIGN_BYTES - 1); // 32B 对齐掩码
+// GRU 门控份数：门控张量列宽恒为 3H（reset/update/new 三等分）
+constexpr int64_t GATE_CNT_PER_HIDDEN = 3;
+// GRU storage 每隐藏单元保存的中间值份数：storage 列宽恒为 5H
+constexpr int64_t STORAGE_CNT_PER_HIDDEN = 5;
+// 门控元素空间坐标系（左补 1 至 RANK=4）轴号：2 = B 轴，3 = H 轴
+constexpr int64_t COORD_AXIS_BATCH = 2;
+constexpr int64_t COORD_AXIS_HIDDEN = 3;
+// 输入 / 输出实际有效 rank：2D（B, H）
+constexpr int64_t EFFECTIVE_RANK = 2;
+// H 维切分覆写的最小余量：coreNum/batch 下限与切分因子 k 下限均为 2
+constexpr int64_t HSPLIT_MIN_FACTOR = 2;
 // 微量数据回退阈值：UB 全量数据（batch × paddedHidden × fp32 字节）< 此字节数时，
 // 多核 launch 开销 > 计算收益，回退形态 C 单 tile 避免 launch-bound 退化。
 // 阈值 160B 仅捕获 ≤ 128B 微量场景（如 B=4,H=8,fp32 = 128B），≥ 192B 的受益场景不受影响。
@@ -123,15 +134,15 @@ static void PadAndSqueezeGateSpace(const std::vector<std::vector<int64_t>>& rawI
 
     normalInputShapes.assign(static_cast<size_t>(MAX_INPUT_SLOTS), {});
     inputStrides.assign(static_cast<size_t>(MAX_INPUT_SLOTS), {});
-    normalInputShapes[INPUT_GATES_IDX] = padToRank(batch, 3 * hidden);
-    inputStrides[INPUT_GATES_IDX] = {0, 0, 3 * hidden, 1}; // input_gates
-    normalInputShapes[HIDDEN_GATES_IDX] = padToRank(batch, 3 * hidden);
-    inputStrides[HIDDEN_GATES_IDX] = {0, 0, 3 * hidden, 1}; // hidden_gates
+    normalInputShapes[INPUT_GATES_IDX] = padToRank(batch, GATE_CNT_PER_HIDDEN * hidden);
+    inputStrides[INPUT_GATES_IDX] = {0, 0, GATE_CNT_PER_HIDDEN * hidden, 1}; // input_gates
+    normalInputShapes[HIDDEN_GATES_IDX] = padToRank(batch, GATE_CNT_PER_HIDDEN * hidden);
+    inputStrides[HIDDEN_GATES_IDX] = {0, 0, GATE_CNT_PER_HIDDEN * hidden, 1}; // hidden_gates
     normalInputShapes[HX_IDX] = padToRank(batch, hidden);
     inputStrides[HX_IDX] = {0, 0, hidden, 1};            // hx
     for (size_t s : {INPUT_BIAS_IDX, HIDDEN_BIAS_IDX}) { // 可选 bias：batch 维 stride=0 随路广播
         const bool present = !rawInputShapes[s].empty();
-        normalInputShapes[s] = padToRank(1, present ? 3 * hidden : 1);
+        normalInputShapes[s] = padToRank(1, present ? GATE_CNT_PER_HIDDEN * hidden : 1);
         inputStrides[s] = {0, 0, 0, 1};
     }
 
@@ -139,8 +150,8 @@ static void PadAndSqueezeGateSpace(const std::vector<std::vector<int64_t>>& rawI
     outputStrides.assign(static_cast<size_t>(MAX_OUTPUT_SLOTS), {});
     normalOutputShapes[0] = padToRank(batch, hidden);
     outputStrides[0] = {0, 0, hidden, 1}; // hy
-    normalOutputShapes[1] = padToRank(batch, 5 * hidden);
-    outputStrides[1] = {0, 0, 5 * hidden, 1}; // storage
+    normalOutputShapes[1] = padToRank(batch, STORAGE_CNT_PER_HIDDEN * hidden);
+    outputStrides[1] = {0, 0, STORAGE_CNT_PER_HIDDEN * hidden, 1}; // storage
 }
 
 // 派发锚点 input_gates 的元素字节数（用于 rowBytes = H × sizeof(dtype) 的 32B 对齐判定）
@@ -153,11 +164,17 @@ static int64_t DtypeElemBytes(ge::DataType dtype) { return (dtype == ge::DT_FLOA
 // 非 32B 对齐 H 由 kernel 侧行对齐填充（paddedHidden）处理，不再强制退化到形态 A
 // 形态 B 的 aI 上限 ceil(B/coreNum) 保证 totalTiles ≥ coreNum，充分利用多核并行
 // 产出的 axis 已是 RANK=4 maxBroShape 坐标系内的最终值
-// 3-buffer pipeline UB budget:
+// 3-buffer pipeline UB budget (per-element bytes)
 //   fp32: 3 fp32 TBufs (work0/work1/work2), each tileElems × 4 bytes → 12 bytes/elem
 //   bf16/fp16: 3 fp32 TBufs + 1 T TBuf (cast input), → 14 bytes/elem
 //   bias loaded into same bufs (reused), no separate overhead
-static int64_t PerTileElemBytes(ge::DataType dtype) { return (dtype == ge::DT_FLOAT) ? 12 : 14; }
+constexpr int64_t PIPELINE_BUF_COUNT = 3;
+constexpr int64_t FP32_TILE_BYTES_PER_ELEM = PIPELINE_BUF_COUNT * FP32_BYTES;
+constexpr int64_t FP16_TILE_BYTES_PER_ELEM = FP32_TILE_BYTES_PER_ELEM + FP16_BYTES;
+static int64_t PerTileElemBytes(ge::DataType dtype)
+{
+    return (dtype == ge::DT_FLOAT) ? FP32_TILE_BYTES_PER_ELEM : FP16_TILE_BYTES_PER_ELEM;
+}
 
 static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemBytes, int64_t ubPerCore,
                           int64_t paddedHidden, int64_t coreNum, ge::DataType dtype, SplitResult& out)
@@ -173,7 +190,7 @@ static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemB
     const int64_t hidden = maxBroShape[3]; // hidden 维（原始 H）
     if (paddedHidden > perBufElems) {
         // 形态 A：padded H 超出 UB → 沿 H 切，单行 tile（axis=3）
-        out.axis = 3;
+        out.axis = COORD_AXIS_HIDDEN;
         out.aI = (hidden < perBufElems) ? hidden : perBufElems; // aI = min(H, P)
         out.aO = (hidden + out.aI - 1) / out.aI;                // 外轴 tile 数
         const int64_t rem = hidden % out.aI;
@@ -184,7 +201,7 @@ static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemB
         // aI 上限 2：多核利用率约束 ceil(B/coreNum)，保证 totalTiles ≥ coreNum
         const int64_t aIUb = perBufElems / paddedHidden;             // floor(P/paddedHidden)
         const int64_t aIMultiCore = (batch + coreNum - 1) / coreNum; // ceil(B/coreNum)
-        out.axis = 2;
+        out.axis = COORD_AXIS_BATCH;
         out.aI = (aIUb < aIMultiCore) ? aIUb : aIMultiCore; // min(UB约束, 多核约束)
         if (out.aI < 1) {
             out.aI = 1; // 防御：极小 batch 时 aI 至少 1
@@ -199,7 +216,7 @@ static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemB
         // ≥ 192B 的受益场景不受影响，≤ 128B 的微量场景（含 strided 回退目标）均走 Form C
         const int64_t aIUb = perBufElems / paddedHidden;
         const int64_t aIMultiCore = (batch + coreNum - 1) / coreNum;
-        out.axis = 2;
+        out.axis = COORD_AXIS_BATCH;
         out.aI = (aIUb < aIMultiCore) ? aIUb : aIMultiCore;
         if (out.aI < 1) {
             out.aI = 1;
@@ -224,7 +241,8 @@ static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemB
         totalTiles *= maxBroShape[j];
     }
     totalTiles *= out.aO;
-    if (totalTiles < coreNum && batch * hidden * elemBytes >= MIN_HSPLIT_DATA_BYTES && coreNum / batch >= 2) {
+    if (totalTiles < coreNum && batch * hidden * elemBytes >= MIN_HSPLIT_DATA_BYTES &&
+        coreNum / batch >= HSPLIT_MIN_FACTOR) {
         // k 策略：k = min(coreNum/batch, hidden)，收缩至段宽 ≥ MIN_HSPLIT_TILE_BYTES；
         // k ≥ 2 才覆写（k=1 表示 H 无法既满足段宽又可切，保持默认）
         int64_t k = coreNum / batch;
@@ -234,9 +252,9 @@ static bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t elemB
         while (k > 1 && ((hidden + k - 1) / k) * elemBytes < MIN_HSPLIT_TILE_BYTES) {
             k -= 1;
         }
-        if (k >= 2) {
+        if (k >= HSPLIT_MIN_FACTOR) {
             const int64_t aIH = (hidden + k - 1) / k;         // ceil(hidden/k)
-            out.axis = 3;                                     // 单行 H 段 tile（kernel 既有通路）
+            out.axis = COORD_AXIS_HIDDEN;                     // 单行 H 段 tile（kernel 既有通路）
             out.aI = (aIH < perBufElems) ? aIH : perBufElems; // 防御性 min（触发数学下恒不生效）
             out.aO = (hidden + out.aI - 1) / out.aI;
             out.aITail = hidden - (out.aO - 1) * out.aI;
@@ -341,7 +359,8 @@ public:
             const int64_t hmHidden = rawInputShapes_[thnn_fused_gru_cell::HX_IDX][1];
             const int64_t hmElemBytes = thnn_fused_gru_cell::DtypeElemBytes(dtype_);
             const bool hmNeedCast = (hmElemBytes == thnn_fused_gru_cell::FP16_BYTES);
-            const int64_t hmPadGates = ((3 * hmHidden + 15) / 16) * 16;   // PadTo16(3H) ≥ 16
+            const int64_t hmPadGates = ((thnn_fused_gru_cell::GATE_CNT_PER_HIDDEN * hmHidden + 15) / 16) *
+                                       16;                                // PadTo16(3H) ≥ 16
             const int64_t hmPadStorage = ((6 * hmHidden + 15) / 16) * 16; // PadTo16(6H) ≥ 16
             const int64_t hmBytesPerRow = 2 * hmPadGates * hmElemBytes +
                                           7 * hmHidden * thnn_fused_gru_cell::FP32_BYTES +
@@ -403,7 +422,7 @@ public:
         // 3) 输入预处理（门控元素空间坐标系）
         thnn_fused_gru_cell::PadAndSqueezeGateSpace(rawInputShapes_, rawOutputShapes_, maxBroShape_, normalInputShapes_,
                                                     normalOutputShapes_, inputStrides_, outputStrides_);
-        rank_ = 2; // 实际有效 rank（(B,H)）
+        rank_ = thnn_fused_gru_cell::EFFECTIVE_RANK; // 实际有效 rank（(B,H)）
 
         // 4) 切分链 + 全字段赋值 + 维测日志 + SetBlockDim
         ret = DoTilingAndSet();
@@ -628,7 +647,7 @@ private:
         const int64_t batch = gates[0];
         const int64_t hidden = hx[1];
         // input_gates.shape[1] == 3 * hx.shape[1]（门控三等分与 hx 对齐）
-        if (gates[1] != 3 * hidden) {
+        if (gates[1] != thnn_fused_gru_cell::GATE_CNT_PER_HIDDEN * hidden) {
             OP_LOGE(node, "shape_mismatch: input_gates.shape[1](%ld) != 3 * hx.shape[1](%ld)", gates[1], hidden);
             return ge::GRAPH_FAILED;
         }
@@ -644,9 +663,10 @@ private:
                 continue;
             }
             const std::vector<int64_t>& bias = rawInputShapes_[idx];
-            if (bias.size() != 1 || thnn_fused_gru_cell::Numel(bias) != 3 * hidden) {
+            if (bias.size() != 1 ||
+                thnn_fused_gru_cell::Numel(bias) != thnn_fused_gru_cell::GATE_CNT_PER_HIDDEN * hidden) {
                 OP_LOGE(node, "shape_mismatch: bias(%lu) must be rank-1 with numel == 3*H(%ld)",
-                        static_cast<unsigned long>(idx), 3 * hidden);
+                        static_cast<unsigned long>(idx), thnn_fused_gru_cell::GATE_CNT_PER_HIDDEN * hidden);
                 return ge::GRAPH_FAILED;
             }
         }

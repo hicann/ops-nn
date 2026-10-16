@@ -44,6 +44,13 @@ constexpr int64_t TREE_LANE_ALIGN = 8;         // fp32 lane 8 对齐（元素）
 constexpr int64_t P_POST_EMPTY = 1;            // EMPTY_R P_POST_EMPTY（份数）
 constexpr int64_t EMPTY_BUF_CAP = 64 * 1024;   // 单 buf 64KB 上限（字节）
 constexpr int64_t EMPTY_MIN_BUF_BYTES = 4096;  // (a) 4KB buffer 下界（字节）
+constexpr int64_t FP16_BYTES = 2;              // fp16 / bf16 元素字节数（字节）
+constexpr int64_t GATE_CNT_PER_HIDDEN = 3;     // 门控沿 H 维三等分，门梯度列宽恒为 3H
+constexpr int64_t STORAGE_CNT_PER_HIDDEN = 5;  // storage 每隐藏单元 5 份中间值，列宽恒为 5H
+constexpr int64_t POW2_DOUBLE_FACTOR = 2;      // 2 幂倍增因子（FindNearestPower2）
+constexpr int64_t UB_FACTOR_HALF_DIVISOR = 2;  // cacheBuf 容量违例时 aUbFactor 折半收缩
+constexpr int64_t GROUP_CORE_HALF_DIVISOR = 2; // group 判定：aLoopCntTotal ≤ coreNum/2
+constexpr int64_t GROUP_MIN_R_LOOP_CNT = 2;    // group 判定：rLoopCntTotal 下限
 
 // ─── 输出校验常量（ValidateOutputs）───
 constexpr size_t OUTPUT_NUM = 5;                              // 输出总数：门梯度×2 + grad_hx + bias×2
@@ -58,8 +65,8 @@ inline int64_t LargestPow2StrictlyBelow(int64_t n)
         return 0;
     }
     int64_t p = 1;
-    while (p * 2 < n) {
-        p *= 2;
+    while (p * POW2_DOUBLE_FACTOR < n) {
+        p *= POW2_DOUBLE_FACTOR;
     }
     return p;
 }
@@ -174,7 +181,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ThnnFusedGruCell
                         static_cast<int>(gradHyDtype), static_cast<int>(storageDtype)),
                 return ge::GRAPH_FAILED);
     tiling.dtype = gradHyDtype;
-    tiling.dtypeSize = (gradHyDtype == ge::DT_FLOAT) ? static_cast<int64_t>(FP32_BYTES) : 2;
+    tiling.dtypeSize = (gradHyDtype == ge::DT_FLOAT) ? static_cast<int64_t>(FP32_BYTES) : FP16_BYTES;
 
     // 校验 3：rank==2 强约束（rank=0 / rank=3 一律拒绝，shape_mismatch）
     const gert::Shape& gradHyDims = gradHyShape->GetStorageShape();
@@ -187,9 +194,9 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ThnnFusedGruCell
     // 校验 5：CheckShapeConsistency 型（非 broadcast）——storage.shape == (B, 5H)
     tiling.B = gradHyDims.GetDim(0);
     tiling.H = gradHyDims.GetDim(1);
-    OP_CHECK_IF((storageDims.GetDim(0) != tiling.B) || (storageDims.GetDim(1) != 5 * tiling.H),
+    OP_CHECK_IF((storageDims.GetDim(0) != tiling.B) || (storageDims.GetDim(1) != STORAGE_CNT_PER_HIDDEN * tiling.H),
                 OP_LOGE(context, "shape mismatch: storage (%ld, %ld) != (B, 5H) = (%ld, %ld)", storageDims.GetDim(0),
-                        storageDims.GetDim(1), tiling.B, 5 * tiling.H),
+                        storageDims.GetDim(1), tiling.B, STORAGE_CNT_PER_HIDDEN * tiling.H),
                 return ge::GRAPH_FAILED);
 
     // 校验 6：动态 shape 未解析拒绝（tiling 阶段要求全维具体；-1 一律拒绝，
@@ -199,7 +206,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ThnnFusedGruCell
                 return ge::GRAPH_FAILED);
 
     OP_LOGI(context, "ThnnFusedGruCellGrad shapes: grad_hy (%ld, %ld), storage (%ld, %ld)", tiling.B, tiling.H,
-            tiling.B, 5 * tiling.H);
+            tiling.B, STORAGE_CNT_PER_HIDDEN * tiling.H);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -227,11 +234,11 @@ ge::graphStatus ValidateOutputs(gert::TilingContext* context, const ThnnFusedGru
         OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
         const gert::Shape& outDims = outShape->GetStorageShape();
         // 期望维值（含运行时派生量 B/H，无法 constexpr；rank 查 OUTPUT_RANKS）
-        const int64_t expDims[OUTPUT_NUM][2] = {{tiling.B, 3 * tiling.H},
-                                                {tiling.B, 3 * tiling.H},
+        const int64_t expDims[OUTPUT_NUM][2] = {{tiling.B, GATE_CNT_PER_HIDDEN * tiling.H},
+                                                {tiling.B, GATE_CNT_PER_HIDDEN * tiling.H},
                                                 {tiling.B, tiling.H},
-                                                {3 * tiling.H, 0},
-                                                {3 * tiling.H, 0}};
+                                                {GATE_CNT_PER_HIDDEN * tiling.H, 0},
+                                                {GATE_CNT_PER_HIDDEN * tiling.H, 0}};
         bool dimsOk = (static_cast<int64_t>(outDims.GetDimNum()) == OUTPUT_RANKS[i]);
         for (size_t j = 0; dimsOk && (j < outDims.GetDimNum()); ++j) {
             dimsOk = (outDims.GetDim(j) == expDims[i][j]);
@@ -380,7 +387,8 @@ ge::graphStatus ComputeUbSplit(gert::TilingContext* context, ThnnFusedGruCellGra
         if (CacheCount(tiling.rLoopCntTotal) * levelStride * FP32_BYTES <= CACHE_BUF_BYTES) {
             break;
         }
-        tiling.aUbFactor = std::max(tiling.bsElem, FloorAlign(tiling.aUbFactor / 2, tiling.bsElem));
+        tiling.aUbFactor = std::max(tiling.bsElem,
+                                    FloorAlign(tiling.aUbFactor / UB_FACTOR_HALF_DIVISOR, tiling.bsElem));
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -400,7 +408,8 @@ void ComputeFusedALoopSplit(ThnnFusedGruCellGradTiling& tiling)
 // ─── Group 触发判定（与分支路由触发条件逐字一致）───
 bool ShouldUseGroup(const ThnnFusedGruCellGradTiling& tiling)
 {
-    return (tiling.aLoopCntTotal <= tiling.coreNum / 2) && (tiling.rLoopCntTotal >= 2);
+    return (tiling.aLoopCntTotal <= tiling.coreNum / GROUP_CORE_HALF_DIVISOR) &&
+           (tiling.rLoopCntTotal >= GROUP_MIN_R_LOOP_CNT);
 }
 
 // ─── group 2D 分核：对齐 aLoopCntTotal 保 2D 网格整齐，aPerCore=1 恒成立 ───
@@ -466,8 +475,8 @@ ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const ThnnFus
     td->axisShape[0] = 1;
     td->axisShape[1] = tiling.B;
     td->axisShape[2] = tiling.H;
-    td->axisStride[0] = 5 * tiling.B * tiling.H; // 主输入 storage 的元素 GM stride
-    td->axisStride[1] = 5 * tiling.H;
+    td->axisStride[0] = STORAGE_CNT_PER_HIDDEN * tiling.B * tiling.H; // 主输入 storage 的元素 GM stride
+    td->axisStride[1] = STORAGE_CNT_PER_HIDDEN * tiling.H;
     td->axisStride[2] = 1;
     // ─── 多核切分 ───
     td->aLoopCntTotal = tiling.aLoopCntTotal;

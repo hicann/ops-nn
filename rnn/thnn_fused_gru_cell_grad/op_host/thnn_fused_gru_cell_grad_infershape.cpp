@@ -16,6 +16,17 @@
 namespace ops {
 using namespace ge;
 
+namespace {
+// 反向五路输出：grad_input_gates / grad_hidden_gates / grad_hx / grad_input_bias / grad_hidden_bias
+constexpr size_t OUTPUT_NUM = 5U;
+// 输入 / 主力输出均为 2D 张量（B, H）
+constexpr size_t RANK_2D = 2U;
+// storage 每隐藏单元保存 5 份中间值，storage 列宽恒为 5H
+constexpr int64_t STORAGE_CNT_PER_HIDDEN = 5;
+// 门控张量沿 H 维三等分，门梯度列宽恒为 3H
+constexpr int64_t GATE_CNT_PER_HIDDEN = 3;
+} // namespace
+
 static ge::graphStatus InferShape4ThnnFusedGruCellGrad(gert::InferShapeContext* context)
 {
     // ── 输入存在性校验（缺失必选输入 → GRAPH_FAILED）──
@@ -32,7 +43,7 @@ static ge::graphStatus InferShape4ThnnFusedGruCellGrad(gert::InferShapeContext* 
         return s->GetDimNum() == 1 && s->GetDim(0) == ge::UNKNOWN_DIM_NUM;
     };
     if (isUnknownRank(gradHyShape) || isUnknownRank(storageShape)) {
-        for (size_t i = 0; i < 5; ++i) {
+        for (size_t i = 0; i < OUTPUT_NUM; ++i) {
             gert::Shape* outShape = context->GetOutputShape(i);
             OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
             outShape->SetDimNum(0);
@@ -42,7 +53,7 @@ static ge::graphStatus InferShape4ThnnFusedGruCellGrad(gert::InferShapeContext* 
     }
 
     // ── rank==2 强校验（2D ND 张量）──
-    if (gradHyShape->GetDimNum() != 2 || storageShape->GetDimNum() != 2) {
+    if (gradHyShape->GetDimNum() != RANK_2D || storageShape->GetDimNum() != RANK_2D) {
         OP_LOGE(context, "[InferShape] rank must be 2: grad_hy rank=%zu, storage rank=%zu.", gradHyShape->GetDimNum(),
                 storageShape->GetDimNum());
         return GRAPH_FAILED;
@@ -60,9 +71,9 @@ static ge::graphStatus InferShape4ThnnFusedGruCellGrad(gert::InferShapeContext* 
                 static_cast<long>(batchSize));
         return GRAPH_FAILED;
     }
-    if (hiddenSize != UNKNOWN_DIM && storageH != UNKNOWN_DIM && storageH != 5 * hiddenSize) {
+    if (hiddenSize != UNKNOWN_DIM && storageH != UNKNOWN_DIM && storageH != STORAGE_CNT_PER_HIDDEN * hiddenSize) {
         OP_LOGE(context, "[InferShape] storage dim1 [%ld] != 5 * hidden size [%ld].", static_cast<long>(storageH),
-                static_cast<long>(5 * hiddenSize));
+                static_cast<long>(STORAGE_CNT_PER_HIDDEN * hiddenSize));
         return GRAPH_FAILED;
     }
 
@@ -89,19 +100,19 @@ static ge::graphStatus InferShape4ThnnFusedGruCellGrad(gert::InferShapeContext* 
     OP_CHECK_NULL_WITH_CONTEXT(context, gradHiddenBiasShape);
 
     // 未知维传播：hiddenSize==UNKNOWN_DIM → 3H 也为 UNKNOWN_DIM
-    const int64_t threeH = (hiddenSize == UNKNOWN_DIM) ? UNKNOWN_DIM : 3 * hiddenSize;
+    const int64_t threeH = (hiddenSize == UNKNOWN_DIM) ? UNKNOWN_DIM : GATE_CNT_PER_HIDDEN * hiddenSize;
 
     // grad_input_gates / grad_hidden_gates: (B, 3H)，行内三段门梯度。
-    gradInputGatesShape->SetDimNum(2);
+    gradInputGatesShape->SetDimNum(RANK_2D);
     gradInputGatesShape->SetDim(0, batchSize);
     gradInputGatesShape->SetDim(1, threeH);
 
-    gradHiddenGatesShape->SetDimNum(2);
+    gradHiddenGatesShape->SetDimNum(RANK_2D);
     gradHiddenGatesShape->SetDim(0, batchSize);
     gradHiddenGatesShape->SetDim(1, threeH);
 
     // grad_hx: (B, H)，随 grad_hy。
-    gradHxShape->SetDimNum(2);
+    gradHxShape->SetDimNum(RANK_2D);
     gradHxShape->SetDim(0, batchSize);
     gradHxShape->SetDim(1, hiddenSize);
 
