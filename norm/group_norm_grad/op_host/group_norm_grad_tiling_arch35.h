@@ -15,24 +15,21 @@
 #pragma once
 
 #include "group_norm_grad_tiling.h"
-using namespace Ops::NN::Optiling;
 
 namespace optiling {
-class GroupNormGradRegBaseTiling : public TilingBaseClass {
+// mix 模板 tiling：g_full_load/c_full_load/recompute/small_ng 四类子模板的统一 tiling 入口
+// 继承 GroupNormGradTilingBase，通过注册路由机制调度（empty 优先级更高，不满足空tensor条件时落到本类）
+class GroupNormGradRegBaseMixTiling : public GroupNormGradTilingBase {
 public:
-    explicit GroupNormGradRegBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    explicit GroupNormGradRegBaseMixTiling(gert::TilingContext* context) : GroupNormGradTilingBase(context) {}
 
 protected:
     // 1、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
-    // 2、获取平台信息比如CoreNum、UB/L1/L0C资源大小
-    ge::graphStatus GetPlatformInfo() override;
     // 3、二分折叠reduce计算
     bool IsCapable() override;
     // 4、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
-    // 5、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override;
     // 6、计算TilingKey
     uint64_t GetTilingKey() const override;
     // 7、计算Workspace 大小
@@ -42,7 +39,6 @@ protected:
 
 private:
     static constexpr uint32_t CACHE_BUFF_SIZE = 256;
-    static constexpr uint32_t UPPER_CARRYING_LIMIT = 8000;
     static constexpr uint32_t MAX_C_SIZE = 240000;
     static constexpr uint32_t WORKSPACE_COPIES = 2;
     static constexpr uint32_t DOUBLE_BUFFER = 2;
@@ -63,8 +59,6 @@ private:
     ge::graphStatus UbTiling();
     ge::graphStatus Mode2UbTiling();
     void CalBinaryParams(int64_t reduceNum, int64_t& binaryQuotient, uint32_t& binaryK, uint32_t& binaryLastNum);
-    ge::graphStatus ParamsCheck();
-    ge::graphStatus InputCheck(gert::Shape& dyShape);
     void SetTilingData();
     void SetBaseTilingData();
     void SetReduceTilingData();
@@ -79,26 +73,15 @@ private:
 private:
     const char* opName = "GroupNormGrad";
     GroupNormGradRegBaseTilingData tilingData;
-    uint64_t ubSize_ = 0;
-    uint32_t coreNum_ = 0;
-    uint32_t sysWorkspaceSize_ = 0;
-    uint32_t blockSize_ = 0;
-    int64_t workSpaceSize_ = 0;
-    uint32_t reserveSpace_ = 0;
-    ge::DataType tTypeStr_ = ge::DT_UNDEFINED; // T type: x, dy, dx
-    ge::DataType uTypeStr_ = ge::DT_UNDEFINED; // U type: mean, rstd, gamma, dgamma, dbeta
-    uint32_t tTypeBytes_ = 0;
     uint32_t modeKey_ = -1;
+    uint32_t reserveSpace_ = 0;
+    uint32_t tTypeBytes_ = 0;
+    int64_t workSpaceSize_ = 0;
     uint32_t stage0CoreUsed_ = 0;
     uint32_t stage0TailCore_ = 0;
     uint32_t stage1CoreUsed_ = 0;
-    int64_t N_ = 0;
-    int64_t C_ = 0;
-    int64_t HxW_ = 1;
-    int64_t G_ = 0;
     int64_t NxC_ = 0;
     int64_t NxG_ = 0;
-    int64_t CPerG_ = 0;
     int64_t clrBlockSize_ = 0;
     uint32_t clrBlockNum_ = 0;
     int64_t clrTailBlockSize_ = 0;
@@ -136,10 +119,6 @@ private:
     uint32_t tailcNumMode2PerCore_ = 0;
     int64_t stage2LoopCnt_ = 0;
     int64_t stage2FactorN_ = 0;
-    uint32_t vectorLen_ = 0;
-    bool dxIsRequire_ = false;
-    bool dgammaIsRequire_ = false;
-    bool dbetaIsRequire_ = false;
 
     // Stage2Mode2 Use
     int64_t cTileNum_ = 0;

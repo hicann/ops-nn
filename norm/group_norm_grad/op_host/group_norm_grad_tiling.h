@@ -214,5 +214,61 @@ struct TilingCalculationParameters {
     bool dbetaIsRequire = true;
 };
 
+// TilingKey 的 dtype 组合后缀，供各 regbase tiling 模板复用
+enum class GNGDtypeKey : int { FLOAT_FLOAT = 1, HALF_HALF = 2, BF16_BF16 = 3, HALF_FLOAT = 4, BF16_FLOAT = 5 };
+
+// regbase 各 tiling 模板共享的公共参数，由基类统一解析填充
+struct ParamsGroupNormGrad {
+    uint32_t coreNum = 0;                     // AIV 核数
+    uint64_t ubSizePlatForm = 0;              // 平台 UB 大小
+    uint32_t vectorLen = 0;                   // 矢量寄存器长度(fp32 元素数)
+    uint32_t blockSize = 0;                   // UB 搬运对齐块大小
+    uint32_t sysWorkspaceSize = 0;            // 系统 workspace 大小
+    int64_t N = 0;                            // x/dy 的 N 维
+    int64_t C = 0;                            // x/dy 的 C 维
+    int64_t G = 0;                            // num_groups
+    int64_t CPerG = 0;                        // C / G
+    int64_t HxW = 1;                          // 空间维乘积
+    ge::DataType tTypeStr = ge::DT_UNDEFINED; // T type: x, dy, dx
+    ge::DataType uTypeStr = ge::DT_UNDEFINED; // U type: mean, rstd, gamma, dgamma, dbeta
+    bool isRegBase = false;
+    bool dxIsRequire = true;
+    bool dgammaIsRequire = true;
+    bool dbetaIsRequire = true;
+};
+
+// group_norm_grad regbase 模板 tiling 公共基类：
+// 仅内置公共参数 commonParams 与方法默认实现（参考 layer_norm_grad_v3 的 TilingBase 形态），
+// 不内置任何模板私有成员；各 regbase tiling 模板（empty/mix 及后续新增）继承本类，
+// 由注册路由机制按优先级调度
+class GroupNormGradTilingBase : public Ops::NN::Optiling::TilingBaseClass {
+public:
+    explicit GroupNormGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~GroupNormGradTilingBase() override = default;
+    ParamsGroupNormGrad commonParams;
+
+protected:
+    // 1、获取INPUT/OUTPUT/ATTR信息（公共骨架，子类按需 override）
+    ge::graphStatus GetShapeAttrsInfo() override;
+    // 2、获取平台信息（从 compileInfo 统一取值填充 commonParams）
+    ge::graphStatus GetPlatformInfo() override;
+    // 3、模板能力自判（默认恒 true，特殊条件场景由子类 override）
+    bool IsCapable() override;
+    // 4、计算数据切分TilingData
+    ge::graphStatus DoOpTiling() override;
+    // 5、计算高阶API的TilingData
+    ge::graphStatus DoLibApiTiling() override;
+    // 6、计算TilingKey
+    uint64_t GetTilingKey() const override;
+    // 7、计算Workspace大小
+    ge::graphStatus GetWorkspaceSize() override;
+    // 8、保存Tiling数据
+    ge::graphStatus PostTiling() override;
+    // 公共输入校验（默认严格版：要求所有维度大于等于1；空tensor等宽松场景由子类 override）
+    virtual ge::graphStatus InputCheck(gert::Shape& dyShape);
+    // 公共参数校验（默认严格版；C为0等宽松场景由子类 override）
+    virtual ge::graphStatus ParamsCheck();
+};
+
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_GROUPNORMGRAD_H

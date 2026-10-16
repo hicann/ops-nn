@@ -16,27 +16,17 @@
 
 namespace optiling {
 static constexpr uint16_t INPUT_IDX_DY = 0;
-static constexpr uint16_t INPUT_IDX_MEAN = 1;
-static constexpr uint16_t INPUT_IDX_RSTD = 2;
-static constexpr uint16_t INPUT_IDX_X = 3;
-static constexpr uint16_t INPUT_IDX_GAMMA = 4;
-static constexpr uint16_t OUTPUT_IDX_DX = 0;
-static constexpr uint16_t OUTPUT_IDX_DGAMMA = 1;
-static constexpr uint16_t OUTPUT_IDX_DBETA = 2;
 static constexpr uint16_t DX_IS_REQUIRE_IDX = 2;
 static constexpr uint16_t DGAMMA_IS_REQUIRE_IDX = 3;
 static constexpr uint16_t DBETA_IS_REQUIRE_IDX = 4;
 static constexpr uint16_t DIM0 = 0;
 static constexpr uint16_t DIM1 = 1;
-static constexpr uint16_t DIM2 = 2;
-static constexpr uint16_t DIM3 = 3;
 static constexpr uint32_t FLOAT_DTYPE_BYTES = 4;
 static constexpr uint16_t BFLOAT16_DTYPE_BYTES = 2;
 static constexpr uint16_t FLOAT16_DTYPE_BYTES = 2;
 static constexpr int64_t RA_BINARY_ADD_THRESHOLD = 8;
 static constexpr uint16_t BINARY_ADD_COEF = 2;
 static constexpr int64_t SCALE_COEF_EIGHT = 8;
-static constexpr uint16_t MIN_X_DIM = 2;
 static constexpr uint32_t MIN_BLOCK_SIZE = 512;
 static constexpr uint32_t SMALL_NG = 16;
 static constexpr uint32_t STAGE0_C_PER_CORE = 2;
@@ -51,38 +41,11 @@ static constexpr int16_t CONST_FOUR = 4;
 static constexpr int16_t CONST_SIXTY_THREE = 63;
 static constexpr int16_t CONST_SIXTY_FOUR = 64;
 
-enum class GNGDtypeKey : int { FLOAT_FLOAT = 1, HALF_HALF = 2, BF16_BF16 = 3, HALF_FLOAT = 4, BF16_FLOAT = 5 };
-
-static const std::unordered_map<ge::DataType, uint32_t> DATA_TYPE_TO_INT{
-    {ge::DataType::DT_FLOAT, 1}, {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_BF16, 3}};
-
-ge::graphStatus GroupNormGradRegBaseTiling::GetPlatformInfo()
-{
-    OP_LOGD(opName, "Tiling initializing.");
-    // Get compileInfo
-    auto compileInfo = context_->GetCompileInfo<GroupNormGradCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
-    ubSize_ = compileInfo->ubSizePlatForm;
-    OP_TILING_CHECK((ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize should be greater than zero."),
-                    return ge::GRAPH_FAILED);
-    coreNum_ = compileInfo->totalCoreNum;
-    OP_TILING_CHECK((coreNum_ <= 0), OP_LOGE(context_->GetNodeName(), "core num should be greater than zero."),
-                    return ge::GRAPH_FAILED);
-    vectorLen_ = compileInfo->vectorLen / sizeof(float);
-    OP_TILING_CHECK((vectorLen_ <= 0), OP_LOGE(context_->GetNodeName(), "vectorLen should be greater than zero."),
-                    return ge::GRAPH_FAILED);
-    blockSize_ = compileInfo->blockSize;
-    OP_TILING_CHECK((blockSize_ <= 0), OP_LOGE(context_->GetNodeName(), "blockSize should be greater than zero."),
-                    return ge::GRAPH_FAILED);
-    sysWorkspaceSize_ = compileInfo->sysWorkspaceSize;
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus GroupNormGradRegBaseTiling::GetShapeAttrsInfo()
+ge::graphStatus GroupNormGradRegBaseMixTiling::GetShapeAttrsInfo()
 {
     auto dyDesc = context_->GetInputDesc(INPUT_IDX_DY);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
-    tTypeStr_ = dyDesc->GetDataType();
+    commonParams.tTypeStr = dyDesc->GetDataType();
     auto dyShape = context_->GetInputShape(INPUT_IDX_DY)->GetStorageShape();
     OP_TILING_CHECK(InputCheck(dyShape) == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "Input check failed."),
                     return ge::GRAPH_FAILED);
@@ -92,208 +55,65 @@ ge::graphStatus GroupNormGradRegBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     // Get ATTR
     const bool* dxRequire = attrs->GetAttrPointer<bool>(DX_IS_REQUIRE_IDX);
-    dxIsRequire_ = (dxRequire == nullptr) ? true : *dxRequire;
+    commonParams.dxIsRequire = (dxRequire == nullptr) ? true : *dxRequire;
     const bool* dgammaRequire = attrs->GetAttrPointer<bool>(DGAMMA_IS_REQUIRE_IDX);
-    dgammaIsRequire_ = (dgammaRequire == nullptr) ? true : *dgammaRequire;
+    commonParams.dgammaIsRequire = (dgammaRequire == nullptr) ? true : *dgammaRequire;
     const bool* dbetaRequire = attrs->GetAttrPointer<bool>(DBETA_IS_REQUIRE_IDX);
-    dbetaIsRequire_ = (dbetaRequire == nullptr) ? true : *dbetaRequire;
+    commonParams.dbetaIsRequire = (dbetaRequire == nullptr) ? true : *dbetaRequire;
     const int64_t* gValue = attrs->GetAttrPointer<int64_t>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gValue);
     OP_TILING_CHECK((*gValue <= 0),
                     OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(),
                                               "bigger than 0"),
                     return ge::GRAPH_FAILED);
-    G_ = static_cast<int64_t>(*gValue);
-    N_ = dyShape.GetDim(DIM0);
-    C_ = dyShape.GetDim(DIM1);
+    commonParams.G = static_cast<int64_t>(*gValue);
+    commonParams.N = dyShape.GetDim(DIM0);
+    commonParams.C = dyShape.GetDim(DIM1);
     OP_TILING_CHECK(
-        (this->N_ <= 0 || this->C_ <= 0),
+        (this->commonParams.N <= 0 || this->commonParams.C <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "dy", Ops::Base::ToString(dyShape).c_str(),
             "The N-dimension and C-dimension of dy must be greater than 0, where N-dimension is the first dim and "
             "C-dimension is the second dim"),
         return ge::GRAPH_FAILED);
-    NxG_ = N_ * G_;
-    NxC_ = N_ * C_;
-    CPerG_ = C_ / G_;
+    NxG_ = commonParams.N * commonParams.G;
+    NxC_ = commonParams.N * commonParams.C;
+    commonParams.CPerG = commonParams.C / commonParams.G;
     for (uint32_t dimIdx = 2; dimIdx < dimNum; dimIdx++) {
-        HxW_ *= dyShape.GetDim(dimIdx);
+        commonParams.HxW *= dyShape.GetDim(dimIdx);
     }
     OP_TILING_CHECK(ParamsCheck() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "Params check failed."),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool GroupNormGradRegBaseTiling::IsCapable()
+bool GroupNormGradRegBaseMixTiling::IsCapable()
 {
-    CalBinaryParams(this->HxW_, binaryAddQuotient_, binaryAddK_, binaryAddLastNum_);
-    CalBinaryParams(this->CPerG_, binaryCGQuotient_, binaryCGK_, binaryCGLastNum_);
+    CalBinaryParams(this->commonParams.HxW, binaryAddQuotient_, binaryAddK_, binaryAddLastNum_);
+    CalBinaryParams(this->commonParams.CPerG, binaryCGQuotient_, binaryCGK_, binaryCGLastNum_);
     return true;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
+void GroupNormGradRegBaseMixTiling::CalBinaryParams(int64_t reduceNum, int64_t& binaryQuotient, uint32_t& binaryK,
+                                                    uint32_t& binaryLastNum)
 {
-    auto xDesc = context_->GetInputDesc(INPUT_IDX_X);
-    auto dxDesc = context_->GetOutputDesc(OUTPUT_IDX_DX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
-    auto xShape = context_->GetInputShape(INPUT_IDX_X)->GetStorageShape();
-    auto dxShape = context_->GetOutputShape(OUTPUT_IDX_DX)->GetStorageShape();
-    ge::DataType xDtypeStr = xDesc->GetDataType();
-    ge::DataType dxDtypeStr = dxDesc->GetDataType();
-    OP_TILING_CHECK((tTypeStr_ != dxDtypeStr || dxDtypeStr != xDtypeStr),
-                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, dx and x",
-                                                           (ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + ", " +
-                                                            ge::TypeUtils::DataTypeToSerialString(dxDtypeStr) +
-                                                            " and " + ge::TypeUtils::DataTypeToSerialString(xDtypeStr))
-                                                               .c_str(),
-                                                           "The dtypes of dy, dx and x must be same"),
-                    return ge::GRAPH_FAILED);
-    auto iter = DATA_TYPE_TO_INT.find(tTypeStr_);
-    if (iter == DATA_TYPE_TO_INT.end()) {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-                                  ge::TypeUtils::DataTypeToSerialString(tTypeStr_).c_str(),
-                                  "float32, float16 or bfloat16");
-        return ge::GRAPH_FAILED;
-    }
-    if (dyShape != dxShape || dxShape != xShape) {
-        std::string incorrectShapes = Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dyShape) + " and " +
-                                      Ops::Base::ToString(dxShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, dy and dx", incorrectShapes.c_str(),
-                                               "The shapes of x, dy and dx must be the same");
-        return ge::GRAPH_FAILED;
-    }
-    for (uint32_t dimIdx = 0; dimIdx < dyShape.GetDimNum(); dimIdx++) {
-        auto currShape = dyShape.GetDim(dimIdx);
-        if (currShape < 1) {
-            std::string errMsg = Ops::Base::ToString(dyShape);
-            std::string reasonMsg = "All axes of dy must be greater or equal to 1. Currently, dim[" +
-                                    std::to_string(currShape) + "] of dy does not meet the condition";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", errMsg.c_str(), reasonMsg.c_str());
-            return ge::GRAPH_FAILED;
-        }
-    }
-    auto dimNum = dyShape.GetDimNum();
-    if (dimNum < MIN_X_DIM) {
-        std::string incorrectDims = std::to_string(dimNum) + ", " + std::to_string(dimNum) + " and " +
-                                    std::to_string(dimNum);
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x, dy and dx", incorrectDims.c_str(),
-                                                  "The shape dims of x, dy and dx must be at least 2");
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus GroupNormGradRegBaseTiling::ParamsCheck()
-{
-    // C / G must not be zero, and C must be an integer multiple of G
-    // while also not exceeding the operator's current carrying capacity.
-    auto dyShape = context_->GetInputShape(INPUT_IDX_DY)->GetStorageShape();
-    if (CPerG_ == 0 || C_ % G_ != 0 || CPerG_ > UPPER_CARRYING_LIMIT) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "dy", Ops::Base::ToString(dyShape).c_str(),
-            ("The C axis(first axis) of parameter dy must can be completely divided into num_groups(" +
-             std::to_string(G_) +
-             ") uniform groups, "
-             "and each group must not be empty or exceed the operator's current carrying capacity( " +
-             std::to_string(UPPER_CARRYING_LIMIT) + ")")
-                .c_str());
-        return ge::GRAPH_FAILED;
-    }
-    auto gammaDesc = context_->GetInputDesc(INPUT_IDX_GAMMA);
-    auto meanDesc = context_->GetInputDesc(INPUT_IDX_MEAN);
-    auto rstdDesc = context_->GetInputDesc(INPUT_IDX_RSTD);
-    auto dGammaDesc = context_->GetOutputDesc(OUTPUT_IDX_DGAMMA);
-    auto dBetaDesc = context_->GetOutputDesc(OUTPUT_IDX_DBETA);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, meanDesc);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
-    auto gammaShape = context_->GetInputShape(INPUT_IDX_GAMMA)->GetStorageShape();
-    auto meanShape = context_->GetInputShape(INPUT_IDX_MEAN)->GetStorageShape();
-    auto rstdShape = context_->GetInputShape(INPUT_IDX_RSTD)->GetStorageShape();
-    uTypeStr_ = gammaDesc->GetDataType();
-    ge::DataType meanDtypeStr = meanDesc->GetDataType();
-    ge::DataType rstdDtypeStr = rstdDesc->GetDataType();
-    ge::DataType dGammaDtypeStr = dGammaDesc->GetDataType();
-    ge::DataType dBetaDtypeStr = dBetaDesc->GetDataType();
-    int64_t gammaSize = 1;
-    for (uint32_t dimIdx = 0; dimIdx < gammaShape.GetDimNum(); dimIdx++) {
-        gammaSize *= gammaShape.GetDim(dimIdx);
-    }
-    OP_TILING_CHECK(
-        gammaShape.GetDimNum() != 1 || gammaSize != this->C_,
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "gammaSize", Ops::Base::ToString(gammaShape).c_str(),
-            ("The shape size of gamma must be the same as C(dim[1] of dy), where C is " + std::to_string(this->C_))
-                .c_str()),
-        return ge::GRAPH_FAILED);
-    int64_t meanSize = 1;
-    for (uint32_t dimIdx = 0; dimIdx < meanShape.GetDimNum(); dimIdx++) {
-        meanSize *= meanShape.GetDim(dimIdx);
-    }
-    int64_t rstdSize = 1;
-    for (uint32_t dimIdx = 0; dimIdx < rstdShape.GetDimNum(); dimIdx++) {
-        rstdSize *= rstdShape.GetDim(dimIdx);
-    }
-    auto iter = DATA_TYPE_TO_INT.find(uTypeStr_);
-    if (iter == DATA_TYPE_TO_INT.end()) {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "gamma",
-                                  ge::TypeUtils::DataTypeToSerialString(uTypeStr_).c_str(),
-                                  "float32, float16 or bfloat16");
-        return ge::GRAPH_FAILED;
-    }
-    if (meanDtypeStr != rstdDtypeStr || rstdDtypeStr != dGammaDtypeStr || dGammaDtypeStr != dBetaDtypeStr ||
-        dBetaDtypeStr != uTypeStr_) {
-        std::string dtypesMsg = ge::TypeUtils::DataTypeToSerialString(rstdDtypeStr) + " , " +
-                                ge::TypeUtils::DataTypeToSerialString(meanDtypeStr) + " , " +
-                                ge::TypeUtils::DataTypeToSerialString(uTypeStr_) + " , " +
-                                ge::TypeUtils::DataTypeToSerialString(dBetaDtypeStr) + " and " +
-                                ge::TypeUtils::DataTypeToSerialString(dGammaDtypeStr);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "rstd, mean, gamma, dbeta and dgamma",
-                                               dtypesMsg.c_str(),
-                                               "The dtypes of rstd, mean, gamma, dbeta and dgamma must be the same");
-        return ge::GRAPH_FAILED;
-    }
-    OP_TILING_CHECK((tTypeStr_ == ge::DT_FLOAT && (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16)),
-                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                        context_->GetNodeName(), "mean and rstd",
-                        (ge::TypeUtils::DataTypeToSerialString(uTypeStr_) + " and " +
-                         ge::TypeUtils::DataTypeToSerialString(uTypeStr_))
-                            .c_str(),
-                        "The dtype of mean and rstd must be float when the dtype of x/dy/dx is float"),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(meanSize != rstdSize || meanSize != this->N_ * this->G_,
-                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-                        context_->GetNodeName(), "mean and rstd",
-                        (std::to_string(meanSize) + " and " + std::to_string(rstdSize)).c_str(),
-                        ("The shape sizes of mean and rstd must be N * G, where N is dim[0] of dy, G is num_groups, "
-                         "got N = " +
-                         std::to_string(this->N_) + ", G = " + std::to_string(this->G_))
-                            .c_str()),
-                    return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
-void GroupNormGradRegBaseTiling::CalBinaryParams(int64_t reduceNum, int64_t& binaryQuotient, uint32_t& binaryK,
-                                                 uint32_t& binaryLastNum)
-{
-    binaryQuotient = vectorLen_;
+    binaryQuotient = commonParams.vectorLen;
     while (binaryQuotient < reduceNum) {
         binaryQuotient *= BINARY_ADD_COEF;
     }
-    binaryQuotient /= BINARY_ADD_COEF;                      // 二分折叠之后的长度
-    int64_t quotientVcaddNum = binaryQuotient / vectorLen_; // 预留空间大小，存放二分折叠临时变量
-    if (quotientVcaddNum <= vectorLen_) {
+    binaryQuotient /= BINARY_ADD_COEF;                                  // 二分折叠之后的长度
+    int64_t quotientVcaddNum = binaryQuotient / commonParams.vectorLen; // 预留空间大小，存放二分折叠临时变量
+    if (quotientVcaddNum <= commonParams.vectorLen) {
         binaryLastNum = static_cast<uint32_t>(quotientVcaddNum);
         binaryK = 0;
     } else {
-        auto binaryAddNum = quotientVcaddNum / vectorLen_;
+        auto binaryAddNum = quotientVcaddNum / commonParams.vectorLen;
         binaryK = __builtin_ctzl(binaryAddNum);
-        binaryLastNum = vectorLen_;
+        binaryLastNum = commonParams.vectorLen;
     }
 }
 
-uint32_t GroupNormGradRegBaseTiling::GetTypeSize(ge::DataType dtypeStr) const
+uint32_t GroupNormGradRegBaseMixTiling::GetTypeSize(ge::DataType dtypeStr) const
 {
     switch (dtypeStr) {
         case ge::DT_FLOAT:
@@ -310,34 +130,37 @@ uint32_t GroupNormGradRegBaseTiling::GetTypeSize(ge::DataType dtypeStr) const
     }
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::BlockTiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::BlockTiling()
 {
-    this->tTypeBytes_ = GetTypeSize(this->tTypeStr_);
+    this->tTypeBytes_ = GetTypeSize(this->commonParams.tTypeStr);
     OP_TILING_CHECK(this->tTypeBytes_ == 0, OP_LOGE(context_->GetNodeName(), "Calculated tTypeBytes_ is zero"),
                     return ge::GRAPH_FAILED);
 
-    int64_t cGFloatAlign = Ops::Base::CeilAlign(CPerG_, static_cast<int64_t>(this->blockSize_ / FLOAT_DTYPE_BYTES));
-    int64_t cGHalfAlign = Ops::Base::CeilAlign(CPerG_, static_cast<int64_t>(this->blockSize_ / FLOAT16_DTYPE_BYTES));
+    int64_t cGFloatAlign = Ops::Base::CeilAlign(commonParams.CPerG,
+                                                static_cast<int64_t>(this->commonParams.blockSize / FLOAT_DTYPE_BYTES));
+    int64_t cGHalfAlign = Ops::Base::CeilAlign(
+        commonParams.CPerG, static_cast<int64_t>(this->commonParams.blockSize / FLOAT16_DTYPE_BYTES));
     int64_t cGtempSpace = 0;
     // CGNum(4+2): gamma, dbeta, dgamma, ds, input_db, input_ds
     int64_t cgAllocSpace = 0;
     if (NxG_ <= SMALL_NG) {
         cgAllocSpace = cGFloatAlign * FLOAT_DTYPE_BYTES * (UB_COPIES_4 + UB_COPIES_2);
-        if (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16) {
+        if (commonParams.uTypeStr == ge::DT_FLOAT16 || commonParams.uTypeStr == ge::DT_BF16) {
             cGtempSpace = cGHalfAlign * FLOAT16_DTYPE_BYTES; // tBufGamma
         }
     } else {
         cgAllocSpace = cGFloatAlign * FLOAT_DTYPE_BYTES * UB_COPIES_4;
-        if (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16) {
+        if (commonParams.uTypeStr == ge::DT_FLOAT16 || commonParams.uTypeStr == ge::DT_BF16) {
             cGtempSpace = cGHalfAlign * UB_COPIES_2 * FLOAT16_DTYPE_BYTES; // tBufGamma, tBufDbeta
         }
     }
 
-    reserveSpace_ = cgAllocSpace + cGtempSpace + UB_COPIES_2 * this->blockSize_; // 2 block for Mean, rstd buf
+    reserveSpace_ = cgAllocSpace + cGtempSpace +
+                    UB_COPIES_2 * this->commonParams.blockSize; // 2 block for Mean, rstd buf
 
     // Allocate computing core
     if (NxG_ <= SMALL_NG) {
-        stage0TaskNumPerCore_ = Ops::Base::CeilDiv(NxC_, static_cast<int64_t>(coreNum_));
+        stage0TaskNumPerCore_ = Ops::Base::CeilDiv(NxC_, static_cast<int64_t>(commonParams.coreNum));
         if (stage0TaskNumPerCore_ == 0) {
             OP_LOGE(context_->GetNodeName(), "stage0TaskNumPerCore_ is zero");
             return ge::GRAPH_FAILED;
@@ -351,7 +174,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::BlockTiling()
         }
     }
 
-    taskNumPerCore_ = Ops::Base::CeilAlign(NxG_, static_cast<int64_t>(coreNum_)) / coreNum_;
+    taskNumPerCore_ = Ops::Base::CeilAlign(NxG_, static_cast<int64_t>(commonParams.coreNum)) / commonParams.coreNum;
     stage1CoreUsed_ = (NxG_ - 1) / taskNumPerCore_ + 1;
     taskNumPerTailCore_ = taskNumPerCore_;
     tailCore_ = stage1CoreUsed_;
@@ -363,26 +186,27 @@ ge::graphStatus GroupNormGradRegBaseTiling::BlockTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::UbTiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::UbTiling()
 {
-    OP_TILING_CHECK(ubSize_ < (reserveSpace_),
+    OP_TILING_CHECK(commonParams.ubSizePlatForm < (reserveSpace_),
                     OP_LOGE(context_->GetNodeName(), "Error:[UbTiling] ubSize less than reserveSpace"),
                     return ge::GRAPH_FAILED);
-    auto canUseUbSize = (ubSize_ - reserveSpace_) / DOUBLE_BUFFER;
+    auto canUseUbSize = (commonParams.ubSizePlatForm - reserveSpace_) / DOUBLE_BUFFER;
     // mode0 x, dy 全部load成float32数据类型，放在UB中计算完dx 和 dgamma, dbeta
-    int64_t tAlignFactor = this->blockSize_ / this->tTypeBytes_;
-    int64_t mode0xDyDxSize = static_cast<int64_t>(Ops::Base::CeilAlign(CPerG_ * HxW_, tAlignFactor)) *
+    int64_t tAlignFactor = this->commonParams.blockSize / this->tTypeBytes_;
+    int64_t mode0xDyDxSize = static_cast<int64_t>(
+                                 Ops::Base::CeilAlign(commonParams.CPerG * commonParams.HxW, tAlignFactor)) *
                              this->tTypeBytes_ * UB_COPIES_3;
     // mode0 mean, rstd需要额外的空间
-    mode0UbCapGNum_ = canUseUbSize / (mode0xDyDxSize + this->blockSize_ * UB_COPIES_2);
-    mode1UbCapCNum_ = canUseUbSize / (static_cast<int64_t>(Ops::Base::CeilAlign(HxW_, tAlignFactor)) *
+    mode0UbCapGNum_ = canUseUbSize / (mode0xDyDxSize + this->commonParams.blockSize * UB_COPIES_2);
+    mode1UbCapCNum_ = canUseUbSize / (static_cast<int64_t>(Ops::Base::CeilAlign(commonParams.HxW, tAlignFactor)) *
                                       this->tTypeBytes_ * UB_COPIES_3);
     // the conditions for branch small_ng
     if (mode0UbCapGNum_ > 0) {
         modeKey_ = MODE_0;
     } else if (mode1UbCapCNum_ > 0) {
         bool smallNGCase = (NxG_ <= SMALL_NG) && (stage0TaskNumPerCore_ >= STAGE0_C_PER_CORE) &&
-                           ((N_ * (CPerG_ / mode1UbCapCNum_)) >= SMALL_NG_ND_CHAT);
+                           ((commonParams.N * (commonParams.CPerG / mode1UbCapCNum_)) >= SMALL_NG_ND_CHAT);
         if (smallNGCase && (NxC_ <= MAX_C_SIZE)) {
             modeKey_ = MODE_3;
         } else {
@@ -395,23 +219,24 @@ ge::graphStatus GroupNormGradRegBaseTiling::UbTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::Mode2UbTiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::Mode2UbTiling()
 {
     // cache level is 3
     auto reserveCacheSize = CACHE_BUFF_SIZE * 3 * UB_COPIES_2 * sizeof(float);
-    OP_TILING_CHECK(ubSize_ < (reserveSpace_ + reserveCacheSize),
+    OP_TILING_CHECK(commonParams.ubSizePlatForm < (reserveSpace_ + reserveCacheSize),
                     OP_LOGE(context_->GetNodeName(), "Error:[UbTiling] ubSize less than reserveSpace"),
                     return ge::GRAPH_FAILED);
-    uint32_t canUseUbSize = (ubSize_ - reserveSpace_ - reserveCacheSize) / DOUBLE_BUFFER;
-    mode2UbCapEle_ = Ops::Base::FloorAlign(canUseUbSize / (this->tTypeBytes_ * UB_COPIES_3), this->blockSize_);
+    uint32_t canUseUbSize = (commonParams.ubSizePlatForm - reserveSpace_ - reserveCacheSize) / DOUBLE_BUFFER;
+    mode2UbCapEle_ = Ops::Base::FloorAlign(canUseUbSize / (this->tTypeBytes_ * UB_COPIES_3),
+                                           this->commonParams.blockSize);
     // Loop Size vector Len align
-    mode2OneLoopSize_ = this->vectorLen_;
+    mode2OneLoopSize_ = this->commonParams.vectorLen;
     while (mode2OneLoopSize_ < (mode2UbCapEle_ / BINARY_ADD_COEF)) { // loop need split main/fold part
         mode2OneLoopSize_ *= BINARY_ADD_COEF;
     }
     mode2OneLoopSize_ /= BINARY_ADD_COEF;
     mode2MainLoopCnt_ = Ops::Base::CeilDiv(this->binaryAddQuotient_, static_cast<int64_t>(this->mode2OneLoopSize_));
-    mode2FoldLoopCnt_ = Ops::Base::CeilDiv((this->HxW_ - this->binaryAddQuotient_),
+    mode2FoldLoopCnt_ = Ops::Base::CeilDiv((this->commonParams.HxW - this->binaryAddQuotient_),
                                            static_cast<int64_t>(this->mode2OneLoopSize_));
     OP_TILING_CHECK(
         this->binaryAddQuotient_ % this->mode2OneLoopSize_ != 0,
@@ -419,9 +244,9 @@ ge::graphStatus GroupNormGradRegBaseTiling::Mode2UbTiling()
                 "Error:[UbTiling] the main block can't have tail. binaryAddQuotient = %ld, mode2OneLoopSize = %u.",
                 this->binaryAddQuotient_, this->mode2OneLoopSize_),
         return ge::GRAPH_FAILED);
-    mode2FoldTail_ = (this->HxW_ - this->binaryAddQuotient_) % this->mode2OneLoopSize_ == 0 ?
+    mode2FoldTail_ = (this->commonParams.HxW - this->binaryAddQuotient_) % this->mode2OneLoopSize_ == 0 ?
                          this->mode2OneLoopSize_ :
-                         (this->HxW_ - this->binaryAddQuotient_) % this->mode2OneLoopSize_;
+                         (this->commonParams.HxW - this->binaryAddQuotient_) % this->mode2OneLoopSize_;
     OP_TILING_CHECK(
         this->mode2MainLoopCnt_ < 1 || this->mode2FoldLoopCnt_ < 1,
         OP_LOGE(context_->GetNodeName(), "Error:[UbTiling] mode2MainLoopCnt or mode2FoldLoopCnt less than 1"),
@@ -431,13 +256,14 @@ ge::graphStatus GroupNormGradRegBaseTiling::Mode2UbTiling()
         OP_LOGE(context_->GetNodeName(), "Error:[UbTiling] mode2UbCapEle_ less than 1");
         return ge::GRAPH_FAILED;
     }
-    mode2UbIterNum_ = Ops::Base::CeilAlign(HxW_, static_cast<int64_t>(mode2UbCapEle_)) / mode2UbCapEle_;
-    mode2UbTailNum_ = (HxW_ - mode2UbIterNum_ * mode2UbCapEle_ == 0) ? mode2UbCapEle_ :
-                                                                       (HxW_ - (mode2UbIterNum_ - 1) * mode2UbCapEle_);
+    mode2UbIterNum_ = Ops::Base::CeilAlign(commonParams.HxW, static_cast<int64_t>(mode2UbCapEle_)) / mode2UbCapEle_;
+    mode2UbTailNum_ = (commonParams.HxW - mode2UbIterNum_ * mode2UbCapEle_ == 0) ?
+                          mode2UbCapEle_ :
+                          (commonParams.HxW - (mode2UbIterNum_ - 1) * mode2UbCapEle_);
     return ge::GRAPH_SUCCESS;
 }
 
-int64_t GroupNormGradRegBaseTiling::FindNearestPower2(const int64_t value)
+int64_t GroupNormGradRegBaseMixTiling::FindNearestPower2(const int64_t value)
 {
     if (value <= CONST_ONE) {
         return CONST_ZERO;
@@ -452,28 +278,28 @@ int64_t GroupNormGradRegBaseTiling::FindNearestPower2(const int64_t value)
     }
 }
 
-int64_t GroupNormGradRegBaseTiling::GetCacheID(const int64_t idx)
+int64_t GroupNormGradRegBaseMixTiling::GetCacheID(const int64_t idx)
 {
     return __builtin_popcountll(idx ^ (idx + CONST_ONE)) - CONST_ONE;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::Stage2Mode2Tiling()
 {
     constexpr int16_t ALIGN_FACTOR_BASE_BYTE_LEN = 128;
     constexpr int16_t TILE_NUM_BASE_LEN_B32 = 512;
     const uint32_t dTypeSize = FLOAT_DTYPE_BYTES;
-    int16_t blockLenFp32 = this->blockSize_ / dTypeSize;
+    int16_t blockLenFp32 = this->commonParams.blockSize / dTypeSize;
     int64_t cBlockFactorBase = ALIGN_FACTOR_BASE_BYTE_LEN / dTypeSize;
     int64_t cBlockFactorAlignBase = ALIGN_FACTOR_BASE_BYTE_LEN / dTypeSize;
-    if (C_ <= blockLenFp32) {
+    if (commonParams.C <= blockLenFp32) {
         cBlockFactorBase = blockLenFp32;
         cBlockFactorAlignBase = blockLenFp32;
     }
-    int64_t cBlockFactor = Ops::Base::CeilDiv(C_, static_cast<int64_t>(coreNum_));
+    int64_t cBlockFactor = Ops::Base::CeilDiv(commonParams.C, static_cast<int64_t>(commonParams.coreNum));
     cBlockFactor = Ops::Base::CeilDiv(cBlockFactor, cBlockFactorAlignBase) * cBlockFactorAlignBase;
     cBlockFactor = std::max(cBlockFactorBase, cBlockFactor);
-    stage2CoreUsed_ = Ops::Base::CeilDiv(C_, cBlockFactor);
-    int64_t cTileBlockFactor = C_ - (stage2CoreUsed_ - 1) * cBlockFactor;
+    stage2CoreUsed_ = Ops::Base::CeilDiv(commonParams.C, cBlockFactor);
+    int64_t cTileBlockFactor = commonParams.C - (stage2CoreUsed_ - 1) * cBlockFactor;
     int64_t cTileNumBase = TILE_NUM_BASE_LEN_B32 / dTypeSize;
     if (cTileNumBase > cBlockFactor) {
         cTileNumBase = cBlockFactor;
@@ -498,7 +324,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
         }
 
         int64_t cTileNum = 0;
-        cTileNum = (ubSize_ - FLOAT16_DTYPE_BYTES * UB_COPIES_4) /
+        cTileNum = (commonParams.ubSizePlatForm - FLOAT16_DTYPE_BYTES * UB_COPIES_4) /
                    (CONST_THREE * nTileNum + CONST_TWO + cacheBufferCount) / sizeof(float);
         cTileNum = cTileNum / cTileNumBase * cTileNumBase;
 
@@ -530,33 +356,37 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Mode2Tiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::Stage2Tiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::Stage2Tiling()
 {
     uint32_t elemSize = FLOAT_DTYPE_BYTES;
-    if (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16) {
+    if (commonParams.uTypeStr == ge::DT_FLOAT16 || commonParams.uTypeStr == ge::DT_BF16) {
         elemSize = FLOAT16_DTYPE_BYTES;
     }
 
     if (this->modeKey_ == MODE_3) {
-        reduceNCnt_ = N_;
+        reduceNCnt_ = commonParams.N;
     } else {
-        reduceNCnt_ = Ops::Base::CeilDiv(N_, static_cast<int64_t>(SPLIT_COUNT));
+        reduceNCnt_ = Ops::Base::CeilDiv(commonParams.N, static_cast<int64_t>(SPLIT_COUNT));
     }
-    size_t ubCanUseSize = (((ubSize_ / SPLIT_COUNT / DOUBLE_BUFFER) / this->blockSize_) * this->blockSize_);
+    size_t ubCanUseSize = (((commonParams.ubSizePlatForm / SPLIT_COUNT / DOUBLE_BUFFER) /
+                            this->commonParams.blockSize) *
+                           this->commonParams.blockSize);
 
     auto ubSizePerC = (reduceNCnt_ + 1) * FLOAT_DTYPE_BYTES + FLOAT_DTYPE_BYTES + elemSize;
     if (reduceNCnt_ > SCALE_COEF_EIGHT) {
         ubSizePerC = ubSizePerC + Ops::Base::CeilDiv(reduceNCnt_, SCALE_COEF_EIGHT) * FLOAT_DTYPE_BYTES;
     }
     cFactor_ = ubCanUseSize / ubSizePerC;
-    cFactorAlign_ = ((cFactor_ * elemSize / this->blockSize_) * this->blockSize_) / elemSize;
+    cFactorAlign_ = ((cFactor_ * elemSize / this->commonParams.blockSize) * this->commonParams.blockSize) / elemSize;
     stage2Mode_ = (cFactorAlign_ >= 1) ? STAGE2_MODE_1 : STAGE2_MODE_2;
     if (stage2Mode_ == STAGE2_MODE_1) {
-        uint32_t theLeastAPerCore = this->blockSize_ / elemSize;
-        cBlockFactor_ = (C_ + coreNum_ - 1) / coreNum_;
-        cBlockFactor_ = (cBlockFactor_ < theLeastAPerCore) ? theLeastAPerCore : (C_ + coreNum_ - 1) / coreNum_;
-        stage2CoreUsed_ = (C_ + cBlockFactor_ - 1) / cBlockFactor_;
-        cTailBlockFactor_ = C_ - cBlockFactor_ * (stage2CoreUsed_ - 1);
+        uint32_t theLeastAPerCore = this->commonParams.blockSize / elemSize;
+        cBlockFactor_ = (commonParams.C + commonParams.coreNum - 1) / commonParams.coreNum;
+        cBlockFactor_ = (cBlockFactor_ < theLeastAPerCore) ?
+                            theLeastAPerCore :
+                            (commonParams.C + commonParams.coreNum - 1) / commonParams.coreNum;
+        stage2CoreUsed_ = (commonParams.C + cBlockFactor_ - 1) / cBlockFactor_;
+        cTailBlockFactor_ = commonParams.C - cBlockFactor_ * (stage2CoreUsed_ - 1);
         if (reduceNCnt_ <= RA_BINARY_ADD_THRESHOLD) {
             return ge::GRAPH_SUCCESS;
         }
@@ -578,13 +408,13 @@ ge::graphStatus GroupNormGradRegBaseTiling::Stage2Tiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::DoOpTiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::DoOpTiling()
 {
     OP_TILING_CHECK(BlockTiling() != ge::GRAPH_SUCCESS,
                     OP_LOGE(context_->GetNodeName(), "fail to calculate block Tiling"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(UbTiling() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "fail to calculate UB Tiling"),
                     return ge::GRAPH_FAILED);
-    if (N_ > 1 || this->modeKey_ == MODE_3) {
+    if (commonParams.N > 1 || this->modeKey_ == MODE_3) {
         OP_TILING_CHECK(Stage2Tiling() != ge::GRAPH_SUCCESS,
                         OP_LOGE(context_->GetNodeName(), "fail to calculate regbase Stage2 Tiling"),
                         return ge::GRAPH_FAILED);
@@ -592,23 +422,21 @@ ge::graphStatus GroupNormGradRegBaseTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
-
-uint64_t GroupNormGradRegBaseTiling::GetTilingKey() const
+uint64_t GroupNormGradRegBaseMixTiling::GetTilingKey() const
 {
     uint64_t tilingKey = this->modeKey_;
-    if (tTypeStr_ == ge::DataType::DT_FLOAT) {
+    if (commonParams.tTypeStr == ge::DataType::DT_FLOAT) {
         tilingKey += static_cast<uint64_t>(GNGDtypeKey::FLOAT_FLOAT);
-    } else if (tTypeStr_ == ge::DataType::DT_FLOAT16) {
-        if (uTypeStr_ == ge::DataType::DT_FLOAT16) {
+    } else if (commonParams.tTypeStr == ge::DataType::DT_FLOAT16) {
+        if (commonParams.uTypeStr == ge::DataType::DT_FLOAT16) {
             tilingKey += static_cast<uint64_t>(GNGDtypeKey::HALF_HALF);
-        } else if (uTypeStr_ == ge::DataType::DT_FLOAT) {
+        } else if (commonParams.uTypeStr == ge::DataType::DT_FLOAT) {
             tilingKey += static_cast<uint64_t>(GNGDtypeKey::HALF_FLOAT);
         }
-    } else if (tTypeStr_ == ge::DataType::DT_BF16) {
-        if (uTypeStr_ == ge::DataType::DT_BF16) {
+    } else if (commonParams.tTypeStr == ge::DataType::DT_BF16) {
+        if (commonParams.uTypeStr == ge::DataType::DT_BF16) {
             tilingKey += static_cast<uint64_t>(GNGDtypeKey::BF16_BF16);
-        } else if (uTypeStr_ == ge::DataType::DT_FLOAT) {
+        } else if (commonParams.uTypeStr == ge::DataType::DT_FLOAT) {
             tilingKey += static_cast<uint64_t>(GNGDtypeKey::BF16_FLOAT);
         }
     }
@@ -616,19 +444,19 @@ uint64_t GroupNormGradRegBaseTiling::GetTilingKey() const
     return tilingKey;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::GetWorkspaceSize()
+ge::graphStatus GroupNormGradRegBaseMixTiling::GetWorkspaceSize()
 {
     if (this->modeKey_ == MODE_3) {
-        workSpaceSize_ = N_ * C_;
+        workSpaceSize_ = commonParams.N * commonParams.C;
     } else {
-        workSpaceSize_ = Ops::Base::CeilDiv(N_, static_cast<int64_t>(SPLIT_COUNT)) * C_;
+        workSpaceSize_ = Ops::Base::CeilDiv(commonParams.N, static_cast<int64_t>(SPLIT_COUNT)) * commonParams.C;
     }
     auto workspaces = context_->GetWorkspaceSizes(1);
     auto usrWorkspaceSize = WORKSPACE_COPIES * workSpaceSize_ * FLOAT_DTYPE_BYTES;
-    workspaces[0] = sysWorkspaceSize_ + usrWorkspaceSize;
+    workspaces[0] = commonParams.sysWorkspaceSize + usrWorkspaceSize;
 
-    auto alignFactor = this->blockSize_ / FLOAT_DTYPE_BYTES;
-    auto clrBlockFactor = Ops::Base::CeilDiv(workSpaceSize_, static_cast<int64_t>(coreNum_));
+    auto alignFactor = this->commonParams.blockSize / FLOAT_DTYPE_BYTES;
+    auto clrBlockFactor = Ops::Base::CeilDiv(workSpaceSize_, static_cast<int64_t>(commonParams.coreNum));
     auto clrBlockAlignFactor = Ops::Base::CeilDiv(clrBlockFactor, static_cast<int64_t>(alignFactor)) * alignFactor;
     clrBlockSize_ = std::max(static_cast<int64_t>(clrBlockAlignFactor), static_cast<int64_t>(MIN_BLOCK_SIZE));
     clrBlockNum_ = Ops::Base::CeilDiv(workSpaceSize_, clrBlockSize_);
@@ -636,7 +464,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradRegBaseTiling::PostTiling()
+ge::graphStatus GroupNormGradRegBaseMixTiling::PostTiling()
 {
     SetTilingData();
     PrintTilingData();
@@ -653,7 +481,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void GroupNormGradRegBaseTiling::SetTilingData()
+void GroupNormGradRegBaseMixTiling::SetTilingData()
 {
     OP_LOGD(opName, "Tiling start.");
     SetBaseTilingData();
@@ -661,13 +489,13 @@ void GroupNormGradRegBaseTiling::SetTilingData()
     SetKernel2TilingData();
 }
 
-void GroupNormGradRegBaseTiling::SetBaseTilingData()
+void GroupNormGradRegBaseMixTiling::SetBaseTilingData()
 {
     OP_LOGD(opName, "Tiling start.");
-    tilingData.gNGBaseParams.set_N(N_);                                               // 1
-    tilingData.gNGBaseParams.set_C(C_);                                               // 2
-    tilingData.gNGBaseParams.set_HXW(HxW_);                                           // 3
-    tilingData.gNGBaseParams.set_G(G_);                                               // 4
+    tilingData.gNGBaseParams.set_N(commonParams.N);                                   // 1
+    tilingData.gNGBaseParams.set_C(commonParams.C);                                   // 2
+    tilingData.gNGBaseParams.set_HXW(commonParams.HxW);                               // 3
+    tilingData.gNGBaseParams.set_G(commonParams.G);                                   // 4
     tilingData.gNGBaseParams.set_clrBlockSize(clrBlockSize_);                         // 5
     tilingData.gNGBaseParams.set_clrTailBlockSize(clrTailBlockSize_);                 // 6
     tilingData.gNGBaseParams.set_clrBlockNum(clrBlockNum_);                           // 7
@@ -685,16 +513,16 @@ void GroupNormGradRegBaseTiling::SetBaseTilingData()
     tilingData.gNGBaseParams.set_mode2OneLoopSize(mode2OneLoopSize_);                 // 19
     tilingData.gNGBaseParams.set_mode2FoldTail(mode2FoldTail_);                       // 20
     tilingData.gNGBaseParams.set_workSpaceSize(workSpaceSize_);                       // 21
-    tilingData.gNGBaseParams.set_dxIsRequire(dxIsRequire_);                           // 22
-    tilingData.gNGBaseParams.set_dgammaIsRequire(dgammaIsRequire_);                   // 23
-    tilingData.gNGBaseParams.set_dbetaIsRequire(dbetaIsRequire_);                     // 24
+    tilingData.gNGBaseParams.set_dxIsRequire(commonParams.dxIsRequire);               // 22
+    tilingData.gNGBaseParams.set_dgammaIsRequire(commonParams.dgammaIsRequire);       // 23
+    tilingData.gNGBaseParams.set_dbetaIsRequire(commonParams.dbetaIsRequire);         // 24
     tilingData.gNGBaseParams.set_stage0TaskNumPerCore(stage0TaskNumPerCore_);         // 25
     tilingData.gNGBaseParams.set_stage0TaskNumPerTailCore(stage0TaskNumPerTailCore_); // 26
     tilingData.gNGBaseParams.set_stage0TailCore(stage0TailCore_);                     // 27
     tilingData.gNGBaseParams.set_stage0CoreUsed(stage0CoreUsed_);                     // 28
 }
 
-void GroupNormGradRegBaseTiling::SetReduceTilingData()
+void GroupNormGradRegBaseMixTiling::SetReduceTilingData()
 {
     tilingData.gNGReduceParams.set_binaryAddQuotient(binaryAddQuotient_); // 1
     tilingData.gNGReduceParams.set_binaryAddK(binaryAddK_);               // 2
@@ -704,7 +532,7 @@ void GroupNormGradRegBaseTiling::SetReduceTilingData()
     tilingData.gNGReduceParams.set_binaryCGLastNum(binaryCGLastNum_);     // 6
 }
 
-void GroupNormGradRegBaseTiling::SetKernel2TilingData()
+void GroupNormGradRegBaseMixTiling::SetKernel2TilingData()
 {
     // 共用
     tilingData.gNGKernel2Params.set_stage2CoreUsed(stage2CoreUsed_);
@@ -734,14 +562,14 @@ void GroupNormGradRegBaseTiling::SetKernel2TilingData()
     tilingData.gNGKernel2Params.set_cTailTailBlock(cTailTail_);
 }
 
-void GroupNormGradRegBaseTiling::PrintTilingData() const
+void GroupNormGradRegBaseMixTiling::PrintTilingData() const
 {
-    OP_LOGD(opName, "N:                       %ld.", N_);
-    OP_LOGD(opName, "C:                       %ld.", C_);
-    OP_LOGD(opName, "HXW:                     %ld.", HxW_);
-    OP_LOGD(opName, "G:                       %ld.", G_);
+    OP_LOGD(opName, "N:                       %ld.", commonParams.N);
+    OP_LOGD(opName, "C:                       %ld.", commonParams.C);
+    OP_LOGD(opName, "HXW:                     %ld.", commonParams.HxW);
+    OP_LOGD(opName, "G:                       %ld.", commonParams.G);
     OP_LOGD(opName, "NXG:                     %ld.", NxG_);
-    OP_LOGD(opName, "CPerG:                   %ld.", CPerG_);
+    OP_LOGD(opName, "CPerG:                   %ld.", commonParams.CPerG);
     OP_LOGD(opName, "clrBlockSize_:           %ld.", clrBlockSize_);
     OP_LOGD(opName, "clrTailBlockSize_:       %ld.", clrTailBlockSize_);
     OP_LOGD(opName, "clrBlockNum_:            %d.", clrBlockNum_);
@@ -778,9 +606,9 @@ void GroupNormGradRegBaseTiling::PrintTilingData() const
     OP_LOGD(opName, "tailcNumMode2PerCore:    %d.", tailcNumMode2PerCore_);
     OP_LOGD(opName, "stage2LoopCnt:           %ld.", stage2LoopCnt_);
     OP_LOGD(opName, "stage2FactorN:           %ld.", stage2FactorN_);
-    OP_LOGD(opName, "dxIsRequire:             %d.", dxIsRequire_);
-    OP_LOGD(opName, "dgammaIsRequire:         %d.", dgammaIsRequire_);
-    OP_LOGD(opName, "dbetaIsRequire:          %d.", dbetaIsRequire_);
+    OP_LOGD(opName, "dxIsRequire:             %d.", commonParams.dxIsRequire);
+    OP_LOGD(opName, "dgammaIsRequire:         %d.", commonParams.dgammaIsRequire);
+    OP_LOGD(opName, "dbetaIsRequire:          %d.", commonParams.dbetaIsRequire);
     OP_LOGD(opName, "modeKey_:                %ld.", this->modeKey_);
     OP_LOGD(opName, "cFactorStage2Mode2       %ld.", cTileNum_);
     OP_LOGD(opName, "nFactorStage2Mode2       %ld.", nTileNum_);
@@ -794,4 +622,7 @@ void GroupNormGradRegBaseTiling::PrintTilingData() const
     OP_LOGD(opName, "cLoopTailBlock           %ld.", cLoopTail_);
     OP_LOGD(opName, "cTailTailBlock           %ld.", cTailTail_);
 }
+
+// 注册 mix 模板 tiling（优先级 200，empty 优先级 100 在前，空tensor场景由 empty 接管）
+REGISTER_TILING_TEMPLATE("GroupNormGrad", GroupNormGradRegBaseMixTiling, 200);
 } // namespace optiling

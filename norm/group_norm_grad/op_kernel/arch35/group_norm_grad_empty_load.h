@@ -17,16 +17,17 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "group_norm_grad_base.h"
 
 namespace GroupNormGrad {
 using namespace AscendC;
 constexpr int OUTPUT_COUNT = 2;
 
 template <typename T, int32_t BUFFER_NUM = 2>
-class EmptyDgamma {
+class EmptyDgamma : public GroupNormGradBase {
 public:
     __aicore__ inline EmptyDgamma(TPipe* pipe, const GroupNormGradEmptyTilingData* tilingData)
-        : Ppipe_(pipe), tiling_(tilingData)
+        : GroupNormGradBase(), Ppipe_(pipe), tiling_(tilingData)
     {}
     __aicore__ inline void Init(__gm__ uint8_t* dgamma, __gm__ uint8_t* dbeta)
     {

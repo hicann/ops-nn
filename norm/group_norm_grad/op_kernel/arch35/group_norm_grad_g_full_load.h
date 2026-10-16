@@ -17,14 +17,14 @@
 #pragma once
 
 #include "kernel_operator.h"
-#include "group_norm_grad_base.h"
+#include "group_norm_grad_mix_base.h"
 #include "group_norm_grad_common.h"
 
 namespace GroupNormGrad {
 template <typename T, typename U>
-class GroupNormGradGFullLoad : public GroupNormGradBase<T, U> {
+class GroupNormGradGFullLoad : public GroupNormGradMixBase<T, U> {
 public:
-    __aicore__ inline GroupNormGradGFullLoad() : GroupNormGradBase<T, U>(){};
+    __aicore__ inline GroupNormGradGFullLoad() : GroupNormGradMixBase<T, U>(){};
     __aicore__ inline ~GroupNormGradGFullLoad(){};
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
@@ -138,8 +138,8 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::InitBuffer(const GroupNormG
     // VEC_IN
     this->pipe->InitBuffer(this->inQueDy_, DOUBLE_BUFFER, gElemAllocSpace);
     this->pipe->InitBuffer(this->inQueX_, DOUBLE_BUFFER, gElemAllocSpace);
-    this->pipe->InitBuffer(this->inQueMean_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
-    this->pipe->InitBuffer(this->inQueRstd_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
+    this->pipe->InitBuffer(this->inQueMean_, 1, CeilAlign(this->mode0UbCapGNum_, PF32_PER_BLOCK) * sizeof(float));
+    this->pipe->InitBuffer(this->inQueRstd_, 1, CeilAlign(this->mode0UbCapGNum_, PF32_PER_BLOCK) * sizeof(float));
     this->pipe->InitBuffer(this->inQueGamma_, 1, cGAllocSpace);
     // VEC_OUT
     this->pipe->InitBuffer(this->outQueDx_, DOUBLE_BUFFER, gElemAllocSpace);
@@ -163,8 +163,8 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(int32_t taskIdx, co
     LocalTensor<float> dsTensor = this->outQueDs_.template AllocTensor<float>();
     if (this->eleNumPerC_ == 1) {
         VFMode0DbetaDsOneHw(xTensor, dyTensor, dbetaTensor, dsTensor);
-    } else if (this->eleNumPerC_ <= this->VecLen_) {
-        VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, this->VecLen_, 0,
+    } else if (this->eleNumPerC_ <= VecLen_) {
+        VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, VecLen_, 0,
                             static_cast<uint16_t>(this->C_G_));
     } else {
         this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor, 0, this->C_G_);
@@ -196,7 +196,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsOneHw(const L
     __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
     __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
     __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
-    uint32_t sregvl = (uint32_t)this->VecLen_;
+    uint32_t sregvl = (uint32_t)VecLen_;
     uint16_t loopCnt = this->C_G_ / sregvl;
     uint32_t tailNum = this->C_G_ % sregvl;
 
@@ -277,7 +277,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0DxOneHw(
     __ubuf__ T* ubDy = (__ubuf__ T*)dyTensor.GetPhyAddr();
     __ubuf__ T* ubDst = (__ubuf__ T*)dstTensor.GetPhyAddr();
     __ubuf__ float* ubGamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
-    uint32_t sregvl = (uint32_t)this->VecLen_;
+    uint32_t sregvl = (uint32_t)VecLen_;
     uint16_t loopCnt = this->C_G_ / sregvl;
     uint32_t tailNum = this->C_G_ % sregvl;
 
@@ -340,7 +340,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(const Loca
     __ubuf__ T* ubDst = (__ubuf__ T*)dstTensor.GetPhyAddr();
     __ubuf__ float* ubGamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
     uint32_t eleNumPerC = this->eleNumPerC_;
-    uint32_t sregvl = (uint32_t)this->VecLen_;
+    uint32_t sregvl = (uint32_t)VecLen_;
     uint16_t loopCnt = eleNumPerC / sregvl;
     uint32_t tailNum = eleNumPerC % sregvl;
     __ubuf__ T* curUbDst;

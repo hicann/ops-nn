@@ -18,14 +18,14 @@
 #pragma once
 
 #include "kernel_operator.h"
-#include "group_norm_grad_base.h"
+#include "group_norm_grad_mix_base.h"
 #include "group_norm_grad_common.h"
 
 namespace GroupNormGrad {
 template <typename T, typename U>
-class GroupNormGradCFullLoad : public GroupNormGradBase<T, U> {
+class GroupNormGradCFullLoad : public GroupNormGradMixBase<T, U> {
 public:
-    __aicore__ inline GroupNormGradCFullLoad() : GroupNormGradBase<T, U>(){};
+    __aicore__ inline GroupNormGradCFullLoad() : GroupNormGradMixBase<T, U>(){};
     __aicore__ inline ~GroupNormGradCFullLoad(){};
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
@@ -35,8 +35,8 @@ public:
 protected:
     __aicore__ inline void InitBuffer(const GroupNormGradRegBaseTilingData* tilingData);
     __aicore__ inline void Compute(int32_t taskIdx);
-    __aicore__ inline void ComputeMode1Dx(
-        int32_t taskIdx, LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor);
+    __aicore__ inline void ComputeMode1Dx(int32_t taskIdx, LocalTensor<float>& dbetaTensor,
+                                          LocalTensor<float>& dsTensor);
 };
 
 template <typename T, typename U>
@@ -71,8 +71,8 @@ template <typename T, typename U>
 __aicore__ inline void GroupNormGradCFullLoad<T, U>::InitBuffer(const GroupNormGradRegBaseTilingData* tilingData)
 {
     // for cast mean, rstd, for store sum1, sum2
-    this->pipe->InitBuffer(this->tempMeanBuf_, this->BLOCK_BYTES);
-    this->pipe->InitBuffer(this->tempRstdBuf_, this->BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempMeanBuf_, BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempRstdBuf_, BLOCK_BYTES);
     uint32_t capElemAllocSpace = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * this->mode1UbCapCNum_),
                                            this->elemTPerBlock_) *
                                  sizeof(T);
@@ -117,9 +117,9 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::Compute(int32_t taskIdx)
 
         dyTensor = this->inQueDy_.template DeQue<T>();
         xTensor = this->inQueX_.template DeQue<T>();
-        if (this->eleNumPerC_ <= this->VecLen_) {
-            VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, this->VecLen_,
-                loopIdx * this->mode1UbCapCNum_, static_cast<uint16_t>(curCNum));
+        if (this->eleNumPerC_ <= VecLen_) {
+            VFComputeDbetaDs<T>(xTensor, dyTensor, dbetaTensor, dsTensor, this->eleNumPerC_, VecLen_,
+                                loopIdx * this->mode1UbCapCNum_, static_cast<uint16_t>(curCNum));
         } else {
             this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor,
                                                 loopIdx * this->mode1UbCapCNum_, curCNum);

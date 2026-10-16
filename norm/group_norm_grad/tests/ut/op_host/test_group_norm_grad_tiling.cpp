@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <iostream>
 #include <vector>
@@ -112,6 +111,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_0)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -219,6 +219,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradEmptyTiling_multi_block)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -326,6 +327,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_1)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -434,6 +436,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_2)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -542,6 +545,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_3)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -650,6 +654,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_4)
     gert::StorageShape dbeta_shape = {{C}, {C}};
     int32_t deterministic = 1;
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -759,6 +764,7 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_5)
     gert::StorageShape dbeta_shape = {{C}, {C}};
     int32_t deterministic = 1;
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -873,6 +879,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_0)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -987,6 +994,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_1)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1101,6 +1109,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_2)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1215,6 +1224,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_3)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1329,6 +1339,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_4)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1443,6 +1454,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_5)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1557,6 +1569,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_6)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1671,6 +1684,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_7)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1782,6 +1796,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradEmptyTiling_single_core)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1891,6 +1906,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradEmptyTiling_multi_core)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -1999,6 +2015,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_mode1_fp32)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2105,6 +2122,7 @@ TEST_F(GroupNormGradTiling, Regbase_InputCheck_dimNum_less_2)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2210,6 +2228,7 @@ TEST_F(GroupNormGradTiling, Regbase_ParamsCheck_mean_rstd_dtype_mismatch)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2315,6 +2334,7 @@ TEST_F(GroupNormGradTiling, Regbase_Stage2Mode2)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2423,6 +2443,7 @@ TEST_F(GroupNormGradTiling, Empty_InputCheck_shape_mismatch)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2528,6 +2549,7 @@ TEST_F(GroupNormGradTiling, Empty_CheckInputAndOutput_c_not_divisible)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2633,6 +2655,7 @@ TEST_F(GroupNormGradTiling, Empty_CheckShapeAndType_dtype_mismatch)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2738,6 +2761,7 @@ TEST_F(GroupNormGradTiling, Empty_CheckShapeAndType_fp32_fp16)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2846,6 +2870,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_9)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})
@@ -2960,6 +2985,7 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_10)
     gert::StorageShape dgamma_shape = {{C}, {C}};
     gert::StorageShape dbeta_shape = {{C}, {C}};
     auto holder = gert::TilingContextFaker()
+                      .SetOpType("GroupNormGrad")
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&dy_shape, &mean_shape, &rstd_shape, &x_shape, &gamma_shape})

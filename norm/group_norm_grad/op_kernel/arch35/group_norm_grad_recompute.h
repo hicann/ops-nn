@@ -17,7 +17,7 @@
 #pragma once
 
 #include "kernel_operator.h"
-#include "group_norm_grad_base.h"
+#include "group_norm_grad_mix_base.h"
 #include "group_norm_grad_common.h"
 
 namespace GroupNormGrad {
@@ -29,9 +29,9 @@ struct ComputeDxParams {
 };
 
 template <typename T, typename U>
-class GroupNormGradReCompute : public GroupNormGradBase<T, U> {
+class GroupNormGradReCompute : public GroupNormGradMixBase<T, U> {
 public:
-    __aicore__ inline GroupNormGradReCompute() : GroupNormGradBase<T, U>(){};
+    __aicore__ inline GroupNormGradReCompute() : GroupNormGradMixBase<T, U>(){};
     __aicore__ inline ~GroupNormGradReCompute(){};
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
@@ -86,8 +86,8 @@ template <typename T, typename U>
 __aicore__ inline void GroupNormGradReCompute<T, U>::InitBuffer(const GroupNormGradRegBaseTilingData* tilingData)
 {
     // for cast mean, rstd, for store sum1, sum2
-    this->pipe->InitBuffer(this->tempMeanBuf_, this->BLOCK_BYTES);
-    this->pipe->InitBuffer(this->tempRstdBuf_, this->BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempMeanBuf_, BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempRstdBuf_, BLOCK_BYTES);
     uint32_t capElemSpace = CeilAlign(this->mode2UbCapEle_, this->elemTPerBlock_) * sizeof(T);
     uint32_t cGAllocSpace = CeilAlign(this->C_G_, this->elemUPerBlock_) * sizeof(float);
     this->pipe->InitBuffer(this->cacheDbetaBuf_, this->MAX_CACHE_DEPTH * this->CACHE_BUFF_SIZE * sizeof(float));
@@ -147,7 +147,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
     LocalTensor<float> binaryDbetaTensor = this->outQueDx_.template AllocTensor<float>();
     // 复用 outQueDx_ 切分为前后2半用，float16时，大小是float32的一半，折半2次
     uint32_t backHalfOffset = this->mode2OneLoopSize_ / DOUBLE_BUFFER / DOUBLE_BUFFER;
-    backHalfOffset = CeilAlign(backHalfOffset, this->PF32_PER_BLOCK);
+    backHalfOffset = CeilAlign(backHalfOffset, PF32_PER_BLOCK);
     LocalTensor<float> binarydsTensor = binaryDbetaTensor[backHalfOffset];
     __ubuf__ float* ubBinaryDbeta = (__ubuf__ float*)binaryDbetaTensor.GetPhyAddr();
     __ubuf__ float* ubBinaryDgamma = (__ubuf__ float*)binarydsTensor.GetPhyAddr();
@@ -160,32 +160,32 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
     uint32_t foldAddNum = 0;
     uint32_t binaryAddRemainder = 0;
     uint32_t unFoldAddNum = 0;
-    uint32_t sregvl = this->VecLen_;
+    uint32_t sregvl = VecLen_;
 
     constexpr uint16_t ulongBitLenOfClzInstr = 64;
 
     if (loopIdx < this->mode2FoldLoopCnt_ - 1) {
         foldAddNum = mainReduceNum;
-        overLapLoopTimes = mainReduceNum / this->VecLen_;
-        binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
+        overLapLoopTimes = mainReduceNum / VecLen_;
+        binaryAddLoop = ((mainReduceNum / VecLen_) / VecLen_);
         binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
-        binaryUbLastNum = overLapLoopTimes <= this->VecLen_ ? overLapLoopTimes : this->VecLen_;
+        binaryUbLastNum = overLapLoopTimes <= VecLen_ ? overLapLoopTimes : VecLen_;
     } else if (loopIdx == this->mode2FoldLoopCnt_ - 1) {
         foldAddNum = foldReduceNum;
-        unFoldAddNum = (mainReduceNum - foldReduceNum) / this->VecLen_ * this->VecLen_;
-        overLapLoopTimes = foldReduceNum / this->VecLen_;
-        remainerLoopTimes = foldReduceNum % this->VecLen_ == 0 ? 0 : 1;
-        unFoldLoopTimes = unFoldAddNum / this->VecLen_;
+        unFoldAddNum = (mainReduceNum - foldReduceNum) / VecLen_ * VecLen_;
+        overLapLoopTimes = foldReduceNum / VecLen_;
+        remainerLoopTimes = foldReduceNum % VecLen_ == 0 ? 0 : 1;
+        unFoldLoopTimes = unFoldAddNum / VecLen_;
         uint32_t foldLoopTimes = overLapLoopTimes + remainerLoopTimes + unFoldLoopTimes;
-        binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
+        binaryAddLoop = ((mainReduceNum / VecLen_) / VecLen_);
         binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
-        binaryUbLastNum = foldLoopTimes <= this->VecLen_ ? foldLoopTimes : this->VecLen_;
+        binaryUbLastNum = foldLoopTimes <= VecLen_ ? foldLoopTimes : VecLen_;
     } else {
-        unFoldAddNum = Aligned(mainReduceNum, this->VecLen_);
-        unFoldLoopTimes = mainReduceNum / this->VecLen_;
-        binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
+        unFoldAddNum = Aligned(mainReduceNum, VecLen_);
+        unFoldLoopTimes = mainReduceNum / VecLen_;
+        binaryAddLoop = ((mainReduceNum / VecLen_) / VecLen_);
         binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
-        binaryUbLastNum = unFoldLoopTimes <= this->VecLen_ ? unFoldLoopTimes : this->VecLen_;
+        binaryUbLastNum = unFoldLoopTimes <= VecLen_ ? unFoldLoopTimes : VecLen_;
     }
 
     __VEC_SCOPE__
@@ -447,7 +447,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFComputeMode2Dx(const Loca
     auto gamma = dxParams.gamma;
     uint32_t calCount = dxParams.processNum;
     float dyMulScalar = this->rstdScalar_ * gamma;
-    uint16_t repeatTimes = CeilDiv(calCount, this->VecLen_);
+    uint16_t repeatTimes = CeilDiv(calCount, VecLen_);
 
     __VEC_SCOPE__
     {
@@ -455,7 +455,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFComputeMode2Dx(const Loca
         RegTensor<float> vregDy;
         uint32_t sreg = (uint32_t)calCount;
         MaskReg preg;
-        uint32_t sregvl = (uint32_t)this->VecLen_;
+        uint32_t sregvl = (uint32_t)VecLen_;
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
             preg = UpdateMask<float>(sreg);
             LoadOneTensorForDtypeT<T>(ubX, vregX, preg, i * sregvl);

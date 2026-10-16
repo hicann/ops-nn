@@ -17,14 +17,14 @@
 #pragma once
 
 #include "kernel_operator.h"
-#include "group_norm_grad_base.h"
+#include "group_norm_grad_mix_base.h"
 #include "group_norm_grad_common.h"
 
 namespace GroupNormGrad {
 template <typename T, typename U>
-class GroupNormGradSmallNGCFullLoad : public GroupNormGradBase<T, U> {
+class GroupNormGradSmallNGCFullLoad : public GroupNormGradMixBase<T, U> {
 public:
-    __aicore__ inline GroupNormGradSmallNGCFullLoad() : GroupNormGradBase<T, U>(){};
+    __aicore__ inline GroupNormGradSmallNGCFullLoad() : GroupNormGradMixBase<T, U>(){};
     __aicore__ inline ~GroupNormGradSmallNGCFullLoad(){};
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
@@ -63,8 +63,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::Init(
     this->stage0TailCore_ = tilingData->gNGBaseParams.stage0TailCore;
     this->stage0CoreUsed_ = tilingData->gNGBaseParams.stage0CoreUsed;
     // init gm
-    this->elemTPerBlock_ = this->BLOCK_BYTES / sizeof(T);
-    this->elemUPerBlock_ = this->BLOCK_BYTES / sizeof(U);
+    this->elemTPerBlock_ = BLOCK_BYTES / sizeof(T);
+    this->elemUPerBlock_ = BLOCK_BYTES / sizeof(U);
     this->dyGm_.SetGlobalBuffer((__gm__ T*)dy, this->allEleNum_);
     this->xGm_.SetGlobalBuffer((__gm__ T*)x, this->allEleNum_);
     this->dxGm_.SetGlobalBuffer((__gm__ T*)dx, this->allEleNum_);
@@ -119,8 +119,8 @@ template <typename T, typename U>
 __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::InitBuffer()
 {
     // for cast mean, rstd, for store sum1, sum2
-    this->pipe->InitBuffer(this->tempMeanBuf_, this->BLOCK_BYTES);
-    this->pipe->InitBuffer(this->tempRstdBuf_, this->BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempMeanBuf_, BLOCK_BYTES);
+    this->pipe->InitBuffer(this->tempRstdBuf_, BLOCK_BYTES);
     uint32_t capElemAllocSpace = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * this->mode1UbCapCNum_),
                                            this->elemTPerBlock_) *
                                  sizeof(T);
@@ -149,7 +149,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage0()
     LocalTensor<float> dsTensor = this->outQueDs_.template AllocTensor<float>();
     int64_t baseOffset = this->startTaskId_ * this->eleNumPerC_;
     uint32_t ubLoopCnt = (this->curCoreTaskNum_ + this->mode1UbCapCNum_ - 1) / this->mode1UbCapCNum_;
-    bool isLessEqualVL = this->eleNumPerC_ <= this->VecLen_;
+    bool isLessEqualVL = this->eleNumPerC_ <= VecLen_;
     LocalTensor<T> dyTensor;
     LocalTensor<T> xTensor;
     for (uint32_t loopIdx = 0; loopIdx < ubLoopCnt; loopIdx++) {
@@ -312,7 +312,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
         for (uint16_t idx = 0; idx < static_cast<uint16_t>(curCNum); idx++) {
             MaskReg preg;
             uint32_t sreg = (uint32_t)eleNumPerC;
-            uint32_t sregvl = (uint32_t)this->VecLen_;
+            uint32_t sregvl = (uint32_t)VecLen_;
             uint32_t ubOffSet = idx * eleNumPerC;
             MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
             curUbX = ubX + ubOffSet;
@@ -355,7 +355,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFComputeStage1Ds(co
     float rstdScalar = this->rstdScalar_;
 
     uint32_t calCount = this->C_G_;
-    uint16_t repeatTimes = CeilDiv(calCount, this->VecLen_);
+    uint16_t repeatTimes = CeilDiv(calCount, VecLen_);
 
     __VEC_SCOPE__
     {
@@ -363,7 +363,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFComputeStage1Ds(co
         RegTensor<float> vregDs;
         MaskReg preg;
         uint32_t sreg = (uint32_t)calCount;
-        uint32_t sregvl = (uint32_t)this->VecLen_;
+        uint32_t sregvl = (uint32_t)VecLen_;
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
             preg = UpdateMask<float>(sreg);
             LoadAlign(vregDs, ubDs + i * sregvl);

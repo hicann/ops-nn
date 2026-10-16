@@ -12,8 +12,6 @@
  * \file group_norm_grad.cc
  * \brief
  */
-#include "group_norm_grad_tiling_arch35.h"
-#include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
@@ -615,39 +613,12 @@ void GroupNormGradTiling::TilingDataPrint() const
     OP_LOGD(tilingContext->GetNodeName(), "dbetaIsRequire:          %d.", tilingParams->dbetaIsRequire);
 }
 
-bool TilingShapeEmptyJudge(gert::TilingContext* context)
-{
-    const gert::Shape xShape = context->GetInputShape(INPUT_3)->GetStorageShape();
-    const gert::Shape gammaShape = context->GetInputShape(INPUT_4)->GetStorageShape();
-
-    int64_t xShapeDimValue = 1;
-    int64_t gammaShapeDimValue = 1;
-    size_t index;
-
-    for (index = 0; index < xShape.GetDimNum(); index++) {
-        xShapeDimValue *= xShape.GetDim(index);
-    }
-
-    for (index = 0; index < gammaShape.GetDimNum(); index++) {
-        gammaShapeDimValue *= gammaShape.GetDim(index);
-    }
-
-    if ((xShapeDimValue == 0) && (gammaShapeDimValue != 0)) {
-        return true;
-    }
-    return false;
-}
-
 ge::graphStatus TilingGroupNormGrad(gert::TilingContext* context)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormGradCompileInfo>();
     if (compileInfo->isRegBase) {
-        if (TilingShapeEmptyJudge(context)) {
-            GroupNormGradEmptyTiling tilingObj(context);
-            return tilingObj.DoTiling();
-        }
-        GroupNormGradRegBaseTiling tilingObj(context);
-        return tilingObj.DoTiling();
+        // regbase 场景由注册路由机制按优先级调度（empty=100 优先，mix=200 兜底）
+        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
     context->SetScheduleMode(SCHEDULE_MODE);
     GroupNormGradTiling tilingObject(context);
