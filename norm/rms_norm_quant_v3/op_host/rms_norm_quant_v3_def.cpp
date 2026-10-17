@@ -139,6 +139,7 @@ public:
         OpAICoreConfig configRegbase;
         configRegbase.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", configRegbase);
+        this->AICore().AddConfig("ascend960dt", configRegbase);
     }
 };
 OP_ADD(RmsNormQuantV3);
