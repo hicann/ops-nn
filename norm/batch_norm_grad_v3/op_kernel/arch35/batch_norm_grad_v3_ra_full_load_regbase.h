@@ -29,6 +29,8 @@ using AscendC::Reg::MemType;
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RAFullLoad {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline void ComputeStoreDx(__ubuf__ DY_TYPE* xAddr, __ubuf__ DY_TYPE* dyAddr, __ubuf__ float* dxAddr,
                                           RegTensor<float>& meanReg, RegTensor<float>& rstdReg,
                                           RegTensor<float>& gammaReg, RegTensor<float>& dgammaReg,
@@ -54,6 +56,10 @@ public:
                                 __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
                                 const BatchNormGradV3RAFullLoadTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         const BatchNormGradV3BaseTilingData& baseTilingData = tilingData->baseTilingData;
         rDim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
@@ -111,6 +117,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         if (aLoopFactor <= 0) {
             return;
         }
@@ -576,19 +585,25 @@ public:
         // store dbeta
         dbetaOutQue_.EnQue(dbeta);
         dbeta = dbetaOutQue_.template DeQue<WEIGHT_TYPE>();
-        CopyOut(dbetaGm_[gmOffset], dbeta, factor);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            CopyOut(dbetaGm_[gmOffset], dbeta, factor);
+        }
         dbetaOutQue_.FreeTensor(dbeta);
 
         // store dgamma
         dgammaOutQue_.EnQue(dgamma);
         dgamma = dgammaOutQue_.template DeQue<WEIGHT_TYPE>();
-        CopyOut(dgammaGm_[gmOffset], dgamma, factor);
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            CopyOut(dgammaGm_[gmOffset], dgamma, factor);
+        }
         dgammaOutQue_.FreeTensor(dgamma);
 
         // store dx
         dxOutQue_.EnQue(dx);
         dx = dxOutQue_.template DeQue<DY_TYPE>();
-        CopyOut(dxGm_[gmOffset], dx, rDim_, factor, aDim_, stride);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            CopyOut(dxGm_[gmOffset], dx, rDim_, factor, aDim_, stride);
+        }
         dxOutQue_.FreeTensor(dx);
     }
 

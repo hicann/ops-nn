@@ -28,6 +28,8 @@ using AscendC::Reg::MemType;
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARecompute {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3RARecompute(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
@@ -35,6 +37,10 @@ public:
                                 __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
                                 const BatchNormGradV3RARecomputeTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         const BatchNormGradV3BaseTilingData& baseTilingData = tilingData->baseTilingData;
         rDim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
@@ -87,6 +93,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         if (GetBlockIdx() >= numBlocks) {
             return;
         }
@@ -348,7 +357,9 @@ public:
         // Copy Out dxTensor
         dxOutQue_.EnQue(dxTensor);
         dxTensor = dxOutQue_.template DeQue<DY_TYPE>();
-        CopyOut(dxGm_[offset], dxTensor, rLength, aLength, aDim_, aLoopFactorAligned);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            CopyOut(dxGm_[offset], dxTensor, rLength, aLength, aDim_, aLoopFactorAligned);
+        }
         dxOutQue_.FreeTensor(dxTensor);
     }
 
@@ -419,11 +430,15 @@ public:
         dbetaOutQue_.EnQue(dbetaTensor);
         dbetaTensor = dbetaOutQue_.template DeQue<float>();
         LocalTensor<WEIGHT_TYPE> dbetaType = dbetaTensor.template ReinterpretCast<WEIGHT_TYPE>();
-        CopyOut(dbetaGm_[gmOffset], dbetaType, aLength);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            CopyOut(dbetaGm_[gmOffset], dbetaType, aLength);
+        }
         dgammaOutQue_.EnQue(dgammaTensor);
         dgammaTensor = dgammaOutQue_.template DeQue<float>();
         LocalTensor<WEIGHT_TYPE> dgammaType = dgammaTensor.template ReinterpretCast<WEIGHT_TYPE>();
-        CopyOut(dgammaGm_[gmOffset], dgammaType, aLength);
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            CopyOut(dgammaGm_[gmOffset], dgammaType, aLength);
+        }
 
         gammaInQue_.FreeTensor(gammaTensor);
         meanInQue_.FreeTensor(meanTensor);

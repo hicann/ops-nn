@@ -35,6 +35,8 @@ static constexpr int32_t BLOCK_FP32_NUMS = BLOCK_SIZE / sizeof(float);
 template <typename DY_DTYPE, typename WEIGHT_DTYPE>
 class BatchNormGradV3RARSplitCoreR1 {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3RARSplitCoreR1(TPipe* pipeIn,
                                                     const BatchNormGradV3RARSplitCoreR1TilingData* tilingDataIn)
     {
@@ -45,6 +47,10 @@ public:
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace)
     {
+        outputMask_ = tilingData_->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         blkIdx_ = GetBlockIdx();
         isLastCore_ = blkIdx_ == (tilingData_->usedCoreNums - 1) ? true : false;
 
@@ -129,6 +135,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         // stage 0： 核内二分累加dbeta/dgamma
         Stage0InitBuffer();
         CalcDbetaDgammaInCore();
@@ -531,11 +540,15 @@ public:
         copyOutParams.dstStride = 0;
 
         LocalTensor<WEIGHT_DTYPE> dbeta = dbetaOutQue_.DeQue<WEIGHT_DTYPE>();
-        DataCopyPad<WEIGHT_DTYPE, PaddingMode::Normal>(dbetaGm_[offset], dbeta, copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_DTYPE, PaddingMode::Normal>(dbetaGm_[offset], dbeta, copyOutParams);
+        }
         dbetaOutQue_.FreeTensor(dbeta);
 
         LocalTensor<WEIGHT_DTYPE> dgamma = dgammaOutQue_.DeQue<WEIGHT_DTYPE>();
-        DataCopyPad<WEIGHT_DTYPE, PaddingMode::Normal>(dgammaGm_[offset], dgamma, copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_DTYPE, PaddingMode::Normal>(dgammaGm_[offset], dgamma, copyOutParams);
+        }
         dgammaOutQue_.FreeTensor(dgamma);
 
         // 拷贝到workspace 临时空间
@@ -721,7 +734,9 @@ public:
         SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
 
         LocalTensor<DY_DTYPE> dxTensor = dxOutQue_.DeQue<DY_DTYPE>();
-        DataCopyPad<DY_DTYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            DataCopyPad<DY_DTYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyOutParams);
+        }
         dxOutQue_.FreeTensor(dxTensor);
 
         ResetLoopModePara(DataCopyMVType::UB_TO_OUT);

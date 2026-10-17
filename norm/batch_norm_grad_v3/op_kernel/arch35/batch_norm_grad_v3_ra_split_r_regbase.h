@@ -32,6 +32,8 @@ constexpr uint32_t RA_SPLIT_R_MODE_FUSED_PAIR = 2;
 template <typename DY_TYPE, typename WEIGHT_TYPE, uint32_t MODE = RA_SPLIT_R_MODE_GENERIC>
 class BatchNormGradV3RASplitR {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     static constexpr uint32_t MODE_GENERIC = RA_SPLIT_R_MODE_GENERIC;
     static constexpr uint32_t MODE_FUSED_SINGLE = RA_SPLIT_R_MODE_FUSED_SINGLE;
     static constexpr uint32_t MODE_FUSED_PAIR = RA_SPLIT_R_MODE_FUSED_PAIR;
@@ -42,6 +44,10 @@ public:
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
                                 const BatchNormGradV3RASplitRTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         blockIdx_ = GetBlockIdx();
         tilingData_ = tilingData;
         int64_t offset = blockIdx_ * tilingData_->blockFactor * tilingData_->aDim;
@@ -81,6 +87,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         // 路径由host按tiling结构条件经tilingKey选定(generic/fused-single/fused-pair)。
         // 编译期分发：每个key只编译自身路径，generic不携带fused代码，避免冷热路径交织影响icache局部性。
         if constexpr (MODE == MODE_FUSED_PAIR) {
@@ -673,8 +682,13 @@ private:
         copyOutParams.dstStride = 0;
 
         LocalTensor<WEIGHT_TYPE> dbetaOutTensor = dbetaOutQue_.DeQue<WEIGHT_TYPE>();
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dbetaGm_[offset], dbetaOutTensor, copyOutParams);
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dgammaGm_[offset], dbetaOutTensor[aFactorAlign_], copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dbetaGm_[offset], dbetaOutTensor, copyOutParams);
+        }
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dgammaGm_[offset], dbetaOutTensor[aFactorAlign_],
+                                                          copyOutParams);
+        }
         dbetaOutQue_.FreeTensor(dbetaOutTensor);
     }
 
@@ -795,7 +809,9 @@ private:
         copyParams.dstStride = (dstStride - colSize) * sizeof(DY_TYPE);
 
         LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template DeQue<DY_TYPE>();
-        DataCopyPad<DY_TYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyParams);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            DataCopyPad<DY_TYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyParams);
+        }
         dxOutQue_.FreeTensor(dxTensor);
     }
 

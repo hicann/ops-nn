@@ -29,11 +29,17 @@ static constexpr int64_t UB_ADD_BUF = 3 * UB_ADD_LEN * sizeof(float); // ubé—´äº
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARRecomputeSplitR0 {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3RARRecomputeSplitR0(){};
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
                                 const BatchNormGradV3RARRecomputeTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         const BatchNormGradV3BaseTilingData baseTilingData = tilingData->baseTilingData;
         r1Dim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
@@ -97,6 +103,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         if (GetBlockIdx() >= blockNum_) {
             return;
         }
@@ -388,8 +397,12 @@ public:
         copyOutParams.blockLen = sizeof(WEIGHT_TYPE);
         copyOutParams.srcStride = 0;
         copyOutParams.dstStride = 0;
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Compact>(dbetaGm_[offset], dbetaOut, copyOutParams);
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Compact>(dgammaGm_[offset], dgammaOut, copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_TYPE, PaddingMode::Compact>(dbetaGm_[offset], dbetaOut, copyOutParams);
+        }
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            DataCopyPad<WEIGHT_TYPE, PaddingMode::Compact>(dgammaGm_[offset], dgammaOut, copyOutParams);
+        }
         dbetaOutQue_.FreeTensor(dbetaOut);
         dgammaOutQue_.FreeTensor(dgammaOut);
     }
@@ -401,7 +414,9 @@ public:
         copyOutParams.blockLen = copyLen * sizeof(DY_TYPE);
         copyOutParams.srcStride = 0;
         copyOutParams.dstStride = 0;
-        DataCopyPad<DY_TYPE, PaddingMode::Compact>(dxGm_[offset], dx, copyOutParams);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            DataCopyPad<DY_TYPE, PaddingMode::Compact>(dxGm_[offset], dx, copyOutParams);
+        }
     }
 
     __aicore__ inline void BinaryAdd(Reg::RegTensor<float>& rst, __ubuf__ float* binaryAddAddr, uint16_t binaryAddLoop,

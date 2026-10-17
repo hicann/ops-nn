@@ -145,6 +145,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 5;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -186,6 +187,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 170;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -227,6 +229,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_bfloat16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 8;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -268,6 +271,7 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_float32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -300,6 +304,7 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_float16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -332,6 +337,7 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_bfloat16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -364,6 +370,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 1;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -405,6 +412,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
         tiling);
+    tilingDatafromBin->outputMask = 7;
 
     tilingDatafromBin->baseTilingData.r1Dim = 10;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -504,6 +512,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_channel_last_float32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3InferChannelLastTilingData*
         tilingDatafromBin = reinterpret_cast<BatchNormGradV3InferChannelLastTilingData*>(tiling);
+    tilingDatafromBin->outputMask = 7;
     tilingDatafromBin->totalTiles = 0;
     tilingDatafromBin->tilesPerCore = 0;
     tilingDatafromBin->usedCoreNums = 0;
@@ -530,6 +539,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_float32)
     size_t tilingSize = sizeof(BatchNormGradV3InferTilingData) + sizeof(float);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3InferTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3InferTilingData*>(tiling);
+    tilingDatafromBin->outputMask = 7;
     tilingDatafromBin->totalTiles = 1;
     tilingDatafromBin->tilesPerCore = 1;
     tilingDatafromBin->usedCoreNums = 1;

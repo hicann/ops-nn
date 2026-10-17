@@ -52,6 +52,7 @@ struct BatchNormGradV3RARFullLoadTilingData {
     int64_t ubTailOfFormerBlock = 0;
     int64_t ubLoopOfTailBlock = 0;
     int64_t ubTailOfTailBlock = 0;
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3RARRecomputeTilingData {
@@ -69,6 +70,7 @@ struct BatchNormGradV3RARRecomputeTilingData {
     int64_t ubRDimTailTailFactor = 0;      // R轴尾块的尾块一次循环处理的R轴个数
     int64_t ubRDimTailTailFactorAlign = 0; // R轴尾块的尾块一次循环对齐到block的R轴大小
     int64_t ubRDimTailTailLoopNum = 0;     // R轴尾块的尾块的循环次数
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3RAFullLoadTilingData {
@@ -91,6 +93,7 @@ struct BatchNormGradV3RAFullLoadTilingData {
     int64_t foldLoopOffset3 = 0;
     int64_t reduceRecursionLoop = 0;
     int64_t reduceLoopTimes = 0;
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3RARecomputeTilingData {
@@ -111,6 +114,8 @@ struct BatchNormGradV3RARecomputeTilingData {
     int64_t binaryTailBlock = 0;
     int64_t cacheBufferCount = 0;
     float reciprocal = 0;
+    uint32_t outputMaskPadding = 0; // Align the mask with the serialized tiling data.
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3RASplitRTilingData {
@@ -137,6 +142,7 @@ struct BatchNormGradV3RASplitRTilingData {
     int64_t dxLastCoreTail = 0;
     int64_t dxLastCoreTimes = 0;
     int64_t cacheBuffCnt = 0;
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3RARSplitCoreR1TilingData {
@@ -184,6 +190,7 @@ struct BatchNormGradV3RARSplitCoreR1TilingData {
     int64_t lastCoreBinAddBasicBlockLoop = 0;
     int64_t lastCoreBinAddMainFoldCount = 0;
     int64_t lastCoreBinAddResultCacheID = 0;
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3InferChannelLastTilingData {
@@ -199,6 +206,8 @@ struct BatchNormGradV3InferChannelLastTilingData {
     int64_t tileBlockBLen = 0;
     int64_t tileBlockBTail = 0;
     float epsilon = 0;
+    uint32_t outputMaskPadding = 0; // Align the mask with the serialized tiling data.
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3InferTilingData {
@@ -219,6 +228,8 @@ struct BatchNormGradV3InferTilingData {
     int64_t tileBlockB1Tail = 0;
     int64_t tileBlockAPaddingNum = 0;
     float epsilon = 0;
+    uint32_t outputMaskPadding = 0; // Align the mask with the serialized tiling data.
+    int64_t outputMask = 7;
 };
 
 struct BatchNormGradV3FullLoadTilingData {

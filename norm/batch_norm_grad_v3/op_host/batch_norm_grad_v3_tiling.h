@@ -32,6 +32,12 @@
 using namespace std;
 
 namespace optiling {
+constexpr size_t BNG_V3_OUTPUT_MASK_NUM = 3;
+constexpr int64_t BNG_V3_OUTPUT_MASK_NONE = 0;
+constexpr int64_t BNG_V3_OUTPUT_MASK_ALL = (int64_t{1} << BNG_V3_OUTPUT_MASK_NUM) - 1;
+
+ge::graphStatus ParseBatchNormGradV3OutputMask(gert::TilingContext* context, int64_t& outputMask);
+
 BEGIN_TILING_DATA_DEF(BatchNormGradV3BaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, r1Dim);          // R1AR0 R外轴
 TILING_DATA_FIELD_DEF(int64_t, aDim);           // R1AR0 A轴
@@ -67,6 +73,7 @@ TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock); // 整核进行UB循环的�
 TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock); // 整核最后一轮UB循环，处理的A轴个数
 TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock); // 尾核进行UB循环的次数，tailBlockDim/formerUbDim 向上取整
 TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock); // 尾核最后一轮UB循环，处理的A轴个数
+TILING_DATA_FIELD_DEF(int64_t, outputMask);        // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000000, BatchNormGradV3RARFullLoadTilingData);
@@ -86,6 +93,7 @@ TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTail);            // R轴尾块的尾�
 TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTailFactor);      // R轴尾块的尾块一次循环处理的R轴个数
 TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTailFactorAlign); // R轴尾块的尾块一次循环对齐到block的R轴大小
 TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTailLoopNum);     // R轴尾块的尾块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, outputMask);                // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000000, BatchNormGradV3RARRecomputeTilingData)
@@ -111,6 +119,7 @@ TILING_DATA_FIELD_DEF(int64_t, foldLoopStep3);
 TILING_DATA_FIELD_DEF(int64_t, foldLoopOffset3);
 TILING_DATA_FIELD_DEF(int64_t, reduceRecursionLoop);
 TILING_DATA_FIELD_DEF(int64_t, reduceLoopTimes);
+TILING_DATA_FIELD_DEF(int64_t, outputMask); // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000000, BatchNormGradV3RAFullLoadTilingData);
@@ -133,6 +142,7 @@ TILING_DATA_FIELD_DEF(int64_t, binaryBlockCount);
 TILING_DATA_FIELD_DEF(int64_t, binaryTailBlock);
 TILING_DATA_FIELD_DEF(int64_t, cacheBufferCount);
 TILING_DATA_FIELD_DEF(float, reciprocal);
+TILING_DATA_FIELD_DEF(int64_t, outputMask); // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000000, BatchNormGradV3RARecomputeTilingData);
@@ -161,6 +171,7 @@ TILING_DATA_FIELD_DEF(int64_t, dxLastCoreFactor);  // 计算dx时尾核一次处
 TILING_DATA_FIELD_DEF(int64_t, dxLastCoreTail);    // 计算dx时尾核尾块处理多少行
 TILING_DATA_FIELD_DEF(int64_t, dxLastCoreTimes);   // 计算dx时尾核R轴需要循环多少次
 TILING_DATA_FIELD_DEF(int64_t, cacheBuffCnt);      // cacheBuffer个数
+TILING_DATA_FIELD_DEF(int64_t, outputMask);        // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_50000000, BatchNormGradV3RASplitRTilingData);
@@ -181,6 +192,7 @@ TILING_DATA_FIELD_DEF(int64_t, tileBlockAPaddingNum);
 TILING_DATA_FIELD_DEF(int64_t, tileBlockBLen);
 TILING_DATA_FIELD_DEF(int64_t, tileBlockBTail);
 TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(int64_t, outputMask); // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900000, BatchNormGradV3InferChannelLastTilingData);
@@ -204,6 +216,7 @@ TILING_DATA_FIELD_DEF(int64_t, tileBlockB1Len);
 TILING_DATA_FIELD_DEF(int64_t, tileBlockB1Tail);
 TILING_DATA_FIELD_DEF(int64_t, tileBlockAPaddingNum);
 TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(int64_t, outputMask); // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910000, BatchNormGradV3InferTilingData);
@@ -325,6 +338,7 @@ TILING_DATA_FIELD_DEF(int64_t, binAddResultCacheID);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddBasicBlockLoop);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddMainFoldCount);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreBinAddResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, outputMask); // bits: dx, dweight, dbias
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_1000, BatchNormGradV3RARSplitCoreR1TilingData);
@@ -360,6 +374,7 @@ protected:
     ge::graphStatus GetDtypesAndCheckValid();
     const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape);
 
+    int64_t outputMask_{BNG_V3_OUTPUT_MASK_ALL};
     uint32_t coreNum{0};
     uint64_t ubSize{0};
     uint64_t blockSize{0};

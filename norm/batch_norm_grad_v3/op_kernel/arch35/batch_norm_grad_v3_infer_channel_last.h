@@ -39,6 +39,8 @@ class BatchNormGradV3InferChannelLast {
     static constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
 
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3InferChannelLast(){};
 
     __aicore__ inline BatchNormGradV3InferChannelLast(const BatchNormGradV3InferChannelLastTilingData* tilingDataIn)
@@ -48,6 +50,10 @@ public:
 
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR weight, GM_ADDR runningVar, GM_ADDR dx, TPipe* pipeIn)
     {
+        outputMask_ = tilingData_->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         pipe_ = pipeIn;
 
         dyGm_.SetGlobalBuffer((__gm__ T1*)dy);
@@ -65,6 +71,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         int64_t blockIdx = GetBlockIdx();
         int64_t beginIdx = blockIdx * tilingData_->tilesPerCore;
         int64_t endIdx = beginIdx + tilingData_->tilesPerCore;
@@ -193,7 +202,9 @@ private:
         extParams.dstStride = (tilingData_->totalALen - curTileALen) * sizeof(T1);
         extParams.blockCount = curTileBLen;
 
-        DataCopyPad(dxGm_[dxGmOffset], dx, extParams);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            DataCopyPad(dxGm_[dxGmOffset], dx, extParams);
+        }
 
         dxQueue_.FreeTensor(dx);
     }

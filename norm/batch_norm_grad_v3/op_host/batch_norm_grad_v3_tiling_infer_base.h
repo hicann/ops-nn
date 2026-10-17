@@ -16,6 +16,7 @@
 #ifndef BATCH_NORM_GRAD_V3_TILING_INFER_BASE_H_
 #define BATCH_NORM_GRAD_V3_TILING_INFER_BASE_H_
 
+#include "batch_norm_grad_v3_tiling.h"
 #include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
@@ -83,6 +84,7 @@ public:
     }
 
 protected:
+    int64_t outputMask_{BNG_V3_OUTPUT_MASK_ALL};
     bool IsCapable() override { return true; }
 
     // 1、获取INPUT/OUTPUT/ATTR信息

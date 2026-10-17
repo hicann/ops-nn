@@ -8,7 +8,6 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# ----------------------------------------------------------------------------
 
 import numpy as np
 import sys
@@ -190,6 +189,11 @@ TILING_CASE_LIST = {
 
 def main(case_name):
     data = TILING_CASE_LIST.get(case_name)
+    if case_name.startswith("case") or case_name in {
+        "infer_channel_last_fp32",
+        "infer_fp32",
+    }:
+        data = data + [7]
     tiling_data = np.array(data, dtype=np.int64)
 
     tiling_file = open("tiling.bin", "wb")

@@ -144,7 +144,7 @@ public:
 
         this->Attr("is_training").AttrType(OPTIONAL).Bool(true);
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
-        this->Attr("version").AttrType(OPTIONAL).Int(0);
+        this->Attr("output_mask").AttrType(OPTIONAL).ListBool({true, true, true});
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)

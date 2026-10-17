@@ -738,7 +738,7 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
     CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
     std::array<aclTensor*, BN_GRAD_V3_RESULT_CNT> grad = l0op::BatchNormGradV3(
         gradOutContiguous, inputContiguous, weightContiguous, runningMeanContiguous, runningVarContiguous, saveMeanCast,
-        saveInvstdCast, training, eps, executor);
+        saveInvstdCast, training, eps, outputMask, executor);
 
     if (!training) {
         CHECK_RET(

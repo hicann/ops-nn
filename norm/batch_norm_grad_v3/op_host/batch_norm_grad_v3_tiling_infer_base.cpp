@@ -107,6 +107,9 @@ ge::graphStatus BatchNormGradV3InferBase::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
+    OP_TILING_CHECK(ParseBatchNormGradV3OutputMask(context_, outputMask_) != ge::GRAPH_SUCCESS, ,
+                    return ge::GRAPH_FAILED);
+
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 

@@ -19,6 +19,31 @@
 using namespace AscendC;
 
 namespace optiling {
+ge::graphStatus ParseBatchNormGradV3OutputMask(gert::TilingContext* context, int64_t& outputMask)
+{
+    constexpr size_t OUTPUT_MASK_ATTR_INDEX = 2;
+    outputMask = BNG_V3_OUTPUT_MASK_ALL;
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    auto mask = attrs->GetAttrPointer<gert::ContinuousVector>(OUTPUT_MASK_ATTR_INDEX);
+    if (mask == nullptr) {
+        return ge::GRAPH_SUCCESS;
+    }
+    OP_CHECK_IF(
+        mask->GetSize() != BNG_V3_OUTPUT_MASK_NUM,
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "output_mask", std::to_string(mask->GetSize()).c_str(),
+                                     std::to_string(BNG_V3_OUTPUT_MASK_NUM).c_str()),
+        return ge::GRAPH_FAILED);
+    auto values = static_cast<const bool*>(mask->GetData());
+    outputMask = BNG_V3_OUTPUT_MASK_NONE;
+    for (size_t i = 0; i < BNG_V3_OUTPUT_MASK_NUM; i++) {
+        if (values[i]) {
+            outputMask |= int64_t{1} << i;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static constexpr size_t BNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
 static constexpr int64_t DIM_NUM_4 = 4;
 static constexpr int64_t DIM_NUM_5 = 5;
@@ -383,6 +408,9 @@ ge::graphStatus BatchNormGradV3TilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "TilingContext: %s", optiling::BNGDebugTilingContext(context_).c_str());
 
+    OP_TILING_CHECK(ParseBatchNormGradV3OutputMask(context_, outputMask_) != ge::GRAPH_SUCCESS, ,
+                    return ge::GRAPH_FAILED);
+
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
@@ -565,6 +593,7 @@ ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::PostTiling()
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
+    tilingData.set_outputMask(outputMask_);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -726,6 +755,7 @@ ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::PostTiling()
     size_t* curWorkspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, curWorkspaces);
     curWorkspaces[0] = workspaceSize_;
+    tilingData.set_outputMask(outputMask_);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -853,6 +883,7 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::PostTiling()
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
+    tilingData.set_outputMask(outputMask_);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -937,6 +968,7 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::PostTiling()
     size_t* raWorkspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, raWorkspaces);
     raWorkspaces[0] = workspaceSize_;
+    tilingData.set_outputMask(outputMask_);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;

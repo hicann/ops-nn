@@ -39,6 +39,7 @@ ND.
 * @par Attributes:
 * @li is_training: (Optional) A bool value. Whether the operation is in training mode. Default: true
 * @li epsilon: (Optional) A small float32 value added for numerical stability. Default: 1e-5
+* @li output_mask: (Optional) A ListBool of length 3, ordered as dx, dweight, dbias. Default: {true, true, true}.
 
 * @par Outputs:
 * @li dx: Gradient of the loss w.r.t the input, a tensor of type float16/bfloat16/float32. Supported formats: NCHW,
@@ -63,6 +64,7 @@ REG_OP(BatchNormGradV3)
     .OUTPUT(dbias, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(is_training, Bool, true)
     .ATTR(epsilon, Float, 1e-5)
+    .ATTR(output_mask, ListBool, {true, true, true})
     .OP_END_FACTORY_REG(BatchNormGradV3)
 
 } // namespace ge

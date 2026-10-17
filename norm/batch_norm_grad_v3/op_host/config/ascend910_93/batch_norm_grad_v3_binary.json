@@ -129,8 +129,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -263,8 +263,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -397,8 +397,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -531,8 +531,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -665,8 +665,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -799,8 +799,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -933,8 +933,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1067,8 +1067,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1201,8 +1201,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1335,8 +1335,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1469,8 +1469,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1603,8 +1603,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1737,8 +1737,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]
@@ -1871,8 +1871,8 @@
                     "value": null
                 },
                 {
-                    "name": "version",
-                    "dtype": "int",
+                    "name": "output_mask",
+                    "dtype": "list_bool",
                     "value": null
                 }
             ]

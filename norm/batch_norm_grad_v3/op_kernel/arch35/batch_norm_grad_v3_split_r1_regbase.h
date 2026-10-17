@@ -44,6 +44,8 @@ using BinaryAddParam = struct BNGBinaryAddParam {
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARSplitR1 {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3RARSplitR1(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline uint32_t CalcBinaryAddLastNum(uint32_t binaryAddQuotient)
@@ -59,6 +61,10 @@ public:
                                 __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
                                 const BatchNormGradV3RARRecomputeTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         const BatchNormGradV3BaseTilingData& baseTilingData = tilingData->baseTilingData;
         r1Dim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
@@ -157,12 +163,16 @@ public:
         ReSaveDGammaDBeta(dGammaLocal_, dBetaLocal_);
         dbetaOutQue_.EnQue(dBetaLocal_);
         LocalTensor<WEIGHT_TYPE> dBetaLocal = dbetaOutQue_.template DeQue<WEIGHT_TYPE>();
-        CopyOutNormParam(dBetaLocal, dbetaGm_, ni, 1);
+        if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+            CopyOutNormParam(dBetaLocal, dbetaGm_, ni, 1);
+        }
         dbetaOutQue_.FreeTensor(dBetaLocal);
 
         dgammaOutQue_.EnQue(dGammaLocal_);
         LocalTensor<WEIGHT_TYPE> dGammaLocal = dgammaOutQue_.template DeQue<WEIGHT_TYPE>();
-        CopyOutNormParam(dGammaLocal, dgammaGm_, ni, 1);
+        if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+            CopyOutNormParam(dGammaLocal, dgammaGm_, ni, 1);
+        }
         dgammaOutQue_.FreeTensor(dGammaLocal);
 
         meanInQue_.FreeTensor(meanLocal_);
@@ -356,6 +366,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         if (GetBlockIdx() >= blockNum_) {
             return;
         }
@@ -1028,7 +1041,9 @@ public:
 
     __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE>& dx, uint64_t offset, uint32_t r1Factor)
     {
-        CopyOutRAR(dx, dxGm_, offset, r1Factor);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            CopyOutRAR(dx, dxGm_, offset, r1Factor);
+        }
     }
 
     __aicore__ inline void CopyInRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,

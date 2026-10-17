@@ -137,4 +137,27 @@ const std::array<aclTensor*, BN_GRAD_V3_OUTPUT_NUM> BatchNormGradV3(
     return {gradInput, gradWeight, gradBias};
 }
 
+// A5 entry point: preserve the legacy launcher arguments for A2/A3 callers.
+const std::array<aclTensor*, BN_GRAD_V3_OUTPUT_NUM> BatchNormGradV3(
+    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
+    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
+    const aclBoolArray* outputMask, aclOpExecutor* executor)
+{
+    L0_DFX(BatchNormGradV3, gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
+           outputMask);
+    auto gradInput = executor->AllocTensor(input->GetViewShape(), input->GetDataType(), input->GetViewFormat());
+    auto gradWeight = executor->AllocTensor(saveMean->GetViewShape(), weight->GetDataType(), weight->GetViewFormat());
+    auto gradBias = executor->AllocTensor(saveMean->GetViewShape(), weight->GetDataType(), weight->GetViewFormat());
+
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        BatchNormGradV3, OP_INPUT(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd),
+        OP_OUTPUT(gradInput, gradWeight, gradBias), OP_ATTR(training, eps, outputMask));
+    if (ret != ACL_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BatchNormGradV3 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        return {nullptr, nullptr, nullptr};
+    }
+
+    return {gradInput, gradWeight, gradBias};
+}
+
 } // namespace l0op

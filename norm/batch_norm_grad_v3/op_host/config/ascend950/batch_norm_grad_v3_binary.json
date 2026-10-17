@@ -129,9 +129,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -263,9 +263,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -397,9 +397,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -531,9 +531,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -665,9 +665,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -799,9 +799,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -933,9 +933,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1067,9 +1067,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1201,9 +1201,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1335,9 +1335,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1469,9 +1469,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1603,9 +1603,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1737,9 +1737,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -1871,9 +1871,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2005,9 +2005,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2139,9 +2139,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2273,9 +2273,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2407,9 +2407,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2541,9 +2541,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2675,9 +2675,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2809,9 +2809,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -2943,9 +2943,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3077,9 +3077,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3211,9 +3211,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3345,9 +3345,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3479,9 +3479,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3613,9 +3613,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     },
@@ -3747,9 +3747,9 @@
           "value": null
         },
         {
-            "name": "version",
-            "dtype": "int",
-            "value": null
+          "name": "output_mask",
+          "dtype": "list_bool",
+          "value": null
         }
       ]
     }

@@ -14,8 +14,10 @@
  */
 
 #include <iostream>
+#include <cstring>
 #include <fstream>
 #include <vector>
+#include <tuple>
 #include <gtest/gtest.h>
 // #include "test_common.h"
 // #include "pad_ops.h"
@@ -162,8 +164,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
 }
 
@@ -273,8 +281,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
 }
 
@@ -384,8 +398,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
 }
 
@@ -495,9 +515,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 31000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "4 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 2 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
 }
@@ -608,9 +634,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 31000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
 }
@@ -721,9 +753,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 31000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
 }
@@ -834,9 +872,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 32000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
 }
@@ -947,9 +991,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 32000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
 }
@@ -1060,9 +1110,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 32000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
 }
@@ -1173,9 +1229,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 400 0 4 0 8 0 225000 0 58 0 7 0 1 0 12168 0 19 0 5976 0 5976 0 1 0 7 0 1 0 1 "
         "0 1 0 1 0 8 0 4 0 1 0 8 0 1 0 4 0 10224 0 23 0 72 0 72 0 1 0 7 0 1 0 1 0 1 0 1 0 8 0 4 0 1 0 128 0 5 0 8 0 7 "
         "0 16 0 3 0 4 0 ");
@@ -1287,9 +1349,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86000 0 2 0 8 0 225 0 64 0 1344 0 1328 0 240 0 1 0 225 0 240 0 63 0 22 0 21 0 "
         "22 0 5 0 1 0 8 0 2 0 1 0 16 0 1 0 2 0 240 0 1 0 225 0 240 0 42 0 32 0 42 0 32 0 26 0 2 0 8 0 1 0 2 0 16 0 6 0 "
         "5 0 4 0 16 0 6 0 4 0 ");
@@ -1398,9 +1466,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_split_r1_bf16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 50000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "144000 0 68 0 64 0 64 0 2250 0 2250 0 36 0 32 0 10 0 36 0 32 0 10 0 68 0 80 0 68 0 1 0 252 0 234 0 9 0 252 0 "
         "234 0 9 0 6 0 ");
 }
@@ -1508,8 +1582,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_ba)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 900000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 ");
 }
 
@@ -1619,8 +1699,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 910000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "1 0 1 0 1 0 5 0 2 0 12 0 1 0 1 0 1 0 5 0 5 0 2 0 2 0 128 0 12 0 0 0 925353388 0 ");
 }
 
@@ -1730,8 +1816,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 20000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "4 0 1637 0 1 0 0 0 64 0 37 0 25 0 26 0 0 0 0 0 0 0 63 0 26 0 25 0 62 0 1 0 26 0 32 0 25 0 32 0 1 0 2 0 "
               "0 0 2 0 0 0 2 0 0 0 1 0 ");
 }
@@ -1839,13 +1931,62 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_recompute)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 40000000);
     auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_GE(tilingData->GetDataSize(), sizeof(int64_t));
+    int64_t outputMask = 0;
+    std::memcpy(&outputMask,
+                static_cast<const uint8_t*>(tilingData->GetData()) + tilingData->GetDataSize() - sizeof(outputMask),
+                sizeof(outputMask));
+    EXPECT_EQ(outputMask, 7);
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
               "1088 0 2880 0 1 0 0 0 64 0 0 0 45 0 46 0 0 0 0 0 0 0 64 0 45 0 0 0 64 0 0 0 64 0 64 0 64 0 17 0 0 0 16 "
               "0 17 0 0 0 5 0 980480241 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
+// A2/A3 must keep their original tiling keys and complete serialized layouts,
+// both without output_mask (legacy L0) and with each shared-OpDef mask value.
+// Explicit 910B/910_93 platform information makes CANN reserve 256 bytes of UB;
+// serialized expectations below use 196352 available bytes from 196608 physical bytes.
+using BatchNormGradV3LegacyParam = std::tuple<std::string, int64_t>;
+
+class BatchNormGradV3LegacyTiling : public testing::TestWithParam<BatchNormGradV3LegacyParam> {
+protected:
+    std::map<std::string, std::string>& LegacyPlatform()
+    {
+        legacyPlatform_ = {{"Short_SoC_version", std::get<0>(GetParam())}, {"NpuArch", "2201"}};
+        return legacyPlatform_;
+    }
+
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> LegacyAttrs(bool training) const
+    {
+        std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs = {
+            {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(training)},
+            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)}};
+        auto bits = std::get<1>(GetParam());
+        if (bits >= 0) {
+            std::vector<bool> mask(optiling::BNG_V3_OUTPUT_MASK_NUM);
+            for (size_t i = 0; i < mask.size(); ++i) {
+                mask[i] = (bits & (int64_t{1} << i)) != 0;
+            }
+            attrs.emplace_back("output_mask", Ops::NN::AnyValue::CreateFrom<std::vector<bool>>(mask));
+        }
+        return attrs;
+    }
+
+private:
+    std::map<std::string, std::string> legacyPlatform_;
+};
+
+INSTANTIATE_TEST_SUITE_P(LegacyPlatformsAndMasks, BatchNormGradV3LegacyTiling,
+                         testing::Combine(testing::Values(std::string("Ascend910B"), std::string("Ascend910_93")),
+                                          testing::Range(int64_t{-1}, optiling::BNG_V3_OUTPUT_MASK_ALL + 1)),
+                         [](const testing::TestParamInfo<BatchNormGradV3LegacyParam>& info) {
+                             auto soc = std::get<0>(info.param) == "Ascend910B" ? "A2_" : "A3_";
+                             auto bits = std::get<1>(info.param);
+                             return std::string(soc) + (bits < 0 ? "Default" : "Mask" + std::to_string(bits));
+                         });
+
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_infer_full_load)
 {
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -1895,6 +2036,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -1927,14 +2070,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -1948,10 +2091,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "12 0 2 0 5 0 80 0 1 0 1 0 183 0 2 0 925353388 0 ");
+              "12 0 2 0 5 0 80 0 1 0 1 0 182 0 2 0 925353388 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_infer_split_load)
 {
     gert::StorageShape dy_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape x_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
@@ -2001,6 +2144,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2033,14 +2178,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2054,10 +2199,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "1200 0 40 0 50 0 60000 0 1 0 1 0 12280 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
+              "1200 0 40 0 50 0 60000 0 1 0 1 0 12264 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_core)
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_infer_split_load_cross_core)
 {
     gert::StorageShape dy_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape x_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
@@ -2107,6 +2252,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_cor
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2139,14 +2286,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_cor
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2161,11 +2308,11 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_cor
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "1200 0 2 0 50 0 60000 0 0 0 0 0 12288 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+        "1200 0 2 0 50 0 60000 0 0 0 0 0 12272 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
         "0 0 0 5 0 10 0 40 0 925353388 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_train_full_load)
 {
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -2215,6 +2362,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2247,14 +2396,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2268,10 +2417,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "12 0 2 0 5 0 80 0 1 0 1 0 137 0 2 0 925353388 0 ");
+              "12 0 2 0 5 0 80 0 1 0 1 0 136 0 2 0 925353388 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_train_split_load)
 {
     gert::StorageShape dy_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape x_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
@@ -2323,6 +2472,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2354,14 +2505,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2375,10 +2526,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "1200 0 40 0 50 0 60000 0 1 0 1 0 12280 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
+              "1200 0 40 0 50 0 60000 0 1 0 1 0 12264 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
 }
 
-TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_core)
+TEST_P(BatchNormGradV3LegacyTiling, batch_norm_grad_v3_legacy_train_split_load_corss_core)
 {
     gert::StorageShape dy_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape x_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
@@ -2430,6 +2581,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            LegacyPlatform());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2461,14 +2614,14 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs(LegacyAttrs(is_training))
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", LegacyPlatform());
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -2483,14 +2636,15 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "1200 0 2 0 50 0 60000 0 0 0 0 0 12288 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+        "1200 0 2 0 50 0 60000 0 0 0 0 0 12272 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
         "0 0 0 5 0 10 0 40 0 925353388 0 ");
 }
 
 // ra_split_r fused 路径 tilingKey 派发与合计 UB 兜底用例(NCHW (N,C,1,1) HW=1×1)
 // 50000000 generic / 51000000 fused-single / 52000000 fused-pair
 static void RunSplitRTilingKeyCase(int64_t n, int64_t c, ge::DataType dyDtype, uint32_t ubSize, uint32_t coreNum,
-                                   uint64_t expectedKey, bool expectNotSplitR = false)
+                                   uint64_t expectedKey, bool expectNotSplitR = false,
+                                   const std::vector<bool>* outputMask = nullptr)
 {
     gert::StorageShape dy_shape = {{n, c, 1, 1}, {n, c, 1, 1}};
     gert::StorageShape x_shape = {{n, c, 1, 1}, {n, c, 1, 1}};
@@ -2549,30 +2703,33 @@ static void RunSplitRTilingKeyCase(int64_t n, int64_t c, ge::DataType dyDtype, u
     auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
-    auto holder = gert::TilingContextFaker()
-                      .SetOpType(op_type)
-                      .NodeIoNum(7, 3)
-                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&dy_shape, &x_shape, &weight_shape, &running_mean_shape, &running_var_shape,
-                                    &save_mean_shape, &save_rstd_shape})
-                      .OutputShapes({&dx_shape, &dweight_shape, &dbias_shape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeInputTd(1, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
+    gert::TilingContextFaker faker;
+    faker.SetOpType(op_type)
+        .NodeIoNum(7, 3)
+        .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+        .InputShapes({&dy_shape, &x_shape, &weight_shape, &running_mean_shape, &running_var_shape, &save_mean_shape,
+                      &save_rstd_shape})
+        .OutputShapes({&dx_shape, &dweight_shape, &dbias_shape})
+        .CompileInfo(&compile_info)
+        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+        .NodeInputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(1, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                    {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+        .TilingData(param.get())
+        .Workspace(ws_size);
+    if (outputMask != nullptr) {
+        faker.NodeAttrs({{"output_mask", Ops::NN::AnyValue::CreateFrom<std::vector<bool>>(*outputMask)}});
+    }
+    auto holder = faker.Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -2581,7 +2738,24 @@ static void RunSplitRTilingKeyCase(int64_t n, int64_t c, ge::DataType dyDtype, u
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    if (outputMask != nullptr && outputMask->size() != 3) {
+        EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+        return;
+    }
+    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto raw = tiling_context->GetRawTilingData();
+    int64_t actualMask = 0;
+    ASSERT_GE(raw->GetDataSize(), sizeof(actualMask));
+    std::memcpy(&actualMask, static_cast<const uint8_t*>(raw->GetData()) + raw->GetDataSize() - sizeof(actualMask),
+                sizeof(actualMask));
+    int64_t expectedMask = 7;
+    if (outputMask != nullptr) {
+        expectedMask = 0;
+        for (size_t i = 0; i < outputMask->size(); ++i) {
+            expectedMask |= int64_t((*outputMask)[i]) << i;
+        }
+    }
+    EXPECT_EQ(actualMask, expectedMask);
     if (expectNotSplitR) {
         // 只断言"没被切R模板抢走",不绑定具体落到哪个对手模板,避免对手改 key 时误伤
         uint64_t actualKey = tiling_context->GetTilingKey();
@@ -2651,4 +2825,22 @@ TEST_F(BatchNormGradV3Tiling, ra_split_r_not_capable_single_rival_core)
 TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_pair_ub_fallback_generic)
 {
     RunSplitRTilingKeyCase(5120, 128, ge::DT_FLOAT, 196608, 40, 50000000);
+}
+
+TEST_F(BatchNormGradV3Tiling, output_mask_all_combinations)
+{
+    for (uint64_t bits = 0; bits < 8; ++bits) {
+        std::vector<bool> mask{bool(bits & 1), bool(bits & 2), bool(bits & 4)};
+        RunSplitRTilingKeyCase(8192, 64, ge::DT_FLOAT, 245760, 64, 51000000, false, &mask);
+        RunSplitRTilingKeyCase(8192, 128, ge::DT_FLOAT, 245760, 64, 52000000, false, &mask);
+        RunSplitRTilingKeyCase(8192, 256, ge::DT_FLOAT, 245760, 64, 50000000, false, &mask);
+    }
+}
+
+TEST_F(BatchNormGradV3Tiling, output_mask_invalid_length)
+{
+    for (size_t length : {0, 1, 2, 4}) {
+        std::vector<bool> mask(length, true);
+        RunSplitRTilingKeyCase(8192, 64, ge::DT_FLOAT, 245760, 64, 51000000, false, &mask);
+    }
 }

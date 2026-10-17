@@ -26,6 +26,8 @@ using namespace AscendC;
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARFullLoad {
 public:
+    int64_t outputMask_ = OUTPUT_MASK_ALL;
+
     __aicore__ inline BatchNormGradV3RARFullLoad(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
@@ -33,6 +35,10 @@ public:
                                 __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
                                 const BatchNormGradV3RARFullLoadTilingData* tilingData)
     {
+        outputMask_ = tilingData->outputMask;
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         const BatchNormGradV3BaseTilingData& baseTilingData = tilingData->baseTilingData;
         const BatchNormGradV3BinaryAddTilingData& binaryAddTilingData = tilingData->binaryAddTilingData;
         r1Dim_ = baseTilingData.r1Dim;
@@ -89,6 +95,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (outputMask_ == OUTPUT_MASK_NONE) {
+            return;
+        }
         LocalTensor<float> binaryAddTensor = binaryAddBuf_.Get<float>();
         for (uint32_t i = 0; i < aDimLoopNum_; i++) {
             uint32_t a = i == aDimLoopNum_ - 1 ? aDimLoopTail_ : aDimPerLoop_;
@@ -144,11 +153,15 @@ public:
             gammaInQue_.FreeTensor(gamma);
 
             LocalTensor<WEIGHT_TYPE> dbetaOut = dbetaOutQue_.template DeQue<WEIGHT_TYPE>();
-            CopyOutNormParam(dbetaOut, dbetaGm_, meanOffset, a);
+            if ((outputMask_ & OUTPUT_MASK_DBETA) != OUTPUT_MASK_NONE) {
+                CopyOutNormParam(dbetaOut, dbetaGm_, meanOffset, a);
+            }
             dbetaOutQue_.FreeTensor(dbetaOut);
 
             LocalTensor<WEIGHT_TYPE> dgammaOut = dgammaOutQue_.template DeQue<WEIGHT_TYPE>();
-            CopyOutNormParam(dgammaOut, dgammaGm_, meanOffset, a);
+            if ((outputMask_ & OUTPUT_MASK_DGAMMA) != OUTPUT_MASK_NONE) {
+                CopyOutNormParam(dgammaOut, dgammaGm_, meanOffset, a);
+            }
             dgammaOutQue_.FreeTensor(dgammaOut);
 
             CopyOutDx(x, offset, a);
@@ -509,7 +522,9 @@ public:
 
     __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE>& dx, uint64_t offset, uint32_t a)
     {
-        CopyOutRAR(dx, dxGm_, offset, a);
+        if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
+            CopyOutRAR(dx, dxGm_, offset, a);
+        }
     }
 
     __aicore__ inline void CopyInRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,

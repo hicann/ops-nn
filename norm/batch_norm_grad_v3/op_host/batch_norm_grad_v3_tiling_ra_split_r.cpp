@@ -265,6 +265,7 @@ ge::graphStatus BatchNormGradV3TilingRASplitR::PostTiling()
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(CONST_ONE);
+    tilingData_.set_outputMask(outputMask_);
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     PrintTilingData();
