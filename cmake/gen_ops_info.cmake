@@ -295,6 +295,7 @@ function(merge_graph_headers)
     COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/merge_proto.py
     ${proto_headers}
     --output-file ${MGPROTO_OUT_DIR}/ops_proto_nn.h
+    DEPENDS ${proto_headers} ${CMAKE_SOURCE_DIR}/scripts/util/merge_proto.py
   )
   add_custom_command(
     OUTPUT ${MGPROTO_OUT_DIR}/ops_proto_nn.cpp
