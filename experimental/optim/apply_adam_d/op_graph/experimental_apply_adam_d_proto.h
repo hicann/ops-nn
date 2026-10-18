@@ -29,7 +29,7 @@ namespace ge {
 *  *The input tensors must have the same shape.*
 *
 *@par Inputs:
-*@li var: A mutable Tensor of the type TensorType::NumberType().
+*@li var: A mutable Tensor of type {BFLOAT16, FLOAT16, FLOAT}.
 *     Should be from a Variable().
 *@li m: A mutable Tensor of the same type as "var".
 *     Should be from a Variable().
@@ -63,19 +63,19 @@ namespace ge {
 * Warning: THIS FUNCTION IS DEPRECATED. Please use ApplyAdam instead.
 */
 REG_OP(ApplyAdamD)
-    .INPUT(var, TensorType::NumberType())
-    .INPUT(m, TensorType::NumberType())
-    .INPUT(v, TensorType::NumberType())
-    .INPUT(beta1_power, TensorType::NumberType())
-    .INPUT(beta2_power, TensorType::NumberType())
-    .INPUT(lr, TensorType::NumberType())
-    .INPUT(beta1, TensorType::NumberType())
-    .INPUT(beta2, TensorType::NumberType())
-    .INPUT(epsilon, TensorType::NumberType())
-    .INPUT(grad, TensorType::NumberType())
-    .OUTPUT(var, TensorType::NumberType())
-    .OUTPUT(m, TensorType::NumberType())
-    .OUTPUT(v, TensorType::NumberType())
+    .INPUT(var, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(m, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(v, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(beta1_power, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(beta2_power, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(lr, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(beta1, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(beta2, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(epsilon, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(grad, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(var, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(m, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(v, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .ATTR(use_locking, Bool, false)
     .ATTR(use_nesterov, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdamD)
