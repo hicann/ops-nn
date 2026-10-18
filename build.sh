@@ -178,7 +178,7 @@ usage() {
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --bisheng_flags=ccec_g,oom"
         echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
-        echo "    --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+        echo "    --kernel_template_input=\"args0=args0;args1=args1;args2=args2;args3=args3\""
         echo "                           Specify kernel template input arguments (semicolon-separated for multiple)"
         echo $dotted_line
         echo "Examples:"
@@ -189,7 +189,7 @@ usage() {
         echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --oom"
         echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op}"
         echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op} --bisheng_flags=ccec_g,oom"
-        echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input="BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0""
+        echo "    bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input=\"BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0\""
         return
         ;;
       opkernel)
@@ -206,14 +206,14 @@ usage() {
         echo "    --bisheng_flags=ccec_g,oom"
         echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
         echo "    --no_force             Do not force building the kernels of dependent operators; only the specified operators are compiled."
-        echo "    --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+        echo "    --kernel_template_input=\"args0=args0;args1=args1;args2=args2;args3=args3\""
         echo "                           Specify kernel template input arguments (semicolon-separated for multiple)"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul --build-type=Debug"
         echo "    bash build.sh --opkernel --soc=ascend310p --ops=transpose_batch_mat_mul,fatrelu_mul --oom"
-        echo "    bash build.sh --opkernel --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input="BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0""
+        echo "    bash build.sh --opkernel --soc=ascend910b --ops=transpose_batch_mat_mul --kernel_template_input=\"BATCH_SPLIT=0;PP_MAT_MUL_EINSUM_MODE=0;PERM_X1=2;PERM_X2=0\""
         return
         ;;
       opkernel_aicpu)
@@ -419,7 +419,7 @@ usage() {
   echo "    --oom Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
   echo "    --dump_cce Dump kernel precompiled files (.i) for debugging"
   echo "    --bisheng_flags Specify bisheng compiler config, like: --bisheng_flags=ccec_g,oom, use ',' to separate different compiler flags"
-  echo "    --kernel_template_input Specify kernel template input arguments, like: --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
+  echo "    --kernel_template_input Specify kernel template input arguments, like: --kernel_template_input=\"args0=args0;args1=args1;args2=args2;args3=args3\""
   echo "                                                                                                  Use ';' to separate different kernel template args, can only specify a single kernel template input"
   echo "    --ut_mode=<MODE>       UT mode for all UT types (MODE: debug/fast)"
   echo "                           debug: enable addr2line symbolization, -g, -O0 (for development)"
