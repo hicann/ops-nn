@@ -15,14 +15,14 @@
 
 - **算子功能**：对标 `torch.median`，求中位数（下中位数）。
   - 当 `indicesOut == nullptr` 时为**全局中位数**：将 `self` 拍平为一维后取下中位数，仅输出 `valuesOut`。
-  - 当 `indicesOut != nullptr` 时为**按维中位数**：沿 `dim` 维取下中位数，输出 `valuesOut` 及该中位数在该维上首个出现的下标 `indicesOut`。
+  - 当 `indicesOut != nullptr` 时为**按维中位数**：沿 `dim` 维取下中位数，输出 `valuesOut` 及对应中位数元素在该维上的下标 `indicesOut`。中位数值重复时，不保证返回首个出现位置。
 - **计算公式**：设沿规约维排序后的非降序序列为 $s$、长度为 $k$，则
 
   $$
   values = s_{\lfloor (k-1)/2 \rfloor}
   $$
 
-  即偶数长度取较小的中间值（与 NumPy 取均值不同）；`indices` 为该值在 `self` 沿规约维首个出现的位置。
+  即偶数长度取较小的中间值（与 NumPy 取均值不同）；`indices` 为对应中位数元素在 `self` 沿规约维上的位置。中位数值重复时，具体返回哪个同值位置不作保证。
 
 ## aclnnMedianGetWorkspaceSize 参数说明
 
