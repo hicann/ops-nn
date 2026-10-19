@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC scatter_elements_v2_apt.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "--cce-simd-vf-fusion=false"
 )

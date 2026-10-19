@@ -1,0 +1,1061 @@
+{
+	"op_type": "RepeatInterleave",
+	"op_list": [
+		{
+			"bin_filename": "RepeatInterleave_093a9c399321376b38a75cfb730e3bd5",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_c956995141babe6b46a07ca335faa2f6",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_05a7302fd8569e6be78b86162a580069",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "bool",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "bool",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_4f12aca806ed482b082e86983ec4bb6f",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "bool",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "bool",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_6e7f02d790c19489aa959f7a0decd9ba",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_03c0542f2023bc999d5085c3cf4d9b0b",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_59875a0ff8228b3015d96baf3c81bb9e",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_7a09f5b7af4126487a7f726a9aac7548",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_98bddd8e0187d69757cf7450fb6c5fd9",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_ae1bb983d55cdb4f4fdf0c38b36799d2",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_8b4ec10fbb39c5c0a65192c606400b29",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_084655047edb72b366482aa51e18034b",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_65b8831ee054f9f32f9460360bd29bf1",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_0d745295987e1c668b2ec8b2844aeada",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_6ebc118f1f99e8a49d9bc016f5d1c0c3",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_60c42e561c203eefb1e4955f2afaef3c",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_4dae835995940675ba29a534fa187699",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_7b5256f2ea67a217fed14356517555de",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_cdf390bfd9c1c2617ad090138fd5a396",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_064b27f3015dfa81e5c1e3521344f8dd",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_b5f9a09a5dd35ccad942b4e69891f7e8",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_1b5b4c9f75262abc7e00b2e9a96cb157",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_b0b54dddeb312b593b50c229b8dea90d",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		},
+		{
+			"bin_filename": "RepeatInterleave_da5646da4cde210233b1d50ae2aa5c45",
+			"inputs": [
+				{
+					"name": "x",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				},
+				{
+					"name": "repeats",
+					"index": 1,
+					"dtype": "int64",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"outputs": [
+				{
+					"name": "y",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					]
+				}
+			],
+			"attrs": [
+				{
+					"name": "axis",
+					"dtype": "int",
+					"value": null
+				}
+			]
+		}
+	]
+}

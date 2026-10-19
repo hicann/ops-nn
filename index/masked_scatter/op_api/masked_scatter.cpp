@@ -75,9 +75,10 @@ static bool CheckShapeLimit(const aclTensor* self, const aclTensor* mask, const 
 static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
 {
     // 只需要判断dtype
-    auto supportList = Ops::NN::AclnnUtil::IsRegbase() ? // 判断芯片架构
-                           AICORE_DTYPE_SUPPORT_LIST_REGBASE :
-                           AICORE_DTYPE_SUPPORT_LIST;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool useRegbase = Ops::NN::AclnnUtil::IsRegbase(npuArch) || npuArch == NpuArch::DAV_9201 ||
+                      npuArch == NpuArch::DAV_9202;
+    auto supportList = useRegbase ? AICORE_DTYPE_SUPPORT_LIST_REGBASE : AICORE_DTYPE_SUPPORT_LIST;
     bool result = CheckType(self->GetDataType(), supportList);
     result = result && (mask->GetDataType() == op::DataType::DT_BOOL);
     result = result && CheckShapeLimit(self, mask, source);

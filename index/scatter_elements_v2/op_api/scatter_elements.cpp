@@ -279,7 +279,8 @@ bool UseScatterElementsV2(const aclTensor* data, const aclTensor* indices, const
                           int64_t dataDimSize, const std::string& reduction)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(npuArch) || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
         if (REGBASE_DTYPE_SUPPORT_LIST.count(reduction) == 0) {
             return false;
         }

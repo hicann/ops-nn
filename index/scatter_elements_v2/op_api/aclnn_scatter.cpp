@@ -53,6 +53,11 @@ extern "C" {
 static constexpr int64_t MIN_INDICES_FOR_SORTED = 32;
 static constexpr int64_t MIN_UPDATES_FOR_SORTED = 512;
 
+static bool IsRegbaseOrAscend960(NpuArch npuArch)
+{
+    return Ops::NN::AclnnUtil::IsRegbase(npuArch) || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
+
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_UINT8,  op::DataType::DT_INT8,      op::DataType::DT_INT16,     op::DataType::DT_INT32,
     op::DataType::DT_INT64,  op::DataType::DT_BOOL,      op::DataType::DT_FLOAT16,   op::DataType::DT_FLOAT,
@@ -107,7 +112,7 @@ static bool IsUseScatterAddWithSorted(const aclTensor* varRef, const aclTensor* 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == NpuArch::DAV_2201 || IsRegbaseOrAscend960(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -211,7 +216,7 @@ static bool CheckTensorDim(const aclTensor* self, const aclTensor* index, const 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_LOGD("aclnnScatter CheckTensorDim curArch =%u, selfDimSize:%ld, indexDimSize:%ld, srcDimSize:%ld.", curArch,
             selfDimSize, indexDimSize, srcDimSize);
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (IsRegbaseOrAscend960(curArch)) {
         if (selfDimSize == 0) {
             selfDimSize = 1;
         }
@@ -604,11 +609,11 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     bool flag910b = false;
     bool flagRebase = false;
     auto selfType = selfContiguous->GetDataType();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == NpuArch::DAV_2201 || IsRegbaseOrAscend960(curArch)) {
         aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST);
         scatterAddRegbaseSupport = CheckType(selfType, SCATTER_ADD_AICORE_REGBASE_DTYPE_SUPPORT_LIST);
-        flag910b = !(Ops::NN::AclnnUtil::IsRegbase(curArch));
-        flagRebase = Ops::NN::AclnnUtil::IsRegbase(curArch);
+        flag910b = !(IsRegbaseOrAscend960(curArch));
+        flagRebase = IsRegbaseOrAscend960(curArch);
     } else {
         // 转换BF16数据类型为FP32，因算子暂不支持BF16
         if (selfType == op::DataType::DT_BF16 || srcContiguous->GetDataType() == op::DataType::DT_BF16) {
@@ -621,7 +626,9 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     }
 
     aicoreSupport = aicoreSupport && (curArch != NpuArch::DAV_2002);
-    scatterAddRegbaseSupport = scatterAddRegbaseSupport && (reduction == REDUCTION_ADD) && flagRebase;
+    // Keep Ascend 960 on ScatterElementsV2 until the ScatterAdd shortcut is registered there.
+    scatterAddRegbaseSupport = scatterAddRegbaseSupport && (reduction == REDUCTION_ADD) &&
+                               Ops::NN::AclnnUtil::IsRegbase(curArch);
 
     int64_t selfDimNum = static_cast<int64_t>(selfContiguous->GetViewShape().GetDimNum());
     int64_t dimFinal = GetFinalDim(dim, selfDimNum);
@@ -746,7 +753,7 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
 
     int64_t dimInput = dimFinal;
     // 310P统一走aicpu,无需Transpose
-    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && (!Ops::NN::AclnnUtil::IsRegbase(curArch));
+    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && (!IsRegbaseOrAscend960(curArch));
     if (needTranspose) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
         CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose self failed!");
@@ -829,6 +836,14 @@ static aclnnStatus ExecScatterReduceGetWorkspaceSize(const aclTensor* self, int6
 {
     CHECK_COND(IsValidScatterReduce(reduce), ACLNN_ERR_PARAM_INVALID,
                "reduce must be one of [0(none), 1(add), 2(mul), 3(max), 4(min), 5(mean)].");
+
+    // The arch35 kernel reused on 960 always includes self in add/mul reductions.
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) &&
+        (reduce == REDUCE_ADD || reduce == REDUCE_MUL)) {
+        CHECK_COND(includeSelf, ACLNN_ERR_PARAM_INVALID,
+                   "ScatterReduce add/mul on Ascend 960 requires include_self=true.");
+    }
 
     // Tensor.scatter_reduce clones self before calling ACLNN with self == out.
     // Specialize only that bounded, contiguous FP32 sum path. Other APIs and

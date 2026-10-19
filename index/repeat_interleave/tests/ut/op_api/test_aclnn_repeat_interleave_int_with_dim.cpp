@@ -266,3 +266,13 @@ TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_19)
 }
 
 // 可以加个outputSize的校验
+
+TEST_F(l2_repeat_interleave_dim_int_test, ascend960_bfloat16_scalar_repeats)
+{
+    SocVersionManager soc(SocVersion::RESERVED_VERSION);
+    for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        NpuArchManager platform(arch);
+        SCOPED_TRACE(static_cast<int>(arch));
+        test_run({2, 3}, ACL_BF16, ACL_FORMAT_ND, {-2, 2}, 2, 1, 6, {2, 6}, ACL_BF16, ACL_FORMAT_ND);
+    }
+}

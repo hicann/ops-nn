@@ -83,10 +83,16 @@ static bool CheckNotNull(const aclTensor* selfRef, const aclTensor* mask, const 
     return true;
 }
 
+static bool IsRegbaseOrAscend960()
+{
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return Ops::NN::AclnnUtil::IsRegbase(npuArch) || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
+
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (curArch == NpuArch::DAV_2201 || IsRegbaseOrAscend960()) {
         return ASCEND910B_SELFREF_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_SELFREF_DTYPE_SUPPORT_LIST;
@@ -500,7 +506,7 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
         return ACLNN_SUCCESS;
     }
 
-    if (!Ops::NN::AclnnUtil::IsRegbase() && source->IsEmpty()) {
+    if (!IsRegbaseOrAscend960() && source->IsEmpty()) {
         // 根据实际支持情况补充
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -545,7 +551,7 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
     CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* opOut = nullptr;
-    if (!Ops::NN::AclnnUtil::IsRegbase()) { // 判断芯片架构
+    if (!IsRegbaseOrAscend960()) { // 判断芯片架构
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
         auto retStatus = ProcessBroadcast(selfRefContiguous, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());

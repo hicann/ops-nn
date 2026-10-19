@@ -22,6 +22,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 using namespace std;
 
@@ -122,4 +123,26 @@ TEST_F(l2_scatter_test, l2_scatter_test_18)
     // src empty
     test_run_invalid({10, 15, 15}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3, 5, 3}, ACL_INT64, ACL_FORMAT_ND, {0, 2},
                      {3, 5, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {10, 15, 15}, ACL_FLOAT16, ACL_FORMAT_ND, 0);
+}
+
+TEST_F(l2_scatter_test, ascend960_bfloat16_normal_and_expanded_index)
+{
+    op::SocVersionManager soc(op::SocVersion::RESERVED_VERSION);
+    for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        op::NpuArchManager platform(arch);
+        SCOPED_TRACE(static_cast<int>(arch));
+        for (bool expanded : {false, true}) {
+            auto self = TensorDesc({4, 4}, ACL_BF16, ACL_FORMAT_ND);
+            auto src = TensorDesc({2, 4}, ACL_BF16, ACL_FORMAT_ND);
+            auto out = TensorDesc({4, 4}, ACL_BF16, ACL_FORMAT_ND);
+            auto index = expanded ? TensorDesc({2, 4}, ACL_INT64, ACL_FORMAT_ND, {1, 0}, 0, {2}) :
+                                    TensorDesc({2, 4}, ACL_INT64, ACL_FORMAT_ND);
+            index.ValueRange<int64_t>(0, 3);
+            for (int64_t reduction : {0, 1, 2}) {
+                auto ut = OP_API_UT(aclnnScatter, INPUT(self, int64_t{0}, index, src, reduction), OUTPUT(out));
+                uint64_t workspaceSize = 0;
+                EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+            }
+        }
+    }
 }

@@ -15,6 +15,7 @@
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 using namespace std;
 
@@ -198,4 +199,29 @@ TEST_F(l2_scatter_reduce_test, inplace_scatter_reduce_dtype_mismatch_should_fail
 
     auto ut = OP_API_UT(aclnnInplaceScatterReduce, INPUT(self, 0, index, src, kReduceAdd, true), OUTPUT());
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_reduce_test, ascend960_add_mul_include_self)
+{
+    op::SocVersionManager soc(op::SocVersion::RESERVED_VERSION);
+    for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        op::NpuArchManager platform(arch);
+        SCOPED_TRACE(static_cast<int>(arch));
+        for (int64_t reduction : {kReduceAdd, kReduceMul}) {
+            for (bool includeSelf : {false, true}) {
+                auto self = TensorDesc({3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+                auto index = TensorDesc({1, 4}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 2, 1});
+                auto src = TensorDesc({1, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+                auto out = TensorDesc({3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+                auto expected = includeSelf ? ACLNN_SUCCESS : ACLNN_ERR_PARAM_INVALID;
+                uint64_t workspaceSize = 0;
+                auto ut = OP_API_UT(aclnnScatterReduce, INPUT(self, int64_t{0}, index, src, reduction, includeSelf),
+                                    OUTPUT(out));
+                EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), expected);
+                auto inplaceUt = OP_API_UT(aclnnInplaceScatterReduce,
+                                           INPUT(self, int64_t{0}, index, src, reduction, includeSelf), OUTPUT());
+                EXPECT_EQ(inplaceUt.TestGetWorkspaceSize(&workspaceSize), expected);
+            }
+        }
+    }
 }

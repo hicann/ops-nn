@@ -840,3 +840,35 @@ TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_large_shape_case)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+TEST_F(l2_masked_scatter_test, ascend960_bfloat16_equal_and_broadcast_masks)
+{
+    SocVersionManager soc(SocVersion::RESERVED_VERSION);
+    for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        NpuArchManager platform(arch);
+        SCOPED_TRACE(static_cast<int>(arch));
+        for (const auto& maskShape : vector<vector<int64_t>>{{2, 4}, {2, 1}, {1, 4}}) {
+            auto self = TensorDesc({2, 4}, ACL_BF16, ACL_FORMAT_ND);
+            auto mask = TensorDesc(maskShape, ACL_BOOL, ACL_FORMAT_ND);
+            auto source = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND);
+            auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(self, mask, source), OUTPUT());
+            uint64_t workspaceSize = 0;
+            EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+        }
+    }
+}
+
+TEST_F(l2_masked_scatter_test, ascend960_empty_source_with_false_mask)
+{
+    SocVersionManager soc(SocVersion::RESERVED_VERSION);
+    for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        NpuArchManager platform(arch);
+        SCOPED_TRACE(static_cast<int>(arch));
+        auto self = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto mask = TensorDesc({2, 4}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>(8, false));
+        auto source = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(self, mask, source), OUTPUT());
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    }
+}
