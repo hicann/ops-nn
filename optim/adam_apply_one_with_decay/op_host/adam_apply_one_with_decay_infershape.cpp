@@ -44,20 +44,23 @@ static ge::graphStatus InferShape4AdamApplyOneWithDecay(gert::InferShapeContext*
     auto output2_shape = context->GetOutputShape(OUTPUT2_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output2_shape);
 
-    OP_CHECK_IF(!BroadcastShape(input0_shape, input1_shape, output0_shape),
+    gert::Shape broadcast_shape;
+    OP_CHECK_IF(!BroadcastShape(input0_shape, input1_shape, &broadcast_shape),
                 OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
                         ToString(*input1_shape).c_str()),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(!BroadcastShape(input0_shape, input2_shape, output1_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
-                        ToString(*input2_shape).c_str()),
-                return ge::GRAPH_FAILED);
+    gert::Shape tmp_shape;
+    OP_CHECK_IF(!BroadcastShape(&broadcast_shape, input2_shape, &tmp_shape),
+                OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together"), return ge::GRAPH_FAILED);
+    broadcast_shape = tmp_shape;
+    OP_CHECK_IF(!BroadcastShape(&broadcast_shape, input3_shape, &tmp_shape),
+                OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together"), return ge::GRAPH_FAILED);
+    broadcast_shape = tmp_shape;
 
-    OP_CHECK_IF(!BroadcastShape(input2_shape, input3_shape, output2_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input2_shape).c_str(),
-                        ToString(*input3_shape).c_str()),
-                return ge::GRAPH_FAILED);
+    *output0_shape = broadcast_shape;
+    *output1_shape = broadcast_shape;
+    *output2_shape = broadcast_shape;
 
     return GRAPH_SUCCESS;
 }

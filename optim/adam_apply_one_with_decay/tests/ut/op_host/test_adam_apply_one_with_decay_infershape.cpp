@@ -188,3 +188,45 @@ TEST_F(AdamApplyOneWithDecayProtoTest, infer_axis_type_with_input_dim_num_great_
     gert::Shape expected_output_shape_2 = {-1, -1};
     ASSERT_EQ(Ops::Base::ToString(*output_desc_2), Ops::Base::ToString(expected_output_shape_2));
 }
+
+TEST_F(AdamApplyOneWithDecayProtoTest, infer_shape_uses_common_broadcast_shape_for_all_outputs)
+{
+    gert::Shape input0 = {1, 3};
+    gert::Shape input1 = {1, 3};
+    gert::Shape input2 = {2, 1};
+    gert::Shape input3 = {1, 1};
+    gert::Shape scalar = {1};
+    gert::Shape output0 = {};
+    gert::Shape output1 = {};
+    gert::Shape output2 = {};
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AdamApplyOneWithDecay")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input0, &input1, &input2, &input3, &scalar, &scalar, &scalar, &scalar, &scalar,
+                                    &scalar, &scalar})
+                      .OutputShapes({&output0, &output1, &output2})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(9, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(10, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const gert::Shape expected = {2, 3};
+    for (size_t i = 0; i < 3; ++i) {
+        auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(i);
+        ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expected));
+    }
+}
