@@ -207,7 +207,7 @@ static bool CheckShape(const aclTensor* input, const aclTensor* out)
     return true;
 }
 
-static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean,
+static bool CheckOtherShape(int64_t dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean,
                             const aclTensor* runningVar)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {

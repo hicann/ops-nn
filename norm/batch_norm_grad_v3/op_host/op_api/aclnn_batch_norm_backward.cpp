@@ -216,40 +216,40 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     return true;
 }
 
-static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* runningMean,
+static bool CheckOtherShape(int64_t dimC, const aclTensor* weight, const aclTensor* runningMean,
                             const aclTensor* runningVar)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of weight should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                "Dim of weight should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                 op::ToString(weight->GetViewShape()).GetString());
         return false;
     }
     if (runningMean != nullptr &&
         (runningMean->GetViewShape().GetDimNum() != 1 || runningMean->GetViewShape()[0] != dimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                "Dim of runningMean should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                 op::ToString(runningMean->GetViewShape()).GetString());
         return false;
     }
     if (runningVar != nullptr &&
         (runningVar->GetViewShape().GetDimNum() != 1 || runningVar->GetViewShape()[0] != dimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                "Dim of runningVar should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                 op::ToString(runningVar->GetViewShape()).GetString());
         return false;
     }
     return true;
 }
 
-static bool CheckSaveMeanSaveInvstdShape(int dimC, const aclTensor* saveMean, const aclTensor* saveInvstd,
+static bool CheckSaveMeanSaveInvstdShape(int64_t dimC, const aclTensor* saveMean, const aclTensor* saveInvstd,
                                          bool training)
 {
     if (saveMean != nullptr &&
         (saveMean->GetViewShape().GetDimNum() != 1 ||
          (saveMean->GetViewShape()[0] != dimC && (training || saveMean->GetViewShape()[0] != 0)))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of saveMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                "Dim of saveMean should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                 op::ToString(saveMean->GetViewShape()).GetString());
         return false;
     }
@@ -257,21 +257,21 @@ static bool CheckSaveMeanSaveInvstdShape(int dimC, const aclTensor* saveMean, co
         (saveInvstd->GetViewShape().GetDimNum() != 1 ||
          (saveInvstd->GetViewShape()[0] != dimC && (training || saveInvstd->GetViewShape()[0] != 0)))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of saveInvstd should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                "Dim of saveInvstd should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                 op::ToString(saveInvstd->GetViewShape()).GetString());
         return false;
     }
     return true;
 }
 
-static bool CheckGradWeightGradBiasShape(int dimC, const aclTensor* gradWeight, const aclTensor* gradBias,
+static bool CheckGradWeightGradBiasShape(int64_t dimC, const aclTensor* gradWeight, const aclTensor* gradBias,
                                          const aclBoolArray* outputMask)
 {
     if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
         if (gradWeight != nullptr &&
             (gradWeight->GetViewShape().GetDimNum() != 1 || gradWeight->GetViewShape()[0] != dimC)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "Dim of gradWeight should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                    "Dim of gradWeight should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                     op::ToString(gradWeight->GetViewShape()).GetString());
             return false;
         }
@@ -279,7 +279,7 @@ static bool CheckGradWeightGradBiasShape(int dimC, const aclTensor* gradWeight, 
     if ((*outputMask)[GRAD_BIAS_INDEX]) {
         if (gradBias != nullptr && (gradBias->GetViewShape().GetDimNum() != 1 || gradBias->GetViewShape()[0] != dimC)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "Dim of gradBias should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                    "Dim of gradBias should be one and shape is channel num of input[%ld], but got [%s].", dimC,
                     op::ToString(gradBias->GetViewShape()).GetString());
             return false;
         }
@@ -378,7 +378,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input,
     CHECK_RET(CheckFormat(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckShape(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
-    int dimC = GetDimC(input);
+    int64_t dimC = GetDimC(input);
     CHECK_RET(CheckOtherShape(dimC, weight, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {

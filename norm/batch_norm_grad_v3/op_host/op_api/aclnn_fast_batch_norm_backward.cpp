@@ -208,27 +208,27 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     return true;
 }
 
-static bool CheckOtherShape(int fastDimC, const aclTensor* fastWeight, const aclTensor* fastRunningMean,
+static bool CheckOtherShape(int64_t fastDimC, const aclTensor* fastWeight, const aclTensor* fastRunningMean,
                             const aclTensor* fastRunningVar)
 {
     if (fastWeight != nullptr &&
         (fastWeight->GetViewShape().GetDimNum() != 1 || fastWeight->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of weight should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                "Dim of weight should be one and shape is channel num of input[%ld], but got [%s].", fastDimC,
                 op::ToString(fastWeight->GetViewShape()).GetString());
         return false;
     }
     if (fastRunningMean != nullptr &&
         (fastRunningMean->GetViewShape().GetDimNum() != 1 || fastRunningMean->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                "Dim of runningMean should be one and shape is channel num of input[%ld], but got [%s].", fastDimC,
                 op::ToString(fastRunningMean->GetViewShape()).GetString());
         return false;
     }
     if (fastRunningVar != nullptr &&
         (fastRunningVar->GetViewShape().GetDimNum() != 1 || fastRunningVar->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                "Dim of runningVar should be one and shape is channel num of input[%ld], but got [%s].", fastDimC,
                 op::ToString(fastRunningVar->GetViewShape()).GetString());
         return false;
     }
@@ -254,7 +254,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input,
     CHECK_RET(CheckFormat(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckShape(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
-    int dimC = GetDimC(input);
+    int64_t dimC = GetDimC(input);
     CHECK_RET(CheckOtherShape(dimC, weight, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
