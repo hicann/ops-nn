@@ -290,6 +290,11 @@ function(merge_graph_headers)
   set(oneValueArgs TARGET OUT_DIR)
   cmake_parse_arguments(MGPROTO "" "${oneValueArgs}" "" ${ARGN})
   get_target_property(proto_headers ${GRAPH_PLUGIN_NAME}_proto_headers INTERFACE_SOURCES)
+  if(NOT proto_headers)
+      # the filtered ci build may compile no op that owns a per-op proto header, the
+      # get_target_property result is <var>-NOTFOUND then and would break the DEPENDS below
+      set(proto_headers "")
+  endif()
   set(proto_headers ${proto_headers} ${CMAKE_SOURCE_DIR}/common/inc/op_graph/op_nn_proto_extend.h)
   add_custom_command(OUTPUT ${MGPROTO_OUT_DIR}/ops_proto_nn.h
     COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/merge_proto.py
