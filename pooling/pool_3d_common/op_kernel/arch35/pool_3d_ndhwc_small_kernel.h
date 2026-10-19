@@ -204,6 +204,12 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::BaseCompute()
         if (tilingData_->splitMode == SPLIT_COLS) {
             onePlaneElements = ops::Aligned(onePlaneElements, eleInBlk_);
             oneBatchElements = onePlaneElements * inDeps;
+        } else if (tilingData_->splitMode == SPLIT_ROWS) {
+            // oneBatchElements 经 inputInfo.dstStride[3] 传入 CopyInMultiRows，作为
+            // loop1DstStride 写入 LOOP1_STRIDE_OUTTOUB 寄存器，该字段要求 32B 对齐
+            // (见 SetLoopModeOutParaImpl 的断言)，否则 SetLoopModePara 报错。
+            // batch 在 UB 中是独立“间隙”，向上对齐不影响 batch 内布局。
+            oneBatchElements = ops::Aligned(oneBatchElements, eleInBlk_);
         }
         TensorDescInfo inputInfo = {
             {static_cast<uint32_t>(inCols * channels), static_cast<uint32_t>(inRows), static_cast<uint32_t>(inDeps),
