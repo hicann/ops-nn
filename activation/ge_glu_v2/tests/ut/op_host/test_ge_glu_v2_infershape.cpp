@@ -43,3 +43,13 @@ TEST_F(GEGLUV2, GEGLUV2_infershape_diff_test_legal_input)
     EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_output_shape);
     EXPECT_EQ(output_gelu_desc.GetShape().GetDims(), expected_output_shape);
 }
+
+TEST_F(GEGLUV2, GEGLUV2_infershape_rejects_odd_split_dim)
+{
+    ge::op::GeGluV2 op;
+    op.UpdateInputDesc("x", create_desc({4, 4, 5}, ge::DT_FLOAT16));
+    op.SetAttr("dim", -1);
+    op.SetAttr("approximate", 1);
+    Runtime2TestParam param{{"dim", "approximate"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
+}

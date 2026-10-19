@@ -63,10 +63,14 @@ static ge::graphStatus InferShapeForGeGluV2(gert::InferShapeContext* context)
 
     // 动态shape场景split_dim_value传入-1不做处理
     auto split_dim_value = x_shape->GetDim(split_dim);
-    if (split_dim_value > 0) {
-        out_shape_y->SetDim(split_dim, split_dim_value / SPLIT_NUM);
-        out_shape_y_glu->SetDim(split_dim, split_dim_value / SPLIT_NUM);
+    if (split_dim_value == -1) {
+        return GRAPH_SUCCESS;
     }
+    OP_CHECK_IF(split_dim_value < 0 || split_dim_value % SPLIT_NUM != 0,
+                OP_LOGE("GEGLUV2", "The length of the split dimension [%ld] must be an even number.", split_dim_value),
+                return GRAPH_FAILED);
+    out_shape_y->SetDim(split_dim, split_dim_value / SPLIT_NUM);
+    out_shape_y_glu->SetDim(split_dim, split_dim_value / SPLIT_NUM);
     return GRAPH_SUCCESS;
 }
 
