@@ -15,5 +15,5 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC non_zero_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
 )
