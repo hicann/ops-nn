@@ -21,6 +21,7 @@
 #include "opdev/op_executor.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 using namespace op;
 namespace l0op {
@@ -39,9 +40,17 @@ static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_
     op::DataType::DT_INT64,    op::DataType::DT_INT8,    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN,
     op::DataType::DT_HIFLOAT8, op::DataType::DT_UINT8};
 
+static const std::initializer_list<op::DataType> ASCEND960DT_AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT,    op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,        op::DataType::DT_BF16,
+    op::DataType::DT_INT64,    op::DataType::DT_INT8,    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN,
+    op::DataType::DT_HIFLOAT8, Ops::NN::DT_HIFLOAT4,     op::DataType::DT_UINT8};
+
 inline static bool IsAiCoreSupport(const aclTensor* self)
 {
     // ScatterNdUpdate只需要判断self
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+        return CheckType(self->GetDataType(), ASCEND960DT_AICORE_DTYPE_SUPPORT_LIST);
+    }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(self->GetDataType(), ASCEND950_AICORE_DTYPE_SUPPORT_LIST);
     }

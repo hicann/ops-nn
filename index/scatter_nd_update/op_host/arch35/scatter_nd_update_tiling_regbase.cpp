@@ -22,6 +22,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_common/op_host/util/math_util.h"
 #include "error_util.h"
+#include "../../../../common/inc/op_host/op_const_def_nn.h"
 
 using namespace AscendC;
 namespace optiling {
@@ -267,6 +268,9 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(const gert::Shape&
     varStorageInAxis_ = outputStorageShapeSize_ / afterAxis_;
     sliceSize = static_cast<uint64_t>(afterAxis_);
 
+    OP_CHECK_IF(CheckShapeForHif4(varDtype_) != ge::GRAPH_SUCCESS, OP_LOGE(opName, "var type hifloat4 check fail."),
+                return ge::GRAPH_FAILED);
+
     if (context_->GetDeterministic() == 1 && indicesAxis_ > 1) {
         isDeterminstic_ = 1;
         context_->SetScheduleMode(1);
@@ -288,6 +292,38 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(const gert::Shape&
     if (indicesAxis_ / varInAxis_ >= SIMT_SORT_LIMIT) {
         isSimtWithSort_ = 1;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterNdUpdateTiling::CheckNpuArch()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterNdUpdateTiling::CheckShapeForHif4(ge::DataType varDtype)
+{
+    if (varDtype != Ops::NN::DT_HIFLOAT4) {
+        return ge::GRAPH_SUCCESS;
+    }
+    OP_CHECK_IF(CheckNpuArch() != ge::GRAPH_SUCCESS, OP_LOGE(opName, "npu 960DT check fail."), return ge::GRAPH_FAILED);
+    // hif4 仅支持连续输入：非连续分支的 outputStorageShapeSize_ 为首维行数语义（不随两两打包折半）
+    // aclnn 侧 CheckContiguousSupport 保持一致，tiling 层对称拦截
+    OP_CHECK_IF(IsContiguous_ != 1, OP_LOGE(opName, "The var of hifloat4 dtype only support contiguous input."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isAscend960DT_ && afterAxis_ % TWO != 0,
+                OP_LOGE(opName, "The number of vars in each line must be an even number."), return ge::GRAPH_FAILED);
+    // kernel 侧 hifloat4x2_t 按 int8 计算一个 GM 元素，tiling 中所有偏移/长度需同步换算为 int8 单位
+    afterAxis_ /= TWO;
+    sliceSize = static_cast<uint64_t>(afterAxis_);
+    varTypeSize_ = ge::GetSizeByDataType(ge::DT_INT8);
+    updateDtype_ = ge::DT_INT8;
+    updateShapeSize /= TWO;
+    outputShapeSize /= TWO;
+    outputStorageShapeSize_ /= TWO;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -1033,6 +1069,17 @@ ge::graphStatus ScatterNdUpdateTiling::SetStride()
     OP_CHECK_NULL_WITH_CONTEXT(context_, varShape);
     const auto& varOriginShape = EnsureNotScalar(varShape->GetOriginShape());
 
+    // hif4 的 afterAxis_/outputStorageShapeSize_ 等已在 CheckShapeForHif4 中换算为 int8 单位，
+    // stride 需同步折半，保证 kernel 侧 flat 偏移（Σ idx*stride）与 yGm_[int8] 单位一致
+    auto halveStrideForHif4 = [this]() {
+        if (varDtype_ != Ops::NN::DT_HIFLOAT4) {
+            return;
+        }
+        for (int16_t dim = 0; dim < static_cast<int16_t>(shapeRank_); ++dim) {
+            strideList[dim] /= TWO;
+        }
+    };
+
     // 检查输入是否为非连续视图
     if (context_->InputIsView(INPUT_IDX_VAR)) {
         OP_LOGI(opName, "Input is view, checking non-contiguous scenario");
@@ -1044,6 +1091,7 @@ ge::graphStatus ScatterNdUpdateTiling::SetStride()
                 strideList[dim] = varViewStride->GetStride(dim);
                 OP_LOGI(opName, "Non-contiguous stride[%d]: %llu (from view stride)", dim, strideList[dim]);
             }
+            halveStrideForHif4();
             return ge::GRAPH_SUCCESS;
         } else {
             OP_LOGI(opName, "varViewStride is null or dimNum is 0, falling back to contiguous scenario");
@@ -1060,6 +1108,7 @@ ge::graphStatus ScatterNdUpdateTiling::SetStride()
         OP_LOGI(opName, "Contiguous stride[%d]: %llu (shape[%d]: %lld, stride[%d]: %llu)", dim, strideList[dim],
                 dim + 1, varOriginShape.GetDim(dim + 1), dim + 1, strideList[dim + 1]);
     }
+    halveStrideForHif4();
     return ge::GRAPH_SUCCESS;
 }
 

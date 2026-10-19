@@ -194,7 +194,8 @@ struct GatherNdParam {
 };
 
 static void ExecuteTestCase(const GatherNdParam& opsParamInfos, uint64_t expectTilingKey,
-                            ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS, const std::string& npuArch = "",
+                            const std::string& socVersion = "Ascend950")
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -206,7 +207,11 @@ static void ExecuteTestCase(const GatherNdParam& opsParamInfos, uint64_t expectT
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> soc_version_infos = {{"Short_SoC_version", socVersion}};
+    // GetCurNpuArch 读取 version res 中的 NpuArch 键，非空时用于模拟指定平台（如 960DT 取值 9201）
+    if (!npuArch.empty()) {
+        soc_version_infos["NpuArch"] = npuArch;
+    }
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -627,6 +632,105 @@ TEST_F(AscendGatherNdTest, GatherNd_tiling_ascendc_simd_all_load_vgather)
     opsParamInfos.indicesShape = {{10, 33, 24, 1}, {10, 33, 24, 1}};
     opsParamInfos.yShape = {{10, 33, 24, 6, 41}, {10, 33, 24, 6, 41}};
     uint64_t expectTilingKey = 4000;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey);
+}
+
+// 960DT 命中 GatherDMA：尾轴字节 2048（[SIMD_THRES, DMA_THRES] 区间下边界）、indicesNum/gatherDimSize<=1
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend960dt_dma_indices32_noneg)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 1024}, {1024, 1024}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{40, 1}, {40, 1}};
+    opsParamInfos.yShape = {{40, 1024}, {40, 1024}};
+    uint64_t expectTilingKey = 50000000;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey, ge::GRAPH_SUCCESS, "9201", "Ascend960DT");
+}
+
+// 960DT 命中 GatherDMA 且支持负索引，tiling key 尾位为 1
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend960dt_dma_indices32_supportneg)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 1024}, {1024, 1024}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{40, 1}, {40, 1}};
+    opsParamInfos.yShape = {{40, 1024}, {40, 1024}};
+    uint64_t expectTilingKey = 50000001;
+    opsParamInfos.negativeIndexSupport = true;
+    ExecuteTestCase(opsParamInfos, expectTilingKey, ge::GRAPH_SUCCESS, "9201", "Ascend960DT");
+}
+
+// 960DT 尾轴字节超过 DMA_THRES(32K)，不命中 DMA 回落 SIMD
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend960dt_dma_over_thres_fallback_simd)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 20480}, {1024, 20480}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{40, 1}, {40, 1}};
+    opsParamInfos.yShape = {{40, 20480}, {40, 20480}};
+    uint64_t expectTilingKey = 11111111;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey, ge::GRAPH_SUCCESS, "9201", "Ascend960DT");
+}
+
+// 960DT 命中 GatherDMA 且 gatherDimSize*gatherSize*xDtypeSize 超过 INT32_MAX，indices 为 int32 时触发 cast，key 十位为
+// 1
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend960dt_dma_indices32_cast)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{65536, 16384}, {65536, 16384}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{40, 1}, {40, 1}};
+    opsParamInfos.yShape = {{40, 16384}, {40, 16384}};
+    uint64_t expectTilingKey = 50000010;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey, ge::GRAPH_SUCCESS, "9201", "Ascend960DT");
+}
+
+// 相同 shape 在 950 上不使能 DMA，走 SIMD 路径，验证 arch 门控不影响 950 行为
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend950_dma_shape_fallback_simd)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 1024}, {1024, 1024}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{40, 1}, {40, 1}};
+    opsParamInfos.yShape = {{40, 1024}, {40, 1024}};
+    uint64_t expectTilingKey = 11111111;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey);
+}
+
+// 960DT 尾轴字节 512 且 16 字节对齐，XDtypeImproveB128 将 x 提升至 16 字节，tiling key 中 xKey 为 B128
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend960dt_b128_improve)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 256}, {1024, 256}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{640, 1}, {640, 1}};
+    opsParamInfos.yShape = {{640, 256}, {640, 256}};
+    uint64_t expectTilingKey = 10000000001231100042;
+    opsParamInfos.negativeIndexSupport = false;
+    ExecuteTestCase(opsParamInfos, expectTilingKey, ge::GRAPH_SUCCESS, "9201", "Ascend960DT");
+}
+
+// 相同 shape 在 950 上仅提升到 B64，tiling key 中 xKey 为 B64，验证 B128 仅在 960 生效
+TEST_F(AscendGatherNdTest, GatherNd_tiling_ascend950_b128_shape_keep_b64)
+{
+    GatherNdParam opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT16;
+    opsParamInfos.xShape = {{1024, 256}, {1024, 256}};
+    opsParamInfos.indicesDtype = ge::DT_INT32;
+    opsParamInfos.indicesShape = {{640, 1}, {640, 1}};
+    opsParamInfos.yShape = {{640, 256}, {640, 256}};
+    uint64_t expectTilingKey = 10000000001231100032;
     opsParamInfos.negativeIndexSupport = false;
     ExecuteTestCase(opsParamInfos, expectTilingKey);
 }

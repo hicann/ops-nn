@@ -64,6 +64,7 @@ public:
             .ExtendCfgInfo("opFile.value", "reverse_v2_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
     }
 };
 OP_ADD(ReverseV2);

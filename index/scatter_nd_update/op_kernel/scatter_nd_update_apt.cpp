@@ -25,7 +25,11 @@ static constexpr uint64_t B8 = 1;
 
 template <typename T>
 struct GetComputeType {
-    using type = typename std::conditional<sizeof(T) == B8, int8_t, T>::type;
+    using type = typename std::conditional<std::is_same<T, hifloat4x2_t>::value, int8_t, // 优先处理特殊类型
+                                           typename std::conditional<sizeof(T) == B8,    // 处理1字节类型
+                                                                     int8_t,
+                                                                     T // 其他类型保持不变
+                                                                     >::type>::type;
 };
 
 using namespace ScatterNdUpdate;

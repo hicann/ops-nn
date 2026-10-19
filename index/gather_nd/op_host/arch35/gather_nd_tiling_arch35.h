@@ -74,6 +74,26 @@ REGISTER_TILING_DATA_CLASS(GatherNd_3100, GatherNdGaAllLoadTilingData)
 REGISTER_TILING_DATA_CLASS(GatherNd_4000, GatherNdGaAllLoadTilingData)
 REGISTER_TILING_DATA_CLASS(GatherNd_4100, GatherNdGaAllLoadTilingData)
 
+BEGIN_TILING_DATA_DEF(GatherNdGatherDmaTilingData)
+TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, xShape);
+TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, strideShape);
+TILING_DATA_FIELD_DEF(int64_t, rank);
+TILING_DATA_FIELD_DEF(int64_t, gatherSize);
+TILING_DATA_FIELD_DEF(int64_t, aSize);
+TILING_DATA_FIELD_DEF(int64_t, aSizeAligned);
+TILING_DATA_FIELD_DEF(int64_t, needCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);
+TILING_DATA_FIELD_DEF(int64_t, blockFactor);
+TILING_DATA_FIELD_DEF(int64_t, preBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, isCastIndices);
+TILING_DATA_FIELD_DEF(int64_t, indicesNum);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(GatherNd_50000000, GatherNdGatherDmaTilingData)
+REGISTER_TILING_DATA_CLASS(GatherNd_50000010, GatherNdGatherDmaTilingData) // cast
+REGISTER_TILING_DATA_CLASS(GatherNd_50000001, GatherNdGatherDmaTilingData) // neg
+REGISTER_TILING_DATA_CLASS(GatherNd_50000011, GatherNdGatherDmaTilingData) // neg + cast
+
 struct GatherNdSimtCompileInfo {};
 
 constexpr std::size_t GATHER_ND_X_DIM_LEN = 8;
@@ -103,6 +123,8 @@ protected:
     ge::graphStatus DoNormOpTiling();
     ge::graphStatus DoMixKernelOpTiling();
     void CalcSimdTiling();
+    void CalcSimdDmaTiling();
+    void XDtypeImproveB128();
     bool IsGaAllLoad() const;
     ge::graphStatus GaAllLoadTiling();
 
@@ -135,9 +157,13 @@ private:
     bool isSimd_ = false;
     bool isGaAllLoad_ = false;
     bool isMixKernel_ = false;
+    bool isAscend960DT_ = false;
+    bool isDma_ = false;
+    bool isCastIndices_ = false;
 
     GatherNdTilingData tilingData_;
     GatherNdGaAllLoadTilingData gaAllLoadTilingdata_;
+    GatherNdGatherDmaTilingData gatherDmaTilingdata_;
 };
 } // namespace optiling
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHER_ND_SIMT_ARCH35_H_

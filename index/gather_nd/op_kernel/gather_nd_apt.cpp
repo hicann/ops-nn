@@ -29,6 +29,10 @@
 #define MIX_KERNEL_X_B64_INDICES_64_INDEX_32 880UL
 #define MIX_KERNEL_X_B64_INDICES_64_INDEX_64 881UL
 
+#define SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_64_INDEX_64 10000000001231101043UL
+#define SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_64_INDEX_32 10000000001231100043UL
+#define SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_32_INDEX_32 10000000001231100042UL
+#define SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_32_INDEX_64 10000000001231101042UL
 #define SIMT_NOSUPPORT_NEGATIVE_X_B64_INDICES_64_INDEX_64 10000000001231101033UL
 #define SIMT_NOSUPPORT_NEGATIVE_X_B64_INDICES_64_INDEX_32 10000000001231100033UL
 #define SIMT_NOSUPPORT_NEGATIVE_X_B64_INDICES_32_INDEX_32 10000000001231100032UL
@@ -66,6 +70,10 @@
 #define ZERO_SHAPE_X_B16_INDICES_64 10000000000231110010UL
 #define ZERO_SHAPE_X_B8_INDICES_64 10000000000231110000UL
 #define SIMD_TILING_KEY 11111111
+#define SIMD_TILING_KEY_DMA 50000000
+#define SIMD_TILING_KEY_CAST_DMA 50000010
+#define SIMD_TILING_KEY_DMA_NEG 50000001
+#define SIMD_TILING_KEY_CAST_DMA_NEG 50000011
 #define SIMD_GA_FULL_LOAD_VGATHER_TILING_KEY 4000UL
 #define SIMD_GA_FULL_LOAD_VGATHER_SUPPORT_NEG_INDICE_TILING_KEY 4100UL
 #define SIMD_GA_ALL_LOAD_TILING_KEY 3000UL
@@ -77,6 +85,10 @@
 #include "./arch35/gather_nd_full_load_vgather.h"
 #include "./arch35/gather_nd_all_load.h"
 #include "./arch35/gather_nd_mix.h"
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#include "./arch35/gather_nd_simd_dma.h"
+#endif
 
 using namespace GatherNd;
 
@@ -113,6 +125,26 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GET_TILING_DATA_WITH_STRUCT(GatherNdGaAllLoadTilingData, tiling_data, tiling);
         GatherNdAllLoad<DTYPE_INDICES, true> op(&pipeIn);
         op.Init(x, indices, y, &tiling_data);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_64_INDEX_64)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
+        GatherNdSimt<int4, int64_t, uint64_t, false> op;
+        op.Init(x, indices, y, userWS, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_64_INDEX_32)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
+        GatherNdSimt<int4, int64_t, uint32_t, false> op;
+        op.Init(x, indices, y, userWS, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_32_INDEX_32)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
+        GatherNdSimt<int4, int32_t, uint32_t, false> op;
+        op.Init(x, indices, y, userWS, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_32_INDEX_64)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
+        GatherNdSimt<int4, int32_t, uint64_t, false> op;
+        op.Init(x, indices, y, userWS, &tiling_data, &pipeIn);
         op.Process();
     } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B64_INDICES_64_INDEX_64)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
@@ -294,6 +326,28 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GatherNdSimd<DTYPE_INDICES> op;
         op.Init(x, indices, y, &tiling_data, &pipeIn);
         op.Process();
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+    } else if (TILING_KEY_IS(SIMD_TILING_KEY_DMA)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdGatherDmaTilingData, tiling_data, tiling);
+        GatherNdSimdDma<DTYPE_INDICES, false, false> op;
+        op.Init(x, indices, y, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMD_TILING_KEY_CAST_DMA)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdGatherDmaTilingData, tiling_data, tiling);
+        GatherNdSimdDma<DTYPE_INDICES, true, false> op;
+        op.Init(x, indices, y, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMD_TILING_KEY_DMA_NEG)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdGatherDmaTilingData, tiling_data, tiling);
+        GatherNdSimdDma<DTYPE_INDICES, false, true> op;
+        op.Init(x, indices, y, &tiling_data, &pipeIn);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMD_TILING_KEY_CAST_DMA_NEG)) {
+        GET_TILING_DATA_WITH_STRUCT(GatherNdGatherDmaTilingData, tiling_data, tiling);
+        GatherNdSimdDma<DTYPE_INDICES, true, true> op;
+        op.Init(x, indices, y, &tiling_data, &pipeIn);
+        op.Process();
+#endif
     } else if (TILING_KEY_IS(MIX_KERNEL_X_B8_INDICES_32_INDEX_32)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
         GatherNdMixKernel<int8_t, int32_t, int32_t> op;

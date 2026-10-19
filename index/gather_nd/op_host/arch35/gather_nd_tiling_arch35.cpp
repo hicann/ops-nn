@@ -29,11 +29,13 @@ constexpr uint64_t INPUT_DTYPE_B8 = 1;
 constexpr uint64_t INPUT_DTYPE_B16 = 2;
 constexpr uint64_t INPUT_DTYPE_B32 = 4;
 constexpr uint64_t INPUT_DTYPE_B64 = 8;
+constexpr uint64_t INPUT_DTYPE_B128 = 16;
 
 constexpr int64_t DTYPE_B8_KEY = 0;
 constexpr int64_t DTYPE_B16_KEY = 1;
 constexpr int64_t DTYPE_B32_KEY = 2;
 constexpr int64_t DTYPE_B64_KEY = 3;
+constexpr int64_t DTYPE_B128_KEY = 4;
 
 constexpr size_t GATHER_ND_X_IDX = 0;
 constexpr size_t GATHER_ND_INDICES_IDX = 1;
@@ -45,11 +47,13 @@ constexpr uint64_t MIN_INDICES_NUM = 640;
 constexpr uint64_t DIM_8 = 8;
 
 const static uint64_t SIMD_THRES = 2048;
+const static uint64_t DMA_THRES = 32 * 1024UL;
 const static uint64_t BUFFER_NUM = 2;
 const static uint64_t INDICES_SIZE = 16 * 1024UL;
 constexpr int32_t RESERVE_BUFFER_SIZE = 1024;
 
 const static uint64_t SIMD_TILING_KEY = 11111111;
+const static uint64_t DMA_TILING_KEY_BASE = 50000000;
 
 #ifdef DAVID_FPGA
 constexpr uint32_t SINGLE_CORE_MIN_NUM = 128;
@@ -155,6 +159,54 @@ void GatherNdSimtTiling::CalcSimdTiling()
     tilingData_.set_blockNum(needCoreNum);
 }
 
+void GatherNdSimtTiling::CalcSimdDmaTiling()
+{
+    if (gatherDimSize_ * gatherSize_ * xDtypeSize_ >= INT32_MAX && indicesDtypeSize_ == INPUT_DTYPE_B32) {
+        isCastIndices_ = 1;
+    }
+
+    // 先按indices分核
+    uint64_t blockFactor = indicesNum_ / coreNum_;
+    uint64_t preBlockFactor = indicesNum_ - blockFactor * coreNum_;
+    uint64_t ubBlockSize = static_cast<uint64_t>(GetUbBlockSize(context_));
+    uint64_t needCoreNum = preBlockFactor;
+    if (blockFactor > static_cast<uint64_t>(0)) {
+        needCoreNum = coreNum_;
+    }
+
+    // 再分Ub
+    ubSize_ += DCACHE_SIZE;
+    int64_t aSize = static_cast<int64_t>(gatherSize_) * static_cast<int64_t>(xDtypeSize_);
+    uint64_t aSizeAligned = (aSize + ubBlockSize - 1) / ubBlockSize * ubBlockSize;
+    uint64_t ubFactor = (ubSize_ - HELP_BUFFER_SIZE) / BUFFER_NUM /
+                        (indicesDtypeSize_ + aSizeAligned + sizeof(int64_t));
+    int64_t restSize = static_cast<int64_t>(-1);
+    ubFactor += 1;
+    while (restSize <= 0) {
+        --ubFactor;
+        restSize = (ubSize_ - HELP_BUFFER_SIZE) / BUFFER_NUM - ubFactor * aSizeAligned -    // 尾轴内存
+                   Ops::Base::CeilAlign(ubFactor * indicesDtypeSize_ * rank_, ubBlockSize); // indices内存
+        if (isCastIndices_) {
+            restSize -= Ops::Base::CeilAlign(ubFactor * INPUT_DTYPE_B64, ubBlockSize); // 考虑offest内存
+        } else {
+            restSize -= Ops::Base::CeilAlign(ubFactor * indicesDtypeSize_, ubBlockSize);
+        }
+    }
+
+    gatherDmaTilingdata_.set_xShape(xShape_);
+    gatherDmaTilingdata_.set_strideShape(strideShape_);
+    gatherDmaTilingdata_.set_rank(rank_);
+    gatherDmaTilingdata_.set_gatherSize(gatherSize_);
+    gatherDmaTilingdata_.set_aSize(aSize);
+    gatherDmaTilingdata_.set_aSizeAligned(aSizeAligned);
+    gatherDmaTilingdata_.set_needCoreNum(needCoreNum);
+    gatherDmaTilingdata_.set_indicesNum(indicesNum_);
+    gatherDmaTilingdata_.set_ubFactor(ubFactor);
+    gatherDmaTilingdata_.set_blockFactor(blockFactor);
+    gatherDmaTilingdata_.set_preBlockFactor(preBlockFactor);
+    gatherDmaTilingdata_.set_isCastIndices(isCastIndices_);
+}
+
 ge::graphStatus GatherNdSimtTiling::GetXShapeInfo()
 {
     // x
@@ -194,6 +246,11 @@ ge::graphStatus GatherNdSimtTiling::GetXShapeInfo()
         isZeroShape_ = isZeroShape_ || (gatherSize_ == static_cast<uint64_t>(0));
     }
     xShape_[rank_] = gatherSize_;
+
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -399,6 +456,12 @@ ge::graphStatus GatherNdSimtTiling::DoOpTiling()
     }
     if (gatherSize_ * xDtypeSize_ >= SIMD_THRES && ubSize_ >= BUFFER_NUM * INDICES_SIZE &&
         indicesNum_ >= coreNum_ / BUFFER_NUM) {
+        // 960DT部分场景使用GatherDMA增强性能
+        if (isAscend960DT_ && gatherSize_ * xDtypeSize_ <= DMA_THRES && indicesNum_ / gatherDimSize_ <= 1) {
+            isDma_ = true;
+            CalcSimdDmaTiling();
+            return ge::GRAPH_SUCCESS;
+        }
         isSimd_ = true;
         CalcSimdTiling();
         return ge::GRAPH_SUCCESS;
@@ -453,9 +516,33 @@ ge::graphStatus GatherNdSimtTiling::DoBroadCastOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void GatherNdSimtTiling::XDtypeImproveB128()
+{
+    uint64_t lastAxisByte = gatherSize_ * xDtypeSize_;
+    if (isAscend960DT_ && rank_ > static_cast<uint64_t>(0) && !negativeIndexSupport_) {
+        if ((xDtypeSize_ < INPUT_DTYPE_B128) && ((lastAxisByte % INPUT_DTYPE_B128) == 0)) {
+            OP_LOGD("GatherNdSimt", "XDtypeImprove lastAxisByte %ld, improve to INPUT_DTYPE_B128", lastAxisByte);
+            OP_LOGD("GatherNdSimt", "XDtypeImprove before gatherSize_ %ld, xDtypeSize_ is %ld", gatherSize_,
+                    xDtypeSize_);
+            improveDtypeSize_ = INPUT_DTYPE_B128;
+            gatherSize_ = gatherSize_ / (improveDtypeSize_ / xDtypeSize_);
+            xShape_[rank_] = gatherSize_;
+            outputSize_ = indicesNum_ * gatherSize_;
+            xDtypeSize_ = improveDtypeSize_;
+            OP_LOGD("GatherNdSimt", "XDtypeImprove after gatherSize_ %ld, xDtypeSize_ is %ld", gatherSize_,
+                    xDtypeSize_);
+        }
+
+        tilingData_.set_gatherSize(gatherSize_);
+        tilingData_.set_outputSize(outputSize_);
+        tilingData_.set_xShape(xShape_);
+    }
+}
+
 ge::graphStatus GatherNdSimtTiling::DoNormOpTiling()
 {
     OP_LOGD("GatherNdSimt", "DoNormOpTiling");
+    XDtypeImproveB128();
     uint64_t xRatio = gatherSize_ * xDtypeSize_;
     uint64_t indicesRatio = rank_ * indicesDtypeSize_;
     OP_LOGD("GatherNdSimt", "xRatio is %ld, indicesRatio is %ld", xRatio, indicesRatio);
@@ -546,6 +633,13 @@ uint64_t GatherNdSimtTiling::GetTilingKey() const
     if (isSimd_) {
         OP_LOGD("GatherNdSimt", "tilingKey is %lu", SIMD_TILING_KEY);
         return SIMD_TILING_KEY;
+    } else if (isDma_) {
+        uint64_t tens = isCastIndices_ ? static_cast<uint64_t>(1) : static_cast<uint64_t>(0);
+        uint64_t units = negativeIndexSupport_ ? static_cast<uint64_t>(1) : static_cast<uint64_t>(0);
+        constexpr uint64_t DIGIT_TEN = 10;
+        uint64_t tilingKey = DMA_TILING_KEY_BASE + DIGIT_TEN * tens + units;
+        OP_LOGD("GatherNdSimt", "tilingKey is %lu", tilingKey);
+        return tilingKey;
     } else if (isGaAllLoad_) {
         uint64_t tilingKey = gaAllLoadBaseTilingKey_;
         uint64_t tilingBase = negativeIndexSupport_ ? static_cast<uint64_t>(NEG_INDICES_SUPPORT_BASE_KEY) :
@@ -572,8 +666,10 @@ uint64_t GatherNdSimtTiling::GetTilingKey() const
     uint32_t indicesKey = (indicesDtypeSize_ == INPUT_DTYPE_B64 || rank_ == static_cast<uint32_t>(0) || isZeroShape_) ?
                               static_cast<uint32_t>(DTYPE_B64_KEY) :
                               static_cast<uint32_t>(DTYPE_B32_KEY);
-    uint32_t xKey = DTYPE_B64_KEY;
-    if (xDtypeSize_ == INPUT_DTYPE_B32) {
+    uint32_t xKey = DTYPE_B128_KEY;
+    if (xDtypeSize_ == INPUT_DTYPE_B64) {
+        xKey = static_cast<uint32_t>(DTYPE_B64_KEY);
+    } else if (xDtypeSize_ == INPUT_DTYPE_B32) {
         xKey = static_cast<uint32_t>(DTYPE_B32_KEY);
     } else if (xDtypeSize_ == INPUT_DTYPE_B16) {
         xKey = static_cast<uint32_t>(DTYPE_B16_KEY);
@@ -619,6 +715,11 @@ ge::graphStatus GatherNdSimtTiling::PostTiling()
         gaAllLoadTilingdata_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                                           context_->GetRawTilingData()->GetCapacity());
         context_->GetRawTilingData()->SetDataSize(gaAllLoadTilingdata_.GetDataSize());
+    } else if (isDma_) {
+        context_->SetBlockDim(gatherDmaTilingdata_.get_needCoreNum());
+        gatherDmaTilingdata_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                          context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(gatherDmaTilingdata_.GetDataSize());
     } else {
         context_->SetBlockDim(tilingData_.get_blockNum());
         tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());

@@ -82,6 +82,8 @@ protected:
     ge::graphStatus PostTiling() override;
     ge::graphStatus GenerateTilingKey();
     void DumpTilingInfo() override;
+    ge::graphStatus CheckShapeForHif4(ge::DataType varDtype);
+    ge::graphStatus CheckNpuArch();
 
 private:
     ge::graphStatus UbTiling();
@@ -174,6 +176,8 @@ private:
     int64_t updateColUbFactor_ = 0;
     int64_t colIndicesLoopSize_ = 0;
     int64_t colIndicesTailNum_ = 0;
+
+    bool isAscend960DT_ = false;
 
     const char* opName = "ScatterNdUpdate";
 };

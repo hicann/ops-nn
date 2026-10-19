@@ -25,6 +25,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_executor.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,11 @@ static const std::initializer_list<op::DataType> ASCEND950_DTYPE_DTYPE_SUPPORT_L
     op::DataType::DT_INT64,    op::DataType::DT_INT8,    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN,
     op::DataType::DT_HIFLOAT8, op::DataType::DT_UINT8};
 
+static const std::initializer_list<op::DataType> ASCEND960_DTYPE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT,    op::DataType::DT_FLOAT16, op::DataType::DT_BOOL,        op::DataType::DT_BF16,
+    op::DataType::DT_INT64,    op::DataType::DT_INT8,    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN,
+    op::DataType::DT_HIFLOAT8, Ops::NN::DT_HIFLOAT4,     op::DataType::DT_UINT8};
+
 static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
                                                                              op::DataType::DT_INT32};
 
@@ -57,6 +63,9 @@ static bool CheckNotNull(aclTensor* varRef, const aclTensor* indices, const aclT
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto socVersion = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if (socVersion == NpuArch::DAV_9201) {
+        return ASCEND960_DTYPE_DTYPE_SUPPORT_LIST;
+    }
     if (socVersion == NpuArch::DAV_3510) {
         return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
     }
@@ -85,6 +94,49 @@ static bool CheckDtypeValid(aclTensor* varRef, const aclTensor* indices, const a
     return true;
 }
 
+static bool IsNonContiguous(const aclTensor* varRef)
+{
+    if (varRef == nullptr) {
+        return false;
+    }
+    op::Shape shapeI = varRef->GetViewShape();
+    auto dimNum = static_cast<int64_t>(shapeI.GetDimNum());
+    // 0 维张量视为平凡连续，交由后续维度校验返回错误码，避免 strides 下标越界
+    if (dimNum <= 0) {
+        return false;
+    }
+    auto shapeIStride = varRef->GetViewStrides();
+    if (static_cast<int64_t>(shapeIStride.size()) != dimNum) {
+        return false;
+    }
+    // size 为 1 的维度其 stride 不参与内存布局，跳过连续性判定（与 IsAxesContiguous 语义一致），
+    // 避免合法的连续输入（如部分 reshape/squeeze 后 size=1 维 stride 不规范）被误判为非连续
+    int64_t validStride = 1;
+    for (int64_t j = dimNum - 1; j >= 0; j--) {
+        if (shapeI.GetDim(j) == 1) {
+            continue;
+        }
+        if (shapeIStride[j] != validStride) {
+            return true;
+        }
+        validStride *= shapeI.GetDim(j);
+    }
+
+    return false;
+}
+
+static bool CheckContiguousSupport(aclTensor* varRef, const aclTensor* updates)
+{
+    auto varIsNonCon = IsNonContiguous(varRef);
+    auto updatesIsNonCon = IsNonContiguous(updates);
+    if (varRef->GetDataType() == Ops::NN::DT_HIFLOAT4 && (varIsNonCon || updatesIsNonCon)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "varRef and updates dtype is hifloat4, non-continuous is not supported.");
+        return false;
+    }
+
+    return true;
+}
+
 static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, const aclTensor* updates)
 {
     // 1. 检查参数是否为空指针
@@ -92,6 +144,9 @@ static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, cons
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(varRef, indices, updates), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查hifloat4仅支持连续
+    CHECK_RET(CheckContiguousSupport(varRef, updates), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

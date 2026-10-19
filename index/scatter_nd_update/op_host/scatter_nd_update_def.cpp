@@ -12,6 +12,8 @@
  * \brief ScatterNdUpdate ophost
  */
 #include "register/op_def_registry.h"
+// opbuild 工具编译 def 时仅注入工具链 include（无仓根 -I），须用相对路径引用仓内公共头
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace ops {
 class ScatterNdUpdate : public OpDef {
@@ -85,6 +87,82 @@ public:
             .ExtendCfgInfo("opFile.value", "scatter_nd_update_apt");
         this->AICore().AddConfig("ascend950", aicore_config);
         this->AICore().AddConfig("ascend350", aicore_config);
+
+        OpAICoreConfig aicoreConfigArch35Hif4;
+        aicoreConfigArch35Hif4.Input("var")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64,         ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,
+                       ge::DT_BF16,          ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
+                       ge::DT_HIFLOAT8,      Ops::NN::DT_HIFLOAT4, ge::DT_UINT8,         ge::DT_INT64,
+                       ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,       ge::DT_BF16,
+                       ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
+                       Ops::NN::DT_HIFLOAT4, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
+        aicoreConfigArch35Hif4.Input("indices")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
+        aicoreConfigArch35Hif4.Input("updates")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64,         ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,
+                       ge::DT_BF16,          ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
+                       ge::DT_HIFLOAT8,      Ops::NN::DT_HIFLOAT4, ge::DT_UINT8,         ge::DT_INT64,
+                       ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,       ge::DT_BF16,
+                       ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
+                       Ops::NN::DT_HIFLOAT4, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
+        aicoreConfigArch35Hif4.Output("var")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT64,         ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,
+                       ge::DT_BF16,          ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
+                       ge::DT_HIFLOAT8,      Ops::NN::DT_HIFLOAT4, ge::DT_UINT8,         ge::DT_INT64,
+                       ge::DT_INT8,          ge::DT_FLOAT,         ge::DT_FLOAT16,       ge::DT_BF16,
+                       ge::DT_BOOL,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
+                       Ops::NN::DT_HIFLOAT4, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND});
+        aicoreConfigArch35Hif4.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "scatter_nd_update_apt");
+        this->AICore().AddConfig("ascend960dt", aicoreConfigArch35Hif4);
 
         OpAICoreConfig aicoreConfigArch22;
         aicoreConfigArch22.Input("var")
