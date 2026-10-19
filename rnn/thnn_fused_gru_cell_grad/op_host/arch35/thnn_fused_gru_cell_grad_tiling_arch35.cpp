@@ -71,7 +71,7 @@ inline int64_t LargestPow2StrictlyBelow(int64_t n)
     return p;
 }
 
-// CalLog2 = floor(log2(x))（x ≥ 1；循环条件 x > 1 保证入参恒正，按无符号移位规避有符号右移，G.EXP.27）
+// CalLog2 = floor(log2(x))（x ≥ 1；循环条件 x > 1 保证入参恒正，按无符号移位规避有符号右移）
 inline int64_t FloorLog2(int64_t x)
 {
     int64_t r = 0;
