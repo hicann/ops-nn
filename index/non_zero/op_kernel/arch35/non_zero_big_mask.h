@@ -18,6 +18,7 @@
 
 #include "op_kernel/platform_util.h"
 #include "kernel_operator.h"
+#include "non_zero_core_num.h"
 
 namespace NonZero {
 using namespace Ops::Base;
@@ -29,8 +30,6 @@ using AscendC::Reg::UnPack;
 
 const int32_t BUFFER_NUM = 2;
 const int32_t MULTIP_UB_SIZE = 32 * 3;
-const int32_t REDUCE_UB_SIZE = 72 * 128;
-const int32_t WORKSPACE_SIZE = 72 * 128;
 
 constexpr uint64_t NON_ZERO_OUTSHAPE_DIM = 0x80000002;
 constexpr int32_t IDX_NUM_0 = 0;
@@ -162,10 +161,12 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::InitBase(GM_ADDR x, GM_ADDR y, GM
     xGm_.SetGlobalBuffer((__gm__ T1*)x);
     yGm_.SetGlobalBuffer((__gm__ int32_t*)y);
     shapeGm_.SetGlobalBuffer((__gm__ uint64_t*)outShape);
+    // 归约区按实际参与计算的核数分配，核数不超过 CORE_NUM_CAP 时与历史大小一致
+    int32_t reduceRegionSize = GetReduceRegionSize(tilingData->realCoreNum, REDUCE_SLOT_NUM_BIG);
     if constexpr (sizeof(T1) == sizeof(int64_t)) {
-        workspaceGmB64_.SetGlobalBuffer((__gm__ int64_t*)workspace, WORKSPACE_SIZE);
+        workspaceGmB64_.SetGlobalBuffer((__gm__ int64_t*)workspace, reduceRegionSize);
     } else {
-        workspaceGm_.SetGlobalBuffer((__gm__ int32_t*)workspace, WORKSPACE_SIZE);
+        workspaceGm_.SetGlobalBuffer((__gm__ int32_t*)workspace, reduceRegionSize);
     }
     blockIdx_ = GetBlockIdx();
     tiling_ = tilingData;
@@ -177,7 +178,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::InitBase(GM_ADDR x, GM_ADDR y, GM
 
     pipe.InitBuffer(inQueX_, BUFFER_NUM, xInputSize);
     pipe.InitBuffer(outQueY_, BUFFER_NUM, yOutputSize);
-    pipe.InitBuffer(addUb, REDUCE_UB_SIZE);
+    pipe.InitBuffer(addUb, reduceRegionSize);
     pipe.InitBuffer(multipDimUb, MULTIP_UB_SIZE);
 }
 

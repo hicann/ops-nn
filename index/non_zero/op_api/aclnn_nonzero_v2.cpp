@@ -28,6 +28,7 @@
 #include "opdev/platform.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def_nn.h"
+#include "nonzero_arch.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -64,7 +65,7 @@ static bool IsAiCoreSupport(const aclTensor* self)
             return false;
         }
         return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
-    } else if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    } else if (NonZeroArch::IsRegbaseOrArch92(curArch)) {
         return CheckType(self->GetDataType(), REGBASE_AICORE_DTYPE_SUPPORT_LIST);
     }
     return false;
@@ -80,7 +81,7 @@ inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch) || NonZeroArch::IsArch92(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -141,7 +142,9 @@ aclnnStatus aclnnNonzeroV2GetWorkspaceSize(const aclTensor* self, aclTensor* out
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && IsAiCoreSupport(self) && !IsContiguous(out)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((curArch == NpuArch::DAV_3510 || NonZeroArch::IsArch92(curArch)) && IsAiCoreSupport(self) &&
+        !IsContiguous(out)) {
         auto outContiguous = l0op::Contiguous(out, uniqueExecutor.get());
         CHECK_RET(outContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto outC = const_cast<aclTensor*>(outContiguous);

@@ -28,6 +28,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "nonzero_arch.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -63,7 +64,7 @@ inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (NonZeroArch::IsRegbaseOrArch92(curArch)) {
         return REGBASE_DTYPE_SUPPORT_LIST;
     }
     if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {

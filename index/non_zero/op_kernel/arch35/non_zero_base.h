@@ -17,6 +17,7 @@
 
 #include "op_kernel/platform_util.h"
 #include "kernel_operator.h"
+#include "non_zero_core_num.h"
 
 namespace NonZero {
 using namespace Ops::Base;
@@ -48,7 +49,6 @@ constexpr int32_t DIM17 = 17;
 constexpr int32_t DIM18 = 18;
 constexpr int64_t DB_BUFFER = 2;
 const int32_t ONE_BLOCK = 32;
-const int32_t ALL_CORE_NUM = 72 * 32;
 const int32_t MAX_SHAPE = 7;
 const uint32_t VF_LEN_INT64 = GetVRegSize() / sizeof(int64_t);
 const uint32_t VF_LEN_INT32 = GetVRegSize() / sizeof(int32_t);
@@ -227,10 +227,12 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::InitBase(GM_ADDR x, GM_A
     xGm_.SetGlobalBuffer((__gm__ T1*)x);
     yGm_.SetGlobalBuffer((__gm__ T2*)y);
     shapeGm_.SetGlobalBuffer((__gm__ uint64_t*)outShape);
-    workspaceGm_.SetGlobalBuffer((__gm__ uint32_t*)workspace, ALL_CORE_NUM);
+    // 归约区按实际参与计算的核数分配，核数不超过 CORE_NUM_CAP 时与历史大小一致
+    int32_t reduceRegionSize = GetReduceRegionSize(tilingData->realCoreNum, REDUCE_SLOT_NUM_SMALL);
+    workspaceGm_.SetGlobalBuffer((__gm__ uint32_t*)workspace, reduceRegionSize);
     tilingData_ = tilingData;
     pipe.InitBuffer(inQueX_, 2, tilingData_->xInputSize);
-    pipe.InitBuffer(addUb, ADD_UB_SIZE);
+    pipe.InitBuffer(addUb, reduceRegionSize);
     pipe.InitBuffer(maskUb, tilingData_->maskSize);
 }
 

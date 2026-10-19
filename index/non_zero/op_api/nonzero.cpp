@@ -22,6 +22,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "nonzero_arch.h"
 
 using namespace op;
 
@@ -47,7 +48,7 @@ static bool IsAiCoreSupport(const aclTensor* self)
             return false;
         }
         return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
-    } else if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    } else if (NonZeroArch::IsRegbaseOrArch92(curArch)) {
         return CheckType(self->GetDataType(), REGBASE_AICORE_DTYPE_SUPPORT_LIST);
     }
     return false;
@@ -57,7 +58,7 @@ static bool IsAiCoreSupport(const aclTensor* self)
 static aclTensor* NonzeroAiCore(const aclTensor* self, aclTensor* out, bool transpose, aclOpExecutor* executor)
 {
     L0_DFX(NonzeroAiCore, self, out, transpose);
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
+    if (NonZeroArch::IsRegbaseOrArch92(GetCurrentPlatformInfo().GetCurNpuArch())) {
         Shape outShapeShape{NONZERO_TENSOR_DIMS_MAX + 1};
         auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(NonZero, OP_INPUT(self), OP_OUTPUT(out),

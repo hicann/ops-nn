@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <algorithm>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
@@ -37,11 +38,13 @@ constexpr size_t SHAPE_DIM_7 = 7;
 constexpr size_t SHAPE_DIM_8 = 8;
 constexpr size_t DIV_NUM = 2;
 constexpr int64_t SHAPE_DIM_MAX = 7;
-constexpr int64_t WORKSPACE_SIZE_OFFSET = 9216L; // 72 * 128
-constexpr int64_t WORKSPACE_SIZE = 16 * 1024 * 1024 + WORKSPACE_SIZE_OFFSET;
+constexpr int64_t WORKSPACE_SIZE_BASE = 16 * 1024 * 1024;
 constexpr int64_t TMP_UB_SIZE_SMALL = 128;
-constexpr int64_t TMP_UB_SIZE_BIG = 2304L;    // 72 * 32
-constexpr int64_t TMP_UB_SIZE_BIGMASK = 9216; // 72 * 128
+// 跨核归约预留的基准核数，实际核数超过该值时按实际核数计算，以兼容核数更多的芯片(如 Ascend960)
+constexpr int64_t CORE_NUM_CAP = 72;
+// 每核在归约区中占用的槽位数：small mask 路径 32，big mask 路径 128
+constexpr int64_t REDUCE_SLOT_NUM_SMALL = 32;
+constexpr int64_t REDUCE_SLOT_NUM_BIG = 128;
 constexpr int64_t ALIGN_UB_SIZE = 256;
 constexpr int64_t ALIGN_UB_32 = 32;
 constexpr int64_t ALIGN_NUM = 32;
@@ -121,6 +124,11 @@ private:
     void PrintNullTensorTilingData();
     ge::graphStatus DoTilingForNullInputTensor();
     bool IsUseFullLoad() const;
+    // 跨核归约占用的 UB 预留量，按实际核数动态计算；核数不超过 CORE_NUM_CAP 时与历史取值一致
+    int64_t GetSmallMaskUbReserve() const { return std::max(coreNum_, CORE_NUM_CAP) * REDUCE_SLOT_NUM_SMALL; }
+    int64_t GetBigMaskUbReserve() const { return std::max(coreNum_, CORE_NUM_CAP) * REDUCE_SLOT_NUM_BIG; }
+    // GM workspace = 框架预留 + big mask 跨核归约区
+    int64_t GetWorkspaceSize() const { return WORKSPACE_SIZE_BASE + GetBigMaskUbReserve(); }
 
 private:
     int64_t inputDims_ = 0;
@@ -385,7 +393,8 @@ void NonZeroAscendCTilingImpl::CalcMaskLoopNum(int64_t numInput)
 
 void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
 {
-    inputUbSize_ = FloorDiv(((ubSize_ - TMP_UB_SIZE_BIG - maskUbSize_) / DIV_NUM), static_cast<uint64_t>(ALIGN_UB_32)) *
+    inputUbSize_ = FloorDiv(((ubSize_ - GetSmallMaskUbReserve() - maskUbSize_) / DIV_NUM),
+                            static_cast<uint64_t>(ALIGN_UB_32)) *
                    ALIGN_UB_32;
     int64_t numInput = inputUbSize_ / inputDtypeSize_;
 
@@ -401,7 +410,8 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
         loopNumTailCore_ = loopNumTailCore_ - 1;
     }
     loopTailTailCore_ = numTailCore_ - loopNumTailCore_ * ubFactorNum_;
-    inputUbSize_ = FloorDiv(((ubSize_ - TMP_UB_SIZE_BIG - maskUbSize_) / DIV_NUM), static_cast<uint64_t>(ALIGN_UB_32)) *
+    inputUbSize_ = FloorDiv(((ubSize_ - GetSmallMaskUbReserve() - maskUbSize_) / DIV_NUM),
+                            static_cast<uint64_t>(ALIGN_UB_32)) *
                    ALIGN_UB_32;
     int32_t inputDimsNew = inputDims_;
     // 输出是int32且需要转置场景
@@ -442,7 +452,7 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
 
 void NonZeroAscendCTilingImpl::CalcUbSizeInfoBigMask()
 {
-    ubFactorNum_ = (ubSize_ - TMP_UB_SIZE_BIGMASK) / static_cast<int64_t>(DIV_NUM) /
+    ubFactorNum_ = (ubSize_ - GetBigMaskUbReserve()) / static_cast<int64_t>(DIV_NUM) /
                    (inputDtypeSize_ + VSQZ_UB_SIZE + inputDims_ * outputDtypeSize_);
     // 按照256Byte向下对齐
     ubAlignNum_ = ALIGN_UB_SIZE / inputDtypeSize_;
@@ -531,7 +541,7 @@ ge::graphStatus NonZeroAscendCTilingImpl::DoTiling()
     for (size_t i = 0; i < xShape_.GetDimNum(); i++) {
         innerSize_ *= xShape_.GetDim(i);
     }
-    maskUbSizeThres_ = (ubSize_ - TMP_UB_SIZE_BIGMASK) / HALF_PARAM;
+    maskUbSizeThres_ = (ubSize_ - GetBigMaskUbReserve()) / HALF_PARAM;
 
     // match tiling strategy and calc Ub size info
     if (IsUseFullLoad()) {
@@ -550,7 +560,7 @@ ge::graphStatus NonZeroAscendCTilingImpl::DoTiling()
     context_->SetScheduleMode(1);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = WORKSPACE_SIZE;
+    workspaces[0] = GetWorkspaceSize();
     OP_LOGD(context_->GetNodeName(), "Exit NonZeroAscendCTilingImpl DoTiling.");
     return ge::GRAPH_SUCCESS;
 }
