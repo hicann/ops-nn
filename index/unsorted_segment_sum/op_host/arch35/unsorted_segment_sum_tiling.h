@@ -60,6 +60,10 @@ protected:
     std::tuple<uint64_t, uint64_t> AutoTiling(uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize,
                                               bool colTileNumMin = false);
     ge::graphStatus GetCastType();
+    // ascend960dt/ascend960pr(DAV_9201/DAV_9202) 平台判定，用于 960 专属特性(ScatterDataCopy 等)的运行时开关
+    bool IsArch92Platform();
+    // 判定 output fullload 模板是否可承接当前 shape/dtype(无副作用，仅供其他模板做优先级让位判断)
+    bool OutFlIsCapable() const;
 
 public:
     uint64_t ubSize_ = 0;

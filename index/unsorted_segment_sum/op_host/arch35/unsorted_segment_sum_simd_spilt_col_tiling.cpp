@@ -25,9 +25,17 @@ static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 static constexpr uint64_t BASE_A_SIZE = 1024;
+static constexpr uint64_t RATIO_BY_SORT = 5; // ascend960dt/ascend960pr 上的行/列比例阈值
 
 bool UnsortedSegmentSumSimdSplitColTiling::IsCapable()
 {
+    if (IsArch92Platform()) {
+        // 960 上不再限制 inputOuterDim_ < totalCoreNum_，改为按行/列比例让位给行方向切分的模板
+        if (innerDim_ * valueTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND && ratio_ > RATIO_BY_SORT) {
+            return IsFullLoad();
+        }
+        return false;
+    }
     if (inputOuterDim_ < totalCoreNum_ && innerDim_ * valueTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND) {
         return IsFullLoad();
     }

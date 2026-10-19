@@ -34,6 +34,10 @@ bool UnsortedSegmentSumDetermSmallInnerDimTiling::IsCapable()
 {
     OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] DetermSmallInnerDim GetDeterministic state: %u",
             context_->GetDeterministic());
+    // 960 kernel 未提供 deterministic small innerdim 模板，由 deterministic 模板承接该场景
+    if (IsArch92Platform()) {
+        return false;
+    }
     if (context_->GetDeterministic() != 1 || dataShapeSize_ == 0 || innerDim_ != 1 ||
         inputOuterDim_ >= INPUT_OUTER_DIM_THRESHOLD ||
         deterministicSupportType.find(dataType_) == deterministicSupportType.end()) {

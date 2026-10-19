@@ -27,6 +27,8 @@ static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t RATIO_BY_SORT = 5;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
+static constexpr uint64_t OFFSET_TYPESIZE = 8;              // int64_t offset for ScatterDataCopy
+static constexpr uint64_t SCATTER_OFFSET_NUM_LIMIT = 65535; // uint16_t offsetNum upper bound
 
 static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 
@@ -59,6 +61,7 @@ void UnsortedSegmentSumSimdNonSortTiling::SetTilingData()
     tilingData->baseS = baseS_;
     tilingData->baseA = baseA_;
     tilingData->usedCoreNum = usedCoreNum_;
+    tilingData->useScatterDMA = useScatterDMA_;
 }
 
 ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
@@ -94,7 +97,33 @@ ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
 
     // ub split
     baseA_ = std::min(normBlockA_, maxBaseA);
-    baseS_ = (ubSize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * valueTypeBytes_ + idTypeBytes_);
+
+    // ascend960dt/ascend960pr 支持 ScatterDataCopy，baseS 计算需为 offsetBuf 预留空间
+    bool scatterSupported = IsArch92Platform();
+    uint64_t baseS;
+    if (scatterSupported) {
+        baseS = (ubSize_ - BUFFER_NUM * ubBlockSize_) /
+                (BUFFER_NUM * (baseA_ * valueTypeBytes_ + idTypeBytes_) + OFFSET_TYPESIZE);
+        if (baseS == 0) {
+            baseS = 1;
+        }
+        if (baseS > SCATTER_OFFSET_NUM_LIMIT) {
+            // uint16_t offsetNum can hold at most 65535 rows
+            baseS = SCATTER_OFFSET_NUM_LIMIT;
+        }
+    } else {
+        baseS = (ubSize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * valueTypeBytes_ + idTypeBytes_);
+    }
+    baseS_ = baseS;
+
+    if (scatterSupported) {
+        uint64_t offsetBufSize = Ops::Base::CeilAlign(baseS_ * OFFSET_TYPESIZE, ubBlockSize_);
+        uint64_t totalCost = BUFFER_NUM * (ubBlockSize_ + baseS_ * (baseA_ * valueTypeBytes_ + idTypeBytes_)) +
+                             offsetBufSize;
+        useScatterDMA_ = (totalCost <= ubSize_) ? 1UL : 0UL;
+    } else {
+        useScatterDMA_ = 0UL;
+    }
 
     SetTilingData();
     return ge::GRAPH_SUCCESS;
@@ -126,6 +155,7 @@ void UnsortedSegmentSumSimdNonSortTiling::DumpTilingInfo()
     info << ", tailBlockA: " << tilingData->tailBlockA;
     info << ", baseS: " << tilingData->baseS;
     info << ", baseA: " << tilingData->baseA;
+    info << ", useScatterDMA: " << tilingData->useScatterDMA;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

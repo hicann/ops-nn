@@ -38,7 +38,9 @@ bool UnsortedSegmentSumDetermTiling::IsCapable()
     OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] GetDeterministic state: %u", context_->GetDeterministic());
     if (context_->GetDeterministic() == 1 && dataShapeSize_ != 0 &&
         determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() &&
-        !(innerDim_ > BIG_INNERDIM_THRESHOLD) && !(innerDim_ == 1 && inputOuterDim_ < SMALL_INNERDIM_THRESHOLD)) {
+        !(innerDim_ > BIG_INNERDIM_THRESHOLD) &&
+        // 960 无 deterministic small innerdim 模板，该场景仍由本模板承接
+        (IsArch92Platform() || !(innerDim_ == 1 && inputOuterDim_ < SMALL_INNERDIM_THRESHOLD))) {
         return true;
     }
     return false;
@@ -123,11 +125,17 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
         usedCoreNum_ = Ops::Base::CeilDiv(inputOuterDim_, normalCoreProcessNum_);
         tailCoreProcessNum_ = inputOuterDim_ - (usedCoreNum_ - 1) * normalCoreProcessNum_;
     }
-    uint64_t perCoreSortedIdBytes = (normalCoreProcessNum_ * idTypeBytes_ + 31) / 32 * 32;
-    uint64_t perCoreSortedIndexBytes = (normalCoreProcessNum_ * sizeof(uint32_t) + 31) / 32 * 32;
-    usrWorkspaceSize_ = outputOuterDim_ * innerDim_ * sizeof(int32_t) * DOUBLE + outputOuterDim_ * sizeof(int64_t) +
-                        DOUBLE * NUMBER_KB + NUMBER_KB + usedCoreNum_ * perCoreSortedIdBytes + NUMBER_KB +
-                        usedCoreNum_ * perCoreSortedIndexBytes;
+    if (IsArch92Platform()) {
+        // 960 kernel 的 deterministic 实现不使用 per-core sortedId/sortedIndex workspace，公式更小
+        usrWorkspaceSize_ = outputOuterDim_ * innerDim_ * sizeof(int32_t) * DOUBLE + outputOuterDim_ * sizeof(int64_t) +
+                            DOUBLE * NUMBER_KB;
+    } else {
+        uint64_t perCoreSortedIdBytes = (normalCoreProcessNum_ * idTypeBytes_ + 31) / 32 * 32;
+        uint64_t perCoreSortedIndexBytes = (normalCoreProcessNum_ * sizeof(uint32_t) + 31) / 32 * 32;
+        usrWorkspaceSize_ = outputOuterDim_ * innerDim_ * sizeof(int32_t) * DOUBLE + outputOuterDim_ * sizeof(int64_t) +
+                            DOUBLE * NUMBER_KB + NUMBER_KB + usedCoreNum_ * perCoreSortedIdBytes + NUMBER_KB +
+                            usedCoreNum_ * perCoreSortedIndexBytes;
+    }
     sortSharedBufSize_ = GetSortTmpSize(rowsNumInUB);
     rowsNumInUB_ = rowsNumInUB;
     SetTilingData();
@@ -137,7 +145,12 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
 ge::graphStatus UnsortedSegmentSumDetermTiling::PostTiling()
 {
     context_->SetTilingKey(GetTilingKey());
-    context_->SetBlockDim(static_cast<uint32_t>(totalCoreNum_));
+    if (IsArch92Platform()) {
+        // 960 kernel 仅按实际使用的核数启动
+        context_->SetBlockDim(usedCoreNum_);
+    } else {
+        context_->SetBlockDim(static_cast<uint32_t>(totalCoreNum_));
+    }
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),

@@ -17,6 +17,7 @@
 #include "unsorted_segment_sum_tiling.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "util/platform_util.h"
 #include "util/math_util.h"
 #include "unsorted_segment_sum_tiling_arch35.h"
@@ -319,6 +320,39 @@ std::set<uint64_t> UnsortedSegmentSumBaseTiling::FindUniqueCut(uint64_t usedCore
 }
 
 bool UnsortedSegmentSumBaseTiling::IsCapable() { return true; }
+
+bool UnsortedSegmentSumBaseTiling::IsArch92Platform()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        return false;
+    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 || ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
+}
+
+bool UnsortedSegmentSumBaseTiling::OutFlIsCapable() const
+{
+    if (dataShapeSize_ == 0UL) {
+        return true;
+    }
+    if (dataType_ == ge::DT_INT64 || dataType_ == ge::DT_UINT64 || dataType_ == ge::DT_UINT32) {
+        return false;
+    }
+    constexpr uint32_t OUT_FL_ROW_NUM = 16;
+    constexpr uint32_t OUT_FL_MAX_LAST_DIM_RANG = 1024;
+    constexpr uint64_t OUT_FL_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
+    constexpr uint64_t OUT_FL_BUFFER_ADD_NUM = 2;
+    constexpr uint32_t OUT_FL_SIMD_RESERVED_SIZE = 8192;
+    uint32_t lastDimRange = OUT_FL_MAX_LAST_DIM_RANG / OUT_FL_ROW_NUM;
+    uint64_t outSize = outputOuterDim_ * innerDim_;
+    uint64_t xBufferSize = OUT_FL_ROW_NUM * innerDim_ * valueTypeBytes_ + ubBlockSize_;
+    uint64_t indexBufferSize = OUT_FL_ROW_NUM * idTypeBytes_ + ubBlockSize_;
+    uint64_t tmpBufferSize = Ops::Base::CeilAlign(outSize * valueTypeBytes_, ubBlockSize_) * OUT_FL_ROW_NUM;
+    uint64_t needUb = xBufferSize * OUT_FL_BUFFER_ADD_NUM + indexBufferSize * OUT_FL_BUFFER_ADD_NUM + tmpBufferSize;
+    uint64_t localUbSize = ubSize_ - OUT_FL_DCACHE_SIZE - OUT_FL_SIMD_RESERVED_SIZE;
+    return needUb < localUbSize && innerDimAlign_ <= lastDimRange;
+}
 
 ge::graphStatus UnsortedSegmentSumBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 

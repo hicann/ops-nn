@@ -30,13 +30,15 @@ static constexpr uint64_t COL_LIMIT_SIZE = 1024;
 static constexpr uint64_t DOUBLE = 2;
 static constexpr uint32_t SORT_STAT_PADDING = 64;
 static constexpr uint32_t OUTPUT_THRESHOLD = 12000;
-static constexpr uint32_t RATIO_THRESHOLD = 256;
+static constexpr uint32_t RATIO_THRESHOLD_DEFAULT = 256;
+static constexpr uint32_t RATIO_THRESHOLD_DV121 = 224; // ascend960dt/ascend960pr(DV121) 上的调优阈值
 
 static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 
 bool UnsortedSegmentSumSimdDynSortTiling::IsCapable()
 {
-    if (ratio_ >= RATIO_THRESHOLD && innerDim_ * outputOuterDim_ < OUTPUT_THRESHOLD &&
+    uint32_t ratioThreshold = IsArch92Platform() ? RATIO_THRESHOLD_DV121 : RATIO_THRESHOLD_DEFAULT;
+    if (ratio_ >= ratioThreshold && innerDim_ * outputOuterDim_ < OUTPUT_THRESHOLD &&
         innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
         setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
         return true;
