@@ -58,8 +58,8 @@
 ```c++
 aclnnStatus aclnnGroupNormSiluQuantGetWorkspaceSize(
     const aclTensor* self,
-    const aclTensor* gammaOptional,
-    const aclTensor* betaOptional,
+    const aclTensor* gamma,
+    const aclTensor* beta,
     const aclTensor* quantScale,
     int64_t          group,
     double           eps,
@@ -116,7 +116,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>√</td>
     </tr>
     <tr>
-        <td>gammaOptional</td>
+        <td>gamma</td>
         <td>可选输入</td>
         <td>公式中的γ。</td>
         <td>为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>√</td>
     </tr>
     <tr>
-        <td>betaOptional</td>
+        <td>beta</td>
         <td>可选输入</td>
         <td>公式中的β。</td>
         <td>为空时元素的默认值为1。数据类型与self保持一致，元素数量需与输入self的第1维度保持相同。</td>

@@ -47,7 +47,8 @@ extern "C" {
  * npu device侧的aclTensor，数据类型支持FLOAT32类型，
  * 数据格式支持ND，支持非连续的Tensor。
  * @param [in] group：计算属性，host侧的整数，数据类型支持INT64,分组信息
- * @param [in] esp：计算属性，host侧的浮点数，数据类型支持double,默认le-5
+ * @param [in] eps：计算属性，host侧的浮点数，数据类型支持double，默认1e-5
+ * @param [in] activateSilu：计算属性，是否开启Silu计算，数据类型支持BOOL，当前仅支持开启。
  * @param [out] out：y的输出。
  * npu device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16类型，
  * 数据格式支持ND。
