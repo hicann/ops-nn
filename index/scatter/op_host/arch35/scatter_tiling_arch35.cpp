@@ -78,6 +78,7 @@ constexpr int64_t MAX_INT32_NUM = 2147483647;
 constexpr int64_t DB_BUFFER = 2;
 constexpr int32_t SIMD_PERF_SIZE = 8 * 1024;
 constexpr int64_t INDICES_SIZE = 4096;
+constexpr int64_t OFFSET_TYPESIZE = 8;
 constexpr int64_t SIMD_TEMP = 1;
 constexpr int64_t SIMD_PERF_TEMP = 2;
 constexpr int32_t TWO_INDICES = 2;
@@ -107,6 +108,7 @@ ge::graphStatus ScatterTiling::GetPlatformInfo()
         ubSize = static_cast<int32_t>(compileInfoPtr->ub_size);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
         aivCoreNum = static_cast<int32_t>(ascendcPlatform.GetCoreNumAiv());
 
         uint64_t ubSizePlatform;
@@ -483,6 +485,53 @@ ge::graphStatus ScatterTiling::DoDeterministicTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void ScatterTiling::SimdScatterDMATilingPrepare()
+{
+    // DAV_9201 的 SIMD scatter：由 vector 计算偏移，再通过 scatter DMA 将整行写回
+    int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
+    int64_t idxSize = static_cast<int64_t>(indicesDim) * static_cast<int64_t>(ge::GetSizeByDataType(indicesDtype));
+    int64_t colsNormal = updatesNewShape[DIM2] * updatesNewShape[DIM3];
+    int64_t colsPerf = updatesNewShape[DIM3];
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t ubPerBuf = static_cast<int64_t>(ubSize) / DB_BUFFER;
+    int64_t oneRowCostNormal = Ops::Base::CeilAlign(colsNormal * dtypeSize, ubBlockSize) +
+                               Ops::Base::CeilAlign(idxSize, ubBlockSize) +
+                               Ops::Base::CeilAlign(OFFSET_TYPESIZE, ubBlockSize);
+    bool usePerfMode = (boNum < aivCoreNum && oneRowCostNormal > ubPerBuf && colsPerf * dtypeSize > SIMD_PERF_SIZE);
+
+    int64_t D = usePerfMode ? updatesNewShape[DIM1] * updatesNewShape[DIM2] : updatesNewShape[DIM1];
+    int64_t colsPerRow = usePerfMode ? colsPerf : colsNormal;
+
+    int64_t oneRowCost = Ops::Base::CeilAlign(idxSize, ubBlockSize) +
+                         Ops::Base::CeilAlign(colsPerRow * dtypeSize, ubBlockSize) +
+                         Ops::Base::CeilAlign(OFFSET_TYPESIZE, ubBlockSize);
+    if (oneRowCost > ubPerBuf) {
+        // 单行数据无法放入UB，回退到普通SIMD tiling（分列处理）
+        indicesUbSize = INDICES_SIZE;
+        int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER,
+                                                         ubBlockSize);
+        loopLength = maxUpdatesUbSize / dtypeSize;
+        simdTemp = SIMD_TEMP;
+        return;
+    }
+
+    simdTemp = usePerfMode ? SIMD_PERF_TEMP : SIMD_TEMP;
+    isScatterDmaTiling_ = true;
+    maxRowsOnce_ = (ubPerBuf * D - D * idxSize) / (D * colsPerRow * dtypeSize + OFFSET_TYPESIZE * D + idxSize);
+
+    while (maxRowsOnce_ > 0) {
+        int64_t idNum = Ops::Base::CeilDiv(maxRowsOnce_, D) + 1;
+        indicesUbSize = Ops::Base::CeilAlign(idNum * idxSize, ubBlockSize);
+        updatesUbSize = maxRowsOnce_ * Ops::Base::CeilAlign(colsPerRow * dtypeSize, ubBlockSize);
+        offsetUbSize = Ops::Base::CeilAlign(maxRowsOnce_ * OFFSET_TYPESIZE, ubBlockSize);
+        if (indicesUbSize + updatesUbSize + offsetUbSize <= ubPerBuf) {
+            break;
+        }
+        maxRowsOnce_--;
+    }
+    loopLength = maxRowsOnce_ * Ops::Base::CeilAlign(colsPerRow * dtypeSize, ubBlockSize) / dtypeSize;
+}
+
 void ScatterTiling::SetTilingData()
 {
     tilingData.set_axis(axis);
@@ -513,6 +562,9 @@ void ScatterTiling::SetTilingData()
     tilingData.set_updatesTailBlockColLoop(updatesTailBlockColLoop_);
     tilingData.set_updatesNormBlockTailLoopSize(updatesNormBlockTailLoopSize_);
     tilingData.set_updatesTailBlockTailLoopSize(updatesTailBlockTailLoopSize_);
+    tilingData.set_maxRowsOnce(maxRowsOnce_);
+    tilingData.set_offsetUbSize(offsetUbSize);
+    tilingData.set_updatesUbSize(updatesUbSize);
 }
 
 ge::graphStatus ScatterTiling::DoOpTiling()
@@ -546,16 +598,21 @@ ge::graphStatus ScatterTiling::DoOpTiling()
     // 非确定性场景：PCIe through 时强制走 ScatterSimd（纯 SIMD，PCIe安全）
     int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
     if (isPcieThrough || srcStride * dtypeSize > MIN_FACTOR) {
-        indicesUbSize = INDICES_SIZE;
-        int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-        int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER,
-                                                         ubBlockSize);
-        loopLength = maxUpdatesUbSize / dtypeSize;
-        simdTemp = SIMD_TEMP;
-        int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
-        if (!isPcieThrough && boNum < aivCoreNum && srcStride > loopLength &&
-            updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
-            simdTemp = SIMD_PERF_TEMP;
+        if (isDav9201_ && !isPcieThrough) {
+            // DAV_9201 优先走 SIMD scatter DMA 模板，单行放不下时回退普通 ScatterSimd
+            SimdScatterDMATilingPrepare();
+        } else {
+            indicesUbSize = INDICES_SIZE;
+            int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
+            int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER,
+                                                             ubBlockSize);
+            loopLength = maxUpdatesUbSize / dtypeSize;
+            simdTemp = SIMD_TEMP;
+            int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
+            if (!isPcieThrough && boNum < aivCoreNum && srcStride > loopLength &&
+                updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
+                simdTemp = SIMD_PERF_TEMP;
+            }
         }
     }
 
@@ -642,6 +699,10 @@ uint64_t ScatterTiling::GetTilingKey() const
     if (simdTemp > 0) {
         uint64_t factorStart = 100;
         uint64_t tilingKey = simdTemp * factorStart;
+        if (isDav9201_ && isScatterDmaTiling_) {
+            // DAV_9201 的 SIMD scatter DMA 模板：100/200 基础上 +1 得到 101/201
+            tilingKey += 1;
+        }
         return tilingKey;
     }
     uint64_t tilingKey = 0xFF;

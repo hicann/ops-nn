@@ -1,0 +1,523 @@
+{
+    "op_type": "SegmentSum",
+    "op_list": [
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a76b57a0e77as78c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a170365c87164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1798a2c87164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_21702a2c87164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a54b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "uint32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "uint32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a76b5360e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "uint64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "uint64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a76b57a9877d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a9887164a76b57a0e77as78c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a170365c87164a76b57a0e77d798c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1798a2747164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_217a6a2c87164a76b57a0e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1702a2c87164a54b57a0e77d779c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "uint32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "uint32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        },
+        {
+            "bin_filename": "SegmentSum_a1708a2c87164a76b5360e77d778c987",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "uint64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              },
+              {
+                "name": "segment_ids",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "uint64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ]
+              }
+            ]
+        }
+    ]
+  }

@@ -87,6 +87,25 @@ TILING_DATA_FIELD_DEF(uint64_t, tailCoreDequantLoopSize);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreDequantTailUbFactor);
 TILING_DATA_FIELD_DEF(uint64_t, isDeterministic);
 TILING_DATA_FIELD_DEF(uint64_t, isDeterminTemplate);
+TILING_DATA_FIELD_DEF(uint64_t, isScatterDataCopy);
+TILING_DATA_FIELD_DEF(uint64_t, ubSliceFactor);
+TILING_DATA_FIELD_DEF(uint32_t, ubUpdateSize);
+TILING_DATA_FIELD_DEF(uint32_t, ubIndicesSize);
+TILING_DATA_FIELD_DEF(uint64_t, dmaBlockFactor);
+TILING_DATA_FIELD_DEF(uint32_t, tailDmaBlockFactor);
+TILING_DATA_FIELD_DEF(uint64_t, normBlockIndicesLoop);
+TILING_DATA_FIELD_DEF(uint64_t, tailBlockIndicesLoop);
+TILING_DATA_FIELD_DEF(uint32_t, ubIndicesFactor);
+TILING_DATA_FIELD_DEF(uint32_t, normBlockIndicesTailNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailBlockIndicesTailNum);
+TILING_DATA_FIELD_DEF(uint32_t, normBlockTailLoop);
+TILING_DATA_FIELD_DEF(uint32_t, normBlockTailTailNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailBlockTailLoop);
+TILING_DATA_FIELD_DEF(uint32_t, tailBlockTailTailNum);
+TILING_DATA_FIELD_DEF(uint32_t, ubOutOffsetFactor);
+TILING_DATA_FIELD_DEF(uint64_t, normBlockUbLoop);
+TILING_DATA_FIELD_DEF(uint64_t, normBlockUbTailNum);
+TILING_DATA_FIELD_DEF(uint64_t, oneSliceAlign);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterNd, ScatterNdTilingData)
@@ -127,6 +146,11 @@ private:
     void SetStride();
     void SetStrideForDeterministic();
     void SetTilingData();
+    void IsSimdDmaTiling();
+    void SimdDmaBlockTiling();
+    void OutputBlockTiling();
+    ge::graphStatus ScatterDataCopyTiling();
+    ge::graphStatus DoSimdDmaTiling();
 
 private:
     uint64_t coreNum_ = 0;
@@ -185,6 +209,29 @@ private:
     uint64_t isIdxSplit = 0;
     uint64_t isDeterministic_ = 0;
     uint64_t isDeterminTemplate_ = 0;
+    uint64_t isScatterDataCopy_ = 0;
+    uint32_t ubSliceFactor_ = 0;
+    bool isDav9201_ = false;
+    bool isNotSimdDmaBlock_ = false;
+    uint64_t dmaBlockFactor_ = 0;
+    uint32_t tailDmaBlockFactor_ = 0;
+    uint32_t halfUbSize_ = 0;
+    uint64_t oneSliceBytesAlign_ = 0;
+    uint64_t oneSliceAlign_ = 0;
+    uint32_t ubIndicesFactor_ = 0;
+    uint64_t normBlockIndicesLoop_ = 0;
+    uint32_t normBlockIndicesTailNum_ = 0;
+    uint64_t tailBlockIndicesLoop_ = 0;
+    uint32_t tailBlockIndicesTailNum_ = 0;
+    uint64_t normBlockUbLoop_ = 0;
+    uint32_t normBlockUbTailNum_ = 0;
+    uint32_t normBlockTailLoop_ = 0;
+    uint32_t normBlockTailTailNum_ = 0;
+    uint32_t tailBlockTailLoop_ = 0;
+    uint32_t tailBlockTailTailNum_ = 0;
+    uint32_t ubOutOffsetSizeAlign_ = 0;
+    uint32_t ubBlock_ = 0;
+    uint32_t idxOffsetDtypeSize_ = 8;
     const char* opName = "ScatterNd";
     ScatterNdTilingData tilingData;
 };

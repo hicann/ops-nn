@@ -57,6 +57,12 @@ constexpr float THRESHOLD_FACTOR = 0.8;
 constexpr float THRESHOLD_FACTOR_2 = 0.1;
 
 constexpr uint64_t TEMPLATE_EMPTY_TENSOR = 999;
+constexpr uint64_t SCATTER_DATA_COPY_SLICE_THRESHOLD = 128;
+constexpr uint64_t SCATTER_DATA_COPY_MIN_SLICE_CNT = 8;
+constexpr uint32_t IDX_OFFSET_INT32_SIZE = 4;
+constexpr uint32_t CONST_BUF_RESERVED_SIZE = 128;
+constexpr uint32_t DMA_OFFSET_NUM_LIMIT = 4088;
+constexpr uint32_t HALF_UB_PROCESS_INDICES_SIZE = 32768;
 } // namespace
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE_TO_INT{{ge::DataType::DT_INT32, 100},
@@ -89,10 +95,8 @@ ge::graphStatus ScatterNdTiling::GetPlatformInfo()
     OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE), OP_LOGE(opName, "ub size less than Dcache Size. please check"),
                 return ge::GRAPH_FAILED);
     // UB Size Need reserve space for Dcache / CCEC Compile Stack.
-    ubSize_ = static_cast<uint32_t>(ubSizePlatForm - DCACHE_SIZE);
-    auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %u failed.", ubSize_),
-                return ge::GRAPH_FAILED);
+    ubSize_ = static_cast<uint32_t>(ubSizePlatForm);
+    isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -384,6 +388,102 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void ScatterNdTiling::OutputBlockTiling()
+{
+    auto clrBlockFactor = CeilDiv(outputShapeSize_, coreNum_);
+    auto clrBlockAlignFactor = CeilDiv(clrBlockFactor, alignFactor_) * alignFactor_;
+    clrBlockTilingSize_ = std::max(static_cast<uint64_t>(clrBlockAlignFactor), MIN_BLOCK_SIZE);
+    clrBlockNum_ = CeilDiv(outputShapeSize_, clrBlockTilingSize_);
+    clrTailBlockTilingSize_ = outputShapeSize_ - clrBlockTilingSize_ * (clrBlockNum_ - static_cast<uint64_t>(1));
+    OP_LOGD(opName,
+            "outputShapeSize = %lld, clrBlockFactor = %lld, clrBlockTilingSize = %lu, clrTailBlockTilingSize = %lu",
+            static_cast<long long>(outputShapeSize_), static_cast<long long>(clrBlockFactor),
+            static_cast<unsigned long>(clrBlockTilingSize_), static_cast<unsigned long>(clrTailBlockTilingSize_));
+}
+
+void ScatterNdTiling::SimdDmaBlockTiling()
+{
+    if (preAxis_ < TWO * coreNum_) {
+        isNotSimdDmaBlock_ = true;
+        return;
+    }
+    dmaBlockFactor_ = preAxis_ / coreNum_;
+    blockNum_ = coreNum_;
+    tailDmaBlockFactor_ = preAxis_ % coreNum_;
+
+    auto typeSize = ge::GetSizeByDataType(updateDtype);
+    alignFactor_ = ubBlock_ / typeSize;
+    OutputBlockTiling();
+    return;
+}
+
+void ScatterNdTiling::IsSimdDmaTiling()
+{
+    ubBlock_ = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
+    SimdDmaBlockTiling();
+    sliceSize_ = afterAxis_;
+    auto sliceBytes = sliceSize_ * updateDtypeSize_;
+    oneSliceAlign_ = CeilDiv(sliceSize_, alignFactor_) * alignFactor_;
+    halfUbSize_ = (ubSize_ - CONST_BUF_RESERVED_SIZE - TWO * HALF_UB_PROCESS_INDICES_SIZE - TWO * ubBlock_) /
+                  BUFFER_NUM;
+    oneSliceBytesAlign_ = oneSliceAlign_ * updateDtypeSize_;
+    if (indiceDtypeSize_ < sizeof(int64_t) && indiceShapeSize_ < INT32_MAX &&
+        updateShapeSize_ * updateDtypeSize_ < INT32_MAX && outputShapeSize_ * updateDtypeSize_ < INT32_MAX) {
+        idxOffsetDtypeSize_ = IDX_OFFSET_INT32_SIZE;
+    }
+    uint32_t indiceBytesPerSlice = rankSize_ * static_cast<uint32_t>(indiceDtypeSize_);
+    ubIndicesFactor_ = HALF_UB_PROCESS_INDICES_SIZE / indiceBytesPerSlice;
+    ubOutOffsetSizeAlign_ = Ops::Base::CeilDiv(ubIndicesFactor_ * idxOffsetDtypeSize_, ubBlock_) * ubBlock_;
+    if (!isNotSimdDmaBlock_ && sliceBytes > SCATTER_DATA_COPY_SLICE_THRESHOLD && isDav9201_ &&
+        (halfUbSize_ - ubOutOffsetSizeAlign_) / oneSliceBytesAlign_ > SCATTER_DATA_COPY_MIN_SLICE_CNT) {
+        isScatterDataCopy_ = static_cast<uint64_t>(1);
+        return;
+    }
+}
+
+ge::graphStatus ScatterNdTiling::ScatterDataCopyTiling()
+{
+    uint64_t normBlockAllIndices = tailDmaBlockFactor_ > 0 ? (dmaBlockFactor_ + 1) : dmaBlockFactor_;
+    normBlockIndicesLoop_ = Ops::Base::CeilDiv(normBlockAllIndices, static_cast<uint64_t>(ubIndicesFactor_));
+    normBlockIndicesTailNum_ = normBlockAllIndices - ((normBlockIndicesLoop_ - 1) * ubIndicesFactor_);
+    tailBlockIndicesLoop_ = Ops::Base::CeilDiv(dmaBlockFactor_, static_cast<uint64_t>(ubIndicesFactor_));
+    tailBlockIndicesTailNum_ = dmaBlockFactor_ - ((tailBlockIndicesLoop_ - 1) * ubIndicesFactor_);
+
+    halfUbSize_ -= ubOutOffsetSizeAlign_;
+    ubSliceFactor_ = halfUbSize_ / oneSliceBytesAlign_;
+    ubSliceFactor_ = (ubSliceFactor_ / (ubBlock_ / idxOffsetDtypeSize_)) * (ubBlock_ / idxOffsetDtypeSize_);
+    ubSliceFactor_ = ubSliceFactor_ > DMA_OFFSET_NUM_LIMIT ? DMA_OFFSET_NUM_LIMIT : ubSliceFactor_;
+    normBlockUbLoop_ = Ops::Base::CeilDiv(ubIndicesFactor_, ubSliceFactor_);
+    normBlockUbTailNum_ = ubIndicesFactor_ - ((normBlockUbLoop_ - 1) * ubSliceFactor_);
+    normBlockTailLoop_ = Ops::Base::CeilDiv(normBlockIndicesTailNum_, ubSliceFactor_);
+    normBlockTailTailNum_ = normBlockIndicesTailNum_ - ((normBlockTailLoop_ - 1) * ubSliceFactor_);
+    tailBlockTailLoop_ = Ops::Base::CeilDiv(tailBlockIndicesTailNum_, ubSliceFactor_);
+    tailBlockTailTailNum_ = tailBlockIndicesTailNum_ - ((tailBlockTailLoop_ - 1) * ubSliceFactor_);
+
+    OP_LOGD(opName,
+            "ScatterDataCopyTiling: ubIndicesFactor_:%u, normBlockIndicesLoop_:%lu, normBlockIndicesTailNum_:%u,"
+            "tailBlockIndicesLoop_:%lu, tailBlockIndicesTailNum_:%u, ubSliceFactor_:%u, normBlockUbLoop_:%lu,"
+            " normBlockUbTailNum_:%u, normBlockTailLoop_:%u, normBlockTailTailNum_:%u, tailBlockTailLoop_:%u, "
+            "tailBlockTailTailNum_:%u",
+            ubIndicesFactor_, static_cast<unsigned long>(normBlockIndicesLoop_), normBlockIndicesTailNum_,
+            static_cast<unsigned long>(tailBlockIndicesLoop_), tailBlockIndicesTailNum_, ubSliceFactor_,
+            static_cast<unsigned long>(normBlockUbLoop_), normBlockUbTailNum_, normBlockTailLoop_,
+            normBlockTailTailNum_, tailBlockTailLoop_, tailBlockTailTailNum_);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterNdTiling::DoSimdDmaTiling()
+{
+    OP_LOGD(opName, "ScatterNd scatter data copy template is running");
+    if (ScatterDataCopyTiling() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    SetStride();
+    SetTilingData();
+    OP_LOGD(opName, "ScatterNd scatter data copy template success.");
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ScatterNdTiling::DoOpTiling()
 {
     if (preAxis_ == 0) {
@@ -392,16 +492,28 @@ ge::graphStatus ScatterNdTiling::DoOpTiling()
         return ge::GRAPH_SUCCESS;
     }
     if (isDeterminTemplate_) {
+        ubSize_ -= DCACHE_SIZE;
         OP_LOGD(opName, "ScatterNdDeterministicTiling is running");
+        uint32_t postTilingUbSize = ubSize_;
         if (ScatterNdDeterministicTiling() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
         SetStride();
         SetTilingData();
+        ubSize_ = postTilingUbSize;
         OP_LOGD(opName, "ScatterNdDeterministicTiling success.");
         return ge::GRAPH_SUCCESS;
     }
 
+    IsSimdDmaTiling();
+    if (isScatterDataCopy_) {
+        if (DoSimdDmaTiling() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        return ge::GRAPH_SUCCESS;
+    }
+
+    ubSize_ -= DCACHE_SIZE;
     OP_LOGD(opName, "ScatterNd simt template is running");
     BlockTiling();
     ge::graphStatus res = UbTiling();
@@ -437,10 +549,19 @@ uint64_t ScatterNdTiling::GetTilingKey() const
         OP_LOGE_FOR_INVALID_DTYPE(opName, "updates", Ops::Base::ToString(updateDtype).c_str(),
                                   "float16, float32 or int32");
     }
-    if (indiceShapeSize_ < UINT32_MAX && updateShapeSize_ < UINT32_MAX && outputShapeSize_ < UINT32_MAX) {
-        tilingKey += INPUT_ADDRESS_IN_INT32;
+    if (isScatterDataCopy_) {
+        if (indiceDtypeSize_ < sizeof(int64_t) && indiceShapeSize_ < INT32_MAX &&
+            updateShapeSize_ * updateDtypeSize_ < INT32_MAX && outputShapeSize_ * updateDtypeSize_ < INT32_MAX) {
+            tilingKey += INPUT_ADDRESS_IN_INT32;
+        } else {
+            tilingKey += INPUT_ADDRESS_IN_INT64;
+        }
     } else {
-        tilingKey += INPUT_ADDRESS_IN_INT64;
+        if (indiceShapeSize_ < UINT32_MAX && updateShapeSize_ < UINT32_MAX && outputShapeSize_ < UINT32_MAX) {
+            tilingKey += INPUT_ADDRESS_IN_INT32;
+        } else {
+            tilingKey += INPUT_ADDRESS_IN_INT64;
+        }
     }
     OP_LOGD(opName, "tilingKey = %lld.", tilingKey);
     return tilingKey;
@@ -475,6 +596,12 @@ ge::graphStatus ScatterNdTiling::PostTiling()
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context_->SetScheduleMode(1);
+    // SIMT 模板需要将全部 UB 作为局部内存使用；scatter DMA 模板由 kernel 自行管理 buffer
+    if (!isScatterDataCopy_) {
+        auto res = context_->SetLocalMemorySize(ubSize_);
+        OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %u failed.", ubSize_),
+                    return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -534,6 +661,25 @@ void ScatterNdTiling::SetTilingData()
     tilingData.set_isIdxSplit(isIdxSplit);
     tilingData.set_isDeterministic(isDeterministic_);
     tilingData.set_isDeterminTemplate(isDeterminTemplate_);
+    tilingData.set_isScatterDataCopy(isScatterDataCopy_);
+    tilingData.set_ubSliceFactor(ubSliceFactor_);
+    tilingData.set_ubUpdateSize(ubSliceFactor_ * oneSliceBytesAlign_);
+    tilingData.set_ubIndicesSize(HALF_UB_PROCESS_INDICES_SIZE);
+    tilingData.set_dmaBlockFactor(dmaBlockFactor_);
+    tilingData.set_tailDmaBlockFactor(tailDmaBlockFactor_);
+    tilingData.set_normBlockIndicesLoop(normBlockIndicesLoop_);
+    tilingData.set_normBlockIndicesTailNum(normBlockIndicesTailNum_);
+    tilingData.set_tailBlockIndicesLoop(tailBlockIndicesLoop_);
+    tilingData.set_tailBlockIndicesTailNum(tailBlockIndicesTailNum_);
+    tilingData.set_normBlockTailLoop(normBlockTailLoop_);
+    tilingData.set_normBlockTailTailNum(normBlockTailTailNum_);
+    tilingData.set_tailBlockTailLoop(tailBlockTailLoop_);
+    tilingData.set_tailBlockTailTailNum(tailBlockTailTailNum_);
+    tilingData.set_ubIndicesFactor(ubIndicesFactor_);
+    tilingData.set_normBlockUbLoop(normBlockUbLoop_);
+    tilingData.set_normBlockUbTailNum(normBlockUbTailNum_);
+    tilingData.set_oneSliceAlign(oneSliceAlign_);
+    tilingData.set_ubOutOffsetFactor(ubOutOffsetSizeAlign_);
     return;
 }
 
@@ -593,6 +739,8 @@ void ScatterNdTiling::DumpTilingInfo()
     info << "isIdxSplit: " << tilingData.get_isIdxSplit() << std::endl;
     info << "isDeterministic: " << tilingData.get_isDeterministic() << std::endl;
     info << "isDeterminTemplate: " << tilingData.get_isDeterminTemplate() << std::endl;
+    info << "isScatterDataCopy: " << tilingData.get_isScatterDataCopy() << std::endl;
+    info << "ubSliceFactor: " << tilingData.get_ubSliceFactor() << std::endl;
 
     OP_LOGI(opName, "Tiling inf is: %s", info.str().c_str());
 }

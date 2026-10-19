@@ -17,6 +17,9 @@
 #include "arch35/scatter_simd.h"
 #include "arch35/scatter_simt.h"
 #include "arch35/scatter_deterministic.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#include "arch92/scatter_simd_scatter_dma.h"
+#endif
 
 using namespace SCATTER;
 using namespace AscendC;
@@ -51,6 +54,10 @@ using namespace AscendC;
 #define TILING_KEY_UINT64_INT64_INT2 27
 #define TILING_KEY_SIMD 100
 #define TILING_KEY_SIMD_PERF 200
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#define TILING_KEY_SIMD_SCATTER_DMA 101
+#define TILING_KEY_SIMD_PERF_SCATTER_DMA 201
+#endif
 #define TILING_KEY_ONECORE_INT32_INT8 300
 #define TILING_KEY_ONECORE_INT32_UINT8 301
 #define TILING_KEY_ONECORE_INT32_FLOAT16 302
@@ -203,6 +210,16 @@ extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADD
         SCATTER::ScatterSimd<DTYPE_INDICES, 1> op(&tilingData, &pipeOp);
         op.Init(x, indices, updates, y);
         op.Process();
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_SCATTER_DMA)) {
+        SCATTER::ScatterSimdScatterDMA<DTYPE_INDICES, 0> op(&tilingData, &pipeOp);
+        op.Init(x, indices, updates, y);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_PERF_SCATTER_DMA)) {
+        SCATTER::ScatterSimdScatterDMA<DTYPE_INDICES, 1> op(&tilingData, &pipeOp);
+        op.Init(x, indices, updates, y);
+        op.Process();
+#endif
     } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT32_INT8)) {
         SCATTER::ScatterSimt<int8_t, int32_t, uint32_t> op;
         op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);

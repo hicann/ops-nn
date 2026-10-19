@@ -13,13 +13,15 @@
  * \brief
  */
 
-#include "arch35/scatter_nd.h"
-#include "arch35/scatter_nd_deterministic.h"
-#include "arch35/scatter_nd_empty.h"
+#include "../arch35/scatter_nd.h"
+#include "../arch35/scatter_nd_deterministic.h"
+#include "../arch35/scatter_nd_empty.h"
+#include "scatter_nd_dma.h"
 
 using namespace ScatterNdSimt;
 using namespace ScatterNdDeterministic;
 using namespace ScatterNdEmpty;
+using namespace ScatterNdDmaSimd;
 
 namespace {
 #define INT_INT_INT32_TILING_KEY 101
@@ -56,11 +58,21 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
     if (TILING_KEY_IS(INT_INT_INT32_TILING_KEY)) {
-        ScatterNd<int32_t, int32_t, uint32_t> op;
-        op.Init(indices, x, shape, y, &tilingData, &pipe);
-        op.Process(&tilingData);
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, int32_t, int32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else {
+            ScatterNd<int32_t, int32_t, uint32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
     } else if (TILING_KEY_IS(INT_HALF_INT32_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, half, int32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();
@@ -70,7 +82,11 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
             op.Process(&tilingData);
         }
     } else if (TILING_KEY_IS(INT_FLOAT_INT32_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, float, int32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();
@@ -104,11 +120,21 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
             op.Process(&tilingData);
         }
     } else if (TILING_KEY_IS(INT_INT_INT64_TILING_KEY)) {
-        ScatterNd<int32_t, int32_t, uint64_t> op;
-        op.Init(indices, x, shape, y, &tilingData, &pipe);
-        op.Process(&tilingData);
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, int32_t, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else {
+            ScatterNd<int32_t, int32_t, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
     } else if (TILING_KEY_IS(INT_HALF_INT64_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, half, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();
@@ -118,7 +144,11 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
             op.Process(&tilingData);
         }
     } else if (TILING_KEY_IS(INT_FLOAT_INT64_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int32_t, float, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();
@@ -128,11 +158,21 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
             op.Process(&tilingData);
         }
     } else if (TILING_KEY_IS(INT64_INT_INT64_TILING_KEY)) {
-        ScatterNd<int64_t, int32_t, uint64_t> op;
-        op.Init(indices, x, shape, y, &tilingData, &pipe);
-        op.Process(&tilingData);
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int64_t, int32_t, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else {
+            ScatterNd<int64_t, int32_t, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
     } else if (TILING_KEY_IS(INT64_HALF_INT64_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int64_t, half, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<half, int64_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();
@@ -142,7 +182,11 @@ extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_
             op.Process(&tilingData);
         }
     } else if (TILING_KEY_IS(INT64_FLOAT_INT64_TILING_KEY)) {
-        if (tilingData.isDeterminTemplate) {
+        if (tilingData.isScatterDataCopy) {
+            ScatterNdDma<int64_t, float, int64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        } else if (tilingData.isDeterminTemplate) {
             ScatterNdDeterministicImpl<float, int64_t> op(tilingData, pipe);
             op.Init(indices, x, y, userWS);
             op.Process();

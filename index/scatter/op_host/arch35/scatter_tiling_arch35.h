@@ -62,6 +62,9 @@ TILING_DATA_FIELD_DEF(int64_t, updatesNormBlockColLoop);
 TILING_DATA_FIELD_DEF(int64_t, updatesTailBlockColLoop);
 TILING_DATA_FIELD_DEF(int64_t, updatesNormBlockTailLoopSize);
 TILING_DATA_FIELD_DEF(int64_t, updatesTailBlockTailLoopSize);
+TILING_DATA_FIELD_DEF(int64_t, maxRowsOnce);
+TILING_DATA_FIELD_DEF(int64_t, offsetUbSize);
+TILING_DATA_FIELD_DEF(int64_t, updatesUbSize);
 
 END_TILING_DATA_DEF;
 
@@ -106,6 +109,7 @@ private:
     ge::graphStatus GetTilingParam();
     ge::graphStatus DoSimdTiling();
     ge::graphStatus DoDeterministicTiling();
+    void SimdScatterDMATilingPrepare();
     void SetTilingData();
 
     bool oneCoreTemp{false};
@@ -119,6 +123,8 @@ private:
     int64_t tailBlockData = 0;
     int64_t loopLength = 0;
     int64_t indicesUbSize = 0;
+    int64_t offsetUbSize = 0;
+    int64_t updatesUbSize = 0;
     uint64_t simdTemp = 0;
     int32_t axis = 1;
     int32_t indicesDim = 0;
@@ -133,6 +139,9 @@ private:
     int64_t updatesTailBlockColLoop_ = 0;
     int64_t updatesNormBlockTailLoopSize_ = 0;
     int64_t updatesTailBlockTailLoopSize_ = 0;
+    int64_t maxRowsOnce_ = 0;
+    bool isDav9201_ = false;
+    bool isScatterDmaTiling_ = false;
     ge::DataType inputDtype = ge::DT_UNDEFINED;
     ge::DataType indicesDtype = ge::DT_UNDEFINED;
     ge::DataType updatesDtype = ge::DT_UNDEFINED;
