@@ -87,7 +87,7 @@ __aicore__ inline void QbmmCubeBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
         {aGM, bGM, cGM, bias, perTokenScale, scale}, // gm addr
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
-         slidingWindowParams.nTailMain},
+         slidingWindowParams.nTailMain, slidingWindowParams.windowLen},
         qbmmParams};
     MatmulKernel qbmm;
     qbmm(params);

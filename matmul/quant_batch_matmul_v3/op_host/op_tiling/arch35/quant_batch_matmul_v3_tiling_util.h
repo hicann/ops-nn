@@ -14,6 +14,7 @@
  */
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -53,6 +54,11 @@ constexpr uint8_t L1_FOUR_BUFFER = 4U;
 constexpr uint32_t NUM_HALF = 2U;
 // Mix/per-block templates require the AIC:AIV core ratio to be 1:2.
 constexpr uint32_t CORE_RATIO = 2U;
+// Sliding window length of the ASW block schedulers for non-DAV_9201/9202 archs.
+// The value is written into SlidingWindowParams.windowLen and delivered to the kernel via tiling data;
+// the kernel-side schedulers (qbmm_asw_block.h and cmct/block/block_scheduler_qbmm.h) consume it directly
+// instead of deriving WINDOW_LEN from __NPU_ARCH__. DAV_9201/9202 derive it adaptively from the AI core
+// count in GetAswWindowLen.
 constexpr uint64_t WINDOW_LEN = 4UL;
 constexpr uint32_t BATCH_DIM_NUM = 4U;
 constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
@@ -97,6 +103,23 @@ struct BasicRunInfoTiling {
 enum class BatchMode : uint32_t { WITH_BATCH = 0, WITHOUT_BATCH = 1 };
 
 enum class QMMApiLevel : uint32_t { HIGH_LEVEL = 0, BASIC_LEVEL = 1, BLAZE_LEVEL = 2 };
+
+// ASW sliding window length for the given NPU arch, aligned with the kernel-side block schedulers.
+// DAV_9201/9202 derive it from the AI core count: the largest divisor of aicNum not exceeding
+// sqrt(aicNum), aligned with BaseBlockCalculator::CalShortWinLen; other archs use the fixed WINDOW_LEN.
+inline uint64_t GetAswWindowLen(NpuArch npuArch, uint64_t aicNum)
+{
+    if (npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
+        return qmmv3_tiling_const::WINDOW_LEN;
+    }
+    const float sqrtNum = std::sqrt(aicNum * 1.0f);
+    for (uint32_t i = static_cast<uint32_t>(std::floor(sqrtNum)); i >= 1U; i--) {
+        if (aicNum % i == 0UL) {
+            return static_cast<uint64_t>(i);
+        }
+    }
+    return 1UL;
+}
 
 inline bool IsTensorapiCapable()
 {

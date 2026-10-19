@@ -526,7 +526,8 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateAFullLoadStatus()
                                                          qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
     const bool isAFullLoadCandidate = singleCoreASize <=
                                           aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_A_SCALER &&
-                                      adaptiveWin_.mBlockCnt < qmmv3_tiling_const::WINDOW_LEN &&
+                                      adaptiveWin_.mBlockCnt <
+                                          GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum) &&
                                       aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                                       adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     bool selectAFullLoad = isAFullLoadCandidate;
@@ -566,7 +567,7 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateBFullLoadStatus()
                                         inputParams_.bDtype));
 
     isBFullLoad_ = singleCoreBSize <= aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_B_SCALER &&
-                   adaptiveWin_.nBlockCnt < qmmv3_tiling_const::WINDOW_LEN &&
+                   adaptiveWin_.nBlockCnt < GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum) &&
                    aicoreParams_.aicNum % adaptiveWin_.nBlockCnt == 0 &&
                    adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     if (isBFullLoad_ && adaptiveWin_.baseN != realBaseNSize) {
@@ -617,6 +618,8 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
 
     if (useWithoutBatchTilingData_) {
         SetWithoutBatchTilingData();

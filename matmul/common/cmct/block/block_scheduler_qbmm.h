@@ -73,9 +73,10 @@ public:
         int64_t nBaseTailSplitCnt;
         int64_t mTailMain;
         int64_t nTailMain;
+        // windowLen由tilingData传入,如果不传入则默认为4
+        // 但当c++ < 14时，若初始化列表中的数量小于struct成员数量，默认值不会生效，而是被赋值成0
+        int64_t windowLen{WINDOW_LEN};
     };
-
-    const int64_t WINDOW_LEN = 4;
 
 public:
     __aicore__ inline BlockSchedulerQuantBatchMatmulV3(const ProblemShape& shape, const Params& params)
@@ -88,7 +89,12 @@ public:
         mCnt_ = Cmct::Gemm::CeilDiv(m_, baseM_);
         nCnt_ = Cmct::Gemm::CeilDiv(n_, baseN_);
         totalCnt_ = mCnt_ * nCnt_;
-        mCoreNum_ = Cmct::Gemm::Min(WINDOW_LEN, mCnt_);
+
+        if (params.windowLen > 0) {
+            mCoreNum_ = Cmct::Gemm::Min(params.windowLen, mCnt_);
+        } else {
+            mCoreNum_ = Cmct::Gemm::Min(static_cast<int64_t>(WINDOW_LEN), mCnt_);
+        }
         mainRow_ = mCnt_ / mCoreNum_ - 1;
         mTailCoreNum_ = mCnt_ - mCoreNum_ * mainRow_;
         endBlockIdx_ = (totalCnt_ - 1) % blockNum_;

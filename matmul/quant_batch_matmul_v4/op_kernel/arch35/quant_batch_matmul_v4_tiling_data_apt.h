@@ -71,6 +71,9 @@ struct L2cacheTileParams {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
+// 与 DequantBmm::SlidingWindowParams（quant_batch_matmul_v3）保持布局兼容：
+// v4 CMCT pretile 路径将该结构指针交给 v3 的 QbmmCmctPertileKernel 按 DequantBmm 结构解析，
+// windowLen 字段必须与 v3 同步存在
 struct SlidingWindowParams {
     uint32_t mTailTile = 0;
     uint32_t nTailTile = 0;
@@ -78,6 +81,8 @@ struct SlidingWindowParams {
     uint32_t nBaseTailSplitCnt = 1;
     uint32_t mTailMain = 0;
     uint32_t nTailMain = 0;
+    uint32_t windowLen = 4;
+    uint32_t reserved = 0;
 };
 #pragma pack(pop)
 

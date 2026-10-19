@@ -30,6 +30,21 @@ constexpr int32_t MIX_ASW = 6L;
 constexpr int32_t PERBLOCK_BASIC_API_ASW = 7L;
 constexpr int32_t MX_STREAMK = 8L;
 
+// AIV num paired with one AIC. DAV_3510 binds two AIVs per AIC, DAV_9201/9202(960DT/960PR) bind one.
+// Returns 0 for architectures whose core ratio is not maintained here.
+inline uint32_t GetAivNumPerAic(NpuArch npuArch)
+{
+    switch (npuArch) {
+        case NpuArch::DAV_3510:
+            return 2U;
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
+            return 1U;
+        default:
+            return 0U;
+    }
+}
+
 inline const std::vector<int32_t>& GetQuantBatchMatmulV3Priorities(NpuArch npuArch)
 {
     static const std::vector<int32_t> dav3510Priorities = {

@@ -25,7 +25,6 @@
 
 namespace {
 constexpr uint32_t DB_SIZE = 2;
-constexpr uint64_t WINDOW_LEN = 4UL;
 constexpr uint32_t DATA_SIZE_L0C = 4;
 constexpr uint8_t L1_TWO_BUFFER = 2;
 constexpr uint8_t L1_FOUR_BUFFER = 4;
@@ -380,7 +379,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::UpdateAFullLoadStatus()
                                           ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype),
                                                          CUBE_REDUCE_BLOCK));
     isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_A_SCALER &&
-                   adaptiveWin_.mBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
+                   adaptiveWin_.mBlockCnt < GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum) &&
+                   aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                    adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     if (isAFullLoad_ && adaptiveWin_.baseM != realBaseMSize) {
         adaptiveWin_.baseM = realBaseMSize;
@@ -433,6 +433,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
 
     if (useWithoutBatchTilingData_) {
         SetWithoutBatchTilingData();

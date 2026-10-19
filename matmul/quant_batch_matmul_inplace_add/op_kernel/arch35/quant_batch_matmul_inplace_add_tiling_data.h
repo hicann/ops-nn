@@ -65,6 +65,8 @@ struct BasicAPICubeTiling {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
+// 与 DequantBmm::SlidingWindowParams（quant_batch_matmul_v3）保持布局兼容：
+// windowLen 由 v3 tiling 侧计算并随整块 memcpy 拷贝过来，保持 sizeof 一致是硬性约束
 struct SlidingWindowParams {
     uint32_t mTailTile = 0;
     uint32_t nTailTile = 0;
@@ -72,6 +74,8 @@ struct SlidingWindowParams {
     uint32_t nBaseTailSplitCnt = 1;
     uint32_t mTailMain = 0;
     uint32_t nTailMain = 0;
+    uint32_t windowLen = 4;
+    uint32_t reserved = 0;
 };
 #pragma pack(pop)
 

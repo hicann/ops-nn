@@ -462,7 +462,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
     uint64_t singleCoreASize = GetSizeWithDataType(realBaseMSize * kAligned, inputParams_.aDtype);
     bool isAFullLoadCandidate = singleCoreASize <=
                                     aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_A_SCALER &&
-                                adaptiveWin_.mBlockCnt < qmmv3_tiling_const::WINDOW_LEN &&
+                                adaptiveWin_.mBlockCnt < GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum) &&
                                 aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                                 adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     isAFullLoad_ = false;
@@ -558,6 +558,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
 
     if (useWithoutBatchTilingData_) {
         SetWithoutBatchTilingData();

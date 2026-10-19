@@ -11,6 +11,9 @@
 #pragma once
 
 #include "cmct/epilogue/block_epilogue_pertile.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+#include "cmct/epilogue/block_epilogue_pertile_4_ub_bank.h"
+#endif
 #include "cmct/block/block_mmad_pertile.h"
 #include "cmct/block/block_scheduler_qbmm.h"
 #include "cmct/block/block_scheduler_policy.h"
@@ -47,8 +50,14 @@ __aicore__ inline void QbmmCmctPertileKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR 
     using BlockMmadPolicy = Cmct::Gemm::MmadCAccOnUb<>;
     using BlockMmad = Cmct::Gemm::Block::BlockMmadPertile<BlockMmadPolicy, AType, LayoutA, BType, LayoutB, CType,
                                                           LayoutC, biasType, LayoutBias, L1Tileshape, L0Tileshape>;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    // DAV_9201/9202(960DT/960PR)的UB bank结构与DAV_3510不同，使用4-UB-bank布局的专用epilogue
+    using BlockEpilogue = Cmct::Gemm::Block::BlockEpiloguePertile4UbBank<L0Tileshape, YType, CType, BiasType,
+                                                                         ptScaleType, ScaleType, LayoutA, LayoutB>;
+#else
     using BlockEpilogue = Cmct::Gemm::Block::BlockEpiloguePertile<L0Tileshape, YType, CType, BiasType, ptScaleType,
                                                                   ScaleType, LayoutA, LayoutB>;
+#endif
 
     using QbmmKernel = Cmct::Gemm::Kernel::QuantMmBatchPertile<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename QbmmKernel::Params;
@@ -67,14 +76,14 @@ __aicore__ inline void QbmmCmctPertileKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR 
                           matmulTiling.kAL1,       matmulTiling.kBL1,   matmulTiling.nBufferNum,
                           dataParams.biasThreeDim, matmulTiling.isBias, matmulTiling.weightMustHitL2};
 
-    Params params = {
-        {matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},
-        {x, weight, y, bias},
-        {y, scale, perTokenScale, bias, matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
-         dataParams.groupSizeM, dataParams.groupSizeN, dataParams.groupSizeK, matmulTiling.isBias},
-        {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
-         slidingWindowParams.mBaseTailSplitCnt, 1, slidingWindowParams.mTailMain, matmulTiling.isBias},
-        qbmmParams};
+    Params params = {{matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},
+                     {x, weight, y, bias},
+                     {y, scale, perTokenScale, bias, matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+                      dataParams.groupSizeM, dataParams.groupSizeN, dataParams.groupSizeK, matmulTiling.isBias},
+                     {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile,
+                      slidingWindowParams.nTailTile, slidingWindowParams.mBaseTailSplitCnt, 1,
+                      slidingWindowParams.mTailMain, matmulTiling.isBias, slidingWindowParams.windowLen},
+                     qbmmParams};
     QbmmKernel qbmm;
     qbmm(params);
 }

@@ -126,8 +126,13 @@ public:
     uint32_t X2_C0_SIZE;
 
 private:
-    const uint64_t WINDOW_LEN = 4;
+    // 滑动窗口长度由 tiling 侧按 NPU arch 计算后经 SlidingWindowParams.windowLen 下发
+    // （DAV_9201/9202 为 8，其余为 4），kernel 不再通过 __NPU_ARCH__ 自行推导
     static constexpr uint64_t CUBE_BLOCK = 16UL;
+    // 默认滑动窗口长度，与 cmct/block_scheduler_utils.h 的 WINDOW_LEN 保持一致；
+    // windowLen 为 0（旧版本序列化数据/手工构造 tiling/遗漏赋值分支）时回退该值，
+    // 避免 mCoreNum 被赋 0 后 mainRow 计算除零，与 BlockSchedulerQuantBatchMatmulV3 的防护统一
+    static constexpr uint64_t DEFAULT_WINDOW_LEN = 4UL;
     uint32_t blockIdx_;
 };
 
@@ -157,7 +162,9 @@ __aicore__ inline void QuantBmmAswBlock::Init(const DequantBmm::QuantBatchMatmul
     params_.totalTailTile = static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.mTailTile) *
                             static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.nTailTile);
     params_.round = DequantBmm::CeilDiv(params_.totalCnt, tilingData_->matmulTiling.usedCoreNum);
-    params_.mCoreNum = DequantBmm::Min(WINDOW_LEN, params_.mCnt);
+    // windowLen 为 0 时回退默认窗口，防止 mCoreNum 为 0 导致下一行 mainRow 计算除零
+    uint64_t windowLen = static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.windowLen);
+    params_.mCoreNum = DequantBmm::Min(windowLen > 0UL ? windowLen : DEFAULT_WINDOW_LEN, params_.mCnt);
     params_.mainRow = params_.mCnt / params_.mCoreNum - 1UL;
     params_.mTailCoreNum = params_.mCnt - params_.mCoreNum * params_.mainRow;
     params_.groupSizeM = tilingData_->params.groupSizeM;

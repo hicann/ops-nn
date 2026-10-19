@@ -51,6 +51,13 @@
 #define ORIG_DTYPE_X2 DT_INT8
 #endif
 
+// Mix-kernel task type: DAV_3510 pairs one AIC with two AIVs, DAV_9201/9202(960DT/960PR) pair one with one.
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+#define QBMMV3_MIX_AIC_RATION ASCENDC_TPL_MIX_AIC_1_1
+#else
+#define QBMMV3_MIX_AIC_RATION ASCENDC_TPL_MIX_AIC_1_2
+#endif
+
 namespace QuantBatchMatmulV3Arch35TilingKey {
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_SCALE))
@@ -127,11 +134,11 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #endif
 
 // Ordinary ND and WeightNZ Mix share the Blaze kernel and transpose selectors.
-#if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && defined(ASC_DEVKIT_MAJOR) && \
-    defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0 && defined(ORIG_DTYPE_X1) &&           \
-    defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_Y) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) &&             \
-    defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2) &&       \
-    defined(DT_HIFLOAT8) && defined(DT_INT8) && defined(DT_FLOAT) && defined(DT_FLOAT16) && defined(DT_BF16)
+#if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && IS_BLAZE &&                   \
+    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_Y) && defined(ORIG_DTYPE_SCALE) &&          \
+    defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(DT_FLOAT8_E4M3FN) &&             \
+    defined(DT_FLOAT8_E5M2) && defined(DT_HIFLOAT8) && defined(DT_INT8) && defined(DT_FLOAT) && defined(DT_FLOAT16) && \
+    defined(DT_BF16)
 #define SUPPORT_MIX_TILING_KEY                                                                \
     ((FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ) &&                            \
      (((ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8) &&                              \
@@ -219,7 +226,7 @@ ASCENDC_TPL_SEL(
 #if ((!defined(__CCE_AICORE__)) || (defined(ORIG_DTYPE_SCALE) && defined(DT_FLOAT) && defined(DT_BF16) && \
                                     (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)))
 #if (SUPPORT_MIX_TILING_KEY == 1)
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(QBMMV3_MIX_AIC_RATION),
                          ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
                          ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
                          ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITH_BATCH, TPL_WITHOUT_BATCH),
@@ -228,7 +235,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
     ASCENDC_TPL_ARGS_SEL( // kernel type {2, 3} * ATRANS {0, 1} * BTRANS {0, 1} * APILEVEL {0}
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_KERNEL_TYPE_SEL(QBMMV3_MIX_AIC_RATION), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITH_BATCH), // Batch Mode 只有0
         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_WITH_MMAPI,
@@ -237,7 +244,7 @@ ASCENDC_TPL_SEL(
 #endif
 #if ((!defined(__CCE_AICORE__)) || (SUPPORT_PERBLOCK))
     ASCENDC_TPL_ARGS_SEL( // kernel type {4} * ATRANS {0, 1} * BTRANS {0, 1}
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_KERNEL_TYPE_SEL(QBMMV3_MIX_AIC_RATION), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITH_BATCH), // Batch Mode 只有0
         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_WITH_CUSTOM_MM),
@@ -254,7 +261,7 @@ ASCENDC_TPL_SEL(
 #endif
 #if ((!defined(__CCE_AICORE__)) || (SUPPORT_STREAMK_TILING_KEY))
     ASCENDC_TPL_ARGS_SEL( // kernel type {11}: AIC split-K workspace + AIV scale/bias epilogue
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_KERNEL_TYPE_SEL(QBMMV3_MIX_AIC_RATION), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITHOUT_BATCH),
         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI),
@@ -292,8 +299,9 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
-#if ((!defined(__CCE_AICORE__)) || \
-     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && IS_BLAZE && QBMMV3_IS_MX_DTYPE_TPL))
+#if ((!defined(__CCE_AICORE__)) ||                                                                                   \
+     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && IS_BLAZE && \
+      QBMMV3_IS_MX_DTYPE_TPL))
     ASCENDC_TPL_ARGS_SEL( // kernel type {9, 10} * batch mode {0, 1} * api level {2} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
@@ -334,7 +342,8 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && !QBMMV3_IS_MX_DTYPE_TPL && !QBMMV3_IS_NON_MX_CUBE_ND_TPL)
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && \
+     !QBMMV3_IS_MX_DTYPE_TPL && !QBMMV3_IS_NON_MX_CUBE_ND_TPL)
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),

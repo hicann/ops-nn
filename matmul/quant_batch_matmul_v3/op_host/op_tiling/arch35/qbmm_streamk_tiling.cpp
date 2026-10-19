@@ -1166,13 +1166,16 @@ void QBMMV3StreamKTiling::SetTilingData()
         tilingData_.matmulTiling.nBufferNum = L1_TWO_BUFFER;
     }
     // adaptiveSlidingWin is kept only to preserve the shared BasicAPI tiling data layout. StreamK scheduling uses
-    // streamKTiling fields instead of ASW tail/window parameters, so fill neutral placeholders here.
+    // streamKTiling fields instead of ASW tail/window parameters, so fill neutral placeholders here. windowLen
+    // still carries the arch-specific ASW window length to keep the shared layout semantically consistent.
     tilingData_.adaptiveSlidingWin.mTailTile = 1U;
     tilingData_.adaptiveSlidingWin.nTailTile = 1U;
     tilingData_.adaptiveSlidingWin.mBaseTailSplitCnt = 1U;
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = 1U;
     tilingData_.adaptiveSlidingWin.mTailMain = 0U;
     tilingData_.adaptiveSlidingWin.nTailMain = 0U;
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
     OP_LOGD(inputParams_.opName,
             "QBMM StreamK SetTilingData: M=%u N=%u K=%u baseM=%u baseN=%u baseK=%u singleCoreK=%u "
             "kL1=%u scaleKL1=%u usedCore=%u kAL1=%u kBL1=%u nBuffer=%u.",

@@ -88,6 +88,13 @@ struct SlidingWindowParams {
     uint32_t nBaseTailSplitCnt = 1;
     uint32_t mTailMain = 0;
     uint32_t nTailMain = 0;
+    // ASW block scheduler window length (non-DAV_9201/9202: 4; DAV_9201/9202: derived from the AI core
+    // count), computed by tiling via GetAswWindowLen(npuArch, aicNum) and delivered to the kernel,
+    // replacing the kernel-side __NPU_ARCH__ based WINDOW_LEN derivation
+    // (qbmm_asw_block.h / cmct/block_scheduler_qbmm.h).
+    // Default 4 is the common-window fallback so hand-built tiling data stays valid.
+    uint32_t windowLen = 4;
+    uint32_t reserved = 0;
 };
 #pragma pack(pop)
 

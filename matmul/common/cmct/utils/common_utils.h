@@ -56,6 +56,13 @@ constexpr uint32_t C0_SIZE_B8 = 32UL;
 constexpr uint32_t C0_SIZE_B4 = 64UL;
 constexpr uint64_t CUBE_OUT_VECTOR_IN = 1;
 constexpr uint64_t ONLY_VECTOR_IN = 2;
+// DAV_9201/9202(960DT/960PR) UB 按地址交错划分为 4 个 bank（每 bank 256B 起始间隔），
+// 4-bank 布局的跨 bank 访问 stride 为 1KB，供 pertile 9201 专用 epilogue 使用。
+constexpr uint64_t UB_BANK0_START_ADRR = 0UL;
+constexpr uint64_t UB_BANK1_START_ADRR = 256UL;
+constexpr uint64_t UB_BANK2_START_ADRR = 512UL;
+constexpr uint64_t UB_BANK3_START_ADRR = 768UL;
+constexpr uint64_t UB_FOUR_BANK_STRIDE = 1024UL;
 // FusedMatMul OpType
 constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
 constexpr static uint64_t OP_TYPE_ADD = 1UL;

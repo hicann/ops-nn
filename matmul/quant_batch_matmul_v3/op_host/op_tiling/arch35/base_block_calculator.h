@@ -17,6 +17,7 @@
 #include <cstdint>
 
 #include "graph/types.h"
+#include "platform/platform_infos_def.h"
 
 namespace optiling {
 
@@ -35,18 +36,41 @@ struct BaseBlockRes {
     bool useTailWinLogic = true;
 };
 
-enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK, CUBE_BASIC };
+enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK, CUBE_BASIC, LOAD_BALANCE };
+
+constexpr uint64_t GHZ_TO_MHZ = 1000UL;
+
+// DAV_9201/9202(960DT/960PR) 负载均衡基块搜索所需的SoC规格参数（缺失项用默认值，参照 ops-nn-dev
+// base_block_calculator.h）
+struct SocSpecifyParams {
+    double hbmBw = 0;                  // HBM带宽 TB/s
+    double l2Bw = 0;                   // L2带宽  TB/s
+    double freq = 0;                   // GHz
+    double singleCoreComputePower = 0; // 单核算力
+    double l0Bw = 256;                 // B/c
+    double l0BwB4KoutterAxis = 128;    // B/c
+    double l0mxBw = 64;                // B/c
+    uint64_t mmadFracM = 16;           // 元素数
+    uint64_t mmadFracN = 16;           // 元素数
+    uint64_t mmadFracK = 32;           // 32B
+    void CalSingleCoreComputePower()
+    {
+        singleCoreComputePower = mmadFracM * mmadFracN * mmadFracK * freq / 1024; // 1024: KB to B
+    }
+};
 
 uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype);
 
 class BaseBlockCalculator {
 public:
     BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
-                        uint64_t batchCoreCnt = 1UL);
+                        uint64_t batchCoreCnt = 1UL, fe::PlatFormInfos* platformInfo = nullptr);
     virtual ~BaseBlockCalculator() = default;
 
     bool Compute(BaseBlockMode mode);
     const BaseBlockRes& GetOutput() const;
+    // 读取平台规格（带宽/频率/核数），用于 DAV_9201/9202 负载均衡基块搜索；查询失败返回 false。
+    bool GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo) const;
 
 protected:
     // QBMMActivationQuant需要修改为32对齐
@@ -54,6 +78,7 @@ protected:
     const QuantBatchMatmulInfo& inputParams_;
     const QuantBatchMatmulV3CompileInfo& compileInfo_;
     uint64_t batchCoreCnt_ = 1UL;
+    fe::PlatFormInfos* platformInfo_ = nullptr;
     BaseBlockRes baseBlockRes_;
 
 private:
@@ -69,6 +94,19 @@ private:
     bool FinalizeStreamKBaseK();
     uint64_t GetBaseMAlignSize() const;
     uint64_t GetBaseKAlignSize() const;
+    // DAV_9201/9202(960DT/960PR) 负载均衡基块搜索：参照 ops-nn-dev BaseBlockCalculator（SocVersion 版）移植，
+    // 实现位于 base_block_load_balance_calculator.cpp
+    bool ComputeBaseBlockLoadBalance();
+    BaseBlockRes ComputeBaseBlockPlain();
+    bool RearrangeBasicBlock(const BaseBlockRes& baseBlockInit);
+    uint64_t CalMaxBasicBlockLimited(uint64_t shapeSize, uint64_t alignUnit, uint64_t l0BufferSize,
+                                     bool isSplite) const;
+    double CalBalanceRate(uint64_t baseM, uint64_t baseN) const;
+    bool IsBalanceAFullLoad(uint64_t baseM, uint64_t baseN) const;
+    void GetBaseK(BaseBlockRes& baseBlockTemp);
+    bool IsBaseK64Aligned(ge::DataType dtype) const;
+    bool IsDoubleEqual(double a, double b) const;
+    bool IsMxKOdd() const;
     bool OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode);
     void OptimizeBaseBlockForLoadBalance(BaseBlockMode mode);
     void SearchLoadBalanceBaseBlock(uint64_t roundLimit, uint64_t originLastRoundUsedCore,

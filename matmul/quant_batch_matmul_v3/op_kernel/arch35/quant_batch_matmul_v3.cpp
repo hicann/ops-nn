@@ -529,7 +529,8 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #endif
 #endif
     } else {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && IS_BLAZE && SUPPORT_NON_MX_STREAMK_TILING_KEY
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && IS_BLAZE && \
+    SUPPORT_NON_MX_STREAMK_TILING_KEY
         // Non-MX per-tensor StreamK uses the no-batch tiling key; keep it outside the legacy with-batch dispatch.
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {

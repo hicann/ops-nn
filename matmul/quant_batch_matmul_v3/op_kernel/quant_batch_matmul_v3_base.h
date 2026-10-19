@@ -58,7 +58,7 @@ constexpr uint16_t V2C_PING_FLAG = 0x6;
 constexpr uint16_t FLAG_ID_MAX = 16;
 constexpr uint16_t AIV_SYNC_AIC_FLAG = 6;
 constexpr uint16_t AIC_SYNC_AIV_FLAG = 8;
-constexpr uint8_t AIC_SYNC_AIV_MODE = 4;
+constexpr uint8_t AIC_SYNC_AIV_MODE = 2;
 constexpr uint8_t CV_RATIO = 2;
 constexpr int32_t MXFP_GROUP_SIZE = 32;
 constexpr int32_t MXFP_DIVISOR_SIZE = 64;
@@ -356,7 +356,8 @@ __aicore__ inline constexpr uint32_t GetTaskRation()
 }
 
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
-    __CUBE_S8S4_S4S4__
+    __CUBE_S8S4_S4S4__ || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201) ||                                      \
+    (defined(__NPU_ARCH__) && __NPU_ARCH__ == 9202)
 template <typename T>
 __aicore__ inline constexpr bool IsMxType()
 {

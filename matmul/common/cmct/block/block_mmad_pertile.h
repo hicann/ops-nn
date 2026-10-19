@@ -107,7 +107,8 @@ private:
                                              bool isTailBL1);
     __aicore__ inline void CopyInA1Nd2Nz(const AscendC::GlobalTensor<AType>& aGlobal, uint64_t kOffset, bool isTailAL1);
     __aicore__ inline void CopyInB1Nd2Nz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1);
-    __aicore__ inline void CopyInB1WeightNz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1);
+    __aicore__ inline void CopyInB1WeightNz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset,
+                                            bool isTailBL1);
     __aicore__ inline void CopyInA2(uint64_t mAL1Offset, uint64_t kAL1Offset, uint64_t kOffset, bool isTailAL1);
     __aicore__ inline void CopyInB2(uint64_t nBL1Offset, uint64_t kBL1Offset, uint64_t kOffset, bool isTailBL1);
     __aicore__ inline void MmadBase(uint64_t kOffset);
@@ -115,14 +116,10 @@ private:
     __aicore__ inline void WaitForVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID);
-        AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID +
-                                                                     QBMM_FLAG_ID_MAX);
     }
     __aicore__ inline void NotifyVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID);
-        AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID +
-                                                                    QBMM_FLAG_ID_MAX);
     }
 
 public:
@@ -234,7 +231,8 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
 __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::UpdatePertileMmParam()
 {
-    mmParams_.fixpipeSplitN = Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE || Get<MNK_M>(actualSingleShape_) == 1;
+    mmParams_.fixpipeSplitN = GetAicAivTaskRation() != 1 &&
+                              (Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE || Get<MNK_M>(actualSingleShape_) == 1);
 
     if constexpr (transA) {
         mmParams_.srcStride = Align(Get<MNK_M>(actualSingleShape_), static_cast<uint64_t>(AscendC::ONE_BLK_SIZE));
@@ -254,8 +252,13 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         mmParams_.ndNum = Get<MNK_N>(actualSingleShape_) > UB_SUB_BANK_ELEMS_B32 ? 2 : 1;
         mmParams_.fixpipeN = Align(Get<MNK_N>(actualSingleShape_),
                                    static_cast<uint64_t>(AscendC::BLOCK_CUBE) * mmParams_.ndNum);
+        if (GetAicAivTaskRation() == 1 && mmParams_.ndNum != 1) {
+            mmParams_.fixpipeN = UB_SUB_BANK_ELEMS_B32;
+        }
     }
-    mmParams_.fixpipeN /= mmParams_.ndNum;
+    if (GetAicAivTaskRation() != 1) {
+        mmParams_.fixpipeN /= mmParams_.ndNum;
+    }
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
@@ -380,6 +383,10 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         fixpipeParams.params.ndNum = mmParams_.ndNum;
         fixpipeParams.params.srcNdStride = mmParams_.srcStride * (mmParams_.fixpipeN / AscendC::BLOCK_CUBE);
         fixpipeParams.params.dstNdStride = UB_TWO_BANK_ELEMS_B32 * PER_BLOCK_SIZE;
+        if (GetAicAivTaskRation() == 1) {
+            fixpipeParams.dstStride = CeilDiv(UB_FOUR_BANK_STRIDE, sizeof(CType));
+            fixpipeParams.params.dstNdStride = mmParams_.fixpipeM * fixpipeParams.dstStride;
+        }
         if (needAicWait_) {
             WaitForVector(crossPingPongID_);
         }
@@ -484,11 +491,12 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         uint64_t curAlignN = Cmct::Gemm::CeilAlign(curN, static_cast<uint64_t>(AscendC::BLOCK_CUBE));
         dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(curK, static_cast<uint64_t>(B_C0_SIZE));
         dataCopyParams.blockLen = curAlignN * B_C0_SIZE;
-        dataCopyParams.srcStride =
-            (Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) - curAlignN) * B_C0_SIZE;
+        dataCopyParams.srcStride = (Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) -
+                                    curAlignN) *
+                                   B_C0_SIZE;
         dataCopyParams.dstStride = 0;
-        gmOffset = (kOffset / B_C0_SIZE) *
-                   Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) * B_C0_SIZE;
+        gmOffset = (kOffset / B_C0_SIZE) * Cmct::Gemm::CeilAlign(nProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) *
+                   B_C0_SIZE;
     } else {
         // B[K,N] NZ layout: (n1, kAlign16, n0=c0), slice along K to kOffset
         uint64_t curAlignN = Cmct::Gemm::CeilAlign(curN, static_cast<uint64_t>(B_C0_SIZE));
@@ -496,8 +504,9 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
         uint64_t l1KPad = Cmct::Gemm::Align(curK, static_cast<uint64_t>(QBMM_DATA_BLOCK));
         dataCopyParams.blockCount = curAlignN / B_C0_SIZE;
         dataCopyParams.blockLen = curKNZ * B_C0_SIZE;
-        dataCopyParams.srcStride =
-            (Cmct::Gemm::CeilAlign(kProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) - curKNZ) * B_C0_SIZE;
+        dataCopyParams.srcStride = (Cmct::Gemm::CeilAlign(kProblem, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) -
+                                    curKNZ) *
+                                   B_C0_SIZE;
         dataCopyParams.dstStride = l1KPad - curKNZ;
         gmOffset = kOffset * B_C0_SIZE;
     }

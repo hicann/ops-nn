@@ -25,7 +25,9 @@
 
 namespace {
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+                                               static_cast<int32_t>(NpuArch::DAV_9201),
+                                               static_cast<int32_t>(NpuArch::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_ASW;
 } // namespace
 
@@ -75,9 +77,10 @@ bool AdaptiveSlidingWindowMixTiling::IsCapable()
 
 bool AdaptiveSlidingWindowMixTiling::CheckCoreNum() const
 {
-    if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
-        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
-                compileInfo_.aicNum, compileInfo_.aivNum);
+    const uint32_t aivNumPerAic = strategy::GetAivNumPerAic(compileInfo_.npuArch);
+    if (aivNumPerAic == 0U || compileInfo_.aivNum != aivNumPerAic * compileInfo_.aicNum) {
+        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:%u, actual aicNum: %u, aivNum: %u.",
+                aivNumPerAic, compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
     return true;
@@ -97,8 +100,12 @@ ge::graphStatus AdaptiveSlidingWindowMixTiling::GetWorkspaceSize()
 
 bool AdaptiveSlidingWindowMixTiling::CalcBasicBlock()
 {
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
-    if (!calculator.Compute(BaseBlockMode::DEFAULT)) {
+    // DAV_9201/9202(960DT/960PR)使用负载均衡基块搜索（参照 ops-nn-dev CalcBasicBlock91096），其余架构沿用DEFAULT。
+    BaseBlockMode mode = (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) ?
+                             BaseBlockMode::LOAD_BALANCE :
+                             BaseBlockMode::DEFAULT;
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo());
+    if (!calculator.Compute(mode)) {
         return false;
     }
     const BaseBlockRes& baseBlockRes = calculator.GetOutput();

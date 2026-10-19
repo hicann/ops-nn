@@ -440,6 +440,8 @@ void AdaptiveSlidingWindowTiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
 }
 
 uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum() const
@@ -741,7 +743,7 @@ void AdaptiveSlidingWindowTiling::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCn
 {
     uint64_t mTailSize = inputParams_.mSize % adaptiveWin_.baseM;
     uint64_t baseTailCntMax = std::min((adaptiveWin_.baseM - mTailSize) / BASIC_BLOCK_SIZE_16, adaptiveWin_.mBlockCnt);
-    uint64_t windowSize = std::min(qmmv3_tiling_const::WINDOW_LEN, adaptiveWin_.mBlockCnt);
+    uint64_t windowSize = std::min(GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum), adaptiveWin_.mBlockCnt);
     uint64_t mainWindowNum = adaptiveWin_.mBlockCnt / windowSize - 1UL;
     uint64_t tailWindowSize = adaptiveWin_.mBlockCnt - mainWindowNum * windowSize;
     uint64_t perfRes = (mainWindowNum + 1UL) * adaptiveWin_.baseM;
@@ -798,9 +800,10 @@ void AdaptiveSlidingWindowTiling::GetOuterNAxisTailCnt(uint64_t& baseTailSplitCn
         (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.mBlockCnt + adaptiveWin_.mBlockCnt % aicoreParams_.aicNum,
         aicoreParams_.aicNum);
 
-    if (blockCnt <= aicoreParams_.aicNum || (adaptiveWin_.mBlockCnt % aicoreParams_.aicNum == 0UL &&
-                                             (adaptiveWin_.nBlockCnt % qmmv3_tiling_const::WINDOW_LEN == 0UL ||
-                                              qmmv3_tiling_const::WINDOW_LEN % adaptiveWin_.nBlockCnt == 0UL))) {
+    const uint64_t windowLen = GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum);
+    if (blockCnt <= aicoreParams_.aicNum ||
+        (adaptiveWin_.mBlockCnt % aicoreParams_.aicNum == 0UL &&
+         (adaptiveWin_.nBlockCnt % windowLen == 0UL || windowLen % adaptiveWin_.nBlockCnt == 0UL))) {
         mainWindows = totalWindows;
     }
     uint64_t tailWindows = totalWindows - mainWindows;

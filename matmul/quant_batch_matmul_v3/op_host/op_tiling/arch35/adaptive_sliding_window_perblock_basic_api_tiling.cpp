@@ -24,7 +24,9 @@
 
 namespace {
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+                                               static_cast<int32_t>(NpuArch::DAV_9201),
+                                               static_cast<int32_t>(NpuArch::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::PERBLOCK_BASIC_API_ASW;
 } // namespace
 
@@ -73,9 +75,10 @@ ge::graphStatus AdaptiveSlidingWindowPerblockBasicAPITiling::DoOpTiling()
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CheckCoreNum() const
 {
-    if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
+    const uint32_t aivNumPerAic = strategy::GetAivNumPerAic(compileInfo_.npuArch);
+    if (aivNumPerAic == 0U || compileInfo_.aivNum != aivNumPerAic * compileInfo_.aicNum) {
         OP_LOGE(inputParams_.opName,
-                "For perblock template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
+                "For perblock template, aicNum:aivNum should be 1:%u, actual aicNum: %u, aivNum: %u.", aivNumPerAic,
                 compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
@@ -99,6 +102,14 @@ uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetKernelType() const
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalcBasicBlock()
 {
+    if (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) {
+        // DAV_9201/9202(960DT/960PR)固定128x128x128基块，不做核利用率调整（参照 ops-nn-dev CalcBasicBlock91096）。
+        adaptiveWin_.baseM = qmmv3_tiling_const::PER_BLOCK_SIZE;
+        adaptiveWin_.baseN = qmmv3_tiling_const::PER_BLOCK_SIZE;
+        adaptiveWin_.baseK = qmmv3_tiling_const::PER_BLOCK_SIZE;
+        adaptiveWin_.useTailWinLogic = true;
+        return true;
+    }
     BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
     if (!calculator.Compute(BaseBlockMode::PERBLOCK)) {
         return false;
@@ -199,6 +210,8 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+    tilingData_.adaptiveSlidingWin.windowLen = static_cast<uint32_t>(
+        GetAswWindowLen(compileInfo_.npuArch, aicoreParams_.aicNum));
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowPerblockBasicAPITiling, supportedNpuArch,

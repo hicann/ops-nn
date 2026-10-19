@@ -24,7 +24,7 @@ constexpr uint16_t QBMM_FLAG_ID_MAX = 16;
 constexpr uint16_t QBMM_AIV_SYNC_AIC_FLAG = 6;
 constexpr uint16_t QBMM_AIC_SYNC_AIV_FLAG = 8;
 constexpr int32_t QBMM_CUBE_SYNC_MTE1_FLAG = 3;
-constexpr uint8_t QBMM_AIC_SYNC_AIV_MODE = 4;
+constexpr uint8_t QBMM_AIC_SYNC_AIV_MODE = 2;
 constexpr uint64_t QBMM_MAX_STEP_SCALEA_K = 16;
 constexpr uint32_t QBMM_UB_ALIGN_SIZE = 32;
 

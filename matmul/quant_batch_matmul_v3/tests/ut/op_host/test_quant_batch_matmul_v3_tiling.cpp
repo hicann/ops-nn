@@ -987,8 +987,10 @@ static BaseBlockRes ComputeStreamKBaseBlock(bool isMxPerGroup, bool transA, bool
 
     QuantBatchMatmulV3CompileInfo compileInfo{};
     compileInfo.aicNum = 24U;
+    compileInfo.l1Size = 524288UL;
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
+    compileInfo.l0cSize = 262144UL;
     compileInfo.npuArch = NpuArch::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
@@ -1012,8 +1014,10 @@ static BaseBlockRes ComputeCubeBasicBaseBlock(bool transA, bool transB, uint64_t
 
     QuantBatchMatmulV3CompileInfo compileInfo{};
     compileInfo.aicNum = 32U;
+    compileInfo.l1Size = 524288UL;
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
+    compileInfo.l0cSize = 262144UL;
     compileInfo.npuArch = NpuArch::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
@@ -1037,8 +1041,10 @@ static BaseBlockRes ComputeMxBaseBlock(bool transA, bool transB, uint64_t mSize,
 
     QuantBatchMatmulV3CompileInfo compileInfo{};
     compileInfo.aicNum = 32U;
+    compileInfo.l1Size = 524288UL;
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
+    compileInfo.l0cSize = 262144UL;
     compileInfo.npuArch = NpuArch::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);

@@ -80,7 +80,8 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
                                 isMMultiCore_, al1Local_, this->aGlobal_);
         mm.Init(&this->block_.tilingData_->matmulTiling, this->pipe_);
     }
-    uint32_t mForSingleVec = DequantBmm::CeilDiv(this->tilingData_->matmulTiling.baseM, CV_RATIO);
+    uint32_t mForSingleVec = DequantBmm::CeilDiv(this->tilingData_->matmulTiling.baseM,
+                                                 AscendC::GetTaskRation()); // 按AIV核数均分baseM
     uint64_t ubOffset = 0;
     this->l0cOutUb_ = LocalTensor<l0cDtype>(TPosition::VECIN, 0, mForSingleVec * this->tilingData_->matmulTiling.baseN);
     ubOffset += mForSingleVec * this->tilingData_->matmulTiling.baseN * sizeof(l0cDtype);

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include "error_util.h"
+#include "platform/soc_spec.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "util/math_util.h"
 
@@ -90,8 +91,9 @@ uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype)
 }
 
 BaseBlockCalculator::BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams,
-                                         const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t batchCoreCnt)
-    : inputParams_(inputParams), compileInfo_(compileInfo), batchCoreCnt_(batchCoreCnt)
+                                         const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t batchCoreCnt,
+                                         fe::PlatFormInfos* platformInfo)
+    : inputParams_(inputParams), compileInfo_(compileInfo), batchCoreCnt_(batchCoreCnt), platformInfo_(platformInfo)
 {}
 
 bool BaseBlockCalculator::Compute(BaseBlockMode mode)
@@ -112,6 +114,12 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
                 return false;
             }
             break;
+        case BaseBlockMode::LOAD_BALANCE:
+            // DAV_9201/9202(960DT/960PR)专用：负载均衡基块搜索为完整独立流程，不再叠加3510的小shape调整。
+            if (!ComputeBaseBlockLoadBalance()) {
+                return false;
+            }
+            break;
         case BaseBlockMode::DEFAULT:
         default:
             ComputeBaseBlockDefault();
@@ -119,7 +127,8 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
     }
     // StreamK base block is bound to split-K scheduling. ASWT base optimization can change baseM/baseN without
     // recomputing streamKCnt and singleCoreK, so skip those adjustments and use the common validation below.
-    if (mode != BaseBlockMode::STREAMK) {
+    // LOAD_BALANCE already folds the small-shape rearrange and the balance search inside its own flow.
+    if (mode != BaseBlockMode::STREAMK && mode != BaseBlockMode::LOAD_BALANCE) {
         if (!OptimizeBaseBlockForCoreUtilization(mode)) {
             OP_LOGE(inputParams_.opName, "Failed to adjust base block.");
             return false;
@@ -173,13 +182,8 @@ bool BaseBlockCalculator::ValidateBaseBlock() const
 
 void BaseBlockCalculator::ComputeBaseBlockDefault()
 {
-    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256),
-                                         GetBaseMAlignSize());
-    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256),
-                                         GetBaseNAlignSize(qmmv3_tiling_const::L1_ALIGN_SIZE));
-
-    uint64_t baseKDefaultSize = GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_128, inputParams_.aDtype);
-    baseBlockRes_.baseK = ops::CeilAlign(std::min(baseKDefaultSize, inputParams_.kSize), GetBaseKAlignSize());
+    // 基本块自适应l0csize
+    baseBlockRes_ = ComputeBaseBlockPlain();
 }
 
 void BaseBlockCalculator::ComputeBaseBlockPerblock()
