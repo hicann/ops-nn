@@ -332,8 +332,6 @@ install_whl_package() {
     else
         logandprint "[INFO]: ${_package_name} installed successfully!"
     fi
-    chmod -R "${CUSTOM_PERM}" "${_pythonlocalpath}"/es_nn 2> /dev/null
-    chmod -R "${CUSTOM_PERM}" "${_pythonlocalpath}"/es_nn-*.dist-info 2> /dev/null
   else
     logandprint "[ERROR]: ERR_NO:0x0080;ERR_DES:install ${_package_name} failed, can not find the matched package for this platform."
     exit 1
@@ -346,10 +344,6 @@ install_es_whl()
   local python_es_whl_name="es_nn"
   local whl_install_dir_path="${TARGET_VERSION_DIR}/python/site-packages"
   install_whl_package "${es_whl_path}" "${python_es_whl_name}" "${whl_install_dir_path}"
-
-  if [ -d "${TARGET_VERSION_DIR}/ops_nn" ]; then
- 	  rm -rf "${TARGET_VERSION_DIR}/ops_nn"
- 	fi
 }
 
 # 背景：allow_hf32_matmul_*_conv_*.ini四个文件从canndev仓迁移至本仓，canndev仓后续会删除这四个文件，
@@ -416,6 +410,10 @@ add_init_py() {
   if [ -n "${opp_builtin_mod}" ]; then
     chmod ${opp_builtin_mod} -R "${built_in_impl_path}" 2>/dev/null
   fi
+
+  if [ -d "${TARGET_VERSION_DIR}/ops_nn" ]; then
+ 	  rm -rf "${TARGET_VERSION_DIR}/ops_nn"
+ 	fi
 }
 
 install_opp() {
@@ -432,6 +430,8 @@ install_opp() {
   # 先安装 whl 包，再通过 install_common_parser.sh 统一安装权限
   install_cann_ops_nn_whl
 
+  install_es_whl
+
   # legacy hf32 ini已在目标环境存在时不覆盖：从payload中剔除副本，copy_all整树拷贝即不会覆盖
   skip_existing_legacy_hf32_ini
 
@@ -444,8 +444,6 @@ install_opp() {
   logandprint "[INFO]: upgradePercentage:30%"
 
   add_init_py
-
-  install_es_whl
 
   logandprint "[INFO]: upgradePercentage:50%"
 }
