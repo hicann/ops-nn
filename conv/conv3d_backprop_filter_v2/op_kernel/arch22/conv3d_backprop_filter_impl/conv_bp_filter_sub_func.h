@@ -38,6 +38,15 @@ struct Out2L1ScalarParams {
     uint32_t bL1cin1CopyLen{0};
 };
 
+struct LoadToB1CopyParams {
+    uint64_t srcOffset{0};
+    uint64_t blockLen{0};
+    uint64_t srcStride{0};
+    uint64_t singleCoreHi{0};
+    uint32_t hiCopyLen{0};
+    uint32_t padUp{0};
+};
+
 template <class Intf>
 static __aicore__ inline void CalOut2L1ScalarParams(Intf* self, Out2L1ScalarParams& params)
 {
@@ -302,6 +311,109 @@ __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, con
     }
 }
 
+template <class Intf>
+static __aicore__ inline void CalLoadToB1Params(Intf* self, uint64_t kbStepIdx, const Out2L1ScalarParams& params,
+                                                LoadToB1CopyParams& copyParams)
+{
+    // L0shape到orgShape的对应关系，L0和L1是16对齐的，orgShape是Wi对齐的,先算Wo对齐再算Wi对齐
+    // 先算L0B所在BL1块的起始地址，16对齐的
+    uint64_t b1SrcKAlign = kbStepIdx * self->ctx.kbl1_;
+    // load3d必须有完整Wo，做Wo对齐，计算起始地址所在的Ho
+    uint32_t b1SrcHo = b1SrcKAlign / self->ctx.tiling_->wo;
+    uint32_t b1SrcHoGm = b1SrcHo + self->ctx.hoStartIdx_;
+    // 计算Ho对应的Hi，根据卷积原理
+    int64_t b1SrcHiGm = static_cast<uint64_t>(b1SrcHoGm) * self->ctx.tiling_->strideH - self->ctx.tiling_->padUp;
+    uint32_t b1SrcHi = 0;
+    if (b1SrcHiGm > 0 && self->ctx.hiStartIdx_ > 0) {
+        b1SrcHi = b1SrcHiGm - self->ctx.hiStartIdx_;
+    } else if (b1SrcHiGm > 0) {
+        b1SrcHi = b1SrcHiGm;
+    }
+
+    uint32_t kbl1 = self->ctx.kbl1_;
+    if (self->ctx.stepKbRound == (kbStepIdx + 1)) {
+        kbl1 = self->ctx.singleShapeHo_ * self->ctx.tiling_->wo - b1SrcKAlign;
+    }
+    uint32_t ho = CalRows2Copy(kbl1, self->ctx.tiling_->wo);
+    uint32_t hiCopyLen = ho * self->ctx.tiling_->strideH + self->ctx.strideKernelDilationH;
+
+    uint32_t padUp = 0;
+    if (b1SrcHiGm < 0) {
+        hiCopyLen = hiCopyLen + b1SrcHiGm;
+        padUp = -b1SrcHiGm;
+    }
+    if (b1SrcHiGm + hiCopyLen > self->ctx.tiling_->hi) {
+        hiCopyLen = self->ctx.tiling_->hi - b1SrcHiGm;
+    }
+
+    uint32_t hiRemainLen = params.singleShapeHi - b1SrcHi;
+    hiCopyLen = hiRemainLen > hiCopyLen ? hiCopyLen : hiRemainLen;
+    copyParams.hiCopyLen = hiCopyLen;
+    copyParams.padUp = padUp;
+
+    copyParams.blockLen = static_cast<uint64_t>(hiCopyLen) * self->ctx.tiling_->wi;
+    copyParams.srcStride = self->ctx.hwI_ - copyParams.blockLen;
+    uint64_t singleCoreHi = self->ctx.tiling_->singleCoreHo * self->ctx.tiling_->strideH +
+                            self->ctx.strideKernelDilationH;
+    singleCoreHi = self->ctx.tiling_->hi > singleCoreHi ? singleCoreHi : self->ctx.tiling_->hi;
+    if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
+        copyParams.srcStride = singleCoreHi * self->ctx.tiling_->wi - copyParams.blockLen;
+    }
+    copyParams.singleCoreHi = singleCoreHi;
+
+    // 得到gm的偏移量
+    copyParams.srcOffset = (params.out2B1SrcAddr + static_cast<uint64_t>(b1SrcHi) * self->ctx.tiling_->wi) *
+                           self->ctx.tiling_->channelSize;
+}
+
+template <class Intf>
+static __aicore__ inline void CopyFmapToB1(Intf* self, LocalTensor<typename Intf::SrcT>& useB1Buf,
+                                           uint32_t bL1cin1CopyLen, const LoadToB1CopyParams& copyParams)
+{
+    DataCopyParams dataCopyParams;
+    dataCopyParams.dstStride = 0;
+
+    uint64_t srcOffset = copyParams.srcOffset;
+    uint64_t dstOffset = 0;
+    if (copyParams.blockLen <= MAX_BLOCK_LEN && copyParams.srcStride <= MAX_16BITS_STRIDE) {
+        dataCopyParams.srcStride = copyParams.srcStride;
+        dataCopyParams.blockLen = copyParams.blockLen;
+        dataCopyParams.blockCount = MAX_BLOCK_COUNT;
+
+        uint32_t loop = bL1cin1CopyLen / MAX_BLOCK_COUNT;
+        for (uint32_t idx = 0; idx < loop; ++idx) {
+            DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
+            if constexpr (Intf::Config::xType::format ==
+                          ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
+                srcOffset += MAX_BLOCK_COUNT * copyParams.singleCoreHi * self->ctx.tiling_->wi *
+                             self->ctx.tiling_->channelSize;
+            } else {
+                srcOffset += MAX_BLOCK_COUNT * self->ctx.hwI_ * self->ctx.tiling_->channelSize;
+            }
+            dstOffset += MAX_BLOCK_COUNT * copyParams.blockLen * self->ctx.tiling_->channelSize;
+        }
+
+        dataCopyParams.blockCount = bL1cin1CopyLen - loop * MAX_BLOCK_COUNT;
+        if (dataCopyParams.blockCount > 0) {
+            DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
+        }
+    } else {
+        dataCopyParams.srcStride = 0;
+        dataCopyParams.blockCount = copyParams.hiCopyLen;
+        dataCopyParams.blockLen = self->ctx.tiling_->wi;
+        for (uint32_t idx = 0; idx < bL1cin1CopyLen; ++idx) {
+            DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
+            if constexpr (Intf::Config::xType::format ==
+                          ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
+                srcOffset += copyParams.singleCoreHi * self->ctx.tiling_->wi * self->ctx.tiling_->channelSize;
+            } else {
+                srcOffset += self->ctx.hwI_ * self->ctx.tiling_->channelSize;
+            }
+            dstOffset += copyParams.blockLen * self->ctx.tiling_->channelSize;
+        }
+    }
+}
+
 template <class Intf, class src1_T>
 __aicore__ inline void LoadToB1(Intf* self, bool cachePosB1, uint64_t kbIdx, const Out2L1ScalarParams& params,
                                 bool isLoadB1, uint64_t kbStepIdx)
@@ -324,105 +436,58 @@ __aicore__ inline void LoadToB1(Intf* self, bool cachePosB1, uint64_t kbIdx, con
             useB1Buf = self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
         }
 
-        // L0shape到orgShape的对应关系，L0和L1是16对齐的，orgShape是Wi对齐的,先算Wo对齐再算Wi对齐
-        // 先算L0B所在BL1块的起始地址，16对齐的
-        uint64_t b1SrcKAlign = kbStepIdx * self->ctx.kbl1_;
-        // load3d必须有完整Wo，做Wo对齐，计算起始地址所在的Ho
-        uint32_t b1SrcHo = b1SrcKAlign / self->ctx.tiling_->wo;
-        uint32_t b1SrcHoGm = b1SrcHo + self->ctx.hoStartIdx_;
-        // 计算Ho对应的Hi，根据卷积原理
-        int64_t b1SrcHiGm = static_cast<uint64_t>(b1SrcHoGm) * self->ctx.tiling_->strideH - self->ctx.tiling_->padUp;
-        uint32_t b1SrcHi = 0;
-        if (b1SrcHiGm > 0 && self->ctx.hiStartIdx_ > 0) {
-            b1SrcHi = b1SrcHiGm - self->ctx.hiStartIdx_;
-        } else if (b1SrcHiGm > 0) {
-            b1SrcHi = b1SrcHiGm;
-        }
-
-        uint32_t kbl1 = self->ctx.kbl1_;
-        if (self->ctx.stepKbRound == (kbStepIdx + 1)) {
-            kbl1 = self->ctx.singleShapeHo_ * self->ctx.tiling_->wo - b1SrcKAlign;
-        }
-        uint32_t ho = CalRows2Copy(kbl1, self->ctx.tiling_->wo);
-        uint32_t hiCopyLen = ho * self->ctx.tiling_->strideH + self->ctx.strideKernelDilationH;
-
-        uint32_t padUp = 0;
-        if (b1SrcHiGm < 0) {
-            hiCopyLen = hiCopyLen + b1SrcHiGm;
-            padUp = -b1SrcHiGm;
-        }
-        if (b1SrcHiGm + hiCopyLen > self->ctx.tiling_->hi) {
-            hiCopyLen = self->ctx.tiling_->hi - b1SrcHiGm;
-        }
-
-        uint32_t hiRemainLen = params.singleShapeHi - b1SrcHi;
-        hiCopyLen = hiRemainLen > hiCopyLen ? hiCopyLen : hiRemainLen;
-
-        DataCopyParams dataCopyParams;
-        dataCopyParams.dstStride = 0;
-
-        uint64_t blockLen = static_cast<uint64_t>(hiCopyLen) * self->ctx.tiling_->wi;
-        uint64_t srcStride = self->ctx.hwI_ - blockLen;
-        uint64_t singleCoreHi = self->ctx.tiling_->singleCoreHo * self->ctx.tiling_->strideH +
-                                self->ctx.strideKernelDilationH;
-        singleCoreHi = self->ctx.tiling_->hi > singleCoreHi ? singleCoreHi : self->ctx.tiling_->hi;
-        if constexpr (Intf::Config::xType::format ==
-                      ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
-            srcStride = singleCoreHi * self->ctx.tiling_->wi - blockLen;
-        }
-
-        // 得到gm的偏移量
-        uint64_t srcOffset = (params.out2B1SrcAddr + static_cast<uint64_t>(b1SrcHi) * self->ctx.tiling_->wi) *
-                             self->ctx.tiling_->channelSize;
-        uint64_t dstOffset = 0;
-        if (blockLen <= MAX_BLOCK_LEN && srcStride <= MAX_16BITS_STRIDE) {
-            dataCopyParams.srcStride = srcStride;
-            dataCopyParams.blockLen = blockLen;
-            dataCopyParams.blockCount = MAX_BLOCK_COUNT;
-
-            uint32_t loop = params.bL1cin1CopyLen / MAX_BLOCK_COUNT;
-            for (uint32_t idx = 0; idx < loop; ++idx) {
-                DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
-                if constexpr (Intf::Config::xType::format ==
-                              ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
-                    srcOffset += MAX_BLOCK_COUNT * singleCoreHi * self->ctx.tiling_->wi *
-                                 self->ctx.tiling_->channelSize;
-                } else {
-                    srcOffset += MAX_BLOCK_COUNT * self->ctx.hwI_ * self->ctx.tiling_->channelSize;
-                }
-                dstOffset += MAX_BLOCK_COUNT * blockLen * self->ctx.tiling_->channelSize;
-            }
-
-            dataCopyParams.blockCount = params.bL1cin1CopyLen - loop * MAX_BLOCK_COUNT;
-            if (dataCopyParams.blockCount > 0) {
-                DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
-            }
-        } else {
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.blockCount = hiCopyLen;
-            dataCopyParams.blockLen = self->ctx.tiling_->wi;
-            for (uint32_t idx = 0; idx < params.bL1cin1CopyLen; ++idx) {
-                DataCopy(useB1Buf[dstOffset], self->ctx.fmapGlobal_[srcOffset], dataCopyParams);
-                if constexpr (Intf::Config::xType::format ==
-                              ConvolutionBackprop::CubeFormat::NCDHW) { // Transdata merge x input
-                    srcOffset += singleCoreHi * self->ctx.tiling_->wi * self->ctx.tiling_->channelSize;
-                } else {
-                    srcOffset += self->ctx.hwI_ * self->ctx.tiling_->channelSize;
-                }
-                dstOffset += blockLen * self->ctx.tiling_->channelSize;
-            }
-        }
+        LoadToB1CopyParams copyParams;
+        CalLoadToB1Params<Intf>(self, kbStepIdx, params, copyParams);
+        CopyFmapToB1<Intf>(self, useB1Buf, params.bL1cin1CopyLen, copyParams);
 
         if (cachePosB1) {
-            self->ctx.bL1HiCopyLenPing = hiCopyLen;
-            self->ctx.bL1PadUpPing = padUp;
+            self->ctx.bL1HiCopyLenPing = copyParams.hiCopyLen;
+            self->ctx.bL1PadUpPing = copyParams.padUp;
             self->ctx.b1Ping_.EnQue(useB1Buf);
         } else {
-            self->ctx.bL1HiCopyLenPong = hiCopyLen;
-            self->ctx.bL1PadUpPong = padUp;
+            self->ctx.bL1HiCopyLenPong = copyParams.hiCopyLen;
+            self->ctx.bL1PadUpPong = copyParams.padUp;
             self->ctx.b1Pong_.EnQue(useB1Buf);
         }
     }
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0cToGmNonSeq(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                const LocalTensor<typename Intf::L0cT>& l0c)
+{
+    uint64_t alignCoutG = !self->ctx.isDeterministic_ ?
+                              static_cast<uint64_t>(self->ctx.tiling_->cout1G) * self->ctx.tiling_->channelSize :
+                              ShiftCeilChannelSize<Intf>(self->ctx.singleShapeCout_, self->ctx.tiling_->channelSize) *
+                                  self->ctx.tiling_->channelSize;
+
+    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * alignCoutG +
+                         static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM *
+                             self->ctx.tiling_->channelSize;
+    // bf16 c0_size is 16 * sizeof(float) , fp32 enable channel split, c0_size is 8 * sizeof(float)
+    uint64_t dstStrideIn = alignCoutG * self->ctx.tiling_->channelSize * sizeof(typename Intf::DstT) / ONE_BLK_SIZE;
+    FixpipeParamsV220 fixpipeParams(
+        static_cast<uint16_t>(self->ctx.baseUseN_), static_cast<uint16_t>(self->ctx.baseUseM_),
+        ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0, dstStrideIn, 0);
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+        fixpipeParams.isChannelSplit = true;
+    }
+    Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_NZ>(output[dstOffset], l0c, fixpipeParams);
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0cToGmSeq(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                             const LocalTensor<typename Intf::L0cT>& l0c)
+{
+    uint64_t dstStrideIn = self->ctx.tiling_->baseM * self->ctx.tiling_->channelSize * sizeof(typename Intf::DstT) /
+                           ONE_BLK_SIZE;
+    FixpipeParamsV220 fixpipeParams(
+        static_cast<uint16_t>(self->ctx.baseUseN_), static_cast<uint16_t>(self->ctx.baseUseM_),
+        ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0, dstStrideIn, 0);
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+        fixpipeParams.isChannelSplit = true;
+    }
+    Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_NZ>(output, l0c, fixpipeParams);
 }
 
 template <class Intf>
@@ -441,36 +506,9 @@ static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename
     }
     if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::FRACTAL_Z_3D) {
         if (!enSequentialWrite) {
-            uint64_t alignCoutG = !self->ctx.isDeterministic_ ?
-                                      static_cast<uint64_t>(self->ctx.tiling_->cout1G) *
-                                          self->ctx.tiling_->channelSize :
-                                      ShiftCeilChannelSize<Intf>(self->ctx.singleShapeCout_,
-                                                                 self->ctx.tiling_->channelSize) *
-                                          self->ctx.tiling_->channelSize;
-
-            uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * alignCoutG +
-                                 static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM *
-                                     self->ctx.tiling_->channelSize;
-            // bf16 c0_size is 16 * sizeof(float) , fp32 enable channel split, c0_size is 8 * sizeof(float)
-            uint64_t dstStrideIn = alignCoutG * self->ctx.tiling_->channelSize * sizeof(typename Intf::DstT) /
-                                   ONE_BLK_SIZE;
-            FixpipeParamsV220 fixpipeParams(
-                static_cast<uint16_t>(self->ctx.baseUseN_), static_cast<uint16_t>(self->ctx.baseUseM_),
-                ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0, dstStrideIn, 0);
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-                fixpipeParams.isChannelSplit = true;
-            }
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_NZ>(output[dstOffset], l0c, fixpipeParams);
+            LoadL0cToGmNonSeq<Intf>(self, output, l0c);
         } else {
-            uint64_t dstStrideIn = self->ctx.tiling_->baseM * self->ctx.tiling_->channelSize *
-                                   sizeof(typename Intf::DstT) / ONE_BLK_SIZE;
-            FixpipeParamsV220 fixpipeParams(
-                static_cast<uint16_t>(self->ctx.baseUseN_), static_cast<uint16_t>(self->ctx.baseUseM_),
-                ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0, dstStrideIn, 0);
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-                fixpipeParams.isChannelSplit = true;
-            }
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_NZ>(output, l0c, fixpipeParams);
+            LoadL0cToGmSeq<Intf>(self, output, l0c);
         }
     }
     if (enAtomic == 1) {

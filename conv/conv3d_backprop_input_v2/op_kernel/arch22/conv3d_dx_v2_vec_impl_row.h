@@ -19,68 +19,92 @@
 template <typename T>
 __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffers()
 {
-    // BF16/FP16 共用：W 维向量化快路径 + FP32 累加兜底；strideW>1 相位分解仅 BF16 使用
     if constexpr (std::is_same<T, bfloat16_t>::value) {
-        if (vecScalarOnly) {
-            // UB 预算降级：放得下 rowAcc+outH 时走 ComputeRowScalarAcc，否则纯标量 ComputeRow
-            if (useScalarAcc) {
-                pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-                pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-            }
-        } else if (CanUseBf16VecStridedRow()) {
-            // strideW>1 相位分解向量化（仅 BF16）：只需类缓冲（约 gradInW/strideW 宽）
-            pipe.InitBuffer(tmpBufRowAccP, classAlignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufProdP, classAlignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufGradRowP, classAlignedWi * sizeof(T));
-            pipe.InitBuffer(tmpBufOutHP, classAlignedWi * sizeof(T));
-        } else {
-            // strideW==1 快路径或标量兜底：全行缓冲
-            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
-            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-        }
+        InitBuffersBfloat16();
     } else if constexpr (std::is_same<T, half>::value) {
-        // FP16 与 BF16 共用：快路径需全行缓冲，标量兜底只需 rowAcc/outH
-        if (vecScalarOnly) {
-            // UB 预算降级：放得下 rowAcc+outH 时走 ComputeRowScalarAcc，否则纯标量 ComputeRow
-            if (useScalarAcc) {
-                pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-                pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-            }
-        } else if (CanUseBf16VecRow()) {
-            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
-            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-        } else {
-            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-        }
+        InitBuffersHalf();
     } else if constexpr (std::is_same<T, float>::value) {
-        // FP32：strideW==1 走 W 维向量化快路径，否则降级 ComputeRowScalarAcc
-        if (vecScalarOnly) {
-            // 极端大 wi 时 tiling 已降级：仅保留 weightDilated，走 ComputeRow 标量路径
-        } else if (CanUseFp32VecRow()) {
-            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
-            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
-        } else {
-            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
-            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
-        }
+        InitBuffersFloat();
     }
     if constexpr (std::is_same<T, bfloat16_t>::value || std::is_same<T, half>::value || std::is_same<T, float>::value) {
-        // 事件 ID 一次性获取、循环内复用（热循环内反复 Fetch 是未定义行为）
-        evtVToMte2_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE2));
-        evtMte2ToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
-        evtVToMte3_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
-        evtMte3ToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_V));
-        evtVToS_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_S));
-        evtSToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::S_V));
+        FetchVecEventIds();
     }
+}
+
+// BF16/FP16 共用：W 维向量化快路径 + FP32 累加兜底；strideW>1 相位分解仅 BF16 使用
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffersBfloat16()
+{
+    if (vecScalarOnly) {
+        // UB 预算降级：放得下 rowAcc+outH 时走 ComputeRowScalarAcc，否则纯标量 ComputeRow
+        if (useScalarAcc) {
+            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+        }
+    } else if (CanUseBf16VecStridedRow()) {
+        // strideW>1 相位分解向量化（仅 BF16）：只需类缓冲（约 gradInW/strideW 宽）
+        pipe.InitBuffer(tmpBufRowAccP, classAlignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufProdP, classAlignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufGradRowP, classAlignedWi * sizeof(T));
+        pipe.InitBuffer(tmpBufOutHP, classAlignedWi * sizeof(T));
+    } else {
+        // strideW==1 快路径或标量兜底：全行缓冲
+        pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
+        pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+    }
+}
+
+// FP16 与 BF16 共用：快路径需全行缓冲，标量兜底只需 rowAcc/outH
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffersHalf()
+{
+    if (vecScalarOnly) {
+        // UB 预算降级：放得下 rowAcc+outH 时走 ComputeRowScalarAcc，否则纯标量 ComputeRow
+        if (useScalarAcc) {
+            pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+        }
+    } else if (CanUseBf16VecRow()) {
+        pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
+        pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+    } else {
+        pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+    }
+}
+
+// FP32：strideW==1 走 W 维向量化快路径，否则降级 ComputeRowScalarAcc
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffersFloat()
+{
+    if (vecScalarOnly) {
+        // 极端大 wi 时 tiling 已降级：仅保留 weightDilated，走 ComputeRow 标量路径
+    } else if (CanUseFp32VecRow()) {
+        pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
+        pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+        pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
+    } else {
+        pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+        pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+    }
+}
+
+// 事件 ID 一次性获取、循环内复用（热循环内反复 Fetch 是未定义行为）
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::FetchVecEventIds()
+{
+    evtVToMte2_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE2));
+    evtMte2ToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
+    evtVToMte3_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
+    evtMte3ToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_V));
+    evtVToS_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_S));
+    evtSToV_ = static_cast<event_t>(pipe.FetchEventID(HardEvent::S_V));
 }
 
 // 单行计算分派：与 aclnn IsConv3DVecFallbackCase 能力圈一致

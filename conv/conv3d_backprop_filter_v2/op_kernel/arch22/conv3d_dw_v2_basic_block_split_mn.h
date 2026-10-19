@@ -61,6 +61,57 @@ protected:
         this->singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
     }
 
+    __aicore__ inline void CalBasicBlockCoreIdx(uint64_t basicBlockIdx, uint32_t mCnt, uint64_t nCnt,
+                                                uint64_t batchDoutNcnt, uint64_t mnCnt, uint64_t& batchDoutIndex)
+    {
+        if (this->coreBindOrder_ == ROW_FIRST) {
+            // 行优先, NDC1HWC0的行方向是C0即N方向
+            this->mCoreIndx_ = basicBlockIdx / batchDoutNcnt;
+            batchDoutIndex = (basicBlockIdx - this->mCoreIndx_ * batchDoutNcnt) / nCnt;
+            this->nCoreIndx_ = basicBlockIdx - this->mCoreIndx_ * batchDoutNcnt - batchDoutIndex * nCnt;
+        } else {
+            // 列优先, NDC1HWC0的列方向是Cout方向
+            uint64_t batchDoutNIndex = basicBlockIdx / mCnt;
+            this->mCoreIndx_ = basicBlockIdx - batchDoutNIndex * mCnt;
+            this->nCoreIndx_ = batchDoutNIndex % nCnt;
+            batchDoutIndex = basicBlockIdx / mnCnt;
+        }
+    }
+
+    __aicore__ inline void CalBasicBlockIterate(uint64_t batchIdx, uint64_t doutIdx, uint64_t& syncTimes)
+    {
+#if __CCE_AICORE__ == 220
+        if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
+            uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset +
+                                (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
+            this->dw_.SetFmap(this->workspaceXGm_[wsOffset]);
+            if ASCEND_IS_AIV {
+                if (syncTimes > 1) {
+                    CrossCoreWaitFlag(this->SYNC_AIC_AIV_FLAG + this->gmPingPongEventId_);
+                }
+                this->TransDataTo6HD(batchIdx, doutIdx);
+                CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(this->SYNC_AIV_AIC_FLAG + this->gmPingPongEventId_);
+                this->gmPingPongEventId_ &= 1;
+                this->gmPingPongEventId_ ^= 1;
+                syncTimes += 1;
+            }
+            if ASCEND_IS_AIC {
+                if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
+                    CrossCoreWaitFlag(this->SYNC_AIV_AIC_FLAG + this->gmPingPongEventId_);
+                    this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
+                    CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE2>(this->SYNC_AIC_AIV_FLAG + this->gmPingPongEventId_);
+                    this->gmPingPongEventId_ &= 1;
+                    this->gmPingPongEventId_ ^= 1;
+                }
+            }
+        } else {
+            this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
+        }
+#else
+        this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
+#endif
+    }
+
     __aicore__ inline void CalBasicBlock()
     {
         uint32_t mCnt = DivCeil(this->m_, this->singleShapeM_);
@@ -91,18 +142,7 @@ protected:
         this->kCoreIndx_ = 0; // 默认不分核
         uint64_t syncTimes = 0;
         for (uint64_t j = 0; j < calRound; ++j) {
-            if (this->coreBindOrder_ == ROW_FIRST) {
-                // 行优先, NDC1HWC0的行方向是C0即N方向
-                this->mCoreIndx_ = basicBlockIdx / batchDoutNcnt;
-                batchDoutIndex = (basicBlockIdx - this->mCoreIndx_ * batchDoutNcnt) / nCnt;
-                this->nCoreIndx_ = basicBlockIdx - this->mCoreIndx_ * batchDoutNcnt - batchDoutIndex * nCnt;
-            } else {
-                // 列优先, NDC1HWC0的列方向是Cout方向
-                uint64_t batchDoutNIndex = basicBlockIdx / mCnt;
-                this->mCoreIndx_ = basicBlockIdx - batchDoutNIndex * mCnt;
-                this->nCoreIndx_ = batchDoutNIndex % nCnt;
-                batchDoutIndex = basicBlockIdx / mnCnt;
-            }
+            CalBasicBlockCoreIdx(basicBlockIdx, mCnt, nCnt, batchDoutNcnt, mnCnt, batchDoutIndex);
             uint64_t batchIdx = batchDoutIndex / this->dout_;
             uint64_t doutIdx = batchDoutIndex - batchIdx * this->dout_;
 
@@ -122,36 +162,7 @@ protected:
             this->hoStartIdx_ = this->kCoreIndx_ * this->singleCoreHo_;
             this->dw_.SetSingleShape(mCoreUse, nCoreUse, this->singleShapeK_, this->hoStartIdx_);
             this->dw_.SetFmap(this->xGm_[this->offsetB_]);
-#if __CCE_AICORE__ == 220
-            if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
-                uint64_t wsOffset = block_idx * this->DOUBLE_BUFFER * this->gmPongOffset +
-                                    (this->gmPingPongEventId_ ? this->gmPingOffset : this->gmPongOffset);
-                this->dw_.SetFmap(this->workspaceXGm_[wsOffset]);
-                if ASCEND_IS_AIV {
-                    if (syncTimes > 1) {
-                        CrossCoreWaitFlag(this->SYNC_AIC_AIV_FLAG + this->gmPingPongEventId_);
-                    }
-                    this->TransDataTo6HD(batchIdx, doutIdx);
-                    CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(this->SYNC_AIV_AIC_FLAG + this->gmPingPongEventId_);
-                    this->gmPingPongEventId_ &= 1;
-                    this->gmPingPongEventId_ ^= 1;
-                    syncTimes += 1;
-                }
-                if ASCEND_IS_AIC {
-                    if constexpr (xFormat == FORMAT_NCDHW) { // Transdata Merge
-                        CrossCoreWaitFlag(this->SYNC_AIV_AIC_FLAG + this->gmPingPongEventId_);
-                        this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
-                        CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE2>(this->SYNC_AIC_AIV_FLAG + this->gmPingPongEventId_);
-                        this->gmPingPongEventId_ &= 1;
-                        this->gmPingPongEventId_ ^= 1;
-                    }
-                }
-            } else {
-                this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
-            }
-#else
-            this->dw_.IterateAll(this->yGm_[this->offsetC_], 1);
-#endif
+            CalBasicBlockIterate(batchIdx, doutIdx, syncTimes);
         }
     }
 };

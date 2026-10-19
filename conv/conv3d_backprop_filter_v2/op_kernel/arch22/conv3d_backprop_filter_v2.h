@@ -230,7 +230,7 @@ protected:
     uint64_t syncTimes_ = 0;
 #endif
 
-    __aicore__ inline void InitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    __aicore__ inline void InitTilingBaseParams(const Conv3DBackpropFilterV2TilingData* tilingData)
     {
         batchDim_ = tilingData->params.batchDim;
         mDim_ = tilingData->params.mDim;
@@ -270,6 +270,10 @@ protected:
         dilationD_ = tilingData->dwTiling.dilationD;
         dilationH_ = tilingData->dwTiling.dilationH;
         seperateDk_ = group_ > 1 || dilationD_ > 1;
+    }
+
+    __aicore__ inline void InitTilingShapeParams(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
         seperateDk_ = true;
         singleSize_ = tilingData->dwTiling.baseM * tilingData->dwTiling.baseN;
@@ -286,6 +290,12 @@ protected:
             tailCinG_ = cinG_;
             tailCoutG_ = coutG_;
         }
+    }
+
+    __aicore__ inline void InitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
+    {
+        InitTilingBaseParams(tilingData);
+        InitTilingShapeParams(tilingData);
     }
 
     __aicore__ inline void CalcOffset(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,

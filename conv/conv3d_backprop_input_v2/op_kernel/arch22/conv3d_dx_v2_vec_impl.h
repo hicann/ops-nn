@@ -280,6 +280,14 @@ private:
             return;
         }
 
+        LoadTapGradRow(goRowBase, srcStart, validLen, leftPad, rightPad, gradRow);
+        AccumulateTapProd(wv, rowAcc, prod, gradRow);
+    }
+
+    // 单个 tap 的 GM->UB 搬运：按左右 pad 把 gradOutput 一行搬入 gradRow（V/MTE2 双向同步）
+    __aicore__ inline void LoadTapGradRow(uint64_t goRowBase, uint32_t srcStart, uint32_t validLen, uint32_t leftPad,
+                                          uint32_t rightPad, LocalTensor<T>& gradRow)
+    {
         Duplicate(gradRow, static_cast<T>(0), alignedWi);
         SetFlag<HardEvent::V_MTE2>(evtVToMte2_);
         WaitFlag<HardEvent::V_MTE2>(evtVToMte2_);
@@ -289,7 +297,12 @@ private:
         DataCopyPad<T>(gradRow, gradOutputGm[goRowBase + srcStart], tapParams, tapPad);
         SetFlag<HardEvent::MTE2_V>(evtMte2ToV_);
         WaitFlag<HardEvent::MTE2_V>(evtMte2ToV_);
+    }
 
+    // 单个 tap 的乘加：gradRow 转 fp32 后按权重 wv 缩放，累加进 rowAcc（含 FP32 Kahan 补偿）
+    __aicore__ inline void AccumulateTapProd(float wv, LocalTensor<float>& rowAcc, LocalTensor<float>& prod,
+                                             LocalTensor<T>& gradRow)
+    {
         if constexpr (std::is_same<T, float>::value) {
             // 同型 Cast 不被 AscendC 支持，fp32 用 Adds+0 等价拷贝
             Adds(prod, gradRow, 0.0f, alignedWi);
@@ -426,6 +439,11 @@ private:
 
     // 行计算相关：声明在类内，定义见 conv3d_dx_v2_vec_impl_row.h
     __aicore__ inline void InitBuffers();
+    // InitBuffers 的 dtype 分派与事件 ID 获取子块，定义见 conv3d_dx_v2_vec_impl_row.h
+    __aicore__ inline void InitBuffersBfloat16();
+    __aicore__ inline void InitBuffersHalf();
+    __aicore__ inline void InitBuffersFloat();
+    __aicore__ inline void FetchVecEventIds();
     __aicore__ inline void ProcessRow(uint64_t r);
     __aicore__ inline void DecomposeRow(uint64_t r, uint32_t& n, uint32_t& ci, uint32_t& diRow, uint32_t& hi) const;
     __aicore__ inline uint64_t GetRowBase(uint32_t n, uint32_t ci, uint32_t diRow, uint32_t hi) const;

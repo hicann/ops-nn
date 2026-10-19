@@ -758,10 +758,9 @@ bool IsInputTransdataWhiteListCase(const ConvBackpropParams& params)
     return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST);
 }
 
-static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* outBackprop, const aclIntArray* stride5,
-                                      const aclIntArray* pad6, const aclIntArray* dilation5, int groups)
+static bool CheckPreNHTransposePreconditions(const aclTensor* input, const aclIntArray* stride5,
+                                             const aclIntArray* pad6, const aclIntArray* dilation5, int groups)
 {
-    OP_LOGD("enter CheckPreNHTransposeEnable");
     if (stride5 == nullptr || pad6 == nullptr || dilation5 == nullptr) {
         OP_LOGD("stride5, pad6 or dilation5 is nullptr, NH transpose disable.");
         return false;
@@ -782,16 +781,21 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
         OP_LOGD("unsupported dataType , NH transpose disable.");
         return false;
     }
+    return true;
+}
 
+static bool GetPreNHTransposeDims(const aclTensor* input, const aclTensor* outBackprop, uint64_t& inputN,
+                                  uint64_t& inputC, uint64_t& inputW, uint64_t& dedyC, uint64_t& dedyW)
+{
     auto inputShape = input->GetOriginalShape();
     auto dedyShape = outBackprop->GetOriginalShape();
-    uint64_t inputN = inputShape[N_DIM_NCDHW_INDEX];
-    uint64_t inputC = inputShape[C_DIM_NCDHW_INDEX];
+    inputN = inputShape[N_DIM_NCDHW_INDEX];
+    inputC = inputShape[C_DIM_NCDHW_INDEX];
     uint64_t inputD = inputShape[D_DIM_NCDHW_INDEX];
     uint64_t inputH = inputShape[H_DIM_NCDHW_INDEX];
-    uint64_t inputW = inputShape[W_DIM_NCDHW_INDEX];
-    uint64_t dedyW = dedyShape[W_DIM_NCDHW_INDEX];
-    uint64_t dedyC = dedyShape[C_DIM_NCDHW_INDEX];
+    inputW = inputShape[W_DIM_NCDHW_INDEX];
+    dedyW = dedyShape[W_DIM_NCDHW_INDEX];
+    dedyC = dedyShape[C_DIM_NCDHW_INDEX];
 
     if (dedyW == 0) {
         OP_LOGD("unsupported dataType , NH transpose disable.");
@@ -802,6 +806,11 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
         OP_LOGD("inputD or inputH is 1, NH transpose disable.");
         return false;
     }
+    return true;
+}
+
+static bool CheckPreNHTransposeStride(const aclIntArray* stride5)
+{
     // check stride,dilation,padding
     if (stride5->Size() == CONV3D_DIM) {
         auto strideData = stride5->GetData();
@@ -813,6 +822,11 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
             return false;
         }
     }
+    return true;
+}
+
+static bool CheckPreNHTransposeDilation(const aclIntArray* dilation5)
+{
     if (dilation5->Size() == CONV3D_DIM) {
         auto dilationData = dilation5->GetData();
         auto dilationD = dilationData[D_DIM_NCDHW_INDEX];
@@ -824,6 +838,11 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
             return false;
         }
     }
+    return true;
+}
+
+static bool CheckPreNHTransposePad(const aclIntArray* pad6)
+{
     auto padData = pad6->GetData();
     for (uint64_t i = 0; i < pad6->Size(); i++) {
         if (padData[i] != 0) {
@@ -831,7 +850,12 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
             return false;
         }
     }
+    return true;
+}
 
+static bool CheckPreNHTransposeShapeLimit(uint64_t inputN, uint64_t dedyC, uint64_t inputW, uint64_t inputC,
+                                          uint64_t dedyW)
+{
     // check input and output, prevent Transpose cost excessive time
     if (inputN < N_TRANSPOSE_N2H_RULE_MIN || inputN > N_TRANSPOSE_N2H_RULE_MAX ||
         dedyC > DEDY_C_TRANSPOSE_N2H_RULE_MAX || inputW > INPUT_W_TRANSPOSE_N2H_RULE_MAX ||
@@ -841,6 +865,34 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
                 "inputW*inputC=%lu (max=2000), "
                 "inputN/dedyW=%lu (min=65), NH transpose disable.",
                 inputN, dedyC, inputW, inputC, inputW * inputC, inputN / dedyW);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* outBackprop, const aclIntArray* stride5,
+                                      const aclIntArray* pad6, const aclIntArray* dilation5, int groups)
+{
+    OP_LOGD("enter CheckPreNHTransposeEnable");
+    if (!CheckPreNHTransposePreconditions(input, stride5, pad6, dilation5, groups)) {
+        return false;
+    }
+
+    uint64_t inputN = 0;
+    uint64_t inputC = 0;
+    uint64_t inputW = 0;
+    uint64_t dedyC = 0;
+    uint64_t dedyW = 0;
+    if (!GetPreNHTransposeDims(input, outBackprop, inputN, inputC, inputW, dedyC, dedyW)) {
+        return false;
+    }
+    if (!CheckPreNHTransposeStride(stride5) || !CheckPreNHTransposeDilation(dilation5)) {
+        return false;
+    }
+    if (!CheckPreNHTransposePad(pad6)) {
+        return false;
+    }
+    if (!CheckPreNHTransposeShapeLimit(inputN, dedyC, inputW, inputC, dedyW)) {
         return false;
     }
     OP_LOGD("NH transpose enable.");
@@ -872,6 +924,45 @@ static const aclIntArray* AdaptOutputPaddingTo5D(const aclTensor* input, const a
     return adaptedOutputPadding;
 }
 
+static aclnnStatus TransposeConv3DBackpropFilterInputs(const aclTensor*& input, const aclTensor*& outBackprop,
+                                                       aclIntArray*& stride5, aclIntArray*& dilation5,
+                                                       aclOpExecutor* executor)
+{
+    auto permAfter = executor->AllocIntArray(OUTPUT_BACKPROP_N2H_SHAPE_DIMS.data(),
+                                             OUTPUT_BACKPROP_N2H_SHAPE_DIMS.size());
+    OP_CHECK(permAfter != nullptr, OP_LOGD("permAfter alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    // change input format
+    input = l0op::Transpose(input, permAfter, executor);
+    OP_CHECK(input != nullptr, OP_LOGD("input transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
+    // change output format
+    outBackprop = l0op::Transpose(outBackprop, permAfter, executor);
+    OP_CHECK(outBackprop != nullptr, OP_LOGD("outBackprop transpose return null."),
+             return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
+    // change stride
+    if (stride5->Size() == CONV3D_DIM) {
+        auto oriStrideData = stride5->GetData();
+        FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX], oriStrideData[D_DIM_NCDHW_INDEX],
+                                       oriStrideData[N_DIM_NCDHW_INDEX], oriStrideData[W_DIM_NCDHW_INDEX],
+                                       oriStrideData[C_DIM_NCDHW_INDEX]};
+        stride5 = executor->AllocIntArray(newStrides.data(), CONV3D_DIM);
+    }
+    // change dilation
+    if (dilation5->Size() == CONV3D_DIM) {
+        auto oriDilationData = dilation5->GetData();
+        FVector<int64_t> newDilations = {oriDilationData[H_DIM_NCDHW_INDEX], oriDilationData[D_DIM_NCDHW_INDEX],
+                                         oriDilationData[N_DIM_NCDHW_INDEX], oriDilationData[W_DIM_NCDHW_INDEX],
+                                         oriDilationData[C_DIM_NCDHW_INDEX]};
+        dilation5 = executor->AllocIntArray(newDilations.data(), CONV3D_DIM);
+    }
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor* input, const aclTensor* weight,
                                                 const aclTensor* outBackprop, const aclIntArray* stride,
                                                 const aclIntArray* padding, const aclIntArray* dilation, int groups,
@@ -900,37 +991,9 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor* input, const ac
 
     // check and permute(0, 2, 3, 4, 1) then permute(3, 2, 0, 4, 1)
     if (CheckPreNHTransposeEnable(input, outBackprop, stride5, pad6, dilation5, groups)) {
-        auto permAfter = executor->AllocIntArray(OUTPUT_BACKPROP_N2H_SHAPE_DIMS.data(),
-                                                 OUTPUT_BACKPROP_N2H_SHAPE_DIMS.size());
-        OP_CHECK(permAfter != nullptr, OP_LOGD("permAfter alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-        // change input format
-        input = l0op::Transpose(input, permAfter, executor);
-        OP_CHECK(input != nullptr, OP_LOGD("input transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-        const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
-        // change output format
-        outBackprop = l0op::Transpose(outBackprop, permAfter, executor);
-        OP_CHECK(outBackprop != nullptr, OP_LOGD("outBackprop transpose return null."),
-                 return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-        const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
-        // change stride
-        if (stride5->Size() == CONV3D_DIM) {
-            auto oriStrideData = stride5->GetData();
-            FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX], oriStrideData[D_DIM_NCDHW_INDEX],
-                                           oriStrideData[N_DIM_NCDHW_INDEX], oriStrideData[W_DIM_NCDHW_INDEX],
-                                           oriStrideData[C_DIM_NCDHW_INDEX]};
-            stride5 = executor->AllocIntArray(newStrides.data(), CONV3D_DIM);
-        }
-        // change dilation
-        if (dilation5->Size() == CONV3D_DIM) {
-            auto oriDilationData = dilation5->GetData();
-            FVector<int64_t> newDilations = {oriDilationData[H_DIM_NCDHW_INDEX], oriDilationData[D_DIM_NCDHW_INDEX],
-                                             oriDilationData[N_DIM_NCDHW_INDEX], oriDilationData[W_DIM_NCDHW_INDEX],
-                                             oriDilationData[C_DIM_NCDHW_INDEX]};
-            dilation5 = executor->AllocIntArray(newDilations.data(), CONV3D_DIM);
+        auto transposeRet = TransposeConv3DBackpropFilterInputs(input, outBackprop, stride5, dilation5, executor);
+        if (transposeRet != ACLNN_SUCCESS) {
+            return transposeRet;
         }
     }
     L0_DFX(Conv3DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32);

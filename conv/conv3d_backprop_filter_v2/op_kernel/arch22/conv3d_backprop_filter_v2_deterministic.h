@@ -66,6 +66,35 @@ __aicore__ inline void ReachMaxIterate()
     }
 }
 
+__aicore__ inline void ReduceKInUbBlkInWorkspace(const LocalTensor<yType>& ubSrc1, const LocalTensor<yType>& ubSrc2,
+                                                 const LocalTensor<yType>& ubDst, uint64_t baseWorkspaceOffset,
+                                                 uint64_t useDataSize)
+{
+    uint32_t groupCoreFactor = dkDim_ * batchDim_ * kDim_ * nDim_ * mDim_;
+    uint32_t dkCoreFactor = batchDim_ * kDim_ * nDim_ * mDim_;
+    uint32_t batchCoreFactor = mDim_ * nDim_ * kDim_;
+    uint32_t mCoreFactor = nDim_ * kDim_;
+    for (uint32_t curBatchIndx = 0; curBatchIndx < batchDim_; curBatchIndx++) {
+        for (uint32_t curKIndx = 0; curKIndx < kDim_; curKIndx++) {
+            uint32_t curBlkIndx = groupCoreIndx_ * groupCoreFactor + dkCoreIndx_ * dkCoreFactor +
+                                  curBatchIndx * batchCoreFactor + mCoreIndx_ * mCoreFactor + nCoreIndx_ * kDim_ +
+                                  curKIndx;
+            uint64_t curWorkspaceOffset = baseWorkspaceOffset + DOUBLE_BUFFER * curBlkIndx * singleSize_;
+            SetFlag<HardEvent::V_MTE2>(0);
+            WaitFlag<HardEvent::V_MTE2>(0);
+            if (curBatchIndx == 0 && curKIndx == 0) {
+                DataCopy(ubSrc1, workspaceGm_[curWorkspaceOffset], useDataSize);
+                continue;
+            }
+            DataCopy(ubSrc2, workspaceGm_[curWorkspaceOffset], useDataSize);
+            SetFlag<HardEvent::MTE2_V>(0);
+            WaitFlag<HardEvent::MTE2_V>(0);
+            PipeBarrier<PIPE_V>();
+            Add<yType>(ubDst, ubSrc1, ubSrc2, useDataSize);
+        }
+    }
+}
+
 __aicore__ inline void ReduceKInUb()
 {
     LocalTensor<yType> ubSrc1 = tmpBuf_.template Get<yType>();
@@ -93,29 +122,7 @@ __aicore__ inline void ReduceKInUb()
         }
         SetFlag<HardEvent::MTE3_V>(0);
         WaitFlag<HardEvent::MTE3_V>(0);
-        uint32_t groupCoreFactor = dkDim_ * batchDim_ * kDim_ * nDim_ * mDim_;
-        uint32_t dkCoreFactor = batchDim_ * kDim_ * nDim_ * mDim_;
-        uint32_t batchCoreFactor = mDim_ * nDim_ * kDim_;
-        uint32_t mCoreFactor = nDim_ * kDim_;
-        for (uint32_t curBatchIndx = 0; curBatchIndx < batchDim_; curBatchIndx++) {
-            for (uint32_t curKIndx = 0; curKIndx < kDim_; curKIndx++) {
-                uint32_t curBlkIndx = groupCoreIndx_ * groupCoreFactor + dkCoreIndx_ * dkCoreFactor +
-                                      curBatchIndx * batchCoreFactor + mCoreIndx_ * mCoreFactor + nCoreIndx_ * kDim_ +
-                                      curKIndx;
-                uint64_t curWorkspaceOffset = baseWorkspaceOffset + DOUBLE_BUFFER * curBlkIndx * singleSize_;
-                SetFlag<HardEvent::V_MTE2>(0);
-                WaitFlag<HardEvent::V_MTE2>(0);
-                if (curBatchIndx == 0 && curKIndx == 0) {
-                    DataCopy(ubSrc1, workspaceGm_[curWorkspaceOffset], useDataSize);
-                    continue;
-                }
-                DataCopy(ubSrc2, workspaceGm_[curWorkspaceOffset], useDataSize);
-                SetFlag<HardEvent::MTE2_V>(0);
-                WaitFlag<HardEvent::MTE2_V>(0);
-                PipeBarrier<PIPE_V>();
-                Add<yType>(ubDst, ubSrc1, ubSrc2, useDataSize);
-            }
-        }
+        ReduceKInUbBlkInWorkspace(ubSrc1, ubSrc2, ubDst, baseWorkspaceOffset, useDataSize);
         DataCopyParams loadUbToGmParams(n1InOneCal, DivCeil(dataBlockSize * sizeof(float), ONE_BLK_SIZE), 0, 0);
         uint64_t yGmOffsetInterval = alignCoutG * dw_.ctx.tiling_->channelSize;
         uint64_t dstStride = DivCeil((yGmOffsetInterval - dataBlockSize) * sizeof(float), ONE_BLK_SIZE);

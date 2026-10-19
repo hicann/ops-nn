@@ -428,30 +428,25 @@ protected:
         }
     }
 
-    template <bool isSplitM = false>
-    __aicore__ inline void ReduceStreamKToY(uint64_t mCoreUse, uint64_t nCoreUse, uint64_t tailBlockIdx)
+    __aicore__ inline bool CalStreamKReduceParams(uint64_t mCoreUse, uint64_t nCoreUse, uint64_t tailBlockIdx,
+                                                  uint64_t& alignedM, uint64_t& curOffsetC, uint64_t& vecOffsetC,
+                                                  uint64_t& totalSize)
     {
-        if (mCoreUse == 0 || nCoreUse == 0) {
-            return;
-        }
-
         uint64_t reducerCore = tailBlockIdx * this->coreStreamK_;
         uint32_t maxVecCore = this->coreStreamK_ * VEC_CUBE_RATIO;
-        uint64_t totalSize;
-        uint32_t useVecCore;
+        uint32_t useVecCore = 0;
         uint32_t localVecIdx = (block_idx - reducerCore) * VEC_CUBE_RATIO + GetSubBlockIdx();
-        uint64_t alignedM = this->cout1G_ * this->channelSize_;
-        uint64_t curOffsetC = this->offsetC_;
-        uint64_t vecOffsetC = 0;
-        uint32_t offsetBlock = 0;
+        alignedM = this->cout1G_ * this->channelSize_;
+        curOffsetC = this->offsetC_;
+        vecOffsetC = 0;
 
         uint32_t totalBlockNum = Ceil(nCoreUse, this->channelSize_);
         useVecCore = totalBlockNum > maxVecCore ? maxVecCore : totalBlockNum;
         if (localVecIdx >= useVecCore) {
-            return;
+            return false;
         }
         totalSize = totalBlockNum / useVecCore;
-        offsetBlock = totalSize * localVecIdx;
+        uint32_t offsetBlock = totalSize * localVecIdx;
         uint32_t tailVecNum = totalBlockNum % useVecCore;
         if (tailVecNum != 0) {
             offsetBlock += localVecIdx < tailVecNum ? localVecIdx : tailVecNum;
@@ -460,6 +455,23 @@ protected:
         totalSize = totalSize * Ceil(mCoreUse, BLOCK_CUBE) * BLOCK_CUBE * this->channelSize_;
         curOffsetC += offsetBlock * alignedM * this->channelSize_;
         vecOffsetC = offsetBlock * mCoreUse * this->channelSize_;
+        return true;
+    }
+
+    template <bool isSplitM = false>
+    __aicore__ inline void ReduceStreamKToY(uint64_t mCoreUse, uint64_t nCoreUse, uint64_t tailBlockIdx)
+    {
+        if (mCoreUse == 0 || nCoreUse == 0) {
+            return;
+        }
+
+        uint64_t alignedM = 0;
+        uint64_t curOffsetC = 0;
+        uint64_t vecOffsetC = 0;
+        uint64_t totalSize = 0;
+        if (!CalStreamKReduceParams(mCoreUse, nCoreUse, tailBlockIdx, alignedM, curOffsetC, vecOffsetC, totalSize)) {
+            return;
+        }
 
         LocalTensor<yType> ubSrc1 = this->tmpBuf_.template Get<yType>();
         LocalTensor<yType> ubSrc2 = ubSrc1[this->dataSize_];

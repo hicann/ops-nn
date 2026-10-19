@@ -331,6 +331,56 @@ static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const
     return true;
 }
 
+static ge::graphStatus InferShapeForConv3DTransposeZeroOutput(gert::InferShapeContext* context, gert::Shape* y_shape)
+{
+    const auto x_desc = context->GetInputDesc(kConv3DTransposeXIdx);
+    OP_CHECK_IF(x_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "x desc is null"),
+                return ge::GRAPH_FAILED);
+    const auto x_format = x_desc->GetOriginFormat();
+
+    Conv3DInputShapes shapes;
+    Conv3DAttrs attrs;
+    int64_t output_padding[3]; // 3: DHW
+    if (GetConv3DXShape(context, 1UL, x_format, false, shapes) &&
+        GetConv3DFilterShape(context, kConv3DTransposeFilterIdx, shapes) &&
+        GetConv3DStridesAndDilations(context, x_format, attrs) &&
+        GetConvGroups(context, kConv3DTransposeGroupsIdx, attrs) &&
+        GetConv3DPads(context, shapes, kConv3DTransposePadsIdx, kConv3DTransposePaddingIdx, attrs) &&
+        GetConv3DTransposeOutputPadding(context, x_format, output_padding, sizeof(output_padding) / sizeof(int64_t))) {
+        int64_t output_d = attrs.strd * (shapes.id - 1) + output_padding[0] + ((shapes.kd - 1) * attrs.dild + 1) -
+                           (attrs.padf + attrs.padb);
+        int64_t output_h = attrs.strh * (shapes.ih - 1) + output_padding[1] + ((shapes.kh - 1) * attrs.dilh + 1) -
+                           (attrs.padu + attrs.padd);
+        // 2: w dim
+        int64_t output_w = attrs.strw * (shapes.iw - 1) + output_padding[2] + ((shapes.kw - 1) * attrs.dilw + 1) -
+                           (attrs.padl + attrs.padr);
+
+        y_shape->SetDimNum(0);
+        if (x_format == ge::FORMAT_NCDHW) {
+            y_shape->AppendDim(shapes.in);
+            y_shape->AppendDim(shapes.kc * attrs.groups);
+            y_shape->AppendDim(output_d);
+            y_shape->AppendDim(output_h);
+            y_shape->AppendDim(output_w);
+        } else if (x_format == ge::FORMAT_NDHWC) {
+            y_shape->AppendDim(shapes.in);
+            y_shape->AppendDim(output_d);
+            y_shape->AppendDim(output_h);
+            y_shape->AppendDim(output_w);
+            y_shape->AppendDim(shapes.kc * attrs.groups);
+        } else {
+            OP_LOGE(context->GetNodeName(), "The format of output y not support format %s.",
+                    ge::TypeUtils::FormatToAscendString(x_format).GetString());
+            return false;
+        }
+
+        OP_LOGD(context->GetNodeName(), "y_shape: %s", Ops::Base::ToString(*y_shape).c_str());
+        return ge::GRAPH_SUCCESS;
+    }
+
+    return ge::GRAPH_FAILED;
+}
+
 static ge::graphStatus InferShapeForConv3DTranspose(gert::InferShapeContext* context)
 {
     auto const_tensor = context->GetInputTensor(0);
@@ -364,53 +414,7 @@ static ge::graphStatus InferShapeForConv3DTranspose(gert::InferShapeContext* con
 
     bool from_2D = const_tensor_dim_num == kConv2dDimSizeLimit;
     if (CheckOutputAllZero(y_shape) || (from_2D && CheckOutputAllZeroFrom2D(context, y_shape, d_index))) {
-        const auto x_desc = context->GetInputDesc(kConv3DTransposeXIdx);
-        OP_CHECK_IF(x_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "x desc is null"),
-                    return ge::GRAPH_FAILED);
-        const auto x_format = x_desc->GetOriginFormat();
-
-        Conv3DInputShapes shapes;
-        Conv3DAttrs attrs;
-        int64_t output_padding[3]; // 3: DHW
-        if (GetConv3DXShape(context, 1UL, x_format, false, shapes) &&
-            GetConv3DFilterShape(context, kConv3DTransposeFilterIdx, shapes) &&
-            GetConv3DStridesAndDilations(context, x_format, attrs) &&
-            GetConvGroups(context, kConv3DTransposeGroupsIdx, attrs) &&
-            GetConv3DPads(context, shapes, kConv3DTransposePadsIdx, kConv3DTransposePaddingIdx, attrs) &&
-            GetConv3DTransposeOutputPadding(context, x_format, output_padding,
-                                            sizeof(output_padding) / sizeof(int64_t))) {
-            int64_t output_d = attrs.strd * (shapes.id - 1) + output_padding[0] + ((shapes.kd - 1) * attrs.dild + 1) -
-                               (attrs.padf + attrs.padb);
-            int64_t output_h = attrs.strh * (shapes.ih - 1) + output_padding[1] + ((shapes.kh - 1) * attrs.dilh + 1) -
-                               (attrs.padu + attrs.padd);
-            // 2: w dim
-            int64_t output_w = attrs.strw * (shapes.iw - 1) + output_padding[2] + ((shapes.kw - 1) * attrs.dilw + 1) -
-                               (attrs.padl + attrs.padr);
-
-            y_shape->SetDimNum(0);
-            if (x_format == ge::FORMAT_NCDHW) {
-                y_shape->AppendDim(shapes.in);
-                y_shape->AppendDim(shapes.kc * attrs.groups);
-                y_shape->AppendDim(output_d);
-                y_shape->AppendDim(output_h);
-                y_shape->AppendDim(output_w);
-            } else if (x_format == ge::FORMAT_NDHWC) {
-                y_shape->AppendDim(shapes.in);
-                y_shape->AppendDim(output_d);
-                y_shape->AppendDim(output_h);
-                y_shape->AppendDim(output_w);
-                y_shape->AppendDim(shapes.kc * attrs.groups);
-            } else {
-                OP_LOGE(context->GetNodeName(), "The format of output y not support format %s.",
-                        ge::TypeUtils::FormatToAscendString(x_format).GetString());
-                return false;
-            }
-
-            OP_LOGD(context->GetNodeName(), "y_shape: %s", Ops::Base::ToString(*y_shape).c_str());
-            return ge::GRAPH_SUCCESS;
-        }
-
-        return ge::GRAPH_FAILED;
+        return InferShapeForConv3DTransposeZeroOutput(context, y_shape);
     }
     return ge::GRAPH_SUCCESS;
 }

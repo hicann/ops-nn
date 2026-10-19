@@ -254,6 +254,97 @@ struct SetSingleShape {
     }
 };
 
+template <class Intf>
+__aicore__ inline void UpdateFirstIterParams(Intf* self, Out2L1ScalarParams& params,
+                                             bool kIterCeilStepKaGreaterAl1Pbuffer,
+                                             bool kIterCeilStepKbGreaterBl1Pbuffer)
+{
+    self->ctx.curML0Idx_ = 0;
+    self->ctx.curNL0Idx_ = 0;
+    self->ctx.curML1Idx_ = 0;
+    self->ctx.curNL1Idx_ = 0;
+    self->ctx.isFirstIter_ = false;
+    self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM ? self->ctx.tiling_->stepM : self->ctx.mIter_;
+    self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN : self->ctx.nIter_;
+    bool isLastNLoop = self->ctx.nIter_ == 1;
+    bool isLastMLoop = self->ctx.mIter_ == 1;
+    bool isNLastStep = isLastNLoop || self->ctx.tiling_->stepN == 1;
+    bool isMLastStep = isLastMLoop || self->ctx.tiling_->stepM == 1;
+    params.isLoad2L1A = true;
+    params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer || (self->ctx.tiling_->iterateOrder && isMLastStep) || // OrderN
+                       (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep);                     // OrderM
+    params.isLoad2L1B = true;
+    params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer ||
+                       (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) || // OrderN
+                       (!(self->ctx.tiling_->iterateOrder) && isNLastStep);               // OrderM
+}
+
+template <class Intf>
+__aicore__ inline bool UpdateIterateOrderN(Intf* self, Out2L1ScalarParams& params)
+{
+    if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
+        self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
+        if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
+            self->ctx.curML1Idx_ += self->ctx.curStepM_;
+            if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
+                return false;
+            }
+            if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
+                self->ctx.curML1Idx_ = 0;
+                self->ctx.curNL1Idx_ += self->ctx.curStepN_;
+            }
+            UpdateIdxAndStep<Intf>(self);
+            if (self->ctx.curML0Idx_ == 0) {
+                params.isLoad2L1B = true; // OrderN, N轴循环结束，需要置换BL1
+            }
+        }
+        params.isLoad2L1A = true; // OrderN, M轴循环结束，需要置换AL1
+    }
+    if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
+        self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1) {
+        params.isFreeAL1 = true; // OrderN, M轴最后一次循环，需要释放AL1
+    }
+    if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
+        (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
+         self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1)) {
+        params.isFreeBL1 = true; // OrderN, N轴最后一次循环，需要释放BL1
+    }
+    return true;
+}
+
+template <class Intf>
+__aicore__ inline bool UpdateIterateOrderM(Intf* self, Out2L1ScalarParams& params)
+{
+    if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
+        self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
+        if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
+            self->ctx.curNL1Idx_ += self->ctx.curStepN_;
+            if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
+                return false;
+            }
+            if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
+                self->ctx.curNL1Idx_ = 0;
+                self->ctx.curML1Idx_ += self->ctx.curStepM_;
+            }
+            UpdateIdxAndStep<Intf>(self);
+            if (self->ctx.curNL0Idx_ == 0) {
+                params.isLoad2L1A = true; // OrderM, M轴循环结束，需要置换AL1
+            }
+        }
+        params.isLoad2L1B = true; // OrderM, N轴循环结束，需要置换BL1
+    }
+    if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) &&
+        (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
+         self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1)) {
+        params.isFreeAL1 = true; // OrderM, M轴最后一次循环，需要释放AL1
+    }
+    if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
+        self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1) {
+        params.isFreeBL1 = true; // OrderM, N轴最后一次循环，需要释放BL1
+    }
+    return true;
+}
+
 template <class Intf, bool sync>
 struct Iterate {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
@@ -295,82 +386,15 @@ struct Iterate {
         out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer;
         out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer;
         if (unlikely(self->ctx.isFirstIter_)) {
-            self->ctx.curML0Idx_ = 0;
-            self->ctx.curNL0Idx_ = 0;
-            self->ctx.curML1Idx_ = 0;
-            self->ctx.curNL1Idx_ = 0;
-            self->ctx.isFirstIter_ = false;
-            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM ? self->ctx.tiling_->stepM :
-                                                                                self->ctx.mIter_;
-            self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN :
-                                                                                self->ctx.nIter_;
-            bool isLastNLoop = self->ctx.nIter_ == 1;
-            bool isLastMLoop = self->ctx.mIter_ == 1;
-            bool isNLastStep = isLastNLoop || self->ctx.tiling_->stepN == 1;
-            bool isMLastStep = isLastMLoop || self->ctx.tiling_->stepM == 1;
-            out2L1Params.isLoad2L1A = true;
-            out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer ||
-                                     (self->ctx.tiling_->iterateOrder && isMLastStep) ||                 // OrderN
-                                     (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep); // OrderM
-            out2L1Params.isLoad2L1B = true;
-            out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer ||
-                                     (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) || // OrderN
-                                     (!(self->ctx.tiling_->iterateOrder) && isNLastStep);               // OrderM
+            UpdateFirstIterParams<Intf>(self, out2L1Params, kIterCeilStepKaGreaterAl1Pbuffer,
+                                        kIterCeilStepKbGreaterBl1Pbuffer);
         } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
-            if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-                if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                    self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        return false;
-                    }
-                    if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                    if (self->ctx.curML0Idx_ == 0) {
-                        out2L1Params.isLoad2L1B = true; // OrderN, N轴循环结束，需要置换BL1
-                    }
-                }
-                out2L1Params.isLoad2L1A = true; // OrderN, M轴循环结束，需要置换AL1
-            }
-            if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
-                self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1) {
-                out2L1Params.isFreeAL1 = true; // OrderN, M轴最后一次循环，需要释放AL1
-            }
-            if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
-                (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
-                 self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1)) {
-                out2L1Params.isFreeBL1 = true; // OrderN, N轴最后一次循环，需要释放BL1
+            if (!UpdateIterateOrderN<Intf>(self, out2L1Params)) {
+                return false;
             }
         } else { // order_M
-            if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-                if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                    self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        return false;
-                    }
-                    if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curNL1Idx_ = 0;
-                        self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                    if (self->ctx.curNL0Idx_ == 0) {
-                        out2L1Params.isLoad2L1A = true; // OrderM, M轴循环结束，需要置换AL1
-                    }
-                }
-                out2L1Params.isLoad2L1B = true; // OrderM, N轴循环结束，需要置换BL1
-            }
-            if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) &&
-                (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
-                 self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1)) {
-                out2L1Params.isFreeAL1 = true; // OrderM, M轴最后一次循环，需要释放AL1
-            }
-            if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
-                self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1) {
-                out2L1Params.isFreeBL1 = true; // OrderM, N轴最后一次循环，需要释放BL1
+            if (!UpdateIterateOrderM<Intf>(self, out2L1Params)) {
+                return false;
             }
         }
         self->ctx.baseUseM_ = (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ :

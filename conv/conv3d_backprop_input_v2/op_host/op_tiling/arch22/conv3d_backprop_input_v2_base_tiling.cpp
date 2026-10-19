@@ -388,6 +388,20 @@ int32_t Conv3DBackpropInputV2Tiling::GetDimFactor(const int64_t& value, const st
     return dimFactor;
 }
 
+static bool TryNonFactorSplitByM(const int32_t remainFactor, const int32_t dMaxFactor,
+                                 const int32_t batchDepthMaxFactor, const int64_t maxM, int32_t& dDim,
+                                 int32_t& batchDim, int32_t& mDim)
+{
+    // m的粒度合适，执行M的非因子分核
+    if (maxM >= (remainFactor * BEST_BASE_M)) {
+        dDim = MathUtil::GetGcd(dMaxFactor, batchDepthMaxFactor);
+        batchDim = batchDepthMaxFactor / dDim;
+        mDim = remainFactor;
+        return true;
+    }
+    return false;
+}
+
 void Conv3DBackpropInputV2Tiling::GetCoreDim(int32_t& batchDim, int32_t& dDim, int32_t& mDim, int32_t& nDim,
                                              const int32_t curCoreNum)
 {
@@ -450,10 +464,7 @@ void Conv3DBackpropInputV2Tiling::GetCoreDim(int32_t& batchDim, int32_t& dDim, i
     }
 
     // m的粒度合适，执行M的非因子分核
-    if (maxM >= (remainFactor * BEST_BASE_M)) {
-        dDim = MathUtil::GetGcd(dMaxFactor, batchDepthMaxFactor);
-        batchDim = batchDepthMaxFactor / dDim;
-        mDim = remainFactor;
+    if (TryNonFactorSplitByM(remainFactor, dMaxFactor, batchDepthMaxFactor, maxM, dDim, batchDim, mDim)) {
         return;
     }
 
@@ -649,6 +660,18 @@ void Conv3DBackpropInputV2Tiling::UpdateBaseStep(uint32_t& stepKa, uint32_t& ste
     }
 }
 
+static uint64_t CalB1Size(const TilingValue& tilingParams, uint32_t stepKb, uint32_t baseK, uint32_t baseN,
+                          uint64_t lenHkWkC0, uint32_t dtypeByte)
+{
+    if (dtypeByte == FP32_DATA_SIZE) {
+        uint64_t numHkWkC0 = Ops::Base::CeilDiv(static_cast<uint64_t>(tilingParams.stepKb * tilingParams.baseK),
+                                                lenHkWkC0);
+        return tilingParams.bl1Pbuffer * dtypeByte * baseN *
+               Ops::Base::CeilDiv(numHkWkC0, static_cast<uint64_t>(NUM_FP32_C1OUT)) * NUM_FP32_C1OUT * lenHkWkC0;
+    }
+    return tilingParams.bl1Pbuffer * dtypeByte * stepKb * baseN * baseK;
+}
+
 bool Conv3DBackpropInputV2Tiling::CalBaseBlockTiling(TilingValue& tilingParams)
 {
     // 默认开启double buffer
@@ -684,16 +707,8 @@ bool Conv3DBackpropInputV2Tiling::CalBaseBlockTiling(TilingValue& tilingParams)
     tilingParams.stepGroup = 1U;
     tilingParams.iterateOrder = 1U;
 
-    uint64_t b1Size = 0;
     uint64_t lenHkWkC0 = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * blockSize_;
-    if (dtypeByte_ == FP32_DATA_SIZE) {
-        uint64_t numHkWkC0 = Ops::Base::CeilDiv(static_cast<uint64_t>(tilingParams.stepKb * tilingParams.baseK),
-                                                lenHkWkC0);
-        b1Size = tilingParams.bl1Pbuffer * dtypeByte_ * baseN *
-                 Ops::Base::CeilDiv(numHkWkC0, static_cast<uint64_t>(NUM_FP32_C1OUT)) * NUM_FP32_C1OUT * lenHkWkC0;
-    } else {
-        b1Size = tilingParams.bl1Pbuffer * dtypeByte_ * stepKb * baseN * baseK;
-    }
+    uint64_t b1Size = CalB1Size(tilingParams, stepKb, baseK, baseN, lenHkWkC0, dtypeByte_);
     uint64_t coutNum = static_cast<uint64_t>(stepKa) * baseK / (runInfo_.kernel_h * runInfo_.kernel_w);
     uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(baseM)) * runInfo_.dedy_w * runInfo_.stride_w * coutNum;
     uint64_t l1UsedSize = a1PixelNum * dtypeByte_ * tilingParams.al1Pbuffer + b1Size;
@@ -909,6 +924,39 @@ void Conv3DBackpropInputV2Tiling::SetRunInfoTiling(TConv3DInputV2Tiling& dxt)
     dxt.initOutputFlag = runInfo_.initOutputFlag;
 }
 
+static bool HitTilingKnowledgeMap(const int32_t coreNum, const uint32_t dtypeByte, const int64_t realG,
+                                  const std::string& key, TilingValue& tilingParams, bool& useBasicBlock)
+{
+    bool isHitKnowledgeMap = false;
+    if (realG == 1) {
+        if (dtypeByte == F16_DATA_SIZE) {
+            if (coreNum == CORE_NUM_910B3 && TILING_DATA_MAP_B3.find(key) != TILING_DATA_MAP_B3.end()) {
+                tilingParams = TILING_DATA_MAP_B3.at(key);
+                isHitKnowledgeMap = true;
+            } else if (coreNum == CORE_NUM_910B2 && TILING_DATA_MAP_B2.find(key) != TILING_DATA_MAP_B2.end()) {
+                tilingParams = TILING_DATA_MAP_B2.at(key);
+                isHitKnowledgeMap = true;
+            }
+        } else if (dtypeByte == FP32_DATA_SIZE) {
+            if (coreNum == CORE_NUM_910B2 && FP32_TILING_DATA_MAP_B2.find(key) != FP32_TILING_DATA_MAP_B2.end()) {
+                tilingParams = FP32_TILING_DATA_MAP_B2.at(key);
+                isHitKnowledgeMap = true;
+            } else if (coreNum == CORE_NUM_910B3 &&
+                       FP32_TILING_DATA_MAP_B3.find(key) != FP32_TILING_DATA_MAP_B3.end()) {
+                tilingParams = FP32_TILING_DATA_MAP_B3.at(key);
+                isHitKnowledgeMap = true;
+            } else if (coreNum == CORE_NUM_910B2 && FP32_BASIC_BLOCK_MAP_B2.count(key) > 0) {
+                tilingParams = FP32_BASIC_BLOCK_MAP_B2.at(key);
+                useBasicBlock = isHitKnowledgeMap = true;
+            } else if (coreNum == CORE_NUM_910B3 && FP32_BASIC_BLOCK_MAP_B3.count(key) > 0) {
+                tilingParams = FP32_BASIC_BLOCK_MAP_B3.at(key);
+                useBasicBlock = isHitKnowledgeMap = true;
+            }
+        }
+    }
+    return isHitKnowledgeMap;
+}
+
 void Conv3DBackpropInputV2Tiling::SetDxTilingFromTbeTiling()
 {
     TConv3DInputV2Tiling& dxt = tilingData_.conv3DDxTiling;
@@ -935,32 +983,11 @@ void Conv3DBackpropInputV2Tiling::SetDxTilingFromTbeTiling()
                     CUBE_INNER_ERR_REPORT(
                         opName_, "Failed to get valid core number from platform information. core num: %d", coreNum_),
                     return);
-    bool isHitKnowledgeMap = false;
-    if (runInfo_.real_g == 1) {
-        if (dtypeByte_ == F16_DATA_SIZE) {
-            if (coreNum_ == CORE_NUM_910B3 && TILING_DATA_MAP_B3.find(key) != TILING_DATA_MAP_B3.end()) {
-                tilingParams = TILING_DATA_MAP_B3.at(key);
-                isHitKnowledgeMap = true;
-            } else if (coreNum_ == CORE_NUM_910B2 && TILING_DATA_MAP_B2.find(key) != TILING_DATA_MAP_B2.end()) {
-                tilingParams = TILING_DATA_MAP_B2.at(key);
-                isHitKnowledgeMap = true;
-            }
-        } else if (dtypeByte_ == FP32_DATA_SIZE) {
-            if (coreNum_ == CORE_NUM_910B2 && FP32_TILING_DATA_MAP_B2.find(key) != FP32_TILING_DATA_MAP_B2.end()) {
-                tilingParams = FP32_TILING_DATA_MAP_B2.at(key);
-                isHitKnowledgeMap = true;
-            } else if (coreNum_ == CORE_NUM_910B3 &&
-                       FP32_TILING_DATA_MAP_B3.find(key) != FP32_TILING_DATA_MAP_B3.end()) {
-                tilingParams = FP32_TILING_DATA_MAP_B3.at(key);
-                isHitKnowledgeMap = true;
-            } else if (coreNum_ == CORE_NUM_910B2 && FP32_BASIC_BLOCK_MAP_B2.count(key) > 0) {
-                tilingParams = FP32_BASIC_BLOCK_MAP_B2.at(key);
-                useBasicBlock_ = isHitKnowledgeMap = true;
-            } else if (coreNum_ == CORE_NUM_910B3 && FP32_BASIC_BLOCK_MAP_B3.count(key) > 0) {
-                tilingParams = FP32_BASIC_BLOCK_MAP_B3.at(key);
-                useBasicBlock_ = isHitKnowledgeMap = true;
-            }
-        }
+    bool useBasicBlockHit = false;
+    bool isHitKnowledgeMap = HitTilingKnowledgeMap(coreNum_, dtypeByte_, runInfo_.real_g, key, tilingParams,
+                                                   useBasicBlockHit);
+    if (useBasicBlockHit) {
+        useBasicBlock_ = true;
     }
     if (isHitKnowledgeMap) {
         OP_LOGD(opName_, "hit tiling knowledge map");

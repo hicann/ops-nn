@@ -566,20 +566,13 @@ bool CheckParams(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* context
     return true;
 }
 
-bool CheckAttrs(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, const char* opName,
-                OtherParams& otherParams)
+static bool CheckDilationWithKernel(const char* opName, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                    const OtherParams& otherParams)
 {
     // kernel大于1时，才能有dilation属性, 前面代码已经做了兼容性属性重设，这里做二次check
     bool dilationDFlag = (runInfoV2.dilation_d != 1 && otherParams.b_shape.d == 1);
     bool dilationHFlag = (runInfoV2.dilation_h != 1 && otherParams.b_shape.h == 1);
     bool dilationWFlag = (runInfoV2.dilation_w != 1 && otherParams.b_shape.w == 1);
-
-    int32_t strideHwUp = STRIDES_DIM_HW_UP;
-    int32_t strideDUp = STRIDES_DIM_DEPTH_UP;
-    if (IsArchAfter35(context)) {
-        strideHwUp = kDimUp;
-        strideDUp = kDimUp;
-    }
 
     OP_CHECK_IF(dilationDFlag,
                 CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_d: [%s] != 1 while kernel_d: [%s] = 1",
@@ -596,16 +589,12 @@ bool CheckAttrs(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runI
                                       std::to_string(runInfoV2.dilation_w).c_str(),
                                       std::to_string(otherParams.b_shape.w).c_str()),
                 return false);
+    return true;
+}
 
-    if (!IsArchAfter35(context)) {
-        if (runInfoV2.stride_d > otherParams.b_shape.d) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                opName, "stride_d", std::to_string(runInfoV2.stride_d),
-                FormatString("cannot support stride_d > kernel_d: %ld", otherParams.b_shape.d).c_str());
-            return false;
-        }
-    }
-
+static bool CheckStrideAndGroupRange(const char* opName, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                     const OtherParams& otherParams, int32_t strideHwUp, int32_t strideDUp)
+{
     OP_CHECK_IF(CheckRange(runInfoV2.stride_h, DIM_LOW, strideHwUp) == false,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     opName, "stride_h", std::to_string(runInfoV2.stride_h),
@@ -639,6 +628,32 @@ bool CheckAttrs(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runI
                     FormatString("the value of groups must be in range [%d, %d]", GROUPS_LOW, GROUPS_UP).c_str()),
                 return false);
     return true;
+}
+
+bool CheckAttrs(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, const char* opName,
+                OtherParams& otherParams)
+{
+    if (!CheckDilationWithKernel(opName, runInfoV2, otherParams)) {
+        return false;
+    }
+
+    int32_t strideHwUp = STRIDES_DIM_HW_UP;
+    int32_t strideDUp = STRIDES_DIM_DEPTH_UP;
+    if (IsArchAfter35(context)) {
+        strideHwUp = kDimUp;
+        strideDUp = kDimUp;
+    }
+
+    if (!IsArchAfter35(context)) {
+        if (runInfoV2.stride_d > otherParams.b_shape.d) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                opName, "stride_d", std::to_string(runInfoV2.stride_d),
+                FormatString("cannot support stride_d > kernel_d: %ld", otherParams.b_shape.d).c_str());
+            return false;
+        }
+    }
+
+    return CheckStrideAndGroupRange(opName, runInfoV2, otherParams, strideHwUp, strideDUp);
 }
 
 bool CheckPadRange(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, const char* opName)

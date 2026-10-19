@@ -48,6 +48,31 @@ AscendString Conv3DTransposeToV2FusionPass::GetNodeType() const { return PASS_NA
 
 namespace {
 bool IsUnknownRankShape(const std::vector<int64_t>& dims) { return dims.size() == 1 && dims[0] == -2; }
+
+void ApplyConv3DTransposeV2InputOutputDesc(GNode* v2Node, const TensorDesc& input0Desc, const TensorDesc& input1Desc,
+                                           const TensorDesc& input2Desc, bool hasBias, const TensorDesc& biasDesc,
+                                           bool hasOffsetW, const TensorDesc& offsetWDesc, bool needTranspose,
+                                           const TensorDesc& transFilterDesc, const TensorDesc& outputDesc)
+{
+    // 与1.0 TBE通用化层保持一致：x为unknown rank shape [-2]时，归一为-1*5后传给V2节点
+    TensorDesc xDescForV2 = input1Desc;
+    if (IsUnknownRankShape(xDescForV2.GetShape().GetDims())) {
+        const std::vector<int64_t> unknownDims = {-1, -1, -1, -1, -1};
+        xDescForV2.SetShape(ge::Shape(unknownDims));
+        xDescForV2.SetOriginShape(ge::Shape(unknownDims));
+    }
+
+    v2Node->UpdateInputDesc(INPUT_SIZE_INDEX, input0Desc);
+    v2Node->UpdateInputDesc(X_INDEX, xDescForV2);
+    v2Node->UpdateInputDesc(FILTER_INDEX, needTranspose ? transFilterDesc : input2Desc);
+    if (hasBias) {
+        v2Node->UpdateInputDesc(BIAS_INDEX, biasDesc);
+    }
+    if (hasOffsetW) {
+        v2Node->UpdateInputDesc(OFFSET_W_INDEX, offsetWDesc);
+    }
+    v2Node->UpdateOutputDesc(OUTPUT_INDEX, outputDesc);
+}
 } // namespace
 
 bool Conv3DTransposeToV2FusionPass::MeetRequirements(const GNode& matchedNode)
@@ -229,24 +254,8 @@ GraphUniqPtr Conv3DTransposeToV2FusionPass::Replacement(const GNode& convTranspo
     v2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
     v2Node->SetAttr("enable_hf32", convBpAttr.hf32);
 
-    // 与1.0 TBE通用化层保持一致：x为unknown rank shape [-2]时，归一为-1*5后传给V2节点
-    TensorDesc xDescForV2 = input1Desc;
-    if (IsUnknownRankShape(xDescForV2.GetShape().GetDims())) {
-        const std::vector<int64_t> unknownDims = {-1, -1, -1, -1, -1};
-        xDescForV2.SetShape(ge::Shape(unknownDims));
-        xDescForV2.SetOriginShape(ge::Shape(unknownDims));
-    }
-
-    v2Node->UpdateInputDesc(INPUT_SIZE_INDEX, input0Desc);
-    v2Node->UpdateInputDesc(X_INDEX, xDescForV2);
-    v2Node->UpdateInputDesc(FILTER_INDEX, needTranspose ? transFilterDesc : input2Desc);
-    if (hasBias) {
-        v2Node->UpdateInputDesc(BIAS_INDEX, biasDesc);
-    }
-    if (hasOffsetW) {
-        v2Node->UpdateInputDesc(OFFSET_W_INDEX, offsetWDesc);
-    }
-    v2Node->UpdateOutputDesc(OUTPUT_INDEX, outputDesc);
+    ApplyConv3DTransposeV2InputOutputDesc(v2Node, input0Desc, input1Desc, input2Desc, hasBias, biasDesc, hasOffsetW,
+                                          offsetWDesc, needTranspose, transFilterDesc, outputDesc);
 
     std::vector<EsTensorHolder> outputs;
     outputs.push_back(conv3dTransposeV2);

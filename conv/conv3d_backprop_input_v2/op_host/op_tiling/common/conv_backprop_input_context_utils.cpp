@@ -102,6 +102,74 @@ bool ValidateConvBackpropContext(const gert::TilingContext* context)
     return true;
 }
 
+static bool CheckDilationsNCDHW(const char* op_name, const int64_t* dilations, int32_t kDilationUpTmp)
+{
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
+            FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
+                .c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
+            FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
+                .c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NCDHW]).c_str(),
+            FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NCDHW]).c_str(),
+            FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NCDHW]).c_str(),
+            FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckDilationsNDHWC(const char* op_name, const int64_t* dilations, int32_t kDilationUpTmp)
+{
+    OP_CHECK_IF(!CheckRangeInt64(dilations[K_N_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+                OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NDHWC]).c_str(),
+                                          std::to_string(K_DEFAULT_DILATIONS).c_str()),
+                return false);
+    OP_CHECK_IF(!CheckRangeInt64(dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+                OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NDHWC]).c_str(),
+                                          std::to_string(K_DEFAULT_DILATIONS).c_str()),
+                return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NDHWC]).c_str(),
+            FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NDHWC]).c_str(),
+            FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(
+        !CheckRangeInt64(dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NDHWC]).c_str(),
+            FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    return true;
+}
+
 bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* dilations, optiling::OpTypeV2 op_type)
 {
     const auto op_name = context->GetNodeName();
@@ -112,68 +180,9 @@ bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* 
         isFuseInputNCDHW = context->GetInputDesc(FILTER_INDEX)->GetOriginFormat() == ge::FORMAT_NCDHW;
     }
     if (y_ori_format == ge::FORMAT_NCDHW || isFuseInputNCDHW) {
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
-                FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
-                    .c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
-                FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
-                    .c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NCDHW]).c_str(),
-                FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NCDHW]).c_str(),
-                FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NCDHW]).c_str(),
-                FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
-    } else {
-        OP_CHECK_IF(!CheckRangeInt64(dilations[K_N_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-                    OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NDHWC]).c_str(),
-                                              std::to_string(K_DEFAULT_DILATIONS).c_str()),
-                    return false);
-        OP_CHECK_IF(!CheckRangeInt64(dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-                    OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NDHWC]).c_str(),
-                                              std::to_string(K_DEFAULT_DILATIONS).c_str()),
-                    return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NDHWC]).c_str(),
-                FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NDHWC]).c_str(),
-                FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
-        OP_CHECK_IF(
-            !CheckRangeInt64(dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NDHWC]).c_str(),
-                FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
-            return false);
+        return CheckDilationsNCDHW(op_name, dilations, kDilationUpTmp);
     }
-
-    return true;
+    return CheckDilationsNDHWC(op_name, dilations, kDilationUpTmp);
 }
 
 bool CheckAttrRangeStrides(const gert::TilingContext* context, const int64_t* strides, optiling::OpTypeV2 op_type)
@@ -454,6 +463,37 @@ bool CheckTransposeOutputdingRange(const gert::TilingContext* context, const Con
     return true;
 }
 
+static void CalDtypeSupportFlag(const gert::TilingContext* context, const OtherParams& otherParams,
+                                bool& dtypeSupportFlag, std::string& dtypeCheckLog)
+{
+    bool isFp16Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_FLOAT16 &&
+                      otherParams.c_dtype == ge::DT_FLOAT16;
+    bool isFp32Flag = otherParams.a_dtype == ge::DT_FLOAT && otherParams.b_dtype == ge::DT_FLOAT &&
+                      otherParams.c_dtype == ge::DT_FLOAT;
+    dtypeSupportFlag = isFp16Flag || isFp32Flag;
+    dtypeCheckLog = "fp16 and fp32";
+    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+        bool isHiF8Flag = otherParams.a_dtype == ge::DT_HIFLOAT8 && otherParams.b_dtype == ge::DT_HIFLOAT8 &&
+                          otherParams.c_dtype == ge::DT_HIFLOAT8;
+        bool isFp8E4M3Flag = otherParams.a_dtype == ge::DT_FLOAT8_E4M3FN &&
+                             otherParams.b_dtype == ge::DT_FLOAT8_E4M3FN && otherParams.c_dtype == ge::DT_FLOAT8_E4M3FN;
+        bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
+                          (otherParams.c_dtype == ge::DT_FLOAT16 || otherParams.c_dtype == ge::DT_INT8);
+        dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag || isInt8Flag;
+        dtypeCheckLog = "hifloat8, float8_e4m3, int8, fp16 and fp32";
+    }
+    if (IsSocVersionFuse(context)) {
+        bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
+                          (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
+        bool isA16W8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_INT8 &&
+                           (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
+        bool isFp16Int8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_FLOAT16 &&
+                              otherParams.c_dtype == ge::DT_INT8;
+        dtypeSupportFlag = isFp16Flag || isInt8Flag || isA16W8Flag || isFp16Int8Flag;
+        dtypeCheckLog = "fp16 and int8";
+    }
+}
+
 bool UpdateDtypeParams(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2,
                        const optiling::OpTypeV2 op_type, OtherParams& otherParams)
 {
@@ -479,32 +519,9 @@ bool UpdateDtypeParams(const gert::TilingContext* context, Conv3dBpInputV2RunInf
         otherParams.c_dtype = ge::DT_FLOAT16;
     }
 
-    bool isFp16Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_FLOAT16 &&
-                      otherParams.c_dtype == ge::DT_FLOAT16;
-    bool isFp32Flag = otherParams.a_dtype == ge::DT_FLOAT && otherParams.b_dtype == ge::DT_FLOAT &&
-                      otherParams.c_dtype == ge::DT_FLOAT;
-    bool dtypeSupportFlag = isFp16Flag || isFp32Flag;
-    string dtypeCheckLog = "fp16 and fp32";
-    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-        bool isHiF8Flag = otherParams.a_dtype == ge::DT_HIFLOAT8 && otherParams.b_dtype == ge::DT_HIFLOAT8 &&
-                          otherParams.c_dtype == ge::DT_HIFLOAT8;
-        bool isFp8E4M3Flag = otherParams.a_dtype == ge::DT_FLOAT8_E4M3FN &&
-                             otherParams.b_dtype == ge::DT_FLOAT8_E4M3FN && otherParams.c_dtype == ge::DT_FLOAT8_E4M3FN;
-        bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
-                          (otherParams.c_dtype == ge::DT_FLOAT16 || otherParams.c_dtype == ge::DT_INT8);
-        dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag || isInt8Flag;
-        dtypeCheckLog = "hifloat8, float8_e4m3, int8, fp16 and fp32";
-    }
-    if (IsSocVersionFuse(context)) {
-        bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
-                          (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
-        bool isA16W8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_INT8 &&
-                           (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
-        bool isFp16Int8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_FLOAT16 &&
-                              otherParams.c_dtype == ge::DT_INT8;
-        dtypeSupportFlag = isFp16Flag || isInt8Flag || isA16W8Flag || isFp16Int8Flag;
-        dtypeCheckLog = "fp16 and int8";
-    }
+    bool dtypeSupportFlag = false;
+    string dtypeCheckLog;
+    CalDtypeSupportFlag(context, otherParams, dtypeSupportFlag, dtypeCheckLog);
     OP_CHECK_IF(!dtypeSupportFlag,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                     op_name, "out_backprop, filter and y",
@@ -549,6 +566,39 @@ std::string FormatSetToString(const std::unordered_set<ge::Format>& format_set)
     return result;
 }
 
+static void CalValidStorageFormats(const gert::TilingContext* context, optiling::OpTypeV2 op_type, bool enableFractalZ,
+                                   std::unordered_set<ge::Format>& valid_out_bp_format,
+                                   std::unordered_set<ge::Format>& valid_filter_format,
+                                   std::unordered_set<ge::Format>& valid_y_format)
+{
+    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
+        (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+         op_type == optiling::OpTypeV2::kExtendConvTransposeV2)) {
+        valid_out_bp_format = {ge::FORMAT_NCDHW};
+    } else {
+        valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+    }
+
+    if (IsSocVersionFuse(context)) {
+        valid_filter_format = {ge::FORMAT_NDHWC, ge::FORMAT_FRACTAL_Z};
+    } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+               op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
+        valid_filter_format = {ge::FORMAT_NCDHW};
+    } else {
+        valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
+    }
+    if (enableFractalZ) {
+        valid_filter_format.insert(ge::FORMAT_FRACTAL_Z);
+    }
+
+    if (op_type == optiling::OpTypeV2::kExtendConvTransposeV2 ||
+        (op_type == optiling::OpTypeV2::kExtendConvTranspose && IsArchAfter35(context))) {
+        valid_y_format = {ge::FORMAT_NCDHW};
+    } else {
+        valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+    }
+}
+
 bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_index, size_t out_backprop_input_index,
                         optiling::OpTypeV2 op_type)
 {
@@ -565,34 +615,9 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
                                                      out_backprop_desc->GetDataType(), filter_desc->GetDataType());
 
     std::unordered_set<ge::Format> valid_out_bp_format;
-    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
-        (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
-         op_type == optiling::OpTypeV2::kExtendConvTransposeV2)) {
-        valid_out_bp_format = {ge::FORMAT_NCDHW};
-    } else {
-        valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
-    }
-
     std::unordered_set<ge::Format> valid_filter_format;
-    if (IsSocVersionFuse(context)) {
-        valid_filter_format = {ge::FORMAT_NDHWC, ge::FORMAT_FRACTAL_Z};
-    } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
-               op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
-        valid_filter_format = {ge::FORMAT_NCDHW};
-    } else {
-        valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
-    }
-    if (enableFractalZ) {
-        valid_filter_format.insert(ge::FORMAT_FRACTAL_Z);
-    }
-
     std::unordered_set<ge::Format> valid_y_format;
-    if (op_type == optiling::OpTypeV2::kExtendConvTransposeV2 ||
-        (op_type == optiling::OpTypeV2::kExtendConvTranspose && IsArchAfter35(context))) {
-        valid_y_format = {ge::FORMAT_NCDHW};
-    } else {
-        valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
-    }
+    CalValidStorageFormats(context, op_type, enableFractalZ, valid_out_bp_format, valid_filter_format, valid_y_format);
 
     bool invalid_tag = valid_out_bp_format.count(out_backprop_format) == 0 ||
                        valid_filter_format.count(filter_format) == 0 || valid_y_format.count(y_format) == 0;
@@ -754,6 +779,93 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filt
     return true;
 }
 
+static bool CheckShapeFormatsArchAfter35(const gert::TilingContext* context, size_t filter_input_index,
+                                         size_t out_backprop_input_index, optiling::OpTypeV2 op_type,
+                                         bool enableFractalZ)
+{
+    const auto op_name = context->GetNodeName();
+    auto filter_ori_format = context->GetInputDesc(filter_input_index)->GetOriginFormat();
+    OP_CHECK_IF(
+        filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
+            filter_ori_format != ge::FORMAT_DHWCN && !(enableFractalZ && filter_ori_format == ge::FORMAT_NCHW),
+        OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter", ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
+                                   enableFractalZ ? "NDHWC or NCDHW or DHWCN or NCHW" : "NDHWC or NCDHW or DHWCN"),
+        return false);
+    OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index, op_type),
+                OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
+    return true;
+}
+
+static bool CheckShapeFormatsLegacy(const gert::TilingContext* context, size_t filter_input_index,
+                                    size_t out_backprop_input_index, optiling::OpTypeV2 op_type, bool isV2Impl)
+{
+    const auto op_name = context->GetNodeName();
+    const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
+    const auto filter_desc = context->GetInputDesc(filter_input_index);
+    const auto y_desc = context->GetOutputDesc(Y_INDEX);
+    auto filter_ori_format = filter_desc->GetOriginFormat();
+    OP_CHECK_IF(
+        filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
+            filter_ori_format != ge::FORMAT_DHWCN,
+        OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter", ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
+                                   "NDHWC or NCDHW or DHWCN"),
+        return false);
+    auto out_backprop_format = static_cast<ge::Format>(ge::GetPrimaryFormat(out_backprop_desc->GetStorageFormat()));
+    auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
+    auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
+    // vector 兜底组合（NCDHW 原始格式），由 vec tiling 模板处理
+    auto formatStr = ge::TypeUtils::FormatToSerialString(out_backprop_format) + " and " +
+                     ge::TypeUtils::FormatToSerialString(filter_format);
+    OP_CHECK_IF(!(out_backprop_format == ge::FORMAT_NCDHW && filter_format == ge::FORMAT_NCDHW) &&
+                    (out_backprop_format != ge::FORMAT_NDC1HWC0 || filter_format != ge::FORMAT_FRACTAL_Z_3D),
+                OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                    op_name, "out_backprop and filter", formatStr.c_str(),
+                    "The formats of out_backprop and filter must be NDC1HWC0 and FRACTAL_Z_3D"),
+                return false);
+    if (!isV2Impl || op_type == optiling::OpTypeV2::kConv3DTransposeV2 ||
+        op_type == optiling::OpTypeV2::kExtendConvTranspose || op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
+        OP_CHECK_IF(
+            y_format != ge::FORMAT_NDC1HWC0,
+            OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(), "NDC1HWC0"),
+            return false);
+    } else {
+        OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0 && y_format != ge::FORMAT_NCDHW,
+                    OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(),
+                                               "NDC1HWC0 or NCDHW"),
+                    return false);
+    }
+    return true;
+}
+
+static bool CheckShapeFormats(const gert::TilingContext* context, size_t filter_input_index,
+                              size_t out_backprop_input_index, optiling::OpTypeV2 op_type, bool isV2Impl,
+                              bool enableFractalZ)
+{
+    const auto op_name = context->GetNodeName();
+    auto out_backprop_ori_format = context->GetInputDesc(out_backprop_input_index)->GetOriginFormat();
+    auto y_ori_format = context->GetOutputDesc(Y_INDEX)->GetOriginFormat();
+    if (!IsSocVersionFuse(context)) {
+        OP_CHECK_IF(
+            out_backprop_ori_format != y_ori_format,
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and y",
+                                                    (ge::TypeUtils::FormatToSerialString(out_backprop_ori_format) +
+                                                     " and " + ge::TypeUtils::FormatToSerialString(y_ori_format))
+                                                        .c_str(),
+                                                    "The formats of out_backprop and y must be the same"),
+            return false);
+    }
+    OP_CHECK_IF(out_backprop_ori_format != ge::FORMAT_NDHWC && out_backprop_ori_format != ge::FORMAT_NCDHW,
+                OP_LOGE_FOR_INVALID_FORMAT(op_name, "out_backprop",
+                                           ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str(),
+                                           "NDHWC or NCDHW"),
+                return false);
+    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+        return CheckShapeFormatsArchAfter35(context, filter_input_index, out_backprop_input_index, op_type,
+                                            enableFractalZ);
+    }
+    return CheckShapeFormatsLegacy(context, filter_input_index, out_backprop_input_index, op_type, isV2Impl);
+}
+
 bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 op_type,
                     bool isV2Impl, OtherParams& otherParams)
 {
@@ -781,68 +893,10 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
                 CUBE_INNER_ERR_REPORT(op_name, "failed to get out_backprop/filter/y shape from context."),
                 return false);
 
-    auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
-    auto filter_ori_format = filter_desc->GetOriginFormat();
-    auto y_ori_format = y_desc->GetOriginFormat();
     const bool enableFractalZ = EnableLoadB1FractalZ(context, filter_desc->GetStorageFormat(),
                                                      out_backprop_desc->GetDataType(), filter_desc->GetDataType());
-    if (!IsSocVersionFuse(context)) {
-        OP_CHECK_IF(
-            out_backprop_ori_format != y_ori_format,
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and y",
-                                                    (ge::TypeUtils::FormatToSerialString(out_backprop_ori_format) +
-                                                     " and " + ge::TypeUtils::FormatToSerialString(y_ori_format))
-                                                        .c_str(),
-                                                    "The formats of out_backprop and y must be the same"),
-            return false);
-    }
-    OP_CHECK_IF(out_backprop_ori_format != ge::FORMAT_NDHWC && out_backprop_ori_format != ge::FORMAT_NCDHW,
-                OP_LOGE_FOR_INVALID_FORMAT(op_name, "out_backprop",
-                                           ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str(),
-                                           "NDHWC or NCDHW"),
-                return false);
-    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-        OP_CHECK_IF(
-            filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
-                filter_ori_format != ge::FORMAT_DHWCN && !(enableFractalZ && filter_ori_format == ge::FORMAT_NCHW),
-            OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter",
-                                       ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
-                                       enableFractalZ ? "NDHWC or NCDHW or DHWCN or NCHW" : "NDHWC or NCDHW or DHWCN"),
-            return false);
-        OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index, op_type),
-                    OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
-    } else {
-        OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
-                        filter_ori_format != ge::FORMAT_DHWCN,
-                    OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter",
-                                               ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
-                                               "NDHWC or NCDHW or DHWCN"),
-                    return false);
-        auto out_backprop_format = static_cast<ge::Format>(ge::GetPrimaryFormat(out_backprop_desc->GetStorageFormat()));
-        auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
-        auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
-        // vector 兜底组合（NCDHW 原始格式），由 vec tiling 模板处理
-        auto formatStr = ge::TypeUtils::FormatToSerialString(out_backprop_format) + " and " +
-                         ge::TypeUtils::FormatToSerialString(filter_format);
-        OP_CHECK_IF(!(out_backprop_format == ge::FORMAT_NCDHW && filter_format == ge::FORMAT_NCDHW) &&
-                        (out_backprop_format != ge::FORMAT_NDC1HWC0 || filter_format != ge::FORMAT_FRACTAL_Z_3D),
-                    OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-                        op_name, "out_backprop and filter", formatStr.c_str(),
-                        "The formats of out_backprop and filter must be NDC1HWC0 and FRACTAL_Z_3D"),
-                    return false);
-        if (!isV2Impl || op_type == optiling::OpTypeV2::kConv3DTransposeV2 ||
-            op_type == optiling::OpTypeV2::kExtendConvTranspose ||
-            op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
-            OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0,
-                        OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(),
-                                                   "NDC1HWC0"),
-                        return false);
-        } else {
-            OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0 && y_format != ge::FORMAT_NCDHW,
-                        OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(),
-                                                   "NDC1HWC0 or NCDHW"),
-                        return false);
-        }
+    if (!CheckShapeFormats(context, filter_input_index, out_backprop_input_index, op_type, isV2Impl, enableFractalZ)) {
+        return false;
     }
 
     OP_CHECK_IF(!CalShapeInfoFromDesc(context, filter_input_index, out_backprop_input_index, runInfoV2, otherParams),
@@ -1221,6 +1275,48 @@ static bool ValidateFractalZStorageShape(const gert::TilingContext* context, con
     return true;
 }
 
+static void CalRealGForArchAfter35(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2,
+                                   OtherParams& otherParams, bool enableFractalZGroup)
+{
+    otherParams.ci1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.c,
+                                          static_cast<int64_t>(kBlockSize));
+    otherParams.co1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups,
+                                          otherParams.b_shape.c0);
+
+    if (!enableFractalZGroup) {
+        size_t filter_input_idx = static_cast<size_t>(FILTER_INDEX);
+        size_t out_backprop_input_idx = static_cast<size_t>(OUT_BACKPROP_INDEX);
+        const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_idx);
+        const auto filter_desc = context->GetInputDesc(filter_input_idx);
+
+        constexpr uint32_t ENLARGE_BUFFER_NUM = 2;
+        constexpr uint32_t REG_SIZE = 256;
+        uint32_t availableUbSize = context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
+        if (IsSocVersion960(context) && runInfoV2.b_dtype_bytes == ge::GetSizeByDataType(ge::DT_BF16)) {
+            availableUbSize = 262400; // 262400 = (65535 + 1) * sizeof(bfloat16) * BUFFER_NUM_TWO + 256
+        }
+        bool disableGroupEnlarge = static_cast<uint64_t>(ENLARGE_BUFFER_NUM) *
+                                           (otherParams.co1g * otherParams.b_shape.h * otherParams.b_shape.w *
+                                            otherParams.ci1g * kBlockSize * otherParams.b_shape.c0) *
+                                           runInfoV2.b_dtype_bytes +
+                                       REG_SIZE >
+                                   static_cast<uint64_t>(availableUbSize);
+
+        bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
+                                 filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
+                                 filter_desc->GetDataType() == ge::DT_INT8) ||
+                                (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
+                                 out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 ||
+                                 out_backprop_desc->GetDataType() == ge::DT_INT8);
+        if (disableGroupEnlarge || nonExtendedDtype || IsNeedTilingHkWk(context, runInfoV2, otherParams)) {
+            otherParams.multiple_extend = 1;
+            runInfoV2.real_g = runInfoV2.groups;
+            otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
+            otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
+        }
+    }
+}
+
 static bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams,
                      const optiling::OpTypeV2 opType)
 {
@@ -1263,44 +1359,7 @@ static bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runIn
     }
 
     if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-        otherParams.ci1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.c,
-                                              static_cast<int64_t>(kBlockSize));
-        otherParams.co1g = Ops::Base::CeilDiv(
-            otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
-
-        if (!enableFractalZGroup) {
-            size_t filter_input_idx = static_cast<size_t>(FILTER_INDEX);
-            size_t out_backprop_input_idx = static_cast<size_t>(OUT_BACKPROP_INDEX);
-            const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_idx);
-            const auto filter_desc = context->GetInputDesc(filter_input_idx);
-
-            constexpr uint32_t ENLARGE_BUFFER_NUM = 2;
-            constexpr uint32_t REG_SIZE = 256;
-            uint32_t availableUbSize = context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
-            if (IsSocVersion960(context) && runInfoV2.b_dtype_bytes == ge::GetSizeByDataType(ge::DT_BF16)) {
-                availableUbSize = 262400; // 262400 = (65535 + 1) * sizeof(bfloat16) * BUFFER_NUM_TWO + 256
-            }
-            bool disableGroupEnlarge = static_cast<uint64_t>(ENLARGE_BUFFER_NUM) *
-                                               (otherParams.co1g * otherParams.b_shape.h * otherParams.b_shape.w *
-                                                otherParams.ci1g * kBlockSize * otherParams.b_shape.c0) *
-                                               runInfoV2.b_dtype_bytes +
-                                           REG_SIZE >
-                                       static_cast<uint64_t>(availableUbSize);
-
-            bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
-                                     filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
-                                     filter_desc->GetDataType() == ge::DT_INT8) ||
-                                    (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
-                                     out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 ||
-                                     out_backprop_desc->GetDataType() == ge::DT_INT8);
-            if (disableGroupEnlarge || nonExtendedDtype || IsNeedTilingHkWk(context, runInfoV2, otherParams)) {
-                otherParams.multiple_extend = 1;
-                runInfoV2.real_g = runInfoV2.groups;
-                otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
-                otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups,
-                                                      otherParams.b_shape.c0);
-            }
-        }
+        CalRealGForArchAfter35(context, runInfoV2, otherParams, enableFractalZGroup);
     }
 
     // vector 兜底组合无分形 storage 维，跳过分形交叉校验
@@ -1450,18 +1509,9 @@ bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo& runInfoV2, const gert::
     return true;
 }
 
-bool CheckParamsWithLog(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* context, OtherParams& otherParams)
+static bool CheckDilationAndStrideRange(const char* op_name, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                        int32_t kDilationUpTmp, int32_t kStrideHWUpTmp, int32_t kStrideDUpTmp)
 {
-    const auto op_name = context->GetNodeName();
-    int32_t kStrideHWUpTmp = kDimUp;
-    int32_t kStrideDUpTmp = kDimUp;
-    int32_t kDilationUpTmp = kDilationUp;
-    if (IsArchAfter35(context)) {
-        kDilationUpTmp = kDimUp;
-    }
-    if (IsSocVersionFuse(context)) {
-        kStrideHWUpTmp = kStrideHWUp;
-    }
     OP_CHECK_IF(
         !CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -1495,7 +1545,11 @@ bool CheckParamsWithLog(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* 
                     op_name, "stride_d", std::to_string(runInfoV2.stride_d).c_str(),
                     FormatString("The value of stride_d must be range [%d, %d]", kDimLow, kStrideDUpTmp).c_str()),
                 return false);
-    OP_CHECK_IF(!CheckPadParamsWithLog(runInfoV2, context), OP_LOGE(op_name, "check pad params failed"), return false);
+    return true;
+}
+
+static bool CheckFilterDilationAndPadding(const char* op_name, const OtherParams& otherParams)
+{
     OP_CHECK_IF(
         (otherParams.filter_d_dilation > otherParams.fmap_d_padding),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -1523,6 +1577,28 @@ bool CheckParamsWithLog(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* 
                          otherParams.fmap_w_padding)
                 .c_str()),
         return false);
+    return true;
+}
+
+bool CheckParamsWithLog(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* context, OtherParams& otherParams)
+{
+    const auto op_name = context->GetNodeName();
+    int32_t kStrideHWUpTmp = kDimUp;
+    int32_t kStrideDUpTmp = kDimUp;
+    int32_t kDilationUpTmp = kDilationUp;
+    if (IsArchAfter35(context)) {
+        kDilationUpTmp = kDimUp;
+    }
+    if (IsSocVersionFuse(context)) {
+        kStrideHWUpTmp = kStrideHWUp;
+    }
+    if (!CheckDilationAndStrideRange(op_name, runInfoV2, kDilationUpTmp, kStrideHWUpTmp, kStrideDUpTmp)) {
+        return false;
+    }
+    OP_CHECK_IF(!CheckPadParamsWithLog(runInfoV2, context), OP_LOGE(op_name, "check pad params failed"), return false);
+    if (!CheckFilterDilationAndPadding(op_name, otherParams)) {
+        return false;
+    }
     OP_CHECK_IF(!CheckRange(otherParams.a_shape.w * runInfoV2.stride_w, kDimLow, kDimUp),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     op_name, "out_backprop's W after expands",
@@ -1660,17 +1736,10 @@ void SetConvAttrs(Conv3dBpInputV2RunInfo& runInfoV2, const int64_t* pads_data, S
     otherParams.dilation_d_gt_one_flag = dilations_ncdhw.d > 1 ? 1 : 0;
 }
 
-bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 op_type,
-                           OtherParams& otherParams)
+static bool CheckAttrSizes(const char* op_name, const gert::ContinuousVector* strides,
+                           const gert::ContinuousVector* pads, const gert::ContinuousVector* dilations,
+                           const int64_t* groups)
 {
-    auto attrs = context->GetAttrs();
-    size_t idx = 0;
-    const auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const auto dilations = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const auto groups = attrs->GetAttrPointer<int64_t>(idx++);
-
-    const auto op_name = context->GetNodeName();
     // stridesDim == 5
     OP_CHECK_IF(strides == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "strides", "null", "non_empty_value"),
                 return false);
@@ -1692,6 +1761,23 @@ bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo&
                 return false);
     OP_CHECK_IF(groups == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "groups", "null", "non_empty_value"),
                 return false);
+    return true;
+}
+
+bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 op_type,
+                           OtherParams& otherParams)
+{
+    auto attrs = context->GetAttrs();
+    size_t idx = 0;
+    const auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const auto dilations = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const auto groups = attrs->GetAttrPointer<int64_t>(idx++);
+
+    const auto op_name = context->GetNodeName();
+    if (!CheckAttrSizes(op_name, strides, pads, dilations, groups)) {
+        return false;
+    }
 
     const auto strides_data = static_cast<const int64_t*>(strides->GetData());
     const auto pads_data = static_cast<const int64_t*>(pads->GetData());

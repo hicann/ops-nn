@@ -341,6 +341,89 @@ static __aicore__ inline void JudgeIterateSkip(Intf* self)
     }
 }
 
+// order_N：L1 上驻留 B 循环 A 时的 L0/L1 指针推进
+template <class Intf>
+static __aicore__ inline bool AdvanceIterateIdxOrderN(Intf* self)
+{
+    if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
+        self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
+        if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
+            self->ctx.curML1Idx_ += self->ctx.curStepM_;
+            if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
+                self->ctx.curML1Idx_ = 0;
+                self->ctx.curNL1Idx_ = 0;
+                if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
+                    return true;
+                }
+            }
+            if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
+                self->ctx.curML1Idx_ = 0;
+                self->ctx.curNL1Idx_ += self->ctx.curStepN_;
+            }
+            UpdateIdxAndStep<Intf>(self);
+        }
+    }
+    return false;
+}
+
+// order_M：L1 上驻留 A 循环 B 时的 L0/L1 指针推进
+template <class Intf>
+static __aicore__ inline bool AdvanceIterateIdxOrderM(Intf* self)
+{
+    if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
+        self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
+        if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
+            self->ctx.curNL1Idx_ += self->ctx.curStepN_;
+            if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
+                self->ctx.curML1Idx_ = 0;
+                self->ctx.curNL1Idx_ = 0;
+                if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
+                    return true;
+                }
+            }
+            if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
+                self->ctx.curNL1Idx_ = 0;
+                self->ctx.curML1Idx_ += self->ctx.curStepM_;
+            }
+            UpdateIdxAndStep<Intf>(self);
+        }
+    }
+    return false;
+}
+
+// 更新idx，用L1、L1step、L0三个指针控制走位和计算offset，表示计算第几个mL0 * baseN
+// 返回 true 表示单次 iterate 已遍历完，调用方应直接结束本次迭代
+template <class Intf>
+static __aicore__ inline bool AdvanceIterateIdx(Intf* self)
+{
+    if (unlikely(self->ctx.isFirstIter_)) {
+        self->ctx.curML0Idx_ = 0;
+        self->ctx.curNL0Idx_ = 0;
+        self->ctx.curML1Idx_ = 0;
+        self->ctx.curNL1Idx_ = 0;
+        self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
+        self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_;
+        if constexpr (std::is_same<typename Intf::SrcT, float>::value) {
+            self->ctx.curPingCoutIdx_ = 0;
+            self->ctx.curPongCoutIdx_ = 0;
+        }
+        self->ctx.isFirstIter_ = false;
+        self->ctx.isLoadB1_ = true;
+        self->ctx.isFreeB1_ = false;
+        self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM ?
+                                  self->ctx.tiling_->stepM :
+                                  (self->ctx.mIter_ - self->ctx.curML1Idx_);
+        self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN ?
+                                  self->ctx.tiling_->stepN :
+                                  (self->ctx.nIter_ - self->ctx.curNL1Idx_);
+    } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
+        return AdvanceIterateIdxOrderN<Intf>(self);
+    } else { // order_M
+        return AdvanceIterateIdxOrderM<Intf>(self);
+    }
+    return false;
+}
+
 template <class Intf, bool sync>
 struct Iterate {
     // 一次iterate计算（baseM, baseN, baseD)，当前baseD=1
@@ -367,65 +450,8 @@ struct Iterate {
         L0A3*L0B3，L0A4*L0B1，L0A5*L0B1 …… L0A6*L0B6 order_M: L0A1*L0B1, L0A1*L0B2, L0A1*L0B3, L0A2*L0B1 …………
         L0A3*L0B3，L0A1*L0B4，L0A1*L0B5 …… L0A6*L0B6
         */
-        // 更新idx，用L1、L1step、L0三个指针控制走位和计算offset，表示计算第几个mL0 * baseN
-        if (unlikely(self->ctx.isFirstIter_)) {
-            self->ctx.curML0Idx_ = 0;
-            self->ctx.curNL0Idx_ = 0;
-            self->ctx.curML1Idx_ = 0;
-            self->ctx.curNL1Idx_ = 0;
-            self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
-            self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_;
-            if constexpr (std::is_same<typename Intf::SrcT, float>::value) {
-                self->ctx.curPingCoutIdx_ = 0;
-                self->ctx.curPongCoutIdx_ = 0;
-            }
-            self->ctx.isFirstIter_ = false;
-            self->ctx.isLoadB1_ = true;
-            self->ctx.isFreeB1_ = false;
-            self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM ?
-                                      self->ctx.tiling_->stepM :
-                                      (self->ctx.mIter_ - self->ctx.curML1Idx_);
-            self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN ?
-                                      self->ctx.tiling_->stepN :
-                                      (self->ctx.nIter_ - self->ctx.curNL1Idx_);
-        } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
-            if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-                if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                    self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ = 0;
-                        if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                            return false;
-                        }
-                    }
-                    if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                }
-            }
-        } else { // order_M
-            if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-                if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                    self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ = 0;
-                        if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                            return false;
-                        }
-                    }
-                    if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curNL1Idx_ = 0;
-                        self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                }
-            }
+        if (AdvanceIterateIdx<Intf>(self)) {
+            return false;
         }
         self->ctx.isFreeB1_ = self->ctx.isB1FullLoadFlag_ && (self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
                               (self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) &&

@@ -52,6 +52,50 @@ static __aicore__ inline uint32_t CalcHDstDataSkipLine(Intf* self)
     return hDstDataSkipLine;
 }
 
+// strideW==1 场景的 A1 DataCopy 参数计算（含 strideH>1 与 strideH==1 两种子场景）
+template <class Intf>
+static __aicore__ inline void CalcLoadToA1PlainDataCopyParams(Intf* self, DataCopyParams& dataCopyParams,
+                                                              uint32_t& loadToA1Cout1Loop, uint32_t& loadToA1HLoop,
+                                                              uint64_t& srcDataStride, uint32_t& dstDataStride,
+                                                              uint32_t& padOffset, uint32_t curHoSize,
+                                                              uint32_t curCout1Size, uint32_t hDstDataSkipLine)
+{
+    uint32_t strideH = self->ctx.tiling_->strideH;
+    loadToA1HLoop = 1;
+    if (strideH > 1) { // 一次datacoy，拷贝curHo*Wo个c0，拷贝CurCout1次
+        uint32_t curInputHoSize = (curHoSize - hDstDataSkipLine + (strideH - 1)) / strideH;
+        dataCopyParams.srcStride = 0;
+        // 当前不支持(strideH - 1) * self->ctx.tiling_->wo 超过uint16_max的场景
+        dataCopyParams.dstStride = (strideH - 1) * self->ctx.tiling_->wo;
+        dataCopyParams.blockLen = self->ctx.tiling_->wo;
+        dataCopyParams.blockCount = curInputHoSize;
+
+        uint32_t wDataStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
+        // 防止Ho较大，uint32溢出
+        srcDataStride = self->ctx.hwO_ * self->ctx.tiling_->c0;
+        dstDataStride = wDataStride;
+        loadToA1Cout1Loop = curCout1Size;
+        // 由于strideH 和Wo的限制，此处不会溢出
+        padOffset = hDstDataSkipLine * wDataStride;
+    } else {
+        // 原数据尾和头的间隔
+        uint64_t dataCoptSrcStride = static_cast<uint64_t>(self->ctx.tiling_->ho - curHoSize) * self->ctx.tiling_->wo;
+        dataCopyParams.dstStride = 0; // 目的数据尾和头的间隔
+        dataCopyParams.blockLen = curHoSize * self->ctx.tiling_->wo;
+        if (dataCoptSrcStride <= UINT16_MAX) {
+            dataCopyParams.srcStride = static_cast<uint16_t>(dataCoptSrcStride);
+            dataCopyParams.blockCount = curCout1Size;
+            loadToA1Cout1Loop = 1;
+        } else {
+            // due to srcStride should not over uint16_max, so we have to move data one by one
+            dataCopyParams.srcStride = 0;
+            dataCopyParams.blockCount = 1;
+            loadToA1Cout1Loop = curCout1Size;
+            dstDataStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
+        }
+    }
+}
+
 template <class Intf, class src0_T>
 __aicore__ inline void CalcLoadToA1DataCopyParams(Intf* self, DataCopyParams& dataCopyParams,
                                                   uint32_t& loadToA1Cout1Loop, uint32_t& loadToA1HLoop,
@@ -89,42 +133,69 @@ __aicore__ inline void CalcLoadToA1DataCopyParams(Intf* self, DataCopyParams& da
         dstDataStride = woExpand * self->ctx.tiling_->c0;
         padOffset = hDstDataSkipLine * dstDataStride;
     } else {
-        loadToA1HLoop = 1;
-        if (strideH > 1) { // 一次datacoy，拷贝curHo*Wo个c0，拷贝CurCout1次
-            uint32_t curInputHoSize = (curHoSize - hDstDataSkipLine + (strideH - 1)) / strideH;
-            dataCopyParams.srcStride = 0;
-            // 当前不支持(strideH - 1) * self->ctx.tiling_->wo 超过uint16_max的场景
-            dataCopyParams.dstStride = (strideH - 1) * self->ctx.tiling_->wo;
-            dataCopyParams.blockLen = self->ctx.tiling_->wo;
-            dataCopyParams.blockCount = curInputHoSize;
-
-            uint32_t wDataStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
-            // 防止Ho较大，uint32溢出
-            srcDataStride = self->ctx.hwO_ * self->ctx.tiling_->c0;
-            dstDataStride = wDataStride;
-            loadToA1Cout1Loop = curCout1Size;
-            // 由于strideH 和Wo的限制，此处不会溢出
-            padOffset = hDstDataSkipLine * wDataStride;
-        } else {
-            // 原数据尾和头的间隔
-            uint64_t dataCoptSrcStride = static_cast<uint64_t>(self->ctx.tiling_->ho - curHoSize) *
-                                         self->ctx.tiling_->wo;
-            dataCopyParams.dstStride = 0; // 目的数据尾和头的间隔
-            dataCopyParams.blockLen = curHoSize * self->ctx.tiling_->wo;
-            if (dataCoptSrcStride <= UINT16_MAX) {
-                dataCopyParams.srcStride = static_cast<uint16_t>(dataCoptSrcStride);
-                dataCopyParams.blockCount = curCout1Size;
-                loadToA1Cout1Loop = 1;
-            } else {
-                // due to srcStride should not over uint16_max, so we have to move data one by one
-                dataCopyParams.srcStride = 0;
-                dataCopyParams.blockCount = 1;
-                loadToA1Cout1Loop = curCout1Size;
-                dstDataStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
-            }
-        }
+        CalcLoadToA1PlainDataCopyParams(self, dataCopyParams, loadToA1Cout1Loop, loadToA1HLoop, srcDataStride,
+                                        dstDataStride, padOffset, curHoSize, curCout1Size, hDstDataSkipLine);
     }
     CalcSetFmatrixParams(self, curHoSize, woExpand);
+}
+
+// strideW*strideH>1 时 A1 缓冲区需要先清零（奢侈拷贝的目的空间）
+template <class Intf>
+static __aicore__ inline void InitA1BufForStridedCopy(Intf* self, LocalTensor<typename Intf::SrcT>& useA1Buf)
+{
+    if constexpr (!Intf::conv3dConfig.enableKernelSplit) {
+        if (unlikely(self->ctx.tiling_->strideW * self->ctx.tiling_->strideH > 1)) {
+            // block num 以32B为单位, 5用以替换除法运算
+            uint32_t len = useA1Buf.GetSize() * sizeof(typename Intf::SrcT);
+            InitConstValue(useA1Buf, {1, static_cast<uint16_t>(len >> 5), 0, 0U});
+            AscendC::PipeBarrier<PIPE_MTE2>();
+        }
+    }
+}
+
+// 按 dataCopyParams 的格式，把 outBackProp 从 GM 按 (Cout1 循环 x Ho 循环) 搬入 A1 缓冲区
+template <class Intf>
+static __aicore__ inline void LoadToA1ByDataCopyParams(Intf* self, LocalTensor<typename Intf::SrcT>& useA1Buf,
+                                                       DataCopyParams& dataCopyParams, uint32_t curDoutIdx,
+                                                       uint32_t curCout1Idx, uint64_t srcDataStride,
+                                                       uint32_t dstDataStride, uint32_t padDataOffset,
+                                                       uint32_t curHoSize, uint32_t loadToA1Cout1Loop,
+                                                       uint32_t loadToA1HLoop)
+{
+    if (dataCopyParams.blockCount > 0) {
+        // GM的绝对地址已经在API外部计算，这里采用绝对坐标时，需要去除起始坐标
+        int64_t curHoStartOffset = self->ctx.curHoStartIdx_ < 0 ? 0 : self->ctx.curHoStartIdx_;
+        int64_t curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : (self->ctx.curHoIdx_ - curHoStartOffset);
+        // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点）
+        int64_t curOriHoIdx = curHoIdx;
+
+        if (self->ctx.tiling_->strideH > 1) {
+            int64_t skipHoSize = curHoStartOffset % self->ctx.tiling_->strideH;
+            skipHoSize = skipHoSize > 0 ? (self->ctx.tiling_->strideH - skipHoSize) : skipHoSize;
+            curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : (self->ctx.curHoIdx_ - curHoStartOffset);
+            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点）
+            curOriHoIdx = (curHoIdx - skipHoSize + self->ctx.tiling_->strideH - 1) / self->ctx.tiling_->strideH;
+        }
+
+        int64_t hoStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
+        int64_t coutStride = self->ctx.tiling_->ho * hoStride;
+        int64_t out2A1SrcAddrOffsetBase = (curDoutIdx * self->ctx.tiling_->cout1 + curCout1Idx) * coutStride +
+                                          curOriHoIdx * hoStride;
+        int64_t dstOffsetC = padDataOffset;
+        int64_t dstDataStrideC = curHoSize * dstDataStride;
+
+        for (int64_t j = 0; j < loadToA1Cout1Loop; j++) {
+            int64_t out2A1SrcAddrOffset = out2A1SrcAddrOffsetBase;
+            int64_t dstOffset = dstOffsetC;
+            for (int64_t i = 0; i < loadToA1HLoop; i++) {
+                DataCopy(useA1Buf[dstOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dataCopyParams);
+                out2A1SrcAddrOffset += srcDataStride;
+                dstOffset += (dstDataStride * self->ctx.tiling_->strideH);
+            }
+            dstOffsetC += dstDataStrideC;
+            out2A1SrcAddrOffsetBase += coutStride;
+        }
+    }
 }
 
 template <class Intf, class src0_T>
@@ -138,14 +209,7 @@ __aicore__ inline void LoadToA1(Intf* self, uint32_t kIdx, uint32_t curDoutIdx, 
             useA1Buf = self->ctx.a1Pong_.template AllocTensor<typename Intf::SrcT>();
         }
 
-        if constexpr (!Intf::conv3dConfig.enableKernelSplit) {
-            if (unlikely(self->ctx.tiling_->strideW * self->ctx.tiling_->strideH > 1)) {
-                // block num 以32B为单位, 5用以替换除法运算
-                uint32_t len = useA1Buf.GetSize() * sizeof(typename Intf::SrcT);
-                InitConstValue(useA1Buf, {1, static_cast<uint16_t>(len >> 5), 0, 0U});
-                AscendC::PipeBarrier<PIPE_MTE2>();
-            }
-        }
+        InitA1BufForStridedCopy<Intf>(self, useA1Buf);
 
         uint32_t curCout1Idx = 0;
         if constexpr (Intf::conv3dConfig.enableKernelSplit) {
@@ -172,40 +236,8 @@ __aicore__ inline void LoadToA1(Intf* self, uint32_t kIdx, uint32_t curDoutIdx, 
                                                                   loadToA1HLoop, srcDataStride, dstDataStride,
                                                                   padDataOffset, curHoSize, curCout1Idx);
         }
-        if (dataCopyParams.blockCount > 0) {
-            // GM的绝对地址已经在API外部计算，这里采用绝对坐标时，需要去除起始坐标
-            int64_t curHoStartOffset = self->ctx.curHoStartIdx_ < 0 ? 0 : self->ctx.curHoStartIdx_;
-            int64_t curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : (self->ctx.curHoIdx_ - curHoStartOffset);
-            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点）
-            int64_t curOriHoIdx = curHoIdx;
-
-            if (self->ctx.tiling_->strideH > 1) {
-                int64_t skipHoSize = curHoStartOffset % self->ctx.tiling_->strideH;
-                skipHoSize = skipHoSize > 0 ? (self->ctx.tiling_->strideH - skipHoSize) : skipHoSize;
-                curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : (self->ctx.curHoIdx_ - curHoStartOffset);
-                // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点）
-                curOriHoIdx = (curHoIdx - skipHoSize + self->ctx.tiling_->strideH - 1) / self->ctx.tiling_->strideH;
-            }
-
-            int64_t hoStride = self->ctx.tiling_->wo * self->ctx.tiling_->c0;
-            int64_t coutStride = self->ctx.tiling_->ho * hoStride;
-            int64_t out2A1SrcAddrOffsetBase = (curDoutIdx * self->ctx.tiling_->cout1 + curCout1Idx) * coutStride +
-                                              curOriHoIdx * hoStride;
-            int64_t dstOffsetC = padDataOffset;
-            int64_t dstDataStrideC = curHoSize * dstDataStride;
-
-            for (int64_t j = 0; j < loadToA1Cout1Loop; j++) {
-                int64_t out2A1SrcAddrOffset = out2A1SrcAddrOffsetBase;
-                int64_t dstOffset = dstOffsetC;
-                for (int64_t i = 0; i < loadToA1HLoop; i++) {
-                    DataCopy(useA1Buf[dstOffset], self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dataCopyParams);
-                    out2A1SrcAddrOffset += srcDataStride;
-                    dstOffset += (dstDataStride * self->ctx.tiling_->strideH);
-                }
-                dstOffsetC += dstDataStrideC;
-                out2A1SrcAddrOffsetBase += coutStride;
-            }
-        }
+        LoadToA1ByDataCopyParams<Intf>(self, useA1Buf, dataCopyParams, curDoutIdx, curCout1Idx, srcDataStride,
+                                       dstDataStride, padDataOffset, curHoSize, loadToA1Cout1Loop, loadToA1HLoop);
 
         if (pingPongFlag) {
             self->ctx.a1Ping_.EnQue(useA1Buf);
