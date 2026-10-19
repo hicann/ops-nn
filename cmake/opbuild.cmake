@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -36,17 +36,18 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
         SRC ${module_sources}
         PACKAGE opbuild_gen_${prefix}
         OPTIONS OPS_PROTO_SEPARATE 1 OPS_PROJECT_NAME ${prefix} OPS_ACLNN_GEN ${need_gen_aclnn}
+        COMPILE_OPTIONS "-I${CMAKE_SOURCE_DIR}"
         OUT_DIR ${out_src_path}
       )
       execute_process(COMMAND bash -c "rm -fr ${out_src_path}/*.ini"
-        COMMAND 
+        COMMAND
           ${CMAKE_COMMAND} -E env OPS_PROTO_SEPARATE=1 OPS_PROJECT_NAME=${prefix} OPS_ACLNN_GEN=${need_gen_aclnn}
           OPS_PRODUCT_NAME=${ASCEND_COMPUTE_UNIT} ${OP_BUILD_TOOL} ${out_src_path}/libascend_all_ops.so ${out_src_path}
       )
       string(JOIN "," kernel_srcs ${kernel_src_list})
       execute_process(
-        COMMAND 
-          ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/insert_kernel_src.py 
+        COMMAND
+          ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/insert_kernel_src.py
           ${kernel_srcs} ${out_src_path} ${ASCEND_COMPUTE_UNIT}
       )
     endif()

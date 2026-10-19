@@ -12,10 +12,10 @@
  * \file quant_matmul_checker.cpp
  * \brief
  */
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "quant_matmul_checker.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
-#include "version/metadef_version.h"
 
 using namespace op;
 using namespace ge;
@@ -201,7 +201,7 @@ static inline bool IsHif8Input(const aclTensor* x1, const aclTensor* x2)
 
 static inline bool IsHif4Input(const aclTensor* x1, const aclTensor* x2)
 {
-    return x1->GetDataType() == op::DataType::DT_HIFLOAT4 && x2->GetDataType() == op::DataType::DT_HIFLOAT4;
+    return x1->GetDataType() == Ops::NN::DT_HIFLOAT4 && x2->GetDataType() == Ops::NN::DT_HIFLOAT4;
 }
 
 static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
@@ -1940,14 +1940,7 @@ bool QuantMatmulChecker::IsHif4Scale(const aclTensor* x1Scale, const aclTensor* 
     if (x1Scale == nullptr || x2Scale == nullptr) {
         return false;
     }
-#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
-    return x1Scale->GetDataType() == op::DataType::DT_HIFLOAT4_SCALE &&
-           x2Scale->GetDataType() == op::DataType::DT_HIFLOAT4_SCALE;
-#else
-    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
-            "DT_HIFLOAT4_SCALE is only supported in CANN 9.3.0 and later, please install the corresponding version.");
-    return false;
-#endif
+    return x1Scale->GetDataType() == Ops::NN::DT_HIFLOAT4_SCALE && x2Scale->GetDataType() == Ops::NN::DT_HIFLOAT4_SCALE;
 }
 
 bool QuantMatmulChecker::CheckHif4Scaling() const
