@@ -25,7 +25,9 @@ namespace ge {
 * Two inputs, including:
 * @li features: A Tensor. Unnormalized scores from model output. Must be one of the following types: float16, bfloat16,
 float32, double.
-* A "batch_size * num_classes" matrix. The format must be ND or NHWC. Support 2D, 4D.
+* A "batch_size * num_classes" matrix. The format must be ND for 2D input, and NCHW or NHWC for 4D input. Support 1D
+(broadcast with the other input), 2D, 4D.
+* Dynamic shapes (dims are -1) are supported for 2D inputs, but not for 4D inputs.
 * When the shape of features is 4D, the data type supports bfloat16 in dynamic shape scenarios, and float32 in static
 shape scenarios.
 * @li labels: A Tensor. of the same type and format as "features". The true labels of the samples. A "batch_size *
