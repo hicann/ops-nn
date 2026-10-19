@@ -121,6 +121,14 @@ done
 #自定义算子包验证run_example
 for name in "${ops_name[@]}"
 do
+    # 卸载已安装的其他vendor包:运行时会加载vendors下全部vendor目录,
+    # 多个vendor包含同名算子时会发生重复注册,导致示例进程double free崩溃
+    for uninstall_sh in ${ASCEND_HOME_PATH:-/usr/local/Ascend/cann}/opp/vendors/*/scripts/uninstall.sh; do
+        if [ -f "${uninstall_sh}" ]; then
+            echo "[EXECUTE_COMMAND] bash ${uninstall_sh}"
+            bash "${uninstall_sh}"
+        fi
+    done
     #安装指定路径的自定义算子包
     echo "--------------------------------"
     echo "${name}"
