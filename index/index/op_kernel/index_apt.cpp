@@ -23,6 +23,7 @@
 #include "arch35/index_nocon_broadcast.h"
 #include "arch35/index_tiling_key.h"
 #include "arch35/index_tiling_data.h"
+#include "arch92/index_full_load_dma.h"
 
 using namespace Index;
 
@@ -118,6 +119,22 @@ __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR i
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, &tilingData);
         op.Process();
         // ---------------- Full-load --------------------
+    } else if constexpr (FULL_LOAD_TYPE == INDEX_FULL_LOAD_DMA_1D) {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        REGISTER_TILING_FOR_TILINGKEY("FULL_LOAD_TYPE == INDEX_FULL_LOAD_DMA_1D", IndexFullLoadTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
+        KernelIndexFullLoadDma<inputComputeType, int32_t, DTYPE_INDICES, 1, 1> op(tPipe, tilingData);
+        op.Init(inputX, indexedSizes, indices, output);
+        op.Process();
+#endif
+    } else if constexpr (FULL_LOAD_TYPE == INDEX_FULL_LOAD_DMA_2D_MASK_0) {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        REGISTER_TILING_FOR_TILINGKEY("FULL_LOAD_TYPE == INDEX_FULL_LOAD_DMA_2D_MASK_0", IndexFullLoadTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
+        KernelIndexFullLoadDma<inputComputeType, int32_t, DTYPE_INDICES, 0, DIM2> op(tPipe, tilingData);
+        op.Init(inputX, indexedSizes, indices, output);
+        op.Process();
+#endif
     } else if constexpr (FULL_LOAD_TYPE == INDEX_FULL_LOAD_1D) {
         REGISTER_TILING_FOR_TILINGKEY("FULL_LOAD_TYPE == INDEX_FULL_LOAD_1D", IndexFullLoadTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);

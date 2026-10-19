@@ -32,13 +32,16 @@ namespace Index {
 #define INDEX_FULL_LOAD_1D 1
 #define INDEX_FULL_LOAD_2D_MASK_0 2
 #define INDEX_FULL_LOAD_2D_MASK_1 3
+#define INDEX_FULL_LOAD_DMA_1D 4        // DV121(960) DMA path, 1D
+#define INDEX_FULL_LOAD_DMA_2D_MASK_0 5 // DV121(960) DMA path, 2D mask(1, 0)
 
 // 模板参数声明
 ASCENDC_TPL_ARGS_DECL(Index,
                       ASCENDC_TPL_DTYPE_DECL(X_DTYPE, INDEX_TPL_NONE, INDEX_TPL_B8, INDEX_TPL_B16, INDEX_TPL_B32,
                                              INDEX_TPL_B64, INDEX_TPL_B128),
                       ASCENDC_TPL_DTYPE_DECL(FULL_LOAD_TYPE, INDEX_NOT_FULL_LOAD, INDEX_FULL_LOAD_1D,
-                                             INDEX_FULL_LOAD_2D_MASK_0, INDEX_FULL_LOAD_2D_MASK_1),
+                                             INDEX_FULL_LOAD_2D_MASK_0, INDEX_FULL_LOAD_2D_MASK_1,
+                                             INDEX_FULL_LOAD_DMA_1D, INDEX_FULL_LOAD_DMA_2D_MASK_0),
                       ASCENDC_TPL_BOOL_DECL(IS_PERF, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_SIMD, 0, 1),
                       ASCENDC_TPL_BOOL_DECL(IS_NOCON, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_ACCUMULATE, 0),
                       ASCENDC_TPL_BOOL_DECL(IS_OVERLENGTH, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_BROADCAST, 0, 1));
@@ -79,6 +82,17 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0), ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0), ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0),
                          ASCENDC_TPL_TILING_STRUCT_SEL(IndexFullLoadTilingData)),
+
+#if ((!defined(__CCE_AICORE__)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)))
+    // index_tiling_full_load.cpp: Full load DMA 模板（仅 DV121/960 平台生效）
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_DTYPE_SEL(X_DTYPE, INDEX_TPL_B8, INDEX_TPL_B16, INDEX_TPL_B32, INDEX_TPL_B64),
+                         ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, INDEX_FULL_LOAD_DMA_1D, INDEX_FULL_LOAD_DMA_2D_MASK_0),
+                         ASCENDC_TPL_BOOL_SEL(IS_PERF, 0), ASCENDC_TPL_BOOL_SEL(IS_SIMD, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0), ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0),
+                         ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0), ASCENDC_TPL_BOOL_SEL(IS_BROADCAST, 0),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(IndexFullLoadTilingData)),
+#endif
 
     // index_tiling_no_continuous.cpp: 非连续模板
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),

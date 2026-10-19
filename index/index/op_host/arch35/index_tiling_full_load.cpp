@@ -39,6 +39,8 @@ static constexpr int64_t MAX_UINT16_NUM = 65535;
 static constexpr uint8_t MASK_MODE_0 = 0;
 static constexpr uint8_t MASK_MODE_1 = 1;
 static constexpr uint8_t MASK_MODE_INVALID = 127;
+static constexpr int64_t DMA_INPUT_BYTES_THRESHOLD = 64 * 1024; // DV121 DMA path: input >= 64KB
+static constexpr int64_t DMA_LAST_DIM_BYTES_THRESHOLD = 64;     // DV121 DMA path: lastDim >= 64B (仅 2D MODE_0)
 
 ge::graphStatus IndexFullLoadTiling::GetShapeAttrsInfo()
 {
@@ -99,12 +101,32 @@ bool IndexFullLoadTiling::IsCapable()
     if (maskIndices_ != indicesTensorNum_) {
         return false;
     }
-    if ((inputDataTypeSize == dtypeSizeB8 || inputDataTypeSize == dtypeSizeB16) && inputShapeSize > MAX_UINT16_NUM) {
-        return false;
-    } else if (inputShapeSize > MAX_INT32_NUM) {
+    if (SetMaskMode() != ge::GRAPH_SUCCESS) {
         return false;
     }
-    if (SetMaskMode() != ge::GRAPH_SUCCESS) {
+    const gert::Tensor* maskTensor = context_->GetInputTensor(MASK_INPUT_IDX);
+    if (maskTensor == nullptr) {
+        OP_LOGE(context_->GetNodeName(), "maskTensor is nullptr!");
+        return false;
+    }
+    int64_t maskSize = static_cast<int64_t>(maskShape_.GetDim(0));
+    int64_t dimSize = inputShape_.GetDimNum();
+    for (int64_t i = dimSize - 1; i >= 0; i--) {
+        if (i >= maskSize || maskTensor->GetData<int64_t>()[i] == 0) {
+            lastAxisSize_ *= inputShape_.GetDim(i);
+        } else {
+            break;
+        }
+    }
+    // DV121(960) DMA path: input 留 GM 用 GatherDataCopy, 仅单维索引 (DIM1/DIM2 MODE_0) 适用
+    int64_t inputBytes = inputShapeSize * inputDataTypeSize;
+    int64_t lastDimBytes = lastAxisSize_ * inputDataTypeSize;
+    useDmaPath_ = isDv121_ && (dimSize == 1 || maskMode_ == MASK_MODE_0) && (inputBytes >= DMA_INPUT_BYTES_THRESHOLD) &&
+                  (dimSize == 1 || lastDimBytes >= DMA_LAST_DIM_BYTES_THRESHOLD);
+    if (!useDmaPath_ && (inputDataTypeSize == dtypeSizeB8 || inputDataTypeSize == dtypeSizeB16) &&
+        inputShapeSize > MAX_UINT16_NUM) {
+        return false;
+    } else if (inputShapeSize > MAX_INT32_NUM) {
         return false;
     }
     if (CalcUBBuffer() != ge::GRAPH_SUCCESS || ubIndices_ < INDEX_THRESHOLD) {
@@ -121,23 +143,25 @@ bool IndexFullLoadTiling::IsCapable()
 // mask(1, 1)/mask(1) -> outputshape:indices.size
 ge::graphStatus IndexFullLoadTiling::CalcUBBuffer()
 {
-    int64_t dimSize = inputShape_.GetDimNum();
     int64_t inputOutputDtypeSize = ge::GetSizeByDataType(inputDtype_);
     int64_t indicesDtypeSize = ge::GetSizeByDataType(indicesDtype_);
     const int64_t dtypeSizeB32 = static_cast<int64_t>(DTYPE_SIZE_B32);
     const int64_t dtypeSizeB64 = static_cast<int64_t>(DTYPE_SIZE_B64);
-    const gert::Tensor* maskTensor = context_->GetInputTensor(MASK_INPUT_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, maskTensor);
-    int64_t maskSize = static_cast<int64_t>(maskShape_.GetDim(0));
-    for (int64_t i = dimSize - 1; i >= 0; i--) {
-        if (i >= maskSize || maskTensor->GetData<int64_t>()[i] == 0) {
-            lastAxisSize_ *= inputShape_.GetDim(i);
-        } else {
-            break;
-        }
-    }
     int64_t inputSize = Ops::Base::CeilAlign(inputShape_.GetShapeSize() * inputOutputDtypeSize, blockSize_);
-    if (indicesDtypeSize == dtypeSizeB64) {
+    if (useDmaPath_) {
+        // DMA path: input 留 GM, UB 只存 output + indices + gather offset
+        int64_t lastDimBytes = lastAxisSize_ * inputOutputDtypeSize;
+        int64_t lastDimBytesAligned = Ops::Base::CeilAlign(lastDimBytes, static_cast<int64_t>(blockSize_));
+        int64_t outPerIdx = lastDimBytesAligned * DOUBLE;
+        int64_t idxPerIdx = indicesDtypeSize * indicesTensorNum_ * DOUBLE;
+        int64_t offsetPerIdx = static_cast<int64_t>(sizeof(int64_t));
+        int64_t fixedAlign = DOUBLE * blockSize_ + indicesTensorNum_ * blockSize_ * DOUBLE;
+        if (indicesDtypeSize == dtypeSizeB64) {
+            offsetPerIdx += dtypeSizeB64;
+            fixedAlign += blockSize_;
+        }
+        ubIndices_ = (static_cast<int64_t>(ubSize_) - fixedAlign) / (outPerIdx + idxPerIdx + offsetPerIdx);
+    } else if (indicesDtypeSize == dtypeSizeB64) {
         ubIndices_ = (static_cast<int64_t>(ubSize_) - inputSize - DOUBLE * blockSize_ -
                       indicesTensorNum_ * blockSize_ * DOUBLE - blockSize_) /
                      (lastAxisSize_ * inputOutputDtypeSize * DOUBLE + dtypeSizeB32 * indicesTensorNum_ * DOUBLE +
@@ -202,7 +226,14 @@ ge::graphStatus IndexFullLoadTiling::DoOpTiling()
     } else {
         indicesQueueSize = Ops::Base::CeilAlign(ubIndices_ * indicesDtypeSize, blockSize_) * indicesTensorNum_;
     }
-    int64_t outputQueueSize = Ops::Base::CeilAlign(ubIndices_ * lastAxisSize_ * inputOutputDtypeSize, blockSize_);
+    int64_t lastDimBytes = lastAxisSize_ * inputOutputDtypeSize;
+    int64_t outputQueueSize = 0;
+    if (useDmaPath_) {
+        // DMA path: kernel 按行 32B 对齐步进写入(GatherDataCopy dstStride), 分配量需按行对齐
+        outputQueueSize = ubIndices_ * Ops::Base::CeilAlign(lastDimBytes, blockSize_);
+    } else {
+        outputQueueSize = Ops::Base::CeilAlign(ubIndices_ * lastDimBytes, blockSize_);
+    }
     tilingData_->inputQueSize = inputQueueSize;
     tilingData_->indicesQueSize = indicesQueueSize;
     tilingData_->outputQueSize = outputQueueSize;
@@ -242,10 +273,29 @@ ge::graphStatus IndexFullLoadTiling::SetMaskMode()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus IndexFullLoadTiling::GetPlatformInfo()
+{
+    ge::graphStatus ret = IndexTilingCommon::GetPlatformInfo();
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+    auto platformPtr = context_->GetPlatformInfo();
+    if (platformPtr != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        isDv121_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                   ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 uint64_t IndexFullLoadTiling::GetTilingKey() const
 {
     uint32_t fullLoadMode = 0;
-    if (inputShape_.GetDimNum() == 1) {
+    if (useDmaPath_ && inputShape_.GetDimNum() == 1) {
+        fullLoadMode = INDEX_FULL_LOAD_DMA_1D;
+    } else if (useDmaPath_) {
+        fullLoadMode = INDEX_FULL_LOAD_DMA_2D_MASK_0;
+    } else if (inputShape_.GetDimNum() == 1) {
         fullLoadMode = INDEX_FULL_LOAD_1D;
     } else if (inputShape_.GetDimNum() == DIM_NUM_TWO && maskMode_ == MASK_MODE_0) {
         fullLoadMode = INDEX_FULL_LOAD_2D_MASK_0;

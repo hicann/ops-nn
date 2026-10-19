@@ -29,6 +29,7 @@ public:
 
 private:
     bool IsCapable() override;
+    ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
@@ -49,6 +50,8 @@ private:
     int64_t blockSize_{0};
     uint8_t maskMode_{0};
     int64_t lastAxisSize_{1};
+    bool isDv121_{false};
+    bool useDmaPath_{false};
     IndexFullLoadTilingData* tilingData_;
 };
 
