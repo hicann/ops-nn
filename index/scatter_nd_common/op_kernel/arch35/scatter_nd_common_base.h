@@ -38,7 +38,11 @@ constexpr uint64_t SORT_PAD_NUM = 2;
 constexpr uint16_t MIN_SAME_IDX_ACCM_COUNT = 256;
 constexpr uint16_t MAX_SHAPE_RANK = 8;
 constexpr uint16_t INDICE_RANK_TWO = 2;
+#if __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
+constexpr float SORT_HIST_THRESHOLD = 0.3f;
+#else
 constexpr float SORT_HIST_THRESHOLD = 0.03f;
+#endif
 constexpr uint32_t HASH_SCORE_BUF_SIZE = 128;
 constexpr uint32_t CAST_0 = 0;
 constexpr uint32_t CAST_1 = 1;

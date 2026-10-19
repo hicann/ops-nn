@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,28 +8,35 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "arch35/gather_v2_simt.h"
-#include "arch35/gather_v2_simd.h"
-#include "arch35/gather_v2_simd_two_dim.h"
-#include "arch35/gather_v2_simd_last_gather.h"
-#include "arch35/gather_v2_ga_all_load.h"
-#include "arch35/gather_v2_after_gather_full_load.h"
-#include "arch35/gather_v2_simt_two_dim.h"
-#include "arch35/gather_v2_empty.h"
+#include "../arch35/gather_v2_simt.h"
+#include "../arch35/gather_v2_simd.h"
+#include "../arch35/gather_v2_simd_two_dim.h"
+#include "gather_v2_simd_two_dim_gdma.h"
+#include "../arch35/gather_v2_simd_last_gather.h"
+#include "../arch35/gather_v2_ga_all_load.h"
+#include "../arch35/gather_v2_after_gather_full_load.h"
+#include "../arch35/gather_v2_simt_two_dim.h"
+#include "../arch35/gather_v2_empty.h"
 
 using namespace AscendC;
 using namespace gatherv2;
 
+#define TILING_KEY_X_B128_INDEX_SIZE_64 10000000000000000041UL
 #define TILING_KEY_X_B64_INDEX_SIZE_64 10000000000000000031UL
 #define TILING_KEY_X_B32_INDEX_SIZE_64 10000000000000000021UL
 #define TILING_KEY_X_B16_INDEX_SIZE_64 10000000000000000011UL
 #define TILING_KEY_X_B8_INDEX_SIZE_64 10000000000000000001UL
+#define TILING_KEY_X_B128_INDEX_SIZE_32 10000000000000000040UL
 #define TILING_KEY_X_B64_INDEX_SIZE_32 10000000000000000030UL
 #define TILING_KEY_X_B32_INDEX_SIZE_32 10000000000000000020UL
 #define TILING_KEY_X_B16_INDEX_SIZE_32 10000000000000000010UL
 #define TILING_KEY_X_B8_INDEX_SIZE_32 10000000000000000000UL
 #define SIMD_TILING_KEY 1000000099
 #define SIMD_TILING_KEY_TWO_DIM 1000000299
+#define SIMD_TILING_KEY_TWO_DIM_DMA 4000000099
+#define SIMD_TILING_KEY_TWO_DIM_CAST_DMA 4100000099
+#define SIMD_TILING_KEY_TWO_DIM_DMA_NEG 4000000199
+#define SIMD_TILING_KEY_TWO_DIM_CAST_DMA_NEG 4100000199
 #define SIMD_LAST_GATHER_B8_TILING_KEY 1100000001UL
 #define SIMD_LAST_GATHER_B16_TILING_KEY 1100000002UL
 #define SIMD_LAST_GATHER_B32_TILING_KEY 1100000004UL
@@ -52,10 +59,12 @@ using namespace gatherv2;
 #define SIMT_TWO_DIM_B16_INDEX_SIZE_32_TILING_KEY 2000000002UL
 #define SIMT_TWO_DIM_B32_INDEX_SIZE_32_TILING_KEY 2000000004UL
 #define SIMT_TWO_DIM_B64_INDEX_SIZE_32_TILING_KEY 2000000008UL
+#define SIMT_TWO_DIM_B128_INDEX_SIZE_32_TILING_KEY 2000000016UL
 #define SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY 2000000101UL
 #define SIMT_TWO_DIM_B16_INDEX_SIZE_64_TILING_KEY 2000000102UL
 #define SIMT_TWO_DIM_B32_INDEX_SIZE_64_TILING_KEY 2000000104UL
 #define SIMT_TWO_DIM_B64_INDEX_SIZE_64_TILING_KEY 2000000108UL
+#define SIMT_TWO_DIM_B128_INDEX_SIZE_64_TILING_KEY 2000000116UL
 
 extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, GM_ADDR workspace,
                                                 GM_ADDR tiling)
@@ -65,6 +74,10 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
 
     TILING_KEY_IS(SIMD_TILING_KEY);
     TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM);
+    TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM_DMA);
+    TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM_CAST_DMA);
+    TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM_DMA_NEG);
+    TILING_KEY_IS(SIMD_TILING_KEY_TWO_DIM_CAST_DMA_NEG);
     TILING_KEY_IS(SIMD_LAST_GATHER_B8_TILING_KEY);
     TILING_KEY_IS(SIMD_LAST_GATHER_B16_TILING_KEY);
     TILING_KEY_IS(SIMD_LAST_GATHER_B32_TILING_KEY);
@@ -79,14 +92,18 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     TILING_KEY_IS(SIMT_TWO_DIM_B16_INDEX_SIZE_32_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B32_INDEX_SIZE_32_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B64_INDEX_SIZE_32_TILING_KEY);
+    TILING_KEY_IS(SIMT_TWO_DIM_B128_INDEX_SIZE_32_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B16_INDEX_SIZE_64_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B32_INDEX_SIZE_64_TILING_KEY);
     TILING_KEY_IS(SIMT_TWO_DIM_B64_INDEX_SIZE_64_TILING_KEY);
+    TILING_KEY_IS(SIMT_TWO_DIM_B128_INDEX_SIZE_64_TILING_KEY);
+    TILING_KEY_IS(TILING_KEY_X_B128_INDEX_SIZE_64);
     TILING_KEY_IS(TILING_KEY_X_B64_INDEX_SIZE_64);
     TILING_KEY_IS(TILING_KEY_X_B32_INDEX_SIZE_64);
     TILING_KEY_IS(TILING_KEY_X_B16_INDEX_SIZE_64);
     TILING_KEY_IS(TILING_KEY_X_B8_INDEX_SIZE_64);
+    TILING_KEY_IS(TILING_KEY_X_B128_INDEX_SIZE_32);
     TILING_KEY_IS(TILING_KEY_X_B64_INDEX_SIZE_32);
     TILING_KEY_IS(TILING_KEY_X_B32_INDEX_SIZE_32);
     TILING_KEY_IS(TILING_KEY_X_B16_INDEX_SIZE_32);
@@ -106,6 +123,26 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDim, tilingDataIn, tiling);
     Gatherv2SimdTwoDim<DTYPE_INDICES> gatherv2Op(&pipe);
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM_DMA
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDimDma, tilingDataIn, tiling);
+    SimdTwoDimGatherDMA<DTYPE_INDICES, false, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM_CAST_DMA
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDimDma, tilingDataIn, tiling);
+    SimdTwoDimGatherDMA<DTYPE_INDICES, true, false> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM_DMA_NEG
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDimDma, tilingDataIn, tiling);
+    SimdTwoDimGatherDMA<DTYPE_INDICES, false, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMD_TILING_KEY_TWO_DIM_CAST_DMA_NEG
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimdTwoDimDma, tilingDataIn, tiling);
+    SimdTwoDimGatherDMA<DTYPE_INDICES, true, true> gatherv2Op(&pipe);
+    gatherv2Op.Init(x, indices, y, &tilingDataIn);
     gatherv2Op.Process();
 #elif TILING_KEY_VAR == SIMD_LAST_GATHER_B8_TILING_KEY
     GET_TILING_DATA_WITH_STRUCT(GatherV2LastTilingData, tilingDataIn, tiling);
@@ -177,6 +214,11 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     Gatherv2SimtTwoDim<int64_t, DTYPE_INDICES, uint64_t> gatherv2Op;
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B128_INDEX_SIZE_64_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    Gatherv2SimtTwoDim<int4, DTYPE_INDICES, uint64_t> gatherv2Op;
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
 #elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_32_TILING_KEY
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
     Gatherv2SimtTwoDim<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op;
@@ -195,6 +237,11 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
 #elif TILING_KEY_VAR == SIMT_TWO_DIM_B64_INDEX_SIZE_32_TILING_KEY
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
     Gatherv2SimtTwoDim<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op;
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == SIMT_TWO_DIM_B128_INDEX_SIZE_32_TILING_KEY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
+    Gatherv2SimtTwoDim<int4, DTYPE_INDICES, uint32_t> gatherv2Op;
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
 #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_64
@@ -217,6 +264,11 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     Gatherv2<int64_t, DTYPE_INDICES, uint64_t> gatherv2Op;
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_X_B128_INDEX_SIZE_64
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2<int4, DTYPE_INDICES, uint64_t> gatherv2Op;
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
 #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_32
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
     Gatherv2<int8_t, DTYPE_INDICES, uint32_t> gatherv2Op;
@@ -235,6 +287,11 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
 #elif TILING_KEY_VAR == TILING_KEY_X_B64_INDEX_SIZE_32
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
     Gatherv2<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op;
+    gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
+    gatherv2Op.Process();
+#elif TILING_KEY_VAR == TILING_KEY_X_B128_INDEX_SIZE_32
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingData, tilingDataIn, tiling);
+    Gatherv2<int4, DTYPE_INDICES, uint32_t> gatherv2Op;
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
 #elif TILING_KEY_VAR == TILING_KEY_X_B8_INDEX_SIZE_2D

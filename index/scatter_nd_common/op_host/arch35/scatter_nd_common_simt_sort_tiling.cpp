@@ -23,6 +23,7 @@ namespace optiling {
 using namespace ScatterNdCommon;
 
 static constexpr int64_t SORT_LIMIT = 5;
+static constexpr int64_t ASCEND960dt_SORT_LIMIT = 50;
 static constexpr int64_t ALIGN_SIZE = 32;
 static constexpr int64_t MIN_HANDLE_SIZE = 128;
 static constexpr int64_t INT32_BYTES = 4;
@@ -51,7 +52,8 @@ bool ScatterNdCommonSimtSortTiling::IsCapable()
     }
 
     // 是否排序
-    if (indicesAxis_ / varInAxis_ >= SORT_LIMIT && IsSimtSortSupportType(updateDtype_)) {
+    int64_t sortLimit = isAscend960dt_ ? ASCEND960dt_SORT_LIMIT : SORT_LIMIT;
+    if (indicesAxis_ / varInAxis_ >= sortLimit && IsSimtSortSupportType(updateDtype_)) {
         return true;
     }
     return false;

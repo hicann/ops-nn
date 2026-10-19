@@ -108,6 +108,25 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GatherV2_1000000299, GatherV2TilingDataSimdTwoDim)
 
+BEGIN_TILING_DATA_DEF(GatherV2TilingDataSimdTwoDimDma)
+TILING_DATA_FIELD_DEF(int16_t, colCoreNum);
+TILING_DATA_FIELD_DEF(int16_t, needCoreNum);
+TILING_DATA_FIELD_DEF(int16_t, indicesUbFactor);
+TILING_DATA_FIELD_DEF(int16_t, indiceFactor);
+TILING_DATA_FIELD_DEF(int32_t, colUbFactor);
+TILING_DATA_FIELD_DEF(int32_t, tailBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, blockFactor);
+TILING_DATA_FIELD_DEF(int64_t, gatherDimSize);
+TILING_DATA_FIELD_DEF(int64_t, innerByte);
+TILING_DATA_FIELD_DEF(int64_t, normalColCoreInners);
+TILING_DATA_FIELD_DEF(int64_t, tailColCoreInners);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(GatherV2_4000000099, GatherV2TilingDataSimdTwoDimDma)
+REGISTER_TILING_DATA_CLASS(GatherV2_4100000099, GatherV2TilingDataSimdTwoDimDma) // cast
+REGISTER_TILING_DATA_CLASS(GatherV2_4000000199, GatherV2TilingDataSimdTwoDimDma) // neg
+REGISTER_TILING_DATA_CLASS(GatherV2_4100000199, GatherV2TilingDataSimdTwoDimDma) // neg + cast
+
 BEGIN_TILING_DATA_DEF(GatherV2TilingDataSimtTwoDim)
 TILING_DATA_FIELD_DEF(int16_t, needCoreNum);
 TILING_DATA_FIELD_DEF(int16_t, negativeIndexSupport);
@@ -122,10 +141,12 @@ REGISTER_TILING_DATA_CLASS(GatherV2_2000000001, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000002, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000004, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000008, GatherV2TilingDataSimtTwoDim)
+REGISTER_TILING_DATA_CLASS(GatherV2_2000000016, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000101, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000102, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000104, GatherV2TilingDataSimtTwoDim)
 REGISTER_TILING_DATA_CLASS(GatherV2_2000000108, GatherV2TilingDataSimtTwoDim)
+REGISTER_TILING_DATA_CLASS(GatherV2_2000000116, GatherV2TilingDataSimtTwoDim)
 
 BEGIN_TILING_DATA_DEF(GatherV2TilingDataEmptyInput)
 TILING_DATA_FIELD_DEF(int64_t, needCoreNum);
@@ -175,6 +196,7 @@ private:
     void CalcCoreElement();
     void CalcSimdTiling();
     ge::graphStatus SimdTwoDimTiling();
+    ge::graphStatus SimdTwoDimDmaTiling();
     ge::graphStatus SimtTwoDimTiling();
     ge::graphStatus CalFullLoadTiling();
     bool IsAfterGdimFullLoad();
@@ -185,6 +207,7 @@ private:
     bool IsLastGatherAndFullLoad();
     bool IsGaAllLoad();
     bool IsSimdTwoDim();
+    bool IsSimdTwoDimDma();
     bool IsSimtTwoDim();
     void LastGatherUbTiling(int32_t& inputUbSize, int32_t& indiceUbSize, int32_t& outUbSize, int32_t& indiceCastUbSize,
                             int32_t& inputNum, int32_t& indicesNum, int32_t& ubCols, int32_t& ubRows,
@@ -198,6 +221,7 @@ private:
     GatherV2LastTilingData lastTilingdata_;
     GatherV2GaAllLoadTilingData gaAllLoadTilingdata_;
     GatherV2TilingDataSimdTwoDim simdTwoDimTilingData_;
+    GatherV2TilingDataSimdTwoDimDma simdTwoDimDmaTilingData_;
     GatherV2TilingDataSimtTwoDim simtTwoDimTilingData_;
     GatherV2TilingDataEmptyInput emptyTilingData_;
 #ifdef DAVID_FPGA
@@ -219,14 +243,18 @@ private:
     int64_t outerSize_ = 1;
     int64_t gatherSize_ = 0;
     int64_t innerSize_ = 1;
+    int64_t innerSizeB16_ = 1;
+    int64_t improveDtypeSizeB16_ = 1;
     int64_t ubSize_ = 0;
     int64_t needCoreNum_ = 0;
     int64_t inputBatchDims_ = 0;
     bool negativeIndexSupport_ = false;
     bool supportOutOfBoundIndex_ = false;
+    bool isAscend96_ = false;
     int32_t tilingMode_ = 0;
     int32_t ubBlockSize_ = 32;
     int32_t vRegSize_ = 256;
+    uint32_t isCastIndices_ = 0;
 };
 } // namespace optiling
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHERV2_H

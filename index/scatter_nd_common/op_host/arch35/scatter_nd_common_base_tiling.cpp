@@ -76,6 +76,11 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetPlatformInfo()
     totalCoreNum_ = compileInfo->core_num;
     ubSize_ = compileInfo->ub_size;
 
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960dt_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+
     OP_CHECK_IF(totalCoreNum_ <= 0, OP_LOGE(context_, "GetPlatformInfo get corenum <= 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(ubSize_ <= 0, OP_LOGE(context_, "GetPlatformInfo get ub size <= 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

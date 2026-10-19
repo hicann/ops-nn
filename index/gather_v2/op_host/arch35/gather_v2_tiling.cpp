@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 #include "op_host/tiling_key.h"
 #include "util/const_util.h"
+#include "op_common/op_host/util/math_util.h"
 
 namespace optiling {
 
@@ -30,6 +31,7 @@ const static int32_t ATTR_BATCH_DIMS_INDEX = 0;
 const static int32_t ATTR_NEG_INDEX_SUPPORT = 1;
 const static int64_t SIMD_THRES = 2048;
 const static int64_t SIMD_TWO_DIM_THRES = 2048;
+const static int64_t SIMD_DMA_THRES = 1024;
 const static int64_t SIMD_B8_THRES = 218;
 const static int64_t SIMD_B16_THRES = 360;
 const static int64_t SIMD_B32_THRES = 620;
@@ -48,6 +50,7 @@ const static int32_t NUM_ONE = 1;
 const static int32_t NUM_ZERO = 0;
 const static int32_t NUM_HUNDRED = 100;
 
+const static int64_t INPUT_DTYPE_B128 = 16;
 const static int64_t INPUT_DTYPE_B64 = 8;
 const static int64_t INPUT_DTYPE_B32 = 4;
 const static int64_t INPUT_DTYPE_B16 = 2;
@@ -60,6 +63,8 @@ const static uint64_t DTYPE_B16_KEY = 1;
 const static uint64_t DTYPE_B8_KEY = 0;
 const static uint64_t SIMD_TILING_KEY = 1000000099UL;
 const static uint64_t SIMD_TWO_DIM_TILING_KEY = 1000000299UL;
+const static uint64_t SIMD_TWO_DIM_DMA_TILING_KEY = 4000000099UL;
+const static uint64_t SIMD_TWO_DIM_DMA_CAST_TILING_KEY = 4100000099UL;
 const static uint64_t SIMT_TWO_DIM_BASE_KEY = 2000000000UL;
 const static uint64_t EMPTY_TILING_KEY = 3000000000UL;
 const static int64_t MIN_OUTPUT_FULL_LOAD_SIZE = 2048;
@@ -79,6 +84,7 @@ const static int32_t TILING_AFTER_GDIM = 4;
 const static int32_t TILING_SIMD_TWO_DIM = 5;
 const static int32_t TILING_SIMT_TWO_DIM = 6;
 const static int32_t TILING_EMPTY = 7;
+const static int32_t TILING_SIMD_TWO_DIM_DMA = 8;
 const static int32_t B8_AND_B16_GATHER_UPPER = 65536;
 const static int64_t SPLIT_OUT_THRES = 2048;
 const static int32_t MIN_INDICES_UB_SIZE = 1024;
@@ -86,8 +92,10 @@ const static int32_t WARP_THREAD_NUM = 32;
 const static int32_t SIMD_VECTOR_REG = 256;
 const static int32_t HELP_BUFFER_SIZE = 256;
 const static int32_t DATA_CACHE_SIZE = 512;
+const static int64_t DMA_LIMIT_INNER_SIZE = 4096;
 const static int64_t MIN_TILING_BITS_SIZE_PER_CORE = 32768; // 4KB
 const static int64_t BITS_NUM = 8;
+// constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 
 template <typename T1, typename T2>
 static inline auto CeilDiv(T1 a, T2 b) -> T1
@@ -266,6 +274,12 @@ inline ge::graphStatus Gatherv2TilingBase::GetAttrsInfoAndCheck()
 
 ge::graphStatus Gatherv2TilingBase::GetShapeAttrsInfo()
 {
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context_, "platformInfo is nullptr."), return ge::GRAPH_FAILED);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend96_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                  ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
+
     opName_ = context_->GetNodeName();
     OP_CHECK_IF(GetXInfoAndCheck() != ge::GRAPH_SUCCESS, OP_LOGD(opName_, "input x check failed."),
                 return ge::GRAPH_FAILED);
@@ -303,7 +317,11 @@ ge::graphStatus Gatherv2TilingBase::MargeAxis()
 
     gatherSize_ = indicesSize / batchSize_;
 
+    innerSizeB16_ = innerSize_;
     innerSize_ = innerSize_ / (XDtypeImprove() / ge::GetSizeByDataType(xDtype_));
+    if (improveDtypeSizeB16_ == INPUT_DTYPE_B128) {
+        innerSizeB16_ = innerSizeB16_ / (improveDtypeSizeB16_ / ge::GetSizeByDataType(xDtype_));
+    }
 
     gatherV2TilingData_.set_batchSize(batchSize_);
     gatherV2TilingData_.set_outerSize(outerSize_);
@@ -325,6 +343,10 @@ int64_t Gatherv2TilingBase::XDtypeImprove()
     int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
     improveDtypeSize_ = xDtypeSize;
     int64_t lastAxisBytes = innerSize_ * xDtypeSize;
+    if (isAscend96_ && (xDtypeSize < INPUT_DTYPE_B128) && (lastAxisBytes % INPUT_DTYPE_B128) == 0) {
+        OP_LOGD(opName_, "XDtypeImprove lastAxisBytes %ld, can improve to INPUT_DTYPE_B128", lastAxisBytes);
+        improveDtypeSizeB16_ = INPUT_DTYPE_B128;
+    }
     if ((xDtypeSize < INPUT_DTYPE_B64) && (lastAxisBytes % INPUT_DTYPE_B64) == 0) {
         OP_LOGD(opName_, "XDtypeImprove lastAxisBytes %ld, improve to INPUT_DTYPE_B64", lastAxisBytes);
         improveDtypeSize_ = INPUT_DTYPE_B64;
@@ -375,6 +397,14 @@ ge::graphStatus Gatherv2TilingBase::CalcEmptyCoreElement()
 
 void Gatherv2TilingBase::CalcCoreElement()
 {
+    if (isAscend96_ && improveDtypeSizeB16_ == INPUT_DTYPE_B128 &&
+        (CeilDiv(ySize_ / NUM_TWO, threadNum_) > (aivNum_ / NUM_TWO))) {
+        improveDtypeSize_ = improveDtypeSizeB16_;
+        innerSize_ = innerSizeB16_;
+        ySize_ = batchSize_ * outerSize_ * gatherSize_ * innerSize_;
+        gatherV2TilingData_.set_innerSize(innerSize_);
+        gatherV2TilingData_.set_ySize(ySize_);
+    }
     while ((threadNum_ >= NUM_TWO * SMALL_CASE_THREAD_NUM) && (CeilDiv(ySize_, threadNum_) < (aivNum_ / NUM_TWO))) {
         threadNum_ = threadNum_ / NUM_TWO;
     }
@@ -464,9 +494,81 @@ ge::graphStatus Gatherv2TilingBase::SimdTwoDimTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Gatherv2TilingBase::SimdTwoDimDmaTiling()
+{
+    int64_t innerByte = innerSize_ * improveDtypeSize_;
+
+    // block tiling
+    int64_t blockFactor = gatherSize_ / aivNum_; // 每核索引个数
+    int64_t normBlockRowNum = blockFactor;
+    if (gatherSize_ % aivNum_ != 0) {
+        normBlockRowNum += 1;
+    }
+    int64_t tailBlockFactor = gatherSize_ - blockFactor * aivNum_; // 对核数取余之后的索引数
+
+    int64_t colCoreNum = 1;
+
+    int64_t normalColCoreInners = innerByte;
+    int64_t tailColCoreInners = innerByte;
+    if (blockFactor > 0) {
+        needCoreNum_ = aivNum_;
+    } else {
+        colCoreNum = aivNum_ / tailBlockFactor;
+        normalColCoreInners = (innerByte + colCoreNum - 1) / colCoreNum;          // 正常列核处理的尾轴Byte数
+        colCoreNum = (innerByte + normalColCoreInners - 1) / normalColCoreInners; // 列上开核数
+        tailColCoreInners = innerByte - (colCoreNum - 1) * normalColCoreInners;   // 尾列核处理的尾轴Byte数
+        needCoreNum_ = tailBlockFactor * colCoreNum;
+    }
+
+    // ub tiling
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int32_t indiceFactor = INDICES_SIZE / indicesDtypeSize_;
+
+    int64_t colUbFactor = Ops::Base::CeilAlign(normalColCoreInners, ubBlockSize);
+
+    int64_t indicesUbFactor;
+    if (isCastIndices_ == 0) { // 在列长确定时，计算UB最多容纳多少行
+        indicesUbFactor = (ubSize_ - ubBlockSize - INDICES_SIZE) / (BUFFER_NUM * colUbFactor + indicesDtypeSize_);
+    } else {
+        indicesUbFactor = (ubSize_ - NUM_TWO * ubBlockSize - INDICES_SIZE) /
+                          (BUFFER_NUM * colUbFactor + indicesDtypeSize_ + sizeof(int64_t)); // 考虑offsetLocal空间
+    }
+
+    // 如果一次UB循环处理不完索引，每次循环处理索引大小需要向下对齐block
+    if (normBlockRowNum > indicesUbFactor) {
+        indicesUbFactor = indicesUbFactor * indicesDtypeSize_ / ubBlockSize * ubBlockSize / indicesDtypeSize_;
+    }
+
+    if (normBlockRowNum < indicesUbFactor) { // 在单循环行数超过block行数时，将单循环行数缩小至block行数
+        indicesUbFactor = normBlockRowNum;
+    }
+
+    simdTwoDimDmaTilingData_.set_colCoreNum(colCoreNum);
+    simdTwoDimDmaTilingData_.set_needCoreNum(needCoreNum_);
+    simdTwoDimDmaTilingData_.set_indicesUbFactor(indicesUbFactor);
+    simdTwoDimDmaTilingData_.set_indiceFactor(indiceFactor);
+    simdTwoDimDmaTilingData_.set_colUbFactor(colUbFactor);
+    simdTwoDimDmaTilingData_.set_tailBlockFactor(tailBlockFactor);
+    simdTwoDimDmaTilingData_.set_blockFactor(blockFactor);
+    simdTwoDimDmaTilingData_.set_gatherDimSize(gatherDimSize_);
+    simdTwoDimDmaTilingData_.set_innerByte(innerByte);
+    simdTwoDimDmaTilingData_.set_normalColCoreInners(normalColCoreInners);
+    simdTwoDimDmaTilingData_.set_tailColCoreInners(tailColCoreInners);
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Gatherv2TilingBase::SimtTwoDimTiling()
 {
     int32_t threadNum = MAX_THREAD_NUM;
+
+    if (isAscend96_ && improveDtypeSizeB16_ == INPUT_DTYPE_B128 &&
+        (CeilDiv(ySize_ / NUM_TWO, static_cast<int64_t>(threadNum)) > (aivNum_ / NUM_TWO))) {
+        improveDtypeSize_ = improveDtypeSizeB16_;
+        innerSize_ = innerSizeB16_;
+        ySize_ = batchSize_ * outerSize_ * gatherSize_ * innerSize_;
+    }
+
     while ((threadNum >= NUM_TWO * SMALL_CASE_THREAD_NUM) &&
            (CeilDiv(ySize_, static_cast<int64_t>(threadNum)) < (aivNum_ / NUM_TWO))) {
         threadNum = threadNum / NUM_TWO;
@@ -593,6 +695,54 @@ bool Gatherv2TilingBase::IsSimdTwoDim()
     return isTwoDim && isSimd;
 }
 
+bool Gatherv2TilingBase::IsSimdTwoDimDma()
+{
+    if (!isAscend96_) {
+        return false;
+    }
+
+    int64_t innerByte = innerSize_ * improveDtypeSize_;
+
+    // 尾轴小于4K走GatherDMA模板
+    if (innerByte >= DMA_LIMIT_INNER_SIZE) {
+        return false;
+    }
+
+    // x的总字节数超过int32最大值且索引为int32时，GatherDMA的索引offset需要cast
+    if (gatherDimSize_ * innerByte >= INT32_MAX && indicesDtype_ == ge::DataType::DT_INT32) {
+        isCastIndices_ = 1;
+    }
+
+    int64_t blockFactor = gatherSize_ / aivNum_;                   // 每核索引个数
+    int64_t tailBlockFactor = gatherSize_ - blockFactor * aivNum_; // 对核数取余之后的索引数
+
+    int64_t colCoreNum = 1;
+    int64_t normalColCoreInners = innerByte;
+    if (blockFactor <= 0) {
+        if (tailBlockFactor == 0) {
+            return false;
+        }
+        colCoreNum = aivNum_ / tailBlockFactor;
+        normalColCoreInners = (innerByte + colCoreNum - 1) / colCoreNum; // 正常列核处理的尾轴Byte数
+    }
+
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t innerByteAlign = Ops::Base::CeilAlign(normalColCoreInners, ubBlockSize);
+
+    int64_t minIndicesUbFactor = (indicesDtype_ == ge::DataType::DT_INT32) ? ubBlockSize / sizeof(int32_t) :
+                                                                             ubBlockSize / sizeof(int64_t);
+    int64_t castSize = isCastIndices_ == 1 ? ubBlockSize / sizeof(int32_t) * sizeof(int64_t) : 0;
+    int64_t needUbSize = minIndicesUbFactor * innerByteAlign * BUFFER_NUM + INDICES_SIZE + ubBlockSize + castSize;
+
+    bool isTwoDim = batchSize_ == 1 && outerSize_ == 1;
+    bool isSimdDma = (innerSize_ * improveDtypeSize_ >= SIMD_DMA_THRES ||
+                      (improveDtypeSize_ == INPUT_DTYPE_B8 && innerSize_ * improveDtypeSize_ >= SIMD_B8_THRES) ||
+                      (improveDtypeSize_ == INPUT_DTYPE_B16 && innerSize_ * improveDtypeSize_ >= SIMD_B16_THRES) ||
+                      (improveDtypeSize_ == INPUT_DTYPE_B32 && innerSize_ * improveDtypeSize_ >= SIMD_B32_THRES)) &&
+                     (gatherSize_ / gatherDimSize_ <= 1) && ubSize_ >= needUbSize;
+    return isTwoDim && isSimdDma;
+}
+
 bool Gatherv2TilingBase::IsSimtTwoDim()
 {
     bool isTwoDim = batchSize_ == 1 && outerSize_ == 1;
@@ -614,6 +764,10 @@ ge::graphStatus Gatherv2TilingBase::DoOpTiling()
         tilingMode_ = TILING_SIMD;
         CalcSimdTiling();
         return ge::GRAPH_SUCCESS;
+    }
+    if (IsSimdTwoDimDma()) {
+        tilingMode_ = TILING_SIMD_TWO_DIM_DMA;
+        return SimdTwoDimDmaTiling();
     }
     if (IsSimdTwoDim()) {
         tilingMode_ = TILING_SIMD_TWO_DIM;
@@ -657,6 +811,14 @@ uint64_t Gatherv2TilingBase::GetTilingKey() const
     uint64_t tilingKey = 0UL;
     if (tilingMode_ == TILING_SIMD_TWO_DIM) {
         tilingKey = SIMD_TWO_DIM_TILING_KEY;
+    } else if (tilingMode_ == TILING_SIMD_TWO_DIM_DMA) {
+        uint64_t tilingBase = negativeIndexSupport_ ? static_cast<uint64_t>(NEG_INDICES_SUPPORT_BASE_KEY) :
+                                                      static_cast<uint64_t>(0);
+        if (isCastIndices_ == 0) {
+            tilingKey = SIMD_TWO_DIM_DMA_TILING_KEY + tilingBase;
+        } else {
+            tilingKey = SIMD_TWO_DIM_DMA_CAST_TILING_KEY + tilingBase;
+        }
     } else if (tilingMode_ == TILING_SIMD) {
         tilingKey = SIMD_TILING_KEY;
     } else if (tilingMode_ == TILING_LAST_GATHER) {
@@ -676,7 +838,9 @@ uint64_t Gatherv2TilingBase::GetTilingKey() const
     } else {
         uint64_t sizeAddrType;
         uint64_t xKey = DTYPE_B8_KEY;
-        if (improveDtypeSize_ == INPUT_DTYPE_B64) {
+        if (improveDtypeSize_ == INPUT_DTYPE_B128) {
+            xKey = DTYPE_B128_KEY;
+        } else if (improveDtypeSize_ == INPUT_DTYPE_B64) {
             xKey = DTYPE_B64_KEY;
         } else if (improveDtypeSize_ == INPUT_DTYPE_B32) {
             xKey = DTYPE_B32_KEY;
@@ -920,6 +1084,10 @@ ge::graphStatus Gatherv2TilingBase::PostTiling()
         simdTwoDimTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                                            context_->GetRawTilingData()->GetCapacity());
         context_->GetRawTilingData()->SetDataSize(simdTwoDimTilingData_.GetDataSize());
+    } else if (tilingMode_ == TILING_SIMD_TWO_DIM_DMA) {
+        simdTwoDimDmaTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                              context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(simdTwoDimDmaTilingData_.GetDataSize());
     } else if (tilingMode_ == TILING_LAST_GATHER) {
         lastTilingdata_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                                      context_->GetRawTilingData()->GetCapacity());

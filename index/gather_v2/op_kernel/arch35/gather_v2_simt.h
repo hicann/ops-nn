@@ -23,6 +23,10 @@
 #include "simt_api/asc_simt.h"
 #include "basic_api/kernel_vec_intf.h"
 
+#ifndef __CCE_KT_TEST__
+typedef int32_t int4 __attribute__((ext_vector_type(4)));
+#endif
+
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 512;
 #else
@@ -87,7 +91,11 @@ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void Gatherv2<X_T, INDICES_T, INDEX
         INDEX_SIZE_T indicesValueI = static_cast<INDEX_SIZE_T>(indicesValue);
         INDEX_SIZE_T xIndex = (tmp1 * gatherDimSize + indicesValueI) * innerSize + innerI;
         bool idxOutOfBound = indicesValue < 0 || indicesValueI >= gatherDimSize;
-        y[yIndex] = idxOutOfBound ? 0 : x[xIndex];
+        if constexpr (IsSameType<X_T, int4>::value) {
+            y[yIndex] = idxOutOfBound ? (int4){0, 0, 0, 0} : x[xIndex];
+        } else {
+            y[yIndex] = idxOutOfBound ? 0 : x[xIndex];
+        }
     }
 }
 

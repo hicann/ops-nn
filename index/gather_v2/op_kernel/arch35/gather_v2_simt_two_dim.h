@@ -25,6 +25,10 @@
 #include "basic_api/kernel_vec_intf.h"
 #endif
 
+#ifndef __CCE_KT_TEST__
+typedef int32_t int4 __attribute__((ext_vector_type(4)));
+#endif
+
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND_TWO_DIM = 512;
 #else
@@ -80,7 +84,11 @@ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void Gatherv2SimtTwoDim<X_T
         INDEX_SIZE_T indicesValueI = static_cast<INDEX_SIZE_T>(indicesValue);
         INDEX_SIZE_T xIndex = indicesValueI * innerSize + innerI;
         bool idxOutOfBound = indicesValue < 0 || indicesValueI >= gatherDimSize;
-        y[yIndex] = idxOutOfBound ? 0 : x[xIndex];
+        if constexpr (IsSameType<X_T, int4>::value) {
+            y[yIndex] = idxOutOfBound ? (int4){0, 0, 0, 0} : x[xIndex];
+        } else {
+            y[yIndex] = idxOutOfBound ? 0 : x[xIndex];
+        }
     }
 }
 

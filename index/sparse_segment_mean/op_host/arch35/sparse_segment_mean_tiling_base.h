@@ -27,9 +27,8 @@
 #include "register/op_def_registry.h"
 #include "index/sparse_segment_mean/op_kernel/arch35/sparse_segment_mean_struct.h"
 
-using namespace std;
-
 namespace optiling {
+using namespace std;
 
 struct SparseSegmentMeanInputInfo {
     int64_t innerSize{1};

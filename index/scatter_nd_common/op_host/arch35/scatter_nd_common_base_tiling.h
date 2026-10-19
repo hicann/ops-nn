@@ -75,6 +75,7 @@ public:
     uint64_t indiceCastMode_ = 0; // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32
                                   // Cast uint8; 5:int64 Cast uint8.
     int64_t indiceCastDtypeSize_ = 0;
+    bool isAscend960dt_ = false;
     uint64_t strideList_[OPTILING_MAX_RANK_COUNT] = {0};
     uint64_t outPutShape_[OPTILING_MAX_SHAPE_RANK] = {0};
 
