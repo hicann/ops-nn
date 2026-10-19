@@ -1512,19 +1512,12 @@ build_ut() {
 }
 
 build_single_example() {
-  echo "Start to run example,op_name:${OP_NAME} example_name:${example} mode:${EXAMPLE_MODE}."
+  echo "Start to run example,op_name:${OP_NAME} example_name:${arch}${example} mode:${EXAMPLE_MODE}."
 
   if [[ "${ENABLE_SIMULATOR}" == "TRUE" ]]; then
     if [[ "${EXAMPLE_MODE}" == "graph" ]]; then
       usage "run_example"
       exit 1
-    fi
-    # 根据soc设置仿真库路径
-    if [[ -n $COMPUTE_UNIT_SHORT ]]; then
-      IFS=';' read -ra COMPUTE_UNITS <<<"$COMPUTE_UNIT_SHORT"
-      unit=${COMPUTE_UNITS[0]}
-    else
-      unit="ascend910b"
     fi
     local arch=$(cmake -P ${BASE_PATH}/cmake/query.cmake Func get_npu_arch_by_soc_version ${unit} 2>&1)
     if [[ "${arch}x" == "x" ]]; then
@@ -1590,7 +1583,7 @@ build_single_example() {
   ${BUILD_PATH}/"${pattern}${example}" | tail -n 10
   status=${PIPESTATUS[0]}
   if [[ $status -eq 0 ]]; then
-    success_example+=(${example}) && echo -e "\n$dotted_line\nRun ${pattern}${example} success.\n$dotted_line\n"
+    success_example+=(${arch}${example}) && echo -e "\n$dotted_line\nRun ${arch}${pattern}${example} success.\n$dotted_line\n"
   else
     return $status
   fi
@@ -1621,13 +1614,19 @@ build_example() {
   OLDIFS=$IFS
   IFS=$'\n'
   files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental" || true))
-  if [[ "$COMPUTE_UNIT" == "ascend950" || "$COMPUTE_UNIT" == "ascend350" || "$COMPUTE_UNIT" == "ascend960dt" || "$COMPUTE_UNIT" == "ascend960pr" ]]; then
+  # 获取处理过的soc
+  local unit="ascend910b"
+  if [[ -n $COMPUTE_UNIT_SHORT ]]; then
+    IFS=';' read -ra COMPUTE_UNITS <<<"$COMPUTE_UNIT_SHORT"
+    unit=${COMPUTE_UNITS[0]}
+  fi
+  if [[ "$unit" == "ascend950" || "$unit" == "ascend350" || "$unit" == "ascend960dt" || "$unit" == "ascend960pr" ]]; then
     files+=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
-  if [[ "$COMPUTE_UNIT" == "ascend910b" ]]; then
+  if [[ "$unit" == "ascend910b" ]]; then
     files+=($(find ../ -path "*/${OP_NAME}/examples/arch22/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
-  if [[ "$COMPUTE_UNIT" == "ascend310p" ]]; then
+  if [[ "$unit" == "ascend310p" ]]; then
     files+=($(find ../ -path "*/${OP_NAME}/examples/arch20/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
   IFS=$OLDIFS
@@ -1638,23 +1637,29 @@ build_example() {
   for file in "${files[@]}"; do
     example=${file#*"${pattern}"}
     example=${example%.*}
-    examples+=($example)
+    arch=$(dirname $file)
+    arch="$(basename $arch)/"
+    if [[ "${arch}" != arch* ]]; then
+      arch=""
+    fi
+
     local old_ld_path=${LD_LIBRARY_PATH}
     if [[ $EXAMPLE_NAME == "" || $EXAMPLE_NAME == $example ]]; then
+
       build_single_example || {
-        echo -e "\n$dotted_line\nRun ${pattern}${example} failed. \n$dotted_line\n"
-        failed_example+=(${example})
+        echo -e "\n$dotted_line\nRun ${arch}${pattern}${example} failed. \n$dotted_line\n"
+        failed_example+=(${arch}${example})
       }
     fi
     export LD_LIBRARY_PATH=${old_ld_path}
   done
 
-  examples=$(IFS=,; echo "${examples[*]}")
   failed_example=$(IFS=,; echo "${failed_example[*]}")
   success_example=$(IFS=,; echo "${success_example[*]}")
 
   if [[ ${#files[@]} -eq 0 ]]; then
     echo "ERROR: ${OP_NAME} doesn't have ${EXAMPLE_MODE} examples."
+    exit 1
   elif [[ ${failed_example} != "" || ${success_example} == "" ]]; then
     echo "Run ${EXAMPLE_MODE} example failed, op_name: ${OP_NAME}, \
 success examples: ${success_example}, failed_example: ${failed_example[@]}."
