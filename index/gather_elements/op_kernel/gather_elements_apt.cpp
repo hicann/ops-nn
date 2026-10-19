@@ -12,9 +12,15 @@
  * \file gather_elements.cpp
  * \brief
  */
+#if defined(__CCE_AICORE__) && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+#include "arch92/gather_elements_arch92.h"
+#include "arch92/gather_elements_no_contiguos_arch92.h"
+#include "arch92/gather_elements_full_load_arch92.h"
+#else
 #include "arch35/gather_elements_simt.h"
 #include "arch35/gather_elements_no_contiguos.h"
 #include "arch35/gather_elements_full_load.h"
+#endif
 
 using namespace GatherElements;
 

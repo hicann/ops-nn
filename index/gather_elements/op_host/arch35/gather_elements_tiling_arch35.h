@@ -130,6 +130,7 @@ private:
     int64_t xAfterAxis_ = 0;
     int64_t idxAfterAxis_ = 0;
     int64_t isFullLoad_ = 0;
+    bool isDav920x_ = false;
 
     std::vector<int64_t> xShapeArr_;
     std::vector<int64_t> indexShapeArr_;

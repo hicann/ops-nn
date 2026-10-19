@@ -58,6 +58,8 @@ ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
+        isDav920x_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                      ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
         OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
@@ -220,6 +222,9 @@ void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, in
                                 Ops::Base::CeilAlign(yPerUbSize, static_cast<uint64_t>(blockSize)) +
                                 Ops::Base::CeilAlign(idxPerUbSize, static_cast<uint64_t>(blockSize))) *
                                DOUBLE);
+    if (isDav920x_ && xLoadInUbNum_ > UINT16_MAX_NUM) {
+        xLoadInUbNum_ = UINT16_MAX_NUM;
+    }
     xUbFactor_ = xAfterAxis_ * xLoadInUbNum_;
     indexLoadInUbNum_ = xLoadInUbNum_;
     if (xLoadInUbNum_ > 0 && xShape_.GetDim(axis_) <= UINT16_MAX_NUM && idxAfterAxis_ > MIN_IDX_AFTER_AXIS &&
