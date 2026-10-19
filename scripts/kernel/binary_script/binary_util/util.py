@@ -13,6 +13,7 @@
 """
 util.py
 """
+
 import os
 import json
 import stat
@@ -87,7 +88,7 @@ class CompileParam:
 
 
 def wr_json(json_obj, json_file):
-    flags = os.O_WRONLY | os.O_CREAT
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     modes = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(json_file, flags, modes), "w") as f:
         json.dump(json_obj, f, indent=2)
@@ -169,7 +170,9 @@ def generate_op_inputs_or_outputs_supportinfo(op_info, is_inputs, is_support_inf
 
     def _get_tensor_info(tensor, is_inputs, is_support_info, inputs_or_output):
         index = ""
-        info = generate_single_tensor_supportinfo(index, tensor, is_inputs, is_support_info)
+        info = generate_single_tensor_supportinfo(
+            index, tensor, is_inputs, is_support_info
+        )
         inputs_or_output.append(info)
 
     if op_info is None:
@@ -204,20 +207,27 @@ def generate_op_static_key(op_info):
     static_key_json = {}
     attrs = generate_op_attrs_static_key(op_info)
     gen_notnone_param(static_key_json, "attrs", attrs)
-    inputs = generate_op_inputs_or_outputs_supportinfo(op_info.get("inputs"), True, False)
+    inputs = generate_op_inputs_or_outputs_supportinfo(
+        op_info.get("inputs"), True, False
+    )
     gen_notnone_param(static_key_json, "inputs", inputs)
-    outputs = generate_op_inputs_or_outputs_supportinfo(op_info.get("outputs"), False, True)
+    outputs = generate_op_inputs_or_outputs_supportinfo(
+        op_info.get("outputs"), False, True
+    )
     gen_notnone_param(static_key_json, "outputs", outputs)
-    static_key_json_str = json.dumps(static_key_json, separators=(',', ':'))
+    static_key_json_str = json.dumps(static_key_json, separators=(",", ":"))
     static_key = hashlib.sha256(str(static_key_json_str).encode("utf-8")).hexdigest()
-    debug_mes = "Generate op(Binfilename={}) static key is {}. static_key json is {}".format(
-        op_info.get("bin_filename"), str(static_key), str(static_key_json_str))
+    debug_mes = (
+        "Generate op(Binfilename={}) static key is {}. static_key json is {}".format(
+            op_info.get("bin_filename"), str(static_key), str(static_key_json_str)
+        )
+    )
     logging.debug(debug_mes)
     return static_key
 
 
 def sha256_files(binary_file, json_obj):
-    om_file_path = binary_file.split('json')[0] + 'om'
+    om_file_path = binary_file.split("json")[0] + "om"
     with open(om_file_path, "rb") as f:
         sha256obj = hashlib.sha256()
         sha256obj.update(f.read())
