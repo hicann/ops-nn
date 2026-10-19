@@ -18,6 +18,7 @@
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace ge {
 
@@ -26,10 +27,14 @@ namespace ge {
 
 * @par Inputs:
 * @li var: The rewritten tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types:
-* float16, float32, int32, int8, uint8, bfloat16, int64, uint32, uint64, float8_e5m2, float8_e4m3, float8_e8m0.
+* float16, float32, int32, int8, uint8, bfloat16, int64, uint32, uint64, float8_e5m2, float8_e4m3, float8_e8m0,
+* hifloat4.
+* hifloat4 is only supported on Ascend960DT.
+* The size of vars in each line must be an even number when dtype of var is hifloat4.
 * @li indices: The index tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types: int32, int64.
-* @li updates: The source tensor. An ND Tensor. Support 1D ~ 8D. Shape should be equal to the shape of "indices" concats
-* the shape of "var" except for the first dimension. Must have the same type of "var".
+* @li updates: The source tensor. An ND Tensor. Support 0D ~ 8D. Shape should be equal to the shape of "indices" concats
+* the shape of "var" except for the first dimension when shape is not scalar. Must have the same type of "var".
+* updates should not be scalar when dtype is hifloat4.
 
 * @par Attributes:
 * use_locking: An optional bool. Defaults to "False". If "True", the operation will be protected by a lock.
@@ -42,12 +47,12 @@ namespace ge {
 */
 REG_OP(ScatterUpdate)
     .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_INT64, DT_UINT32, DT_UINT64,
-                            DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
+                            DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4}))
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_INT64, DT_UINT32,
-                                DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
+                                DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4}))
     .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16, DT_INT64, DT_UINT32, DT_UINT64,
-                             DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0}))
+                             DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterUpdate)
 } // namespace ge

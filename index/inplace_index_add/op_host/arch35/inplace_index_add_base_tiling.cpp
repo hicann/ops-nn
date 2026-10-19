@@ -15,6 +15,7 @@
 #include <cstdint>
 #include "inplace_index_add_tiling_arch35.h"
 #include "inplace_index_add_tiling.h"
+#include "util/platform_util.h"
 
 namespace optiling {
 constexpr int64_t VAR_IDX = 0;
@@ -104,6 +105,14 @@ void InplaceIndexAddTiling::SelTemplateByInput()
     }
 }
 
+void InplaceIndexAddTiling::CheckNpuArch()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    return;
+}
+
 ge::graphStatus InplaceIndexAddTiling::GetPlatformInfo()
 {
     auto compileInfo = reinterpret_cast<const InplaceIndexAddCompileInfo*>(context_->GetCompileInfo());
@@ -111,6 +120,7 @@ ge::graphStatus InplaceIndexAddTiling::GetPlatformInfo()
     totalCoreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
     ubSize_ = ubSize_ - DCACHE_SIZE_SIMT;
+    CheckNpuArch();
     SelTemplateByInput();
     return ge::GRAPH_SUCCESS;
 }

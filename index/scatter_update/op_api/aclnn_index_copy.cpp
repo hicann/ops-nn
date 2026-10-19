@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include "aclnn_index_copy.h"
 #include "index/index_put_v2/op_api/index_put_v2.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "level0/tensor_move.h"
 #include "aclnn_kernels/transpose.h"
 #include "op_api/scatter_update.h"
@@ -57,6 +58,8 @@ extern "C" {
  */
 
 constexpr size_t MAX_DIM_LEN = 8;
+constexpr size_t LAST_AXIS_EVEN = 2;
+constexpr size_t DIM_TWO = 2;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_INT8,
@@ -78,6 +81,14 @@ static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_950 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
     op::DataType::DT_INT64, op::DataType::DT_UINT64, op::DataType::DT_BF16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8};
+
+static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_960DT = {
+    op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128,
+    op::DataType::DT_BOOL,
+    // aicore
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
+    op::DataType::DT_INT64, op::DataType::DT_UINT64, op::DataType::DT_BF16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, Ops::NN::DT_HIFLOAT4};
 
 static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
                                                                              op::DataType::DT_INT32};
@@ -104,6 +115,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         return SELF_DTYPE_SUPPORT_LIST_910B;
+    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+        return SELF_DTYPE_SUPPORT_LIST_960DT;
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         return SELF_DTYPE_SUPPORT_LIST_950;
     } else {
@@ -152,6 +165,74 @@ static inline bool IsSliceShapeSame(const aclTensor* self, const aclTensor* sour
     return true;
 }
 
+static inline bool CheckHiFloat4Shape(const aclTensor* self, int64_t dim)
+{
+    if (self->GetDataType() != Ops::NN::DT_HIFLOAT4) {
+        return true;
+    }
+    auto selfShape = self->GetViewShape();
+    size_t dimNum = selfShape.GetDimNum();
+    int64_t lastAxis = 1;
+    if (dim != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim should be 0 when dtype of tensor self is HIFLOAT4, but got %ld.",
+                dim);
+        return false;
+    }
+
+    for (size_t idx = 1; idx < dimNum; idx++) {
+        lastAxis *= selfShape.GetDim(idx);
+    }
+    if (lastAxis % LAST_AXIS_EVEN != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The size of self in each line must be an even number when dtype of tensor self is HIFLOAT4, "
+                "but got %ld.",
+                lastAxis);
+        return false;
+    }
+    return true;
+}
+
+static bool IsNonContiguous(const aclTensor* tensor)
+{
+    if (tensor == nullptr) {
+        return false;
+    }
+    op::Shape shapeI = tensor->GetViewShape();
+    auto dimNum = static_cast<int64_t>(shapeI.GetDimNum());
+    // 0 维（scalar）张量恒视为连续，避免后续以 dimNum - 1 == -1 越界访问 stride
+    if (dimNum <= 0) {
+        return false;
+    }
+    auto shapeIStride = tensor->GetViewStrides();
+    // 尾轴stride不为1，非连续
+    if (shapeIStride[dimNum - 1] != 1) {
+        return true;
+    }
+    // 其他轴的stride[i]!=shape[i+1]*stride[i+1]，非连续
+    for (int64_t j = dimNum - DIM_TWO; j >= 0; j--) {
+        if (shapeIStride[j] != shapeIStride[j + 1] * shapeI[j + 1]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool CheckContiguousSupport(const aclTensor* varRef, const aclTensor* updates)
+{
+    if (varRef->GetDataType() != Ops::NN::DT_HIFLOAT4) {
+        return true;
+    }
+    auto varIsNonCon = IsNonContiguous(varRef);
+    auto updatesIsNonCon = IsNonContiguous(updates);
+    if (varIsNonCon || updatesIsNonCon) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "varRef and updates dtype is hifloat4, non-continuous is not supported.");
+        return false;
+    }
+
+    return true;
+}
+
 static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* source,
                        const aclTensor* out)
 {
@@ -194,6 +275,16 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* inde
 
     if (!IsSliceShapeSame(self, source, dim)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self and source must have same slice shapes");
+        return false;
+    }
+
+    if (!CheckContiguousSupport(self, source)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckContiguousSupport for HiFloat4 dtype failed");
+        return false;
+    }
+
+    if (!CheckHiFloat4Shape(self, dim)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckShape for HiFloat4 dtype failed");
         return false;
     }
 

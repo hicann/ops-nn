@@ -13,6 +13,7 @@
  * \brief scatter_update
  */
 #include "register/op_def_registry.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace ops {
 static const std::vector<ge::DataType> SUPPORT_DTYPE = {
@@ -29,6 +30,23 @@ static const std::vector<ge::Format> SUPPORT_FORMAT = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> SUPPORT_DTYPE_960DT = {
+    ge::DT_FLOAT16,       ge::DT_FLOAT,       ge::DT_BF16,          ge::DT_INT32,         ge::DT_INT64,
+    ge::DT_UINT8,         ge::DT_INT8,        ge::DT_UINT32,        ge::DT_UINT64,        ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4, ge::DT_FLOAT16,       ge::DT_FLOAT,
+    ge::DT_BF16,          ge::DT_INT32,       ge::DT_INT64,         ge::DT_UINT8,         ge::DT_INT8,
+    ge::DT_UINT32,        ge::DT_UINT64,      ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
+    Ops::NN::DT_HIFLOAT4};
+static const std::vector<ge::DataType> INDICES_SUPPORT_DTYPE_960DT = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::Format> SUPPORT_FORMAT_960DT = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 class ScatterUpdate : public OpDef {
 public:
     explicit ScatterUpdate(const char* name) : OpDef(name)
@@ -63,10 +81,40 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "scatter_update_apt");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicore_config);
         this->AICore().AddConfig("ascend350", aicore_config);
+        OpAICoreConfig aiCoreConfig;
+        aiCoreConfig.Input("var")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(SUPPORT_DTYPE_960DT)
+            .Format(SUPPORT_FORMAT_960DT)
+            .UnknownShapeFormat(SUPPORT_FORMAT_960DT);
+        aiCoreConfig.Input("indices")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(INDICES_SUPPORT_DTYPE_960DT)
+            .Format(SUPPORT_FORMAT_960DT)
+            .UnknownShapeFormat(SUPPORT_FORMAT_960DT);
+        aiCoreConfig.Input("updates")
+            .ParamType(REQUIRED)
+            .AutoContiguous()
+            .DataType(SUPPORT_DTYPE_960DT)
+            .Format(SUPPORT_FORMAT_960DT)
+            .UnknownShapeFormat(SUPPORT_FORMAT_960DT);
+        aiCoreConfig.Output("var")
+            .ParamType(REQUIRED)
+            .DataType(SUPPORT_DTYPE_960DT)
+            .Format(SUPPORT_FORMAT_960DT)
+            .UnknownShapeFormat(SUPPORT_FORMAT_960DT);
+        aiCoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        this->AICore().AddConfig("ascend960dt", aiCoreConfig);
     }
 };
 

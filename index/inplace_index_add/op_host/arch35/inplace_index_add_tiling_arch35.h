@@ -64,6 +64,7 @@ protected:
     void GetCastTypeSize();
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     void GetCastTypeForSort();
+    void CheckNpuArch();
 
 public:
     int64_t ubSize_ = 0;
@@ -134,6 +135,7 @@ public:
                                    // Cast uint8; 5:int64 Cast uint8.
     int64_t indicesCastDtypeSize_ = 0;
     int64_t isProcessSingleRow_ = 0;
+    bool isAscend960DT_ = false;
 
     ge::DataType dtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;

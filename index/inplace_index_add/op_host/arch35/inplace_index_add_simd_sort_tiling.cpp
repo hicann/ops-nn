@@ -448,5 +448,5 @@ void InplaceIndexAddSimdSortTiling::SetTilingData()
     return;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(InplaceIndexAdd, InplaceIndexAddSimdSortTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(InplaceIndexAdd, InplaceIndexAddSimdSortTiling, 1);
 } // namespace optiling

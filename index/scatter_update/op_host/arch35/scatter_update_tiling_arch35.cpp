@@ -14,6 +14,7 @@
  */
 
 #include "scatter_update_tiling_arch35.h"
+#include "op_host/op_const_def_nn.h"
 #include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
@@ -79,6 +80,12 @@ constexpr int32_t SIMD_SORT_PROCESS_START = 1;
 constexpr int32_t SIMD_ALIGN = 1;
 constexpr int32_t MIN_UB_PROCESS_COL_NUM = 2;
 constexpr int32_t SPLIT_COL_MIN_CORE_NUM = 1;
+constexpr uint64_t VAR_DTYPE_SIZE_BTYE1 = 1;
+constexpr uint64_t VAR_DTYPE_SIZE_BTYE2 = 2;
+constexpr uint64_t VAR_DTYPE_SIZE_BTYE4 = 4;
+constexpr uint64_t VAR_DTYPE_SIZE_BTYE8 = 8;
+constexpr uint64_t VAR_DTYPE_SIZE_BTYE16 = 16;
+constexpr uint64_t COL_LIMIT_SIZE = 1024;
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE{{ge::DataType::DT_INT32, 1},
                                                                          {ge::DataType::DT_INT64, 2}};
@@ -88,6 +95,18 @@ static const std::unordered_map<ge::DataType, uint64_t> VAR_DATA_TYPE{
     {ge::DataType::DT_FLOAT16, 4},        {ge::DataType::DT_FLOAT, 5},        {ge::DataType::DT_BF16, 6},
     {ge::DataType::DT_INT64, 7},          {ge::DataType::DT_UINT32, 8},       {ge::DataType::DT_UINT64, 9},
     {ge::DataType::DT_FLOAT8_E4M3FN, 10}, {ge::DataType::DT_FLOAT8_E5M2, 11}, {ge::DataType::DT_FLOAT8_E8M0, 12}};
+
+static const std::set<ge::DataType> VAR_DATA_TYPE_960DT = {
+    ge::DataType::DT_INT32,  ge::DataType::DT_INT8,          ge::DataType::DT_UINT8,       ge::DataType::DT_FLOAT16,
+    ge::DataType::DT_FLOAT,  ge::DataType::DT_BF16,          ge::DataType::DT_INT64,       ge::DataType::DT_UINT32,
+    ge::DataType::DT_UINT64, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2, ge::DataType::DT_FLOAT8_E8M0,
+    Ops::NN::DT_HIFLOAT4};
+
+static const std::unordered_map<uint64_t, uint32_t> DTYPE_SIZE_KEY = {{VAR_DTYPE_SIZE_BTYE1, 1},
+                                                                      {VAR_DTYPE_SIZE_BTYE2, 2},
+                                                                      {VAR_DTYPE_SIZE_BTYE4, 3},
+                                                                      {VAR_DTYPE_SIZE_BTYE8, 4},
+                                                                      {VAR_DTYPE_SIZE_BTYE16, 5}};
 
 ge::graphStatus ScatterUpdateTiling::GetPlatformInfo()
 {
@@ -220,13 +239,13 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED;
         }
     }
-    updateShape_[0] = indicesSize_;
-    updateShape_[1] = varShape_[1];
     if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "var, indices, updates",
                                                "var_dtype, indices_dtype, updates_dtype", "input dtype check failed");
         return ge::GRAPH_FAILED;
     }
+    updateShape_[0] = indicesSize_;
+    updateShape_[1] = varShape_[1];
 
     if (context_->GetDeterministic() && !isUpdateScalar_) {
         isDeterministic_ = 1;
@@ -234,9 +253,42 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus ScatterUpdateTiling::CheckNpuArch()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ScatterUpdateTiling::CheckShapeForHif4()
+{
+    const char* opName_ = "ScatterUpdate";
+    if (varDtype_ != Ops::NN::DT_HIFLOAT4) {
+        return ge::GRAPH_SUCCESS;
+    }
+    if (varShape_[1] % DOUBLE != 0 && varStride_ % DOUBLE != 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "varShape", std::to_string(varShape_[1]).c_str(),
+                                              "The size of vars in each line must be an even number when dtype of var "
+                                              "is hifloat4.");
+        return ge::GRAPH_FAILED;
+    }
+    if (isUpdateScalar_ != 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "updates", std::to_string(isUpdateScalar_).c_str(),
+                                              "Updates should not be Scalar when dtype of var is hifloat4.");
+        return ge::GRAPH_FAILED;
+    }
+    varShape_[1] = varShape_[1] / DOUBLE; // HIFLOAT4在kernel按int8进行搬运，尾轴长度减半
+    varStride_ = varStride_ / DOUBLE;
+    varTypeSize_ = VAR_DTYPE_SIZE_BTYE1; // DtypeSize固定为int8的位宽
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ScatterUpdateTiling::CheckInputDtype()
 {
     const char* opName_ = "ScatterUpdate";
+    CheckNpuArch();
     auto indicesPtr = context_->GetInputDesc(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesPtr);
     indicesDtype_ = indicesPtr->GetDataType();
@@ -254,10 +306,21 @@ ge::graphStatus ScatterUpdateTiling::CheckInputDtype()
     auto dataPtr = context_->GetInputDesc(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataPtr);
     varDtype_ = dataPtr->GetDataType();
-    if (VAR_DATA_TYPE.find(varDtype_) == VAR_DATA_TYPE.end()) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName_, "var", std::to_string(static_cast<int32_t>(varDtype_)).c_str(),
-            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN");
+    // var 与 updates 共用同一张按当前 SoC 选出的 dtype 白名单：Ascend960DT 额外支持 HIFLOAT4
+    auto isDtypeSupported = [this](ge::DataType dtype) -> bool {
+        if (isAscend960DT_) {
+            return VAR_DATA_TYPE_960DT.find(dtype) != VAR_DATA_TYPE_960DT.end();
+        }
+        return VAR_DATA_TYPE.find(dtype) != VAR_DATA_TYPE.end();
+    };
+    const char* supportedDtypeStr =
+        isAscend960DT_ ?
+            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN/"
+            "HIFLOAT4" :
+            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN";
+    if (!isDtypeSupported(varDtype_)) {
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "var", std::to_string(static_cast<int32_t>(varDtype_)).c_str(),
+                                  supportedDtypeStr);
         return ge::GRAPH_FAILED;
     }
     varTypeSize_ = ge::GetSizeByDataType(varDtype_);
@@ -266,14 +329,18 @@ ge::graphStatus ScatterUpdateTiling::CheckInputDtype()
                                               "get dataType size fail");
         return ge::GRAPH_FAILED;
     }
+    if (CheckShapeForHif4() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "varShape", std::to_string(varShape_[1]).c_str(),
+                                              "HiFloat4 Shape check failed");
+        return ge::GRAPH_FAILED;
+    }
     isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
     auto updatePtr = context_->GetInputDesc(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatePtr);
     auto updatesType = updatePtr->GetDataType();
-    if (VAR_DATA_TYPE.find(updatesType) == VAR_DATA_TYPE.end()) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName_, "updates", std::to_string(static_cast<int32_t>(updatesType)).c_str(),
-            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN");
+    if (!isDtypeSupported(updatesType)) {
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "updates", std::to_string(static_cast<int32_t>(updatesType)).c_str(),
+                                  supportedDtypeStr);
         return ge::GRAPH_FAILED;
     }
     if (updatesType != varDtype_) {
@@ -508,9 +575,47 @@ uint64_t ScatterUpdateTiling::CalcSimtIndicesUbFactor()
     return start;
 }
 
+void ScatterUpdateTiling::VarDtypeImprove()
+{
+    if (isUpdateScalar_ == 1) {
+        return;
+    }
+
+    uint64_t lastAxisByte = varShape_[1] * varTypeSize_;
+    uint32_t improveRatio = 1;
+    if (isAscend960DT_) {
+        if ((varTypeSize_ < VAR_DTYPE_SIZE_BTYE16) && (lastAxisByte % VAR_DTYPE_SIZE_BTYE16 == 0)) {
+            OP_LOGD("ScatterUpdateSimt", "XDtypeImprove lastAxisByte %ld, improve to VAR_DTYPE_SIZE_BTYE16",
+                    lastAxisByte);
+            improveRatio = VAR_DTYPE_SIZE_BTYE16 / varTypeSize_;
+            varTypeSize_ = VAR_DTYPE_SIZE_BTYE16;
+            varStride_ = varStride_ / improveRatio;
+            varShape_[1] = varShape_[1] / improveRatio;
+            return;
+        }
+    }
+    if ((varTypeSize_ < VAR_DTYPE_SIZE_BTYE8) && (lastAxisByte % VAR_DTYPE_SIZE_BTYE8 == 0)) {
+        OP_LOGD("ScatterUpdateSimt", "XDtypeImprove lastAxisByte %ld, improve to VAR_DTYPE_SIZE_BTYE8", lastAxisByte);
+        improveRatio = VAR_DTYPE_SIZE_BTYE8 / varTypeSize_;
+        varTypeSize_ = VAR_DTYPE_SIZE_BTYE8;
+    } else if ((varTypeSize_ < VAR_DTYPE_SIZE_BTYE4) && (lastAxisByte % VAR_DTYPE_SIZE_BTYE4 == 0)) {
+        OP_LOGD("ScatterUpdateSimt", "XDtypeImprove lastAxisByte %ld, improve to VAR_DTYPE_SIZE_B4", lastAxisByte);
+        improveRatio = VAR_DTYPE_SIZE_BTYE4 / varTypeSize_;
+        varTypeSize_ = VAR_DTYPE_SIZE_BTYE4;
+    } else if ((varTypeSize_ < VAR_DTYPE_SIZE_BTYE2) && (lastAxisByte % VAR_DTYPE_SIZE_BTYE2 == 0)) {
+        OP_LOGD("ScatterUpdateSimt", "XDtypeImprove lastAxisByte %ld, improve to VAR_DTYPE_SIZE_BTYE2", lastAxisByte);
+        improveRatio = VAR_DTYPE_SIZE_BTYE2 / varTypeSize_;
+        varTypeSize_ = VAR_DTYPE_SIZE_BTYE2;
+    }
+
+    varStride_ = varStride_ / improveRatio;
+    varShape_[1] = varShape_[1] / improveRatio;
+}
+
 void ScatterUpdateTiling::DoSimtTiling()
 {
     GetCastType();
+    VarDtypeImprove();
     uint64_t totalSize = varShape_[1] * indicesSize_;
     usedCoreNum_ = Ops::Base::CeilDiv(totalSize, MAX_THREAD_NUM);
     usedCoreNum_ = std::min(usedCoreNum_, totalCoreNum_);
@@ -641,6 +746,9 @@ void ScatterUpdateTiling::DoDeterministicTiling()
         updatesTailBlockTailLoopSize_ = tailBlockColNum_ - (updatesTailBlockLoop_ - 1) * updateColUbFactor_;
         SetUpdateColManyTiling();
     } else {
+        if (isSimt_) {
+            VarDtypeImprove();
+        }
         // 按行分核
         deterministicMode_ = DETERMINISTIC_MODE_ROW;
         normBlockIndices_ = Ops::Base::CeilDiv(indicesSize_, totalCoreNum_);
@@ -701,10 +809,21 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
     if (!isSimt_) {
         templateKey_ = UPDATES_IN_SIMD;
         AutoTiling();
-        rowNormalNum_ = Ops::Base::FloorDiv(rowTotalNum_, rowTileNum_);
-        colNormalNum_ = Ops::Base::FloorDiv(colTotalNum_, colTileNum_);
-        rowFormerNum_ = rowTotalNum_ - rowNormalNum_ * rowTileNum_;
-        colFormerNum_ = colTotalNum_ - colNormalNum_ * colTileNum_;
+        if (isAscend960DT_) {
+            // 960DT收紧分核消除空核：CeilDiv后重算tileNum，保证 m*n 恰好覆盖所有数据
+            rowNormalNum_ = Ops::Base::CeilDiv(rowTotalNum_, rowTileNum_);
+            colNormalNum_ = Ops::Base::CeilDiv(colTotalNum_, colTileNum_);
+            rowTileNum_ = Ops::Base::CeilDiv(rowTotalNum_, rowNormalNum_);
+            colTileNum_ = Ops::Base::CeilDiv(colTotalNum_, colNormalNum_);
+            rowFormerNum_ = rowTotalNum_ - rowNormalNum_ * (rowTileNum_ - 1);
+            colFormerNum_ = colTotalNum_ - colNormalNum_ * (colTileNum_ - 1);
+            usedCoreNum_ = colTileNum_ * rowTileNum_;
+        } else {
+            rowNormalNum_ = Ops::Base::FloorDiv(rowTotalNum_, rowTileNum_);
+            colNormalNum_ = Ops::Base::FloorDiv(colTotalNum_, colTileNum_);
+            rowFormerNum_ = rowTotalNum_ - rowNormalNum_ * rowTileNum_;
+            colFormerNum_ = colTotalNum_ - colNormalNum_ * colTileNum_;
+        }
         CalcKernelParam();
     } else {
         DoSimtTiling();
@@ -874,6 +993,43 @@ void ScatterUpdateTiling::ProcessSimdNonSort(uint64_t existNodeSize)
     ClacSimdTilingParamNonSort(existNodeSize, ROW_DOWN_COL_BACK);
 }
 
+void ScatterUpdateTiling::ProcessSimdNonSortScatterDMA()
+{
+    if (varSize_ * varTypeSize_ >= INT32_MAX && indicesDtype_ == ge::DataType::DT_INT32) {
+        isCastIndices_ = 1;
+    }
+
+    uint64_t ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
+    updateColUbFactor_ = COL_LIMIT_SIZE / varTypeSize_; // 列按COL_LIMIT_SIZE切分
+    if (normBlockColNum_ * varTypeSize_ <=
+        COL_LIMIT_SIZE) { // 如果整核列数小于设定值（1024B），则将Factor与normBlockCol保持一致
+        updateColUbFactor_ = normBlockColNum_;
+    }
+    updateColUbFactor_ = Ops::Base::CeilAlign(updateColUbFactor_, ubBlock / varTypeSize_);
+
+    if (isCastIndices_ == 0) { // 在列长确定时，计算UB最多容纳多少行
+        indicesUbFactor_ = (ubSize_ - DB_BUFFER * ubBlock) / DB_BUFFER /
+                           (updateColUbFactor_ * varTypeSize_ + indicesDtypeSize_);
+    } else {
+        indicesUbFactor_ = (ubSize_ - (DB_BUFFER + DOUBLE) * ubBlock) / DB_BUFFER /
+                           (updateColUbFactor_ * varTypeSize_ + indicesDtypeSize_ +
+                            sizeof(int64_t)); // 考虑offsetLocal空间
+    }
+
+    if (normBlockRowNum_ < indicesUbFactor_) { // 单循环行数超过block行数时，缩小至block行数并重算单循环列数
+        indicesUbFactor_ = normBlockRowNum_;
+        if (isCastIndices_ == 0) {
+            updateColUbFactor_ = (ubSize_ - DB_BUFFER * (ubBlock + indicesUbFactor_ * indicesDtypeSize_)) / DB_BUFFER /
+                                 (indicesUbFactor_ * varTypeSize_);
+        } else {
+            updateColUbFactor_ = (ubSize_ - DB_BUFFER * (ubBlock + indicesUbFactor_ * indicesDtypeSize_) -
+                                  (ubBlock + indicesUbFactor_ * sizeof(int64_t))) /
+                                 DB_BUFFER / (indicesUbFactor_ * varTypeSize_);
+        }
+        updateColUbFactor_ = Ops::Base::FloorAlign(updateColUbFactor_, ubBlock / varTypeSize_);
+    }
+}
+
 void ScatterUpdateTiling::CalcKernelParam()
 {
     OP_LOGD(opName, "ScatterUpdateTiling CalcKernelParam Enter.");
@@ -884,7 +1040,14 @@ void ScatterUpdateTiling::CalcKernelParam()
     if (isSort_) {
         ProcessSimdSort();
     } else {
-        ProcessSimdNonSort(existNodeSize);
+        if (isAscend960DT_) {
+            isUseScatterDma_ = 1;
+            tailBlockRowNum_ = static_cast<uint64_t>(rowFormerNum_);
+            tailBlockColNum_ = static_cast<uint64_t>(colFormerNum_);
+            ProcessSimdNonSortScatterDMA();
+        } else {
+            ProcessSimdNonSort(existNodeSize);
+        }
     }
 }
 
@@ -988,10 +1151,19 @@ uint64_t ScatterUpdateTiling::GetTilingKey() const
         sizeAddrType = 0;
     }
 
-    uint64_t tilingKey = 0;
-    tilingKey = GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_, TILING_KEY_PLACE_HOLD,
-                              TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD,
-                              TILING_KEY_PLACE_HOLD, isMask_, deterministicMode_);
+    uint32_t varDtypeKey = 0;
+    uint32_t scatterDmaKey = isUseScatterDma_ + isCastIndices_;
+    if (isSimt_ && isUpdateScalar_ == 0) {
+        auto varDtypeKeyFind = DTYPE_SIZE_KEY.find(varTypeSize_);
+        OP_CHECK_IF((varDtypeKeyFind == DTYPE_SIZE_KEY.end()), OP_LOGE(opName, "varTypeSize Error, please check."),
+                    return ge::GRAPH_FAILED);
+        varDtypeKey = varDtypeKeyFind->second;
+    }
+
+    uint64_t tilingKey = GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_, TILING_KEY_PLACE_HOLD,
+                                       TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD,
+                                       TILING_KEY_PLACE_HOLD, isMask_, deterministicMode_, varDtypeKey, scatterDmaKey);
+
     OP_LOGD("ScatterUpdateTiling", "tilingKey is %lu", tilingKey);
     return tilingKey;
 }

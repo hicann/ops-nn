@@ -12,12 +12,12 @@
  * \file inplace_index_add.cpp
  * \brief inplace_index_add
  */
-#include "arch35/inplace_index_add_simt.h"
-#include "arch35/inplace_index_add_determinstic.h"
-#include "arch35/inplace_index_add_determinstic_notquant.h"
-#include "arch35/inplace_index_add_simd.h"
-#include "arch35/inplace_index_add_simd_sort.h"
-#include "arch35/inplace_index_add_simt_sort.h"
+#include "inplace_index_add_simt.h"
+#include "inplace_index_add_determinstic.h"
+#include "inplace_index_add_determinstic_notquant.h"
+#include "inplace_index_add_simd.h"
+#include "inplace_index_add_simd_sort.h"
+#include "inplace_index_add_simt_sort.h"
 
 using namespace InplaceIndexAdd;
 

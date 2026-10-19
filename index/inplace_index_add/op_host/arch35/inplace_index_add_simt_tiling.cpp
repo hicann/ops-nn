@@ -125,5 +125,5 @@ void InplaceIndexAddSimtTiling::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(InplaceIndexAdd, InplaceIndexAddSimtTiling, 1);
+REGISTER_OPS_TILING_TEMPLATE(InplaceIndexAdd, InplaceIndexAddSimtTiling, 4);
 } // namespace optiling

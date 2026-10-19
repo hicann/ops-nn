@@ -18,6 +18,7 @@
 #include "opdev/aicpu/aicpu_task.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 
 using namespace op;
 namespace l0op {
@@ -38,11 +39,19 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 =
     op::DataType::DT_INT8,        op::DataType::DT_UINT8,       op::DataType::DT_UINT64,
     op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0, op::DataType::DT_FLOAT8_E4M3FN};
 
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_960DT = {
+    op::DataType::DT_FLOAT,  op::DataType::DT_FLOAT16,     op::DataType::DT_INT32,       op::DataType::DT_UINT32,
+    op::DataType::DT_INT64,  op::DataType::DT_BF16,        op::DataType::DT_INT8,        op::DataType::DT_UINT8,
+    op::DataType::DT_UINT64, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0, op::DataType::DT_FLOAT8_E4M3FN,
+    Ops::NN::DT_HIFLOAT4};
+
 static bool IsAiCoreSupport(const aclTensor* self)
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B);
+    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_960DT);
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
     } else {

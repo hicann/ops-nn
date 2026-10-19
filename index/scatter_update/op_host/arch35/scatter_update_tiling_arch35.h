@@ -80,6 +80,10 @@ protected:
     uint64_t CalcIndicesUbFactor();
     uint64_t CalcSimtIndicesUbFactor();
     ge::graphStatus GetCastType();
+    ge::graphStatus CheckNpuArch();
+    ge::graphStatus CheckShapeForHif4();
+    void VarDtypeImprove();
+    void ProcessSimdNonSortScatterDMA();
 
 private:
     uint64_t varSize_ = 0;
@@ -150,6 +154,8 @@ private:
     uint64_t indicesTailForUpTailLoopNum_ = 0;
     uint64_t indicesCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t indicesCastDtypeSize_ = 0;
+    uint32_t isUseScatterDma_ = 0;
+    uint32_t isCastIndices_ = 0;
     int32_t rowFormerNum_ = 0;
     int32_t colFormerNum_ = 0;
 
@@ -157,6 +163,7 @@ private:
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
     const char* opName = "ScatterUpdate";
+    bool isAscend960DT_ = false;
 
     uint64_t rowTotalNum_{0};
     uint64_t colTotalNum_{0};

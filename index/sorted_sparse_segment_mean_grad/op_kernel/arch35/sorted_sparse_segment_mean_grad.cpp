@@ -13,8 +13,8 @@
  * \brief
  */
 
-#include "arch35/sorted_sparse_segment_mean_grad_simt_large_inner.h"
-#include "arch35/sorted_sparse_segment_mean_grad_simt_small_inner.h"
+#include "sorted_sparse_segment_mean_grad_simt_large_inner.h"
+#include "sorted_sparse_segment_mean_grad_simt_small_inner.h"
 
 using namespace AscendC;
 using namespace SparseSegmentMeanGradNameSpace;
