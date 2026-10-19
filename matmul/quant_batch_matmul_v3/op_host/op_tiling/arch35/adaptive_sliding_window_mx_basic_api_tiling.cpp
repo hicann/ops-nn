@@ -25,6 +25,7 @@
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
+#include "quant_batch_matmul_v3_checker_arch_9201.h"
 
 namespace {
 constexpr uint32_t STEP_K_TWO = 2U;
@@ -34,7 +35,31 @@ constexpr uint64_t MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT = 128UL * 1024UL * 1024UL;
 // Keep A full-load if repeated A reads exceed this share of non-full-load GM traffic.
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+struct MxTilingCapabilities {
+    optiling::BaseBlockMode baseBlockMode;
+    bool useDedicatedChecker;
+    bool useAdaptiveL1Plan;
+    bool useAdaptiveAFullLoad;
+    bool normalizeSingleRoundTailSplit;
+};
+
+const MxTilingCapabilities& GetMxTilingCapabilities(NpuArch npuArch)
+{
+    static const MxTilingCapabilities defaultCapabilities = {optiling::BaseBlockMode::DEFAULT, false, true, true, true};
+    static const MxTilingCapabilities loadBalanceCapabilities = {optiling::BaseBlockMode::LOAD_BALANCE, true, false,
+                                                                 false, false};
+    switch (npuArch) {
+        case NpuArch::DAV_9201:
+        case NpuArch::DAV_9202:
+            return loadBalanceCapabilities;
+        default:
+            return defaultCapabilities;
+    }
+}
+
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+                                               static_cast<int32_t>(NpuArch::DAV_9201),
+                                               static_cast<int32_t>(NpuArch::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_BASIC_API_ASW;
 
 uint64_t GetSingleRoundTailSplitBase(uint64_t axisSize, uint64_t baseSize, uint64_t tailTile, uint64_t alignSize)
@@ -81,7 +106,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
-    return IsTensorApiEnabled() && inputParams_.batchC == 1UL;
+    return IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
+           (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201);
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step,
@@ -108,8 +134,9 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
-    return IsTensorApiEnabled() ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
-                                  static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
+    const bool supportsBlaze = npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201;
+    return IsTensorApiEnabled() && supportsBlaze ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+                                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
@@ -120,7 +147,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
 {
-    const bool useMxL0CPingpong = IsMxL0CPingpong(inputParams_);
+    // L0C ping-pong remains a DAV_3510-only template; Ascend960 does not register kernel type 9/10.
+    const bool useMxL0CPingpong = compileInfo_.npuArch == NpuArch::DAV_3510 && IsMxL0CPingpong(inputParams_);
     if (isAFullLoad_ && useMxL0CPingpong) {
         return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
     }
@@ -133,10 +161,36 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
     return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI);
 }
 
+bool AdaptiveSlidingWindowMXBasicAPITiling::CheckDtype() const
+{
+    if (GetMxTilingCapabilities(compileInfo_.npuArch).useDedicatedChecker) {
+        // tiling_util's arch switch has no Ascend960 case, so the MX checker is invoked directly here.
+        QuantBatchMatmulV3CheckerArch9201 checker(context_, inputParams_);
+        return checker.CheckDtype();
+    }
+    return AdaptiveSlidingWindowTiling::CheckDtype();
+}
+
+bool AdaptiveSlidingWindowMXBasicAPITiling::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                                       const gert::StorageShape* biasShape,
+                                                       const gert::StorageShape* pertokenShape,
+                                                       const std::vector<int64_t>& dimValueOfMKN) const
+{
+    if (GetMxTilingCapabilities(compileInfo_.npuArch).useDedicatedChecker) {
+        QuantBatchMatmulV3CheckerArch9201 checker(context_, inputParams_);
+        return checker.CheckShape(mandtoryShape, biasShape, pertokenShape, dimValueOfMKN);
+    }
+    return AdaptiveSlidingWindowTiling::CheckShape(mandtoryShape, biasShape, pertokenShape, dimValueOfMKN);
+}
+
 bool AdaptiveSlidingWindowMXBasicAPITiling::CalcBasicBlock()
 {
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
-    if (!calculator.Compute(BaseBlockMode::DEFAULT)) {
+    const MxTilingCapabilities& capabilities = GetMxTilingCapabilities(compileInfo_.npuArch);
+    fe::PlatFormInfos* platformInfo = capabilities.baseBlockMode == BaseBlockMode::LOAD_BALANCE ?
+                                          context_->GetPlatformInfo() :
+                                          nullptr;
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), platformInfo);
+    if (!calculator.Compute(capabilities.baseBlockMode)) {
         return false;
     }
     const BaseBlockRes& baseBlockRes = calculator.GetOutput();
@@ -212,11 +266,21 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum()
 {
     const uint32_t stepK = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
     const uint64_t currentKL1 = static_cast<uint64_t>(stepK) * tilingData_.matmulTiling.baseK;
-    const MxL1EstimateParams currentParams = BuildL1EstimateParams(currentKL1, tilingData_.matmulTiling.scaleKL1,
-                                                                   tilingData_.matmulTiling.baseM,
-                                                                   tilingData_.matmulTiling.baseN, isAFullLoad_);
-    const MxL1Plan plan = SelectMxL1Plan(currentParams, tilingData_.matmulTiling.baseK,
-                                         tilingData_.matmulTiling.scaleKL1);
+    const MxTilingCapabilities& capabilities = GetMxTilingCapabilities(compileInfo_.npuArch);
+    MxL1Plan plan = {currentKL1, tilingData_.matmulTiling.scaleKL1, qmmv3_tiling_const::L1_TWO_BUFFER};
+    if (capabilities.useAdaptiveL1Plan) {
+        const MxL1EstimateParams currentParams = BuildL1EstimateParams(currentKL1, tilingData_.matmulTiling.scaleKL1,
+                                                                       tilingData_.matmulTiling.baseM,
+                                                                       tilingData_.matmulTiling.baseN, isAFullLoad_);
+        plan = SelectMxL1Plan(currentParams, tilingData_.matmulTiling.baseK, tilingData_.matmulTiling.scaleKL1);
+    } else {
+        const MxL1EstimateParams currentParams = {currentKL1, tilingData_.matmulTiling.scaleKL1,
+                                                  tilingData_.matmulTiling.baseM, tilingData_.matmulTiling.baseN,
+                                                  isAFullLoad_};
+        const uint64_t usedL1Size = CalcUsedL1Size(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
+        plan.l1BufferNum = usedL1Size < aicoreParams_.l1Size ? qmmv3_tiling_const::L1_FOUR_BUFFER :
+                                                               qmmv3_tiling_const::L1_TWO_BUFFER;
+    }
     tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(plan.kL1);
     tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(plan.scaleKL1);
@@ -236,8 +300,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::DeriveScaleKL1(uint32_t& scaleFa
     uint64_t scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
                                  static_cast<uint64_t>(scaleFactorB) * stepKb * baseK);
     const uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
-    if (IsMxL0CPingpong(inputParams_) && outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT &&
-        scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
+    if (compileInfo_.npuArch == NpuArch::DAV_3510 && IsMxL0CPingpong(inputParams_) &&
+        outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT && scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
         AdjustScaleFactorForL0CPingpong(scaleFactorA, static_cast<uint32_t>(stepKa), static_cast<uint32_t>(baseK));
         AdjustScaleFactorForL0CPingpong(scaleFactorB, static_cast<uint32_t>(stepKb), static_cast<uint32_t>(baseK));
         scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
@@ -457,6 +521,20 @@ double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMacTimeUs() const
 
 void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
 {
+    const MxTilingCapabilities& capabilities = GetMxTilingCapabilities(compileInfo_.npuArch);
+    if (!capabilities.useAdaptiveAFullLoad) {
+        if (adaptiveWin_.mBlockCnt == 0UL) {
+            isAFullLoad_ = false;
+            return;
+        }
+        const uint64_t singleCoreASize = GetSizeWithDataType(adaptiveWin_.baseM * inputParams_.kSize,
+                                                             inputParams_.aDtype);
+        isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_A_SCALER &&
+                       adaptiveWin_.mBlockCnt < qmmv3_tiling_const::WINDOW_LEN &&
+                       aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0UL &&
+                       adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1UL;
+        return;
+    }
     uint64_t realBaseMSize = adaptiveWin_.mBaseTailSplitCnt == 1UL ? adaptiveWin_.baseM : adaptiveWin_.mTailMain;
     uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
     uint64_t singleCoreASize = GetSizeWithDataType(realBaseMSize * kAligned, inputParams_.aDtype);
@@ -503,7 +581,9 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalcTailRoundBasicBlockSplit()
     } else {
         CalcTailBasicBlock();
     }
-    NormalizeSingleRoundTailSplitBasicBlock();
+    if (GetMxTilingCapabilities(compileInfo_.npuArch).normalizeSingleRoundTailSplit) {
+        NormalizeSingleRoundTailSplitBasicBlock();
+    }
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::NormalizeSingleRoundTailSplitBasicBlock()

@@ -25,6 +25,7 @@
 #include "log/log.h"
 #include "op_host/tiling_templates_registry.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
+#include "quant_batch_matmul_v3_checker_arch_9201.h"
 
 using namespace QuantBatchMatmulV3Arch35TilingKey;
 
@@ -72,7 +73,8 @@ constexpr uint64_t BENEFIT_TIME_SAFETY_NUM = 6UL;
 constexpr uint64_t BENEFIT_TIME_SAFETY_DEN = 5UL;
 constexpr uint64_t FIXPIPE_N_ALIGN_ELEMENTS = 32UL;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+                                               static_cast<int32_t>(NpuArch::DAV_9201)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_STREAMK;
 
 uint64_t SafeCeilDiv(uint64_t value, uint64_t factor) { return factor == 0UL ? 0UL : ops::CeilDiv(value, factor); }
@@ -906,6 +908,10 @@ ge::graphStatus QBMMV3StreamKTiling::CheckContext()
 
 bool QBMMV3StreamKTiling::CheckDtype() const
 {
+    if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+        QuantBatchMatmulV3CheckerArch9201 checker(context_, inputParams_);
+        return checker.CheckDtype();
+    }
     return QuantBatchMatMulV3TilingUtil::CheckDtype(context_, inputParams_, compileInfo_);
 }
 
@@ -913,6 +919,10 @@ bool QBMMV3StreamKTiling::CheckShape(const std::vector<gert::Shape*>& mandatoryS
                                      const gert::StorageShape* biasShape, const gert::StorageShape* pertokenShape,
                                      const std::vector<int64_t>& dimValueOfMKN) const
 {
+    if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+        QuantBatchMatmulV3CheckerArch9201 checker(context_, inputParams_);
+        return checker.CheckShape(mandatoryShape, biasShape, pertokenShape, dimValueOfMKN);
+    }
     return QuantBatchMatMulV3TilingUtil::CheckShape(context_, inputParams_, compileInfo_, mandatoryShape, biasShape,
                                                     pertokenShape, dimValueOfMKN);
 }
@@ -1005,6 +1015,12 @@ bool QBMMV3StreamKTiling::IsCapable()
 {
     bool isMxInput = IsMxInput();
     bool isPertensorStreamKInput = IsPertensorStreamKInput();
+    const bool isDav9201 = compileInfo_.npuArch == NpuArch::DAV_9201;
+    // This batch registers DAV_9201 StreamK for MX only; the non-MX per-tensor StreamK route stays 3510-only.
+    if (isDav9201 && !isMxInput) {
+        OP_LOGD(inputParams_.opName, "DAV_9201 QBMM StreamK only supports MX per-group input.");
+        return false;
+    }
     if (!isMxInput && !isPertensorStreamKInput) {
         OP_LOGD(inputParams_.opName,
                 "QBMM StreamK only supports MX per-group or non-MX per-tensor vector-dequant input.");
@@ -1019,8 +1035,15 @@ bool QBMMV3StreamKTiling::IsCapable()
                 compileInfo_.aicNum);
         return false;
     }
-    if (compileInfo_.aicNum == 0UL || compileInfo_.aivNum % CORE_RATIO != 0UL ||
-        compileInfo_.aivNum / CORE_RATIO != compileInfo_.aicNum) {
+    if (isDav9201) {
+        // DAV_9201 uses the MIX_AIC_1_1 StreamK template, so AIV:AIC must be 1:1.
+        if (compileInfo_.aicNum == 0UL || compileInfo_.aivNum != compileInfo_.aicNum) {
+            OP_LOGD(inputParams_.opName, "DAV_9201 QBMM StreamK only supports aivNum == aicNum, aiv=%u aic=%u.",
+                    compileInfo_.aivNum, compileInfo_.aicNum);
+            return false;
+        }
+    } else if (compileInfo_.aicNum == 0UL || compileInfo_.aivNum % CORE_RATIO != 0UL ||
+               compileInfo_.aivNum / CORE_RATIO != compileInfo_.aicNum) {
         OP_LOGD(inputParams_.opName, "QBMM StreamK only supports aivNum == aicNum * 2, aiv=%u aic=%u.",
                 compileInfo_.aivNum, compileInfo_.aicNum);
         return false;

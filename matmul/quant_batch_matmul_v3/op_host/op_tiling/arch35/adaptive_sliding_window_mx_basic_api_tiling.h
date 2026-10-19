@@ -76,6 +76,9 @@ private:
 protected:
     void ResetTilingData() override;
     bool IsCapable() override;
+    bool CheckDtype() const override;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
     uint64_t GetBatchCoreCnt() const override;
     const void* GetTilingData() const override;
     uint64_t GetApiLevel(NpuArch npuArch) const override;
