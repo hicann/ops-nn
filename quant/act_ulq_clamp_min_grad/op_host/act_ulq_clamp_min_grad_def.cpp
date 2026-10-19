@@ -74,6 +74,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "act_ulq_clamp_min_grad");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
+        this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };
 

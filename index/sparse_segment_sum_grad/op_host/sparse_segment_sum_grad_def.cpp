@@ -69,6 +69,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "sparse_segment_sum_grad");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
+        this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };
 OP_ADD(SparseSegmentSumGrad);

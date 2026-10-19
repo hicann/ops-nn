@@ -21,7 +21,7 @@
 
 # KERNEL_SRC 缺省为 softplus_grad（与 op_kernel/softplus_grad.cpp 一致）
 add_kernel_sources(
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
     OPTIONS "--cce-simd-vf-fusion=true" "--cce-simd-at-voss=true"
 )

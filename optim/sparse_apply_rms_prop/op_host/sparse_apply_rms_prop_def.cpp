@@ -132,6 +132,7 @@ public:
             .ExtendCfgInfo("opInterface.value", "sparse_apply_rms_prop");
         ;
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(SparseApplyRMSProp);

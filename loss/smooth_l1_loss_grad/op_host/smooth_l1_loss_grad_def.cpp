@@ -61,6 +61,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false); // fp16 原生精度直算，不降精度
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(SmoothL1LossGrad);

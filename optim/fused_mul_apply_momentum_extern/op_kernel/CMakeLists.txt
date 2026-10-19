@@ -11,6 +11,6 @@
 
 add_kernel_sources(
     KERNEL_SRC fused_mul_apply_momentum_extern_arch35.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )

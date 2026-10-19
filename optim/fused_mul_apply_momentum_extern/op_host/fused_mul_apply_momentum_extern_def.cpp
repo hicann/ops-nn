@@ -116,6 +116,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "fused_mul_apply_momentum_extern");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
+        this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };
 OP_ADD(FusedMulApplyMomentumExtern);
