@@ -466,6 +466,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "dequant_swiglu_quant_apt");
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("ascend960dt", config_950);
         this->AICore().AddConfig("ascend350", config_950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

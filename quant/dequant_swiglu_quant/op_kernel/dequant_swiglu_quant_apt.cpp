@@ -360,7 +360,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
     TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE);
     TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE);
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>();
 #endif
 
@@ -1449,7 +1449,7 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
     op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
     op.Process();
 #endif
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
     AscendC::SetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

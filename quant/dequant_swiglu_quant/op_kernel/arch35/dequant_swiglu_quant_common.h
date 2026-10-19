@@ -91,7 +91,7 @@ static constexpr AscendC::Reg::DivSpecificMode DIV_MODE = {
 template <typename yDtype>
 __aicore__ inline void SetFloatOverflowModeForRegbase()
 {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
     if constexpr (IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value ||
                   IsSameType<yDtype, fp8_e4m3fn_t>::value) {
         AscendC::SetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>(
