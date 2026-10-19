@@ -1,7 +1,5 @@
 # aclnnTurboQuant
 
-[查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/turbo_quant)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

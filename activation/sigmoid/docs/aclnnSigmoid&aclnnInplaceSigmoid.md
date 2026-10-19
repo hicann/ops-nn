@@ -1,7 +1,5 @@
 # aclnnSigmoid&aclnnInplaceSigmoid
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/sigmoid)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -139,7 +137,6 @@ aclnnStatus aclnnInplaceSigmoid(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

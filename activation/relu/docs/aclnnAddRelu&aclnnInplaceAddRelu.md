@@ -1,7 +1,5 @@
 # aclnnAddRelu&aclnnInplaceAddRelu
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/relu)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

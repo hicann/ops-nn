@@ -1,7 +1,5 @@
 # aclnnTransQuantParam
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/quant/trans_quant_param)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

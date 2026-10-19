@@ -1,7 +1,5 @@
 # aclnnSwigluBackwardGroupQuantWithDualAxis
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/swiglu_backward_group_quant_with_dual_axis)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

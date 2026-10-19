@@ -1,7 +1,5 @@
 # aclnnHardswishBackwardV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/hard_swish_grad_v2)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

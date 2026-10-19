@@ -1,7 +1,5 @@
 # aclnnDequantBias
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/quant/dequant_bias)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

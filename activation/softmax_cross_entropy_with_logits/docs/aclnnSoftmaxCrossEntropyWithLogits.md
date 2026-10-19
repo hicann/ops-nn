@@ -1,7 +1,5 @@
 # aclnnSoftmaxCrossEntropyWithLogits
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/softmax_cross_entropy_with_logits)
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->

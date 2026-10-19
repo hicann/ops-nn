@@ -1,7 +1,5 @@
 # SwigluGroupQuant
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/9.2.0/activation/swiglu_group_quant)
-
 ## 产品支持情况
 
 |产品             |  是否支持  |

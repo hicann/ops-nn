@@ -47,7 +47,9 @@ $$
 $$
 
 其中：
+
 - $G$ 为MoE专家分组数
+
 - 后续所有步骤仅处理前 $\text{trunc}$ 行数据
 
 **MoE场景说明**：在MoE推理反向传播中，不同专家可能处理不同数量的token，groupIndex允许动态调整处理范围。
@@ -120,7 +122,9 @@ $$
 $$
 
 其中：
+
 - $\mathbf{grad}_{y_0}$ 为处理后的梯度输入（见步骤四）
+
 - 如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}} \cdot \mathbf{weight}$
 - 如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}}$
 
@@ -133,7 +137,9 @@ $$
 $$
 
 其中：
+
 - $\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出
+
 - 沿最后一维（H维度）求和
 
 **GroupIndex处理**：
