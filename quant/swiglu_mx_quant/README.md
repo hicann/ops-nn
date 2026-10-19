@@ -84,7 +84,7 @@
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>shape必须为1维，且shape[0]大于0且小于等于256；data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。</td>
+      <td>shape必须为1维，且shape[0]大于0且小于等于256；data的每个值必须为大于等于0的整数，所有值的和必须大于0，且必须小于等于x经SwiGLU操作后的总行数（即SwiGLU输出y的总行数：activate_dim为尾轴时等于x除尾轴之外剩余轴的乘积，activate_dim为非尾轴时等于x总行数的一半）。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -197,7 +197,7 @@
 - 当activate_dim = -2 或者axis = -2, group_index存在时，输入x必须为2维。
 - 当dst_type为FP4类型时，输出shape的最后一维必须能被2整除。
 - 当dst_type为FP4类型时，scale_alg必须为0。
-- group_index存在时，必须为1维，且shape[0]大于0且小于等于256；data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。
+- group_index存在时，必须为1维，且shape[0]大于0且小于等于256；data的每个值必须为大于等于0的整数，所有值的和必须大于0，且必须小于等于x经SwiGLU操作后的总行数（即SwiGLU输出y的总行数：activate_dim为尾轴时等于x除尾轴之外剩余轴的乘积，activate_dim为非尾轴时等于x总行数的一半）。
 - FP8输出类型仅支持"rint"舍入模式。
 - 不支持空Tensor：输入x、可选输入group_index及输出y、mxscale的shape中任一维度为0（元素数为0）时，算子校验失败并报错。
 - 输入x必须为2-7维，不支持rank=0标量Tensor。
