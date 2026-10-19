@@ -72,7 +72,7 @@ bool SystemUtils::IsDirExist(const std::string& path)
     CANNKB_LOGD("Check dir: %s existence and permission.", path.c_str());
     struct stat status;
     if (stat(path.c_str(), &status) == 0) {
-        if ((status.st_mode & S_IFDIR) != 0) {
+        if (S_ISDIR(status.st_mode)) {
             return true;
         }
     }
@@ -107,7 +107,7 @@ Status SystemUtils::CreateMultiDirectory(const std::string& dir)
     }
 
     for (const auto& it : dir_lists) {
-        if (mkdir(it.c_str(), kCreateDirPermission) != 0 && errno != EEXIST) {
+        if (mkdir(it.c_str(), kCreateDirPermission) != 0 && (errno != EEXIST || !SystemUtils::IsDirExist(it))) {
             CANNKB_LOGE("Create directory %s failed.", it.c_str());
             return FAILED;
         }
