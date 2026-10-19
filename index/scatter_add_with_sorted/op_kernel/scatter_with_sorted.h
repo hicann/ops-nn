@@ -99,6 +99,8 @@ public:
             }
             indicesExtParams = {(uint16_t)1, static_cast<uint32_t>(currentNum * sizeof(int)), 0, 0, 0};
             indicesExtParams2 = {(uint16_t)1, static_cast<uint32_t>((currentNum + 1) * sizeof(int)), 0, 0, 0};
+            // Finish scalar reads before reusing the index and position buffers.
+            PIPE_S_MTE2();
             if (coreId == 0 && i == 0) {
                 DataCopyPad(indicesLocal, indicesGm[indicesOffset], indicesExtParams, uPadParams);
                 DataCopyPad(posLocal, posGm[indicesOffset], indicesExtParams, uPadParams);
@@ -143,6 +145,7 @@ public:
                     currentNum = currentTail;
                 }
                 indicesExtParams2 = {(uint16_t)1, static_cast<uint32_t>((currentNum + 1) * sizeof(int)), 0, 0, 0};
+                PIPE_S_MTE2();
                 DataCopyPad(indicesLocal, indicesGm[indicesOffset - 1], indicesExtParams2, uPadParams);
                 DataCopyPad(posLocal, posGm[indicesOffset - 1], indicesExtParams2, uPadParams);
                 PIPE_MTE2_S();
@@ -186,6 +189,13 @@ public:
         int32_t eventIDMTE2ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
+    }
+
+    __aicore__ inline void PIPE_S_MTE2()
+    {
+        int32_t eventIDSToMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
+        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
     }
 
 private:

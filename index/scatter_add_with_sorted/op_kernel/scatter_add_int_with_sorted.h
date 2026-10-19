@@ -65,6 +65,8 @@ public:
         for (uint64_t index = start; index < start + currentNum; ++index) {
             uint64_t indicesIndex = index;
             uint64_t updatesIndex = index * updatesOneTime;
+            // Finish the previous scalar read before overwriting indicesLocal.
+            PIPE_S_MTE2();
             DataCopyPad(indicesLocal, indicesGm[indicesIndex], indicesExtParams, uPadParams);
             PIPE_MTE2_S();
 
@@ -105,6 +107,13 @@ public:
         int32_t eventIDMTE2ToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
         SetFlag<HardEvent::MTE2_MTE3>(eventIDMTE2ToMTE3);
         WaitFlag<HardEvent::MTE2_MTE3>(eventIDMTE2ToMTE3);
+    }
+
+    __aicore__ inline void PIPE_S_MTE2()
+    {
+        int32_t eventIDSToMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
+        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
     }
 
 private:

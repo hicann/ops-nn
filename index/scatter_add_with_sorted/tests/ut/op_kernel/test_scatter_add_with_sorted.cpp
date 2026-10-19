@@ -14,6 +14,7 @@
  */
 #include <array>
 #include <vector>
+#include <type_traits>
 #include "gtest/gtest.h"
 #include "scatter_add_with_sorted_tiling_def.h"
 
@@ -90,3 +91,106 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
+
+namespace {
+// CPU UT checks values and chunk boundaries; device racecheck checks pipeline synchronization.
+template <typename T = float, uint32_t tilingKey = 11>
+void RunRepeatedIndices(uint32_t rows, uint32_t updates, uint32_t chunkSize, bool nonzeroInitial)
+{
+    constexpr uint32_t cols = 3;
+    constexpr uint32_t blockDim = 4;
+    const uint32_t perCore = updates / blockDim;
+    auto* var = static_cast<T*>(AscendC::GmAlloc(rows * cols * sizeof(T)));
+    auto* src = static_cast<T*>(AscendC::GmAlloc(updates * cols * sizeof(T)));
+    auto* ind = static_cast<int32_t*>(AscendC::GmAlloc(updates * sizeof(int32_t)));
+    auto* pos = static_cast<int32_t*>(AscendC::GmAlloc(updates * sizeof(int32_t)));
+    auto* tiling = static_cast<ScatterAddWithSortedTilingData*>(
+        AscendC::GmAlloc(sizeof(ScatterAddWithSortedTilingData)));
+    std::vector<T> expected(rows * cols);
+    for (uint32_t i = 0; i < rows * cols; ++i) {
+        var[i] = nonzeroInitial ? static_cast<T>(i % 8 + 1) : static_cast<T>(0);
+        expected[i] = var[i];
+    }
+    for (uint32_t i = 0; i < updates * cols; ++i) {
+        src[i] = static_cast<T>(i % (std::is_integral_v<T> ? 2 : 16));
+    }
+    for (uint32_t i = 0; i < updates; ++i) {
+        // Sorted duplicate indices, with a non-identity permutation of updates.
+        ind[i] = i * rows / updates;
+        pos[i] = updates - 1 - i;
+        for (uint32_t col = 0; col < cols; ++col) {
+            if constexpr (tilingKey < 10) {
+                expected[ind[i] * cols + col] = src[pos[i] * cols + col];
+            } else if constexpr (std::is_integral_v<T>) {
+                expected[ind[i] * cols + col] += src[i * cols + col];
+            } else {
+                expected[ind[i] * cols + col] += src[pos[i] * cols + col];
+            }
+        }
+    }
+
+    *tiling = {};
+    tiling->usedCoreNum = blockDim;
+    tiling->eachCount = perCore;
+    tiling->lastCount = perCore;
+    tiling->inputCount = rows * cols;
+    tiling->indicesCount = updates;
+    tiling->updatesCount = updates * cols;
+    tiling->inputOneTime = cols;
+    tiling->updatesOneTime = cols;
+    tiling->updatesAlign = 32 / sizeof(T);
+    tiling->maxSize = chunkSize;
+    tiling->eachNum = std::is_integral_v<T> && tilingKey > 10 ? perCore : chunkSize;
+    tiling->eachLoop = (perCore + chunkSize - 1) / chunkSize;
+    tiling->eachTail = (perCore - 1) % chunkSize + 1;
+    tiling->lastNum = tiling->eachNum;
+    tiling->lastLoop = tiling->eachLoop;
+    tiling->lastTail = tiling->eachTail;
+    tiling->updatesLoop = 1;
+    tiling->updatesEach = cols;
+    tiling->updatesLast = cols;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, reinterpret_cast<uint8_t*>(var), reinterpret_cast<uint8_t*>(src),
+                reinterpret_cast<uint8_t*>(ind), reinterpret_cast<uint8_t*>(pos), reinterpret_cast<uint8_t*>(var),
+                nullptr, reinterpret_cast<uint8_t*>(tiling));
+    // Small integer values also give exact FP32 reference results.
+    for (uint32_t i = 0; i < rows * cols; ++i) {
+        EXPECT_EQ(var[i], expected[i]) << "element " << i;
+    }
+    AscendC::GmFree(var);
+    AscendC::GmFree(src);
+    AscendC::GmFree(ind);
+    AscendC::GmFree(pos);
+    AscendC::GmFree(tiling);
+}
+} // namespace
+
+TEST_F(scatter_add_with_sorted_test, test_case_fp32_repeated_indices) { RunRepeatedIndices<>(256, 512, 16, false); }
+
+TEST_F(scatter_add_with_sorted_test, test_case_fp32_nonzero_initial_and_index_refill)
+{
+    RunRepeatedIndices<>(17, 80, 8, true);
+}
+
+TEST_F(scatter_add_with_sorted_test, test_case_fp32_duplicate_spans_cores) { RunRepeatedIndices<>(1, 80, 8, true); }
+
+TEST_F(scatter_add_with_sorted_test, test_case_scatter_nonzero_initial_and_index_refill)
+{
+    RunRepeatedIndices<float, 1>(17, 80, 8, true);
+}
+
+TEST_F(scatter_add_with_sorted_test, test_case_scatter_duplicate_spans_cores)
+{
+    RunRepeatedIndices<float, 1>(1, 80, 8, true);
+}
+
+TEST_F(scatter_add_with_sorted_test, test_case_int32_index_reuse) { RunRepeatedIndices<int32_t, 13>(17, 80, 8, true); }
+
+TEST_F(scatter_add_with_sorted_test, test_case_scatter_uint8_index_refill)
+{
+    RunRepeatedIndices<uint8_t, 4>(17, 80, 8, true);
+}
+
+TEST_F(scatter_add_with_sorted_test, test_case_int8_index_reuse) { RunRepeatedIndices<int8_t, 15>(17, 80, 8, true); }

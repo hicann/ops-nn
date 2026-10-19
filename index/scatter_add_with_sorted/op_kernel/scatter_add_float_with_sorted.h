@@ -98,8 +98,10 @@ public:
             PIPE_MTE2_V();
             Cast(calcSelfLocal, dequeLocal, RoundMode::CAST_NONE, updatesAlign);
         } else {
-            PIPE_MTE2_S();
+            PIPE_MTE2_V();
             DataCopy(calcSelfLocal, dequeLocal, updatesAlign);
+            // UB-to-UB DataCopy and Add both execute on PIPE_V.
+            PipeBarrier<PIPE_V>();
         }
         inQueueSelf.FreeTensor(dequeLocal);
     }
@@ -112,7 +114,7 @@ public:
             PIPE_V_MTE3();
         } else {
             DataCopy(outputLocal, calcSelfLocal, updatesAlign);
-            PIPE_S_MTE3();
+            PIPE_V_MTE3();
         }
         outQueueSelf.EnQue(outputLocal);
 
@@ -155,6 +157,8 @@ public:
             }
             indicesExtParams = {(uint16_t)1, static_cast<uint32_t>(currentNum * sizeof(int)), 0, 0, 0};
             indicesExtParams2 = {(uint16_t)1, static_cast<uint32_t>((currentNum + 1) * sizeof(int)), 0, 0, 0};
+            // Finish scalar reads before reusing the index and position buffers.
+            PIPE_S_MTE2();
             if (coreId == 0 && i == 0) {
                 DataCopyPad(indicesLocal, indicesGm[indicesOffset], indicesExtParams, uPadParams);
             } else {
@@ -203,6 +207,7 @@ public:
                 }
                 indicesExtParams = {(uint16_t)1, static_cast<uint32_t>(currentNum * sizeof(int)), 0, 0, 0};
                 indicesExtParams2 = {(uint16_t)1, static_cast<uint32_t>((currentNum + 1) * sizeof(int)), 0, 0, 0};
+                PIPE_S_MTE2();
                 DataCopyPad(indicesLocal, indicesGm[indicesOffset - 1], indicesExtParams2, uPadParams);
                 DataCopyPad(posLocal, posGm[indicesOffset], indicesExtParams, uPadParams);
                 PIPE_MTE2_S();
@@ -258,18 +263,18 @@ public:
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     }
 
+    __aicore__ inline void PIPE_S_MTE2()
+    {
+        int32_t eventIDSToMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+        SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
+        WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
+    }
+
     __aicore__ inline void PIPE_V_MTE3()
     {
         int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-    }
-
-    __aicore__ inline void PIPE_S_MTE3()
-    {
-        int32_t eventIDSToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-        SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
-        WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     }
 
 private:
