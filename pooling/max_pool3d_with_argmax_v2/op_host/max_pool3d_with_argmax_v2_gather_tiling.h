@@ -160,6 +160,8 @@ private:
     void PrintSplitData() const;
     void DoBlockTiling();
     void DoBufferCalculate();
+    void SearchOuterSingle(int64_t& inner);
+    void AdjustInnerSplitForMultiCore();
     bool IsCapable() override;
     bool IsBasicConfigUnsupported() const;
     bool IsExcludedByDegenerateCheck(int64_t noOverlapCount, int64_t degenerateCount, bool wDegenerate,

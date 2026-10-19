@@ -43,6 +43,7 @@ struct MaxPoolGradNCHWBaseInfo {
 struct MaxPoolGradNCHWSplitInfo {
     // DoUBTiling
     int64_t isCheckRange{0};
+    int64_t isStrideAligned{0};
 
     int64_t highAxisInner{0};
     int64_t highAxisTail{0};
@@ -91,6 +92,7 @@ protected:
     void DoBlockTiling() override;
     void PrintBaseData() const override;
     void PrintSplitData() const override;
+    void AdjustInnerSplitForMultiCore() override;
     bool TrySplitNC();
     bool TrySplitAlignH();
     bool TrySplitAlignW();

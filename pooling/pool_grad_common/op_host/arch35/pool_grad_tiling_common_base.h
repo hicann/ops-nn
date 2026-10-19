@@ -51,6 +51,7 @@ public:
     ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key)
     {
         DoUBTiling();
+        AdjustInnerSplitForMultiCore();
         DoBlockTiling();
         SetTilingData(context, key);
         PrintBaseData();
@@ -89,6 +90,23 @@ protected:
         baseData.isOverlap = (baseData.hProBatchSize != 1 || baseData.wProBatchSize != 1) ? 1 : 0;
     }
 
+    void SearchOuterSingle(int64_t& inner, int64_t step)
+    {
+        int64_t lastNormal = splitData.normalCoreProcessNum;
+        while (inner > step) {
+            inner -= step;
+            DoBlockTiling();
+            int64_t newNormal = splitData.normalCoreProcessNum;
+            if (newNormal > lastNormal) {
+                inner += step;
+                DoBlockTiling();
+                break;
+            }
+            lastNormal = newNormal;
+        }
+    }
+
+    virtual void AdjustInnerSplitForMultiCore() = 0;
     virtual void DoBufferCalculate() = 0;
     virtual void DoUBTiling() = 0;
     virtual void DoBlockTiling() = 0;

@@ -167,7 +167,7 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800001)
     std::string data_format = "NHWC";
     bool nan_prop = false;
     uint64_t except_tilingkey = 800001;
-    std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 2 2 1 1 1 1 128 32 32 0 0 0 0 0 0 0 0 800001 ";
+    std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 1 1 2 1 1 2 128 32 32 0 0 0 0 0 0 0 0 800001 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
@@ -186,7 +186,7 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800002)
     std::string data_format = "NHWC";
     bool nan_prop = false;
     uint64_t except_tilingkey = 800002;
-    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 "
+    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 2 2 32 1 1 64 14336 32 32 1 1 7 1 10 64 64 "
                          "1 800002 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
@@ -206,7 +206,7 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800011)
     std::string data_format = "NHWC";
     bool nan_prop = true;
     uint64_t except_tilingkey = 800011;
-    std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 2 2 1 1 1 1 128 32 32 0 0 0 0 0 0 0 0 800011 ";
+    std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 1 1 2 1 1 2 128 32 32 0 0 0 0 0 0 0 0 800011 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
@@ -225,8 +225,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800012)
     std::string data_format = "NHWC";
     bool nan_prop = true;
     uint64_t except_tilingkey = 800012;
-    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 "
-                         "1 800012 ";
+    std::string
+        expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 2 2 32 1 1 64 14336 32 32 1 1 7 1 10 64 64 1 800012 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
@@ -322,7 +322,7 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700001)
     bool nan_prop = false;
     uint64_t except_tilingkey = 700001;
     std::string
-        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700001 ";
+        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 3 2 2 13 13 1 2 2 60 1920 192 192 0 0 0 0 0 0 0 0 700001 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
@@ -342,7 +342,7 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700011)
     bool nan_prop = true;
     uint64_t except_tilingkey = 700011;
     std::string
-        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700011 ";
+        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 3 2 2 13 13 1 2 2 60 1920 192 192 0 0 0 0 0 0 0 0 700011 ";
     ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
                     includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }

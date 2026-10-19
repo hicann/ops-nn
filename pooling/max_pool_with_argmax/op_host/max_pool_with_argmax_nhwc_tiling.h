@@ -148,6 +148,8 @@ private:
     void SetTilingData();
     uint64_t GetTilingKey() const override;
     void DoBlockTiling();
+    void SearchOuterSingle(int64_t& inner);
+    void AdjustInnerSplitForMultiCore();
     void RerouteTemplateBySplit();
     void DoBufferCalculate();
     bool IsCapable() override;

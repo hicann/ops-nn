@@ -42,6 +42,7 @@ struct MaxPoolGradWithArgmaxNHWCBaseInfo {
 struct MaxPoolGradWithArgmaxNHWCSplitInfo {
     // DoUBTiling
     int64_t isCheckRange{0};
+    int64_t isStrideAligned{0};
 
     int64_t nOutputInner{0};
     int64_t nOutputTail{0};
@@ -100,6 +101,7 @@ private:
     void PrintSplitData() const override;
     void DoBlockTiling() override;
     void DoBufferCalculate() override;
+    void AdjustInnerSplitForMultiCore() override;
     PoolGradTiling::PoolGradNhwcDims GetNhwcDims() const;
 };
 

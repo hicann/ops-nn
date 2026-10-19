@@ -161,6 +161,8 @@ private:
     void PrintBaseData() const;
     void PrintSplitData() const;
     void DoBlockTiling();
+    void SearchOuterSingle(int64_t& inner);
+    void AdjustInnerSplitForMultiCore();
     void DoBufferCalculate();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;

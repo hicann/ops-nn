@@ -54,6 +54,7 @@ public:
             .ExtendCfgInfo("opFile.value", "max_pool_v3_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
         this->AICore().AddConfig("ascend350", aiCoreConfig);
+        this->AICore().AddConfig("ascend960dt", aiCoreConfig);
     }
 };
 

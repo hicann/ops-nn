@@ -651,6 +651,10 @@ void MaxPool3DWithArgmaxV2GatherTiling::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
+}
+
+void MaxPool3DWithArgmaxV2GatherTiling::DoBlockTiling()
+{
     splitData_.wOutputOuter = Ops::Base::CeilDiv(baseData_.wOutput, splitData_.wOutputInner);
     int64_t tempWOutputTail = baseData_.wOutput % splitData_.wOutputInner;
     splitData_.wOutputTail = tempWOutputTail == 0 ? splitData_.wOutputInner : tempWOutputTail;
@@ -666,16 +670,59 @@ void MaxPool3DWithArgmaxV2GatherTiling::DoUBTiling()
     splitData_.highAxisOuter = Ops::Base::CeilDiv(baseData_.highAxisTotal, splitData_.highAxisInner);
     int64_t tempNOutputTail = baseData_.highAxisTotal % splitData_.highAxisInner;
     splitData_.highAxisTail = tempNOutputTail == 0 ? splitData_.highAxisInner : tempNOutputTail;
-}
 
-void MaxPool3DWithArgmaxV2GatherTiling::DoBlockTiling()
-{
     splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.dOutputOuter * splitData_.hOutputOuter *
                                    splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
     splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
                                     splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+}
+
+void MaxPool3DWithArgmaxV2GatherTiling::SearchOuterSingle(int64_t& inner)
+{
+    int64_t lastNormal = splitData_.normalCoreProcessNum;
+    while (inner > 1) {
+        inner -= 1;
+        DoBlockTiling();
+        int64_t newNormal = splitData_.normalCoreProcessNum;
+        if (newNormal > lastNormal) {
+            inner += 1;
+            DoBlockTiling();
+            break;
+        }
+        lastNormal = newNormal;
+    }
+}
+
+void MaxPool3DWithArgmaxV2GatherTiling::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData_.highAxisInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.dOutputInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.hOutputInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.wOutputInner);
+    DoBufferCalculate();
 }
 
 void MaxPool3DWithArgmaxV2GatherTiling::PrintBaseData() const
@@ -732,6 +779,7 @@ void MaxPool3DWithArgmaxV2GatherTiling::SetTilingData()
 ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::DoOpTiling()
 {
     DoUBTiling();
+    AdjustInnerSplitForMultiCore();
     DoBlockTiling();
     SetTilingData();
     PrintBaseData();

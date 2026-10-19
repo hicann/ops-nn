@@ -37,6 +37,7 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
         case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201:
             return DTYPE_SUPPORT_REGBASE_LIST;
         default:
             return DTYPE_SUPPORT_DEFAULT_LIST;

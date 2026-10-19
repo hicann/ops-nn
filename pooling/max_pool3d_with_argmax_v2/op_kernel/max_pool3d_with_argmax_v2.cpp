@@ -79,7 +79,9 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_AD
     // 111110 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=float(0)
     // 111111 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=half(1)
     // 111112 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=bfloat(2)
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
+// dav_9201(ascend960dt)的Compare接口仅支持uint8_t/int8_t类型的mask张量，不支持uint16_t
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
     using mask_type = uint8_t;
 #else
     using mask_type = uint16_t;

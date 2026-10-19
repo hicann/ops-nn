@@ -109,16 +109,19 @@ void MaxPoolGradNCHWTilingCommon::SplitUnalignHW()
 void MaxPoolGradNCHWTilingCommon::SearchBestTiling()
 {
     splitData.isCheckRange = 0;
+    splitData.isStrideAligned = 0;
     if (TrySplitNC()) {
         return;
     }
 
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         if (TrySplitAlignH()) {
+            splitData.isStrideAligned = 1;
             return;
         }
 
         if (TrySplitAlignW()) {
+            splitData.isStrideAligned = 1;
             return;
         }
     }
@@ -132,17 +135,42 @@ void MaxPoolGradNCHWTilingCommon::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
+}
+
+void MaxPoolGradNCHWTilingCommon::DoBlockTiling()
+{
     PoolGradTiling::CalcAxisOuterTail(inputData->wX, splitData.wOutputInner, splitData.wOutputOuter,
                                       splitData.wOutputTail);
     PoolGradTiling::CalcAxisOuterTail(inputData->hX, splitData.hOutputInner, splitData.hOutputOuter,
                                       splitData.hOutputTail);
     PoolGradTiling::CalcAxisOuterTail(baseData.inputNCSize, splitData.highAxisInner, splitData.highAxisOuter,
                                       splitData.highAxisTail);
-}
-void MaxPoolGradNCHWTilingCommon::DoBlockTiling()
-{
     PoolGradTiling::DoBlockTilingNchw(splitData, baseData.totalCoreNum);
 }
+
+void MaxPoolGradNCHWTilingCommon::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData.highAxisInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.hOutputInner, splitData.isStrideAligned ? inputData->hStride : 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.wOutputInner, splitData.isStrideAligned ? inputData->wStride : 1);
+    DoBufferCalculate();
+}
+
 void MaxPoolGradNCHWTilingCommon::PrintBaseData() const
 {
     OP_LOGD("MaxPoolGradNCHW", "[MaxPoolGradNCHW] PrintBaseData start running");
@@ -172,7 +200,7 @@ void MaxPoolGradNCHWTilingCommon::PrintSplitData() const
 
     std::ostringstream info;
     info << "splitData.isCheckRange: " << splitData.isCheckRange << std::endl;
-
+    info << "splitData.isStrideAligned: " << splitData.isStrideAligned << std::endl;
     info << "splitData.highAxisInner: " << splitData.highAxisInner << std::endl;
     info << "splitData.highAxisTail: " << splitData.highAxisTail << std::endl;
     info << "splitData.highAxisOuter: " << splitData.highAxisOuter << std::endl;

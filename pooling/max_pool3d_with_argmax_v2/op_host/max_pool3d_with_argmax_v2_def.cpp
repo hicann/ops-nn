@@ -95,6 +95,7 @@ public:
             .ExtendCfgInfo("opFile.value", "max_pool3d_with_argmax_v2");
         this->AICore().AddConfig("ascend950", aicore_config_950);
         this->AICore().AddConfig("ascend350", aicore_config_950);
+        this->AICore().AddConfig("ascend960dt", aicore_config_950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

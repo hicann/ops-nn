@@ -11,7 +11,8 @@
 /*!
  * \file pool_grad_tiling_split_helper.h
  * \brief 池化反向算子 (MaxPoolGrad / AvgPoolV2Grad 系列) op_host 侧共用的
- *        UB 切分搜索 (TrySplit* / SplitUnalign*) 与核间分块 (DoBlockTiling) 模板实现。
+ *        UB 切分搜索 (TrySplit* / SplitUnalign*)、核间分块 (DoBlockTiling) 与
+ *        多核收缩搜索 (SearchOuterSingle / AdjustInnerSplitForMultiCore) 模板实现。
  *        调用方将各自 InputInfo/BaseInfo 的维度与参数归一为标量/维度结构体传入,
  *        切分判定与动态调整通过 TilingClass 模板参数直接调用 tiling 类的
  *        IsMeetUBSize() / IsMeetTargetCoreNum() / DynamicAdjustmentWH() 成员,
@@ -23,6 +24,7 @@
 #define POOL_GRAD_TILING_SPLIT_HELPER_H_
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 
 #include "util/math_util.h"
@@ -373,6 +375,55 @@ void DoBlockTilingNhwc(SplitInfo& splitData, int64_t totalCoreNum)
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
     splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
                                    splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+}
+
+// ---------------- 多核收缩搜索 ----------------
+
+/*!
+ * \brief 待按核数收缩的 inner 轴: inner 为切分大小引用, step 为单次收缩步长。
+ */
+struct PoolGradAxisSplit {
+    int64_t* inner;
+    int64_t step;
+};
+
+/*!
+ * \brief 按 step 逐次收缩 inner, 每次收缩后通过 recalcBlock 回调重算 block 切分;
+ *        若重算后 normalCoreProcessNum 反向增大, 则回退一次并停止。
+ *        recalcBlock / getNormalCore 由调用方以 lambda 注入, 适配各 tiling 类的成员命名与重算方式。
+ */
+template <typename RecalcBlockFn, typename GetNormalCoreFn>
+inline void SearchOuterSingle(int64_t& inner, int64_t step, RecalcBlockFn recalcBlock, GetNormalCoreFn getNormalCore)
+{
+    int64_t lastNormal = getNormalCore();
+    while (inner > step) {
+        inner -= step;
+        recalcBlock();
+        int64_t newNormal = getNormalCore();
+        if (newNormal > lastNormal) {
+            inner += step;
+            recalcBlock();
+            break;
+        }
+        lastNormal = newNormal;
+    }
+}
+
+/*!
+ * \brief 轴列表驱动: 依次对每个轴执行 SearchOuterSingle; 期间 usedCoreNum 达 totalCoreNum 即提前结束。
+ *        调用前需已完成一次 block 切分重算; 返回后由调用方决定 buffer 重算方式(含各算子特殊分支)。
+ */
+template <typename RecalcBlockFn, typename GetNormalCoreFn, typename GetUsedCoreFn, typename GetTotalCoreFn>
+inline void AdjustInnerSplitForMultiCore(const PoolGradAxisSplit* axes, size_t axisNum, RecalcBlockFn recalcBlock,
+                                         GetNormalCoreFn getNormalCore, GetUsedCoreFn getUsedCore,
+                                         GetTotalCoreFn getTotalCore)
+{
+    for (size_t i = 0; i < axisNum; ++i) {
+        if (getUsedCore() >= getTotalCore()) {
+            break;
+        }
+        SearchOuterSingle(*axes[i].inner, axes[i].step, recalcBlock, getNormalCore);
+    }
 }
 
 } // namespace PoolGradTiling

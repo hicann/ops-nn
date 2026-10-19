@@ -93,20 +93,24 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::SplitUnalignHWC()
 void MaxPoolGradWithArgmaxNHWCTilingCommon::SearchBestTiling()
 {
     splitData.isCheckRange = 0;
+    splitData.isStrideAligned = 0;
     if (TrySplitN()) {
         return;
     }
 
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         if (TrySplitAlignH()) {
+            splitData.isStrideAligned = 1;
             return;
         }
 
         if (TrySplitAlignW()) {
+            splitData.isStrideAligned = 1;
             return;
         }
 
         if (TrySplitAlignC()) {
+            splitData.isStrideAligned = 1;
             return;
         }
     }
@@ -121,6 +125,10 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
+}
+
+void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBlockTiling()
+{
     PoolGradTiling::CalcAxisOuterTail(inputData->wX, splitData.wOutputInner, splitData.wOutputOuter,
                                       splitData.wOutputTail);
     PoolGradTiling::CalcAxisOuterTail(inputData->hX, splitData.hOutputInner, splitData.hOutputOuter,
@@ -129,11 +137,38 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoUBTiling()
                                       splitData.nOutputTail);
     PoolGradTiling::CalcAxisOuterTail(inputData->cX, splitData.cOutputInner, splitData.cOutputOuter,
                                       splitData.cOutputTail);
-}
-void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBlockTiling()
-{
     PoolGradTiling::DoBlockTilingNhwc(splitData, baseData.totalCoreNum);
 }
+
+void MaxPoolGradWithArgmaxNHWCTilingCommon::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData.nOutputInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.hOutputInner, splitData.isStrideAligned ? inputData->hStride : 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.wOutputInner, splitData.isStrideAligned ? inputData->wStride : 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.cOutputInner, 1);
+    DoBufferCalculate();
+}
+
 void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintBaseData() const
 {
     std::ostringstream info;
@@ -161,7 +196,7 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintSplitData() const
 {
     std::ostringstream info;
     info << "splitData.isCheckRange: " << splitData.isCheckRange << std::endl;
-
+    info << "splitData.isStrideAligned: " << splitData.isStrideAligned << std::endl;
     info << "splitData.nOutputInner: " << splitData.nOutputInner << std::endl;
     info << "splitData.nOutputTail: " << splitData.nOutputTail << std::endl;
     info << "splitData.nOutputOuter: " << splitData.nOutputOuter << std::endl;

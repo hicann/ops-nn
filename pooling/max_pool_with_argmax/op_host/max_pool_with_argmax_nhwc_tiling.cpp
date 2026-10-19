@@ -304,6 +304,10 @@ void MaxPoolWithArgmaxNhwcTiling::DoUBTiling()
     // 切输出,反算输入
     SearchBestTiling();
     DoBufferCalculate();
+}
+
+void MaxPoolWithArgmaxNhwcTiling::DoBlockTiling()
+{
     splitData_.wOutputOuter = Ops::Base::CeilDiv(baseData_.wOutput, splitData_.wOutputInner);
     int64_t tempWOutputTail = baseData_.wOutput % splitData_.wOutputInner;
     splitData_.wOutputTail = tempWOutputTail == 0 ? splitData_.wOutputInner : tempWOutputTail;
@@ -319,16 +323,59 @@ void MaxPoolWithArgmaxNhwcTiling::DoUBTiling()
     splitData_.cOutputOuter = Ops::Base::CeilDiv(baseData_.cInput, splitData_.cOutputInner);
     int64_t tempCOutputTail = baseData_.cInput % splitData_.cOutputInner;
     splitData_.cOutputTail = tempCOutputTail == 0 ? splitData_.cOutputInner : tempCOutputTail;
-}
 
-void MaxPoolWithArgmaxNhwcTiling::DoBlockTiling()
-{
     splitData_.totalBaseBlockNum = splitData_.nOutputOuter * splitData_.cOutputOuter * splitData_.hOutputOuter *
                                    splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
     splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
                                     splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+}
+
+void MaxPoolWithArgmaxNhwcTiling::SearchOuterSingle(int64_t& inner)
+{
+    int64_t lastNormal = splitData_.normalCoreProcessNum;
+    while (inner > 1) {
+        inner -= 1;
+        DoBlockTiling();
+        int64_t newNormal = splitData_.normalCoreProcessNum;
+        if (newNormal > lastNormal) {
+            inner += 1;
+            DoBlockTiling();
+            break;
+        }
+        lastNormal = newNormal;
+    }
+}
+
+void MaxPoolWithArgmaxNhwcTiling::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData_.nOutputInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.hOutputInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.wOutputInner);
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData_.cOutputInner);
+    DoBufferCalculate();
 }
 
 void MaxPoolWithArgmaxNhwcTiling::RerouteTemplateBySplit()
@@ -386,6 +433,7 @@ void MaxPoolWithArgmaxNhwcTiling::SetTilingData()
 ge::graphStatus MaxPoolWithArgmaxNhwcTiling::DoOpTiling()
 {
     DoUBTiling();
+    AdjustInnerSplitForMultiCore();
     RerouteTemplateBySplit();
     DoBlockTiling();
     SetTilingData();
