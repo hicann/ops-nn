@@ -36,12 +36,12 @@ protected:
 
     ge::graphStatus SetTilingData();
     bool CheckInputDtype();
-    void DoUBTiling();
+    virtual void DoUBTiling();
     bool IsContinuous();
     void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
                           int64_t colTotalNum);
 
-private:
+protected:
     uint64_t valueTypeSize = 0;
     uint64_t indicesTypeSize = 0;
     uint64_t needCoreNum_ = 0;

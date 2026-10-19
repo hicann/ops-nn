@@ -14,6 +14,7 @@
  */
 #include "index/common/op_api/index_put_with_sort_v2.h"
 #include "opdev/data_type_utils.h"
+#include "opdev/platform.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"
@@ -27,6 +28,12 @@ using namespace op;
 
 namespace l0op {
 OP_TYPE_REGISTER(IndexPutWithSortV2);
+
+static bool IsArch92()
+{
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
 
 static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorList* indices, const aclTensor* value)
 {
@@ -125,8 +132,12 @@ static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices
 {
     static const int64_t INT32_MAX_LIMIT = 2147483647;
     auto indicesSize = indices->Size();
+    constexpr int64_t CAST_MAX_NUM = 16777216;
     int64_t shapeProd = 1;
     for (size_t i = 0; i < indicesSize; i++) {
+        if (IsArch92() && selfRef->GetViewShape().GetDim(i) > CAST_MAX_NUM) {
+            return false;
+        }
         shapeProd *= selfRef->GetViewShape().GetDim(i);
     }
     if (shapeProd > INT32_MAX_LIMIT) {
@@ -190,6 +201,10 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef, const aclTensor
     // self和values总大小>=64M
     auto valueShape = values->GetViewShape();
     int64_t dataNums = static_cast<int64_t>(selfShape.GetShapeSize() + valueShape.GetShapeSize());
+    if (IsArch92()) {
+        constexpr int64_t AVG_BYTES_PER_ELEMENT = 2;
+        return dataNums >= MEMORY_LIMIT_BYTES / AVG_BYTES_PER_ELEMENT;
+    }
     auto selfDtype = selfRef->GetDataType();
     int64_t selfTypeSize = ge::GetSizeByDataType(selfDtype);
     int64_t memLimit = (selfTypeSize / 2) > 1 ? MEMORY_LIMIT_BYTES * selfTypeSize / 2 : MEMORY_LIMIT_BYTES;
@@ -299,7 +314,7 @@ bool IsUseSortedV2OptScene(const bool isAiCpu, const aclTensor* self, const aclT
                            const bool isNonContiguous, const bool& usePutV2SpeOpt)
 {
     // 1. 基本判断
-    if (isAiCpu || deterministicValue || isNonContiguous) {
+    if (isAiCpu || deterministicValue || isNonContiguous || (IsArch92() && !accumulate)) {
         return false;
     }
     // 2. self, indices和values数据类型限制
@@ -327,6 +342,9 @@ bool IsUseSortedV2OptScene(const bool isAiCpu, const aclTensor* self, const aclT
         return false;
     }
     // 8. sortv2优化判断
+    if (IsArch92()) {
+        return IsSortV2PerformanceOptimal(self, indices, values);
+    }
     if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, usePutV2SpeOpt) &&
         !IsSortV2Scene(self, indices, accumulate)) {
         return false;

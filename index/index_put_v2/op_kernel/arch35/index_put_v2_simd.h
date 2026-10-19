@@ -44,7 +44,7 @@ public:
     __aicore__ inline void CopyInValue(int64_t copyCount, int64_t copyLen, int64_t blockOffset);
     __aicore__ inline void GetIndices(int64_t curRows);
 
-private:
+protected:
     TPipe pipe_;
     GlobalTensor<TX> inputGM_;
     GlobalTensor<TIDX> indicesGM_;

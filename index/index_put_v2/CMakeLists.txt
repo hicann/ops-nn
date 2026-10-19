@@ -10,7 +10,16 @@
 
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350" "ascend960dt" "ascend960pr")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE index_put_v2 ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE DEPENDENCIES index index_put index_put_with_sort index_put_with_sort_v2 index_check)
+
+# Index does not select its arch35 tiling sources for 960 yet.
+# Include the shared SIMT and non-contiguous implementations required by IndexPutV2.
+if((ASCEND_COMPUTE_UNIT STREQUAL "ascend960dt" OR ASCEND_COMPUTE_UNIT STREQUAL "ascend960pr")
+   AND TARGET ${OPHOST_NAME}_tiling_obj)
+    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../index/op_host/arch35/index_tiling_arch35.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../index/op_host/arch35/index_tiling_no_continuous.cpp)
+endif()

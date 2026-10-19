@@ -17,6 +17,9 @@
 #include "../index/arch35/index.h"
 #include "../index/arch35/index_no_continuous.h"
 #include "arch35/index_put_v2_simd.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#include "arch92/index_put_v2_simd_dma.h"
+#endif
 #include "arch35/index_put_v2_tiling_key.h"
 #include "arch35/index_put_v2_tiling_data.h"
 
@@ -61,6 +64,10 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(Index::IndexSimtTilingData);
 
+#if !defined(__NPU_ARCH__) || (__NPU_ARCH__ != 9201)
+    static_assert(!IS_PERF, "IndexPutV2 DMA is supported only on DAV_9201");
+#endif
+
     using indexOffsetType = std::conditional_t<IS_OVERLENGTH, uint64_t, uint32_t>;
 
     // ---------------- SIMT -------------------------
@@ -102,22 +109,42 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
         // ---------------- SIMD -------------------------
-    } else if constexpr (IS_SIMD && !IS_ACCUMULATE) {
+    } else if constexpr (IS_SIMD && !IS_PERF && !IS_ACCUMULATE) {
         REGISTER_TILING_FOR_TILINGKEY(
-            "FULL_LOAD_TYPE == 0 && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == false",
+            "FULL_LOAD_TYPE == 0 && IS_PERF == false && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == false",
             IndexPutV2SimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexPutV2SimdTilingData, tilingData, tiling);
         IndexPutV2Simd<DTYPE_X, DTYPE_INDICES, false> op;
         op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
-    } else if constexpr (IS_SIMD && IS_ACCUMULATE && !std::is_same<DTYPE_X, uint8_t>::value &&
+    } else if constexpr (IS_SIMD && !IS_PERF && IS_ACCUMULATE && !std::is_same<DTYPE_X, uint8_t>::value &&
                          !std::is_same<DTYPE_X, int64_t>::value && !std::is_same<DTYPE_X, bool>::value) {
         REGISTER_TILING_FOR_TILINGKEY(
-            "FULL_LOAD_TYPE == 0 && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == true",
+            "FULL_LOAD_TYPE == 0 && IS_PERF == false && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == true",
             IndexPutV2SimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexPutV2SimdTilingData, tilingData, tiling);
         IndexPutV2Simd<DTYPE_X, DTYPE_INDICES, true> op;
         op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+        // IS_PERF selects the additional SIMD DMA templates without changing the mainline tiling keys.
+    } else if constexpr (IS_SIMD && IS_PERF && !IS_ACCUMULATE) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "FULL_LOAD_TYPE == 0 && IS_PERF == true && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == false",
+            IndexPutV2SimdTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexPutV2SimdTilingData, tilingData, tiling);
+        IndexPutV2SimdDma<DTYPE_X, DTYPE_INDICES, false> op;
+        op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
+        op.Process();
+    } else if constexpr (IS_SIMD && IS_PERF && IS_ACCUMULATE && !std::is_same<DTYPE_X, uint8_t>::value &&
+                         !std::is_same<DTYPE_X, int64_t>::value && !std::is_same<DTYPE_X, bool>::value) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "FULL_LOAD_TYPE == 0 && IS_PERF == true && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == true",
+            IndexPutV2SimdTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexPutV2SimdTilingData, tilingData, tiling);
+        IndexPutV2SimdDma<DTYPE_X, DTYPE_INDICES, true> op;
+        op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
+        op.Process();
+#endif
     }
 }

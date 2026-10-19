@@ -112,7 +112,9 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo& info, const es::EsTensor
     std::vector<int64_t> linearIndexDims{indexShapeSize};
 
     // LinearIndexV2 输入输出描述
-    TensorDesc linearIndexOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
+    // LinearIndexV2 preserves the indices dtype on the supported regbase platforms.
+    const DataType linearIndexDtype = info.indicesDtypes.front();
+    TensorDesc linearIndexOutputDesc(Shape(linearIndexDims), FORMAT_ND, linearIndexDtype);
     linearIndex.GetProducer()->UpdateOutputDesc(0, linearIndexOutputDesc);
     for (int64_t i = 0; i < info.indicesNum; ++i) {
         TensorDesc indicesDesc(Shape(info.indicesDims[i]), info.indicesFmt, info.indicesDtypes[i]);
@@ -122,9 +124,9 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo& info, const es::EsTensor
     linearIndex.GetProducer()->UpdateInputDesc(static_cast<uint32_t>(info.indicesNum + 1), xShapeSizeDesc);
 
     // Sort 输入输出描述
-    TensorDesc sortInputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
+    TensorDesc sortInputDesc(Shape(linearIndexDims), FORMAT_ND, linearIndexDtype);
     sortIndex.GetProducer()->UpdateInputDesc(0, sortInputDesc);
-    TensorDesc sortOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
+    TensorDesc sortOutputDesc(Shape(linearIndexDims), FORMAT_ND, linearIndexDtype);
     sortIndex.GetProducer()->UpdateOutputDesc(0, sortOutputDesc);
     TensorDesc posIdxOutputDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     posIdx.GetProducer()->UpdateOutputDesc(1, posIdxOutputDesc);
@@ -138,7 +140,7 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo& info, const es::EsTensor
     // IndexPutWithSortV2 输入输出描述
     TensorDesc indexPutInputXDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortSelf, indexPutInputXDesc);
-    TensorDesc indexPutInputSortIdxDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
+    TensorDesc indexPutInputSortIdxDesc(Shape(linearIndexDims), FORMAT_ND, linearIndexDtype);
     indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortSortIdx, indexPutInputSortIdxDesc);
     TensorDesc indexPutInputPosDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
     indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortPosIdx, indexPutInputPosDesc);
@@ -158,8 +160,9 @@ bool IndexPutV2FusionPass::CheckPlatform() const
         return false;
     }
     const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc != "Ascend950" && soc != "MC62") {
-        OP_LOGI(kPassName.c_str(), "Platform %s is not supported, only Ascend950, MC62", soc.c_str());
+    if (soc != "Ascend950" && soc != "MC62" && soc != "Ascend960DT" && soc != "Ascend960PR") {
+        OP_LOGI(kPassName.c_str(), "Platform %s is not supported, only Ascend950, MC62, Ascend960DT and Ascend960PR",
+                soc.c_str());
         return false;
     }
     return true;

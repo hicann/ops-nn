@@ -33,6 +33,7 @@ namespace IndexPutV2 {
 #define INDEX_PUT_V2_TPL_B64 8   // 64位数据类型
 #define INDEX_PUT_V2_TPL_B128 16 // 128位数据类型
 
+// IS_PERF remains zero for mainline templates; arch92 uses it to select SIMD DMA.
 // 模板参数声明
 ASCENDC_TPL_ARGS_DECL(IndexPutV2,
                       ASCENDC_TPL_DTYPE_DECL(X_DTYPE, 0, INDEX_PUT_V2_TPL_B8, INDEX_PUT_V2_TPL_B16,
@@ -40,6 +41,13 @@ ASCENDC_TPL_ARGS_DECL(IndexPutV2,
                       ASCENDC_TPL_DTYPE_DECL(FULL_LOAD_TYPE, 0), ASCENDC_TPL_BOOL_DECL(IS_PERF, 0, 1),
                       ASCENDC_TPL_BOOL_DECL(IS_SIMD, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_NOCON, 0, 1),
                       ASCENDC_TPL_BOOL_DECL(IS_ACCUMULATE, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_OVERLENGTH, 0, 1));
+
+// Host tiling describes both paths; device compilation enables DMA only on DAV_9201.
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 9201)
+#define INDEX_PUT_V2_DMA_SEL ASCENDC_TPL_BOOL_SEL(IS_PERF, 0)
+#else
+#define INDEX_PUT_V2_DMA_SEL ASCENDC_TPL_BOOL_SEL(IS_PERF, 0, 1)
+#endif
 
 // 模板选择器
 ASCENDC_TPL_SEL(
@@ -61,10 +69,12 @@ ASCENDC_TPL_SEL(
 
     // index_put_v2_simd_tiling.cpp: SIMD 模板
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY), ASCENDC_TPL_DTYPE_SEL(X_DTYPE, 0),
-                         ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, 0), ASCENDC_TPL_BOOL_SEL(IS_PERF, 0),
+                         ASCENDC_TPL_DTYPE_SEL(FULL_LOAD_TYPE, 0), INDEX_PUT_V2_DMA_SEL,
                          ASCENDC_TPL_BOOL_SEL(IS_SIMD, 1), ASCENDC_TPL_BOOL_SEL(IS_NOCON, 0),
                          ASCENDC_TPL_BOOL_SEL(IS_ACCUMULATE, 0, 1), ASCENDC_TPL_BOOL_SEL(IS_OVERLENGTH, 0),
                          ASCENDC_TPL_TILING_STRUCT_SEL(IndexPutV2SimdTilingData)));
+
+#undef INDEX_PUT_V2_DMA_SEL
 
 } // namespace IndexPutV2
 
