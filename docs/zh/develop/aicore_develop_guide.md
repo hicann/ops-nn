@@ -418,7 +418,7 @@ __aicore__ inline void AddExample<T>::Process()
    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list} [--experimental] [-j${n}]
    ```
 
-   - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR&950DT系列产品产品使用"ascend950"。
+   - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR&950DT系列产品使用"ascend950"。
    - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"--ops=add_example"。
    - --experimental（可选）：若编译的算子为贡献算子，需配置--experimental。
@@ -722,8 +722,7 @@ uint32_t blockDim = tilingInfo.blockNum;
 
 - 可使用`tests/ut/op_kernel/data_utils.h`的`ReadFile/WriteFile`读写二进制。
 - 结合`gen_data.py`/`compare_data.py`脚本生成与比对数据，可参考以下脚本所在的数据目录：
-  [gen_data.py](../../../activation/clipped_swiglu/tests/ut/op_kernel/
-clipped_swiglu_data/gen_data.py)、
+  [gen_data.py](../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data/gen_data.py)、
   [compare_data.py](../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data/compare_data.py)。
 - 简单算子可直接在UT中计算期望值并比对。
     - 浮点比较建议使用`EXPECT_NEAR/ASSERT_NEAR`并设置合理容差。

@@ -25,12 +25,13 @@
 ### 目录结构介绍
 
 ```
-├── docs                        // 算子文档目录
-├── example                     // 调用示例目录
-├── op_host                     // host目录
-├── op_kernel                   // kernel目录
-└── tests                       // 测试用例目录
-└── SoftplusBackward.json       // SoftplusV2Grad算子原型定义json
+softplus_v2_grad/
+├── docs                        // 算子文档目录
+├── examples                    // 调用示例目录
+├── op_host                     // host目录
+├── op_kernel                   // kernel目录
+├── tests                       // 测试用例目录
+└── CMakeLists.txt              // 算子编译配置文件
 ```
 
 ### 环境要求
@@ -48,36 +49,38 @@
   - 执行编译
 
     ```bash
-    bash build.sh --pkg --soc=ascend910b --ops=softplus_v2_grad
+    bash build.sh --pkg --experimental --soc=ascend910b --ops=softplus_v2_grad
     ```
 
   - 部署算子包
 
     ```bash
-    ./build_out/cann-ops-nn-custom-linux.aarch64.run
+    ./build_out/cann-ops-nn-custom_linux-${arch}.run
     ```
 
 ### 算子调用
 
 <table>
-    <th>目录</th><th>描述</th>
-    <tr>
-        <td><a href="./examples/AclNNInvocationNaive"> AclNNInvocationNaive</td><td>通过aclnn调用的方式调用SoftplusV2Grad算子。</td>
-    </tr>
-    <tr>
-        <td><a href="./examples/ascendoptest"> ascendoptest</td><td>通过ascendoptest调用的方式调用SoftplusV2Grad算子。</td>
-    </tr>
+    <thead>
+        <tr><th>目录</th><th>描述</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="./examples/test_aclnn_softplus_v2_grad.cpp">test_aclnn_softplus_v2_grad</a></td>
+            <td>通过aclnn调用的方式调用SoftplusV2Grad算子。</td>
+        </tr>
+    </tbody>
 </table>
 
 ### 参考算子
 
-Abs：[ops-math/math/abs/README.md · CANN/ops-math - GitCode]
+Abs：[ops-math/math/abs/README.md](https://gitcode.com/cann/ops-math/blob/master/math/abs/README.md)
 
 ### 更新说明
 
 | 时间       | 更新事项     |
 | ---------- | ------------ |
-| 2025/11/17 | 新增本readme |
+| 2025/11/17 | 新增本README |
 | 2025/11/17 | 新增参考算子 |
 
 参考：
