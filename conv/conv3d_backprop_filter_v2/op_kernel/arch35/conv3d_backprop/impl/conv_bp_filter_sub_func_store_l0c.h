@@ -114,10 +114,10 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(Intf* self, const GlobalT
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
-    uint32_t numBaseNIncludeHwk = (c1hkwk + self->ctx.head_ >= self->ctx.hwK_) ?
-                                      (c1hkwk - (self->ctx.hwK_ - self->ctx.head_)) :
-                                      0;
-    uint64_t baseNIter = Ceil(numBaseNIncludeHwk, self->ctx.hwK_) + 1;
+    uint64_t c1hkwkPlusHead = c1hkwk + self->ctx.head_;
+    uint64_t baseNIter = Ceil((c1hkwkPlusHead >= self->ctx.hwK_) ? c1hkwkPlusHead - self->ctx.hwK_ : 0,
+                              self->ctx.hwK_) +
+                         1;
 
     for (uint64_t j = 0; j < baseNIter; j++) {
         self->ctx.tail_ = (c1hkwk - nValueSum + self->ctx.head_) > self->ctx.hwK_ ?
@@ -179,7 +179,10 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(Intf* self, const Gl
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
-    uint64_t baseNIter = Ceil(c1hkwk - (self->ctx.hwK_ - self->ctx.head_), self->ctx.hwK_) + 1;
+    uint64_t c1hkwkPlusHead = c1hkwk + self->ctx.head_;
+    uint64_t baseNIter = Ceil((c1hkwkPlusHead >= self->ctx.hwK_) ? c1hkwkPlusHead - self->ctx.hwK_ : 0,
+                              self->ctx.hwK_) +
+                         1;
 
     for (uint64_t j = 0; j < baseNIter; j++) {
         self->ctx.tail_ = (c1hkwk - nValueSum + self->ctx.head_) > self->ctx.hwK_ ?
@@ -238,7 +241,10 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(Intf* self,
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
-    uint64_t baseNIter = Ceil(c1hkwk - (self->ctx.hwK_ - self->ctx.head_), self->ctx.hwK_) + 1;
+    uint64_t c1hkwkPlusHead = c1hkwk + self->ctx.head_;
+    uint64_t baseNIter = Ceil((c1hkwkPlusHead >= self->ctx.hwK_) ? c1hkwkPlusHead - self->ctx.hwK_ : 0,
+                              self->ctx.hwK_) +
+                         1;
 
     for (uint64_t j = 0; j < baseNIter; j++) {
         self->ctx.tail_ = (c1hkwk - nValueSum + self->ctx.head_) > self->ctx.hwK_ ?
