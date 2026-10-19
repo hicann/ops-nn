@@ -283,6 +283,47 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
     return true;
 }
 
+//  逐层校验权重和偏置的shape
+static bool CheckLayerParams(const aclTensorList* params, int64_t numLayers, bool hasBias, uint64_t dScale,
+                             int64_t hiddenSize, int64_t inputSize)
+{
+    auto curLayerInputSize = inputSize;
+    uint64_t oneLayerParams = 2 * (hasBias ? 2 : 1) * dScale;
+    for (uint64_t i = 0; i < static_cast<uint64_t>(numLayers); i++) {
+        op::Shape expWiShape = {GRU_GATE_NUM * hiddenSize, curLayerInputSize};
+        op::Shape expWhShape = {GRU_GATE_NUM * hiddenSize, hiddenSize};
+        op::Shape expBShape = {GRU_GATE_NUM * hiddenSize};
+        for (uint64_t j = 0; j < dScale; j++) {
+            uint64_t offsets = i * oneLayerParams + j * oneLayerParams / 2;
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets], expWiShape, return false);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 1], expWhShape, return false);
+            if (hasBias) {
+                OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 2], expBShape, return false);
+                OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 3], expBShape, return false);
+            }
+        }
+        //  第2层起，输入shape变成[3H, D*H]
+        curLayerInputSize = dScale * hiddenSize;
+    }
+    return true;
+}
+
+//  校验训练模式下各门控中间结果的shape
+static bool CheckTrainOutShape(const aclTensorList* rOut, const aclTensorList* zOut, const aclTensorList* nOut,
+                               const aclTensorList* hnOut, const aclTensorList* hOut, int64_t timeStep,
+                               int64_t batchSize, int64_t hiddenSize)
+{
+    for (uint64_t i = 0; i < rOut->Size(); i++) {
+        op::Shape expShape = {timeStep, batchSize, hiddenSize};
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*rOut)[i], expShape, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*zOut)[i], expShape, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*nOut)[i], expShape, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hnOut)[i], expShape, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
+    }
+    return true;
+}
+
 static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
                        int64_t numLayers, bool train, bool bidirection, bool batchFirst, const aclTensor* output,
                        const aclTensor* hy, const aclTensorList* rOut, const aclTensorList* zOut,
@@ -300,28 +341,9 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     }
     //  W_ih[0] = 3H
     auto hiddenSize = (*params)[0]->GetViewShape().GetDim(0) / GRU_GATE_NUM;
-    auto curLayerInputSize = inputSize;
     uint64_t dScale = bidirection ? 2 : 1;
-    auto bScale = hasBias ? 2 : 1;
-    uint64_t oneLayerParams = 2 * bScale * dScale;
 
-    //  逐层校验
-    for (uint64_t i = 0; i < static_cast<uint64_t>(numLayers); i++) {
-        op::Shape expWiShape = {GRU_GATE_NUM * hiddenSize, curLayerInputSize};
-        op::Shape expWhShape = {GRU_GATE_NUM * hiddenSize, hiddenSize};
-        op::Shape expBShape = {GRU_GATE_NUM * hiddenSize};
-        for (uint64_t j = 0; j < dScale; j++) {
-            uint64_t offsets = i * oneLayerParams + j * oneLayerParams / 2;
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets], expWiShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 1], expWhShape, return false);
-            if (hasBias) {
-                OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 2], expBShape, return false);
-                OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*params)[offsets + 3], expBShape, return false);
-            }
-        }
-        //  第2层起，输入shape变成[3H, D*H]
-        curLayerInputSize = dScale * hiddenSize;
-    }
+    CHECK_RET(CheckLayerParams(params, numLayers, hasBias, dScale, hiddenSize, inputSize), false);
 
     if (hx != nullptr) {
         op::Shape expHxShape = {numLayers * static_cast<int64_t>(dScale), batchSize, hiddenSize};
@@ -337,14 +359,7 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hy, expHyShape, return false);
 
     if (train) {
-        for (uint64_t i = 0; i < rOut->Size(); i++) {
-            op::Shape expShape = {timeStep, batchSize, hiddenSize};
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*rOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*zOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*nOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hnOut)[i], expShape, return false);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
-        }
+        CHECK_RET(CheckTrainOutShape(rOut, zOut, nOut, hnOut, hOut, timeStep, batchSize, hiddenSize), false);
     }
     return true;
 }
@@ -528,6 +543,48 @@ static aclnnStatus CheckDataDimsAndListLength(const GruDataParamsIn& inputs, con
     return ACLNN_SUCCESS;
 }
 
+//  逐group校验权重和偏置的shape
+static aclnnStatus CheckGroupParamsShapes(const GruDataParamsIn& inputs, const GruDataInfo& info)
+{
+    op::Shape weightIhFirstLayerShape = {GRU_GATE_NUM * info.H, info.I};
+    op::Shape weightIhShape = {GRU_GATE_NUM * info.H, info.H * info.D};
+    op::Shape weightHhShape = {GRU_GATE_NUM * info.H, info.H};
+    op::Shape biasShape = {GRU_GATE_NUM * info.H};
+    for (int64_t group = INDEX_0; group < info.LD; group++) {
+        int64_t currOffset = group * info.groupLen;
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_0],
+                                                    ((group < info.D) ? weightIhFirstLayerShape : weightIhShape),
+                                                    return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_1], weightHhShape,
+                                                    return ACLNN_ERR_PARAM_INVALID);
+        if (inputs.hasBias) {
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_2], biasShape,
+                                                        return ACLNN_ERR_PARAM_INVALID);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_3], biasShape,
+                                                        return ACLNN_ERR_PARAM_INVALID);
+        }
+    }
+    return ACLNN_SUCCESS;
+}
+
+//  校验训练模式下各门控中间结果的shape
+static aclnnStatus CheckTrainGateShapes(const GruDataParamsOut& outputs, const GruDataInfo& info)
+{
+    aclnnStatus ret;
+    op::Shape gateShape2d = {info.totalValidSteps, info.H};
+    ret = CheckTensorListShape(outputs.rOut, gateShape2d, "rOut");
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = CheckTensorListShape(outputs.zOut, gateShape2d, "zOut");
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = CheckTensorListShape(outputs.nOut, gateShape2d, "nOut");
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = CheckTensorListShape(outputs.hnOut, gateShape2d, "hnOut");
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = CheckTensorListShape(outputs.hOut, gateShape2d, "hOut");
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    return ACLNN_SUCCESS;
+}
+
 //  PackedSequence模式的shape校验
 static aclnnStatus CheckDataShapes(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs, GruDataInfo& info)
 {
@@ -560,28 +617,11 @@ static aclnnStatus CheckDataShapes(const GruDataParamsIn& inputs, const GruDataP
         info.H = info.H / INDEX_2;
     }
 
-    op::Shape weightIhFirstLayerShape = {GRU_GATE_NUM * info.H, info.I};
-    op::Shape weightIhShape = {GRU_GATE_NUM * info.H, info.H * info.D};
-    op::Shape weightHhShape = {GRU_GATE_NUM * info.H, info.H};
-    op::Shape biasShape = {GRU_GATE_NUM * info.H};
+    ret = CheckGroupParamsShapes(inputs, info);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     op::Shape hxShape = {info.D * info.L, info.B, info.H};
     op::Shape hyShape = {info.LD, info.B, info.H};
-
-    for (int64_t group = INDEX_0; group < info.LD; group++) {
-        int64_t currOffset = group * info.groupLen;
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_0],
-                                                    ((group < info.D) ? weightIhFirstLayerShape : weightIhShape),
-                                                    return ACLNN_ERR_PARAM_INVALID);
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_1], weightHhShape,
-                                                    return ACLNN_ERR_PARAM_INVALID);
-        if (inputs.hasBias) {
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_2], biasShape,
-                                                        return ACLNN_ERR_PARAM_INVALID);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_3], biasShape,
-                                                        return ACLNN_ERR_PARAM_INVALID);
-        }
-    }
-
     if (inputs.hx) {
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(inputs.hx, hxShape, return ACLNN_ERR_PARAM_INVALID);
     }
@@ -591,16 +631,7 @@ static aclnnStatus CheckDataShapes(const GruDataParamsIn& inputs, const GruDataP
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.hy, hyShape, return ACLNN_ERR_PARAM_INVALID);
 
     if (inputs.train) {
-        op::Shape gateShape2d = {info.totalValidSteps, info.H};
-        ret = CheckTensorListShape(outputs.rOut, gateShape2d, "rOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CheckTensorListShape(outputs.zOut, gateShape2d, "zOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CheckTensorListShape(outputs.nOut, gateShape2d, "nOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CheckTensorListShape(outputs.hnOut, gateShape2d, "hnOut");
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CheckTensorListShape(outputs.hOut, gateShape2d, "hOut");
+        ret = CheckTrainGateShapes(outputs, info);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
     return ACLNN_SUCCESS;
