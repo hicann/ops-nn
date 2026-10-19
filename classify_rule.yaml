@@ -106,12 +106,18 @@ HPTG1@ops-nn:
                 - ops/ops-nn/index/broadcast_gradient_args/op_host/arch35/
                 - ops/ops-nn/index/broadcast_gradient_args/op_kernel/arch35/
                 - ops/ops-nn/index/broadcast_gradient_args/docs/
+                - ops/ops-nn/norm/rms_norm_hi_f4_quant/
+                - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/
             opensource_style: null
             kernel_style: null
         unrelease:
             test_code:
                 - ops/ops-nn/index/broadcast_gradient_args/examples/
                 - ops/ops-nn/index/broadcast_gradient_args/tests/
+                - ops/ops-nn/norm/rms_norm_hi_f4_quant/tests/
+                - ops/ops-nn/norm/rms_norm_hi_f4_quant/examples/
+                - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/tests/
+                - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/examples/
             non_delivery: null
             open_source: null
 

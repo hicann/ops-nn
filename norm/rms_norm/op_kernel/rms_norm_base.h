@@ -33,7 +33,8 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 #endif
 }
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310 && \
+    __CCE_AICORE__ != 920
 #define bfloat16_t int16_t
 #endif
 constexpr int32_t BUFFER_NUM = 1;        // tensor num for each queue
