@@ -10,7 +10,7 @@
 
 /*!
  * \file cross_entropy_sum_exp_and_index_logit_def.cpp
- * \brief A5 (ascend950) op def — vocab 并行 CrossEntropy 本地计算融合算子
+ * \brief op def — vocab 并行 CrossEntropy 本地计算融合算子
  */
 #include "register/op_def_registry.h"
 
@@ -68,7 +68,6 @@ public:
         this->Attr("vocab_start_index").AttrType(REQUIRED).Int();
         this->Attr("vocab_end_index").AttrType(REQUIRED).Int();
 
-        // AICore 配置：仅 ascend950 (A5)，Input/Output 已由上方算子原型定义
         OpAICoreConfig config_950;
         config_950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
@@ -82,6 +81,7 @@ public:
 
         this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend350", config_950);
+        this->AICore().AddConfig("ascend960dt", config_950);
     }
 };
 

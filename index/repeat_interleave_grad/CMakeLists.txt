@@ -8,9 +8,9 @@
 #/
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350")
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350" "ascend960dt")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE repeat_interleave_grad ACLNNTYPE aclnn COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)
 
 add_kernel_sources(
@@ -22,7 +22,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC repeat_interleave_grad_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )
