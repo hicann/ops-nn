@@ -8,8 +8,8 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR&950DT系列产品</term>                      |    √     |
-| <term>Atlas A3 系列产品</term>                               |    √     |
-| <term>Atlas A2 系列产品</term>                               |    √     |
+| <term>Atlas A3系列产品</term>                               |    √     |
+| <term>Atlas A2系列产品</term>                               |    √     |
 | <term>Atlas 200I/500 A2推理产品</term>                       |    ×     |
 | <term>Atlas 推理系列产品</term>                              |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
@@ -144,7 +144,7 @@ $$
 <tbody>
   <tr>
     <td>图模式调用</td>
-    <td><a>-</a></td>
+    <td><a href="./examples/test_geir_sparse_apply_adagrad.cpp">test_geir_sparse_apply_adagrad.cpp</a></td>
     <td>通过<a href="./op_graph/sparse_apply_adagrad_proto.h">算子IR</a>构图方式调用SparseApplyAdagrad算子。</td>
   </tr>
   <tr>
@@ -154,3 +154,9 @@ $$
   </tr>
 </tbody>
 </table>
+
+参考[Kernel调用](../../docs/zh/invocation/quick_op_invocation.md)中的图模式调用说明，安装算子包后执行：
+
+```bash
+bash build.sh --run_example sparse_apply_adagrad graph --soc=ascend950
+```
