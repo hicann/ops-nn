@@ -44,6 +44,7 @@ GraphPtr BuildDepthwiseGraph(const char* graphName, const DepthwiseConv2DConfig&
 
 const SocConfig kMc62SocConfig = SocConfig::MC62();
 const SocConfig kNonNdSocConfig("Ascend910B", "Ascend910B1");
+const SocConfig kAscend350SocConfig("Ascend350", "Ascend350_355e");
 } // namespace
 
 class DepthwiseToConv2dFusionPassTest : public testing::Test {
@@ -103,6 +104,9 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_fusion_success)
                                       {-1, 256, 256, 4})},
         {"dynamic_nchw_with_bias", nullptr, DepthwiseConv2DConfig::Basic("depthwise_conv2d").WithBias()},
         {"static_nchw_mc62", &kMc62SocConfig,
+         DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT16, FORMAT_NCHW, {1, 16, 256, 256}, {1, 1, 1, 64},
+                                      {1, 4, 256, 256})},
+        {"static_nchw_ascend350", &kAscend350SocConfig,
          DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT16, FORMAT_NCHW, {1, 16, 256, 256}, {1, 1, 1, 64},
                                       {1, 4, 256, 256})},
     };

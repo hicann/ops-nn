@@ -29,7 +29,7 @@ constexpr int32_t MAX_DIM_NUM = 4;
 constexpr int32_t FMAP_CHANNEL_NCHW_INDEX = 1;
 constexpr int32_t FMAP_CHANNEL_NHWC_INDEX = 3;
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
 } // namespace DepthwiseToConv2dFusion
 
 class __attribute__((visibility("default"))) DepthwiseToConv2dFusionPass : public ge::fusion::DecomposePass {

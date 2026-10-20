@@ -15,6 +15,18 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+
+def _numpy_hifloat8():
+    try:
+        from ttk.utilities import numpy_hifloat8
+
+        return numpy_hifloat8()
+    except ImportError:
+        from ttk.utilities.dtypes import resolve_numpy_dtype
+
+        return resolve_numpy_dtype("hifloat8")
+
+
 __golden__ = {
     "aclnn": {
         "aclnnConvolution": "aclnn_convolution_golden",
@@ -413,9 +425,7 @@ def _compute_conv_forward(
         out = out + bias_expanded.to(out.dtype)
 
     if "hifloat8" in input_dtype_str or "hifloat8" in weight_dtype_str:
-        from ttk.utilities import numpy_hifloat8
-
-        out = torch.from_numpy(out.numpy().astype(numpy_hifloat8()).astype(np.float32))
+        out = torch.from_numpy(out.numpy().astype(_numpy_hifloat8()).astype(np.float32))
 
     return out
 
@@ -488,9 +498,7 @@ def aclnn_convolution_golden(
     output_dtype = kwargs.get("tensor_dtypes")[output_tensor_index]
 
     if output_dtype == "hifloat8":
-        from ttk.utilities import numpy_hifloat8
-
-        out = out.numpy().astype(numpy_hifloat8(), copy=False)
+        out = out.numpy().astype(_numpy_hifloat8(), copy=False)
     elif output_dtype == "float8_e4m3fn":
         out = out.to(torch.float8_e4m3fn)
     else:
@@ -577,11 +585,10 @@ def aclnn_conv_tbc_golden(
     if tensor_dtypes:
         out_dtype = tensor_dtypes[-1]
         if out_dtype in ("hifloat8", "float8_e4m3fn", "float8_e5m2"):
-            from ttk.utilities import numpy_hifloat8
             import ml_dtypes
 
             np_dtype_map = {
-                "hifloat8": numpy_hifloat8(),
+                "hifloat8": _numpy_hifloat8(),
                 "float8_e4m3fn": ml_dtypes.float8_e4m3fn,
                 "float8_e5m2": ml_dtypes.float8_e5m2,
             }
@@ -680,9 +687,7 @@ def aclnn_conv_depthwise2d_golden(
     output_tensor_index = kwargs.get("output_tensor_indexes", [-1])[0]
     output_dtype = kwargs.get("tensor_dtypes")[output_tensor_index]
     if output_dtype == "hifloat8":
-        from ttk.utilities import numpy_hifloat8
-
-        out = out.numpy().astype(numpy_hifloat8(), copy=False)
+        out = out.numpy().astype(_numpy_hifloat8(), copy=False)
     else:
         dtype_map = {
             "bfloat16": torch.bfloat16,
@@ -906,11 +911,10 @@ def aclnn_quant_conv_golden(
         return out_np
 
     if dtype_name in np_float8_dtypes:
-        from ttk.utilities import numpy_hifloat8
         import ml_dtypes
 
         np_dtype_map = {
-            "hifloat8": numpy_hifloat8(),
+            "hifloat8": _numpy_hifloat8(),
             "float8_e4m3fn": ml_dtypes.float8_e4m3fn,
             "float8_e5m2": ml_dtypes.float8_e5m2,
         }
