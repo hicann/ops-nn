@@ -90,7 +90,7 @@ aclnnStatus aclnnKthvalue(
         <td>k</td>
         <td>输入</td>
         <td>Host侧的整型，表示取指定维度上第k个最小值。</td>
-        <td><ul><li>取值范围为[0, self.size(dim)]。</li></ul></td>
+        <td><ul><li>取值范围为[1, self.size(dim)]。</li></ul></td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnKthvalue(
       <td>dim的取值不在输入tensor self的维度范围中。</td>
       </tr>
       <tr>
-      <td>k小于0或者k大于输入self在dim维度上的size大小。</td>
+      <td>k小于等于0或者k大于输入self在dim维度上的size大小。</td>
       </tr>
     </tbody>
     </table>
