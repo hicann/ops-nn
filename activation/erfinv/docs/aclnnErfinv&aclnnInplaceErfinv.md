@@ -109,7 +109,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>erfinv计算的出参。对应计算公式中的y。</td>
-      <td>shape需要与self一致。</td>
+      <td><ul><li>shape需要与self一致。</li><li>self为FLOAT/FLOAT16/BFLOAT16时，out与self的数据类型一致；self为整型时，out仅支持FLOAT。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
