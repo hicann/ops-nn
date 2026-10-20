@@ -11,7 +11,6 @@
  * \file multi_add_rms_norm_dynamic_quant.cpp
  * \brief
  */
-#include "multi_add_rms_norm_dynamic_quant_regbase.h"
 #include "multi_add_rms_norm_dynamic_quant_regbase_perf.h"
 #include "multi_add_rms_norm_dynamic_quant_regbase_split_reduce.h"
 #include "multi_add_rms_norm_dynamic_quant_regbase_single_row.h"
@@ -22,10 +21,14 @@ using namespace AscendC;
 #define TILING_KEY_UNRUN 199
 
 // 相对参照 add_rms_norm_dynamic_quant:去 beta 输入、增 y 输出(RmsNorm 结果),x1 为 TensorList。
-#define INIT_AND_PROCESS_WORKSPACE                                                                                 \
-    do {                                                                                                           \
-        op.Init(x1, x2, gamma, smooathScale1, smooathScale2, y1, y2, x, y, scale1, scale2, workspace, tilingData); \
-        op.Process();                                                                                              \
+// workspace 入参是整块基址, 前 RESERVED_WORKSPACE(2201/3510 下为 16MB)是框架系统区(dump/KFC 等),
+// 用户临时数据必须从 GetUserWorkspace(workspace) 起写, 否则一旦开 ASCENDC_DUMP 或引入 lib-API 即互踩。
+// tiling 申报的就是"系统区 + 用户区"(tiling_arch35.cpp DEFAULT_SYS_WORKSPACE), 此处按约定取用户区。
+#define INIT_AND_PROCESS_WORKSPACE                                                                                    \
+    do {                                                                                                              \
+        GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);                                                  \
+        op.Init(x1, x2, gamma, smooathScale1, smooathScale2, y1, y2, x, y, scale1, scale2, usrWorkspace, tilingData); \
+        op.Process();                                                                                                 \
     } while (0)
 
 #define INIT_AND_PROCESS                                                                                \
@@ -49,9 +52,6 @@ extern "C" __global__ __aicore__ void multi_add_rms_norm_dynamic_quant(GM_ADDR x
         const MultiAddRmsNormDynamicQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
         if (TILING_KEY_IS(100)) {
             KernelMultiAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(101)) {
-            KernelMultiAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1> op(&pipe);
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(102)) {
             KernelMultiAddRmsNormDynamicQuantRegbaseSingleRow<DTYPE_X1, DTYPE_Y1> op(&pipe);

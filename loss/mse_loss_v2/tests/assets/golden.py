@@ -78,30 +78,35 @@ def _reduction_str(v):
     return _REDUCTION_NUM2STR[int(v)]
 
 
-def _f32_floor(t):
-    """fp16/bf16 抬 fp32（CPU half 支持残缺，且与 NPU 内核 fp32 计算一致）；
-    fp32/fp64 照单全收——cross_check 场景框架按 golden_mode=Promote 自动把输入抬一档
-    （fp32→fp64），golden 不自行 cast、不替框架做精度决策（砍回 fp32 会废掉 Promote）。
+def _work_dtype(*tensors):
+    """计算 dtype：任一输入已是 fp64（即 TTK 的 Promote 抬过）则全程 fp64，否则 fp32。
+
+    **golden 绝不自行抬档**：
+      · 三方档 TTK 设 `golden_mode_override="Promote"` 已把输入抬一档，抬真值是**工具的
+        职责**，golden 照单全收即「零 cast」；
+      · 两方泛化档 TTK 不抬，golden 按**内核的加宽行为**走 —— 本算子内核
+        `mse_loss_v2.h` 的 `NEED_CAST = !is_same<T_IN,float>` + 显式 `Cast` 到
+        `LocalTensor<float>`，U = fp32。
+    两档合起来即「到手 dtype 与 U 取更宽」。
     """
-    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+    for t in tensors:
+        if t is not None and getattr(t, "dtype", None) == torch.float64:
+            return torch.float64
+    return torch.float32
 
 
 def _compute(input, target, **kwargs):
     """torch.Tensor 进 / 出，返回 list[Tensor]（舍回输出 dtype 由各路壳负责）。
 
-    归约在 **float64** 上做: golden 是仲裁真值, 必须比被测两腿都准。
-    kernel/aclnn 通路有 golden_mode=Promote 把输入抬到 fp64, 这里是空操作;
-    **e2e 通路的 Promote 实测没生效**(framework_api/golden_generation.py 自带一条
-    "flat_dtypes 取不到就原样返回、Promote 空转" 的静默路径), golden 停在 fp32 后:
-      · ±1e18 档先求和再除会溢出 → golden 自己变 inf(实测 e2e_0055);
-      · 与同为 fp32 的三方腿算出**逐位相同**的值 → |三方-golden|=0, 比值分母塌陷
-        → rmse 比值虚高判红(实测 e2e_0235, golden 与三方同为 2437.4717)。
-    两种都不是 NPU 的问题, 是参照腿失去了仲裁能力。
+    计算精度 = `_work_dtype`，零 cast。
+    golden 不自行抬档: 到手 fp64 就算 fp64, 否则按内核的计算类型 fp32。
+    (framework_api/golden_generation.py 的 flat_dtypes 静默路径)，golden 停在 fp32 会与
+    同精度三方腿逐位相同」。那是**拿 golden 去补工具的缺陷**，违反
+    该问题的归属见 TTK 那条静默路径，或 e2e 不声明 cross_check）。
     """
     reduction = _reduction_str(_attr(kwargs, "reduction", "mean"))
-    x64 = _f32_floor(input).to(torch.float64)
-    t64 = _f32_floor(target).to(torch.float64)
-    y = F.mse_loss(x64, t64, reduction=reduction)
+    w = _work_dtype(input, target)
+    y = F.mse_loss(input.to(w), target.to(w), reduction=reduction)
     return [y]
 
 
@@ -115,7 +120,7 @@ def _to_torch(arr):
 
 
 def _third_party_mse(input, target, reduction):
-    """三方腿的 mse：按 §五 四格对照表「浮点 + 三方」那一行实现。
+    """三方腿的 mse: 按三方腿的实现约定给出。
 
     规则原文：**GPU（三方腿）按 NPU 加宽行为同步 cast，出口对应窄回**。
     此前这里是直接 `F.mse_loss(input, target)` 按原 dtype 算，两处不符：
@@ -124,32 +129,24 @@ def _third_party_mse(input, target, reduction):
        `intermediate_dtype: float32`），三方腿却在 fp16 上累加 —— 实测 q0170
        (fp16, ±180, 1048576 元素) 累加和 2.29e10 远超 fp16 上限 65504，三方腿返回 inf，
        而 NPU 与 fp64 golden 都是 21792.0。
-    ② **mean 的运算序列与 NPU 不等价**。NPU 在求和完成前就除以 N；三方腿先求和再除，
+    ② **mean 的运算序列与 NPU 不等价**。NPU 在求和完成前就除以 N；三方腿先求和再除
        中间和会涨到 N 倍 —— 实测 q0178 (fp32, ±1e18, 14512 元素) 中间和 1.43e40 超
        fp32 上限 3.4e38，任何"先求和再除"的 fp32 实现都必然 inf，而真值 9.85e35 在
        fp32 完全可表示，NPU 也算出来了。
 
-    两处都会让三方腿吐 inf，而 cross_check 是三腿比值判据，分母 |三方−golden| 无定义
-    → mare/mere/rmse 全 None、整条用例判不了。**这是参照腿的缺陷，不是算子的**。
-
-    ⚠ 独立性未破（§六之二 V1 / lamb 七算子那个坑）：加宽只改精度落点、不改 torch 自己的
-    归约顺序，实测 fp32 档误差仍在 1e-8~1e-7 且多数用例与改前不同值，fp16 档误差 ~1e-4
-    由输出 cast 主导 —— 不是"两腿同构、三比值恒 1.0"的退化。
+    ②（已撤回）此处曾手写"先除 N 再累加"以对齐 NPU 的归约序列，理由是 q0178
+       (fp32, ±1e18, 14512 元素) 下 `F.mse_loss` 先求和再除，中间和 1.43e40 超 fp32 上限
+       3.4e38 → 返回 inf，而真值 9.85e35 在 fp32 可表示、NPU 也算得出。
+       但手写等于**脱离竞品的真实 API**（违反 V5）**并复制内核的运算序列**（削弱 V1 独立性）
+       属 未覆盖的"竞品自身溢出"，不该在三方腿里绕。已改回直调 `F.mse_loss`：
+       该档若因竞品溢出而判不了，就如实暴露，由规范定取舍。
     """
     out_dt = input.dtype
     # 按 NPU 的加宽行为: fp16/bf16 → fp32; fp32/fp64 保持原样(不得反向窄化)
     work = torch.float32 if out_dt in (torch.float16, torch.bfloat16) else out_dt
-    a, b = input.to(work), target.to(work)
-    d = (a - b) ** 2
-    red = _reduction_str(reduction)
-    if red == "mean":
-        # 先除 N 再累加, 与 NPU 的归约序列对齐(NPU 在跨核合并前已除 N)
-        d = d / torch.tensor(float(d.numel()), dtype=work, device=d.device)
-        out = d.sum()
-    elif red == "sum":
-        out = d.sum()
-    else:
-        out = d
+    out = F.mse_loss(
+        input.to(work), target.to(work), reduction=_reduction_str(reduction)
+    )
     return out.to(out_dt)
 
 
@@ -171,9 +168,9 @@ class _MseLossAclnnCompose:
     """aclnn 通路三方标杆（aclnnMseLoss）：输入名取 aclnn 头文件（self/target）、
     reduction 为 int64(0=none/1=mean/2=sum)。
 
-    ⚠️ `self` 仅位置参数：aclnn 首参名就叫 self，服务端按名绑定时 self=<tensor>
+    `self` 仅位置参数: aclnn 首参名就叫 self, 服务端按名绑定时 self=<tensor>
     会以关键字进 **_；若方法的 self 是常规位置关键字参数，调用即撞名
-    "got multiple values for argument 'self'"。positional-only 声明后，
+    "got multiple values for argument 'self'"。positional-only 声明后
     关键字 self 只能落进 **kw，不撞实例参数。__init__/__call__ 都同理要加。
     """
 
@@ -198,10 +195,10 @@ def _inject_nonfinite(input, target, testcase_name=""):
     """DFX-nonfinite 档的定点注入：只对用例名含 `_nonfinite` 的用例生效。
 
     为什么不能靠 CSV 的 input_data_ranges 写 inf/nan：TTK 的 RandomData 会把值域里的
-    inf/nan **钳到 dtype 极值**（ttk/utilities/data.py `_digitize_inf_nan`），
+    inf/nan **钳到 dtype 极值**（ttk/utilities/data.py `_digitize_inf_nan`）
     写了也造不出非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
 
-    注入位置固定（首元素 +inf、次元素 -inf、第三个 nan，各自在 input/target 上错开），
+    注入位置固定（首元素 +inf、次元素 -inf、第三个 nan，各自在 input/target 上错开）
     不随机：随机会让复现依赖 seed，且小 shape 时可能一个都注不进去。
     元素数 < 4 的用例不注入（位置放不下，注入会把整个张量变成非有限，失去"传播"这一档的意义）。
 
@@ -266,7 +263,7 @@ class MseLossV2AclnnSpec:
 class MseLossV2TorchSpec:
     """e2e 通路 spec（torch.nn.functional.mse_loss）：golden 收已 H2D 的 torch.Tensor。
 
-    ⚠️ 签名按 torch API 全参数序：框架按 param plan **位置**传全量参数
+    签名按 torch API 全参数序：框架按 param plan **位置**传全量参数
     （input, target, size_average, reduce, reduction），少声明会报"6 were given"。
     """
 

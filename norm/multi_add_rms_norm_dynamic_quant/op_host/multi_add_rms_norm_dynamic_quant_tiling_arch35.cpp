@@ -76,14 +76,21 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::Da
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckShapeNull.");
-    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 按 IR 索引取: GE 把动态输入追加到静态输入之后(端口序 x2, gamma, x1),
     // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
     const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
     const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
     const gert::StorageShape* gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
 
-    OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
+    // 逐指针报出"哪一个为空", 比"x1/x2/gamma/x 之一为空"可定位; 仍只有一条日志(命中即返回)
+    const char* nullName = (nullptr == x1Shape)    ? "x1" :
+                           (nullptr == x2Shape)    ? "x2" :
+                           (nullptr == gammaShape) ? "gamma" :
+                           (nullptr == xShape)     ? "x" :
+                                                     nullptr;
+    OP_CHECK_IF(nullName != nullptr,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName.c_str(), nullName, "null", "shape must not be null"),
                 return false);
     return true;
 }
@@ -97,17 +104,24 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
     const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
     const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
     tilingParams.quantBufCnt = 0;
-    if (smoothScale1Shape != nullptr) {
+    // 可选输入"存在"的判据与 infershape(CheckOptionalShapeExisting: nullptr 或 GetShapeSize()<=0 均视为不存在)
+    // 保持一致: 只判指针非空会把"已连接但零元素"的 smooth 当成存在, 后续在 CheckShapeSame 里报成"形状不等",
+    // 诊断指向错误原因。
+    auto smoothExisting = [](const gert::StorageShape* shape) -> bool {
+        return (shape != nullptr) && (shape->GetStorageShape().GetShapeSize() > 0);
+    };
+    if (smoothExisting(smoothScale1Shape)) {
         tilingParams.hasSmoothScale1 = true;
         tilingParams.quantBufCnt++;
     }
-    if (smoothScale2Shape != nullptr) {
+    if (smoothExisting(smoothScale2Shape)) {
         tilingParams.hasSmoothScale2 = true;
         tilingParams.quantBufCnt++;
     }
-    if (betaShape != nullptr) {
-        tilingParams.hasBeta = true;
-    }
+    // beta 不在本算子 IR 里(proto 只有 5 个输入), BETA_INDEX 探测的是未注册端口, 恒取不到 ⇒ hasBeta 恒 false。
+    // 保留字段以维持 TilingData 结构与内核模板实参不变, 但不再做这次无意义的探测。
+    (void)betaShape;
+    tilingParams.hasBeta = false;
     OP_CHECK_IF(!tilingParams.hasSmoothScale1 && tilingParams.hasSmoothScale2,
                 OP_LOGE(nodeName.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
     tilingParams.hasY2Scale2 = tilingParams.hasSmoothScale2;
@@ -117,7 +131,7 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeDim.");
-    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 按 IR 索引取: GE 把动态输入追加到静态输入之后(端口序 x2, gamma, x1),
     // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
     const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
     const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
@@ -145,14 +159,18 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
         return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
-    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(), , return false);
+    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName.c_str(), "gamma",
+                                                         std::to_string(gammaShape->GetStorageShape().GetDimNum()),
+                                                         "must be 1-dimensional"),
+                return false);
     return true;
 }
 
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeValue.");
-    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 按 IR 索引取: GE 把动态输入追加到静态输入之后(端口序 x2, gamma, x1),
     // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
     const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
     const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
@@ -203,10 +221,15 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8,
-                                                  ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
-    auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
-    auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
+    // 与 def.cpp 的注册保持一致: y1/y2 只注册了 DT_INT8(见 op_host/..._def.cpp 的 y1/y2 DataType 列表),
+    // 原先多列的 hifp8/fp8 组合既无 binary 配置也无内核分支, GE 不会递进来, 属冗余放宽。
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8};
+    const auto y1Desc = context_->GetOutputDesc(Y1_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, y1Desc);
+    const auto y2Desc = context_->GetOutputDesc(Y2_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, y2Desc);
+    auto y1DataType = y1Desc->GetDataType();
+    auto y2DataType = y2Desc->GetDataType();
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "MultiAddRmsNormDynamicQuant")) ||
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "MultiAddRmsNormDynamicQuant")) ||
         (y1DataType != y2DataType)) {
@@ -225,18 +248,28 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
     std::vector<ge::DataType> supportedXGammaDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
     std::vector<ge::DataType> supportedSmoothScaleDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
 
-    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 按 IR 索引取: GE 把动态输入追加到静态输入之后(端口序 x2, gamma, x1),
     // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
-    ge::DataType x1Dtype = context_->GetDynamicInputTensor(X1_INDEX, 0)->GetDataType();
-    ge::DataType x2Dtype = context_->GetRequiredInputTensor(X2_INDEX)->GetDataType();
-    ge::DataType gammaDtype = context_->GetRequiredInputTensor(GAMMA_INDEX)->GetDataType();
+    const auto x1Tensor0 = context_->GetDynamicInputTensor(X1_INDEX, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x1Tensor0);
+    const auto x2Tensor = context_->GetRequiredInputTensor(X2_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x2Tensor);
+    const auto gammaTensor = context_->GetRequiredInputTensor(GAMMA_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaTensor);
+    ge::DataType x1Dtype = x1Tensor0->GetDataType();
+    ge::DataType x2Dtype = x2Tensor->GetDataType();
+    ge::DataType gammaDtype = gammaTensor->GetDataType();
     ge::DataType smoothScale1Dtype = ge::DT_FLOAT;
     ge::DataType smoothScale2Dtype = ge::DT_FLOAT;
     if (tilingParams.hasSmoothScale1) {
-        smoothScale1Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE1_INDEX)->GetDataType();
+        const auto smooth1Tensor = context_->GetOptionalInputTensor(SMOOTH_SCALE1_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, smooth1Tensor);
+        smoothScale1Dtype = smooth1Tensor->GetDataType();
     }
     if (tilingParams.hasSmoothScale2) {
-        smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
+        const auto smooth2Tensor = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, smooth2Tensor);
+        smoothScale2Dtype = smooth2Tensor->GetDataType();
     }
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1, x2 and gamma",
@@ -287,9 +320,28 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
                 return ge::GRAPH_FAILED);
     tilingParams.x1Num = static_cast<uint32_t>(x1Num);
     // Set input dim(必需输入 gamma 位于 x1 列表之后,按 x1Num 偏移)
-    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 按 IR 索引取: GE 把动态输入追加到静态输入之后(端口序 x2, gamma, x1),
     // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
     const gert::Shape x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0)->GetStorageShape();
+    // x1 列表内各实例必须同 shape 同 dtype: 内核对每个实例复用实例 0 算出的 gmOffset/gmLen
+    // (op_kernel/arch35/..._regbase.h 的 x1GmList_ 设址), 实例形状更小会 GM 越界读。
+    const auto x1Desc0 = context_->GetDynamicInputDesc(X1_INDEX, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x1Desc0);
+    const ge::DataType x1Dtype0 = x1Desc0->GetDataType();
+    for (int64_t i = 1; i < x1Num; i++) {
+        const auto x1ShapeI = context_->GetDynamicInputShape(X1_INDEX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, x1ShapeI);
+        OP_CHECK_IF((x1ShapeI->GetStorageShape() != x1Shape),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName.c_str(), "x1-0, x1-" + std::to_string(i),
+                                                           "mismatched", "all x1 tensors must share one shape"),
+                    return ge::GRAPH_FAILED);
+        const auto x1DescI = context_->GetDynamicInputDesc(X1_INDEX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, x1DescI);
+        OP_CHECK_IF((x1DescI->GetDataType() != x1Dtype0),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1-0, x1-" + std::to_string(i),
+                                                           "mismatched", "all x1 tensors must share one dtype"),
+                    return ge::GRAPH_FAILED);
+    }
     const gert::Shape gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX)->GetStorageShape();
     size_t x1DimNum = x1Shape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
@@ -305,7 +357,9 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
     tilingParams.numN = numN;
 
     // Set input dtype(取 x1 列表首个张量 dtype)
-    auto xDataType = context_->GetDynamicInputTensor(X1_INDEX, 0)->GetDataType();
+    const auto xTensor0 = context_->GetDynamicInputTensor(X1_INDEX, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xTensor0);
+    auto xDataType = xTensor0->GetDataType();
     tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
     tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize;
     tilingParams.xReduceAlignNum = ALING_FACTOR_512 / tilingParams.xDtypeSize;
@@ -315,12 +369,25 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
+    // epsilon 是数据通路参数(进 tilingData 参与 rstd=1/sqrt(mean(x^2)+eps)): 指针必须判空,
+    // 取值域必须拒 <=0: 0 或负数会让 rstd = 1/sqrt(mean(x^2)+eps) 出 inf/NaN。
+    OP_CHECK_IF(epsilon == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName.c_str(), "epsilon", "null", "attr must be set"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((*epsilon <= 0.0f),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName.c_str(), "epsilon", std::to_string(*epsilon),
+                                                      "must be greater than zero"),
+                return ge::GRAPH_FAILED);
     tilingParams.epsilon = *epsilon;
-    tilingParams.needRun = true;
-    if ((0 == numN) || (0 == numM)) {
-        tilingParams.needRun = false;
-    }
-    tilingParams.avgFactor = (0 == numN) ? 0.0f : 1.0f / static_cast<float>(numN);
+    // 归约轴(末维)长度为 0 时 scale1/scale2 仍是 [numM] 的非空输出, 而其取值依赖对空集求
+    // mean(x^2) 与 amax(|x|), 无定义 ⇒ 拒收。numM 为 0(行方向为空)不在此列: 该形态下全部
+    // 输出均为空张量, 走 needRun=false 的空进空出。
+    OP_CHECK_IF(0 == numN,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName.c_str(), "x1", "0",
+                                                      "the last dim (reduce axis) must be greater than 0"),
+                return ge::GRAPH_FAILED);
+    tilingParams.needRun = (0 != numM);
+    tilingParams.avgFactor = 1.0f / static_cast<float>(numN);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -409,19 +476,12 @@ uint64_t MultiAddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM
         totalSize += 1 * baseNB32Align * sizeof(float); // y2Tmp
     }
 
-    if (TILING_TYPE_NORMAL == tilingType) {
-        totalSize += NUM_TWO * baseMB32Align * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
-            totalSize += 1 * baseMB32Align * sizeof(float); // scale2
-        }
-    } else {
-        totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
-            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
-        }
-        totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
-        totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
+    totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
+    if (tilingParams.hasY2Scale2) {
+        totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
     }
+    totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
+    totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
 
     return totalSize;
 }
@@ -513,7 +573,10 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling SetTilingParams.");
     tilingParams.powerLoop = 1;
 
-    if (TryPerfTiling() || TryNormTiling() || TrySingleRowTiling() || TrySplitTiling()) {
+    // NORMAL(key 101) 档已下线: 其单行 UB 开销(约 27N 且按 xReduceAlignNum 对齐)恒大于 PERF(约 26N),
+    // 首个装得下者胜的选档顺序下永远选不到它(真机 37 个形状实证零命中), 属不可达死档; 已连同
+    // op_kernel/arch35/..._regbase.h 模板与 101 分派分支一并移除, 避免"编得过、永远测不到"的分支继续积累缺陷。
+    if (TryPerfTiling() || TrySingleRowTiling() || TrySplitTiling()) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -535,35 +598,18 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::TryPerfTiling()
     return false;
 }
 
-bool MultiAddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
-{
-    uint64_t tmpUBSize = CalUBTotalSize(1, tilingParams.numN, TILING_TYPE_NORMAL);
-    if (tmpUBSize <= tilingParams.maxUbSize) {
-        tilingParams.baseN = tilingParams.numN;
-        uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN, TILING_TYPE_NORMAL);
-        uint64_t rstdCount = tilingParams.hasY2Scale2 ? 3 : 2; // rstd/scale1/scale2
-        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
-        tilingParams.baseM = 1;
-        if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
-            tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
-                                 (tmpUBSize - rstdRemainUBSize - justNUBSize + rstdCount * sizeof(float));
-        }
-        tilingParams.tilingType = TILING_TYPE_NORMAL;
-        return true;
-    }
-    return false;
-}
-
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
 {
-    auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
+    const auto yDesc = context_->GetOutputDesc(Y1_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
+    auto yDataType = yDesc->GetDataType();
     uint64_t yDtypeSize = GetSizeByDataType(yDataType);
     uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
     uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
     // single_row 内核 UB 精确记账(对应 regbase_single_row.h InitBuffer,禁魔法系数):
     //   D 相关 = D_aligned × (5 块 sizeof(T_X) + 2 块 sizeof(float));固定 = scalesQue(2×ROW_FACTOR×sizeof(float))。
     // 参照 add_rms_norm_dynamic_quant 曾按 16*D 固定系数估算,本算子 multi-add 变体多了 yOutQue+yBufFp32 →
-    // 手写系数漏算致 D∈(14506,16320] 溢出(泛化 D=15360 实测 NO_OUTPUT,bug#1)。改按 buffer 结构求和后,加 buffer
+    // 手写系数会漏算部分 buffer, 致 D∈(14506,16320] 溢出。改按 buffer 结构求和后, 加 buffer
     // 自动更新、不再漏。
     uint64_t singleRowUbSize = D_aligned * (SINGLE_ROW_XDTYPE_BUF_NUM * tilingParams.xDtypeSize +
                                             SINGLE_ROW_FP32_BUF_NUM * sizeof(float)) +
@@ -610,9 +656,21 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
         tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     }
 
-    tilingParams.mPerCore = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.totalCoreNum);
-    tilingParams.usedCoreNum = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.mPerCore);
-    tilingParams.mLastCore = tilingParams.numM - (tilingParams.usedCoreNum - 1) * tilingParams.mPerCore;
+    // 空 tensor(numM==0 || numN==0, 即 needRun==false): 内核走 TILING_KEY_UNRUN 的
+    // "Do nothing" 分支, 但 tiling 仍必须产出**合法的 block_dim** —— runtime 以 block_dim
+    // 启动核, <=0 不是有效的启动参数(kernel 直调通路会直接判为无效 tiling)。
+    // 同时短路掉 mPerCore = CeilDiv(0, totalCoreNum) = 0 之后再以 mPerCore 作除数这一步,
+    // 不依赖 CeilDiv 对零除数的具体语义。
+    // 对照正例: loss/poisson_nll_loss 的 totalIdx==0 分支注释写明 "block_dim stays 1"。
+    if (!tilingParams.needRun) {
+        tilingParams.mPerCore = 0;
+        tilingParams.usedCoreNum = 1;
+        tilingParams.mLastCore = 0;
+    } else {
+        tilingParams.mPerCore = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.totalCoreNum);
+        tilingParams.usedCoreNum = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.mPerCore);
+        tilingParams.mLastCore = tilingParams.numM - (tilingParams.usedCoreNum - 1) * tilingParams.mPerCore;
+    }
 
     ge::graphStatus res = SetTilingParams();
     OP_CHECK_IF(ge::GRAPH_SUCCESS != res, , return res);
@@ -623,11 +681,6 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
     tilingParams.baseNReduceAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xReduceAlignNum);
     uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (2 * tilingParams.vecLength);
     tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
-
-    if (TILING_TYPE_NORMAL == tilingParams.tilingType) {
-        uint64_t tmpPower = std::floor(std::log(tilingParams.baseNReduceAlign) / std::log(LOG_2));
-        tilingParams.powerSplit = std::pow(LOG_2, tmpPower);
-    }
 
     SetTilingData();
     PrintTilingData();

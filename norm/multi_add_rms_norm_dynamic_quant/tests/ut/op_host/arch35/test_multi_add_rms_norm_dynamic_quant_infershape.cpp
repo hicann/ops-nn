@@ -86,6 +86,45 @@ TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_known_shape)
     EXPECT_EQ(context->GetOutputShape(0)->GetDim(2), 11264);
 }
 
+// ascend950 分支:rank(x2) < rank(gamma) 时 InferReduceShape 返回 false(scale1 形状未被写入),
+// infershape 必须显式失败而不是带着未写的形状返回 SUCCESS 把错误推迟到 tiling。
+TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_x2_rank_less_than_gamma_fail)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("MultiAddRmsNormDynamicQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MultiAddRmsNormDynamicQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    // x2 为 1 维、gamma 为 2 维 ⇒ xDimNum(1) < gammaDimNum(2)
+    gert::StorageShape input_shape = {{11264}, {11264}};
+    gert::StorageShape gamma_shape = {{2, 11264}, {2, 11264}};
+    gert::StorageShape out_shape = {{11264}, {11264}};
+    gert::StorageShape reduce_shape = {{1}, {1}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(5, 6)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
+                      .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
+                      .NodeAttrs({
+                          {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                      })
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_FAILED);
+}
+
 // ascend950 分支:GE 图未知 rank(x2/gamma 为 [-2])时早返回 SUCCESS,不落入 InferReduceShape。
 TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_unknown_rank)
 {

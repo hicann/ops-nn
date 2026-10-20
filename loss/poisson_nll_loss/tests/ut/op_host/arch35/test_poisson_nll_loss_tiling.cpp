@@ -67,8 +67,12 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
 }
 
 // Run tiling for one case. When expectSuccess, also assert the parsed tilingData fields and key.
+// targetDtypeOv: 覆盖 target 的 dtype(默认 DT_UNDEFINED = 与 input_x 同 dtype)。
+// 用于验证"target 必须与 input_x 同 dtype": dtype 属 binary key, 混合组合在二进制匹配阶段
+// 就被挡掉、走不到 tiling, 故该校验只能在 host UT 取证。
 static void DoTilingCase(const std::vector<int64_t>& inDims, ge::DataType dtype, bool logInput, bool full, float eps,
-                         const std::string& reduction, bool expectSuccess, uint32_t expectReduction)
+                         const std::string& reduction, bool expectSuccess, uint32_t expectReduction,
+                         ge::DataType targetDtypeOv = ge::DT_UNDEFINED)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -105,7 +109,8 @@ static void DoTilingCase(const std::vector<int64_t>& inDims, ge::DataType dtype,
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
                       .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, (targetDtypeOv == ge::DT_UNDEFINED) ? dtype : targetDtypeOv, ge::FORMAT_ND,
+                                   ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"log_input", Ops::NN::AnyValue::CreateFrom<bool>(logInput)},
                                   {"full", Ops::NN::AnyValue::CreateFrom<bool>(full)},
@@ -147,15 +152,21 @@ static void DoTilingCase(const std::vector<int64_t>& inDims, ge::DataType dtype,
     EXPECT_EQ(td->totalNum, totalNum);
     if (expectReduction == REDUCTION_MEAN) {
         if (totalNum == 0) {
-            // empty tensor: meanCof = 1/0 = inf, so the kernel's total(0)*meanCof = nan (mean of empty).
-            EXPECT_TRUE(std::isinf(td->meanCof));
+            // 空 tensor 的 mean 由内核 0.0f/0.0f 得 nan, tiling 侧只需 totalNum==0。
         } else {
-            EXPECT_NEAR(td->meanCof, 1.0f / static_cast<float>(totalNum), 1e-9f);
         }
     }
 }
 
 // ---- reduction=none (large -> double buffer, key 256/257) ----
+// target 与 input_x dtype 不一致必须拒收。覆盖两个方向, 外加"同 dtype 必须过"的对照, 保证判据不恒红。
+TEST_F(PoissonNllLossTiling, target_dtype_mismatch_rejected)
+{
+    DoTilingCase({128, 128}, ge::DT_FLOAT, true, false, 1e-8f, "mean", false, REDUCTION_MEAN, ge::DT_FLOAT16);
+    DoTilingCase({128, 128}, ge::DT_FLOAT16, true, false, 1e-8f, "sum", false, REDUCTION_SUM, ge::DT_FLOAT);
+    DoTilingCase({128, 128}, ge::DT_FLOAT, true, false, 1e-8f, "mean", true, REDUCTION_MEAN, ge::DT_FLOAT);
+}
+
 TEST_F(PoissonNllLossTiling, none_fp32)
 {
     DoTilingCase({128, 128}, ge::DT_FLOAT, true, false, 1e-8f, "none", true, REDUCTION_NONE);
@@ -200,9 +211,8 @@ TEST_F(PoissonNllLossTiling, none_fp32_small_single_buffer)
     DoTilingCase({8, 8}, ge::DT_FLOAT, true, false, 1e-8f, "none", true, REDUCTION_NONE);
 }
 
-// ---- empty tensor is accepted (aligns with ascend910b/torch: none->empty output, sum->0, mean->nan) ----
-// The tiling must succeed for all reductions; the kernel produces the reduced scalar (sum=0,
-// mean=0*inf=nan) or an empty output (none). block_dim stays 1 for empty.
+// ---- empty tensor is accepted: none -> empty output, sum -> 0, mean -> nan ----
+// Tiling must succeed for all reductions; block_dim stays 1 for empty.
 TEST_F(PoissonNllLossTiling, empty_tensor_accepted_none)
 {
     DoTilingCase({0}, ge::DT_FLOAT, true, false, 1e-8f, "none", true, REDUCTION_NONE);
@@ -224,7 +234,7 @@ TEST_F(PoissonNllLossTiling, invalid_reduction_rejected)
     DoTilingCase({16, 16}, ge::DT_FLOAT, true, false, 1e-8f, "bogus", false, REDUCTION_NONE);
 }
 
-// ---- eps == 0 is rejected (guards log(input+eps); aligns with ascend910b entry gate) ----
+// ---- eps == 0 is rejected (guards log(input+eps)) ----
 TEST_F(PoissonNllLossTiling, eps_zero_rejected)
 {
     DoTilingCase({16, 16}, ge::DT_FLOAT, false, false, 0.0f, "mean", false, REDUCTION_MEAN);

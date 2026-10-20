@@ -49,7 +49,10 @@ constexpr int64_t DTYPE_LEN_FP32 = 4;
 constexpr int64_t FP32_WORK_BUF_BYTES = 4 * DTYPE_LEN_FP32;
 constexpr int64_t TARGET_BUF_BYTES = DTYPE_LEN_FP32;
 // 累加器 wfAcc | wbAcc | ceAcc | wtAcc | redTmp
-constexpr int64_t ACC_BUF_NUM = 5;
+// UB 的对齐粒度(32B): 行槽粒度 = 一个块能放的 float 数, 与 kernel 的 StoreAlign 约束一致
+constexpr int64_t UB_BLOCK_BYTES = 32;
+constexpr int64_t ROW_SLOT_ELEM = UB_BLOCK_BYTES / DTYPE_LEN_FP32;
+constexpr int64_t ACC_BUF_NUM = 8; // 4 个行标量 + 4 个低位残差
 constexpr int64_t ACC_ALIGN_ELEM = 8;
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
@@ -96,6 +99,7 @@ private:
     int64_t coreNum_ = 0;
     uint64_t ubSize_ = 0;
     int64_t vlFp32_ = 0;
+    ge::DataType predDtype_ = ge::DT_FLOAT;
     int64_t predDtypeLen_ = DTYPE_LEN_FP32;
     int64_t weightDtypeLen_ = 0;
     uint64_t hasWeight_ = 0;
@@ -111,6 +115,7 @@ ge::graphStatus SoftmaxFocalLossGradTiling::CheckDtypes()
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "pred", ToString(predDtype).c_str(), "FLOAT or FLOAT16"),
         return ge::GRAPH_FAILED);
     predDtypeLen_ = (predDtype == ge::DT_FLOAT) ? DTYPE_LEN_FP32 : DTYPE_LEN_FP16;
+    predDtype_ = predDtype;
 
     auto targetDesc = context_->GetInputDesc(INPUT_TARGET_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, targetDesc);
@@ -165,9 +170,11 @@ ge::graphStatus SoftmaxFocalLossGradTiling::CheckShapes()
         auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_IDX);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
         auto weightDtype = weightDesc->GetDataType();
-        OP_CHECK_IF((weightDtype != ge::DT_FLOAT && weightDtype != ge::DT_FLOAT16),
+        // def/binary.json 声明的两组组合按序对齐(f16,f16)/(f32,f32), weight 恒与 pred 同 dtype;
+        // 内核入口的 DTYPE_WEIGHT 兜底值依赖该前提, 故此处必须收成硬校验而非独立判 fp16/fp32。
+        OP_CHECK_IF((weightDtype != predDtype_),
                     OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight", ToString(weightDtype).c_str(),
-                                              "FLOAT or FLOAT16"),
+                                              "the same as pred dtype"),
                     return ge::GRAPH_FAILED);
         weightDtypeLen_ = (weightDtype == ge::DT_FLOAT) ? DTYPE_LEN_FP32 : DTYPE_LEN_FP16;
         OP_CHECK_IF((weightShape->GetStorageShape() != predShape->GetStorageShape()),
@@ -246,9 +253,14 @@ ge::graphStatus SoftmaxFocalLossGradTiling::CalUbSplit()
         uint32_t minValue = 0;
         AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
                                            minValue);
-        int64_t accBytes = ACC_BUF_NUM * Ops::Base::CeilAlign(tilingData_->rowsPerTile, ACC_ALIGN_ELEM) *
-                           DTYPE_LEN_FP32;
-        reserve = static_cast<int64_t>(maxValue) + accBytes;
+        // 末槽后留 vlFp32_ 的余量: 组合并一次读满一个向量长度
+        int64_t accBytes = vlFp32_ * DTYPE_LEN_FP32 +
+                           ACC_BUF_NUM * Ops::Base::CeilAlign(tilingData_->rowsPerTile, ACC_ALIGN_ELEM) *
+                               DTYPE_LEN_FP32;
+        // dfBuf: 组内行槽 hi/lo, 每行占 ROW_SLOT_ELEM 个 float(对齐要求)
+        // 四个累加量各有 hi/lo 行槽(四链交错版)
+        int64_t dfBytes = ACC_BUF_NUM * vlFp32_ * ROW_SLOT_ELEM * DTYPE_LEN_FP32;
+        reserve = static_cast<int64_t>(maxValue) + accBytes + dfBytes;
     }
     return ge::GRAPH_SUCCESS;
 }

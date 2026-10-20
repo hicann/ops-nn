@@ -29,7 +29,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../op_graph/poisson_nll_loss_proto.h"
+#include "../../op_graph/poisson_nll_loss_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -73,10 +73,16 @@ int32_t GenData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
     float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        std::cout << "Allocate host buffer failed, size: " << size << std::endl;
+        return FAILED;
+    }
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
+    // Tensor 构造按 data_len 做深拷贝, 这里的宿主缓冲用完即可释放, 不需要活到图执行。
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -128,8 +134,9 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     poissonNllLoss1.set_attr_eps(1e-8f);
     poissonNllLoss1.set_attr_reduction("mean");
 
-    // reduction=mean -> scalar output
-    std::vector<int64_t> lossShape = {1};
+    // reduction=mean -> scalar output(rank 0): infershape 走 SetDimNum(0)(见 op_host/..._infershape.cpp),
+    // 这里必须构 rank-0 的 desc, 写 {1} 会与算子推导出的 shape 不一致。
+    std::vector<int64_t> lossShape = {};
     TensorDesc loss_desc = TensorDesc(ge::Shape(lossShape), FORMAT_ND, inDtype);
     poissonNllLoss1.update_output_desc_loss(loss_desc);
 

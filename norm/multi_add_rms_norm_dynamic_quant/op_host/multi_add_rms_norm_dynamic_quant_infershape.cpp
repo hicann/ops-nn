@@ -106,10 +106,7 @@ static ge::graphStatus InferShape4MultiAddRmsNormDynamicQuant(gert::InferShapeCo
     const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
     bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
 
-    // A5(Ascend950/arch35)独立 infershape 分支:处理完直接 return,不落入下方 A2 代码;
-    // A2(910b/910_93/310p)逻辑逐字保持不变(见下方原始 gamma/smooth 校验与 InferReduceShape)。
-    // 注:拿不到 platform 或非 Ascend950 一律走 ascend910b 分支——ascend910b 行为不因 ascend950 适配而改变(含 UT faker
-    // 未灌 platform 场景)。
+    // Ascend950 走独立分支并直接返回; 拿不到 platform 或其它 soc 一律走下方原有逻辑, 行为不变。
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     bool isAscend950 = (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(
@@ -137,7 +134,12 @@ static ge::graphStatus InferShape4MultiAddRmsNormDynamicQuant(gert::InferShapeCo
             OP_LOGI(context, "End to do InferShape4MultiAddRmsNormDynamicQuant with unknown rank.");
             return ge::GRAPH_SUCCESS;
         }
-        InferReduceShape(x2Shape, gammaShape, outScale1Shape);
+        // rank(x2) < rank(gamma) 时 InferReduceShape 返回 false 且不写 outScale1Shape,
+        // 丢弃返回值会让错误推迟到 tiling 才报, 故在此收成显式失败。
+        OP_CHECK_IF(!InferReduceShape(x2Shape, gammaShape, outScale1Shape),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x2", "lower than gamma",
+                                                             "rank of x2 must not be less than rank of gamma"),
+                    return ge::GRAPH_FAILED);
         if (smooth2Exist) {
             *y2Shape = *x2Shape;
             *outScale2Shape = *outScale1Shape;

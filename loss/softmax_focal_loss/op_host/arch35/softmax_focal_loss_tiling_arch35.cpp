@@ -47,8 +47,12 @@ constexpr int64_t DTYPE_LEN_FP32 = 4;
 constexpr int64_t FP32_WORK_BUF_BYTES = 3 * DTYPE_LEN_FP32;
 constexpr int64_t TARGET_BUF_BYTES = DTYPE_LEN_FP32;
 // 累加器 ceAcc | fwAcc | redTmp | rowVal
-constexpr int64_t ACC_BUF_NUM = 4;
+constexpr int64_t ACC_BUF_NUM = 6; // ce/fw 的行标量 + 各自的低位残差
 constexpr int64_t ACC_ALIGN_ELEM = 8;
+// UB 的对齐粒度(32B): 行槽粒度 = 一个块能放的 float 数, 与 kernel 的 StoreAlign 约束一致
+constexpr int64_t UB_BLOCK_BYTES = 32;
+constexpr int64_t ROW_SLOT_ELEM = UB_BLOCK_BYTES / DTYPE_LEN_FP32;
+constexpr int64_t CE_FW_NUM = 2; // ce 与 fw 两个行标量
 // SIMD/SIMT 共用的 dcache, 与参照算子一致预留
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 constexpr int32_t TILING_ITER = 2;
@@ -204,7 +208,10 @@ ge::graphStatus SoftmaxFocalLossTiling::CalUbSplit()
                                            minValue);
         int64_t accBytes = ACC_BUF_NUM * Ops::Base::CeilAlign(tilingData_->rowsPerTile, ACC_ALIGN_ELEM) *
                            DTYPE_LEN_FP32;
-        reserve = static_cast<int64_t>(maxValue) + accBytes;
+        // dfBuf: 精确行求和的 (hi, lo) 车道暂存
+        // ce/fw 各一组行槽(hi/lo), 每行 ROW_SLOT_ELEM 个 float
+        int64_t dfBytes = CE_FW_NUM * 2 * vlFp32_ * ROW_SLOT_ELEM * DTYPE_LEN_FP32;
+        reserve = static_cast<int64_t>(maxValue) + accBytes + dfBytes;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -287,14 +294,13 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
             tilingData_->alpha = *alpha;
         }
     }
-    // 缺省值取 "none"(本算子唯一支持的取值), 属性未下发时按缺省处理即可通过。
-    // 【已批准差异】A2 的 IR 缺省是 "mean", 但 A2 实现同样只放行 "none", 那个缺省值在 A2 上必然报错、
-    // 不可用; 此处把缺省对齐到支持面内, 避免"缺省即非法"。
+    // 原型缺省值为 "mean", 当前只支持 "none": 取不到属性指针时按缺省值 "mean" 处理,
+    // 由 CheckReduction 拒收, 不回落成 "none" 静默跑通。
     const char* reduction = nullptr;
     if (attrNum > ATTR_REDUCTION_IDX) {
         reduction = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
     }
-    if (CheckReduction(context_, reduction == nullptr ? "none" : reduction) != ge::GRAPH_SUCCESS) {
+    if (CheckReduction(context_, reduction == nullptr ? "mean" : reduction) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 

@@ -99,8 +99,8 @@ private:
     __aicore__ inline void TakeMaxAbs(LocalTensor<float>& diff, int64_t count, float* maxAbsOut);
     // 本核累加, 可按给定的(精确 2 的幂)缩放重跑一遍; 出参带回本核 max|x-t|
     __aicore__ inline float AccumulateLocal(float scaleA, float scaleB, float& maxAbsOut);
-    __aicore__ inline void StagePartial(float partial, float maxAbs);
-    __aicore__ inline float MergePartials(float& maxAbsOut);
+    __aicore__ inline void StagePartial(float partial, float maxAbs, int32_t jCore);
+    __aicore__ inline float MergePartialsRestore();
     __aicore__ inline void ComputeNone(int64_t currentNum);
     __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
     __aicore__ inline void ProcessNone();
@@ -157,6 +157,8 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::Init(GM_ADDR input, GM_ADDR
         yGm_.SetGlobalBuffer((__gm__ T_IN*)output + startOffset, (blockLength_ > 0) ? blockLength_ : 1);
     } else {
         yGm_.SetGlobalBuffer((__gm__ T_IN*)output, 1);
+        // 两轮各占互不重叠的区域: 复用同一块会让快核改写后、慢核读到混合两轮的数据,
+        // 导致各核缩放判定不一致、合并出 inf。
         int64_t wsElems = (usedCoreNum_ > 0) ? (usedCoreNum_ * MSE_WS_CORE_STRIDE) : MSE_WS_CORE_STRIDE;
         wsGm_.SetGlobalBuffer((__gm__ float*)workspace, wsElems);
     }
@@ -287,29 +289,9 @@ __aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::LocalMaxAbs(LocalTensor<fl
 template <typename T_IN, int BUFFER_MODE>
 __aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::LocalReduceSum(LocalTensor<float>& src, int64_t count)
 {
-    // **32B 对齐的二分(pairwise)归约**, 与竞品 torch 的归约顺序对齐。
-    //
-    // 根因(在**dump 出的真实输入**上穷举 20 种归约顺序复现所得, 不是推断):
-    //   本例 602 元素 fp32 / reduction=sum, 精确和 2509.8317183688378, 1 ULP = 2.44e-4
-    //     NPU(原 ReduceSum 路径) 2509.83154296875   偏 0.718 ULP
-    //     竞品 torch / 任意含树形的顺序 2509.831787109375  偏 0.282 ULP
-    //   命中 NPU 那个值的 4 种顺序(分块8+顺序合并 / 分块16+顺序合并 /
-    //   分块64内顺序+树形合并 / 分块384内顺序+树形合并)**都含一个"顺序累加"环节**;
-    //   其余 16 种含树形的顺序一律给出竞品值。
-    //   → 差异来自**归约链里的顺序累加段**(ReduceSum 对超过矢量宽度的数据按块累加),
-    //     竞品是全程 pairwise。多数数据两者舍到同一可表示值, 只有精确和落在两个可表示值
-    //     **中间区域**时才分道(本例 0.282 vs 0.718, 几乎正中)。
-    //
-    // ⚠ **ReduceSum 本身没有精度缺陷**: 同一组输入的对照实验(probe_sum_602)里
-    //   ReduceSum 与本二分实现**逐位相同**。它只是顺序与竞品不同。换二分是为了
-    //   "两边计算方式对齐", 不是因为 ReduceSum 弱, 也不是压阈值。
-    //   A2(arch22)本来就是二分(ReduceSumBisect); 本仓另有约 10 个精度敏感归约算子
-    //   (bn_training_reduce / euclidean_norm / instance_norm_grad 等)也自写 pairwise。
-    //   写法沿用本文件逐元素部分的经典 AscendC 向量 API, 不照抄 A2 代码, 不触碰 regbase 段。
-    //
-    // ⚠ **折半点必须 32B 对齐**(fp32 即 8 的整数倍): 偏移视图 src[half] 不对齐会直接
-    // VEC_ERROR 崩在设备上(实测 602 的一半 301 未对齐 → 崩)。因此折半点上对齐到 8,
-    // 两半不再严格等长(上半 len-half 个折进下半), 仍是对数级归约; 剩余 <= 8 个元素标量收尾。
+    // 32B 对齐的二分(pairwise)归约: 归约顺序决定舍入点, 与参照实现保持一致。
+    // 折半点必须按 32B(fp32 即 8 元素)上对齐, 否则偏移视图不对齐会触发 VEC_ERROR;
+    // 两半因此不严格等长, 剩余不足 8 个元素标量收尾。
     constexpr int32_t FP32_PER_BLOCK = 8;
     int32_t len = static_cast<int32_t>(count);
     while (len > FP32_PER_BLOCK) {
@@ -372,16 +354,8 @@ __aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::AccumulateLocal(float scal
     // 本核对自己那段元素求 sum((x-t)*scale)^2, 同时带回 max|x-t|(未缩放的原始量级)。
     // max 与 sum 在**同一趟**里算完: 数据已经在 UB, 多一次 ReduceMax/ReduceMin 对这个
     // 访存瓶颈的算子几乎不增加耗时, 却省掉了"为了定标而多读一遍 GM"的那一趟。
-    // 本核累加。两处与朴素写法不同, 都是实测驱动的:
-    //
-    // ① **每个 tile 求和后立刻除 N**(reduction=mean), 而不是"核内攒完再除"。
-    //    核内 partial 的量级 = blockFactor x mean, q0177 实测 384 x 9.3e35 = 3.6e38
-    //    直接越过 fp32 上限 3.4e38 而输出 inf —— 真值 9.3e35 本来完全可表示。
-    //    下沉一层之后累加器全程不超过结果量级, 从源头上不再产生这种溢出。
-    //    每 tile 一次标量除法, 开销与 tile 数同阶, 可忽略。
-    // ② **核内跨 tile 用 Kahan 补偿**, 而不是裸 `partial += ...`。
-    //    跨核那步早就用了 Kahan, 核内反而是裸加 —— loopCount 大时(大 shape 可达上百轮)
-    //    误差逐轮累积, 与跨核的精心补偿不匹配。
+    // 两点与朴素写法不同: ① reduction=mean 时每个 tile 求和后立刻除 N, 使累加器量级不超过
+    // 结果量级, 避免核内 partial 溢出 fp32; ② 核内跨 tile 用 Kahan 补偿, 与跨核那步一致。
     //    NaN/Inf 时把补偿量清零, 否则 (t-acc)-y 在 inf 上算出 NaN 会污染后续每一轮。
     float partial = 0.0f;
     float comp = 0.0f;
@@ -409,17 +383,13 @@ __aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::AccumulateLocal(float scal
         }
     }
     maxAbsOut = maxAbs;
-    // **收尾把补偿量补回**: Kahan 的 comp 存的是每一步被丢掉的低位部分, 只返回 partial
-    // 等于一路维护了补偿量却在最后一步扔掉。实测(aclnn_0235_sum, 602 元素 fp32):
-    //   NPU 2509.83154297 / fp64 真值 2509.83171069 / 竞品 2509.83178711
-    //   NPU 偏 0.687 ULP、竞品偏 0.313 ULP —— 两者落在相邻的两个 fp32 值上,
-    //   竞品是正确舍入值而 NPU 掉到了下一个。补回 comp 正是补上这半个多 ULP。
-    // comp 为非有限时不能补(inf/nan 场景 comp 已被清零, 这里再判一次更稳)。
+    // 收尾把 Kahan 补偿量补回: comp 是每步被丢掉的低位, 只返回 partial 等于白维护补偿。
+    // comp 非有限时不补(inf/nan 场景下 comp 已清零, 此处再判一次)。
     return IsFiniteF(comp) ? (partial - comp) : partial;
 }
 
 template <typename T_IN, int BUFFER_MODE>
-__aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::StagePartial(float partial, float maxAbs)
+__aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::StagePartial(float partial, float maxAbs, int32_t jCore)
 {
     // 写**整 32B 块**而不是单个 4B: GM 上跨核写以 32B 为粒度, 4B 密排会让相邻核踩同一块。
     // 0 号槽放 partial, 1 号槽放本核 max|x-t|(供溢出重算定标), 其余补零 ——
@@ -430,6 +400,7 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::StagePartial(float partial,
     }
     stage.SetValue(0, partial);
     stage.SetValue(1, maxAbs);
+    stage.SetValue(2, static_cast<float>(jCore)); // 本核的缩放指数, 供 0 号核还原
     event_t evtSMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(evtSMTE3);
     WaitFlag<HardEvent::S_MTE3>(evtSMTE3);
@@ -438,202 +409,88 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::StagePartial(float partial,
 }
 
 template <typename T_IN, int BUFFER_MODE>
-__aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::MergePartials(float& maxAbsOut)
+__aicore__ inline float MseLossV2<T_IN, BUFFER_MODE>::MergePartialsRestore()
 {
+    // 只由 0 号核调用: 逐核读 (partial, j), 按各核自带的 j 还原后做 Kahan 累加。
+    // 还原用"逐次乘 2.0f"而非物化 2^(2j)(那个常数自身会溢出); 2 的幂乘法零舍入。
     LocalTensor<float> partials = partialBuf_.Get<float>();
-    const uint16_t mergeRounds = static_cast<uint16_t>(partialUbElems_ / MSE_VL_FP32);
     DataCopyExtParams inParams{1, static_cast<uint32_t>(usedCoreNum_ * MSE_WS_CORE_STRIDE * sizeof(float)), 0, 0, 0};
     DataCopyPadExtParams<float> inPad{false, 0, 0, 0};
+    // 读别核槽位前逐槽失效本核数据缓存: SyncAll 只保证都写完, 不保证本核读到 GM 最新值。
+    for (int64_t off = 0; off < usedCoreNum_ * MSE_WS_CORE_STRIDE; off += MSE_WS_CORE_STRIDE) {
+        DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(wsGm_[off]);
+    }
     DataCopyPad(partials, wsGm_, inParams, inPad);
-    event_t evtMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-    SetFlag<HardEvent::MTE2_V>(evtMTE2V);
-    WaitFlag<HardEvent::MTE2_V>(evtMTE2V);
+    event_t evtMTE2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(evtMTE2S);
+    WaitFlag<HardEvent::MTE2_S>(evtMTE2S);
 
-    // 1 号槽存的是各核的 max|x-t|(见 StagePartial)。先扫出全局 max 供溢出重算定标用,
-    // 再把这些车道清零 —— 否则下面的矢量 Kahan 会把 64 条车道全部相加, 把 max 当成 partial
-    // 累进结果里。核数 <= 64, 标量扫一遍的代价可以忽略。
-    float globalMax = 0.0f;
-    for (int32_t c = 0; c < static_cast<int32_t>(usedCoreNum_); c++) {
-        float m = partials.GetValue(c * MSE_WS_CORE_STRIDE + 1);
-        if (!IsFiniteF(m)) {
-            globalMax = m; // 同 LocalMaxAbs: NaN 参与 ">" 比较恒假, 必须显式置位
-        } else if (IsFiniteF(globalMax) && m > globalMax) {
-            globalMax = m;
-        }
-        partials.SetValue(c * MSE_WS_CORE_STRIDE + 1, 0.0f);
-    }
-    maxAbsOut = globalMax;
-    event_t evtSV0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-    SetFlag<HardEvent::S_V>(evtSV0);
-    WaitFlag<HardEvent::S_V>(evtSV0);
-
-    // 只清**补零区**: 矢量合并整轮读满 MSE_VL_FP32 车道、收尾标量循环也按 stride 读满
-    // MSE_VL_FP32/MSE_WS_CORE_STRIDE 条车道, 而 DataCopyPad 只搬入 usedCoreNum_ 个槽; 余下车道若不清零读到的是
-    // UB 残留(可能含 ±inf/NaN), 会被当作 partial 累加 —— 核数越少无效车道越多。
-    // 放在搬入之后只清尾巴, 比"搬入前清整段"省一次 V->MTE2 同步和大部分清零量(实测小 shape 的
-    // sum 快回 4~5%); Duplicate 与下面的矢量循环同为 V 流水, 按序发射无需额外同步。
-    const int32_t copiedElems = static_cast<int32_t>(usedCoreNum_ * MSE_WS_CORE_STRIDE);
-    if (partialUbElems_ > copiedElems) {
-        Duplicate(partials[copiedElems], 0.0f, partialUbElems_ - copiedElems);
-    }
-
-    // ── 跨核合并: **矢量(regbase)形态的 Kahan 补偿累加** ───────────────────────────────
-    // 布局: 每核占一个 32B 块(首元素是它的 partial, 其余 7 个为 0), 于是一次寄存器载入(64 车道)
-    // 正好覆盖 8 个核, 补零车道加 0 不改变结果也不产生补偿量。64 核 = 8 轮, 即 8 车道并行、
-    // 每车道顺序累加 8 个 partial —— Kahan 的补偿项覆盖的就是这 8 步。
-    //
-    // 为什么不是标量循环: 原写法在 block 0 上串行 usedCoreNum_(最多 64)次, 实测跨核规约段占
-    // 小 shape 整核时延四成; 矢量化后这段压成 8 轮指令。
-    // 为什么不是纯树形规约: 树形没有补偿项, 合并 64 个 partial 的误差 ~log2(64)*eps, 比 Kahan
-    // 的 ~2*eps 差(实测 4M 用例 1.2 ulp vs 0.8 ulp), 精度不能白丢。
-    // 为什么先除 N 再合并(reduction=mean): 直接累加原量级 partial, 中间和会涨到 ~N*mean 的量级
-    // (实测 20528 元素、值域 ±65504 时中间和达 8.2e13, 该处 fp32 1 ulp = 8388608), 合并误差被
-    // 这个量级的表示粒度锁死, 换 Kahan/树形都无从改善。先把每个 partial 除以 N, 累加器全程停在
-    // 最终结果量级(4e9, 1 ulp = 512), 误差随之降到 1/4, 且与竞品 mean 的运算序列对齐
-    // (实测 q0177/q0178 两例均与 GPU 三方腿逐位相同)。用 Div 而非乘 1/N: N 非 2 的幂时 1/N 在
-    // fp32 存不下, 先舍 1/N 再舍乘积是双重舍入, IEEE754 除法只舍一次。
-    // reduction != mean 时除数取 1.0(精确), 复用同一条指令路径, 不额外分支。
-    // inf/nan: 补偿量 c = (t - sum) - y 在 t 为 ±inf 时算出 NaN, 会污染后续每一轮, 把本该是 inf
-    // 的和变成 nan(实测单核不复现、多核必现)。用自比 Compare<EQ>(c, c) 找出非 NaN 车道, Select
-    // 把 NaN 车道的补偿量清零 —— 只清补偿量、不动 sum, 故真 nan 仍会如实传播。
-    // (同款写法见 norm/instance_norm_grad 的跨 N 合并。)
-    __local_mem__ float* partialUb = (__local_mem__ float*)partials.GetPhyAddr();
-    {
-        AscendC::Reg::RegTensor<float> sumReg;
-        AscendC::Reg::RegTensor<float> compReg;
-        AscendC::Reg::RegTensor<float> zeroReg;
-        AscendC::Reg::RegTensor<float> pReg;
-        AscendC::Reg::RegTensor<float> kY;
-        AscendC::Reg::RegTensor<float> kT;
-        AscendC::Reg::RegTensor<float> kD;
-        AscendC::Reg::RegTensor<float> divReg;
-        AscendC::Reg::MaskReg preg;
-        AscendC::Reg::MaskReg finiteMask;
-        uint32_t sreg = static_cast<uint32_t>(mergeRounds) * MSE_VL_FP32;
-        // tiling 已拒收空 tensor, totalNum_ > 0
-        // 除 N 已在 AccumulateLocal 的 tile 级完成, 这里不能再除一次。
-        // 保留 divReg 结构是为了让缩放重算路径能复用同一条指令序列(此处恒为 1.0, 精确)。
-        const float divisor = 1.0f;
-        __VEC_SCOPE__
-        {
-            preg = AscendC::Reg::UpdateMask<float>(sreg);
-            AscendC::Reg::Duplicate(sumReg, 0.0f, preg);
-            AscendC::Reg::Duplicate(compReg, 0.0f, preg);
-            AscendC::Reg::Duplicate(zeroReg, 0.0f, preg);
-            AscendC::Reg::Duplicate(divReg, divisor, preg);
-            for (uint16_t r = 0; r < mergeRounds; ++r) {
-                AscendC::Reg::DataCopy(pReg, partialUb + r * MSE_VL_FP32);
-                AscendC::Reg::Div(pReg, pReg, divReg, preg); // 先除 N, 累加器停在结果量级
-                AscendC::Reg::Sub(kY, pReg, compReg, preg);  // y = p - comp
-                AscendC::Reg::Add(kT, sumReg, kY, preg);     // t = sum + y
-                AscendC::Reg::Sub(kD, kT, sumReg, preg);     // d = t - sum
-                AscendC::Reg::Sub(compReg, kD, kY, preg);    // comp = d - y
-                AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(finiteMask, compReg, compReg, preg);
-                AscendC::Reg::Select(compReg, compReg, zeroReg, finiteMask); // NaN 车道 -> 0
-                AscendC::Reg::Move(sumReg, kT, preg);
-            }
-            // **矢量 Kahan 也要把补偿量补回**: compReg 存的是每轮被丢掉的低位部分,
-            // 只存 sumReg 等于白维护了一路补偿。这是第三处丢弃点(另两处在核内累加与
-            // 跨核标量收尾) —— 三处都补上才算真正用上了 Kahan。
-            // compReg 里的 NaN 车道已在循环内被 Select 清零, 这里直接相减是安全的。
-            AscendC::Reg::Sub(sumReg, sumReg, compReg, preg);
-            AscendC::Reg::DataCopy(partialUb, sumReg, preg);
-        }
-    }
-    // 合并 64 条车道(其中 8 条有效, 其余恒 0)
-    // 收尾: 只对 MSE_VL_FP32/MSE_WS_CORE_STRIDE 条有效车道做标量 Kahan(核数 64 时是 8 步, 不是原来的 64 步)。
-    // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— 实测(同一批 partial 配对比较)
-    // 与原标量 Kahan 6 例中 5 例逐位相同; 若这里改用无补偿的树形规约, 会有 3/6 变差。
-    SetFlag<HardEvent::V_S>(EVENT_ID0);
-    WaitFlag<HardEvent::V_S>(EVENT_ID0);
     float total = 0.0f;
-    float mergeComp = 0.0f;
-    for (int32_t lane = 0; lane < MSE_VL_FP32; lane += static_cast<int32_t>(MSE_WS_CORE_STRIDE)) {
-        float y = partials.GetValue(lane) - mergeComp;
+    float comp = 0.0f;
+    for (int32_t c = 0; c < static_cast<int32_t>(usedCoreNum_); c++) {
+        float v = partials.GetValue(c * MSE_WS_CORE_STRIDE);
+        const int32_t jc = static_cast<int32_t>(partials.GetValue(c * MSE_WS_CORE_STRIDE + 2));
+        for (int32_t k = 0; k < 2 * jc; k++) {
+            v *= 2.0f; // 精确: 只改指数位
+        }
+        float y = v - comp;
         float t = total + y;
-        mergeComp = (t - total) - y;
-        if (__isinf(t) || __isnan(t)) {
-            mergeComp = 0.0f;
+        comp = (t - total) - y;
+        if (!IsFiniteF(t)) {
+            comp = 0.0f; // inf/nan 上的补偿项会算出 NaN, 必须清零
         }
         total = t;
     }
-    // 同上: 跨核收尾也要把补偿量补回去, 否则这一路 Kahan 的低位信息在最后一步丢掉。
-    if (IsFiniteF(mergeComp)) {
-        total -= mergeComp;
-    }
-    return total;
+    // 收尾把补偿量补回(同核内 Kahan): 否则一路维护的低位信息在最后一步被丢掉。
+    return IsFiniteF(comp) ? (total - comp) : total;
 }
 
 template <typename T_IN, int BUFFER_MODE>
 __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::ProcessReduce()
 {
+    // 跨核规约: 缩放判定是纯本地决策 —— 每核只看自己的 partial 是否溢出, 溢出就按本核的
+    // max|x-t| 定出 2 的幂缩放因子并只重算本核那段, 把该指数随 partial 上报, 0 号核还原后累加。
+    // 若改成各核都读全部 partial 再各自判定, 跨核读的可见性差异会让判定分叉、合并出 inf。
     float maxAbs = 0.0f;
     float partial = AccumulateLocal(1.0f, 1.0f, maxAbs);
-    StagePartial(partial, maxAbs);
-    SyncAll(); // 栅栏 #1 —— 无条件
-
-    float globalMax = 0.0f;
-    float total = MergePartials(globalMax);
-
-    // ── 溢出兜底 ─────────────────────────────────────────────────────────────
-    // 中间和越界时结果是 ±inf/nan(Kahan 的补偿项在 inf 上算出 nan), 而真值往往仍在 fp32
-    // 可表示范围内(实测 q0177: 真值 9.32e35 < 上限 3.4e38, 内核却给 inf) —— 实打实的缺陷。
-    // 修法: 用**数据自身**的 max|x-t| 定出精确的 2 的幂缩放, 在平方之前缩放后重算, 再按指数
-    // 还原。因子是 2 的幂 → fp32 乘法零舍入 → 相对精度与常规路径完全一致; 常规路径不取用
-    // 重算结果 → 小值端不会被"预先除 N"冲成 0。两端都不牺牲, 判据是精确的 isfinite。
-    //
-    // ⚠ **SyncAll 的调用次数必须与判定无关**。SyncAll 是全核栅栏, 各核调用次数不同就会有核
-    // 永远等在栅栏上 —— 设备端死锁, 主机侧持着设备锁死等, 表现为整个跑批冻结(2026-09-27 实测:
-    // 一个核卡 479s, 其余 3 个 worker 全堵在 OnAcquireLock)。
-    // 所以这里**无条件**走完"再暂存 + 栅栏 #2 + 再合并", needScale 只决定**用不用**重算结果,
-    // 绝不决定同步几次。不依赖"各核判定必然一致"这种推理 —— 那个推理错了就是死锁。
-    const bool needScale = (!IsFiniteF(total) && IsFiniteF(globalMax) && globalMax > 0.0f);
-    int32_t j = 0;
-    float sA = 1.0f;
-    float sB = 1.0f;
-    if (needScale) {
-        // j 使 N*(max*2^-j)^2 落在 1 附近: j = ceil(log2 max) + ceil(log2 N)/2
-        float m = globalMax;
-        // 上限 MSE_SCALE_ITER_MAX 只是**循环安全边界**(fp32 指数位有限, 正常 j < 160),
-        // 不是精度门限 —— 设备端死循环会挂死整卡, 必须有硬边界。
-        while (m > 1.0f && j < MSE_SCALE_ITER_MAX) {
+    int32_t jCore = 0;
+    if (!IsFiniteF(partial) && IsFiniteF(maxAbs) && maxAbs > 0.0f) {
+        // j 使 blockFactor*(max*2^-j)^2 落在 1 附近: j = ceil(log2 max) + ceil(log2 N)/2
+        float m = maxAbs;
+        // MSE_SCALE_ITER_MAX 是循环安全边界(设备端死循环会挂死整卡), 不是精度门限。
+        while (m > 1.0f && jCore < MSE_SCALE_ITER_MAX) {
             m *= 0.5f;
-            j++;
+            jCore++;
         }
         int32_t e = 0;
         while (e < MSE_LOG2N_MAX && (static_cast<int64_t>(1) << e) < totalNum_) {
             e++;
         }
-        j += (e + 1) / 2;
+        jCore += (e + 1) / 2;
         // 拆两个因子, 避免单个因子掉进非规格化数(fp32 最小规格数 2^-126)而真丢精度
-        int32_t j1 = j / 2;
+        float sA = 1.0f;
+        float sB = 1.0f;
+        int32_t j1 = jCore / 2;
         for (int32_t k = 0; k < j1; k++) {
             sA *= 0.5f;
         }
-        for (int32_t k = 0; k < j - j1; k++) {
+        for (int32_t k = 0; k < jCore - j1; k++) {
             sB *= 0.5f;
         }
+        float dummyMax = 0.0f;
+        partial = AccumulateLocal(sA, sB, dummyMax);
     }
-    float maxAbs2 = 0.0f;
-    float retryPartial = needScale ? AccumulateLocal(sA, sB, maxAbs2) : partial;
-    StagePartial(retryPartial, 0.0f);
-    SyncAll(); // 栅栏 #2 —— 同样无条件
-    float dummy = 0.0f;
-    float retryTotal = MergePartials(dummy);
-    if (needScale) {
-        // 还原 2^(2j): 绝不物化这个常数(它自身就会溢出), 逐次乘 2.0f 是精确运算;
-        // 真值本身超 fp32 时自然仍得 inf, 这正是正确行为。
-        total = retryTotal;
-        for (int32_t k = 0; k < 2 * j; k++) {
-            total *= 2.0f;
-        }
-    }
+    StagePartial(partial, maxAbs, jCore);
+    // 过栅栏前排空 MTE3: StagePartial 的 DataCopyPad 是异步写, 不排空则 0 号核可能读到旧值。
+    PipeBarrier<PIPE_MTE3>();
+    SyncAll(); // 唯一一道跨核栅栏, 无条件
 
     if (blockIdx_ != 0) {
         return;
     }
 
     // mean 的除 N 已在跨核合并前逐 partial 完成, 此处不再整体相除。
+    float total = MergePartialsRestore();
 
     LocalTensor<T_IN> yLocal = outQueueY_.template AllocTensor<T_IN>();
     if constexpr (NEED_CAST) {

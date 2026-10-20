@@ -68,7 +68,7 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataTy
 
 #define ADD_INPUT(idx, opInputName, inDtype, inShape)                                       \
     vector<int64_t> ph##idx##_shape = inShape;                                              \
-    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(0);                    \
+    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(idx);                  \
     TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_ND, inDtype); \
     ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                        \
     ph##idx##_desc.SetOriginFormat(FORMAT_ND);                                              \
@@ -95,9 +95,9 @@ int CreateGraph(DataType dt, std::vector<ge::Tensor>& input, std::vector<Operato
     auto op_node = op::SoftmaxFocalLoss("softmax_focal_loss_op");
     // ND 2D: [N, C], 归约轴为最后一维
     std::vector<int64_t> xShape = {8, 64};
-    ADD_INPUT(1, pred, dt, xShape);
-    ADD_INPUT(2, target, DT_INT32, xShape);
-    ADD_INPUT(3, weight, dt, xShape);
+    ADD_INPUT(0, pred, dt, xShape);
+    ADD_INPUT(1, target, DT_INT32, xShape);
+    ADD_INPUT(2, weight, dt, xShape);
     op_node.set_attr_gamma(2.0f);
     op_node.set_attr_alpha(0.25f);
     op_node.set_attr_reduction("none");

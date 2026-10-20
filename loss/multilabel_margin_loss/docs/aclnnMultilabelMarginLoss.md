@@ -111,8 +111,8 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入x。</td>
-      <td class="tg-0pky">shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。<br>当`self`中元素个数大于15000*20000时可能出现507034 Vector Core运行超时。</td>
-      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。</td>
+      <td class="tg-0pky"><term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：FLOAT、FLOAT16、BFLOAT16<br><term>Atlas训练系列产品</term>：FLOAT、FLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1、2</td>
       <td class="tg-0pky">√</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0lax">与self保持一致</td>
       <td class="tg-0lax">ND</td>
       <td class="tg-0lax">0、1</td>
-      <td class="tg-0lax"></td>
+      <td class="tg-0lax">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">isTarget（aclTensor*）</td>
@@ -359,7 +359,7 @@ int main() {
   aclTensor* out = nullptr;
   aclTensor* istarget = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5};
-  std::vector<int32_t> targetHostData = {0, 1, 2, 3, 4, 5};
+  std::vector<int32_t> targetHostData = {0, 1, -1, 2, -1, -1};
   std::vector<float> outHostData(2, 0);
   std::vector<float> istargetHostData(6, 0);
   int64_t reduction = 0;

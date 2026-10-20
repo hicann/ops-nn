@@ -39,6 +39,7 @@ public:
         this->ubFactor = tilingData->ubFactor;
         this->wsCoreStride = tilingData->wsCoreStride;
         this->partialUbElems = tilingData->partialUbElems;
+        this->labelBlock = tilingData->labelBlock;
         this->cFactor = (tilingData->cFactor == 0u) ? this->C : tilingData->cFactor;
         this->splitC = (this->cFactor < this->C);
         this->rowElems = this->splitC ? this->cFactor : this->C;
@@ -68,6 +69,8 @@ public:
         if (this->programId == 0u && wsElems > 0u) {
             InitGlobalMemory(this->workspaceGm, wsElems, 0.0f);
         }
+        // 过栅栏前排空 MTE3: 上面的清零是异步写, 不排空则别核可能在它落地前读 workspace
+        AscendC::PipeBarrier<PIPE_MTE3>();
         SyncAll();
 
         if (this->reduction == RED_NONE) {
@@ -76,6 +79,8 @@ public:
             StageCorePartial();
         }
 
+        // 同理: 上面落 workspace 的 DataCopyPad 是异步写, 不排空则 0 号核可能读到未落地的 partial。
+        AscendC::PipeBarrier<PIPE_MTE3>();
         SyncAll();
 
         if (this->programId == 0u) {
@@ -137,26 +142,18 @@ private:
         for (uint32_t k = 0; k < this->wsCoreStride; k++) {
             one.SetValue(k, 0.0f);
         }
-        // 必须把补偿量补回再写: 循环里算出的 comp 是"最后一轮实际丢掉的零头",
-        // 只写 coreSum 等于把它永久扔掉, 本核 partial 就带着约 1 ULP 的欠账进 workspace。
-        // (跨核合并那侧已经是 (mmlSum - mmlComp) 才写回, 这里漏了同一步。)
-        // 实测证据 (362038,11) sum: NPU=1272497.875 / 正确舍入=1272497.75, 差 1 ULP(=0.125),
-        // 与 CPU torch pairwise 逐位相同而 GPU 腿命中正确舍入 -> cross_check rmse 比值 2.90。
-        // comp 非有限时不补(inf-inf=NaN 会把本该 inf 的和污染成 NaN)。
+        // 补偿量必须补回再写: comp 是最后一轮丢掉的零头, 只写 coreSum 会让本核 partial
+        // 带着约 1 ULP 的欠账进 workspace(跨核合并侧同样是 (mmlSum - mmlComp) 才写回)。
+        // comp 非有限时不补: inf - inf = NaN 会把本该 inf 的和污染成 NaN。
         float coreOut = coreSum;
         if (!__isinf(comp) && !__isnan(comp)) {
             coreOut = coreSum - comp;
         }
-        // ── reduction 除数在**写回 workspace 前**就施加(不再等 FinalizeReduced 统一除) ──
-        // 原因是单个 fp32 表示不了未除 C 的总和: 该总和量级 = 结果 x C, 一旦越过 2^23,
-        // ULP 就从 0.125 跳到 1.0, 除 C 之后粒度是 1.0/C —— 这是一条**系统性精度地板**,
-        // Kahan 补偿再准也救不回来(补偿量在那个 binade 里根本表示不出来)。
-        // 实测 (362038,11) sum: 未除 C 的总和 1.4e7(ULP=1.0), 地板 = 1.0/11 = 0.727 ULP,
-        // NPU 实测误差 0.742 ULP 正贴在地板上; 竞品(同为 fp32, 逐行先除 C)是 0.256 ULP。
-        // 改成各核先除, 累加器量级降回 1.27e6(ULP=0.125), 实测 0.258 ULP, 与竞品同档,
+        // ── reduction 除数在写回 workspace 前施加(不等 FinalizeReduced 统一除) ──
+        // 单个 fp32 表示不了未除 C 的总和: 该总和量级 = 结果 x C, 越过 2^23 后 ULP 从 0.125
+        // 跳到 1.0, 除 C 之后粒度是 1.0/C, 形成系统性精度地板, 补偿量在该 binade 内无法表示。
+        // 各核先除可把累加器量级降回原量级, 粒度随之回到 0.125。
         // 且只引入 usedCoreNum(<=64) 次除法舍入, 不是逐行 36 万次。
-        // 离线网格验证 20 组(形状 x reduction): 更好 3, 持平 17, **更差 0**;
-        // 注释原先担心会变差的 (12,40) 持平, (15,25) 由 1.182/1.461 ULP 降到 0.182/0.539。
         one.SetValue(0, ApplyReductionDivisor(coreOut));
         PipeBarrier<HardEvent::S_MTE3>();
         DataCopyExtParams cpWs{1, static_cast<uint32_t>(this->wsCoreStride * sizeof(float)), 0, 0, 0};
@@ -227,7 +224,7 @@ private:
             }
         }
         // 收尾: 只对 MML_VL_FP32/this->wsCoreStride 条有效车道做标量 Kahan(核数 64 时是 8 步, 不是原来的 64 步)。
-        // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— 实测(同一批 partial 配对比较)
+        // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— )
         // 与原标量 Kahan 6 例中 5 例逐位相同; 若这里改用无补偿的树形规约, 会有 3/6 变差。
         SetFlag<HardEvent::V_S>(EVENT_ID0);
         WaitFlag<HardEvent::V_S>(EVENT_ID0);

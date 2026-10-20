@@ -401,12 +401,12 @@ private:
 
             SetOverflowMode<T_Y>(0);
             DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
-                                                        betaLocal, smoothScale1Local, 0, baseNDtypeAlign_,
+                                                        betaLocal, smoothScale1Local, 0, realNDtypeAlign,
                                                         hasSmoothScale1_, hasBeta_);
             if (hasY2Scale2_) {
                 DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal,
                                                             gammaLocal, betaLocal, smoothScale2Local, 0,
-                                                            baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
+                                                            realNDtypeAlign, hasSmoothScale2_, hasBeta_);
             }
             SetOverflowMode<T_Y>(oriOverflowMode_);
 

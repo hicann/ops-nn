@@ -40,7 +40,7 @@ public:
 
         this->Attr("gamma").AttrType(OPTIONAL).Float(2.0);
         this->Attr("alpha").AttrType(OPTIONAL).Float(0.25);
-        this->Attr("reduction").AttrType(OPTIONAL).String("none");
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

@@ -52,24 +52,83 @@
 
 ## 参数说明
 
-| 参数名 | 输入/输出/属性 | 描述                                                         | 数据类型        | 数据格式 |
-| ------ | -------------- | ------------------------------------------------------------ | --------------- | -------- |
-| pred   | 输入           | 前级softmax输出的概率，对应公式中的$p$，取值应落在(0, 1)开区间。 | FLOAT16、FLOAT  | ND       |
-| target | 输入           | one-hot标签，对应公式中的$t$，shape与pred一致。               | INT32           | ND       |
-| dout   | 输入           | 上游传入的梯度，对应公式中的$\text{d}$，shape与数据类型均与pred一致。 | FLOAT16、FLOAT  | ND       |
-| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与数据类型均与pred一致。不传入时按全1处理，该行为仅<term>Ascend 950PR&950DT系列产品</term>支持，其余产品需显式传入weight。 | FLOAT16、FLOAT  | ND       |
-| alpha  | 属性           | 调制因子的权重系数，对应公式中的$\alpha$，缺省值为0.25。      | FLOAT           | -        |
-| gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
-| reduction | 属性        | 取值为"none"、"mean"、"sum"之一（大小写不敏感），缺省值为"mean"，传入其他取值会报错。取"mean"时梯度乘以$1/\text{numel(pred)}$，"none"与"sum"不缩放。 | STRING          | -        |
-| grad   | 输出           | pred的梯度，shape与数据类型均与pred一致。                     | FLOAT16、FLOAT  | ND       |
+<table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
+  <col style="width: 40px">
+  <col style="width: 60px">
+  <col style="width: 266px">
+  <col style="width: 60px">
+  <col style="width: 40px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>pred</td>
+      <td>输入</td>
+      <td>前级softmax输出的概率，公式中的p。取值落在(0, 1)开区间，各维长度须大于0（不支持空Tensor），最后一维为类别维、其余维为样本维。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>target</td>
+      <td>输入</td>
+      <td>one-hot标签，公式中的t，shape与pred一致。</td>
+      <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>dout</td>
+      <td>输入</td>
+      <td>上游传入的梯度，公式中的d，shape与数据类型均与pred一致。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>weight</td>
+      <td>可选输入</td>
+      <td>逐元素权重，公式中的w，shape与数据类型均与pred一致。不传入时按全1处理，该行为仅<term>Ascend 950PR&950DT系列产品</term>支持，其余产品需显式传入weight。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>属性</td>
+      <td>调制因子的权重系数，公式中的alpha，缺省值为0.25。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>gamma</td>
+      <td>属性</td>
+      <td>调制因子的指数，公式中的gamma，缺省值为2.0。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>reduction</td>
+      <td>属性</td>
+      <td>归约方式，支持'none'、'mean'、'sum'（大小写不敏感），缺省值为'mean'。取'mean'时梯度乘以1/numel(pred)，'none'与'sum'不缩放。</td>
+      <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>grad</td>
+      <td>输出</td>
+      <td>pred的梯度，shape与数据类型均与pred一致。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-- pred、dout、weight、grad的数据类型保持一致；target的数据类型固定为INT32。
-- target、dout、weight的shape必须与pred一致。
-- pred各维长度必须大于0，不支持空Tensor。
-- 归约轴固定为最后一维。
-- gamma小于1且pred趋近1时，$(1-p)^{\gamma-1}$发散，该行为与算法定义一致，不做拦截。
+无。
 
 ## 调用说明
 

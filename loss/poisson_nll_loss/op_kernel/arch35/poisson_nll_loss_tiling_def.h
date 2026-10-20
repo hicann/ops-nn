@@ -23,7 +23,6 @@ struct PoissonNllLossTilingData {
     int64_t blockFactor = 0; // elements per core
     int64_t ubFactor = 0;    // elements per UB tile
     float eps = 1e-8f;       // eps for log_input=False
-    float meanCof = 1.0f;    // 1/totalNum for reduction=mean (else unused)
     uint32_t logInput = 1;   // runtime: 1=log_input true, 0=false
     uint32_t full = 0;       // runtime: 1=full true, 0=false
     uint32_t reduction = 0;  // runtime: 0=none, 1=sum, 2=mean

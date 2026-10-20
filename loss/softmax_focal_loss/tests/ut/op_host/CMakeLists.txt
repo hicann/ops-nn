@@ -10,4 +10,6 @@
 
 if(UT_TEST_ALL OR OP_HOST_UT)
     add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    # infershape 用例只在 HOSTNAME 含 "infershape" 的模块下才会被收集, 缺这项注册会静默不参编。
+    add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

@@ -65,7 +65,7 @@
         {
           "name": "reduction",
           "dtype": "string",
-          "value": "mean"
+          "value": "ALL"
         }
       ]
     },
@@ -133,7 +133,7 @@
         {
           "name": "reduction",
           "dtype": "string",
-          "value": "mean"
+          "value": "ALL"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "name": "reduction",
           "dtype": "string",
-          "value": "mean"
+          "value": "ALL"
         }
       ]
     },
@@ -269,7 +269,7 @@
         {
           "name": "reduction",
           "dtype": "string",
-          "value": "mean"
+          "value": "ALL"
         }
       ]
     }

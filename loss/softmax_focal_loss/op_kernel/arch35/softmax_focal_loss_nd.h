@@ -49,6 +49,14 @@ public:
 
 private:
     __aicore__ inline void ProcessTile(int64_t rowGm, int64_t rows);
+    // 少行形状的精确行求和: 逐块双二元组累加, 行尾一次精确合并
+    // 双链交错版: ce/fw 同一循环, 各带独立临时寄存器(大 D 精确路径)
+    __aicore__ inline void ExactRowSum2(__ubuf__ float* srcCe, __ubuf__ float* srcFw, __ubuf__ float* ceHi,
+                                        __ubuf__ float* ceLo, __ubuf__ float* fwHi, __ubuf__ float* fwLo, int64_t rows,
+                                        int64_t len);
+    __aicore__ inline void MergeRowSlots2(__ubuf__ float* ceHi, __ubuf__ float* ceLo, __ubuf__ float* fwHi,
+                                          __ubuf__ float* fwLo, __ubuf__ float* rowHi, __ubuf__ float* rowLo,
+                                          int64_t slotSpan, int64_t g, uint32_t cntMask);
     __aicore__ inline void CopyIn(int64_t rowGm, int64_t colOff, int64_t rows, int64_t len);
     __aicore__ inline void ComputeCeFw(int64_t rows, int64_t len);
     __aicore__ inline void CeFwTailSeg(__ubuf__ T* predAddr, __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr,
@@ -100,6 +108,8 @@ protected:
     // 恰为求和的单位元, 对任意 gamma 均成立, 无需再对归约缓冲显式清零。
     // (不能 pad 0: -log(0)*0 = inf*0 = NaN; 不能 pad 1: gamma=0 时 0*log(0) = NaN)
     constexpr static float PRED_PAD_VALUE = 0.5f;
+    // 行槽粒度 = 一个 32B 块能放的 float 数: StoreAlign 要求 32B 对齐, 单元素偏移是非法地址
+    constexpr static uint32_t ROW_SLOT_ELEM = BLOCK_SIZE / sizeof(float);
 
 private:
     GlobalTensor<T> predGm_;
@@ -117,6 +127,7 @@ private:
     TBuf<QuePosition::VECCALC> fwBuf_;
     TBuf<QuePosition::VECCALC> yF32Buf_;
     TBuf<QuePosition::VECCALC> accBuf_;
+    TBuf<QuePosition::VECCALC> dfBuf_;
 
     int64_t a_ = 0;
     int64_t r_ = 0;
@@ -170,7 +181,10 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Init(GM_ADDR pred, 
     pipe_->InitBuffer(fwBuf_, maxElem * sizeof(float));
     pipe_->InitBuffer(yF32Buf_, maxElem * sizeof(float));
     // ceAcc | fwAcc | redTmp | rowVal
-    pipe_->InitBuffer(accBuf_, 4 * accStride_ * sizeof(float));
+    pipe_->InitBuffer(accBuf_, 6 * accStride_ * sizeof(float));
+    // dfBuf: 精确行求和的 (hi, lo) 车道暂存
+    // dfBuf: ce/fw 各一组行槽(hi/lo), 每行占 ROW_SLOT_ELEM 个 float
+    pipe_->InitBuffer(dfBuf_, 4 * VL_FP32 * ROW_SLOT_ELEM * sizeof(float));
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -198,9 +212,13 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t
     LocalTensor<float> fwAcc = accBuf[accStride_];
     LocalTensor<float> redTmp = accBuf[2 * accStride_];
     LocalTensor<float> rowVal = accBuf[3 * accStride_];
+    LocalTensor<float> ceLo = accBuf[4 * accStride_];
+    LocalTensor<float> fwLo = accBuf[5 * accStride_];
 
     AscendC::Duplicate(ceAcc, 0.0f, static_cast<int32_t>(rows));
     AscendC::Duplicate(fwAcc, 0.0f, static_cast<int32_t>(rows));
+    AscendC::Duplicate(ceLo, 0.0f, static_cast<int32_t>(rows));
+    AscendC::Duplicate(fwLo, 0.0f, static_cast<int32_t>(rows));
 
     LocalTensor<float> ceBuf = ceBuf_.template Get<float>();
     LocalTensor<float> fwBuf = fwBuf_.template Get<float>();
@@ -213,11 +231,25 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t
         CopyIn(rowGm, colOff, rows, len);
         ComputeCeFw(rows, len);
 
-        uint32_t srcShape[2] = {static_cast<uint32_t>(rows), static_cast<uint32_t>(StrideOfF32(len))};
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(redTmp, ceBuf, srcShape, false);
-        AscendC::Add(ceAcc, ceAcc, redTmp, static_cast<int32_t>(rows));
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(redTmp, fwBuf, srcShape, false);
-        AscendC::Add(fwAcc, fwAcc, redTmp, static_cast<int32_t>(rows));
+        int64_t blocksRow = (len + static_cast<int64_t>(VL_FP32) - 1) / static_cast<int64_t>(VL_FP32);
+        int64_t logLenRow = 0;
+        while ((static_cast<int64_t>(1) << logLenRow) < len) {
+            ++logLenRow;
+        }
+        // 判据与 SFLG 一致, 由误差计数推导: 本路径每行有 blocksRow 次未补偿的块级舍入
+        // (块内树形规约 + 块间无补偿裸加), 竞品 pairwise 约 logLenRow 次;
+        // blocksRow == 1 时没有跨块累积, 块内树形即竞品算法本身, 无需也无从补偿。
+        if (blocksRow > 1 && blocksRow > logLenRow) {
+            ExactRowSum2((__ubuf__ float*)ceBuf.GetPhyAddr(), (__ubuf__ float*)fwBuf.GetPhyAddr(),
+                         (__ubuf__ float*)ceAcc.GetPhyAddr(), (__ubuf__ float*)ceLo.GetPhyAddr(),
+                         (__ubuf__ float*)fwAcc.GetPhyAddr(), (__ubuf__ float*)fwLo.GetPhyAddr(), rows, len);
+        } else {
+            uint32_t srcShape[2] = {static_cast<uint32_t>(rows), static_cast<uint32_t>(StrideOfF32(len))};
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(redTmp, ceBuf, srcShape, false);
+            AscendC::Add(ceAcc, ceAcc, redTmp, static_cast<int32_t>(rows));
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(redTmp, fwBuf, srcShape, false);
+            AscendC::Add(fwAcc, fwAcc, redTmp, static_cast<int32_t>(rows));
+        }
     }
 
     // y 整行同值 = CE * FW
@@ -288,6 +320,8 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::CopyOutRow(int64_t 
 {
     LocalTensor<float> accBuf = accBuf_.template Get<float>();
     LocalTensor<float> rowVal = accBuf[3 * accStride_];
+    LocalTensor<float> ceLo = accBuf[4 * accStride_];
+    LocalTensor<float> fwLo = accBuf[5 * accStride_];
     LocalTensor<float> yF32 = yF32Buf_.template Get<float>();
     LocalTensor<T> yBuf = yQue_.template AllocTensor<T>();
 

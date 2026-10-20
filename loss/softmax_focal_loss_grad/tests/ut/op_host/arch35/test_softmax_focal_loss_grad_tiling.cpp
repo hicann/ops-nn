@@ -51,7 +51,7 @@ static ge::graphStatus DoSoftmaxFocalLossGradTilingCase(
     std::string reduction, uint64_t& tilingKey, uint32_t& blockDim, std::initializer_list<int64_t> targetShapeOv = {},
     std::initializer_list<int64_t> doutShapeOv = {}, std::initializer_list<int64_t> weightShapeOv = {},
     ge::DataType doutDtypeOv = ge::DT_UNDEFINED, float* reductionCoefOut = nullptr, bool withReductionAttr = true,
-    float* gammaOut = nullptr, float* alphaOut = nullptr)
+    float* gammaOut = nullptr, float* alphaOut = nullptr, ge::DataType weightDtypeOv = ge::DT_UNDEFINED)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -94,6 +94,7 @@ static ge::graphStatus DoSoftmaxFocalLossGradTilingCase(
                                                                 gert::StorageShape{shape, shape};
     gert::StorageShape gradShape = {shape, shape};
     ge::DataType doutDtype = doutDtypeOv == ge::DT_UNDEFINED ? dtype : doutDtypeOv;
+    ge::DataType weightDtype = weightDtypeOv == ge::DT_UNDEFINED ? dtype : weightDtypeOv;
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
@@ -121,7 +122,7 @@ static ge::graphStatus DoSoftmaxFocalLossGradTilingCase(
                 .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeInputTd(2, doutDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(3, weightDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeAttrs(attrList)
                 .TilingData(param.get())
@@ -276,6 +277,29 @@ TEST_F(SoftmaxFocalLossGradTiling, test_tiling_dout_dtype_mismatch)
     EXPECT_EQ(DoSoftmaxFocalLossGradTilingCase({8, 64}, ge::DT_FLOAT, true, 2.0f, 0.25f, "mean", tilingKey, blockDim,
                                                {}, {}, {}, ge::DT_FLOAT16),
               ge::GRAPH_FAILED);
+}
+
+// weight 与 pred 必须同 dtype: def 与 binary.json 声明的两组组合按序对齐(f16,f16)/(f32,f32),
+// 且内核入口 DTYPE_WEIGHT 的兜底值(= DTYPE_PRED)以此为前提, 异形组合必须在 host 挡住。
+TEST_F(SoftmaxFocalLossGradTiling, test_tiling_weight_dtype_mismatch)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    // pred=fp32 + weight=fp16
+    EXPECT_EQ(
+        DoSoftmaxFocalLossGradTilingCase({8, 64}, ge::DT_FLOAT, true, 2.0f, 0.25f, "mean", tilingKey, blockDim, {}, {},
+                                         {}, ge::DT_UNDEFINED, nullptr, true, nullptr, nullptr, ge::DT_FLOAT16),
+        ge::GRAPH_FAILED);
+    // pred=fp16 + weight=fp32
+    EXPECT_EQ(
+        DoSoftmaxFocalLossGradTilingCase({8, 64}, ge::DT_FLOAT16, true, 2.0f, 0.25f, "mean", tilingKey, blockDim, {},
+                                         {}, {}, ge::DT_UNDEFINED, nullptr, true, nullptr, nullptr, ge::DT_FLOAT),
+        ge::GRAPH_FAILED);
+    // 非 fp16/fp32 的 weight 同样拒收(原独立 dtype 校验覆盖的场景不能丢)
+    EXPECT_EQ(
+        DoSoftmaxFocalLossGradTilingCase({8, 64}, ge::DT_FLOAT, true, 2.0f, 0.25f, "mean", tilingKey, blockDim, {}, {},
+                                         {}, ge::DT_UNDEFINED, nullptr, true, nullptr, nullptr, ge::DT_INT32),
+        ge::GRAPH_FAILED);
 }
 
 // reduction 缺省值是 "mean": 属性未下发时必须与显式传 "mean" 得到同一个系数,

@@ -78,6 +78,19 @@ def _reduction_str(v):
     return _REDUCTION_INT2STR[int(v)]
 
 
+def _work_dtype(*tensors):
+    """计算 dtype：任一输入已是 fp64（即 TTK 的 Promote 抬过）则全程 fp64，否则 fp32。
+
+    **golden 绝不自行抬档**：三方档照收 Promote 的结果即「零 cast」；
+    两方泛化档按**内核的加宽行为**走（本算子 U = fp32）。两档合起来即
+    「到手 dtype 与 U 取更宽」。
+    """
+    for t in tensors:
+        if t is not None and getattr(t, "dtype", None) == torch.float64:
+            return torch.float64
+    return torch.float32
+
+
 def _compute(x, target, **kwargs):
     """torch.Tensor 进 / 出，返回 [y, is_target]，顺序照 def.cpp 输出序。
 
@@ -85,14 +98,13 @@ def _compute(x, target, **kwargs):
     返回的 y 保持计算精度，舍回 x dtype 由各路壳负责。
     """
     reduction = _reduction_str(_attr(kwargs, "reduction", "mean"))
-    # golden 在 **float64** 上算: 它是仲裁真值, 必须比被测两腿都准。
-    # kernel/aclnn 通路有 golden_mode=Promote 抬到 fp64, 这里是空操作;
-    # **e2e 通路的 Promote 实测不生效**(framework_api/golden_generation.py 自带
-    # "flat_dtypes 取不到就原样返回、Promote 空转" 的静默路径), golden 停在 fp32 后会与
-    # 同精度的三方腿算出逐位相同的值 → |三方-golden|=0 → cross_check 比值分母塌陷判红。
-    # MSELossV2 实测两例红即此因, 改 fp64 后 e2e 240/240 全通。
-    # aten.multilabel_margin_loss_forward 已实测支持 fp64(CPU)。
-    xf = x.to(torch.float64)
+    # 计算精度 = _work_dtype, 零 cast: 抬真值是 TTK 的 Promote 的职责, golden 不自行抬档
+    # 。内核 U = fp32(arch35 实现通篇 LocalTensor<float>/RegTensor<float>),
+    # 故泛化档 fp16/bf16 抬 fp32、fp32 不再抬; 三方档照收 Promote 抬上来的档。
+    # 历史上这里写过无条件 .to(torch.float64), 理由是 e2e 通路 Promote 实测空转
+    # 那是拿 golden 补工具缺陷, 违反  已撤回; 归属见。
+    # (aten.multilabel_margin_loss_forward 已实测支持 fp64 与 fp32(CPU), 不支持 half。)
+    xf = x.to(_work_dtype(x))
     if x.numel() == 0 and reduction != "none":
         # [0,C] 的 sum/mean：**不能用 aten 当真值** —— 它在空输入上读的是未初始化内存
         # （同一输入连续调用会得到 3.6e19 / 1.6e-12 等互不相同的值）。取归约的通用约定：
@@ -132,7 +144,7 @@ def _cast_np(t, target_dt):
 # 三方腿的 is_target 用**1 元素占位**回传, 不回传整块。
 #
 # 依据: is_target 恒为 int32, _TOL["int32"] = binary_equal, 而 BinaryComparison.compare_impl
-# 只用 self.output 与 self.golden(见 ttk/core_modules/comparison/binary_equal.py) ——
+# 只用 self.output 与 self.golden(见 ttk/core_modules/comparison/binary_equal.py)
 # **三方腿的 is_target 值从未被任何判据使用**。而它的尺寸是 N x C, 比 y 大几个数量级:
 #   (362038, 11) 单例: y(sum)=4B / y(none)=1.4MB / is_target=15.9MB
 # 这条链路是 proxyjump 公网跳板(:80), 实测吞吐仅 85 KB/s。白传的 is_target 既拖慢跑批,
@@ -157,21 +169,27 @@ class _MmlCompose:
         self.reduction = _reduction_str(reduction)
 
     def __call__(self, x, target, **_):
+        # 按 NPU 的加宽行为同步 cast: **仅窄类型**抬 fp32(U=fp32, 且 aten 的 CPU 实现不支持 half),
+        # fp32 原样 —— 对 U==T 的档加 cast 是多余的, 还会让竞品凭空变准 → 假红。
+        narrow = x.dtype in (torch.float16, torch.bfloat16)
         out, is_target = torch.ops.aten.multilabel_margin_loss_forward(
-            x.to(torch.float32),
-            target.to(torch.int64),
+            x.float() if narrow else x,
+            target.to(torch.int64),  # aten 要求 LongTensor, 属 API 约束非精度决策
             _REDUCTION_STR2INT[self.reduction],
         )
         # is_target 回传 1 元素占位, 不回传整块 —— 见文件上方 _IST_PLACEHOLDER_NOTE:
         # 它的判据是 binary_equal(NPU 对 golden 两腿), 三方腿的值从不被使用, 而尺寸是 N x C。
         # golden 壳必须保留完整(binary_equal 要拿它跟 NPU 比), 只有三方腿这侧可以省。
-        return [out.to(x.dtype), is_target.reshape(-1)[:1].to(torch.int32)]
+        return [
+            out.to(x.dtype) if narrow else out,
+            is_target.reshape(-1)[:1].to(torch.int32),
+        ]
 
 
 class _MmlAclnnCompose:
     """aclnn 通路三方标杆（aclnnMultilabelMarginLoss）：输入名取 aclnn 头文件
     （self/target），reduction 为 int64(0=none/1=mean/2=sum)；is_target 跟随 self dtype
-    （A5 aclnn 契约）。`self` 仅位置参数防撞名（acl nn 首参名即 self，
+    （A5 aclnn 契约）。`self` 仅位置参数防撞名（acl nn 首参名即 self
     服务端按名绑定时关键字 self 会撞实例参数，positional-only 后落入 **kw）。"""
 
     def __init__(self, /, reduction=1, **_):
@@ -183,15 +201,17 @@ class _MmlAclnnCompose:
         **位置与关键字都要接**: TTK 对 aclnn 三方腿是按头文件形参**顺序**下发的
         (参照 activation/elu_grad_v2 的 aclnn golden —— 连标量和输出张量都在形参里)。
         只声明 `**kw` 时 args 为空、kw 里没有 self/input, 取到 None 后 `.to()` 直接崩,
-        服务端返回 500 AttributeError, 熔断器连续 30 例失败后中止整批 ——
+        服务端返回 500 AttributeError, 熔断器连续 30 例失败后中止整批
         MSELossV2 的 aclnn 通路实测踩过这个坑(240 例只收 29 条)。
         """
         x = args[0] if len(args) > 0 else kw.get("self", kw.get("input"))
         tgt = args[1] if len(args) > 1 else kw.get("target")
         red = args[2] if len(args) > 2 else kw.get("reduction", self._red)
+        # 仅窄类型抬 fp32(U=fp32, aten CPU 不支持 half); fp32 原样, 不加多余 cast()
+        narrow = x.dtype in (torch.float16, torch.bfloat16)
         out, is_target = torch.ops.aten.multilabel_margin_loss_forward(
-            x.to(torch.float32),
-            tgt.to(torch.int64),
+            x.float() if narrow else x,
+            tgt.to(torch.int64),  # aten 要求 LongTensor, API 约束非精度决策
             _REDUCTION_STR2INT[_reduction_str(red)],
         )
         # 这里**不能**用 1 元素占位(kernel 通路那侧可以): aclnn 契约下 is_target 的 dtype
@@ -210,12 +230,14 @@ class _MmlTorchCompose:
         self._red = _reduction_str(reduction)
 
     def __call__(self, input, target, **_):
+        # 仅窄类型抬 fp32; fp32 原样()
+        narrow = input.dtype in (torch.float16, torch.bfloat16)
         out, _is_target = torch.ops.aten.multilabel_margin_loss_forward(
-            input.to(torch.float32),
-            target.to(torch.int64),
+            input.float() if narrow else input,
+            target.to(torch.int64),  # aten 要求 LongTensor, API 约束非精度决策
             _REDUCTION_STR2INT[self._red],
         )
-        return [out.to(input.dtype)]
+        return [out.to(input.dtype) if narrow else out]
 
 
 def _inject_nonfinite(x, target, testcase_name=""):
@@ -242,6 +264,34 @@ def _inject_nonfinite(x, target, testcase_name=""):
     return a, target
 
 
+def _make_sentinel_mid(target, testcase_name=""):
+    """`_sentinelmid` 档的定点构造: 把哨兵 -1 放在行中部, 并在其后填入**合法但应被忽略**的下标。
+
+    为什么需要钩子: 本算子的实际标签数 L 是"数据内容派生的隐含维度"(第一个 -1 之前的
+    元素个数), CSV 的 input_data_ranges 只能给区间, 表达不了"第 k 位恰为 -1、其后仍是
+    合法下标"这种定点形态。靠值域随机只能得到 L 的分布, 命不中"哨兵在中部且后面有合法值"
+    这一支 —— 而内核正是在这一支上决定"遇 -1 即停", 停错就会把后面的下标也算进损失。
+
+    构造: 对每一行, 前 k 个位置填 0..k-1(合法且互不相同), 第 k 位填 -1,
+    其后填 (k+1)%C ... 这些值合法、但按语义必须被忽略。k = max(1, C//2)。
+    """
+    if "_sentinelmid" not in (testcase_name or ""):
+        return target
+    t = np.asarray(target).copy()
+    if t.ndim < 1 or t.shape[-1] < 3:
+        return target
+    c = t.shape[-1]
+    k = max(1, c // 2)
+    flat = t.reshape(-1, c)
+    for row in range(flat.shape[0]):
+        for i in range(k):
+            flat[row, i] = i % c
+        flat[row, k] = -1
+        for i in range(k + 1, c):
+            flat[row, i] = (i + 1) % c
+    return t
+
+
 class MultilabelMarginLossKernelSpec:
     """kernel / GEIR 通路 spec：golden 收 numpy.ndarray、返 [y, is_target]。"""
 
@@ -254,7 +304,9 @@ class MultilabelMarginLossKernelSpec:
         return [_cast_np(outs[0], y_dt), _cast_np(outs[1], t_dt)]
 
     def customize_inputs(x, target, **kwargs):
-        return _inject_nonfinite(x, target, kwargs.get("testcase_name", ""))
+        name = kwargs.get("testcase_name", "")
+        target = _make_sentinel_mid(target, name)
+        return _inject_nonfinite(x, target, name)
 
     third_party = {"torch": _MmlCompose}
     tolerance = _TOL
@@ -286,7 +338,7 @@ class MultilabelMarginLossAclnnSpec:
 class MultilabelMarginLossTorchSpec:
     """e2e 通路 spec（torch.nn.functional.multilabel_margin_loss）：只产 y（API 不暴露 is_target）。
 
-    ⚠️ 签名按 torch API 全参数序：框架按 param plan **位置**传全量参数
+    签名按 torch API 全参数序：框架按 param plan **位置**传全量参数
     （input, target, size_average, reduce, reduction），少声明会报参数数错。
     """
 

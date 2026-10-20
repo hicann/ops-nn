@@ -35,10 +35,11 @@ namespace ge {
 *@par Attributes:
 * @li gamma: An optional float. Exponential coefficient of the focal loss. Defaults to "2.0".
 * @li alpha: An optional float. Weighted coefficient of the focal loss. Defaults to "0.25".
-* @li reduction: An optional string. Defaults to "none". Only "none" is supported; any other value is
-*rejected, because the output always has the same shape as "pred" and cannot carry the scalar result
-*that "mean"/"sum" would produce. The default differs from the "mean" declared on other products,
-*where that default is rejected by the implementation and therefore unusable. \n
+* @li reduction: An optional string from "none", "mean" and "sum", specifying how the loss is reduced.
+* Defaults to "mean" (aligned with the common loss convention and with the Ascend 910B prototype).
+* Shape of "y" follows this attribute: "none" keeps the shape of "pred"; "mean"/"sum" would reduce "y"
+* to a scalar. Only "none" is implemented currently, any other value is rejected in InferShape;
+* so "reduction" must be set explicitly to "none" for now.
 
 *@par Outputs:
 *y: A Tensor. Has the same type and shape as "pred". All elements within one row share the same
@@ -53,7 +54,7 @@ REG_OP(SoftmaxFocalLoss)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(gamma, Float, 2.0)
     .ATTR(alpha, Float, 0.25)
-    .ATTR(reduction, String, "none")
+    .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
 #endif // OPS_PROTO_DEF_SOFTMAXFOCALLOSS
 

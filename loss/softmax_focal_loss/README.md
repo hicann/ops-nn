@@ -39,24 +39,76 @@
 
 ## 参数说明
 
-| 参数名 | 输入/输出/属性 | 描述                                                         | 数据类型        | 数据格式 |
-| ------ | -------------- | ------------------------------------------------------------ | --------------- | -------- |
-| pred   | 输入           | 前级softmax输出的概率，对应公式中的$p$，取值应落在(0, 1)开区间。 | FLOAT16、FLOAT  | ND       |
-| target | 输入           | one-hot标签，对应公式中的$t$，shape与pred一致。               | INT32           | ND       |
-| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与pred一致；不传入时按全1处理。数据类型可与pred不同。 | FLOAT16、FLOAT  | ND       |
-| gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
-| alpha  | 属性           | 调制因子的权重系数，对应公式中的$\alpha$，缺省值为0.25。      | FLOAT           | -        |
-| reduction | 属性        | 缺省值为"none"，当前也仅支持"none"，传入其他取值会报错。 | STRING          | -        |
-| y      | 输出           | 损失值，shape与pred一致，同一行内各元素取值相同。数据类型与pred一致。 | FLOAT16、FLOAT  | ND       |
+<table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
+  <col style="width: 40px">
+  <col style="width: 60px">
+  <col style="width: 266px">
+  <col style="width: 60px">
+  <col style="width: 40px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>pred</td>
+      <td>输入</td>
+      <td>前级softmax输出的概率，公式中的p。取值落在(0, 1)开区间，各维长度须大于0（不支持空Tensor），最后一维为类别维、其余维为样本维。<term>Ascend 950PR&950DT系列产品</term>：支持rank≥1；其余产品：仅支持(batch_size, num_classes)二维。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>target</td>
+      <td>输入</td>
+      <td>one-hot标签，公式中的t，shape与pred一致，取值须为0或1。</td>
+      <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>weight</td>
+      <td>可选输入</td>
+      <td>逐元素权重，公式中的w，shape与pred一致；不传入时按全1处理。数据类型可与pred不同。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>gamma</td>
+      <td>属性</td>
+      <td>调制因子的指数，公式中的gamma，缺省值为2.0。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>属性</td>
+      <td>调制因子的权重系数，公式中的alpha，缺省值为0.25。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>reduction</td>
+      <td>属性</td>
+      <td>归约方式，支持'none'、'mean'、'sum'，缺省值为'mean'。输出y的shape随该属性：'none'时与pred同形，'mean'、'sum'时为标量。当前仅支持'none'，须显式传入。</td>
+      <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>y</td>
+      <td>输出</td>
+      <td>损失值，shape与pred一致，同一行内各元素取值相同。数据类型与pred一致。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-- pred与y的数据类型保持一致；weight的数据类型可独立于pred取FLOAT16或FLOAT。
-- target、weight的shape必须与pred一致，target的数据类型固定为INT32。
-- pred各维长度必须大于0，不支持空Tensor。
-- target应为one-hot编码：本算子不校验target的取值，非one-hot时其数值会作为权重直接参与行内求和，结果不再是Focal Loss的定义值。
-- 归约轴固定为最后一维：pred的最后一维为类别维，其余维为样本维。<term>Ascend 950PR&950DT系列产品</term>支持任意rank≥1的pred，其余产品仅支持二维形式(batch_size, num_classes)。
-- reduction属性当前仅支持"none"：本算子的输出shape恒等于pred，无法承载"mean"/"sum"所需的标量结果，故传入"none"以外的取值（大小写不敏感）直接报错。缺省值取"none"，不显式传入该属性时按"none"处理。
+无。
 
 ## 调用说明
 

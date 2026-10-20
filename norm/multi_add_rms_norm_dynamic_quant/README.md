@@ -93,42 +93,42 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。</td>
+      <td>表示标准化过程中的源数据张量列表，为长度为1~5的listOfTensor，对应公式中的`x1`。列表内各张量的shape与数据类型需要一致，维数不超过8。最后一维（归约轴）长度必须大于0；其余维长度可为0（空Tensor），此时各输出为同形空张量、不做计算。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。</td>
+      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。shape需要与`x1`列表中各张量一致，数据类型与`x1`一致。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与`x1`最后一维一致，数据类型与`x1`一致。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale1</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。</td>
+      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。shape需要与`gamma`一致，数据类型与`x1`一致。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale2</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。</td>
+      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。shape需要与`gamma`一致，数据类型与`x1`一致。不支持只传入`smooth_scale2`而不传入`smooth_scale1`。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td>用于防止除0错误，对应公式中的`epsilon`。默认值为1e-6。</td>
+      <td>用于防止除0错误，对应公式中的`epsilon`。默认值为1e-6，取值必须大于零。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -142,7 +142,7 @@
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>表示量化输出Tensor，对应公式中的`y2`。</td>
+      <td>表示量化输出Tensor，对应公式中的`y2`。当`smooth_scale2`未输入时，该输出shape固定为[1]且取值无实际意义。</td>
       <td>INT8</td>
       <td>ND</td>
     </tr>
@@ -163,14 +163,14 @@
     <tr>
       <td>scale1</td>
       <td>输出</td>
-      <td>第一路量化的输出。</td>
+      <td>第一路量化的输出。shape为输入`x1`去掉末维后的形状（`x1`为1维时为[1]）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale2</td>
       <td>输出</td>
-      <td>第二路量化的输出。</td>
+      <td>第二路量化的输出。当`smooth_scale2`未输入时，该输出shape固定为[1]且取值无实际意义。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

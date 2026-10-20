@@ -15,9 +15,8 @@
  * \file multilabel_margin_loss_tiling_arch35.cpp
  * \brief MultilabelMarginLoss arch35(ascend950/regbase)独立 tiling。
  *
- * 组织方式对齐仓上双代先例 loss/chamfer_distance_grad:唯一的 IMPL_OP_OPTILING 留在根 tiling,
- * 根 tiling 只做一次 soc 分派;A5 的全部计算(dtype 守护 / 分核 / UB 预算 / workspace)都在本文件,
- * A2 的 tiling 与 tiling data 一个字节不动。
+ * 唯一的 IMPL_OP_OPTILING 留在根 tiling 并按 soc 分派; dtype 守护、分核、UB 预算与
+ * workspace 计算全部在本文件, 其余 soc 的 tiling 与 tiling data 不受影响。
  *
  * 本文件承担 host 侧 buffer 实算:kernel 不再自行推导任何 UB 尺寸,全部取自下发的 ubFactor。
  */
@@ -143,10 +142,9 @@ ge::graphStatus ParseShapeAndReduction(gert::TilingContext* context, uint32_t& N
     size_t dimNum = xShape->GetStorageShape().GetDimNum();
     // 支持面只有 [N, C](2D) 与 [C](1D)。原先 `dimNum >= 2` 一律照收、只取前两维,
     // 第 3 维起被**静默丢弃** —— 喂 (4,5,6) 会当成 N=4,C=5 算, 不报错也不拒收, 直接出错误结果。
-    // A2 同样缺这道校验(canndev tbe/impl/multilabel_margin_loss.py 只用 len(shape)==2 判 nd_flag),
-    // 但"A2 没有"不构成 A5 也不做的理由: 缺校验 ≠ 支持该形状, 补上是改进不是兼容性回退。
     OP_CHECK_IF(dimNum < 1 || dimNum > MAX_DIM_NUM,
-                OP_LOGE(context->GetNodeName(), "The dim num of x must be 1 or 2, but got %zu.", dimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(dimNum),
+                                                         "dim num must be 1 or 2"),
                 return ge::GRAPH_FAILED);
     if (dimNum >= 2) {
         N = static_cast<uint32_t>(xShape->GetStorageShape().GetDim(0));
@@ -156,9 +154,43 @@ ge::graphStatus ParseShapeAndReduction(gert::TilingContext* context, uint32_t& N
         C = static_cast<uint32_t>(xShape->GetStorageShape().GetDim(0));
     }
 
+    // 类别轴 C 为 0 必须拒收: 1/C 无意义, 且会让内核按 0 字节 InitBuffer 与 blockLen=0 搬运。
+    // 空 tensor 仅支持 N 轴为空([0,C], C>=1)。
+    OP_CHECK_IF(C == 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x", "C=0",
+                                                      "the class dim (C) must be greater than 0"),
+                return ge::GRAPH_FAILED);
+
+    // target 的 shape 必须与 x 一致: 内核按 x 的 N*C 给 targetGm 设址, 更小的 target 会越界读。
+    const gert::StorageShape* targetShape = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, targetShape);
+    const auto& tStorage = targetShape->GetStorageShape();
+    // target 必须与 x 形状完全一致(rank 与逐维). 两种不一致合用一条日志: 用 mismatchDim 区分
+    // —— SIZE_MAX 表示 rank 不等, 其余为首个不等的维下标。避免为同一类错误铺两条 OP_LOGE。
+    size_t mismatchDim = SIZE_MAX;
+    bool shapeMismatch = (tStorage.GetDimNum() != dimNum);
+    if (!shapeMismatch) {
+        for (size_t i = 0; i < dimNum; i++) {
+            if (tStorage.GetDim(i) != xShape->GetStorageShape().GetDim(i)) {
+                shapeMismatch = true;
+                mismatchDim = i;
+                break;
+            }
+        }
+    }
+    OP_CHECK_IF(shapeMismatch,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "x, target",
+                    Ops::Base::ToString(xShape->GetStorageShape()) + ", " + Ops::Base::ToString(tStorage),
+                    "target shape must equal x shape"),
+                return ge::GRAPH_FAILED);
+
     reduction = ParseReductionAttr(context);
     if (reduction == REDUCTION_INVALID) {
-        OP_LOGE(context->GetNodeName(), "The reduction attribute must be 'none', 'mean', or 'sum'.");
+        const auto* redAttrs = context->GetAttrs();
+        const char* redRaw = (redAttrs == nullptr) ? nullptr : redAttrs->GetAttrPointer<char>(0);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduction",
+                                              (redRaw == nullptr) ? "null" : redRaw, "must be 'none', 'mean' or 'sum'");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -187,7 +219,6 @@ ge::graphStatus GetElemSizes(gert::TilingContext* context, uint32_t& tSize, uint
 }
 
 // 整行装不下就按 C 方向分块, 而不是拒收: 内核对 C 的支持面不应由"一行必须整条驻留 UB"决定
-// (issue #32: A2 由 TBE DSL 承担切分, 对 C 无上限; 我方原实现在 C≈8000 就 GRAPH_FAILED)。
 ge::graphStatus SolveCFactor(gert::TilingContext* context, uint64_t ubSize, uint32_t fixedBytes, uint32_t C,
                              uint32_t tSize, uint32_t isTgtSize, uint32_t perTileBytes, uint32_t& cFactor,
                              uint32_t& perRowBytes, uint64_t& used)
@@ -207,10 +238,8 @@ ge::graphStatus SolveCFactor(gert::TilingContext* context, uint64_t ubSize, uint
         cFactor -= TILE_ALIGN;
     }
     if (cFactor < TILE_MIN) {
-        OP_LOGE(context->GetNodeName(),
-                "UB budget exhausted: even one tile of %u elements does not fit (fixed %u B + reserve %u B, "
-                "UB %lu B, C=%u).",
-                TILE_MIN, fixedBytes, UB_RESERVE_BYTES, static_cast<unsigned long>(ubSize), C);
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(),
+                                       "UB budget exhausted: even one tile does not fit, C=" + std::to_string(C));
         return ge::GRAPH_FAILED;
     }
     perRowBytes = PerRowUbBytes(cFactor, tSize, isTgtSize, SPLIT_FLOAT_BUFS);
@@ -225,16 +254,20 @@ ge::graphStatus SolveUbFactor(gert::TilingContext* context, uint64_t ubSize, uin
 {
     // 除零守卫: perTileBytes = 2*sizeof(float)+tSize 恒 > 0, used < ubSize 由调用方保证,
     // 这里显式挡一道, 免得后续改动把前提破坏了还静默算下去。
-    OP_CHECK_IF(perTileBytes == 0U || used >= ubSize,
-                OP_LOGE(context->GetNodeName(), "invalid UB budget: perTileBytes=%u, used=%lu, ubSize=%lu",
-                        perTileBytes, static_cast<unsigned long>(used), static_cast<unsigned long>(ubSize)),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        perTileBytes == 0U || used >= ubSize,
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(),
+                                       "invalid UB budget: perTileBytes=" + std::to_string(perTileBytes) +
+                                           ", used=" + std::to_string(used) + ", ubSize=" + std::to_string(ubSize)),
+        return ge::GRAPH_FAILED);
     ubFactor = FloorAlign(static_cast<uint32_t>((ubSize - used) / perTileBytes), TILE_ALIGN);
     if (ubFactor > MAX_VEC_ELEMS) {
         ubFactor = MAX_VEC_ELEMS; // 已是 16 的倍数(255×64=16320)
     }
     if (ubFactor < TILE_MIN) {
-        OP_LOGE(context->GetNodeName(), "UB too small for tiling: ubFactor=%u < %u (C=%u).", ubFactor, TILE_MIN, C);
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(),
+                                       "UB too small for tiling: ubFactor=" + std::to_string(ubFactor) + " < " +
+                                           std::to_string(TILE_MIN) + " (C=" + std::to_string(C) + ")");
         return ge::GRAPH_FAILED;
     }
     // 不超过实际所需:reduction=none 需要覆盖 N 行,mean/sum 只需 1 个元素。
@@ -250,6 +283,29 @@ ge::graphStatus SolveUbFactor(gert::TilingContext* context, uint64_t ubSize, uin
 }
 
 // 写 tiling 数据与 workspace 大小。
+// 标签分块粒度 labelBlock: accVec 顺序累加 B 个标签的相对误差 ~ eps*B/2, 其后对 C 个元素
+// 树规约的相对误差 ~ eps*k/2(k = ceil(log2 C))。取 B <= k 使前者不成为主导项, 再向上取到
+// 8 的倍数并钳进 [8, 64]; L <= B 时块数为 1, 不引入额外规约。
+static uint32_t SolveLabelBlock(uint32_t C)
+{
+    constexpr uint32_t LABEL_BLOCK_MIN = 8U;
+    constexpr uint32_t LABEL_BLOCK_MAX = 64U;
+    constexpr uint32_t LABEL_BLOCK_STEP = 8U;
+    uint32_t k = 1U;
+    while ((1U << k) < C) { // k = ceil(log2 C)
+        k++;
+    }
+    // 向下取到 8 的倍数: 向上取整会让 B 超过 k, 块内顺序累加成为主导误差项。
+    uint32_t b = (k / LABEL_BLOCK_STEP) * LABEL_BLOCK_STEP;
+    if (b < LABEL_BLOCK_MIN) {
+        b = LABEL_BLOCK_MIN;
+    }
+    if (b > LABEL_BLOCK_MAX) {
+        b = LABEL_BLOCK_MAX;
+    }
+    return b;
+}
+
 // Float 工作区:reduction=none 每行一个槽;mean/sum 每核一个 32B 独占槽(不用原子加,
 // 核0 按固定的 blockIdx 顺序 Kahan 合并 -> 结果可复现且更准)。
 ge::graphStatus WriteTilingAndWorkspace(gert::TilingContext* context,
@@ -261,11 +317,12 @@ ge::graphStatus WriteTilingAndWorkspace(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     if (memset_s(tiling, sizeof(MultilabelMarginLossArch35TilingData), 0,
                  sizeof(MultilabelMarginLossArch35TilingData)) != EOK) {
-        OP_LOGE(context->GetNodeName(), "memset_s tiling data failed.");
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(), "memset_s tiling data failed");
         return ge::GRAPH_FAILED;
     }
     // 除零守卫: usedCoreNum 由入口按 (N==0)?1:min(N,coreNum) 算出恒 >= 1, 显式挡一道。
-    OP_CHECK_IF(usedCoreNum == 0U, OP_LOGE(context->GetNodeName(), "usedCoreNum is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(usedCoreNum == 0U, OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(), "usedCoreNum is 0"),
+                return ge::GRAPH_FAILED);
     tiling->N = N;
     tiling->C = C;
     tiling->basePerCore = N / usedCoreNum;
@@ -276,6 +333,7 @@ ge::graphStatus WriteTilingAndWorkspace(gert::TilingContext* context,
     tiling->wsCoreStride = WS_CORE_STRIDE;
     tiling->partialUbElems = partialUbElems;
     tiling->cFactor = cFactor;
+    tiling->labelBlock = SolveLabelBlock(C);
 
     uint32_t wsElems = (reduction == RED_NONE) ? ((N == 0U) ? 1U : N) : (usedCoreNum * WS_CORE_STRIDE);
     size_t accBytes = ((static_cast<size_t>(wsElems) * sizeof(float) + 31U) / 32U) * 32U;
@@ -286,7 +344,7 @@ ge::graphStatus WriteTilingAndWorkspace(gert::TilingContext* context,
 }
 } // namespace
 
-// A5 tiling 入口。根 tiling 在 regbase 分支上调用本函数(前置声明见根文件)。
+// tiling 入口。根 tiling 在 regbase 分支上调用本函数。
 ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
 {
     if (CheckDtypeValid(context) != ge::GRAPH_SUCCESS) {
@@ -316,7 +374,7 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
     uint64_t ubSize = 0U;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     if (ubSize == 0U) {
-        OP_LOGE(context->GetNodeName(), "Failed to get UB size from platform.");
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(context->GetNodeName(), "failed to get UB size from platform");
         return ge::GRAPH_FAILED;
     }
 
@@ -332,8 +390,13 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
 
     uint64_t used = static_cast<uint64_t>(perRowBytes) + fixedBytes + UB_RESERVE_BYTES;
     uint32_t cFactor = C;
-    if (used >= ubSize && SolveCFactor(context, ubSize, fixedBytes, C, tSize, isTgtSize, perTileBytes, cFactor,
-                                       perRowBytes, used) != ge::GRAPH_SUCCESS) {
+    // 切到 C 分块的条件不是"整行一点都装不下", 而是"整行装下后还得给 tile 缓冲留出至少
+    // TILE_MIN 份" —— 否则存在一条夹缝: ubSize-used 落在 (0, TILE_MIN*perTileBytes) 区间时,
+    // 整行装不下时按 C 方向分块而不是拒收: 判定口径必须与 SolveCFactor 内部一致(同一份
+    // tileReserve), 否则会出现"整行判定通过、随后 SolveUbFactor 解出 ubFactor=0 而拒收"。
+    uint64_t tileReserve = static_cast<uint64_t>(TILE_MIN) * perTileBytes;
+    if (used + tileReserve > ubSize && SolveCFactor(context, ubSize, fixedBytes, C, tSize, isTgtSize, perTileBytes,
+                                                    cFactor, perRowBytes, used) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -348,9 +411,8 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
 
 struct MultilabelMarginLossCompileInfo {};
 
-// 本文件只在 ascend950 编译(COMPUTE_UNIT ascend950 + TILING_DIR arch35),直接走 A5 实算,
-// 不做 soc 分派。A2(ascend910b 等)不编译本仓 tiling,回归 canndev 自带 A2 tiling。
-// 参照 loss/ctc_loss_v2 的组织方式:arch35 文件自包含 A5 实现 + 注册,无分派、无 A2 回退。
+// 本文件只在 ascend950 编译(COMPUTE_UNIT ascend950 + TILING_DIR arch35), 自包含实现与注册,
+// 不做 soc 分派。
 static ge::graphStatus MultilabelMarginLossTilingFunc(gert::TilingContext* context)
 {
     return DoMultilabelMarginLossTiling950(context);

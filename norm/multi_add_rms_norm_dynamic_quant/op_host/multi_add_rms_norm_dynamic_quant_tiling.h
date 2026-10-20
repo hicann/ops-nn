@@ -65,13 +65,12 @@ TILING_DATA_FIELD_DEF(uint32_t, x1Num);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_100, MultiAddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_101, MultiAddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_102, MultiAddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_103, MultiAddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_199, MultiAddRmsNormDynamicQuantRegbaseTilingData)
 
 constexpr uint32_t TILING_TYPE_PERF = 0;
-constexpr uint32_t TILING_TYPE_NORMAL = 1;
+// 1 号位(NORMAL/key 101)已下线: 不可达死档, 见 tiling_arch35.cpp SetTilingParams 注释。编号保留不复用。
 constexpr uint32_t TILING_TYPE_SINGLE_ROW = 2;
 constexpr uint32_t TILING_TYPE_SPILT = 3;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;
@@ -200,7 +199,6 @@ public:
 
 private:
     bool TryPerfTiling();
-    bool TryNormTiling();
     bool TrySingleRowTiling();
     bool TrySplitTiling();
 

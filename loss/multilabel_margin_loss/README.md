@@ -8,7 +8,7 @@
 |  <term>Atlas A3系列产品</term>  |     √    |
 |  <term>Atlas A2系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
-|  <term>Atlas推理系列产品</term>     |     √    |
+|  <term>Atlas推理系列产品</term>     |     ×    |
 |  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -48,7 +48,7 @@
     <td>x</td>
     <td>输入</td>
     <td>公式中的`x`，预测分数张量。shape为`[N,C]`（2D）或`[C]`（1D）。空tensor仅支持`N`轴为空（`[0,C]`，要求`C≥1`，空进空出）；`C=0`不支持（含`1/C`无意义，报`161002`）。</td>
-    <td>BFLOAT16、FLOAT16、FLOAT32</td>
+    <td><term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：BFLOAT16、FLOAT16、FLOAT32<br><term>Atlas训练系列产品</term>：FLOAT16、FLOAT32</td>
     <td>ND</td>
     </tr>
     <tr>
@@ -62,20 +62,20 @@
     <td>y</td>
     <td>输出</td>
     <td>损失输出；`reduction=none`+2D为`[N]`，否则为标量`[1]`。</td>
-    <td>FLOAT16、BFLOAT16、FLOAT32（与`x`一致）</td>
+    <td>与`x`一致。<term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：BFLOAT16、FLOAT16、FLOAT32<br><term>Atlas训练系列产品</term>：FLOAT16、FLOAT32</td>
     <td>ND</td>
     </tr>
     <tr>
     <td>is_target</td>
     <td>输出</td>
     <td>目标位0/1掩码，与`target`同shape，掩码值由`target`派生（0/1）。dtype支持INT32或与`x`一致。</td>
-    <td>INT32，或与`x`一致（FLOAT16、BFLOAT16、FLOAT32）</td>
+    <td>INT32，或与`x`一致。后者按产品分档：<term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：BFLOAT16、FLOAT16、FLOAT32<br><term>Atlas训练系列产品</term>：FLOAT16、FLOAT32</td>
     <td>ND</td>
     </tr>
     <tr>
     <td>reduction</td>
     <td>属性</td>
-    <td>归约方式，支持`'none'`、`'mean'`、`'sum'`。</td>
+    <td>归约方式，支持`'none'`、`'mean'`、`'sum'`，默认值为`'mean'`。</td>
     <td>STRING</td>
     <td>-</td>
     </tr>

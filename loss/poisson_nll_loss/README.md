@@ -52,14 +52,14 @@
     <tr>
       <td>input_x</td>
       <td>输入</td>
-      <td>预测值张量，公式中的input_x。数据类型需要与target一致，shape需要与target相同。</td>
+      <td>预测值张量，公式中的input_x。数据类型需要与target一致，shape需要与target相同。支持空Tensor（元素总数为0）：reduction为"none"时输出空Tensor，"sum"时输出0，"mean"时输出nan。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>target</td>
       <td>输入</td>
-      <td>目标值张量，公式中的target。数据类型需要与input_x一致，shape需要与input_x相同。</td>
+      <td>目标值张量，公式中的target。数据类型需要与input_x一致，shape需要与input_x完全相同。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -102,14 +102,10 @@
 
 ## 约束说明
 
-- input_x、target的数据类型必须相同，同为FLOAT16或FLOAT32。
-- input_x与target的shape必须完全相同（不支持broadcast）；输出loss的数据类型与输入一致。
-- eps不能为0。
-- reduction取值仅支持"none"/"mean"/"sum"。
-- 支持空Tensor（元素总数为0）输入：reduction=none时输出空Tensor；sum时输出0；mean时输出nan（0/0）。
+无。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式调用 | [test_geir_poisson_nll_loss.cpp](examples/arch35/test_geir_poisson_nll_loss.cpp) | 通过算子IR构图方式调用PoissonNllLoss算子。 |
+| 图模式调用 | [test_geir_poisson_nll_loss.cpp](examples/arch35/test_geir_poisson_nll_loss.cpp) | 通过[算子IR](op_graph/poisson_nll_loss_proto.h)构图方式调用PoissonNllLoss算子。 |

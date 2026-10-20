@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -36,7 +37,9 @@ static std::vector<int64_t> ShapeToVec(const gert::Shape& s)
     return v;
 }
 
-static ge::graphStatus RunInfer(const gert::Shape& x, const std::string& reduction, gert::Shape& y, gert::Shape& isTgt)
+// withReductionAttr=false: 不下发 reduction 属性。
+static ge::graphStatus RunInfer(const gert::Shape& x, const std::string& reduction, gert::Shape& y, gert::Shape& isTgt,
+                                bool withReductionAttr = true)
 {
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("MultilabelMarginLoss");
     EXPECT_NE(opImpl, nullptr);
@@ -52,7 +55,10 @@ static ge::graphStatus RunInfer(const gert::Shape& x, const std::string& reducti
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+                      .NodeAttrs(withReductionAttr ?
+                                     std::vector<std::pair<std::string, Ops::NN::AnyValue>>{
+                                         {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}} :
+                                     std::vector<std::pair<std::string, Ops::NN::AnyValue>>{})
                       .Build();
     auto context = holder.GetContext<gert::InferShapeContext>();
     auto ret = fn(context);
@@ -65,6 +71,14 @@ static ge::graphStatus RunInfer(const gert::Shape& x, const std::string& reducti
 } // namespace
 
 class MultilabelMarginLossInferShapeTest : public testing::Test {};
+
+// 不下发 reduction 属性时 infershape 必须失败, 不得自行假定 "mean"。
+TEST_F(MultilabelMarginLossInferShapeTest, reduction_attr_absent_must_fail)
+{
+    gert::Shape y, isTgt;
+    const gert::Shape x{8, 16};
+    EXPECT_EQ(RunInfer(x, "mean", y, isTgt, false), ge::GRAPH_FAILED);
+}
 
 TEST_F(MultilabelMarginLossInferShapeTest, none_2d_y_eq_n_istarget_eq_x)
 {

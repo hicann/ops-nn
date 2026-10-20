@@ -15,13 +15,16 @@
 
 #include "arch35/poisson_nll_loss.h"
 
+// workspace 入参是整块基址, 起始若干 MB 属框架系统区(dump/KFC 等), 用户数据必须从
+// GetUserWorkspace(workspace) 起写, 否则与系统区互踩。
 #ifdef __CCE_KT_TEST__
 extern "C" __global__ __aicore__ void poisson_nll_loss(GM_ADDR input_x, GM_ADDR target, GM_ADDR loss, GM_ADDR workspace,
                                                        GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(PoissonNllLossTilingData, tilingData, tiling);
     NsPoissonNllLoss::KernelPoissonNllLoss<DTYPE_INPUT_X, float, 0> op;
-    op.Init(input_x, target, loss, workspace, &tilingData);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
+    op.Init(input_x, target, loss, usrWorkspace, &tilingData);
     op.Process();
 }
 #else
@@ -32,7 +35,8 @@ __global__ __aicore__ void poisson_nll_loss(GM_ADDR input_x, GM_ADDR target, GM_
     REGISTER_TILING_DEFAULT(PoissonNllLossTilingData);
     GET_TILING_DATA_WITH_STRUCT(PoissonNllLossTilingData, tilingData, tiling);
     NsPoissonNllLoss::KernelPoissonNllLoss<D_T_X, float, BUFFER_MODE> op;
-    op.Init(input_x, target, loss, workspace, &tilingData);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
+    op.Init(input_x, target, loss, usrWorkspace, &tilingData);
     op.Process();
 }
 #endif

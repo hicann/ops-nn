@@ -53,6 +53,26 @@ constexpr int32_t PNLL_WS_CORE_STRIDE = 8;
 // 一个 fp32 向量寄存器的车道数(256B / 4B)
 constexpr int32_t PNLL_VL_FP32 = 64;
 
+// 标量 TwoSum: 把 add 精确并入 (hi, lo)。非有限的补偿量按 0 处理, 避免 inf 场景被污染成 NaN。
+__aicore__ inline void TwoSumAcc(float& hi, float& lo, float add)
+{
+    float s = hi + add;
+    float b = s - hi;
+    float err = (hi - (s - b)) + (add - b);
+    float e = err + lo;
+    if (!(e == e)) {
+        e = 0.0f;
+    }
+    float h = s + e;
+    float b2 = h - s;
+    float r = (s - (h - b2)) + (e - b2);
+    if (!(r == r)) {
+        r = 0.0f;
+    }
+    hi = h;
+    lo = r;
+}
+
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
 class KernelPoissonNllLoss {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
@@ -72,7 +92,8 @@ private:
     __aicore__ inline void CopyOut(int64_t pnllSeg, int64_t pnllSegNum);
     __aicore__ inline void ProcessNone();
     __aicore__ inline void ProcessReduce();
-    __aicore__ inline float LocalReduceSum(LocalTensor<T_COMPUTE>& src, int64_t count);
+    // 段内补偿式规约: 块内硬件树形, 块间 TwoSum, 结果以 (hi, lo) 返回(调用方只在最末并一次)
+    __aicore__ inline void LocalExactSum(LocalTensor<T_COMPUTE>& src, int64_t count, float& hi, float& lo);
 
 private:
     TPipe pipe_;
@@ -277,18 +298,78 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::CopyO
     pnllQueY_.FreeTensor(pnllYLocal);
 }
 
-// Whole-reduce a fp32 LocalTensor of `count` elements to a single fp32 value.
-// Uses ReduceSum(dst, src, work, count) — the proven arch35 whole-reduce form.
+// 段内规约: 每 PNLL_VL_FP32 个元素一条硬件树形规约(块内即最优序), 块间用 TwoSum 把块和
+// 精确并入 (hi, lo), 使误差与块数无关。
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
-__aicore__ inline float KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::LocalReduceSum(LocalTensor<T_COMPUTE>& src,
-                                                                                           int64_t count)
+__aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::LocalExactSum(LocalTensor<T_COMPUTE>& src,
+                                                                                         int64_t count, float& hi,
+                                                                                         float& lo)
 {
-    LocalTensor<T_COMPUTE> red = pnllReduceBuf_.Get<T_COMPUTE>();
-    ReduceSum(red, src, red, static_cast<int32_t>(count));
+    LocalTensor<T_COMPUTE> slot = pnllReduceBuf_.Get<T_COMPUTE>();
+    __ubuf__ float* srcAddr = (__ubuf__ float*)src.GetPhyAddr();
+    // 两个 lane0 结果各占一个 32B 块: StoreAlign 要求 32B 对齐
+    __ubuf__ float* hiAddr = (__ubuf__ float*)slot.GetPhyAddr();
+    __ubuf__ float* loAddr = hiAddr + PNLL_WS_CORE_STRIDE;
+
+    uint32_t vfLen = static_cast<uint32_t>(PNLL_VL_FP32);
+    uint16_t blocks = static_cast<uint16_t>(count / PNLL_VL_FP32);
+    uint32_t tailNum = static_cast<uint32_t>(count % PNLL_VL_FP32);
+    uint16_t tailLoop = tailNum != 0 ? 1 : 0;
+    uint32_t oneCnt = 1U;
+
+    __VEC_SCOPE__
+    {
+        AscendC::Reg::RegTensor<float> vReg;
+        AscendC::Reg::RegTensor<float> rReg;
+        AscendC::Reg::RegTensor<float> hiReg;
+        AscendC::Reg::RegTensor<float> loReg;
+        AscendC::Reg::RegTensor<float> sReg;
+        AscendC::Reg::RegTensor<float> eReg;
+        AscendC::Reg::RegTensor<float> bReg;
+        AscendC::Reg::RegTensor<float> tReg;
+        AscendC::Reg::RegTensor<float> zeroReg;
+        AscendC::Reg::MaskReg pregFinite;
+        // UpdateMask 必须排在 CreateMask(ALL) 之前取, 否则主掩码会被改写成尾块掩码
+        AscendC::Reg::MaskReg pregOne = AscendC::Reg::UpdateMask<float>(oneCnt);
+        AscendC::Reg::MaskReg pregTail = AscendC::Reg::UpdateMask<float>(tailNum);
+        AscendC::Reg::MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+
+        AscendC::Reg::Duplicate(hiReg, 0.0f);
+        AscendC::Reg::Duplicate(loReg, 0.0f);
+        AscendC::Reg::Duplicate(zeroReg, 0.0f);
+        for (uint16_t j = 0; j < blocks + tailLoop; ++j) {
+            AscendC::Reg::MaskReg preg = (j < blocks) ? pregMain : pregTail;
+            AscendC::Reg::AddrReg off = AscendC::Reg::CreateAddrReg<float>(0, 0U, j, vfLen);
+            AscendC::Reg::LoadAlign(vReg, srcAddr, off);
+            AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(rReg, vReg, preg);
+            AscendC::Reg::Add(sReg, hiReg, rReg, pregMain);
+            AscendC::Reg::Sub(bReg, sReg, hiReg, pregMain);
+            AscendC::Reg::Sub(tReg, sReg, bReg, pregMain);
+            AscendC::Reg::Sub(tReg, hiReg, tReg, pregMain);
+            AscendC::Reg::Sub(eReg, rReg, bReg, pregMain);
+            AscendC::Reg::Add(eReg, tReg, eReg, pregMain);
+            AscendC::Reg::Add(eReg, eReg, loReg, pregMain);
+            // inf/nan 位上补偿量算出 NaN 会污染后续每一轮: 非有限则按 0 处理(与跨核合并同策)
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eReg, eReg, pregMain);
+            AscendC::Reg::Select(eReg, eReg, zeroReg, pregFinite);
+            AscendC::Reg::Add(hiReg, sReg, eReg, pregMain);
+            AscendC::Reg::Sub(bReg, hiReg, sReg, pregMain);
+            AscendC::Reg::Sub(tReg, hiReg, bReg, pregMain);
+            AscendC::Reg::Sub(tReg, sReg, tReg, pregMain);
+            AscendC::Reg::Sub(loReg, eReg, bReg, pregMain);
+            AscendC::Reg::Add(loReg, tReg, loReg, pregMain);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, loReg, loReg, pregMain);
+            AscendC::Reg::Select(loReg, loReg, zeroReg, pregFinite);
+        }
+        AscendC::Reg::StoreAlign(hiAddr, hiReg, pregOne);
+        AscendC::Reg::StoreAlign(loAddr, loReg, pregOne);
+    }
+    AscendC::PipeBarrier<PIPE_V>();
     event_t evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(evtVS);
     WaitFlag<HardEvent::V_S>(evtVS);
-    return red.GetValue(0);
+    hi = slot.GetValue(0);
+    lo = slot.GetValue(PNLL_WS_CORE_STRIDE);
 }
 
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
@@ -310,7 +391,9 @@ template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
 __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::ProcessReduce()
 {
     // Phase 1: this core accumulates a fp32 partial sum of its loss elements.
-    float partial = 0.0f;
+    // 段内与段间都走补偿累加, 只在最末并一次: 无补偿累加的误差随段数/块数增长。
+    float partialHi = 0.0f;
+    float partialLo = 0.0f;
     if (pnllBlockLen_ > 0) {
         int64_t pnllLoops = (pnllBlockLen_ + pnllUbLen_ - 1) / pnllUbLen_;
         for (int64_t i = 0; i < pnllLoops; i++) {
@@ -318,9 +401,15 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Proce
             CopyIn(i, pnllSegNum);
             LocalTensor<T_COMPUTE> loss = workBuf1_.Get<T_COMPUTE>();
             ComputeLoss(pnllSegNum, loss);
-            partial += LocalReduceSum(loss, pnllSegNum);
+            float segHi = 0.0f;
+            float segLo = 0.0f;
+            LocalExactSum(loss, pnllSegNum, segHi, segLo);
+            // 段和整对并入: 先把 (hi, lo) 折成单值会把残差舍掉
+            TwoSumAcc(partialHi, partialLo, segHi);
+            TwoSumAcc(partialHi, partialLo, segLo);
         }
     }
+    float partial = partialHi + partialLo;
 
     // Stage this core's partial sum into its own 32B-aligned workspace slot (pnllBlockIdx_*8),
     // so adjacent cores never share a 32B GM write block (see PNLL_WS_CORE_STRIDE).
@@ -337,6 +426,8 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Proce
     DataCopyExtParams pnllWsParams{1, static_cast<uint32_t>(PNLL_WS_CORE_STRIDE * sizeof(float)), 0, 0, 0};
     DataCopyPad(pnllWsGm_[pnllBlockIdx_ * PNLL_WS_CORE_STRIDE], pnllStage, pnllWsParams);
 
+    // 过栅栏前排空 MTE3: 上面的 DataCopyPad 是异步写, 不排空则 0 号核可能读到未落地的值。
+    AscendC::PipeBarrier<PIPE_MTE3>();
     SyncAll();
 
     // Phase 2: block 0 reads every core's partial (strided by 8) and sums them with a scalar
@@ -404,10 +495,12 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Proce
         }
     }
     // 收尾: 只对 PNLL_VL_FP32/PNLL_WS_CORE_STRIDE 条有效车道做标量 Kahan(核数 64 时是 8 步, 不是原来的 64 步)。
-    // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— 实测(同一批 partial 配对比较)
+    // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— )
     // 与原标量 Kahan 6 例中 5 例逐位相同; 若这里改用无补偿的树形规约, 会有 3/6 变差。
-    SetFlag<HardEvent::V_S>(EVENT_ID0);
-    WaitFlag<HardEvent::V_S>(EVENT_ID0);
+    // 事件号由 FetchEventID 分配: 固定号与在飞的同号事件冲突会漏同步
+    event_t evtVSTail = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(evtVSTail);
+    WaitFlag<HardEvent::V_S>(evtVSTail);
     float total = 0.0f;
     float pnllCarry = 0.0f;
     for (int32_t lane = 0; lane < PNLL_VL_FP32; lane += static_cast<int32_t>(PNLL_WS_CORE_STRIDE)) {

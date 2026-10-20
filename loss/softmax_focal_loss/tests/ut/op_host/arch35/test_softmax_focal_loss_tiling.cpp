@@ -295,11 +295,12 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_attr_order_gamma_before_alpha)
 }
 
 // 缺省值取 "none": 不下发该属性时按缺省处理, 应正常通过(而不是落到不支持的取值上)
-TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_absent_defaults_to_none)
+// 属性不下发时按原型缺省值 "mean" 处理, 当前只支持 "none" ⇒ 应拒收, 不回落成 "none"。
+TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_absent_rejected_as_mean)
 {
     uint64_t tilingKey = 0;
     uint32_t blockDim = 0;
     EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
                                            blockDim, {}, {}, false),
-              ge::GRAPH_SUCCESS);
+              ge::GRAPH_FAILED);
 }

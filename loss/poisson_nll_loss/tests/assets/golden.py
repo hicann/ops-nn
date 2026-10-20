@@ -99,24 +99,63 @@ class _PoissonNllLossCompose:
         self.reduction = str(reduction)
 
     def __call__(self, input_x, target, **_):
-        return [
-            F.poisson_nll_loss(
-                input_x,
-                target,
-                log_input=self.log_input,
-                full=self.full,
-                eps=self.eps,
-                reduction=self.reduction,
-            )
-        ]
+        # 按 NPU 的加宽行为同步 cast, 出口对应窄回 ——  四格表「浮点+三方」那一行、V2 第三行。
+        # 本算子内核 U = fp32(op_kernel/arch35 通篇 RegTensor<float>/LocalTensor<float>),
+        # 而 torch 的 poisson_nll_loss 是 exp/log/mul/sub + 归约的组合, 算子之间每步落回 T
+        # ⇒ 三方腿若停在 fp16/bf16 就是「逐步截断的实现」当竞品, 误差远大于内核
+        #   cross_check 分母虚高、比值系统性偏小 ⇒ **内核有缺陷也照样 PASS**(判据被放水)。
+        # fp32/fp64 不动(U = T, torch 原生即是), 否则竞品凭空变准 ⇒ 假红。
+        # 同批的 MSELossV2 已按此修, 本算子当时漏了。
+        kw = dict(
+            log_input=self.log_input,
+            full=self.full,
+            eps=self.eps,
+            reduction=self.reduction,
+        )
+        if input_x.dtype not in (torch.float16, torch.bfloat16):
+            # U == T, torch 原生即是 ⇒ **不 cast**(加了就是多余 cast, 还会让竞品凭空变准 → 假红)
+            return [F.poisson_nll_loss(input_x, target, **kw)]
+        # 仅窄类型需要补齐「跨算子不落回」, 出口窄回 T
+        y = F.poisson_nll_loss(input_x.float(), target.float(), **kw)
+        return [y.to(input_x.dtype)]
+
+
+def _inject_nonfinite(input_x, target, testcase_name=""):
+    """DFX-nonfinite 档的定点注入：只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 input_data_ranges 写 inf/nan：TTK 的 RandomData 会把值域里的
+    inf/nan 钳到 dtype 极值(ttk/utilities/data.py `_digitize_inf_nan`), 写了也造不出
+    非有限输入 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    注入位置固定(input_x 首元素 +inf、第三个 nan; target 次元素 -inf), 不随机:
+    随机会让复现依赖 seed, 且小 shape 时可能一个都注不进去。元素数 < 4 不注入。
+
+    预期行为: 内核无特判, 按 IEEE 自然传播(与 torch 一致), 仍走正常精度判据, 不是拒收档。
+    注: 对齐同批 mse_loss_v2/multilabel_margin_loss 的同名钩子写法。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return input_x, target
+    a, b = np.asarray(input_x).copy(), np.asarray(target).copy()
+    if a.size < 4:
+        return input_x, target
+    fa, fb = a.reshape(-1), b.reshape(-1)
+    fa[0], fa[2] = np.inf, np.nan
+    fb[1] = -np.inf
+    return a, b
 
 
 class PoissonNllLossSpec:
     """kernel / GEIR 通路 spec：golden 收 numpy.ndarray、返 list[np.ndarray]。"""
 
     def golden(input_x, target, **kwargs):
-        inp = torch.from_numpy(np.ascontiguousarray(input_x))
-        tgt = torch.from_numpy(np.ascontiguousarray(target))
+        # 用 np.asarray 而非 np.ascontiguousarray: 后者会把 0 维数组提升成 (1,),
+        # 而本算子接受 rank-0 输入(def.cpp 的 shape 面与 infershape 的 SetDimNum(0) 分支),
+        # 一旦泛化集补上 rank-0 用例, ascontiguousarray 会让三方腿与内核的形状语义不一致。
+        # ascontiguousarray 会把 0 维数组提升成 (1,), 而本算子接受 rank-0 输入
+        # (def.cpp 的 shape 面与 infershape 的 SetDimNum(0) 分支) ⇒ 保连续后按原 shape 还原,
+        # 既不丢"连续"这个 from_numpy 需要的性质, 也不改变 rank 语义。
+        inp = torch.from_numpy(np.ascontiguousarray(input_x).reshape(np.shape(input_x)))
+        tgt = torch.from_numpy(np.ascontiguousarray(target).reshape(np.shape(target)))
         outs = _compute(inp, tgt, **kwargs)
         od = kwargs.get("output_dtypes") or []
         od = [d[0] if isinstance(d, (list, tuple)) else str(d) for d in od]
@@ -124,6 +163,10 @@ class PoissonNllLossSpec:
             o.numpy().astype(od[i]) if i < len(od) else o.numpy().astype(input_x.dtype)
             for i, o in enumerate(outs)
         ]
+
+    def customize_inputs(input_x, target, **kwargs):
+        # 非有限输入只能由钩子定点注入(CSV 值域写 inf/nan 会被 TTK 钳掉), 见 _inject_nonfinite。
+        return _inject_nonfinite(input_x, target, kwargs.get("testcase_name", ""))
 
     third_party = {"torch": _PoissonNllLossCompose}
     tolerance = _TOL
@@ -137,7 +180,7 @@ def poisson_nll_loss_golden(input_x, target, **kwargs):
 __spec__ = {"poisson_nll_loss": "PoissonNllLossSpec"}
 __golden__ = {"kernel": {"poisson_nll_loss": "poisson_nll_loss_golden"}}
 
-# 【不存在】aclnn 通路：A2 侧无 aclnn 接口（def ACLNNTYPE aclnn_exclude，对齐 A2 不新增），
+# 【不存在】aclnn 通路：A2 侧无 aclnn 接口（def ACLNNTYPE aclnn_exclude，对齐 A2 不新增）
 #   见 01_requirement.md §3.2。
 # 【不存在】e2e 通路：torch poisson_nll_loss 是 composite 分解，不走本融合算子；
 #   torch_npu 二进制无 aclnnPoissonNllLoss 引用（dispatcher 权威判定，01 §3.2）。

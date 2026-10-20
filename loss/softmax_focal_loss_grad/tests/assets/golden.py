@@ -135,6 +135,14 @@ def _compute(pred, target, dout, weight=None, **kwargs):
     return [res.contiguous()]
 
 
+def _tp_widen(a):
+    """三方腿按 NPU 的加宽行为同步 cast：**仅窄类型**抬 fp32（本算子内核 U=fp32），
+    fp32 原样返回: 对计算类型与输入类型相同的档加 cast 是多余的,
+    还会让竞品凭空变准、比值变大 → 假红。
+    """
+    return a.float() if a.dtype in (torch.float16, torch.bfloat16) else a
+
+
 class _Compose:
     """竞品标杆(A100 上执行): 用 torch 高层表达式拼等价语义。
 
@@ -150,10 +158,11 @@ class _Compose:
 
     def __call__(self, pred, target, dout, weight=None, **kwargs):
         out_dtype = pred.dtype
-        p = pred.float()
-        t = target.float()
-        d = dout.float()
-        w = weight.float() if weight is not None else torch.ones_like(p)
+        narrow = pred.dtype in (torch.float16, torch.bfloat16)
+        p = _tp_widen(pred)
+        t = _tp_widen(target)
+        d = _tp_widen(dout)
+        w = _tp_widen(weight) if weight is not None else torch.ones_like(p)
 
         log_1sub_p = torch.log(1.0 - p)
         wf = self.alpha * torch.exp(self.gamma * log_1sub_p) * t
@@ -169,7 +178,32 @@ class _Compose:
         if self.reduction == "mean" and p.numel() > 0:
             grad = grad * (1.0 / float(p.numel()))
         # 浮点输出必须 cast 回 NPU 输出 dtype, 否则竞品天然更准, ratio 失真
-        return [grad.contiguous().to(out_dtype)]
+        return [grad.contiguous().to(out_dtype) if narrow else grad.contiguous()]
+
+
+def _inject_nonfinite(pred, testcase_name=""):
+    """错误场景档 nonfinite 的定点注入: 只对用例名含 `_nonfinite` 的用例生效。
+
+    为什么不能靠 CSV 的 `input_data_ranges` 写 inf/nan: TTK 的 RandomData 会把值域里的
+    inf/nan **钳到 dtype 极值**(`ttk/utilities/data.py` 的 `_digitize_inf_nan`), 写了也
+    造不出非有限数据 —— 那一档会变成"名字叫 nonfinite、数据却全是普通数"的空跑。
+
+    只注入 pred(浮点数据面), **不动 target**(int32 one-hot 标签, 往里写非有限会变成
+    非法标签, 测的是"非法标签"而不是"非有限值传播", 两码事)。
+    资料依据(01_requirement.md §6): 「未校验 pred 值域…非法输入按 IEEE 语义传播, 不报错」
+    与「p→1 时 log(1-p)→-inf」—— 本档就是验这两条声明。
+    位置固定不随机(随机会让复现依赖 seed, 小 shape 时还可能一个都注不进去):
+    首元素 +inf、第 2 个 -inf、第 3 个 nan、第 4 个 1.0(命中 log(1-p)→-inf 的端点)。
+    元素数 < 5 不注入。
+    """
+    if "_nonfinite" not in (testcase_name or ""):
+        return pred
+    a = np.array(pred, copy=True)
+    if a.size < 5:
+        return pred
+    f = a.reshape(-1)
+    f[0], f[1], f[2], f[3] = np.inf, -np.inf, np.nan, 1.0
+    return a
 
 
 class SoftmaxFocalLossGradKernelSpec:
@@ -190,6 +224,14 @@ class SoftmaxFocalLossGradKernelSpec:
             o.numpy().astype(od[i]) if i < len(od) else o.numpy()
             for i, o in enumerate(outs)
         ]
+
+    def customize_inputs(pred, target, dout, weight=None, **kwargs):
+        return (
+            _inject_nonfinite(pred, kwargs.get("testcase_name", "")),
+            target,
+            dout,
+            weight,
+        )
 
     third_party = {"torch": _Compose}
     tolerance = _TOL

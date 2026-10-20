@@ -23,6 +23,8 @@
 
 using namespace AscendC;
 
+// workspace 入参是整块基址, 起始若干 MB 属框架系统区(dump/KFC 等), 用户数据必须从
+// GetUserWorkspace(workspace) 起写, 否则与系统区互踩。
 #ifdef DTYPE_X
 // UT entry: non-template, DTYPE_X set via compile flag -DDTYPE_X=float/half
 extern "C" __global__ __aicore__ void mse_loss_v2(GM_ADDR input, GM_ADDR target, GM_ADDR output, GM_ADDR workspace,
@@ -30,7 +32,8 @@ extern "C" __global__ __aicore__ void mse_loss_v2(GM_ADDR input, GM_ADDR target,
 {
     GET_TILING_DATA(tilingData, tiling);
     NsMseLossV2::MseLossV2<DTYPE_X, 0> op;
-    op.Init(input, target, output, workspace, &tilingData);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
+    op.Init(input, target, output, usrWorkspace, &tilingData);
     op.Process();
 }
 #else
@@ -41,7 +44,8 @@ __global__ __aicore__ void mse_loss_v2(GM_ADDR input, GM_ADDR target, GM_ADDR ou
     REGISTER_TILING_DEFAULT(MSELossV2Arch35TilingData);
     GET_TILING_DATA_WITH_STRUCT(MSELossV2Arch35TilingData, tilingData, tiling);
     NsMseLossV2::MseLossV2<D_T_X, BUFFER_MODE> op;
-    op.Init(input, target, output, workspace, &tilingData);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
+    op.Init(input, target, output, usrWorkspace, &tilingData);
     op.Process();
 }
 #endif

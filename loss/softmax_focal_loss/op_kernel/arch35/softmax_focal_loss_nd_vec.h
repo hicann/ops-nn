@@ -212,6 +212,227 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ComputeCeFw(int64_t
     }
 }
 
+template <typename T, typename TW, uint64_t hasWeight>
+__aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::MergeRowSlots2(__ubuf__ float* ceHi, __ubuf__ float* ceLo,
+                                                                            __ubuf__ float* fwHi, __ubuf__ float* fwLo,
+                                                                            __ubuf__ float* rowHi,
+                                                                            __ubuf__ float* rowLo, int64_t slotSpan,
+                                                                            int64_t g, uint32_t cntMask)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<float> rhReg;
+        RegTensor<float> rlReg;
+        RegTensor<float> ahReg;
+        RegTensor<float> alReg;
+        RegTensor<float> sR;
+        RegTensor<float> eR;
+        RegTensor<float> bR;
+        RegTensor<float> tR;
+        RegTensor<float> zeroReg;
+        MaskReg pregFinite;
+        MaskReg pregCnt = AscendC::Reg::UpdateMask<float>(cntMask);
+
+        AscendC::Reg::Duplicate(zeroReg, 0.0f);
+        AscendC::Reg::RegTensor<int32_t> idxReg;
+        AscendC::Reg::Arange(idxReg, 0);
+        AscendC::Reg::Muls(idxReg, idxReg, static_cast<int32_t>(ROW_SLOT_ELEM), pregCnt);
+        AscendC::Reg::Gather(rhReg, rowHi + 0 * slotSpan, (AscendC::Reg::RegTensor<uint32_t>&)idxReg, pregCnt);
+        AscendC::Reg::Gather(rlReg, rowLo + 0 * slotSpan, (AscendC::Reg::RegTensor<uint32_t>&)idxReg, pregCnt);
+        AscendC::Reg::LoadAlign(ahReg, ceHi + g);
+        AscendC::Reg::LoadAlign(alReg, ceLo + g);
+        AscendC::Reg::Add(sR, ahReg, rhReg, pregCnt);
+        AscendC::Reg::Sub(bR, sR, ahReg, pregCnt);
+        AscendC::Reg::Sub(tR, sR, bR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, tR, pregCnt);
+        AscendC::Reg::Sub(eR, rhReg, bR, pregCnt);
+        AscendC::Reg::Add(eR, tR, eR, pregCnt);
+        AscendC::Reg::Add(eR, eR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR, eR, pregCnt);
+        AscendC::Reg::Select(eR, eR, zeroReg, pregFinite);
+        AscendC::Reg::Add(ahReg, sR, eR, pregCnt);
+        AscendC::Reg::Sub(bR, ahReg, sR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, bR, pregCnt);
+        AscendC::Reg::Sub(tR, sR, tR, pregCnt);
+        AscendC::Reg::Sub(alReg, eR, bR, pregCnt);
+        AscendC::Reg::Add(alReg, tR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, alReg, alReg, pregCnt);
+        AscendC::Reg::Select(alReg, alReg, zeroReg, pregFinite);
+        AscendC::Reg::Add(sR, ahReg, rlReg, pregCnt);
+        AscendC::Reg::Sub(bR, sR, ahReg, pregCnt);
+        AscendC::Reg::Sub(tR, sR, bR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, tR, pregCnt);
+        AscendC::Reg::Sub(eR, rlReg, bR, pregCnt);
+        AscendC::Reg::Add(eR, tR, eR, pregCnt);
+        AscendC::Reg::Add(eR, eR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR, eR, pregCnt);
+        AscendC::Reg::Select(eR, eR, zeroReg, pregFinite);
+        AscendC::Reg::Add(ahReg, sR, eR, pregCnt);
+        AscendC::Reg::Sub(bR, ahReg, sR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, bR, pregCnt);
+        AscendC::Reg::Sub(tR, sR, tR, pregCnt);
+        AscendC::Reg::Sub(alReg, eR, bR, pregCnt);
+        AscendC::Reg::Add(alReg, tR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, alReg, alReg, pregCnt);
+        AscendC::Reg::Select(alReg, alReg, zeroReg, pregFinite);
+        AscendC::Reg::StoreAlign(ceHi + g, ahReg, pregCnt);
+        AscendC::Reg::StoreAlign(ceLo + g, alReg, pregCnt);
+        AscendC::Reg::Gather(rhReg, rowHi + 1 * slotSpan, (AscendC::Reg::RegTensor<uint32_t>&)idxReg, pregCnt);
+        AscendC::Reg::Gather(rlReg, rowLo + 1 * slotSpan, (AscendC::Reg::RegTensor<uint32_t>&)idxReg, pregCnt);
+        AscendC::Reg::LoadAlign(ahReg, fwHi + g);
+        AscendC::Reg::LoadAlign(alReg, fwLo + g);
+        AscendC::Reg::Add(sR, ahReg, rhReg, pregCnt);
+        AscendC::Reg::Sub(bR, sR, ahReg, pregCnt);
+        AscendC::Reg::Sub(tR, sR, bR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, tR, pregCnt);
+        AscendC::Reg::Sub(eR, rhReg, bR, pregCnt);
+        AscendC::Reg::Add(eR, tR, eR, pregCnt);
+        AscendC::Reg::Add(eR, eR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR, eR, pregCnt);
+        AscendC::Reg::Select(eR, eR, zeroReg, pregFinite);
+        AscendC::Reg::Add(ahReg, sR, eR, pregCnt);
+        AscendC::Reg::Sub(bR, ahReg, sR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, bR, pregCnt);
+        AscendC::Reg::Sub(tR, sR, tR, pregCnt);
+        AscendC::Reg::Sub(alReg, eR, bR, pregCnt);
+        AscendC::Reg::Add(alReg, tR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, alReg, alReg, pregCnt);
+        AscendC::Reg::Select(alReg, alReg, zeroReg, pregFinite);
+        AscendC::Reg::Add(sR, ahReg, rlReg, pregCnt);
+        AscendC::Reg::Sub(bR, sR, ahReg, pregCnt);
+        AscendC::Reg::Sub(tR, sR, bR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, tR, pregCnt);
+        AscendC::Reg::Sub(eR, rlReg, bR, pregCnt);
+        AscendC::Reg::Add(eR, tR, eR, pregCnt);
+        AscendC::Reg::Add(eR, eR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR, eR, pregCnt);
+        AscendC::Reg::Select(eR, eR, zeroReg, pregFinite);
+        AscendC::Reg::Add(ahReg, sR, eR, pregCnt);
+        AscendC::Reg::Sub(bR, ahReg, sR, pregCnt);
+        AscendC::Reg::Sub(tR, ahReg, bR, pregCnt);
+        AscendC::Reg::Sub(tR, sR, tR, pregCnt);
+        AscendC::Reg::Sub(alReg, eR, bR, pregCnt);
+        AscendC::Reg::Add(alReg, tR, alReg, pregCnt);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, alReg, alReg, pregCnt);
+        AscendC::Reg::Select(alReg, alReg, zeroReg, pregFinite);
+        AscendC::Reg::StoreAlign(fwHi + g, ahReg, pregCnt);
+        AscendC::Reg::StoreAlign(fwLo + g, alReg, pregCnt);
+    }
+    AscendC::PipeBarrier<PIPE_V>();
+}
+
+template <typename T, typename TW, uint64_t hasWeight>
+__aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ExactRowSum2(__ubuf__ float* srcCe, __ubuf__ float* srcFw,
+                                                                          __ubuf__ float* ceHi, __ubuf__ float* ceLo,
+                                                                          __ubuf__ float* fwHi, __ubuf__ float* fwLo,
+                                                                          int64_t rows, int64_t len)
+{
+    LocalTensor<float> dfLocal = dfBuf_.template Get<float>();
+    constexpr int64_t slotSpan = static_cast<int64_t>(VL_FP32) * static_cast<int64_t>(ROW_SLOT_ELEM);
+    __ubuf__ float* rowHi = (__ubuf__ float*)dfLocal.GetPhyAddr();
+    __ubuf__ float* rowLo = rowHi + 2 * slotSpan;
+
+    int64_t strideF = StrideOfF32(len);
+    uint32_t vfLen = VL_FP32;
+    // 行内按对齐长度规约: 补齐位上 ce/fw 由 CeFwVec 写成 0(求和单位元), 但不能越过行尾读到下一行
+    uint16_t repeatTimes = static_cast<uint16_t>(strideF / vfLen);
+    uint32_t tailNum = static_cast<uint32_t>(strideF % vfLen);
+    uint16_t tailLoop = tailNum != 0 ? 1 : 0;
+
+    for (int64_t g = 0; g < rows; g += static_cast<int64_t>(VL_FP32)) {
+        int64_t left = rows - g;
+        uint16_t cnt = static_cast<uint16_t>(left < static_cast<int64_t>(VL_FP32) ? left :
+                                                                                    static_cast<int64_t>(VL_FP32));
+        uint32_t cntMask = static_cast<uint32_t>(cnt);
+        uint32_t oneCnt = 1U;
+        __ubuf__ float* grpSrcCe = srcCe + g * strideF;
+        __ubuf__ float* grpSrcFw = srcFw + g * strideF;
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> hi0;
+            RegTensor<float> lo0;
+            RegTensor<float> sR0;
+            RegTensor<float> eR0;
+            RegTensor<float> bR0;
+            RegTensor<float> tR0;
+            RegTensor<float> rR0;
+            RegTensor<float> vR0;
+            RegTensor<float> hi1;
+            RegTensor<float> lo1;
+            RegTensor<float> sR1;
+            RegTensor<float> eR1;
+            RegTensor<float> bR1;
+            RegTensor<float> tR1;
+            RegTensor<float> rR1;
+            RegTensor<float> vR1;
+            RegTensor<float> zeroReg;
+            MaskReg pregFinite;
+            MaskReg pregOne = AscendC::Reg::UpdateMask<float>(oneCnt);
+            MaskReg pregTail = AscendC::Reg::UpdateMask<float>(tailNum);
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, MaskPattern::ALL>();
+
+            AscendC::Reg::Duplicate(zeroReg, 0.0f);
+            for (uint16_t i = 0; i < cnt; ++i) {
+                AscendC::Reg::Duplicate(hi0, 0.0f);
+                AscendC::Reg::Duplicate(lo0, 0.0f);
+                AscendC::Reg::Duplicate(hi1, 0.0f);
+                AscendC::Reg::Duplicate(lo1, 0.0f);
+                for (uint16_t j = 0; j < repeatTimes + tailLoop; ++j) {
+                    MaskReg preg = (j < repeatTimes) ? pregMain : pregTail;
+                    AscendC::Reg::AddrReg offF = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideF),
+                                                                                    j, vfLen);
+                    AscendC::Reg::LoadAlign(vR0, grpSrcCe, offF);
+                    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(rR0, vR0, preg);
+                    AscendC::Reg::LoadAlign(vR1, grpSrcFw, offF);
+                    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(rR1, vR1, preg);
+                    AscendC::Reg::Add(sR0, hi0, rR0, pregMain);
+                    AscendC::Reg::Sub(bR0, sR0, hi0, pregMain);
+                    AscendC::Reg::Sub(tR0, sR0, bR0, pregMain);
+                    AscendC::Reg::Sub(tR0, hi0, tR0, pregMain);
+                    AscendC::Reg::Sub(eR0, rR0, bR0, pregMain);
+                    AscendC::Reg::Add(eR0, tR0, eR0, pregMain);
+                    AscendC::Reg::Add(eR0, eR0, lo0, pregMain);
+                    AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR0, eR0, pregMain);
+                    AscendC::Reg::Select(eR0, eR0, zeroReg, pregFinite);
+                    AscendC::Reg::Add(hi0, sR0, eR0, pregMain);
+                    AscendC::Reg::Sub(bR0, hi0, sR0, pregMain);
+                    AscendC::Reg::Sub(tR0, hi0, bR0, pregMain);
+                    AscendC::Reg::Sub(tR0, sR0, tR0, pregMain);
+                    AscendC::Reg::Sub(lo0, eR0, bR0, pregMain);
+                    AscendC::Reg::Add(lo0, tR0, lo0, pregMain);
+                    AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, lo0, lo0, pregMain);
+                    AscendC::Reg::Select(lo0, lo0, zeroReg, pregFinite);
+                    AscendC::Reg::Add(sR1, hi1, rR1, pregMain);
+                    AscendC::Reg::Sub(bR1, sR1, hi1, pregMain);
+                    AscendC::Reg::Sub(tR1, sR1, bR1, pregMain);
+                    AscendC::Reg::Sub(tR1, hi1, tR1, pregMain);
+                    AscendC::Reg::Sub(eR1, rR1, bR1, pregMain);
+                    AscendC::Reg::Add(eR1, tR1, eR1, pregMain);
+                    AscendC::Reg::Add(eR1, eR1, lo1, pregMain);
+                    AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, eR1, eR1, pregMain);
+                    AscendC::Reg::Select(eR1, eR1, zeroReg, pregFinite);
+                    AscendC::Reg::Add(hi1, sR1, eR1, pregMain);
+                    AscendC::Reg::Sub(bR1, hi1, sR1, pregMain);
+                    AscendC::Reg::Sub(tR1, hi1, bR1, pregMain);
+                    AscendC::Reg::Sub(tR1, sR1, tR1, pregMain);
+                    AscendC::Reg::Sub(lo1, eR1, bR1, pregMain);
+                    AscendC::Reg::Add(lo1, tR1, lo1, pregMain);
+                    AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(pregFinite, lo1, lo1, pregMain);
+                    AscendC::Reg::Select(lo1, lo1, zeroReg, pregFinite);
+                }
+                AscendC::Reg::AddrReg offRow = AscendC::Reg::CreateAddrReg<float>(i, ROW_SLOT_ELEM);
+                AscendC::Reg::StoreAlign(rowHi + 0 * slotSpan, hi0, offRow, pregOne);
+                AscendC::Reg::StoreAlign(rowLo + 0 * slotSpan, lo0, offRow, pregOne);
+                AscendC::Reg::StoreAlign(rowHi + 1 * slotSpan, hi1, offRow, pregOne);
+                AscendC::Reg::StoreAlign(rowLo + 1 * slotSpan, lo1, offRow, pregOne);
+            }
+        }
+        AscendC::PipeBarrier<PIPE_V>();
+        MergeRowSlots2(ceHi, ceLo, fwHi, fwLo, rowHi, rowLo, slotSpan, g, cntMask);
+    }
+}
+
 } // namespace SoftmaxFocalLoss
 
 #endif // SOFTMAX_FOCAL_LOSS_ND_VEC_H

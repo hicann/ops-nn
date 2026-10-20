@@ -53,9 +53,8 @@ protected:
 
     TBuf<TPosition::VECCALC> xRowBuf;
     TBuf<TPosition::VECCALC> isPosBuf;
-    TBuf<TPosition::VECCALC> reduceBuf; // accVec: per-row accumulator over target labels (float)
-    TBuf<TPosition::VECCALC> workBuf;   // ReduceSum work buffer
-    TBuf<TPosition::VECCALC> outCastBuf;
+    TBuf<TPosition::VECCALC> reduceBuf;    // accVec: per-row accumulator over target labels (float)
+    TBuf<TPosition::VECCALC> workBuf;      // ReduceSum work buffer
     TBuf<TPosition::VECCALC> rowLossBuf;   // this core's row losses (float), staged before atomic add
     TBuf<TPosition::VECCALC> gatherBuf;    // core 0: full float workspace read-back (<= N floats)
     TBuf<TPosition::VECCALC> gatherOutBuf; // core 0: cast-to-T output vector (<= N elems)
@@ -79,6 +78,7 @@ protected:
     uint32_t ubFactor;       // host 侧实算下发:每轮 UB 处理的元素数(已对齐)
     uint32_t wsCoreStride;   // host 侧实算下发:mean/sum 每核独占槽位跨步(float 个数)
     uint32_t partialUbElems; // host 侧实算下发:跨核合并回读 partial 的 UB 元素数(整轮对齐)
+    uint32_t labelBlock;     // host 侧解出下发:标签分块粒度(见 host SolveLabelBlock 推导)
     uint32_t cFactor;  // host 侧实算下发:C 方向每段元素数; == C 表示整行装得下, 走全行路径
     bool splitC;       // cFactor < C
     uint32_t rowElems; // 行缓冲按它分配: splitC ? cFactor : C
@@ -89,7 +89,12 @@ protected:
     {
         uint32_t padBytes = ((rowElems * sizeof(U) + 31u) / 32u) * 32u;
         uint32_t castBytes = ((rowElems + 15u) / 16u) * 16u * sizeof(U);
-        return (padBytes > castBytes) ? padBytes : castBytes;
+        uint32_t bytes = (padBytes > castBytes) ? padBytes : castBytes;
+        // 32B 下限: rowElems==0(C=0)时上面两项都是 0, 会让 inputQueue/targetQueue/isTargetOutQueue
+        // 落到 InitBuffer(0 字节) 与 blockLen=0 的 DataCopyPad(真机 len>0 断言被 ASCENDC_CPU_DEBUG 编掉)。
+        // host 侧已按 README 声明拒收 C=0, 这里是双保险——内核不应依赖 host 校验才不踩内存
+        // (xRowBuf 等 VF 工作缓冲本来就有同样的 32B 兜底)。
+        return (bytes < 32u) ? 32u : bytes;
     }
 
     __aicore__ inline void InitGlobalBuffers(GM_ADDR input, GM_ADDR target, GM_ADDR y, GM_ADDR isTarget,
@@ -130,7 +135,6 @@ protected:
         // 核0 读回全部 partial:每核一个 this->wsCoreStride 槽,故按跨步总量分配。
         // 跨核合并按 MML_VL_FP32 条车道整批读, 缓冲区大小由 host 按整轮算好下发。
         uint32_t partialsBytes = this->partialUbElems * static_cast<uint32_t>(sizeof(float));
-        uint32_t scalarBytes = 32u;
 
         pipe.InitBuffer(inputQueue, 1, inputRowBytes);
         pipe.InitBuffer(targetQueue, 1, intRowBytes);
@@ -141,7 +145,6 @@ protected:
         pipe.InitBuffer(isPosBuf, vfRowBytes);
         pipe.InitBuffer(reduceBuf, vfRowBytes);
         pipe.InitBuffer(workBuf, fRowBytes);
-        pipe.InitBuffer(outCastBuf, scalarBytes);
         // 分块路径要把 is_target 段回读成 float 当掩码; 全行路径用不到, 给最小块即可。
         pipe.InitBuffer(isTgtFBuf, this->splitC ? vfRowBytes : 32u);
 
@@ -172,23 +175,6 @@ protected:
             DataCopy(dst, src, cnt8);
         } else {
             Cast(dst, src, RoundMode::CAST_NONE, cnt);
-        }
-    }
-
-    __aicore__ inline void StoreScalarAsInput(LocalTensor<T>& outLocal, float value)
-    {
-        if constexpr (std::is_same<T, float>::value) {
-            outLocal.SetValue(0, value);
-        } else {
-            LocalTensor<float> stage = outCastBuf.Get<float>();
-            stage.SetValue(0, value);
-            PipeBarrier<HardEvent::S_V>();
-            if constexpr (std::is_same<T, bfloat16_t>::value) {
-                Cast(outLocal, stage, RoundMode::CAST_RINT, 1);
-            } else {
-                Cast(outLocal, stage, RoundMode::CAST_NONE, 1);
-            }
-            PipeBarrier<HardEvent::V_S>();
         }
     }
 
@@ -274,12 +260,10 @@ protected:
     //     x[i] = +/-inf at a target position would give inf*0 = NaN and corrupt the sum; Select replaces
     //     the value (no arithmetic), so target slots become an exact 0 and non-target inf/nan propagate
     //     as torch's IEEE result.
-    // Accumulate each label's masked margins into accVec, then one ReduceSum per row (sum_k sum_i == sum_i sum_k).
-    // arch35 regbase(Reg VF)实现: 外层 target 标量循环(数据依赖,-1 哨兵 break + 越界守卫),
-    // 内层按 C 用 RegTensor 硬件向量循环(VF, 尾块 UpdateMask)。语义与 A2 完全一致:
-    //   margin[i] = relu((1 - x[k]) + x[i]) 严格 >0 select(nan-safe,对齐 torch `if(z>0)`),
-    //   非目标位用 Select 屏蔽(非乘法,避免 target 位 inf*0=NaN)。逐 k 累加进 UB 的 accVec,
-    //   最后对 accVec 做一次 ReduceSum(sum_k sum_i == sum_i sum_k)。
+    // 外层按 target 标量循环(-1 哨兵 break + 越界守卫), 内层按 C 向量化累加 margin:
+    //   margin[i] = relu((1 - x[k]) + x[i]), 严格 >0 的 Select 保证 nan-safe, 目标位用 Select 屏蔽。
+    // 每 labelBlock 个标签对 accVec 规约一次、块间 Kahan 合并, 限制顺序累加链长; 粒度由 host 下发。
+    // 代价: 每行 ceil(L/labelBlock) 次 ReduceSum(L<=labelBlock 时与原来一样是 1 次), 向量累加次数不变。
     __aicore__ inline float AccumulateRowLoss(uint32_t cnt, LocalTensor<float>& xRow, LocalTensor<int32_t>& tgtIn,
                                               LocalTensor<float>& isPos)
     {
@@ -302,6 +286,12 @@ protected:
         ZeroVecBuffer(accAddr, cnt, repeatTimes);
         PipeBarrier<HardEvent::V_S>(); // V->S: 下面读 x[k] 标量依赖 Cast 产出的 xRow
 
+        // 块间 Kahan: blkSum/blkComp 累加每 labelBlock 个标签规约出的块和
+        // labelBlock==0 只可能出现在 tiling 未下发(异常)时, 退化成"不分块"以保持原行为可用。
+        const uint32_t blkCap = (this->labelBlock > 0u) ? this->labelBlock : cnt;
+        float blkSum = 0.0f;
+        float blkComp = 0.0f;
+        uint32_t inBlk = 0u; // 当前块已累加的标签数
         // 外层 target 标量循环(数据依赖, -1 哨兵 break + 越界守卫); 内层按 C 向量化累加进 accVec。
         for (uint32_t t = 0; t < cnt; t++) {
             int32_t tt = tgtIn.GetValue(t);
@@ -309,6 +299,20 @@ protected:
                 break;
             if (tt < 0 || static_cast<uint32_t>(tt) >= cnt)
                 continue;
+            if (inBlk == blkCap) { // 块满: 规约本块 -> Kahan 累加 -> accVec 清零开新块
+                float blkVal = LocalReduceSum(accVec, cnt);
+                float y = blkVal - blkComp;
+                float nxt = blkSum + y;
+                blkComp = (nxt - blkSum) - y;
+                if (__isinf(nxt) || __isnan(nxt)) { // 非有限: 补偿项 inf-inf=NaN 会污染后续块
+                    blkComp = 0.0f;
+                }
+                blkSum = nxt;
+                ZeroVecBuffer(accAddr, cnt, repeatTimes);
+                PipeBarrier<HardEvent::V_S>();
+                inBlk = 0u;
+            }
+            inBlk++;
             float s = 1.0f - xRow.GetValue(static_cast<uint32_t>(tt));
             uint32_t sreg = cnt;
             __VEC_SCOPE__
@@ -326,15 +330,27 @@ protected:
                     Select(tmp, tmp, zero, posM); // relu 严格 >0 (nan/负 -> 0, +inf 保留)
                     CompareScalar<float, CMPMODE::GT>(tgtM, posr, 0.5f, preg); // isPos > 0.5 (目标位)
                     Select(tmp, zero, tmp, tgtM);                              // 目标位 -> 0, 非目标位保留 tmp
-                    // 勿在此加 Kahan 补偿:补偿量代数恒为 0,VF 后端 -O2 重结合会整段消掉(实测无效)。
+                    // 勿在此加 Kahan 补偿: 补偿量代数恒为 0, 后端重结合会整段消掉。
                     Add(accr, accr, tmp, preg);
                     DataCopy(accAddr + i * VL, accr, preg);
                 }
             }
         }
-        // 行损失 = sum_i accVec[i] (只读有效 [0,cnt))。
-        float acc = LocalReduceSum(accVec, cnt);
-        return acc;
+        // 收尾: 规约最后一个未满的块, 与前面的块和做 Kahan 合并(补偿量也要补回, 否则又丢一次零头)。
+        if (inBlk > 0u) {
+            float blkVal = LocalReduceSum(accVec, cnt);
+            float y = blkVal - blkComp;
+            float nxt = blkSum + y;
+            blkComp = (nxt - blkSum) - y;
+            if (__isinf(nxt) || __isnan(nxt)) {
+                blkComp = 0.0f;
+            }
+            blkSum = nxt;
+        }
+        if (!__isinf(blkComp) && !__isnan(blkComp)) {
+            blkSum = blkSum - blkComp;
+        }
+        return blkSum;
     }
 
     // 硬件 ReduceSum(树规约)求 src[0,cnt) 之和。不用逐元素 GetValue 标量单链:单链误差随 C
@@ -421,9 +437,7 @@ protected:
     }
 
     // (a) 扫 target 建本段掩码, 同时产出并写出 is_target 段。
-    // 掩码在 UB 内就地建好(不经 GM 往返): 曾用"标量写 is_target 到 GM 再回读当掩码"的做法, 实测会
-    // **丢写**(9000 类的一行少了 16 个 1, loss 随之偏大 1.0018 倍), 标量写 + DataCacheCleanAndInvalid
-    // 在这种散点场景下不可靠。
+    // 掩码在 UB 内就地建好, 不经 GM 往返: 散点场景下标量写 GM 再回读会丢写。
     // 扫本行的 target(遇 -1 哨兵停), 把落在 [xoff, xoff+xcnt) 的标签位置在 mLocal 上置 1。
     __aicore__ inline void ScanTargetsIntoMask(uint64_t rowOff, uint32_t xoff, uint32_t xcnt,
                                                LocalTensor<IsTgtT>& mLocal)
@@ -470,9 +484,7 @@ protected:
         ScanTargetsIntoMask(rowOff, xoff, xcnt, mLocal);
 
         // 掩码转 float 供向量比较用, 再把 is_target 段写出(它是必产出的输出)。
-        // 两处同步都必须有, 且**用独立事件 ID**:类内 PipeBarrier 固定 EVENT_ID0, 在本路径里会与
-        // 队列同步/LocalReduceSum 的同 ID 事件交织, 实测表现为**同一用例多次跑结果不同**
-        // (is_target 一次少 7 个 1、一次少 1167 个)。
+        // 两处同步都必须有, 且用独立事件 ID: 固定 EVENT_ID0 会与队列同步的同 ID 事件交织, 导致丢写。
         //   S->V : 标量写的 1 要被 Cast(向量)读到;
         //   S->MTE3: DataCopyPad 从 UB 搬出前必须等标量写落地 —— EnQue 只保证 V->MTE3,
         //            而这里最后的写者是标量单元, 缺这道同步就会丢写。

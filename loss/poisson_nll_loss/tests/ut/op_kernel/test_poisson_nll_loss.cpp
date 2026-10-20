@@ -51,7 +51,7 @@ static void RunKernel(int64_t numElements, uint32_t reduction, uint32_t logInput
 {
     // Empty tensor (numElements==0) is valid: allocate a minimal (unused) buffer so GmAlloc is never
     // called with size 0; the kernel does not read/write it (blockLength==0 -> none no-op, sum/mean
-    // stages a zero partial). meanCof below becomes 1/0=inf so mean of empty resolves to 0*inf=nan.
+    // stages a zero partial). mean of empty 由内核 total/totalNum = 0.0f/0.0f 得 nan。
     size_t inSize = (numElements > 0 ? numElements : 1) * sizeof(float);
     // reduction=none writes an elementwise output; sum/mean writes a single scalar.
     size_t outSize = (reduction == REDUCTION_NONE) ? inSize : sizeof(float);
@@ -78,7 +78,6 @@ static void RunKernel(int64_t numElements, uint32_t reduction, uint32_t logInput
     td->blockFactor = numElements;
     td->ubFactor = ubFactor;
     td->eps = 1e-8f;
-    td->meanCof = 1.0f / static_cast<float>(numElements);
     td->logInput = logInput;
     td->full = full;
     td->reduction = reduction;

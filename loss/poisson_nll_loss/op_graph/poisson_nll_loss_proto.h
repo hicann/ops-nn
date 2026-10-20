@@ -25,9 +25,9 @@ namespace ge {
  *
  * @par Inputs:
  * Two inputs, including:
- * @li input: A Tensor of predicted values. Must be one of the following types: float16, float32.
+ * @li input_x: A Tensor of predicted values. Must be one of the following types: float16, float32.
  * @li target: A Tensor of target values. Must be one of the following types: float16, float32.
- *             Must have the same shape as input or be broadcastable.
+ *             Must have the same shape as input_x.
  *
  * @par Attributes:
  * @li log_input: An optional bool. If True, the loss is computed as exp(input) - target * input.
@@ -38,8 +38,8 @@ namespace ge {
  *                Defaults to "mean".
  *
  * @par Outputs:
- * @li output: A Tensor. Has the same type as input.
- *             Shape depends on reduction: (1,) for "mean"/"sum", same as input for "none".
+ * @li loss: A Tensor. Has the same type as input_x.
+ *             Shape depends on reduction: a scalar (rank 0) for "mean"/"sum", same as input_x for "none".
  *
  * @par Third-party framework compatibility
  * Compatible with PyTorch operator PoissonNLLLoss.

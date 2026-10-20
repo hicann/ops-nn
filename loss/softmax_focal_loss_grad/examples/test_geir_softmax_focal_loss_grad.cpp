@@ -68,7 +68,7 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataTy
 
 #define ADD_INPUT(idx, opInputName, inDtype, inShape)                                       \
     vector<int64_t> ph##idx##_shape = inShape;                                              \
-    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(0);                    \
+    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index((idx) - 1);            \
     TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_ND, inDtype); \
     ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                        \
     ph##idx##_desc.SetOriginFormat(FORMAT_ND);                                              \

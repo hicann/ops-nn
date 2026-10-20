@@ -59,19 +59,19 @@
       ],
       "attrs": [
         {
-          "name": "gamma",
-          "dtype": "float",
-          "value": 2.0
-        },
-        {
           "name": "alpha",
           "dtype": "float",
           "value": 0.25
         },
         {
+          "name": "gamma",
+          "dtype": "float",
+          "value": 2.0
+        },
+        {
           "name": "reduction",
-          "dtype": "str",
-          "value": ""
+          "dtype": "string",
+          "value": "ALL"
         }
       ]
     },
@@ -133,19 +133,19 @@
       ],
       "attrs": [
         {
-          "name": "gamma",
-          "dtype": "float",
-          "value": 2.0
-        },
-        {
           "name": "alpha",
           "dtype": "float",
           "value": 0.25
         },
         {
+          "name": "gamma",
+          "dtype": "float",
+          "value": 2.0
+        },
+        {
           "name": "reduction",
-          "dtype": "str",
-          "value": ""
+          "dtype": "string",
+          "value": "ALL"
         }
       ]
     }

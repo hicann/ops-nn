@@ -20,6 +20,12 @@
 
 using namespace AscendC;
 
+// weight 是可选输入, 缺省时 wrapper 不生成 DTYPE_WEIGHT 宏, 编译会报未定义标识符。
+// 兜底取 DTYPE_PRED: 声明的组合里 weight 恒与 pred 同 dtype, 且缺省时该类型仅作模板占位。
+#ifndef DTYPE_WEIGHT
+#define DTYPE_WEIGHT DTYPE_PRED
+#endif
+
 template <uint64_t hasWeight>
 __global__ __aicore__ void softmax_focal_loss_grad(GM_ADDR pred, GM_ADDR target, GM_ADDR dout, GM_ADDR weight,
                                                    GM_ADDR grad, GM_ADDR workspace, GM_ADDR tiling)

@@ -27,12 +27,13 @@ namespace ge {
 *  rmsnorm_out = x * rstd * gamma \n
 *  if smooth_scales1 exist: \n
 *    scale1 = row_max(abs(rmsnorm_out * smooth_scale1)) / 127 \n
+*    y1 = round(rmsnorm_out * smooth_scale1 / scale1) \n
 *  if smooth_scales1 not exist: \n
 *    scale1 = row_max(abs(rmsnorm_out)) / 127 \n
-*  y1 = round(rmsnorm_out / scale1) \n
+*    y1 = round(rmsnorm_out / scale1) \n
 *  if smooth_scales2 exist: \n
 *    scale2 = row_max(abs(rmsnorm_out * smooth_scale2)) / 127 \n
-*    y2 = round(rmsnorm_out / scale2) \n
+*    y2 = round(rmsnorm_out * smooth_scale2 / scale2) \n
 *  if smooth_scales2 not exist:  \n
 *    not calculate scale2 and y2. \n
 *  Only for experimental use. \n
