@@ -304,6 +304,64 @@ stages:
     - type: auto
     fail-fast: true
   stage4:
+    name: UT_report
+    select: selected_by_default
+    jobs:
+      JOB_ut_report:
+        name: ut_report
+        steps:
+          -
+            name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
+              allow-unsafe-pr-checkout: true
+          -
+            name: download
+            uses: obs-download
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              key: |
+                ${{ env.obs_path }}/pr_filelist.txt
+                ${{ env.obs_path }}/pr_filelist_mod.txt
+              path: ${{ steps.process_checkout.outputs.path }}
+          -
+            name: ut_report
+            identifier: ut-report
+            uses: cui_jiahao/.gitcode_4945/actions/ut-cov-report@master
+            with:
+              workspace: ${{ steps.process_checkout.outputs.path }}
+              token: ${{ secrets.TESTTOKEN }}
+              cov_mode: "report"
+              ut_field: "ops-nn"
+              modules: "ophost opapi opkernel opgraph"
+              source_branch: ${{ env.SOURCE_BRANCH }}
+              target_branch: ${{ env.TARGET_BRANCH }}
+              obs_path: ${{ env.obs_path }}
+              git_token: ${{ secrets.GIT_TOKEN }}
+              UT_SOFT_FAIL_REPOS: ${{ vars.UT_SOFT_FAIL_REPOS }}
+          -
+            name: upload
+            uses: obs-upload
+            if: ${{ always() }}
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              access-key: ${{secrets.AK}}
+              secret-key: ${{secrets.SK}}
+              artifact-path: |
+                ${{ steps.process_checkout.outputs.path }}/ut_cov_*.tar.gz
+              object-prefix: ${{ env.obs_path }}/
+        if: env.TARGET_BRANCH == 'master'
+        runs-on: ["self-hosted", "arch=x64", "spec=medium"]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ jobs.JOB_image.outputs.UT_Test_ophost }}
+    pre:
+    - type: auto
+    fail-fast: true
+  stage5:
     name: PreSmoke
     jobs:
       A2_smoke:
@@ -319,6 +377,7 @@ stages:
           -
             name: download
             uses: obs-download
+            if: ${{ always() }}
             with:
               endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
               bucket: "ascend-ci"
