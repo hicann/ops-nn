@@ -416,6 +416,12 @@ function(prepare_compile_from_config)
   endif()
 
   add_custom_target(config_compile_${CONFCMP_COMPUTE_UNIT}_${CONFCMP_OP_NAME}
+    # 前置拦截：ops-info中无该算子条目（def的soc支持被版本门禁/条件编译裁剪等）时，
+    # 明确报错并阻止进入kernel编译流程，避免在编译深处报模糊错误
+    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/util/check_ops_info_entry.sh
+            ${ASCEND_KERNEL_CONF_DST}/aic-${CONFCMP_COMPUTE_UNIT}-ops-info.ini
+            ${CONFCMP_OP_TYPE}
+            ${CONFCMP_COMPUTE_UNIT}
     COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_opc.sh
             ${CONFCMP_OP_TYPE}
             ${CONFCMP_COMPUTE_UNIT}

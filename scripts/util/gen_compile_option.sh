@@ -123,6 +123,7 @@ main() {
   local workdir=$(cd "$(dirname $0)" && pwd)
   local topdir=$(readlink -f ${workdir}/../..)
   local binary_param_dir=${topdir}/build/tbe
+  local ascendc_sanity_checked=""
   for pair in "${all_pairs[@]}"; do
     if [[ "$pair" != *:* ]]; then
       echo "[ERROR] Invalid format: '$pair'. Expected: op_type:compute_unit"
@@ -130,13 +131,24 @@ main() {
     fi
     local op_type="${pair%%:*}"
     local soc_version="${pair#*:}"
+    if [[ -z "$op_type" || -z "$soc_version" || "$op_type$soc_version" =~ [[:space:]] ]]; then
+      echo "[ERROR] Invalid op pair: '$pair'. op_type/soc_version must be non-empty without whitespace"
+      continue
+    fi
     local arch=$(cmake -P ${topdir}/cmake/query.cmake Func get_npu_arch_by_soc_version ${soc_version} 2>&1)
 
     local soc_version_lower=${soc_version,,}
 
     local ascendc_config_file="${topdir}/scripts/kernel/binary_config/ascendc_config.json"
-    local key_word_in_list="\"name\":\s*\"${op_type}\""
-    local ascendc_op_conf=$(grep ${key_word_in_list} ${ascendc_config_file} | grep -E "$arch|$soc_version_lower")
+    if [ -z "$ascendc_sanity_checked" ]; then
+      if [ ! -f "${ascendc_config_file}" ] || ! grep -qF 'name":' "${ascendc_config_file}"; then
+        echo "[ERROR] ascendc_config.json self-check failed: fixed pattern name-colon not hit, grep construction broken" >&2
+        exit 1
+      fi
+      ascendc_sanity_checked="1"
+    fi
+    local key_word_in_list="\"name\":[[:space:]]*\"${op_type}\""
+    local ascendc_op_conf=$(grep -E "${key_word_in_list}" "${ascendc_config_file}" | grep -E "$arch|$soc_version_lower")
     ascendc_op_conf=${ascendc_op_conf//$arch/$soc_version_lower}
     json_line=$(echo "$ascendc_op_conf" | tr -d '\n\r')
 
@@ -146,13 +158,13 @@ main() {
     local auto_sync=""
     local compile_options=""
     if [ -f "${kernel_config_file}" ]; then
-      auto_sync=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file")
-      compile_options=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file")
+      auto_sync=$(awk -F "=" -v section="[${op_type}]" 'index($0, section)==1{flag=1; next}/^\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file")
+      compile_options=$(awk -F "=" -v section="[${op_type}]" 'index($0, section)==1{flag=1; next}/^\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file")
     fi
     if [ -z "${auto_sync}" ] && [ -z "${compile_options}" ]; then
       if [ -f "${kernel_config_file_all}" ]; then
-        auto_sync=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file_all")
-        compile_options=$(awk -F "=" '/\['${op_type}'\]/{flag=1; next}/\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file_all")
+        auto_sync=$(awk -F "=" -v section="[${op_type}]" 'index($0, section)==1{flag=1; next}/^\[/{flag=0} flag && /auto_sync/{print $2; exit}' "$kernel_config_file_all")
+        compile_options=$(awk -F "=" -v section="[${op_type}]" 'index($0, section)==1{flag=1; next}/^\[/{flag=0} flag && /options/{print substr($0, length("options=") + 1); exit}' "$kernel_config_file_all")
       fi
     fi
 
@@ -188,7 +200,6 @@ main() {
     if [ -z "$compile_options" ]; then
       compile_options=$(echo "$json_line" | grep -oE '"compile_options"[[:space:]]*:[[:space:]]*\{[^}]*\}' | sed 's/"compile_options"[[:space:]]*:[[:space:]]*//')
     fi
-    echo $compile_options
 
     call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compile_options"
   done

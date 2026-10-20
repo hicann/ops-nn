@@ -943,11 +943,23 @@ function(get_op_type_from_op_name OP_NAME OP_TYPE)
   if(NOT op_type)
     set(op_type "")
   else()
-    string(REGEX REPLACE "[\t ]*OP_ADD\\([\t ]*" "" op_type ${op_type})
-    string(REGEX REPLACE "[\t ]*\\).*$" "" op_type ${op_type})
+    # def文件头部说明的注释中也可能出现OP_ADD字样，先剥离行内注释，再提取注册行，
+    # 并以引号引用变量——否则多行结果会被当作list展开拼接出脏op_type（如"//   -XxxYyy"）
+    string(REGEX REPLACE "//[^\r\n]*" "" op_type "${op_type}")
+    string(REGEX REPLACE "[\t ]*OP_ADD\\([\t ]*" "" op_type "${op_type}")
+    string(REGEX REPLACE "[\t ]*\\)[^\r\n]*" "" op_type "${op_type}")
+    string(REGEX REPLACE "[\r\n]+" ";" op_type "${op_type}")
+    set(_op_type_first "")
+    foreach(_op_line ${op_type})
+      if(NOT "${_op_line}" STREQUAL "")
+        set(_op_type_first "${_op_line}")
+        break()
+      endif()
+    endforeach()
+    set(op_type "${_op_type_first}")
   endif()
   set(${OP_TYPE}
-      ${op_type}
+      "${op_type}"
       PARENT_SCOPE
     )
 endfunction()
