@@ -213,7 +213,7 @@
     {"name":"ForeachLerpList", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "ascend350", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"ForeachLerpScalar", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "ascend960dt", "ascend350", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "ascend350": ["--cce-no-dcache-flush"], "ascend960dt": ["--cce-no-dcache-flush"]}},
     {"name":"ForeachAbs", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false},
-    {"name":"ForeachCopy", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false},
+    {"name":"ForeachCopy", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "ascend960dt", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"ForeachSign", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"ForeachACosInplace", "compute_units": ["ascend910b", "ascend950"], "auto_sync" : false},
     {"name":"ForeachAcos", "compute_units": ["ascend910b", "ascend950", "ascend350", "kirinx90", "kirin9030", "ascend910_93"], "auto_sync" : false},
