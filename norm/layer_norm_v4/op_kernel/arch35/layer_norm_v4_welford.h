@@ -28,7 +28,7 @@ using AscendC::Reg::StoreAlign;
 namespace LayerNormV4Regbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310 || __NPU_ARCH == 5102
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920 || __NPU_ARCH == 5102
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;

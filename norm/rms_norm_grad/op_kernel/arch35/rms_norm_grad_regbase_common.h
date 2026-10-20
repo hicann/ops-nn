@@ -35,7 +35,7 @@ using AscendC::Reg::UpdateMask;
 namespace RmsNormGradRegbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;

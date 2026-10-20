@@ -14,6 +14,7 @@
  */
 
 #include "add_rms_norm_quant_tiling.h"
+#include "op_host/tiling_util.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
 namespace optiling {
@@ -40,11 +41,6 @@ constexpr uint32_t REDUCE_VREG_PER_REPEAT = 2;
 constexpr float DEFAULT_EPSILON = 1e-6F;
 const gert::Shape g_vec_1_shape = {1};
 
-static bool IsArch3510(gert::TilingContext* context)
-{
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
-}
 /**
  * Ensure that the returned shape is non-scalar.
  * When the dim num of shape is 0, this shape is considered to express a scalar.
@@ -502,7 +498,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetInputParams()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
     tilingParams.epsilon = (epsilon == nullptr) ? DEFAULT_EPSILON : *epsilon;
-    if (numN == 0 && !IsArch3510(context_)) {
+    if (numN == 0 && !Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(nodeName.c_str(), "gamma", "0",
                                                   "The shape size of gamma should be greater than 0.");
         return ge::GRAPH_FAILED;
@@ -720,7 +716,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
 ge::graphStatus AddRmsNormQuantRegbaseTiling::DoOpTiling()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormQuantRegbaseTiling DoOpTiling.");
-    if ((tilingParams.numM == 0 || tilingParams.numN == 0) && IsArch3510(context_)) {
+    if ((tilingParams.numM == 0 || tilingParams.numN == 0) && Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         // A legal launch still needs one block. The kernel returns before any
         // buffer initialization or GM access, using an existing NORMAL key.
         tilingParams.usedCoreNum = 1;
