@@ -38,7 +38,6 @@ constexpr int64_t BETA_GAMMA_BUFFER_NUM = 2;
 
 constexpr int64_t BINARY_ADD_COEF = 2;
 constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
-constexpr int64_t WSP_RESERVED_SIZE = 16L * 1024L * 1024L;
 constexpr int64_t MEAN_AND_VAR_NODE_NUM = 2;
 constexpr int64_t FIRST_VCADD_RESULT_VL_MULTIPLE = 2;
 } // namespace
@@ -363,7 +362,11 @@ ge::graphStatus BatchNormV3RARBlockSplitRTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = WSP_RESERVED_SIZE +
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    size_t workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    currentWorkspace[0] = workspaceSize +
                           usedCoreNum * MEAN_AND_VAR_NODE_NUM * batchNormV3TilingData.get_patternAAlign() * FP32_BYTE;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),

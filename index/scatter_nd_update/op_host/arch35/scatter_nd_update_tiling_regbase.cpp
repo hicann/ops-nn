@@ -36,7 +36,6 @@ static constexpr uint16_t RANK_MAX_VALUE = 7;
 static constexpr uint16_t STRIDE_MAX_VALUE = 8;
 static constexpr uint64_t MIN_TILING_SIZE = 128;
 static constexpr uint32_t DCACHE_SIZE = 32U * 1024U;
-static constexpr uint32_t RESERVED_WORKSPACE_SIZE = 16U * 1024U * 1024U;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT32 = 100;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT64 = 200;
 static constexpr uint32_t THREE = 3;
@@ -1036,7 +1035,10 @@ uint64_t ScatterNdUpdateTiling::GetTilingKey() const
 
 ge::graphStatus ScatterNdUpdateTiling::GetWorkspaceSize()
 {
-    workspaceSize = RESERVED_WORKSPACE_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     if (isDeterminstic_ == 1 && isPcieThrough_ != 1) {
         if (indiceShapeSize < UINT32_MAX && updateShapeSize < UINT32_MAX && outputStorageShapeSize_ < INT32_MAX) {
             workspaceSize = workspaceSize + (varStorageInAxis_ + indicesAxis_ + 1) * sizeof(int32_t);

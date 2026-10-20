@@ -43,7 +43,6 @@ constexpr uint64_t TILING_NOT_REVERSE_DIM = 10;
 
 constexpr int64_t MAX_INT32_NUM = 2147483647;
 constexpr int64_t RESERVED_UB_SIZE = static_cast<int64_t>(9) * 1024;
-constexpr uint64_t ASCENDC_TOOLS_WORKSPACE = static_cast<uint64_t>(16) * 1024 * 1024;
 static constexpr int64_t MAX_INPUT_ELEMENTS = std::numeric_limits<uint16_t>::max();
 
 constexpr int64_t SIMD_THRESHOLD = 128;
@@ -386,7 +385,10 @@ uint64_t ReverseV2Tiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus ReverseV2Tiling::GetWorkspaceSize()
 {
-    workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 

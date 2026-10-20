@@ -30,7 +30,6 @@ static constexpr uint16_t RANK_MIN_VALUE = 1;
 static constexpr uint16_t RANK_MAX_VALUE = 7;
 static constexpr uint64_t MIN_TILING_SIZE = 128;
 static constexpr uint32_t DCACHE_SIZE = 32U * 1024U;
-static constexpr uint32_t RESERVED_WORKSPACE_SIZE = 16U * 1024U * 1024U;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT32 = 100;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT64 = 200;
 static constexpr uint32_t ONE = 1;
@@ -735,7 +734,10 @@ uint64_t ScatterNdAddSimtTiling::GetTilingKey() const
 
 ge::graphStatus ScatterNdAddSimtTiling::GetWorkspaceSize()
 {
-    workspaceSize = RESERVED_WORKSPACE_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     /* 非量化不需要开workspace */
     if (isDeterminstic_ == 1 && isSplitAfterAxis_ == 0) {
         int64_t rCoutWsSize = varInAxis_ * INT32_BYTES;

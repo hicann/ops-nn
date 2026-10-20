@@ -31,7 +31,6 @@ constexpr uint64_t MIN_TILING_SIZE = 128;
 constexpr uint64_t MIN_BLOCK_SIZE = 512;
 constexpr uint32_t DCACHE_SIZE = static_cast<uint32_t>(32) * 1024;
 constexpr uint32_t REGBASE_CCEC_CACHE_SIZE = static_cast<uint32_t>(8) * 1024;
-constexpr uint32_t RESERVED_WORKSPACE_SIZE = static_cast<uint32_t>(16) * 1024 * 1024;
 constexpr uint32_t INPUT_ADDRESS_IN_INT32 = 0;
 constexpr uint32_t INPUT_ADDRESS_IN_INT64 = 20;
 constexpr uint32_t ONE = 1;
@@ -569,7 +568,10 @@ uint64_t ScatterNdTiling::GetTilingKey() const
 
 ge::graphStatus ScatterNdTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = RESERVED_WORKSPACE_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     if (isDeterminTemplate_ && isDeterministic_) {
         uint64_t postVarAlignSize = Ops::Base::CeilAlign(afterAxis_ * sizeof(float),

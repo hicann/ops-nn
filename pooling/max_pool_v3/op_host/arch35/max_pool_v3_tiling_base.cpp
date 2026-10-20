@@ -29,7 +29,6 @@ const int32_t PADDING_POS = 3;
 const int32_t FORMAT_POS = 4;
 const int32_t GLOBAL_POOLING_POS = 5;
 const int32_t CEIL_POS = 6;
-const uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U;
 static const int32_t MP_MAX_2D_DIM_ZERO = 0;
 static const int32_t MP_MAX_2D_DIM_ONE = 1;
 static const int32_t MP_MAX_2D_DIM_TWO = 2;
@@ -537,10 +536,12 @@ uint64_t MaxPoolV3BaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus MaxPoolV3BaseTiling::GetWorkspaceSize()
 {
-    uint32_t sysWorkspace = WS_SYS_SIZE;
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sysWorkspace;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    currentWorkspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

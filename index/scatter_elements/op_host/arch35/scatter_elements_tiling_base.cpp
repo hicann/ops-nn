@@ -31,8 +31,7 @@ constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t MAX_INT32_NUM = 2147483647;
 constexpr int64_t MAX_UINT32_COUNT = 1LL << 32;
 constexpr int64_t MAX_INT16_NUM = 32767;
-constexpr int64_t DCACHE_SIZE = 131072;               // 128K
-constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
+constexpr int64_t DCACHE_SIZE = 131072; // 128K
 constexpr int64_t DETERM_DB_BUFFER = 2;
 constexpr int64_t DOUBLE_COUNT = 2;
 constexpr int64_t BASE_S_MAX = 256;
@@ -640,7 +639,10 @@ uint64_t ScatterElementsTiling::GetTilingKey() const
 
 ge::graphStatus ScatterElementsTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     if (isSortDeterm_) {
         workspaceSize_ += wsUserSize_;
     } else if (castTypeSize_ != 0) {
