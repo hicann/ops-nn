@@ -1912,7 +1912,11 @@ main() {
     build_lib
   fi
   if [[ "$ENABLE_BINARY" == "TRUE" || "$ENABLE_PACKAGE" == "TRUE" ]]; then
+    local OLD_ASCEND_OPP_PATH=${ASCEND_OPP_PATH}
+    local OLD_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
     build_binary
+    export ASCEND_OPP_PATH=${OLD_ASCEND_OPP_PATH}
+    export LD_LIBRARY_PATH=${OLD_LD_LIBRARY_PATH}
   fi
   if [[ "$ENABLE_STATIC" == "TRUE" ]]; then
     build_static_lib
