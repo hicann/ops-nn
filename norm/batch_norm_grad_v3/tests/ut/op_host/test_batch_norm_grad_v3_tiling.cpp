@@ -881,8 +881,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
-        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
-        "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
+        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14848 0 14848 0 4 0 29888 0 7424 0 "
+        "7424 0 4 0 192 0 7424 0 7424 0 2 0 ");
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
@@ -1000,8 +1000,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
-        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
-        "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
+        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14848 0 14848 0 4 0 29888 0 7424 0 "
+        "7424 0 4 0 192 0 7424 0 7424 0 2 0 ");
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
@@ -1119,8 +1119,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
-        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
-        "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
+        "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14848 0 14848 0 4 0 29888 0 7424 0 "
+        "7424 0 4 0 192 0 7424 0 7424 0 2 0 ");
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
@@ -1359,7 +1359,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize() - sizeof(int64_t)),
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86000 0 2 0 8 0 225 0 64 0 1344 0 1328 0 240 0 1 0 225 0 240 0 63 0 22 0 21 0 "
-        "22 0 5 0 1 0 8 0 2 0 1 0 16 0 1 0 2 0 240 0 1 0 225 0 240 0 42 0 32 0 42 0 32 0 26 0 2 0 8 0 1 0 2 0 16 0 6 0 "
+        "22 0 5 0 1 0 8 0 2 0 1 0 16 0 1 0 2 0 240 0 1 0 225 0 240 0 85 0 16 0 69 0 16 0 53 0 1 0 8 0 2 0 1 0 16 0 6 0 "
         "5 0 4 0 16 0 6 0 4 0 ");
 }
 

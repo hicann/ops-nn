@@ -295,7 +295,7 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage2()
     // 计算公式: ubsize >= r0Inner * r1InnerInner * aInner * sizeof(DTYPE_DY) * DOUBLE_BUFFER * 3 + aInnerAligned
     // * sizeof(float) * DOUBLE_BUFFER * 5 切r0
     int64_t factorMax = (ubSize - aInnerAligned * FLOAT32_BYTES * DOUBLE_BUFFER * SMALL_SHAPES_STG2) / dyBaseLen_ /
-                        (DOUBLE_BUFFER * FLOAT32_BYTES * BIG_SHAPES_STG2);
+                        (DOUBLE_BUFFER * dyDtypeSize_ * BIG_SHAPES_STG2);
 
     OP_TILING_CHECK(factorMax <= 0,
                     OP_LOGI(context_->GetNodeName(),

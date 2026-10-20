@@ -31,7 +31,7 @@ class BatchNormGradV3RARRecomputeSplitR0 {
 public:
     int64_t outputMask_ = OUTPUT_MASK_ALL;
 
-    __aicore__ inline BatchNormGradV3RARRecomputeSplitR0(){};
+    __aicore__ inline explicit BatchNormGradV3RARRecomputeSplitR0(TPipe* pipe) : pipe_(pipe) {}
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
                                 GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
                                 const BatchNormGradV3RARRecomputeTilingData* tilingData)
@@ -88,14 +88,14 @@ public:
         xBufElemNum_ = xBufSize / sizeof(DY_TYPE);
         int64_t binaryAddBufSize = RoundUpOneBlock(binaryAddQuotient_ / VL_FP32 * sizeof(float));
 
-        pipe_.InitBuffer(dyInQue_, BUFFER_NUM, dyBufSize);
-        pipe_.InitBuffer(xInQue_, BUFFER_NUM, xBufSize);
-        pipe_.InitBuffer(meanInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
-        pipe_.InitBuffer(rstdInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
-        pipe_.InitBuffer(gammaInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
-        pipe_.InitBuffer(dbetaOutQue_, 1, UB_ADD_BUF);
-        pipe_.InitBuffer(dgammaOutQue_, 1, UB_ADD_BUF);
-        pipe_.InitBuffer(binaryAddBuf_, binaryAddBufSize);
+        pipe_->InitBuffer(dyInQue_, BUFFER_NUM, dyBufSize);
+        pipe_->InitBuffer(xInQue_, BUFFER_NUM, xBufSize);
+        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
+        pipe_->InitBuffer(rstdInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
+        pipe_->InitBuffer(gammaInQue_, BUFFER_NUM, BatchNormGradV3::ONE_BLK_SIZE);
+        pipe_->InitBuffer(dbetaOutQue_, 1, UB_ADD_BUF);
+        pipe_->InitBuffer(dgammaOutQue_, 1, UB_ADD_BUF);
+        pipe_->InitBuffer(binaryAddBuf_, binaryAddBufSize);
 
         V_MTE3_EVENT = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         MTE3_MTE2_EVENT = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
@@ -929,7 +929,7 @@ public:
     }
 
 private:
-    TPipe pipe_;
+    TPipe* pipe_{nullptr};
     TQue<QuePosition::VECIN, BUFFER_NUM> dyInQue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> xInQue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> meanInQue_;

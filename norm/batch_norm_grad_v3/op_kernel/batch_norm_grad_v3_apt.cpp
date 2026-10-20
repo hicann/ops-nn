@@ -62,7 +62,7 @@ extern "C" __global__ __aicore__ void batch_norm_grad_v3(GM_ADDR dy, GM_ADDR x, 
     } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op;
+        BatchNormGradV3RARRecomputeSplitR0<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1)) {

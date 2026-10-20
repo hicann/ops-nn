@@ -77,6 +77,16 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
     factorMax = factorMax / b0Inner;
     int64_t aFactorMax = fusedALen_;
     aInner = factorMax <= aFactorMax ? factorMax : aFactorMax;
+    // 初始容量按 aInner=1 估算，gamma/runningVar 队列实际按最终 aInner 分配。
+    // 按四组双缓冲队列对齐后的总字节数复核容量，必要时减小 aInner。
+    auto ubUsed = [&](int64_t a) {
+        auto alignUp = [this](int64_t byteCount) { return Ops::Base::CeilAlign(byteCount, blockSize_); };
+        return DOUBLE_BUFFER * (alignUp(a * bytesPerWeight_) + alignUp(a * bytesPerRunningVar_)) +
+               DOUBLE_BUFFER * INPUT_OUTPUT_NUM * alignUp(b1Inner * aTileBase_ * a * b0Inner * bytesPerDy_);
+    };
+    while (aInner > 1 && ubUsed(aInner) > static_cast<int64_t>(aicoreParams_.ubSize)) {
+        aInner--;
+    }
     int64_t aOuter = Ops::Base::CeilDiv(fusedALen_, aInner);
 
     int64_t totalTiles = b0Outer * aOuter * b1Outer;

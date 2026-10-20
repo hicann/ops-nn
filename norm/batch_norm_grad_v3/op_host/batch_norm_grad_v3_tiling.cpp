@@ -604,12 +604,11 @@ bool BatchNormGradV3RARRecomputeTilingBase::IsCapable()
     if (r0Dim == 1) {
         return false;
     }
-    // UB内二分累加buffer按32KB的float数算，占512字节
-    // dgamma和dbeta的UB间二分累加buffer各占3KB
-    // mean rstd gamma各占128字节，共512字节
-    // 总共7KB
-    constexpr uint64_t extraUbSize = 7 * 1024 + 512;
+    // 与 Kernel InitBuffer 的分配保持一致，预留 dy/x 之外的 UB 开销。
+    constexpr uint64_t extraUbSize = 8000;
     binaryAddBufSize = (ubSize - extraUbSize) / TWO / DOUBLE_BUFFER;
+    // SplitR1 的 dy/x 按两个 block 向上对齐，单块预算需向下对齐以覆盖实际分配。
+    binaryAddBufSize = binaryAddBufSize / (TWO * blockSize) * (TWO * blockSize);
 
     // R0不可全载，核内切R0
     subTilingKey = BNG_V3_RAR_RECOMPUTE_SPLIT_R0;
