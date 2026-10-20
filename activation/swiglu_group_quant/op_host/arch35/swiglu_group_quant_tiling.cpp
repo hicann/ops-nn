@@ -18,6 +18,7 @@
 #include <sstream>
 #include <limits>
 #include <graph/utils/type_utils.h>
+#include "../../../../common/inc/op_host/op_const_def_nn.h"
 #include "../../../swiglu_group_quant_with_dual_axis/op_host/arch35/swiglu_group_quant_mx_tiling.h"
 #include "../../../swiglu_group_quant_with_dual_axis/op_host/arch35/swiglu_group_quant_with_dual_axis_policy.h"
 #include "swiglu_group_quant_tiling.h"
@@ -56,6 +57,7 @@ constexpr int64_t B16_ALIGN_NUM = BLOCK_SIZE / B16_BYTES;
 constexpr int64_t B32_ALIGN_NUM = BLOCK_SIZE / B32_BYTES;
 constexpr int64_t PER_BLOCK_FP16 = 128;
 constexpr int64_t PER_MX_FP16 = 32;
+constexpr int64_t PER_HIF4 = 64;
 constexpr int64_t FP4_PACK_NUM = 2;
 constexpr int64_t SWIGLU_SPLIT_FACTOR = 2;
 constexpr int64_t MX_SCALE_ALIGN_FACTOR = 2;
@@ -64,6 +66,7 @@ constexpr size_t MAX_DIM_NUM = 8;
 constexpr int64_t BLOCK_QUANT = 0;
 constexpr int64_t MX_QUANT = 1;
 constexpr int64_t MX_QUANT_EXTEND = 5;
+constexpr int64_t HIF4_QUANT = 4;
 constexpr size_t ATTR_INDEX_DST_TYPE = 0;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
 constexpr size_t ATTR_INDEX_BLOCK_SIZE = 2;
@@ -96,6 +99,8 @@ constexpr int64_t MXFP4_QUANT_TILING_KEY = 3000;
 constexpr int64_t MX_QUANT_EXTEND_TILING_KEY = 5000;
 constexpr int64_t MX_QUANT_EXTEND_YORIGIN_TILING_KEY = 5100;
 constexpr int64_t MXFP4_QUANT_YORIGIN_TILING_KEY = 3100;
+constexpr int64_t HIF4_QUANT_TILING_KEY = 6000;
+constexpr int64_t HIF4_QUANT_YORIGIN_TILING_KEY = 6100;
 
 int64_t ShapeElementNum(const gert::Shape& shape)
 {
@@ -178,22 +183,33 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
     auto* attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
-    auto dstTypeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    dstType_ = dstTypeAttr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypeAttr);
-    OP_CHECK_IF((dstType_ != ge::DT_FLOAT8_E4M3FN && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT4_E2M1 &&
-                 dstType_ != ge::DT_FLOAT4_E1M2),
-                OP_LOGE(context_->GetNodeName(),
-                        "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %s.",
-                        ge::TypeUtils::DataTypeToSerialString(dstType_).c_str()),
-                return ge::GRAPH_FAILED);
-    isMxFp4Quant_ = dstType_ == ge::DT_FLOAT4_E2M1 || dstType_ == ge::DT_FLOAT4_E1M2;
-
     auto quantModeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     quantMode_ = quantModeAttr == nullptr ? BLOCK_QUANT : *quantModeAttr;
+    const bool isHif4Quant = quantMode_ == HIF4_QUANT;
+    const bool isMxQuant = quantMode_ == MX_QUANT || quantMode_ == MX_QUANT_EXTEND;
+
+    if (isHif4Quant) {
+        // quant_mode=4 always quantizes to HIFLOAT4 and ignores dst_type.
+        dstType_ = Ops::NN::DT_HIFLOAT4;
+    } else {
+        auto dstTypeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
+        dstType_ = dstTypeAttr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypeAttr);
+        OP_CHECK_IF(
+            (dstType_ != ge::DT_FLOAT8_E4M3FN && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT4_E2M1 &&
+             dstType_ != ge::DT_FLOAT4_E1M2),
+            OP_LOGE(context_->GetNodeName(),
+                    "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %s.",
+                    ge::TypeUtils::DataTypeToSerialString(dstType_).c_str()),
+            return ge::GRAPH_FAILED);
+    }
+    isMxFp4Quant_ = dstType_ == ge::DT_FLOAT4_E2M1 || dstType_ == ge::DT_FLOAT4_E1M2;
+
     OP_CHECK_IF(
-        (quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT && quantMode_ != MX_QUANT_EXTEND),
+        (quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT && quantMode_ != HIF4_QUANT &&
+         quantMode_ != MX_QUANT_EXTEND),
         OP_LOGE(context_->GetNodeName(),
-                "attr quant_mode only supports 0(block_quant), 1(mx_quant) or 5(mx_quant_v2), got %ld.", quantMode_),
+                "attr quant_mode only supports 0(block_quant), 1(mx_quant), 4(hif4_quant) or 5(mx_quant_v2), got %ld.",
+                quantMode_),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (isMxFp4Quant_ && quantMode_ != MX_QUANT),
@@ -201,16 +217,20 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
                 "attr quant_mode must be 1(mx_quant) when dst_type is FLOAT4_E2M1/FLOAT4_E1M2, got %ld.", quantMode_),
         return ge::GRAPH_FAILED);
 
-    auto blockSizeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_BLOCK_SIZE);
-    int64_t blockSize = blockSizeAttr == nullptr ? 0 : *blockSizeAttr;
-    const bool isMxQuant = quantMode_ == MX_QUANT || quantMode_ == MX_QUANT_EXTEND;
-    int64_t expectedBlockSize = isMxQuant ? PER_MX_FP16 : PER_BLOCK_FP16;
-    OP_CHECK_IF((blockSize != 0 && blockSize != expectedBlockSize),
-                OP_LOGE(context_->GetNodeName(), "attr block_size should be 0 or %ld when quant_mode is %ld, got %ld.",
-                        expectedBlockSize, quantMode_, blockSize),
-                return ge::GRAPH_FAILED);
-
-    splitFactor_ = expectedBlockSize;
+    if (isHif4Quant) {
+        // quant_mode=4 uses the fixed HIF4 group size and ignores block_size/round_scale.
+        splitFactor_ = PER_HIF4;
+    } else {
+        auto blockSizeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_BLOCK_SIZE);
+        int64_t blockSize = blockSizeAttr == nullptr ? 0 : *blockSizeAttr;
+        int64_t expectedBlockSize = isMxQuant ? PER_MX_FP16 : PER_BLOCK_FP16;
+        OP_CHECK_IF(
+            (blockSize != 0 && blockSize != expectedBlockSize),
+            OP_LOGE(context_->GetNodeName(), "attr block_size should be 0 or %ld when quant_mode is %ld, got %ld.",
+                    expectedBlockSize, quantMode_, blockSize),
+            return ge::GRAPH_FAILED);
+        splitFactor_ = expectedBlockSize;
+    }
 
     auto roundScaleAttr = attrs->GetAttrPointer<bool>(ATTR_INDEX_ROUND_SCALE);
     if (roundScaleAttr != nullptr) {
@@ -337,7 +357,12 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, con
     OP_CHECK_NULL_WITH_CONTEXT(context_, yScaleDesc);
     auto yScaleDtype = yScaleDesc->GetDataType();
     const bool isMxQuant = quantMode_ == MX_QUANT || quantMode_ == MX_QUANT_EXTEND;
-    auto expectedYScaleDtype = isMxQuant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
+    ge::DataType expectedYScaleDtype;
+    if (quantMode_ == HIF4_QUANT) {
+        expectedYScaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    } else {
+        expectedYScaleDtype = isMxQuant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
+    }
     OP_CHECK_IF((yScaleDtype != expectedYScaleDtype),
                 OP_LOGE(context_->GetNodeName(), "output y_scale dtype should be %s when quant_mode is %ld, got %s.",
                         ge::TypeUtils::DataTypeToSerialString(expectedYScaleDtype).c_str(), quantMode_,
@@ -410,6 +435,30 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, con
                             expectedMxTailDim, MX_SCALE_ALIGN_FACTOR, quantMode_,
                             yScaleStorageShape.GetDim(xDimNum - 1), yScaleStorageShape.GetDim(xDimNum)),
                     return ge::GRAPH_FAILED);
+    } else if (quantMode_ == HIF4_QUANT) {
+        // [..., ceil((D/2)/64), 1]
+        OP_CHECK_IF((yScaleStorageShape.GetDimNum() != static_cast<size_t>(xDimNum + 1)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_scale dim num should be %ld when quant_mode is 4, "
+                            "got %zu.",
+                            xDimNum + 1, yScaleStorageShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < xDimNum - 1; ++i) {
+            OP_CHECK_IF((yScaleStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                        OP_LOGE(context_->GetNodeName(),
+                                "output y_scale dim[%ld] should be equal to input x "
+                                "dim[%ld], got y_scale dim %ld, x dim %ld.",
+                                i, i, yScaleStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                        return ge::GRAPH_FAILED);
+        }
+        int64_t expectedHif4TailDim = CeilDiv(splitD_, PER_HIF4);
+        OP_CHECK_IF(
+            (yScaleStorageShape.GetDim(xDimNum - 1) != expectedHif4TailDim || yScaleStorageShape.GetDim(xDimNum) != 1),
+            OP_LOGE(context_->GetNodeName(),
+                    "output y_scale last two dims should be [%ld, 1] when "
+                    "quant_mode is 4, got [%ld, %ld].",
+                    expectedHif4TailDim, yScaleStorageShape.GetDim(xDimNum - 1), yScaleStorageShape.GetDim(xDimNum)),
+            return ge::GRAPH_FAILED);
     } else {
         // [..., ceil((D/2)/128)]
         OP_CHECK_IF((yScaleStorageShape.GetDimNum() != static_cast<size_t>(xDimNum)),
@@ -516,10 +565,10 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
                         "the product of input x dims except the last one should be non-negative, but is %ld.", bs_),
                 return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
-    // An empty x (last dim 0) is supported by legacy block/MX modes; otherwise the last dim must be
+    // An empty x (last dim 0) is supported by legacy block/MX/HIF4 modes; otherwise the last dim must be
     // greater than or equal to and divisible by the mode-specific D limit. Mode 5 does not support empty x.
     const int64_t dLimit = quantMode_ == MX_QUANT_EXTEND ? MX_QUANT_EXTEND_D_LIMIT : D_LIMIT;
-    const bool supportsEmpty = quantMode_ == BLOCK_QUANT || quantMode_ == MX_QUANT;
+    const bool supportsEmpty = quantMode_ == BLOCK_QUANT || quantMode_ == MX_QUANT || quantMode_ == HIF4_QUANT;
     OP_CHECK_IF(((d_ == 0 && !supportsEmpty) || (d_ != 0 && (d_ < dLimit || d_ % dLimit != 0))),
                 OP_LOGE(context_->GetNodeName(),
                         "input x last dim should be 0 for an empty supported mode or greater than or equal to %ld "
@@ -535,9 +584,9 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
         return ge::GRAPH_FAILED;
     }
 
-    // y_scale has one more dim than x in MX mode and y_scale dim num must be in [1, 8],
-    // so x dim num is limited to [2, 7] when quant_mode is 1.
-    if (quantMode_ == MX_QUANT) {
+    // y_scale has one more dim than x in MX mode and HIF4 mode, and y_scale dim num must be in [1, 8],
+    // so x dim num is limited to [2, 7] when quant_mode is 1 or 4.
+    if (quantMode_ == MX_QUANT || quantMode_ == HIF4_QUANT) {
         OP_CHECK_IF(
             (xDimNum > MAX_DIM_NUM - 1),
             OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu] when quant_mode is %ld, got %zu.",
@@ -673,6 +722,29 @@ int64_t SwigluGroupQuantTiling::CalcMxFp4QuantTotalSize(int64_t rowFactor, int64
     return AddYOriginSize(totalSize, rowFactor, dFactor);
 }
 
+int64_t SwigluGroupQuantTiling::CalcHif4QuantTotalSize(int64_t rowFactor, int64_t dFactor) const
+{
+    int64_t b16AlignNum = 4 * REPEAT_SIZE / B16_BYTES;
+    int64_t yCnt = RoundUp(rowFactor * RoundUp(dFactor, B16_ALIGN_NUM), b16AlignNum);
+    int64_t eACnt = CeilDiv(yCnt, PER_HIF4);
+    int64_t eBCnt = CeilDiv(yCnt, PER_HIF4);
+    int64_t eCCnt = CeilDiv(yCnt, PER_HIF4 / SWIGLU_SPLIT_FACTOR);
+
+    int64_t x0Size = rowFactor * RoundUp(dFactor, B16_ALIGN_NUM) * B16_BYTES * DOUBLE_BUFFER;
+    int64_t x1Size = rowFactor * RoundUp(dFactor, B16_ALIGN_NUM) * B16_BYTES * DOUBLE_BUFFER;
+    int64_t swigluSize = RoundUp(rowFactor * RoundUp(dFactor, B16_ALIGN_NUM), b16AlignNum) * B16_BYTES;
+    int64_t eASize = RoundUp(eACnt, FP8_ALIGN_NUM) * FP8_BYTES;
+    int64_t eBSize = RoundUp(eBCnt, FP8_ALIGN_NUM) * FP8_BYTES;
+    int64_t eCSize = RoundUp(eCCnt, B16_ALIGN_NUM) * B16_BYTES;
+    int64_t ySize = RoundUp(CeilDiv(yCnt, FP4_PACK_NUM), FP8_ALIGN_NUM) * FP8_BYTES * DOUBLE_BUFFER;
+    int64_t scaleSize = RoundUp(CeilDiv(yCnt, PER_HIF4), B32_ALIGN_NUM) * B32_BYTES * DOUBLE_BUFFER;
+    int64_t totalSize = x0Size + x1Size + swigluSize + eASize + eBSize + eCSize + ySize + scaleSize;
+    totalSize = AddWeightSize(totalSize, rowFactor);
+    // When outputOrigin is enabled, the yOrigin queue keeps the pre-weight swiglu result while
+    // quantization consumes the swiglu result from the swiglu buffer, so both are reserved in UB.
+    return AddYOriginSize(totalSize, rowFactor, dFactor);
+}
+
 void SwigluGroupQuantTiling::CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize)
 {
     rowFactor_ = rowOnceLoop;
@@ -774,6 +846,15 @@ ge::graphStatus SwigluGroupQuantTiling::CalcMxFp4QuantOpTiling()
     InitCoreTiling();
     int64_t rowOnceLoop = std::min(rowOfFormerBlock_, static_cast<int64_t>(1));
     CalcDAndRowFactorTiling(rowOnceLoop, splitFactor_, &SwigluGroupQuantTiling::CalcMxFp4QuantTotalSize);
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus SwigluGroupQuantTiling::CalcHif4QuantOpTiling()
+{
+    InitCoreTiling();
+    int64_t rowOnceLoop = std::min(rowOfFormerBlock_, static_cast<int64_t>(1));
+    CalcDAndRowFactorTiling(rowOnceLoop, splitFactor_, &SwigluGroupQuantTiling::CalcHif4QuantTotalSize);
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -895,6 +976,8 @@ ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
         } else {
             status = CalcMxQuantOpTiling();
         }
+    } else if (quantMode_ == HIF4_QUANT) {
+        status = CalcHif4QuantOpTiling();
     }
     return status;
 }
@@ -917,6 +1000,10 @@ ge::graphStatus SwigluGroupQuantTiling::SetTilingKey()
     }
     if (quantMode_ == MX_QUANT_EXTEND) {
         tilingKey_ = outputOrigin_ ? MX_QUANT_EXTEND_YORIGIN_TILING_KEY : MX_QUANT_EXTEND_TILING_KEY;
+        return context_->SetTilingKey(tilingKey_);
+    }
+    if (quantMode_ == HIF4_QUANT) {
+        tilingKey_ = outputOrigin_ ? HIF4_QUANT_YORIGIN_TILING_KEY : HIF4_QUANT_TILING_KEY;
         return context_->SetTilingKey(tilingKey_);
     }
     return context_->SetTilingKey(tilingKey_);

@@ -39,6 +39,7 @@ public:
     ge::graphStatus CalcMxQuantExtendOpTiling();
     ge::graphStatus CalcMxFp4QuantOpTiling();
     ge::graphStatus CalcBlockQuantOpTiling();
+    ge::graphStatus CalcHif4QuantOpTiling();
     ge::graphStatus CalcGroupIndexTiling();
     void SetEmptyTiling();
     void SetTilingData();
@@ -63,6 +64,7 @@ private:
     int64_t CalcMxQuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
     int64_t CalcBlockQuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
     int64_t CalcMxFp4QuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
+    int64_t CalcHif4QuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
 
     gert::TilingContext* context_ = nullptr;
     uint64_t tilingKey_ = 0;

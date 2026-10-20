@@ -22,6 +22,7 @@
 #include "test_cube_util.h"
 #include "ut_op_common.h"
 #include "ut_op_util.h"
+#include "../../../../../../common/inc/op_host/op_const_def_nn.h"
 #include "../../../../op_host/arch35/swiglu_group_quant_tiling.h"
 
 namespace {
@@ -222,6 +223,112 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8)
     tc.quantMode = 1;
     tc.roundScale = true;
     tc.tilingKey = 2000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hif4_fp16)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.scaleShape = {{8, 128, 64, 1}, {8, 128, 64, 1}};
+    tc.quantMode = 4;
+    tc.tilingKey = 6000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hif4_bf16_y_origin_weight_group)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_BF16;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.yOriginDtype = ge::DT_BF16;
+    tc.xShape = {{4, 64, 2048}, {4, 64, 2048}};
+    tc.yShape = {{4, 64, 1024}, {4, 64, 1024}};
+    tc.scaleShape = {{4, 64, 16, 1}, {4, 64, 16, 1}};
+    tc.yOriginShape = {{4, 64, 1024}, {4, 64, 1024}};
+    tc.weightShape = {{256}, {256}};
+    tc.quantMode = 4;
+    tc.outputOrigin = true;
+    tc.hasWeight = true;
+    tc.hasGroupIndex = true;
+    tc.tilingKey = 6100;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hif4_empty)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.xShape = {{0, 256}, {0, 256}};
+    tc.yShape = {{0, 128}, {0, 128}};
+    tc.scaleShape = {{0, 2, 1}, {0, 2, 1}};
+    tc.yOriginShape = {{0, 128}, {0, 128}};
+    tc.quantMode = 4;
+    tc.tilingKey = 6000;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hif4_scale_dtype)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.scaleShape = {{8, 128, 64, 1}, {8, 128, 64, 1}};
+    tc.quantMode = 4;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hif4_y_dtype)
+{
+    TilingCase tc;
+    tc.yDtype = ge::DT_FLOAT8_E4M3FN;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.scaleShape = {{8, 128, 64, 1}, {8, 128, 64, 1}};
+    tc.quantMode = 4;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hif4_rank_eight)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.xShape = {{2, 2, 2, 2, 2, 2, 2, 256}, {2, 2, 2, 2, 2, 2, 2, 256}};
+    tc.yShape = {{2, 2, 2, 2, 2, 2, 2, 128}, {2, 2, 2, 2, 2, 2, 2, 128}};
+    tc.scaleShape = {{2, 2, 2, 2, 2, 2, 2, 2, 1}, {2, 2, 2, 2, 2, 2, 2, 2, 1}};
+    tc.yOriginShape = {{2, 2, 2, 2, 2, 2, 2, 128}, {2, 2, 2, 2, 2, 2, 2, 128}};
+    tc.quantMode = 4;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hif4_low_precision_weight)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.scaleShape = {{8, 128, 64, 1}, {8, 128, 64, 1}};
+    tc.quantMode = 4;
+    tc.hasWeight = true;
+    tc.weightDtype = ge::DT_BF16;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hif4_alpha)
+{
+    TilingCase tc;
+    tc.yDtype = Ops::NN::DT_HIFLOAT4;
+    tc.scaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+    tc.scaleShape = {{8, 128, 64, 1}, {8, 128, 64, 1}};
+    tc.quantMode = 4;
+    tc.alpha = 1.702f;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 

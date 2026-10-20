@@ -17,6 +17,7 @@
 #define QUANT_SWIGLU_GROUP_QUANT_PROTO_H_
 
 #include "graph/operator_reg.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace ge {
 
@@ -77,8 +78,9 @@ REG_OP(SwigluGroupQuant)
     .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
     .OPTIONAL_INPUT(scale, TensorType({DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_HIFLOAT8}))
-    .OUTPUT(y_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
+    .OUTPUT(y, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_HIFLOAT8,
+                           Ops::NN::DT_HIFLOAT4}))
+    .OUTPUT(y_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4_SCALE}))
     .OUTPUT(y_origin, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .ATTR(dst_type, Int, DT_FLOAT8_E4M3FN)
     .ATTR(quant_mode, Int, 0)

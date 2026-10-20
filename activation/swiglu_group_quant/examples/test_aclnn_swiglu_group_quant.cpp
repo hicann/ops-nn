@@ -15,6 +15,8 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_swiglu_group_quant.h"
 
+constexpr size_t INPUT_DATA_MOD_BASE = 23;
+
 #define CHECK_RET(cond, return_expr) \
     do {                             \
         if (!(cond)) {               \
@@ -51,17 +53,15 @@ bool CheckHardwareSupport()
 {
     const char* socName = aclrtGetSocName();
     if (socName == nullptr) {
-        LOG_PRINT("Warning: Cannot get SOC name, skip hardware check\n");
+        LOG_PRINT("Warning: cannot get SOC name, skip hardware check.\n");
         return true;
     }
-
     LOG_PRINT("Current SOC: %s\n", socName);
-    if (strstr(socName, "Ascend950") != nullptr || strstr(socName, "ascend950") != nullptr) {
+    if (strstr(socName, "Ascend950") != nullptr || strstr(socName, "ascend950") != nullptr ||
+        strstr(socName, "Ascend960") != nullptr || strstr(socName, "ascend960") != nullptr) {
         return true;
     }
-
-    LOG_PRINT("Warning: SwigluGroupQuant only supports Ascend950, current SOC '%s' is not supported. Skip test.\n",
-              socName);
+    LOG_PRINT("Warning: current SOC '%s' is not supported. Skip test.\n", socName);
     return false;
 }
 
@@ -135,7 +135,7 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
 
     std::vector<uint16_t> xHostData(GetShapeSize(xShape), 0);
     for (size_t i = 0; i < xHostData.size(); ++i) {
-        xHostData[i] = static_cast<uint16_t>(i % 23);
+        xHostData[i] = static_cast<uint16_t>(i % INPUT_DATA_MOD_BASE);
     }
     std::vector<uint8_t> yHostData(GetShapeSize(yShape) * testCase.yElementSize, 0);
     std::vector<uint8_t> yScaleE8M0HostData(GetShapeSize(testCase.yScaleShape), 0);
@@ -276,6 +276,21 @@ int main()
     for (const auto& testCase : testCases) {
         ret = RunSwigluGroupQuantCase(testCase, stream);
         CHECK_RET(ret == ACL_SUCCESS, Finalize(deviceId, stream); return ret);
+    }
+
+    const char* socName = aclrtGetSocName();
+    if (socName != nullptr && (strstr(socName, "Ascend960") != nullptr || strstr(socName, "ascend960") != nullptr)) {
+        SwigluGroupQuantCase hif4Case = {"hif4_quant", 4, 0,     false, {2, 2, 1}, ACL_HIFLOAT4_SCALE, false, 28, 448.0,
+                                         ACL_HIFLOAT4, 1, false, false, {}};
+        ret = RunSwigluGroupQuantCase(hif4Case, stream);
+        CHECK_RET(ret == ACL_SUCCESS, Finalize(deviceId, stream); return ret);
+        SwigluGroupQuantCase hif4OriginCase = {
+            "hif4_quant_y_origin", 4, 0,    false, {2, 2, 1}, ACL_HIFLOAT4_SCALE, false, 28, 448.0,
+            ACL_HIFLOAT4,          1, true, false, {}};
+        ret = RunSwigluGroupQuantCase(hif4OriginCase, stream);
+        CHECK_RET(ret == ACL_SUCCESS, Finalize(deviceId, stream); return ret);
+    } else {
+        LOG_PRINT("Skip hif4_quant test: only supported on Ascend960\n");
     }
 
     Finalize(deviceId, stream);

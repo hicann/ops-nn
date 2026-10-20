@@ -13,6 +13,8 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "version/metadef_version.h"
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace ops {
 namespace {
@@ -21,6 +23,54 @@ constexpr float DEFAULT_DST_TYPE_MAX = 15.0f;
 constexpr float DEFAULT_ALPHA = 1.0f;
 constexpr float DEFAULT_BIAS = 0.0f;
 constexpr uint32_t SWIGLU_GROUP_QUANT_VERSION_TWO = 2;
+
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+static const std::vector<ge::DataType> xDataType960dt = {
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::DataType> weightDataType960dt = {
+    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::DataType> groupIndexDataType960dt(25, ge::DT_INT64);
+static const std::vector<ge::DataType> scaleDataType960dt(25, ge::DT_FLOAT);
+static const std::vector<ge::DataType> yDataType960dt = {
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT4_E2M1,   ge::DT_FLOAT4_E2M1,
+    ge::DT_FLOAT4_E1M2,   ge::DT_FLOAT4_E1M2,   ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4};
+static const std::vector<ge::DataType> yScaleDataType960dt = {ge::DT_FLOAT,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              ge::DT_FLOAT8_E8M0,
+                                                              Ops::NN::DT_HIFLOAT4_SCALE,
+                                                              Ops::NN::DT_HIFLOAT4_SCALE};
+static const std::vector<ge::DataType> yOriginDataType960dt = xDataType960dt;
+static const std::vector<ge::Format> formatNd960dt(25, ge::FORMAT_ND);
+#endif
 } // namespace
 
 class SwigluGroupQuant : public OpDef {
@@ -159,6 +209,55 @@ public:
             .ExtendCfgInfo("opFile.value", "swiglu_group_quant");
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
+
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+        OpAICoreConfig config960dt;
+        config960dt.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(xDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt)
+            .AutoContiguous();
+        config960dt.Input("weight")
+            .ParamType(OPTIONAL)
+            .DataType(weightDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt)
+            .AutoContiguous();
+        config960dt.Input("group_index")
+            .ParamType(OPTIONAL)
+            .DataType(groupIndexDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt);
+        config960dt.Input("scale")
+            .ParamType(OPTIONAL)
+            .DataType(scaleDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt);
+        config960dt.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(yDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt);
+        config960dt.Output("y_scale")
+            .ParamType(REQUIRED)
+            .DataType(yScaleDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt);
+        config960dt.Output("y_origin")
+            .ParamType(REQUIRED)
+            .DataType(yOriginDataType960dt)
+            .Format(formatNd960dt)
+            .UnknownShapeFormat(formatNd960dt);
+        config960dt.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "swiglu_group_quant");
+        this->AICore().AddConfig("ascend960dt", config960dt);
+#endif
     }
 };
 

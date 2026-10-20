@@ -125,21 +125,21 @@ public:
                 }
                 if (hasTopkWeight_) {
                     if (hasClampValue_) {
-                        VFProcessSwiglu<T0, true, true, outputOrigin>(
+                        VFProcessSwiglu<T0, T0, true, true, outputOrigin>(
                             swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
                             topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
-                        VFProcessSwiglu<T0, true, false, outputOrigin>(
+                        VFProcessSwiglu<T0, T0, true, false, outputOrigin>(
                             swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
                             topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }
                 } else {
                     if (hasClampValue_) {
-                        VFProcessSwiglu<T0, false, true, outputOrigin>(
+                        VFProcessSwiglu<T0, T0, false, true, outputOrigin>(
                             swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
                             topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
-                        VFProcessSwiglu<T0, false, false, outputOrigin>(
+                        VFProcessSwiglu<T0, T0, false, false, outputOrigin>(
                             swigluLocal, yOriginLocal, xLocal, xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
                             topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }

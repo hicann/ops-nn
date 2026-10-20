@@ -17,6 +17,7 @@
 #include "ut_op_common.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "../../../../../common/inc/op_host/op_const_def_nn.h"
 #include "../../../op_graph/swiglu_group_quant_proto.h"
 
 namespace {
@@ -81,6 +82,30 @@ TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_fp4)
     EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({2, 8, 512}));
 }
 
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_hif4)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {2, 4, 512}, ge::DT_FLOAT16);
+    op.SetAttr("quant_mode", static_cast<int64_t>(4));
+
+    EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), std::vector<int64_t>({2, 4, 256}));
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({2, 4, 4, 1}));
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({2, 4, 256}));
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_hif4_bf16_tail_group)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {3, 768}, ge::DT_BF16);
+    op.SetAttr("quant_mode", static_cast<int64_t>(4));
+
+    EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), std::vector<int64_t>({3, 384}));
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({3, 6, 1}));
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({3, 384}));
+}
+
 TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_unknown_rank)
 {
     ge::op::SwigluGroupQuant op;
@@ -124,6 +149,31 @@ TEST_F(SwigluGroupQuantInferShapeTest, infer_dtype_mx_fp4)
     EXPECT_EQ(InferDataTypeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
     EXPECT_EQ(op.GetOutputDesc(0).GetDataType(), ge::DT_FLOAT4_E1M2);
     EXPECT_EQ(op.GetOutputDesc(1).GetDataType(), ge::DT_FLOAT8_E8M0);
+    EXPECT_EQ(op.GetOutputDesc(2).GetDataType(), ge::DT_BF16);
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_dtype_hif4)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {2, 4, 512}, ge::DT_FLOAT16);
+    op.SetAttr("quant_mode", static_cast<int64_t>(4));
+
+    EXPECT_EQ(InferDataTypeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(0).GetDataType(), Ops::NN::DT_HIFLOAT4);
+    EXPECT_EQ(op.GetOutputDesc(1).GetDataType(), Ops::NN::DT_HIFLOAT4_SCALE);
+    EXPECT_EQ(op.GetOutputDesc(2).GetDataType(), ge::DT_FLOAT16);
+}
+
+TEST_F(SwigluGroupQuantInferShapeTest, infer_dtype_hif4_ignores_dst_type)
+{
+    ge::op::SwigluGroupQuant op;
+    UpdateInputX(op, {2, 4, 512}, ge::DT_BF16);
+    op.SetAttr("dst_type", static_cast<int64_t>(ge::DT_FLOAT8_E4M3FN));
+    op.SetAttr("quant_mode", static_cast<int64_t>(4));
+
+    EXPECT_EQ(InferDataTypeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(0).GetDataType(), Ops::NN::DT_HIFLOAT4);
+    EXPECT_EQ(op.GetOutputDesc(1).GetDataType(), Ops::NN::DT_HIFLOAT4_SCALE);
     EXPECT_EQ(op.GetOutputDesc(2).GetDataType(), ge::DT_BF16);
 }
 

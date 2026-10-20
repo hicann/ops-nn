@@ -218,11 +218,12 @@ __simd_callee__ inline void FP16Convert(AscendC::Reg::RegTensor<half>& output, A
                                    (AscendC::Reg::RegTensor<uint16_t>&)input, specialMask);
 }
 
-template <typename T, bool hasTopkWeight = false, bool hasClampValue = false, bool hasOriginOutput = false>
-__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* yOriginLocalAddr, __ubuf__ T* x0LocalAddr,
-                                          __ubuf__ T* x1LocalAddr, __ubuf__ float* topkWeightLocalAddr,
-                                          uint16_t loopCount, uint32_t sregNum, uint32_t curColNumAlign,
-                                          const uint16_t curRowNum, float clampValue)
+template <typename T0, typename T1 = T0, bool hasTopkWeight = false, bool hasClampValue = false,
+          bool hasOriginOutput = false>
+__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T1* yLocalAddr, __ubuf__ T0* yOriginLocalAddr,
+                                          __ubuf__ T0* x0LocalAddr, __ubuf__ T0* x1LocalAddr,
+                                          __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount, uint32_t sregNum,
+                                          uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
 {
     RegTensor<float> weight;
     RegTensor<float> x0;
@@ -239,8 +240,8 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* yO
         uint32_t sreg = sregNum;
         for (uint16_t j = 0; j < loopCount; j++) {
             pregLoop = UpdateMask<float>(sreg);
-            LoadInputData<T>(x0, x0LocalAddr, pregLoop, j * VL_FP32 + i * curColNumAlign);
-            LoadInputData<T>(x1, x1LocalAddr, pregLoop, j * VL_FP32 + i * curColNumAlign);
+            LoadInputData<T0>(x0, x0LocalAddr, pregLoop, j * VL_FP32 + i * curColNumAlign);
+            LoadInputData<T0>(x1, x1LocalAddr, pregLoop, j * VL_FP32 + i * curColNumAlign);
             if constexpr (hasClampValue) {
                 Mins(x0, x0, clampValue, pregLoop);
                 Maxs(x1, x1, -clampValue, pregLoop);
@@ -248,31 +249,33 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* yO
             }
             VFSwiGlu(y, x0, x1, one, tmp, pregLoop);
             if constexpr (hasOriginOutput) {
-                StoreOutputData<T>(yOriginLocalAddr, y, pregLoop, j * VL_FP32 + i * curColNumAlign);
+                // yOrigin keeps the pre-weight swiglu result.
+                StoreOutputData<T0>(yOriginLocalAddr, y, pregLoop, j * VL_FP32 + i * curColNumAlign);
             }
             if constexpr (hasTopkWeight) {
                 Mul(y, y, weight, pregLoop);
             }
-            StoreOutputData<T>(yLocalAddr, y, pregLoop, j * VL_FP32 + i * curColNumAlign);
+            StoreOutputData<T1>(yLocalAddr, y, pregLoop, j * VL_FP32 + i * curColNumAlign);
         }
     }
 }
 
-template <typename T, bool hasTopkWeight = false, bool hasClampValue = false, bool hasOriginOutput = false>
-__aicore__ inline void VFProcessSwiglu(const LocalTensor<T>& yLocal, const LocalTensor<T>& yOriginLocal,
-                                       const LocalTensor<T>& x0Local, const LocalTensor<T>& x1Local,
+template <typename T0, typename T1 = T0, bool hasTopkWeight = false, bool hasClampValue = false,
+          bool hasOriginOutput = false>
+__aicore__ inline void VFProcessSwiglu(const LocalTensor<T1>& yLocal, const LocalTensor<T0>& yOriginLocal,
+                                       const LocalTensor<T0>& x0Local, const LocalTensor<T0>& x1Local,
                                        const LocalTensor<float>& topkWeightLocal, const uint16_t curRowNum,
                                        const uint32_t curColNum, float clampValue)
 {
-    __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
-    __ubuf__ T* yOriginLocalAddr = hasOriginOutput ? (__ubuf__ T*)yOriginLocal.GetPhyAddr() : nullptr;
-    __ubuf__ T* x0LocalAddr = (__ubuf__ T*)x0Local.GetPhyAddr();
-    __ubuf__ T* x1LocalAddr = (__ubuf__ T*)x1Local.GetPhyAddr();
+    __ubuf__ T1* yLocalAddr = (__ubuf__ T1*)yLocal.GetPhyAddr();
+    __ubuf__ T0* yOriginLocalAddr = hasOriginOutput ? (__ubuf__ T0*)yOriginLocal.GetPhyAddr() : nullptr;
+    __ubuf__ T0* x0LocalAddr = (__ubuf__ T0*)x0Local.GetPhyAddr();
+    __ubuf__ T0* x1LocalAddr = (__ubuf__ T0*)x1Local.GetPhyAddr();
     __ubuf__ float* topkWeightLocalAddr = hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
     uint16_t loopCount = CeilDiv(curColNum, VL_FP32);
     uint32_t sregNum = curColNum;
-    uint32_t curColNumAlign = RoundUp<T>(curColNum);
-    AscendC::VF_CALL<VFProcessSwigluVf<T, hasTopkWeight, hasClampValue, hasOriginOutput>>(
+    uint32_t curColNumAlign = RoundUp<T0>(curColNum);
+    AscendC::VF_CALL<VFProcessSwigluVf<T0, T1, hasTopkWeight, hasClampValue, hasOriginOutput>>(
         yLocalAddr, yOriginLocalAddr, x0LocalAddr, x1LocalAddr, topkWeightLocalAddr, loopCount, sregNum, curColNumAlign,
         curRowNum, clampValue);
 }
