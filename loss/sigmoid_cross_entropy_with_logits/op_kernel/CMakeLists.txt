@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     AUTO_SYNC false
     OPTIONS "--cce-simd-vf-fusion=true" "-mllvm -cce-aicore-dcci-before-kernel-end=true"
 )

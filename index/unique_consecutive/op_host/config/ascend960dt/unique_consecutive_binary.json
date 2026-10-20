@@ -1,0 +1,1523 @@
+{
+    "op_type": "UniqueConsecutive",
+    "op_list": [
+        {
+            "bin_filename": "UniqueConsecutive_int8_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint8_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int16_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint16_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_bf16_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_float16_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int32_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint32_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_float_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int64_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint64_v_int32_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int8_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint8_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int16_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint16_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_bf16_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_float16_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int32_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint32_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_float_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_int64_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "UniqueConsecutive_uint64_v_int64_i",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "idx",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "count",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "return_idx",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "return_counts",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "axis",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "out_idx",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

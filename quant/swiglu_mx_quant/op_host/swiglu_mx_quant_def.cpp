@@ -123,6 +123,7 @@ public:
             .ExtendCfgInfo("opFile.value", "swiglu_mx_quant_apt");
         this->AICore().AddConfig("ascend950", regbaseCfg);
         this->AICore().AddConfig("ascend350", regbaseCfg);
+        this->AICore().AddConfig("ascend960dt", regbaseCfg);
     }
 };
 

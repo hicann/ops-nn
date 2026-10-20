@@ -13,6 +13,6 @@ add_kernel_sources(
 )
 add_kernel_sources(
     KERNEL_SRC arch35/cross_entropy_loss_grad.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     OPTIONS "--cce-no-dcache-flush"
 )

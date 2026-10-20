@@ -53,8 +53,9 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_SUPPORT_BF16
 
 static const std::initializer_list<op::DataType> CheckSocVersionIsSupportBf16(void)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if ((GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
         return DTYPE_SUPPORT_LIST_SUPPORT_BF16;
     }
     return DTYPE_SUPPORT_LIST_NOT_SUPPORT_BF16;

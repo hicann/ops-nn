@@ -67,7 +67,8 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     // 检查promoteType的数据类型是否在支持列表内
     const bool supportBf16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
                               GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
-                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
+                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 ||
+                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201;
     const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST = supportBf16 ? ASCEND910B_DTYPE_SUPPORT_LIST :
                                                                                          ASCEND910_DTYPE_SUPPORT_LIST;
     if (!CheckType(promoteType2, CURRENT_DTYPE_SUPPORT_LIST)) {

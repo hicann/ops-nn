@@ -11,6 +11,6 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/apply_adam_w.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     AUTO_SYNC false
 )

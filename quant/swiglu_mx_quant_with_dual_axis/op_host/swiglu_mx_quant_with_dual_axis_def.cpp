@@ -83,6 +83,7 @@ public:
             .ExtendCfgInfo("opFile.value", "swiglu_mx_quant_with_dual_axis_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
     }
 };
 
