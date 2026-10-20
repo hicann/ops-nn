@@ -38,7 +38,6 @@ constexpr uint32_t FP16_UB_SIZE = 11;
 constexpr uint32_t BF16_DB_UB_SIZE = 13;
 constexpr uint32_t BF16_UB_SIZE = 11;
 
-constexpr uint32_t SYS_WORKSPACE_SIZE = static_cast<uint32_t>(16) * 1024 * 1024;
 constexpr uint32_t COMPARE_INT = 255;
 constexpr uint32_t NUM_SIXTEEN = 16;
 constexpr uint32_t RESERVED_LENGTH = static_cast<uint32_t>(2 * 1024);
@@ -370,7 +369,7 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::RunFusionKernelTiling(gert::T
     SetTilingData(context, x->GetDataType());
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
-    workSpaces[0] = SYS_WORKSPACE_SIZE;
+    workSpaces[0] = 0;
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(coreNum);

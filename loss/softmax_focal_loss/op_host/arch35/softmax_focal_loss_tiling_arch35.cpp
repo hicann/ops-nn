@@ -51,7 +51,6 @@ constexpr int64_t ACC_BUF_NUM = 4;
 constexpr int64_t ACC_ALIGN_ELEM = 8;
 // SIMD/SIMT 共用的 dcache, 与参照算子一致预留
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
-constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 constexpr int32_t TILING_ITER = 2;
 
 // 本算子不做跨样本归约: 输出 shape 恒等于 pred(infershape 钉死), 一行内所有元素同值 = Σce × Σfw,
@@ -312,7 +311,7 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
     context_->SetLocalMemorySize(ubSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = WORKSPACE_SIZE;
+    workspaces[0] = 0;
     return ge::GRAPH_SUCCESS;
 }
 

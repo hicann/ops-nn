@@ -115,7 +115,6 @@ private:
     int64_t vlMax_ = 0; // max(VRegSize/sizeof(var dtype), VRegSize/4): 各域公共的整宽车道数
     int64_t varDtypeLen_ = DTYPE_LEN_INT32;
     bool isInt8_ = false;
-    size_t sysWorkspaceSize_ = 0;
 };
 
 ge::graphStatus ArgMaxGradTiling::CheckDtype()
@@ -415,7 +414,6 @@ ge::graphStatus ArgMaxGradTiling::Init()
                 OP_LOGE(context_->GetNodeName(), "GetHardwareInfo failed, ubSize %lu", ubSize_),
                 return ge::GRAPH_FAILED);
     ubSize_ -= SIMD_SIMT_DCACHE_SIZE;
-    sysWorkspaceSize_ = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
     vlInt32_ = static_cast<int64_t>(Ops::Base::GetVRegSize(context_)) / DTYPE_LEN_INT32;
     // T 域车道数: var dtype 窄于 int32 时它更大。buffer 字节数必须同时是 T 域与 int32 域整宽的
     // 整数倍, 否则 TPipe 顺序铺出来的后续 buffer 起点会偏离向量寄存器边界(errcode 340)。
@@ -460,10 +458,10 @@ ge::graphStatus ArgMaxGradTiling::DoTiling()
     // 空 tensor 时不进核, 但 blockDim 必须合法
     context_->SetBlockDim(realCoreNum_ > 0 ? realCoreNum_ : 1);
     context_->SetLocalMemorySize(ubSize_);
-    // 本算子无跨核同步、无中间落盘, 只按平台要求预留框架自用部分
+    // 本算子无跨核同步、无中间落盘, kernel 不使用 workspace
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = sysWorkspaceSize_;
+    workspaces[0] = 0;
     return ge::GRAPH_SUCCESS;
 }
 

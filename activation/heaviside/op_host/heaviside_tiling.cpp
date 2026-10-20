@@ -24,9 +24,6 @@ constexpr int32_t MAX_ELEMENT_NUM_EACH_CORE = 8 * 1024;
 
 constexpr uint64_t TILING_KEY_DEFAULT = 1;
 
-const static int32_t SIZE_16 = 16;
-const static int32_t LENGTH_1024 = 1024;
-
 class HeavisideTiling {
 public:
     explicit HeavisideTiling(gert::TilingContext* context) : tilingContext(context) {};
@@ -42,8 +39,6 @@ private:
     int64_t inputShapeSize = 0;
     int64_t valuesShapeSize = 0;
     bool valuesType = false;
-
-    const int32_t workspaceSize_ = SIZE_16 * LENGTH_1024 * LENGTH_1024;
 
     inline int64_t CeilA2B(const int64_t a, const int64_t b) const
     {
@@ -115,7 +110,7 @@ ge::graphStatus HeavisideTiling::RunBigKernelTiling()
     uint32_t needCoreNum = GetNeedCoreNum(platformInfo.GetCoreNumAiv());
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
-    currentWorkspace[0] = workspaceSize_;
+    currentWorkspace[0] = 0;
 
     tilingData.set_elementNum(inputShapeSize);
     tilingData.set_valuesType(valuesType);

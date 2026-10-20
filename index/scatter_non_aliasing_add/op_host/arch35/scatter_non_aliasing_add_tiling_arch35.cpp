@@ -28,7 +28,6 @@ constexpr int64_t SLOT_ALIGN = 32;
 struct ScatterNonAliasingAddCompileInfo {
     int64_t coreNum;
     uint64_t ubSize;
-    uint64_t sysWorkspaceSize;
 };
 
 static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, int64_t coreNum, int64_t& totalElements,
@@ -129,7 +128,6 @@ static ge::graphStatus ScatterNonAliasingAddTilingFunc(gert::TilingContext* cont
     OP_CHECK_IF(coreNum <= 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    uint64_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     int64_t totalElements, totalScatters, updateDataNum, maxIndice;
     int64_t perCoreSlots, needCoreNum, perCoreElements;
     int32_t K;
@@ -155,7 +153,7 @@ static ge::graphStatus ScatterNonAliasingAddTilingFunc(gert::TilingContext* cont
     context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     size_t* ws = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
-    ws[0] = static_cast<size_t>(sysWorkspaceSize);
+    ws[0] = 0;
     constexpr uint32_t DCACHE_SIZE = 128 * 1024;
     constexpr uint32_t STATIC_UB_ESTIMATE = 0;
     if (ubSize > static_cast<uint64_t>(DCACHE_SIZE) + static_cast<uint64_t>(STATIC_UB_ESTIMATE)) {
@@ -178,7 +176,6 @@ static ge::graphStatus TilingParseForScatterNonAliasingAdd(gert::TilingParseCont
     OP_CHECK_IF(compileInfo->coreNum <= 0, OP_LOGE(context, "Failed to get core num"), return ge::GRAPH_FAILED);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
-    compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

@@ -597,7 +597,7 @@ static ge::graphStatus BNInferGradTilingFunc(gert::TilingContext* context)
         return ret;
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
-    workspaces[0] = 16 * 1024 * 1024; // 16MB 系统预留
+    workspaces[0] = 0;
     return GRAPH_SUCCESS;
 }
 

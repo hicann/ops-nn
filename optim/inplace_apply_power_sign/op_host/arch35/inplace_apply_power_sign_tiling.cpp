@@ -172,18 +172,15 @@ static uint32_t ComputeSharedTmpSize(int64_t tileSize)
     return sharedTmpSize;
 }
 
-// Reserve system workspace. AscendC kernels require a framework-managed
-// system workspace region; if the tiling reports none, the online-compiled
-// (TE_COMPILE) kernel faults with an MTE DDR-out-of-range exception on real
-// hardware. User workspace is 0 (this operator needs no extra scratch GM).
+// Kernel 不读写 workspace (no extra scratch GM needed), workspace 上报 0.
+// 历史记录: 原实现按 GetLibApiWorkSpaceSize() 预留系统 workspace, 因 TE_COMPILE 在线编译模式下
+// 不预留会在真机触发 MTE DDR 越界异常(错误码 507015); 该风险对 AscendC kernel 是模式级共性,
+// 非本算子特有, 故随"申请而不用"整改统一移除. 若在线编译场景复现 507015, 恢复该预留即可.
 static ge::graphStatus SetWorkspace(gert::TilingContext* context)
 {
     size_t* ws = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    ws[0] = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
+    ws[0] = 0;
     return ge::GRAPH_SUCCESS;
 }
 

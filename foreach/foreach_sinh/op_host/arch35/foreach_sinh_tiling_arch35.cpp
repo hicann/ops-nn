@@ -26,7 +26,6 @@ namespace optiling {
 using namespace Ops::NN::OpTiling;
 
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
-constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 constexpr int64_t MAX_TENSOR_COUNT = 256;
 constexpr int64_t ALIGN_SIZE = 32;
 constexpr int64_t MIN_PER_CORE_ELEMENTS = 1024;
@@ -114,7 +113,7 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
 
     size_t* wsSizes = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, wsSizes);
-    wsSizes[0] = static_cast<size_t>(ASCENDC_TOOLS_WORKSPACE);
+    wsSizes[0] = 0;
 
     context->SetBlockDim(needCoreNum);
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));

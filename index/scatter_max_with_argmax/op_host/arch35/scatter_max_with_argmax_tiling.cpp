@@ -161,12 +161,10 @@ static ge::graphStatus ScatterMaxWithArgmaxTilingFunc(gert::TilingContext* conte
     // 设置核数
     context->SetBlockDim(needCoreNum);
 
-    // Workspace（无用户 workspace，但必须分配系统 workspace）
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    uint64_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    // Workspace（无用户 workspace，kernel 不使用 workspace）
     size_t* ws = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
-    ws[0] = static_cast<size_t>(static_cast<int64_t>(sysWorkspaceSize));
+    ws[0] = 0;
 
     // SetLocalMemorySize（DCache 预留 128KB，无静态 UB）
     OP_CHECK_IF(ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE,

@@ -29,11 +29,6 @@ extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x,
         return;
     }
 
-    GM_ADDR user1 = GetUserWorkspace(workSpace);
-    if (user1 == nullptr) {
-        return;
-    }
-
     GET_TILING_DATA(tilingData, tiling);
     if (GetBlockIdx() >= tilingData.coreNum) {
         return;
@@ -41,11 +36,11 @@ extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x,
     TPipe pipe;
     if (TILING_KEY_IS(0) || TILING_KEY_IS(1)) {
         DynamicQuantUpdateScatterV2<DTYPE_X, DTYPE_VAR> op(&pipe);
-        op.Init(x, indices, var, varScale, varOffset, workSpace, &tilingData);
+        op.Init(x, indices, var, varScale, varOffset, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(2) || TILING_KEY_IS(3)) {
         DynamicQuantUpdateScatterV2DbOpt<DTYPE_X, DTYPE_VAR> op(&pipe);
-        op.Init(x, indices, var, varScale, varOffset, workSpace, &tilingData);
+        op.Init(x, indices, var, varScale, varOffset, &tilingData);
         op.Process();
     } else {
     }

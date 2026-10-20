@@ -42,7 +42,6 @@ constexpr int64_t VECTOR_LEN = 64;
 constexpr int64_t UB_RESERVED_BYTES = 16 * 1024;
 constexpr int64_t PARAM_BUFFER_BYTES = 64;
 constexpr int64_t X_TYPE_BYTES = 2;
-constexpr int64_t WORKSPACE_BYTES = 16 * 1024 * 1024;
 constexpr uint64_t TILING_KEY_REGBASE = 0;
 constexpr size_t DIM_TWO = 2;
 constexpr size_t INPUT_X_DIM_NUM = 3;
@@ -277,7 +276,7 @@ ge::graphStatus Tiling4DynamicQuantUpdateScatterV2Regbase(gert::TilingContext* c
         workspaces == nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "workspaces null"),
         return ge::GRAPH_FAILED);
-    workspaces[0] = WORKSPACE_BYTES;
+    workspaces[0] = 0;
     context->SetBlockDim(coreNum);
     context->SetTilingKey(TILING_KEY_REGBASE);
     OP_LOGD(context->GetNodeName(),

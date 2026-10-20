@@ -41,9 +41,6 @@ constexpr int64_t DIM_4 = 4;
 
 static const int32_t INDEX_EPSILON = 0;
 constexpr float DEFAULT_EPSILON = 1e-5;
-
-// 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 } // namespace
 
 namespace optiling {
@@ -499,8 +496,9 @@ uint64_t BNInferTiling::GetTilingKey() const { return TILINGKEY_INFER; }
 
 ge::graphStatus BNInferTiling::GetWorkspaceSize()
 {
-    // 计算workspace大小
-    workspaceSize_ = MINIMAL_WORKSPACE;
+    // 计算workspace大小; kernel 不使用 workspace, 置 0.
+    // 注意: 原实现预留 16M(MINIMAL_WORKSPACE), debugTool 执行时需要, 若 debugTool 执行报错可恢复该预留.
+    workspaceSize_ = 0;
     return ge::GRAPH_SUCCESS;
 }
 

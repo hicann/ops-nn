@@ -139,7 +139,15 @@ ge::graphStatus LambUpdateWithLrTiling::DoLibApiTiling() { return ge::GRAPH_SUCC
 
 uint64_t LambUpdateWithLrTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus LambUpdateWithLrTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus LambUpdateWithLrTiling::GetWorkspaceSize()
+{
+    // BroadcastBaseTiling 内部默认写入 16MB 框架预留值, 但本算子 kernel 不使用 workspace, 覆盖为 0
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    if (workspaces != nullptr) {
+        workspaces[0] = 0;
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus LambUpdateWithLrTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
