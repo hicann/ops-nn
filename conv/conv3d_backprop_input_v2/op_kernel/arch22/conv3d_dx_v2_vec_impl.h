@@ -26,6 +26,7 @@ namespace {
 constexpr int32_t VEC_BLOCK_BYTES = 32;
 // 255：DataCopyPadExtParams 单侧填充/拷贝元素计数上限（uint8_t 编码）
 constexpr int32_t DATACOPY_PAD_MAX_ELEMS = 255;
+constexpr uint32_t FP32_KAHAN_MIN_ELEMS = 512U;
 } // namespace
 
 constexpr uint64_t FP32_VEC_ROW_BYTES = 20ULL;
@@ -194,7 +195,7 @@ private:
         if constexpr (!std::is_same<T, float>::value) {
             return false;
         } else {
-            if (!Fp32PadExceedsVecLimit()) {
+            if (!Fp32PadExceedsVecLimit() && alignedWi >= FP32_KAHAN_MIN_ELEMS) {
                 return false;
             }
             const uint64_t need = static_cast<uint64_t>(alignedWi) * (FP32_VEC_ROW_BYTES + sizeof(float)) +
@@ -324,19 +325,32 @@ private:
             Add(tmpE, tmpE, prod, alignedWi);
             Add(comp, comp, tmpE, alignedWi);
             Adds(rowAcc, tmpT, 0.0f, alignedWi);
+        } else if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
+            LocalTensor<float> tmpT = tmpBufRowTmp.Get<float>(), tmpE = tmpBufRowTmp2.Get<float>();
+            LocalTensor<float> comp = tmpBufRowComp.Get<float>();
+            Add(tmpT, rowAcc, prod, alignedWi);
+            Sub(tmpE, rowAcc, tmpT, alignedWi);
+            Add(tmpE, tmpE, prod, alignedWi);
+            Add(comp, comp, tmpE, alignedWi);
+            Adds(rowAcc, tmpT, 0.0f, alignedWi);
         } else {
             Add(rowAcc, rowAcc, prod, alignedWi);
         }
     }
 
-    // FP32 下 Cast 同型不被支持，用 Adds+0 等价拷贝
-    __aicore__ inline void CastRowAccToOutH(const LocalTensor<float>& rowAcc, const LocalTensor<T>& outH, uint32_t len)
+    __aicore__ inline void CastAndWriteRow(uint64_t rowBase, const LocalTensor<float>& acc, const LocalTensor<T>& outH)
     {
         if constexpr (std::is_same<T, float>::value) {
-            Adds(outH, rowAcc, 0.0f, len);
+            Adds(outH, acc, 0.0f, alignedWi);
         } else {
-            Cast(outH, rowAcc, RoundMode::CAST_RINT, len);
+            Cast(outH, acc, RoundMode::CAST_RINT, alignedWi);
         }
+        SetFlag<HardEvent::V_MTE3>(evtVToMte3_);
+        WaitFlag<HardEvent::V_MTE3>(evtVToMte3_);
+        DataCopyExtParams outParams(1, static_cast<uint32_t>(gradInW) * sizeof(T), 0, 0, 0);
+        DataCopyPad<T>(gradInputGm[rowBase], outH, outParams);
+        SetFlag<HardEvent::MTE3_V>(evtMte3ToV_);
+        WaitFlag<HardEvent::MTE3_V>(evtMte3ToV_);
     }
 
     __aicore__ inline void AccumulateBf16TapBlocked(uint64_t goRowBase, uint32_t dw, float wv,
@@ -434,7 +448,12 @@ private:
         Muls(prod, prod, wv, alignedLen);
         SetFlag<HardEvent::V_S>(evtVToS_);
         WaitFlag<HardEvent::V_S>(evtVToS_);
-        Add(rowAcc, rowAcc, prod, alignedLen);
+        LocalTensor<float> alt = tmpBufRowComp.Get<float>();
+        if ((scalarTapParity ^= 1U) == 0U) {
+            Add(alt, alt, prod, alignedLen);
+        } else {
+            Add(rowAcc, rowAcc, prod, alignedLen);
+        }
     }
 
     // 行计算相关：声明在类内，定义见 conv3d_dx_v2_vec_impl_row.h
@@ -470,8 +489,8 @@ private:
     template <bool UseUbAcc>
     __aicore__ inline void AccumulateScalarRowTaps(uint64_t goPlaneBase, uint32_t hi, uint64_t rowBase,
                                                    LocalTensor<float>& rowAcc, LocalTensor<T>& weightDilated);
+    __aicore__ inline void ComputeRowBf16Vec(uint64_t r);
     __aicore__ inline void ComputeRowBf16VecPlain(uint64_t r);
-    __aicore__ inline void WriteRowToGm(uint64_t rowBase, const LocalTensor<T>& outH);
     __aicore__ inline void ComputeRowBf16VecStrided(uint64_t r);
     __aicore__ inline void ComputeRowScalarAcc(uint64_t r);
     __aicore__ inline void ComputeRow(uint64_t r);
@@ -488,6 +507,7 @@ private:
     uint32_t vecScalarOnly = 0;
     uint32_t useScalarAcc = 0;
     uint32_t dhBlocked = 0;
+    uint32_t scalarTapParity = 0;
     // 标量 UB 累加（UseUbAcc=true）在 T=float 时使用的补偿数组（复用 outH，行末折回 rowAcc）
     LocalTensor<float> scalarComp;
     uint32_t blockDim;
@@ -496,6 +516,8 @@ private:
     TBuf<QuePosition::VECCALC> tmpBufWeightDilated;
     TBuf<QuePosition::VECCALC> tmpBufRowAcc;
     TBuf<QuePosition::VECCALC> tmpBufRowComp; // FP32 补偿缓冲
+    TBuf<QuePosition::VECCALC> tmpBufRowTmp;
+    TBuf<QuePosition::VECCALC> tmpBufRowTmp2;
     TBuf<QuePosition::VECCALC> tmpBufProd;
     TBuf<QuePosition::VECCALC> tmpBufGradRow;
     TBuf<QuePosition::VECCALC> tmpBufOutH;
@@ -515,6 +537,46 @@ private:
     GlobalTensor<T> weightGm;
     GlobalTensor<T> gradInputGm;
 };
+
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowScalarAcc(uint64_t r)
+{
+    uint32_t n, ci, diRow, hi;
+    DecomposeRow(r, n, ci, diRow, hi);
+    const uint64_t rowBase = GetRowBase(n, ci, diRow, hi);
+
+    LocalTensor<float> rowAcc = tmpBufRowAcc.Get<float>();
+    LocalTensor<T> outH = tmpBufOutH.Get<T>();
+    LocalTensor<T> weightDilated = tmpBufWeightDilated.Get<T>();
+
+    Duplicate(rowAcc, 0.0f, alignedWi);
+    scalarComp = tmpBufRowComp.Get<float>();
+    Duplicate(scalarComp, 0.0f, alignedWi);
+    SetFlag<HardEvent::V_S>(evtVToS_);
+    WaitFlag<HardEvent::V_S>(evtVToS_);
+
+    uint32_t ciLocal, coStart, coEnd;
+    GetGroupRange(ci, ciLocal, coStart, coEnd);
+    for (uint32_t co = coStart; co < coEnd; co++) {
+        for (uint32_t doIdx = 0; doIdx < gradOutD; doIdx++) {
+            for (uint32_t dk = 0; dk < kernelD; dk++) {
+                const int32_t di = static_cast<int32_t>(doIdx) * strideD + static_cast<int32_t>(dk) * dilationD -
+                                   padFront;
+                if (di != static_cast<int32_t>(diRow)) {
+                    continue;
+                }
+                BuildWeightDilated(co, ciLocal, dk, weightDilated);
+                AccumulateScalarRowTaps<true>(GetGoPlaneBase(n, co, doIdx), hi, rowBase, rowAcc, weightDilated);
+            }
+        }
+    }
+
+    SetFlag<HardEvent::S_V>(evtSToV_);
+    WaitFlag<HardEvent::S_V>(evtSToV_);
+
+    Add(rowAcc, rowAcc, scalarComp, alignedWi);
+    CastAndWriteRow(rowBase, rowAcc, outH);
+}
 
 #include "conv3d_dx_v2_vec_impl_row.h"
 
