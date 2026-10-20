@@ -83,14 +83,12 @@ ge::graphStatus LayerNormV4TilingBase::GetPlatformInfo()
 ge::graphStatus GetCommonShapeAttrsInfo(gert::TilingContext* context, uint64_t colSize, uint64_t rowSize,
                                         ParamsLayerNomrV4& commonParams)
 {
-    OP_CHECK_IF(
-        commonParams.colSize <= 0,
-        OP_LOGE(context, "colSize must be greater than 0, colSize: %u", static_cast<uint32_t>(commonParams.colSize)),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        commonParams.rowSize <= 0,
-        OP_LOGE(context, "rowSize must be greater than 0, rowSize: %u", static_cast<uint32_t>(commonParams.rowSize)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(colSize <= 0,
+                OP_LOGE(context, "colSize must be greater than 0, colSize: %u", static_cast<uint32_t>(colSize)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rowSize <= 0,
+                OP_LOGE(context, "rowSize must be greater than 0, rowSize: %u", static_cast<uint32_t>(rowSize)),
+                return ge::GRAPH_FAILED);
 
     commonParams.colSize = colSize;
     commonParams.rowSize = rowSize;

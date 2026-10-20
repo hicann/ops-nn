@@ -113,7 +113,7 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas推理系列产品</term>：输入参数（除了normalized_shape）和所有输出参数的数据类型不支持BFLOAT16。
+  - <term>Atlas推理系列产品</term>：x与y仅支持FLOAT16；gamma/beta支持FLOAT、FLOAT16。
 
   - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：
     - 所有输入、输出的数据类型不支持BFLOAT16。
@@ -127,7 +127,7 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_fast_layer_norm](examples/test_aclnn_fast_layer_norm.cpp) | 通过[aclnnFastLayerNorm](docs/aclnnFastLayerNorm.md)接口方式调用LayerNormV4算子。 |
-| aclnn接口  | [test_aclnn_layer_norm_v4](examples/test_aclnn_layer_norm_v4.cpp) | 通过[aclnnLayerNorm](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
-| aclnn接口  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
-| 图模式 | [test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp) | 通过[Ascend IR](docs/ascendirLayerNormV4.md)构图方式调用LayerNormV4算子。 |
+| aclnn API  | [test_aclnn_fast_layer_norm](examples/test_aclnn_fast_layer_norm.cpp) | 通过[aclnnFastLayerNorm](docs/aclnnFastLayerNorm.md)接口方式调用LayerNormV4算子。 |
+| aclnn API  | [test_aclnn_layer_norm_v4](examples/test_aclnn_layer_norm_v4.cpp) | 通过[aclnnLayerNorm](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
+| aclnn API  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
+| GE图模式 | [test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp) | 通过[Ascend IR](docs/ascendirLayerNormV4.md)构图方式调用LayerNormV4算子。 |

@@ -84,11 +84,12 @@ static bool CheckInputDtype(const aclTensor* input, const aclTensor* fastWeightO
     return true;
 }
 
-static bool CheckFastOutputDtype(const aclTensor* out, const aclTensor* meanOutOptional,
+static bool CheckFastOutputDtype(const aclTensor* input, const aclTensor* out, const aclTensor* meanOutOptional,
                                  const aclTensor* rstdOutOptional)
 {
     const auto& supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
+    OP_CHECK_DTYPE_NOT_SAME(out, input, return false);
     if (rstdOutOptional) {
         OP_CHECK_DTYPE_NOT_SUPPORT(rstdOutOptional, supportList, return false);
     }
@@ -248,7 +249,7 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclIntArray* normal
     // 1. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckInputDtype(input, weightOptional, biasOptional), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查输出的数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckFastOutputDtype(out, meanOutOptional, rstdOutOptional), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFastOutputDtype(input, out, meanOutOptional, rstdOutOptional), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查input, weight，bias与normalizedShape间的shape关系
     CHECK_RET(CheckShape(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional),
               ACLNN_ERR_PARAM_INVALID);
