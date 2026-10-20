@@ -41,7 +41,9 @@ extern "C" {
  * @param [in]
  * quantMode：用于指定量化的模式，Host侧的char*。当前支持"pertoken"，"pertensor"和"perchannel"。当quantMode取"pertensor"、"perchannel"时，groupIndexOptional必须是nullptr。
  * @param [in] yOut: npu
- * 量化后的输出Tensor，shape和x保持一致，类型由dstType指定。支持非连续的Tensor，数据格式支持ND。
+ * 量化后的输出Tensor，类型由dstType指定。支持非连续的Tensor，数据格式支持ND。
+ * 数据类型为INT32时（INT32实际为8个INT4拼接），shape的最后一维是x最后一维的1/8，其余维度和x一致；
+ * 其他数据类型时shape和x保持一致。
  * @param [in] scaleOut: npu
  * 量化使用的scale，Device侧的aclTensor，数据类型支持FLOAT，支持非连续的Tensor，数据格式支持ND。
  * @param [in] offsetOut: npu
