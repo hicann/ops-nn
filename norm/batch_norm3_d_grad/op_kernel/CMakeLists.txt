@@ -10,6 +10,6 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/batch_norm3_d_grad.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )

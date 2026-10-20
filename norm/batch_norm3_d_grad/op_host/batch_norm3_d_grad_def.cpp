@@ -121,6 +121,7 @@ public:
             .ExtendCfgInfo("opFile.value", "batch_norm3_d_grad")
             .ExtendCfgInfo("opInterface.value", "batch_norm3_d_grad");
         this->AICore().AddConfig("ascend950", regbaseCfg);
+        this->AICore().AddConfig("ascend350", regbaseCfg);
     }
 };
 
