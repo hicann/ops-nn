@@ -50,3 +50,25 @@ TEST_F(EmbeddingTest, embedding_infer_shape_runtime_test_0)
     gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Shape2String(*output), "[9, 10]");
 }
+
+TEST_F(EmbeddingTest, embedding_infer_shape_rank2_indices)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Embedding")->infer_shape;
+
+    gert::StorageShape xShape = {{8, 10}, {8, 10}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{2, 3}, {2, 3}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
+                      .InputShapes({&xShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Shape2String(*output), "[2, 3, 10]");
+}

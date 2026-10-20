@@ -43,9 +43,7 @@ static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context)
         outShape->SetDim(i, indiesShape->GetDim(i));
     }
 
-    for (int64_t i = 1; i < xDim; i++) {
-        outShape->SetDim(i, xShape->GetDim(i));
-    }
+    outShape->SetDim(rankIndices, xShape->GetDim(xDim - 1));
     OP_CHECK_IF(xShape->GetShapeSize() > INT32_MAX || outShape->GetShapeSize() > INT32_MAX,
                 OP_LOGE(context->GetNodeName(), "input or output shape is too large."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
