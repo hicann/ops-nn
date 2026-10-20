@@ -377,7 +377,7 @@ public:
 
     __aicore__ inline void CopyOutDbetaAndDgamma(int64_t offset)
     {
-        if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<WEIGHT_TYPE, half>::value) {
             CastDbetaAndDgamma();
         }
         dbetaOutQue_.EnQue(dbeta_);
@@ -566,7 +566,7 @@ public:
         const __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dy.GetPhyAddr();
         const __local_mem__ float* outAddr = (__local_mem__ float*)dgamma_.GetPhyAddr();
         const __local_mem__ float* binaryAddAddr = (__local_mem__ float*)binaryAdd.GetPhyAddr();
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xAddr += xBufElemNum_ / BatchNorm3DGrad::TWO;
         }
         int64_t binaryAddRemainder = ubRDimTailFactor_ - halfBinaryAddQuotient_;
@@ -683,7 +683,7 @@ public:
         const __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dy.GetPhyAddr();
         const __local_mem__ float* outAddr = (__local_mem__ float*)dgamma_.GetPhyAddr();
         const __local_mem__ float* binaryAddAddr = (__local_mem__ float*)binaryAdd.GetPhyAddr();
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xAddr += xBufElemNum_ / BatchNorm3DGrad::TWO;
         }
         int64_t processR = ubRDimFactor_;
@@ -867,7 +867,7 @@ public:
         __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgamma_.GetPhyAddr();
         __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbeta_.GetPhyAddr();
 
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xSrcAddr += xBufElemNum_ / BatchNorm3DGrad::TWO;
         }
 

@@ -58,24 +58,38 @@ class _BatchNorm3DCompose:
         scale_f = scale.to(torch.float32)
         offset_f = offset.to(torch.float32)
         if self.is_training:
-            y_n = F.batch_norm(
-                x_n.to(torch.float32),
-                None,
-                None,
-                scale_f,
-                offset_f,
-                training=True,
-                momentum=0.1,
-                eps=self.epsilon,
-            )
             axes = (0, 2, 3, 4)
             batch_mean = x_n.to(torch.float32).mean(dim=axes)
             batch_var = x_n.to(torch.float32).var(dim=axes, unbiased=False)
             reduce_count = 1
             for axis in axes:
                 reduce_count *= x_n.shape[axis]
-            saved_var = batch_var * (float(reduce_count) / float(reduce_count - 1))
+            # 每通道仅 1 个值时 N/(N-1) 为 0/0，显式取 nan，避免 third_party 自身除零
+            var_correction = (
+                float("nan")
+                if reduce_count <= 1
+                else (float(reduce_count) / float(reduce_count - 1))
+            )
+            saved_var = batch_var * var_correction
             saved_rstd = torch.rsqrt(batch_var + self.epsilon)
+            if reduce_count > 1:
+                y_n = F.batch_norm(
+                    x_n.to(torch.float32),
+                    None,
+                    None,
+                    scale_f,
+                    offset_f,
+                    training=True,
+                    momentum=0.1,
+                    eps=self.epsilon,
+                )
+            else:
+                # F.batch_norm 拒绝“每通道仅 1 个值”的输入，退化用例改用手工公式
+                view_shape = [1, x_n.shape[1], 1, 1, 1]
+                y_n = (
+                    x_n.to(torch.float32) - batch_mean.reshape(view_shape)
+                ) * saved_rstd.reshape(view_shape)
+                y_n = y_n * scale_f.reshape(view_shape) + offset_f.reshape(view_shape)
         else:
             batch_mean = mean.to(torch.float32)
             batch_var = variance.to(torch.float32)
@@ -151,11 +165,19 @@ def batch_norm3d_golden(
         reduce_count = 1
         for axis in axes:
             reduce_count *= x_n.shape[axis]
-        saved_var = batch_var * (float(reduce_count) / float(reduce_count - 1))
-        saved_rstd = torch.rsqrt(batch_var + epsilon)
-        y_t = F.batch_norm(
-            x_n, None, None, scale_f, offset_f, training=True, momentum=0.1, eps=epsilon
+        # N==1 时无偏方差的修正因子 N/(N-1) 为 0/0，结果为 nan（与算子一致），
+        # 用显式 nan 避免 golden 自身除零抛错
+        var_correction = (
+            float("nan")
+            if reduce_count <= 1
+            else (float(reduce_count) / float(reduce_count - 1))
         )
+        saved_var = batch_var * var_correction
+        saved_rstd = torch.rsqrt(batch_var + epsilon)
+        # 手工计算 y，避免 F.batch_norm 在“每通道仅 1 个值”时直接报错（退化 shape 用例）
+        view_shape = [1, x_n.shape[1], 1, 1, 1]
+        y_t = (x_n - batch_mean.view(view_shape)) * saved_rstd.view(view_shape)
+        y_t = y_t * scale_f.view(view_shape) + offset_f.view(view_shape)
     else:
         batch_mean = torch.from_numpy(np.ascontiguousarray(mean)).to(torch.float64)
         batch_var = torch.from_numpy(np.ascontiguousarray(variance)).to(torch.float64)

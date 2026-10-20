@@ -21,12 +21,12 @@ BatchNorm3DGrad对BatchNorm3D的反向梯度进行计算，输出输入梯度、
 
 |参数名|输入/输出|数据类型|格式|说明|
 |---|---|---|---|---|
-|y_backprop|输入|FLOAT16、FLOAT32、BFLOAT16|NCDHW、NCHW、NHWC、NDHWC|反向传播梯度。|
-|x|输入|FLOAT16、FLOAT32、BFLOAT16|NCDHW、NCHW、NHWC、NDHWC|正向输入。|
+|y_backprop|输入|FLOAT16、FLOAT32|NCDHW、NCHW、NHWC、NDHWC|反向传播梯度。|
+|x|输入|FLOAT16、FLOAT32|NCDHW、NCHW、NHWC、NDHWC|正向输入。|
 |scale|输入|FLOAT32|ND|通道缩放系数。|
 |reserve_space_1|输入|FLOAT32|ND|正向保存的均值。|
 |reserve_space_2|输入|FLOAT32|ND|正向保存的标准差倒数或等价统计量。|
-|x_backprop|输出|FLOAT16、FLOAT32、BFLOAT16|NCDHW、NCHW、NHWC、NDHWC|输入梯度。|
+|x_backprop|输出|FLOAT16、FLOAT32|NCDHW、NCHW、NHWC、NDHWC|输入梯度。|
 |scale_backprop|输出|FLOAT32|ND|scale梯度。|
 |offset_backprop|输出|FLOAT32|ND|offset梯度。|
 |reserve_space_4|输出|FLOAT32|ND|辅助输出。|

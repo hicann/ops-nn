@@ -303,7 +303,7 @@ public:
         uint16_t loopTimes = (r + VL - 1) / VL;
         const __local_mem__ DY_TYPE* xSrcAddr = (__local_mem__ DY_TYPE*)x.GetPhyAddr();
         const __local_mem__ float* xDstAddr = (const __local_mem__ float*)x.GetPhyAddr();
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xSrcAddr += xBufElemNum_ / 2;
         }
         const __local_mem__ float* meanAddr = (__local_mem__ float*)mean.GetPhyAddr();
@@ -526,7 +526,7 @@ public:
                     Mul(dx, gammaValue, rstdMulSubDy, pregR);
                     StoreOneTensor<DY_TYPE>(xhatAddr, dx, pregR, i * rAlign + VL * j);
                 }
-                if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
+                if constexpr (IsSameType<WEIGHT_TYPE, half>::value) {
                     StoreOneElement<WEIGHT_TYPE>(dbetaAddr, dbetaValue, pregMerge, i);
                     StoreOneElement<WEIGHT_TYPE>(dgammaAddr, dgammaValue, pregMerge, i);
                 }

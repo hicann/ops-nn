@@ -65,23 +65,10 @@ public:
 protected:
     bool IsCapable() override
     {
-        OP_LOGI(context_->GetNodeName(),
-                "BatchNorm3DRARBlockSplitRTiling IsCapable: enter IsCapable function to judge.");
-        // 不按 format 过滤：基类已把五种 format 统一折算成 (r1_, a_, r0_)，本模板往下只用这三个值，
-        // 同 dims 的 ND 与 NCHW 在这里不可区分。
-        // R0 多核切分场景下该模板的 tail A 通道统计量存在错误，交由 Welford 模板处理。
-        if (r1_ < static_cast<int64_t>(aicoreParams_.blockDim)) {
-            return false;
-        }
-        if (a_ * NUM_TWO >= static_cast<int64_t>(aicoreParams_.blockDim)) {
-            return false;
-        }
-        OP_LOGI(
-            context_->GetNodeName(),
-            "BatchNorm3DRARBlockSplitRTiling IsCapable true! ready to use BatchNorm3DRARBlockSplitRTiling (tilingkey: "
-            "%lu) !",
-            TILINGKEY_RAR_BLOCK_SPLIT_R);
-        return true;
+        // RAR_BLOCK_SPLIT_R 在当前 CANN 版本存在 SyncAll 之后调用 outline 版 vector 段的
+        // 设备侧异常（实测 a_=1/4/11/34 且大 R 场景全部 VEC_ERROR），暂整类禁用，
+        // 交由后续模板（如 Welford，优先级 30000）处理。
+        return false;
     }
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;

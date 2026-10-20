@@ -1016,7 +1016,7 @@ public:
 
     __aicore__ inline void ReSaveDGammaDBeta(LocalTensor<float>& dgamma, LocalTensor<float>& dbeta)
     {
-        if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<WEIGHT_TYPE, half>::value) {
             __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgamma.GetPhyAddr();
             __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbeta.GetPhyAddr();
 

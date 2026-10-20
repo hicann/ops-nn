@@ -357,7 +357,7 @@ public:
             varInQue_.FreeTensor(var_);
         }
 
-        if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<WEIGHT_TYPE, half>::value) {
             CastDbetaAndDgamma();
         }
 
@@ -542,7 +542,7 @@ public:
         const __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dy.GetPhyAddr();
         const __local_mem__ float* outAddr = (__local_mem__ float*)dgamma_.GetPhyAddr();
         const __local_mem__ float* binaryAddAddr = (__local_mem__ float*)binaryAdd.GetPhyAddr();
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xAddr += xBufElemNum_ / BatchNormGradExt2::TWO;
         }
         int64_t binaryAddRemainder = ubRDimTailFactor_ - halfBinaryAddQuotient_;
@@ -666,7 +666,7 @@ public:
         const __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dy.GetPhyAddr();
         const __local_mem__ float* outAddr = (__local_mem__ float*)dgamma_.GetPhyAddr();
         const __local_mem__ float* binaryAddAddr = (__local_mem__ float*)binaryAdd.GetPhyAddr();
-        if constexpr (IsSameType<DY_TYPE, half>::value || IsSameType<DY_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<DY_TYPE, half>::value) {
             xAddr += xBufElemNum_ / BatchNormGradExt2::TWO;
         }
         int64_t processR = ubRDimFactor_;
@@ -1875,7 +1875,7 @@ public:
 
     __aicore__ inline void ReSaveDGammaDBeta(LocalTensor<float>& dgamma, LocalTensor<float>& dbeta)
     {
-        if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
+        if constexpr (IsSameType<WEIGHT_TYPE, half>::value) {
             __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgamma.GetPhyAddr();
             __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbeta.GetPhyAddr();
 

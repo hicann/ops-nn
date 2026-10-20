@@ -83,10 +83,6 @@ __aicore__ inline void LoadOneTensor(const __local_mem__ void* input, MicroAPI::
         MicroAPI::RegTensor<half> xFp16;
         DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)(input) + offset);
-        Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
         DataCopy(dst, (__local_mem__ float*)(input) + offset);
     }
@@ -104,7 +100,7 @@ __aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, Micro
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
-    } else { // fp16、bf16
+    } else { // fp16
         RegTensor<T> xFp16;
         DataCopy<T, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
@@ -119,11 +115,6 @@ __aicore__ inline void StoreOneTensor(const __local_mem__ void* output, MicroAPI
         MicroAPI::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
         DataCopy<half, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ half*)(output) + offset, xFp16, preg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ bfloat16_t*)(output) + offset, xBf16,
-                                                                 preg);
     } else {
         DataCopy((__local_mem__ float*)(output) + offset, src, preg);
     }
@@ -137,10 +128,6 @@ __aicore__ inline void LoadOneElement(const __local_mem__ void* input, MicroAPI:
         MicroAPI::RegTensor<half> xFp16;
         DataCopy<half, MicroAPI::LoadDist::DIST_BRC_B16>(xFp16, (__local_mem__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_BRC_B16>(xBf16, (__local_mem__ bfloat16_t*)(input) + offset);
-        Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
         DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__local_mem__ float*)(input)) + offset);
     }
@@ -155,11 +142,6 @@ __aicore__ inline void StoreOneElement(const __local_mem__ void* output, MicroAP
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
         DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ half*)(output) + offset, xFp16,
                                                                     preg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ bfloat16_t*)(output) + offset,
-                                                                          xBf16, preg);
     } else {
         DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)output) + offset, src,
                                                                      preg);
