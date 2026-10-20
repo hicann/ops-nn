@@ -13,7 +13,6 @@
  */
 
 #include "register/op_impl_registry.h"
-#include <string>
 #include "util/math_util.h"
 #include "platform/platform_infos_def.h"
 #include "log/log.h"
@@ -45,6 +44,8 @@ constexpr int64_t OFFSET_QUE_NUM = 3;
 constexpr uint64_t WEIGHT_DIM_QUE_NUM_SUM_MEAN = 2;
 constexpr uint64_t WEIGHT_DIM_QUE_NUM_MAX = 5;
 constexpr int64_t MAX_SIMT_EMBDDING_BYTES = 512;
+constexpr int64_t EMBDDING_BYTES_GATTER_DMA = 128;
+constexpr int64_t BAG_SIZE_GATTER_DMA = 32;
 constexpr uint64_t OFFSET_DIFF_TYPE_SMALL = 2;
 constexpr uint64_t OFFSET_DIFF_TYPE_LARGE = 3;
 constexpr int64_t INIDCES_LIMIT_BYTE = 1024 * 32;
@@ -62,6 +63,7 @@ constexpr int64_t OFFSETS_LIMIT_BYTE = 2L * 1024L;
 constexpr int64_t BASE_BLOCK_COPY_ALIGN = 512;
 constexpr uint64_t TILING_KEY_INDICES_1D = 100;
 constexpr uint64_t TILING_KEY_INDICES_2D = 200;
+constexpr uint64_t TILING_KEY_GATTER_DMA = 10;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t WEIGHT_DIM_LIMIT = 128L;
 constexpr uint64_t TILING_KEY_SIMT_1D = 300;
@@ -79,6 +81,8 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetPlatformInfo()
     ubSize_ -= DCACHE_SIZE;
     OP_CHECK_IF((aivNum <= 0), OP_LOGE(opName, "fail to get coreNum."), return ge::GRAPH_FAILED);
     totalCoreNum_ = aivNum;
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    isSupportGatterDMA_ = (npuArch == NpuArch::DAV_9201);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -350,6 +354,9 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor,
     if (mode_ == MDOE_SUM || mode_ == MDOE_MEAN) {
         int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
                          Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock);
+        if (useGatterDMA_) {
+            occupy += Ops::Base::CeilAlign(weightRowFactor * static_cast<int64_t>(sizeof(int64_t)), ubBlock);
+        }
         return occupy;
     }
 
@@ -487,6 +494,12 @@ ge::graphStatus EmbeddingBagRegBaseTiling::DoOpTiling()
     if (isNeedOffset_ == 1) {
         Compute1DFactor();
     } else {
+        if (isSupportGatterDMA_ && indiceSize_ > BAG_SIZE_GATTER_DMA && paddingIdx_ < 0) {
+            useGatterDMA_ = true;
+        }
+        if ((mode_ == MDOE_SUM && isNeedSampleWeight_ == 1) || mode_ == MDOE_MAX) {
+            useGatterDMA_ = false;
+        }
         Compute2DFactor();
     }
     SetTilingData();
@@ -521,6 +534,9 @@ uint64_t EmbeddingBagRegBaseTiling::GetTilingKey() const
     tilingKey = (isNeedOffset_ == 1 ? TILING_KEY_INDICES_1D : TILING_KEY_INDICES_2D);
     if (offsetsType_ != indicesType_) {
         tilingKey += 1;
+    }
+    if (useGatterDMA_) {
+        tilingKey += TILING_KEY_GATTER_DMA;
     }
 
     return tilingKey;

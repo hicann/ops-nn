@@ -84,6 +84,8 @@ private:
     int64_t weightDimFactor_ = 0;
     int64_t weightRowFactor_ = 0;
     int64_t indicesLimit_ = 0;
+    bool isSupportGatterDMA_ = false;
+    bool useGatterDMA_ = false;
 
     const char* opName = "EmbeddingBag";
     EmbeddingBagTilingData tilingData_;

@@ -46,6 +46,13 @@ constexpr uint32_t USED_THREAD_NUM = 2048;
 constexpr uint32_t BLOCK_DIM_0 = 32;
 constexpr uint32_t BLOCK_DIM_1 = USED_THREAD_NUM / BLOCK_DIM_0;
 
+static constexpr AscendC::Reg::CastTrait castTraitInt32Int64 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN,
+};
+
 template <typename T>
 __simt_callee__ __aicore__ inline T GetNegInf()
 {
@@ -166,6 +173,44 @@ __aicore__ inline void DivForMean(LocalTensor<T> sumLocal, int64_t count, int64_
             ops::LoadOneTensorForDtypeT<T>(sumAddr, castReg, maskReg, sumAddrOffet);
             AscendC::Reg::Div(castReg, castReg, countReg, maskReg);
             ops::StoreOneTensorForDtypeT<T>(sumAddr, castReg, maskReg, sumAddrOffet);
+        }
+    }
+}
+
+template <typename SrcT, typename DstT>
+__aicore__ inline void CopyUnAlignWithCast(LocalTensor<DstT> dstLocal, LocalTensor<SrcT> srcLocal, int64_t srcOffset,
+                                           int64_t copyNum)
+{
+    __ubuf__ SrcT* srcAddr = (__ubuf__ SrcT*)srcLocal.GetPhyAddr();
+    __ubuf__ DstT* dstAddr = (__ubuf__ DstT*)dstLocal.GetPhyAddr();
+
+    uint32_t vfLen = platform::GetVRegSize() / sizeof(DstT);
+    uint16_t loopCnt = static_cast<uint16_t>((copyNum + vfLen - 1) / vfLen);
+    uint32_t counter = static_cast<uint32_t>(copyNum);
+
+    __VEC_SCOPE__
+    {
+        AscendC::Reg::RegTensor<SrcT> srcReg;
+        AscendC::Reg::RegTensor<DstT> dstReg;
+        AscendC::Reg::UnalignRegForLoad u0;
+        AscendC::Reg::MaskReg maskRegUpdate;
+
+        for (uint16_t i = 0; i < loopCnt; ++i) {
+            maskRegUpdate = AscendC::Reg::UpdateMask<DstT>(counter);
+
+            if constexpr (sizeof(DstT) / sizeof(SrcT) == DIGIT_2) { // int32,int64
+                auto srcOffsetAddr = srcAddr + srcOffset + i * vfLen;
+                AscendC::Reg::LoadUnAlignPre(u0, srcOffsetAddr);
+                AscendC::Reg::LoadUnAlign<SrcT>(srcReg, u0, srcOffsetAddr);
+                AscendC::Reg::UnPack((AscendC::Reg::RegTensor<DstT>&)srcReg, (AscendC::Reg::RegTensor<SrcT>&)srcReg);
+                AscendC::Reg::Cast<DstT, SrcT, castTraitInt32Int64>(dstReg, srcReg, maskRegUpdate);
+                AscendC::Reg::StoreAlign(dstAddr + i * vfLen, dstReg, maskRegUpdate);
+            } else { // int32,int32  int64,int64
+                auto srcOffsetAddr = srcAddr + srcOffset + i * vfLen;
+                AscendC::Reg::LoadUnAlignPre(u0, srcOffsetAddr);
+                AscendC::Reg::LoadUnAlign<DstT>(dstReg, u0, srcOffsetAddr);
+                AscendC::Reg::StoreAlign(dstAddr + i * vfLen, dstReg, maskRegUpdate);
+            }
         }
     }
 }

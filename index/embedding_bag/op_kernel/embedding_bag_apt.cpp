@@ -9,22 +9,31 @@
  */
 /*!
  * \file embedding_bag_apt.cpp
- * \brief
+ * \brief 统一kernel入口: arch92(Ascend960dt)经 __NPU_ARCH__==9201 编译期门禁
+ *        启用GatherDMA(tiling key 210/211), 其余平台走公共分发
  */
 
-#if __CCE_AICORE__ == 310 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
-#include "./arch35/embedding_bag_regbase_1d_sum.h"
-#include "./arch35/embedding_bag_regbase_1d_mean.h"
-#include "./arch35/embedding_bag_regbase_1d_max.h"
-#include "./arch35/embedding_bag_regbase_2d.h"
-#include "./arch35/embedding_bag_regbase_1d_simt.h"
-#include "./arch35/embedding_bag_regbase_2d_simt.h"
-#include "./arch35/embedding_bag_regbase_empty_simt.h"
+#if defined(__DAV_VEC__)
+#if (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
+#include "arch35/embedding_bag_regbase_1d_sum.h"
+#include "arch35/embedding_bag_regbase_1d_mean.h"
+#include "arch35/embedding_bag_regbase_1d_max.h"
+#include "arch35/embedding_bag_regbase_2d.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#include "arch92/embedding_bag_gather_dma.h"
+#endif
+#include "arch35/embedding_bag_regbase_1d_simt.h"
+#include "arch35/embedding_bag_regbase_2d_simt.h"
+#include "arch35/embedding_bag_regbase_empty_simt.h"
 
 #define TILING_KEY_INDICES_1D_SAME 100
 #define TILING_KEY_INDICES_1D_PROMOTE 101
 #define TILING_KEY_INDICES_2D_SAME 200
 #define TILING_KEY_INDICES_2D_PROMOTE 201
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#define TILING_KEY_INDICES_2D_SAME_GATTER_DMA 210
+#define TILING_KEY_INDICES_2D_PROMOTE_GATTER_DMA 211
+#endif
 #define TILING_KEY_SIMT_1D_SAME_INT32 300
 #define TILING_KEY_SIMT_1D_SAME_INT64 301
 #define TILING_KEY_SIMT_1D_PROMOTE_INT32 302
@@ -59,7 +68,7 @@ extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indi
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
 
-#if __CCE_AICORE__ == 310 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
+#if (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
     GM_ADDR gmParam[TENSOR_COUNT] = {weight, indices,    offsets,  per_sample_weights,
                                      y,      offset2bag, bag_size, max_indices};
     if (TILING_KEY_IS(TILING_KEY_INDICES_1D_SAME)) {
@@ -129,6 +138,16 @@ extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indi
         EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, int64_t> op(tilingData, pipe);
         op.Init(gmParam);
         op.Process();
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+    } else if (TILING_KEY_IS(TILING_KEY_INDICES_2D_SAME_GATTER_DMA)) {
+        EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_INDICES, 1> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_INDICES_2D_PROMOTE_GATTER_DMA)) {
+        EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, 1> op(tilingData, pipe);
+        op.Init(gmParam);
+        op.Process();
+#endif
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_SAME_INT32)) {
         EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(
             tilingData, pipe);
@@ -224,7 +243,8 @@ extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indi
         EmbeddingBagFP16<half, int> op(gmTensor, tilingData, pipe);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (__CCE_AICORE__ >= 220 || __CCE_AICORE__ == 920) && \
+    !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(3)) {
         EmbeddingBagFP16<bfloat16_t, int> op(gmTensor, tilingData, pipe);
         op.Process();
@@ -232,3 +252,4 @@ extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indi
 #endif
 #endif
 }
+#endif
