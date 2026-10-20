@@ -18,6 +18,8 @@
 #include "simt_api/common_functions.h"
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_sync_functions.h"
+#include <limits>
+#include <type_traits>
 
 namespace {
 using namespace AscendC;
@@ -29,6 +31,19 @@ constexpr int32_t DB_BUFFER = 2;
 template <typename T>
 __simt_callee__ __aicore__ inline T SubValue(T lhs, T rhs)
 {
+    if constexpr (std::is_integral<T>::value && std::is_signed<T>::value) {
+        using UnsignedT = typename std::make_unsigned<T>::type;
+        const UnsignedT difference = static_cast<UnsignedT>(static_cast<UnsignedT>(lhs) - static_cast<UnsignedT>(rhs));
+        constexpr UnsignedT signedMax = static_cast<UnsignedT>(std::numeric_limits<T>::max());
+        if (difference <= signedMax) {
+            return static_cast<T>(difference);
+        }
+        const UnsignedT magnitude = static_cast<UnsignedT>(static_cast<UnsignedT>(0) - difference);
+        if (magnitude == signedMax + static_cast<UnsignedT>(1)) {
+            return std::numeric_limits<T>::min();
+        }
+        return static_cast<T>(-static_cast<T>(magnitude));
+    }
     return static_cast<T>(lhs - rhs);
 }
 

@@ -47,7 +47,7 @@ constexpr const char* COMPILE_INFO = R"({
 ge::graphStatus RunInplaceSubTiling(gert::StorageShape xShape, gert::StorageShape indicesShape,
                                     gert::StorageShape vShape, ge::DataType xDtype, ge::DataType indicesDtype,
                                     ge::DataType vDtype, InplaceSubTilingData* outTilingData = nullptr,
-                                    int64_t coreNum = 64, int64_t ubSize = 253952)
+                                    int64_t coreNum = 64, int64_t ubSize = 253952, uint32_t* outScheduleMode = nullptr)
 {
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceSub");
     if (opImpl == nullptr || opImpl->tiling == nullptr) {
@@ -101,6 +101,9 @@ ge::graphStatus RunInplaceSubTiling(gert::StorageShape xShape, gert::StorageShap
         auto tilingData = reinterpret_cast<const InplaceSubTilingData*>(tilingContext->GetRawTilingData()->GetData());
         *outTilingData = *tilingData;
     }
+    if (status == ge::GRAPH_SUCCESS && outScheduleMode != nullptr) {
+        *outScheduleMode = tilingContext->GetScheduleMode();
+    }
     return status;
 }
 } // namespace
@@ -110,9 +113,11 @@ class InplaceSubTilingTest : public testing::Test {};
 TEST_F(InplaceSubTilingTest, staticShapeSuccess)
 {
     InplaceSubTilingData tilingData;
+    uint32_t scheduleMode = 0;
     auto status = RunInplaceSubTiling({{64, 128}, {64, 128}}, {{16}, {16}}, {{16, 128}, {16, 128}}, ge::DT_FLOAT16,
-                                      ge::DT_INT32, ge::DT_FLOAT16, &tilingData);
+                                      ge::DT_INT32, ge::DT_FLOAT16, &tilingData, 64, 253952, &scheduleMode);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(scheduleMode, 1U);
     EXPECT_EQ(tilingData.needCoreNum, 10);
     EXPECT_EQ(tilingData.n, 64);
     EXPECT_EQ(tilingData.k, 16);

@@ -13,7 +13,6 @@ import hashlib
 from typing import ClassVar
 
 import numpy as np
-import torch
 
 __spec__ = {
     "inplace_sub": "InplaceSubKernelSpec",
@@ -61,6 +60,20 @@ def _supports_special_values(array):
 
 def inplace_sub_input(x, indices, v, **kwargs):
     testcase_name = kwargs.get("testcase_name", "")
+    if "dfx_signed_overflow" in testcase_name:
+        x = np.array(x, copy=True)
+        indices = np.zeros_like(indices)
+        v = np.array(v, copy=True)
+        dtype_info = np.iinfo(x.dtype)
+        x.reshape(-1)[:] = np.resize(
+            np.array(
+                [dtype_info.max, dtype_info.min, dtype_info.max, dtype_info.min],
+                dtype=x.dtype,
+            ),
+            x.size,
+        )
+        v.reshape(-1)[:] = np.resize(np.array([-1, 1, -2, 2], dtype=v.dtype), v.size)
+        return [x, indices, v]
     if "dfx_nan" in testcase_name and _supports_special_values(x):
         x = np.array(x, copy=True)
         v = np.array(v, copy=True)
@@ -109,12 +122,16 @@ def _is_wide_unsigned(dtype):
 
 
 def _numpy_to_torch_tensor(array):
+    import torch
+
     if "bfloat16" in array.dtype.name:
         return torch.from_numpy(array.view(dtype=np.int16)).view(torch.bfloat16)
     return torch.from_numpy(array)
 
 
 def _torch_to_numpy_tensor(tensor):
+    import torch
+
     if tensor.dtype == torch.bfloat16:
         from ml_dtypes import bfloat16
 
@@ -123,6 +140,8 @@ def _torch_to_numpy_tensor(tensor):
 
 
 def _prepare_inplace_sub_inputs(x, indices, v):
+    import torch
+
     if isinstance(x, torch.Tensor):
         return_torch = True
         result_dtype = x.dtype
@@ -161,6 +180,8 @@ def _restore_inplace_sub_output(y, result_dtype, return_torch):
 
 
 def _inplace_sub_golden_compute(x, indices, v):
+    import torch
+
     y, idx, updates, result_dtype, return_torch = _prepare_inplace_sub_inputs(
         x, indices, v
     )

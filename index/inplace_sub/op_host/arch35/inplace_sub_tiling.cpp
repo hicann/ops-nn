@@ -28,6 +28,7 @@
 namespace optiling {
 namespace {
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
+constexpr uint32_t BATCH_MODE = 1;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int64_t MIN_ELEMENTS_PER_CORE = 1024;
 constexpr size_t INPUT_X_IDX = 0;
@@ -221,6 +222,8 @@ static ge::graphStatus SetLocalMemoryAndWorkspace(gert::TilingContext* context,
     auto workspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
     workspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
+    OP_CHECK_IF(context->SetScheduleMode(BATCH_MODE) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "Failed to set the schedule mode."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 } // namespace
