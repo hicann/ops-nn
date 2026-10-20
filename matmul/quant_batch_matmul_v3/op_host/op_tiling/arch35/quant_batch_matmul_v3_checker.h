@@ -71,5 +71,19 @@ protected:
     bool CheckInnerAxisIsEven(const std::vector<int64_t>& dimValueOfMKN) const;
     bool CheckMXFP4Constraints(const std::vector<int64_t>& dimValueOfMKN) const;
     bool CheckABDtypesSame() const;
+
+    // 平台差异扩展点：默认实现保持与当前平台一致，子类 checker 按 SoC 规格覆写。
+    virtual const std::vector<ge::DataType>& GetLegalInputDtypes() const;
+    virtual const std::vector<ge::DataType>& GetLegalOutputDtypes() const;
+    virtual const char* GetLegalInputDtypesDesc() const;
+    virtual const char* GetLegalOutputDtypesDesc() const;
+    virtual bool IsFp4Input() const;
+    virtual bool IsHif4Input() const;
+    virtual bool CheckExtraABDtypePairs() const;
+    virtual bool CheckHif4ScaleDtypeWithPertoken() const;
+    virtual bool CheckExtraOutputDtype() const;
+    virtual bool CheckExtraBiasConstraint(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape) const;
+    virtual bool CheckExtraShapeValid(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+                                      const std::vector<int64_t>& dimValueOfMKN) const;
 };
 } // namespace optiling

@@ -390,6 +390,20 @@ public:
             } else {
                 Get<3>(offset) = nOffset * MXFP_MULTI_BASE_SIZE; // 3: idx of x2Scale
             }
+        } else if constexpr (aQuantMode == QuantBatchMatmul::QuantMode::HIF4_PEGROUP_MODE) {
+            // hifloat4_scale在A转置和B不转置的排布如下：
+            // E8,E1_8  E8,E1_8  E8,E1_8  E8,E1_8
+            // E1_16    E1_16    E1_16    E1_16
+            if constexpr (isTransA) {
+                Get<2>(offset) = mOffset >> 1; // 2: idx of x1Scale
+            } else {
+                Get<2>(offset) = mOffset * CeilDiv(k, MXFP_DIVISOR_SIZE); // 2: idx of x1Scale
+            }
+            if constexpr (isTransB) {
+                Get<3>(offset) = nOffset * CeilDiv(k, MXFP_DIVISOR_SIZE); // 3: idx of x2Scale
+            } else {
+                Get<3>(offset) = nOffset >> 1; // 3: idx of x2Scale
+            }
         } else {
             Get<2>(offset) = mOffset; // 2: idx of x1Scale
             Get<3>(offset) = nOffset; // 3: idx of x2Scale

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "acl/acl_rt.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "exe_graph/runtime/shape.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "exe_graph/runtime/tiling_context.h"
@@ -132,7 +133,8 @@ inline bool IsTensorapiCapable()
 
 inline uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
 {
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 ||
+        dtype == Ops::NN::DT_HIFLOAT4) {
         return size + size;
     }
     uint64_t dtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
@@ -141,10 +143,44 @@ inline uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
 
 inline uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
 {
-    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
+    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4 ||
+        dtype == Ops::NN::DT_HIFLOAT4) {
         return (shape + 1UL) >> 1UL;
     }
     return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+}
+
+// MX 与 hif4 均为 per-group scale 量化（32/64 元素一组），公共分支统一走此谓词。
+inline bool HasPerGroupScale(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isMxPerGroup || inputParams.isHif4PerGroup;
+}
+
+// Pergroup 量化模式统一分发：hif4 走 HIF4_PERGROUP_MODE，MX 走 MX_PERGROUP_MODE。
+inline BasicQuantMode GetPergroupQuantMode(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isHif4PerGroup ? BasicQuantMode::HIF4_PERGROUP_MODE : BasicQuantMode::MX_PERGROUP_MODE;
+}
+
+// hif4 每 64 个 K 元素共享 1 个 scale；MX 每 32 个 K 元素共享 1 个 scale（等价每 64 元素 2 个）。
+inline uint64_t GetScaleGroupSize(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isHif4PerGroup ? qmmv3_tiling_const::MXFP_DIVISOR_SIZE : qmmv3_tiling_const::MX_GROUP_SIZE;
+}
+
+// baseK 覆盖的 scale 元素个数：hif4 为 CeilDiv(baseK, 64)，MX 为 2 * CeilDiv(baseK, 64)。
+inline uint64_t GetScaleBaseK(const QuantBatchMatmulInfo& inputParams, uint64_t baseK)
+{
+    if (inputParams.isHif4PerGroup) {
+        return ops::CeilDiv(baseK, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
+    }
+    return ops::CeilAlign(ops::CeilDiv(baseK, qmmv3_tiling_const::MX_GROUP_SIZE),
+                          qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
+}
+
+inline uint64_t GetScaleMultiBase(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isHif4PerGroup ? 1UL : qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
 }
 
 inline bool IsBInnerAxisAligned(const QuantBatchMatmulInfo& inputParams)
@@ -195,6 +231,11 @@ inline bool IsMxBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
     bool isMxfp4 = inputParams.isMxPerGroup && inputParams.aDtype == ge::DT_FLOAT4_E2M1 &&
                    inputParams.bDtype == ge::DT_FLOAT4_E2M1;
     return isMxfp8 || isMxfp4;
+}
+
+inline bool IsHif4BasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isHif4PerGroup && inputParams.bFormat == ge::FORMAT_ND;
 }
 
 bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams);

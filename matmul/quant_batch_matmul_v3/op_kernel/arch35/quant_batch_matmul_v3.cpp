@@ -40,7 +40,14 @@
 #define FORMAT_FRACTAL_NZ
 #endif
 
-#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#if defined(DT_HIFLOAT4) && defined(DT_HIFLOAT4_SCALE)
+#define QBMMV3_IS_HIF4_DTYPE_TPL \
+    (ORIG_DTYPE_X1 == DT_HIFLOAT4 && ORIG_DTYPE_X2 == DT_HIFLOAT4 && ORIG_DTYPE_SCALE == DT_HIFLOAT4_SCALE)
+#else
+#define QBMMV3_IS_HIF4_DTYPE_TPL false
+#endif
+
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) || QBMMV3_IS_HIF4_DTYPE_TPL
 #include "qbmm_mx_basic_api_cmct.h"
 #else
 #include "qbmm_cube_basic_api_cmct.h"
@@ -51,7 +58,7 @@
 #include "qbmm_cube_tensor_api_blaze.h"
 #include "qbmm_mix_tensor_api_blaze.h"
 #include "qbmm_pertensor_streamk_tensor_api_blaze.h"
-#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) || QBMMV3_IS_HIF4_DTYPE_TPL
 #include "qbmm_mx_tensor_api_blaze.h"
 #include "qbmm_mx_l0c_pingpong.h"
 #include "qbmm_mx_streamk_tensor_api_blaze.h"
@@ -101,10 +108,11 @@ using namespace AscendC;
 using namespace matmul;
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
-#define IS_MX                                                                                                     \
-    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) && \
-     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X2 == DT_FLOAT4_E2M1) && \
-     ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#define IS_MX                                                                                                      \
+    (((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) && \
+      (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X2 == DT_FLOAT4_E2M1) && \
+      ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) ||                                                                       \
+     QBMMV3_IS_HIF4_DTYPE_TPL)
 #else
 #define IS_MX false
 #endif
@@ -158,7 +166,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         op.Process();                                                                                                 \
     } while (0)
 
-#if defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0 && IS_BLAZE
+#if defined(ORIG_DTYPE_SCALE) && IS_BLAZE && ((ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) || QBMMV3_IS_HIF4_DTYPE_TPL)
 #define QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                               \
     do {                                                                                                       \
         if ASCEND_IS_AIC {                                                                                     \
@@ -206,7 +214,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     } while (0)
 #endif
 
-#if defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0
+#if defined(ORIG_DTYPE_SCALE) && ((ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) || QBMMV3_IS_HIF4_DTYPE_TPL)
 #define QUANT_BMMV3_MX_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                                \
     do {                                                                                                       \
         if ASCEND_IS_AIC {                                                                                     \
@@ -434,7 +442,46 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     }
 #endif
 
-    if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
+#if QBMMV3_IS_HIF4_DTYPE_TPL && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    if constexpr (DequantBmm::IsHif4Type<DTYPE_X1, DTYPE_SCALE>()) {
+        // hif4: 9202 全部走 CMCT；9201 按 api level 分流 Blaze/CMCT
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201) && IS_BLAZE
+        if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
+                      TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
+        } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
+                             TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
+                             TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
+                                                          Blaze::Gemm::A_FULL_LOAD_MODE);
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
+                             TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
+                                            Blaze::Gemm::A_FULL_LOAD_MODE);
+        }
+#endif
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
+                             TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                           Cmct::Gemm::A_FULL_LOAD_MODE);
+        }
+#else
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                           Cmct::Gemm::A_FULL_LOAD_MODE);
+        }
+#endif
+    } else
+#endif
+
+        if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
 #if IS_MX
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
 #if IS_BLAZE

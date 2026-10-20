@@ -12,67 +12,38 @@
  * \file quant_batch_matmul_v3_checker_arch_9201.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_CHECKER_ARCH_9201_H
-#define QUANT_BATCH_MATMUL_V3_CHECKER_ARCH_9201_H
-#include "quant_batch_matmul_v3_checker_base.h"
+#pragma once
+#include "quant_batch_matmul_v3_checker.h"
 
 namespace optiling {
 
-class QuantBatchMatmulV3CheckerArch9201 : public QuantBatchMatmulV3CheckerBase {
+class QuantBatchMatmulV3CheckerArch9201 : public QuantBatchMatmulV3Checker {
 public:
     QuantBatchMatmulV3CheckerArch9201(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
-        : QuantBatchMatmulV3CheckerBase(context, inputParams)
+        : QuantBatchMatmulV3Checker(context, inputParams)
     {}
 
     ~QuantBatchMatmulV3CheckerArch9201() override = default;
-    bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
-                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 protected:
-    bool CheckABDtypes() const;
-    bool CheckScalesDtype() const;
-    bool CheckScaleDtypeWithPertoken() const;
-    bool CheckBiasDtype() const;
-    bool CheckOutputDtype() const;
-    bool CheckDtypesInRange() const;
-    bool CheckDtype4WeightNz() const;
-    bool CheckWeightNzAbDtypes() const;
-    bool CheckWeightNzDtype4Hifloat8() const;
-    bool CheckWeightNzDtype4Fp4() const;
-    bool CheckWeightNzDtype4Fp8E4M3() const;
-    bool MxPertokenScaleShapeCheck(const gert::StorageShape* pertokenShape) const;
-    bool MxScaleShapeCheck(const gert::Shape& scaleShape) const;
+    const std::vector<ge::DataType>& GetLegalInputDtypes() const override;
+    const std::vector<ge::DataType>& GetLegalOutputDtypes() const override;
+    const char* GetLegalInputDtypesDesc() const override;
+    const char* GetLegalOutputDtypesDesc() const override;
+    bool IsFp4Input() const override;
+    bool IsHif4Input() const override;
+    bool CheckExtraABDtypePairs() const override;
+    bool CheckHif4ScaleDtypeWithPertoken() const override;
+    bool CheckExtraOutputDtype() const override;
+    bool CheckExtraBiasConstraint(const gert::Shape& scaleShape,
+                                  const gert::StorageShape* pertokenShape) const override;
+    bool CheckExtraShapeValid(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+                              const std::vector<int64_t>& dimValueOfMKN) const override;
+
+private:
     bool Hif4PertokenScaleShapeCheck(const gert::StorageShape* pertokenShape) const;
     bool Hif4ScaleShapeCheck(const gert::Shape& scaleShape) const;
-    bool CheckInputVaildInHif4PerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+    bool CheckInputValidInHif4PerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
                                            const std::vector<int64_t>& dimValueOfMKN) const;
-    bool CheckInputValidInPerblockMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckDimValidInPerblockMode(size_t x1ShapeLen, size_t x2ShapeLen, size_t pertokenShapeLen,
-                                     size_t scaleShapeLen) const;
-    bool CheckBatchValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
-                                         const gert::Shape& x1Shape, const gert::Shape& x2Shape,
-                                         const std::vector<int64_t>& dimValueOfMKN) const;
-    bool CheckBatchValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                         const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckGroupValidInPerblockMode() const;
-    bool PerTokenDimValueCheck(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape) const;
-    bool CheckShapeInRangeForOptionalInputs(const gert::Shape& scaleShape, const gert::StorageShape* biasShape,
-                                            const gert::StorageShape* pertokenShape,
-                                            const gert::StorageShape* offsetShape, size_t outDimNum) const;
-    bool CheckDimValue(const gert::Shape& scaleShape, const gert::StorageShape* biasShape,
-                       const gert::StorageShape* pertokenShape, const gert::StorageShape* offsetShape,
-                       const std::vector<int64_t>& dimValueOfMKN) const;
-    bool CheckShapeInBoundary(const gert::Shape& shape, uint32_t shapeIdx) const;
-    bool BiasShapeCheck(const gert::Shape& biasShape, const gert::Shape& scaleShape,
-                        const gert::StorageShape* pertokenShape) const;
-    bool ExtraInputCheck() const;
-    bool LogicXOR(bool cond1, bool cond2) const;
 };
 } // namespace optiling
-#endif // QUANT_BATCH_MATMUL_V3_CHECKER_ARCH_9201_H

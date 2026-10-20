@@ -17,6 +17,7 @@
 #define QUANT_BATCH_MATMUL_V3_TILING_BASE_H
 #include <memory>
 #include <set>
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "quant_batch_matmul_v3_compile_info.h"
@@ -128,6 +129,7 @@ enum class BasicQuantMode : uint32_t {
     MX_PERGROUP_MODE = 0x1U << 3,
     PERBLOCK_MODE = 0x1U << 4,
     PERGROUP_MODE = 0x1U << 5,
+    HIF4_PERGROUP_MODE = 0x1U << 6,
 };
 
 void ResetQuantBatchMatmulV3InputParams();
@@ -174,6 +176,7 @@ protected:
     bool SetX2QuantMode(BasicQuantMode& x2QuantMode, bool isFp8Hif8Input, const gert::Shape& scaleShape);
     std::string QuantModeMapToString(const std::vector<BasicQuantMode>& quantModeList) const;
     bool IsMicroScaling() const;
+    bool IsHif4Scale() const;
     std::string QuantModeToString(BasicQuantMode quantMode) const;
     uint64_t GetBatchSize(const gert::Shape& shape) const;
     bool InferOutBatchDim(const gert::Shape& x1Shape, const gert::Shape& x2Shape);
@@ -184,6 +187,8 @@ protected:
     bool AnalyzeGroupInfo(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape);
     bool AnalyzeMxGroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken, size_t pertokenShapeLen,
                             size_t scaleShapeLen);
+    bool AnalyzeHif4GroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken, size_t pertokenShapeLen,
+                              size_t scaleShapeLen);
     void AnalyzeBatchInfo(const gert::Shape& oriShapeA, const gert::Shape& oriShapeB);
     void DoBatchFusion(uint64_t fusedDimValue);
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
@@ -221,7 +226,7 @@ protected:
     template <typename T>
     T GetShapeWithDataType(T size, ge::DataType dtype) const
     {
-        if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1) {
+        if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == Ops::NN::DT_HIFLOAT4) {
             return size + size;
         } else {
             return size / static_cast<T>(ge::GetSizeByDataType(dtype));
@@ -231,7 +236,7 @@ protected:
     template <typename T>
     T GetSizeWithDataType(T shape, ge::DataType dtype) const
     {
-        if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4) {
+        if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4 || dtype == Ops::NN::DT_HIFLOAT4) {
             return (shape + 1) >> 1;
         } else {
             return shape * static_cast<T>(ge::GetSizeByDataType(dtype));

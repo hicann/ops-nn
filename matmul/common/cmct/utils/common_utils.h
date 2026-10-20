@@ -25,6 +25,14 @@
 #include "lib/matmul_intf.h"
 namespace Cmct {
 namespace Gemm {
+// hifloat4x2_t/hif4_scale 仅在 9201/9202 编译目标下引用，
+// 其余平台按 false 处理，保证旧工具链编译既有 dtype 不受影响。
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+#define CMCT_HIF4_SUPPORT 1
+#else
+#define CMCT_HIF4_SUPPORT 0
+#endif
+
 constexpr int64_t MATRIX_INNER_DIM_LIMIT_SIZE = 65536LL;
 constexpr int32_t MATMUL_MNK_ALIGN = 16;
 constexpr int32_t MATMUL_MNK_ALIGN_INT8 = 32;

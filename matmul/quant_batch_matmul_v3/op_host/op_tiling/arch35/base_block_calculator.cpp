@@ -15,6 +15,7 @@
 #include "base_block_calculator.h"
 
 #include <algorithm>
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "error_util.h"
 #include "platform/soc_spec.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
@@ -65,7 +66,8 @@ double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
 
 double GetDtypeBytes(ge::DataType dtype)
 {
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 ||
+        dtype == Ops::NN::DT_HIFLOAT4) {
         return FOUR_BIT_DTYPE_BYTES;
     }
     return static_cast<double>(ge::GetSizeByDataType(dtype));
@@ -338,8 +340,9 @@ uint64_t BaseBlockCalculator::GetBaseNAlignSize(uint64_t innerAlignSize) const
 
 uint64_t BaseBlockCalculator::GetBaseKAlignSize() const
 {
-    return inputParams_.isMxPerGroup ? qmmv3_tiling_const::MXFP_DIVISOR_SIZE :
-                                       GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype);
+    return HasPerGroupScale(inputParams_) ?
+               qmmv3_tiling_const::MXFP_DIVISOR_SIZE :
+               GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype);
 }
 
 bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode)

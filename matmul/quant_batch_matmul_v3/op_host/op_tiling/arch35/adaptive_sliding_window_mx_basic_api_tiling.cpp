@@ -107,7 +107,22 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
     return IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
-           (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201);
+           (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+           IsHif4BlazeCapable();
+}
+
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsHif4BlazeCapable() const
+{
+    // 暂时先让HIF4都走CMCT 等ops-tensor适配代码上库后放开118-120行
+    if (inputParams_.isHif4PerGroup) {
+        return false;
+    }
+    // 9202 上 hif4 内核只实现 CMCT(basic) 路径，不消费 WithoutBatchTilingData，禁止走 blaze/without-batch
+    if (inputParams_.isHif4PerGroup && compileInfo_.npuArch != NpuArch::DAV_9201) {
+        return false;
+    }
+    // tensor-api crd2idx 对 hif4_scale 暂不支持奇数坐标，baseK 需为 64 的偶数倍
+    return !(inputParams_.isHif4PerGroup && basicTiling_.baseK % (qmmv3_tiling_const::MXFP_DIVISOR_SIZE * 2UL) != 0UL);
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step,
@@ -122,7 +137,10 @@ void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint
     scaleFactor = static_cast<uint32_t>(std::min<uint64_t>(scaleFactor, adjustedScaleFactor));
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable() { return IsMxBasicApiCapable(inputParams_); }
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable()
+{
+    return IsMxBasicApiCapable(inputParams_) || IsHif4BasicApiCapable(inputParams_);
+}
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const { return inputParams_.batchC; }
 
@@ -135,8 +153,9 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     const bool supportsBlaze = npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201;
-    return IsTensorApiEnabled() && supportsBlaze ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
-                                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
+    return IsTensorApiEnabled() && supportsBlaze && IsHif4BlazeCapable() ?
+               static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+               static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
@@ -401,8 +420,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcMxFullKLoadSize(uint64_t out
                                                                     ge::DataType scaleDtype) const
 {
     uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
-    uint64_t scaleK = ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
-                      qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
+    uint64_t scaleK = GetScaleBaseK(inputParams_, inputParams_.kSize);
     return GetSizeWithDataType(outerSize * kAligned, dataDtype) + GetSizeWithDataType(outerSize * scaleK, scaleDtype);
 }
 
@@ -419,8 +437,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcUsedL1Size(const MxL1Estimat
                                                                uint32_t l1BufferNum) const
 {
     uint64_t usedL1Size = GetSizeWithDataType(params.baseN * params.kL1, inputParams_.bDtype) * l1BufferNum;
-    // B-side MX scale follows the scaleKL1 window and is double-buffered separately from B data.
-    usedL1Size += GetSizeWithDataType(params.baseN * ops::CeilDiv(params.scaleKL1, qmmv3_tiling_const::MX_GROUP_SIZE),
+    // B-side scale follows the scaleKL1 window and is double-buffered separately from B data.
+    usedL1Size += GetSizeWithDataType(params.baseN * ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_)),
                                       inputParams_.scaleDtype) *
                   qmmv3_tiling_const::L1_TWO_BUFFER;
     if (inputParams_.hasBias) {
@@ -430,9 +448,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcUsedL1Size(const MxL1Estimat
         usedL1Size += CalcMxFullKLoadSize(params.baseM, inputParams_.aDtype, inputParams_.perTokenScaleDtype);
     } else {
         usedL1Size += GetSizeWithDataType(params.baseM * params.kL1, inputParams_.aDtype) * l1BufferNum;
-        usedL1Size += GetSizeWithDataType(
-                          params.baseM * ops::CeilDiv(params.scaleKL1, qmmv3_tiling_const::MX_GROUP_SIZE),
-                          inputParams_.perTokenScaleDtype) *
+        usedL1Size += GetSizeWithDataType(params.baseM * ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_)),
+                                          inputParams_.perTokenScaleDtype) *
                       qmmv3_tiling_const::L1_TWO_BUFFER;
     }
     return usedL1Size;
@@ -630,8 +647,9 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
     tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
         IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
-    tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
-    tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
+    const uint32_t perGroupQuantMode = static_cast<uint32_t>(GetPergroupQuantMode(inputParams_));
+    tilingData_.params.x1QuantMode = perGroupQuantMode;
+    tilingData_.params.x2QuantMode = perGroupQuantMode;
     tilingData_.adaptiveSlidingWin.mTailTile = adaptiveWin_.mTailTile;
     tilingData_.adaptiveSlidingWin.nTailTile = adaptiveWin_.nTailTile;
     tilingData_.adaptiveSlidingWin.mBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.mBaseTailSplitCnt);
@@ -666,8 +684,9 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.nBaseTailSplitCnt = static_cast<uint16_t>(adaptiveWin_.nBaseTailSplitCnt);
     withoutBatchTilingData_.mTailMain = static_cast<uint16_t>(adaptiveWin_.mTailMain);
     withoutBatchTilingData_.nTailMain = static_cast<uint16_t>(adaptiveWin_.nTailMain);
-    withoutBatchTilingData_.x1QuantMode = static_cast<uint8_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
-    withoutBatchTilingData_.x2QuantMode = static_cast<uint8_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
+    const uint8_t perGroupQuantMode = static_cast<uint8_t>(GetPergroupQuantMode(inputParams_));
+    withoutBatchTilingData_.x1QuantMode = perGroupQuantMode;
+    withoutBatchTilingData_.x2QuantMode = perGroupQuantMode;
     withoutBatchTilingData_.isBias = tilingData_.matmulTiling.isBias;
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
     withoutBatchTilingData_.nBufferNum = tilingData_.matmulTiling.nBufferNum;

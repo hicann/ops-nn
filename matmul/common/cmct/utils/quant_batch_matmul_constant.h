@@ -68,6 +68,7 @@ enum class QuantMode : uint32_t {
     MX_PERGROUP_MODE = 0x1U << 3,
     PERBLOCK_MODE = 0x1U << 4,
     PERGROUP_MODE = 0x1U << 5,
+    HIF4_PEGROUP_MODE = 0x1U << 6,
 };
 } // namespace QuantBatchMatmul
 } // namespace Gemm

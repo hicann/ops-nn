@@ -201,10 +201,16 @@ public:
 
         int64_t singleCoreMSplit = Cmct::Gemm::CeilDiv(singleCoreM, mTailTile_);
         int64_t singleCoreNSplit = Cmct::Gemm::CeilDiv(singleCoreN, nTailTile_);
-        if constexpr (AscendC::IsSameType<AType, fp4x2_e2m1_t>::value) {
+#if CMCT_HIF4_SUPPORT
+        constexpr bool isFourBitA = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ||
+                                    AscendC::IsSameType<AType, hifloat4x2_t>::value;
+#else
+        constexpr bool isFourBitA = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value;
+#endif
+        if constexpr (isFourBitA) {
             singleCoreMSplit = (singleCoreMSplit + 1) & ~1;
         }
-        if constexpr (AscendC::IsSameType<AType, fp4x2_e2m1_t>::value) {
+        if constexpr (isFourBitA) {
             singleCoreNSplit = (singleCoreNSplit + 1) & ~1;
         }
         if constexpr ((aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||

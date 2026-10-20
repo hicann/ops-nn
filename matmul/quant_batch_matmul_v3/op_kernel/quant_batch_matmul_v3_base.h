@@ -364,6 +364,16 @@ __aicore__ inline constexpr bool IsMxType()
     return AscendC::IsSameType<T, AscendC::fp8_e8m0_t>::value;
 }
 
+template <typename x1Dtype, typename scaleDtype>
+__aicore__ inline constexpr bool IsHif4Type()
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    return AscendC::IsSameType<x1Dtype, hifloat4x2_t>::value;
+#else
+    return false;
+#endif
+}
+
 template <typename T>
 __aicore__ inline constexpr bool IsFp4()
 {

@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "quant_batch_matmul_v3_tiling_base.h"
 #include "quant_batch_matmul_info_factory.h"
 #include "error_util.h"
@@ -83,6 +84,7 @@ const std::map<ge::DataType, std::vector<BasicQuantMode>> X2_QUANT_MODE_MAP = {
      {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE, BasicQuantMode::PERBLOCK_MODE,
       BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_FLOAT4_E2M1, {BasicQuantMode::MX_PERGROUP_MODE}},
+    {Ops::NN::DT_HIFLOAT4, {BasicQuantMode::HIF4_PERGROUP_MODE}},
     {ge::DT_HIFLOAT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE, BasicQuantMode::PERBLOCK_MODE}},
     {ge::DT_INT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERCHANNEL_MODE}},
 
@@ -96,6 +98,7 @@ const std::map<ge::DataType, std::vector<BasicQuantMode>> X1_QUANT_MODE_MAP = {
      {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE, BasicQuantMode::PERBLOCK_MODE,
       BasicQuantMode::MX_PERGROUP_MODE}},
     {ge::DT_FLOAT4_E2M1, {BasicQuantMode::MX_PERGROUP_MODE}},
+    {Ops::NN::DT_HIFLOAT4, {BasicQuantMode::HIF4_PERGROUP_MODE}},
     {ge::DT_HIFLOAT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE, BasicQuantMode::PERBLOCK_MODE}},
     {ge::DT_INT8, {BasicQuantMode::PERTENSOR_MODE, BasicQuantMode::PERTOKEN_MODE}},
 
@@ -430,6 +433,11 @@ bool QuantBatchMatmulV3TilingBase::CheckShape4WeightNz() const
 
 bool QuantBatchMatmulV3TilingBase::IsMicroScaling() const { return inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0; }
 
+bool QuantBatchMatmulV3TilingBase::IsHif4Scale() const
+{
+    return inputParams_.aDtype == Ops::NN::DT_HIFLOAT4 && inputParams_.bDtype == Ops::NN::DT_HIFLOAT4;
+}
+
 std::string QuantBatchMatmulV3TilingBase::QuantModeToString(BasicQuantMode quantMode) const
 {
     std::string mode = "default";
@@ -449,6 +457,9 @@ std::string QuantBatchMatmulV3TilingBase::QuantModeToString(BasicQuantMode quant
         case BasicQuantMode::PERBLOCK_MODE:
             mode = "perblock";
             break;
+        case BasicQuantMode::HIF4_PERGROUP_MODE:
+            mode = "hifloat4_pergroup";
+            break;
         default:
             break;
     }
@@ -461,6 +472,8 @@ bool QuantBatchMatmulV3TilingBase::SetX2QuantMode(BasicQuantMode& x2QuantMode, b
     auto scaleShapeLen = scaleShape.GetDimNum();
     if (IsMicroScaling()) {
         x2QuantMode = BasicQuantMode::MX_PERGROUP_MODE;
+    } else if (IsHif4Scale()) {
+        x2QuantMode = BasicQuantMode::HIF4_PERGROUP_MODE;
     } else if (isFp8Hif8Input && inputParams_.scaleDtype == ge::DT_FLOAT && scaleShapeLen > 1 &&
                (scaleShapeLen > SCALE_PERGROUP_MIN_DIM_NUM || scaleShape.GetDim(0) != 1 ||
                 inputParams_.groupSizeN > 1)) {
@@ -491,6 +504,8 @@ bool QuantBatchMatmulV3TilingBase::SetX1QuantMode(BasicQuantMode& x1QuantMode, b
     auto pertokenLen = pertoken.GetDimNum();
     if (IsMicroScaling()) {
         x1QuantMode = BasicQuantMode::MX_PERGROUP_MODE;
+    } else if (IsHif4Scale()) {
+        x1QuantMode = BasicQuantMode::HIF4_PERGROUP_MODE;
     } else if (isFp8Hif8Input && inputParams_.perTokenScaleDtype == ge::DT_FLOAT && pertokenLen > 1) {
         x1QuantMode = BasicQuantMode::PERBLOCK_MODE;
     } else if (isFp8Hif8Input && pertokenLen == 1 && pertoken.GetDim(pertokenLen - LAST_FIRST_DIM_INDEX) == 1) {
@@ -546,9 +561,11 @@ bool QuantBatchMatmulV3TilingBase::SetQuantMode(const gert::Shape& scaleShape, c
     inputParams_.isPertoken = x1QuantMode == BasicQuantMode::PERTOKEN_MODE;
     inputParams_.isMxPerGroup = x1QuantMode == BasicQuantMode::MX_PERGROUP_MODE && x1QuantMode == x2QuantMode;
     inputParams_.isPerBlock = x1QuantMode == BasicQuantMode::PERBLOCK_MODE;
+    inputParams_.isHif4PerGroup = x1QuantMode == BasicQuantMode::HIF4_PERGROUP_MODE && x1QuantMode == x2QuantMode;
     OP_TILING_CHECK(
         !(inputParams_.isPerChannel || inputParams_.isDoubleScale || inputParams_.isPerTensor ||
-          inputParams_.isPertoken || inputParams_.isMxPerGroup || inputParams_.isPerBlock),
+          inputParams_.isPertoken || inputParams_.isMxPerGroup || inputParams_.isPerBlock ||
+          inputParams_.isHif4PerGroup),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "Unexpected quantification, quantification of x1: %s, quantification of x2: %s",
                               QuantModeToString(x1QuantMode).c_str(), QuantModeToString(x2QuantMode).c_str()),
@@ -710,6 +727,53 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeMxGroupInfo(const gert::Shape& scaleSh
     return true;
 }
 
+bool QuantBatchMatmulV3TilingBase::AnalyzeHif4GroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+                                                        size_t pertokenShapeLen, size_t scaleShapeLen)
+{
+    const size_t hif4ScaleDimNum = 3;
+    const uint64_t hif4GroupSize = 64UL;
+    // hif4 每 64 个 K 元素共享 1 个 scale，groupSize 固定为 [1, 1, 64]，
+    // 不能通过 K / scaleK 反推，否则 K 非 64 整数倍时尾组会被推导为错误值或直接失败
+    if (inputParams_.groupSizeM == 0UL) {
+        inputParams_.groupSizeM = 1UL;
+    }
+    if (inputParams_.groupSizeN == 0UL) {
+        inputParams_.groupSizeN = 1UL;
+    }
+    if (inputParams_.groupSizeK == 0UL) {
+        inputParams_.groupSizeK = hif4GroupSize;
+    }
+    if (pertokenShapeLen != hif4ScaleDimNum || scaleShapeLen != hif4ScaleDimNum) {
+        // scale 维度非法时由后续 checker 报错
+        return true;
+    }
+    uint64_t expectedScaleK = ops::CeilDiv(inputParams_.kSize, hif4GroupSize);
+    // 存在 1 维广播时 K 维校验交由 checker 判定，此处只校验非广播场景的 K 维覆盖 ceil(K / 64)
+    if (pertoken.GetDim(0) != 1 && pertoken.GetDim(1) != 1) {
+        uint64_t pertokenKSize = static_cast<uint64_t>(pertoken.GetDim(inputParams_.transA ? 0 : 1));
+        OP_TILING_CHECK(
+            pertokenKSize != expectedScaleK,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                  "In hif4 quantification, the k dimension of pertokenScale [%lu] should be equal to "
+                                  "x1 k dimension [%lu] ceil div 64 [%lu].",
+                                  pertokenKSize, inputParams_.kSize, expectedScaleK),
+            return false);
+    }
+    if (scaleShape.GetDim(0) != 1 && scaleShape.GetDim(1) != 1) {
+        uint64_t scaleKSize = static_cast<uint64_t>(scaleShape.GetDim(inputParams_.transB ? 1 : 0));
+        OP_TILING_CHECK(
+            scaleKSize != expectedScaleK,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                  "In hif4 quantification, the k dimension of scale [%lu] should be equal to "
+                                  "x2 k dimension [%lu] ceil div 64 [%lu].",
+                                  scaleKSize, inputParams_.kSize, expectedScaleK),
+            return false);
+    }
+    OP_LOGD(inputParams_.opName, "Infer hif4 groupSize success. groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.",
+            inputParams_.groupSizeM, inputParams_.groupSizeN, inputParams_.groupSizeK);
+    return true;
+}
+
 bool QuantBatchMatmulV3TilingBase::AnalyzeGroupInfo(const gert::Shape& scaleShape,
                                                     const gert::StorageShape* pertokenShape)
 {
@@ -725,6 +789,9 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeGroupInfo(const gert::Shape& scaleShap
     }
     if (IsMicroScaling()) {
         return AnalyzeMxGroupInfo(scaleShape, pertoken, pertokenShapeLen, scaleShapeLen);
+    }
+    if (IsHif4Scale()) {
+        return AnalyzeHif4GroupInfo(scaleShape, pertoken, pertokenShapeLen, scaleShapeLen);
     }
     auto pertokenInner = pertoken.GetDim(1);
     auto pertokenOuter = pertoken.GetDim(0);
@@ -948,6 +1015,7 @@ void QuantBatchMatmulInfo::Reset()
     isMxPerGroup = false;
     isPerBlock = false;
     isPerBlockPerToken = false;
+    isHif4PerGroup = false;
     isLut = false;
     outDtype = 0L;
     libApiWorkSpaceSize = 0U;

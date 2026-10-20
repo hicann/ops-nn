@@ -179,11 +179,10 @@ bool L1TilingDataCalculator::InitLeftL1Size()
 
 bool L1TilingDataCalculator::ComputeL1TilingDefault()
 {
-    if (inputParams_.isMxPerGroup) {
+    if (HasPerGroupScale(inputParams_)) {
         uint64_t baseASize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype);
         uint64_t baseBSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
-        uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE),
-                                             qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
+        uint64_t scaleBaseK = GetScaleBaseK(inputParams_, baseK_);
         uint64_t baseScaleASize = GetSizeWithDataType(scaleBaseK * baseM_, inputParams_.perTokenScaleDtype);
         uint64_t baseScaleBSize = GetSizeWithDataType(scaleBaseK * baseN_, inputParams_.scaleDtype);
         uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
@@ -231,11 +230,9 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
                     return false);
     uint64_t leftL1SizeAfterFullA = leftL1Size_ - alignedSingleCoreASize;
     uint64_t baseBSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
-    if (inputParams_.isMxPerGroup) {
+    if (HasPerGroupScale(inputParams_)) {
         uint64_t singleCoreScaleASize = GetSizeWithDataType(
-            std::min(inputParams_.mSize, baseM_) *
-                ops::CeilAlign(ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MX_GROUP_SIZE),
-                               qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE),
+            std::min(inputParams_.mSize, baseM_) * GetScaleBaseK(inputParams_, inputParams_.kSize),
             inputParams_.perTokenScaleDtype);
         uint64_t alignedSingleCoreScaleASize = ops::CeilAlign(singleCoreScaleASize, qmmv3_tiling_const::L1_ALIGN_SIZE);
         l1TilingData_.scaleFactorA_ = 1UL;
@@ -408,11 +405,11 @@ bool L1TilingDataCalculator::CalScaleFactors(uint64_t baseASize, uint64_t baseBS
     uint64_t stepK = std::min(l1TilingData_.stepKa_, l1TilingData_.stepKb_);
     uint64_t kL1 = stepK * baseK_;
 
-    // One MX scale group covers 64 K elements and stores two scale values. A/B scale buffers are double-buffered,
-    // so this is the L1 cost for extending scaleKL1 by one 64-element group.
+    // MX scale: one 64-K group stores two scale values; hif4 scale: one 64-K group stores one scale value.
+    // A/B scale buffers are double-buffered, so this is the L1 cost for extending scaleKL1 by one 64-element group.
     uint64_t scaleGroupL1Size = (GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
                                  GetSizeWithDataType(baseN_, inputParams_.scaleDtype)) *
-                                qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+                                GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     OP_TILING_CHECK(scaleGroupL1Size == 0UL || kL1 == 0UL,
                     CUBE_INNER_ERR_REPORT(
                         inputParams_.opName,
@@ -550,14 +547,14 @@ uint64_t L1TilingDataCalculator::GetDepthA1B1() const
     // Reserve a bounded scale window while searching depth. If depth later covers more K than the estimate,
     // scaleL1Size is raised accordingly before accepting that depth.
     uint64_t scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
-                           qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+                           GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     while (depth * baseABSize + scaleL1Size <= leftL1Size_) {
         depth *= INDEX;
         uint64_t kL1 = depth / qmmv3_tiling_const::DOUBLE_BUFFER_NUM * baseK_;
         if (kL1 > scaleKL1) {
             scaleKL1 = kL1;
             scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
-                          qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+                          GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
         }
     }
     return depth == 1UL ? depth : depth / INDEX;
@@ -575,11 +572,10 @@ uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
     }
 
     // Keep single-copy size at least 32KB without exceeding L1.
-    uint64_t scaleBBaseK = inputParams_.isMxPerGroup ?
-                               ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE),
-                                              qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE) :
-                               0UL;
-    uint64_t baseBSize = GetSizeWithDataType(baseN_ * (baseK_ + scaleBBaseK) * stepKbBase, inputParams_.bDtype);
+    uint64_t scaleBBaseK = HasPerGroupScale(inputParams_) ? GetScaleBaseK(inputParams_, baseK_) : 0UL;
+    uint64_t baseBSize = (GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) +
+                          GetSizeWithDataType(baseN_ * scaleBBaseK, inputParams_.scaleDtype)) *
+                         stepKbBase;
     if (baseBSize == 0UL) {
         return qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     }
@@ -631,8 +627,7 @@ uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
 
 uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) const
 {
-    uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE),
-                                         qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
+    uint64_t scaleBaseK = GetScaleBaseK(inputParams_, baseK_);
     uint64_t baseScaleBSize = GetSizeWithDataType(baseN_ * scaleBaseK, inputParams_.scaleDtype);
     if (baseScaleBSize == 0UL || l1TilingData_.stepKb_ == 0UL || l1TilingData_.depthKb_ == 0UL) {
         return 1UL;
@@ -722,8 +717,8 @@ bool L1TilingDataCalculator::ComputeL1TilingMmadS8S4LUT()
 
 uint64_t L1TilingDataCalculator::GetSingleCoreAFullLoadSize() const
 {
-    if (inputParams_.isMxPerGroup) {
-        // MX kernels consume K in 64-element groups; scale bytes are reserved separately.
+    if (HasPerGroupScale(inputParams_)) {
+        // MX/hif4 kernels consume K in 64-element groups; scale bytes are reserved separately.
         return GetSizeWithDataType(baseM_ * ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
                                    inputParams_.aDtype);
     }
@@ -736,8 +731,8 @@ uint64_t L1TilingDataCalculator::GetSingleCoreAFullLoadSize() const
 
 uint64_t L1TilingDataCalculator::GetSingleCoreBFullLoadSize() const
 {
-    if (inputParams_.isMxPerGroup) {
-        // MX kernels consume K in 64-element groups; scale bytes are reserved separately.
+    if (HasPerGroupScale(inputParams_)) {
+        // MX/hif4 kernels consume K in 64-element groups; scale bytes are reserved separately.
         return GetSizeWithDataType(baseN_ * ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
                                    inputParams_.bDtype);
     }

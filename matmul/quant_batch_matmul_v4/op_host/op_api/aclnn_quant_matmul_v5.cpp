@@ -27,6 +27,7 @@
 #include "opdev/platform.h"
 #include "aclnn_quant_matmul_v5.h"
 #include "quant_matmul_common_check.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "log/log.h"
 
 using namespace op;
@@ -65,6 +66,12 @@ static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST = {op::Da
 static const std::initializer_list<op::DataType> Y_OFFSET_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
 static constexpr const char* kOpName = "aclnnQuantMatmulV5GetWorkspaceSize";
+
+static inline bool Is960Series()
+{
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
 
 static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
 {
@@ -142,6 +149,11 @@ static inline bool IsTCG(const aclTensor* x1Scale, const aclTensor* x2Scale)
 static inline bool IsHif8Input(const aclTensor* x1, const aclTensor* x2)
 {
     return x1->GetDataType() == op::DataType::DT_HIFLOAT8 && x2->GetDataType() == op::DataType::DT_HIFLOAT8;
+}
+
+static inline bool IsHifp4(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == Ops::NN::DT_HIFLOAT4 && x2->GetDataType() == Ops::NN::DT_HIFLOAT4;
 }
 
 static inline bool IsPerblock(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
@@ -317,7 +329,7 @@ static inline bool CheckDimRange(TupleInput& inputTensors, TupleQuant& quantTens
         return false;
     }
     if (x1Scale != nullptr && op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 &&
-        op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 && !Is960Series()) {
         OP_CHECK_WRONG_DIMENSION(x2Scale, 1, return false);
     }
     OP_LOGD("QuantMatmul check dimension range success.");
@@ -1004,11 +1016,15 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput& inputTensors, TupleQuant& qu
     if (x1Scale != nullptr) {
         if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2) || isA8W4Float(x1, x2))) {
             CHECK_RET(MxScaleContiguousProcess(x1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+        } else if (IsHifp4(x1, x2)) {
+            CHECK_RET(MxScaleContiguousProcess(x1Scale, executor), ACLNN_ERR_INNER_NULLPTR);
         } else {
             CHECK_RET(TensorContiguousProcess(x1Scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
         }
     }
     if (IsMicroScaling(x1Scale, x2Scale) && (IsFp4Input(x1, x2) || IsFp8Input(x1, x2) || isA8W4Float(x1, x2))) {
+        CHECK_RET(MxScaleContiguousProcess(x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    } else if (IsHifp4(x1, x2)) {
         CHECK_RET(MxScaleContiguousProcess(x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
     } else {
         CHECK_RET(TensorContiguousProcess(x2Scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);

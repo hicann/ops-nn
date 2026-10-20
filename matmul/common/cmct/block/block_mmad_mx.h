@@ -63,6 +63,16 @@ public:
     using LayoutC = LayoutC_;
     using L1TileShape = L1TileShape_;
     using L0TileShape = L0TileShape_;
+#if CMCT_HIF4_SUPPORT
+    using ScaleAType = typename AscendC::Conditional<IsSameType<AType, hifloat4x2_t>::value, hif4_scale,
+                                                     AscendC::fp8_e8m0_t>::type;
+    using ScaleBType = typename AscendC::Conditional<IsSameType<AType, hifloat4x2_t>::value, hif4_scale,
+                                                     AscendC::fp8_e8m0_t>::type;
+#else
+    using ScaleAType = AscendC::fp8_e8m0_t;
+    using ScaleBType = AscendC::fp8_e8m0_t;
+#endif
+    using ScaleType = ScaleAType;
     using MxL0AType = typename GetL0DataType<AType, true>::Type;
     using MxL0BType = typename GetL0DataType<BType, true>::Type;
     using BiasType = BiasType_;
@@ -76,12 +86,23 @@ public:
     uint64_t kL1Iter_{0};
     uint64_t kL1_{1};
     uint64_t scaleKL1_{1};
+    uint64_t scaleKL1Num_{1}; // scale多载后，K方向上实际的scale元素个数
     uint64_t baseM_{16};
     uint64_t baseN_{16};
     uint64_t baseK_{16};
     bool isBias_{false};
-    static constexpr uint64_t MIN_STEP = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? B4_MIN_STEP : B8_MIN_STEP;
+#if CMCT_HIF4_SUPPORT
+    static constexpr bool IS_FP4 = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ||
+                                   AscendC::IsSameType<AType, hifloat4x2_t>::value;
+#else
     static constexpr bool IS_FP4 = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value;
+#endif
+    static constexpr uint64_t MIN_STEP = IS_FP4 ? B4_MIN_STEP : B8_MIN_STEP;
+#if CMCT_HIF4_SUPPORT
+    static constexpr bool IS_HIF4 = AscendC::IsSameType<AType, hifloat4x2_t>::value;
+#else
+    static constexpr bool IS_HIF4 = false;
+#endif
     static constexpr CubeFormat formatB = TagToFormat<LayoutB>::format;
     static constexpr bool transA = TagToTrans<LayoutA>::value;
     static constexpr bool transB = TagToTrans<LayoutB>::value;
@@ -94,6 +115,8 @@ public:
     constexpr static uint64_t MXFP_GROUP_SIZE = 32UL;
     constexpr static uint64_t MXFP_DIVISOR_SIZE = 64UL;
     constexpr static uint64_t MXFP_MULTI_BASE_SIZE = 2;
+    constexpr static uint64_t HIF4_SCALE_NUM_HALF_RATIO = 1UL;
+    constexpr static uint64_t HIF4_GROUP_SIZE = 64UL;
     constexpr static uint64_t SCALE_BUFFER_NUM = 2;
     constexpr static uint64_t EVEN_FACTOR = 2UL;
     // Set unitflag state: 3 = final accumulation, 2 = non-final accumulation
@@ -155,6 +178,11 @@ public:
         k_ = Get<IDX_K_IDX>(problemShape);
         kL1_ = l1Params.kL1;
         scaleKL1_ = l1Params.scaleKL1;
+        if constexpr (IS_HIF4) {
+            scaleKL1Num_ = Cmct::Gemm::CeilDiv(scaleKL1_, HIF4_GROUP_SIZE);
+        } else {
+            scaleKL1Num_ = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_GROUP_SIZE);
+        }
         baseM_ = Get<IDX_M_IDX>(l0TileShape);
         baseN_ = Get<IDX_N_IDX>(l0TileShape);
         baseK_ = Get<IDX_K_IDX>(l0TileShape);
@@ -162,13 +190,21 @@ public:
         l1BufNum_ = l1Params.l1BufNum;
         enableL0cPingPong_ = dbL0C;
         bL1OneBuffer_ = baseN_ * kL1_;
-        scaleBL1OneBuffer_ = baseN_ * Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+        if constexpr (IS_HIF4) {
+            scaleBL1OneBuffer_ = baseN_ * scaleKL1Num_;
+        } else {
+            scaleBL1OneBuffer_ = baseN_ * Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+        }
         if (isBias_) {
             biasL1OneBuffer_ = baseN_ * sizeof(BiasType);
         }
         if constexpr (DispatchPolicy::fullLoadMode == 0) {
             aL1OneBuffer_ = baseM_ * Cmct::Gemm::Align(kL1_, MXFP_DIVISOR_SIZE);
-            scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+            if constexpr (IS_HIF4) {
+                scaleAL1OneBuffer_ = baseM_ * scaleKL1Num_;
+            } else {
+                scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+            }
             for (int32_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
                 // 2 buffer: L1 space is : A0|B0|AScale0|BScale0|bias0|...|A1|B1|AScale1|BScale1|bias1|...
                 // 4 buffer: L1 space is : A0A2|B0B2|AScale0|BScale0|bias0|...|A1A3|B1B3|AScale1|BScale1|bias1|...
@@ -181,32 +217,55 @@ public:
             }
             for (int32_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
                 // l1BufferScaleAOffset_[bufferId]: byte count when B8, element count when B4
-                l1BufferScaleAOffset_[bufferId] = IS_FP4 ?
-                                                      ((l1BufferBOffset_[bufferId] +
-                                                        bL1OneBuffer_ * (l1BufNum_ >> 1)) >>
-                                                       1) :
-                                                      (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1));
-                l1BufferScaleBOffset_[bufferId] = l1BufferScaleAOffset_[bufferId] + scaleAL1OneBuffer_;
-                l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
+                if constexpr (IS_HIF4) {
+                    // hif4_scale 为 4Byte，L1 上按 ScaleAType 元素寻址；size 用元素个数，偏移换算为元素
+                    uint64_t scaleAByteOffset = (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1)) >> 1;
+                    l1BufferScaleAOffset_[bufferId] = scaleAByteOffset / sizeof(ScaleAType);
+                    l1BufferScaleBOffset_[bufferId] = l1BufferScaleAOffset_[bufferId] + scaleAL1OneBuffer_;
+                    l1BufferBiasOffset_[bufferId] = (l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_) *
+                                                    sizeof(ScaleAType);
+                } else {
+                    l1BufferScaleAOffset_[bufferId] = IS_FP4 ? ((l1BufferBOffset_[bufferId] +
+                                                                 bL1OneBuffer_ * (l1BufNum_ >> 1)) >>
+                                                                1) :
+                                                               (l1BufferBOffset_[bufferId] +
+                                                                bL1OneBuffer_ * (l1BufNum_ >> 1));
+                    l1BufferScaleBOffset_[bufferId] = l1BufferScaleAOffset_[bufferId] + scaleAL1OneBuffer_;
+                    l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
+                }
             }
         } else {
             uint64_t mAlign = Cmct::Gemm::Align(baseM_, transA ? C0_SIZE : BLOCK_CUBE);
             uint64_t kAlign = Cmct::Gemm::Align(k_, MXFP_DIVISOR_SIZE);
             aL1OneBuffer_ = mAlign * kAlign;
-            scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+            if constexpr (IS_HIF4) {
+                scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(k_, HIF4_GROUP_SIZE);
+            } else {
+                scaleAL1OneBuffer_ = baseM_ * Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
+            }
             // 2 buffer: L1 space is : B0|BScale0|bias0|A|AScale|...|B1|BScale1|bias1|
             // 4 buffer: L1 space is : B0B2|BScale0|bias0|A|AScale|...|B1B3|BScale1|bias1|...
             // l1BufferAOffset_[0]: byte count when B8, element count when B4
             // l1BufferScaleAOffset_[0]: byte count when B8, element count when B4
-            l1BufferAOffset_[0] = IS_FP4 ? (bL1OneBuffer_ * (l1BufNum_ >> 1) +
-                                            ((scaleBL1OneBuffer_ + biasL1OneBuffer_) << 1)) :
-                                           (bL1OneBuffer_ * (l1BufNum_ >> 1) + scaleBL1OneBuffer_ + biasL1OneBuffer_);
-            l1BufferScaleAOffset_[0] = IS_FP4 ? ((l1BufferAOffset_[0] + aL1OneBuffer_) >> 1) :
-                                                (l1BufferAOffset_[0] + aL1OneBuffer_);
+            if constexpr (IS_HIF4) {
+                // hif4_scale 为 4Byte，scale 偏移按元素计算，bias 偏移按 Byte 计算
+                l1BufferAOffset_[0] = bL1OneBuffer_ * (l1BufNum_ >> 1) +
+                                      ((scaleBL1OneBuffer_ * sizeof(ScaleBType) + biasL1OneBuffer_) << 1);
+                l1BufferScaleAOffset_[0] = ((l1BufferAOffset_[0] + aL1OneBuffer_) >> 1) / sizeof(ScaleAType);
+            } else {
+                l1BufferAOffset_[0] = IS_FP4 ?
+                                          (bL1OneBuffer_ * (l1BufNum_ >> 1) +
+                                           ((scaleBL1OneBuffer_ + biasL1OneBuffer_) << 1)) :
+                                          (bL1OneBuffer_ * (l1BufNum_ >> 1) + scaleBL1OneBuffer_ + biasL1OneBuffer_);
+                l1BufferScaleAOffset_[0] = IS_FP4 ? ((l1BufferAOffset_[0] + aL1OneBuffer_) >> 1) :
+                                                    (l1BufferAOffset_[0] + aL1OneBuffer_);
+            }
             // b1Offset: byte count when B8, element count when B4
-            uint64_t b1Offset = l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1) ?
-                                    l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_ :
-                                    (AscendC::TOTAL_L1_SIZE >> 1);
+            uint64_t scaleAEndOffset = IS_HIF4 ?
+                                           ((l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_) * sizeof(ScaleAType)) :
+                                           (l1BufferScaleAOffset_[0] + scaleAL1OneBuffer_);
+            uint64_t b1Offset = scaleAEndOffset >= (AscendC::TOTAL_L1_SIZE >> 1) ? scaleAEndOffset :
+                                                                                   (AscendC::TOTAL_L1_SIZE >> 1);
             if constexpr (IS_FP4) {
                 b1Offset <<= 1;
             }
@@ -215,12 +274,19 @@ public:
             }
             for (int32_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
                 // l1BufferScaleBOffset_[bufferId]: byte count when B8, element count when B4
-                l1BufferScaleBOffset_[bufferId] = IS_FP4 ?
-                                                      ((l1BufferBOffset_[bufferId] +
-                                                        bL1OneBuffer_ * (l1BufNum_ >> 1)) >>
-                                                       1) :
-                                                      (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1));
-                l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
+                if constexpr (IS_HIF4) {
+                    uint64_t scaleBByteOffset = (l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1)) >> 1;
+                    l1BufferScaleBOffset_[bufferId] = scaleBByteOffset / sizeof(ScaleBType);
+                    l1BufferBiasOffset_[bufferId] = (l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_) *
+                                                    sizeof(ScaleBType);
+                } else {
+                    l1BufferScaleBOffset_[bufferId] = IS_FP4 ? ((l1BufferBOffset_[bufferId] +
+                                                                 bL1OneBuffer_ * (l1BufNum_ >> 1)) >>
+                                                                1) :
+                                                               (l1BufferBOffset_[bufferId] +
+                                                                bL1OneBuffer_ * (l1BufNum_ >> 1));
+                    l1BufferBiasOffset_[bufferId] = l1BufferScaleBOffset_[bufferId] + scaleBL1OneBuffer_;
+                }
             }
         }
         kL1Iter_ = CeilDiv(k_, kL1_);
@@ -393,8 +459,8 @@ public:
         AscendC::DataCopyPad(cl1Local, biasGlobal, biasParam, padParams);
     }
 
-    __aicore__ inline void CopyInScaleA(const GlobalTensor<fp8_e8m0_t>& aScaleGlobal,
-                                        const LocalTensor<fp8_e8m0_t>& aScaleL1Local, uint64_t curML1, uint64_t curKL1,
+    __aicore__ inline void CopyInScaleA(const GlobalTensor<ScaleAType>& aScaleGlobal,
+                                        const LocalTensor<ScaleAType>& aScaleL1Local, uint64_t curML1, uint64_t curKL1,
                                         uint64_t kL1Offset)
     {
         if (DispatchPolicy::fullLoadMode != 0 && kL1Offset != 0) {
@@ -416,30 +482,48 @@ public:
         if constexpr (!transA) {
             AscendC::Dn2NzParams dn2nzParams;
             dn2nzParams.dnNum = 1;
-            dn2nzParams.dValue = nDim;
-            dn2nzParams.nValue = dDim;
-            dn2nzParams.srcDnMatrixStride = 0;
-            dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE);
-            dn2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, MXFP_DIVISOR_SIZE);
+            if constexpr (IS_HIF4) {
+                offsetScaleAGM = offsetScaleAGM << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.dValue = nDim;
+                dn2nzParams.nValue = dDim << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.srcDnMatrixStride = 0;
+                dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, HIF4_GROUP_SIZE) << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, HIF4_GROUP_SIZE) << HIF4_SCALE_NUM_HALF_RATIO;
+            } else {
+                dn2nzParams.dValue = nDim;
+                dn2nzParams.nValue = dDim;
+                dn2nzParams.srcDnMatrixStride = 0;
+                dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE);
+                dn2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, MXFP_DIVISOR_SIZE);
+            }
             dn2nzParams.dstNzNStride = 1;
             dn2nzParams.dstNzMatrixStride = 0;
             AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams);
         } else {
             AscendC::Nd2NzParams nd2nzParams;
             nd2nzParams.ndNum = 1;
-            nd2nzParams.nValue = nDim;
-            nd2nzParams.dValue = dDim;
-            nd2nzParams.srcNdMatrixStride = 0;
-            nd2nzParams.srcDValue = m_;
-            nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, MXFP_DIVISOR_SIZE);
+            if constexpr (IS_HIF4) {
+                offsetScaleAGM = offsetScaleAGM << HIF4_SCALE_NUM_HALF_RATIO;
+                nd2nzParams.nValue = nDim << HIF4_SCALE_NUM_HALF_RATIO;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 0;
+                nd2nzParams.srcDValue = m_;
+                nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, MXFP_DIVISOR_SIZE) << HIF4_SCALE_NUM_HALF_RATIO;
+            } else {
+                nd2nzParams.nValue = nDim;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 0;
+                nd2nzParams.srcDValue = m_;
+                nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(curKL1, MXFP_DIVISOR_SIZE);
+            }
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = 0;
             AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams);
         }
     }
 
-    __aicore__ inline void CopyInScaleB(const GlobalTensor<fp8_e8m0_t>& bScaleGlobal,
-                                        const LocalTensor<fp8_e8m0_t>& bScaleL1Local, uint64_t curNL1,
+    __aicore__ inline void CopyInScaleB(const GlobalTensor<ScaleBType>& bScaleGlobal,
+                                        const LocalTensor<ScaleBType>& bScaleL1Local, uint64_t curNL1,
                                         uint64_t kL1Offset)
     {
         uint64_t curScaleKL1 = scaleKL1_;
@@ -458,22 +542,40 @@ public:
         if constexpr (transB) {
             AscendC::Dn2NzParams dn2nzParams;
             dn2nzParams.dnNum = 1;
-            dn2nzParams.dValue = nDim;
-            dn2nzParams.nValue = dDim;
-            dn2nzParams.srcDnMatrixStride = 0;
-            dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE);
-            dn2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
+            if constexpr (IS_HIF4) {
+                offsetScaleBGM = offsetScaleBGM << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.dValue = nDim;
+                dn2nzParams.nValue = dDim << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.srcDnMatrixStride = 0;
+                dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, HIF4_GROUP_SIZE) << HIF4_SCALE_NUM_HALF_RATIO;
+                dn2nzParams.dstNzC0Stride = scaleKL1Num_ << HIF4_SCALE_NUM_HALF_RATIO;
+            } else {
+                dn2nzParams.dValue = nDim;
+                dn2nzParams.nValue = dDim;
+                dn2nzParams.srcDnMatrixStride = 0;
+                dn2nzParams.srcDValue = Cmct::Gemm::CeilDiv(k_, MXFP_DIVISOR_SIZE);
+                dn2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
+            }
             dn2nzParams.dstNzNStride = 1;
             dn2nzParams.dstNzMatrixStride = 0;
             AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams);
         } else {
             AscendC::Nd2NzParams nd2nzParams;
             nd2nzParams.ndNum = 1;
-            nd2nzParams.nValue = nDim;
-            nd2nzParams.dValue = dDim;
-            nd2nzParams.srcNdMatrixStride = 0;
-            nd2nzParams.srcDValue = n_;
-            nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
+            if constexpr (IS_HIF4) {
+                offsetScaleBGM = offsetScaleBGM << HIF4_SCALE_NUM_HALF_RATIO;
+                nd2nzParams.nValue = nDim << HIF4_SCALE_NUM_HALF_RATIO;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 0;
+                nd2nzParams.srcDValue = n_;
+                nd2nzParams.dstNzC0Stride = scaleKL1Num_ << HIF4_SCALE_NUM_HALF_RATIO;
+            } else {
+                nd2nzParams.nValue = nDim;
+                nd2nzParams.dValue = dDim;
+                nd2nzParams.srcNdMatrixStride = 0;
+                nd2nzParams.srcDValue = n_;
+                nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
+            }
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = 0;
             AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams);
@@ -496,7 +598,7 @@ public:
 
     __aicore__ inline void CopyInL0A(const AscendC::LocalTensor<MxL0AType>& l0aLocal,
                                      const AscendC::LocalTensor<AType>& al1Local,
-                                     const AscendC::LocalTensor<fp8_e8m0_t>& scaleAl1Local, uint64_t iter,
+                                     const AscendC::LocalTensor<ScaleAType>& scaleAl1Local, uint64_t iter,
                                      TileL1L0Param& tileL1L0Param, uint64_t curScaleKL1)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -526,11 +628,24 @@ public:
             loadDataParams.ifTranspose = true;
         }
         loadData2DMxParams.xStartPosition = 0;
-        loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, MXFP_DIVISOR_SIZE);
         loadData2DMxParams.xStep = m1;
-        loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE);
-        loadData2DMxParams.srcStride = Cmct::Gemm::CeilDiv(curScaleKL1, MXFP_DIVISOR_SIZE);
-        loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        if constexpr (IS_HIF4) {
+            // ystartPosition, ystep 的单位为32B
+            // hifp4 scale的相邻元素k方向的offset为16*4B = 64B(16是m方向分型大小), ystep 的单位为32B,
+            // 所以scale的 y方向offset 数值是 元素个数的2倍
+            loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, HIF4_GROUP_SIZE)
+                                                << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE)
+                                       << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.srcStride = Cmct::Gemm::CeilDiv(curScaleKL1, HIF4_GROUP_SIZE)
+                                           << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        } else {
+            loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.srcStride = Cmct::Gemm::CeilDiv(curScaleKL1, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        }
         AscendC::LoadData(l0aLocal, al1Local, scaleAl1Local, loadDataParams, loadData2DMxParams);
         if constexpr (transA) {
             if (((m1 & 1) != 0 && !(IS_FP4)) ||
@@ -565,7 +680,7 @@ public:
 
     __aicore__ inline void CopyInL0B(const AscendC::LocalTensor<MxL0BType>& l0bLocal,
                                      const AscendC::LocalTensor<BType>& bl1Local,
-                                     const AscendC::LocalTensor<fp8_e8m0_t>& scaleBl1Local, uint64_t iter,
+                                     const AscendC::LocalTensor<ScaleBType>& scaleBl1Local, uint64_t iter,
                                      TileL1L0Param& tileL1L0Param)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -595,11 +710,23 @@ public:
             loadDataParams.ifTranspose = true;
         }
         loadData2DMxParams.xStartPosition = 0;
-        loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, MXFP_DIVISOR_SIZE);
         loadData2DMxParams.xStep = n1;
-        loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE);
-        loadData2DMxParams.srcStride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
-        loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        if constexpr (IS_HIF4) {
+            // ystartPosition, ystep 的单位为32B
+            // hifp4 scale的相邻元素k方向的offset为16*4B = 64B(16是m方向分型大小), ystep 的单位为32B,
+            // 所以scale的 y方向offset 数值是 元素个数的2倍
+            loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, HIF4_GROUP_SIZE)
+                                                << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE)
+                                       << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.srcStride = scaleKL1Num_ << HIF4_SCALE_NUM_HALF_RATIO;
+            loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        } else {
+            loadData2DMxParams.yStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.yStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.srcStride = Cmct::Gemm::CeilDiv(scaleKL1_, MXFP_DIVISOR_SIZE);
+            loadData2DMxParams.dstStride = loadData2DMxParams.yStep;
+        }
         AscendC::LoadData(l0bLocal, bl1Local, scaleBl1Local, loadDataParams, loadData2DMxParams);
         if constexpr (!transB) {
             if (((n1 & 1) != 0 && !(IS_FP4)) ||
@@ -685,8 +812,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyScalesInL1(AscendC::GlobalTensor<fp8_e8m0_t>& scaleAGlobal,
-                                          AscendC::GlobalTensor<fp8_e8m0_t>& scaleBGlobal, TileL1L0Param& tileL1L0Param,
+    __aicore__ inline void CopyScalesInL1(AscendC::GlobalTensor<ScaleAType>& scaleAGlobal,
+                                          AscendC::GlobalTensor<ScaleBType>& scaleBGlobal, TileL1L0Param& tileL1L0Param,
                                           uint64_t l1Iter, uint64_t scaleL1BufId)
     {
         uint64_t kL1Offset = l1Iter * kL1_;
@@ -757,14 +884,24 @@ public:
                 l0Offset = (HALF_L0_SIZE << 1) * (l0PingPong_ & 0x1);
             }
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0PingPong_ & 0x1);
-            uint64_t offsetScaleL1 = BLOCK_CUBE * (l1Iter % (scaleKL1_ / kL1_)) * (kL1_ / MXFP_GROUP_SIZE);
+            uint64_t offsetScaleL1 = 0;
+            if constexpr (IS_HIF4) {
+                offsetScaleL1 = BLOCK_CUBE * (l1Iter % (scaleKL1_ / kL1_)) * (kL1_ / HIF4_GROUP_SIZE);
+            } else {
+                offsetScaleL1 = BLOCK_CUBE * (l1Iter % (scaleKL1_ / kL1_)) * (kL1_ / MXFP_GROUP_SIZE);
+            }
             if constexpr (DispatchPolicy::fullLoadMode == 0) {
                 CopyInL0A(l0aLocal_[l0Offset], aL1Local_[offsetAl1],
                           scaleAL1Local_[l1BufferScaleAOffset_[scaleL1BufId] + offsetScaleL1], iter1, tileL1L0Param,
                           scaleKL1_);
             } else {
                 offsetAl1 = l1BufferAOffset_[0] + l1Iter * kL1_ * tileL1L0Param.curAlignM;
-                uint64_t offsetScaleAL1 = BLOCK_CUBE * l1Iter * (kL1_ / MXFP_GROUP_SIZE);
+                uint64_t offsetScaleAL1 = 0;
+                if constexpr (IS_HIF4) {
+                    offsetScaleAL1 = BLOCK_CUBE * l1Iter * (kL1_ / HIF4_GROUP_SIZE);
+                } else {
+                    offsetScaleAL1 = BLOCK_CUBE * l1Iter * (kL1_ / MXFP_GROUP_SIZE);
+                }
                 CopyInL0A(l0aLocal_[l0Offset], aL1Local_[offsetAl1],
                           scaleAL1Local_[l1BufferScaleAOffset_[0] + offsetScaleAL1], iter1, tileL1L0Param, k_);
             }
@@ -786,8 +923,8 @@ public:
     }
 
     __aicore__ inline void operator()(AscendC::GlobalTensor<AType> aGlobal, AscendC::GlobalTensor<BType> bGlobal,
-                                      AscendC::GlobalTensor<fp8_e8m0_t> scaleAGlobal,
-                                      AscendC::GlobalTensor<fp8_e8m0_t> scaleBGlobal,
+                                      AscendC::GlobalTensor<ScaleAType> scaleAGlobal,
+                                      AscendC::GlobalTensor<ScaleBType> scaleBGlobal,
                                       AscendC::GlobalTensor<BiasType> biasGlobal, AscendC::GlobalTensor<CType> cGlobal,
                                       BlockShape singleShape)
     {
@@ -873,8 +1010,8 @@ private:
     AscendC::LocalTensor<AType> aL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
     AscendC::LocalTensor<BType> bL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
     AscendC::LocalTensor<BiasType> biasL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE / sizeof(BiasType)};
-    AscendC::LocalTensor<fp8_e8m0_t> scaleAL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
-    AscendC::LocalTensor<fp8_e8m0_t> scaleBL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
+    AscendC::LocalTensor<ScaleAType> scaleAL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
+    AscendC::LocalTensor<ScaleBType> scaleBL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
 };
 } // namespace Block
 } // namespace Gemm

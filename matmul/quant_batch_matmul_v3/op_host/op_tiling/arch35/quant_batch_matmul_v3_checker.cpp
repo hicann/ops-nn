@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
@@ -37,7 +38,7 @@ constexpr int64_t SHAPE_PRODUCT_UPPER_BOUND = static_cast<int64_t>(INT64_MAX);
 inline constexpr bool IsLowFloatInputType(ge::DataType dtype)
 {
     return dtype == ge::DT_HIFLOAT8 || dtype == ge::DT_FLOAT8_E4M3FN || dtype == ge::DT_FLOAT8_E5M2 ||
-           dtype == ge::DT_FLOAT4_E2M1;
+           dtype == ge::DT_FLOAT4_E2M1 || dtype == Ops::NN::DT_HIFLOAT4;
 }
 
 inline constexpr bool IsFp8E4M3Pair(ge::DataType aDtype, ge::DataType bDtype)
@@ -121,6 +122,9 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
     if (!CheckABDtypesSame()) {
         return false;
     }
+    if (!CheckExtraABDtypePairs()) {
+        return false;
+    }
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) == nullptr ||
         context_->GetOptionalInputShape(GetPertokenIdx()) == nullptr) {
         OP_TILING_CHECK(
@@ -139,8 +143,8 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
 
 bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
 {
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
-    bool isFp8 = inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN;
+    const bool isFp4 = IsFp4Input();
+    const bool isFp8 = inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN;
     OP_TILING_CHECK(
         inputParams_.aDtype != ge::DT_INT4 && inputParams_.aDtype != ge::DT_INT8 &&
             inputParams_.perTokenScaleDtype != inputParams_.scaleDtype,
@@ -164,7 +168,7 @@ bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
                                               "when the dtype of input is FLOAT8 and pertokenScale exists, the dtype "
                                               "of scale must be FLOAT or FLOAT8_E8M0"),
         return false);
-    OP_TILING_CHECK(!(isFp4 || isFp8) && inputParams_.perTokenScaleDtype != ge::DT_FLOAT,
+    OP_TILING_CHECK(!(isFp4 || isFp8 || IsHif4Input()) && inputParams_.perTokenScaleDtype != ge::DT_FLOAT,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         inputParams_.opName, "pertokenScale",
                         ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
@@ -188,12 +192,15 @@ bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
                                               "when the dtype of input is INT4/INT8, the dtype of output is BFLOAT16, "
                                               "and pertokenScale exists, the dtype of scale must be FLOAT/BFLOAT16"),
         return false);
+    if (!CheckHif4ScaleDtypeWithPertoken()) {
+        return false;
+    }
     return true;
 }
 
 bool QuantBatchMatmulV3Checker::CheckScalesDtype() const
 {
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
+    const bool isFp4 = IsFp4Input();
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
         context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(!CheckScaleDtypeWithPertoken(),
@@ -306,9 +313,9 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
                                               ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
                                               "when the dtype of input is INT4, the dtype of output can not be INT32"),
         return false);
-    bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
-    bool isFp8 = inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
-                 inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E8M0;
+    const bool isFp4 = IsFp4Input();
+    const bool isFp8 = inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
+                       inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E8M0;
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
         context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(
@@ -334,32 +341,33 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
                 "when pertokenScale exists, the dtype of output must be FLOAT/FLOAT16/BFLOAT16"),
             return false);
     }
+    if (!CheckExtraOutputDtype()) {
+        return false;
+    }
     return true;
 }
 
 bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
 {
-    static const std::vector<ge::DataType> legalInputDtypes = {
-        ge::DT_INT4, ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1};
-    static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT,
-                                                                ge::DT_INT32};
+    const std::vector<ge::DataType>& legalInputDtypes = GetLegalInputDtypes();
+    const std::vector<ge::DataType>& legalOutputDtypes = GetLegalOutputDtypes();
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.aDtype) == legalInputDtypes.end(),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             inputParams_.opName, "x1", ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            "the dtype of x1 must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1"),
+            FormatString("the dtype of x1 must be %s", GetLegalInputDtypesDesc()).c_str()),
         return false);
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.bDtype) == legalInputDtypes.end(),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             inputParams_.opName, "x2", ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-            "the dtype of x2 must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1"),
+            FormatString("the dtype of x2 must be %s", GetLegalInputDtypesDesc()).c_str()),
         return false);
     OP_TILING_CHECK(
         std::find(legalOutputDtypes.begin(), legalOutputDtypes.end(), inputParams_.cDtype) == legalOutputDtypes.end(),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(inputParams_.opName, "output",
-                                              ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
-                                              "the dtype of output must be INT8/FLOAT16/BFLOAT16/FLOAT/INT32"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+            FormatString("the dtype of output must be %s", GetLegalOutputDtypesDesc()).c_str()),
         return false);
     OP_TILING_CHECK(inputParams_.cDtype == ge::DT_INT32 &&
                         (inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8),
@@ -953,7 +961,7 @@ bool QuantBatchMatmulV3Checker::CheckShapeInRangeForOptionalInputs(const gert::S
     if (pertokenShape != nullptr) {
         auto pertokenDimNum = pertokenShape->GetStorageShape().GetDimNum();
         OP_TILING_CHECK(
-            !inputParams_.isPerBlock && !inputParams_.isMxPerGroup &&
+            !inputParams_.isPerBlock && !HasPerGroupScale(inputParams_) &&
                 (pertokenDimNum != 1 || scaleShape.GetDimNum() != 1),
             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
                 inputParams_.opName, "pertokenScale, scale",
@@ -1034,7 +1042,8 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
         IsLowFloatInputType(inputParams_.aDtype) && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             inputParams_.opName, "offset", "not null",
-            "when the dtype of input is HIFLOAT8/FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1, offset must be null"),
+            "when the dtype of input is HIFLOAT8/FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1/HIFLOAT4, offset must be "
+            "null"),
         return false);
     return true;
 }
@@ -1109,6 +1118,9 @@ bool QuantBatchMatmulV3Checker::CheckDimValue(const gert::Shape& scaleShape, con
     if (biasShape != nullptr && !BiasShapeCheck(biasShape->GetStorageShape())) {
         return false;
     }
+    if (biasShape != nullptr && !CheckExtraBiasConstraint(scaleShape, pertokenShape)) {
+        return false;
+    }
     if (offsetShape != nullptr) {
         OP_TILING_CHECK(
             inputParams_.cDtype == ge::DT_INT8 &&
@@ -1170,9 +1182,54 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape*>& mand
          !CheckInputValidInMxPerGroupMode(scaleShape, pertokenShape, x1Shape, x2Shape, dimValueOfMKN))) {
         return false;
     }
+    if (!CheckExtraShapeValid(scaleShape, pertokenShape, dimValueOfMKN)) {
+        return false;
+    }
     if (!ExtraInputCheck()) {
         return false;
     }
+    return true;
+}
+
+const std::vector<ge::DataType>& QuantBatchMatmulV3Checker::GetLegalInputDtypes() const
+{
+    static const std::vector<ge::DataType> legalInputDtypes = {
+        ge::DT_INT4, ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1};
+    return legalInputDtypes;
+}
+
+const std::vector<ge::DataType>& QuantBatchMatmulV3Checker::GetLegalOutputDtypes() const
+{
+    static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT,
+                                                                ge::DT_INT32};
+    return legalOutputDtypes;
+}
+
+const char* QuantBatchMatmulV3Checker::GetLegalInputDtypesDesc() const
+{
+    return "INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1";
+}
+
+const char* QuantBatchMatmulV3Checker::GetLegalOutputDtypesDesc() const { return "INT8/FLOAT16/BFLOAT16/FLOAT/INT32"; }
+
+bool QuantBatchMatmulV3Checker::IsFp4Input() const { return inputParams_.aDtype == ge::DT_FLOAT4_E2M1; }
+
+bool QuantBatchMatmulV3Checker::IsHif4Input() const { return false; }
+
+bool QuantBatchMatmulV3Checker::CheckExtraABDtypePairs() const { return true; }
+
+bool QuantBatchMatmulV3Checker::CheckHif4ScaleDtypeWithPertoken() const { return true; }
+
+bool QuantBatchMatmulV3Checker::CheckExtraOutputDtype() const { return true; }
+
+bool QuantBatchMatmulV3Checker::CheckExtraBiasConstraint(const gert::Shape&, const gert::StorageShape*) const
+{
+    return true;
+}
+
+bool QuantBatchMatmulV3Checker::CheckExtraShapeValid(const gert::Shape&, const gert::StorageShape*,
+                                                     const std::vector<int64_t>&) const
+{
     return true;
 }
 } // namespace optiling
