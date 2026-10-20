@@ -100,8 +100,6 @@ protected:
 
     void InitializationVars();
     void DoBufferCalculate();
-    bool IsMeetTargetCoreNum();
-    bool IsMeetUBSize();
     bool TrySplitNC();
     void SplitUnalignDHW();
     void SearchBestTiling();
@@ -110,9 +108,14 @@ protected:
     void SplitAlignDHW();
     void DynamicAdjustmentAlignDWH();
     void DoBlockTiling();
+    void AdjustInnerSplitForMultiCore();
     ge::graphStatus SetTilingData();
 
 public:
+    // 约定: IsMeetTargetCoreNum / IsMeetUBSize 需公开, 供 pool_grad_tiling_split_helper 模板调用
+    bool IsMeetTargetCoreNum();
+    bool IsMeetUBSize();
+
     int64_t gradInputN_;
     int64_t gradInputC_;
     int64_t gradInputH_;

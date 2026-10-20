@@ -12,7 +12,7 @@
  * \file adaptive_avg_pool3d_grad.cpp
  * \brief
  */
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920)
 #include "arch35/adaptive_avg_pool3d_grad_simt.h"
 #include "arch35/adaptive_avg_pool3d_grad_ncdhw_big_kernel.h"
 #include "arch35/adaptive_avg_pool3d_grad_struct.h"
@@ -25,7 +25,7 @@
 #include "adaptive_avg_pool3d_grad_nc_large_float.h"
 #endif
 using namespace AscendC;
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || __CCE_AICORE__ == 920)
 using namespace AdaptiveAvgPool3dGradOp;
 
 // 按索引位宽实例化并运行 SIMT 模板。

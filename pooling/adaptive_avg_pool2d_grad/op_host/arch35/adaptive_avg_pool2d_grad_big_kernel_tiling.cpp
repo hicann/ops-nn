@@ -15,6 +15,7 @@
  */
 
 #include "adaptive_avg_pool2d_grad_big_kernel_tiling.h"
+#include "../../../pool_grad_common/op_host/arch35/pool_grad_tiling_split_helper.h"
 
 namespace optiling {
 using namespace AdaptiveAvgPool2dGradOp;
@@ -85,11 +86,10 @@ bool AdaptiveAvgPool2dGradTilingBigKernel::IsCapable()
 
 bool AdaptiveAvgPool2dGradTilingBigKernel::IsMeetTargetCoreNum()
 {
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
-    int64_t tmpHOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
-    int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData_.inputNCSize, splitData_.highAxisInner);
-
-    return tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData_.coreUsedForBestPerformance;
+    // 核数判定只涉及 hX/wX 与各轴 inner, strides 不参与, 传 1
+    const PoolGradTiling::PoolGradNchwDims dims{gradOutputH_, gradOutputW_, 1, 1};
+    return PoolGradTiling::IsMeetTargetCoreNumNchw(splitData_, dims, baseData_.inputNCSize,
+                                                   baseData_.coreUsedForBestPerformance);
 }
 
 bool AdaptiveAvgPool2dGradTilingBigKernel::IsMeetUBSize()
@@ -109,26 +109,11 @@ bool AdaptiveAvgPool2dGradTilingBigKernel::TrySplitNC()
 
     splitData_.highAxisInner = 1;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = baseData_.inputNCSize;
-        int64_t bestSplit = 1;
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData_.highAxisInner = mid;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData_.highAxisInner = bestSplit;
+        splitData_.highAxisInner = PoolGradTiling::SearchMaxSplit(
+            *this, splitData_, &AdaptiveAvgPool2dGradSplitInfo::highAxisInner, 1, baseData_.inputNCSize);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void AdaptiveAvgPool2dGradTilingBigKernel::DynamicAdjustmentAlignDWH()
@@ -212,27 +197,35 @@ void AdaptiveAvgPool2dGradTilingBigKernel::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
-
-    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
-    int64_t tempWOutputTail = gradOutputW_ % splitData_.wOutputInner;
-    splitData_.wOutputTail = tempWOutputTail == 0 ? splitData_.wOutputInner : tempWOutputTail;
-
-    splitData_.hOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
-    int64_t tempHOutputTail = gradOutputH_ % splitData_.hOutputInner;
-    splitData_.hOutputTail = tempHOutputTail == 0 ? splitData_.hOutputInner : tempHOutputTail;
-
-    splitData_.highAxisOuter = Ops::Base::CeilDiv(baseData_.inputNCSize, splitData_.highAxisInner);
-    int64_t tempHighAxisTail = baseData_.inputNCSize % splitData_.highAxisInner;
-    splitData_.highAxisTail = tempHighAxisTail == 0 ? splitData_.highAxisInner : tempHighAxisTail;
 }
 
 void AdaptiveAvgPool2dGradTilingBigKernel::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
-    splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
-    splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
-                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    PoolGradTiling::CalcAxisOuterTail(gradOutputW_, splitData_.wOutputInner, splitData_.wOutputOuter,
+                                      splitData_.wOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(gradOutputH_, splitData_.hOutputInner, splitData_.hOutputOuter,
+                                      splitData_.hOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(baseData_.inputNCSize, splitData_.highAxisInner, splitData_.highAxisOuter,
+                                      splitData_.highAxisTail);
+    PoolGradTiling::DoBlockTilingNchw(splitData_, baseData_.totalCoreNum);
+}
+
+void AdaptiveAvgPool2dGradTilingBigKernel::AdjustInnerSplitForMultiCore()
+{
+    auto recalcBlock = [this]() { DoBlockTiling(); };
+    auto getNormalCore = [this]() { return splitData_.normalCoreProcessNum; };
+
+    DoBlockTiling();
+    if (splitData_.usedCoreNum >= baseData_.totalCoreNum) {
+        return;
+    }
+
+    PoolGradTiling::PoolGradAxisSplit axes[] = {
+        {&splitData_.highAxisInner, 1}, {&splitData_.hOutputInner, 1}, {&splitData_.wOutputInner, 1}};
+    PoolGradTiling::AdjustInnerSplitForMultiCore(
+        axes, sizeof(axes) / sizeof(axes[0]), recalcBlock, getNormalCore, [this]() { return splitData_.usedCoreNum; },
+        [this]() { return baseData_.totalCoreNum; });
+    DoBufferCalculate();
 }
 
 ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::SetTilingData()
@@ -266,6 +259,7 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::SetTilingData()
 ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::DoOpTiling()
 {
     DoUBTiling();
+    AdjustInnerSplitForMultiCore();
     DoBlockTiling();
     return SetTilingData();
 }

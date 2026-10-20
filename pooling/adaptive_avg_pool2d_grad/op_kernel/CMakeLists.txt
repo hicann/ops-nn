@@ -9,7 +9,7 @@
  # ----------------------------------------------------------------------------
  add_kernel_sources(
  	     KERNEL_SRC arch35/adaptive_avg_pool2d_grad.cpp
- 	     COMPUTE_UNITS ascend950 ascend350
+ 	     COMPUTE_UNITS ascend950 ascend350 ascend960dt
  	     SIMPLIFIED_KEY 0
  	     AUTO_SYNC false
  	)

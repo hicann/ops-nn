@@ -167,6 +167,52 @@ void AdaptiveAvgPool3dGradTilingBigKernel::SearchBestTiling()
     return;
 }
 
+void AdaptiveAvgPool3dGradTilingBigKernel::SearchOuterSingle(int64_t& inner, int64_t step)
+{
+    int64_t lastNormal = splitData.normalCoreProcessNum;
+    while (inner > step) {
+        inner -= step;
+        DoBlockTiling();
+        int64_t newNormal = splitData.normalCoreProcessNum;
+        if (newNormal > lastNormal) {
+            inner += step;
+            DoBlockTiling();
+            break;
+        }
+        lastNormal = newNormal;
+    }
+}
+
+void AdaptiveAvgPool3dGradTilingBigKernel::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData.highAxisInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.dOutputInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.hOutputInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.wOutputInner, 1);
+    DoBufferCalculate();
+}
+
 ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::SetTilingData()
 {
     AdaptiveAvgPool3dGradOp::AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35* tilingData = context_->GetTilingData<
@@ -183,6 +229,7 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::SetTilingData()
 ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::DoOpTiling()
 {
     DoUBTiling();
+    AdjustInnerSplitForMultiCore();
     DoBlockTiling();
     return SetTilingData();
 }

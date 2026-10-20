@@ -40,6 +40,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "adaptive_avg_pool2d_apt");
         this->AICore().AddConfig("ascend950", aicore_config_950);
+        this->AICore().AddConfig("ascend960dt", aicore_config_950);
         this->AICore().AddConfig("ascend350", aicore_config_950);
     }
 };

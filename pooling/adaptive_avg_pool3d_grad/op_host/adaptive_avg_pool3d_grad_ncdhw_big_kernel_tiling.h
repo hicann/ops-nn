@@ -52,6 +52,8 @@ protected:
     void DynamicAdjustmentDWH();
     void SplitAlignDHW();
     void DynamicAdjustmentAlignDWH();
+    void SearchOuterSingle(int64_t& inner, int64_t step);
+    void AdjustInnerSplitForMultiCore();
     ge::graphStatus SetTilingData();
 };
 

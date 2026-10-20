@@ -165,6 +165,10 @@ protected:
     {
         SearchBestTiling();
         DoBufferCalculate();
+    }
+
+    void DoBlockTiling()
+    {
         PoolGradTiling::CalcAxisOuterTail(gradOutputW, splitData.wOutputInner, splitData.wOutputOuter,
                                           splitData.wOutputTail);
         PoolGradTiling::CalcAxisOuterTail(gradOutputH, splitData.hOutputInner, splitData.hOutputOuter,
@@ -173,10 +177,7 @@ protected:
                                           splitData.dOutputTail);
         PoolGradTiling::CalcAxisOuterTail(baseData.inputNCSize, splitData.highAxisInner, splitData.highAxisOuter,
                                           splitData.highAxisTail);
-    }
 
-    void DoBlockTiling()
-    {
         splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
                                       splitData.dOutputOuter;
         splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
