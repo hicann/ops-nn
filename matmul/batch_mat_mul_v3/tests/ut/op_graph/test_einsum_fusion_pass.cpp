@@ -2056,3 +2056,269 @@ TEST_F(EinsumPassTest, dtypeMismatchDynamicFuzzFail)
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Einsum"), 1);
 }
+
+// === Coverage: dispatch handler for "abc,cd->abd" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcCd2AbdSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abccd2abd", "abc,cd->abd", 2, {{2, 3, -1}, {4, 5}},
+                                         {{{2, 2}, {3, 3}, {3, 6}}, {{4, 4}, {5, 5}}}, {2, 3, 5}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 5}));
+}
+
+// === Coverage: dispatch handler for "abc,dc->abd" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcDc2AbdSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdc2abd", "abc,dc->abd", 2, {{2, 3, -1}, {5, 4}},
+                                         {{{2, 2}, {3, 3}, {3, 6}}, {{5, 5}, {4, 4}}}, {2, 3, 5}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 5}));
+}
+
+// === Coverage: dispatch handler for "abcd,abde->abce" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdAbde2AbceSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdabde2abce", "abcd,abde->abce", 2, {{2, 3, 4, -1}, {2, 3, -1, 6}},
+                                         {{{2, 2}, {3, 3}, {4, 4}, {5, 9}}, {{2, 2}, {3, 3}, {5, 9}, {6, 6}}},
+                                         {2, 3, 4, 6}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 4, 6}));
+}
+
+// === Coverage: dispatch handler for "abcd,abce->abde" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdAbce2AbdeSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdabce2abde", "abcd,abce->abde", 2, {{2, 3, -1, 5}, {2, 3, -1, 6}},
+                                         {{{2, 2}, {3, 3}, {4, 8}, {5, 5}}, {{2, 2}, {3, 3}, {4, 8}, {6, 6}}},
+                                         {2, 3, 5, 6}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 5, 6}));
+}
+
+// === Coverage: dispatch handler for "abc,abd->acd" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcAbd2AcdSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcabd2acd", "abc,abd->acd", 2, {{-1, 3, 4}, {-1, 3, 5}},
+                                         {{{2, 6}, {3, 3}, {4, 4}}, {{2, 6}, {3, 3}, {5, 5}}}, {-1, 4, 5}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {-1, 4, 5}));
+}
+
+// === Coverage: dispatch handler for "ab,cb->ac" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbCb2AcSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcb2ac", "ab,cb->ac", 2, {{-1, 3}, {4, -1}},
+                                         {{{2, 6}, {3, 3}}, {{4, 4}, {2, 6}}}, {-1, 4}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {-1, 4}));
+}
+
+// === Coverage: dispatch handler for "abc,acd->abd" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcAcd2AbdSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcacd2abd", "abc,acd->abd", 2, {{2, 3, -1}, {2, -1, 5}},
+                                         {{{2, 2}, {3, 3}, {4, 8}}, {{2, 2}, {4, 8}, {5, 5}}}, {2, 3, 5}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 5}));
+}
+
+// === Coverage: dispatch handler for "abc,adc->abd" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcAdc2AbdSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcadc2abd", "abc,adc->abd", 2, {{2, 3, -1}, {2, 5, -1}},
+                                         {{{2, 2}, {3, 3}, {4, 8}}, {{2, 2}, {5, 5}, {4, 8}}}, {2, 3, 5}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 5}));
+}
+
+// === Coverage: dispatch handler for "abcd,abce->acde" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdAbce2AcdeSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdabce2acde", "abcd,abce->acde", 2, {{2, 3, -1, 5}, {2, 3, -1, 6}},
+                                         {{{2, 2}, {3, 3}, {4, 8}, {5, 5}}, {{2, 2}, {3, 3}, {4, 8}, {6, 6}}},
+                                         {2, 4, 5, 6}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 4, 5, 6}));
+}
+
+// === Coverage: dispatch handler for "abcd,ebcd->bcae" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdEbcd2BcaeSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdebcd2bcae", "abcd,ebcd->bcae", 2, {{2, 3, 4, -1}, {6, 3, 4, -1}},
+                                         {{{2, 2}, {3, 3}, {4, 4}, {5, 9}}, {{6, 6}, {3, 3}, {4, 4}, {5, 9}}},
+                                         {3, 4, 2, 6}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {3, 4, 2, 6}));
+}
+
+// === Coverage: dispatch handler for "abcd,cde->abe" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdCde2AbeSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdcde2abe", "abcd,cde->abe", 2, {{2, 3, 4, -1}, {4, -1, 6}},
+                                         {{{2, 2}, {3, 3}, {4, 4}, {5, 9}}, {{4, 4}, {5, 9}, {6, 6}}}, {2, 3, 6},
+                                         DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 6}));
+}
+
+// === Coverage: dispatch handler for "abc,abd->dc" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcAbd2DcSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcabd2dc", "abc,abd->dc", 2, {{-1, 3, 4}, {-1, 3, 5}},
+                                         {{{2, 6}, {3, 3}, {4, 4}}, {{2, 6}, {3, 3}, {5, 5}}}, {5, 4}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {5, 4}));
+}
+
+// === Coverage: dispatch handler for "abcd,ecd->abe" lacks a dynamic-shape case ===
+TEST_F(EinsumPassTest, dynamicShapeAbcdEcd2AbeSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_abcdecd2abe", "abcd,ecd->abe", 2, {{2, 3, 4, -1}, {6, 4, -1}},
+                                         {{{2, 2}, {3, 3}, {4, 4}, {5, 9}}, {{6, 6}, {4, 4}, {5, 9}}}, {2, 3, 6},
+                                         DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {2, 3, 6}));
+}
+
+// === Coverage: int32 dual-input dynamic fuzz forces dims to -1 (forcedInputDims_ path) ===
+TEST_F(EinsumPassTest, dynamicFuzzInt32DualInputSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_int32_2in", "ab,bc->ac", 2, {{-1, 20}, {20, -1}},
+                                         {{{2, 10}, {20, 20}}, {{20, 20}, {5, 30}}}, {-1, 30}, DT_INT32);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {-1, 30}));
+}
+
+// === Coverage: promoted-dtype cast, opposite side (input0 stays fp16, cast up via else branch) ===
+TEST_F(EinsumPassTest, dynamicFuzzPromotedDtypeCastFlowReverseSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dtype_promoted_rev", "ab,bc->ac", 2, {{-1, 1}, {4, -1}},
+                                         {{{2, 6}, {1, 1}}, {{4, 4}, {5, 30}}}, {-1, 30}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    ASSERT_EQ(status, GRAPH_SUCCESS);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    EXPECT_GE(CountNodes(graph, "Cast"), 3);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    TensorDesc outDesc;
+    finalNode.GetOutputDesc(0, outDesc);
+    EXPECT_EQ(outDesc.GetDataType(), DT_FLOAT16);
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {-1, 30}));
+}
+
+// === Coverage: ellipsis broadcast check on the dynamic fuzz route (dual input) ===
+TEST_F(EinsumPassTest, dynamicFuzzEllipsisBroadcastSuccess)
+{
+    auto graph = BuildEinsumGraphDynamic("dyn_ell_bcast", "...ab,...a->...b", 2, {{4, 2, -1}, {1, 2}},
+                                         {{{4, 4}, {2, 2}, {3, 6}}, {{1, 1}, {2, 2}}}, {4, -1}, DT_FLOAT16);
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    EinsumPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "Einsum"), 0);
+    GNode finalNode;
+    ASSERT_TRUE(FindFinalOutputNode(graph, finalNode));
+    EXPECT_TRUE(CheckNodeOutputShape(finalNode, {4, -1}));
+}

@@ -53,7 +53,10 @@ const size_t kEquationPartNum = 2;
 const size_t kEllipsisTailLen = 2;
 const size_t kArrowLen = 2;
 
-static const uint8_t kNumOfLetters = 'z' - 'a' + 1;
+constexpr uint8_t kAsciiUpperA = 0x41; // uppercase label base
+constexpr uint8_t kAsciiLowerA = 0x61; // lowercase label base
+constexpr uint8_t kAsciiLowerZ = 0x7A; // 'z'
+static const uint8_t kNumOfLetters = kAsciiLowerZ - kAsciiLowerA + 1;
 static const uint8_t kTotalLabels = kNumOfLetters * 2;
 static const uint8_t kEllipsis = kTotalLabels;
 const size_t kMergedFreeDimNum = 2;
@@ -92,7 +95,7 @@ void EquationNormalization(std::string& equation)
     for (auto& dimShape : equation) {
         if (isalpha(dimShape)) {
             if (normalizeMap.find(dimShape) == normalizeMap.end()) {
-                normalizeMap[dimShape] = 'a' + indice;
+                normalizeMap[dimShape] = static_cast<char>(kAsciiLowerA + indice);
                 indice++;
             }
             dimShape = normalizeMap[dimShape];
@@ -149,7 +152,7 @@ GNode CreateTransposeNode(EsGraphBuilder& builder, const std::string& name, cons
     return transNode;
 }
 
-void SetTransposeOutputDesc(GNode& transNode, const std::vector<int32_t>& perm)
+void SetTransposeOutputDesc(GNode transNode, const std::vector<int32_t>& perm)
 {
     auto [inPtr, inPort] = transNode.GetInDataNodesAndPortIndexs(0);
     if (inPtr == nullptr) {
@@ -172,7 +175,7 @@ void SetTransposeOutputDesc(GNode& transNode, const std::vector<int32_t>& perm)
     transNode.UpdateOutputDesc(0, outDesc);
 }
 
-void SetReshapeOutputDesc(GNode& reshapeNode, const std::vector<int64_t>& targetDims)
+void SetReshapeOutputDesc(GNode reshapeNode, const std::vector<int64_t>& targetDims)
 {
     auto [inPtr, inPort] = reshapeNode.GetInDataNodesAndPortIndexs(0);
     if (inPtr == nullptr) {
@@ -187,7 +190,7 @@ void SetReshapeOutputDesc(GNode& reshapeNode, const std::vector<int64_t>& target
     reshapeNode.UpdateOutputDesc(0, outDesc);
 }
 
-void SetGatherShapesOutputDesc(GNode& gatherNode, size_t axesSize)
+void SetGatherShapesOutputDesc(GNode gatherNode, size_t axesSize)
 {
     int64_t sz = static_cast<int64_t>(axesSize);
     TensorDesc outDesc(Shape({sz}), FORMAT_ND, DT_INT64);
@@ -196,7 +199,7 @@ void SetGatherShapesOutputDesc(GNode& gatherNode, size_t axesSize)
     gatherNode.UpdateOutputDesc(0, outDesc);
 }
 
-void SetUnsqueezeOutputDesc(GNode& unsqueezeNode, const std::vector<int64_t>& axes)
+void SetUnsqueezeOutputDesc(GNode unsqueezeNode, const std::vector<int64_t>& axes)
 {
     auto [inPtr, inPort] = unsqueezeNode.GetInDataNodesAndPortIndexs(0);
     if (inPtr == nullptr) {
@@ -222,7 +225,7 @@ void SetUnsqueezeOutputDesc(GNode& unsqueezeNode, const std::vector<int64_t>& ax
     unsqueezeNode.UpdateOutputDesc(0, outDesc);
 }
 
-void SetMulOutputDesc(GNode& mulNode)
+void SetMulOutputDesc(GNode mulNode)
 {
     auto [in0Ptr, in0Port] = mulNode.GetInDataNodesAndPortIndexs(0);
     auto [in1Ptr, in1Port] = mulNode.GetInDataNodesAndPortIndexs(1);
@@ -286,7 +289,7 @@ GNode CreateReshapeNode(EsGraphBuilder& builder, const std::string& name, const 
 }
 
 // Create a Cast node via the ES API (edge wired automatically)
-GNode CreateCastNode(EsGraphBuilder& builder, const EsTensorHolder& x, DataType dstType)
+GNode CreateCastNode(const EsGraphBuilder& builder, const EsTensorHolder& x, DataType dstType)
 {
     (void)builder; // owner builder is resolved from the input tensor by the ES API
     auto out = es::Cast(x, static_cast<int64_t>(dstType));
@@ -308,7 +311,7 @@ GNode CreateUnsqueezeNode(Graph* graphPtr, const std::string& name, const std::v
 }
 
 // Create a Mul node via the ES API (edges wired automatically)
-GNode CreateMulNode(EsGraphBuilder& builder, const EsTensorHolder& x1, const EsTensorHolder& x2)
+GNode CreateMulNode(const EsGraphBuilder& builder, const EsTensorHolder& x1, const EsTensorHolder& x2)
 {
     (void)builder; // owner builder is resolved from the input tensors by the ES API
     auto out = es::Mul(x1, x2);
@@ -387,7 +390,7 @@ static void SetMatMulOutputDesc(const EsTensorHolder& out, const TensorDesc& x1D
 // (inputs / optional inputs / attrs) per the registered proto, so no manual IrDef is needed.
 // It also wires the input edges automatically; the output desc (batch dims + m + n) is still
 // computed manually here since the ES builder does not infer it.
-EsTensorHolder CreateMatMulNode(EsGraphBuilder& builder, const std::string& opType, const EsTensorHolder& x1,
+EsTensorHolder CreateMatMulNode(const EsGraphBuilder& builder, const std::string& opType, const EsTensorHolder& x1,
                                 const EsTensorHolder& x2, bool adjX1, bool adjX2)
 {
     (void)builder; // owner builder is resolved from the input tensors by the ES API
@@ -628,8 +631,8 @@ static bool CheckOutputLabelCount(const GNode& matchedNode, const std::string& e
     return true;
 }
 
-bool EinsumPass::CheckEquationFormat(const GNode& matchedNode, std::string& equation,
-                                     std::vector<std::string>& inEquations)
+bool EinsumPass::CheckEquationFormat(const GNode& matchedNode, const std::string& equation,
+                                     std::vector<std::string>& inEquations) const
 {
     FUSION_PASS_CHECK(equation.find("->") == std::string::npos,
                       OPS_LOG_D(kPassName.c_str(), "Equation[%s] has no arrow.", equation.c_str()), return false;);
@@ -666,9 +669,9 @@ bool EinsumPass::CheckEquationFormat(const GNode& matchedNode, std::string& equa
     return CheckOutputLabelCount(matchedNode, equation, arrowPos);
 }
 
-bool EinsumPass::CheckLabelConsistency(const GNode& matchedNode, const std::string& equation,
-                                       const std::vector<std::string>& inEquations, std::vector<DataType>& inputDtypes,
-                                       std::vector<std::vector<int64_t>>& inputDims)
+bool EinsumPass::CheckLabelConsistency(const GNode& matchedNode, const std::vector<std::string>& inEquations,
+                                       std::vector<DataType>& inputDtypes,
+                                       std::vector<std::vector<int64_t>>& inputDims) const
 {
     for (size_t idx = 0; idx < matchedNode.GetInputsSize(); ++idx) {
         TensorDesc inputDesc;
@@ -801,7 +804,7 @@ static bool CheckEllipsisBroadcast(const std::string& seq0, const std::string& s
 
 bool EinsumPass::CheckBroadcastConsistency(const std::string& equation, const std::vector<std::string>& inEquations,
                                            const std::vector<DataType>& inputDtypes,
-                                           const std::vector<std::vector<int64_t>>& inputDims)
+                                           const std::vector<std::vector<int64_t>>& inputDims) const
 {
     // Only apply when the dynamic fuzz path would be taken (dynamic shape + equation not in 28 patterns)
     bool isDynamicShape = false;
@@ -871,7 +874,7 @@ bool EinsumPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResul
     // Check input label count, overflow, dtype consistency
     std::vector<DataType> inputDtypes;
     std::vector<std::vector<int64_t>> inputDims;
-    if (!CheckLabelConsistency(matchedNode, equation, inEquations, inputDtypes, inputDims)) {
+    if (!CheckLabelConsistency(matchedNode, inEquations, inputDtypes, inputDims)) {
         return false;
     }
     // Check broadcast consistency (dynamic fuzz path only)
@@ -970,7 +973,7 @@ GraphUniqPtr EinsumPass::Replacement(const std::unique_ptr<MatchResult>& matchRe
 
 GraphUniqPtr EinsumPass::BuildBatchMatmulReplacement(bool adjX1, bool adjX2,
                                                      const std::vector<SubgraphInput>& subgraphInputs,
-                                                     const GNode& matchedNode)
+                                                     const GNode& matchedNode) const
 {
     auto inputInfo = CollectInputInfo(subgraphInputs);
     FUSION_PASS_CHECK(!inputInfo.valid, OPS_LOG_E(kPassName.c_str(), "CollectInputInfo failed."), return nullptr);
@@ -1002,7 +1005,7 @@ GraphUniqPtr EinsumPass::BuildBatchMatmulReplacement(bool adjX1, bool adjX2,
 
 // 002: transpose+transpose+batchmatmul(swap input) - abcd,aecd->aceb
 GraphUniqPtr EinsumPass::HandleABCDxAECD2ACEB(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxAECD2ACEB");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1051,7 +1054,7 @@ GraphUniqPtr EinsumPass::HandleABCDxAECD2ACEB(const std::vector<SubgraphInput>& 
 
 // 003: transpose+batchmatmul+transpose - abcd,adbe->acbe
 GraphUniqPtr EinsumPass::HandleABCDxADBE2ACBE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxADBE2ACBE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1099,7 +1102,8 @@ GraphUniqPtr EinsumPass::HandleABCDxADBE2ACBE(const std::vector<SubgraphInput>& 
 }
 
 // 004: reshape+reshape+matmul+reshape->reshape+batchmatmul - abcd,cde->abe
-GraphUniqPtr EinsumPass::HandleABCDxCDE2ABE(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCDxCDE2ABE(const std::vector<SubgraphInput>& subgraphInputs,
+                                            const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxCDE2ABE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1146,21 +1150,24 @@ GraphUniqPtr EinsumPass::HandleABCDxCDE2ABE(const std::vector<SubgraphInput>& su
 }
 
 // 005: batchmatmul - abc,cd->abd
-GraphUniqPtr EinsumPass::HandleABCxCD2ABD(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxCD2ABD(const std::vector<SubgraphInput>& subgraphInputs,
+                                          const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxCD2ABD");
     return BuildBatchMatmulReplacement(false, false, subgraphInputs, matchedNode);
 }
 
 // 006: batchmatmul - abc,dc->abd
-GraphUniqPtr EinsumPass::HandleABCxDC2ABD(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxDC2ABD(const std::vector<SubgraphInput>& subgraphInputs,
+                                          const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxDC2ABD");
     return BuildBatchMatmulReplacement(false, true, subgraphInputs, matchedNode);
 }
 
 // 007: reshape+reshape+matmul(swap input) - abc,abd->dc
-GraphUniqPtr EinsumPass::HandleABCxABD2DC(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxABD2DC(const std::vector<SubgraphInput>& subgraphInputs,
+                                          const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxABD2DC");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1208,7 +1215,7 @@ GraphUniqPtr EinsumPass::HandleABCxABD2DC(const std::vector<SubgraphInput>& subg
 
 // 001: reshape+reshape+matmul+reshape (dynamic) - abc,cde->abde
 GraphUniqPtr EinsumPass::HandleDynamicABCxCDE2ABDE(const std::vector<SubgraphInput>& subgraphInputs,
-                                                   const GNode& matchedNode)
+                                                   const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleDynamicABCxCDE2ABDE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1266,7 +1273,7 @@ GraphUniqPtr EinsumPass::HandleDynamicABCxCDE2ABDE(const std::vector<SubgraphInp
 
 // 008: reshape+reshape+matmul+reshape (dynamic) - abc,dec->abde
 GraphUniqPtr EinsumPass::HandleDynamicABCxDEC2ABDE(const std::vector<SubgraphInput>& subgraphInputs,
-                                                   const GNode& matchedNode)
+                                                   const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleDynamicABCxDEC2ABDE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1324,7 +1331,7 @@ GraphUniqPtr EinsumPass::HandleDynamicABCxDEC2ABDE(const std::vector<SubgraphInp
 
 // 009: reshape+reshape+matmul+reshape (swap input, dynamic) - abc,abde->dec
 GraphUniqPtr EinsumPass::HandleDynamicABCxABDE2DEC(const std::vector<SubgraphInput>& subgraphInputs,
-                                                   const GNode& matchedNode)
+                                                   const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleDynamicABCxABDE2DEC");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1391,7 +1398,7 @@ GraphUniqPtr EinsumPass::HandleDynamicABCxABDE2DEC(const std::vector<SubgraphInp
 
 // 010: transpose+batchmatmul+transpose - abcd,aecd->acbe
 GraphUniqPtr EinsumPass::HandleABCDxAECD2ACBE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxAECD2ACBE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1440,7 +1447,7 @@ GraphUniqPtr EinsumPass::HandleABCDxAECD2ACBE(const std::vector<SubgraphInput>& 
 
 // 011: transpose+batchmatmul+transpose(swap input) - abcd,acbe->aecd
 GraphUniqPtr EinsumPass::HandleABCDxACBE2AECD(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxACBE2AECD");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1488,7 +1495,8 @@ GraphUniqPtr EinsumPass::HandleABCDxACBE2AECD(const std::vector<SubgraphInput>& 
 }
 
 // 012: reshape+reshape+matmul+reshape->reshape+batchmatmul - abcd,ecd->abe
-GraphUniqPtr EinsumPass::HandleABCDxECD2ABE(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCDxECD2ABE(const std::vector<SubgraphInput>& subgraphInputs,
+                                            const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxECD2ABE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1536,7 +1544,7 @@ GraphUniqPtr EinsumPass::HandleABCDxECD2ABE(const std::vector<SubgraphInput>& su
 
 // 013: reshape+reshape+matmul+reshape (swap input, dynamic) - abcd,abe->ecd
 GraphUniqPtr EinsumPass::HandleDynamicABCDxABE2ECD(const std::vector<SubgraphInput>& subgraphInputs,
-                                                   const GNode& matchedNode)
+                                                   const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleDynamicABCDxABE2ECD");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1603,7 +1611,7 @@ GraphUniqPtr EinsumPass::HandleDynamicABCDxABE2ECD(const std::vector<SubgraphInp
 
 // 014: transpose+batchmatmul+transpose - abcd,acbe->adbe
 GraphUniqPtr EinsumPass::HandleABCDxACBE2ADBE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxACBE2ADBE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1652,7 +1660,7 @@ GraphUniqPtr EinsumPass::HandleABCDxACBE2ADBE(const std::vector<SubgraphInput>& 
 
 // 015: batchmatmul - abcd,abde->abce
 GraphUniqPtr EinsumPass::HandleABCDxABDE2ABCE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxABDE2ABCE");
     return BuildBatchMatmulReplacement(false, false, subgraphInputs, matchedNode);
@@ -1660,7 +1668,7 @@ GraphUniqPtr EinsumPass::HandleABCDxABDE2ABCE(const std::vector<SubgraphInput>& 
 
 // 016: batchmatmul - abcd,abce->abde
 GraphUniqPtr EinsumPass::HandleABCDxABCE2ABDE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxABCE2ABDE");
     return BuildBatchMatmulReplacement(true, false, subgraphInputs, matchedNode);
@@ -1668,7 +1676,7 @@ GraphUniqPtr EinsumPass::HandleABCDxABCE2ABDE(const std::vector<SubgraphInput>& 
 
 // 017: transpose+batchmatmul+transpose - abcd,aebd->aebc
 GraphUniqPtr EinsumPass::HandleABCDxAEBD2AEBC(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxAEBD2AEBC");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1718,7 +1726,7 @@ GraphUniqPtr EinsumPass::HandleABCDxAEBD2AEBC(const std::vector<SubgraphInput>& 
 
 // 018: transpose+transpose+batchmatmul - abcd,abce->acde
 GraphUniqPtr EinsumPass::HandleABCDxABCE2ACDE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxABCE2ACDE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1767,35 +1775,40 @@ GraphUniqPtr EinsumPass::HandleABCDxABCE2ACDE(const std::vector<SubgraphInput>& 
 }
 
 // 019: batchmatmul - abc,abd->acd
-GraphUniqPtr EinsumPass::HandleABCxABD2ACD(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxABD2ACD(const std::vector<SubgraphInput>& subgraphInputs,
+                                           const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxABD2ACD");
     return BuildBatchMatmulReplacement(true, false, subgraphInputs, matchedNode);
 }
 
 // 020: batchmatmul - ab,cb->ac
-GraphUniqPtr EinsumPass::HandleABxCB2AC(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABxCB2AC(const std::vector<SubgraphInput>& subgraphInputs,
+                                        const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABxCB2AC");
     return BuildBatchMatmulReplacement(false, true, subgraphInputs, matchedNode);
 }
 
 // 021: batchmatmul - abc,acd->abd
-GraphUniqPtr EinsumPass::HandleABCxACD2ABD(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxACD2ABD(const std::vector<SubgraphInput>& subgraphInputs,
+                                           const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxACD2ABD");
     return BuildBatchMatmulReplacement(false, false, subgraphInputs, matchedNode);
 }
 
 // 022: batchmatmul - abc,adc->abd
-GraphUniqPtr EinsumPass::HandleABCxADC2ABD(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCxADC2ABD(const std::vector<SubgraphInput>& subgraphInputs,
+                                           const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCxADC2ABD");
     return BuildBatchMatmulReplacement(false, true, subgraphInputs, matchedNode);
 }
 
 // 023: transpose+batchmatmul+transpose - abcd,ced->abce
-GraphUniqPtr EinsumPass::HandleABCDxCED2ABCE(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCDxCED2ABCE(const std::vector<SubgraphInput>& subgraphInputs,
+                                             const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxCED2ABCE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1845,7 +1858,7 @@ GraphUniqPtr EinsumPass::HandleABCDxCED2ABCE(const std::vector<SubgraphInput>& s
 
 // 024: transpose+transpose+batchmatmul - abcd,ebcd->bcae
 GraphUniqPtr EinsumPass::HandleABCDxEBCD2BCAE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxEBCD2BCAE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1895,7 +1908,7 @@ GraphUniqPtr EinsumPass::HandleABCDxEBCD2BCAE(const std::vector<SubgraphInput>& 
 
 // 025: transpose+batchmatmul+transpose - abcd,dabe->cabe
 GraphUniqPtr EinsumPass::HandleABCDxDABE2CABE(const std::vector<SubgraphInput>& subgraphInputs,
-                                              const GNode& matchedNode)
+                                              const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxDABE2CABE");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1944,7 +1957,7 @@ GraphUniqPtr EinsumPass::HandleABCDxDABE2CABE(const std::vector<SubgraphInput>& 
 }
 
 // 026: unsqueeze+unsqueeze+mul - a,b->ab
-GraphUniqPtr EinsumPass::HandleAxB2AB(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleAxB2AB(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleAxB2AB");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -1990,7 +2003,8 @@ GraphUniqPtr EinsumPass::HandleAxB2AB(const std::vector<SubgraphInput>& subgraph
 }
 
 // 027: transpose+reshape+matmul - abcd,aecd->eb
-GraphUniqPtr EinsumPass::HandleABCDxAECD2EB(const std::vector<SubgraphInput>& subgraphInputs, const GNode& matchedNode)
+GraphUniqPtr EinsumPass::HandleABCDxAECD2EB(const std::vector<SubgraphInput>& subgraphInputs,
+                                            const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleABCDxAECD2EB");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -2046,7 +2060,7 @@ GraphUniqPtr EinsumPass::HandleABCDxAECD2EB(const std::vector<SubgraphInput>& su
 
 // 028: transpose+reshape+matmul+reshape+transpose (dynamic) - abcd,eb->aecd
 GraphUniqPtr EinsumPass::HandleDynamicABCDxEB2AECD(const std::vector<SubgraphInput>& subgraphInputs,
-                                                   const GNode& matchedNode)
+                                                   const GNode& matchedNode) const
 {
     OPS_LOG_D(kPassName.c_str(), "HandleDynamicABCDxEB2AECD");
     auto inputInfo = CollectInputInfo(subgraphInputs);
@@ -2130,7 +2144,7 @@ void KeepComputedDtypeAndUpdateOutputDesc(GNode& lastNode, const TensorDesc& out
 
 // Resolve the final output node of the replacement chain (split from
 // SplitOpInFuzzScene/SplitDynamicFuzzScene); returns invalid GNode on failure
-GNode EinsumPass::ResolveLastOutputNode()
+GNode EinsumPass::ResolveLastOutputNode() const
 {
     if (!bmmOutputNodes_.empty()) {
         return bmmOutputNodes_.back();
@@ -2281,7 +2295,7 @@ ge::Status EinsumPass::ReduceAndSumPairForDynamic(const GNode& matchedNode, int6
                       OPS_LOG_W(kPassName.c_str(), "failed to process input A ReduceSum"), return FAILED);
     FUSION_PASS_CHECK(ReduceSumInput(matchedNode, bDimsToSum, 1, true) != SUCCESS,
                       OPS_LOG_W(kPassName.c_str(), "failed to process input B ReduceSum"), return FAILED);
-    SumproductPair(matchedNode, sumDims, true);
+    SumproductPair(matchedNode, sumDims);
     return SUCCESS;
 }
 
@@ -3167,17 +3181,20 @@ void EinsumPass::CalcBatchMatmulOutput(size_t inputNum, const GNode& matchedNode
 // Dynamic decomposition steps
 // ============================================================================
 
-static uint8_t LabelToSubscript(unsigned char label)
+static uint8_t LabelToSubscript(uint8_t label)
 {
-    return std::isupper(label) ? label - 'A' : label - 'a' + kNumOfLetters;
+    return std::isupper(label) != 0 ? label - kAsciiUpperA : label - kAsciiLowerA + kNumOfLetters;
 }
 
 #ifndef STRIP_ERROR_MESSAGES
-static unsigned char SubscriptToLabel(uint8_t s) { return s < kNumOfLetters ? s + 'A' : s + 'a' - kNumOfLetters; }
+static uint8_t SubscriptToLabel(uint8_t s)
+{
+    return s < kNumOfLetters ? s + kAsciiUpperA : s + kAsciiLowerA - kNumOfLetters;
+}
 #endif
 
 Status EinsumPass::InputLabelProcess(const std::string& lhs, size_t numOps, bool& ellInInput,
-                                     std::vector<std::vector<uint8_t>>& opLabels)
+                                     std::vector<std::vector<uint8_t>>& opLabels) const
 {
     std::size_t currOp = 0;
     for (std::size_t i = 0; i < lhs.length(); ++i) {
@@ -3220,7 +3237,7 @@ Status EinsumPass::InputLabelProcess(const std::string& lhs, size_t numOps, bool
 
 Status EinsumPass::LabelCountMap(const GNode& matchedNode, size_t numOps, int64_t& ellNumDim,
                                  std::vector<int64_t>& labelCount, std::vector<std::vector<uint8_t>>& opLabels,
-                                 size_t arrowPos)
+                                 size_t arrowPos) const
 {
     (void)arrowPos;
     for (size_t i = 0; i < numOps; ++i) {
@@ -3294,7 +3311,7 @@ static Status ParseOutputRhsLabel(const std::string& equation, size_t arrowPos, 
 
 Status EinsumPass::ParseOutputLabel(const std::string& equation, size_t arrowPos, int64_t& ellNumDim,
                                     int64_t& permIndex, bool& ellInOutput, std::vector<int64_t>& labelPermIndex,
-                                    std::vector<int64_t>& labelCount, int64_t& outNumDim, int64_t& ellIndex)
+                                    std::vector<int64_t>& labelCount, int64_t& outNumDim, int64_t& ellIndex) const
 {
     if (arrowPos == std::string::npos) {
         permIndex = ellNumDim;
@@ -3322,11 +3339,11 @@ Status EinsumPass::ParseOutputLabel(const std::string& equation, size_t arrowPos
     return SUCCESS;
 }
 
-Status EinsumPass::AlignInputDimForOutLabel(const GNode& matchedNode, size_t numOps, int64_t& permIndex,
-                                            std::vector<std::vector<uint8_t>>& opLabels,
+Status EinsumPass::AlignInputDimForOutLabel(const GNode& matchedNode, size_t numOps, const int64_t& permIndex,
+                                            const std::vector<std::vector<uint8_t>>& opLabels,
                                             std::vector<int64_t>& dimCounts, std::vector<int64_t>& ellSizes,
-                                            std::vector<int64_t>& labelSize, std::vector<int64_t>& labelPermIndex,
-                                            int64_t& ellNumDim, int64_t& ellIndex)
+                                            std::vector<int64_t>& labelSize, const std::vector<int64_t>& labelPermIndex,
+                                            const int64_t& ellNumDim, const int64_t& ellIndex)
 {
     for (size_t i = 0; i < numOps; ++i) {
         TensorDesc inputDesc;
@@ -3585,12 +3602,8 @@ Status EinsumPass::SumDimEmptyMul(const GNode& matchedNode, std::shared_ptr<Tens
     return SUCCESS;
 }
 
-Status EinsumPass::InsertGatherShape(std::shared_ptr<OpDesc>& gatherShapesDesc,
-                                     const std::vector<std::vector<int64_t>>& axes, std::vector<int64_t>& tmpDims,
-                                     std::shared_ptr<TensorDesc>& rightDesc)
+Status EinsumPass::InsertGatherShape(const std::vector<std::vector<int64_t>>& axes)
 {
-    (void)gatherShapesDesc;
-    (void)rightDesc;
     if (!axes.empty()) {
         std::vector<std::vector<int64_t>> axesAttr = axes;
         std::vector<EsTensorHolder> gatherInputs{
@@ -3682,7 +3695,7 @@ Status EinsumPass::PermuteReshapeInput(const GNode& matchedNode, const std::vect
 
 EinsumPass::DimClassification EinsumPass::ClassifySumproductDims(const std::shared_ptr<TensorDesc>& leftDesc,
                                                                  const std::shared_ptr<TensorDesc>& rightDesc,
-                                                                 const std::vector<int64_t>& sumDims)
+                                                                 const std::vector<int64_t>& sumDims) const
 {
     DimClassification cls;
     int64_t dim = leftDesc->GetShape().GetDims().size();
@@ -3769,8 +3782,7 @@ Status EinsumPass::BuildSumproductBmm(const GNode& matchedNode, const DimClassif
         axes.push_back({1, d});
         tmpDims.emplace_back(rightDesc->GetShape().GetDims()[d]);
     }
-    std::shared_ptr<OpDesc> dummyGatherDesc = nullptr;
-    FUSION_PASS_CHECK(InsertGatherShape(dummyGatherDesc, axes, tmpDims, rightDesc) != SUCCESS,
+    FUSION_PASS_CHECK(InsertGatherShape(axes) != SUCCESS,
                       OPS_LOG_E(kPassName.c_str(), "Insert gather shape node failed"), return GRAPH_NOT_CHANGED);
     std::vector<int> lpermutation;
     std::vector<int> rpermutation;
@@ -3788,13 +3800,12 @@ Status EinsumPass::BuildSumproductBmm(const GNode& matchedNode, const DimClassif
                       return GRAPH_NOT_CHANGED);
     FUSION_PASS_CHECK(BatchMatmul(matchedNode) != SUCCESS,
                       OPS_LOG_W(kPassName.c_str(), "failed to process batchmatmul"), return GRAPH_NOT_CHANGED);
-    FUSION_PASS_CHECK(
-        ReshapePermuteInput(matchedNode, dummyGatherDesc, opermutation, tmpDims, unsqueezeDims) != SUCCESS,
-        OPS_LOG_W(kPassName.c_str(), "failed to process reshape and permute"), return GRAPH_NOT_CHANGED);
+    FUSION_PASS_CHECK(ReshapePermuteInput(matchedNode, opermutation, tmpDims, unsqueezeDims) != SUCCESS,
+                      OPS_LOG_W(kPassName.c_str(), "failed to process reshape and permute"), return GRAPH_NOT_CHANGED);
     return SUCCESS;
 }
 
-Status EinsumPass::SumproductPair(const GNode& matchedNode, const std::vector<int64_t>& sumDims, bool keepdim)
+Status EinsumPass::SumproductPair(const GNode& matchedNode, const std::vector<int64_t>& sumDims)
 {
     auto leftDesc = GetPrevOutputDesc(matchedNode, 0);
     auto rightDesc = GetPrevOutputDesc(matchedNode, 1);
@@ -3818,9 +3829,8 @@ Status EinsumPass::SumproductPair(const GNode& matchedNode, const std::vector<in
     return BuildSumproductBmm(matchedNode, cls, sumDims, outNumDim, rightDesc);
 }
 
-Status EinsumPass::ReshapePermuteInput(const GNode& matchedNode, std::shared_ptr<OpDesc>& gatherShapesDesc,
-                                       const std::vector<int>& opermuteDim, const std::vector<int64_t>& outDim,
-                                       const std::vector<int64_t>& unsqueezeDim)
+Status EinsumPass::ReshapePermuteInput(const GNode& matchedNode, const std::vector<int>& opermuteDim,
+                                       const std::vector<int64_t>& outDim, const std::vector<int64_t>& unsqueezeDim)
 {
     auto xDesc = GetPrevOutputDescAfterBmm(matchedNode);
     if (!IsGNodeType(gathershapeNode_, kGatherShapes)) {

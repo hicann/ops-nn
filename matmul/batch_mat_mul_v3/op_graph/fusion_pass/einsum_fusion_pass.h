@@ -43,61 +43,61 @@ private:
 
     // Handle* functions for specific equation patterns (dynamic shape)
     ge::fusion::GraphUniqPtr HandleDynamicABCxCDE2ABDE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                       const ge::GNode& matchedNode);
+                                                       const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxAECD2ACEB(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxADBE2ACBE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxCDE2ABE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                const ge::GNode& matchedNode);
+                                                const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxCD2ABD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                              const ge::GNode& matchedNode);
+                                              const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxDC2ABD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                              const ge::GNode& matchedNode);
+                                              const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxABD2DC(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                              const ge::GNode& matchedNode);
+                                              const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleDynamicABCxDEC2ABDE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                       const ge::GNode& matchedNode);
+                                                       const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleDynamicABCxABDE2DEC(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                       const ge::GNode& matchedNode);
+                                                       const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxAECD2ACBE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxACBE2AECD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxECD2ABE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                const ge::GNode& matchedNode);
+                                                const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleDynamicABCDxABE2ECD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                       const ge::GNode& matchedNode);
+                                                       const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxACBE2ADBE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxABDE2ABCE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxABCE2ABDE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxAEBD2AEBC(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxABCE2ACDE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxABD2ACD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                               const ge::GNode& matchedNode);
+                                               const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABxCB2AC(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                            const ge::GNode& matchedNode);
+                                            const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxACD2ABD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                               const ge::GNode& matchedNode);
+                                               const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCxADC2ABD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                               const ge::GNode& matchedNode);
+                                               const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxCED2ABCE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                 const ge::GNode& matchedNode);
+                                                 const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxEBCD2BCAE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxDABE2CABE(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                  const ge::GNode& matchedNode);
+                                                  const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleAxB2AB(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                          const ge::GNode& matchedNode);
+                                          const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleABCDxAECD2EB(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                const ge::GNode& matchedNode);
+                                                const ge::GNode& matchedNode) const;
     ge::fusion::GraphUniqPtr HandleDynamicABCDxEB2AECD(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                       const ge::GNode& matchedNode);
+                                                       const ge::GNode& matchedNode) const;
 
     // Generic decomposition paths
     ge::fusion::GraphUniqPtr SplitOpInFuzzScene(const std::string& equation,
@@ -106,19 +106,19 @@ private:
     ge::fusion::GraphUniqPtr SplitDynamicFuzzScene(const std::string& equation,
                                                    const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
                                                    const ge::GNode& matchedNode);
-    ge::GNode ResolveLastOutputNode();
+    ge::GNode ResolveLastOutputNode() const;
     bool CreateDynamicInputHolders(ge::es::EsGraphBuilder& builder,
                                    const std::vector<ge::fusion::SubgraphInput>& subgraphInputs);
 
     // MeetRequirements helpers (split from the original oversized function)
-    bool CheckEquationFormat(const ge::GNode& matchedNode, std::string& equation,
-                             std::vector<std::string>& inEquations);
-    bool CheckLabelConsistency(const ge::GNode& matchedNode, const std::string& equation,
-                               const std::vector<std::string>& inEquations, std::vector<ge::DataType>& inputDtypes,
-                               std::vector<std::vector<int64_t>>& inputDims);
+    bool CheckEquationFormat(const ge::GNode& matchedNode, const std::string& equation,
+                             std::vector<std::string>& inEquations) const;
+    bool CheckLabelConsistency(const ge::GNode& matchedNode, const std::vector<std::string>& inEquations,
+                               std::vector<ge::DataType>& inputDtypes,
+                               std::vector<std::vector<int64_t>>& inputDims) const;
     bool CheckBroadcastConsistency(const std::string& equation, const std::vector<std::string>& inEquations,
                                    const std::vector<ge::DataType>& inputDtypes,
-                                   const std::vector<std::vector<int64_t>>& inputDims);
+                                   const std::vector<std::vector<int64_t>>& inputDims) const;
 
     // SplitDynamicFuzzScene helpers (split from the original oversized function)
     ge::Status PrepareDynamicLabels(const std::string& equation, const ge::GNode& matchedNode, size_t numOps,
@@ -132,7 +132,7 @@ private:
     // Helper: build batchmatmul replacement graph
     ge::fusion::GraphUniqPtr BuildBatchMatmulReplacement(bool adjX1, bool adjX2,
                                                          const std::vector<ge::fusion::SubgraphInput>& subgraphInputs,
-                                                         const ge::GNode& matchedNode);
+                                                         const ge::GNode& matchedNode) const;
 
     // Equation parsing helpers
     void ParseEquation(const std::string& equation, std::vector<std::string>& inEquations, std::string& outEquation);
@@ -174,17 +174,18 @@ private:
 
     // Dynamic decomposition steps
     ge::Status InputLabelProcess(const std::string& lhs, size_t numOps, bool& ellInInput,
-                                 std::vector<std::vector<uint8_t>>& opLabels);
+                                 std::vector<std::vector<uint8_t>>& opLabels) const;
     ge::Status LabelCountMap(const ge::GNode& matchedNode, size_t numOps, int64_t& ellNumDim,
                              std::vector<int64_t>& labelCount, std::vector<std::vector<uint8_t>>& opLabels,
-                             size_t arrowPos);
+                             size_t arrowPos) const;
     ge::Status ParseOutputLabel(const std::string& equation, size_t arrowPos, int64_t& ellNumDim, int64_t& permIndex,
                                 bool& ellInOutput, std::vector<int64_t>& labelPermIndex,
-                                std::vector<int64_t>& labelCount, int64_t& outNumDim, int64_t& ellIndex);
-    ge::Status AlignInputDimForOutLabel(const ge::GNode& matchedNode, size_t numOps, int64_t& permIndex,
-                                        std::vector<std::vector<uint8_t>>& opLabels, std::vector<int64_t>& dimCounts,
-                                        std::vector<int64_t>& ellSizes, std::vector<int64_t>& labelSize,
-                                        std::vector<int64_t>& labelPermIndex, int64_t& ellNumDim, int64_t& ellIndex);
+                                std::vector<int64_t>& labelCount, int64_t& outNumDim, int64_t& ellIndex) const;
+    ge::Status AlignInputDimForOutLabel(const ge::GNode& matchedNode, size_t numOps, const int64_t& permIndex,
+                                        const std::vector<std::vector<uint8_t>>& opLabels,
+                                        std::vector<int64_t>& dimCounts, std::vector<int64_t>& ellSizes,
+                                        std::vector<int64_t>& labelSize, const std::vector<int64_t>& labelPermIndex,
+                                        const int64_t& ellNumDim, const int64_t& ellIndex);
     ge::Status ReduceSumInput(const ge::GNode& matchedNode, const std::vector<int64_t>& dimsToSum, size_t idx,
                               bool keepDims);
 
@@ -202,7 +203,7 @@ private:
     };
     DimClassification ClassifySumproductDims(const std::shared_ptr<ge::TensorDesc>& leftDesc,
                                              const std::shared_ptr<ge::TensorDesc>& rightDesc,
-                                             const std::vector<int64_t>& sumDims);
+                                             const std::vector<int64_t>& sumDims) const;
     void BuildSumproductPermutations(const DimClassification& cls, const std::vector<int64_t>& sumDims,
                                      int64_t outNumDim, std::vector<int>& lpermutation, std::vector<int>& rpermutation,
                                      std::vector<int>& opermutation) const;
@@ -210,12 +211,10 @@ private:
                                   const std::vector<int64_t>& sumDims, int64_t outNumDim,
                                   std::shared_ptr<ge::TensorDesc>& rightDesc);
 
-    ge::Status SumproductPair(const ge::GNode& matchedNode, const std::vector<int64_t>& sumDims, bool keepdim);
+    ge::Status SumproductPair(const ge::GNode& matchedNode, const std::vector<int64_t>& sumDims);
     ge::Status SumDimEmptyMul(const ge::GNode& matchedNode, std::shared_ptr<ge::TensorDesc>& leftDesc,
                               std::shared_ptr<ge::TensorDesc>& rightDesc, const std::vector<int64_t>& sumDims);
-    ge::Status InsertGatherShape(std::shared_ptr<ge::OpDesc>& gatherShapesDesc,
-                                 const std::vector<std::vector<int64_t>>& axes, std::vector<int64_t>& tmpDims,
-                                 std::shared_ptr<ge::TensorDesc>& rightDesc);
+    ge::Status InsertGatherShape(const std::vector<std::vector<int64_t>>& axes);
     ge::Status CastNode(const ge::GNode& matchedNode, const ge::DataType& dtypeOut, int32_t idx);
     ge::Status PermuteInput(const ge::GNode& matchedNode, const std::vector<int>& permutation, size_t idx);
     ge::Status UnsqueezeInput(const ge::GNode& matchedNode, std::vector<int64_t> dims,
@@ -224,9 +223,8 @@ private:
                                    const std::vector<int64_t>& reshapeDim, const std::vector<size_t>& size, size_t idx);
     ge::Status FinalizePermuteReshape(const ge::GNode& matchedNode, const std::vector<int64_t>& reshapeDim, size_t idx);
     ge::Status BatchMatmul(const ge::GNode& matchedNode);
-    ge::Status ReshapePermuteInput(const ge::GNode& matchedNode, std::shared_ptr<ge::OpDesc>& gatherShapesDesc,
-                                   const std::vector<int>& opermuteDim, const std::vector<int64_t>& outDim,
-                                   const std::vector<int64_t>& unsqueezeDim);
+    ge::Status ReshapePermuteInput(const ge::GNode& matchedNode, const std::vector<int>& opermuteDim,
+                                   const std::vector<int64_t>& outDim, const std::vector<int64_t>& unsqueezeDim);
     std::vector<int64_t> MaybeWrapDim(const std::vector<int64_t>& sumDims, int64_t dim) const;
 
     // Helpers to get prev output desc/node in the replacement chain
@@ -262,7 +260,7 @@ private:
 
     // Dispatch table for the 28 specific dynamic equations (same as legacy dynamicShapeProcs_)
     using ProcFunc = ge::fusion::GraphUniqPtr (EinsumPass::*)(const std::vector<ge::fusion::SubgraphInput>&,
-                                                              const ge::GNode&);
+                                                              const ge::GNode&) const;
     static std::unordered_map<std::string, ProcFunc> dynamicShapeProcs_;
 
     void ResetState();
