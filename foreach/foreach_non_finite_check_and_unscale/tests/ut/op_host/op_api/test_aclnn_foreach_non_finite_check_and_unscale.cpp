@@ -136,19 +136,6 @@ TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, empty_list)
               ACLNN_ERR_INNER_TILING_ERROR);
 }
 
-TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, empty_gradient)
-{
-    auto grads = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-    ExpectWorkspaceStatus(TensorListDesc({grads}), ACLNN_ERR_INNER_TILING_ERROR);
-}
-
-TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, empty_subview_after_valid_gradient)
-{
-    auto grads = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto empty = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND, {3, 1}, 2, {16});
-    ExpectWorkspaceStatus(TensorListDesc({grads, empty}), ACLNN_ERR_INNER_TILING_ERROR);
-}
-
 TEST_P(L2ForeachNonFiniteCheckAndUnscaleTest, excessive_list_length)
 {
     auto grads = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);

@@ -81,10 +81,6 @@ static aclnnStatus CheckParams(const aclTensorList* scaledGrads, const aclTensor
         auto tensor = (*scaledGrads)[i];
         OP_CHECK_DTYPE_NOT_SUPPORT(tensor, dtypeSupportList, return ACLNN_ERR_PARAM_INVALID);
         OP_CHECK_DTYPE_NOT_MATCH(tensor, dtype, return ACLNN_ERR_INNER_TILING_ERROR);
-        if (tensor->GetViewShape().GetShapeSize() == 0) {
-            OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "scaledGrads must not contain empty tensors.");
-            return ACLNN_ERR_INNER_TILING_ERROR;
-        }
         auto ret = CheckTensorShapeAndFormat(tensor, "scaledGrads");
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
