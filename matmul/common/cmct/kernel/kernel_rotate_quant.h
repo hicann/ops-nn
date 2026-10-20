@@ -159,12 +159,20 @@ public:
         if ASCEND_IS_AIC {
             blockMmadOp.Init(problemShape_, bs.GetTileL1Shape(), bs.GetTileL0Shape());
         }
+// v121(9201/9202, AIC:AIV=1:1)无需溢出模式处理(参照v121适配版); v100(3510)保持主线行为
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        if ASCEND_IS_AIV {
+            epilogueOp.Init(params.epilogueParams, problemShape_, alpha_, needClamp_, bs.GetAxis(), bs.GetRoundMode(),
+                            bs.GetScaleAlg(), bs.GetDstTypeMax(), bs.GetInvDstTypeMax());
+        }
+#else
         int64_t oriOverflowMode = GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
         if ASCEND_IS_AIV {
             SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
             epilogueOp.Init(params.epilogueParams, problemShape_, alpha_, needClamp_, bs.GetAxis(), bs.GetRoundMode(),
                             bs.GetScaleAlg(), bs.GetDstTypeMax(), bs.GetInvDstTypeMax());
         }
+#endif
 
         auto ubLocal = epilogueOp.GetTensor();
         for (int64_t tileIdx = curBlockIdx, roundIdx = 0; tileIdx < tileNum; tileIdx += blockNum, roundIdx++) {
@@ -172,6 +180,28 @@ public:
             int64_t offset = bs.GetOffset(tileIdx);
             int64_t rotOffset = bs.GetRotOffset(tileIdx);
             int64_t blkM = Get<MNK_M>(blockShape);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+            // v121(1:1): cann_out原版结构——AIC→AIV方向用flag 9(AIC Set/AIV Wait),
+            // AIV→AIC方向用flag 8(AIV Set/AIC Wait), 两方向flag id隔离避免互踩;
+            // AIC首轮跳过等待为cann_out原版行为(034c3f391曾误删致死锁, 0017ebdf1恢复)
+            if ASCEND_IS_AIC {
+                if (roundIdx > 0) {
+                    CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(SYNC_AIV_AIC_FLAG);
+                }
+                blockMmadOp.template operator()<AscendC::LocalTensor<CType>>(
+                    ubLocal, aGlobal_[offset * k_], rotGlobal_[rotOffset], blockShape, tileIdx < blockNum);
+                CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(SYNC_AIC_AIV_FLAG);
+            }
+            if ASCEND_IS_AIV {
+                CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(SYNC_AIC_AIV_FLAG);
+                epilogueOp(offset, blkM, k_); // ub receives blkM * k elements
+                if (tileIdx + blockNum < tileNum) {
+                    CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(SYNC_AIV_AIC_FLAG);
+                }
+            }
+#else
+            // 3510(1:2): master原版——乒乓双flag路由(AIC→AIV方向flag 9, AIV→AIC方向flag 8),
+            // AIV按subBlockIdx认领round
             if ASCEND_IS_AIC {
                 if (roundIdx > 0) {
                     CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
@@ -191,11 +221,16 @@ public:
                     }
                 }
             }
+#endif
         }
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        // v121: 无需恢复溢出模式
+#else
         if ASCEND_IS_AIV {
             SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
         }
+#endif
     }
 
     __host_aicore__ static Status CheckShape(const ProblemShape& shape)

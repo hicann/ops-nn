@@ -32,6 +32,7 @@ struct RotateQuantAptCompileInfo {
     uint64_t l0CSize{0};
     uint64_t aicNum{0};
     uint64_t aivNum{0};
+    NpuArch npuArch{NpuArch::DAV_2201};
 };
 
 struct RotateQuantAptInfo {

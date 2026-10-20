@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 #include "aclnn_rotate_quant.h"
 #include "rotate_quant.h"
 #include "acl/acl.h"
@@ -46,6 +47,11 @@ constexpr uint32_t MAX_X_DIM_NUM = 7;
 constexpr uint32_t MIN_ROT_DIM_NUM = 2;
 constexpr uint32_t MAX_ROT_DIM_NUM = 3;
 constexpr int64_t MX_SCALE_CEIL_NUM = 64;
+constexpr int64_t ROT_K_SIZE_32 = 32;
+constexpr int64_t ROT_K_SIZE_64 = 64;
+constexpr int64_t ROT_K_SIZE_128 = 128;
+constexpr int64_t HIF4_BLOCK_SIZE = 64;
+constexpr int64_t HIF4_SCALE_LAST_SIZE = 1;
 
 static const std::initializer_list<op::DataType> EMPTY_LIST = {};
 
@@ -58,18 +64,33 @@ static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_INT = {o
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_MX = {
     op::DataType::DT_FLOAT4_E2M1, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2};
 
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_HIF4 = {
+    static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4)};
+
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_INT = {op::DataType::DT_FLOAT};
 
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_MX = {op::DataType::DT_FLOAT8_E8M0};
 
+static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_HIF4 = {
+    static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4_SCALE)};
+
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST}};
+    {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST_INT}, {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_MX}};
+    {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST_INT},
+    {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_MX},
+    {NpuArch::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_MX},
+    {NpuArch::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_MX}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST_INT}, {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_MX}};
+    {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST_INT},
+    {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_MX},
+    {NpuArch::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_MX},
+    {NpuArch::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_MX}};
 
 static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     const std::map<NpuArch, const std::initializer_list<op::DataType>*>& socSupportDtypes)
@@ -81,6 +102,50 @@ static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     }
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for arch %u is not implemented", static_cast<uint32_t>(curArch));
     return EMPTY_LIST;
+}
+
+static bool CheckOutDtypeValid(const aclTensor* yOut)
+{
+    auto yDtype = yOut->GetDataType();
+    auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
+    if (std::find(outList.begin(), outList.end(), yDtype) != outList.end()) {
+        return true;
+    }
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) &&
+        std::find(OUT_DTYPE_SUPPORT_LIST_HIF4.begin(), OUT_DTYPE_SUPPORT_LIST_HIF4.end(), yDtype) !=
+            OUT_DTYPE_SUPPORT_LIST_HIF4.end()) {
+        return true;
+    }
+    std::string fullListStr = "[";
+    for (auto dtype : outList) {
+        fullListStr += op::ToString(dtype).GetString();
+        fullListStr += ",";
+    }
+    if (curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+        for (auto dtype : OUT_DTYPE_SUPPORT_LIST_HIF4) {
+            fullListStr += op::ToString(dtype).GetString();
+            fullListStr += ",";
+        }
+    }
+    fullListStr += "]";
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor yOut should be in dtype support list %s", fullListStr.c_str());
+    return false;
+}
+
+static bool CheckScaleDtypeValid(const aclTensor* scaleOut, const aclTensor* yOut)
+{
+    auto yDtype = yOut->GetDataType();
+    auto scaleDtype = scaleOut->GetDataType();
+    const std::initializer_list<op::DataType>* scaleList = &GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
+    if (yDtype == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4)) {
+        scaleList = &SCALE_DTYPE_SUPPORT_LIST_HIF4;
+    }
+    OP_CHECK(std::find(scaleList->begin(), scaleList->end(), scaleDtype) != scaleList->end(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor scaleOut should be in dtype support list %s",
+                     op::ToString(*scaleList).GetString()),
+             return false);
+    return true;
 }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut,
@@ -133,20 +198,10 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* rotation, const
                  FormatString("The dtypes of %s must be the same", "x and rotation").c_str()),
              return false);
 
-    auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
-    auto scaleList = GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
-    OP_CHECK(std::find(outList.begin(), outList.end(), yOut->GetDataType()) != outList.end(),
-             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                 kOpName, "yOut", op::ToString(yOut->GetDataType()).GetString(),
-                 FormatString("The dtype of %s must be in %s", "yOut", op::ToString(outList).GetString()).c_str()),
-             return false);
-    OP_CHECK(
-        std::find(scaleList.begin(), scaleList.end(), scaleOut->GetDataType()) != scaleList.end(),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            kOpName, "scaleOut", op::ToString(scaleOut->GetDataType()).GetString(),
-            FormatString("The dtype of %s must be in %s", "scaleOut", op::ToString(scaleList).GetString()).c_str()),
-        return false);
-    return true;
+    if (!CheckOutDtypeValid(yOut)) {
+        return false;
+    }
+    return CheckScaleDtypeValid(scaleOut, yOut);
 }
 
 static bool CheckMxRotationShape(const aclTensor* x, const aclTensor* rotation)
@@ -233,6 +288,42 @@ static bool CheckMxShape(const aclTensor* x, const aclTensor* rotation, const ac
                          const aclTensor* scaleOut)
 {
     return CheckMxRotationShape(x, rotation) && CheckMxOutputShape(x, yOut, scaleOut);
+}
+
+static bool CheckHif4RotKSize(int64_t k)
+{
+    OP_CHECK(k == ROT_K_SIZE_64 || k == ROT_K_SIZE_128,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "for hif4 output, rotation last dim size must be in [64, 128]."),
+             return false);
+    return true;
+}
+
+static bool CheckHif4RotMatrixShape(const op::Shape& rotShape, int64_t k)
+{
+    OP_CHECK(rotShape.GetDimNum() == MIN_ROT_DIM_NUM,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "for hif4 output, rotation only supports 2D (per-axis=-1 quant)."),
+             return false);
+    OP_CHECK(rotShape.GetDim(0) == k,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation matrix shape should be (%d, %d).", k, k), return false);
+    return true;
+}
+
+static bool CheckHif4ScaleShape(const op::Shape& xShape, const aclTensor* scaleOut, int64_t n)
+{
+    op::Shape expectScaleShape = xShape;
+    expectScaleShape.SetDim(expectScaleShape.GetDimNum() - 1, (n + HIF4_BLOCK_SIZE - 1) / HIF4_BLOCK_SIZE);
+    expectScaleShape.AppendDim(HIF4_SCALE_LAST_SIZE);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(scaleOut, expectScaleShape, return false);
+    return true;
+}
+
+static bool CheckHif4Shape(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut,
+                           const aclTensor* scaleOut, int64_t n, int64_t k)
+{
+    if (!CheckHif4RotKSize(k)) {
+        return false;
+    }
+    return CheckHif4RotMatrixShape(rotation->GetViewShape(), k) && CheckHif4ScaleShape(x->GetViewShape(), scaleOut, n);
 }
 
 static bool CheckIntRotationShape(const aclTensor* x, const aclTensor* rotation)
@@ -332,6 +423,11 @@ static bool CheckShape(const aclTensor* x, const aclTensor* rotation, const aclT
     if (scaleOut->GetDataType() == op::DataType::DT_FLOAT8_E8M0) {
         return CheckMxShape(x, rotation, yOut, scaleOut);
     }
+    if (scaleOut->GetDataType() == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4_SCALE)) {
+        int64_t n = x->GetViewShape().GetDim(x->GetViewShape().GetDimNum() - 1);
+        int64_t k = rotation->GetViewShape().GetDim(rotation->GetViewShape().GetDimNum() - 1);
+        return CheckHif4Shape(x, rotation, yOut, scaleOut, n, k);
+    }
     return CheckIntRotationShape(x, rotation) && CheckIntOutputShape(x, yOut, scaleOut);
 }
 
@@ -406,12 +502,14 @@ static bool CheckRoundModeValid(const char* roundModeValue, const aclTensor* yOu
                  kOpName, "round_mode", roundMode.c_str(),
                  FormatString("The value of %s must be one of %s", "round_mode", "{rint, floor, round}").c_str()),
              return false);
-    if (yOut->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN || yOut->GetDataType() == op::DataType::DT_FLOAT8_E5M2) {
+    if (yOut->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN || yOut->GetDataType() == op::DataType::DT_FLOAT8_E5M2 ||
+        yOut->GetDataType() == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4)) {
         OP_CHECK(
             roundMode == "rint",
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 kOpName, "round_mode", roundMode.c_str(),
-                FormatString("When yOut dtype is FLOAT8_E4M3/FLOAT8_E5M2, %s only support rint", "round_mode").c_str()),
+                FormatString("When yOut dtype is FLOAT8_E4M3/FLOAT8_E5M2/HIFLOAT4, %s only support rint", "round_mode")
+                    .c_str()),
             return false);
     }
     return true;
@@ -433,6 +531,12 @@ static bool CheckScaleAlgValid(int64_t scaleAlg, const aclTensor* yOut)
                 kOpName, "scaleAlg", FormatString("%ld", scaleAlg).c_str(),
                 FormatString("The value of %s must be in %s for %s output", "scaleAlg", "{0, 2}", "MXFP4").c_str()),
             return false);
+    } else if (yDtype == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4)) {
+        OP_CHECK(scaleAlg == 0,
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     kOpName, "scaleAlg", FormatString("%ld", scaleAlg).c_str(),
+                     FormatString("The value of %s must be %ld for %s output", "scaleAlg", 0, "HIFLOAT4").c_str()),
+                 return false);
     } else {
         OP_CHECK(
             scaleAlg == 0 || scaleAlg == 1,

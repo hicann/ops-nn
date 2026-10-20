@@ -14,14 +14,17 @@
  */
 
 #pragma once
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
 #include "kernel_operator.h"
 #endif
 #include "fusion/default_fusion_op.h"
+// v121贴cann_out: 宏保护写法(避免重复定义)
+#ifndef FLOAT_OVERFLOW_MODE_CTRL
 #define FLOAT_OVERFLOW_MODE_CTRL 60
+#endif
 
 struct RotateQuantShapeInfo {
     int64_t M;
@@ -33,7 +36,13 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 using namespace AscendC;
+// 命名空间差异: cann_out(v121)用MicroAPI, 主线(3510)用Reg——同名API(LoadAlign/StoreAlign/Compare/
+// Select等)在两个命名空间下可能解析到不同实现, v121必须与cann_out一致
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+using namespace AscendC::MicroAPI;
+#else
 using namespace AscendC::Reg;
+#endif
 template <typename DataTypeIn_, typename DataTypeOut_, typename DataTypeScale_,
           typename FusionOp_ = DefaultFusion<DataTypeOut_, DataTypeIn_>>
 class BlockEpilogueRotateQuant {
@@ -63,6 +72,10 @@ public:
                                 float invDstTypeMax)
     {
         // 饱和模式由单指令设置生效
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        // v121(1:1): 溢出模式在epilogue层设置(cann_out方式, v121侧kernel层不做)
+        SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+#endif
         InitGlobalBuffer(params);
         InitProblemShape(problemShape);
         InitQuantParams(alpha, needClamp, axis, roundMode, scaleAlg, dstTypeMax, invDstTypeMax);
@@ -129,8 +142,17 @@ private:
     static constexpr int64_t MODE_FLOOR = 1;
 
     static constexpr int32_t GROUP_SIZE = 32;
+    // UB布局对齐cann_out(v121机器验证基线): x区128KB/y区32KB/max区2KB/eMax链4KB; 950主线布局在
+    // mL1=128大块时x区(16K bf16)恰好贴满无余量, 3510保持主线小布局不变
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    static constexpr int32_t MN_SIZE = 64 * 1024;
+    static constexpr int32_t OUT_SIZE = 32 * 1024;
+    static constexpr int32_t MAX_SIZE = 1 * 1024;
+    static constexpr int32_t EMAX_SIZE = 1 * 1024;
+#else
     static constexpr int32_t MN_SIZE = 16 * 1024;
     static constexpr int32_t EMAX_SIZE = 512;
+#endif
 
     static constexpr uint16_t MAX_EXP_FOR_BF16 = 0x7f80;
     static constexpr uint16_t MAX_EXP_FOR_FP8 = 0x00ff;
@@ -187,7 +209,13 @@ private:
     GlobalTensor<int8_t> cGlobal_;
     GlobalTensor<int8_t> scaleGlobal_;
 
+    // TBuf模板参数差异: cann_out(v121)用TPosition::VECCALC, 主线(3510)用QuePosition::VECCALC
+    // (TPipe::InitBuffer重载与位置语义不同), v121必须与cann_out一致
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    TBuf<TPosition::VECCALC> bufQueue_;
+#else
     TBuf<QuePosition::VECCALC> bufQueue_;
+#endif
     LocalTensor<bfloat16_t> xTensor_;
     LocalTensor<int8_t> yTensor_;
     LocalTensor<bfloat16_t> maxTensor_;
@@ -268,8 +296,14 @@ private:
         pipe_.InitBuffer(bufQueue_, TOTAL_UB_SIZE);
         xTensor_ = bufQueue_.Get<bfloat16_t>();
         yTensor_ = xTensor_[MN_SIZE].template ReinterpretCast<int8_t>();
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        // v121: 切分基对齐cann_out(y区按OUT_SIZE, max区按MAX_SIZE), 与上方大布局常量配套
+        maxTensor_ = yTensor_[OUT_SIZE].template ReinterpretCast<bfloat16_t>();
+        eMaxTensor_ = maxTensor_[MAX_SIZE].template ReinterpretCast<uint16_t>();
+#else
         maxTensor_ = yTensor_[MN_SIZE].template ReinterpretCast<bfloat16_t>();
         eMaxTensor_ = maxTensor_[EMAX_SIZE].template ReinterpretCast<uint16_t>();
+#endif
         deQuantScaleTensor_ = eMaxTensor_[EMAX_SIZE];
         scaleTensor_ = deQuantScaleTensor_[EMAX_SIZE].template ReinterpretCast<int8_t>();
         scaleBlockTensor_ = scaleTensor_[EMAX_SIZE];
@@ -289,15 +323,25 @@ private:
             dataSize = dataSize >> 1;
             dstStride = dstStride >> 1;
         }
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        copy_ubuf_to_gm_align_v2(cGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
+                                 dataSize, false, false, 0, 0, dstStride, dataSize, false);
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         copy_ubuf_to_gm_align_v2(cGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
                                  dataSize, 0, dstStride, dataSize);
+#endif
     }
 
     __aicore__ inline void CopyScaleFromUbToGm(uint64_t offset, LocalTensor<int8_t>& src, uint16_t blockCount,
                                                uint32_t dataSize, uint32_t dstStride)
     {
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
+                                 dataSize, false, false, 0, 0, dstStride, SCALE_STORE_STRIDE, false);
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
                                  dataSize, 0, dstStride, SCALE_STORE_STRIDE);
+#endif
     }
 
     __aicore__ inline void CopyPadScaleFromUbToGm(uint64_t offset, LocalTensor<int8_t>& src, uint32_t nKRatio,
@@ -308,23 +352,38 @@ private:
         uint16_t lastNum = (firstNum < blkM) ? (blkM - firstNum) % nKRatio : 0;
 
         uint32_t dataSize = firstNum + ((nkIdx + firstNum == nKRatio) ? 1 : 0);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, 1, dataSize,
+                                 false, false, 0, 0, 0, 0, false);
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, 1, dataSize, 0,
                                  0, 0);
+#endif
         offset += dataSize;
         uint32_t srcOffset = RotateQuantAlign(firstNum + 1, SCALE_STORE_STRIDE);
 
         if (rowLoopNum > 0) {
             dataSize = nKRatio + 1;
             uint32_t srcStride = RotateQuantAlign(dataSize, SCALE_STORE_STRIDE);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+            copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
+                                     rowLoopNum, dataSize, false, false, 0, 0, dataSize, srcStride, false);
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
                                      rowLoopNum, dataSize, 0, dataSize, srcStride);
+#endif
             offset += rowLoopNum * dataSize;
             srcOffset += rowLoopNum * srcStride;
         }
 
         if (lastNum > 0) {
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+            copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
+                                     1, lastNum, false, false, 0, 0, 0, 0, false);
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
                                      1, lastNum, 0, 0, 0);
+#endif
         }
     }
 
@@ -437,6 +496,45 @@ private:
         VF_CALL<PadScaleVf>(qscaleAddr, qscaleBlkAddr, nkIdx, nKRatio, firstNum, lastNum, rowLoopNum);
     }
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    template <bool needExp>
+    static __simd_vf__ inline void ExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, uint32_t count,
+                                            uint16_t repeatTimes, uint32_t oneRepeatSize)
+    {
+        RegTensor<bfloat16_t> vSrcReg0;
+        RegTensor<bfloat16_t> vSrcReg1;
+        RegTensor<uint16_t> vdMaxExp;
+        RegTensor<uint16_t> expMaskBF16;
+        RegTensor<uint16_t> absMask16Bit;
+
+        if constexpr (needExp) {
+            Duplicate(expMaskBF16, MAX_EXP_FOR_BF16);
+        } else {
+            Duplicate(absMask16Bit, ABS_MASK_FOR_16BIT);
+        }
+        MaskReg maskReg;
+        UnalignReg u1;
+        AddrReg aReg;
+
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            aReg = CreateAddrReg<uint32_t>(i, oneRepeatSize);
+            maskReg = UpdateMask<bfloat16_t>(count);
+
+            LoadAlign<bfloat16_t, LoadDist::DIST_DINTLV_B16>(vSrcReg0, vSrcReg1, srcPtr, aReg);
+            if constexpr (needExp) {
+                And((RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg0, expMaskBF16, maskReg);
+                And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, expMaskBF16, maskReg);
+            } else {
+                And((RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg0, absMask16Bit, maskReg);
+                And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
+            }
+            Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::MicroAPI::ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
+            StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, vdMaxExp, u1, STORE_UNALIGN_STRIDE_BYTES);
+        }
+        StoreUnAlignPost(dstPtr, u1, 0);
+    }
+#else
     template <bool needExp>
     static __simd_vf__ inline void ExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, uint32_t count,
                                             uint16_t repeatTimes, uint32_t oneRepeatSize)
@@ -474,7 +572,57 @@ private:
         }
         StoreUnAlignPost(dstPtr, u1, 0);
     }
+#endif
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    template <bool needExp>
+    static __simd_vf__ inline void ClampExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* dst2Ptr,
+                                                 __ubuf__ bfloat16_t* srcPtr, uint32_t count, bfloat16_t alpha,
+                                                 uint16_t repeatTimes, uint32_t oneRepeatSize)
+    {
+        RegTensor<bfloat16_t> vSrcReg0;
+        RegTensor<bfloat16_t> vSrcReg1;
+        RegTensor<bfloat16_t> alphaReg;
+        RegTensor<bfloat16_t> vLimitReg;
+        RegTensor<uint16_t> vdMaxExp;
+        RegTensor<uint16_t> vExpExtract;
+        RegTensor<uint16_t> expMaskBF16;
+        RegTensor<uint16_t> absMask16Bit;
+
+        if constexpr (needExp) {
+            Duplicate(expMaskBF16, MAX_EXP_FOR_BF16);
+        }
+        Duplicate(alphaReg, alpha);
+        Duplicate(absMask16Bit, ABS_MASK_FOR_16BIT);
+        MaskReg maskReg;
+        UnalignReg u1;
+        UnalignReg u2;
+        AddrReg aReg;
+
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            aReg = CreateAddrReg<uint32_t>(i, oneRepeatSize);
+            maskReg = UpdateMask<bfloat16_t>(count);
+
+            LoadAlign<bfloat16_t, LoadDist::DIST_DINTLV_B16>(vSrcReg0, vSrcReg1, srcPtr, aReg);
+            And((RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg0, absMask16Bit, maskReg);
+            And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
+            Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::MicroAPI::ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
+            Mul(vLimitReg, (RegTensor<bfloat16_t>&)vdMaxExp, alphaReg, maskReg);
+            if constexpr (needExp) {
+                And(vExpExtract, (RegTensor<uint16_t>&)vLimitReg, expMaskBF16, maskReg);
+                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, vExpExtract, u1,
+                                                                      STORE_UNALIGN_STRIDE_BYTES);
+            } else {
+                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, (RegTensor<uint16_t>&)vLimitReg, u1,
+                                                                      STORE_UNALIGN_STRIDE_BYTES);
+            }
+            StoreUnAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE>(dst2Ptr, vLimitReg, u2, STORE_UNALIGN_STRIDE_BYTES);
+        }
+        StoreUnAlignPost(dstPtr, u1, 0);
+        StoreUnAlignPost(dst2Ptr, u2, 0);
+    }
+#else
     template <bool needExp>
     static __simd_vf__ inline void ClampExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* dst2Ptr,
                                                  __ubuf__ bfloat16_t* srcPtr, uint32_t count, bfloat16_t alpha,
@@ -522,6 +670,7 @@ private:
         StoreUnAlignPost(dstPtr, u1, 0);
         StoreUnAlignPost(dst2Ptr, u2, 0);
     }
+#endif
 
     template <bool isDynamic>
     static __simd_vf__ inline void ScaleVf(__ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr,
@@ -561,11 +710,15 @@ private:
         MaskReg preMaskScale;
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preMaskScale = UpdateMask<uint16_t>(scaleNum);
+            // cann_out原版此处为LoadAlign(v121验证过), 02b5811f7误改为DataCopy——回退
             LoadAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(vdMaxExp, srcPtr, vfLen16);
 
             if constexpr (isDynamic) {
                 And(vdMaxExpOnly, vdMaxExp, expMask, preMaskScale);
                 Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExpOnly, expMask, preMaskScale);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+                Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExpOnly, zeroRegTensor, preMaskScale);
+#endif
                 Compare<uint16_t, CMPMODE::LT>(invalidDataMask, vdMaxExpOnly, maxExpValue, preMaskScale);
                 Add(vdMaxExpAdd, vdMaxExp, addValue, preMaskScale);
                 And(vdMaxExpAdd, vdMaxExpAdd, expMask, preMaskScale);
@@ -573,6 +726,9 @@ private:
                 Sub(sharedExp, vdMaxExpAdd, maxExpValue, preMaskScale);
             } else {
                 Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+                Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
+#endif
                 Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
                 Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
                 Sub(sharedExp, vdMaxExp, maxExpValue, preMaskScale);
@@ -580,9 +736,16 @@ private:
 
             ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+            Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
+#endif
             StoreAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK_B16>(dstPtr, scaleValue, vfLen32,
                                                                                           preMaskScale);
+            // zeroMask重算(sharedExp!=0)为主线c2ebb486f的subnormal修复, v121无此修复且机器验证
+            // sharedExp==0&&vdMaxExp!=0的组halfScale应为scaleBias而非0(否则y整组量化为0)
+#if !(defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202)))
             Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
+#endif
             Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);
@@ -592,6 +755,91 @@ private:
         }
     }
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    template <bool isFP8>
+    static __simd_vf__ inline void ScaleVfcuBLAS(__ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr,
+                                                 __ubuf__ uint16_t* srcPtr, uint32_t scaleNum, uint16_t repeatTimes,
+                                                 float invDstTypeMax, uint32_t dtypeMax)
+    {
+        RegTensor<uint16_t> max16;
+        RegTensor<uint32_t> max32;
+        RegTensor<uint32_t> exp32;
+        RegTensor<uint32_t> man32;
+        RegTensor<uint32_t> expAddOne32;
+        RegTensor<uint32_t> extractExp;
+        RegTensor<uint16_t> expOut;
+        RegTensor<uint32_t> halfScale;
+        RegTensor<uint16_t> recExpOut;
+        RegTensor<uint32_t> manMaskFP32;
+        RegTensor<uint32_t> expMask;
+        RegTensor<uint32_t> zeroRegTensor32;
+        RegTensor<uint32_t> scaleBias;
+        RegTensor<uint32_t> nanRegTensor;
+        RegTensor<uint32_t> fp4NanRegTensor;
+        RegTensor<float> invMax;
+
+        Duplicate(manMaskFP32, MAN_MASK_FLOAT);
+        Duplicate(expMask, MAX_EXP_FOR_FP32);
+        Duplicate(zeroRegTensor32, 0);
+        Duplicate(scaleBias, FP32_EXP_BIAS_CUBLAS);
+        Duplicate(nanRegTensor, NAN_CUSTOMIZATION_PACK);
+        Duplicate(fp4NanRegTensor, MAX_EXP_FOR_FP8_IN_FP32);
+        if constexpr (isFP8) {
+            Duplicate((RegTensor<uint32_t>&)invMax, dtypeMax);
+        } else {
+            Duplicate(invMax, invDstTypeMax);
+        }
+
+        MaskReg cmpResult;
+        MaskReg zeroMask;
+        MaskReg p0;
+        MaskReg p1;
+        MaskReg p2;
+        MaskReg preMaskScale;
+        uint32_t SixtyFour = 64;
+        MaskReg dataMaskB16Half = UpdateMask<uint16_t>(SixtyFour);
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            preMaskScale = UpdateMask<uint32_t>(scaleNum);
+            // cann_out原版此处为LoadAlign(v121验证过), 02b5811f7误改为DataCopy——回退
+            LoadAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_UNPACK_B16>(max16, srcPtr, vfLen32);
+
+            Cast<float, bfloat16_t, castTraitZero>((RegTensor<float>&)max32, (RegTensor<bfloat16_t>&)max16,
+                                                   preMaskScale);
+            Compare<uint32_t, CMPMODE::LT>(cmpResult, max32, expMask, preMaskScale);
+            Compare<uint32_t, CMPMODE::NE>(zeroMask, max32, zeroRegTensor32, preMaskScale);
+
+            Mul((RegTensor<float>&)max32, (RegTensor<float>&)max32, invMax, preMaskScale);
+            ShiftRights(exp32, max32, SHR_NUM_FOR_FP32, preMaskScale);
+            And(man32, max32, manMaskFP32, preMaskScale);
+
+            CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32, NUMBER_ZERO, preMaskScale);
+            CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32, NUMBER_TWO_FIVE_FOUR, preMaskScale);
+            CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_ZERO, preMaskScale);
+            MaskAnd(p0, p0, p1, preMaskScale);
+            MaskAnd(p0, p0, p2, preMaskScale);
+            if constexpr (isFP8) {
+                CompareScalar<uint32_t, CMPMODE::EQ>(p1, exp32, NUMBER_ZERO, preMaskScale);
+                CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_HALF, preMaskScale);
+                MaskAnd(p1, p1, p2, preMaskScale);
+                MaskOr(p0, p0, p1, preMaskScale);
+            }
+
+            Adds(expAddOne32, exp32, 1, preMaskScale);
+            Select(extractExp, expAddOne32, exp32, p0);
+            Select<uint32_t>(extractExp, extractExp, fp4NanRegTensor, cmpResult);
+            Select<uint32_t>(extractExp, extractExp, zeroRegTensor32, zeroMask);
+            Pack<uint16_t, uint32_t, HighLowPart::LOWEST>(expOut, extractExp);
+            StoreAlign<uint16_t, StoreDist::DIST_PACK_B16>(dstPtr + i * SCALE_STORE_STRIDE, expOut, dataMaskB16Half);
+
+            ShiftLefts(extractExp, extractExp, SHR_NUM_FOR_BF16, preMaskScale);
+            Sub(halfScale, scaleBias, extractExp, preMaskScale);
+            Select<uint32_t>(halfScale, halfScale, nanRegTensor, cmpResult);
+            Select<uint32_t>(halfScale, halfScale, zeroRegTensor32, zeroMask);
+            Pack<uint16_t, uint32_t, HighLowPart::LOWEST>(recExpOut, halfScale);
+            StoreAlign<uint16_t>(dst2Ptr + i * vfLen32, recExpOut, dataMaskB16Half);
+        }
+    }
+#else
     template <bool isFP8>
     static __simd_vf__ inline void ScaleVfcuBLAS(__ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr,
                                                  __ubuf__ uint16_t* srcPtr, uint32_t scaleNum, uint16_t repeatTimes,
@@ -674,7 +922,60 @@ private:
             StoreAlign<uint16_t>(dst2Ptr + i * vfLen32, recExpOut, dataMaskB16Half);
         }
     }
+#endif
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    template <RoundMode roundMode, bool needClamp>
+    static __simd_vf__ inline void QuantVfFP4(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
+                                              __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
+                                              uint32_t oneRepeatSize, uint16_t repeatTimes)
+    {
+        MaskReg dataMask1;
+        MaskReg dataMask2;
+        RegTensor<uint16_t> halfScaleForMul;
+        RegTensor<bfloat16_t> vdExp0;
+        RegTensor<bfloat16_t> vdExp1;
+        RegTensor<fp4x2_e2m1_t> vdExp0FP4;
+        RegTensor<fp4x2_e2m1_t> vdExp1FP4;
+        RegTensor<uint16_t> signMaskBF16;
+        RegTensor<bfloat16_t> vLimitReg;
+        RegTensor<bfloat16_t> vnegLimitReg;
+        AddrReg aReg;
+
+        static constexpr CastTrait castTrait = {RegLayout::ZERO, SatMode::SAT, MaskMergeMode::ZEROING, roundMode};
+
+        Duplicate(signMaskBF16, SIGN_MASK_FOR_BF16);
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            aReg = CreateAddrReg<uint16_t>(i, oneRepeatSize);
+            dataMask1 = UpdateMask<bfloat16_t>(oneRepeatSize);
+            dataMask2 = UpdateMask<bfloat16_t>(oneRepeatSize);
+
+            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                           128 * 2);
+            DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
+
+            if constexpr (needClamp) {
+                DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
+                Xor((RegTensor<uint16_t>&)vnegLimitReg, (RegTensor<uint16_t>&)vLimitReg, signMaskBF16, dataMask1);
+                Max(vdExp0, vdExp0, vnegLimitReg, dataMask1);
+                Max(vdExp1, vdExp1, vnegLimitReg, dataMask1);
+                Min(vdExp0, vdExp0, vLimitReg, dataMask1);
+                Min(vdExp1, vdExp1, vLimitReg, dataMask1);
+            }
+
+            Mul(vdExp0, vdExp0, (RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
+            Mul(vdExp1, vdExp1, (RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
+            Interleave(vdExp0, vdExp1, vdExp0, vdExp1);
+            Cast<fp4x2_e2m1_t, bfloat16_t, castTrait>(vdExp0FP4, vdExp0, dataMask1);
+            Cast<fp4x2_e2m1_t, bfloat16_t, castTrait>(vdExp1FP4, vdExp1, dataMask2);
+
+            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
+                dstPtr, (RegTensor<int8_t>&)vdExp0FP4, 64, dataMask1);
+            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
+                dstPtr, (RegTensor<int8_t>&)vdExp1FP4, 64, dataMask2);
+        }
+    }
+#else
     template <RoundMode roundMode, bool needClamp>
     static __simd_vf__ inline void QuantVfFP4(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
                                               __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
@@ -725,7 +1026,74 @@ private:
                 dstPtr, (RegTensor<int8_t>&)vdExp1FP4, 64, dataMask2);
         }
     }
+#endif
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    template <typename FP8Type, bool needClamp>
+    static __simd_vf__ inline void QuantVfFP8(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
+                                              __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
+                                              uint32_t oneRepeatSize, uint16_t repeatTimes)
+    {
+        MaskReg dataMaskB16 = CreateMask<bfloat16_t>();
+        MaskReg dataMaskB8 = CreateMask<FP8Type>();
+        RegTensor<uint16_t> halfScaleForMul;
+        RegTensor<bfloat16_t> vdExp0;
+        RegTensor<bfloat16_t> vdExp1;
+        RegTensor<float> vdExp0FP32Zero;
+        RegTensor<float> vdExp0FP32One;
+        RegTensor<float> vdExp1FP32Zero;
+        RegTensor<float> vdExp1FP32One;
+        RegTensor<FP8Type> vdExp0FP8Zero;
+        RegTensor<FP8Type> vdExp0FP8One;
+        RegTensor<FP8Type> vdExp1FP8Zero;
+        RegTensor<FP8Type> vdExp1FP8One;
+        RegTensor<uint16_t> signMaskBF16;
+        RegTensor<bfloat16_t> vLimitReg;
+        RegTensor<bfloat16_t> vnegLimitReg;
+        AddrReg aReg;
+
+        Duplicate(signMaskBF16, SIGN_MASK_FOR_BF16);
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            aReg = CreateAddrReg<uint16_t>(i, oneRepeatSize);
+
+            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                           128 * 2);
+            DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
+
+            if constexpr (needClamp) {
+                DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
+                Xor((RegTensor<uint16_t>&)vnegLimitReg, (RegTensor<uint16_t>&)vLimitReg, signMaskBF16, dataMaskB16);
+                Max(vdExp0, vdExp0, vnegLimitReg, dataMaskB16);
+                Max(vdExp1, vdExp1, vnegLimitReg, dataMaskB16);
+                Min(vdExp0, vdExp0, vLimitReg, dataMaskB16);
+                Min(vdExp1, vdExp1, vLimitReg, dataMaskB16);
+            }
+
+            Mul(vdExp0, vdExp0, (RegTensor<bfloat16_t>&)halfScaleForMul, dataMaskB16);
+            Mul(vdExp1, vdExp1, (RegTensor<bfloat16_t>&)halfScaleForMul, dataMaskB16);
+
+            Cast<float, bfloat16_t, castTraitZero>(vdExp0FP32Zero, vdExp0, dataMaskB16);
+            Cast<float, bfloat16_t, castTraitOne>(vdExp0FP32One, vdExp0, dataMaskB16);
+            Cast<float, bfloat16_t, castTraitZero>(vdExp1FP32Zero, vdExp1, dataMaskB16);
+            Cast<float, bfloat16_t, castTraitOne>(vdExp1FP32One, vdExp1, dataMaskB16);
+
+            Cast<FP8Type, float, castTrait32to80>(vdExp0FP8Zero, vdExp0FP32Zero, dataMaskB16);
+            Cast<FP8Type, float, castTrait32to82>(vdExp0FP8One, vdExp0FP32One, dataMaskB16);
+            Cast<FP8Type, float, castTrait32to81>(vdExp1FP8Zero, vdExp1FP32Zero, dataMaskB16);
+            Cast<FP8Type, float, castTrait32to83>(vdExp1FP8One, vdExp1FP32One, dataMaskB16);
+
+            Add((RegTensor<uint8_t>&)vdExp0FP8Zero, (RegTensor<uint8_t>&)vdExp0FP8Zero,
+                (RegTensor<uint8_t>&)vdExp0FP8One, dataMaskB8);
+            Add((RegTensor<uint8_t>&)vdExp1FP8Zero, (RegTensor<uint8_t>&)vdExp1FP8Zero,
+                (RegTensor<uint8_t>&)vdExp1FP8One, dataMaskB8);
+            Add((RegTensor<uint8_t>&)vdExp0FP8Zero, (RegTensor<uint8_t>&)vdExp0FP8Zero,
+                (RegTensor<uint8_t>&)vdExp1FP8Zero, dataMaskB8);
+
+            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_NORM_B8>(
+                dstPtr, (RegTensor<int8_t>&)vdExp0FP8Zero, 128 * 2, dataMaskB8);
+        }
+    }
+#else
     template <typename FP8Type, bool needClamp>
     static __simd_vf__ inline void QuantVfFP8(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
                                               __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
@@ -790,7 +1158,26 @@ private:
                 dstPtr, (RegTensor<int8_t>&)vdExp0FP8Zero, 128 * 2, dataMaskB8);
         }
     }
+#endif
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    static __simd_vf__ inline void TransLayoutVf(__ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr,
+                                                 uint16_t mSize, uint16_t scaleBlockN)
+    {
+        for (uint16_t mIdx = 0; mIdx < mSize; ++mIdx) {
+            uint32_t eleNum = scaleBlockN;
+            MaskReg maskScaleN = UpdateMask<int8_t>(eleNum);
+            RegTensor<int8_t> vReg0;
+            UnalignReg u0;
+            auto srcUb = scaleAddr + mIdx * scaleBlockN;
+            auto dstUb = scaleBlkAddr + mIdx * SCALE_STORE_STRIDE;
+
+            DataCopyUnAlignPre(u0, srcUb);
+            DataCopyUnAlign(vReg0, u0, srcUb);
+            DataCopy<int8_t, StoreDist::DIST_NORM_B8>(dstUb, vReg0, maskScaleN);
+        }
+    }
+#else
     static __simd_vf__ inline void TransLayoutVf(__ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr,
                                                  uint16_t mSize, uint16_t scaleBlockN)
     {
@@ -807,6 +1194,7 @@ private:
             StoreAlign<int8_t, StoreDist::DIST_NORM_B8>(dstUb, vReg0, maskScaleN);
         }
     }
+#endif
 
     static __simd_vf__ inline void PadScaleVf(__ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr, uint32_t nkIdx,
                                               uint32_t nKRatio, uint16_t firstNum, uint16_t lastNum,
@@ -827,6 +1215,22 @@ private:
         }
     }
 
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+    static __simd_callee__ inline void DataCopyByCount(__ubuf__ int8_t* dstAddr, __ubuf__ int8_t* srcAddr,
+                                                       uint32_t count)
+    {
+        uint16_t loopNum = (count + vfLen8 - 1) / vfLen8;
+        RegTensor<int8_t> vReg0;
+        MaskReg maskReg;
+        UnalignReg u0;
+        for (uint16_t i = 0; i < loopNum; ++i) {
+            maskReg = UpdateMask<int8_t>(count);
+            DataCopyUnAlignPre(u0, srcAddr + i * vfLen8);
+            DataCopyUnAlign(vReg0, u0, srcAddr + i * vfLen8);
+            DataCopy<int8_t, StoreDist::DIST_NORM_B8>(dstAddr + i * vfLen8, vReg0, maskReg);
+        }
+    }
+#else
     static __simd_callee__ inline void DataCopyByCount(__ubuf__ int8_t* dstAddr, __ubuf__ int8_t* srcAddr,
                                                        uint32_t count)
     {
@@ -841,9 +1245,10 @@ private:
             StoreAlign<int8_t, StoreDist::DIST_NORM_B8>(dstAddr + i * vfLen8, vReg0, maskReg);
         }
     }
+#endif
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif // __NPU_ARCH__ == 3510
+#endif // __NPU_ARCH__ == 3510 || 9201

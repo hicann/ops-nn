@@ -45,6 +45,10 @@ struct alignas(STRUCT_ALIGNAS) RotateQuantAptTilingData {
     int32_t scaleAlg = 0;  // scale算法
     uint8_t trans = 0;     // 是否转置（0:false, 1:true）
     uint8_t hasAlpha = 0;  // alpha是否有值（0:false, 1:true）
+
+    // 核配参数（tiling层决策，kernel/block层按此运行时分发）
+    uint32_t aivNumRatio = 2; // AIC:AIV核配比（3510=2即1:2, v121 9201/9202=1即1:1），
+                              // 驱动AIC↔AIV同步flag路由与fixpipe subBlockId路由
 };
 #pragma pack(pop)
 } // namespace RotateQuantAptOpt

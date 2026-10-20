@@ -9,9 +9,9 @@
 # ----------------------------------------------------------------------------
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350")
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350" "ascend960dt" "ascend960pr")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35" "arch35" "arch35")
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
@@ -30,9 +30,11 @@ add_kernel_sources(
     AUTO_SYNC false
 )
 
+# arch35全平台(950/350/v121)统一走主线kernel入口: v121(9201/9202)的HIFLOAT4输出由
+# binary.json的dtype条目驱动(kernel内按DTYPE_Y类型分发epilogue)
 add_kernel_sources(
     KERNEL_SRC arch35/rotate_quant.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     SIMPLIFIED_KEY None
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"

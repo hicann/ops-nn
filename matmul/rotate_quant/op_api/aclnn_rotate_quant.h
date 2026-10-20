@@ -41,12 +41,13 @@ extern "C" {
  * @param [in] trans: 表示输出y是否转置。
  * 目前只支持false。
  * @param [out] yOut: 量化后的输出张量。
- * device侧的aclTensor，MX场景数据类型支持FLOAT4_E2M1、FLOAT8_E4M3FN、FLOAT8_E5M2；
+ * device侧的aclTensor，MX场景数据类型支持FLOAT4_E2M1、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT4；
  * INT场景数据类型支持INT8、INT32。数据格式支持ND。
  * 当trans为false时，shape为(M, N)；当trans为true时，shape为(N, M)。
  * @param [out] scaleOut: 动态量化计算出的缩放系数。
- * device侧的aclTensor，MX场景数据类型支持FLOAT8_E8M0；INT场景数据类型支持FLOAT。数据格式支持ND。
- * MX场景shape为(*, CeilDiv(N,64), 2)；INT场景shape为(M,)。
+ * device侧的aclTensor，MX场景数据类型支持FLOAT8_E8M0；HIFLOAT4场景数据类型支持HIFLOAT4_SCALE；
+ * INT场景数据类型支持FLOAT。数据格式支持ND。
+ * MX场景shape为(*, CeilDiv(N,64), 2)；HIFLOAT4场景shape为(*, CeilDiv(N,64), 1)；INT场景shape为(M,)。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

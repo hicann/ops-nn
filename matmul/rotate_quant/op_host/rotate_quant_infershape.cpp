@@ -13,6 +13,7 @@
  * \brief RotateQuant算子形状推导实现
  */
 
+#include "../../../common/inc/op_host/op_const_def_nn.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
 #include "log/log.h"
@@ -40,12 +41,13 @@ constexpr uint32_t INPUT_NUM_MAX_ROTATE_QUANT = 3;
 
 constexpr int64_t MX_BLOCK_SIZE = 64;
 constexpr int64_t MX_SCALE_LAST_DIM = 2;
+constexpr int64_t HIF4_SCALE_LAST_DIM = 1;
 constexpr int64_t ALPHA_DIM_NUM = 1;
 constexpr int64_t ALPHA_DIM_SIZE = 1;
 
 const std::initializer_list<ge::DataType> INT_OUT_TYPE_LIST = {ge::DT_INT8, ge::DT_INT4};
 
-static std::set<std::string> RotateQuant950SupportSoc = {"Ascend950", "Ascend350"};
+static std::set<std::string> RotateQuant950SupportSoc = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
 
 static bool IsRotateQuant950Support()
 {
@@ -222,6 +224,16 @@ static ge::graphStatus InferShape4Mx(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(Y_INDEX);
     gert::Shape* scaleShape = context->GetOutputShape(SCALE_INDEX);
 
+    ge::DataType yDtype = ge::DT_INT8;
+    auto* attrs = context->GetAttrs();
+    if (attrs != nullptr) {
+        const int64_t* pDstDtype = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
+        if (pDstDtype != nullptr) {
+            yDtype = static_cast<ge::DataType>(*pDstDtype);
+        }
+    }
+    int64_t scaleLastDim = (yDtype == Ops::NN::DT_HIFLOAT4) ? HIF4_SCALE_LAST_DIM : MX_SCALE_LAST_DIM;
+
     size_t xDimNum = xShape->GetDimNum();
     int64_t xN = xShape->GetDim(xDimNum - 1);
 
@@ -235,7 +247,7 @@ static ge::graphStatus InferShape4Mx(gert::InferShapeContext* context)
         scaleShape->SetDim(i, xShape->GetDim(i));
     }
     scaleShape->SetDim(xDimNum - 1, Ops::Base::CeilDiv(xN, MX_BLOCK_SIZE));
-    scaleShape->SetDim(xDimNum, MX_SCALE_LAST_DIM);
+    scaleShape->SetDim(xDimNum, scaleLastDim);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -259,12 +271,14 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
     }
 
     if (IsRotateQuant950Support()) {
-        if (yDtype == ge::DT_FLOAT4_E2M1 || yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2) {
+        if (yDtype == ge::DT_FLOAT4_E2M1 || yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2 ||
+            yDtype == Ops::NN::DT_HIFLOAT4) {
             OP_CHECK_IF(CheckInputShape4Mx(context) == ge::GRAPH_FAILED,
                         OP_LOGE(context, "Invalid input shape for mxfp8"), return ge::GRAPH_FAILED);
             return InferShape4Mx(context);
         } else {
-            OP_LOGE(context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, or float8_e5m2, but got %d",
+            OP_LOGE(context,
+                    "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4, but got %d",
                     static_cast<int32_t>(yDtype));
             return ge::GRAPH_FAILED;
         }
@@ -301,8 +315,11 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
         } else if (yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2) {
             context->SetOutputDataType(Y_INDEX, yDtype);
             context->SetOutputDataType(SCALE_INDEX, ge::DT_FLOAT8_E8M0);
+        } else if (yDtype == Ops::NN::DT_HIFLOAT4) {
+            context->SetOutputDataType(Y_INDEX, Ops::NN::DT_HIFLOAT4);
+            context->SetOutputDataType(SCALE_INDEX, Ops::NN::DT_HIFLOAT4_SCALE);
         } else {
-            OP_LOGE(context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, or float8_e5m2");
+            OP_LOGE(context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4");
             return ge::GRAPH_FAILED;
         }
     } else {
