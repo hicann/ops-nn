@@ -12,6 +12,7 @@
  * \file max_pool3d_grad_infershape_arch35.cpp
  * \brief
  */
+#include <algorithm>
 #include <string>
 #include "error_util.h"
 #include "exe_graph/runtime/infer_shape_context.h"
@@ -46,7 +47,7 @@ static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
     OP_CHECK_IF(output_shape == nullptr,
-                OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccessful"),
+                OP_LOGE("SetAllUnknownDim", "the output_shape is nullptr, return unsuccessful"),
                 return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
@@ -139,7 +140,90 @@ ge::graphStatus CheckAttrInfo(const gert::InferShapeContext* context)
 
     const char* data_format = attrs->GetAttrPointer<char>(DATA_FORMAT_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_format);
+    std::string dataFormatStr(data_format);
+    OP_CHECK_IF(
+        dataFormatStr != "NDHWC" && dataFormatStr != "NCDHW",
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "data_format", data_format, "expect [NDHWC] or [NCDHW]"),
+        return ge::GRAPH_FAILED);
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus CalculatePadsForMaxPool3DGrad(const gert::InferShapeContext* context, const gert::Shape* xShape)
+{
+    const char* opName_ = "MaxPool3DGrad";
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+
+    const int64_t xDimNum = static_cast<int64_t>(xShape->GetDimNum());
+    OP_CHECK_IF(
+        xDimNum < static_cast<int64_t>(CDHW_DIM_NUM),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "length of orig_x shape", std::to_string(xDimNum).c_str(),
+                                              "rank of orig_x should be 4(CDHW or DHWC) or 5(NCDHW or NDHWC)"),
+        return ge::GRAPH_FAILED);
+
+    const char* padding = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, padding);
+    std::string paddingStr(padding);
+    if (paddingStr == "CALCULATED") {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    int64_t pads[6] = {0, 0, 0, 0, 0, 0};
+    if (paddingStr == "SAME") {
+        const char* dataFormat = attrs->GetAttrPointer<char>(DATA_FORMAT_ATTR_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context, dataFormat);
+        std::string dataFormatStr(dataFormat);
+
+        size_t dDimIdx = static_cast<size_t>(xDimNum) - (CDHW_DIM_NUM - 1);
+        size_t hDimIdx = static_cast<size_t>(xDimNum) - (CDHW_DIM_NUM - 2);
+        size_t wDimIdx = static_cast<size_t>(xDimNum) - 1;
+        size_t dAttrIdx = SHAPE_D_DIM;
+        size_t hAttrIdx = SHAPE_H_DIM;
+        size_t wAttrIdx = SHAPE_W_DIM;
+        if (dataFormatStr == "NDHWC") {
+            dDimIdx -= 1;
+            hDimIdx -= 1;
+            wDimIdx -= 1;
+            dAttrIdx -= 1;
+            hAttrIdx -= 1;
+            wAttrIdx -= 1;
+        }
+
+        auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(KSIZE_ATTR_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
+        auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(STRIDES_ATTR_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context, strides);
+        const auto ksizeData = static_cast<const int64_t*>(ksize->GetData());
+        const auto stridesData = static_cast<const int64_t*>(strides->GetData());
+        const int64_t kernelD = ksizeData[dAttrIdx];
+        const int64_t kernelH = ksizeData[hAttrIdx];
+        const int64_t kernelW = ksizeData[wAttrIdx];
+        const int64_t strideD = stridesData[dAttrIdx];
+        const int64_t strideH = stridesData[hAttrIdx];
+        const int64_t strideW = stridesData[wAttrIdx];
+        const int64_t inputD = xShape->GetDim(dDimIdx);
+        const int64_t inputH = xShape->GetDim(hDimIdx);
+        const int64_t inputW = xShape->GetDim(wDimIdx);
+
+        const int64_t tailsD = inputD % strideD;
+        const int64_t tailsH = inputH % strideH;
+        const int64_t tailsW = inputW % strideW;
+        const int64_t padD = std::max(int64_t{0}, (tailsD > 0 ? kernelD - tailsD : kernelD - strideD));
+        const int64_t padH = std::max(int64_t{0}, (tailsH > 0 ? kernelH - tailsH : kernelH - strideH));
+        const int64_t padW = std::max(int64_t{0}, (tailsW > 0 ? kernelW - tailsW : kernelW - strideW));
+        pads[0] = padD / 2;
+        pads[1] = padD / 2 + padD % 2;
+        pads[2] = padH / 2;
+        pads[3] = padH / 2 + padH % 2;
+        pads[4] = padW / 2;
+        pads[5] = padW / 2 + padW % 2;
+    }
+
+    OP_LOGD(context->GetNodeName(), "MaxPool3DGrad padding is %s, calculated pads is [%s]", paddingStr.c_str(),
+            (std::to_string(pads[0]) + ", " + std::to_string(pads[1]) + ", " + std::to_string(pads[2]) + ", " +
+             std::to_string(pads[3]) + ", " + std::to_string(pads[4]) + ", " + std::to_string(pads[5]))
+                .c_str());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -152,9 +236,31 @@ ge::graphStatus InferShapeForMaxPool3DGrad(gert::InferShapeContext* context)
     OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPool3DGrad infershape running");
     auto inputXDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXDesc);
+    auto inputXFormat = inputXDesc->GetOriginFormat();
+    OP_CHECK_IF(inputXFormat != FORMAT_ND && inputXFormat != FORMAT_NCDHW && inputXFormat != FORMAT_NDHWC,
+                OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context->GetNodeName(), "orig_x",
+                                                        std::to_string(static_cast<int32_t>(inputXFormat)).c_str(),
+                                                        "format only supports ND, NCDHW, NDHWC"),
+                return ge::GRAPH_FAILED);
+
+    auto inputYDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputYDesc);
+    auto gradsDesc = context->GetInputDesc(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradsDesc);
+    const ge::DataType xDtype = inputXDesc->GetDataType();
+    const ge::DataType yDtype = inputYDesc->GetDataType();
+    const ge::DataType gradsDtype = gradsDesc->GetDataType();
+    OP_CHECK_IF(xDtype != yDtype || xDtype != gradsDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "orig_x, orig_y, grads",
+                                                       (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradsDtype))
+                                                           .c_str(),
+                                                       "the dtypes of orig_x, orig_y and grads must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto ret = CheckAttrInfo(context);
-    OP_CHECK_IF(ret != GRAPH_SUCCESS, OP_LOGD("InferShapeForMaxPool3DGrad", "CheckAttrInfo return unsuccessful"),
+    OP_CHECK_IF(ret != GRAPH_SUCCESS, OP_LOGE("InferShapeForMaxPool3DGrad", "CheckAttrInfo return unsuccessful"),
                 return ge::GRAPH_FAILED);
 
     const gert::Shape* xShape = context->GetInputShape(0);
@@ -179,6 +285,12 @@ ge::graphStatus InferShapeForMaxPool3DGrad(gert::InferShapeContext* context)
         OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPool3DGrad infershape handle unknown rank.");
         return ge::GRAPH_SUCCESS;
     }
+
+    auto padsRet = CalculatePadsForMaxPool3DGrad(context, xShape);
+    OP_CHECK_IF(padsRet != GRAPH_SUCCESS,
+                OP_LOGE("InferShapeForMaxPool3DGrad", "CalculatePadsForMaxPool3DGrad return unsuccessful"),
+                return ge::GRAPH_FAILED);
+
     yShape->SetDimNum(xDimNum);
     *yShape = *xShape;
 
