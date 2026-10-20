@@ -16,7 +16,7 @@
  */
 
 #ifndef MSE_LOSS_GRAD_V2_TILING_ARCH35_H_
-#define MSE_LOSS_GRAD_V2_TILING_ARCH35_H
+#define MSE_LOSS_GRAD_V2_TILING_ARCH35_H_
 
 // Include the tiling data struct definition — this is shared between
 // host-side tiling and device-side kernel (same struct, different compilation).
