@@ -19,19 +19,19 @@
 
 namespace ge {
 /**
-*@brief Computes hyperbolic tangent of "x" element-wise .
-
-*@par Inputs:
-* One input:
-* x: An ND tensor. support 1D ~ 8D. Must be one of the following types:
-* float16, float32, bfloat16.
-*
-*@par Outputs:
-* y: A Tensor. Has the same type as "x" .
-*
-*@par Third-party framework compatibility
-* Compatible with TensorFlow operator Mish.
-*/
+ *@brief Computes the Mish activation function element-wise: x * tanh(softplus(x)).
+ *
+ *@par Inputs:
+ * One input:
+ * x: An ND tensor. support 1D ~ 8D. Must be one of the following types:
+ * float16, float32, bfloat16.
+ *
+ *@par Outputs:
+ * y: A Tensor. Has the same type as "x" .
+ *
+ *@par Third-party framework compatibility
+ * Compatible with TensorFlow operator Mish.
+ */
 
 REG_OP(Mish)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
