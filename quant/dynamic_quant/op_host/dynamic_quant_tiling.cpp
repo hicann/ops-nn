@@ -59,7 +59,7 @@ constexpr uint32_t NUM_TWO_FIVE_SIX = 256;
 constexpr uint32_t MULTI_ROW_HAS_SMOOTH_SPLIT = 15;
 constexpr uint32_t MULTI_ROW_NO_SMOOTH_SPLIT = 11;
 
-constexpr uint32_t SYS_WORKSPACE_SIZE = 0;
+constexpr uint32_t SYS_WORKSPACE_SIZE = 16777216;
 constexpr uint32_t COMPARE_INT = 255;
 constexpr uint32_t B_ASCEND_HW_NUMCORES = 40;
 constexpr uint32_t P_ASCEND_HUW_NUMCORE = 8;
