@@ -29,10 +29,15 @@ namespace {
 constexpr int32_t BYTE_BLOCK = 32;
 constexpr uint32_t B16_BITS = 4;
 constexpr uint32_t FP32_BITS = 3;
-constexpr uint32_t UB_BUDGET_DIVISOR = 2;        // UB 总容量按 2 分配，留一半给其他缓冲
-constexpr uint32_t KB_UNIT = 1024;               // 日志中 KB 换算单位
-constexpr uint32_t SCALAR_ACC_ROW_BYTES = 8;     // rowAcc(FP32) + outH(保守按 FP32) 每元素字节
-constexpr uint32_t FP32_VEC_ROW_BYTES = 20;      // rowAcc/prod/gradRow/outH/rowComp 各 4B 每元素字节
+constexpr uint32_t KB_UNIT = 1024;
+constexpr uint64_t UB_RESERVE_BYTES = 8 * 1024;
+constexpr uint32_t SCALAR_ACC_ROW_BYTES = 12;
+constexpr uint32_t FP32_VEC_ROW_BYTES = 20;
+constexpr uint32_t B16_VEC_ROW_BYTES = 24;
+constexpr uint32_t B16_STRIDED_CLASS_BYTES = 12;
+constexpr uint32_t B16_STRIDED_ROW_BYTES = 12;
+constexpr uint32_t SHORT_ROW_ELEMS = 512;
+constexpr uint64_t DATACOPY_PAD_MAX_COPY_BYTES = 65535;
 constexpr uint32_t DATACOPY_PAD_MAX_ELEMS = 255; // DataCopyPad 单侧填充元素上限（uint8_t）
 const size_t FILTER_INDEX = 1;
 const size_t OUT_BACKPROP_INDEX = 2;
@@ -202,10 +207,8 @@ ge::graphStatus Conv3DDXV2VecTiling::CalcUbStrategy()
 void Conv3DDXV2VecTiling::CalcB16UbBudget(uint64_t ubSize)
 {
     auto& dx = tilingData_.conv3DDxTiling;
-    const uint64_t ubBudget = ubSize / UB_BUDGET_DIVISOR;
+    const uint64_t ubBudget = ubSize - UB_RESERVE_BYTES;
     // BF16/FP16 vector path UB budget check（与 kernel InitBuffer 一致的口径）：
-    //   行缓冲 rowAcc/prod(FP32) + gradRow/outH(BF16) = alignedWi*12B；
-    //   strideW>1 相位分解路径只分配类缓冲（≈alignedWi/strideW*12B）；
     //   weightDilated 按 dilatedHk*alignedDilatedW（不能用 hk，dilationH>1 会低估）。
     // 超限不再 GRAPH_FAILED：降级为标量路径（vecScalarOnly=1，kernel 只保留
     // weightDilated 缓冲），保证大 shape 用例可正常执行而不在 tiling 处被拦截。
@@ -218,8 +221,16 @@ void Conv3DDXV2VecTiling::CalcB16UbBudget(uint64_t ubSize)
                                              dx.dataPerBlock) *
                                                 dx.dataPerBlock :
                                             0;
-        uint64_t bf16UbNeed = static_cast<uint64_t>(alignedWi) * 12 + static_cast<uint64_t>(classAlignedWi) * 12 +
-                              static_cast<uint64_t>(dx.dilatedHk) * dx.alignedDilatedW * sizeof(uint16_t);
+        uint64_t rowUbNeed = static_cast<uint64_t>(alignedWi) * B16_VEC_ROW_BYTES;
+        if (sW > 1) {
+            uint64_t stridedUbNeed = static_cast<uint64_t>(classAlignedWi) * B16_STRIDED_CLASS_BYTES +
+                                     static_cast<uint64_t>(alignedWi) * B16_STRIDED_ROW_BYTES;
+            if (alignedWi < SHORT_ROW_ELEMS) {
+                stridedUbNeed += static_cast<uint64_t>(alignedWi) * 6;
+            }
+            rowUbNeed = (stridedUbNeed > rowUbNeed) ? stridedUbNeed : rowUbNeed;
+        }
+        uint64_t bf16UbNeed = rowUbNeed + static_cast<uint64_t>(dx.dilatedHk) * dx.alignedDilatedW * sizeof(uint16_t);
         if (bf16UbNeed > ubBudget) {
             OP_LOGI(opName_,
                     "vec BF16/FP16 row buffer %uKB exceeds UB budget %uKB (wi=%u, strideW=%u, "
@@ -227,14 +238,19 @@ void Conv3DDXV2VecTiling::CalcB16UbBudget(uint64_t ubSize)
                     static_cast<uint32_t>(bf16UbNeed / KB_UNIT), static_cast<uint32_t>(ubBudget / KB_UNIT), dx.wi,
                     dx.strideW, dx.dilatedHk);
             dx.vecScalarOnly = 1;
-            // rowAcc+outH（按 alignedWi*8B 保守核算）+ weightDilated 放得下 UB 时，
             // 降级到 ComputeRowScalarAcc（FP32 累加，精度口径与向量路径一致）；
             // 极端大 wi 连 rowAcc+outH 都放不下时才退回逐点舍入的纯标量 ComputeRow。
-            dx.useScalarAcc = (static_cast<uint64_t>(alignedWi) * SCALAR_ACC_ROW_BYTES +
-                                   static_cast<uint64_t>(dx.dilatedHk) * dx.alignedDilatedW * sizeof(uint16_t) <=
-                               ubBudget) ?
-                                  1 :
-                                  0;
+            const uint64_t scalarAccUbNeed = static_cast<uint64_t>(alignedWi) * SCALAR_ACC_ROW_BYTES +
+                                             static_cast<uint64_t>(dx.dilatedHk) * dx.alignedDilatedW *
+                                                 sizeof(uint16_t);
+            const bool scalarAccFitsUb = scalarAccUbNeed <= ubBudget;
+            const bool scalarAccWritable = static_cast<uint64_t>(alignedWi) * sizeof(uint16_t) <=
+                                           DATACOPY_PAD_MAX_COPY_BYTES;
+            dx.useScalarAcc = (scalarAccFitsUb && scalarAccWritable) ? 1 : 0;
+        }
+        if (static_cast<uint64_t>(alignedWi) * sizeof(uint16_t) > DATACOPY_PAD_MAX_COPY_BYTES) {
+            dx.vecScalarOnly = 1;
+            dx.useScalarAcc = 0;
         }
     }
 }
@@ -242,10 +258,9 @@ void Conv3DDXV2VecTiling::CalcB16UbBudget(uint64_t ubSize)
 void Conv3DDXV2VecTiling::CalcFp32UbBudget(uint64_t ubSize)
 {
     auto& dx = tilingData_.conv3DDxTiling;
-    const uint64_t ubBudget = ubSize / UB_BUDGET_DIVISOR;
+    const uint64_t ubBudget = ubSize - UB_RESERVE_BYTES;
     // FP32 行缓冲 UB 预算（与 kernel InitBuffer 口径一致）：
     //   向量快路径行缓冲 rowAcc/prod/gradRow/outH/rowComp = alignedWi*20B；
-    //   降级 ComputeRowScalarAcc 只需 rowAcc/outH = alignedWi*8B；
     //   再加 weightDilated（dilatedHk*alignedDilatedW*4B）。超限则降级为纯标量 ComputeRow。
     if (vecDtype_ == ge::DT_FLOAT) {
         const uint32_t alignedWi = ((static_cast<uint32_t>(dx.wi) + dx.dataPerBlock - 1) / dx.dataPerBlock) *
@@ -268,13 +283,16 @@ void Conv3DDXV2VecTiling::CalcFp32UbBudget(uint64_t ubSize)
                     dx.strideW, dx.dilatedHk);
             dx.vecScalarOnly = 1;
         }
+        if (static_cast<uint64_t>(alignedWi) * sizeof(float) > DATACOPY_PAD_MAX_COPY_BYTES) {
+            dx.vecScalarOnly = 1;
+        }
     }
 }
 
 ge::graphStatus Conv3DDXV2VecTiling::CheckWeightUbBudget(uint64_t ubSize)
 {
     auto& dx = tilingData_.conv3DDxTiling;
-    const uint64_t ubBudget = ubSize / UB_BUDGET_DIVISOR;
+    const uint64_t ubBudget = ubSize - UB_RESERVE_BYTES;
     // 兜底路径（vecScalarOnly=1 且 useScalarAcc=0）下 kernel 只分配 weightDilated：
     // 极端 kernel×dilation（dilatedHk*alignedDilatedW 超 UB 预算）会让 InitBuffer 越界，
     // 此处 fail-stop 提前暴露，比运行时 UB 溢出更可诊断。

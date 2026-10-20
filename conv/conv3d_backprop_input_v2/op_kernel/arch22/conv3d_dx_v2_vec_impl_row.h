@@ -26,19 +26,32 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffers()
             if (useScalarAcc) {
                 pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
                 pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+                pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
             }
         } else if (CanUseBf16VecStridedRow()) {
-            // strideW>1 相位分解向量化（仅 BF16）：只需类缓冲（约 gradInW/strideW 宽）
+            // strideW>1 相位分解向量化（仅 BF16）：主缓冲约 gradInW/strideW 宽
             pipe.InitBuffer(tmpBufRowAccP, classAlignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufProdP, classAlignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufGradRowP, classAlignedWi * sizeof(T));
             pipe.InitBuffer(tmpBufOutHP, classAlignedWi * sizeof(T));
+            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp2, alignedWi * sizeof(float));
+            if (alignedWi < FP32_KAHAN_MIN_ELEMS) {
+                // 短行在 ProcessRow 中先于 strided 判据路由到 ComputeRowScalarAcc，
+                // 该路径使用全行 rowAcc/outH，必须在此补齐，否则会访问未 InitBuffer 的 TBuf
+                pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
+                pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+            }
         } else {
             // strideW==1 快路径或标量兜底：全行缓冲
             pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
             pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp2, alignedWi * sizeof(float));
         }
     } else if constexpr (std::is_same<T, half>::value) {
         // FP16 与 BF16 共用：快路径需全行缓冲，标量兜底只需 rowAcc/outH
@@ -47,15 +60,20 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffers()
             if (useScalarAcc) {
                 pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
                 pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+                pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
             }
         } else if (CanUseBf16VecRow()) {
             pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufProd, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufGradRow, alignedWi * sizeof(T));
             pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp, alignedWi * sizeof(float));
+            pipe.InitBuffer(tmpBufRowTmp2, alignedWi * sizeof(float));
         } else {
             pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
         }
     } else if constexpr (std::is_same<T, float>::value) {
         // FP32：strideW==1 走 W 维向量化快路径，否则降级 ComputeRowScalarAcc
@@ -70,6 +88,7 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::InitBuffers()
         } else {
             pipe.InitBuffer(tmpBufRowAcc, alignedWi * sizeof(float));
             pipe.InitBuffer(tmpBufOutH, alignedWi * sizeof(T));
+            pipe.InitBuffer(tmpBufRowComp, alignedWi * sizeof(float));
         }
     }
     if constexpr (std::is_same<T, bfloat16_t>::value || std::is_same<T, half>::value || std::is_same<T, float>::value) {
@@ -94,6 +113,8 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ProcessRow(uint64_t 
             } else {
                 ComputeRow(r);
             }
+        } else if (alignedWi < FP32_KAHAN_MIN_ELEMS) {
+            ComputeRowScalarAcc(r);
         } else if (CanUseBf16VecRow()) {
             ComputeRowBf16VecPlain(r);
         } else if (CanUseBf16VecStridedRow()) {
@@ -109,6 +130,8 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ProcessRow(uint64_t 
             } else {
                 ComputeRow(r);
             }
+        } else if (alignedWi < FP32_KAHAN_MIN_ELEMS) {
+            ComputeRowScalarAcc(r);
         } else if (CanUseBf16VecRow()) {
             ComputeRowBf16VecPlain(r);
         } else {
@@ -119,7 +142,11 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ProcessRow(uint64_t 
         if (vecScalarOnly) {
             ComputeRow(r);
         } else if (CanUseFp32VecRow()) {
-            ComputeRowBf16VecPlain(r);
+            if (UseDhBlockedAcc()) {
+                ComputeRowBf16Vec(r);
+            } else {
+                ComputeRowBf16VecPlain(r);
+            }
         } else {
             ComputeRowScalarAcc(r);
         }
@@ -303,16 +330,12 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::AccumulateScalarRowT
                 }
                 const float gVal = VecToFloat(gradOutputGm.GetValue(goRowBase + static_cast<uint32_t>(wo)));
                 if constexpr (UseUbAcc) {
-                    if constexpr (std::is_same<T, float>::value) {
-                        const float prod = gVal * wv;
-                        const float acc = rowAcc.GetValue(wi);
-                        const float t = acc + prod;
-                        const float e = (acc - t) + prod;
-                        scalarComp.SetValue(wi, scalarComp.GetValue(wi) + e);
-                        rowAcc.SetValue(wi, t);
-                    } else {
-                        rowAcc.SetValue(wi, rowAcc.GetValue(wi) + gVal * wv);
-                    }
+                    const float prod = gVal * wv;
+                    const float acc = rowAcc.GetValue(wi);
+                    const float t = acc + prod;
+                    const float e = (acc - t) + prod;
+                    scalarComp.SetValue(wi, scalarComp.GetValue(wi) + e);
+                    rowAcc.SetValue(wi, t);
                 } else {
                     const float cur = VecToFloat(gradInputGm.GetValue(rowBase + wi));
                     gradInputGm.SetValue(rowBase + wi, VecFromFloat<T>(cur + gVal * wv));
@@ -322,8 +345,6 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::AccumulateScalarRowT
     }
 }
 
-// BF16/FP16/FP32 快路径：整行 W 维向量化累加，行末单次 CAST_RINT
-// FP32 大 pad 走 dh 分块两级累加（分块和寄存于 outH），其余场景补偿量寄存于 rowComp
 template <typename T>
 __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPlain(uint64_t r)
 {
@@ -338,10 +359,7 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPla
     LocalTensor<T> weightDilated = tmpBufWeightDilated.Get<T>();
 
     Duplicate(rowAcc, 0.0f, alignedWi);
-    if constexpr (std::is_same<T, float>::value) {
-        dhBlocked = UseDhBlockedAcc() ? 1U : 0U;
-        Duplicate(dhBlocked != 0 ? outH : tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
-    }
+    Duplicate(tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
 
     uint32_t ciLocal, coStart, coEnd;
     GetGroupRange(ci, ciLocal, coStart, coEnd);
@@ -354,40 +372,66 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecPla
                     continue;
                 }
                 BuildWeightDilated(co, ciLocal, dk, weightDilated);
-                if (dhBlocked != 0) {
-                    AccumulateBf16VecRowTapsBlocked(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
-                                                    weightDilated);
-                } else {
-                    AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow, weightDilated);
-                }
+                AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow, weightDilated);
             }
         }
     }
 
+    Add(rowAcc, rowAcc, tmpBufRowComp.Get<float>(), alignedWi);
+    CastAndWriteRow(rowBase, rowAcc, outH);
+}
+
+template <typename T>
+__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16Vec(uint64_t r)
+{
     if constexpr (std::is_same<T, float>::value) {
+        uint32_t n, ci, diRow, hi;
+        DecomposeRow(r, n, ci, diRow, hi);
+        const uint64_t rowBase = GetRowBase(n, ci, diRow, hi);
+
+        LocalTensor<float> rowAcc = tmpBufRowAcc.Get<float>();
+        LocalTensor<float> prod = tmpBufProd.Get<float>();
+        LocalTensor<T> gradRow = tmpBufGradRow.Get<T>();
+        LocalTensor<T> outH = tmpBufOutH.Get<T>();
+        LocalTensor<T> weightDilated = tmpBufWeightDilated.Get<T>();
+
+        Duplicate(rowAcc, 0.0f, alignedWi);
+        dhBlocked = UseDhBlockedAcc() ? 1U : 0U;
+        if (dhBlocked != 0) {
+            Duplicate(outH, static_cast<T>(0), alignedWi);
+        } else {
+            Duplicate(tmpBufRowComp.Get<float>(), 0.0f, alignedWi);
+        }
+
+        uint32_t ciLocal, coStart, coEnd;
+        GetGroupRange(ci, ciLocal, coStart, coEnd);
+        for (uint32_t co = coStart; co < coEnd; co++) {
+            for (uint32_t doIdx = 0; doIdx < gradOutD; doIdx++) {
+                for (uint32_t dk = 0; dk < kernelD; dk++) {
+                    const int32_t di = static_cast<int32_t>(doIdx) * strideD + static_cast<int32_t>(dk) * dilationD -
+                                       padFront;
+                    if (di != static_cast<int32_t>(diRow)) {
+                        continue;
+                    }
+                    BuildWeightDilated(co, ciLocal, dk, weightDilated);
+                    if (dhBlocked != 0) {
+                        AccumulateBf16VecRowTapsBlocked(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
+                                                        weightDilated);
+                    } else {
+                        AccumulateBf16VecRowTaps(GetGoPlaneBase(n, co, doIdx), hi, rowAcc, prod, gradRow,
+                                                 weightDilated);
+                    }
+                }
+            }
+        }
+
         if (dhBlocked != 0) {
             Add(rowAcc, rowAcc, outH, alignedWi);
         } else {
             Add(rowAcc, rowAcc, tmpBufRowComp.Get<float>(), alignedWi);
         }
+        CastAndWriteRow(rowBase, rowAcc, outH);
     }
-    CastRowAccToOutH(rowAcc, outH, alignedWi);
-    WriteRowToGm(rowBase, outH);
-}
-
-// 行结果回写 GM：V/MTE3 双向同步，保证 outH 在被覆写前已搬完
-template <typename T>
-__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::WriteRowToGm(uint64_t rowBase, const LocalTensor<T>& outH)
-{
-    SetFlag<HardEvent::V_MTE3>(evtVToMte3_);
-    WaitFlag<HardEvent::V_MTE3>(evtVToMte3_);
-
-    DataCopyExtParams outParams(1, static_cast<uint32_t>(gradInW) * sizeof(T), 0, 0, 0);
-    DataCopyPad<T>(gradInputGm[rowBase], outH, outParams);
-
-    // 等待 MTE3 读完 outH 后才能覆写
-    SetFlag<HardEvent::MTE3_V>(evtMte3ToV_);
-    WaitFlag<HardEvent::MTE3_V>(evtMte3ToV_);
 }
 
 template <typename T>
@@ -442,8 +486,11 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecStr
         const int32_t c0 = (dw0 + static_cast<int32_t>(p) - padLDx) / static_cast<int32_t>(sW);
 
         Duplicate(rowAccP, 0.0f, kAligned);
+        Duplicate(tmpBufRowComp.Get<float>(), 0.0f, kAligned);
+        scalarTapParity = 0U;
         AccumulateBf16VecStridedTaps(ciLocal, coStart, coEnd, n, diRow, hi, kMax, kAligned, dw0, c0, sW, rowAccP, prodP,
                                      gradRowP);
+        Add(rowAccP, rowAccP, tmpBufRowComp.Get<float>(), kAligned);
 
         // 累加完成 → 单次 CAST_RINT（与快路径/兜底同一舍入口径）
         SetFlag<HardEvent::V_S>(evtVToS_);
@@ -461,67 +508,6 @@ __aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowBf16VecStr
         SetFlag<HardEvent::S_V>(evtSToV_);
         WaitFlag<HardEvent::S_V>(evtSToV_);
     }
-}
-
-// BF16/FP16 标量兜底：UB 内 FP32 行累加、行末单次舍入，消除逐 tap 舍入漂移满足 L2
-template <typename T>
-__aicore__ inline void KernelConv3dBackpropInputVecImpl<T>::ComputeRowScalarAcc(uint64_t r)
-{
-    uint32_t n, ci, diRow, hi;
-    DecomposeRow(r, n, ci, diRow, hi);
-    const uint64_t rowBase = GetRowBase(n, ci, diRow, hi);
-
-    LocalTensor<float> rowAcc = tmpBufRowAcc.Get<float>();
-    LocalTensor<T> outH = tmpBufOutH.Get<T>();
-    LocalTensor<T> weightDilated = tmpBufWeightDilated.Get<T>();
-
-    Duplicate(rowAcc, 0.0f, alignedWi);
-    if constexpr (std::is_same<T, float>::value) {
-        scalarComp = outH;
-        Duplicate(scalarComp, 0.0f, alignedWi);
-    }
-    // V->S 同步：清零完成后标量才能读 rowAcc
-    SetFlag<HardEvent::V_S>(evtVToS_);
-    WaitFlag<HardEvent::V_S>(evtVToS_);
-
-    uint32_t ciLocal, coStart, coEnd;
-    GetGroupRange(ci, ciLocal, coStart, coEnd);
-    for (uint32_t co = coStart; co < coEnd; co++) {
-        for (uint32_t doIdx = 0; doIdx < gradOutD; doIdx++) {
-            for (uint32_t dk = 0; dk < kernelD; dk++) {
-                const int32_t di = static_cast<int32_t>(doIdx) * strideD + static_cast<int32_t>(dk) * dilationD -
-                                   padFront;
-                if (di != static_cast<int32_t>(diRow)) {
-                    continue;
-                }
-                BuildWeightDilated(co, ciLocal, dk, weightDilated);
-                AccumulateScalarRowTaps<true>(GetGoPlaneBase(n, co, doIdx), hi, rowBase, rowAcc, weightDilated);
-            }
-        }
-    }
-
-    // S->V 同步：标量累加完成后 Cast 才能读 rowAcc
-    SetFlag<HardEvent::S_V>(evtSToV_);
-    WaitFlag<HardEvent::S_V>(evtSToV_);
-
-    if constexpr (std::is_same<T, float>::value) {
-        Add(rowAcc, rowAcc, scalarComp, alignedWi);
-    }
-    CastRowAccToOutH(rowAcc, outH, alignedWi);
-    SetFlag<HardEvent::V_MTE3>(evtVToMte3_);
-    WaitFlag<HardEvent::V_MTE3>(evtVToMte3_);
-
-    // 分段回写：DataCopyPad 长度受限，按固定段拆分支持任意 gradInW
-    constexpr uint32_t kMaxCopyElems = 0x7FF8;
-    uint32_t wiOffset = 0;
-    while (wiOffset < gradInW) {
-        const uint32_t segLen = (gradInW - wiOffset < kMaxCopyElems) ? (gradInW - wiOffset) : kMaxCopyElems;
-        DataCopyExtParams segParams(1, segLen * sizeof(T), 0, 0, 0);
-        DataCopyPad<T>(gradInputGm[rowBase + wiOffset], outH[wiOffset], segParams);
-        wiOffset += segLen;
-    }
-    SetFlag<HardEvent::MTE3_V>(evtMte3ToV_);
-    WaitFlag<HardEvent::MTE3_V>(evtMte3ToV_);
 }
 
 // 纯标量兜底：逐点 GM 读改写，UB 仅 weightDilated（极端大 wi / UB 预算耗尽场景）
