@@ -22,7 +22,7 @@
 #include "sleep_tiling_data.h"
 #include "sleep_tiling_key.h"
 
-#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 3510 && !defined(__CCE_KT_TEST__)
+#if defined(__NPU_ARCH__) && !defined(__CCE_KT_TEST__)
 #include "simt_api/asc_simt.h"
 
 using namespace AscendC;
@@ -48,7 +48,7 @@ __global__ __aicore__ void sleep(GM_ADDR cycles, GM_ADDR workspace, GM_ADDR tili
         return;
     }
 
-#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 3510 && !defined(__CCE_KT_TEST__)
+#if defined(__NPU_ARCH__) && !defined(__CCE_KT_TEST__)
     asc_vf_call<SleepSpin>(dim3(1), sleepCycles);
 #endif
 }

@@ -60,14 +60,6 @@ static ge::graphStatus SleepTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(SleepTilingData), 0, sizeof(SleepTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
-
-    OP_CHECK_IF(socVersion != platform_ascendc::SocVersion::ASCEND950, OP_LOGE(context, "unsupported soc version"),
-                return ge::GRAPH_FAILED);
-
     tiling->cycles = cycles;
 
     context->SetBlockDim(1);

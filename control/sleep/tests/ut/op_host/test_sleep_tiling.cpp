@@ -130,5 +130,3 @@ TEST_F(SleepTilingTest, Ascend950_cycles_minimum) { RunSleepTiling(1, "Ascend950
 TEST_F(SleepTilingTest, cycles_zero_failed) { RunSleepTiling(0, "Ascend950", ge::GRAPH_FAILED); }
 
 TEST_F(SleepTilingTest, cycles_negative_failed) { RunSleepTiling(-100, "Ascend950", ge::GRAPH_FAILED); }
-
-TEST_F(SleepTilingTest, unsupported_soc_failed) { RunSleepTiling(1000000, "Ascend910B", ge::GRAPH_FAILED); }
