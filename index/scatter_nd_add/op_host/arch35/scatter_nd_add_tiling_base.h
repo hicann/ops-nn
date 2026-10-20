@@ -94,6 +94,7 @@ protected:
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize, int64_t postAxisSize,
                                  ge::DataType idType);
+    void DoOpTilingForSimdDma();
     void DoOpTilingSplitAfter();
     void DoOpTilingForDeterminsticSplitIndices();
     void DoOpTilingSimdSplitIndices();
@@ -174,8 +175,12 @@ private:
     int64_t isDeterminstic_ = 0;
     int64_t isSimdNonDeterminstic_ = 0;
     int64_t isSort_ = 0;
+    bool isDmaPath_ = false;
     int64_t isOpti_ = 0;
     int64_t singleCol_ = 0;
+    int64_t isDma_ = 0;
+    bool isAscend960DT_ = false;
+    bool isCastIndices_ = false;
 
     const char* opName = "ScatterNdAdd";
     ScatterNdAddTilingData tilingData;

@@ -13,13 +13,14 @@
  * \brief scatter_nd_add
  */
 
-#include "./arch35/scatter_nd_add_simt.h"
-#include "./arch35/scatter_nd_add_simd.h"
-#include "./arch35/scatter_nd_add_common.h"
-#include "./arch35/scatter_nd_add_simt_sort.h"
-#include "./arch35/scatter_nd_add_simd_non_sort.h"
-#include "./arch35/scatter_nd_add_determinstic.h"
-#include "./arch35/scatter_nd_add_struct.h"
+#include "../arch35/scatter_nd_add_simt.h"
+#include "../arch35/scatter_nd_add_simd.h"
+#include "../arch35/scatter_nd_add_common.h"
+#include "../arch35/scatter_nd_add_simt_sort.h"
+#include "../arch35/scatter_nd_add_simd_non_sort.h"
+#include "../arch35/scatter_nd_add_determinstic.h"
+#include "../arch35/scatter_nd_add_struct.h"
+#include "scatter_nd_add_simd_dma.h"
 
 using namespace ScatterNdAdd;
 
@@ -33,6 +34,10 @@ using namespace ScatterNdAdd;
 #define TILING_KEY_INT32_EXCEED_UINT32 203
 #define TILING_KEY_INT64_EXCEED_UINT32 209
 #define TILING_KEY_BOOL_EXCEED_UINT32 212
+#define TILING_KEY_DMA_NOT_EXCEED_UINT32 1100
+#define TILING_KEY_DMA_NOT_EXCEED_UINT32_SPLIT_COL 1101
+#define TILING_KEY_DMA_EXCEED_UINT32 1200
+#define TILING_KEY_DMA_EXCEED_UINT32_SPLIT_COL 1201
 
 __aicore__ inline void fp32VarUnderUint32ScatterNdAddTemplate(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
                                                               GM_ADDR workspace,
@@ -707,5 +712,21 @@ extern "C" __global__ __aicore__ void scatter_nd_add(GM_ADDR x, GM_ADDR indices,
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_BOOL_EXCEED_UINT32)) {
         boolVarBeyondUint32ScatterNdAddTemplate(x, indices, updates, y, workspace, tilingData, pipe);
+    } else if (TILING_KEY_IS(TILING_KEY_DMA_NOT_EXCEED_UINT32)) {
+        ScatterNdAddDma<DTYPE_VAR, DTYPE_INDICES, false, false> op(tilingData, pipe);
+        op.Init(x, indices, updates, y, workspace);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_DMA_NOT_EXCEED_UINT32_SPLIT_COL)) {
+        ScatterNdAddDma<DTYPE_VAR, DTYPE_INDICES, false, true> op(tilingData, pipe);
+        op.Init(x, indices, updates, y, workspace);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_DMA_EXCEED_UINT32)) {
+        ScatterNdAddDma<DTYPE_VAR, DTYPE_INDICES, true, false> op(tilingData, pipe);
+        op.Init(x, indices, updates, y, workspace);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_DMA_EXCEED_UINT32_SPLIT_COL)) {
+        ScatterNdAddDma<DTYPE_VAR, DTYPE_INDICES, true, true> op(tilingData, pipe);
+        op.Init(x, indices, updates, y, workspace);
+        op.Process();
     }
 }

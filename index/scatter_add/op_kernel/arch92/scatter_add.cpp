@@ -14,12 +14,13 @@
  */
 
 #include "kernel_operator.h"
-#include "arch35/scatter_add_simt.h"
-#include "arch35/scatter_add_simd.h"
-#include "arch35/scatter_add_simd_support_atomicadd.h"
-#include "arch35/scatter_add_deterministic.h"
-#include "arch35/scatter_add_simt_sort.h"
-#include "arch35/scatter_add_simd_sort_support_atomicadd.h"
+#include "../arch35/scatter_add_simt.h"
+#include "../arch35/scatter_add_simd.h"
+#include "../arch35/scatter_add_simd_support_atomicadd.h"
+#include "../arch35/scatter_add_deterministic.h"
+#include "../arch35/scatter_add_simt_sort.h"
+#include "../arch35/scatter_add_simd_sort_support_atomicadd.h"
+#include "scatter_add_simd_scatter_dma.h"
 
 using namespace AscendC;
 
@@ -36,6 +37,10 @@ using namespace AscendC;
 #define TILING_KEY_UNSORT_SIMD_TENSOR 10000000000333330010UL
 #define TILING_KEY_SORT_SIMD_SCALAR 10000000000333331011UL
 #define TILING_KEY_SORT_SIMD_TENSOR 10000000000333330011UL
+#define TILING_KEY_SIMD_SCATTER_DMA_SCALAR 10000000001333331010UL
+#define TILING_KEY_SIMD_SCATTER_DMA_TENSOR 10000000001333330010UL
+#define TILING_KEY_SIMD_SCATTER_DMA_CAST_SCALAR 10000000002333331010UL
+#define TILING_KEY_SIMD_SCATTER_DMA_CAST_TENSOR 10000000002333330010UL
 
 using namespace ScatterAdd;
 
@@ -446,6 +451,30 @@ extern "C" __global__ __aicore__ void scatter_add(GM_ADDR var, GM_ADDR indices, 
         ScatterAddSortSimdScalar(var, indices, updates, y, userWs, tiling, pipe);
     } else if (TILING_KEY_IS(TILING_KEY_SORT_SIMD_TENSOR)) {
         ScatterAddSortSimdTensor(var, indices, updates, y, userWs, tiling, pipe);
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_SCATTER_DMA_SCALAR)) {
+        if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
+            ScatterAddScatterDMA<DTYPE_VAR, DTYPE_INDICES, true, false, ADD> op(tilingData, pipe);
+            op.Init(var, indices, updates, y, userWs);
+            op.Process();
+        }
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_SCATTER_DMA_TENSOR)) {
+        if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
+            ScatterAddScatterDMA<DTYPE_VAR, DTYPE_INDICES, false, false, ADD> op(tilingData, pipe);
+            op.Init(var, indices, updates, y, userWs);
+            op.Process();
+        }
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_SCATTER_DMA_CAST_SCALAR)) {
+        if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
+            ScatterAddScatterDMA<DTYPE_VAR, DTYPE_INDICES, true, true, ADD> op(tilingData, pipe);
+            op.Init(var, indices, updates, y, userWs);
+            op.Process();
+        }
+    } else if (TILING_KEY_IS(TILING_KEY_SIMD_SCATTER_DMA_CAST_TENSOR)) {
+        if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
+            ScatterAddScatterDMA<DTYPE_VAR, DTYPE_INDICES, false, true, ADD> op(tilingData, pipe);
+            op.Init(var, indices, updates, y, userWs);
+            op.Process();
+        }
     } else if (TILING_KEY_IS(TILING_KEY_0)) {
         return;
     }

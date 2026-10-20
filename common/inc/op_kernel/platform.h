@@ -50,7 +50,7 @@ __aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
  */
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;
@@ -63,7 +63,7 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 template <typename T>
 __aicore__ inline constexpr bool IsSupportAtomicAddTypeSIMD()
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920
     return ops::IsSame<T, float>::value || ops::IsSame<T, half>::value || ops::IsSame<T, int16_t>::value ||
            ops::IsSame<T, int32_t>::value || ops::IsSame<T, int8_t>::value || ops::IsSame<T, bfloat16_t>::value;
 #else

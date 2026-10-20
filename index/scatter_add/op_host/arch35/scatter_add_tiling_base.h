@@ -57,7 +57,7 @@ TILING_DATA_FIELD_DEF(uint64_t, isDeterministic);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreHandleCol);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreColsLoopSize);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreColsTailUbFactor);
-TILING_DATA_FIELD_DEF(uint64_t, perCoreHandleRows); //反量化按var[0]分核或indices分核
+TILING_DATA_FIELD_DEF(uint64_t, perCoreHandleRows); // 反量化按var[0]分核或indices分核
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreHandleRows);
 TILING_DATA_FIELD_DEF(uint64_t, rowsInUb);
 TILING_DATA_FIELD_DEF(uint64_t, deQuantizeCoreNum);
@@ -125,6 +125,8 @@ protected:
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
                                       const gert::Shape& updatesShape) const;
     ge::graphStatus GetCastType();
+    bool IsSimdDma();
+    ge::graphStatus SimdDmaTiling();
 
 private:
     uint64_t blockFactor_ = 0;
@@ -143,7 +145,9 @@ private:
     uint64_t ubSize_ = 0;
     uint64_t tilingKey_ = 0;
     bool isSimt_ = false;
+    bool isAscend96_ = false;
     uint64_t isSort_ = 0;
+    uint64_t isSortSimt_ = 0;
     uint64_t perCoreHandleVar_ = 0;
     uint64_t copyCoreNum_ = 0;
     uint64_t indicesCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
@@ -195,6 +199,8 @@ private:
     uint64_t tailBlockCol_ = 0;
     uint64_t ubFactorRow_ = 0;
     uint64_t ubFactorCol_ = 0;
+    uint32_t isCastIndices_ = 0;
+    uint32_t isUseScatterDma_ = 0;
 
     ge::DataType varDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;

@@ -14,12 +14,12 @@
  */
 
 #include "kernel_operator.h"
-#include "../scatter_add/arch35/scatter_add_simt.h"
-#include "../scatter_add/arch35/scatter_add_simd.h"
-#include "../scatter_add/arch35/scatter_add_simd_support_atomicadd.h"
-#include "../scatter_add/arch35/scatter_add_deterministic.h"
-#include "../scatter_add/arch35/scatter_add_simt_sort.h"
-#include "../scatter_add/arch35/scatter_add_simd_sort_support_atomicadd.h"
+#include "../../scatter_add/arch35/scatter_add_simt.h"
+#include "../../scatter_add/arch35/scatter_add_simd.h"
+#include "../../scatter_add/arch35/scatter_add_simd_support_atomicadd.h"
+#include "../../scatter_add/arch35/scatter_add_deterministic.h"
+#include "../../scatter_add/arch35/scatter_add_simt_sort.h"
+#include "../../scatter_add/arch35/scatter_add_simd_sort_support_atomicadd.h"
 
 using namespace AscendC;
 

@@ -18,15 +18,21 @@
 namespace optiling {
 using namespace UnsortedSegmentMax;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
+static constexpr uint64_t LAST_DIM_SIMD_COND_SPLIT_COL = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t RATIO_BY_SORT = 5;
+static constexpr uint64_t RATIO_BY_SORT_960DT = 100;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
 
 static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 
 bool UnsortedSegmentSimdNonSortTiling::IsCapable()
 {
-    if (ratio_ < RATIO_BY_SORT && innerDim_ * dataTypeBytes_ >= LAST_DIM_SIMD_COND &&
+    uint64_t ratioBySort = RATIO_BY_SORT;
+    if (isAscend960DT_ && innerDim_ * dataTypeBytes_ <= totalCoreNum_ * LAST_DIM_SIMD_COND_SPLIT_COL) {
+        ratioBySort = RATIO_BY_SORT_960DT;
+    }
+    if (ratio_ < ratioBySort && innerDim_ * dataTypeBytes_ >= LAST_DIM_SIMD_COND &&
         setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
         return true;
     }

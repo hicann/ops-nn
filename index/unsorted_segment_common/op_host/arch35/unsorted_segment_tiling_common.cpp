@@ -174,12 +174,21 @@ ge::graphStatus UnsortedSegmentBaseTiling::CheckInputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus UnsortedSegmentBaseTiling::CheckNpuArch()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus UnsortedSegmentBaseTiling::GetShapeAttrsInfo()
 {
     auto nodeName = context_->GetNodeName();
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin.");
 
-    if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
+    if (CheckNpuArch() != ge::GRAPH_SUCCESS || CheckInputDtype() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 

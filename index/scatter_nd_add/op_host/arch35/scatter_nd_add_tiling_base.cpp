@@ -32,6 +32,7 @@ static constexpr uint64_t MIN_TILING_SIZE = 128;
 static constexpr uint32_t DCACHE_SIZE = 32U * 1024U;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT32 = 100;
 static constexpr uint32_t INPUT_ADDRESS_IN_INT64 = 200;
+static constexpr uint32_t DMA_KEY_OFFSET = 1000;
 static constexpr uint32_t ONE = 1;
 static constexpr int64_t TWO = 2;
 static constexpr uint32_t THREE = 3;
@@ -41,12 +42,16 @@ static constexpr uint64_t RESERVE_SIZE = 256;
 static constexpr int64_t ALIGN_SIZE = 32;
 static constexpr int64_t MIN_HANDLE_SIZE = 128;
 static constexpr int64_t SIMD_NONDETERMINSTIC_MIN_HANDLE_SIZE = 4096;
+static constexpr int64_t DMA_MAX_HANDLE_SIZE = 32U * 1024U;
 static constexpr int64_t MIN_SIZE_SIMD_NONDETERMINSTIC = 128;
 static constexpr int64_t INDICES_MIN_BLOCK_SIZE = 1024;
+static constexpr int64_t DMA_SPLIT_LIMT_SIZE = 2048;
 static constexpr int64_t INT32_BYTES = 4;
 static constexpr int64_t FP32_BYTES = 4;
 static constexpr int64_t BASE_UPDATES_SIZE = 1024;
 static constexpr int64_t SORT_LIMIT = 5;
+static constexpr int64_t SORT_LIMIT_960 = 20;
+static constexpr int64_t SIMD_SORT_LIMIT = 100;
 static constexpr int64_t FULL_LOAD_LIMIT = 16;
 static constexpr int64_t CORE_NUM = 64;
 static constexpr float THRESHOLD_FACTOR = 0.1;
@@ -84,6 +89,11 @@ ge::graphStatus ScatterNdAddSimtTiling::GetPlatformInfo()
 
 ge::graphStatus ScatterNdAddSimtTiling::GetShapeAttrsInfo()
 {
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context_, "platformInfo is nullptr."), return ge::GRAPH_FAILED);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+
     auto var = context_->GetInputTensor(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);
     auto varShapeSize = var->GetShapeSize();
@@ -208,7 +218,8 @@ void ScatterNdAddSimtTiling::SelectTiling()
         isSimdNonDeterminstic_ = 1;
     }
     // 是否排序
-    if (indicesAxis_ / varInAxis_ >= SORT_LIMIT && updateDtype_ != ge::DT_INT64) {
+    int64_t sortLimit = isAscend960DT_ ? SORT_LIMIT_960 : SORT_LIMIT;
+    if (indicesAxis_ / varInAxis_ >= sortLimit && updateDtype_ != ge::DT_INT64) {
         isSort_ = 1;
     }
 }
@@ -292,6 +303,77 @@ int64_t ScatterNdAddSimtTiling::GetRestAvailableSize(int64_t sampleNum, int64_t 
                      sampleNum * Ops::Base::CeilAlign((FP32_BYTES)*postAxisSize, ubBlock) +
                      GetSortTmpSize(sortTmpType, sampleNum, false);
     return originalSize - occupy;
+}
+
+void ScatterNdAddSimtTiling::DoOpTilingForSimdDma()
+{
+    // 循环切分 行不够开核再切列，每次减少一半列大小，列小于2048就停止
+    int64_t ubSize = static_cast<int64_t>(ubSize_ - RESERVE_SIZE);
+    int64_t usedCoreNum = indicesAxis_;
+    eachCoreAfterAxisCount_ = afterAxis_;
+
+    if (indicesAxis_ < totalCoreNum_) {
+        // 行不够填满核，切列
+        eachCoreIndexCount_ = 1;
+        tailCoreIndexCount_ = (indicesAxis_ == 0) ? 0 : 1;
+        updateLoopSize_ = 1;
+        tailCoreAfterAxisCount_ = afterAxis_;
+        while (usedCoreNum < totalCoreNum_ / TWO && eachCoreAfterAxisCount_ * varTypeSize_ > DMA_SPLIT_LIMT_SIZE) {
+            eachCoreAfterAxisCount_ = eachCoreAfterAxisCount_ / TWO;
+            updateLoopSize_ = Ops::Base::CeilDiv(afterAxis_, eachCoreAfterAxisCount_);
+            eachCoreAfterAxisCount_ = afterAxis_ / updateLoopSize_;
+            tailCoreAfterAxisCount_ = afterAxis_ - (updateLoopSize_ - 1) * eachCoreAfterAxisCount_;
+            usedCoreNum = indicesAxis_ * updateLoopSize_;
+        }
+    } else {
+        // 行足够，按indices分核
+        eachCoreIndexCount_ = Ops::Base::CeilDiv(indicesAxis_, totalCoreNum_);
+        usedCoreNumBefore_ = Ops::Base::CeilDiv(indicesAxis_, eachCoreIndexCount_);
+        tailCoreIndexCount_ = indicesAxis_ - eachCoreIndexCount_ * (usedCoreNumBefore_ - 1);
+        eachCoreAfterAxisCount_ = afterAxis_;
+        tailCoreAfterAxisCount_ = afterAxis_;
+        updateLoopSize_ = 1;
+        usedCoreNum = usedCoreNumBefore_;
+    }
+
+    // UB tiling: 计算 indicesFactor 和 afterAxisFactor
+    // UB需求: indicesFactor * rankSize * sizeof(U) [indices]
+    //       + indicesFactor * sizeof(OffsetType) [offsetBuf]
+    //       + 2 * indicesFactor * afterAxisFactor * sizeof(T) [updates, double buffer]
+    //       + OPTILING_MAX_RANK_COUNT * sizeof(U) [strideBuf, 固定]
+    // OffsetType = isCastIndices ? int64_t : U
+    // isCastIndices 与 GetTilingKey 的 under/beyond 判断保持一致:
+    //   任一 shape size >= INT32_MAX 则需 int64 地址
+    isCastIndices_ = outputShapeSize * varTypeSize_ >= INT32_MAX;
+    int64_t offsetTypeSize = isCastIndices_ ? sizeof(int64_t) : indicesTypeSize_;
+
+    int64_t alignNum = ALIGN_SIZE / varTypeSize_;
+    afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
+    int64_t perIndexFixed = rankSize_ * indicesTypeSize_ + offsetTypeSize * TWO;
+    int64_t perIndexUpdate = TWO * afterAxisFactor_ * varTypeSize_;
+    int64_t perIndexTotal = perIndexFixed + perIndexUpdate;
+    int64_t strideBufSize = static_cast<int64_t>(OPTILING_MAX_RANK_COUNT * indicesTypeSize_);
+    indicesFactor_ = (ubSize - strideBufSize) / perIndexTotal;
+
+    if (indicesFactor_ < 1) {
+        // afterAxisFactor太大，需要切列
+        indicesFactor_ = 1;
+        afterAxisFactor_ = (ubSize - strideBufSize - perIndexFixed) / (TWO * varTypeSize_);
+        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
+        if (afterAxisFactor_ < 1) {
+            afterAxisFactor_ = alignNum;
+        }
+    }
+    if (indicesFactor_ > eachCoreIndexCount_) {
+        indicesFactor_ = eachCoreIndexCount_;
+    }
+    if (indicesFactor_ < 1) {
+        indicesFactor_ = 1;
+    }
+    usedCoreNumBefore_ = usedCoreNum;
+    // isSplitAfterAxis: DMA 路径是否切列 (colLoop > 1)
+    isSplitAfterAxis_ = (afterAxisFactor_ < eachCoreAfterAxisCount_) ? 1 : 0;
+    blockNum = static_cast<uint64_t>(usedCoreNum);
 }
 
 void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
@@ -678,6 +760,15 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminstic()
 void ScatterNdAddSimtTiling::DoOpTilingForSimdNonDetermin()
 {
     GetCastType();
+    // DMA scatter 路径: 利用 ScatterDataCopy + SetAtomicAdd 硬件指令加速搬出
+    // 适用条件: 非int64(isSimdNonDeterminstic已排除)、非sort、outputShape可由offset表达
+    // 优先使用 DMA, 不满足则回退到原 Simd 路径
+    if (isAscend960DT_ && afterAxis_ * varTypeSize_ <= DMA_MAX_HANDLE_SIZE &&
+        (indicesAxis_ / varInAxis_ < SIMD_SORT_LIMIT)) {
+        isDmaPath_ = true;
+        DoOpTilingForSimdDma();
+        return;
+    }
     // 列大于4k单行搬入搬出
     if (afterAxis_ * varTypeSize_ > SIMD_NONDETERMINSTIC_MIN_HANDLE_SIZE &&
         (indicesAxis_ > (totalCoreNum_ * SPLIT_THRESHOLD))) {
@@ -721,6 +812,13 @@ ge::graphStatus ScatterNdAddSimtTiling::DoLibApiTiling() { return ge::GRAPH_SUCC
 
 uint64_t ScatterNdAddSimtTiling::GetTilingKey() const
 {
+    if (isDmaPath_) {
+        uint64_t baseKey = isCastIndices_ ? (INPUT_ADDRESS_IN_INT64 + DMA_KEY_OFFSET) :
+                                            (INPUT_ADDRESS_IN_INT32 + DMA_KEY_OFFSET);
+        // isSplitCol: colLoop > 1 即 afterAxisFactor < eachCoreAfterAxisCount
+        bool isSplitCol = (afterAxisFactor_ < eachCoreAfterAxisCount_);
+        return baseKey + (isSplitCol ? 1 : 0);
+    }
     uint64_t tilingKey = updateDtype_;
 
     if (indiceShapeSize < UINT32_MAX && updateShapeSize < UINT32_MAX && outputShapeSize < UINT32_MAX) {

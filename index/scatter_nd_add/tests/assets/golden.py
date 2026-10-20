@@ -20,6 +20,15 @@ def scatter_nd_add_golden(var, indices, updates, *, use_locking=False, **kwargs)
     All the parameters (names and order) follow @scatter_nd_add_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
 
+    语义与 kernel 对齐 (arch35 scatter_nd_add_simt.h / arch92 scatter_nd_add_simd_dma.h):
+      1. indices 最后一维为 rank, flat 行偏移 = sum(indices[m, k] * stride[k]),
+         其中 stride[k] = prod(var.shape[k+1 : rank]) (host 侧 SetStride 同款定义);
+      2. 越界索引 (flat < 0 或 flat >= prod(var.shape[:rank])) 静默跳过。
+         TF 的 ScatterNdAdd 遇越界索引会抛 InvalidArgumentError, 无法作为含越界
+         用例的 golden, 故改为 numpy 复刻 (做法同 scatter_max/scatter_div golden);
+      3. 重复索引逐条累加(加法满足交换律, 顺序无关); fp16 用 float32 累加后回写;
+         bool 按 kernel 的 int8 atomic-max(0/1 即逻辑或) 语义处理。
+
     Args:
         **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
                   full_soc_version, short_soc_version, testcase_name
@@ -27,23 +36,54 @@ def scatter_nd_add_golden(var, indices, updates, *, use_locking=False, **kwargs)
     Returns:
         Output tensor
     """
-    import tensorflow.compat.v1 as tf
+    import numpy as np
 
-    tf.disable_v2_behavior()
+    var = np.asarray(var)
+    indices = np.asarray(indices)
+    updates = np.asarray(updates)
 
-    var_tensor = tf.Variable(var, dtype=var.dtype)
-    indices_holder = tf.placeholder(indices.dtype, shape=indices.shape)
-    updates_holder = tf.placeholder(updates.dtype, shape=updates.shape)
+    out = var.copy()
+    if var.size == 0 or indices.size == 0 or updates.size == 0:
+        return out
 
-    out = tf.raw_ops.ScatterNdAdd(
-        ref=var_tensor,
-        indices=indices_holder,
-        updates=updates_holder,
-        use_locking=use_locking,
-    )
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        res = sess.run(
-            out, feed_dict={indices_holder: indices, updates_holder: updates}
-        )
-    return res
+    rank = int(indices.shape[-1])
+    lead_shape = var.shape[:rank]
+    after_shape = var.shape[rank:]
+
+    var_in_axis = 1
+    for d in lead_shape:
+        var_in_axis *= int(d)
+
+    # flat 行偏移, stride 定义与 host 侧 SetStride 一致
+    idx2d = indices.reshape(-1, rank).astype(np.int64)
+    n_idx = idx2d.shape[0]
+    flat = np.zeros(n_idx, dtype=np.int64)
+    for k in range(rank):
+        stride = 1
+        for d in var.shape[k + 1 : rank]:
+            stride *= int(d)
+        flat += idx2d[:, k] * stride
+
+    valid = (flat >= 0) & (flat < var_in_axis)
+    if not bool(np.any(valid)):
+        return out  # 全部越界: 与 kernel 一致, var 原值输出
+
+    upd2d = updates.reshape((n_idx,) + tuple(after_shape))
+    flat_valid = flat[valid]
+
+    if var.dtype == np.bool_:
+        # kernel bool 路径为 SetAtomicMax<int8>, 0/1 取 max 即逻辑或
+        acc = out.astype(np.int8).reshape((var_in_axis,) + tuple(after_shape))
+        np.maximum.at(acc, flat_valid, upd2d[valid].astype(np.int8))
+        return acc.reshape(var.shape).astype(np.bool_)
+
+    if var.dtype == np.float16:
+        # fp16 用 float32 累加后回写, 避免 fp16 逐条累加的中间舍入
+        acc = out.astype(np.float32).reshape((var_in_axis,) + tuple(after_shape))
+        np.add.at(acc, flat_valid, upd2d[valid].astype(np.float32))
+        return acc.reshape(var.shape).astype(np.float16)
+
+    # int32/int64/float32 等: 原生 dtype 累加, 溢出回绕与硬件原子加一致
+    acc = out.reshape((var_in_axis,) + tuple(after_shape))
+    np.add.at(acc, flat_valid, upd2d[valid])
+    return acc.reshape(var.shape)

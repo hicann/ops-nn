@@ -17,14 +17,14 @@
 
 namespace optiling {
 using namespace UnsortedSegmentMax;
-static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
+static constexpr uint64_t LAST_DIM_SIMD_COND_SPLIT_COL = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t BASE_A_SIZE = 1024;
 static constexpr uint64_t RATIO_BY_SORT = 5;
 
 bool UnsortedSegmentSimdSplitColTiling::IsCapable()
 {
-    if (innerDim_ * dataTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND && ratio_ < RATIO_BY_SORT) {
+    if (innerDim_ * dataTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND_SPLIT_COL && ratio_ < RATIO_BY_SORT) {
         return IsFullLoad();
     }
     return false;
@@ -53,7 +53,7 @@ bool UnsortedSegmentSimdSplitColTiling::IsFullLoad()
 {
     normBlockData_ = Ops::Base::CeilDiv(innerDim_, totalCoreNum_);
     normBlockData_ = Ops::Base::CeilAlign(normBlockData_, ubBlockSize_ / dataTypeBytes_);
-    normBlockData_ = std::max(normBlockData_, LAST_DIM_SIMD_COND / dataTypeBytes_);
+    normBlockData_ = std::max(normBlockData_, LAST_DIM_SIMD_COND_SPLIT_COL / dataTypeBytes_);
     usedCoreNum_ = Ops::Base::CeilDiv(innerDim_, normBlockData_);
     tailBlockData_ = innerDim_ - (usedCoreNum_ - 1UL) * normBlockData_;
 

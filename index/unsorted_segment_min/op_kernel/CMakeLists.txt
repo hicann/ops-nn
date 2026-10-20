@@ -10,7 +10,8 @@
 
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend950 ascend350
+    KERNEL_SRC unsorted_segment_min.cpp
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt
     IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     AUTO_SYNC false
 )

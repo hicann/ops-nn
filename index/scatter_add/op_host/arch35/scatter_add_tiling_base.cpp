@@ -41,6 +41,7 @@ constexpr uint64_t UPDATES_IN_SIMD = 1;
 constexpr uint64_t NON_SORT_NON_ATOMIC_SIZE = static_cast<uint64_t>(64) * 128;
 constexpr uint64_t GM_ALIGN = 512;
 constexpr uint64_t MIN_SIZE_SORT_INDICES_128 = 128;
+constexpr int64_t MIN_INDICES_NUM_DMA = 12;
 constexpr uint64_t INT32_TYPE_SIZE = 4;
 constexpr uint64_t VAR_TAIL_DIM_SIZE = 128;
 constexpr uint64_t VAR_TAIL_DIM_SIZE_SORT = 512;
@@ -53,7 +54,11 @@ constexpr uint32_t UINT32_BYTES = 4;
 constexpr uint32_t DOUBLE = 2;
 constexpr uint32_t THREE = 3;
 constexpr uint32_t TEN = 10;
+constexpr uint32_t SIMD_SORT_RATIO_96 = 200;
+constexpr uint32_t SIMT_SORT_RATIO_96 = 20;
+constexpr uint32_t SIMD10W_SORT_RATIO_96 = 10;
 constexpr uint64_t SIMD_RESERVED_SIZE = static_cast<uint64_t>(8) * 1024;
+constexpr uint64_t SCATTER_DMA_MAX_ROW = 4095;
 static constexpr uint64_t SORT_MIN_INDICES = 8;
 static constexpr uint64_t BASE_A_SIZE = 4096;
 static constexpr uint64_t BASE_BLOCK_SIZE = 4096;
@@ -152,7 +157,7 @@ ge::graphStatus ScatterAddTiling::GetPlatformInfo()
     // UB Size Need reserve space for Dcache / CCEC Compile Stack.
     ubSize_ = ubSizePlatForm;
     if (isSimt_) {
-        if (isSort_ == 1) {
+        if (isSortSimt_ == 1) {
             ubSize_ = ubSizePlatForm - DCACHE_SIZE1;
         } else {
             OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE),
@@ -166,6 +171,11 @@ ge::graphStatus ScatterAddTiling::GetPlatformInfo()
 
 ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
 {
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context_, "platformInfo is nullptr."), return ge::GRAPH_FAILED);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isAscend96_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+
     auto var = context_->GetInputShape(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);
     auto varShape = var->GetStorageShape();
@@ -194,25 +204,32 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
     OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(opName_, "input dtype check failed."),
                 return ge::GRAPH_FAILED);
 
-    isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
+    isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE; // 128
     bool supportAtomicAdd = isSimt_ ? SIMT_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) ==
                                           SIMT_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end() :
                                       SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) ==
                                           SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end();
     if (supportAtomicAdd) {
-        isSort_ = indicesNum_ > varShape_[0] * TEN ? 1 : 0;
+        uint32_t sortRatioSimd = isAscend96_ ? SIMD_SORT_RATIO_96 : TEN;
+        uint32_t sortRatioSimt = isAscend96_ ? SIMT_SORT_RATIO_96 : TEN;
+        uint32_t sortRatioSimd10W = isAscend96_ ? SIMD10W_SORT_RATIO_96 : THREE;
+
+        isSortSimt_ = indicesNum_ > varShape_[0] * sortRatioSimt ? 1 : 0;
+        isSort_ = indicesNum_ > varShape_[0] * sortRatioSimd ? 1 : 0;
+
         if (varShape_[1] >= VAR_LASTDIM_10W && indicesNum_ > MIN_SIZE_SORT_INDICES_128) {
-            isSort_ = indicesNum_ > varShape_[0] * THREE ? 1 : 0;
+            isSort_ = indicesNum_ > varShape_[0] * sortRatioSimd10W ? 1 : 0; // simd尾轴大于10w场景
         }
-        if (isSort_ == 1 &&
+        if (!isAscend96_ && isSortSimt_ == 1 &&
             varDtype_ != ge::DataType::DT_INT8) { // 排序场景尾轴小于512B走simt性能更好，simt AtomicAdd不支持int8
-            isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE_SORT;
+            isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE_SORT; // 512
         }
     }
 
     if (context_->GetDeterministic() == 1 &&
         scatterAddDeterminsiticType.find(varDtype_) != scatterAddDeterminsiticType.end()) {
         isSort_ = 0;
+        isSortSimt_ = 0;
         if (isUpdateScalar_ == 0) {
             isDeterminTemplate_ = 1;
         }
@@ -518,6 +535,7 @@ ge::graphStatus ScatterAddTiling::TilingSimdSupportAtomicAddSortCompute()
 
         ubFactorCol_ = (remainSize - BUFFER_NUM_SIMD_SORT * ubBlock - ubBlock) / (BUFFER_NUM_SIMD_SORT + 1) /
                        (ubFactorRow_ * updatesDtypeSize_);
+        ubFactorCol_ = ubFactorCol_ > UINT16_MAX ? UINT16_MAX : ubFactorCol_;
         ubFactorCol_ = Ops::Base::FloorAlign(ubFactorCol_, ubBlock / updatesDtypeSize_);
     }
     return ge::GRAPH_SUCCESS;
@@ -884,6 +902,94 @@ ge::graphStatus ScatterAddTiling::GetCastType()
     return ge::GRAPH_SUCCESS;
 }
 
+bool ScatterAddTiling::IsSimdDma()
+{
+    if (!isAscend96_) {
+        return false;
+    }
+
+    if (varSize_ * varTypeSize_ >= INT32_MAX && indicesDtype_ == ge::DataType::DT_INT32) {
+        isCastIndices_ = 1;
+    }
+
+    // block split, ensure that ub prioritizes a, block split s * (a/maxBaseCol)
+    uint64_t minBaseIndices = 1;
+    uint64_t ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
+
+    uint64_t maxBaseCol = // 计算UB最多能容纳多少个updates, (假设只搬1行且尾轴非常大)
+        (ubSize_ - BUFFER_NUM * (ubBlock + minBaseIndices * indicesDtypeSize_)) / BUFFER_NUM /
+        (minBaseIndices * updatesDtypeSize_);
+    maxBaseCol = Ops::Base::FloorAlign(maxBaseCol, ubBlock / updatesDtypeSize_); // 向下32B对齐
+
+    uint64_t colNumAlign = Ops::Base::CeilDiv(varShape_[1],
+                                              maxBaseCol); // 计算尾轴能被切几份，尾轴比较小时则不切尾轴（切1份）
+    // [行数 * 每行切分数量] 不超过coreNum时，相当于每个核分一小块（每小块只有1行，且核可能未用满）
+    atomicAddCoreNum_ = std::min(totalCoreNum_, static_cast<uint64_t>(indicesNum_ * colNumAlign));
+
+    // 如果使用核数小于一半且一个核处理列数大于256个元素，则每个核处理的列数减半
+    while (atomicAddCoreNum_ <= totalCoreNum_ / DOUBLE && maxBaseCol > MIN_COL_SIZE) {
+        maxBaseCol = Ops::Base::CeilAlign(maxBaseCol / DOUBLE, ubBlock / updatesDtypeSize_);
+        colNumAlign = Ops::Base::CeilDiv(varShape_[1], maxBaseCol);
+        atomicAddCoreNum_ = std::min(totalCoreNum_, static_cast<uint64_t>(indicesNum_ * colNumAlign));
+    }
+    atomicAddCoreNum_ = atomicAddCoreNum_ == 0 ? 1 : atomicAddCoreNum_;
+
+    // 分别计算两个方向切分份数，使得满足：1、尽量把核用满；2、尾核与整核数据量差值尽量小
+    std::tie(rowTileNum_, colTileNum_) = SimdTiling(atomicAddCoreNum_, colNumAlign, maxBaseCol * updatesDtypeSize_);
+
+    normBlockRow_ = Ops::Base::CeilDiv(indicesNum_, rowTileNum_); // 每个核行数
+    normBlockCol_ = Ops::Base::CeilDiv(varShape_[1], colTileNum_);
+    normBlockCol_ = Ops::Base::CeilAlign(normBlockCol_, ubBlock / updatesDtypeSize_); // 每个核列数
+
+    // ub至少能放得下12行走ScatterDMA
+    int64_t minIndicesUbFactor = MIN_INDICES_NUM_DMA;
+    int64_t minIndicesUbSize = Ops::Base::CeilAlign(MIN_INDICES_NUM_DMA * indicesDtypeSize_, ubBlock);
+    int64_t castSize = isCastIndices_ == 1 ? Ops::Base::CeilAlign(MIN_INDICES_NUM_DMA * sizeof(int64_t), ubBlock) : 0;
+    int64_t needUbSize = minIndicesUbFactor * normBlockCol_ * updatesDtypeSize_ * BUFFER_NUM + minIndicesUbSize +
+                         castSize;
+
+    // bool isSimdDma = ubSize_ >= needUbSize && normBlockRow_ >= MIN_INDICES_NUM_DMA;
+    bool isSimdDma = ubSize_ >= needUbSize;
+    isCastIndices_ = isSimdDma ? isCastIndices_ : 0;
+
+    return isSimdDma;
+}
+
+ge::graphStatus ScatterAddTiling::SimdDmaTiling()
+{
+    isUseScatterDma_ = 1;
+    uint64_t ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
+    rowTileNum_ = Ops::Base::CeilDiv(indicesNum_, normBlockRow_);
+    colTileNum_ = Ops::Base::CeilDiv(varShape_[1], normBlockCol_);
+    atomicAddCoreNum_ = rowTileNum_ * colTileNum_;
+    tailBlockRow_ = indicesNum_ - (rowTileNum_ - 1) * normBlockRow_;  // 行尾核行数
+    tailBlockCol_ = varShape_[1] - (colTileNum_ - 1) * normBlockCol_; // 列尾核列数
+
+    ubFactorCol_ = normBlockCol_;
+
+    // 在列长确定时，计算UB最多容纳多少行
+    if (isCastIndices_ == 0) {
+        ubFactorRow_ = (ubSize_ - BUFFER_NUM * ubBlock) / BUFFER_NUM /
+                       (ubFactorCol_ * updatesDtypeSize_ + indicesDtypeSize_);
+    } else {
+        ubFactorRow_ = (ubSize_ - (BUFFER_NUM + DOUBLE) * ubBlock) / BUFFER_NUM /
+                       (ubFactorCol_ * updatesDtypeSize_ + indicesDtypeSize_ + sizeof(int64_t));
+    }
+
+    // 在单ub循环行数超过block行数时，将单ub循环行数缩小至block行数
+    if (ubFactorRow_ > normBlockRow_) {
+        ubFactorRow_ = normBlockRow_;
+    }
+
+    // ScatterDMA的行数不超过4095
+    if (ubFactorRow_ > SCATTER_DMA_MAX_ROW) {
+        ubFactorRow_ = SCATTER_DMA_MAX_ROW;
+    }
+
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ScatterAddTiling::DoOpTiling()
 {
     if (varShape_[0] * varShape_[1] * indicesNum_ == 0) {
@@ -919,13 +1025,15 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
             if (isSort_ == 1) {
                 OP_CHECK_IF(TilingSimdSupportAtomicAddSortCompute() != ge::GRAPH_SUCCESS,
                             OP_LOGE(opName_, "TilingSimdSupportAtomicAddSortCompute fail."), return ge::GRAPH_FAILED);
+            } else if (IsSimdDma()) {
+                return SimdDmaTiling();
             } else {
                 OP_CHECK_IF(TilingSimdSupportAtomicAddCompute() != ge::GRAPH_SUCCESS,
                             OP_LOGE(opName_, "TilingSimdSupportAtomicAddCompute fail."), return ge::GRAPH_FAILED);
             }
         }
     } else {
-        if (isSort_ == 1) {
+        if (isSortSimt_ == 1) {
             OP_CHECK_IF(TilingSimtSort() != ge::GRAPH_SUCCESS, OP_LOGE(opName_, "TilingSimtSort fail."),
                         return ge::GRAPH_FAILED);
         }
@@ -947,10 +1055,13 @@ uint64_t ScatterAddTiling::GetTilingKey() const
         sizeAddrType = 0;
     }
 
+    uint32_t scatterDmaKey = isUseScatterDma_ + isCastIndices_;
+
     uint64_t tilingKey = 0;
-    tilingKey = Ops::NN::Optiling::GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_,
+    uint64_t isSort = templateKey_ == 0 ? isSortSimt_ : isSort_;
+    tilingKey = Ops::NN::Optiling::GET_TILINGKEY(isSort, templateKey_, sizeAddrType, isUpdateScalar_,
                                                  TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD,
-                                                 TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD);
+                                                 TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, scatterDmaKey);
 
     OP_LOGD("ScatterAddTiling", "tilingKey is %lu", tilingKey);
     return tilingKey;
@@ -959,10 +1070,9 @@ uint64_t ScatterAddTiling::GetTilingKey() const
 ge::graphStatus ScatterAddTiling::GetWorkspaceSize()
 {
     workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
-    if (isSort_ == 0) {
-        if ((isSimt_ && varDtype_ == ge::DT_INT8) || varDtype_ == ge::DT_UINT8) {
-            workspaceSize_ += castTypeSize_ * varSize_;
-        }
+
+    if ((isSimt_ && varDtype_ == ge::DT_INT8) || varDtype_ == ge::DT_UINT8) {
+        workspaceSize_ += castTypeSize_ * varSize_;
     }
 
     if (isDeterminTemplate_ == 1 && isDeterministic_ == 1) {
@@ -985,7 +1095,7 @@ ge::graphStatus ScatterAddTiling::PostTiling()
     context_->SetTilingKey(tilingKey_);
 
     if (varShape_[0] * varShape_[1] * indicesNum_ != 0) {
-        if (isSort_ == 0) {
+        if (isSort_ == 0 && isSortSimt_ == 0) {
             usedCoreNum_ = totalCoreNum_;
         }
         if (isSimt_ == 0 && isDeterminTemplate_ == 0) {

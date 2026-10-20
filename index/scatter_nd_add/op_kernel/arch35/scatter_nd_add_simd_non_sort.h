@@ -111,6 +111,25 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::CopyOutVar(LocalTensor<T>& 
     DataCopyPad(yGm_[varOffset], dstTensor, copyParams);
 }
 
+template <typename T>
+__simd_vf__ inline void ComputeWithCastVF(__ubuf__ T* yLocalAddr, __ubuf__ T* updatesLocalAddr, int64_t vfLen,
+                                          int64_t loopSize, uint32_t size)
+{
+    Reg::RegTensor<float> vreg0;
+    Reg::RegTensor<float> vreg1;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg maskReg;
+
+    for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
+        maskReg = Reg::UpdateMask<float>(size);
+        uint32_t offset = i * vfLen;
+        ops_vf::LoadOneTensorForDtypeT<T>(yLocalAddr, vreg0, maskReg, offset);
+        ops_vf::LoadOneTensorForDtypeT<T>(updatesLocalAddr, vreg1, maskReg, offset);
+        Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(sumReg, vreg0, vreg1, maskReg);
+        ops_vf::StoreOneTensorForDtypeT<T>(yLocalAddr, sumReg, maskReg, offset);
+    }
+}
+
 template <typename T, typename U>
 __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor<T> yLocal, LocalTensor<T> updatesLocal,
                                                                      int64_t dataLen)
@@ -122,25 +141,7 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor
     int64_t loopSize = ops::CeilDiv(static_cast<int64_t>(dataLen), vfLen);
     uint32_t size = static_cast<uint32_t>(dataLen);
 
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<T> vreg_x1;
-        Reg::RegTensor<T> vreg_x2;
-        Reg::RegTensor<float> vreg0;
-        Reg::RegTensor<float> vreg1;
-        Reg::RegTensor<float> sumReg;
-        Reg::RegTensor<T> vregy;
-        Reg::MaskReg maskReg;
-
-        for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
-            maskReg = Reg::UpdateMask<float>(size);
-            uint32_t offset = i * vfLen;
-            ops::LoadOneTensorForDtypeT<T>(yLocalAddr, vreg0, maskReg, offset);
-            ops::LoadOneTensorForDtypeT<T>(updatesLocalAddr, vreg1, maskReg, offset);
-            Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(sumReg, vreg0, vreg1, maskReg);
-            ops::StoreOneTensorForDtypeT<T>(yLocalAddr, sumReg, maskReg, offset);
-        }
-    }
+    ComputeWithCastVF(yLocalAddr, updatesLocalAddr, vfLen, loopSize, size);
 }
 
 template <typename T, typename U>

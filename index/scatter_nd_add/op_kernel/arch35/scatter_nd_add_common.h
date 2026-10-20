@@ -123,6 +123,40 @@ __simd_vf__ inline void ComputeUinqueIdTimesVf(__ubuf__ int32_t* uniqueIdCountsA
     }
 }
 
+template <typename U, typename InnerRegType, typename IndexRegType>
+__simd_vf__ inline void ComputeOutOfsetVF(__ubuf__ U* indicesLocalPtr, __ubuf__ U* outOfstLocalPtr,
+                                          __ubuf__ U* strideLocalPtr, uint32_t dataLen, uint32_t vfLen,
+                                          uint16_t loopCnt, int32_t rankSize)
+{
+    InnerRegType inReg;
+    InnerRegType outReg;
+    InnerRegType orderReg;
+    IndexRegType indexReg;
+    AscendC::Reg::MaskReg pregLoop;
+    uint16_t rankSizeLoops = static_cast<uint16_t>(rankSize);
+
+    for (uint16_t i = 0; i < loopCnt; i++) {
+        if constexpr (IsSameType<U, int64_t>::value) {
+            pregLoop = AscendC::Reg::UpdateMask<U, AscendC::Reg::RegTraitNumTwo>(dataLen);
+        } else {
+            pregLoop = AscendC::Reg::UpdateMask<U>(dataLen);
+        }
+        AscendC::Reg::Duplicate(outReg, 0, pregLoop);
+        AscendC::Reg::Arange(orderReg, i * vfLen);
+        AscendC::Reg::Muls(orderReg, orderReg, rankSize, pregLoop);
+        for (uint16_t dim = 0; dim < rankSizeLoops; dim++) {
+            U strideValue = strideLocalPtr[dim];
+            indexReg = (IndexRegType&)orderReg;
+            AscendC::Reg::Gather(inReg, indicesLocalPtr, indexReg, pregLoop);
+            AscendC::Reg::Muls(inReg, inReg, strideValue, pregLoop);
+            AscendC::Reg::Add(outReg, inReg, outReg, pregLoop);
+            AscendC::Reg::Adds(orderReg, orderReg, (U)(1), pregLoop);
+        }
+        auto outOfstAddr = outOfstLocalPtr + i * vfLen;
+        AscendC::Reg::StoreAlign(outOfstAddr, outReg, pregLoop);
+    }
+}
+
 template <typename T, typename U, typename CAST_T = U, uint32_t castType = CAST_0>
 class ScatterNdAddBase {
 public:
@@ -228,42 +262,15 @@ public:
         LocalTensor<U> strideLocal = strideBuf_.Get<U>();
         __ubuf__ U* indicesLocalPtr = ((__ubuf__ U*)indicesLocal.GetPhyAddr());
         __ubuf__ U* outOfstLocalPtr = ((__ubuf__ U*)outOfstLocal.GetPhyAddr());
+        __ubuf__ U* strideLocalPtr = ((__ubuf__ U*)strideLocal.GetPhyAddr());
 
         uint32_t dataLen = indicesLen;
         uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
         uint32_t indicesLenTimes = ops::CeilDiv(dataLen, vfLen);
         uint16_t loopCnt = static_cast<uint16_t>(indicesLenTimes);
-        uint16_t rankSizeLoops = static_cast<uint16_t>(rankSize);
 
-        __VEC_SCOPE__
-        {
-            InnerRegType inReg;
-            InnerRegType outReg;
-            InnerRegType orderReg;
-            IndexRegType indexReg;
-            AscendC::Reg::MaskReg pregLoop;
-
-            for (uint16_t i = 0; i < loopCnt; i++) {
-                if constexpr (IsSameType<U, int64_t>::value) {
-                    pregLoop = AscendC::Reg::UpdateMask<U, AscendC::Reg::RegTraitNumTwo>(dataLen);
-                } else {
-                    pregLoop = AscendC::Reg::UpdateMask<U>(dataLen);
-                }
-                AscendC::Reg::Duplicate(outReg, 0, pregLoop);
-                AscendC::Reg::Arange(orderReg, i * vfLen);
-                AscendC::Reg::Muls(orderReg, orderReg, rankSize, pregLoop);
-                for (uint16_t dim = 0; dim < rankSizeLoops; dim++) {
-                    U strideValue = strideLocal(dim);
-                    indexReg = (IndexRegType&)orderReg;
-                    AscendC::Reg::Gather(inReg, indicesLocalPtr, indexReg, pregLoop);
-                    AscendC::Reg::Muls(inReg, inReg, strideValue, pregLoop);
-                    AscendC::Reg::Add(outReg, inReg, outReg, pregLoop);
-                    AscendC::Reg::Adds(orderReg, orderReg, (U)(1), pregLoop);
-                }
-                auto outOfstAddr = outOfstLocalPtr + i * vfLen;
-                AscendC::Reg::StoreAlign(outOfstAddr, outReg, pregLoop);
-            }
-        }
+        ComputeOutOfsetVF<U, InnerRegType, IndexRegType>(indicesLocalPtr, outOfstLocalPtr, strideLocalPtr, dataLen,
+                                                         vfLen, loopCnt, rankSize);
         return;
     }
 
@@ -293,8 +300,9 @@ public:
         AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __aicore__ inline void ComputeUniqueIdNumInt32(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
-                                                   uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::Reg::RegTensor<int32_t> orderReg, selReg;
@@ -317,8 +325,9 @@ public:
         AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __aicore__ inline void ComputeUniqueIdNumInt16(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
-                                                   uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumInt16(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::Reg::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -347,8 +356,9 @@ public:
         AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
-    __aicore__ inline void ComputeUniqueIdNumUint8(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
-                                                   uint16_t loopCnt, int64_t dataLen)
+    __simd_callee__ inline void ComputeUniqueIdNumUint8(__ubuf__ CAST_T* indicesAddr,
+                                                        __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt,
+                                                        int64_t dataLen)
     {
         uint32_t counter = dataLen + 1;
         AscendC::Reg::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -390,6 +400,22 @@ public:
         AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
     }
 
+    __simd_vf__ inline void ComputeUniqueIdNumVF(__ubuf__ CAST_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
+                                                 uint16_t loopCnt, int64_t dataLen)
+    {
+        AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+
+        if constexpr (std::is_same<int64_t, CAST_T>::value) {
+            ComputeUniqueIdNumInt64(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+        } else if constexpr (std::is_same<int32_t, CAST_T>::value) {
+            ComputeUniqueIdNumInt32(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+        } else if constexpr (std::is_same<int16_t, CAST_T>::value) {
+            ComputeUniqueIdNumInt16(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+        } else {
+            ComputeUniqueIdNumUint8(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+        }
+    }
+
     __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<CAST_T> indicesLocal,
                                                   LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
     {
@@ -398,20 +424,8 @@ public:
 
         int64_t vfLen = platform::GetVRegSize() / sizeof(CAST_T);
         uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-        uint32_t counter = dataLen + 1;
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-            if constexpr (std::is_same<int64_t, CAST_T>::value) {
-                ComputeUniqueIdNumInt64(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-            } else if constexpr (std::is_same<int32_t, CAST_T>::value) {
-                ComputeUniqueIdNumInt32(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-            } else if constexpr (std::is_same<int16_t, CAST_T>::value) {
-                ComputeUniqueIdNumInt16(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-            } else {
-                ComputeUniqueIdNumUint8(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-            }
-        }
+
+        ComputeUniqueIdNumVF(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
         uint32_t uniqueIdNum = ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
         return uniqueIdNum;
     }
@@ -461,6 +475,37 @@ public:
         }
     }
 
+    __simd_vf__ inline void ComputeSumWithCastVF(__ubuf__ T* updatesAddr, __ubuf__ float* updateSumAddr,
+                                                 __ubuf__ uint32_t* updatesOriginIdexAddr,
+                                                 __ubuf__ int32_t* uniqueIdCountAddr, int64_t colLen, uint32_t vfLen,
+                                                 int32_t loopSize, uint32_t uniqueIdNum, uint32_t colLenAlignSize,
+                                                 uint32_t colLenAlignFp32)
+    {
+        int32_t idLocation = 0;
+        for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
+            AscendC::Reg::RegTensor<float> sumReg;
+            AscendC::Reg::RegTensor<float> castReg;
+            AscendC::Reg::MaskReg maskReg;
+            AscendC::Reg::MaskReg zeroMask = AscendC::Reg::CreateMask<float>();
+            uint32_t maskLen = static_cast<uint32_t>(colLen);
+            uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
+            uint32_t updateSumRowOfst = i * colLenAlignFp32;
+            for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
+                maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
+                AscendC::Reg::Duplicate(sumReg, (float)0, zeroMask);
+                uint32_t colOfst = j * vfLen;
+                for (uint16_t k = 0; k < idRepeatTimes; k++) {
+                    uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
+                    ops_vf::LoadOneTensorForDtypeT<T>(updatesAddr, castReg, maskReg, updatesOffet);
+                    AscendC::Reg::Add(sumReg, sumReg, castReg, maskReg);
+                }
+                uint32_t updateSumAddrOfst = updateSumRowOfst + colOfst;
+                ops_vf::StoreOneTensorForDtypeT<float>(updateSumAddr, sumReg, maskReg, updateSumAddrOfst);
+            }
+            idLocation += idRepeatTimes;
+        }
+    }
+
     __aicore__ inline void ComputeSumWithCast(LocalTensor<int32_t> uniqueIdCountLocal,
                                               LocalTensor<uint32_t> updatesOriginIdexLocal, LocalTensor<T> updatesLocal,
                                               LocalTensor<T> updateSumLocal, uint32_t uniqueIdNum, int64_t colLen)
@@ -472,34 +517,43 @@ public:
 
         uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
         int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);
-        int32_t idLocation = 0;
         uint32_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
         uint32_t colLenAlignFp32 = ops::CeilAlign(colLen * sizeof(float), UB_AGLIN_VALUE) / sizeof(float);
 
-        __VEC_SCOPE__
-        {
-            for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
-                AscendC::Reg::RegTensor<float> sumReg;
-                AscendC::Reg::RegTensor<float> castReg;
-                AscendC::Reg::MaskReg maskReg;
-                AscendC::Reg::MaskReg zeroMask = AscendC::Reg::CreateMask<float>();
-                uint32_t maskLen = static_cast<uint32_t>(colLen);
-                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
-                uint32_t updateSumRowOfst = i * colLenAlignFp32;
-                for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-                    maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
-                    AscendC::Reg::Duplicate(sumReg, (float)0, zeroMask);
-                    uint32_t colOfst = j * vfLen;
-                    for (uint16_t k = 0; k < idRepeatTimes; k++) {
-                        uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
-                        ops::LoadOneTensorForDtypeT<T>(updatesAddr, castReg, maskReg, updatesOffet);
-                        AscendC::Reg::Add(sumReg, sumReg, castReg, maskReg);
-                    }
-                    uint32_t updateSumAddrOfst = updateSumRowOfst + colOfst;
-                    ops::StoreOneTensorForDtypeT<float>(updateSumAddr, sumReg, maskReg, updateSumAddrOfst);
+        ComputeSumWithCastVF(updatesAddr, updateSumAddr, updatesOriginIdexAddr, uniqueIdCountAddr, colLen, vfLen,
+                             loopSize, uniqueIdNum, colLenAlignSize, colLenAlignFp32);
+    }
+
+    __simd_vf__ inline void ComputeSumWithOutCastVF(__ubuf__ selRegType* updatesAddr,
+                                                    __ubuf__ selRegType* updateSumAddr,
+                                                    __ubuf__ uint32_t* updatesOriginIdexAddr,
+                                                    __ubuf__ int32_t* uniqueIdCountAddr, uint32_t uniqueIdNum,
+                                                    int64_t colLen, uint32_t vfLen, int32_t loopSize,
+                                                    uint32_t colLenAlignSize)
+    {
+        int32_t idLocation = 0;
+        for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
+            AscendC::Reg::RegTensor<selRegType> sumReg;
+            AscendC::Reg::RegTensor<selRegType> updateReg;
+            AscendC::Reg::MaskReg maskReg;
+            AscendC::Reg::MaskReg zeroMask = AscendC::Reg::CreateMask<selRegType>();
+            uint32_t maskLen = static_cast<uint32_t>(colLen);
+            uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
+            uint32_t updateSumRowOfst = i * colLenAlignSize;
+            for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
+                maskReg = AscendC::Reg::UpdateMask<selRegType>(maskLen);
+                AscendC::Reg::Duplicate(sumReg, (selRegType)0, zeroMask);
+                uint32_t colOfst = j * vfLen;
+                for (uint16_t k = 0; k < idRepeatTimes; k++) {
+                    uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
+                    auto startAddr = updatesAddr + updatesOffet;
+                    AscendC::Reg::LoadAlign(updateReg, startAddr);
+                    AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
                 }
-                idLocation += idRepeatTimes;
+                auto updateSumAddrOfst = updateSumAddr + updateSumRowOfst + colOfst;
+                AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
             }
+            idLocation += idRepeatTimes;
         }
     }
 
@@ -515,34 +569,9 @@ public:
 
         uint32_t vfLen = platform::GetVRegSize() / sizeof(selRegType);
         int32_t loopSize = (colLen + vfLen - 1) / vfLen;
-        int32_t idLocation = 0;
         uint32_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(selRegType), UB_AGLIN_VALUE) / sizeof(selRegType);
-        __VEC_SCOPE__
-        {
-            for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
-                AscendC::Reg::RegTensor<selRegType> sumReg;
-                AscendC::Reg::RegTensor<selRegType> updateReg;
-                AscendC::Reg::MaskReg maskReg;
-                AscendC::Reg::MaskReg zeroMask = AscendC::Reg::CreateMask<selRegType>();
-                uint32_t maskLen = static_cast<uint32_t>(colLen);
-                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
-                uint32_t updateSumRowOfst = i * colLenAlignSize;
-                for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-                    maskReg = AscendC::Reg::UpdateMask<selRegType>(maskLen);
-                    AscendC::Reg::Duplicate(sumReg, (selRegType)0, zeroMask);
-                    uint32_t colOfst = j * vfLen;
-                    for (uint16_t k = 0; k < idRepeatTimes; k++) {
-                        uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
-                        auto startAddr = updatesAddr + updatesOffet;
-                        AscendC::Reg::LoadAlign(updateReg, startAddr);
-                        AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
-                    }
-                    auto updateSumAddrOfst = updateSumAddr + updateSumRowOfst + colOfst;
-                    AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
-                }
-                idLocation += idRepeatTimes;
-            }
-        }
+        ComputeSumWithOutCastVF(updatesAddr, updateSumAddr, updatesOriginIdexAddr, uniqueIdCountAddr, uniqueIdNum,
+                                colLen, vfLen, loopSize, colLenAlignSize);
     }
 
     __aicore__ inline void ComputeIdxCount(LocalTensor<U> outOfstLocal, int64_t rowLen, int64_t colLen)
@@ -705,6 +734,24 @@ public:
         updateSumIdxQue_.EnQue(updateSumIdxLocal);
     }
 
+    __simd_vf__ inline void ExecConvertAlignVF(__ubuf__ T* updatesAddr, __ubuf__ float* updateSumAddr, int64_t rowLen,
+                                               int64_t colLen, uint32_t vfLen, uint16_t loopSize,
+                                               int64_t colLenAlignSize, int64_t colLenAlignFp32)
+    {
+        for (uint16_t i = 0; i < static_cast<uint16_t>(rowLen); i++) {
+            AscendC::Reg::RegTensor<float> castReg;
+            AscendC::Reg::MaskReg maskReg;
+            uint32_t maskLen = static_cast<uint32_t>(colLen);
+            for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
+                maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
+                auto updateSumAddrOfst = i * colLenAlignFp32 + j * vfLen;
+                auto updateAddrOfet = i * colLenAlignSize + j * vfLen;
+                ops_vf::LoadOneTensorForDtypeT<float>(updateSumAddr, castReg, maskReg, updateSumAddrOfst);
+                ops_vf::StoreOneTensorForDtypeT<T>(updatesAddr, castReg, maskReg, updateAddrOfet);
+            }
+        }
+    }
+
     __aicore__ inline void ExecConvertAlign(LocalTensor<T> updatesLocal, LocalTensor<float> updateSumLocal,
                                             int64_t rowLen, int64_t colLen)
     {
@@ -716,21 +763,8 @@ public:
         int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
         int64_t colLenAlignFp32 = ops::CeilAlign(colLen * sizeof(float), UB_AGLIN_VALUE) / sizeof(float);
 
-        __VEC_SCOPE__
-        {
-            for (uint16_t i = 0; i < static_cast<uint16_t>(rowLen); i++) {
-                AscendC::Reg::RegTensor<float> castReg;
-                AscendC::Reg::MaskReg maskReg;
-                uint32_t maskLen = static_cast<uint32_t>(colLen);
-                for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-                    maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
-                    auto updateSumAddrOfst = i * colLenAlignFp32 + j * vfLen;
-                    auto updateAddrOfet = i * colLenAlignSize + j * vfLen;
-                    ops::LoadOneTensorForDtypeT<float>(updateSumAddr, castReg, maskReg, updateSumAddrOfst);
-                    ops::StoreOneTensorForDtypeT<T>(updatesAddr, castReg, maskReg, updateAddrOfet);
-                }
-            }
-        }
+        ExecConvertAlignVF(updatesAddr, updateSumAddr, rowLen, colLen, vfLen, loopSize, colLenAlignSize,
+                           colLenAlignFp32);
     }
 
     __aicore__ inline void CopyOutSplitIndices(LocalTensor<U> ofstLocal, LocalTensor<T> dataLocal, int64_t rowLen,
@@ -772,6 +806,31 @@ public:
         }
     }
 
+    __simd_vf__ inline void SingleColAddVF(__ubuf__ selRegType* updatesAddr, __ubuf__ COMPUTE_TYPE* updateSumAddr,
+                                           int64_t colLen, uint32_t vfLen, int32_t loopSize)
+    {
+        AscendC::Reg::RegTensor<COMPUTE_TYPE> sumReg;
+        AscendC::Reg::RegTensor<COMPUTE_TYPE> updateReg;
+        AscendC::Reg::MaskReg maskReg;
+        uint32_t maskLen = static_cast<uint32_t>(colLen);
+        for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
+            maskReg = AscendC::Reg::UpdateMask<COMPUTE_TYPE>(maskLen);
+            if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+                ops_vf::LoadOneTensorForDtypeT<T>(updatesAddr + j * vfLen, updateReg, maskReg, 0);
+                AscendC::Reg::LoadAlign(sumReg, updateSumAddr + j * vfLen);
+                AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
+                auto updateSumAddrOfst = updateSumAddr + j * vfLen;
+                AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
+            } else {
+                AscendC::Reg::LoadAlign(sumReg, updateSumAddr + j * vfLen);
+                AscendC::Reg::LoadAlign(updateReg, updatesAddr + j * vfLen);
+                AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
+                auto updateSumAddrOfst = updateSumAddr + j * vfLen;
+                AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
+            }
+        }
+    }
+
     __aicore__ inline void SingleColAdd(LocalTensor<COMPUTE_TYPE> updateSumLocal, int64_t colLen)
     {
         LocalTensor<T> updatesLocal = dataQueue_.DeQue<T>();
@@ -779,29 +838,7 @@ public:
         __ubuf__ COMPUTE_TYPE* updateSumAddr = (__ubuf__ COMPUTE_TYPE*)updateSumLocal.GetPhyAddr();
         uint32_t vfLen = platform::GetVRegSize() / sizeof(COMPUTE_TYPE);
         int32_t loopSize = (colLen + vfLen - 1) / vfLen;
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::RegTensor<COMPUTE_TYPE> sumReg;
-            AscendC::Reg::RegTensor<COMPUTE_TYPE> updateReg;
-            AscendC::Reg::MaskReg maskReg;
-            uint32_t maskLen = static_cast<uint32_t>(colLen);
-            for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-                maskReg = AscendC::Reg::UpdateMask<COMPUTE_TYPE>(maskLen);
-                if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
-                    ops::LoadOneTensorForDtypeT<T>(updatesAddr + j * vfLen, updateReg, maskReg, 0);
-                    AscendC::Reg::LoadAlign(sumReg, updateSumAddr + j * vfLen);
-                    AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
-                    auto updateSumAddrOfst = updateSumAddr + j * vfLen;
-                    AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
-                } else {
-                    AscendC::Reg::LoadAlign(sumReg, updateSumAddr + j * vfLen);
-                    AscendC::Reg::LoadAlign(updateReg, updatesAddr + j * vfLen);
-                    AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
-                    auto updateSumAddrOfst = updateSumAddr + j * vfLen;
-                    AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
-                }
-            }
-        }
+        SingleColAddVF(updatesAddr, updateSumAddr, colLen, vfLen, loopSize);
         dataQueue_.FreeTensor(updatesLocal);
     }
 

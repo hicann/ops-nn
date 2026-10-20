@@ -59,6 +59,7 @@ protected:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override {}
     ge::graphStatus CheckInputDtype();
+    ge::graphStatus CheckNpuArch();
     bool ShapeStartsWith(const gert::Shape shape, const gert::Shape prefix);
     std::tuple<int64_t, int64_t> FlatInput(const gert::Shape shape, const gert::Shape prefix);
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
@@ -85,6 +86,7 @@ public:
     uint64_t idCastMode_ = 0; // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32 Cast
                               // uint8; 5:int64 Cast uint8.
     int64_t idCastDtypeSize_ = 0;
+    bool isAscend960DT_ = false;
 
     ge::DataType dataType_ = ge::DT_UNDEFINED;
     ge::DataType idType_ = ge::DT_UNDEFINED;
