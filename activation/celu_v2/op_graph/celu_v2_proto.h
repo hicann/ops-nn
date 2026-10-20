@@ -25,7 +25,7 @@ namespace ge {
 
 * @par Inputs:
 * One input, including:
-* @li x: A Tensor. Must be one of the following types: float16, float32.
+* @li x: A Tensor. Must be one of the following types: float16, float32, bfloat16.
 
 * @par Attributes:
 * @li alpha: An optional float. The alpha value for the CELU formulation. Defaults to 1.0.
