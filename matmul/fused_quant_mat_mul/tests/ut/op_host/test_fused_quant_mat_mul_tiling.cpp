@@ -27,6 +27,7 @@
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
 #include "matmul/fused_quant_mat_mul/op_host/op_tiling/arch35/fused_quant_matmul_asw_tiling.h"
+#include "matmul/fused_quant_mat_mul/op_host/op_tiling/arch35/fused_quant_matmul_swiglu_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
 #include "op_host/tiling_templates_registry.h"
@@ -241,6 +242,35 @@ static std::vector<FusedQuantMatMulTilingTestParam> GetParams()
     return params;
 }
 
+static void CheckSwigluBaseParams(gert::TilingContext* tilingContext, const FusedQuantMatMulTilingTestParam& param)
+{
+    // 解析 tiling data，校验 singleCoreN 按 ALIGN_N(64) 对齐后 nLoops/usedCoreNum 已回算：
+    // 若 nLoops 未回算，singleNTail = nSize - (nLoops-1)*singleCoreN 会经 uint64 下溢、uint32 截断
+    // 成约为 2^32 的异常值（如 16 核 m=1、n=1536 时 singleNTail 为 -384 截断值）
+    optiling::FusedQuantMatmulSwigluTilingData swigluTilingData;
+    swigluTilingData.SetDataPtr(tilingContext->GetRawTilingData()->GetData());
+    optiling::FusedQuantMatmulSwigluBaseParams baseParams;
+    baseParams.SetDataPtr(swigluTilingData.data_ptr_ + swigluTilingData.baseParams_offset_);
+    optiling::TCubeTiling mmTilingData;
+    mmTilingData.SetDataPtr(swigluTilingData.data_ptr_ + swigluTilingData.mmTilingData_offset_);
+
+    const auto* basePtr = baseParams.data_ptr_;
+    const uint32_t singleCoreN = *(uint32_t*)(basePtr + baseParams.singleCoreN_offset_);
+    const uint32_t mLoops = *(uint32_t*)(basePtr + baseParams.mLoops_offset_);
+    const uint32_t nLoops = *(uint32_t*)(basePtr + baseParams.nLoops_offset_);
+    const uint32_t singleNTail = *(uint32_t*)(basePtr + baseParams.singleNTail_offset_);
+    const uint32_t usedCoreNum = *(uint32_t*)(mmTilingData.data_ptr_ + mmTilingData.usedCoreNum_offset_);
+
+    const uint32_t expectNLoops = (static_cast<uint32_t>(param.n) + singleCoreN - 1U) / singleCoreN;
+    ASSERT_GT(singleCoreN, 0U) << "case " << param.caseName;
+    ASSERT_EQ(nLoops, expectNLoops) << "case " << param.caseName;
+    ASSERT_GT(singleNTail, 0U) << "case " << param.caseName;
+    ASSERT_LE(singleNTail, singleCoreN) << "case " << param.caseName;
+    ASSERT_EQ(usedCoreNum, mLoops * nLoops) << "case " << param.caseName;
+    ASSERT_LE(static_cast<uint64_t>(mLoops) * nLoops, static_cast<uint64_t>(param.coreNum))
+        << "case " << param.caseName;
+}
+
 static void TestOneParamCase(const FusedQuantMatMulTilingTestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
@@ -391,6 +421,9 @@ static void TestOneParamCase(const FusedQuantMatMulTilingTestParam& param)
     ASSERT_EQ(ret, param.tilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
+        if (param.fusedTypeOp == "swiglu") {
+            CheckSwigluBaseParams(tilingContext, param);
+        }
     }
 }
 

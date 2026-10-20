@@ -329,6 +329,7 @@ void FusedQuantMatMulSwigluTiling::SetBaseBlockTiling()
     nLoops = basicTiling_.usedCoreNum / mLoops;
     singleCoreN = ops::CeilDiv(inputParams_.nSize, nLoops);
     singleCoreN = ops::CeilAlign(singleCoreN, static_cast<uint64_t>(ALIGN_N));
+    nLoops = ops::CeilDiv(inputParams_.nSize, singleCoreN);
     while (baseN > MIN_SHAPE_N && baseN > singleCoreN) {
         baseN = baseN >> 1;
     }
