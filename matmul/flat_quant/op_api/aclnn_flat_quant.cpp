@@ -27,6 +27,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/aclnn_util.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 
 using namespace op;
 
@@ -48,6 +49,9 @@ static constexpr int32_t N_INDEX = INDEX_2;
 static constexpr int32_t CEIL_SIZE = 16;
 static constexpr int32_t MAX_K_SIZE = 262144;
 static constexpr int32_t MAX_MN_SIZE = 256;
+static constexpr int32_t DOUBLE_CEIL_SIZE = 64;
+static constexpr int32_t HIF4_SCALE_LAST_DIM = 1;
+static constexpr int32_t MXFP4_SCALE_LAST_DIM = 2;
 static constexpr double ZERO = 0.0;
 static constexpr double ONE = 1.0;
 static constexpr double SIX = 6.0;
@@ -63,25 +67,44 @@ static const std::initializer_list<op::DataType> GROUP_LIST_DTYPE_SUPPORT_LIST =
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
                                                                            op::DataType::DT_INT4};
 
+// DAV_3510: int quantization only
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_INT32, op::DataType::DT_INT4, op::DataType::DT_FLOAT4_E2M1};
+
+// DAV_9201/DAV_9202 (v121) only: hif4 quantization (checked separately, not in REGBASE to keep DAV_3510 clean)
+// hif4 dtype 用 Ops::NN 常量, 兼容旧工具链; 旧版本运行时无 hif4 dtype 张量, 匹配自然不命中
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_HIF4 = {Ops::NN::DT_HIFLOAT4};
 
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_REGBASE = {op::DataType::DT_FLOAT,
                                                                                      op::DataType::DT_FLOAT8_E8M0};
 
+static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_HIF4 = {Ops::NN::DT_HIFLOAT4_SCALE};
+
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST}};
+    {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_GROUP_LIST_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &GROUP_LIST_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &GROUP_LIST_DTYPE_SUPPORT_LIST}};
+    {NpuArch::DAV_2201, &GROUP_LIST_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &GROUP_LIST_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9201, &GROUP_LIST_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_9202, &GROUP_LIST_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_REGBASE}};
+    {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_REGBASE},
+    {NpuArch::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_REGBASE},
+    {NpuArch::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_REGBASE}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE}};
+    {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST},
+    {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE},
+    {NpuArch::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_REGBASE},
+    {NpuArch::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_REGBASE}};
 
 static bool IsDoubleEqual(double a, double b) { return std::abs(a - b) <= std::numeric_limits<double>::epsilon(); }
 
@@ -97,13 +120,14 @@ static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     return EMPTY_LIST;
 }
 
-static aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor, const op::DataType& outDtype,
-                                          aclOpExecutor* executor)
+static aclnnStatus Pack4BitOutputToInt32View(const aclTensor* y, const aclTensor*& outTensor,
+                                             const op::DataType& outDtype, aclOpExecutor* executor)
 {
-    OP_CHECK(outDtype == op::DataType::DT_INT32, OP_LOGD("aclnnFlatQuant output do not need to pack."),
+    // INT32 output is already packed, no view conversion needed
+    OP_CHECK(outDtype == op::DataType::DT_INT32, OP_LOGD("aclnnFlatQuant output is int32, no need to pack."),
              return ACLNN_SUCCESS);
 
-    // if outType is int32, pack output
+    // INT4/mxfp4/hif4 outputs are 4-bit packed; create an INT32 view for ViewCopy
     auto viewShape = y->GetViewShape();
     auto viewShapeDim = viewShape.GetDimNum();
     viewShape[viewShapeDim - 1] /= INT4_NUMS_IN_INT32_SPACE;
@@ -112,7 +136,7 @@ static aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& 
 
     outTemp->SetDataType(DataType::DT_INT32);
     outTensor = outTemp;
-    OP_LOGD("aclnnFlatQuant output real dtype is int4, pack to int32 to out.");
+    OP_LOGD("aclnnFlatQuant 4-bit output packed to int32 view for copy.");
 
     return ACLNN_SUCCESS;
 }
@@ -172,8 +196,8 @@ static bool CheckDim(const aclTensor* x, const aclTensor* kroneckerP1, const acl
     OP_CHECK(p1Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 tensor should be 2D."),
              return false);
     OP_CHECK(xShape.GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x tensor should be 3D."), return false);
-    if (out->GetDataType() == DataType::DT_FLOAT4_E2M1) {
-        // mxfp4的out是2维，scale是3维
+    if (out->GetDataType() == DataType::DT_FLOAT4_E2M1 || out->GetDataType() == Ops::NN::DT_HIFLOAT4) {
+        // mxfp4/hif4: out is 2D, scale is 3D
         OP_CHECK(outShape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 2D."),
                  return false);
         OP_CHECK(quantScaleShape.GetDimNum() == DIM_NUM,
@@ -188,9 +212,11 @@ static bool CheckDim(const aclTensor* x, const aclTensor* kroneckerP1, const acl
     int64_t M = xShape.GetDim(M_INDEX);
     int64_t N = xShape.GetDim(N_INDEX);
     OP_CHECK(K > 0 && M > 0 && N > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x sizes should greater than 0."), return false);
-    OP_CHECK(K <= MAX_K_SIZE && M <= MAX_MN_SIZE && N <= MAX_MN_SIZE,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed %ld, x dim1 and dim2 should not exceed %ld.",
-                     MAX_K_SIZE, MAX_MN_SIZE),
+    OP_CHECK(K <= MAX_K_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed %ld.", MAX_K_SIZE),
+             return false);
+    OP_CHECK(M <= MAX_MN_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim1 should not exceed %ld.", MAX_MN_SIZE),
+             return false);
+    OP_CHECK(N <= MAX_MN_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim2 should not exceed %ld.", MAX_MN_SIZE),
              return false);
     if (out->GetDataType() == op::DataType::DT_INT32) {
         OP_CHECK(N % INT4_NUMS_IN_INT32_SPACE == 0,
@@ -203,13 +229,43 @@ static bool CheckDim(const aclTensor* x, const aclTensor* kroneckerP1, const acl
     }
     OP_CHECK(p1Shape.GetDim(INDEX_0) == M && p1Shape.GetDim(INDEX_1) == M,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 dim0 and dim1 should be same with x dim1."), return false);
-    if (out->GetDataType() != DataType::DT_FLOAT4_E2M1) {
+    if (out->GetDataType() != DataType::DT_FLOAT4_E2M1 && out->GetDataType() != Ops::NN::DT_HIFLOAT4) {
         OP_CHECK(p2Shape.GetDim(INDEX_0) == N && p2Shape.GetDim(INDEX_1) == N,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 dim0 and dim1 should be same with x dim2."),
                  return false);
     }
     OP_CHECK(quantScaleShape.GetDim(INDEX_0) == K,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale dim0 should be same with x dim0."), return false);
+
+    // hif4/mxfp4: 校验 out 与 quantScale 的 dim 值, 以及 p2 的 shape
+    if (out->GetDataType() == DataType::DT_FLOAT4_E2M1 || out->GetDataType() == Ops::NN::DT_HIFLOAT4) {
+        // p2: 与 tiling CheckShapes 一致, 允许 [0,0] (hasP2=false) 或 2D [N,N]
+        bool isP2ZeroShape = (p2Shape.GetDimNum() >= P_DIM_NUM && p2Shape.GetDim(INDEX_0) == 0 &&
+                              p2Shape.GetDim(INDEX_1) == 0);
+        if (!isP2ZeroShape) {
+            OP_CHECK(p2Shape.GetDimNum() == P_DIM_NUM,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 tensor should be 2D."), return false);
+            OP_CHECK(p2Shape.GetDim(INDEX_0) == N && p2Shape.GetDim(INDEX_1) == N,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 dim0 and dim1 should be same with x dim2."),
+                     return false);
+        }
+        // out: [K, M*N] for both mxfp4 and hif4 (element count, 4-bit packing handled by framework)
+        OP_CHECK(outShape.GetDim(INDEX_0) == K,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out dim0 should be same with x dim0."), return false);
+        int64_t expectedOutDim1 = M * N;
+        OP_CHECK(outShape.GetDim(INDEX_1) == expectedOutDim1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out dim1 should be (x dim1 * x dim2)."), return false);
+        // quantScale: [K, ceil(M*N/64), lastDim], lastDim=1(hif4)/2(mxfp4)
+        int64_t expectedScaleDim1 = (M * N + DOUBLE_CEIL_SIZE - 1) / DOUBLE_CEIL_SIZE;
+        OP_CHECK(quantScaleShape.GetDim(INDEX_1) == expectedScaleDim1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale dim1 should be ceil(x dim1 * x dim2 / 64)."),
+                 return false);
+        int64_t expectedScaleLastDim = (out->GetDataType() == Ops::NN::DT_HIFLOAT4) ? HIF4_SCALE_LAST_DIM :
+                                                                                      MXFP4_SCALE_LAST_DIM;
+        OP_CHECK(quantScaleShape.GetDim(INDEX_2) == expectedScaleLastDim,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale dim2 should be %ld.", expectedScaleLastDim),
+                 return false);
+    }
 
     return true;
 }
@@ -222,7 +278,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* kroneckerP1, const a
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check input / output shape failed."), return false);
 
     auto outputDtype = out->GetDataType();
-    if (outputDtype != DataType::DT_FLOAT4_E2M1) {
+    if (outputDtype != DataType::DT_FLOAT4_E2M1 && outputDtype != Ops::NN::DT_HIFLOAT4) {
         OP_CHECK(CheckSpecialIOShape(x, out, outputDtype),
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output shape failed."), return false);
     }
@@ -254,6 +310,56 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* kroneckerP1, const
     return true;
 }
 
+static bool CheckOutDtypeValid(const aclTensor* out)
+{
+    auto outDtype = out->GetDataType();
+    auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
+    if (std::find(outList.begin(), outList.end(), outDtype) != outList.end()) {
+        return true;
+    }
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    // hif4 is only supported on DAV_9201/DAV_9202 (v121); check separately to keep other arch list clean
+    if ((curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) &&
+        std::find(OUT_DTYPE_SUPPORT_LIST_HIF4.begin(), OUT_DTYPE_SUPPORT_LIST_HIF4.end(), outDtype) !=
+            OUT_DTYPE_SUPPORT_LIST_HIF4.end()) {
+        return true;
+    }
+    // build full supported list string for error message (include hif4 for v121)
+    std::string fullListStr = "[";
+    bool isFirst = true;
+    auto appendDtypeStr = [&fullListStr, &isFirst](const std::initializer_list<op::DataType>& dtypeList) {
+        for (auto dtype : dtypeList) {
+            if (!isFirst) {
+                fullListStr += ",";
+            }
+            fullListStr += op::ToString(dtype).GetString();
+            isFirst = false;
+        }
+    };
+    appendDtypeStr(outList);
+    if (curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+        appendDtypeStr(OUT_DTYPE_SUPPORT_LIST_HIF4);
+    }
+    fullListStr += "]";
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor out should be in dtype support list %s", fullListStr.c_str());
+    return false;
+}
+
+static bool CheckScaleDtypeValid(const aclTensor* quantScale, const aclTensor* out)
+{
+    auto outDtype = out->GetDataType();
+    auto scaleDtype = quantScale->GetDataType();
+    const std::initializer_list<op::DataType>* scaleList = &GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
+    if (outDtype == Ops::NN::DT_HIFLOAT4) {
+        scaleList = &SCALE_DTYPE_SUPPORT_LIST_HIF4;
+    }
+    OP_CHECK(std::find(scaleList->begin(), scaleList->end(), scaleDtype) != scaleList->end(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor scale should be in dtype support list %s",
+                     op::ToString(*scaleList).GetString()),
+             return false);
+    return true;
+}
+
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
                             const aclTensor* out, const aclTensor* quantScale)
 {
@@ -261,16 +367,12 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* kroneckerP1, co
     OP_CHECK_DTYPE_NOT_SUPPORT(kroneckerP1, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(kroneckerP2, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
 
-    auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
-    auto scaleList = GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
-    OP_CHECK(std::find(outList.begin(), outList.end(), out->GetDataType()) != outList.end(),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor out should be in dtype support list %s",
-                     op::ToString(outList).GetString()),
-             return false);
-    OP_CHECK(std::find(scaleList.begin(), scaleList.end(), quantScale->GetDataType()) != scaleList.end(),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor scale should be in dtype support list %s",
-                     op::ToString(scaleList).GetString()),
-             return false);
+    if (!CheckOutDtypeValid(out)) {
+        return false;
+    }
+    if (!CheckScaleDtypeValid(quantScale, out)) {
+        return false;
+    }
     OP_CHECK_DTYPE_NOT_SAME(x, kroneckerP1, return false);
     OP_CHECK_DTYPE_NOT_SAME(x, kroneckerP2, return false);
     return true;
@@ -306,9 +408,9 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* kroneckerP1,
 static bool CheckGroupList(const aclTensor* groupListOptional, int64_t groupListType)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510) {
+    if (curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
         OP_CHECK(groupListOptional == nullptr,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For ascend950, groupListOptional only support nullptr."),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For david family soc, groupListOptional only support nullptr."),
                  return false);
     }
     if (curArch == NpuArch::DAV_2201 && groupListOptional != nullptr) {
@@ -370,10 +472,10 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* 
     const aclTensor* quantScaleTensor = std::get<1>(result);
     CHECK_RET(resultTensor != nullptr && quantScaleTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32
+    // 4-bit 输出 (INT4/mxfp4/hif4) 需要转成 INT32 视图, 8 个 4-bit 元素拼成 1 个 INT32
     auto outDtype = out->GetDataType();
     const aclTensor* outTensor = resultTensor;
-    ret = Int42Int32PackedTensor(resultTensor, outTensor, outDtype, uniqueExecutor.get());
+    ret = Pack4BitOutputToInt32View(resultTensor, outTensor, outDtype, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto outResult = l0op::ViewCopy(outTensor, out, uniqueExecutor.get());
@@ -423,10 +525,10 @@ aclnnStatus aclnnFlatQuantV2GetWorkspaceSize(const aclTensor* x, const aclTensor
     const aclTensor* quantScaleTensor = std::get<1>(result);
     CHECK_RET(resultTensor != nullptr && quantScaleTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32
+    // 4-bit 输出 (INT4/mxfp4/hif4) 需要转成 INT32 视图, 8 个 4-bit 元素拼成 1 个 INT32
     auto outDtype = out->GetDataType();
     const aclTensor* outTensor = resultTensor;
-    ret = Int42Int32PackedTensor(resultTensor, outTensor, outDtype, uniqueExecutor.get());
+    ret = Pack4BitOutputToInt32View(resultTensor, outTensor, outDtype, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto outResult = l0op::ViewCopy(outTensor, out, uniqueExecutor.get());
@@ -483,9 +585,9 @@ aclnnStatus aclnnFlatQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor
     const aclTensor* quantScaleTensor = std::get<1>(result);
     CHECK_RET(resultTensor != nullptr && quantScaleTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32
+    // 4-bit 输出 (INT4/mxfp4/hif4) 需要转成 INT32 视图, 8 个 4-bit 元素拼成 1 个 INT32
     const aclTensor* outTensor = resultTensor;
-    ret = Int42Int32PackedTensor(resultTensor, outTensor, out->GetDataType(), uniqueExecutor.get());
+    ret = Pack4BitOutputToInt32View(resultTensor, outTensor, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto outResult = l0op::ViewCopy(outTensor, out, uniqueExecutor.get());

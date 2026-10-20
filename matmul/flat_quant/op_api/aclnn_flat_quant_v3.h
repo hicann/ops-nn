@@ -36,10 +36,14 @@ extern "C" {
  * @param [in] clipRatio: Host侧的double型参数，用于控制量化的裁剪比例，输入数据范围为(0, 1]，默认值为1。
  * @param [in] dstTypeMax: Host侧的double型参数，用于控制目标数据类型的最大值，输入值只能是0或6-12之间的数。
  * @param [in] groupListType: Host侧的int64_t参数，代表groupListOptional输入的分组方式，取值范围0-2。
- * @param [out] out: Device侧的aclTensor，支持非连续的Tensor，数据格式支持ND，数据类型支持INT4，INT32。
+ * @param [out] out: Device侧的aclTensor，支持非连续的Tensor，数据格式支持ND。
  * 类型为INT32时，shape的最后一维是入参`x`最后一维的1/8，其余维度和x一致；类型为INT4时，shape与入参`x`一致。
- * @param [out] quantScale: Device侧的aclTensor，shape为[K]，K与x中K维一致。
- * 支持非连续的Tensor，数据格式支持ND，数据类型支持FLOAT32。
+ * 类型为FLOAT4_E2M1(mxfp4)时，shape为[K, M*N]（仅Ascend950/Ascend350/Ascend960系列支持）；
+ * 类型为HIFLOAT4(hif4)时，shape为[K, M*N]（仅Ascend960DT/Ascend960PR(v121)支持）。
+ * @param [out] quantScale: Device侧的aclTensor，支持非连续的Tensor，数据格式支持ND。
+ * 类型为INT4/INT32时，shape为[K]，K与x中K维一致，数据类型支持FLOAT32。
+ * 类型为FLOAT4_E2M1(mxfp4)时，shape为[K, ceil(M*N/64), 2]，数据类型为FLOAT8_E8M0。
+ * 类型为HIFLOAT4(hif4)时，shape为[K, ceil(M*N/64), 1]，数据类型为HIFLOAT4_SCALE。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

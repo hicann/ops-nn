@@ -12,6 +12,7 @@
  * \file flat_quant.cc
  * \brief
  */
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
 #include "log/log.h"
@@ -20,14 +21,16 @@
 
 using namespace ge;
 namespace ops {
-static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950", "Ascend350"};
+static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
 static const int32_t DTYPE_FLOAT4_E2M1 = 40;
+static const int32_t DTYPE_HIFLOAT4 = 42;
 static constexpr size_t FLATQUANT_K_IDX = 0;
 static constexpr size_t FLATQUANT_M_IDX = 1;
 static constexpr size_t FLATQUANT_N_IDX = 2;
 static constexpr size_t FLATQUANT_ATTRS_NUM_TWO = 2;
 static constexpr size_t FLATQUANT_ATTRS_NUM_THREE = 3;
 static constexpr size_t FLATQUANT_MX_N_OUT_DIM = 2;
+static constexpr size_t FLATQUANT_HIF4_N_OUT_DIM = 1;
 static constexpr size_t FLATQUANT_N_IS_EVEN = 2;
 static constexpr size_t FLATQUANT_DOUBLE_CEIL_SIZE = 64;
 static const size_t ATTR_INDEX_OF_DST_DTYPE = 1;
@@ -107,6 +110,24 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
                 qScaleShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
                 qScaleShape->AppendDim(ceilMNDim);
                 qScaleShape->AppendDim(FLATQUANT_MX_N_OUT_DIM);
+            } else if (dstDtype == DTYPE_HIFLOAT4) { // dst_dtype 为42, hif4
+                const int64_t mDim = xShape->GetDim(FLATQUANT_M_IDX);
+                const int64_t nDim = xShape->GetDim(FLATQUANT_N_IDX);
+                // 与mxfp4一致：M/N任一为动态未知维度(-1)时派生维保持-1
+                const bool hasUnknownDim = (mDim == UNKNOWN_DIM) || (nDim == UNKNOWN_DIM);
+                const int64_t mnDim = hasUnknownDim ? UNKNOWN_DIM : mDim * nDim;
+                const int64_t ceilMNDim = hasUnknownDim ?
+                                              UNKNOWN_DIM :
+                                              (mnDim + static_cast<int64_t>(FLATQUANT_DOUBLE_CEIL_SIZE) - 1) /
+                                                  static_cast<int64_t>(FLATQUANT_DOUBLE_CEIL_SIZE);
+                outShape->SetDimNum(0);
+                outShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
+                outShape->AppendDim(mnDim);
+
+                qScaleShape->SetDimNum(0);
+                qScaleShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
+                qScaleShape->AppendDim(ceilMNDim);
+                qScaleShape->AppendDim(FLATQUANT_HIF4_N_OUT_DIM);
             } else { // 默认值
                 outShape->SetDimNum(0);
                 outShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
@@ -158,6 +179,9 @@ static ge::graphStatus InferDataType4FlatQuant(gert::InferDataTypeContext* conte
             if (dstDtype == DTYPE_FLOAT4_E2M1) {
                 context->SetOutputDataType(0, ge::DT_FLOAT4_E2M1);
                 context->SetOutputDataType(1, ge::DT_FLOAT8_E8M0);
+            } else if (dstDtype == DTYPE_HIFLOAT4) {
+                context->SetOutputDataType(0, Ops::NN::DT_HIFLOAT4);
+                context->SetOutputDataType(1, Ops::NN::DT_HIFLOAT4_SCALE);
             } else {
                 context->SetOutputDataType(0, ge::DT_INT4);
                 context->SetOutputDataType(1, ge::DT_FLOAT);

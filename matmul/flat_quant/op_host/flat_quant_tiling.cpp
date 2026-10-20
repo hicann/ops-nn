@@ -21,6 +21,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "flat_quant_tiling.h"
 #include "platform/soc_spec.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -66,6 +67,12 @@ constexpr uint8_t MM_ONE_MODE = 5;
 constexpr uint8_t MM_HIGH_MODE_ALIGN = 6;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 constexpr uint64_t WORK_SPACE_SIZE_APT = 48 * 1024 * 1024;
+
+// ascend950/350(DAV_3510)与ascend960dt/960pr(DAV_9201/DAV_9202)共用arch35 kernel路径
+static bool IsDavidFamilyArch(const NpuArch npuArch)
+{
+    return npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
 
 class FlatQuantTiling {
 public:
@@ -202,9 +209,9 @@ ge::graphStatus FlatQuantTiling::CalculateIterBatch()
     if (mmMode_ == MM_HIGH_MODE && GetTCubeTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    // 计算迭代批次
-    uint64_t p1Size = nAlign_ * nAlign_ * DATA_TYPE_SIZE;
-    uint64_t p2Size = mAlign_ * mAlign_ * DATA_TYPE_SIZE;
+    // 计算迭代批次 (p1 shape为[M,M]，p2 shape为[N,N]，按各自对齐边长计算占用)
+    uint64_t p1Size = mAlign_ * mAlign_ * DATA_TYPE_SIZE;
+    uint64_t p2Size = nAlign_ * nAlign_ * DATA_TYPE_SIZE;
     uint64_t xInputSize = mAlign_ * nAlign_ * DATA_TYPE_SIZE;
     uint64_t xL0CSize = mAlign_ * nAlign_ * sizeof(float);
     uint64_t iterBatchL1 = (L1_SIZE - p1Size - p2Size) / xInputSize / FACTOR_TWO;
@@ -262,12 +269,25 @@ uint8_t FlatQuantTiling::DetermineMmMode(ge::DataType outDtype) const
     int64_t m = xShape_.GetDim(INDEX_ONE);
     int64_t k = xShape_.GetDim(INDEX_ZERO);
 
+    if (outDtype == Ops::NN::DT_HIFLOAT4) {
+        // HIF4 输出：固定走 Blaze 对齐路径 (key6 = MM_HIGH_MODE_ALIGN), 无论 M/N 是否 16 对齐
+        return MM_HIGH_MODE_ALIGN;
+    }
+
     if (outDtype == ge::DT_FLOAT4_E2M1) {
+        // A6(960dt/pr) CMCT 对齐路径要求 M/N 16 对齐, 非对齐回退 FlatQuantHighV2 (key4);
+        // A5(950/350) Blaze 路径可处理非对齐, 恒走 key6
+        auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+        if (compileInfo != nullptr &&
+            (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202) &&
+            (m % CEIL_SIZE != 0 || n % CEIL_SIZE != 0)) {
+            return MM_HIGH_MODE;
+        }
         return MM_HIGH_MODE_ALIGN;
     }
 
     auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
-    if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_3510) {
+    if (compileInfo != nullptr && IsDavidFamilyArch(compileInfo->npuArch)) {
         return MM_HIGH_MODE;
     }
 
@@ -295,9 +315,9 @@ ge::graphStatus FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType
     size_t* workspaces = tilingContext_->GetWorkspaceSizes(WORKSPACE_NUM);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, workspaces);
 
-    if (outDtype == ge::DT_FLOAT4_E2M1) {
+    if (outDtype == ge::DT_FLOAT4_E2M1 || outDtype == Ops::NN::DT_HIFLOAT4) {
         auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
-        if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_3510) {
+        if (compileInfo != nullptr && IsDavidFamilyArch(compileInfo->npuArch)) {
             int64_t useAivNum = CeilA2B(k, K_PER_VEC) <= aivNum ? CeilA2B(k, K_PER_VEC) : aivNum;
             workspaces[0] = useAivNum *
                                 (K_PER_VEC * m * n * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * n * BYTE_LEN_4) +
@@ -414,9 +434,9 @@ bool FlatQuantTiling::CheckGroupList()
 {
     groupNum_ = 0;
     auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
-    if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_3510) {
+    if (compileInfo != nullptr && IsDavidFamilyArch(compileInfo->npuArch)) {
         OP_CHECK_IF(hasGroupList_ == true,
-                    OP_LOGE(tilingContext_->GetNodeName(), "For ascend950, group_list only support nullptr.."),
+                    OP_LOGE(tilingContext_->GetNodeName(), "For david family soc, group_list only support nullptr.."),
                     return false);
     }
     if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_2201 && hasGroupList_) {
@@ -497,7 +517,7 @@ bool FlatQuantTiling::ValidateAll()
     auto outDesc = tilingContext_->GetOutputDesc(INDEX_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outDesc);
     auto outDtype = outDesc->GetDataType();
-    if (outDtype != ge::DT_FLOAT4_E2M1 && !hasP2_) {
+    if (outDtype != ge::DT_FLOAT4_E2M1 && outDtype != Ops::NN::DT_HIFLOAT4 && !hasP2_) {
         OP_LOGE(tilingContext_->GetNodeName(), "p2 shape must be [N,N] when out dtype is not FLOAT4_E2M1, got [0,0].");
         return false;
     }
@@ -509,6 +529,30 @@ bool FlatQuantTiling::ValidateAll()
     }
     if (!CheckNAlignment(outDtype)) {
         return false;
+    }
+    if (outDtype == Ops::NN::DT_HIFLOAT4) {
+        int64_t mHif4 = xShape_.GetDim(INDEX_ONE);
+        int64_t nHif4 = xShape_.GetDim(INDEX_TWO);
+        OP_CHECK_IF(mHif4 % CEIL_SIZE != 0 || nHif4 % CEIL_SIZE != 0,
+                    OP_LOGE(tilingContext_->GetNodeName(),
+                            "HIFLOAT4 output requires M[%ld] and N[%ld] to be aligned to %d.", mHif4, nHif4, CEIL_SIZE),
+                    return false);
+    }
+    if (outDtype == ge::DT_FLOAT4_E2M1 && !hasP2_) {
+        // A6 非对齐 mxfp4 回退 FlatQuantHighV2 (key4), 该路径要求 p2 存在; 对齐场景由 CMCT (key6) 处理,
+        // A5 Blaze 路径两者均可处理, 不做限制
+        auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+        if (compileInfo != nullptr &&
+            (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202)) {
+            int64_t mMxfp4 = xShape_.GetDim(INDEX_ONE);
+            int64_t nMxfp4 = xShape_.GetDim(INDEX_TWO);
+            OP_CHECK_IF(mMxfp4 % CEIL_SIZE != 0 || nMxfp4 % CEIL_SIZE != 0,
+                        OP_LOGE(tilingContext_->GetNodeName(),
+                                "On ascend960, FLOAT4_E2M1 output with empty kronecker_p2 requires M[%ld] and "
+                                "N[%ld] to be aligned to %d, or provide kronecker_p2 of shape [N,N].",
+                                mMxfp4, nMxfp4, CEIL_SIZE),
+                        return false);
+        }
     }
     return true;
 }
@@ -551,6 +595,12 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     if (compileInfo->npuArch == NpuArch::DAV_3510) {
         OP_CHECK_IF(compileInfo->aivNum != (compileInfo->aicNum * 2), // aivNum must == aicNum*2
                     OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum*2 "),
+                    return ge::GRAPH_FAILED);
+    }
+    if (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202) {
+        // ascend960(v121): AIC:AIV = 1:1
+        OP_CHECK_IF(compileInfo->aivNum != compileInfo->aicNum,
+                    OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum on v121"),
                     return ge::GRAPH_FAILED);
     }
 

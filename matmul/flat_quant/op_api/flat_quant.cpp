@@ -14,6 +14,7 @@
  */
 
 #include "flat_quant.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/op_log.h"
 #include "opdev/op_executor.h"
@@ -51,7 +52,7 @@ const std::tuple<aclTensor*, aclTensor*> FlatQuant(const aclTensor* x, const acl
                                                    int64_t groupListType, aclTensor* out, aclTensor* quantScale,
                                                    aclOpExecutor* executor)
 {
-    if (dst_dtype != DataType::DT_FLOAT4_E2M1) {
+    if (dst_dtype != DataType::DT_FLOAT4_E2M1 && dst_dtype != Ops::NN::DT_HIFLOAT4) {
         out = executor->AllocTensor(x->GetViewShape(), DataType::DT_INT4, x->GetViewFormat());
         OP_CHECK_NULL(out, return std::tuple(nullptr, nullptr));
         int64_t K = x->GetViewShape().GetDim(0);
