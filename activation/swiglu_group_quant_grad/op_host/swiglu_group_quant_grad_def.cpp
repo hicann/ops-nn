@@ -57,6 +57,7 @@ public:
         this->Attr("clamp_limit").AttrType(OPTIONAL).Float(-1.0f);
 
         this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend960dt");
     }
 };
 

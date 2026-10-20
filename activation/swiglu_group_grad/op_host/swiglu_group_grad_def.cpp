@@ -88,6 +88,7 @@ public:
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", regbaseCfg);
         this->AICore().AddConfig("ascend350", regbaseCfg);
+        this->AICore().AddConfig("ascend960dt", regbaseCfg);
     }
 };
 OP_ADD(SwigluGroupGrad);
