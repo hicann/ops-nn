@@ -737,7 +737,7 @@ ge::graphStatus ScatterNdAddSimtTiling::GetWorkspaceSize()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
+    workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     /* 非量化不需要开workspace */
     if (isDeterminstic_ == 1 && isSplitAfterAxis_ == 0) {
         int64_t rCoutWsSize = varInAxis_ * INT32_BYTES;
