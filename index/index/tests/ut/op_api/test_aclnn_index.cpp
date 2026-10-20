@@ -59,7 +59,7 @@ TEST_F(l2_index_test, l2_test_self_empty_fp32)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_index_test, l2_test_out_empty_fp32)
@@ -81,6 +81,81 @@ TEST_F(l2_index_test, l2_test_out_empty_fp32)
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_index_test, l2_test_self_and_out_empty_fp32)
+{
+    vector<int64_t> self_shape = {0, 10};
+    vector<int64_t> indices_shape = {0};
+    vector<int64_t> out_shape = {{0, 10}};
+
+    auto self_desc = TensorDesc(self_shape, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 4);
+    auto indices_desc = TensorDesc(indices_shape, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 25);
+    auto tensor_list_desc = TensorListDesc({
+        indices_desc,
+    });
+    auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    EXPECT_EQ(workspaceSize, 0);
+}
+
+TEST_F(l2_index_test, l2_test_all_indices_empty_fp32)
+{
+    auto self_desc = TensorDesc({30, 10}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 4);
+    auto indices_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({30, 10}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    for (int indices_count = 1; indices_count <= 2; ++indices_count) {
+        SCOPED_TRACE(indices_count);
+        auto tensor_list_desc = TensorListDesc(indices_count, indices_desc);
+        auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), OUTPUT(out_desc));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_index_test, l2_test_all_indices_empty_non_contiguous_fp32)
+{
+    auto self_desc = TensorDesc({30, 10}, ACL_FLOAT, ACL_FORMAT_ND, {1, 30}, 0, {10, 30}).ValueRange(1, 4);
+    auto indices_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto tensor_list_desc = TensorListDesc({indices_desc, indices_desc});
+    auto out_desc = TensorDesc({30, 10}, ACL_FLOAT, ACL_FORMAT_ND, {1, 30}, 0, {10, 30});
+
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_index_test, l2_test_all_indices_empty_scalar_fp32)
+{
+    auto self_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 4);
+    auto indices_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto tensor_list_desc = TensorListDesc({indices_desc});
+    auto out_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_index_test, l2_test_all_indices_empty_invalid_out_shape_fp32)
+{
+    auto self_desc = TensorDesc({30, 10}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 4);
+    auto indices_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto tensor_list_desc = TensorListDesc({indices_desc});
+
+    for (const auto& out_shape : vector<vector<int64_t>>{{10, 30}, {30}, {0, 10}}) {
+        auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), OUTPUT(out_desc));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    }
 }
 
 TEST_F(l2_index_test, l2_test_success_multi_indices_aicore)

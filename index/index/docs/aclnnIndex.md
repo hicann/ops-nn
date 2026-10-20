@@ -162,12 +162,18 @@ aclnnStatus aclnnIndex(
       <td>传入的self是空指针。</td>
       </tr>
       <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self和out的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
       <td>self和out的数据类型不一致。</td>
+      </tr>
+      <tr>
+      <td>self为空且out非空。</td>
+      </tr>
+      <tr>
+      <td>indices中无tensor或所有tensor均为空时，out与self的shape不一致。</td>
       </tr>
     </tbody>
     </table>
@@ -220,6 +226,8 @@ aclnnStatus aclnnIndex(
 - 确定性计算：
   - aclnnIndex默认确定性实现。
 - self非0维Tensor时，indices中tensor的个数需要小于等于self的维度数，self为0维Tensor时，indices中只能有1个tensor。
+- self为空时，out必须为空，否则返回ACLNN_ERR_PARAM_INVALID。
+- indices中无tensor或所有tensor均为空时，输出为self的副本，out的shape必须与self一致，否则返回ACLNN_ERR_PARAM_INVALID。
 - indices中的各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
 <!-- npu="950" id9 -->
 - <term>Ascend 950PR&950DT系列产品</term>：indices各tensor之间shape需相同或满足broadcast关系。

@@ -200,6 +200,10 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensorList* indic
     // 4. 检查shape是否支持
     CheckShape(self, indices);
     CHECK_RET(CheckShapeDim(self, indices), ACLNN_ERR_PARAM_INVALID);
+    if (self->IsEmpty() && !out->IsEmpty()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self is empty but out is non-empty.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     return ACLNN_SUCCESS;
 }
 
@@ -540,10 +544,31 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorLis
     auto ret = CheckParams(self, indices, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
-    bool selfOrOutIsEmpty = self->IsEmpty() || out->IsEmpty();
-    if (selfOrOutIsEmpty) {
+    bool allIndicesEmpty = true;
+    for (size_t i = 0; i < indices->Size(); i++) {
+        if (!(*indices)[i]->IsEmpty()) {
+            allIndicesEmpty = false;
+            break;
+        }
+    }
+    if (allIndicesEmpty) {
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, self->GetViewShape(), return ACLNN_ERR_PARAM_INVALID);
+    }
+
+    // 空输出不需要生成计算图；空self与非空out已在参数检查阶段拒绝。
+    if (out->IsEmpty()) {
         *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 空索引仅作为占位，不改变self；在进入索引检查和形状推导前处理该场景。
+    if (allIndicesEmpty) {
+        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
