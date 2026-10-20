@@ -102,11 +102,35 @@ struct LstmBlockCellTilingData {
     // —— K-split 切分（host TilingFunc 按默认策略填写）——
     //    K=I+H 切 S 段（段宽 W 为 host 侧 K 分档定型值，与核数解耦），段 s 由
     //    (mIdx*SK + s%SK) 号 AIC 核计算，partials fp32 落 GM workspace，
-    //    AIV 以 Kahan 补偿归并（fp16 在合并后单次 round half）。
+    //    AIV 归并（fp16 在合并后单次 round half）。
     uint32_t ksCores;     // SK：每个 M-strip 协作的 AIC 核数
     uint32_t ksStrips;    // Ms'：M-strip 数（blockDim = Ms' * SK）
     uint32_t ksSegWidth;  // W：段宽（元素，host 侧定型值；kernel 侧只消费，不再重派生）
     uint32_t offPartials; // partials 区 fp32 元素偏移（offBiasF32 + 4*Hpad 之后）
+
+    // —— AIV partial 归并模式（0=二分树批量归并【默认】，1=Kahan 逐段补偿）——
+    //    两套数值路径均在困难用例集上验证；树归并把每 partial 的 ~11 条向量
+    //    指令 + 2 个全量 barrier 压到 ~1 条 Add + 每 batch 2 个 barrier，
+    //    大 S（细切 K）场景下是 AIV 侧的串行瓶颈解法。Kahan 路径保留为
+    //    精度对照/回退。
+    uint32_t mergeMode;
+
+    // —— fp32 hi/lo 拆分 GEMM（性能路径，仅 fp32 且大 GEMM 时开启）——
+    //    3510 fp32 Mmad 实测聚合 ~16-17.4 TFLOPS，fp16 Mmad ~120 TFLOPS
+    //    （比值 6.9x）。大 GEMM 的 fp32 用例把 A=[x,h] 与 w 预拆成
+    //    fp16 hi/lo 双平面（a = a_hi + a_lo，RNE 拆分，|残差| <= 2^-22|a|），
+    //    AIC 每 k-block 发 3 条 fp16 Mmad（hi*hi + lo*hi + hi*lo，全部累进
+    //    同一 L0C fp32 累加器，丢弃 lo*lo 项误差 ~2^-21 相对，远小于 W 段
+    //    累加误差），有效吞吐 ~3x 于原生 fp32 Mmad。bias 仍走 BT（fp32
+    //    全精度），partials/归并/epilogue 数值路径完全不变。
+    //    拆分平面布局（half 元素，自 offA16 起）：
+    //      [x16hi B*I | x16lo B*I | h16hi B*H | h16lo B*H | w16hi K*4H | w16lo K*4H]
+    //    生成：AIV 预处理（BiasPrepass 同阶段），按 MIX block 分区——本
+    //    block 的 2 个 AIV 负责本 strip 的 A 行（同 strip 的两个 block 冗余
+    //    写同值，无竞态）+ kIdx 拥有的 w 段行；AIC 只读本 block AIV 写的
+    //    数据，复用 V2C_PREPASS 每-block 旗标，无需网格级同步。
+    uint32_t splitGemm; // 1 = fp32 大 GEMM 走 hi/lo 拆分（host 门控：2*B*H >= 64*(3*B+8*H) 且 workspace 放得下）
+    uint64_t offA16; // A16 拆分区起点（相对 workspace 起点的 half 元素偏移；partials 之后）
 };
 
 #endif // LSTM_BLOCK_CELL_TILING_H

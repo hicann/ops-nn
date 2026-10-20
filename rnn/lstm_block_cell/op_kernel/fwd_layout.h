@@ -58,6 +58,36 @@ static constexpr uint32_t NGRAN = 16;
 static constexpr uint32_t NBLK_MIN = 16;
 static constexpr uint32_t NBLK_MAX = 256;
 
+/* fp16 K-split 段数策略常量（host tiling 与 PickTile 打分共享，单一真值）：
+ * 段数 S16 = clamp(S16_TARGET / CeilDiv(B, mBlk), S16_MIN, S16_TARGET)，
+ * 段宽 W16 = max(W16_MIN, CeilDiv(K, S16))。段边界只由 shape 决定（不随核数
+ * 漂移）；strips 少（B 小）时多切 K 段填满网格，strips 多（B 大）时 S 收到 2。 */
+static constexpr uint32_t S16_TARGET = 32;
+static constexpr uint32_t S16_MIN = 2;
+static constexpr uint32_t W16_MIN = 64;
+
+/* ---------------------------------------------------------------------------------------------
+ * fp32 hi/lo 拆分 GEMM 的片上布局算术（splitGemm=1 路径；HOST_DEVICE 共享）。
+ *
+ * L1/L0A/L0B 以 fp16 staging，每 k-block 同时驻留 A_hi + A_lo（L0A 两张
+ * half tile）与 B_hi 或 B_lo（L0B 单张复用）；L1 双缓冲 a1hi[2]/a1lo[2]/
+ * b1hi[2]/b1lo[2]（4+4 half 槽）。字节量与原生 fp32 路径（a1[2]/b1[2]）相等
+ * （2xfp16 == 1xfp32），唯一差别是 K 向对齐量子 16（fp16 C0）而非 8（fp32
+ * C0）——FitTile 的 splitA16 约束按这些公式收紧 kChunk。
+ * ------------------------------------------------------------------------------------------- */
+static constexpr uint32_t C0H = 16; // fp16 fractal 列块宽（32B / 2B），host 侧无 half 类型，用常量
+
+/* 一个 A half 槽的元素数（NZ 镜像，[mBlk, kChunk]）：与 aElems 同构、C0=16。 */
+HOST_DEVICE uint32_t A16Elems(uint32_t mBlk, uint32_t kChunk)
+{
+    return ch::CeilDiv(kChunk, C0H) * ch::CeilAlign(mBlk, ch::CUBE_BLOCK) * C0H;
+}
+/* 一个 B half 槽的元素数（ZN）：与 bElems 同构（不依赖 C0，二者本就相等）。 */
+HOST_DEVICE uint32_t B16Elems(uint32_t nBlk, uint32_t kChunk)
+{
+    return ch::CeilAlign(kChunk, ch::CUBE_BLOCK) * ch::CeilAlign(nBlk, ch::CUBE_BLOCK);
+}
+
 /* nPad: the padded width of an N-tile with n real columns. */
 HOST_DEVICE uint32_t NPad(uint32_t n) { return ch::CeilAlign(n, NGRAN); }
 
@@ -149,9 +179,13 @@ struct Layout {
     uint32_t nTiles;     // CeilDiv(H, nBlk)
     uint32_t rowsMax;    // rows one AIV owns under splitM (ALLOCATION bound)
     uint32_t planeElems; // one [rowsMax, nBlk] fp32 plane, in elements
-    // L1 (NZ staging)
-    uint32_t aElems, bElems; // A tile [mBlk, kChunk], B tile [kChunk, nBlk] (NZ/Zn footprints)
-    uint32_t bOff, biasOff;  // BYTE offsets in L1
+    // L1 (NZ staging) -- DOUBLE-BUFFERED A/B staging so the MTE2 copy of
+    // k-block kb+1 can be in flight while kb's Mmad chain still runs. a1/b1
+    // each have TWO slots; `slots` here is the L0C accumulator count (unrelated).
+    uint32_t aElems, bElems; // ONE A slot [mBlk, kChunk], ONE B slot [kChunk, nBlk]
+    uint32_t aOff1;          // BYTE offset of A slot 1 (slot 0 is at 0)
+    uint32_t bOff, bOff1;    // BYTE offsets of B slots 0 / 1
+    uint32_t biasOff;        // BYTE offset of the (single) bias staging row
     uint32_t l1Bytes;
     // L0
     uint32_t cSlotElems;  // one L0C accumulator slot [CeilAlign(mBlk,16), CeilAlign(nBlk,16)]
@@ -164,6 +198,18 @@ struct Layout {
     uint32_t wci, wcf, wco;       // peephole weight slices [nBlk], fp32
     uint32_t halfBuf;             // [rowsMax, nBlk] elements of TOp (2-byte casts)
     uint32_t ubBytes;
+    // splitGemm=1 的 L1/L0A 布局（fp16 hi/lo staging；与原生布局共用同一
+    // Layout，只是另一组槽位。字段见 Split16Layout）。
+    struct Split16Layout {
+        uint32_t aElems, bElems; // 单个 half 槽的元素数（A16Elems/B16Elems）
+        uint32_t aHiOff[2];      // L1 BYTE 偏移：a1hi 槽 0/1（ping-pong）
+        uint32_t aLoOff[2];      // L1 BYTE 偏移：a1lo 槽 0/1
+        uint32_t bHiOff[2];      // L1 BYTE 偏移：b1hi 槽 0/1
+        uint32_t bLoOff[2];      // L1 BYTE 偏移：b1lo 槽 0/1
+        uint32_t biasOff;        // L1 BYTE 偏移：fp32 bias staging 行
+        uint32_t a2LoOff;        // L0A BYTE 偏移：a2lo（a2hi 在 0）
+        uint32_t l1Bytes;        // split L1 高水位（4A + 4B + bias）
+    } sp;
 
     HOST_DEVICE Layout(uint32_t bIn, uint32_t iIn, uint32_t hIn, uint32_t mBlkIn, uint32_t nBlkIn, uint32_t kChunkIn,
                        uint32_t slotsIn)
@@ -195,8 +241,10 @@ struct Layout {
         btSlotBytes = ch::CeilAlign(btSlotElems * sizeof(float), 128);
 
         ch::Bump l1;
-        l1.TakeT<TOp>(aElems);
+        l1.TakeT<TOp>(aElems); // A slot 0 at 0
+        aOff1 = l1.TakeT<TOp>(aElems);
         bOff = l1.TakeT<TOp>(bElems);
+        bOff1 = l1.TakeT<TOp>(bElems);
         biasOff = l1.TakeT<float>(btSlotElems);
         l1Bytes = l1.cur;
 
@@ -215,6 +263,28 @@ struct Layout {
         wco = ub.TakeT<float>(nBlk);
         halfBuf = ub.TakeT<TOp>(rowsMax * nBlk);
         ubBytes = ub.cur;
+
+        /* splitGemm 布局（总是计算，纯标量算术）：L1 = a1hi[2] + a1lo[2] +
+         * b1hi[2] + b1lo[2] + bias；L0A = a2hi + a2lo。Bump 用 uint16_t 当
+         * 2 字节元素代理（host 无 half 类型；Bump 只读 sizeof）。 */
+        sp.aElems = A16Elems(mBlkIn, kChunkIn);
+        sp.bElems = B16Elems(nBlkIn, kChunkIn);
+        ch::Bump l1s;
+        for (uint32_t i = 0; i < 2; ++i) {
+            sp.aHiOff[i] = l1s.TakeT<uint16_t>(sp.aElems);
+        }
+        for (uint32_t i = 0; i < 2; ++i) {
+            sp.aLoOff[i] = l1s.TakeT<uint16_t>(sp.aElems);
+        }
+        for (uint32_t i = 0; i < 2; ++i) {
+            sp.bHiOff[i] = l1s.TakeT<uint16_t>(sp.bElems);
+        }
+        for (uint32_t i = 0; i < 2; ++i) {
+            sp.bLoOff[i] = l1s.TakeT<uint16_t>(sp.bElems);
+        }
+        sp.biasOff = l1s.TakeT<float>(btSlotElems);
+        sp.l1Bytes = l1s.cur;
+        sp.a2LoOff = ch::CeilAlign(sp.aElems * 2, ch::C0_BYTES);
     }
 
     /* mBlk here is the PER-ROUND burst (TilingData::rowsPerBlock). The

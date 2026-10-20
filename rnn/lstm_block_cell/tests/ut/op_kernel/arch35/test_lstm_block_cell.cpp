@@ -64,7 +64,10 @@ TEST(LstmBlockCellKernelArch35, ConstantsMatchTilingContract)
     EXPECT_EQ(ch::C0<float>(), 8u);
     EXPECT_EQ(ch::C0<uint16_t>(), 16u);
     EXPECT_EQ(LSTM_BLOCK_CELL_GATES, 4u);
-    EXPECT_EQ(sizeof(LstmBlockCellTilingData), 18u * sizeof(uint32_t));
+    /* 20 个 uint32 字段（tilingKey..splitGemm，偏移 0..79）+ offA16 uint64
+     * （偏移 80，8 对齐无填充）= 88 字节 = 22 个 uint32。splitGemm/offA16
+     * 由 fp32 hi/lo 拆分 GEMM 引入（be2d7ad59）。 */
+    EXPECT_EQ(sizeof(LstmBlockCellTilingData), 22u * sizeof(uint32_t));
 }
 
 TEST(LstmBlockCellKernelArch35, NPadAlignsToGranularity)

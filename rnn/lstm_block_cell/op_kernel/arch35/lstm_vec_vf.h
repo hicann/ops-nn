@@ -123,6 +123,18 @@ __aicore__ inline void SigmoidVecVF(const AscendC::LocalTensor<T>& dst, const As
     asc_vf_call<SigmoidVF<T>>(dstAddr, srcAddr, n, oneRep, repTimes);
 }
 
+/* Reg::Cast traits（PR#10942 LSTMBlockCellGrad 同款，master 验证过）：
+ * fp32->b16: CAST_RINT（RNE）+ NO_SAT（IEEE 754 上溢到 +-Inf，同 HL
+ * CAST_RINT 语义）；b16->fp32: CAST_NONE（无损升宽）。Reg::Cast 是 VF 域
+ * 寄存器指令，挂 V 管队列硬件串行——互锁与类型化事件对对其有效（HL 混合
+ * dtype Cast 不走 V 队列事件排序，只能 PIPE_ALL，这是两者的本质区别）。 */
+constexpr AscendC::Reg::CastTrait kCastTraitF32ToB16{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING,
+                                                     AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait kCastTraitB16ToF32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING,
+                                                     AscendC::RoundMode::CAST_NONE};
+
 /* ---------------------------------------------------------------------------------------------
  * Ragged 1-D slice helpers (DataCopyPad; GM side byte-granular on 3510).
  * ------------------------------------------------------------------------------------------- */
@@ -283,43 +295,53 @@ __aicore__ inline void SigmoidEigenHalf(const AscendC::LocalTensor<float>& dst,
 {
     if constexpr (sizeof(T) == 2) {
         AscendC::Exp(dst, dst, work); /* fp32 exp */
-        AscendC::PipeBarrier<PIPE_V>();
+        /* Exp -> Select 链为纯同管 V RAW（互锁实测，见 vec_helper.h），
+         * 其间无需 barrier；DataCopy/Adds/Div（V 写）-> RoundHalfPlane 的
+         * 混合 dtype Cast（V 读）边界保留 PIPE_V——同管互锁实测不覆盖
+         * mix-dtype Cast，sweep 未触发 != 竞态不存在（检视意见恢复）。 */
         /* inf -> 65504, NaN 原样保留（三缓冲 Select：dst 与两个源均不别名，
          * 本仓登记过 Select dst==src0 别名损坏，见 MergePairKS 注释） */
         AscendC::Duplicate(clipBuf, 65504.0f, work);
         AscendC::Compares(msk, dst, 65504.0f, AscendC::CMPMODE::GE, work);
         AscendC::Select(scratch, msk, clipBuf, dst, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, work);
         AscendC::DataCopy(dst, scratch, work);
-        AscendC::PipeBarrier<PIPE_V>();
         RoundHalfPlane(dst, halfBuf, work);      /* e = RNE(exp) */
         AscendC::Adds(scratch, dst, 1.0f, work); /* 1+e, exact fp32 */
-        AscendC::PipeBarrier<PIPE_V>();
-        RoundHalfPlane(scratch, halfBuf, work); /* d = RNE(1+e) */
-        AscendC::Div(dst, dst, scratch, work);  /* fp32 e/d */
-        AscendC::PipeBarrier<PIPE_V>();
-        RoundHalfPlane(dst, halfBuf, work); /* s = RNE(e/d) */
+        RoundHalfPlane(scratch, halfBuf, work);  /* d = RNE(1+e) */
+        AscendC::Div(dst, dst, scratch, work);   /* fp32 e/d */
+        RoundHalfPlane(dst, halfBuf, work);      /* s = RNE(e/d) */
     }
 }
 
 /* Peephole row add with TF half semantics: gate[r,:] = round(gate[r,:] +
  * round(w[:] * src[r,:])) for r in [0, rows). The fp32 Mul/Add of half-valued
- * operands are exact, so each RoundHalfPlane is exactly the half op's RNE. */
+ * operands are exact, so each RoundHalfPlane is exactly the half op's RNE.
+ *
+ * ⚠ BATCHED, NOT PER-ROW: the elementwise rounding chain is identical, but
+ * the Cast pairs ride the WHOLE [rows, width] plane at once -- the per-row
+ * form spent 4 PipeBarrier<PIPE_ALL> PER ROW (the degenerate-shape killer:
+ * 759 rows x 4 full barriers was ~200us of pure barrier flush). The per-row
+ * Mul/Add remain (a vector row-broadcast primitive does not exist in this
+ * API set), but chained same-pipe V ops need no barriers between rows. */
 template <typename T>
 __aicore__ inline void PeepholeAddRowsHalf(const AscendC::LocalTensor<float>& gate,
                                            const AscendC::LocalTensor<float>& w, const AscendC::LocalTensor<float>& src,
-                                           const AscendC::LocalTensor<float>& scratchRow,
+                                           const AscendC::LocalTensor<float>& scratch,
                                            const AscendC::LocalTensor<T>& halfBuf, uint32_t rows, uint32_t width)
 {
+    const uint32_t work = rows * width;
     for (uint32_t r = 0; r < rows; ++r) {
-        const uint32_t off = r * width;
-        AscendC::Mul(scratchRow, w, src[off], width);
-        AscendC::PipeBarrier<PIPE_V>();
-        RoundHalfPlane(scratchRow, halfBuf, width); /* RNE(w * src) */
-        AscendC::Add(gate[off], gate[off], scratchRow, width);
-        AscendC::PipeBarrier<PIPE_V>();
-        RoundHalfPlane(gate[off], halfBuf, width); /* RNE(gate + peep) */
+        AscendC::Mul(scratch[r * width], w, src[r * width], width);
+    }
+    /* 依赖仅 V 管内（Mul 写 -> HL Cast 读，SigmoidEigenHalf 同结构边界
+     * 同款 PIPE_V），不再让 MTE2/MTE3 白等全停。 */
+    AscendC::PipeBarrier<PIPE_V>();
+    RoundHalfPlane(scratch, halfBuf, work); /* RNE(w * src) for every row */
+    for (uint32_t r = 0; r < rows; ++r) {
+        AscendC::Add(gate[r * width], gate[r * width], scratch[r * width], width);
     }
     AscendC::PipeBarrier<PIPE_V>();
+    RoundHalfPlane(gate, halfBuf, work); /* RNE(gate + peep) for every row */
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -370,7 +392,10 @@ __aicore__ inline void LstmCellGates(const AscendC::LocalTensor<float>& gi, cons
             PeepholeAddRowsHalf<T>(gf, wcf, cc, t1, halfBuf, rows, width);
         }
 
-        /* Activations: i = sigmoid, ci = tanh, f = sigmoid (ICFO). */
+        /* Activations: i = sigmoid, ci = tanh, f = sigmoid (ICFO).
+         * 链间 PIPE_V：V 写（SigmoidEigenHalf 内 RoundHalfPlane 的 Cast /
+         * TanhVec 的 VF store）-> 下一激活的 V/Cast 读的边界保护，与
+         * SigmoidEigenHalf 内部同款纪律（TanhVec 两侧另有内部 PIPE_ALL）。 */
         SigmoidEigenHalf<T>(gi, t2, t3, msk, halfBuf, work);
         AscendC::PipeBarrier<PIPE_V>();
         vh::TanhVec(gci, gci, t1, msk, work);
@@ -423,11 +448,17 @@ __aicore__ inline void LstmCellGates(const AscendC::LocalTensor<float>& gi, cons
             PeepholeAddRows(gf, wcf, cc, t1, rows, width);
         }
 
-        /* Activations: i = sigmoid, ci = tanh, f = sigmoid (ICFO). */
+        /* Activations: i = sigmoid, ci = tanh, f = sigmoid (ICFO).
+         * 同步账本（检视修正版）：
+         * - SigmoidVecVF 前后 PIPE_V：VF 域边界纪律（asc_vf_call 的
+         *   Reg::Load/Store 与 V 管互锁关系未实测），不可去除；
+         * - TanhVec 内部两侧 PIPE_ALL（vendor Tanh 的 VF 域 store 对
+         *   V/MTE3 读需全量 barrier 才可见，见 vec_helper.h）；
+         * - 各 RoundHalfPlane 调用前 PIPE_V：V 写 -> 混合 dtype Cast
+         *   读的边界（互锁实测不覆盖 mix-dtype Cast）。 */
         SigmoidVecVF<float>(gi, gi, work);
         AscendC::PipeBarrier<PIPE_V>();
         vh::TanhVec(gci, gci, t1, msk, work);
-        AscendC::PipeBarrier<PIPE_V>();
         SigmoidVecVF<float>(gf, gf, work);
         AscendC::PipeBarrier<PIPE_V>();
 
@@ -436,12 +467,11 @@ __aicore__ inline void LstmCellGates(const AscendC::LocalTensor<float>& gi, cons
          * Mul (ci*i) + one fused mul-add, vs the plain chain's two Mul roundings.
          * At near-zero-cs cancellation points this halves the noise (1e-9→3.5e-10). */
         AscendC::Mul(t1, gci, gi, work);
-        AscendC::PipeBarrier<PIPE_V>();
         AscendC::FusedMulAdd(cc, gf, t1, work);
-        AscendC::PipeBarrier<PIPE_V>();
 
         /* cell_clip: cs = clip(cs, -cc, cc); cellClip <= 0 means no clip.
-         * ⚠ Select 钳位（NaN 传播，见上方 half 路径注释）。 */
+         * ⚠ Select 钳位（NaN 传播，见上方 half 路径注释）。尾同步由调用侧
+         * StorePlane 的 V_MTE3 pre 事件对承担（MTE3 store 等 V 完成）。 */
         if (cellClip > 0.0f) {
             AscendC::Duplicate(t1, cellClip, work);
             AscendC::Compares(msk, cc, cellClip, AscendC::CMPMODE::GT, work);
@@ -449,13 +479,25 @@ __aicore__ inline void LstmCellGates(const AscendC::LocalTensor<float>& gi, cons
             AscendC::Duplicate(t1, -cellClip, work);
             AscendC::Compares(msk, t2, -cellClip, AscendC::CMPMODE::LT, work);
             AscendC::Select(cc, msk, t1, t2, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, work);
-            AscendC::PipeBarrier<PIPE_V>();
         }
     }
 }
 
 /* Store one fp32 plane's n real columns per row to a [B, H] GM output,
- * casting fp32 -> T first when T is a 2-byte type. */
+ * casting fp32 -> T first when T is a 2-byte type.
+ *
+ * fp32 路径为「单点事件对」同步（PIPE_ALL 全停的精确替代，C1 已验证）：
+ *   pre  V_MTE3    —— RAW：srcPlane 由 V 管产出（链尾 V op），MTE3 store
+ *                     必须等 V 完成；
+ *   post MTE3_V    —— WAR：后续 V 重写该平面（如 TanhVec 复用 gci）前，
+ *                     store 必须读毕；
+ *   post MTE3_MTE2 —— WAR：下一个 unit 的 merge load（MTE2 写 gate 平面）
+ *                     前，store 必须读毕。MTE2/MTE3 是独立队列，无此事件
+ *                     对则跨 unit 的平面复用存在竞态。
+ * ⚠ half 路径维持两个 PIPE_ALL：fp32<->half Cast 不走 V 队列事件排序
+ * （仓内实测登记，见交接文档 §9.2），Cast 产出/重写边界的事件对均无效，
+ * 必须 PA 全停（split 例 ANC_096/EDGE_461/RND_405 实测事件对方案
+ * mare 1.5~6.2 回归）。 */
 template <typename T>
 __aicore__ inline void StorePlane(AscendC::GlobalTensor<T>& dstGM, const AscendC::LocalTensor<T>& halfBuf,
                                   const AscendC::LocalTensor<float>& srcPlane, uint32_t gmRowOff, uint32_t colOff,
@@ -466,10 +508,16 @@ __aicore__ inline void StorePlane(AscendC::GlobalTensor<T>& dstGM, const AscendC
         AscendC::Cast(halfBuf, srcPlane, AscendC::RoundMode::CAST_RINT, work);
         AscendC::PipeBarrier<PIPE_ALL>();
         PadStoreRows<T>(dstGM[gmRowOff + colOff], halfBuf, rows, n, nPad, (hid - n) * sizeof(T));
+        AscendC::PipeBarrier<PIPE_ALL>();
     } else {
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(static_cast<event_t>(4));
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(static_cast<event_t>(4));
         PadStoreRows<T>(dstGM[gmRowOff + colOff], srcPlane, rows, n, nPad, (hid - n) * sizeof(T));
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(static_cast<event_t>(3));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(static_cast<event_t>(3));
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
     }
-    AscendC::PipeBarrier<PIPE_ALL>();
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -497,51 +545,247 @@ __aicore__ inline void BiasPrepass(AscendC::GlobalTensor<T> bGM, AscendC::Global
             const uint32_t n = (L.planeElems < L.hid - off) ? L.planeElems : (L.hid - off);
             const uint32_t pad = ch::CeilAlign(n * sizeof(T), 32) / sizeof(T) - n;
             PadLoadRow<T>(halfBuf, bGM[g * L.hid + off], n, n + pad);
-            AscendC::PipeBarrier<PIPE_ALL>();
             if constexpr (isHalf) {
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
                 AscendC::Cast(fBuf, halfBuf, AscendC::RoundMode::CAST_NONE, n + pad);
                 AscendC::PipeBarrier<PIPE_ALL>();
                 PadStoreRows<float>(wsGM[g * Hpad + off], fBuf, 1, n, n + pad, 0);
+                /* store 读毕 fBuf 后下一轮 Cast(V) 才可重写：Cast 不走 V
+                 * 队列事件排序，此处必须 PIPE_ALL。 */
+                AscendC::PipeBarrier<PIPE_ALL>();
             } else {
+                /* fp32: load(MTE2) -> store(MTE3) 无 V/Cast 中介，用
+                 * MTE2_MTE3 事件对直接序两条搬运队列。 */
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE3>(static_cast<event_t>(1));
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE3>(static_cast<event_t>(1));
                 PadStoreRows<float>(wsGM[g * Hpad + off], halfBuf, 1, n, n + pad, 0);
+                /* store 读毕 halfBuf 后下一轮 load(MTE2) 才可重写（fp32
+                 * 无 Cast，单点对有效）。 */
+                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
             }
-            AscendC::PipeBarrier<PIPE_ALL>();
         }
     }
 }
 
 /* ---------------------------------------------------------------------------------------------
- * K-split merge: merge one pair's S partial planes from the
- * GM workspace into the gate plane, over THIS AIV's row slice only (the other
- * AIV of the block merges its own slice -- no duplication).
+ * fp32 -> fp16 hi/lo 拆分（splitGemm=1 的 AIV 预处理）—— v2 平面大块版。
  *
- *   Kahan-compensated fp32 merge (two-level
- *   compensated form: the S GM partials ARE the "groups", so the merge is the
- *   level-2 compensated accumulation -- y = p_s - c; t = acc + y;
- *   c = (t - acc) - y; acc = t; result = acc - c). fp16 then
- *   rounds ONCE after the merge (TF-half chain point #1, unchanged
- *   position -- the pre-round fp32 sum is simply more accurate);
- *   fp32 rounds nowhere (user contract: no cast on the fp32 path).
- *   GuardFinite: c = isfinite(c) ? c : 0 -- an inf/NaN
- *   partial must leave the SAME final inf/NaN the plain chain
- *   would produce (probe-checked by the special-value suite).
+ *   hi = RNE_fp16(v)；lo = RNE_fp16(v - fp32(hi))
+ *
+ * a = a_hi + a_lo 的残差 <= 2^-22|a|。v1 的 2D 列块版每批只有 ~18KB 且每批
+ * 5-6 个全量 barrier（实测 ANC_096: 3.4 万批 -> ~49ms 纯开销，吞掉全部
+ * GEMM 收益）。v2 要点：
+ *   - 源/目的都是连续内存（x 行段 / h 行段 / w 段行区间均为连续 fp32/
+ *     fp16 平面）→ 按 FLAT 连续大块处理，块大小 2*planeElems（~36KB+），
+ *     无跨步参数、突发完全合并；
+ *   - load→V 用 MTE2_V 事件对（非全停，MergePairKS 同款）；仅 3 个混合
+ *     dtype Cast 后的 PIPE_ALL（硬件纪律不可省）+ 每块 1 个收尾
+ *     PIPE_ALL（store→下一块 load 的 WAR）；
+ *   - 目的区按 16 half 元素（32B）对齐布局（host 同式），尾块 store 向上
+ *     圆整到 16——只写进本区 pad（AIC 永不读），绝不越写下一区；
+ *   - 尾块 load 的 32B 最小突发对读侧无约束（over-read 契约，页面内）。
+ * 缓冲复用 VECCALC 门平面（预处理阶段空闲）：fBuf/fTmp/loF 各跨 2 个相邻
+ * 平面（Bump 连续分配），hiH/loH 用 t2+t3 跨度与 halfBuf。
+ * ------------------------------------------------------------------------------------------- */
+/* SplitCastVf -- hi/lo 拆分的寄存器链（单次 asc_vf_call，PR#10942 融合式）：
+ * LoadAlign(v) -> Cast down(hi16) -> Cast up(hiF) -> Sub(v-hiF) -> Cast down(lo16)
+ * -> StoreAlign(hi16/lo16)。与 C5b 失败的「独立搬运式」（CastDownReg +
+ * CastUpReg + HL Sub 多次调用 + fTmp/loF UB 中转）不同：一次调用、寄存器内
+ * 完成、无中间平面，load/store 次数减半，开销与 HL 块处理同级。
+ * Reg::Cast 挂 V 管队列 -> 互锁/事件对有效，无 PA。 */
+__simd_vf__ inline void SplitCastVfImpl(__ubuf__ half* hiAddr, __ubuf__ half* loAddr, __ubuf__ float* srcAddr,
+                                        uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<float> v;
+    AscendC::Reg::RegTensor<float> hiF;
+    AscendC::Reg::RegTensor<half> hi16;
+    AscendC::Reg::RegTensor<half> lo16;
+    AscendC::Reg::MaskReg mask;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        const uint32_t off = i * oneRepeatSize;
+        uint32_t rem = count - off;
+        mask = AscendC::Reg::UpdateMask<float>(rem);
+        AscendC::Reg::LoadAlign(v, srcAddr + off);
+        AscendC::Reg::Cast<half, float, kCastTraitF32ToB16>(hi16, v, mask);   /* hi = RNE(v) */
+        AscendC::Reg::Cast<float, half, kCastTraitB16ToF32>(hiF, hi16, mask); /* fp32(hi) 无损升回 */
+        AscendC::Reg::Sub(v, v, hiF, mask);                                   /* v - hi（Sterbenz 域内精确） */
+        AscendC::Reg::Cast<half, float, kCastTraitF32ToB16>(lo16, v, mask);   /* lo = RNE(v-hi) */
+        /* ⚠ cast-down 产出的 b16 在寄存器内是 PACKED 形态（64 fp32 lane ->
+         * 128 half），store 必须用 DIST_PACK_B32 打包分布——裸 DIST_NORM 会
+         * 错位写出（实测 NaN/垃圾，PR#10942 PeepOutCastVfImpl 同款纪律）。 */
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(hiAddr + off, hi16, mask);
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(loAddr + off, lo16, mask);
+    }
+}
+
+template <typename T>
+__aicore__ inline void CastSpan(AscendC::GlobalTensor<half>& hiGM, AscendC::GlobalTensor<half>& loGM,
+                                const AscendC::GlobalTensor<T>& srcGM, uint64_t elemStart, uint64_t elemCount,
+                                const fwd::Layout<T>& L)
+{
+    if (elemCount == 0) {
+        return;
+    }
+    AscendC::LocalTensor<float> fBuf(AscendC::TPosition::VECCALC, L.gi, 2u * L.planeElems);
+    AscendC::LocalTensor<half> hiH(AscendC::TPosition::VECCALC, L.t2, 2u * L.planeElems);
+    AscendC::LocalTensor<half> loH(AscendC::TPosition::VECCALC, L.halfBuf, 2u * L.planeElems);
+    const uint32_t chunk = 2u * L.planeElems;
+    constexpr uint32_t kOneRep = AscendC::GetVecLen() / sizeof(float);
+
+    uint64_t off = elemStart;
+    uint64_t left = elemCount;
+    while (left > 0) {
+        uint32_t n = (chunk < left) ? chunk : static_cast<uint32_t>(left);
+        /* ⚠⚠ STORE 必须精确写 n 个元素（绝不向上圆整）：尾块圆整会把 UB 里
+         * [n, nPad) 的陈旧垃圾写进相邻 AIV/block 的活跃范围——并发同值写
+         * 的落序不定，垃圾后落即损坏（实测：RND_393 偶发 22 行 NaN、
+         * ORT_165 偶发 2 行，行号落在 cast 块边界上）。pad 模式 UB→GM
+         * 字节粒度，精确 n 合法（输出路径 StorePlane 对 ragged n 早已如此）。
+         * LOAD 侧相反：最小突发 32B（< 32B 陷阱），向上圆整只发生在读侧
+         * （over-read 契约：页面内、垃圾只进 [n, loadN) 死车道、永不回存）。 */
+        uint32_t loadB = n * sizeof(float);
+        if (loadB < 32u) {
+            loadB = 32u;
+        }
+        AscendC::DataCopyExtParams cp;
+        cp.blockCount = 1;
+        cp.blockLen = loadB;
+        cp.srcStride = 0;
+        cp.dstStride = 0;
+        cp.rsv = 0;
+        AscendC::DataCopyPadExtParams<float> lp(true, 0, 0, static_cast<float>(0));
+        AscendC::DataCopyPad<float>(fBuf, srcGM[off], cp, lp);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+        /* hi/lo 拆分寄存器链：单次调用完成全部 Cast/Sub，无 HL Cast 边界
+         * （Reg 指令挂 V 队列，事件对有效）。 */
+        asc_vf_call<SplitCastVfImpl>((__ubuf__ half*)hiH.GetPhyAddr(), (__ubuf__ half*)loH.GetPhyAddr(),
+                                     (__ubuf__ float*)fBuf.GetPhyAddr(), n, kOneRep,
+                                     AscendC::CeilDivision(static_cast<uint64_t>(n), kOneRep));
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(static_cast<event_t>(4));
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(static_cast<event_t>(4));
+        AscendC::DataCopyExtParams sp;
+        sp.blockCount = 1;
+        sp.blockLen = n * sizeof(half); /* 精确 n，见上方 ⚠⚠ */
+        sp.srcStride = 0;
+        sp.dstStride = 0;
+        sp.rsv = 0;
+        AscendC::DataCopyPad<half>(hiGM[off], hiH, sp);
+        AscendC::DataCopyPad<half>(loGM[off], loH, sp);
+        /* store(MTE3) 读毕 hiH/loH 后下一块的 SplitCastVf(V 写) 才可重写；
+         * 下一块 load(MTE2) 重写 fBuf 前本轮 V 队列（SplitCast 读毕）须
+         * 完成——两个方向各一个单点对（Reg 指令挂 V 队列，事件对有效）。 */
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(static_cast<event_t>(3));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(static_cast<event_t>(3));
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
+        off += n;
+        left -= n;
+    }
+}
+
+/* SplitPrepass -- 本 MIX block 的 2 个 AIV 完成本 block 的 AIC 所需拆分（v2
+ * 平面版）：
+ *
+ *   A 行（strip mIdx 的 [spanBase, spanEnd) 行，x 与 h 两张平面）：两个
+ *       subBlock 各拆一半（按 flat 元素对半；同 strip 的 SK 个 block 冗余
+ *       写同值，无竞态——同值并发写任意交错结果不变。A 侧 cast 流量因此
+ *       是 2*SK*stripRows*(I+H)（tiling 的 split 成本模型按此计）。
+ *   w 行（kIdx 拥有的段 s = kIdx, kIdx+SK, ... 的 [s*W, min(s*W+W,K)) 行）：
+ *       按 kIdx 分区全网格无冗余；owned flat 元素对半分给两个 subBlock
+ *       （段区间各自连续，逐段求交后按 flat 序切半）。
+ *
+ * AIC 只读本 block AIV 写的数据 → 复用 V2C_PREPASS 每-block 旗标即可，
+ * 无需网格级同步（AIC 的 CubeWaitPrepass 等 flagId 与 flagId+16 两个 AIV）。
+ * ------------------------------------------------------------------------------------------- */
+template <typename T = float>
+__aicore__ inline void SplitPrepass(AscendC::GlobalTensor<T> xGM, AscendC::GlobalTensor<T> h0GM,
+                                    AscendC::GlobalTensor<T> wGM, AscendC::GlobalTensor<half> x16hiGM,
+                                    AscendC::GlobalTensor<half> x16loGM, AscendC::GlobalTensor<half> h16hiGM,
+                                    AscendC::GlobalTensor<half> h16loGM, AscendC::GlobalTensor<half> w16hiGM,
+                                    AscendC::GlobalTensor<half> w16loGM, uint32_t mIdx, uint32_t kIdx, uint32_t sk,
+                                    uint32_t S, uint32_t W, uint32_t K, uint32_t spanBase, uint32_t spanEnd,
+                                    uint32_t sub, const fwd::Layout<T>& L)
+{
+    /* ---- A 行：x [spanRows, I] 与 h [spanRows, H] 平面，按 flat 对半 ---- */
+    const uint32_t spanRows = spanEnd - spanBase;
+    const uint64_t xTotal = static_cast<uint64_t>(spanRows) * L.inSize;
+    const uint64_t hTotal = static_cast<uint64_t>(spanRows) * L.hid;
+    const uint64_t xHalf0 = ch::CeilDiv(static_cast<uint32_t>(xTotal > 0xffffffffu ? 0xffffffffu : xTotal), 2u);
+    const uint64_t hHalf0 = ch::CeilDiv(static_cast<uint32_t>(hTotal > 0xffffffffu ? 0xffffffffu : hTotal), 2u);
+    if (sub == 0) {
+        CastSpan<T>(x16hiGM, x16loGM, xGM, static_cast<uint64_t>(spanBase) * L.inSize, xHalf0, L);
+        CastSpan<T>(h16hiGM, h16loGM, h0GM, static_cast<uint64_t>(spanBase) * L.hid, hHalf0, L);
+    } else {
+        CastSpan<T>(x16hiGM, x16loGM, xGM, static_cast<uint64_t>(spanBase) * L.inSize + xHalf0, xTotal - xHalf0, L);
+        CastSpan<T>(h16hiGM, h16loGM, h0GM, static_cast<uint64_t>(spanBase) * L.hid + hHalf0, hTotal - hHalf0, L);
+    }
+    /* ---- w 行：kIdx 拥有的段。owned flat 元素按全局序对半：sub0 拆前半，
+     * sub1 拆后半——逐段与各自区间求交，无重叠无遗漏。 ---- */
+    const uint32_t gw = fwd::GATES * L.hid;
+    uint64_t owned = 0;
+    for (uint32_t s = kIdx; s < S; s += sk) {
+        const uint32_t r0 = s * W;
+        const uint32_t r1 = (r0 + W < K) ? (r0 + W) : K;
+        owned += static_cast<uint64_t>(r1 - r0) * gw;
+    }
+    const uint64_t halfW = (owned + 1ull) / 2ull;
+    const uint64_t myStart = (sub == 0) ? 0 : halfW;
+    const uint64_t myEnd = (sub == 0) ? halfW : owned;
+    uint64_t g0 = 0;
+    for (uint32_t s = kIdx; s < S; s += sk) {
+        const uint32_t r0 = s * W;
+        const uint32_t r1 = (r0 + W < K) ? (r0 + W) : K;
+        const uint64_t cnt = static_cast<uint64_t>(r1 - r0) * gw;
+        const uint64_t i0 = (g0 > myStart) ? g0 : myStart;
+        const uint64_t i1 = (g0 + cnt < myEnd) ? (g0 + cnt) : myEnd;
+        if (i1 > i0) {
+            CastSpan<T>(w16hiGM, w16loGM, wGM, static_cast<uint64_t>(r0) * gw + (i0 - g0), i1 - i0, L);
+        }
+        g0 += cnt;
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * K-split merge: merge one pair's S partial planes from the
+ * GM workspace into the gate plane, over THIS unit's row slice only.
+ *
+ * TWO merge modes (TilingData::mergeMode; both validated on the hard suite):
+ *
+ *   mergeMode == 0 (default) -- BATCHED BINARY-TREE merge. Partials are
+ *   loaded FOUR at a time (one DataCopyPad per plane, back-to-back, one
+ *   barrier) and reduced as a true tree ((p0+p1)+(p2+p3)); the batch result
+ *   is accumulated into the gate plane sequentially. The pairwise tree
+ *   bounds the merge's own rounding growth to ~log2(4) levels per batch and
+ *   S/4 across batches (vs S for a flat chain), which is what makes the
+ *   Kahan compensation droppable: ONE Add per partial and TWO barriers per
+ *   BATCH (the Kahan form spent ~11 vector ops + 2 full barriers per
+ *   partial -- the serial bottleneck of every large-S shape).
+ *
+ *   mergeMode == 1 -- Kahan-compensated fp32 merge (the original two-level
+ *   compensated form: y = p_s - c; t = acc + y; c = (t - acc) - y; acc = t;
+ *   result = acc - c). Kept as the precision reference / fallback.
+ *
+ *   fp16 rounds ONCE after the merge (TF-half chain point #1, unchanged
+ *   position); fp32 rounds nowhere (user contract: no cast on the fp32
+ *   path).
  *
  * Buffer roles during the merge (all caller-provided, all free at the
- * merge point): acc = running sum; scratch = p_s staging; y / comp = Kahan
- * temporaries; tTmp = t = acc + y (needed to form c BEFORE acc advances --
- * Add(acc, acc, y) later reproduces t bit-for-bit, so no copy back).
+ * merge point): acc = running sum; t1/t2/t3/cc = batch load planes.
  *
- * Partial planes are [mBlk, nPad] fp32 with contiguous rows; this AIV reads
- * rows [stripe.base, +count) as one flat 2D DataCopyPad (vendor
+ * Partial planes are [mBlk, nPad] fp32 with contiguous rows; this unit reads
+ * rows [stripeBase, +count) as one flat 2D DataCopyPad (vendor
  * block_epilogue_streamk Run form: non-pad ext params, {false,0,0,0}).
  * ------------------------------------------------------------------------------------------- */
 template <typename T>
-__aicore__ inline void MergePairKS(const AscendC::LocalTensor<float>& acc, const AscendC::LocalTensor<float>& scratch,
-                                   const AscendC::LocalTensor<float>& y, const AscendC::LocalTensor<float>& comp,
-                                   const AscendC::LocalTensor<float>& tTmp, const AscendC::LocalTensor<uint8_t>& msk,
+__aicore__ inline void MergePairKS(const AscendC::LocalTensor<float>& acc, const AscendC::LocalTensor<float>& t1,
+                                   const AscendC::LocalTensor<float>& t2, const AscendC::LocalTensor<float>& t3,
+                                   const AscendC::LocalTensor<float>& cc, const AscendC::LocalTensor<uint8_t>& msk,
                                    const AscendC::LocalTensor<T>& halfBuf,
                                    const AscendC::GlobalTensor<float>& partPairGM, uint32_t stripeBase, uint32_t count,
-                                   uint32_t nPad, uint32_t planePitch, uint32_t S)
+                                   uint32_t nPad, uint32_t planePitch, uint32_t S, uint32_t mergeMode)
 {
     constexpr bool isHalf = (sizeof(T) == 2);
     const uint32_t work = count * nPad;
@@ -555,48 +799,90 @@ __aicore__ inline void MergePairKS(const AscendC::LocalTensor<float>& acc, const
 
     /* s == 0 lands straight in the accumulator. */
     AscendC::DataCopyPad<float>(acc, partPairGM[static_cast<uint64_t>(stripeBase) * nPad], cp, pp);
-    AscendC::PipeBarrier<PIPE_ALL>();
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
     if (S > 1) {
-        {
-            /* ---- Kahan-compensated merge, barrier-thinned.
-             * NUMERICALLY IDENTICAL op sequence to the barriered form (verified
-             * by the precision suite): the only change is WHICH barriers are
-             * kept. Chained same-pipe V ops need NO PipeBarrier on Ascend 950PR
-             * (hardware-interlocked, measured -- see vec_helper.h header), so
-             * the 9 barriers/iter collapse to 2 cross-pipe ones:
-             *   1. after the DataCopyPad (MTE3 -> V: the chain reads scratch)
-             *   2. at the loop end (V -> next-iter MTE3: WAR/WAW on scratch,
-             *      which the chain's Abs rewrites)
-             * The old Select->DataCopy(comp,tTmp) UB->UB move (which needed
-             * its own cross-pipe pair) is now the V-op Add(comp, tTmp, y) with
-             * y==0.0 -- exact for every value except the -0.0 -> +0.0
-             * normalization, which every downstream consumer (== / mare /
-             * cross_check) treats as equal. */
-            AscendC::Duplicate(comp, 0.0f, work); /* c = 0 */
+        if (mergeMode == 0) {
+            /* ---- batched binary-tree merge, barrier-thinned ----
+             * Chained same-pipe V adds need NO PipeBarrier on Ascend 950PR
+             * (hardware-interlocked, see vec_helper.h); the only cross-pipe
+             * points are (1) after the batch's DataCopyPads (MTE3->V: the
+             * tree reads the load planes) and (2) at the batch end (V ->
+             * next batch's MTE3: WAR on the load planes). */
+            const AscendC::LocalTensor<float>* ld[4] = {&t1, &t2, &t3, &cc};
+            uint32_t s = 1;
+            while (s < S) {
+                const uint32_t bn = (4 < S - s) ? 4 : (S - s);
+                for (uint32_t b = 0; b < bn; ++b) {
+                    AscendC::DataCopyPad<float>(*ld[b],
+                                                partPairGM[static_cast<uint64_t>(s + b) * planePitch +
+                                                           static_cast<uint64_t>(stripeBase) * nPad],
+                                                cp, pp);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+                /* in-batch tree: ((p_s + p_{s+1}) + (p_{s+2} + p_{s+3})) */
+                if (bn == 4) {
+                    AscendC::Add(t1, t1, t2, work);
+                    AscendC::Add(t3, t3, cc, work);
+                    AscendC::Add(t1, t1, t3, work);
+                    AscendC::Add(acc, acc, t1, work);
+                } else if (bn == 3) {
+                    AscendC::Add(t1, t1, t2, work);
+                    AscendC::Add(t1, t1, t3, work);
+                    AscendC::Add(acc, acc, t1, work);
+                } else if (bn == 2) {
+                    AscendC::Add(t1, t1, t2, work);
+                    AscendC::Add(acc, acc, t1, work);
+                } else {
+                    AscendC::Add(acc, acc, t1, work);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
+                s += bn;
+            }
+            /* ⚠ T=half 必须保留此 PIPE_V：树尾 Add(V 写 acc) 之后是
+             * RoundHalfPlane 的混合 dtype Cast(V 读 acc)，该 RAW 不在同管
+             * V 链互锁的实测覆盖内（实测仅覆盖等长 fp32 链）——大 B 用例
+             * （ANC_094, B=75983）实测删除后 stat mare 千倍级回归。
+             * fp32 侧消费者是普通 V op，互锁已覆盖，无需 barrier。 */
+            if constexpr (sizeof(T) == 2) {
+                AscendC::PipeBarrier<PIPE_V>();
+            }
+        } else {
+            /* ---- Kahan-compensated merge (precision reference path) ----
+             * 同步与树路径同构（MTE2_V / V_MTE2 单点对，树路径全量验证过），
+             * 不再让 FIX/M/MTE1 白等。 */
+            AscendC::Duplicate(cc, 0.0f, work); /* c = 0 */
             for (uint32_t s = 1; s < S; ++s) {
                 AscendC::DataCopyPad<float>(
-                    scratch,
-                    partPairGM[static_cast<uint64_t>(s) * planePitch + static_cast<uint64_t>(stripeBase) * nPad], cp,
-                    pp);
-                AscendC::PipeBarrier<PIPE_ALL>();
-                AscendC::Sub(y, scratch, comp, work); /* y = p_s - c */
-                AscendC::Add(tTmp, acc, y, work);     /* t = acc + y */
-                AscendC::Sub(comp, tTmp, acc, work);  /* c' = t - acc */
-                AscendC::Sub(comp, comp, y, work);    /* c = c' - y */
-                AscendC::Add(acc, acc, y, work);      /* acc = t (bitwise) */
+                    t1, partPairGM[static_cast<uint64_t>(s) * planePitch + static_cast<uint64_t>(stripeBase) * nPad],
+                    cp, pp);
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+                AscendC::Sub(t2, t1, cc, work);   /* y = p_s - c */
+                AscendC::Add(t3, acc, t2, work);  /* t = acc + y */
+                AscendC::Sub(cc, t3, acc, work);  /* c' = t - acc */
+                AscendC::Sub(cc, cc, t2, work);   /* c = c' - y */
+                AscendC::Add(acc, acc, t2, work); /* acc = t (bitwise) */
                 /* GuardFinite. Select does NOT tolerate dst==src0
                  * aliasing (measured: mare 1947 corruption); stage through
-                 * tTmp (dead after the c computation). scratch (p_s) is dead
-                 * after the Sub above -- |c| rides it. */
-                AscendC::Abs(scratch, comp, work);
-                AscendC::Compares(msk, scratch, (float)FLT_MAX, AscendC::CMPMODE::LT, work);
-                AscendC::Duplicate(y, 0.0f, work); /* y = 0 */
-                AscendC::Select(tTmp, msk, comp, y, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, work);
-                AscendC::Add(comp, tTmp, y, work); /* c = guarded tTmp (+0) */
-                AscendC::PipeBarrier<PIPE_ALL>();
+                 * t3 (dead after the c computation). t1 (p_s) is dead after
+                 * the Sub above -- |c| rides it. */
+                AscendC::Abs(t1, cc, work);
+                AscendC::Compares(msk, t1, (float)FLT_MAX, AscendC::CMPMODE::LT, work);
+                AscendC::Duplicate(t2, 0.0f, work); /* y = 0 */
+                AscendC::Select(t3, msk, cc, t2, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, work);
+                AscendC::Add(cc, t3, t2, work); /* c = guarded t3 (+0) */
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(static_cast<event_t>(6));
             }
-            AscendC::Sub(acc, acc, comp, work); /* result = acc - c */
-            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Sub(acc, acc, cc, work); /* result = acc - c */
+            /* fp32 消费者是普通 V op（互锁实测）；half 消费者是
+             * RoundHalfPlane 的 HL Cast（V->Cast 输入侧，保守保留）。 */
+            if constexpr (isHalf) {
+                AscendC::PipeBarrier<PIPE_V>();
+            }
         }
     }
     if constexpr (isHalf) {
@@ -605,30 +891,48 @@ __aicore__ inline void MergePairKS(const AscendC::LocalTensor<float>& acc, const
 }
 
 /* ---------------------------------------------------------------------------------------------
- * VectorCellKS -- the K-split PHASE-B AIV half.
+ * VectorCellUnit -- ONE (strip mIdx, round, nTile j, AIV row-half) rectangle
+ * of the K-split PHASE-B AIV half.
  *
  * Called AFTER sh::VecWaitKsDone() + AscendC::SyncAll(): every cluster's
- * partials are GM-visible. Cluster (mIdx*SK + q)'s AIVs own the nTiles
- * j ≡ q (mod SK) -- all four gates of such a tile, every round of the strip --
- * and each AIV merges only its DrainStripe rows. The epilogue after the merge
- * is the standard per-nTile block (cs_prev / peephole / LstmCellGates / co /
- * o / stores); the gate planes come from the merged GM partials.
+ * partials are GM-visible. The phase-B work is elementwise in (row, column)
+ * -- the ICFO epilogue, the peephole weights and every output tensor are
+ * addressed by (row, column) alone -- so ANY AIV of the grid may process ANY
+ * rectangle. The kernel entry therefore enumerates the rectangles
+ * (strip x round x nTile x rowHalf) and hands them out round-robin over all
+ * blockDim*2 AIVs: the old "nTile j of this strip goes to cluster q's AIVs"
+ * mapping idled every AIV whose residue q had no nTile (small H: ONE tile,
+ * one cluster merging for the whole grid) and is gone.
  * ------------------------------------------------------------------------------------------- */
 template <typename T = float>
-__aicore__ inline void VectorCellKS(const ch::RowStripe& stripe, uint32_t blockBase, uint32_t mIdx, uint32_t q,
-                                    uint32_t round, AscendC::GlobalTensor<float> partGM,
-                                    AscendC::GlobalTensor<T> csPrevGM, AscendC::GlobalTensor<T> wciGM,
-                                    AscendC::GlobalTensor<T> wcfGM, AscendC::GlobalTensor<T> wcoGM,
-                                    AscendC::GlobalTensor<T> outI, AscendC::GlobalTensor<T> outCs,
-                                    AscendC::GlobalTensor<T> outF, AscendC::GlobalTensor<T> outO,
-                                    AscendC::GlobalTensor<T> outCi, AscendC::GlobalTensor<T> outCo,
-                                    AscendC::GlobalTensor<T> outH, const fwd::Layout<T>& L, uint32_t sk, uint32_t S,
-                                    uint32_t roundsPerStrip, float forgetBias, float cellClip, bool usePeephole)
+__aicore__ inline void VectorCellUnit(uint32_t mIdx, uint32_t round, uint32_t j, uint32_t sub,
+                                      AscendC::GlobalTensor<float> partGM, AscendC::GlobalTensor<T> csPrevGM,
+                                      AscendC::GlobalTensor<T> wciGM, AscendC::GlobalTensor<T> wcfGM,
+                                      AscendC::GlobalTensor<T> wcoGM, AscendC::GlobalTensor<T> outI,
+                                      AscendC::GlobalTensor<T> outCs, AscendC::GlobalTensor<T> outF,
+                                      AscendC::GlobalTensor<T> outO, AscendC::GlobalTensor<T> outCi,
+                                      AscendC::GlobalTensor<T> outCo, AscendC::GlobalTensor<T> outH,
+                                      const fwd::Layout<T>& L, uint32_t S, uint32_t roundsPerStrip, uint32_t span,
+                                      float forgetBias, float cellClip, bool usePeephole, uint32_t mergeMode)
 {
     constexpr bool isHalf = (sizeof(T) == 2);
-    const uint32_t count = stripe.count;
 
-    /* Working planes in VECCALC (fp32 internal) -- same layout as VectorCell. */
+    /* This unit's rows inside the round: base = strip span start + round
+     * offset; the two AIV halves of the round's burst split via DrainStripe. */
+    const uint32_t spanBase = mIdx * span;
+    const uint32_t spanEnd = (spanBase + span < L.b) ? (spanBase + span) : L.b;
+    const uint32_t base = spanBase + round * L.mBlk;
+    if (base >= spanEnd) {
+        return;
+    }
+    const uint32_t mThis = (L.mBlk < spanEnd - base) ? L.mBlk : (spanEnd - base);
+    const ch::RowStripe stripe = ch::DrainStripe(mThis, fwd::SPLIT, sub);
+    const uint32_t count = stripe.count;
+    if (count == 0) {
+        return;
+    }
+
+    /* Working planes in VECCALC (fp32 internal) -- same layout as before. */
     AscendC::LocalTensor<float> gi(AscendC::TPosition::VECCALC, L.gi, L.planeElems);
     AscendC::LocalTensor<float> gci(AscendC::TPosition::VECCALC, L.gci, L.planeElems);
     AscendC::LocalTensor<float> gf(AscendC::TPosition::VECCALC, L.gf, L.planeElems);
@@ -644,101 +948,119 @@ __aicore__ inline void VectorCellKS(const ch::RowStripe& stripe, uint32_t blockB
     AscendC::LocalTensor<T> halfBuf(AscendC::TPosition::VECCALC, L.halfBuf, L.rowsMax * L.nBlk);
     AscendC::LocalTensor<float>* gateWork[fwd::GATES] = {&gi, &gci, &gf, &go};
 
-    const uint32_t rowOff = (blockBase + stripe.base) * L.hid; // this AIV's first GM row, in H units
+    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+    const uint32_t nPad = fwd::NPad(n);
+    const uint32_t work = count * nPad;
+    const uint32_t colOff = j * L.nBlk;                   // in H units
+    const uint32_t rowOff = (base + stripe.base) * L.hid; // this unit's first GM row, in H units
 
-    for (uint32_t j = 0; j < L.nTiles; ++j) {
-        if (j % sk != q) {
-            continue;
-        } // this cluster's nTiles
-        const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
-        const uint32_t nPad = fwd::NPad(n);
-        const uint32_t work = count * nPad;
+    /* ---- merge the tile's four gate planes over this unit's rows ---- */
+    for (uint32_t g = 0; g < fwd::GATES; ++g) {
+        const uint32_t p = j * fwd::GATES + g;
+        const uint64_t off = fwd::KsPartialOff(mIdx, round, p, 0, roundsPerStrip, S, L.hid, L.nBlk, L.mBlk);
+        MergePairKS<T>(*gateWork[g], t1, t2, t3, cc, msk, halfBuf, partGM[off], stripe.base, count, nPad, L.mBlk * nPad,
+                       S, mergeMode);
+    }
 
-        /* ---- merge the tile's four gate planes over this AIV's rows ---- */
-        if (count > 0) {
-            for (uint32_t g = 0; g < fwd::GATES; ++g) {
-                const uint32_t p = j * fwd::GATES + g;
-                const uint64_t off = fwd::KsPartialOff(mIdx, round, p, 0, roundsPerStrip, S, L.hid, L.nBlk, L.mBlk);
-                MergePairKS<T>(*gateWork[g], t1, t2, t3, cc, msk, halfBuf, partGM[off], stripe.base, count, nPad,
-                               L.mBlk * nPad, S);
-            }
-        }
+    /* ---- epilogue for nTile j: the production block, verbatim ---- */
 
-        if (count > 0) {
-            /* ---- epilogue for nTile j: the production block, verbatim ---- */
-            const uint32_t colOff = j * L.nBlk; // in H units
+    /* cs_prev rows: GM [rowOff, rowOff+count) x cols [colOff, colOff+n).
+     * 两条路径的 load->consumer 边界均为单点 MTE2_V 事件对（CastSpan /
+     * MergePairKS 同款；MTE2 队列完成对 V 管消费生效，与 dtype 无关）。
+     * half 的 Cast 输出 -> 后续 V 读保留 PIPE_ALL（混合 dtype 纪律）。 */
+    if constexpr (isHalf) {
+        PadLoadRows<T>(halfBuf, csPrevGM[rowOff + colOff], count, n, nPad, (L.hid - n) * sizeof(T));
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+        AscendC::Cast(cc, halfBuf, AscendC::RoundMode::CAST_NONE, work);
+        AscendC::PipeBarrier<PIPE_ALL>();
+    } else {
+        PadLoadRows<T>(cc, csPrevGM[rowOff + colOff], count, n, nPad, (L.hid - n) * sizeof(T));
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+    }
 
-            /* cs_prev rows: GM [rowOff, rowOff+count) x cols [colOff, colOff+n). */
-            if constexpr (isHalf) {
-                PadLoadRows<T>(halfBuf, csPrevGM[rowOff + colOff], count, n, nPad, (L.hid - n) * sizeof(T));
-                AscendC::PipeBarrier<PIPE_ALL>();
-                AscendC::Cast(cc, halfBuf, AscendC::RoundMode::CAST_NONE, work);
-            } else {
-                PadLoadRows<T>(cc, csPrevGM[rowOff + colOff], count, n, nPad, (L.hid - n) * sizeof(T));
-            }
+    /* peephole weight slices [colOff, colOff+n).
+     * fp32: 三个 MTE2 load 之后一个 MTE2_V 事件对（MTE2 队列保序，一次
+     * wait 覆盖全部三个 load）；half: 每个 load->Cast 边界用 MTE2_V 事件对，
+     * Cast 输出 -> 下一个 load（WAR，V 读毕 halfBuf 才可重写）由其后的
+     * PIPE_ALL 覆盖（全量 barrier 序 V 完成）。 */
+    if (usePeephole) {
+        if constexpr (isHalf) {
+            PadLoadRow<T>(halfBuf, wciGM[colOff], n, nPad);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::Cast(wci, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
             AscendC::PipeBarrier<PIPE_ALL>();
-
-            /* peephole weight slices [colOff, colOff+n). */
-            if (usePeephole) {
-                if constexpr (isHalf) {
-                    PadLoadRow<T>(halfBuf, wciGM[colOff], n, nPad);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    AscendC::Cast(wci, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    PadLoadRow<T>(halfBuf, wcfGM[colOff], n, nPad);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    AscendC::Cast(wcf, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    PadLoadRow<T>(halfBuf, wcoGM[colOff], n, nPad);
-                    AscendC::PipeBarrier<PIPE_ALL>();
-                    AscendC::Cast(wco, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
-                } else {
-                    PadLoadRow<T>(wci, wciGM[colOff], n, nPad);
-                    PadLoadRow<T>(wcf, wcfGM[colOff], n, nPad);
-                    PadLoadRow<T>(wco, wcoGM[colOff], n, nPad);
-                }
-                AscendC::PipeBarrier<PIPE_ALL>();
-            }
-
-            /* ICFO activation up to the clipped cs (the o logit stays RAW). */
-            LstmCellGates<T>(gi, gci, gf, go, cc, t1, t2, t3, msk, wci, wcf, wco, halfBuf, count, nPad, forgetBias,
-                             cellClip, usePeephole);
+            PadLoadRow<T>(halfBuf, wcfGM[colOff], n, nPad);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::Cast(wcf, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
             AscendC::PipeBarrier<PIPE_ALL>();
-
-            /* Stores in TF output order; co reuses gci, h reuses gf. */
-            StorePlane<T>(outI, halfBuf, gi, rowOff, colOff, count, n, nPad, L.hid, work);
-            StorePlane<T>(outCs, halfBuf, cc, rowOff, colOff, count, n, nPad, L.hid, work);
-            StorePlane<T>(outF, halfBuf, gf, rowOff, colOff, count, n, nPad, L.hid, work);
-            StorePlane<T>(outCi, halfBuf, gci, rowOff, colOff, count, n, nPad, L.hid, work);
-
-            /* co = tanh(cs_new) -> gci; o = sigmoid(o_logit + wco*cs_new); h = o * co -> gf. */
-            vh::TanhVec(gci, cc, t1, msk, work);
-            AscendC::PipeBarrier<PIPE_V>();
-            if constexpr (isHalf) {
-                RoundHalfPlane<T>(gci, halfBuf, work);
-                AscendC::PipeBarrier<PIPE_V>();
-            }
-            if (usePeephole) {
-                if constexpr (isHalf) {
-                    PeepholeAddRowsHalf<T>(go, wco, cc, t1, halfBuf, count, nPad);
-                } else {
-                    PeepholeAddRows(go, wco, cc, t1, count, nPad);
-                }
-            }
-            if constexpr (isHalf) {
-                SigmoidEigenHalf<T>(go, t2, t3, msk, halfBuf, work);
-            } else {
-                SigmoidVecVF<float>(go, go, work);
-            }
+            PadLoadRow<T>(halfBuf, wcoGM[colOff], n, nPad);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::Cast(wco, halfBuf, AscendC::RoundMode::CAST_NONE, nPad);
             AscendC::PipeBarrier<PIPE_ALL>();
-            AscendC::Mul(gf, go, gci, work);
-            AscendC::PipeBarrier<PIPE_V>();
-
-            StorePlane<T>(outO, halfBuf, go, rowOff, colOff, count, n, nPad, L.hid, work);
-            StorePlane<T>(outCo, halfBuf, gci, rowOff, colOff, count, n, nPad, L.hid, work);
-            StorePlane<T>(outH, halfBuf, gf, rowOff, colOff, count, n, nPad, L.hid, work);
+        } else {
+            PadLoadRow<T>(wci, wciGM[colOff], n, nPad);
+            PadLoadRow<T>(wcf, wcfGM[colOff], n, nPad);
+            PadLoadRow<T>(wco, wcoGM[colOff], n, nPad);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(static_cast<event_t>(5));
         }
     }
+
+    /* ICFO activation up to the clipped cs (the o logit stays RAW).
+     * 尾同步无需全停：各平面的最后写手均已被 LstmCellGates 内部同步序完
+     * （half: RoundHalfPlane/TanhVec 内置 PIPE_ALL、cellClip Select 链尾
+     * PIPE_V；fp32: VF 域 barrier / StorePlane 的 V_MTE3 pre 对）。 */
+    LstmCellGates<T>(gi, gci, gf, go, cc, t1, t2, t3, msk, wci, wcf, wco, halfBuf, count, nPad, forgetBias, cellClip,
+                     usePeephole);
+
+    /* Stores in TF output order; co reuses gci, h reuses gf. */
+    StorePlane<T>(outI, halfBuf, gi, rowOff, colOff, count, n, nPad, L.hid, work);
+    StorePlane<T>(outCs, halfBuf, cc, rowOff, colOff, count, n, nPad, L.hid, work);
+    StorePlane<T>(outF, halfBuf, gf, rowOff, colOff, count, n, nPad, L.hid, work);
+    StorePlane<T>(outCi, halfBuf, gci, rowOff, colOff, count, n, nPad, L.hid, work);
+
+    /* co = tanh(cs_new) -> gci; o = sigmoid(o_logit + wco*cs_new); h = o * co -> gf.
+     * 同步账本：TanhVec 内部两侧 PIPE_ALL（vendor Tanh 的 VF 域 store 对
+     * V/MTE3 读需全量 barrier）序住 tanh 产出；其后的 RoundHalfPlane /
+     * StorePlane 消费各有 PIPE_V 或事件对承接（见各调用点）；Mul(gf) 的
+     * V 产出由紧随 StorePlane 的 pre 对同步。 */
+    vh::TanhVec(gci, cc, t1, msk, work);
+    if constexpr (isHalf) {
+        RoundHalfPlane<T>(gci, halfBuf, work);
+    }
+    if (usePeephole) {
+        if constexpr (isHalf) {
+            PeepholeAddRowsHalf<T>(go, wco, cc, t1, halfBuf, count, nPad);
+        } else {
+            PeepholeAddRows(go, wco, cc, t1, count, nPad);
+        }
+    }
+    if constexpr (isHalf) {
+        SigmoidEigenHalf<T>(go, t2, t3, msk, halfBuf, work);
+    } else {
+        SigmoidVecVF<float>(go, go, work);
+        /* VF 域 store -> V 读（Mul）的可见性（VF 域边界纪律，PIPE_V 与
+         * LstmCellGates 的 SigmoidVecVF 后同步同款；后续 MTE3 store 由
+         * StorePlane 的 V_MTE3 pre 事件对序——VF 指令占 V 队列槽位，
+         * PR#10942 (7) 同构）。 */
+        AscendC::PipeBarrier<PIPE_V>();
+    }
+    AscendC::Mul(gf, go, gci, work);
+    if constexpr (isHalf) {
+        /* ⚠ Mul(V 写 gf) -> StorePlane 的混合 dtype Cast(V 读 gf)：同管
+         * 互锁未实测覆盖混合 dtype 输入侧，保留 PIPE_V（fp32 侧由
+         * StorePlane 的 V_MTE3 pre 事件对同步，无需 barrier）。 */
+        AscendC::PipeBarrier<PIPE_V>();
+    }
+
+    StorePlane<T>(outO, halfBuf, go, rowOff, colOff, count, n, nPad, L.hid, work);
+    StorePlane<T>(outCo, halfBuf, gci, rowOff, colOff, count, n, nPad, L.hid, work);
+    StorePlane<T>(outH, halfBuf, gf, rowOff, colOff, count, n, nPad, L.hid, work);
 }
 
 } // namespace lstm_vf

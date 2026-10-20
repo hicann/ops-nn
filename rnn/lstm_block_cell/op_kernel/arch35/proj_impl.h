@@ -33,14 +33,47 @@
  * ⚠ BIAS RIDES THE BIAS TABLE, NOT A VECTOR ADD. The BT broadcasts one row
  * over all M rows in hardware. The bias comes from the AIV's fp32 padded
  * workspace ([4, CeilAlign(H,16)], see the kernel entry): every (g, j) slice
- * [g*Hpad + j*nBlk, +nPad) is 32B-aligned by construction, so the AIC never
- * does a ragged GM read.
+ *      [g*Hpad + j*nBlk, +nPad) is 32B-aligned by construction, so the AIC never
+ *      does a ragged GM read.
  *
  * A-tile traffic note: the A tile is re-read once per (group, k-block). With
  * slots == 4 a group is exactly one nTile's four gates, so A traffic is
  * mThis*K per nTile -- the structural cost of N-tiling, and it is small next
  * to the GEMM itself. slots drops to 2/1 only when L0C cannot hold four
  * accumulators, which the tile search avoids when it can.
+ *
+ * -------------------------------------------------------------------------------------------
+ * PIPELINED K-BLOCK WALK (the perf rework). The pre-rework loop was a chain of
+ * full stops: per k-block it stalled the scalar thread on every MTE2->MTE1,
+ * MTE1->M and M->FIX dependency as soon as the dependency was ISSUED, so the
+ * MTE2 engine idled between k-blocks and the FIX drain of one segment blocked
+ * the GM->L1 loads of the next. The rework keeps the SAME Mmad arithmetic (same
+ * instructions, same order, same operands -- bit-identical accumulation) and
+ * only changes WHEN the scalar thread waits:
+ *
+ *   - A/B staging is DOUBLE-BUFFERED in L1 (a1[2], b1[2], see fwd_layout.h):
+ *     k-block kb+1's A tile and pair-0 B tile are copied into the slot kb is
+ *     not using, so the copy needs no WAR fence against kb's SplitA/SplitB.
+ *   - The kb+1 preload is issued at the END of kb's pair loop (after the last
+ *     in-loop pair prefetch, so the MTE2 queue keeps needed-sooner-first
+ *     order) and then overlaps the M-fix wait, the L0C->GM drains and the
+ *     FIX->M wait of the segment boundary.
+ *   - FIX->M is split into SetFlag (issued with the drains, rides the FIX
+ *     queue) and a DEFERRED WaitFlag that lands just before the first Mmad
+ *     that would rewrite c[s] -- SplitA/SplitB of the next k-block do not
+ *     touch L0C and are issued before that wait, so they overlap the drain.
+ *
+ * Event-id ledger (intra-core HardEvent ids are per-type; every Set below has
+ * exactly one Wait before the function returns -- an unwaited set would stay
+ * armed into the NEXT launch and make its first wait fire early):
+ *   MTE2_MTE1 id 0/1  kb-preload landed (one id per L1 slot, alternating)
+ *   MTE2_MTE1 id 2    in-loop pair-prefetch landed (Set+Wait immediate)
+ *   MTE2_MTE1 id 3    BT bias preload landed (Set+Wait immediate)
+ *   M_FIX             last Mmad of a segment done (before its drains)
+ *   FIX_M             drains of a segment done (deferred wait before the next
+ *                     segment's first Mmad; the final one is waited at exit)
+ *   MTE1_MTE2 / M_MTE1 / MTE1_M  same fence semantics as the pre-rework loop
+ * -------------------------------------------------------------------------------------------
  */
 #ifndef PROJ_IMPL_H
 #define PROJ_IMPL_H
@@ -52,28 +85,71 @@
 
 namespace proj {
 
-/* ---------------------------------------------------------------------------------------------
- * CubeProjectKS -- the K-split PHASE-A cube half.
- *
- * Cluster (mIdx = blockIdx/SK, kIdx = blockIdx%SK) computes, for one round of
- * its strip and every (nTile, gate) pair, the partial sums of the K segments
- * s ≡ kIdx (mod SK) -- TRUE multi-core K-split: with SK >= 2 the segments of
- * one output tile are computed on DIFFERENT AIC cores. Each partial
- * accumulates in this core's own L0C (fp32, kChunk-blocked), then drains as
- * an fp32 [mThis, nPad] plane straight to the GM workspace via the ops-nn
- * stream-K L0C->GM fixpipe (ch::DrainToGM). No per-pair flags: the whole
- * phase ends with ONE done-flag (sh::CubeSignalKsDone) and the AIVs merge
- * after a grid-wide SyncAll.
- *
- * Segment table: segment s covers concat-K [s*W, min((s+1)*W, K)); a segment
- * may straddle the x/h operand boundary at k == I and is walked as operand
- * sub-ranges, each kChunk-blocked with a ragged tail (K stays hardware-free).
- *
- * ⚠ BIAS EXACTLY ONCE per pair: only the cluster that owns segment 0
- * (kIdx == 0) BT-seeds its first k-block (MmadBias); every other
- * segment/cluster opens with MmadPlain. The AIV merge therefore sees the bias
- * in exactly one partial (s == 0).
- * ------------------------------------------------------------------------------------------- */
+/* One k-block of the flattened walk: which concat-K rows it covers, from
+ * which operand, and whether it is the first / last block of its segment. */
+struct Kb {
+    uint32_t seg;     // absolute segment index
+    uint32_t ak;      // concat-k of the block start
+    uint32_t actualK; // rows in the block (<= kChunk, ragged tail honoured)
+    bool isX;         // operand: x (true) / h_prev (false)
+    bool firstInSeg;  // ak == segment start (Mmad accumulator reset point)
+    bool lastInSeg;   // the block closes the segment (drain follows)
+};
+
+/* Advance the flattened (segment, position) cursor to the next k-block.
+ * Returns false when the group's owned segments are exhausted. */
+__aicore__ inline bool NextKb(uint32_t& seg, uint32_t& a, uint32_t S, uint32_t sk, uint32_t K, uint32_t I, uint32_t W,
+                              uint32_t kChunk, Kb& out)
+{
+    if (seg >= S || a >= K) {
+        return false;
+    }
+    const uint32_t k1 = (seg * W + W < K) ? (seg * W + W) : K;
+    const bool isX = (a < I);
+    const uint32_t subEnd = isX ? ((k1 < I) ? k1 : I) : k1;
+    uint32_t actualK = (kChunk < subEnd - a) ? kChunk : (subEnd - a);
+    out.seg = seg;
+    out.ak = a;
+    out.actualK = actualK;
+    out.isX = isX;
+    out.firstInSeg = (a == seg * W);
+    out.lastInSeg = false; // filled by the caller after advancing
+    a += actualK;
+    if (a >= k1) {
+        // segment closed: jump to the cluster's next owned segment
+        out.lastInSeg = true;
+        seg += sk;
+        a = (seg < S) ? (seg * W) : K;
+    }
+    return true;
+}
+
+/* Issue the A copy + the group's pair-0 B copy of k-block `kb` into L1
+ * `slot` and arm its landed event. A free function (NOT a lambda): a lambda's
+ * operator() does not inherit __aicore__, and the AscendC sync intrinsics are
+ * __aicore__-only. */
+template <typename T>
+__aicore__ inline void PreloadKb(AscendC::LocalTensor<T> (&a1)[2], AscendC::LocalTensor<T> (&b1)[2],
+                                 AscendC::GlobalTensor<T> xGM, AscendC::GlobalTensor<T> h0GM,
+                                 AscendC::GlobalTensor<T> wGM, const Kb& kb, uint32_t slot, uint32_t grpBase,
+                                 uint32_t blockBase, uint32_t mThis, const fwd::Layout<T>& L)
+{
+    const uint32_t gw = fwd::GATES * L.hid; // w row stride, elements
+    const uint32_t p = grpBase;             // the group's pair 0 rides with the A tile
+    const uint32_t j = p / fwd::GATES;
+    const uint32_t g = p % fwd::GATES;
+    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+    const uint32_t rowStride = kb.isX ? L.inSize : L.hid;
+    const uint32_t wOff = kb.ak * gw + g * L.hid + j * L.nBlk;
+    if (kb.isX) {
+        ch::CopyInNd2Nz<T>(a1[slot], xGM[blockBase * L.inSize + kb.ak], mThis, kb.actualK, rowStride, mThis);
+    } else {
+        ch::CopyInNd2Nz<T>(a1[slot], h0GM[blockBase * L.hid + (kb.ak - L.inSize)], mThis, kb.actualK, rowStride, mThis);
+    }
+    ch::CopyInNd2Nz<T>(b1[slot], wGM[wOff], kb.actualK, n, gw, L.kChunk);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(static_cast<int32_t>(slot));
+}
+
 template <typename T = float>
 __aicore__ inline void CubeProjectKS(AscendC::GlobalTensor<T> xGM, AscendC::GlobalTensor<T> h0GM,
                                      AscendC::GlobalTensor<T> wGM, AscendC::GlobalTensor<float> wsGM,
@@ -87,11 +163,17 @@ __aicore__ inline void CubeProjectKS(AscendC::GlobalTensor<T> xGM, AscendC::Glob
     const uint32_t pairs = L.nTiles * fwd::GATES;
     const uint32_t K = L.inSize + L.hid;
 
-    /* On-chip staging: one A/B tile (reloaded per k-block), `slots` L0C
-     * accumulators + BT tables (recycled per (group, segment) behind the
-     * FIX->M fence at the segment loop end). */
-    AscendC::LocalTensor<T> a1(AscendC::TPosition::A1, 0, L.aElems);
-    AscendC::LocalTensor<T> b1(AscendC::TPosition::B1, L.bOff, L.bElems);
+    /* On-chip staging: DOUBLE-BUFFERED A/B tiles in L1 (the k+1 preload rides
+     * the slot k is not reading), `slots` L0C accumulators + BT tables
+     * (recycled per (group, segment) behind the deferred FIX->M wait). */
+    AscendC::LocalTensor<T> a1[2] = {
+        AscendC::LocalTensor<T>(AscendC::TPosition::A1, 0, L.aElems),
+        AscendC::LocalTensor<T>(AscendC::TPosition::A1, L.aOff1, L.aElems),
+    };
+    AscendC::LocalTensor<T> b1[2] = {
+        AscendC::LocalTensor<T>(AscendC::TPosition::B1, L.bOff, L.bElems),
+        AscendC::LocalTensor<T>(AscendC::TPosition::B1, L.bOff1, L.bElems),
+    };
     AscendC::LocalTensor<float> bl1(AscendC::TPosition::B1, L.biasOff, L.btSlotElems);
     AscendC::LocalTensor<T> a2(AscendC::TPosition::A2, 0, L.aElems);
     AscendC::LocalTensor<T> b2(AscendC::TPosition::B2, 0, L.bElems);
@@ -108,141 +190,392 @@ __aicore__ inline void CubeProjectKS(AscendC::GlobalTensor<T> xGM, AscendC::Glob
         AscendC::LocalTensor<float>(AscendC::TPosition::CO1, 3u * L.cSlotElems * sizeof(float), L.cSlotElems),
     };
 
+    bool fixPending = false; // a FIX->M set is armed and not yet waited
+
     for (uint32_t grp = 0; grp < pairs; grp += L.slots) {
         const uint32_t grpSize = (L.slots < pairs - grp) ? L.slots : (pairs - grp);
 
         /* This cluster's segments of the group, in K order (s = kIdx, kIdx+SK,
-         * ...). The L0C slots are recycled once per (group, segment) behind
-         * the WaitFixToM fence at the loop end. */
-        for (uint32_t seg = kIdx; seg < S; seg += sk) {
-            const uint32_t k0 = seg * W;
-            const uint32_t k1 = (k0 + W < K) ? (k0 + W) : K;
+         * ...), each walked as operand sub-ranges and kChunk blocks. The walk
+         * is FLATTENED so the pipeline can preload across segment boundaries
+         * (segments are short: W/kChunk is often 1). */
+        uint32_t seg = kIdx;
+        uint32_t a = (seg < S) ? (seg * W) : K;
+        Kb kb;
+        if (!NextKb(seg, a, S, sk, K, L.inSize, W, L.kChunk, kb)) {
+            continue; // no owned segment (defensive; host keeps SK <= S)
+        }
+        uint32_t slot = 0;
+        PreloadKb<T>(a1, b1, xGM, h0GM, wGM, kb, slot, grp, blockBase, mThis, L);
 
-            for (uint32_t a = k0; a < k1;) {
-                /* operand sub-range [a, segEnd): x while a < I, then h; w's
-                 * row index is the concat k (x rows [0,I), h rows [I,I+H)). */
-                const bool isX = (a < L.inSize);
-                const uint32_t segEnd = isX ? ((k1 < L.inSize) ? k1 : L.inSize) : k1;
-                const uint32_t rowCount = segEnd - a;
-                const uint32_t rowStride = isX ? L.inSize : L.hid;
+        while (true) {
+            /* --- stage waits: copies landed, splits done, drains done --- */
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(static_cast<int32_t>(slot));
 
-                for (uint32_t kk = 0; kk < rowCount; kk += L.kChunk) {
-                    const uint32_t ak = a + kk; // concat k of this block
-                    const uint32_t actualK = (L.kChunk < rowCount - kk) ? L.kChunk : (rowCount - kk);
-                    const bool firstKb = (ak == k0); // segment's first k-block
-
-                    /* --- A tile [mThis, actualK] from this operand --- */
-                    if (isX) {
-                        ch::CopyInNd2Nz<T>(a1, xGM[blockBase * L.inSize + ak], mThis, actualK, rowStride, mThis);
-                    } else {
-                        ch::CopyInNd2Nz<T>(a1, h0GM[blockBase * L.hid + (ak - L.inSize)], mThis, actualK, rowStride,
-                                           mThis);
-                    }
-                    sh::WaitMte2ToMte1();
-                    const ch::NzLayout aLay(mThis, actualK, c0T, mThis);
-                    ch::SplitA<T>(a2, a1, aLay, actualK);
-                    sh::WaitMte1ToM();
-                    /* a1 (L1) WAR: the NEXT k-block's CopyIn(a1) rides MTE2 and
-                     * must not overwrite a1 before this SplitA (MTE1) retires. */
+            /* Bias preload: ALL grpSize slots UPFRONT (segment-0 owner's
+             * first k-block only). bl1 is reused per slot -- the
+             * MTE1->MTE2 fence between slots retires each LoadBiasToBT
+             * before the next CopyInFlat may overwrite bl1. */
+            if (kb.firstInSeg && kb.seg == 0 && kIdx == 0) {
+                for (uint32_t s = 0; s < grpSize; ++s) {
+                    const uint32_t p = grp + s;
+                    const uint32_t j = p / fwd::GATES;
+                    const uint32_t g = p % fwd::GATES;
+                    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                    const uint32_t nPad = fwd::NPad(n);
+                    ch::CopyInFlat<float>(bl1, wsGM[g * Hpad + j * L.nBlk], nPad);
+                    sh::PipeWait<AscendC::HardEvent::MTE2_MTE1>(static_cast<event_t>(3));
+                    ch::LoadBiasToBT(bt[s], bl1, nPad);
                     sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
-
-                    /* --- Bias preload: ALL grpSize slots UPFRONT (segment-0
-                     * owner's first k-block only). bl1 is reused per slot --
-                     * the MTE1->MTE2 fence between slots retires each
-                     * LoadBiasToBT before the next CopyInFlat may overwrite bl1. */
-                    if (firstKb && kIdx == 0 && seg == 0) {
-                        for (uint32_t s = 0; s < grpSize; ++s) {
-                            const uint32_t p = grp + s;
-                            const uint32_t j = p / fwd::GATES;
-                            const uint32_t g = p % fwd::GATES;
-                            const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
-                            const uint32_t nPad = fwd::NPad(n);
-                            ch::CopyInFlat<float>(bl1, wsGM[g * Hpad + j * L.nBlk], nPad);
-                            sh::WaitMte2ToMte1();
-                            ch::LoadBiasToBT(bt[s], bl1, nPad);
-                            sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
-                        }
-                    }
-
-                    /* --- B-tile preload (pair 0 of this group) --- */
-                    {
-                        const uint32_t p = grp;
-                        const uint32_t j = p / fwd::GATES;
-                        const uint32_t g = p % fwd::GATES;
-                        const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
-                        const uint32_t wOff = ak * gw + g * L.hid + j * L.nBlk;
-                        ch::CopyInNd2Nz<T>(b1, wGM[wOff], actualK, n, gw, L.kChunk);
-                        sh::WaitMte2ToMte1();
-                        ch::SplitB<T>(b2, b1, actualK, n, L.kChunk);
-                        sh::WaitMte1ToM();
-                        /* ⚠⚠ MANDATORY (the bug of the first pipelined attempt):
-                         * the FIRST prefetch below rides MTE2 and would otherwise
-                         * overwrite b1 while this SplitB still reads it -- every
-                         * CopyIn(b1) in the MTE2 queue must sit behind an
-                         * MTE1->MTE2 wait whose set follows the SplitB that frees
-                         * b1 (this fence for B_1, each tail fence for B_{s+2}). */
-                        sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
-                    }
-
-                    /* --- Software-pipelined pairs: pair s+1's GM->L1 B copy (MTE2)
-                     * is issued BEFORE pair s's Mmad, overlapping M-pipe compute.
-                     * Cross-pipe hazards fenced precisely (NO PipeBarrier<PIPE_ALL>):
-                     *   M->MTE1    b2/a2 in L0: Mmad reads, next SplitB/SplitA writes
-                     *   MTE1->MTE2 b1/a1 in L1: SplitB/SplitA reads, next CopyIn
-                     * Numerically identical: same Mmads, same order, same operands. */
-                    for (uint32_t s = 0; s < grpSize; ++s) {
-                        const uint32_t p = grp + s;
-                        const uint32_t j = p / fwd::GATES;
-                        const uint32_t g = p % fwd::GATES;
-                        const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
-                        uint32_t nNext = 0;
-                        if (s + 1 < grpSize) {
-                            const uint32_t pN = p + 1;
-                            const uint32_t jN = pN / fwd::GATES;
-                            const uint32_t gN = pN % fwd::GATES;
-                            nNext = (L.nBlk < L.hid - jN * L.nBlk) ? L.nBlk : (L.hid - jN * L.nBlk);
-                            const uint32_t wOffN = ak * gw + gN * L.hid + jN * L.nBlk;
-                            ch::CopyInNd2Nz<T>(b1, wGM[wOffN], actualK, nNext, gw, L.kChunk); /* prefetch */
-                        }
-                        if (firstKb) {
-                            if (kIdx == 0 && seg == 0) {
-                                ch::MmadBias(c[s], a2, b2, bt[s], mThis, n, actualK);
-                            } else {
-                                ch::MmadPlain(c[s], a2, b2, mThis, n, actualK);
-                            }
-                        } else {
-                            ch::MmadAccum(c[s], a2, b2, mThis, n, actualK);
-                        }
-                        sh::PipeWait<AscendC::HardEvent::M_MTE1>(); /* b2 rewritable */
-                        if (s + 1 < grpSize) {
-                            sh::WaitMte2ToMte1(); /* prefetch landed */
-                            ch::SplitB<T>(b2, b1, actualK, nNext, L.kChunk);
-                            sh::WaitMte1ToM();                             /* b2 = B_{s+1} */
-                            sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>(); /* b1 free */
-                        }
-                    }
                 }
-                a = segEnd;
+            }
+
+            const ch::NzLayout aLay(mThis, kb.actualK, c0T, mThis);
+            ch::SplitA<T>(a2, a1[slot], aLay, kb.actualK);
+            {
+                const uint32_t j = grp / fwd::GATES;
+                const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                ch::SplitB<T>(b2, b1[slot], kb.actualK, n, L.kChunk);
+            }
+            sh::WaitMte1ToM();
+            /* a1/b1[slot] WAR: the pair loop's prefetches rewrite b1[slot]
+             * (and the next-but-one A copy rewrites a1[slot]) -- both must
+             * sit behind an MTE1->MTE2 wait whose set follows the splits. */
+            sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
+            /* Deferred FIX->M: the previous segment's drains must complete
+             * before the first Mmad below rewrites c[s]. Splits are already
+             * queued, so this wait overlaps them. */
+            if (fixPending) {
+                AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
+                fixPending = false;
+            }
+
+            /* --- pair loop: identical arithmetic to the pre-rework loop.
+             * Pair s+1's GM->L1 B copy (MTE2) is issued BEFORE pair s's
+             * Mmad, overlapping M-pipe compute. Cross-pipe hazards fenced
+             * precisely (NO PipeBarrier<PIPE_ALL>):
+             *   M->MTE1    b2/a2 in L0: Mmad reads, next SplitB/SplitA writes
+             *   MTE1->MTE2 b1/a1 in L1: SplitB/SplitA reads, next CopyIn */
+            for (uint32_t s = 0; s < grpSize; ++s) {
+                const uint32_t p = grp + s;
+                const uint32_t j = p / fwd::GATES;
+                const uint32_t g = p % fwd::GATES;
+                const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                uint32_t nNext = 0;
+                if (s + 1 < grpSize) {
+                    const uint32_t pN = p + 1;
+                    const uint32_t jN = pN / fwd::GATES;
+                    const uint32_t gN = pN % fwd::GATES;
+                    nNext = (L.nBlk < L.hid - jN * L.nBlk) ? L.nBlk : (L.hid - jN * L.nBlk);
+                    const uint32_t wOffN = kb.ak * gw + gN * L.hid + jN * L.nBlk;
+                    ch::CopyInNd2Nz<T>(b1[slot], wGM[wOffN], kb.actualK, nNext, gw, L.kChunk); /* prefetch */
+                }
+                if (kb.firstInSeg) {
+                    if (kIdx == 0 && kb.seg == 0) {
+                        ch::MmadBias(c[s], a2, b2, bt[s], mThis, n, kb.actualK);
+                    } else {
+                        ch::MmadPlain(c[s], a2, b2, mThis, n, kb.actualK);
+                    }
+                } else {
+                    ch::MmadAccum(c[s], a2, b2, mThis, n, kb.actualK);
+                }
+                sh::PipeWait<AscendC::HardEvent::M_MTE1>(); /* b2 rewritable */
+                if (s + 1 < grpSize) {
+                    sh::PipeWait<AscendC::HardEvent::MTE2_MTE1>(static_cast<event_t>(2)); /* prefetch landed */
+                    ch::SplitB<T>(b2, b1[slot], kb.actualK, nNext, L.kChunk);
+                    sh::WaitMte1ToM();                             /* b2 = B_{s+1} */
+                    sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>(); /* b1 free */
+                }
+            }
+
+            /* --- advance the walk; preload the NEXT k-block into the other
+             * L1 slot BEFORE the segment-end fences so its copies overlap
+             * the M-fix wait and the L0C->GM drains. --- */
+            Kb next = kb;
+            const bool haveNext = NextKb(seg, a, S, sk, K, L.inSize, W, L.kChunk, next);
+            if (haveNext) {
+                PreloadKb<T>(a1, b1, xGM, h0GM, wGM, next, slot ^ 1u, grp, blockBase, mThis, L);
             }
 
             /* --- drain the group's segment-`seg` partials to GM --- */
-            sh::WaitMToFix();
+            if (kb.lastInSeg) {
+                sh::WaitMToFix();
+                for (uint32_t s = 0; s < grpSize; ++s) {
+                    const uint32_t p = grp + s;
+                    const uint32_t j = p / fwd::GATES;
+                    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                    const uint32_t nPad = fwd::NPad(n);
+                    const uint64_t off = fwd::KsPartialOff(mIdx, round, p, kb.seg, roundsPerStrip, S, L.hid, L.nBlk,
+                                                           L.mBlk);
+                    ch::DrainToGM(partGM[off], c[s], mThis, nPad);
+                }
+                /* FIX->M only, not PIPE_ALL: the next segment's first hazard is
+                 * the Mmad (M pipe) rewriting c[s] while this segment's
+                 * DrainToGM (FIX pipe) still reads it. The A/B-tile WAR
+                 * hazards across the boundary are already covered by the
+                 * in-loop MTE1_MTE2 / M_MTE1 queue markers plus the
+                 * double-buffered slots, which gate every subsequently issued
+                 * MTE1/MTE2 instruction behind the SplitA/SplitB/Mmad that
+                 * precedes them. */
+                AscendC::SetFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
+                fixPending = true;
+            }
+
+            if (!haveNext) {
+                break;
+            }
+            kb = next;
+            slot ^= 1u;
+        }
+        /* The group's final FIX->M set is NOT waited here: the next group's
+         * preload + SplitA/SplitB overlap it, and its first pair loop
+         * consumes the wait (see `fixPending` above). */
+    }
+
+    /* Ledger discipline: every SetFlag has exactly one WaitFlag before the
+     * launch ends -- an armed FIX->M left over would make the NEXT launch's
+     * first FIX->M wait fire early. */
+    if (fixPending) {
+        AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
+    }
+}
+
+/* =============================================================================================
+ * fp32 hi/lo 拆分 GEMM（splitGemm=1 路径）。与 CubeProjectKS 同构的 K-split
+ * 投影，但 A/B 操作数来自 AIV 预拆的 fp16 hi/lo 平面（a = a_hi + a_lo，
+ * |残差| <= 2^-22|a|），每 (k-block, pair) 发 3 条 fp16 Mmad 全部累进同一
+ * L0C fp32 累加器：
+ *
+ *     c += A_hi . B_hi ;  c += A_lo . B_hi ;  c += A_hi . B_lo
+ *
+ * （丢弃 A_lo.B_lo 项，误差 ~2^-21 相对，远小于 W 段 fp32 累加误差；3510
+ * fp16 Mmad 实测 ~6.9x 于 fp32 Mmad，3 条折算 ~2.3x 有效吞吐。）
+ *
+ * 片上布局（fwd::Layout::sp，与 host FitTile 的 splitA16 约束同一真值）：
+ *   L1  a1hi[2] / a1lo[2] / b1hi[2] / b1lo[2]（4+4 half 槽，字节量 == 原生
+ *       a1[2]+b1[2] fp32），bias 行同原生
+ *   L0A a2hi + a2lo 两张 half tile 同时驻留（字节量 == 原生 a2 fp32）
+ *   L0B 单张 b2 复用：hi 相位（2 Mmad）后 SplitB 换入 lo（1 Mmad）
+ *   L0C/BT 与原生完全一致（fp32 累加器 + fp32 bias 表）
+ *
+ * 事件账本与原生相同：MTE2_MTE1 id 0/1 = kb 预装落地（slot 乒乓），id 2 =
+ * 对内 pair 预取落地，id 3 = bias 预装；M_FIX / FIX_M 拆分配对不变。
+ * 栅栏纪律（对内 pair 循环）：
+ *   M->MTE1     b2（L0B）Mmad 读毕，SplitB 可写
+ *   MTE1->MTE2  b1hi/b1lo（L1）SplitB 读毕，下一对 CopyIn 可写（全停式，
+ *               与原生尾部栅栏同款；b1lo(p+1) 存活至 p+1 的 lo 相位 SplitB）
+ * ============================================================================================= */
+template <typename T = float>
+__aicore__ inline void PreloadKbSplit(AscendC::LocalTensor<half> (&a1hi)[2], AscendC::LocalTensor<half> (&a1lo)[2],
+                                      AscendC::LocalTensor<half> (&b1hi)[2], AscendC::LocalTensor<half> (&b1lo)[2],
+                                      AscendC::GlobalTensor<half> xHiGM, AscendC::GlobalTensor<half> xLoGM,
+                                      AscendC::GlobalTensor<half> hHiGM, AscendC::GlobalTensor<half> hLoGM,
+                                      AscendC::GlobalTensor<half> wHiGM, AscendC::GlobalTensor<half> wLoGM,
+                                      const Kb& kb, uint32_t slot, uint32_t grpBase, uint32_t blockBase, uint32_t mThis,
+                                      const fwd::Layout<T>& L)
+{
+    const uint32_t gw = fwd::GATES * L.hid; // w row stride, elements（与 fp32 w 相同布局）
+    const uint32_t p = grpBase;             // 组内 pair 0 的 B_hi 随 A 一起预装
+    const uint32_t j = p / fwd::GATES;
+    const uint32_t g = p % fwd::GATES;
+    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+    const uint32_t rowStride = kb.isX ? L.inSize : L.hid;
+    const uint32_t wOff = kb.ak * gw + g * L.hid + j * L.nBlk;
+    if (kb.isX) {
+        ch::CopyInNd2Nz<half>(a1hi[slot], xHiGM[blockBase * L.inSize + kb.ak], mThis, kb.actualK, rowStride, mThis);
+        ch::CopyInNd2Nz<half>(a1lo[slot], xLoGM[blockBase * L.inSize + kb.ak], mThis, kb.actualK, rowStride, mThis);
+    } else {
+        ch::CopyInNd2Nz<half>(a1hi[slot], hHiGM[blockBase * L.hid + (kb.ak - L.inSize)], mThis, kb.actualK, rowStride,
+                              mThis);
+        ch::CopyInNd2Nz<half>(a1lo[slot], hLoGM[blockBase * L.hid + (kb.ak - L.inSize)], mThis, kb.actualK, rowStride,
+                              mThis);
+    }
+    /* ⚠ pair-0 的 B_hi 与 B_lo 都必须预载：pair 循环的 lo 相位 SplitB 读
+     * b1lo[slot]，若只载 hi，pair-0 的 lo 相位读到的是上一组残留 / 未初始
+     * 化 L1（实测：每个 tile 的 gate i 出现 NaN + 2^-12 量级污染项，其余
+     * 输出因 b_lo 数值小而逐位幸免）。 */
+    ch::CopyInNd2Nz<half>(b1hi[slot], wHiGM[wOff], kb.actualK, n, gw, L.kChunk);
+    ch::CopyInNd2Nz<half>(b1lo[slot], wLoGM[wOff], kb.actualK, n, gw, L.kChunk);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(static_cast<int32_t>(slot));
+}
+
+template <typename T = float>
+__aicore__ inline void CubeProjectKSSplit(AscendC::GlobalTensor<half> xHiGM, AscendC::GlobalTensor<half> xLoGM,
+                                          AscendC::GlobalTensor<half> hHiGM, AscendC::GlobalTensor<half> hLoGM,
+                                          AscendC::GlobalTensor<half> wHiGM, AscendC::GlobalTensor<half> wLoGM,
+                                          AscendC::GlobalTensor<float> wsGM, AscendC::GlobalTensor<float> partGM,
+                                          uint32_t mIdx, uint32_t kIdx, uint32_t round, uint32_t blockBase,
+                                          uint32_t mThis, const fwd::Layout<T>& L, uint32_t sk, uint32_t S, uint32_t W,
+                                          uint32_t roundsPerStrip)
+{
+    const uint32_t c0H = ch::C0<half>();
+    const uint32_t gw = fwd::GATES * L.hid;
+    const uint32_t Hpad = fwd::NPad(L.hid);
+    const uint32_t pairs = L.nTiles * fwd::GATES;
+    const uint32_t K = L.inSize + L.hid;
+
+    /* 片上 staging：split 布局见函数头注（fwd::Layout::sp）。 */
+    AscendC::LocalTensor<half> a1hi[2] = {
+        AscendC::LocalTensor<half>(AscendC::TPosition::A1, L.sp.aHiOff[0], L.sp.aElems),
+        AscendC::LocalTensor<half>(AscendC::TPosition::A1, L.sp.aHiOff[1], L.sp.aElems),
+    };
+    AscendC::LocalTensor<half> a1lo[2] = {
+        AscendC::LocalTensor<half>(AscendC::TPosition::A1, L.sp.aLoOff[0], L.sp.aElems),
+        AscendC::LocalTensor<half>(AscendC::TPosition::A1, L.sp.aLoOff[1], L.sp.aElems),
+    };
+    AscendC::LocalTensor<half> b1hi[2] = {
+        AscendC::LocalTensor<half>(AscendC::TPosition::B1, L.sp.bHiOff[0], L.sp.bElems),
+        AscendC::LocalTensor<half>(AscendC::TPosition::B1, L.sp.bHiOff[1], L.sp.bElems),
+    };
+    AscendC::LocalTensor<half> b1lo[2] = {
+        AscendC::LocalTensor<half>(AscendC::TPosition::B1, L.sp.bLoOff[0], L.sp.bElems),
+        AscendC::LocalTensor<half>(AscendC::TPosition::B1, L.sp.bLoOff[1], L.sp.bElems),
+    };
+    AscendC::LocalTensor<float> bl1(AscendC::TPosition::B1, L.sp.biasOff, L.btSlotElems);
+    AscendC::LocalTensor<half> a2hi(AscendC::TPosition::A2, 0, L.sp.aElems);
+    AscendC::LocalTensor<half> a2lo(AscendC::TPosition::A2, L.sp.a2LoOff, L.sp.aElems);
+    AscendC::LocalTensor<half> b2(AscendC::TPosition::B2, 0, L.sp.bElems);
+    AscendC::LocalTensor<float> bt[4] = {
+        AscendC::LocalTensor<float>(AscendC::TPosition::C2, 0u * L.btSlotBytes, L.btSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::C2, 1u * L.btSlotBytes, L.btSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::C2, 2u * L.btSlotBytes, L.btSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::C2, 3u * L.btSlotBytes, L.btSlotElems),
+    };
+    AscendC::LocalTensor<float> c[4] = {
+        AscendC::LocalTensor<float>(AscendC::TPosition::CO1, 0u * L.cSlotElems * sizeof(float), L.cSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::CO1, 1u * L.cSlotElems * sizeof(float), L.cSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::CO1, 2u * L.cSlotElems * sizeof(float), L.cSlotElems),
+        AscendC::LocalTensor<float>(AscendC::TPosition::CO1, 3u * L.cSlotElems * sizeof(float), L.cSlotElems),
+    };
+
+    bool fixPending = false; // a FIX->M set is armed and not yet waited
+
+    for (uint32_t grp = 0; grp < pairs; grp += L.slots) {
+        const uint32_t grpSize = (L.slots < pairs - grp) ? L.slots : (pairs - grp);
+
+        uint32_t seg = kIdx;
+        uint32_t a = (seg < S) ? (seg * W) : K;
+        Kb kb;
+        if (!NextKb(seg, a, S, sk, K, L.inSize, W, L.kChunk, kb)) {
+            continue; // no owned segment (defensive; host keeps SK <= S)
+        }
+        uint32_t slot = 0;
+        PreloadKbSplit<T>(a1hi, a1lo, b1hi, b1lo, xHiGM, xLoGM, hHiGM, hLoGM, wHiGM, wLoGM, kb, slot, grp, blockBase,
+                          mThis, L);
+
+        while (true) {
+            /* --- stage waits: copies landed, splits done, drains done --- */
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(static_cast<int32_t>(slot));
+
+            /* Bias preload: ALL grpSize slots UPFRONT（与原生同款；fp32 bias
+             * 行走 BT，全精度不参与拆分）。 */
+            if (kb.firstInSeg && kb.seg == 0 && kIdx == 0) {
+                for (uint32_t s = 0; s < grpSize; ++s) {
+                    const uint32_t p = grp + s;
+                    const uint32_t j = p / fwd::GATES;
+                    const uint32_t g = p % fwd::GATES;
+                    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                    const uint32_t nPad = fwd::NPad(n);
+                    ch::CopyInFlat<float>(bl1, wsGM[g * Hpad + j * L.nBlk], nPad);
+                    sh::PipeWait<AscendC::HardEvent::MTE2_MTE1>(static_cast<event_t>(3));
+                    ch::LoadBiasToBT(bt[s], bl1, nPad);
+                    sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
+                }
+            }
+
+            /* A 的 hi/lo 双 SplitA + pair0 的 B_hi SplitB。 */
+            const ch::NzLayout aLay(mThis, kb.actualK, c0H, mThis);
+            ch::SplitA<half>(a2hi, a1hi[slot], aLay, kb.actualK);
+            ch::SplitA<half>(a2lo, a1lo[slot], aLay, kb.actualK);
+            {
+                const uint32_t j = grp / fwd::GATES;
+                const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                ch::SplitB<half>(b2, b1hi[slot], kb.actualK, n, L.kChunk);
+            }
+            sh::WaitMte1ToM();
+            /* a1hi/a1lo/b1hi/b1lo[slot] WAR：后续 CopyIn 重写前必须停在
+             * MTE1->MTE2 栅格之后（与原生同款全停式栅栏）。 */
+            sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>();
+            if (fixPending) {
+                AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
+                fixPending = false;
+            }
+
+            /* --- pair loop: 每 pair 3 条 Mmad（hi*hi + lo*hi + hi*lo） --- */
             for (uint32_t s = 0; s < grpSize; ++s) {
                 const uint32_t p = grp + s;
                 const uint32_t j = p / fwd::GATES;
                 const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
-                const uint32_t nPad = fwd::NPad(n);
-                const uint64_t off = fwd::KsPartialOff(mIdx, round, p, seg, roundsPerStrip, S, L.hid, L.nBlk, L.mBlk);
-                ch::DrainToGM(partGM[off], c[s], mThis, nPad);
+                /* hi 相位：c += A_hi.B_hi（段首 pair 用 Bias/Plain 重置种子）。 */
+                if (kb.firstInSeg) {
+                    if (kIdx == 0 && kb.seg == 0) {
+                        ch::MmadBias(c[s], a2hi, b2, bt[s], mThis, n, kb.actualK);
+                    } else {
+                        ch::MmadPlain(c[s], a2hi, b2, mThis, n, kb.actualK);
+                    }
+                } else {
+                    ch::MmadAccum(c[s], a2hi, b2, mThis, n, kb.actualK);
+                }
+                ch::MmadAccum(c[s], a2lo, b2, mThis, n, kb.actualK);
+                sh::PipeWait<AscendC::HardEvent::M_MTE1>(); /* b2 可被 lo SplitB 重写 */
+                /* lo 相位：b2 <- B_lo(p)，c += A_hi.B_lo。 */
+                ch::SplitB<half>(b2, b1lo[slot], kb.actualK, n, L.kChunk);
+                sh::WaitMte1ToM();
+                ch::MmadAccum(c[s], a2hi, b2, mThis, n, kb.actualK);
+                sh::PipeWait<AscendC::HardEvent::M_MTE1>(); /* b2 可被下一 pair 重写 */
+                /* 下一 pair 的 B_hi/B_lo 预取 + B_hi 就位（b1 槽在本 pair 的
+                 * SplitB 读毕 + 全停栅栏之后才可重写）。 */
+                if (s + 1 < grpSize) {
+                    const uint32_t pN = p + 1;
+                    const uint32_t jN = pN / fwd::GATES;
+                    const uint32_t gN = pN % fwd::GATES;
+                    const uint32_t nNext = (L.nBlk < L.hid - jN * L.nBlk) ? L.nBlk : (L.hid - jN * L.nBlk);
+                    const uint32_t wOffN = kb.ak * gw + gN * L.hid + jN * L.nBlk;
+                    sh::PipeWait<AscendC::HardEvent::MTE1_MTE2>(); /* b1hi/b1lo 读毕 */
+                    ch::CopyInNd2Nz<half>(b1hi[slot], wHiGM[wOffN], kb.actualK, nNext, gw, L.kChunk);
+                    ch::CopyInNd2Nz<half>(b1lo[slot], wLoGM[wOffN], kb.actualK, nNext, gw, L.kChunk);
+                    sh::PipeWait<AscendC::HardEvent::MTE2_MTE1>(static_cast<event_t>(2)); /* 预取落地 */
+                    ch::SplitB<half>(b2, b1hi[slot], kb.actualK, nNext, L.kChunk);
+                    sh::WaitMte1ToM(); /* b2 = B_hi(s+1) */
+                }
             }
-            /* ⚠ FIX->M only, not PIPE_ALL: the next segment's first hazard is
-             * the Mmad (M pipe) rewriting c[s] while this segment's DrainToGM
-             * (FIX pipe) still reads it. The A/B-tile WAR hazards across the
-             * boundary are already covered by the in-loop MTE1_MTE2 / M_MTE1
-             * queue markers, which gate every subsequently issued MTE1/MTE2
-             * instruction behind the SplitA/SplitB/Mmad that precedes them. */
-            sh::WaitFixToM();
+
+            /* --- advance the walk; preload the NEXT k-block into the other
+             * L1 slot BEFORE the segment-end fences（与原生同款）。 --- */
+            Kb next = kb;
+            const bool haveNext = NextKb(seg, a, S, sk, K, L.inSize, W, L.kChunk, next);
+            if (haveNext) {
+                PreloadKbSplit<T>(a1hi, a1lo, b1hi, b1lo, xHiGM, xLoGM, hHiGM, hLoGM, wHiGM, wLoGM, next, slot ^ 1u,
+                                  grp, blockBase, mThis, L);
+            }
+
+            /* --- drain the group's segment-`seg` partials to GM（与原生逐字相同） --- */
+            if (kb.lastInSeg) {
+                sh::WaitMToFix();
+                for (uint32_t s = 0; s < grpSize; ++s) {
+                    const uint32_t p = grp + s;
+                    const uint32_t j = p / fwd::GATES;
+                    const uint32_t n = (L.nBlk < L.hid - j * L.nBlk) ? L.nBlk : (L.hid - j * L.nBlk);
+                    const uint32_t nPad = fwd::NPad(n);
+                    const uint64_t off = fwd::KsPartialOff(mIdx, round, p, kb.seg, roundsPerStrip, S, L.hid, L.nBlk,
+                                                           L.mBlk);
+                    ch::DrainToGM(partGM[off], c[s], mThis, nPad);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
+                fixPending = true;
+            }
+
+            if (!haveNext) {
+                break;
+            }
+            kb = next;
+            slot ^= 1u;
         }
+    }
+
+    /* Ledger discipline：与原生相同，不留 armed 的 FIX->M。 */
+    if (fixPending) {
+        AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(EVENT_ID0);
     }
 }
 

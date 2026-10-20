@@ -117,39 +117,38 @@ __aicore__ inline void CubeWaitPrepass()
      * CopyInNd2Nz inside CubeProjectKS). On PIPE_M it stalled the M pipe and
      * left the MTE2 reads ungated -- the AIC could read the fp32 bias
      * workspace before the AIV pre-pass wrote it. Vendor pattern: wait on the
-     * consuming pipe (same rule as every other cross-core wait here). */
+     * consuming pipe (same rule as every other cross-core wait here).
+     * 后续 bias 读取均为 MTE2 指令且在本 wait 之后发射——MTE2 队列保序
+     * 已覆盖，不再需要全量 barrier（flash_attn 的 cube 侧 flag 后零
+     * PipeBarrier 同款）。 */
     AscendC::CrossCoreWaitFlag<0x4, PIPE_MTE2>(V2C_PREPASS);
     AscendC::CrossCoreWaitFlag<0x4, PIPE_MTE2>(V2C_PREPASS + INTRA_NUM);
-    AscendC::PipeBarrier<PIPE_ALL>();
 }
 
 /* ---------------------------------------------------------------------------------------------
- * K-SPLIT PHASE HANDOFF -- the K-split two-phase structure:
- * the AICs write their partials straight to GM (L0C->GM fixpipe), then every
- * AIV waits for its OWN AIC and only then joins the grid-wide
- * AscendC::SyncAll(). The ledger is one set + one wait per flag slot per
- * launch -- no ring, no reuse.
+ * K-SPLIT ROUND HANDOFF -- flash_attn 式 per-slot flag 流水（mode-4 计数器语义）：
+ * AIC 每个 round 的 partial drain 完成即 set（不等全部 round），AIV round-major
+ * 消费——AIC 的 round r+1 drain 与 AIV 的 round r epilogue 重叠（原先两阶段
+ * 全串行，AIC 在整个 phase-B 空闲）。
  *
- * ⚠ WHY THE AIV WAITS ON PIPE_MTE3: SyncAll() on 3510 is an AIV-only ffts
- * barrier whose ARRIVE instruction rides the MTE3 queue (dav_3510
- * kernel_operator_sync_impl.h: ffts_cross_core_sync(PIPE_MTE3, ...)). Enqueuing
- * this wait on the SAME queue makes the arrive queue-ordered behind the
- * own-AIC flag, so the barrier cannot pass while any AIC is still draining
- * (ops-nn kernel_matmul_streamk.h: CrossCoreWaitFlag<MODE_4, PIPE_MTE3> then
- * SyncAll -- the exact vendor form). After SyncAll() returns, EVERY cluster's
- * partials are GM-visible to every AIV.
+ * ⚠ 计数平衡：AIC set 到 roundsMax 次（空转 round 也 set，tail strip 轮数少），
+ * AIV wait 到 roundsMax 次——mode-4 flag 是计数器，多轮 set/wait 流天然支持
+ * （见上方 counter 语义登记），但每边次数必须相等，否则尾轮死等。
  * ------------------------------------------------------------------------------------------- */
-constexpr uint16_t KS_DONE = 8; // distinct from V2C_PREPASS; 16 logical ids total
+constexpr uint16_t KS_ROUND = 8; // distinct from V2C_PREPASS; 16 logical ids total
 
-/* AIC: my LAST partial drain is on the FIX queue -- this set rides PIPE_FIX,
- * so it is delivered only after every GM write of the phase is complete. */
-__aicore__ inline void CubeSignalKsDone()
+/* AIC: 本 round 的 LAST partial drain 在 FIX 队列——set 挂 PIPE_FIX，
+ * 由队列保序在 drain 之后触发。每 round 尾部调用一次。 */
+__aicore__ inline void CubeSignalRoundDone()
 {
-    AscendC::CrossCoreSetFlag<0x4, PIPE_FIX>(KS_DONE);
-    AscendC::CrossCoreSetFlag<0x4, PIPE_FIX>(KS_DONE + INTRA_NUM);
+    AscendC::CrossCoreSetFlag<0x4, PIPE_FIX>(KS_ROUND);
+    AscendC::CrossCoreSetFlag<0x4, PIPE_FIX>(KS_ROUND + INTRA_NUM);
 }
-/* AIV: my AIC's partials are in GM. Call BEFORE AscendC::SyncAll(). */
-__aicore__ inline void VecWaitKsDone() { AscendC::CrossCoreWaitFlag<0x4, PIPE_MTE3>(KS_DONE); }
+/* AIV: 本 block AIC 的 round r partial 已 GM 可见。round-major 循环内、
+ * SyncAll 之前调用。
+ * ⚠ PIPE_MTE3：与 SyncAll 的 ffts arrive 同队列——arrive 排在本 wait
+ * 之后，屏障不会先于 own-AIC flag 通过（VecWaitKsDone 原设计沿用）。 */
+__aicore__ inline void VecWaitRoundDone() { AscendC::CrossCoreWaitFlag<0x4, PIPE_MTE3>(KS_ROUND); }
 
 } // namespace sh
 

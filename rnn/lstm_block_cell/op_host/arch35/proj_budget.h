@@ -64,67 +64,124 @@ constexpr uint32_t GATES = 4;
 
 namespace detail {
 
-/* The nBlk descent 256 -> 16 shared by the single-round scan and the
- * multi-round fallback: the first (nBlk, kChunk, slots) at this mBlk that
- * fits L0C / BT / UB / L0A / L0B / L1, or false. `why` keeps naming the first
- * buffer that ran out, for the refusal message. */
+/* UB bytes of the AIV working set at (mBlk, nBlk) -- the ONLY mBlk-dependent
+ * budget that is monotone in mBlk at fixed nBlk (8 fp32 gate/scratch planes of
+ * [CeilDiv(mBlk,2), nBlk] + mask + peephole slices + cast scratch). Extracted
+ * from fwd::Layout so the binary search below reads the real layout. */
 template <typename TOp>
-inline bool ScanNTile(uint32_t B, uint32_t I, uint32_t H, uint32_t mBlk, uint32_t c0T, uint32_t& nBlkOut,
-                      uint32_t& kChunkOut, uint32_t& slotsOut, const char*& why)
+inline uint32_t UbBytes(uint32_t B, uint32_t I, uint32_t H, uint32_t mBlk, uint32_t nBlk)
 {
-    for (uint32_t nBlk = fwd::NBLK_MAX; nBlk >= fwd::NBLK_MIN; nBlk -= fwd::NGRAN) {
-        const fwd::Layout<TOp> L(B, I, H, mBlk, nBlk, c0T, 1); // probe (kChunk fixed below)
+    const fwd::Layout<TOp> L(B, I, H, mBlk, nBlk, ch::C0_BYTES / sizeof(TOp), 1);
+    return L.ubBytes;
+}
 
-        // ---- L0C: accumulator slots ----
-        uint32_t slots = 0;
-        if (GATES * L.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
-            slots = GATES;
-        } else if (2 * L.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
-            slots = 2;
-        } else if (L.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
-            slots = 1;
-        } else {
-            why = "L0C: one [mBlk, nBlk] accumulator does not fit";
-            continue;
-        }
-        // ---- BT: one fp32 bias table per slot ----
-        if (slots * L.btSlotBytes > ch::CAP_BT) {
-            why = "BT: bias tables do not fit";
-            continue;
-        }
-        // ---- UB: 7 ring planes + 8 work planes + mask + slices + cast scratch ----
-        if (L.ubBytes > ch::CAP_UB) {
-            why = "UB: ring + activation planes do not fit";
-            continue;
-        }
-        // ---- kChunk: the largest C0-multiple whose A and B tiles fit
-        //      L0A / L0B, solved in closed form (a descending scan would be
-        //      O((I+H)/c0T) per candidate -- hundreds of millions of host
-        //      iterations at the big shapes):
-        //        aElems(k) = CeilDiv(k, c0T) * CeilAlign(mBlk,16) * c0T <= L0A/szT
-        //        bElems(k) = CeilAlign(k,16)  * CeilAlign(nBlk,16)     <= L0B/szT
-        const uint32_t mA = ch::CeilAlign(mBlk, ch::CUBE_BLOCK);
-        const uint32_t nA = ch::CeilAlign(nBlk, ch::CUBE_BLOCK);
-        const uint32_t kA = (ch::CAP_L0A / (sizeof(TOp) * mA * c0T)) * c0T;
-        const uint32_t kB = (ch::CAP_L0B / (sizeof(TOp) * nA) / ch::CUBE_BLOCK) * ch::CUBE_BLOCK;
-        uint32_t kChunk = (kA < kB) ? kA : kB;
-        kChunk = ch::CeilAlign(I + H, c0T) < kChunk ? ch::CeilAlign(I + H, c0T) : kChunk;
-        if (kChunk < c0T) {
-            why = "L0A/L0B: no C0-multiple K block fits";
-            continue;
-        }
-        // ---- L1: A + B + bias staging at the chosen kChunk ----
-        const fwd::Layout<TOp> Lf(B, I, H, mBlk, nBlk, kChunk, slots);
-        if (Lf.l1Bytes > ch::CAP_L1) {
-            why = "L1: A + B + bias staging does not fit";
-            continue;
-        }
-        nBlkOut = nBlk;
-        kChunkOut = kChunk;
-        slotsOut = slots;
-        return true;
+/* Feasibility + tile completion at ONE exact (mBlk, nBlk): slots / BT / UB /
+ * kChunk (L0A + L0B + the double-staged L1) / L1. Returns false with `why`
+ * set when the tile does not fit. kChunk now also solves the DOUBLE-STAGED
+ * L1 budget (2 x A slot + 2 x B slot + bias), because the kernel keeps A/B
+ * staging double-buffered so k-block kb+1's GM->L1 copies overlap kb's Mmad
+ * chain.
+ *
+ * splitA16=true（fp32 hi/lo 拆分 GEMM）时，L0A 需同时驻留 a2hi+a2lo 两张
+ * half tile、L1 需 4A+4B half 槽：字节量与原生 fp32 相等，但 K 向对齐量子
+ * 从 8（fp32 C0）变 16（fp16 C0），kA 与 L1 检查按 fwd::A16Elems/B16Elems
+ * 收紧（split 布局见 fwd_layout.h::Layout::sp）。 */
+template <typename TOp>
+inline bool FitTile(uint32_t B, uint32_t I, uint32_t H, uint32_t mBlk, uint32_t nBlk, uint32_t& kChunkOut,
+                    uint32_t& slotsOut, const char*& why, bool splitA16 = false)
+{
+    const uint32_t c0T = ch::C0_BYTES / sizeof(TOp);
+    const fwd::Layout<TOp> Lp(B, I, H, mBlk, nBlk, c0T, 1);
+
+    // ---- L0C: accumulator slots ----
+    uint32_t slots = 0;
+    if (GATES * Lp.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
+        slots = GATES;
+    } else if (2 * Lp.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
+        slots = 2;
+    } else if (Lp.cSlotElems * sizeof(float) <= ch::CAP_L0C) {
+        slots = 1;
+    } else {
+        why = "L0C: one [mBlk, nBlk] accumulator does not fit";
+        return false;
     }
-    return false;
+    // ---- BT: one fp32 bias table per slot ----
+    if (slots * Lp.btSlotBytes > ch::CAP_BT) {
+        why = "BT: bias tables do not fit";
+        return false;
+    }
+    // ---- UB: 8 work planes + mask + slices + cast scratch ----
+    if (Lp.ubBytes > ch::CAP_UB) {
+        why = "UB: ring + activation planes do not fit";
+        return false;
+    }
+    // ---- kChunk: the largest C0-multiple whose A and B tiles fit
+    //      L0A / L0B and the DOUBLE-STAGED L1. L0A/L0B closed form as before:
+    //        aElems(k) = CeilDiv(k, c0T) * CeilAlign(mBlk,16) * c0T <= L0A/szT
+    //        bElems(k) = CeilAlign(k,16)  * CeilAlign(nBlk,16)     <= L0B/szT
+    //      L1 (2 x A + 2 x B + bias) is piecewise linear in k; start from the
+    //      L0A/L0B cap and walk DOWN in c0T steps until the staged layout fits
+    //      (at most a few steps: the estimate below already lands within one
+    //      alignment quantum).
+    //      splitA16: L0A 承载 a2hi+a2lo 两张 half tile（fwd::A16Elems 公式），
+    //      kA 改按 half 对（CeilDiv(k,16) 量子）求解——比原生 8 量子最多少
+    //      一个 fractal。L0B 反而更松（单张 half b2），维持原生界。
+    const uint32_t mA = ch::CeilAlign(mBlk, ch::CUBE_BLOCK);
+    const uint32_t nA = ch::CeilAlign(nBlk, ch::CUBE_BLOCK);
+    uint32_t kA = 0;
+    if (splitA16) {
+        // 2 张 half A tile 字节 = 64 * CeilDiv(k,16) * mA <= CAP_L0A
+        //  =>  CeilDiv(k,16) <= CAP_L0A/(64*mA)；floor 必须落在除法内层
+        // （外层再乘 16 会放大对齐损失，靠 l1Fits 收缩兜底但低效且绕）。
+        kA = fwd::C0H * (ch::CAP_L0A / (4ull * fwd::C0H * mA));
+    } else {
+        kA = (ch::CAP_L0A / (sizeof(TOp) * mA * c0T)) * c0T;
+    }
+    const uint32_t kB = (ch::CAP_L0B / (sizeof(TOp) * nA) / ch::CUBE_BLOCK) * ch::CUBE_BLOCK;
+    uint32_t kChunk = (kA < kB) ? kA : kB;
+    kChunk = ch::CeilAlign(I + H, c0T) < kChunk ? ch::CeilAlign(I + H, c0T) : kChunk;
+    if (kChunk < c0T) {
+        why = "L0A/L0B: no C0-multiple K block fits";
+        return false;
+    }
+    // L1 estimate: 2*szT*(k*mA + CeilAlign(k,16)*nA) + bias <= CAP_L1. Solve
+    // the linear part, floor to c0T, then let the fixup loop absorb the
+    // CeilAlign rounding on both aElems and bElems.
+    // splitA16: L1 = 4 half A 槽 + 4 half B 槽 + bias —— 每 k 元素字节量与
+    // 原生相同（4A_half == 2A_f32、4B_half == 2B_f32），仅量子不同，估计式
+    // 沿用（fixup 循环按真实 split 布局校正）。
+    const uint64_t l1Head = static_cast<uint64_t>(Lp.btSlotElems) * sizeof(float);
+    if (ch::CAP_L1 > l1Head) {
+        const uint64_t room = ch::CAP_L1 - l1Head;
+        uint64_t kEst = room / (2ull * sizeof(TOp) * (mA + nA));
+        kEst = kEst / c0T * c0T;
+        if (kEst < kChunk) {
+            kChunk = static_cast<uint32_t>(kEst);
+        }
+    }
+    // Fixup loop: shrink until the REAL staged layout fits, then grow while it
+    // still fits (the estimate ignores CeilAlign steps on both aElems/bElems).
+    auto l1Fits = [&](uint32_t k) {
+        const fwd::Layout<TOp> Lf(B, I, H, mBlk, nBlk, k, slots);
+        if (splitA16) {
+            return Lf.sp.l1Bytes <= ch::CAP_L1 && Lf.sp.a2LoOff + Lf.sp.aElems * 2ull <= ch::CAP_L0A;
+        }
+        return Lf.l1Bytes <= ch::CAP_L1;
+    };
+    while (kChunk >= c0T && !l1Fits(kChunk)) {
+        kChunk -= c0T;
+    }
+    if (kChunk < c0T) {
+        why = "L1: double-staged A+B tiles do not fit";
+        return false;
+    }
+    while (kChunk + c0T <= ch::CeilAlign(I + H, c0T) && kChunk + c0T <= kA && kChunk + c0T <= kB &&
+           l1Fits(kChunk + c0T)) {
+        kChunk += c0T;
+    }
+    kChunkOut = kChunk;
+    slotsOut = slots;
+    return true;
 }
 
 } // namespace detail
@@ -142,8 +199,30 @@ struct TileChoice {
     const char* why;
 };
 
+/* TRAFFIC-MODEL TILE SEARCH (replaces the old largest-mBlk-first policy).
+ *
+ * The two GM traffic terms that scale with the tile are
+ *   A-tile re-reads: the A tile [mBlk, kChunk] is re-read once per N-tile
+ *     (the structural cost of N-tiling -- L0C cannot hold accumulators for
+ *     every pair at once), so  A_traffic = CeilDiv(H, nBlk) * K * B * szT.
+ *   w re-streams: w is row-invariant but only its kChunk-strips live in L1,
+ *     so every round of every strip re-reads it:
+ *     W_traffic = strips * CeilDiv(CeilDiv(B, strips), mBlk) * K * 4H * szT
+ *     (strips is clipped to maxBlocks/ksCores by the KS plan; both strips
+ *     and rounds fall out of blockDim = CeilDiv(B, mBlk)).
+ * The search enumerates nBlk (from min(NBLK_MAX, NPad(H)) down -- a tile
+ * wider than H buys nothing but a crushed kChunk) and, per nBlk, the LARGEST
+ * feasible mBlk plus its 16-snapped variant, then keeps the (mBlk, nBlk)
+ * with the smallest modeled traffic. Everything else (partials, outputs,
+ * streaming inputs) is tile-invariant.
+ *
+ * WHY NOT largest-mBlk-first any more: for huge batches the old policy
+ * ballooned the burst to ~1k rows, collapsed nBlk to NBLK_MIN, and paid
+ * CeilDiv(H,16)-fold A amplification (e.g. B=75983/H=5532 fp16: nTiles 346,
+ * ~293 GB of A re-reads); the balanced tile the model picks instead is
+ * ~2x-6x less traffic on exactly the shapes that were slowest. */
 template <typename TOp>
-inline TileChoice PickTile(uint32_t B, uint32_t I, uint32_t H, uint32_t maxBlocks)
+inline TileChoice PickTile(uint32_t B, uint32_t I, uint32_t H, uint32_t maxBlocks, bool splitA16 = false)
 {
     TileChoice tc;
     tc.ok = false;
@@ -156,84 +235,204 @@ inline TileChoice PickTile(uint32_t B, uint32_t I, uint32_t H, uint32_t maxBlock
     }
 
     const uint32_t c0T = ch::C0_BYTES / sizeof(TOp);
-    uint32_t nBlk = 0, kChunk = 0, slots = 0;
+    const uint32_t K = I + H;
+    const uint32_t nStart = (fwd::NBLK_MAX < ch::CeilAlign(H, fwd::NGRAN)) ? fwd::NBLK_MAX :
+                                                                             ch::CeilAlign(H, fwd::NGRAN);
 
-    for (uint32_t mBlk = ch::CeilDiv(B, maxBlocks); mBlk <= B; ++mBlk) {
-        const uint32_t blockDim = ch::CeilDiv(B, mBlk);
-        if (blockDim > maxBlocks) {
-            continue; // cannot happen for the first candidate, kept for safety
-        }
-        // Monotone precheck: UB grows with mBlk at every nBlk; if even NBLK_MIN
-        // overflows, no larger mBlk can fit either -- stop the whole scan.
-        {
-            const fwd::Layout<TOp> Lp(B, I, H, mBlk, fwd::NBLK_MIN, c0T, 1);
-            if (Lp.ubBytes > ch::CAP_UB) {
-                if (tc.why == nullptr || mBlk > ch::CeilDiv(B, maxBlocks)) {
-                    tc.why = "UB: ring + activation planes do not fit (mBlk too large)";
-                }
-                break;
-            }
-        }
-        if (detail::ScanNTile<TOp>(B, I, H, mBlk, c0T, nBlk, kChunk, slots, tc.why)) {
-            tc.ok = true;
-            tc.mBlk = mBlk;
-            tc.nBlk = nBlk;
-            tc.kChunk = kChunk;
-            tc.slots = slots;
-            tc.blockDim = blockDim;
-            tc.rowsPerClusterTotal = mBlk; // single round: the span IS the burst
-            tc.why = nullptr;
-            return tc;
-        }
-    }
+    uint64_t bestScore = ~0ull;
+    uint32_t bestM = 0, bestN = 0, bestK = 0, bestSlots = 0;
 
-    /* ── Multi-round fallback: the single-round scan covered every mBlk that
-     * keeps CeilDiv(B, mBlk) <= maxBlocks and found nothing (with the UB
-     * precheck monotone in mBlk, that means even the smallest such split
-     * overflows the per-AIV planes). Shrink the per-round burst below that
-     * range and let each cluster run multiple rounds. Only mBlk BELOW
-     * CeilDiv(B, maxBlocks) is new territory: at or above it the scan just
-     * proved no tile fits. */
-    const uint32_t start = ch::CeilDiv(B, maxBlocks);
-    if (start >= 2) {
-        /* Burst ceiling: the largest mBlk whose NBLK_MIN plane fits UB. UB is
-         * strictly increasing in mBlk at every fixed nBlk, so binary-search
-         * it (a linear descend from start-1 is O(B) at very large B). The
-         * probe layout's ubBytes depends only on (mBlk, nBlk) -- not on
-         * kChunk/slots -- so it is exact. */
+    for (uint32_t nBlk = nStart; nBlk >= fwd::NBLK_MIN; nBlk -= fwd::NGRAN) {
+        /* Largest mBlk whose UB working set fits (monotone in mBlk at fixed
+         * nBlk -- binary search). mBlk above B is pointless. */
         uint32_t lo = 1;
-        uint32_t hi = start - 1;
+        uint32_t hi = B;
         while (lo < hi) {
-            const uint32_t mid = lo + (hi - lo + 1) / 2;
-            const fwd::Layout<TOp> Lp(B, I, H, mid, fwd::NBLK_MIN, c0T, 1);
-            if (Lp.ubBytes <= ch::CAP_UB) {
+            const uint32_t mid = (lo + hi + 1) / 2;
+            if (detail::UbBytes<TOp>(B, I, H, mid, nBlk) <= ch::CAP_UB) {
                 lo = mid;
             } else {
                 hi = mid - 1;
             }
         }
-        /* Largest burst first: fewest rounds per cluster. The ceiling
-         * candidate fits at NBLK_MIN by construction, so the first probe
-         * returns immediately in practice; the descend below it is defense
-         * (and cannot run off the end: mBlk=16 fits every budget). */
-        for (uint32_t mBlk = lo; mBlk >= 1; --mBlk) {
-            if (detail::ScanNTile<TOp>(B, I, H, mBlk, c0T, nBlk, kChunk, slots, tc.why)) {
-                const uint32_t want = ch::CeilDiv(B, mBlk);
-                tc.ok = true;
-                tc.mBlk = mBlk; // per-round burst
-                tc.nBlk = nBlk;
-                tc.kChunk = kChunk;
-                tc.slots = slots;
-                tc.blockDim = (maxBlocks < want) ? maxBlocks : want; // = maxBlocks
-                tc.rowsPerClusterTotal = ch::CeilDiv(B, tc.blockDim);
-                tc.why = nullptr;
-                return tc;
+        /* Candidate bursts. Feasibility is NOT monotone in mBlk (the L0C
+         * slot count drops in steps: a burst above CAP_L0C/(slots*nA) falls
+         * to fewer slots, and past CAP_L0C/nA refuses), so in addition to
+         * the UB maximum the per-slots L0C bounds are probed; each raw
+         * candidate is also offered 16-snapped (zero wasted Mmad fractal
+         * rows at the cost of a few more rounds). The score below then sees
+         * every reachable (mBlk, slots) operating point and picks the
+         * traffic-optimal one (more slots amortize the A tile over more
+         * gate pairs; fewer slots allow a taller burst and fewer w
+         * re-streaming rounds). */
+        uint32_t cands[10];
+        uint32_t nCands = 0;
+        auto addCand = [&](uint32_t m) {
+            if (m == 0 || m > B) {
+                return;
+            }
+            for (uint32_t j = 0; j < nCands; ++j) {
+                if (cands[j] == m) {
+                    return;
+                }
+            }
+            if (nCands < 10) {
+                cands[nCands++] = m;
+            }
+        };
+        addCand(lo);
+        const uint32_t nA = ch::CeilAlign(nBlk, ch::CUBE_BLOCK);
+        for (uint32_t s = 1; s <= GATES; s *= 2) {
+            const uint32_t bound = (ch::CAP_L0C / sizeof(float) / (s * nA)) / ch::CUBE_BLOCK * ch::CUBE_BLOCK;
+            addCand((bound < lo) ? bound : lo);
+        }
+        const uint32_t nRaw = nCands;
+        for (uint32_t j = 0; j < nRaw; ++j) {
+            addCand(cands[j] / ch::CUBE_BLOCK * ch::CUBE_BLOCK);
+        }
+        for (uint32_t ci = 0; ci < nCands; ++ci) {
+            const uint32_t mBlk = cands[ci];
+            uint32_t kChunk = 0, slots = 0;
+            if (!detail::FitTile<TOp>(B, I, H, mBlk, nBlk, kChunk, slots, tc.why, splitA16)) {
+                continue;
+            }
+            /* Traffic score (bytes, GM-pessimistic -- L2 reuse of the A tile
+             * is a bonus, not a plan).
+             *   A-tile: re-read once per GROUP (a group is `slots` pairs of
+             *     one nTile), so the amplifier is CeilDiv(pairs, slots).
+             *   w: re-streamed once per ROUND of every strip. The round count
+             *     must be modelled the way the KS plan derives it
+             *     (strips x CeilDiv(span, mBlk), NOT CeilDiv(B, mBlk)): the
+             *     span rounding at ragged tails can double the true round
+             *     count, and mis-modelling it trades cheap w re-reads for a
+             *     tall burst whose L0A-bound kChunk collapses (more k-blocks,
+             *     more scalar stalls -- measured 1.6x regression at B=3782).
+             *   fp16 partial planes: the K-split segment count is itself a
+             *     function of the burst (S16 = clamp(S16_TARGET/stripsShape,
+             *     S16_MIN, S16_TARGET), see fwd_layout.h) and the fp32
+             *     partial round-trip (2 * S * B * 4H * 4B) is NOT burst-
+             *     invariant -- scoring it keeps the fp16 burst choice from
+             *     trading cheap w re-reads for expensive partial planes. */
+            const uint32_t nTiles = ch::CeilDiv(H, nBlk);
+            const uint32_t groups = ch::CeilDiv(nTiles * GATES, slots);
+            const uint64_t aTraffic = static_cast<uint64_t>(groups) * K * B * sizeof(TOp);
+            const uint32_t blockDim = ch::CeilDiv(B, mBlk);
+            const uint32_t stripsShape = blockDim; // = CeilDiv(B, mBlk) before the maxBlocks clamp
+            uint32_t skEst = maxBlocks / (stripsShape > 0 ? stripsShape : 1);
+            if (skEst < 2) {
+                skEst = 2;
+            }
+            if (skEst > maxBlocks) {
+                skEst = maxBlocks;
+            }
+            uint32_t stripsEst = (stripsShape < maxBlocks / skEst) ? stripsShape : (maxBlocks / skEst);
+            if (stripsEst == 0) {
+                stripsEst = 1;
+            }
+            const uint32_t spanEst = ch::CeilDiv(B, stripsEst);
+            const uint32_t roundsEst = ch::CeilDiv(spanEst, mBlk);
+            const uint64_t wTraffic = static_cast<uint64_t>(stripsEst) * roundsEst * K * GATES * H * sizeof(TOp);
+            uint64_t score = aTraffic + wTraffic;
+            if constexpr (sizeof(TOp) == 2) {
+                uint32_t s16 = fwd::S16_TARGET / (stripsShape > 0 ? stripsShape : 1);
+                if (s16 < fwd::S16_MIN) {
+                    s16 = fwd::S16_MIN;
+                }
+                if (s16 > fwd::S16_TARGET) {
+                    s16 = fwd::S16_TARGET;
+                }
+                const uint32_t w16 = (fwd::W16_MIN * s16 > K) ? fwd::W16_MIN : ch::CeilDiv(K, s16);
+                const uint32_t s16c = ch::CeilDiv(K, w16);
+                score += 2ull * s16c * B * GATES * H * sizeof(float);
+            }
+            /* k-block iteration stall term: every k-block costs a fixed
+             * scalar-thread stall budget (prefetch waits / M_MTE1 fences;
+             * measured ~2.7us per k-block at B=3782 -> ~107KB of per-AIC
+             * bandwidth equivalent at ~39GB/s/core). Without this term the
+             * model happily trades a tall burst (whose L0A-bound kChunk
+             * collapses, multiplying k-blocks) for fewer w rounds. */
+            {
+                const uint32_t ownedKEst = ch::CeilDiv(K, skEst);
+                const uint32_t kbPerSeg = ch::CeilDiv(ownedKEst > 0 ? ownedKEst : 1, kChunk);
+                const uint64_t kbPerAic = static_cast<uint64_t>(roundsEst) * groups * kbPerSeg;
+                score += kbPerAic * 107ull * 1024ull * (stripsEst * skEst);
+            }
+            /* Strictly-better keeps the larger nBlk (fewer groups) on ties;
+             * equal-score prefers fewer MTE2 ops, then the taller burst. */
+            const bool better = (score < bestScore) || (score == bestScore && kChunk > bestK) ||
+                                (score == bestScore && kChunk == bestK && mBlk > bestM);
+            if (better) {
+                bestScore = score;
+                bestM = mBlk;
+                bestN = nBlk;
+                bestK = kChunk;
+                bestSlots = slots;
+            }
+        }
+        if (nBlk == fwd::NBLK_MIN) {
+            break; // uint32 guard for nBlk -= NGRAN at the floor
+        }
+    }
+
+    if (bestM == 0) {
+        if (tc.why == nullptr) {
+            tc.why = "no (mBlk, nBlk, kChunk) satisfies the on-chip budgets";
+        }
+        return tc;
+    }
+    /* ── Overhead-dominated (tiny-traffic) override: when the modeled GM
+     * traffic is negligible, the launch/epilogue/store fixed cost dominates
+     * and PARALLELISM is the win -- pick the burst that spreads B over every
+     * block (the widest strip fan-out), matching the legacy small-shape
+     * behaviour. Threshold 16MB: above it the traffic model rules. */
+    constexpr uint64_t TINY_TRAFFIC = 16ull * 1024 * 1024;
+    if (bestScore < TINY_TRAFFIC) {
+        const uint32_t mTiny = ch::CeilDiv(B, maxBlocks);
+        const uint32_t mSnap = (mTiny >= 32) ? (mTiny / ch::CUBE_BLOCK * ch::CUBE_BLOCK) : mTiny;
+        const uint32_t tryM[2] = {mSnap, mTiny};
+        for (uint32_t ti = 0; ti < 2; ++ti) {
+            const uint32_t mBlk = tryM[ti];
+            if (mBlk == 0 || mBlk > B) {
+                continue;
+            }
+            for (uint32_t nBlk = nStart; nBlk >= fwd::NBLK_MIN; nBlk -= fwd::NGRAN) {
+                uint32_t kChunk = 0, slots = 0;
+                if (detail::FitTile<TOp>(B, I, H, mBlk, nBlk, kChunk, slots, tc.why, splitA16)) {
+                    tc.ok = true;
+                    tc.mBlk = mBlk;
+                    tc.nBlk = nBlk;
+                    tc.kChunk = kChunk;
+                    tc.slots = slots;
+                    tc.blockDim = ch::CeilDiv(B, mBlk);
+                    if (tc.blockDim > maxBlocks) {
+                        tc.blockDim = maxBlocks;
+                    }
+                    tc.rowsPerClusterTotal = ch::CeilDiv(B, tc.blockDim);
+                    tc.why = nullptr;
+                    return tc;
+                }
+                if (nBlk == fwd::NBLK_MIN) {
+                    break;
+                }
             }
         }
     }
-    if (tc.why == nullptr) {
-        tc.why = "no (mBlk, nBlk, kChunk) satisfies the on-chip budgets";
+    tc.ok = true;
+    tc.mBlk = bestM;
+    tc.nBlk = bestN;
+    tc.kChunk = bestK;
+    tc.slots = bestSlots;
+    /* blockDim keeps the legacy contract (<= maxBlocks): the KS plan only
+     * uses it as the strip-count CEILING (strips = min(blockDim,
+     * maxBlocks/ksCores)), and clamping here preserves both the refusal-free
+     * multi-round mode (blockDim == maxBlocks, span > burst) and the UT
+     * grid invariants. rowsPerClusterTotal follows the clamped grid. */
+    tc.blockDim = ch::CeilDiv(B, bestM);
+    if (tc.blockDim > maxBlocks) {
+        tc.blockDim = maxBlocks;
     }
+    tc.rowsPerClusterTotal = ch::CeilDiv(B, tc.blockDim);
+    tc.why = nullptr;
     return tc;
 }
 

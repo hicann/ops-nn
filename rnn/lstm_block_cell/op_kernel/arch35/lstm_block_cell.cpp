@@ -40,8 +40,8 @@
 #include "kernel_operator.h"
 #include "lstm_block_cell_tiling.h"
 #include "lstm_block_cell_struct.h" // TPL declarations (ASCENDC_TPL_ARGS_DECL / SEL)
-#include "proj_impl.h"              // K-split cube projection (CubeProjectKS)
-#include "lstm_vec_vf.h"            // AIV compute (VectorCellKS, BiasPrepass)
+#include "proj_impl.h"              // K-split cube projection (CubeProjectKS / CubeProjectKSSplit)
+#include "lstm_vec_vf.h"            // AIV compute (VectorCellUnit, BiasPrepass, SplitPrepass)
 
 template <uint32_t DTYPE>
 __global__ __aicore__ void lstm_block_cell(GM_ADDR x, GM_ADDR cs_prev, GM_ADDR h_prev, GM_ADDR w, GM_ADDR wci,
@@ -141,48 +141,196 @@ __global__ __aicore__ void lstm_block_cell(GM_ADDR x, GM_ADDR cs_prev, GM_ADDR h
     oCo.SetGlobalBuffer((__gm__ T*)out_co);
     oH.SetGlobalBuffer((__gm__ T*)out_h);
 
-    /* ── AIV pre-pass: fp32 padded bias workspace (ALL dtypes -- fp32 rides it
-     * too so the AIC has exactly one, always-aligned bias source) ── */
-    if ASCEND_IS_AIV {
-        if (AscendC::GetSubBlockIdx() == 0) {
-            lstm_vf::BiasPrepass<T>(bGM, wsGM, L);
-            /* Make the AIC's MTE2 reads see this AIV's writes. */
-            AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::ENTIRE_DATA_CACHE>(wsGM);
-            AscendC::PipeBarrier<PIPE_ALL>();
+    /* fp32 hi/lo 拆分平面（splitGemm=1）：[x16hi | x16lo | h16hi | h16lo |
+     * w16hi | w16lo]，自 offA16（half 元素）起；各子区大小向上对齐 16 half
+     * 元素（与 host TilingFunc 同式——pad 区 AIC 永不读）。 */
+    const bool split = (tdp->splitGemm != 0) && (sizeof(T) == 4);
+    AscendC::GlobalTensor<half> x16hiGM, x16loGM, h16hiGM, h16loGM, w16hiGM, w16loGM;
+    if constexpr (sizeof(T) == 4) {
+        if (split) {
+            /* p16 = 元素数向上对齐 16（与 host 同式；不用 lambda——bisheng 的
+             * __aicore__ TU 里 lambda 不继承 __aicore__）。 */
+            const uint64_t xe = tdp->batch * (uint64_t)tdp->inputSize;
+            const uint64_t he = tdp->batch * (uint64_t)tdp->hiddenSize;
+            const uint64_t we = (uint64_t)(tdp->inputSize + tdp->hiddenSize) * fwd::GATES * tdp->hiddenSize;
+            const uint64_t xh = (xe + 15ull) / 16ull * 16ull;
+            const uint64_t hh = (he + 15ull) / 16ull * 16ull;
+            const uint64_t wh = (we + 15ull) / 16ull * 16ull;
+            __gm__ half* a16 = (__gm__ half*)workspace + tdp->offA16;
+            x16hiGM.SetGlobalBuffer(a16);
+            x16loGM.SetGlobalBuffer(a16 + xh);
+            h16hiGM.SetGlobalBuffer(a16 + 2ull * xh);
+            h16loGM.SetGlobalBuffer(a16 + 2ull * xh + hh);
+            w16hiGM.SetGlobalBuffer(a16 + 2ull * xh + 2ull * hh);
+            w16loGM.SetGlobalBuffer(a16 + 2ull * xh + 2ull * hh + wh);
         }
-        sh::VecSignalPrepass();
-        AscendC::PipeBarrier<PIPE_ALL>();
     }
 
-    /* ── K-split: two-phase stream-K structure. Phase A: every AIC computes
-     * its K-segments' partials straight to GM; phase B, behind the own-AIC
-     * done flag + the AIV grid barrier (SyncAll), the AIVs merge the S
-     * partials per (round, pair) and run the production epilogue. The AIC
-     * may exit after its done-flag (the flag rides PIPE_FIX behind every GM
-     * drain); every AIV MUST reach SyncAll -- no early return, even with
-     * zero merge work. */
+    /* ── AIV pre-pass: fp32 padded bias workspace (ALL dtypes -- fp32 rides it
+     * too so the AIC has exactly one, always-aligned bias source) + fp32 hi/lo
+     * 拆分平面（splitGemm=1：本 block 的 A 行 + kIdx 段的 w 行，两 AIV 分摊；
+     * AIC 只读本 block AIV 写的数据，V2C_PREPASS 每-block 旗标足够） ── */
+    if ASCEND_IS_AIV {
+        const uint32_t sub = AscendC::GetSubBlockIdx();
+        if (sub == 0) {
+            lstm_vf::BiasPrepass<T>(bGM, wsGM, L);
+        }
+        if constexpr (sizeof(T) == 4) {
+            if (split) {
+                lstm_vf::SplitPrepass<T>(xGM, h0GM, wGM, x16hiGM, x16loGM, h16hiGM, h16loGM, w16hiGM, w16loGM, mIdx,
+                                         kIdx, sk, S, tdp->ksSegWidth, I + H, spanBase, spanEnd, sub, L);
+            }
+        }
+        /* Make the AIC's MTE2 reads see this AIV's writes. split 模式下两个
+         * AIV 都写了平面，各自清自己的 cache（ENTIRE_DATA_CACHE 全量语义，
+         * 与既有 bias 清理同款）。dcci 为 S 域指令，clean 完成 -> flag set
+         * （MTE3）用 S_MTE3 单点事件对序（CANN kernel_operator_sync_impl
+         * 同款形态），不再全量 barrier。 */
+        if (split || sub == 0) {
+            AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::ENTIRE_DATA_CACHE>(wsGM);
+            AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(static_cast<event_t>(0));
+            AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(static_cast<event_t>(0));
+        }
+        sh::VecSignalPrepass();
+        /* flag set 为 MTE3 队列的非阻塞指令，set 后本核无未序依赖——
+         * 不再需要全量 barrier。 */
+    }
+
+    /* ── K-split ROUND-BATCHED 流水（flash_attn per-slot flag 思想）：
+     * AIC 每个 round 的 partial drain 完成即 set mode-4 flag（计数器语义，
+     * PIPE_FIX 队列保序在 drain 之后）；AIV 逐轮 wait（计数平衡），按批
+     * 聚合 SyncAll——批大小自适应（每批 unit 数 ~ totalAIVs*4），小 H
+     * 多轮 case 的 SyncAll 次数骤减（每轮仅 2 unit 时逐轮 SyncAll 的栅栏
+     * 开销 >> 重叠收益，实测 RND_357 +70% 回归），大 H case 批=1 轮保持
+     * 逐轮流水的重叠收益（ANC_094 -16%）。
+     * ⚠ maxRounds 按各 strip 实际行数取最大（不含 span 对齐空转轮），
+     * AIC/AIV 统一计算；AIC 空转 round（本 strip 轮数少）也必须 set 到
+     * maxRounds 次——计数平衡，否则尾轮死等。 */
+    uint32_t maxRounds = 0;
+    for (uint32_t m = 0; m < tdp->ksStrips; ++m) {
+        const uint32_t sb = m * clusterSpan;
+        const uint32_t se = (sb + clusterSpan < B) ? (sb + clusterSpan) : B;
+        if (sb < se) {
+            const uint32_t rm = ch::CeilDiv(se - sb, burst);
+            maxRounds = (rm > maxRounds) ? rm : maxRounds;
+        }
+    }
     if ASCEND_IS_AIC {
         sh::CubeWaitPrepass();
-        for (uint32_t r = 0; r < rounds; ++r) {
-            const uint32_t base = spanBase + r * burst;
-            const uint32_t mThis = (burst < spanEnd - base) ? burst : (spanEnd - base);
-            proj::CubeProjectKS<T>(xGM, h0GM, wGM, wsGM, partGM, mIdx, kIdx, r, base, mThis, L, sk, S, tdp->ksSegWidth,
-                                   roundsMax);
+        for (uint32_t r = 0; r < maxRounds; ++r) {
+            if (r < rounds) {
+                const uint32_t base = spanBase + r * burst;
+                const uint32_t mThis = (burst < spanEnd - base) ? burst : (spanEnd - base);
+                if constexpr (sizeof(T) == 4) {
+                    if (split) {
+                        proj::CubeProjectKSSplit<T>(x16hiGM, x16loGM, h16hiGM, h16loGM, w16hiGM, w16loGM, wsGM, partGM,
+                                                    mIdx, kIdx, r, base, mThis, L, sk, S, tdp->ksSegWidth, roundsMax);
+                        sh::CubeSignalRoundDone();
+                        continue;
+                    }
+                }
+                proj::CubeProjectKS<T>(xGM, h0GM, wGM, wsGM, partGM, mIdx, kIdx, r, base, mThis, L, sk, S,
+                                       tdp->ksSegWidth, roundsMax);
+            }
+            sh::CubeSignalRoundDone();
         }
-        sh::CubeSignalKsDone();
-        AscendC::PipeBarrier<PIPE_ALL>();
+        /* 出口只需 FIX 队列排空（保证 round flag 已触发、L0C->GM drain 已
+         * 落地）；MTE2/MTE1/M 的装载尾巴无对外影响。 */
+        AscendC::PipeBarrier<PIPE_FIX>();
         return;
     }
-    /* AIV side. */
-    sh::VecWaitKsDone();
-    AscendC::SyncAll();
-    AscendC::PipeBarrier<PIPE_ALL>();
-    for (uint32_t r = 0; r < rounds; ++r) {
-        const uint32_t base = spanBase + r * burst;
-        const uint32_t mThis = (burst < spanEnd - base) ? burst : (spanEnd - base);
-        const ch::RowStripe stripe = ch::DrainStripe(mThis, fwd::SPLIT, AscendC::GetSubBlockIdx());
-        lstm_vf::VectorCellKS<T>(stripe, base, mIdx, kIdx, r, partGM, csPrevGM, wciGM, wcfGM, wcoGM, oI, oCs, oF, oO,
-                                 oCi, oCo, oH, L, sk, S, roundsMax, forgetBias, cellClip, usePeephole);
+    /* AIV side: round-batched phase-B. */
+    {
+        const uint32_t totalAIVs = tdp->blockDim * 2;  // MIX_AIC_1_2: 2 AIVs per block
+        const uint32_t aivId = AscendC::GetBlockIdx(); // unique per AIV in [0, 2*blockDim)
+        const uint32_t nTiles = L.nTiles;
+        const uint32_t unitsPerRound = nTiles * 2; // (nTile, rowHalf) units per (strip, round)
+        /* 批大小：每批 unit 总数 ~ totalAIVs*4（各 strip 本轮 unit 数之和
+         * 至少 2）；单轮即一批时保持逐轮流水。 */
+        uint32_t unitsPerStripRound = 0;
+        for (uint32_t m = 0; m < tdp->ksStrips; ++m) {
+            const uint32_t sb = m * clusterSpan;
+            const uint32_t se = (sb + clusterSpan < B) ? (sb + clusterSpan) : B;
+            if (sb < se) {
+                ++unitsPerStripRound;
+            }
+        }
+        const uint32_t unitsPerBatchRound = unitsPerStripRound * unitsPerRound;
+        uint32_t batchR = (unitsPerBatchRound > 0) ? ch::CeilDiv(totalAIVs * 4u, unitsPerBatchRound) : 1u;
+        /* 自适应流水判据（v3 实测锚点标定）：round 流水的收益上限 = AIV
+         * epilogue 被 AIC drain 掩盖的时间；成本 = 批数 x 栅栏 + wait 对
+         * AIV MTE3 store 队列的切段。AIC 主导的小 H 大 B case（ANC_100:
+         * epOps 1.6e8）流水是纯损失（实测 +38~45%），退化为两阶段
+         * （batchR = maxRounds：一次 burst-wait + 一次 SyncAll，等价 v3
+         * 结构）；AIV 主导的大 H case（ANC_094: epOps 3.4e10 >> 2e9）
+         * 保持逐轮流水的重叠收益（-16%）。阈值 2e9 取两锚点（对数轴）
+         * 的几何中点，中间带两策略差异 < 栅栏成本，容错大。 */
+        const uint64_t epOps = static_cast<uint64_t>(B) * H * 80ull;
+        if (epOps <= 2000000000ull) {
+            batchR = (maxRounds > 0) ? maxRounds : 1u;
+        }
+        uint32_t batchStart = 0; /* 本批首轮（连续分割跟踪，绝不反推——
+                                  * 尾批不满时 r+1-batchR 会与上批重叠，
+                                  * 计数被双消耗 => 尾 wait 死等（实测
+                                  * ORT_182 全核 timeout trap）。 */
+        for (uint32_t r = 0; r < maxRounds; ++r) {
+            const bool batchTail = ((r + 1) % batchR == 0) || (r + 1 == maxRounds);
+            if (!batchTail) {
+                continue; /* 非批末不 wait——mode-4 计数由批末一次 burst
+                           * 消耗；wait 不逐轮挂 MTE3（AIC 的 drain 串行
+                           * 性不得注入 AIV 的 store 队列）。 */
+            }
+            /* 批末 burst-wait：连续消耗本批 [batchStart, r] 各轮的 round
+             * 计数（AIC 已 set 的立即通过；未 set 的在此阻塞——正确的
+             * 等待点）。计数平衡：总 wait == 总 set == maxRounds。 */
+            for (uint32_t k = batchStart; k <= r; ++k) {
+                sh::VecWaitRoundDone();
+            }
+            const uint32_t r0 = batchStart;
+            batchStart = r + 1;
+            AscendC::SyncAll();
+            /* SyncAll 的 ffts arrive 走 MTE3 队列；本批的 merge load 是
+             * MTE2——两队列无隐式序，用 MTE3_MTE2 单点对。 */
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(static_cast<event_t>(2));
+            /* ── 本批 rounds [r0, r] 的 units：全网格矩形
+             * round-robin（原 phase-B 语义，分发粒度=批）。 */
+            uint32_t unitsThisBatch = 0;
+            for (uint32_t rr = r0; rr <= r; ++rr) {
+                for (uint32_t m = 0; m < tdp->ksStrips; ++m) {
+                    const uint32_t sb = m * clusterSpan;
+                    const uint32_t se = (sb + clusterSpan < B) ? (sb + clusterSpan) : B;
+                    if (sb < se && rr < ch::CeilDiv(se - sb, burst)) {
+                        unitsThisBatch += unitsPerRound;
+                    }
+                }
+            }
+            for (uint32_t u = aivId; u < unitsThisBatch; u += totalAIVs) {
+                uint32_t rem = u;
+                uint32_t um = 0;
+                uint32_t rr = r0;
+                while (true) {
+                    const uint32_t sb = um * clusterSpan;
+                    const uint32_t se = (sb + clusterSpan < B) ? (sb + clusterSpan) : B;
+                    const bool has = (sb < se && rr < ch::CeilDiv(se - sb, burst));
+                    if (!has || rem < unitsPerRound) {
+                        break;
+                    }
+                    rem -= unitsPerRound;
+                    ++um;
+                    if (um >= tdp->ksStrips) {
+                        um = 0;
+                        ++rr;
+                    }
+                }
+                const uint32_t j = rem / 2;
+                const uint32_t sub2 = rem % 2;
+                lstm_vf::VectorCellUnit<T>(um, rr, j, sub2, partGM, csPrevGM, wciGM, wcfGM, wcoGM, oI, oCs, oF, oO, oCi,
+                                           oCo, oH, L, S, roundsMax, clusterSpan, forgetBias, cellClip, usePeephole,
+                                           tdp->mergeMode);
+            }
+        }
     }
-    AscendC::PipeBarrier<PIPE_ALL>();
+    /* 出口只需 MTE3 队列排空（7 路 GM store 可见）；V/MTE2 尾巴无消费者。 */
+    AscendC::PipeBarrier<PIPE_MTE3>();
 }

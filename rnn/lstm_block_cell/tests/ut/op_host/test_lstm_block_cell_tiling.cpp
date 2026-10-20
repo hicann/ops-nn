@@ -37,6 +37,7 @@
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "../../../op_kernel/arch35/lstm_block_cell_tiling.h"
+#include "../../../op_kernel/fwd_layout.h"
 
 using namespace ut_util;
 using namespace std;
@@ -310,17 +311,17 @@ protected:
 };
 
 // 通用正例校验：W/SK 策略 + 网格不变量
-void CheckTilingInvariants(const LstmBlockCellTilingData* td, uint32_t batch, uint32_t expectedKey, uint32_t expectedW)
+void CheckTilingInvariants(const LstmBlockCellTilingData* td, uint32_t batch, uint32_t expectedKey, uint32_t expectedW,
+                           uint32_t expectedSk)
 {
     EXPECT_EQ(td->tilingKey, expectedKey);
     EXPECT_EQ(td->batch, batch);
     // W 策略（K 分档定型值，与核数解耦）
     EXPECT_EQ(td->ksSegWidth, expectedW);
-    // S 与 SK 反饥饿收缩
+    // SK 填满网格策略：SK = clamp(核数/stripsCap, 2, 核数)，再被 S 封顶
     const uint32_t k = td->inputSize + td->hiddenSize;
     const uint32_t s = CeilDivU(k, expectedW);
-    const uint32_t skBudget = expectedKey == 0 ? kMaxBlocks / 2 : 2;
-    const uint32_t expectedSk = skBudget < s ? skBudget : s;
+    EXPECT_LE(td->ksCores, s);
     EXPECT_EQ(td->ksCores, expectedSk);
     // 网格不变量
     EXPECT_EQ(td->blockDim, td->ksStrips * td->ksCores);
@@ -331,52 +332,51 @@ void CheckTilingInvariants(const LstmBlockCellTilingData* td, uint32_t batch, ui
 
 TEST_F(LstmBlockCellTiling, fp32_small_k_even_split_succ)
 {
-    // K=237 < 1909：小 K 均分 —— W=ceil(237/12)=20, S=12, SK 收缩到 12
+    // K=237：小 K 均分 W=ceil(237/12)=20，S=12；小流量覆盖 mBlk=1 → stripsCap=16 → SK=2、bd=32
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_small_k", 16, 64, 173, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 16, 0, 20);
-    EXPECT_EQ(td.ksCores, 12);
+    CheckTilingInvariants(&td, 16, 0, 20, 2);
 }
 
 TEST_F(LstmBlockCellTiling, fp32_bucket160_succ)
 {
-    // K=2344：常规档 W=160，S=15，SK=min(16,15)=15；B=1 空 strip 防护 strips=1
+    // K=2344：常规档 W=160，S=15；B=1 单 strip → SK=min(32,15)=15
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_bucket160", 1, 32, 2312, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 1, 0, 160);
-    EXPECT_EQ(td.ksCores, 15);
+    CheckTilingInvariants(&td, 1, 0, 160, 15);
     EXPECT_EQ(td.ksStrips, 1);
     EXPECT_EQ(td.blockDim, 15);
 }
 
 TEST_F(LstmBlockCellTiling, fp32_bucket64_succ)
 {
-    // 4096 < K=8192 <= 32768：中档 W=64，S=128，SK=16，满核 blockDim=32
+    // 4096 < K=8192 <= 32768：native 中档 W=64（split 绑定升档只在 split 开启时），
+    // S=128；B=16 单 strip → SK=32。B=16 的 flop/字节门关（2*16*4096 < 64*(48+32768)）
+    // → native，W 保持 64。
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_bucket64", 16, 4096, 4096, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 16, 0, 64);
-    EXPECT_EQ(td.ksCores, 16);
+    CheckTilingInvariants(&td, 16, 0, 64, 32);
     EXPECT_EQ(td.blockDim, 32);
+    EXPECT_EQ(td.splitGemm, 0u);
 }
 
 TEST_F(LstmBlockCellTiling, fp32_large_k_bucket160_succ)
 {
-    // K=40100 > 32768：大 K 档回到 W=160，S=251，SK=16（H 取小值避免触发 GM 2^32 守卫，
+    // K=40100 > 32768：大 K 档 W=160，S=251；B=16 单 strip → SK=32（H 取小值避免触发 GM 2^32 守卫，
     // 守卫本身由 neg_gm_overflow_* 负例覆盖）
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_large_k", 16, 40000, 100, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 16, 0, 160);
-    EXPECT_EQ(td.ksCores, 16);
+    CheckTilingInvariants(&td, 16, 0, 160, 32);
     EXPECT_EQ(td.blockDim, 32);
 }
 
 TEST_F(LstmBlockCellTiling, fp32_huge_b_multi_round_succ)
 {
-    // B=100000：多轮模式（span >> rowsPerBlock），K=16 小 K 均分 W=2/S=8/SK=8
+    // B=100000：多轮模式；K=16 小 K 均分 W=2/S=8；stripsCap=32（burst 878 → CeilDiv(B,878)=114
+    // 截到核数）→ SK=max(2,32/32)=2、strips=16、bd=32
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_multi_round", 100000, 8, 8, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 100000, 0, 2);
-    EXPECT_EQ(td.ksCores, 8);
+    CheckTilingInvariants(&td, 100000, 0, 2, 2);
     EXPECT_GT(td.rowsPerClusterTotal, td.rowsPerBlock);
     EXPECT_EQ(td.blockDim, 32);
 }
@@ -394,20 +394,20 @@ TEST_F(LstmBlockCellTiling, fp32_gm_overflow_border_succ)
 
 TEST_F(LstmBlockCellTiling, fp16_even_split_succ)
 {
-    // fp16：偶分 W=ceil(K/2)，S=2，SK=2
+    // fp16：小流量覆盖 mBlk=1 → stripsShape=16 → W=max(64, ceil(500/2))=250，S=2，SK=2、bd=32
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_fp16", 16, 256, 244, ge::DT_FLOAT16}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 16, 1, 250);
-    EXPECT_EQ(td.ksCores, 2);
+    CheckTilingInvariants(&td, 16, 1, 250, 2);
 }
 
 TEST_F(LstmBlockCellTiling, fp16_b1_succ)
 {
+    // fp16 B=1：小流量覆盖 mBlk=1 → stripsShape=1 → W=max(64, ceil(2344/32)=74)，S=32，SK=32、bd=32
     LstmBlockCellTilingData td{};
     ASSERT_EQ(RunTilingCase({"pos_fp16_b1", 1, 32, 2312, ge::DT_FLOAT16}, &td), ge::GRAPH_SUCCESS);
-    CheckTilingInvariants(&td, 1, 1, 1172);
+    CheckTilingInvariants(&td, 1, 1, 74, 32);
     EXPECT_EQ(td.ksStrips, 1);
-    EXPECT_EQ(td.blockDim, 2);
+    EXPECT_EQ(td.blockDim, 32);
 }
 
 TEST(LstmBlockCellTilingAttr, attrs_propagate)
@@ -418,6 +418,77 @@ TEST(LstmBlockCellTilingAttr, attrs_propagate)
     EXPECT_FLOAT_EQ(td.forgetBias, 1.0f); // faker 属性取值透传
     EXPECT_FLOAT_EQ(td.cellClip, 3.0f);
     EXPECT_EQ(td.usePeephole, 0u);
+    // 归并模式按最终 S 自适应：本用例 K=237 → W=20、S=12 ≤ 16 → Kahan
+    EXPECT_EQ(td.mergeMode, 1u);
+}
+
+// ---- fp32 hi/lo 拆分 GEMM 门控（splitGemm / offA16 / workspace 布局）----
+
+TEST_F(LstmBlockCellTiling, fp32_split_gemm_on)
+{
+    // ANC_088 形状族（fp32 大 GEMM，cube/parital ≈ 2.5 实证赢面 1.21x）：
+    // 门① 2BH=336M >= 64*(3B+8H)=11.6M；门② cube 159.6ms >= 2.4*part 63.6ms；
+    // 门③④ 过 → splitGemm=1。
+    LstmBlockCellTilingData td{};
+    ASSERT_EQ(RunTilingCase({"pos_split_on", 87613, 39, 1919, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.tilingKey, 0u);
+    EXPECT_EQ(td.splitGemm, 1u);
+    EXPECT_GT(td.offA16, 0ull);
+    // offA16 = (bias + partials) 的 fp32 元素数 x 2（A16 区紧跟 partials 之后，
+    // half 元素偏移）；ksPartElems 用 kernel 同一份 fwd::KsPartialElems 复算
+    const uint32_t k = td.inputSize + td.hiddenSize;
+    const uint32_t s = CeilDivU(k, td.ksSegWidth);
+    const uint32_t pairs = CeilDivU(td.hiddenSize, td.nBlk) * 4;
+    const uint32_t roundsMax = CeilDivU(td.rowsPerClusterTotal, td.rowsPerBlock);
+    const uint64_t partElems = fwd::KsPartialElems(td.ksStrips, roundsMax, s, pairs, td.hiddenSize, td.nBlk,
+                                                   td.rowsPerBlock);
+    const uint32_t hpad = ((td.hiddenSize + 15u) / 16u) * 16u;
+    EXPECT_EQ(td.offA16, (td.offBiasF32 + 4ull * hpad + partElems) * 2ull);
+    // offPartials 语义不变（小偏移，仅 bias 之后）
+    EXPECT_EQ(td.offPartials, td.offBiasF32 + 4u * hpad);
+}
+
+TEST_F(LstmBlockCellTiling, fp32_split_gemm_ort137_policy)
+{
+    // ORT_137 形状：mid-K(9314) fp32 大 GEMM → 强制 split + W 64->128 升档
+    LstmBlockCellTilingData td{};
+    ASSERT_EQ(RunTilingCase({"pos_split_ort137", 8831, 3782, 5532, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.splitGemm, 1u);
+    EXPECT_GT(td.offA16, 0ull);
+    EXPECT_EQ(td.ksSegWidth, 256u); /* split 绑定升档 */
+}
+
+TEST_F(LstmBlockCellTiling, fp32_split_gemm_gate_off_small)
+{
+    // B=256 H=256：2BH=131072 < 64*(3B+8H)=180224 → 原生 fp32 路径（小 GEMM
+    // 的 cast 开销不划算）；fp16 用例天然不触发（门控仅 fp32）。
+    LstmBlockCellTilingData td{};
+    ASSERT_EQ(RunTilingCase({"pos_split_off", 256, 256, 256, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.splitGemm, 0u);
+    EXPECT_EQ(td.offA16, 0ull);
+    LstmBlockCellTilingData td16{};
+    ASSERT_EQ(RunTilingCase({"pos_split_off16", 8831, 3782, 5532, ge::DT_FLOAT16}, &td16), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td16.splitGemm, 0u);
+}
+
+TEST_F(LstmBlockCellTiling, fp32_split_gemm_tall_b_native)
+{
+    // 瘦长 shape B=8 H=128：2BH=2048 < 64*(24+1024)=67072 → 原生（大 K 下
+    // w 拆分成本相对 GEMM 收益过大）
+    LstmBlockCellTilingData td{};
+    ASSERT_EQ(RunTilingCase({"pos_split_tall", 8, 65536, 128, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.splitGemm, 0u);
+}
+
+TEST_F(LstmBlockCellTiling, fp32_split_gemm_small_cube_native)
+{
+    // ANC_113 形状（B=759 I=3 H=5532）：flop/字节门通过（181>=64），但
+    // cube 收益 0.565*11.3ms=6.4ms < 2*cast_est(3ms 固定+0.7ms 带宽)=7.4ms
+    // → 第二道门关闭（split96 实测 v1 该用例劣化 0.71x）
+    LstmBlockCellTilingData td{};
+    ASSERT_EQ(RunTilingCase({"pos_split_smallcube", 759, 3, 5532, ge::DT_FLOAT}, &td), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.splitGemm, 0u);
+    EXPECT_EQ(td.offA16, 0ull);
 }
 
 class LstmBlockCellNegativeTiling : public testing::TestWithParam<TilingCase> {};

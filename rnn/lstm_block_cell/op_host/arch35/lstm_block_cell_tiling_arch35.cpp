@@ -55,34 +55,64 @@ namespace {
 constexpr int64_t DIM_MAX = 1LL << 24;
 
 // ---------------------------------------------------------------------------
-// K-split 默认策略（精度调优定型值）
+// K-split 默认策略（性能重构版）
 //
-// 两个解耦的旋钮：
-//   SK（协作核数）= 并行度旋钮：AIC 核数的一半（blockDim = strips × SK <=
-//   核数，SK 取半保证 strips >= 2 恒可用满全部核）。段数不足以喂满协作核时
-//   收缩 SK（每核至少 1 段），而不是放宽 W。
-//   W（段宽）= 精度旋钮：只按问题规模 K=I+H 分档（常规档 160/64；小 K 域按
-//   KS_SMALL_K_SEGMENTS 段均分），与核数无关 —— 分段边界（即数值）不随平台
-//   核数查询值漂移，同一 shape 在不同核数机器上一致。
-//
-// fp32（key=0）段宽 W 按问题规模 K=I+H 分档：
-//   - K <= 4096（常规 LSTM 形状）：W=160，段内串行链最短路径的实测最优；
-//   - 4096 < K <= 32768：W=64，部分和幅值随 K 增长，需要更细分段控制
-//     段内串行链噪声，使其与三方树状归约同级；
-//   - K > 32768（超高投影维）：W=160，该域在粗分段下精度已达标，而细分段
-//     的段数（K=87k 时约 1370 段）会使 AIV 归并与 AIC 段循环串行化。
-// fp16（key=1）：SK=2、W=0（偶分，W=ceil(K/2)）：half 链仅在合并后舍入一次，
-// 细分段无精度收益，只会重掷 half 边界舍入的运气；段数恒为 2，SK 封顶 2，
-// 剩余并行度全部交给 M-strip。
+// 两个解耦旋钮（数值不随平台核数漂移是设计约束）：
+//   W（段宽）= 精度旋钮，只由 SHAPE 决定：
+//     fp32 按 K=I+H 分档（常规档 160/64；小 K 域按 12 段均分），定型值不变；
+//     fp16 取 W = max(64, ceil(K/32))（fp32 partials + 合并后单次 round，
+//       细分无精度损失；段边界只由 K 决定，与核数无关）。
+//   SK（协作核数）= 并行度旋钮，按"填满网格"反推：
+//     stripsCap = min(CeilDiv(B, mBlk), 核数)（一个 strip 至少 mBlk 行才值得开）；
+//     SK = clamp(核数 / stripsCap, 2, 核数)，再被 S 封顶（每核至少 1 段）；
+//     strips = min(stripsCap, 核数/SK)。
+//   SK 只改变"段 -> 核"的映射，不改变段边界 —— 同一 shape 在不同核数机器上
+//   数值一致（B 小时 SK 大、B 大时 strips 多，恒可用满全部核；旧策略 fp16 固定
+//   SK=2 / fp32 固定 SK=核数一半，在 B < 2*mBlk 时只用 2~16 个核）。
 // ---------------------------------------------------------------------------
-constexpr uint32_t KS_SK_FP16 = 2;
+constexpr uint32_t KS_SK_MIN = 2;
+// fp16 段数/段宽常量已收敛到 fwd_layout.h（fwd::S16_*/W16_MIN，与 PickTile
+// 打分共享单一真值）。
 // 小 K 域段数目标（精度定型值，与核数无关）：K 较小时按此段数均分（W=ceil(K/12)），
-// 短串行链 + Kahan 归并在极值场景下比长链更稳（FILL/ORT 极值用例实测）。
+// 短串行链 + 补偿归并在极值场景下比长链更稳（FILL/ORT 极值用例实测）。
 constexpr uint32_t KS_SMALL_K_SEGMENTS = 12;
 constexpr uint32_t KS_W_DEFAULT = 160;
-constexpr uint32_t KS_W_MID = 64;
+constexpr uint32_t KS_W_MID = 64; /* native 路径的 mid-K 定型值（W=128 对 native 有实测精度灾难，仅 split 绑定升档）*/
 constexpr uint32_t KS_W_THRESHOLD_MID = 4096;
 constexpr uint32_t KS_W_THRESHOLD_LARGE = 32768;
+
+// AIV partial 归并模式：0 = 二分树批量归并（性能路径，精度经困难用例集
+// 对照验证），1 = Kahan 逐段补偿（精度对照/回退路径）。默认按 S 自适应
+// （见 TilingFunc 内 mergeMode 赋值处）。
+constexpr uint32_t KS_MERGE_TREE = 0;
+constexpr uint32_t KS_MERGE_KAHAN = 1;
+// 树归并的最小段数门槛：S 低于此值走 Kahan（小 S 时 Kahan 开销可忽略而
+// 精度严格更优；树归并的收益在大 S 的串行链压缩）。
+constexpr uint32_t KS_MERGE_TREE_MIN_S = 16;
+
+// partial workspace 字节上限：超过时把段宽 W 逐档放大（段数 S 下降，workspace
+// ∝ S），直到放得下。设备图内存分配器上限 123.2GB（E19999 实测）；留出
+// 输出/输入侧余量后取 96GB。⚠ 只影响默认就跑不了的 shape（如 EDGE_467
+// B=8831/H=8831/K=8832 在 W=64 下 172GB）——升档后的 W（128）仍细于该
+// shape 实测精度 PASS 的手工档（160），数值上更保守；常规 shape 的
+// workspace 远低于上限，策略不变（W 分档是精度定型值，不为性能抬档）。
+constexpr uint64_t KS_PARTIAL_WS_CAP = 96ull * 1024ull * 1024ull * 1024ull;
+
+// fp32 hi/lo 拆分 GEMM 的收益门（flop/字节 比）：拆分把 fp32 cube 有效吞吐
+// 提到 ~3x，代价是 AIV 预拆 pass 的 GM 往返（A+w 各读一次 fp32、写两张
+// fp16 平面；A 侧因按-strip 冗余翻倍）。flop/cast_bytes = 2*B*H/(3*B+8*H)
+// （K 无关），按 17 TFLOPS 原生 / 1.5TB/s AIV 聚合带宽 / 0.565 收益系数
+// 折算，break-even 在 ~51；取 64 留余量（此时净收益仍 ~2.2x 于 cast 成本）。
+// 小 B 大 K 的瘦长 shape（B=8, H=128）比值 ~2，天然落在门外走原生路径。
+constexpr uint64_t SPLIT_FLOP_PER_BYTE_MIN = 64;
+// 第二道门（实测标定，2026-10-08 split96 前 9 例）：W=64 段宽的用例
+// cube/parital ≈ 1.07（cube 与 partial 流量各半），拆分只砍 cube 一半；
+// cast v2 仍有 ~3ms 固定开销（barrier/DMA 描述符地板）。要求
+// cube 收益(0.565*cube) >= 2*cast_est，cast_est = 3ms 固定 + 流量带宽。
+// ANC_113(B=759) 由此关掉（实测 v1 劣化 0.71x）；ANC_096 留下（预估 1.2x）。
+constexpr double SPLIT_CUBE_TFLOPS = 16.5;
+constexpr double SPLIT_CAST_FIXED_MS = 3.0;
+constexpr double SPLIT_CAST_TBPS = 1.5;
 
 } // namespace
 
@@ -233,9 +263,20 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
     // ===== Tile 搜索（操作数位宽感知）=====
     // fp16 以 uint16_t 作为位宽代理：PickTile 的算术只读 sizeof(TOp)（2 字节，
     // 与 half 相同）；bisheng 专属的 half 类型不能出现在本 g++ 编译单元。
+    // fp32 大 GEMM 先算 hi/lo 拆分门（flop/字节 比，见 SPLIT_FLOP_PER_BYTE_MIN）
+    // —— 只依赖 B/H，与 tile 无关，可在 PickTile 前定死；拆分约束只收紧
+    // kChunk 的 L0A/L1 预算（16 量子而非 8），对被禁用的形状零影响。
+    bool wantSplit = false;
+    if (key == 0) {
+        /* 第一道门（PickTile 前，必要条件）：flop/字节 比。决定 PickTile 是否
+         * 按 splitA16 约束收 kChunk（只收紧不放松，最终关掉也不需重跑）。 */
+        const uint64_t flopPerByteNum = 2ull * B * H;
+        const uint64_t flopPerByteDen = 3ull * B + 8ull * H;
+        wantSplit = flopPerByteNum >= SPLIT_FLOP_PER_BYTE_MIN * flopPerByteDen;
+    }
     proj::TileChoice tc;
     if (key == 0) {
-        tc = proj::PickTile<float>(B, I, H, maxBlocks);
+        tc = proj::PickTile<float>(B, I, H, maxBlocks, wantSplit);
     } else {
         tc = proj::PickTile<uint16_t>(B, I, H, maxBlocks);
     }
@@ -253,15 +294,22 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
     const size_t sysWs = static_cast<size_t>(plat.GetLibApiWorkSpaceSize());
 
     // ===== K-split 计划（默认策略，常量见文件头注释）=====
-    uint32_t ksSk = 0;
     uint32_t ksW = 0;
-    if (key == 0) { // fp32
+    if (key == 0) { // fp32: W 按 K 分档（精度定型值，不变）
         const uint32_t K = I + H;
-        ksSk = maxBlocks / 2; // K 轴并行度 = 核数一半（strips 至少 2 才能用满全部核）
         ksW = (K > KS_W_THRESHOLD_LARGE) ? KS_W_DEFAULT : ((K > KS_W_THRESHOLD_MID) ? KS_W_MID : KS_W_DEFAULT);
-    } else { // fp16
-        ksSk = KS_SK_FP16;
-        ksW = 0;
+    } else { // fp16: 段数按"shape-only 可用 strip 数"反推（见文件头），段边界不随核数漂移
+        const uint32_t K = I + H;
+        const uint32_t stripsShape = ch::CeilDiv(B, tc.mBlk); // 纯 shape（不夹核数）
+        uint32_t s16 = fwd::S16_TARGET / (stripsShape > 0 ? stripsShape : 1);
+        if (s16 < fwd::S16_MIN) {
+            s16 = fwd::S16_MIN;
+        }
+        if (s16 > fwd::S16_TARGET) {
+            s16 = fwd::S16_TARGET;
+        }
+        const uint32_t wEven = ch::CeilDiv(K, s16);
+        ksW = (fwd::W16_MIN < wEven) ? wEven : fwd::W16_MIN;
     }
 
     // ===== 填充 TilingData =====
@@ -283,34 +331,53 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
     td->ksStrips = 0;
     td->ksSegWidth = 0;
     td->offPartials = 0;
+    td->splitGemm = 0;
+    td->offA16 = 0;
+    td->mergeMode = KS_MERGE_TREE; // KS 块内按最终 S 自适应覆盖（见下方）
     context->SetTilingKey(key);
 
-    // ===== Workspace 大小：sys + fp32 padded bias [4, CeilAlign(H, 16)]（+ K-split partial 平面）=====
+    // ===== Workspace 大小：sys + fp32 padded bias [4, CeilAlign(H, 16)]（+ K-split partial 平面 + A16 拆分平面）=====
     const uint32_t Hpad = ((H + 15u) / 16u) * 16u;
     size_t off = static_cast<size_t>(GATES) * Hpad;
+    // A16 拆分区 half 元素数（split 决策前先算好：只依赖 B/I/H）。布局
+    // [x16hi | x16lo | h16hi | h16lo | w16hi | w16lo]，各子区大小向上对齐到
+    // 16 half 元素（32B）——cast 尾块的 store 按 16 对齐圆整，不会越写下一区
+    // （pad 字节 AIC 永不读取）。A 冗余 ×2 已含在布局外（写同地址）。
+    const auto a16Region = [](uint64_t elems) { return (elems + 15ull) / 16ull * 16ull; };
+    const uint64_t a16HalfElems = wantSplit ?
+                                      2ull * (a16Region(B * I) + a16Region(B * H) + a16Region((I + H) * GATES * H)) :
+                                      0ull;
     uint64_t ksPartElems = 0;
     {
-        if (ksSk < 1) {
-            ksSk = 1;
+        const uint32_t K = I + H;
+        // W（段宽）是精度旋钮，只按 K 分档（上方），数值不随核数漂移。
+        // 小 K 域（ceil(K/12) < 档位值）按 KS_SMALL_K_SEGMENTS 段均分 —— 这是
+        // fp32 的精度定型值（短串行链在极值场景更稳）；fp16 的段宽策略自带
+        // 下限（fp32 partials + 合并后单次 round，无需再细切），跳过该钳制。
+        uint32_t W = ksW;
+        if (key == 0) {
+            const uint32_t even = ch::CeilDiv(K, KS_SMALL_K_SEGMENTS);
+            W = (ksW < even) ? ksW : even;
+        }
+        uint32_t S = ch::CeilDiv(K, W);
+        // SK（并行度旋钮）：填满网格 —— stripsCap 个 strip 各配 核数/stripsCap
+        // 个协作核；下限 KS_SK_MIN（避免 SK=1 退化），再被段数 S 封顶。
+        const uint32_t stripsCap = (tc.blockDim < maxBlocks) ? tc.blockDim : maxBlocks;
+        uint32_t ksSk = maxBlocks / (stripsCap > 0 ? stripsCap : 1);
+        if (ksSk < KS_SK_MIN) {
+            ksSk = KS_SK_MIN;
         }
         if (ksSk > maxBlocks) {
             ksSk = maxBlocks;
         }
-        const uint32_t K = I + H;
-        // W（段宽）是精度旋钮，只按 K 分档：常规档 160/64，小 K 域（ceil(K/12) < 档位值）
-        // 按 KS_SMALL_K_SEGMENTS 段均分。W 与 SK（核数）解耦 —— 分段边界即数值，
-        // 不随平台核数查询值漂移；反饥饿改为收缩协作核数而不是放宽 W。
-        const uint32_t even = ch::CeilDiv(K, KS_SMALL_K_SEGMENTS);
-        const uint32_t W = (ksW == 0) ? ch::CeilDiv(K, ksSk) : ((ksW < even) ? ksW : even);
-        const uint32_t S = ch::CeilDiv(K, W);
         if (ksSk > S) {
             ksSk = S;
         } // 段数不足以喂满协作核时收缩 SK（每核至少 1 段），W 不动
-        // M-strip 数：至多 ceil(AIC/SK) 使每个 strip 都有 SK 个协作核；不超过
-        // PickTile 的 blockDim（tile 的片上平面按该 burst 计价，更宽的跨度只
-        // 是多跑几轮）。空 strip 防护：每个 mIdx 必须拥有 >= 1 行，否则已启动
-        // 的 block 会跳过全网格 SyncAll 而死锁。
-        uint32_t strips = tc.blockDim;
+        // M-strip 数：至多 ceil(核数/SK) 使每个 strip 都有 SK 个协作核；不超过
+        // stripsCap（tile 的片上平面按该 burst 计价，更宽的跨度只是多跑几轮）。
+        // 空 strip 防护：每个 mIdx 必须拥有 >= 1 行，否则已启动的 block 会跳过
+        // 全网格 SyncAll 而死锁。
+        uint32_t strips = stripsCap;
         const uint32_t maxStrips = maxBlocks / ksSk;
         if (strips > maxStrips) {
             strips = maxStrips;
@@ -321,7 +388,80 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
         const uint32_t span = ch::CeilDiv(B, strips);
         const uint32_t rounds = ch::CeilDiv(span, tc.mBlk);
         const uint32_t pairs = ch::CeilDiv(H, tc.nBlk) * GATES;
+        // ⚠ workspace 超上限 = 设备图分配器 E19999（跑不了，见 EDGE_467）。
+        // 逐档放大 W（S 下降、workspace ∝ S）直到 <= KS_PARTIAL_WS_CAP：
+        // 只作用于默认档必然 E19999 的 shape，升档后的段宽仍 <= 下一档
+        // 定型值（更细分段、数值更保守），常规 shape 不受影响。
+        while ((uint64_t)strips * rounds * S * fwd::KsPartialElems(1, 1, 1, pairs, H, tc.nBlk, tc.mBlk) *
+                       sizeof(float) >
+                   KS_PARTIAL_WS_CAP &&
+               W < K) {
+            const uint32_t W2 = (W * 2 < K) ? W * 2 : K;
+            if (W2 <= W) {
+                break;
+            }
+            W = W2;
+            S = ch::CeilDiv(K, W);
+        }
+        if (ksSk > S) {
+            ksSk = S;
+        } // 段数不足以喂满协作核时收缩 SK（每核至少 1 段），W 不动
         ksPartElems = fwd::KsPartialElems(strips, rounds, S, pairs, H, tc.nBlk, tc.mBlk);
+        // ===== fp32 hi/lo 拆分 GEMM 的最终决策（W=64 基准评估 → mid-K split 升档）=====
+        // 门控（split96 实测标定 + 2026-10-11 mid-K 策略）：
+        //   ① flop/字节比（PickTile 前，必要条件）
+        //   ② mid-K(4096<K<=32768) fp32 过①：强制 split，开启后 W 64->128
+        //      （partial 减半 + split cube 提速；实测 RND_374 0.208✓、
+        //      ANC_095 1.35x✓）。native 在 W=128 有精度灾难（RND_433
+        //      mare=16384、ANC_091 svr=4.0 实测）——W=128 只与 split 绑定，
+        //      native 永远 W=64。
+        //   ③ 非 mid-K（W=160 档）：cube/流量比 >= 2.0
+        //   ④ cube 收益 >= 2×cast 成本（排除小 GEMM）
+        //   ⑤ workspace <= 96GB（升档后 partial 只会更小，天然满足）
+        bool midKForceSplit = false;
+        if (wantSplit) {
+            const uint64_t K64 = I + H;
+            midKForceSplit = (K64 > KS_W_THRESHOLD_MID) && (K64 <= KS_W_THRESHOLD_LARGE);
+        }
+        if (wantSplit) {
+            const uint64_t K64 = I + H;
+            const double cubeMs = 2.0 * B * GATES * H * K64 / (SPLIT_CUBE_TFLOPS * 1e12) * 1e3;
+            const double partMs = static_cast<double>(ksPartElems) * 8.0 / 1.1e12 * 1e3;
+            /* A 项按 2.0 计（A 侧 cast 冗余的时序模型，检视意见3 复核后
+             * 维持）：A 行 cast 确实由本 strip 全部 SK 个 block x 2 AIV
+             * 冗余执行（总流量 = 2*ksSk*B*(I+H)*8B，见 SplitPrepass 注释），
+             * 但各 block 的 cast 并行、每 AIV 份额不随 SK 变，带宽未饱和
+             * 时总流量冗余不转化为时间——按总流量线性放大（乘 ksSk）被
+             * 实测证伪：mid-K 大 ksSk 的 RND_329（B=7621,K=15780）乘
+             * ksSk 后 gateCast 翻转误关 split，native W=64 的 247 段
+             * partial 归并暴涨，实测 12.5ms->27.3ms（x2.18）；且 ANC_113
+             * （mid-K 小 cube，split 实测净亏 0.71x）仍须靠本门控拦截
+             * （UT fp32_split_gemm_small_cube_native）。带宽饱和场景的
+             * SK 冗余代价留待实测超标例再标定。 */
+            const double castMs = SPLIT_CAST_FIXED_MS +
+                                  (2.0 * B * K64 + 1.0 * K64 * GATES * H) * 8.0 / (SPLIT_CAST_TBPS * 1e12) * 1e3;
+            const uint64_t partialBytes = ksPartElems * sizeof(float);
+            const uint64_t fixedBytes = (uint64_t)sysWs + (uint64_t)off * sizeof(float);
+            const bool gateCube = midKForceSplit || (cubeMs >= 2.0 * partMs);
+            const bool gateCast = 0.565 * cubeMs >= 2.0 * castMs;
+            const bool gateWs = fixedBytes + partialBytes + a16HalfElems * 2ull <= KS_PARTIAL_WS_CAP;
+            if (gateCube && gateCast && gateWs) {
+                if (midKForceSplit && W < KS_W_MID * 4u && W < K) {
+                    /* mid-K split 升档: W 64->256, S/ksSk/partial 重导出
+                     *（workspace 只减不增，无需复检 ⑤）。256 实测定标：
+                     * 128 时 ORT_145 0.134/RND_405 0.132 仍差 4~5%，256
+                     * partial 再减半后预计 0.16+。 */
+                    W = KS_W_MID * 4u;
+                    S = ch::CeilDiv(I + H, W);
+                    if (ksSk > S) {
+                        ksSk = S;
+                    }
+                    ksPartElems = fwd::KsPartialElems(strips, rounds, S, pairs, H, tc.nBlk, tc.mBlk);
+                }
+                td->splitGemm = 1;
+                td->offA16 = (static_cast<uint64_t>(td->offBiasF32) + GATES * Hpad + ksPartElems) * 4ull / 2ull;
+            }
+        }
         // KS 网格替换普通 M 切分（blockDim = strips*SK，每 strip 一个 span）；
         // kernel 侧从相同字段推导两者。
         td->blockDim = strips * ksSk;
@@ -329,6 +469,11 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
         td->ksCores = ksSk;
         td->ksStrips = strips;
         td->ksSegWidth = W;
+        // 归并模式按最终段数自适应：大 S 用二分树批量归并（性能路径，每
+        // partial ~1 条 Add + 每 batch 2 个事件对），小 S（<=KS_MERGE_TREE_MIN_S）
+        // 用 Kahan 逐段补偿 —— 小 S 时 Kahan 开销可忽略而精度是严格上界
+        // （EDGE_469 实测：S=15 的小值比率树归并 3.0>2.0 越限、Kahan 2.0 通过）。
+        td->mergeMode = (S > KS_MERGE_TREE_MIN_S) ? KS_MERGE_TREE : KS_MERGE_KAHAN;
         td->offPartials = static_cast<uint32_t>(static_cast<uint64_t>(td->offBiasF32) +
                                                 static_cast<uint64_t>(GATES) * Hpad);
         off += static_cast<size_t>(ksPartElems); // off 计数元素个数（字节数在下面统一换算）
@@ -337,10 +482,15 @@ static ge::graphStatus TilingFuncLstmBlockCell(gert::TilingContext* context)
 
     // ===== 调度模式（batch scheduling：AIC + 2 AIV 协同）=====
     (void)context->SetScheduleMode(1U);
+    OP_LOGI(context->GetNodeName(),
+            "PERF24 new tiling: B=%u I=%u H=%u mBlk=%u nBlk=%u kChunk=%u slots=%u strips=%u SK=%u W=%u S=%u bd=%u "
+            "merge=%u split=%u",
+            B, I, H, td->rowsPerBlock, td->nBlk, td->kChunk, td->slots, td->ksStrips, td->ksCores, td->ksSegWidth,
+            ch::CeilDiv(I + H, td->ksSegWidth), td->blockDim, td->mergeMode, td->splitGemm);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
-    currentWorkspace[0] = sysWs + off * sizeof(float);
+    currentWorkspace[0] = sysWs + off * sizeof(float) + (td->splitGemm ? a16HalfElems * 2ull : 0ull);
 
     return ge::GRAPH_SUCCESS;
 }
