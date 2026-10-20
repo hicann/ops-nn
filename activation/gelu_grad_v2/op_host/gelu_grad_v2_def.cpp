@@ -47,6 +47,7 @@ public:
             .ExtendCfgInfo("opFile.value", "gelu_grad_v2_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
     }
 };
 

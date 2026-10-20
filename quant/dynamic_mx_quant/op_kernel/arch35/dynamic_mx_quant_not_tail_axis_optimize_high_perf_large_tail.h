@@ -1089,7 +1089,7 @@ template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t c
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR mxScale)
 {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     // init block params

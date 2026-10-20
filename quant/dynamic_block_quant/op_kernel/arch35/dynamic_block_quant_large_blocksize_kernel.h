@@ -139,7 +139,7 @@ __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::Init(GM_ADD
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
-#if (__NPU_ARCH__ == 3510) && (DTYPE_Y != DT_INT8)
+#if ((__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202)) && (DTYPE_Y != DT_INT8)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
 
