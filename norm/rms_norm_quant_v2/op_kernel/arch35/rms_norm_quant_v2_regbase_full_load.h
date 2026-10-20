@@ -14,7 +14,7 @@
  */
 #ifndef RMS_NORM_QUANT_V2_REBASE_FULL_LOAD_H_
 #define RMS_NORM_QUANT_V2_REBASE_FULL_LOAD_H_
-#include "kernel_utils.h"
+#include "kernel_operator_utils_intf.h"
 #include "../inc/platform.h"
 #include "rms_norm_quant_v2_regbase_common.h"
 #include "../../norm_common/reduce_common_regbase.h"

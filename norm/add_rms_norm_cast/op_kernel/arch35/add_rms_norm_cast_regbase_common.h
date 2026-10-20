@@ -16,7 +16,7 @@
 #define OPS_BUILT_IN_TBE_IMPL_ASCENDC_ADD_RMS_NORM_CAST_REGBASE_COMMON_H
 
 #include "kernel_operator.h"
-#include "kernel_utils.h"
+#include "kernel_operator_utils_intf.h"
 #include "../inc/platform.h"
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"

@@ -18,7 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "kernel_utils.h"
+#include "kernel_operator_utils_intf.h"
 #include "../inc/platform.h"
 #include "op_kernel/platform_util.h"
 #include "add_rms_norm_dynamic_mx_quant_tiling_data.h"
