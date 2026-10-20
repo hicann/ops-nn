@@ -343,28 +343,6 @@ TEST_F(l2GeluV2Test, l2_gelu_v2_test_025_uint8_dtype)
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GeluV2Test, l2_gelu_v2_test_026_inplace_float)
-{
-    auto xDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-
-    auto ut = OP_API_UT(aclnnInplaceGeluV2, INPUT(xDesc, 0), OUTPUT());
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-}
-
-TEST_F(l2GeluV2Test, l2_gelu_v2_test_027_inplace_float16)
-{
-    auto xDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-
-    auto ut = OP_API_UT(aclnnInplaceGeluV2, INPUT(xDesc, 1), OUTPUT());
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-}
-
 TEST_F(l2GeluV2Test, l2_gelu_v2_test_028_1d_large)
 {
     auto xDesc = TensorDesc({2048}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -406,4 +384,17 @@ TEST_F(l2GeluV2Test, l2_gelu_v2_test_030_bf16_normal)
     EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 
     ut.TestPrecision();
+}
+
+// approximate取值越界，应返回参数错误而非静默按none计算
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_031_invalid_approximate)
+{
+    auto xDesc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 2), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }

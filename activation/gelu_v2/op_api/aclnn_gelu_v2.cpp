@@ -14,6 +14,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 
 using namespace op;
@@ -27,9 +28,12 @@ const std::string GetApproximateStr(int64_t approximate)
 {
     if (approximate == Approximate::TANH) {
         return "tanh";
-    } else {
+    }
+    if (approximate == Approximate::NONE) {
         return "none";
     }
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Approximate should be 0 or 1, but current is %ld", approximate);
+    return "none";
 }
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
@@ -65,12 +69,23 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* y)
 
 static bool CheckShape(const aclTensor* x, const aclTensor* y)
 {
+    OP_CHECK_MAX_DIM(x, MAX_SUPPORT_DIMS_NUMS, return false);
     // x和y的shape必须一致
     OP_CHECK_SHAPE_NOT_EQUAL(y, x, return false);
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* y)
+static bool checkApproximate(int64_t approximate)
+{
+    const int64_t APPROXIMATE_NUM = 1;
+    if (approximate < 0 || approximate > APPROXIMATE_NUM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Approximate should be 0 or 1, but current is %ld", approximate);
+        return false;
+    }
+    return true;
+}
+
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* y, int64_t approximate)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, y), ACLNN_ERR_PARAM_NULLPTR);
@@ -80,6 +95,9 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* y)
 
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(x, y), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查approximate取值是否在API支持范围内
+    CHECK_RET(checkApproximate(approximate), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -94,7 +112,7 @@ aclnnStatus aclnnGeluV2GetWorkspaceSize(const aclTensor* x, int64_t approximate,
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(x, y);
+    auto ret = CheckParams(x, y, approximate);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空tensor处理
