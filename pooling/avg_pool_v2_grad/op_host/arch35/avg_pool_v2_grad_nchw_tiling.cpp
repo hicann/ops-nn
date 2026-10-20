@@ -157,6 +157,7 @@ void AvgPoolV2GradCommonNCHWTiling::DynamicAdjustmentWH()
 void AvgPoolV2GradCommonNCHWTiling::SearchBestTiling()
 {
     splitData.isCheckRange = 0;
+    splitData.isStrideAligned = 0;
     if (baseData.isPad == 1 || baseData.isOverlap == 1) {
         splitData.isCheckRange = 1;
     } else if (inputData.ceilMode) {
@@ -174,10 +175,12 @@ void AvgPoolV2GradCommonNCHWTiling::SearchBestTiling()
 
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         if (TrySplitAlignH()) {
+            splitData.isStrideAligned = 1;
             return;
         }
 
         if (TrySplitAlignW()) {
+            splitData.isStrideAligned = 1;
             return;
         }
     }
@@ -192,16 +195,56 @@ void AvgPoolV2GradCommonNCHWTiling::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
+}
+
+void AvgPoolV2GradCommonNCHWTiling::DoBlockTiling()
+{
     PoolGradTiling::CalcAxisOuterTail(inputData.outShape[W_DIM], splitData.wOutputInner, splitData.wOutputOuter,
                                       splitData.wOutputTail);
     PoolGradTiling::CalcAxisOuterTail(inputData.outShape[H_DIM], splitData.hOutputInner, splitData.hOutputOuter,
                                       splitData.hOutputTail);
     PoolGradTiling::CalcAxisOuterTail(baseData.inputNCSize, splitData.highAxisInner, splitData.highAxisOuter,
                                       splitData.highAxisTail);
-}
-void AvgPoolV2GradCommonNCHWTiling::DoBlockTiling()
-{
     PoolGradTiling::DoBlockTilingNchw(splitData, baseData.totalCoreNum);
+}
+
+void AvgPoolV2GradCommonNCHWTiling::SearchOuterSingle(int64_t& inner, int64_t step)
+{
+    int64_t lastNormal = splitData.normalCoreProcessNum;
+    while (inner > step) {
+        inner -= step;
+        DoBlockTiling();
+        int64_t newNormal = splitData.normalCoreProcessNum;
+        if (newNormal > lastNormal) {
+            inner += step;
+            DoBlockTiling();
+            break;
+        }
+        lastNormal = newNormal;
+    }
+}
+
+void AvgPoolV2GradCommonNCHWTiling::AdjustInnerSplitForMultiCore()
+{
+    DoBlockTiling();
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        return;
+    }
+
+    SearchOuterSingle(splitData.highAxisInner, 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.hOutputInner, splitData.isStrideAligned ? inputData.stride[H_DIM] : 1);
+    if (splitData.usedCoreNum >= baseData.totalCoreNum) {
+        DoBufferCalculate();
+        return;
+    }
+
+    SearchOuterSingle(splitData.wOutputInner, splitData.isStrideAligned ? inputData.stride[W_DIM] : 1);
+    DoBufferCalculate();
 }
 
 PoolGradTiling::PoolGradNchwDims AvgPoolV2GradCommonNCHWTiling::GetNchwDims() const
@@ -240,6 +283,7 @@ void AvgPoolV2GradCommonNCHWTiling::PrintSplitData() const
     OP_LOGI(context_->GetNodeName(), "PrintInputData start running");
     std::ostringstream info;
     info << "splitData.isCheckRange: " << splitData.isCheckRange;
+    info << ", splitData.isStrideAligned: " << splitData.isStrideAligned;
 
     info << ", splitData.highAxisInner: " << splitData.highAxisInner;
     info << ", splitData.highAxisTail: " << splitData.highAxisTail;
@@ -302,6 +346,8 @@ void AvgPoolV2GradCommonNCHWTiling::SetTilingData()
 ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
 {
     DoUBTiling();
+    AdjustInnerSplitForMultiCore();
+
     int64_t wBatchCnt = std::min(splitData.wInputInner, inputData.gradShape[W_DIM]) / baseData.wProBatchSize;
     wBatchCnt = wBatchCnt > 1 ? wBatchCnt : 1;
     int64_t vlLen = baseData.vRegSize / sizeof(float);

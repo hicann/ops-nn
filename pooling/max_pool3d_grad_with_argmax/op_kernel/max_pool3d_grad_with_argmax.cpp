@@ -12,7 +12,7 @@
  * \file max_pool3d_grad_with_argmax.cpp
  * \brief
  */
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)))
 #include "arch35/max_pool3d_grad_with_argmax_simt.h"
 #include "arch35/max_pool3d_grad_with_argmax_simd_impl.h"
 #include "arch35/max_pool3d_grad_with_argmax_simd_full_load.h"
@@ -43,7 +43,7 @@ using namespace MaxPool3DGradWithArgmax;
     } while (0)
 #endif
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)))
 using namespace MaxPool3DGradWithArgmaxOp;
 template <uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_SIMT = 0, uint64_t IS_CHANNEL_LAST = 0,
           uint64_t IS_CHECK_RANGE = 0, uint64_t IS_FULL = 0>

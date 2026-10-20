@@ -84,6 +84,7 @@ struct MaxPool3DGradWithArgmaxNCDHWSplitInfo {
     // DoUBTiling
     uint32_t isCheckRange{0};
     uint32_t isFull{0};
+    uint32_t isStrideAligned{0};
 
     int64_t highAxisInner{0};
     int64_t highAxisTail{0};
@@ -189,6 +190,7 @@ private:
     void DoBlockTiling();
     void DoBufferCalculate();
     void DoBufferCalculateNC();
+    void AdjustInnerSplitForMultiCore();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;

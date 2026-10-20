@@ -67,6 +67,7 @@ static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
+        case NpuArch::DAV_9201:
         case NpuArch::DAV_3510:
         case NpuArch::DAV_2201: {
             return GRAD_DTYPE_SUPPORT_LIST;

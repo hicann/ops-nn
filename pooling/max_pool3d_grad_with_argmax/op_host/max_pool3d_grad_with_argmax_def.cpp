@@ -101,6 +101,7 @@ public:
             .ExtendCfgInfo("opInterface.value", "max_pool3d_grad_with_argmax");
         this->AICore().AddConfig("ascend950", aicoreConfig950);
         this->AICore().AddConfig("ascend350", aicoreConfig950);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig950);
     }
 };
 

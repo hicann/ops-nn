@@ -49,6 +49,7 @@ struct AvgPoolV2GradNHWCBaseInfo {
 struct AvgPoolV2GradNHWCSplitInfo {
     // DoUBTiling
     int64_t isCheckRange{0};
+    int64_t isStrideAligned{0};
 
     int64_t nOutputInner{0};
     int64_t nOutputTail{0};
@@ -103,6 +104,8 @@ protected:
     void PrintSplitData() const;
     void DoBlockTiling(); // 核间block划分
     void DoBufferCalculate();
+    void SearchOuterSingle(int64_t& inner, int64_t step);
+    void AdjustInnerSplitForMultiCore();
     bool IsCapable() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus GetWorkspaceSize() override;

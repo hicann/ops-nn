@@ -50,6 +50,7 @@ struct AvgPoolV2GradNCHWBaseInfo {
 struct AvgPoolV2GradNCHWSplitInfo {
     // DoUBTiling
     int64_t isCheckRange{0};
+    int64_t isStrideAligned{0};
 
     int64_t highAxisInner{0};
     int64_t highAxisTail{0};
@@ -101,6 +102,8 @@ protected:
     void PrintSplitData() const;
     void DoBlockTiling();
     void DoBufferCalculate();
+    void SearchOuterSingle(int64_t& inner, int64_t step);
+    void AdjustInnerSplitForMultiCore();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;

@@ -84,7 +84,8 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
                     isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                                 SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case NpuArch::DAV_3510: {
+        case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201: {
             return SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST;
         }
         case NpuArch::DAV_1001: {
@@ -101,6 +102,7 @@ static const inline std::initializer_list<op::DataType> GetIndicesDtypeSupportLi
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
         case NpuArch::DAV_3510:
+        case NpuArch::DAV_9201:
             return INDICES_DTYPE_SUPPORT_REGBASE_LIST;
         case NpuArch::DAV_2201:
         case NpuArch::DAV_1001:
