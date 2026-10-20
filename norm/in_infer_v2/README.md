@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 算子功能：根据外部提供的均值和方差执行实例归一化推理，并可选进行缩放和平移；
-  输出归一化结果，并可选透传均值和方差。本算子不计算均值和方差。
+  输出归一化结果，并透传均值和方差；图中可按需连接输出。本算子不计算均值和方差。
 - 计算公式：
 
   当`gamma`和`beta`均提供时：
@@ -29,7 +29,7 @@
   y = {{x - mean}\over\sqrt {variance + \epsilon}}
   $$
 
-  可选输出`batch_mean`和`batch_variance`分别为`mean`和`variance`的副本。
+  输出`batch_mean`和`batch_variance`分别为`mean`和`variance`的副本。
 
 ## 参数说明
 
@@ -42,15 +42,18 @@
 | variance | 可选输入 | 方差，对应公式中的`variance`；当前各支持产品调用时均必须提供，接口声明差异见产品差异说明。 | FLOAT | NC1HWC0、ND |
 | epsilon | 可选属性 | 加到`variance`上的数值，用于提高数值稳定性，默认值为1e-5。 | FLOAT | - |
 | y | 输出 | 归一化结果，shape和数据类型与`x`一致。 | FLOAT、FLOAT16 | NC1HWC0、ND |
-| batch_mean | 可选输出 | 提供该输出时，返回`mean`的副本；省略时不生成该输出。 | FLOAT | NC1HWC0、ND |
-| batch_variance | 可选输出 | 提供该输出时，返回`variance`的副本；省略时不生成该输出。 | FLOAT | NC1HWC0、ND |
+| batch_mean | 可选输出 | 返回`mean`的副本；图中可不连接该输出。 | FLOAT | NC1HWC0、ND |
+| batch_variance | 可选输出 | 返回`variance`的副本；图中可不连接该输出。 | FLOAT | NC1HWC0、ND |
 
 ### 产品差异说明
 
 | 产品 | 静态shape能力 | 动态shape能力 | 可选参数 | shape/rank及组合限制 |
 | --- | --- | --- | --- | --- |
-| <term>Ascend 950PR&950DT系列产品</term> | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`注册为可选输入，但调用时必须提供；`batch_mean`和`batch_variance`为可选输出 | `x`的rank为2～8，shape为`[N, C, R...]`；`gamma`、`beta`、`mean`、`variance`的元素数均为`N*C`；支持空Tensor |
+| <term>Ascend 950PR&950DT系列产品</term> | 各输入、输出均为ND | 支持动态shape和动态rank，各输入、输出均为ND | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`注册为可选输入，但调用时必须提供；`batch_mean`和`batch_variance`为可选输出，图中可不连接 | `x`的rank为2～8，shape为`[N, C, R...]`；`gamma`、`beta`、`mean`、`variance`的元素数均为`N*C`；支持空Tensor |
 | <term>Atlas A3系列产品</term><br><term>Atlas A2系列产品</term><br><term>Atlas 200I/500 A2推理产品</term><br><term>Atlas推理系列产品</term><br><term>Atlas训练系列产品</term> | 各输入、输出均为NC1HWC0 | 不支持 | `gamma`和`beta`必须同时提供或同时省略；`mean`和`variance`为必选输入；`batch_mean`和`batch_variance`为可选输出 | `x`为5维`[N, C1, H, W, C0]`；`gamma`、`beta`、`mean`、`variance`为`[N, C1, 1, 1, C0]`；不支持空Tensor |
+
+<term>Ascend 950PR&950DT系列产品</term>的`batch_mean`和`batch_variance`为可选输出，图中可以只连接需要的结果。
+静态GE图依赖与算子注册配置匹配的预编译二进制，部署时需安装包含本算子二进制的完整算子包。
 
 ## 约束说明
 

@@ -14,8 +14,26 @@
  *        （对齐 canndev built-in ELMTWISE_INFER_SHAPEANDTYPE 的 type 推导语义）
  */
 
+#include "graph/operator_reg.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+
+namespace ge {
+IMPLEMT_COMMON_INFERFUNC(INInferV2LegacyV1InferShape)
+{
+    const auto inferY = ELMTWISE_INFER_SHAPEANDTYPE("x", "y");
+    const auto inferMean = ELMTWISE_INFER_SHAPEANDTYPE("mean", "batch_mean");
+    const auto inferVariance = ELMTWISE_INFER_SHAPEANDTYPE("variance", "batch_variance");
+    if (inferY(op) != GRAPH_SUCCESS || inferMean(op) != GRAPH_SUCCESS || inferVariance(op) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    return GRAPH_SUCCESS;
+}
+
+// GE can select the legacy V1 registry before runtime2.0 inference. Register
+// all three output mappings together: repeated registrations keep only one.
+COMMON_INFER_FUNC_REG(INInferV2, INInferV2LegacyV1InferShape);
+} // namespace ge
 
 namespace ops {
 static ge::graphStatus InferDataTypeForINInferV2(gert::InferDataTypeContext* context)

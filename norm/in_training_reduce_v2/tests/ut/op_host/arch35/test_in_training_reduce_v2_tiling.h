@@ -15,14 +15,7 @@
 #include "platform/platform_infos_def.h"
 namespace optiling {
 
-// 与 op_host/in_training_reduce_v2_tiling.h 的 INTrainingReduceV2CompileInfo 布局一致。
-// tiling_parse_func 把解析结果写入此结构；测试侧独立声明以避免与 op_host 头重复包含冲突
-// （对齐 instance_norm 的 test_instance_norm_tiling.h 做法）。
-struct INTrainingReduceV2CompileInfo {
-    uint64_t coreNum;      // 系统核数
-    uint64_t ubSize;       // UB 空间
-    uint32_t vectorLength; // 256
-    uint64_t ubBlockSize;  // 32B，UB 的字节对齐单位
-};
+// Matches the production CompileInfo. Platform capacities are queried at runtime.
+struct INTrainingReduceV2CompileInfo {};
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TEST_TILING_RUNTIME_IN_TRAINING_REDUCE_V2_H_

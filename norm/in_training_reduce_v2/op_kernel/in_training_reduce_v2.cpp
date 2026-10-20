@@ -17,11 +17,13 @@
 #include "arch35/in_training_reduce_v2_tiling_data.h"
 #include "arch35/in_training_reduce_v2_common.h"
 #include "arch35/in_training_reduce_v2_ar_full_reduce.h"
+#include "arch35/in_training_reduce_v2_ara_reduce.h"
 
 using namespace AscendC;
 using namespace INTrainingReduceV2Ops;
 
 #define TILINGKEY_AR_FULL_REDUCE 200000
+#define TILINGKEY_ARA_REDUCE 400000
 
 extern "C" __global__ __aicore__ void in_training_reduce_v2(GM_ADDR x, GM_ADDR sum, GM_ADDR square_sum,
                                                             GM_ADDR workspace, GM_ADDR tiling)
@@ -31,6 +33,11 @@ extern "C" __global__ __aicore__ void in_training_reduce_v2(GM_ADDR x, GM_ADDR s
     if (TILING_KEY_IS(TILINGKEY_AR_FULL_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARFullReduceTilingData, tilingData, tiling);
         INTrainingReduceV2ARFullReduce<DTYPE_X> op(&tilingData);
+        op.Init(x, sum, square_sum);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_ARA_REDUCE)) {
+        GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARAReduceTilingData, tilingData, tiling);
+        INTrainingReduceV2ARAReduce<DTYPE_X> op(&tilingData);
         op.Init(x, sum, square_sum);
         op.Process();
     }

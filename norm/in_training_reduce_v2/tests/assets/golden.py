@@ -11,7 +11,8 @@
 
 """INTrainingReduceV2 multi-path golden in the TestSpec format.
 
-The operator keeps N and C and reduces every spatial axis (dimension 2 onward):
+The operator keeps N and C and reduces the spatial axes
+(NHWC: H/W; NDHWC: D/H/W; otherwise dimension 2 onward):
 
     sum        = sum(x)
     square_sum = sum(x * x)
@@ -20,9 +21,10 @@ Only one registration key is needed: kernel and GEIR both resolve the snake-case
 operator name and share :class:`INTrainingReduceV2KernelSpec`.  The legacy
 ``__golden__`` entry remains available and calls the same Torch computation core.
 
-The reference math uses Torch operators.  TTK owns floating-point promotion:
-Promote mode uses the supplied input dtype without any input or output casts.
-Other modes follow the kernel's FP32 computation and fixed FP32 output contract.
+The reference math uses Torch operators.  Promote mode computes both statistics
+in FP64 and preserves FP64 outputs.  TTK's FP16-to-FP32 input promotion alone is
+insufficient for a high-precision reference to this operator's FP32 accumulation
+and outputs.  Other modes follow the kernel's FP32 computation and output contract.
 """
 
 import numpy as np
@@ -40,7 +42,8 @@ __golden__ = {
 
 
 _TOL = {
-    # Both outputs are fixed FP32 according to in_training_reduce_v2_def.cpp.
+    # Cover registered input dtypes; both outputs use the FP32 criterion.
+    "float16": {"standard": "cross_check", "level": "L1"},
     "float32": {"standard": "cross_check", "level": "L1"},
 }
 
@@ -52,16 +55,40 @@ def _kernel_compute_input(x):
     return x
 
 
+def _input_format(kwargs, default="ND"):
+    for key in ("input_ori_formats", "input_formats"):
+        formats = kwargs.get(key)
+        if formats:
+            value = formats[0]
+            while isinstance(value, (list, tuple)):
+                value = value[0]
+            return str(value).upper()
+    return default
+
+
+def _spatial_dims(rank, kwargs, default="ND"):
+    layout = _input_format(kwargs, default)
+    if layout in ("NHWC", "NDHWC"):
+        expected_rank = 4 if layout == "NHWC" else 5
+        if rank != expected_rank:
+            raise ValueError(f"{layout} input must have rank {expected_rank}")
+        return tuple(range(1, rank - 1))
+    return tuple(range(2, rank))
+
+
 def _compute(x, **kwargs):
     """Return ``[sum, square_sum]`` as Torch tensors in def.cpp output order.
 
-    The framework supplies the promoted tensors for cross-check.  In other
-    modes only the kernel's FP16-to-FP32 computation cast is needed.
+    Promote mode widens the supplied input values before both squaring and
+    reduction, including when TTK has only promoted FP16 input to FP32.
+    In other modes only the kernel's FP16-to-FP32 computation cast is needed.
     """
     x_compute = (
-        x if kwargs.get("golden_mode") == "Promote" else _kernel_compute_input(x)
+        x.to(torch.float64)
+        if kwargs.get("golden_mode") == "Promote"
+        else _kernel_compute_input(x)
     )
-    reduce_dims = tuple(range(2, x_compute.ndim))
+    reduce_dims = _spatial_dims(x_compute.ndim, kwargs)
 
     if not reduce_dims:
         # A rank-2 ND input has no spatial dimension, so each (N, C) row has R=1.
@@ -123,13 +150,18 @@ class _INTrainingReduceV2Compose:
     """
 
     def __init__(self, **kwargs):
-        del kwargs  # The proto declares no attributes.
+        self.input_format = _input_format(kwargs)
 
     def __call__(self, x, **kwargs):
-        del kwargs
         x_compute = _kernel_compute_input(x)
 
-        if x_compute.ndim > 2:
+        if _input_format(kwargs, self.input_format) in ("NHWC", "NDHWC"):
+            dims = _spatial_dims(x_compute.ndim, kwargs, self.input_format)
+            sum_out = torch.sum(x_compute, dim=dims, keepdim=True)
+            square_sum_out = torch.sum(
+                torch.mul(x_compute, x_compute), dim=dims, keepdim=True
+            )
+        elif x_compute.ndim > 2:
             rows = torch.reshape(x_compute, (*x_compute.shape[:2], -1))
             # Kernel sum path: ReduceSum over the original x lanes.
             sum_out = torch.sum(rows, dim=-1, keepdim=True)

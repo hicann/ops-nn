@@ -42,8 +42,8 @@ struct INInferV2TilingData {
     int64_t ubTileSize;   // UB tile 元素数（VL=64 对齐）
     float epsilon;
     int64_t hasGammaBeta; // 0/1：gamma/beta 是否同时存在
-    int64_t hasBatchMean; // 0/1：batch_mean 输出是否存在
-    int64_t hasBatchVar;  // 0/1：batch_variance 输出是否存在
+    int64_t hasBatchMean; // 0/1：batch_mean 描述是否实例化，不表示消费者连接或 GM 分配
+    int64_t hasBatchVar;  // 0/1：batch_variance 描述是否实例化，不表示消费者连接或 GM 分配
 };
 
 #endif // IN_INFER_V2_TILING_DATA_H

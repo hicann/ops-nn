@@ -16,7 +16,7 @@
  *          x fp16/fp32；gamma/beta/mean/variance 恒 fp32（910b para_check 契约）
  *          gamma/beta/mean/variance 均 optional（与 proto 逐字一致）；
  *          gamma/beta 须同有同无、mean/variance 实际必须提供，由 tiling/infershape 拦截
- *          y 同 x；batch_mean/batch_variance fp32，optional 输出
+ *          y 同 x；batch_mean/batch_variance fp32，后端保持 optional 输出
  *        格式：仅 ND（dim0=N、dim1=C、后导维为归一化轴 R，统计量 [N,C]）
  */
 
@@ -60,6 +60,8 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        // A fixed GE IR output slot does not require storage when this OPTIONAL
+        // statistic has no consumer. Keep the optional-output backend contract.
         this->Output("batch_mean")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
@@ -79,7 +81,10 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .ExtendCfgInfo("opFile.value", "in_infer_v2_apt");
+            .ExtendCfgInfo("opFile.value", "in_infer_v2_apt")
+            // Static GE calls need the binary's optional-output placeholders.
+            // Dynamic graphs keep online compilation and the same OPTIONAL contract.
+            .ExtendCfgInfo("jitCompile.flag", "static_false");
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

@@ -115,7 +115,9 @@ ge::graphStatus INInferV2Tiling::GetShapeAndDtype()
         return ge::GRAPH_FAILED;
     }
 
-    // Optional output 会在节点实例中压实存储，不能把 IR index 当作物理 output index。
+    // IR 实例数不表示消费者连接数：固定 OUTPUT 即使无消费者也可能有一个实例。
+    // hasBatchMean/hasBatchVar 仅记录描述是否实例化；OPTIONAL 后端的空 GM 由 kernel 判断。
+    // 使用实例映射取得物理下标，兼容未实例化的输出；不能用 IR index 访问压实后的输出。
     const auto* batchMeanInstanceInfo = context_->GetIrOutputInstanceInfo(OUTPUT_BATCH_MEAN_INDEX);
     if (batchMeanInstanceInfo != nullptr) {
         OP_CHECK_IF(batchMeanInstanceInfo->GetInstanceNum() > 1,
@@ -310,7 +312,7 @@ ge::graphStatus INInferV2Tiling::FillTilingData()
 
     OP_LOGI(context_,
             "INInferV2 tiling: N=%ld, C=%ld, inner=%ld, units=%ld, unitCores=%ld, innerCores=%ld, "
-            "usedCores=%ld, ubTile=%ld, hasGammaBeta=%ld, hasBatchMean=%ld, hasBatchVar=%ld, eps=%f",
+            "usedCores=%ld, ubTile=%ld, hasGammaBeta=%ld, batchMeanInstance=%ld, batchVarInstance=%ld, eps=%f",
             numN_, numC_, innerSize_, units_, unitCores_, innerCores_, usedCores, ubTileSize_, hasGammaBeta_,
             hasBatchMean_, hasBatchVar_, epsilon_);
     return ge::GRAPH_SUCCESS;

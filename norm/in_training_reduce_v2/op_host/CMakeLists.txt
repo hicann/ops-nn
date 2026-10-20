@@ -9,4 +9,5 @@
 # -----------------------------------------------------------------------------------------------------------
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE in_training_reduce_v2
-        ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common)
+        ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common
+        COMPUTE_UNIT ascend950 TILING_DIR arch35 DISABLE_IN_OPP TRUE)

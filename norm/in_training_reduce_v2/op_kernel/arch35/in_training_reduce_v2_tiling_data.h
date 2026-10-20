@@ -47,4 +47,36 @@ struct INTrainingReduceV2ARFullReduceTilingData {
     uint64_t partialBufferBytes; // sub-R 路径每个 partial buffer 的字节数
 };
 
+// NHWC 物理布局 [N,R,C]，各 (N,C tile) 由唯一核沿 R 分块归约。
+struct INTrainingReduceV2ARAReduceTilingData {
+    uint64_t numN;
+    uint64_t numR;
+    uint64_t numC;
+    uint64_t totalTiles;
+    uint64_t tilesPerCore;
+    uint64_t cOuter;
+    uint64_t tileCLen;
+    uint64_t tileCTail;
+    uint64_t rFactor;
+    uint64_t numChunks;
+    uint64_t totalRows;         // N*C，host 已校验 int64 上界
+    uint64_t totalElements;     // N*R*C，host 已校验 int64 上界
+    uint64_t inputBufferBytes;  // 单个输入 buffer；双缓冲
+    uint64_t outputBufferBytes; // 每个 fp32 输出累加器；单缓冲
+};
+
+#if defined(__CCE_AICORE__)
+#define IN_TRAINING_REDUCE_V2_AICORE __aicore__
+#else
+#define IN_TRAINING_REDUCE_V2_AICORE
+#endif
+// DataCopyExtParams 的 GM stride 单位为字节；不能截断到 uint32。
+IN_TRAINING_REDUCE_V2_AICORE inline constexpr int64_t CalcINTrainingReduceV2ARASrcStrideBytes(uint64_t numC,
+                                                                                              uint64_t currentC,
+                                                                                              uint64_t elemSize)
+{
+    return static_cast<int64_t>((numC - currentC) * elemSize);
+}
+#undef IN_TRAINING_REDUCE_V2_AICORE
+
 #endif // _IN_TRAINING_REDUCE_V2_TILING_DATA_H_

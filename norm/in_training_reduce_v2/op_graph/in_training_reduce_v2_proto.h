@@ -19,28 +19,25 @@
 
 namespace ge {
 /**
-* @brief InstanceNorm training-forward reduce stage, paired with INTrainingUpdateV2.
-* For each instance-channel (n, c), reduces over the spatial axes (H, W for 4D NCHW;
-* D, H, W for 5D NCDHW) and outputs the raw sum (sum = Sigma x) and squared sum
-* (square_sum = Sigma x^2). The reduction keeps N and C; outputs are raw sums
- * (no division by R, no affine). fp16 inputs are promoted to fp32 for
- * accumulation, and the outputs are always fp32.
-
-* @par Inputs:
-* One input:
-* @li x: Empty tensors are NOT supported: every axis, including the reduction
-*        (spatial) axes, must be positive. A zero-sized reduction axis is rejected at
-*        tiling time (the REDUCE_EMPTY template that would write the all-zero
-*        [N, C, 1, ...] outputs is not part of this iteration). Must be one of the
- *        following types: float16, float32. 4D with format NCHW, 5D with
-*        format NCDHW, or 2D~8D with format ND (the second dim is fixed as dim C).
-
-* @par Outputs:
-* Two outputs:
-* @li sum: An ND tensor of dtype float32. The number of dims is same as input x,
-*          dim N and dim C are same as input x, the reduction axes are 1.
-* @li square_sum: An ND tensor of the same dtype (float32) and shape as output sum.
-*/
+ * @brief InstanceNorm training-forward spatial reduction, paired with INTrainingUpdateV2.
+ * For each instance-channel (n, c), computes sum = Sigma x and square_sum = Sigma x^2
+ * over the spatial dimensions, retaining each reduced dimension with size 1. These are raw sums
+ * without division or affine transformation. Float16 inputs are promoted to float32
+ * before multiplication and accumulation. This operator has no attributes.
+ *
+ * @par Inputs:
+ * @li x: A float16 or float32 tensor. NCHW/NHWC inputs are 4D and reduce H and W.
+ *        "Ascend 950PR&950DT系列产品" supports native 5D NDHWC [N,D,H,W,C], reducing D, H and W.
+ *        On "Ascend 950PR&950DT系列产品", all dimensions must be positive.
+ *        The input element count must not exceed 2^63-1 on these products.
+ *        For NHWC/NDHWC, C*sizeof(x.dtype) must not exceed 2^40-1 bytes on these products.
+ *
+ * @par Outputs:
+ * @li sum: A float32 tensor with logical shape [N,C,1,1] for NCHW input or
+ *          [N,1,1,C] for NHWC input, or [N,1,1,1,C] for NDHWC input on "Ascend 950PR&950DT系列产品".
+ *          On "Ascend 950PR&950DT系列产品" the storage format is ND.
+ * @li square_sum: A float32 tensor with the same shape and storage format as sum.
+ */
 
 #ifndef OPS_PROTO_DEF_INTRAININGREDUCEV2
 #define OPS_PROTO_DEF_INTRAININGREDUCEV2

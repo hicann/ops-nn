@@ -25,7 +25,7 @@
 #include "tiling/tiling_api.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
-#include "../op_kernel/arch35/in_training_reduce_v2_tiling_data.h"
+#include "../../op_kernel/arch35/in_training_reduce_v2_tiling_data.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_util.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -35,17 +35,13 @@ using namespace Ops::NN::Optiling;
 
 namespace optiling {
 static constexpr uint64_t IN_TRAINING_REDUCE_V2_AR_FULL_REDUCE_PRIORITY = 9000;
+static constexpr uint64_t IN_TRAINING_REDUCE_V2_ARA_REDUCE_PRIORITY = 10000;
 
 constexpr uint32_t INPUT_X_INDEX = 0;
 constexpr uint32_t OUTPUT_SUM_INDEX = 0;
 constexpr uint32_t OUTPUT_SQUARE_SUM_INDEX = 1;
 
-struct INTrainingReduceV2CompileInfo {
-    uint64_t coreNum;      // 系统核数
-    uint64_t ubSize;       // UB 空间
-    uint32_t vectorLength; // 256
-    uint64_t ubBlockSize;  // 32B，UB 的字节对齐单位
-};
+struct INTrainingReduceV2CompileInfo {};
 
 class INTrainingReduceV2RegbaseTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
@@ -72,9 +68,11 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus CheckDtypeValid();
+    ge::graphStatus CheckOutputShapes();
     ge::graphStatus CheckShapeAllNotNegative(const gert::Shape& shape);
     ge::graphStatus ParseShapeByFormat();
-    // N / C 轴取值 + 正数校验，NCHW / NCDHW / ND 三个分支共用
+    const char* GetNodeName() const;
+    // 根据物理格式读取 N / C，并校验正数。
     ge::graphStatus ParseAndCheckNC();
 
 protected:
@@ -105,7 +103,6 @@ public:
     {
         INTrainingReduceV2RegbaseTilingBase::Reset(context);
         blockNum_ = 0;
-        binaryAddQuotient = 0;
         td_ = {};
     }
 
@@ -121,8 +118,29 @@ private:
     // sub-R 路径 Kernel 侧 UB 精确占用（须与 op_kernel/arch35 的 InitSubR() 逐项一致）
     uint64_t CalcSubRUbBytes(uint64_t rFactor, uint64_t chunksPerGroup, uint64_t numGroups, int64_t elemSize) const;
 
-    int64_t binaryAddQuotient{0};
     INTrainingReduceV2ARFullReduceTilingData td_{};
+};
+
+class INTrainingReduceV2ARAReduceTiling : public INTrainingReduceV2RegbaseTilingBase {
+public:
+    explicit INTrainingReduceV2ARAReduceTiling(gert::TilingContext* context)
+        : INTrainingReduceV2RegbaseTilingBase(context)
+    {}
+    void Reset(gert::TilingContext* context) override
+    {
+        INTrainingReduceV2RegbaseTilingBase::Reset(context);
+        blockNum_ = 0;
+        td_ = {};
+    }
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    INTrainingReduceV2ARAReduceTilingData td_{};
 };
 
 } // namespace optiling

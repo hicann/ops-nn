@@ -116,9 +116,11 @@ public:
         // 在最后一个 R 分片发生有符号加法溢出。
         int64_t remainingR = (rStart_ < tl_->innerSize) ? (tl_->innerSize - rStart_) : 0;
         myR_ = (remainingR < tl_->innerPerCore) ? remainingR : tl_->innerPerCore;
-        // batch_mean/batch_variance 透传拷贝：仅 plane 归属核（rIdx==0）执行，全程恰好一次
-        copyBatchMean_ = (rIdx_ == 0 && tl_->hasBatchMean != 0);
-        copyBatchVar_ = (rIdx_ == 0 && tl_->hasBatchVar != 0);
+        // OPTIONAL statistics can keep IR descriptors while their unused GM is null.
+        // Instance flags alone do not establish allocation; copy only on the owning core.
+        // y is REQUIRED, including in graphs that expose only statistics.
+        copyBatchMean_ = (rIdx_ == 0 && tl_->hasBatchMean != 0 && batchMean != nullptr);
+        copyBatchVar_ = (rIdx_ == 0 && tl_->hasBatchVar != 0 && batchVar != nullptr);
         epsilon_ = tl_->epsilon;
 
         int64_t totalElements = tl_->units * tl_->innerSize;

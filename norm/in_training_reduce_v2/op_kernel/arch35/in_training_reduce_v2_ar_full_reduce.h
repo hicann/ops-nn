@@ -34,6 +34,18 @@ using AscendC::Reg::UpdateMask;
 
 constexpr uint32_t ALIGN_32_FACTOR = 32;
 
+// Preserve horizontal addition errors before rounding each full-AR partial.
+__simd_callee__ inline void ReduceFullAR(RegTensor<float>& result, RegTensor<float>& values, MaskReg& valid)
+{
+    RegTensor<float> low;
+    MaskReg full = CreateMask<float, MaskPattern::ALL>();
+    MaskReg one = CreateMask<float, MaskPattern::VL1>();
+    ShiftLefts((RegTensor<uint32_t>&)values, (RegTensor<uint32_t>&)values, static_cast<int16_t>(0), valid);
+    Duplicate(low, 0.0f, full);
+    ReduceWithError(values, low, full);
+    Add(result, values, low, one);
+}
+
 template <typename T_X>
 class INTrainingReduceV2ARFullReduce {
 public:
@@ -179,17 +191,17 @@ private:
         subR.Process();
     }
 
-    __aicore__ inline void CalculateSumSquareSum(LocalTensor<T_X>& xLocal, LocalTensor<TSum>& sumLocal,
+    __aicore__ inline void CalculateSumSquareSum(const LocalTensor<T_X>& xLocal, LocalTensor<TSum>& sumLocal,
                                                  LocalTensor<TSum>& squareSumLocal, uint32_t curRows,
                                                  uint32_t numColAlign, uint32_t reduceNum)
     {
         LocalTensor<float> binaryAddBuffTmp = binaryAddBuf_.Get<float>();
         LocalTensor<float> squareBinaryAddBuffTmp = squareBinaryAddBuf_.Get<float>();
-        __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ TSum* sumUb = (__local_mem__ TSum*)sumLocal.GetPhyAddr();
-        __local_mem__ TSum* squareSumUb = (__local_mem__ TSum*)squareSumLocal.GetPhyAddr();
-        __local_mem__ float* tmpUb = (__local_mem__ float*)binaryAddBuffTmp.GetPhyAddr();
-        __local_mem__ float* sqTmpUb = (__local_mem__ float*)squareBinaryAddBuffTmp.GetPhyAddr();
+        __ubuf__ T_X* xInUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ TSum* sumUb = (__ubuf__ TSum*)sumLocal.GetPhyAddr();
+        __ubuf__ TSum* squareSumUb = (__ubuf__ TSum*)squareSumLocal.GetPhyAddr();
+        __ubuf__ float* tmpUb = (__ubuf__ float*)binaryAddBuffTmp.GetPhyAddr();
+        __ubuf__ float* sqTmpUb = (__ubuf__ float*)squareBinaryAddBuffTmp.GetPhyAddr();
 
         if (reduceNum <= VL_FP32) {
             CalculateSumLessThanVL(xInUb, sumUb, curRows, numColAlign, reduceNum);
@@ -204,7 +216,7 @@ private:
     }
 
     // ---------- reduceNum <= VL ----------
-    __aicore__ inline void CalculateSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb, uint16_t curRows,
+    __aicore__ inline void CalculateSumLessThanVL(__ubuf__ T_X* xInUb, __ubuf__ TSum* sumUb, uint16_t curRows,
                                                   uint32_t numColAlign, uint32_t reduceNum)
     {
         __VEC_SCOPE__
@@ -218,13 +230,13 @@ private:
 
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
-                ReduceSum(sum, x, pregLoop); // Σx：对原始 x 规约
+                ReduceFullAR(sum, x, pregLoop); // Σx：对原始 x 规约
                 StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
+    __aicore__ inline void CalculateSquareSumLessThanVL(__ubuf__ T_X* xInUb, __ubuf__ TSum* squareSumUb,
                                                         uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         __VEC_SCOPE__
@@ -238,16 +250,16 @@ private:
 
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
-                Mul(x, x, x, pregLoop);      // 先逐元素平方
-                ReduceSum(vsq, x, pregLoop); // Σx²：对平方值规约
+                Mul(x, x, x, pregLoop);         // 先逐元素平方
+                ReduceFullAR(vsq, x, pregLoop); // Σx²：对平方值规约
                 StoreOneElementForDtypeTOut<TSum>(squareSumUb, vsq, pregOne, i);
             }
         }
     }
 
     // ---------- VL < reduceNum <= 2VL ----------
-    __aicore__ inline void CalculateSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb,
-                                                     uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
+    __aicore__ inline void CalculateSumLessThanTwoVL(__ubuf__ T_X* xInUb, __ubuf__ TSum* sumUb, uint16_t curRows,
+                                                     uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
         __VEC_SCOPE__
@@ -264,13 +276,13 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb + VL_FP32, xFold, pregTail, i * numColAlign);
                 ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
                 Add(x, x, xFold, pregFull); // 折叠原始 x
-                ReduceSum(sum, x, pregFull);
+                ReduceFullAR(sum, x, pregFull);
                 StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
+    __aicore__ inline void CalculateSquareSumLessThanTwoVL(__ubuf__ T_X* xInUb, __ubuf__ TSum* squareSumUb,
                                                            uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
@@ -290,16 +302,15 @@ private:
                 Mul(x, x, x, pregFull);             // 先平方（前半）
                 Mul(xFold, xFold, xFold, pregTail); // 先平方（尾半）
                 Add(x, x, xFold, pregFull);         // 再折叠
-                ReduceSum(vsq, x, pregFull);
+                ReduceFullAR(vsq, x, pregFull);
                 StoreOneElementForDtypeTOut<TSum>(squareSumUb, vsq, pregOne, i);
             }
         }
     }
 
     // ---------- reduceNum > 2VL：pairwise 二分折叠（Σx） ----------
-    __aicore__ inline void CalculateSumCommon(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb,
-                                              __local_mem__ float* tmpUb, uint16_t curRows, uint32_t numColAlign,
-                                              uint32_t reduceNum)
+    __aicore__ inline void CalculateSumCommon(__ubuf__ T_X* xInUb, __ubuf__ TSum* sumUb, __ubuf__ float* tmpUb,
+                                              uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t binaryAddQuotient = binaryAddQuotient_;
         uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
@@ -327,7 +338,7 @@ private:
                     LoadTensorForDtypeTIn<T_X>(xInUb, x, pregFull, offset);
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddQuotient, xFold, pregFull, offset);
                     Add(x, x, xFold, pregFull);
-                    ReduceSum(partial, x, pregFull);
+                    ReduceFullAR(partial, x, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), partial, pregOne);
                 }
@@ -342,7 +353,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(x, x, xFold, pregFull);
-                    ReduceSum(partial, x, pregFull);
+                    ReduceFullAR(partial, x, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), partial,
                         pregOne);
@@ -351,7 +362,7 @@ private:
                      r++) {
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
-                    ReduceSum(partial, x, pregFull);
+                    ReduceFullAR(partial, x, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         partial, pregOne);
@@ -376,15 +387,15 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregSeg);
                     Add(acc, acc, x, pregFull);
                 }
-                ReduceSum(vSum, acc, pregFull);
+                ReduceFullAR(vSum, acc, pregFull);
                 StoreOneElementForDtypeTOut<TSum>(sumUb, vSum, pregOne, i);
             }
         }
     }
 
     // ---------- reduceNum > 2VL：pairwise 二分折叠（Σx²，HIGH-1） ----------
-    __aicore__ inline void CalculateSquareSumCommon(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
-                                                    __local_mem__ float* tmpUb, uint16_t curRows, uint32_t numColAlign,
+    __aicore__ inline void CalculateSquareSumCommon(__ubuf__ T_X* xInUb, __ubuf__ TSum* squareSumUb,
+                                                    __ubuf__ float* tmpUb, uint16_t curRows, uint32_t numColAlign,
                                                     uint32_t reduceNum)
     {
         uint32_t binaryAddQuotient = binaryAddQuotient_;
@@ -416,7 +427,7 @@ private:
                     Mul(x, x, x, pregFull); // 先平方（两半各自平方）
                     Mul(xFold, xFold, xFold, pregFull);
                     Add(sumReg, x, xFold, pregFull); // 再折叠已平方值
-                    ReduceSum(partial, sumReg, pregFull);
+                    ReduceFullAR(partial, sumReg, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), partial, pregOne);
                 }
@@ -433,7 +444,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(partial, sumReg, pregFull);
+                    ReduceFullAR(partial, sumReg, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), partial,
                         pregOne);
@@ -443,7 +454,7 @@ private:
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
                     Mul(x, x, x, pregFull);
-                    ReduceSum(partial, x, pregFull);
+                    ReduceFullAR(partial, x, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         partial, pregOne);
@@ -467,7 +478,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregSeg);
                     Add(acc, acc, x, pregFull);
                 }
-                ReduceSum(vSq, acc, pregFull);
+                ReduceFullAR(vSq, acc, pregFull);
                 StoreOneElementForDtypeTOut<TSum>(squareSumUb, vSq, pregOne, i);
             }
         }

@@ -8,14 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <iostream>
-#include <fstream>
-#include <string.h>
-#include <stdint.h>
-#include <vector>
-#include <string>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <exception>
 #include <map>
-#include "assert.h"
+#include <string>
+#include <vector>
 
 #include "graph.h"
 #include "types.h"
@@ -24,14 +24,12 @@
 #include "ge_api_types.h"
 #include "ge_api.h"
 #include "array_ops.h"
-#include "ge_ir_build.h"
 #include "../../op_graph/in_training_reduce_v2_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
 
 using namespace ge;
-using std::map;
 using std::string;
 using std::vector;
 
@@ -44,192 +42,202 @@ string GetTime()
     return string(tmp);
 }
 
-uint32_t GetDataTypeSize(DataType dt)
-{
-    if (dt == ge::DT_FLOAT)
-        return 4;
-    if (dt == ge::DT_FLOAT16)
-        return 2;
-    return 4;
-}
+struct ExampleOptions {
+    DataType dtype = DT_FLOAT;
+    Format format = FORMAT_NCHW;
+    vector<int64_t> shape = {2, 3, 8, 8};
+};
 
-void GenFloat16Data(uint8_t* pData, size_t size)
+bool ParseOptions(int argc, char* argv[], ExampleOptions& options)
 {
-    for (size_t i = 0; i < size; ++i) {
-        float val = static_cast<float>((i * 10 + 5) % 1000) / 1000.0f;
-        uint32_t bits;
-        memcpy(&bits, &val, sizeof(uint32_t));
-        uint16_t sign = (bits >> 16) & 0x8000;
-        uint16_t exponent = (bits >> 23) & 0xff;
-        uint32_t mantissa = bits & 0x7fffff;
-        uint16_t fp16Bits;
-        if (exponent == 0) {
-            fp16Bits = sign;
-        } else if (exponent >= 113 && exponent <= 142) {
-            fp16Bits = sign | ((exponent - 112) << 10) | (mantissa >> 13);
-        } else if (exponent < 113) {
-            if (exponent >= 103) {
-                uint32_t shift = 113 - exponent;
-                uint32_t shifted = (mantissa | 0x800000) >> shift;
-                fp16Bits = sign | static_cast<uint16_t>(shifted);
-                if ((shifted >> 4) & 1)
-                    fp16Bits++;
-            } else {
-                fp16Bits = sign;
-            }
-        } else {
-            fp16Bits = sign | 0x7c00;
+    if (argc > 3) {
+        return false;
+    }
+    if (argc > 1) {
+        const string dtype = argv[1];
+        if (dtype != "fp16" && dtype != "fp32") {
+            return false;
         }
-        memcpy(pData + i * 2, &fp16Bits, 2);
+        options.dtype = dtype == "fp16" ? DT_FLOAT16 : DT_FLOAT;
     }
+    if (argc > 2) {
+        const string format = argv[2];
+        if (format == "NCHW") {
+            options.format = FORMAT_NCHW;
+        } else if (format == "NHWC") {
+            options.format = FORMAT_NHWC;
+            options.shape = {2, 8, 8, 3};
+        } else if (format == "NDHWC") {
+            options.format = FORMAT_NDHWC;
+            options.shape = {2, 4, 4, 8, 3};
+        } else if (format == "NCDHW") {
+            options.format = FORMAT_NCDHW;
+            options.shape = {2, 3, 4, 4, 8};
+        } else if (format == "ND") {
+            options.format = FORMAT_ND;
+            options.shape = {2, 3, 64};
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
 
-int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& desc, DataType dtype)
+int32_t GenFloatData(const ExampleOptions& options, Tensor& tensor, TensorDesc& desc)
 {
-    desc.SetRealDimCnt(shapes.size());
-    size_t size = 1;
-    for (size_t i = 0; i < shapes.size(); i++)
-        size *= shapes[i];
-    uint32_t byteSize = GetDataTypeSize(dtype);
-    uint32_t data_len = size * byteSize;
-    uint8_t* pData = new (std::nothrow) uint8_t[data_len];
-    if (pData == nullptr)
-        return FAILED;
-    if (dtype == ge::DT_FLOAT) {
-        float* p = (float*)pData;
-        for (size_t i = 0; i < size; ++i)
-            p[i] = static_cast<float>((i * 10 + 5) % 1000) / 1000.0f;
-    } else if (dtype == ge::DT_FLOAT16) {
-        GenFloat16Data(pData, size);
+    desc.SetRealDimCnt(options.shape.size());
+    size_t count = 1;
+    for (const auto dim : options.shape) {
+        count *= static_cast<size_t>(dim);
     }
-    input_tensor = Tensor(desc, pData, data_len);
-    delete[] pData;
+    const size_t elemBytes = options.dtype == DT_FLOAT16 ? sizeof(uint16_t) : sizeof(float);
+    vector<uint8_t> data(count * elemBytes);
+    // Exact IEEE binary16 encodings of {-4, -3, -2, -1, 0, 1, 2, 3, 4}.
+    constexpr uint16_t halfValues[] = {0xc400, 0xc200, 0xc000, 0xbc00, 0, 0x3c00, 0x4000, 0x4200, 0x4400};
+    for (size_t i = 0; i < count; ++i) {
+        if (options.dtype == DT_FLOAT16) {
+            std::memcpy(data.data() + i * elemBytes, &halfValues[i % 9], elemBytes);
+        } else {
+            const float value = static_cast<float>(static_cast<int>(i % 9) - 4);
+            std::memcpy(data.data() + i * elemBytes, &value, elemBytes);
+        }
+    }
+    if (tensor.SetTensorDesc(desc) != ge::GRAPH_SUCCESS ||
+        tensor.SetData(data.data(), data.size()) != ge::GRAPH_SUCCESS) {
+        printf("Set input tensor failed\n");
+        return FAILED;
+    }
     return SUCCESS;
+}
+
+bool CheckOutputs(const ExampleOptions& options, const vector<Tensor>& outputs)
+{
+    const bool channelLast = options.format == FORMAT_NHWC || options.format == FORMAT_NDHWC;
+    const size_t channelAxis = channelLast ? options.shape.size() - 1 : 1;
+    const int64_t batches = options.shape[0];
+    const int64_t channels = options.shape[channelAxis];
+    int64_t spatialSize = 1;
+    vector<int64_t> expectedShape(options.shape.size(), 1);
+    expectedShape[0] = batches;
+    expectedShape[channelAxis] = channels;
+    for (size_t axis = 1; axis < options.shape.size(); ++axis) {
+        if (axis != channelAxis) {
+            spatialSize *= options.shape[axis];
+        }
+    }
+    vector<double> sums(batches * channels, 0.0);
+    vector<double> squares(batches * channels, 0.0);
+    for (int64_t n = 0; n < batches; ++n) {
+        for (int64_t c = 0; c < channels; ++c) {
+            for (int64_t r = 0; r < spatialSize; ++r) {
+                const int64_t index = channelLast ? (n * spatialSize + r) * channels + c :
+                                                    (n * channels + c) * spatialSize + r;
+                const double value = static_cast<double>(index % 9 - 4);
+                sums[n * channels + c] += value;
+                squares[n * channels + c] += value * value;
+            }
+        }
+    }
+    if (outputs.size() != 2) {
+        printf("Expected two outputs, got %zu\n", outputs.size());
+        return false;
+    }
+    for (size_t outputIndex = 0; outputIndex < outputs.size(); ++outputIndex) {
+        const auto desc = outputs[outputIndex].GetTensorDesc();
+        const auto& expected = outputIndex == 0 ? sums : squares;
+        if (desc.GetDataType() != DT_FLOAT || desc.GetFormat() != FORMAT_ND ||
+            desc.GetShape().GetDims() != expectedShape || outputs[outputIndex].GetData() == nullptr ||
+            outputs[outputIndex].GetSize() != expected.size() * sizeof(float)) {
+            printf("Output %zu has an unexpected descriptor or buffer size\n", outputIndex);
+            return false;
+        }
+        for (size_t i = 0; i < expected.size(); ++i) {
+            float actual;
+            std::memcpy(&actual, outputs[outputIndex].GetData() + i * sizeof(float), sizeof(float));
+            // These small integer inputs, products and sums are exactly representable in float32.
+            if (static_cast<double>(actual) != expected[i]) {
+                printf("Output %zu[%zu]: actual=%g, expected=%g\n", outputIndex, i, actual, expected[i]);
+                return false;
+            }
+            printf("%s[%zu] = %g\n", outputIndex == 0 ? "sum" : "square_sum", i, actual);
+        }
+    }
+    return true;
+}
+
+int32_t RunExample(const ExampleOptions& options)
+{
+    Graph graph("tc_ge_irrun_in_training_reduce_v2");
+    auto xData = op::Data("placeholder_x").set_attr_index(0);
+    TensorDesc xDesc(ge::Shape(options.shape), options.format, options.dtype);
+    xDesc.SetPlacement(ge::kPlacementHost);
+    Tensor tensorX;
+    if (GenFloatData(options, tensorX, xDesc) != SUCCESS || xData.update_input_desc_x(xDesc) != ge::GRAPH_SUCCESS ||
+        xData.update_output_desc_y(xDesc) != ge::GRAPH_SUCCESS || graph.AddOp(xData) != ge::GRAPH_SUCCESS) {
+        printf("Prepare graph input failed\n");
+        return FAILED;
+    }
+    auto reduceOp = op::INTrainingReduceV2("in_training_reduce_v2");
+    reduceOp.set_input_x(xData);
+    const vector<Operator> inputs = {xData};
+    const vector<Operator> outputs = {reduceOp};
+    graph.SetInputs(inputs).SetOutputs(outputs);
+
+    // Destroy the session and its graph before GEFinalize, including on every failure path.
+    const std::map<AscendString, AscendString> buildOptions;
+    ge::Session session(buildOptions);
+    const uint32_t graphId = 0;
+    Status ret = session.AddGraph(graphId, graph, buildOptions);
+    if (ret != SUCCESS) {
+        printf("AddGraph failed ret=%u\n", ret);
+        return FAILED;
+    }
+    vector<Tensor> results;
+    // RunGraph is synchronous; its returned tensors are ready for host-side checking.
+    ret = session.RunGraph(graphId, {tensorX}, results);
+    if (ret != SUCCESS) {
+        const auto error = ge::GEGetErrorMsgV2();
+        printf("RunGraph failed ret=%u: %s\n", ret, error.GetString());
+        return FAILED;
+    }
+    const bool matches = CheckOutputs(options, results);
+    ret = session.RemoveGraph(graphId);
+    if (ret != SUCCESS) {
+        printf("RemoveGraph failed ret=%u\n", ret);
+        return FAILED;
+    }
+    return matches ? SUCCESS : FAILED;
 }
 
 int main(int argc, char* argv[])
 {
-    const char* graph_name = "tc_ge_irrun_in_training_reduce_v2";
-    Graph graph(graph_name);
-    std::vector<ge::Tensor> input;
-
-    printf("%s - INFO - [XIR]: Start to initialize ge\n", GetTime().c_str());
-    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
-    Status ret = ge::GEInitialize(global_options);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: GEInitialize failed\n", GetTime().c_str());
+    ExampleOptions options;
+    if (!ParseOptions(argc, argv, options)) {
+        printf("Usage: %s [fp16|fp32] [NCHW|NHWC|NDHWC|NCDHW|ND]\n", argv[0]);
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: GEInitialize success\n", GetTime().c_str());
-
-    DataType xDtype = DT_FLOAT;
-    Format xFormat = FORMAT_NCHW;
-    vector<int64_t> xShape = {2, 3, 8, 8};
-
-    if (argc > 1) {
-        string arg = argv[1];
-        if (arg == "fp16") {
-            xDtype = DT_FLOAT16;
-        }
-        if (arg == "fp32") {
-            xDtype = DT_FLOAT;
-        }
+    printf("x dtype=%d format=%d shape=[", options.dtype, options.format);
+    for (const auto dim : options.shape) {
+        printf("%ld,", dim);
     }
-    if (argc > 2) {
-        string fmt = argv[2];
-        if (fmt == "NCDHW") {
-            xFormat = FORMAT_NCDHW;
-            xShape = {2, 3, 4, 4, 8};
-        }
-        if (fmt == "ND") {
-            xFormat = FORMAT_ND;
-            xShape = {2, 3, 64};
-        }
-        if (fmt == "NCHW") {
-            xFormat = FORMAT_NCHW;
-            xShape = {2, 3, 8, 8};
-        }
-    }
-    printf("%s - INFO - [XIR]: x dtype=%d format=%d shape=[", GetTime().c_str(), xDtype, xFormat);
-    for (size_t i = 0; i < xShape.size(); i++)
-        printf("%ld,", xShape[i]);
     printf("]\n");
-
-    auto xData = op::Data("placeholder_x").set_attr_index(0);
-    TensorDesc xDesc = TensorDesc(ge::Shape(xShape), xFormat, xDtype);
-    xDesc.SetPlacement(ge::kPlacementHost);
-    xDesc.SetFormat(xFormat);
-    Tensor tensor_x;
-    ret = GenFloatData(xShape, tensor_x, xDesc, xDtype);
+    const std::map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
+    Status ret = ge::GEInitialize(globalOptions);
     if (ret != SUCCESS) {
-        printf("GenFloatData x failed\n");
+        printf("GEInitialize failed ret=%u\n", ret);
         return FAILED;
     }
-    xData.update_input_desc_x(xDesc);
-    xData.update_output_desc_y(xDesc);
-    input.push_back(tensor_x);
-    graph.AddOp(xData);
-
-    auto reduce_op = op::INTrainingReduceV2("in_training_reduce_v2");
-    reduce_op.set_input_x(xData);
-
-    std::vector<Operator> inputs = {xData};
-    std::vector<Operator> outputs = {reduce_op};
-    graph.SetInputs(inputs).SetOutputs(outputs);
-
-    std::map<AscendString, AscendString> build_options = {};
-    printf("%s - INFO - [XIR]: Create session\n", GetTime().c_str());
-    ge::Session* session = new Session(build_options);
-    if (session == nullptr) {
-        printf("Create session failed\n");
-        return FAILED;
+    int32_t runStatus = FAILED;
+    try {
+        runStatus = RunExample(options);
+    } catch (const std::exception& error) {
+        printf("Example failed: %s\n", error.what());
     }
-
-    std::map<AscendString, AscendString> graph_options = {};
-    uint32_t graph_id = 0;
-    ret = session->AddGraph(graph_id, graph, graph_options);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: AddGraph failed ret=%u\n", GetTime().c_str(), ret);
-        delete session;
-        GEFinalize();
-        return FAILED;
-    }
-    printf("%s - INFO - [XIR]: AddGraph success\n", GetTime().c_str());
-
-    printf("%s - INFO - [XIR]: RunGraph start\n", GetTime().c_str());
-    std::vector<ge::Tensor> output;
-    ret = session->RunGraph(graph_id, input, output);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: RunGraph failed ret=%u\n", GetTime().c_str(), ret);
-        ge::AscendString error_msg = ge::GEGetErrorMsgV2();
-        printf("%s - ERROR - [XIR]: error: %s\n", GetTime().c_str(), error_msg.GetString());
-        delete session;
-        GEFinalize();
-        return FAILED;
-    }
-    printf("%s - INFO - [XIR]: RunGraph success\n", GetTime().c_str());
-
-    int output_num = output.size();
-    printf("output_num=%d\n", output_num);
-    for (int i = 0; i < output_num; i++) {
-        DataType outDtype = output[i].GetTensorDesc().GetDataType();
-        int64_t outSize = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        printf("output[%d] dtype=%d shapeSize=%ld\n", i, outDtype, outSize);
-        if (outDtype == ge::DT_FLOAT) {
-            float* p = (float*)output[i].GetData();
-            int64_t printCnt = outSize < 6 ? outSize : 6;
-            for (int64_t j = 0; j < printCnt; j++)
-                printf("  result[%ld] = %f\n", j, p[j]);
-        }
-    }
-
-    delete session;
-    session = nullptr;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
-        printf("GEFinalize failed\n");
+        printf("GEFinalize failed ret=%u\n", ret);
         return FAILED;
     }
-    printf("%s - INFO - [XIR]: GEFinalize success\n", GetTime().c_str());
-    return SUCCESS;
+    printf("%s - %s\n", GetTime().c_str(), runStatus == SUCCESS ? "PASS" : "FAIL");
+    return runStatus;
 }

@@ -11,15 +11,15 @@
 /*!
  * \file in_training_reduce_v2_sub_r.h
  * \brief sub-R 分块路径（DESIGN §6.3 路 A）：R 超单次 UB 容量时按 rFactor 分块搬入，
- *        每块归约得 Σx/Σx² 分块部分和，再做固定顺序树归约。
- *        部分和缓存按 chunksPerGroup 分组：每组折叠一次，结果写入 carry 槽参与下一组折叠，
- *        因此 UB 占用与 R 无关，R 不设上限。numGroups==1 时退化为改造前的单次全折叠。
+ *        每块归约得 Σx/Σx² 的高低双分量部分和，再做固定顺序补偿树归约。
+ *        部分和缓存按 chunksPerGroup 分组：每组折叠一次，高低两分量写入 carry 槽参与下一组折叠，
+ *        避免全量部分和缓存限制 R；numGroups==1 时只需一次组内折叠。
  */
 
 #ifndef IN_TRAINING_REDUCE_V2_SUB_R_H_
 #define IN_TRAINING_REDUCE_V2_SUB_R_H_
 
-#include "in_training_reduce_v2_common.h"
+#include "in_training_reduce_v2_precision.h"
 
 namespace INTrainingReduceV2Ops {
 using namespace AscendC;
@@ -64,6 +64,8 @@ public:
         numGroups_ = numGroups;
         tailChunks_ = tailChunks;
         blockIdx_ = blockIdx;
+        uint64_t slots = chunksPerGroup + (numGroups > 1 ? 1UL : 0UL);
+        correctionStride_ = (slots + VL_FP32 - 1) / VL_FP32 * VL_FP32;
     }
 
     __aicore__ inline void Process()
@@ -77,8 +79,8 @@ public:
 
         LocalTensor<float> sumPartial = sumPartialBuf_->Get<float>();
         LocalTensor<float> sqPartial = sqPartialBuf_->Get<float>();
-        __local_mem__ float* sumPartUb = (__local_mem__ float*)sumPartial.GetPhyAddr();
-        __local_mem__ float* sqPartUb = (__local_mem__ float*)sqPartial.GetPhyAddr();
+        __ubuf__ float* sumPartUb = (__ubuf__ float*)sumPartial.GetPhyAddr();
+        __ubuf__ float* sqPartUb = (__ubuf__ float*)sqPartial.GetPhyAddr();
 
         for (int64_t row = startRow; row < endRow; ++row) {
             int64_t rowBase = row * numR_;
@@ -99,8 +101,8 @@ public:
                 if (isLastGroup) {
                     LocalTensor<T_SUM> sumLocal = outQueueSum_->AllocTensor<T_SUM>();
                     LocalTensor<T_SUM> sqLocal = outQueueSq_->AllocTensor<T_SUM>();
-                    FoldGroupSubR(sumPartUb, sqPartUb, (__local_mem__ float*)sumLocal.GetPhyAddr(),
-                                  (__local_mem__ float*)sqLocal.GetPhyAddr(), foldCnt);
+                    FoldGroupSubR<true>(sumPartUb, sqPartUb, (__ubuf__ float*)sumLocal.GetPhyAddr(),
+                                        (__ubuf__ float*)sqLocal.GetPhyAddr(), foldCnt);
                     outQueueSum_->EnQue<T_SUM>(sumLocal);
                     outQueueSq_->EnQue<T_SUM>(sqLocal);
                     CopyOutRowSubR(row);
@@ -108,7 +110,7 @@ public:
                     // carry 落在"下一组 chunk 数"这一格，恰好紧跟下一组将写入的 [0, chunksNext)，
                     // 既不会被下一组覆盖，也保证折叠区间连续。
                     uint32_t chunksNext = (g + 2 == numGroups_) ? tailChunks_ : chunksPerGroup_;
-                    FoldGroupSubR(sumPartUb, sqPartUb, sumPartUb + chunksNext, sqPartUb + chunksNext, foldCnt);
+                    FoldGroupSubR<false>(sumPartUb, sqPartUb, sumPartUb + chunksNext, sqPartUb + chunksNext, foldCnt);
                 }
                 chunkBase += static_cast<int64_t>(chunksInGroup);
             }
@@ -132,10 +134,10 @@ private:
         inQueueX_->EnQue(xLocal);
     }
 
-    __aicore__ inline void ReduceChunkSubR(LocalTensor<T_X>& xLocal, __local_mem__ float* sumPartUb,
-                                           __local_mem__ float* sqPartUb, uint32_t chunkIdx, uint32_t count)
+    __aicore__ inline void ReduceChunkSubR(const LocalTensor<T_X>& xLocal, __ubuf__ float* sumPartUb,
+                                           __ubuf__ float* sqPartUb, uint32_t chunkIdx, uint32_t count)
     {
-        __local_mem__ T_X* xUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ T_X* xUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
         uint32_t numSeg = (count + VL_FP32 - 1) / VL_FP32;
         __VEC_SCOPE__
         {
@@ -143,14 +145,16 @@ private:
             RegTensor<float> sqReg;
             RegTensor<float> sumAccReg;
             RegTensor<float> sqAccReg;
-            RegTensor<float> sumScalar;
-            RegTensor<float> sqScalar;
+            RegTensor<float> sumLow;
+            RegTensor<float> sqLow;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
             Duplicate(sumAccReg, static_cast<float>(0.0), pregFull);
             Duplicate(sqAccReg, static_cast<float>(0.0), pregFull);
+            Duplicate(sumLow, 0.0f, pregFull);
+            Duplicate(sqLow, 0.0f, pregFull);
 
             uint32_t sreg = count;
             uint16_t numSeg16 = static_cast<uint16_t>(numSeg);
@@ -158,22 +162,26 @@ private:
                 MaskReg pregSeg = UpdateMask<float>(sreg);
                 LoadTensorForDtypeTIn<T_X>(xUb, xReg, pregSeg, s * VL_FP32);
                 ShiftLefts((RegTensor<uint32_t>&)xReg, (RegTensor<uint32_t>&)xReg, static_cast<int16_t>(0), pregSeg);
-                Add(sumAccReg, sumAccReg, xReg, pregFull); // Σx：累进原始 x
-                Mul(sqReg, xReg, xReg, pregFull);          // HIGH-1：先逐元素平方
-                Add(sqAccReg, sqAccReg, sqReg, pregFull);  // Σx²：累进已平方值
+                AccumulateWithError(sumAccReg, sumLow, xReg, pregFull); // Σx：累进原始 x
+                Mul(sqReg, xReg, xReg, pregFull);                       // HIGH-1：先逐元素平方
+                AccumulateWithError(sqAccReg, sqLow, sqReg, pregFull);  // Σx²：累进已平方值
             }
-            ReduceSum(sumScalar, sumAccReg, pregFull);
-            ReduceSum(sqScalar, sqAccReg, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumPartUb + chunkIdx, sumScalar, pregOne);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqPartUb + chunkIdx, sqScalar, pregOne);
+            ReduceWithError(sumAccReg, sumLow, pregFull);
+            ReduceWithError(sqAccReg, sqLow, pregFull);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumPartUb + chunkIdx, sumAccReg, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqPartUb + chunkIdx, sqAccReg, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumPartUb + correctionStride_ + chunkIdx, sumLow,
+                                                               pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqPartUb + correctionStride_ + chunkIdx, sqLow, pregOne);
         }
     }
 
-    // 折叠一组部分和：把 sumPartUb[0, nChunks) 归约成一个标量写到 sumDst。
+    // 折叠一组部分和：分别归并 [0, nChunks) 的主值及 correctionStride_ 后的低位。
     // nChunks 已含上一组的 carry 格（若有），故 carry 与本组 chunk 一起走同一次树形折叠，
-    // 而不是额外做一次标量顺序加。numGroups==1 时本函数与改造前的 FinalizeRowSubR 完全等价。
-    __aicore__ inline void FoldGroupSubR(__local_mem__ float* sumPartUb, __local_mem__ float* sqPartUb,
-                                         __local_mem__ float* sumDst, __local_mem__ float* sqDst, uint32_t nChunks)
+    // 而不是额外做一次标量顺序加。仅最终输出时合并高低两分量，组间 carry 保留两分量。
+    template <bool FINAL_OUTPUT>
+    __aicore__ inline void FoldGroupSubR(__ubuf__ float* sumPartUb, __ubuf__ float* sqPartUb, __ubuf__ float* sumDst,
+                                         __ubuf__ float* sqDst, uint32_t nChunks)
     {
         uint32_t numSeg = (nChunks + VL_FP32 - 1) / VL_FP32;
         __VEC_SCOPE__
@@ -182,8 +190,8 @@ private:
             RegTensor<float> sqReg;
             RegTensor<float> sumAccReg;
             RegTensor<float> sqAccReg;
-            RegTensor<float> sumScalar;
-            RegTensor<float> sqScalar;
+            RegTensor<float> sumLow;
+            RegTensor<float> sqLow;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
@@ -191,6 +199,8 @@ private:
 
             Duplicate(sumAccReg, static_cast<float>(0.0), pregFull);
             Duplicate(sqAccReg, static_cast<float>(0.0), pregFull);
+            Duplicate(sumLow, 0.0f, pregFull);
+            Duplicate(sqLow, 0.0f, pregFull);
 
             uint32_t sreg = nChunks;
             uint16_t numSeg16 = static_cast<uint16_t>(numSeg);
@@ -201,13 +211,27 @@ private:
                 ShiftLefts((RegTensor<uint32_t>&)sumReg, (RegTensor<uint32_t>&)sumReg, static_cast<int16_t>(0),
                            pregSeg);
                 ShiftLefts((RegTensor<uint32_t>&)sqReg, (RegTensor<uint32_t>&)sqReg, static_cast<int16_t>(0), pregSeg);
-                Add(sumAccReg, sumAccReg, sumReg, pregFull);
-                Add(sqAccReg, sqAccReg, sqReg, pregFull);
+                AccumulateWithError(sumAccReg, sumLow, sumReg, pregFull);
+                AccumulateWithError(sqAccReg, sqLow, sqReg, pregFull);
+                DataCopy<float, LoadDist::DIST_NORM>(sumReg, sumPartUb + correctionStride_ + s * VL_FP32);
+                DataCopy<float, LoadDist::DIST_NORM>(sqReg, sqPartUb + correctionStride_ + s * VL_FP32);
+                ShiftLefts((RegTensor<uint32_t>&)sumReg, (RegTensor<uint32_t>&)sumReg, static_cast<int16_t>(0),
+                           pregSeg);
+                ShiftLefts((RegTensor<uint32_t>&)sqReg, (RegTensor<uint32_t>&)sqReg, static_cast<int16_t>(0), pregSeg);
+                Add(sumLow, sumLow, sumReg, pregFull);
+                Add(sqLow, sqLow, sqReg, pregFull);
             }
-            ReduceSum(sumScalar, sumAccReg, pregFull);
-            ReduceSum(sqScalar, sqAccReg, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumDst, sumScalar, pregOne);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqDst, sqScalar, pregOne);
+            ReduceWithError(sumAccReg, sumLow, pregFull);
+            ReduceWithError(sqAccReg, sqLow, pregFull);
+            if constexpr (FINAL_OUTPUT) {
+                Add(sumAccReg, sumAccReg, sumLow, pregOne);
+                Add(sqAccReg, sqAccReg, sqLow, pregOne);
+            } else {
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumDst + correctionStride_, sumLow, pregOne);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqDst + correctionStride_, sqLow, pregOne);
+            }
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumDst, sumAccReg, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqDst, sqAccReg, pregOne);
         }
     }
 
@@ -243,6 +267,7 @@ private:
     int64_t numGroups_{0};
     uint32_t tailChunks_{0};
     int64_t blockIdx_{0};
+    uint32_t correctionStride_{0};
 };
 } // namespace INTrainingReduceV2Ops
 #endif // IN_TRAINING_REDUCE_V2_SUB_R_H_
