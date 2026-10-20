@@ -31,8 +31,9 @@ namespace ge {
 
 * @par Inputs:
 * five inputs, including:
-* @li grad_y: A required 2D or 3D Tensor of shape (..., H). Must be one of: bfloat16, float16, float32.
-* @li x: A required Tensor of shape (..., 2H) and the same rank as grad_y.
+* @li grad_y: A required Tensor with rank >= 1 and shape (..., H). Must be one of: bfloat16, float16, float32.
+* @li x: A required Tensor with rank >= 1 and shape (..., 2H). Its last dimension must be twice that of grad_y,
+ *     and the product of its leading dimensions must equal the product of grad_y's leading dimensions.
  *     Must be one of: bfloat16, float16, float32.
  * @li weight: An optional Tensor of shape (..., 1) with dtype float32. MoE top-k routing weight.
  *     It must be provided together with y_origin.
