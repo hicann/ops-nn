@@ -90,6 +90,8 @@ constexpr char kPlatAscend910B[] = "Ascend910B";
 constexpr char kPlatAscend910_93[] = "Ascend910_93";
 constexpr char kPlatAscend950[] = "Ascend950";
 constexpr char kPlatAscend350[] = "Ascend350";
+constexpr char kPlatAscend960DT[] = "Ascend960DT";
+constexpr char kPlatAscend960PR[] = "Ascend960PR";
 
 // 3D shape 索引：x1=[batch, M, K], x2=[batch, K, N]，K 和 N 都在 index 2，
 // kKDimIdx 用于 x1，kNDimIdx 用于 x2，语义不同但值相同。
@@ -179,7 +181,7 @@ std::string GetPlatform()
         fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
         OPS_LOG_E(kPassName, "Get platform info failed."), return "");
     static const std::set<std::string> supportPlatList = {kPlatAscend910B, kPlatAscend910_93, kPlatAscend950,
-                                                          kPlatAscend350};
+                                                          kPlatAscend350,  kPlatAscend960DT,  kPlatAscend960PR};
     const std::string currentPlat = platformInfo.str_info.short_soc_version;
     FUSION_PASS_CHECK(supportPlatList.count(currentPlat) == 0,
                       OPS_LOG_W(kPassName, "Fusion TransposeBatchMatMul not supported on this platform."), return "");

@@ -117,7 +117,7 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
 // 判断当前ARCH是否为DAV_3510或后续兼容版本，后续新增兼容ARCH在此函数内追加
 bool IsNpuArch3510Series()
 {
-    static const std::set<std::string> arch35SocList = {"Ascend950", "Ascend350"};
+    static const std::set<std::string> arch35SocList = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
