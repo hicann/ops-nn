@@ -210,7 +210,7 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
     gluLimit_ = attrLimit == nullptr ? CLAMP_LIMIT_DEFAULT : *attrLimit;
 
     OP_CHECK_IF(gluLimit_ <= 0.0f,
-                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "limit", std::to_string(gluLimit_), "> 0"),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "limit", std::to_string(gluLimit_), "> 0"),
                 return ge::GRAPH_FAILED);
     auto* attrBias = attrs->GetAttrPointer<float>(BIAS_INDEX);
     gluBias_ = attrBias == nullptr ? GLU_BIAS_DEFAULT : *attrBias;
@@ -220,10 +220,9 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
 
     auto* attrClampMode = attrs->GetAttrPointer<int64_t>(CLAMPMODE_INDEX);
     clampMode_ = attrClampMode == nullptr ? 0 : *attrClampMode;
-    OP_CHECK_IF(
-        clampMode_ != 0 && clampMode_ != 1,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "clamp_mode", std::to_string(clampMode_), "must be 1 or 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(clampMode_ != 0 && clampMode_ != 1,
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "clamp_mode", std::to_string(clampMode_), "1 or 0"),
+                return ge::GRAPH_FAILED);
 
     auto shapeX = context_->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeX);

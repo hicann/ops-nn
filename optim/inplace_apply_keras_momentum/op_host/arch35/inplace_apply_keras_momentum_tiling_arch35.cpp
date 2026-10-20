@@ -30,6 +30,7 @@
 
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
+#include "graph/utils/type_utils.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "optim/inplace_apply_keras_momentum/op_kernel/arch35/inplace_apply_keras_momentum_tiling_data.h"
@@ -125,7 +126,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     if (supportedDtypes.count(*dataType) == 0) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "var", "unsupported", "DT_FLOAT, DT_FLOAT16, DT_BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "var", ge::TypeUtils::DataTypeToSerialString(*dataType).c_str(),
+                                  "DT_FLOAT, DT_FLOAT16, DT_BF16");
         return ge::GRAPH_FAILED;
     }
 
@@ -137,26 +139,30 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto accumDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumDesc);
     if (accumDesc->GetDataType() != *dataType) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "accum", "mismatch", "same as var");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "accum", ge::TypeUtils::DataTypeToSerialString(accumDesc->GetDataType()).c_str(), "same as var");
         return ge::GRAPH_FAILED;
     }
     auto gradDesc = context->GetInputDesc(3);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
     if (gradDesc->GetDataType() != *dataType) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "grad", "mismatch", "same as var");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "grad", ge::TypeUtils::DataTypeToSerialString(gradDesc->GetDataType()).c_str(), "same as var");
         return ge::GRAPH_FAILED;
     }
 
     auto lrDesc = context->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, lrDesc);
     if (lrDesc->GetDataType() != ge::DT_FLOAT) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "lr", "not float32", "DT_FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "lr", ge::TypeUtils::DataTypeToSerialString(lrDesc->GetDataType()).c_str(),
+                                  "DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     auto momentumDesc = context->GetInputDesc(4);
     OP_CHECK_NULL_WITH_CONTEXT(context, momentumDesc);
     if (momentumDesc->GetDataType() != ge::DT_FLOAT) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "momentum", "not float32", "DT_FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName, "momentum", ge::TypeUtils::DataTypeToSerialString(momentumDesc->GetDataType()).c_str(), "DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 

@@ -93,8 +93,8 @@ ge::graphStatus ValidateInputs(gert::TilingContext* context, const gert::Storage
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16};
     if (supportedDtypes.count(dtype) == 0) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "var", ge::TypeUtils::DataTypeToAscendString(dtype).GetString(),
-                                         "DT_FLOAT, DT_FLOAT16");
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "var", ge::TypeUtils::DataTypeToAscendString(dtype).GetString(),
+                                  "DT_FLOAT, DT_FLOAT16");
         return ge::GRAPH_FAILED;
     }
 
@@ -105,9 +105,9 @@ ge::graphStatus ValidateInputs(gert::TilingContext* context, const gert::Storage
             return ge::GRAPH_FAILED;
         }
         if (t->GetDataType() != dtype) {
-            OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, INPUT_NAMES[idx],
-                                             ge::TypeUtils::DataTypeToAscendString(t->GetDataType()).GetString(),
-                                             "same as var");
+            OP_LOGE_FOR_INVALID_DTYPE(opName, INPUT_NAMES[idx],
+                                      ge::TypeUtils::DataTypeToAscendString(t->GetDataType()).GetString(),
+                                      "same as var");
             return ge::GRAPH_FAILED;
         }
     }

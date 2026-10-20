@@ -123,8 +123,8 @@ static ge::graphStatus ValidateInputDtypes(gert::TilingContext* context, const c
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     if (supportedDtypes.count(*dataType) == 0) {
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "var", ge::TypeUtils::DataTypeToSerialString(*dataType).c_str(),
-                                         "DT_FLOAT, DT_FLOAT16, DT_BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "var", ge::TypeUtils::DataTypeToSerialString(*dataType).c_str(),
+                                  "DT_FLOAT, DT_FLOAT16, DT_BF16");
         return ge::GRAPH_FAILED;
     }
 

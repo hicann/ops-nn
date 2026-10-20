@@ -144,21 +144,22 @@ bool CrossEntropySumExpAndIndexLogitTiling::CheckParam()
     }
     auto attrs = tilingContext->GetAttrs();
     if (attrs == nullptr) {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "attrs", "null", "non_empty_value");
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "attrs", "null", "non-empty value");
         return false;
     }
     const int64_t* vocabStartPtr = attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_START_INDEX);
     const int64_t* vocabEndPtr = attrs->GetAttrPointer<int64_t>(ATTR_VOCAB_END_INDEX);
     if (vocabStartPtr == nullptr || vocabEndPtr == nullptr) {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "vocab_start_index/vocab_end_index", "nullptr",
-                                  "not nullptr");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(tilingContext->GetNodeName(), "vocab_start_index, vocab_end_index",
+                                               "nullptr", "vocab_start_index and vocab_end_index must not be nullptr");
         return false;
     }
     vocabStart_ = *vocabStartPtr;
     vocabEnd_ = *vocabEndPtr;
     if (vocabEnd_ <= vocabStart_) {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "vocab_end_index", std::to_string(vocabEnd_).c_str(),
-                                  "larger than vocab_start_index");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "vocab_end_index",
+                                              std::to_string(vocabEnd_).c_str(),
+                                              "it must be greater than vocab_start_index");
         return false;
     }
 
@@ -217,8 +218,9 @@ bool CrossEntropySumExpAndIndexLogitTiling::CheckParam()
         return false;
     }
     if (vocabEnd_ - vocabStart_ != vLocal) {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "vocab_end_index", std::to_string(vocabEnd_).c_str(),
-                                  "vocab_start_index + V_local");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "vocab_end_index",
+                                              std::to_string(vocabEnd_).c_str(),
+                                              "it must equal vocab_start_index + V_local");
         return false;
     }
 
