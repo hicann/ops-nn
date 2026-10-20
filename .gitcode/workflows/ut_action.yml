@@ -52,6 +52,7 @@ jobs:
         identifier: ut_cov
         uses: cann/.gitcode/actions/ut-cov-report@master
         with:
+          UT_SOFT_FAIL_REPOS: ${{ vars.UT_SOFT_FAIL_REPOS }}
           ut_process: ${{ steps.ut.outputs.ut_process }}
           workspace: ${{ steps.process_checkout.outputs.path }}
           ut_type: ${{ inputs.ut_type }}
