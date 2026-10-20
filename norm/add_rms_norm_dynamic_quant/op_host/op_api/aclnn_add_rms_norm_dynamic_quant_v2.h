@@ -29,6 +29,11 @@ extern "C" {
  *     y1 = dynamicQuant(y, smoothScale1Optional, smoothScale2Optional)
  *     y2 = dynamicQuant(y, smoothScale1Optional, smoothScale2Optional)
  *
+ * @note Ascend 950PR&950DT系列产品：gamma为一维Tensor，长度与x1的最后一维一致。
+ * x2、gamma、非空指针的smoothScale1Optional、smoothScale2Optional和betaOptional、xOut的数据类型与x1一致。
+ * smoothScale1Optional、smoothScale2Optional和betaOptional的shape与gamma一致。
+ * 量化输出还支持HIFLOAT8、FLOAT8_E5M2和FLOAT8_E4M3FN。
+ * 使用INT32存储视图时，每个元素按低位优先存储8个有符号INT4值，最后一维为x1最后一维的1/8。
  * @param [in] x1:
  * 公式中的输入`x1`，数据类型支持BFLOAT16、FLOAT16，shape维度支持2-8维。
  * 支持非连续的Tensor，数据格式支持ND。
@@ -76,7 +81,7 @@ ACLNN_API aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     aclTensor* scale2Out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnAddRmsNormQuantV2的第二段接口，用于执行计算。
+ * @brief aclnnAddRmsNormDynamicQuantV2的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspaceSize: 在npu

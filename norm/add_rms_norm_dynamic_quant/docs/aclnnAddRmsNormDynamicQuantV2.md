@@ -51,35 +51,33 @@
 
   $$
   scale1Out=\begin{cases}
-    row\_max(abs(input1))/127 & (outputMask[0]=True\ ||\ !outputMask) \& y1Out为INT8 \\
-    row\_max(abs(input1))/7 & (outputMask[0]=True\ ||\ !outputMask) \& y1Out为INT4 \\
+    row\_max(abs(input1))/quantMax & outputMask[0]=True\ ||\ !outputMask \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
 
   $$
   y1Out=\begin{cases}
-    round(input1/scale1Out) & outputMask[0]=True\ ||\ !outputMask \\
+    quantize(input1/scale1Out) & outputMask[0]=True\ ||\ !outputMask \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
 
   $$
   scale2Out=\begin{cases}
-    row\_max(abs(input2))/127 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT8 \\
-    row\_max(abs(input2))/7 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT4 \\
+    row\_max(abs(input2))/quantMax & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional) \\
     无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ (!smoothScale1Optional\ ||\ !smoothScale2Optional))
     \end{cases}
   $$
 
   $$
   y2Out=\begin{cases}
-    round(input2/scale2Out) & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)\\
+    quantize(input2/scale2Out) & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)\\
     无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ (!smoothScale1Optional\ ||\ !smoothScale2Optional))
     \end{cases}
   $$
 
-  公式中的row\_max代表每行求最大值。
+  公式中的row\_max代表每行求最大值。INT8的quantMax为127；INT4和INT32打包INT4为7；FLOAT8_E4M3FN为448；FLOAT8_E5M2为57344；HIFLOAT8为32768。quantize对整数使用最近偶数舍入和饱和转换，对浮点量化类型使用对应类型转换。beta缺省时为0；全零行的scale和量化值均为0。INT32只改变INT4的存储视图，每个INT32按低位优先打包8个有符号INT4值。
 
 ## 函数原型
 
@@ -139,7 +137,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1（aclTensor*）</td>
+      <td>x1（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li><li>当输出`y1Out`或`y2Out`的数据类型为INT4时，`x1`的尾轴必须能被2整除。</li><li>当输出`y1Out`或`y2Out`的数据类型为INT32时，`x1`的尾轴必须是输出`y1Out`或`y2Out`尾轴的8倍。</li></ul></td>
@@ -149,7 +147,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2（aclTensor*）</td>
+      <td>x2（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
@@ -159,7 +157,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma（aclTensor*）</td>
+      <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
@@ -169,7 +167,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale1Optional（aclTensor*）</td>
+      <td>smoothScale1Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -179,7 +177,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale2Optional（aclTensor*）</td>
+      <td>smoothScale2Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -189,7 +187,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>betaOptional（aclTensor*）</td>
+      <td>betaOptional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -209,7 +207,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>outputMask（aclBoolArray*）</td>
+      <td>outputMask（const aclBoolArray*）</td>
       <td>输入</td>
       <td><ul><li>表示输出的掩码，对应公式中的`outputMask`。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>支持传空指针或长度为2的数组。</td>
@@ -222,7 +220,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`y1Out`为有效输出时，shape和数据类型需要与输入`x1`保持一致；如果`y1Out`为无效输出时，shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y1Out`为有效输出时，量化数据类型满足下述产品约束；INT32打包视图的shape与`x1`一致但尾轴为其1/8，其他量化类型的shape与`x1`一致；如果`y1Out`为无效输出时，shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>INT4、INT32、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
@@ -232,7 +230,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，量化数据类型满足下述产品约束；INT32打包视图的shape与`x1`一致但尾轴为其1/8，其他量化类型的shape与`x1`一致；如果`y2Out`为无效输出时，shape为[1]。</li><li>仅当`y1Out`和`y2Out`均为有效输出时，两者的数据类型需要一致。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>INT4、INT32、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
@@ -412,7 +410,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   <!-- npu="950" id7 -->
   - <term>Ascend 950PR&950DT系列产品</term>：
 
-    | `x1`/`x2`/`gamma`/`smoothScale1`/`smoothScale2`/`beta` 数据类型 | `y1Out`/`y2Out` 数据类型 | `xOut` 数据类型 | `scale1Out`/`scale2Out` 数据类型 |
+    | `x1`/`x2`/`gamma`/`smoothScale1Optional`/`smoothScale2Optional`/`betaOptional`数据类型 | `y1Out`/`y2Out`数据类型 | `xOut`数据类型 | `scale1Out`/`scale2Out`数据类型 |
     | :----------------------------------------------: | :-----------------------: | :-------------: | :------------------------------: |
     |                     FLOAT16                      |           INT8            |     FLOAT16     |              FLOAT32             |
     |                     BFLOAT16                     |           INT8            |    BFLOAT16     |              FLOAT32             |
@@ -430,7 +428,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   <!-- npu="A3,910b" id8 -->
   - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
 
-    | `x1`/`x2`/`gamma`/`smoothScale1`/`smoothScale2`/`beta` 数据类型 | `y1Out`/`y2Out` 数据类型 | `xOut` 数据类型 | `scale1Out`/`scale2Out` 数据类型 |
+    | `x1`/`x2`/`gamma`/`smoothScale1Optional`/`smoothScale2Optional`/`betaOptional`数据类型 | `y1Out`/`y2Out`数据类型 | `xOut`数据类型 | `scale1Out`/`scale2Out`数据类型 |
     | :----------------------------------------------: | :-----------------------: | :-------------: | :------------------------------: |
     |                     FLOAT16                      |           INT8            |     FLOAT16     |              FLOAT32             |
     |                     BFLOAT16                     |           INT8            |    BFLOAT16     |              FLOAT32             |

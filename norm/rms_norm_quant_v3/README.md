@@ -69,7 +69,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape与x1需要norm（层归一化）的维度保持一致。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape与x需要norm（层归一化）的维度保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -146,20 +146,22 @@
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>表示量化输出Tensor，对应公式中的`y2`。未传入`scales2`时，该输出为shape为[1]的无效占位Tensor，不参与计算。</td>
+      <td>表示量化输出Tensor，对应公式中的`y2`。未传入`scales2`时，该输出为无效占位Tensor，不参与计算；`x`为空时占位shape为[0]，否则为[1]。</td>
       <td>INT8、 INT4、 HIFLOAT8、 FLOAT8_E5M2、 FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td><ul><li>表示归一化后的标准差的倒数，对应公式中Rms(x)的倒数。</li><li>shape为与入参x的shape前几维保持一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>表示归一化后的标准差的倒数，对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，shape与x的非规约维度保持一致，规约维度的大小均为1；规约维度数等于gamma的维度数。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
+
+- 满足输入shape、数据类型约束时，支持`x`为空Tensor且所有有效输出均为空Tensor，GE框架不执行Kernel；未启用的`y2`、`rstd`也推导为空Tensor。`output_rstd`为True且规约后`rstd`非空的场景不支持。
 
 - <term>Ascend 950PR&950DT系列产品</term>：
   - 当`x`的数据类型为FLOAT32时，`scales1`、`scales2`和`zero_points1`、`zero_points2`的数据类型只能为FLOAT32；当`x`的数据类型为FLOAT16或者BFLOAT16，并且`scales1`、`scales2`的数据类型为FLOAT32时，`zero_points1`、`zero_points2`的数据类型只能是FLOAT32或者INT32，否则`scales1`、`scales2`的数据类型需要与`x`的数据类型保持一致同为FLOAT16或者BFLOAT16，`zero_points1`、`zero_points2`的数据类型也需要与`x`的数据类型保持一致或者为INT8。

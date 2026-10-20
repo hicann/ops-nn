@@ -142,7 +142,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1（aclTensor*）</td>
+      <td>x1（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td>支持空Tensor。</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2（aclTensor*）</td>
+      <td>x2（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma（aclTensor*）</td>
+      <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale1Optional（aclTensor*）</td>
+      <td>smoothScale1Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale2Optional（aclTensor*）</td>
+      <td>smoothScale2Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。必须与smoothScale1Optional配套使用。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -306,9 +306,20 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内，或不满足参数间的数据类型一致性要求。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>输入或输出的shape不满足约束条件，例如维数超出支持范围。</td>
     </tr>
   </tbody></table>
+
+<!-- npu="950" id10 -->
+
+- <term>Ascend 950PR&950DT系列产品</term>：`x2`、`gamma`、非空指针的`smoothScale1Optional`和`smoothScale2Optional`、`xOut`的数据类型需要与`x1`一致。即使各参数的数据类型均在支持范围内，不满足该一致性约束时仍返回161002（ACLNN_ERR_PARAM_INVALID）。
+
+<!-- end id10 -->
 
 ## aclnnAddRmsNormDynamicQuant
 
@@ -396,7 +407,23 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+若使用已安装的`custom_nn`自定义算子包，可按以下命令编译并运行。将`CANN_ROOT`替换为CANN安装目录，`SAMPLE`替换为示例源文件路径；文档中的C++代码保存为`.cpp`文件后也可使用该命令。
+
+```bash
+CANN_ROOT=/path/to/cann
+SAMPLE=/path/to/test_aclnn_add_rms_norm_dynamic_quant.cpp
+source "$CANN_ROOT/set_env.sh"
+vendor="$CANN_ROOT/vendors/custom_nn/op_api"
+g++ -std=c++11 "$SAMPLE" -o add_rms_norm_dynamic_quant_example \
+    -I"$vendor/include" -I"$CANN_ROOT/include" -I"$CANN_ROOT/include/aclnn" -I"$CANN_ROOT/include/aclnnop" \
+    -L"$vendor/lib" -L"$CANN_ROOT/lib64" \
+    -lcust_opapi -lascendcl -lnnopbase -lopapi_nn -lopapi_math
+LD_LIBRARY_PATH="$vendor/lib:$CANN_ROOT/lib64:${LD_LIBRARY_PATH:-}" ./add_rms_norm_dynamic_quant_example
+```
+
 ```Cpp
+#include <cmath>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -413,6 +440,12 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
     do {                                \
         printf(message, ##__VA_ARGS__); \
     } while (0)
+
+// 在正常返回和错误返回时释放已创建的资源。
+struct ScopeCleanup {
+    std::function<void()> release;
+    ~ScopeCleanup() { release(); }
+};
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
@@ -431,17 +464,15 @@ int Init(int32_t deviceId, aclrtStream* stream)
     ret = aclrtSetDevice(deviceId);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-        LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
-        aclrtResetDevice(deviceId); aclFinalize(); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
 
     return 0;
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -450,19 +481,46 @@ int CreateAclTensor(
 
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr);
+              *deviceAddr = nullptr; return ret);
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
-    for (int64_t i = shape.size() - 2; i >= 0; i--) {
+    for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; i--) {
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); aclrtFree(*deviceAddr); *deviceAddr = nullptr;
+              return ACL_ERROR_FAILURE);
     return 0;
+}
+
+template <typename T>
+float OutputValue(T value)
+{
+    return static_cast<float>(value);
+}
+
+float OutputValue(short value) { return aclFloat16ToFloat(static_cast<aclFloat16>(value)); }
+
+template <typename T>
+bool CheckOutput(const char* name, void* deviceAddr, std::vector<T>& hostData, float expected, float tolerance = 0.0f)
+{
+    auto bytes = hostData.size() * sizeof(T);
+    auto ret = aclrtMemcpy(hostData.data(), bytes, deviceAddr, bytes, ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s failed. ERROR: %d\n", name, ret); return false);
+    for (size_t i = 0; i < hostData.size(); ++i) {
+        float actual = OutputValue(hostData[i]);
+        if (!std::isfinite(actual) || std::fabs(actual - expected) > tolerance) {
+            LOG_PRINT("%s[%zu]: actual=%g, expected=%g, tolerance=%g\n", name, i, actual, expected, tolerance);
+            return false;
+        }
+    }
+    LOG_PRINT("%s: checked %zu elements, expected=%g, PASS\n", name, hostData.size(), expected);
+    return true;
 }
 
 int main()
@@ -502,6 +560,27 @@ int main()
     aclTensor* scale1 = nullptr;
     aclTensor* scale2 = nullptr;
 
+    void* workspaceAddr = nullptr;
+    ScopeCleanup cleanup{[&]() {
+        // 释放设备内存前等待已提交的异步任务结束。
+        aclrtSynchronizeStream(stream);
+        for (auto* tensor : {x1, x2, gamma, smooth1, smooth2, y1, y2, x, scale1, scale2}) {
+            if (tensor != nullptr) {
+                aclDestroyTensor(tensor);
+            }
+        }
+        for (auto* addr :
+             {x1DeviceAddr, x2DeviceAddr, gammaDeviceAddr, smooth1DeviceAddr, smooth2DeviceAddr, y1DeviceAddr,
+              y2DeviceAddr, xDeviceAddr, scale1DeviceAddr, scale2DeviceAddr, workspaceAddr}) {
+            if (addr != nullptr) {
+                aclrtFree(addr);
+            }
+        }
+        aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    }};
+
     int64_t xShapeSize = GetShapeSize(xShape);
     int64_t gammaShapeSize = GetShapeSize(gammaShape);
     int64_t reduceShapeSize = GetShapeSize(reduceShape);
@@ -512,11 +591,11 @@ int main()
     std::vector<short> smooth1HostData(gammaShapeSize, 0x3e00);
     std::vector<short> smooth2HostData(gammaShapeSize, 0x3e00);
 
-    std::vector<short> y1HostData(xShapeSize, 0);
-    std::vector<short> y2HostData(xShapeSize, 0);
+    std::vector<int8_t> y1HostData(xShapeSize, 0);
+    std::vector<int8_t> y2HostData(xShapeSize, 0);
     std::vector<short> xHostData(xShapeSize, 0);
-    std::vector<short> scale1HostData(reduceShapeSize, 0);
-    std::vector<short> scale2HostData(reduceShapeSize, 0);
+    std::vector<float> scale1HostData(reduceShapeSize, 0.0f);
+    std::vector<float> scale2HostData(reduceShapeSize, 0.0f);
 
     float epsilon = 1e-6;
 
@@ -556,11 +635,11 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnAddRmsNormDynamicQuant第一段接口
-    ret = aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
-        x1, x2, gamma, smooth1, smooth2, epsilon, y1, y2, x, scale1, scale2, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnAddRmsNormDynamicQuantGetWorkspaceSize(x1, x2, gamma, smooth1, smooth2, epsilon, y1, y2, x, scale1,
+                                                      scale2, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -572,46 +651,16 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(xShape);
-    std::vector<int8_t> y1Ret(size, 0);
-    ret = aclrtMemcpy(
-        y1Ret.data(), y1Ret.size() * sizeof(y1Ret[0]), y1DeviceAddr, size * sizeof(int8_t), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %d\n", i, y1Ret[i]);
-    }
+    // 5. 拷回并检查全部有效输出。当前输入为x1=x2=0.5，gamma=smooth1=smooth2=1.5。
+    // 因此x=1，两路量化结果均为127，scale=2.25/sqrt(1+epsilon)/127。
+    float expectedScale = 2.25f / std::sqrt(1.0f + epsilon) / 127.0f;
+    float scaleTolerance = expectedScale / 8192.0f;
+    bool outputsMatch = CheckOutput("y1", y1DeviceAddr, y1HostData, 127.0f);
+    outputsMatch &= CheckOutput("y2", y2DeviceAddr, y2HostData, 127.0f);
+    outputsMatch &= CheckOutput("x", xDeviceAddr, xHostData, 1.0f);
+    outputsMatch &= CheckOutput("scale1", scale1DeviceAddr, scale1HostData, expectedScale, scaleTolerance);
+    outputsMatch &= CheckOutput("scale2", scale2DeviceAddr, scale2HostData, expectedScale, scaleTolerance);
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(x1);
-    aclDestroyTensor(x2);
-    aclDestroyTensor(gamma);
-    aclDestroyTensor(smooth1);
-    aclDestroyTensor(smooth2);
-    aclDestroyTensor(y1);
-    aclDestroyTensor(y2);
-    aclDestroyTensor(x);
-    aclDestroyTensor(scale1);
-    aclDestroyTensor(scale2);
-
-    // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(x1DeviceAddr);
-    aclrtFree(x2DeviceAddr);
-    aclrtFree(gammaDeviceAddr);
-    aclrtFree(smooth1DeviceAddr);
-    aclrtFree(smooth2DeviceAddr);
-    aclrtFree(y1DeviceAddr);
-    aclrtFree(y2DeviceAddr);
-    aclrtFree(xDeviceAddr);
-    aclrtFree(scale1DeviceAddr);
-    aclrtFree(scale2DeviceAddr);
-
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-    aclrtDestroyStream(stream);
-    aclrtResetDevice(deviceId);
-    aclFinalize();
-    return 0;
+    return outputsMatch ? 0 : 1;
 }
 ```

@@ -73,6 +73,110 @@ TEST_F(RmsNormQuantV2, RmsNormQuantV2_infershape_with_scalar_scales2_uses_x_shap
     EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), (std::vector<int64_t>{2, 16}));
 }
 
+TEST_F(RmsNormQuantV2, empty_input_makes_all_registered_outputs_empty)
+{
+    for (bool dual : {false, true}) {
+        ge::op::RmsNormQuantV2 op;
+        op.UpdateInputDesc("x", create_desc({0, 64}, ge::DT_FLOAT16));
+        op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+        op.UpdateInputDesc("scales1", create_desc({1}, ge::DT_FLOAT));
+        if (dual) {
+            op.UpdateInputDesc("scales2", create_desc({}, ge::DT_FLOAT));
+        }
+        ASSERT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetShapeSize(), 0);
+        EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetShapeSize(), 0);
+    }
+}
+
+TEST_F(RmsNormQuantV2, empty_int4_input_preserves_even_last_axis_requirement)
+{
+    for (int64_t lastDim : {0, 63, 64, -1}) {
+        for (auto dstType : {ge::DT_INT4, ge::DT_INT8}) {
+            SCOPED_TRACE(std::to_string(lastDim) + ":" + std::to_string(dstType));
+            ge::op::RmsNormQuantV2 op;
+            op.UpdateInputDesc("x", create_desc({0, lastDim}, ge::DT_FLOAT16));
+            op.UpdateInputDesc("gamma", create_desc({lastDim}, ge::DT_FLOAT16));
+            op.UpdateInputDesc("scales1", create_desc({1}, ge::DT_FLOAT));
+            op.SetAttr("epsilon", 1e-6F);
+            op.SetAttr("div_mode", true);
+            op.SetAttr("dst_type", static_cast<int64_t>(dstType));
+            Runtime2TestParam param{{"epsilon", "div_mode", "dst_type"}, {}, {}};
+            const auto expected = dstType == ge::DT_INT4 && lastDim == 63 ? ge::GRAPH_FAILED : ge::GRAPH_SUCCESS;
+            EXPECT_EQ(InferShapeTest(op, param), expected);
+        }
+    }
+}
+
+TEST_F(RmsNormQuantV2, empty_input_does_not_bypass_shape_or_optional_parameter_checks)
+{
+    ge::op::RmsNormQuantV2 op;
+    op.UpdateInputDesc("x", create_desc({0, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("scales1", create_desc({1}, ge::DT_FLOAT));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+    // Optional holes must be described explicitly; the generic Operator helper assumes contiguous inputs.
+    gert::StorageShape x = {{0, 64}, {0, 64}};
+    gert::StorageShape gamma = {{64}, {64}};
+    gert::StorageShape scale = {{1}, {1}};
+    gert::StorageShape y1;
+    gert::StorageShape y2;
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("RmsNormQuantV2")
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 0, 0, 1, 0}, {1, 1})
+                      .InputShapes({&x, &gamma, &scale, &scale})
+                      .OutputShapes({&y1, &y2})
+                      .Build();
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormQuantV2");
+    ASSERT_NE(impl, nullptr);
+    EXPECT_EQ(impl->infer_shape(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormQuantV2, empty_input_validates_dtype_combinations_before_ge_skips_tiling)
+{
+    gert::StorageShape x = {{0, 64}, {0, 64}};
+    gert::StorageShape gamma = {{64}, {64}};
+    gert::StorageShape scale = {{1}, {1}};
+    gert::StorageShape y1;
+    gert::StorageShape y2;
+    auto check = [&](const std::vector<ge::DataType>& types) {
+        gert::InferShapeContextFaker faker;
+        faker.SetOpType("RmsNormQuantV2")
+            .NodeIoNum(7, 2)
+            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1}, {1, 1})
+            .InputShapes({&x, &gamma, &scale, &scale, &scale, &scale, &gamma})
+            .OutputShapes({&y1, &y2});
+        for (size_t index = 0; index < types.size(); ++index) {
+            faker.NodeInputTd(index, types[index], ge::FORMAT_ND, ge::FORMAT_ND);
+        }
+        auto holder = faker.Build();
+        const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormQuantV2");
+        EXPECT_NE(impl, nullptr);
+        return impl == nullptr ? ge::GRAPH_FAILED : impl->infer_shape(holder.GetContext<gert::InferShapeContext>());
+    };
+    for (auto xType : {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT}) {
+        const std::vector<ge::DataType> types = {xType,        xType,        ge::DT_FLOAT, ge::DT_FLOAT,
+                                                 ge::DT_FLOAT, ge::DT_FLOAT, xType};
+        EXPECT_EQ(check(types), ge::GRAPH_SUCCESS);
+    }
+    for (auto xType : {ge::DT_FLOAT16, ge::DT_BF16}) {
+        const std::vector<ge::DataType> types = {xType, xType, xType, xType, ge::DT_INT8, ge::DT_INT8, xType};
+        EXPECT_EQ(check(types), ge::GRAPH_SUCCESS);
+    }
+    const std::vector<ge::DataType> validTypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_FLOAT,
+                                                  ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16};
+    for (size_t index : {1U, 2U, 3U, 4U, 5U, 6U}) {
+        SCOPED_TRACE(index);
+        auto types = validTypes;
+        types[index] = (index == 4 || index == 5) ? ge::DT_INT8 : ge::DT_BF16;
+        EXPECT_EQ(check(types), ge::GRAPH_FAILED);
+    }
+    auto types = validTypes;
+    types[4] = ge::DT_INT32;
+    EXPECT_EQ(check(types), ge::GRAPH_FAILED);
+}
+
 TEST_F(RmsNormQuantV2, RmsNormQuantV2_InferDtype_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormQuantV2"), nullptr);

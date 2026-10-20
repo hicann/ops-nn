@@ -76,22 +76,6 @@ static bool CheckNotNull(RmsNormQuantInputTensor& inputTensor, aclTensor* y)
     return true;
 }
 
-static bool CheckTensorNotEmpty(const aclTensor* tensor, const char* tensorName)
-{
-    if (tensor != nullptr && tensor->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s tensor must not be empty on Ascend 950.", tensorName);
-        return false;
-    }
-    return true;
-}
-
-static bool CheckNotEmpty(const RmsNormQuantInputTensor& inputTensor, const aclTensor* y)
-{
-    return CheckTensorNotEmpty(inputTensor.x, "x") && CheckTensorNotEmpty(inputTensor.gamma, "gamma") &&
-           CheckTensorNotEmpty(inputTensor.beta, "beta") && CheckTensorNotEmpty(inputTensor.scale, "scale") &&
-           CheckTensorNotEmpty(inputTensor.offset, "offset") && CheckTensorNotEmpty(y, "y");
-}
-
 static bool CheckShapeBeforeReshape(const aclTensor* tensor, const char* tensorName)
 {
     if (tensor != nullptr && tensor->GetViewShape().GetDimNum() == DIMS_TWO_NUMS &&
@@ -303,7 +287,14 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
         }
     }
 
-    OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.gamma, inputTensor.beta, return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        // Validate [H]/[1, H] before preprocessing, including H=0.
+        const auto& betaShape = inputTensor.beta->GetViewShape();
+        OP_CHECK(betaShape.GetDim(betaShape.GetDimNum() - 1) == gammaLastDim,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The last dimension of beta must match gamma."), return false);
+    } else {
+        OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.gamma, inputTensor.beta, return false);
+    }
     OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.scale, inputTensor.offset, return false);
     return true;
 }
@@ -317,6 +308,11 @@ static aclnnStatus CheckParams(RmsNormQuantInputTensor& inputTensor, aclTensor* 
     CHECK_RET(CheckDtypeValid(inputTensor, y), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入/输出的shape大小
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(
+            CheckShapeBeforeReshape(inputTensor.gamma, "gamma") && CheckShapeBeforeReshape(inputTensor.beta, "beta"),
+            ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(CheckShapeDim(inputTensor, y), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
@@ -397,16 +393,22 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 参数检查
     RmsNormQuantInputTensor inputTensorOri = {x, gamma, beta, scale, offset};
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        // Empty tensors must be rejected before the 2D gamma/beta preprocessing so invalid user input is not
-        // reported as an internal reshape/contiguous failure.
-        CHECK_RET(CheckNotEmpty(inputTensorOri, y), ACLNN_ERR_PARAM_INVALID);
-        CHECK_RET(CheckShapeBeforeReshape(gamma, "gamma") && CheckShapeBeforeReshape(beta, "beta"),
-                  ACLNN_ERR_PARAM_INVALID);
+    const bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    if (isRegbase) {
+        const auto paramRet = CheckParams(inputTensorOri, y);
+        CHECK_RET(paramRet == ACLNN_SUCCESS, paramRet);
+        if (x->IsEmpty()) {
+            // Shape validation guarantees an empty y. No preprocessing or kernel task is needed.
+            *workspaceSize = 0;
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
     }
     CHECK_RET(PreDealData(inputTensorOri, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-    auto ret = CheckParams(inputTensorOri, y);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (!isRegbase) {
+        const auto paramRet = CheckParams(inputTensorOri, y);
+        CHECK_RET(paramRet == ACLNN_SUCCESS, paramRet);
+    }
     int32_t yType = y->GetDataType();
     if (yType == op::DataType::DT_INT32) {
         yType = op::DataType::DT_INT4;
@@ -419,8 +421,8 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     CHECK_RET(xCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(offsetCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(scaleCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    ret = RunRmsNormQuantKernel(xCont, scaleCont, offsetCont, gamma, beta, inputTensorOri.gamma, inputTensorOri.beta,
-                                epsilon, yType, y, uniqueExecutor.get());
+    const auto ret = RunRmsNormQuantKernel(xCont, scaleCont, offsetCont, gamma, beta, inputTensorOri.gamma,
+                                           inputTensorOri.beta, epsilon, yType, y, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);

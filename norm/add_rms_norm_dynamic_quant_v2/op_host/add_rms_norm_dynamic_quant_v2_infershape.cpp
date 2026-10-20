@@ -15,6 +15,7 @@
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
+#include "norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_infershape_common.h"
 
 using namespace ge;
 using namespace Ops::Base;
@@ -284,7 +285,130 @@ static graphStatus InferDataType4AddRmsNormDynamicQuantV2(gert::InferDataTypeCon
     return GRAPH_SUCCESS;
 }
 
+// Keep the original inference functions intact for every non-regbase target.
+static ge::graphStatus FetchOptionalInputsAndAttrRegbase(
+    gert::InferShapeContext* context, const gert::Shape* x1Shape, const gert::Shape* gammaShape, bool& smooth1Exist,
+    bool& smooth2Exist, bool& betaExist, const gert::Shape*& smooth1Shape, const gert::Shape*& smooth2Shape,
+    const gert::Shape*& betaShape, const gert::ContinuousVector*& outputMaskAttr, gert::Shape* xShape,
+    gert::Shape* y1Shape, gert::Shape* y2Shape)
+{
+    smooth1Shape = context->GetOptionalInputShape(SMOOTH1_IDX);
+    smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
+    smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
+    smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
+    betaShape = context->GetOptionalInputShape(BETA_IDX);
+    betaExist = CheckOptionalShapeExisting(betaShape);
+
+    // get attr
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    outputMaskAttr = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_OUTPUT_MASK_IDX);
+
+    *xShape = *x1Shape;
+    *y1Shape = gert::Shape({1});
+    *y2Shape = gert::Shape({1});
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2Regbase(gert::InferShapeContext* context)
+{
+    OP_LOGI(context, "Begin to do InferShape4AddRmsNormDynamicQuantV2");
+    if (AddRmsNormDynamicQuantCheck::CheckInputShapes(context) != GRAPH_SUCCESS ||
+        AddRmsNormDynamicQuantCheck::CheckOutputMask(context, NUM_FOUR) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+
+    const gert::Shape* x1Shape = nullptr;
+    const gert::Shape* gammaShape = nullptr;
+    gert::Shape* y1Shape = nullptr;
+    gert::Shape* y2Shape = nullptr;
+    gert::Shape* y3Shape = nullptr;
+    gert::Shape* y4Shape = nullptr;
+    gert::Shape* xShape = nullptr;
+    gert::Shape* outScale1Shape = nullptr;
+    gert::Shape* outScale2Shape = nullptr;
+    if (FetchMainShapes(context, x1Shape, gammaShape, y1Shape, y2Shape, y3Shape, y4Shape, xShape, outScale1Shape,
+                        outScale2Shape) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    bool smooth1Exist = false;
+    bool smooth2Exist = false;
+    bool betaExist = false;
+    const gert::Shape* smooth1Shape = nullptr;
+    const gert::Shape* smooth2Shape = nullptr;
+    const gert::Shape* betaShape = nullptr;
+    const gert::ContinuousVector* outputMaskAttr = nullptr;
+    if (FetchOptionalInputsAndAttrRegbase(context, x1Shape, gammaShape, smooth1Exist, smooth2Exist, betaExist,
+                                          smooth1Shape, smooth2Shape, betaShape, outputMaskAttr, xShape, y1Shape,
+                                          y2Shape) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    size_t outputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
+
+    // unknown rank
+    if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
+        return HandleUnknownRankShapesV2(context, x1Shape, y1Shape, y2Shape, y3Shape, y4Shape, outScale1Shape,
+                                         outScale2Shape, smooth1Exist, smooth2Exist, outputMaskAttr, outputMaskLen);
+    }
+    gert::Shape outScaleShape;
+    auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
+    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
+                return GRAPH_FAILED);
+    auto knownRet = FillKnownRankShapesV2(context, x1Shape, outScaleShape, y1Shape, y2Shape, y3Shape, y4Shape,
+                                          outScale1Shape, outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist,
+                                          smooth2Exist);
+    if (knownRet != GRAPH_SUCCESS) {
+        return knownRet;
+    }
+    OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2");
+    return GRAPH_SUCCESS;
+}
+
+static graphStatus InferDataType4AddRmsNormDynamicQuantV2Regbase(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4AddRmsNormDynamicQuantV2");
+    if (AddRmsNormDynamicQuantCheck::CheckInputDtypes(context) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const int32_t* dstDtype = attrs->GetAttrPointer<int32_t>(ATTR_DST_TYPE_IDX);
+    ge::DataType outDtype = ge::DT_INT8;
+    if (dstDtype != nullptr) {
+        outDtype = static_cast<ge::DataType>(*dstDtype);
+    }
+    OP_CHECK_IF(outDtype != DT_INT8 && outDtype != DT_INT4 && outDtype != DT_HIFLOAT8 && outDtype != DT_FLOAT8_E5M2 &&
+                    outDtype != DT_FLOAT8_E4M3FN,
+                OP_LOGE(context, "dst_type must be INT8, INT4, HIFLOAT8, FLOAT8_E5M2 or FLOAT8_E4M3FN."),
+                return GRAPH_FAILED);
+    context->SetOutputDataType(Y1_IDX, outDtype);
+    context->SetOutputDataType(Y2_IDX, outDtype);
+    context->SetOutputDataType(Y3_IDX, DT_FLOAT);
+    context->SetOutputDataType(Y4_IDX, context->GetInputDataType(X1_IDX));
+    context->SetOutputDataType(X_IDX, context->GetInputDataType(X1_IDX));
+    context->SetOutputDataType(OUT_SCALE1_IDX, DT_FLOAT);
+    context->SetOutputDataType(OUT_SCALE2_IDX, DT_FLOAT);
+    OP_LOGD(context->GetNodeName(), "End to do InferDataType4AddRmsNormDynamicQuantV2");
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2Dispatch(gert::InferShapeContext* context)
+{
+    if (AddRmsNormDynamicQuantCheck::IsRegbaseForInfer()) {
+        return InferShape4AddRmsNormDynamicQuantV2Regbase(context);
+    }
+    return InferShape4AddRmsNormDynamicQuantV2(context);
+}
+
+static ge::graphStatus InferDataType4AddRmsNormDynamicQuantV2Dispatch(gert::InferDataTypeContext* context)
+{
+    if (AddRmsNormDynamicQuantCheck::IsRegbaseForInfer()) {
+        return InferDataType4AddRmsNormDynamicQuantV2Regbase(context);
+    }
+    return InferDataType4AddRmsNormDynamicQuantV2(context);
+}
+
 IMPL_OP_INFERSHAPE(AddRmsNormDynamicQuantV2)
-    .InferShape(InferShape4AddRmsNormDynamicQuantV2)
-    .InferDataType(InferDataType4AddRmsNormDynamicQuantV2);
+    .InferShape(InferShape4AddRmsNormDynamicQuantV2Dispatch)
+    .InferDataType(InferDataType4AddRmsNormDynamicQuantV2Dispatch);
 } // namespace ops

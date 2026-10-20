@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。
+- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子融合Add、RmsNorm和1路或2路DynamicQuant，支持可选偏置beta和输出掩码output_mask。AddRmsNormDynamicQuantV2在此基础上增加归一化结果y3（FLOAT32）和y4（与输入相同类型），两者均在加beta和乘smooth_scale之前输出。ACLNN接口的V1/V2区别见各自接口文档。
 
 - 计算公式：
 
@@ -43,33 +43,35 @@
 
   $$
   scale1Out=\begin{cases}
-    row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ outputMask\ = null \\
+    row\_max(abs(input1))/quantMax & outputMask[0]=True\ ||\ outputMask\ = null \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
 
   $$
   y1Out=\begin{cases}
-    round(input1/scale1Out) & outputMask[0]=True\ ||\ outputMask\ = null \\
+    quantize(input1/scale1Out) & outputMask[0]=True\ ||\ outputMask\ = null \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
 
   $$
   scale2Out=\begin{cases}
-    row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null) \\
+    row\_max(abs(input2))/quantMax & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null) \\
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
 
   $$
   y2Out=\begin{cases}
-    round(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
+    quantize(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
 
   公式中的row\_max代表每行求最大值。
+
+  `quantMax`由输出类型决定：INT8为127，INT4为7，FLOAT8_E4M3FN为448，FLOAT8_E5M2为57344，HIFLOAT8为32768。`quantize`对INT8/INT4按最近偶数舍入并饱和转换，对浮点量化类型执行对应类型转换，不执行整数round。全零行的scale为0，量化值为0。beta缺省时视为0；无效输出仅为占位，其数值无实际意义。图模式下INT4输出保持逻辑shape；INT32打包存储视图仅适用于ACLNN接口，不属于`dst_type`的支持范围。
 
 ## 参数说明
 
@@ -155,14 +157,14 @@
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y1Out`。</li><li>如果`y1`为有效输出时，shape和数据类型需要与输入`x1`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y1Out`。</li><li>如果`y1`为有效输出时，shape与输入`x1`一致，数据类型由`dst_type`指定。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>INT8、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y2Out`。</li><li>如果`y2`为有效输出时，shape和数据类型需要与输入`x1`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y2Out`。</li><li>如果`y2`为有效输出时，shape与输入`x1`一致，数据类型由`dst_type`指定。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>INT8、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
@@ -207,7 +209,7 @@
 - 当output_mask为空时：
   - 参数smooth_scale2有值时，参数smooth_scale1不能为空。
   - y1和scale1始终为有效输出。
-  - y2和scale2只有在smooth_scal1和smooth_scale2均有效时为有效输出，否则为无效输出。
+  - y2和scale2只有在smooth_scale1和smooth_scale2均有效时为有效输出，否则为无效输出。
 
 ## 调用说明
 

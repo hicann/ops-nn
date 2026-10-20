@@ -34,7 +34,7 @@ protected:
                                         ACL_FLOAT16, ACL_INT8,    ACL_FLOAT};
     };
 
-    aclnnStatus RunTensorCase(const TensorCase& testCase, bool outputRstd = true)
+    aclnnStatus RunTensorCase(const TensorCase& testCase, bool outputRstd = true, uint64_t* workspaceOut = nullptr)
     {
         auto xDesc = TensorDesc(testCase.shapes[0], testCase.dtypes[0], ACL_FORMAT_ND);
         auto gammaDesc = TensorDesc(testCase.shapes[1], testCase.dtypes[1], ACL_FORMAT_ND);
@@ -47,7 +47,11 @@ protected:
                             INPUT(xDesc, gammaDesc, scaleDesc, offsetDesc, betaDesc, 1e-6, true, outputRstd),
                             OUTPUT(yDesc, rstdDesc));
         uint64_t workspaceSize = 0;
-        return ut.TestGetWorkspaceSize(&workspaceSize);
+        const auto ret = ut.TestGetWorkspaceSize(&workspaceSize);
+        if (workspaceOut != nullptr) {
+            *workspaceOut = workspaceSize;
+        }
+        return ret;
     }
 
     aclnnStatus RunEmptyTensorCase(size_t emptyTensorIndex, bool outputRstd = true)
@@ -76,6 +80,63 @@ protected:
         return ut.TestGetWorkspaceSize(&workspaceSize);
     }
 };
+
+TEST_F(l2_rms_norm_quant_v3_test, ascend950_empty_input_requires_workspace_and_executor_pointers)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto x = TensorDesc({0, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclType();
+    auto gamma = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclType();
+    auto scale = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ToAclType();
+    auto y = TensorDesc({0, 16}, ACL_INT8, ACL_FORMAT_ND).ToAclType();
+    aclOpExecutor* executor = nullptr;
+    uint64_t workspace = 123;
+    EXPECT_EQ(aclnnRmsNormQuantV3GetWorkspaceSize(x.get(), gamma.get(), scale.get(), nullptr, nullptr, 1e-6, true,
+                                                  false, y.get(), nullptr, nullptr, &executor),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnRmsNormQuantV3GetWorkspaceSize(x.get(), gamma.get(), scale.get(), nullptr, nullptr, 1e-6, true,
+                                                  false, y.get(), nullptr, &workspace, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(executor, nullptr);
+}
+
+TEST_F(l2_rms_norm_quant_v3_test, ascend950_empty_batch_returns_zero_workspace)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    for (bool outputRstd : {false, true}) {
+        for (auto yType : {ACL_INT8, ACL_INT4, ACL_INT32, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E5M2, ACL_HIFLOAT8}) {
+            TensorCase testCase;
+            testCase.shapes[0] = {0, 16};
+            testCase.shapes[1] = {1, 16};
+            testCase.shapes[5] = {0, yType == ACL_INT32 ? 2 : 16};
+            testCase.shapes[6] = {0, 1};
+            testCase.dtypes[5] = yType;
+            uint64_t workspace = 123;
+            EXPECT_EQ(RunTensorCase(testCase, outputRstd, &workspace), ACLNN_SUCCESS);
+            EXPECT_EQ(workspace, 0U);
+        }
+    }
+}
+
+TEST_F(l2_rms_norm_quant_v3_test, ascend950_empty_reduction_requires_disabled_rstd)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    for (bool outputRstd : {false, true}) {
+        for (const auto& shape : {vector<int64_t>{3, 0}, {0}}) {
+            TensorCase testCase;
+            testCase.shapes[0] = shape;
+            testCase.shapes[1] = {1, 0};
+            testCase.shapes[4] = {0};
+            testCase.shapes[5] = shape;
+            testCase.shapes[6] = shape.size() == 1 ? vector<int64_t>{} : vector<int64_t>{3, 1};
+            uint64_t workspace = 123;
+            EXPECT_EQ(RunTensorCase(testCase, outputRstd, &workspace),
+                      outputRstd ? ACLNN_ERR_PARAM_INVALID : ACLNN_SUCCESS);
+            if (!outputRstd) {
+                EXPECT_EQ(workspace, 0U);
+            }
+        }
+    }
+}
 
 TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_001)
 {

@@ -20,21 +20,17 @@
 namespace ge {
 /**
 * @brief Fused Operator of Add, RmsNorm and DynamicQuant.
-* Calculating input: x1, x2, gamma, smooth_scale1, smooth_scale2 \n
+* On Ascend 950PR&950DT系列产品, intermediate values are computed in float32.
+* Calculating input: x1, x2, gamma, smooth_scale1, smooth_scale2, beta \n
 * Calculating process: \n
 *  x = x1 + x2 \n
-*  rstd = np.rsqrt(np.mean(np.power(x, 2), reduce_axis, keepdims=True) + epsilon)) \n
-*  rmsnorm_out = x * rstd * gamma \n
-*  if smooth_scale1 exist: \n
-*    scale1 = row_max(abs(rmsnorm_out * smooth_scale1)) / 127 \n
-*  if smooth_scale1 not exist: \n
-*    scale1 = row_max(abs(rmsnorm_out)) / 127 \n
-*  y1 = round(rmsnorm_out / scale1) \n
-*  if smooth_scale2 exist: \n
-*    scale2 = row_max(abs(rmsnorm_out * smooth_scale2)) / 127 \n
-*  if smooth_scale2 not exist:  \n
-*    scale2 = row_max(abs(rmsnorm_out)) / 127 \n
-*  y2 = round(rmsnorm_out / scale2) \n
+*  rmsnorm_out = x * rsqrt(mean(x * x, axis=-1, keepdims=True) + epsilon) * gamma \n
+*  quant_input_i = (rmsnorm_out + beta_or_zero) * smooth_scale_i_or_one \n
+*  scale_i = row_max(abs(quant_input_i)) / quantMax \n
+*  y_i = quantize(quant_input_i / scale_i); a zero row produces zero scale and zero quantized values. \n
+* quantMax: INT8=127, INT4=7, FLOAT8_E4M3FN=448, FLOAT8_E5M2=57344, HIFLOAT8=32768. \n
+* Integer outputs use round-to-nearest-even; floating outputs use their dtype conversion. \n
+* output_mask controls valid quantized outputs; disabled outputs are placeholders. \n
 
 * @par Inputs:
 * @li x1: A tensor of type float16/bfloat16. Supported format "ND". \n
@@ -55,10 +51,10 @@ namespace ge {
 
 * @par Outputs:
 * @li y1: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
-rmsnorm(x1+x2)*smooth1+beta. Supported format "ND". \n
+(rmsnorm(x1+x2)+beta)*smooth1. Supported format "ND". \n
 * Has the same shape as x1. \n
 * @li y2: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
-rmsnorm(x1+x2)*smooth2+beta. Supported format "ND". \n
+(rmsnorm(x1+x2)+beta)*smooth2. Supported format "ND". \n
 * Has the same shape as x1. \n
 * @li x: A tensor of type float16/bfloat16, describing the result of x1 + x2. Supported format "ND". \n
 * Has the same dtype and shape as x1. \n

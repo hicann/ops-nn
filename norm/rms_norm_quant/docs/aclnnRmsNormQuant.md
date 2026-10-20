@@ -88,7 +88,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>x（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>beta（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏移张量。对应公式中的`beta`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>scale（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中用于计算y的scale张量，对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>维度为1，长度要求见下方产品说明。</li><li>该参数的值不能为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>维度为1，长度要求见下方产品说明。</li><li>该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>offset（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中用于计算y的offset张量，对应公式中的`offset`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与`scale`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`scale`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT8、INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终量化输出Tensor，对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型不为INT32时，shape需要与输入`x`一致；数据类型为INT32时，shape要求见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型不为INT32时，shape需要与输入`x`一致；数据类型为INT32时，shape要求见约束说明。</li></ul></td>
       <td>INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>1-8</td>
@@ -266,6 +266,13 @@ aclnnStatus aclnnRmsNormQuant(
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)）
 
 ## 约束说明
+
+<!-- npu="950" id16 -->
+- <term>Ascend 950PR&950DT系列产品</term>：空Tensor是shape中存在0的Tensor，不等同于空指针或标量。满足其余shape、数据类型约束时，支持`x`与`y`均为空Tensor，第一段接口返回0字节workspace，第二段接口不执行计算。必选参数仍须提供Tensor对象。
+<!-- end id16 -->
+<!-- npu="A3,910b,310p,310b" id17 -->
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：不支持空Tensor。
+<!-- end id17 -->
 
 - 当输入参数scale或offset的值为NaN，或者RmsNorm的计算结果（对应计算公式中的$quant\_in_i$）为NaN时，该接口的最终输出结果为0。
 

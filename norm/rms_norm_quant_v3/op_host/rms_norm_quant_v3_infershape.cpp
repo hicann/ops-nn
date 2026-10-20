@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
+#include "../../rms_norm_quant_v2/op_host/rms_norm_quant_v2_empty_shape.h"
 
 static constexpr int INPUT_X_IDX = 0;
 static constexpr int INPUT_GAMMA_IDX = 1;
@@ -46,6 +47,10 @@ static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     const gert::Shape* gammaShape = context->GetInputShape(INPUT_GAMMA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    const bool isEmpty = rms_norm_quant::HasEmptyDim(*xShape);
+    if (isEmpty && !rms_norm_quant::CheckEmptyInputShapes(context)) {
+        return GRAPH_FAILED;
+    }
 
     gert::Shape* y1Shape = context->GetOutputShape(OUTPUT_Y1_IDX);
     gert::Shape* y2Shape = context->GetOutputShape(OUTPUT_Y2_IDX);
@@ -54,7 +59,7 @@ static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* contex
 
     const bool hasSecondQuantParam = HasSecondQuantParam(context);
     *y1Shape = *xShape;
-    *y2Shape = hasSecondQuantParam ? *xShape : gert::Shape({1});
+    *y2Shape = hasSecondQuantParam ? *xShape : gert::Shape({isEmpty ? 0 : 1});
 
     // rstd shape: A dims preserved, R dims set to 1
     auto* attrs = context->GetAttrs();
@@ -64,6 +69,9 @@ static ge::graphStatus InferShape4RmsNormQuantV3(gert::InferShapeContext* contex
     gert::Shape* rstdShape = context->GetOutputShape(OUTPUT_RSTD_IDX);
     if (rstdEnable) {
         OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
+    } else if (isEmpty && rstdShape != nullptr) {
+        // A disabled output must not prevent GE from recognizing an all-empty graph.
+        *rstdShape = gert::Shape({0});
     }
 
     if (IsUnknownRank(*xShape) || IsUnknownRank(*gammaShape)) {

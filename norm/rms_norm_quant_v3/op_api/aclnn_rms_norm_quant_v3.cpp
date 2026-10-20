@@ -63,25 +63,6 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTe
     return true;
 }
 
-static bool CheckTensorNotEmpty(const aclTensor* tensor, const char* tensorName)
-{
-    if (tensor != nullptr && tensor->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s tensor must not be empty on Ascend 950.", tensorName);
-        return false;
-    }
-    return true;
-}
-
-static bool CheckNotEmpty(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* offset,
-                          const aclTensor* beta, const aclTensor* y, bool outputRstd, const aclTensor* rstd)
-{
-    if (!CheckTensorNotEmpty(x, "x") || !CheckTensorNotEmpty(gamma, "gamma") || !CheckTensorNotEmpty(scale, "scale") ||
-        !CheckTensorNotEmpty(offset, "offset") || !CheckTensorNotEmpty(beta, "beta") || !CheckTensorNotEmpty(y, "y")) {
-        return false;
-    }
-    return !outputRstd || CheckTensorNotEmpty(rstd, "rstd");
-}
-
 static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* y)
 {
     OP_CHECK_MIN_DIM(x, DIMS_ONE_NUMS, return false);
@@ -228,12 +209,15 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const
 {
     CHECK_RET(CheckNotNull(x, gamma, scale, y, outputRstd, rstd), ACLNN_ERR_PARAM_NULLPTR);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        CHECK_RET(CheckNotEmpty(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckRegbaseDtype(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
     }
     CHECK_RET(CheckShapeValid(x, gamma, scale, y), ACLNN_ERR_PARAM_INVALID);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(CheckRegbaseShape(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK(!(x->IsEmpty() && outputRstd && !rstd->IsEmpty()),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Empty x requires all requested outputs to be empty; "
+                                                  "a nonempty rstd is not supported for empty x."),
+                 return ACLNN_ERR_PARAM_INVALID);
     }
     return ACLNN_SUCCESS;
 }
@@ -313,6 +297,9 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(const aclTensor* x, const aclTen
                                                 bool divMode, bool outputRstd, aclTensor* y, aclTensor* rstd,
                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_COMM_INPUT(workspaceSize, executor);
+    }
     OP_LOGD("Enter aclnnRmsNormQuantV3GetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnRmsNormQuantV3, DFX_IN(x, gamma, scale, offset, beta, epsilon, divMode, outputRstd),
                    DFX_OUT(y, rstd));
@@ -324,6 +311,13 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(const aclTensor* x, const aclTen
     // 参数校验
     auto paramRet = CheckParams(x, gamma, scale, offset, beta, y, outputRstd, rstd);
     CHECK_RET(paramRet == ACLNN_SUCCESS, paramRet);
+
+    if (Ops::NN::AclnnUtil::IsRegbase() && x->IsEmpty()) {
+        // CheckParams guarantees that every requested output is empty.
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     // 从输出y的dtype推导yType，INT32表示实际输出为INT4
     int32_t yType = static_cast<int32_t>(y->GetDataType());

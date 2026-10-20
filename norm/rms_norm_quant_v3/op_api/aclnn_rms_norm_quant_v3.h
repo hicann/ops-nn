@@ -57,7 +57,8 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] rstd:
  * 公式中的输出rstd，RMS归一化的标准差倒数。数据类型支持FLOAT32。
- * 当outputRstd为true时，rstd不支持空Tensor，最后一维大小为1，其余维度的大小与x一致；当x为一维Tensor时，也支持标量。
+ * 当outputRstd为true时，rstd最后一维大小为1，其余维度的大小与x一致；当x为一维非空Tensor时，也支持标量。
+ * x为空Tensor时，所有有效输出必须为空Tensor；不支持x为空且outputRstd为true、rstd非空的场景。
  * 当outputRstd为false时，rstd为无效输出，支持空指针或空Tensor占位。
  * 数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。

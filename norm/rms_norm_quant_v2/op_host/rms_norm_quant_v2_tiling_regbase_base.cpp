@@ -130,8 +130,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputOutputShapeSize()
     for (const auto& [tensorShape, tensorName] : tensorShapes) {
         if (tensorShape != nullptr && tensorShape->GetStorageShape().GetShapeSize() == 0) {
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), tensorName, "0",
-                                                      "RmsNormQuantV2 and RmsNormQuantV3 do not support empty "
-                                                      "tensors on Ascend 950");
+                                                      "The kernel tiling path does not support empty tensors; "
+                                                      "valid all-empty outputs must be handled before tiling");
             return false;
         }
     }
@@ -146,8 +146,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputOutputShapeSize()
         const gert::StorageShape* rstdShape = context_->GetOutputShape(RSTD_INDEX);
         if (rstdShape != nullptr && rstdShape->GetStorageShape().GetShapeSize() == 0) {
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "rstd", "0",
-                                                      "RmsNormQuantV3 does not support an empty rstd tensor when "
-                                                      "output_rstd is true");
+                                                      "An empty requested rstd is invalid in the kernel tiling path; "
+                                                      "valid all-empty outputs must be handled before tiling");
             return false;
         }
     }

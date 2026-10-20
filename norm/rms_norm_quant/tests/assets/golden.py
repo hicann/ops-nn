@@ -57,6 +57,9 @@ def _np_to_torch(arr):
         return arr
     if isinstance(arr, np.ndarray):
         dt = str(arr.dtype)
+        if dt == "int4":
+            # Torch has no usable CPU int4 tensor; preserve the logical NumPy dtype.
+            return arr
         if np.issubdtype(arr.dtype, np.integer):
             return torch.from_numpy(arr)
         if "float8_e5m2" in dt:
@@ -138,26 +141,6 @@ def aclnn_rms_norm_quant_golden(
     if offset is not None and offset.dtype != np.float32:
         offset = offset.astype(np.float32)
 
-    x_fp32 = x.astype(np.float32)
-
-    # ACLNN squeezes a legal [1, H] gamma to [H] before last-axis RMSNorm.
-    n = len(x.shape) - 1
-    gamma_flat = gamma.reshape(-1)
-    x_reshaped = x_fp32.reshape(x_fp32.shape[:n] + gamma_flat.shape)
-
-    variance = np.mean(np.power(x_reshaped, 2), axis=n, keepdims=True)
-    std = np.sqrt(variance + epsilon)
-    rstd = 1 / std
-
-    result_mid = x_reshaped * rstd
-
-    gamma_fp32 = gamma.astype(np.float32) if gamma.dtype != np.float32 else gamma
-    y_array = result_mid * gamma_fp32.reshape(gamma_flat.shape)
-
-    if beta is not None:
-        beta_reshaped = beta.reshape(gamma_flat.shape)
-        y_array = y_array + beta_reshaped.astype(np.float32)
-
     y_dtype_str = "int8"
     if y is not None:
         dt_str = str(y.dtype)
@@ -181,6 +164,34 @@ def aclnn_rms_norm_quant_golden(
         }
         y_dtype_str = DST_TYPE_MAP.get(dst_type, "int8")
 
+    # An explicit INT4 output is logical INT4, while INT32 uses eight packed values.
+    pack_int4 = y is None or "int32" in str(y.dtype)
+    if x.size == 0:
+        y_result = _quant_to_dtype(np.empty(x.shape, np.float32), y_dtype_str)
+        if y_dtype_str == "int4" and pack_int4:
+            y_result = _pack_int4_to_int32(y_result)
+        return _np_to_torch(y_result)
+
+    x_fp32 = x.astype(np.float32)
+
+    # ACLNN squeezes a legal [1, H] gamma to [H] before last-axis RMSNorm.
+    n = len(x.shape) - 1
+    gamma_flat = gamma.reshape(-1)
+    x_reshaped = x_fp32.reshape(x_fp32.shape[:n] + gamma_flat.shape)
+
+    variance = np.mean(np.power(x_reshaped, 2), axis=n, keepdims=True)
+    std = np.sqrt(variance + epsilon)
+    rstd = 1 / std
+
+    result_mid = x_reshaped * rstd
+
+    gamma_fp32 = gamma.astype(np.float32) if gamma.dtype != np.float32 else gamma
+    y_array = result_mid * gamma_fp32.reshape(gamma_flat.shape)
+
+    if beta is not None:
+        beta_reshaped = beta.reshape(gamma_flat.shape)
+        y_array = y_array + beta_reshaped.astype(np.float32)
+
     y_quant = (
         y_array / scale.reshape(-1).reshape(scale.shape)
         if scale is not None
@@ -190,7 +201,7 @@ def aclnn_rms_norm_quant_golden(
         y_quant = y_quant + offset.reshape(-1).reshape(offset.shape)
 
     y_result = _quant_to_dtype(y_quant, y_dtype_str)
-    if y_dtype_str == "int4":
+    if y_dtype_str == "int4" and pack_int4:
         y_result = _pack_int4_to_int32(y_result)
     return _np_to_torch(y_result)
 

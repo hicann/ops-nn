@@ -40,14 +40,16 @@ namespace ge {
 
 * @par Outputs:
 * @li y1: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
-rmsnorm(x1+x2)*smooth1+beta. Supported format "ND". \n
+(rmsnorm(x1+x2)+beta)*smooth1. Supported format "ND". \n
 * Has the same shape as x1. \n
 * @li y2: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
-rmsnorm(x1+x2)*smooth2+beta. Supported format "ND". \n
+(rmsnorm(x1+x2)+beta)*smooth2. Supported format "ND". \n
 * Has the same shape as x1. \n
-* @li y3: A tensor of type float32, cast result for rmsnorm(x1+x2). Supported format "ND". \n
+* @li y3: A tensor of type float32, float32 result for rmsnorm(x1+x2), before adding beta or applying smooth scales.
+Supported format "ND". \n
 * Has the same shape as x1. \n
-* @li y4: A tensor of type float16/bfloat16, describe the result for rmsnorm(x1+x2). Supported format "ND". \n
+* @li y4: A tensor of type float16/bfloat16, dtype-converted result for rmsnorm(x1+x2), before adding beta or applying
+smooth scales. Supported format "ND". \n
 * Has the same dtype and shape as x1. \n
 * @li x: A tensor of type float16/bfloat16, describing the result of x1 + x2. Supported format "ND". \n
 * Has the same dtype and shape as x1. \n

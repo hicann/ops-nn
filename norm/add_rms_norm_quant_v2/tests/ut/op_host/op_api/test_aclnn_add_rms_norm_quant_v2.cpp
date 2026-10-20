@@ -116,6 +116,137 @@ static aclnnStatus RunOutputContractCase(op::SocVersion socVersion, bool hasXOut
     return ut.TestGetWorkspaceSize(&workspaceSize);
 }
 
+// Quant parameters are channel-wise so legacy products use the existing V1 fallback.
+static aclnnStatus RunQuantParamDtypeCase(op::SocVersion socVersion, aclDataType xDtype, aclDataType scales1Dtype,
+                                          aclDataType zeroPoints1Dtype, aclDataType scales2Dtype = ACL_DT_UNDEFINED,
+                                          aclDataType zeroPoints2Dtype = ACL_DT_UNDEFINED, bool perTensor = false)
+{
+    op::SocVersionManager versionManager(socVersion);
+    const vector<int64_t> quantShape = perTensor ? vector<int64_t>{1} : vector<int64_t>{64};
+    auto x1 = TensorDesc({8, 64}, xDtype, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({8, 64}, xDtype, ACL_FORMAT_ND);
+    auto gamma = TensorDesc({64}, xDtype, ACL_FORMAT_ND);
+    auto beta = TensorDesc({64}, xDtype, ACL_FORMAT_ND);
+    auto scales1 = TensorDesc(quantShape, scales1Dtype, ACL_FORMAT_ND);
+    auto scales2 = TensorDesc(quantShape, scales2Dtype == ACL_DT_UNDEFINED ? ACL_FLOAT : scales2Dtype, ACL_FORMAT_ND);
+    auto zeroPoints1 = TensorDesc(quantShape, zeroPoints1Dtype == ACL_DT_UNDEFINED ? ACL_INT32 : zeroPoints1Dtype,
+                                  ACL_FORMAT_ND);
+    auto zeroPoints2 = TensorDesc(quantShape, zeroPoints2Dtype == ACL_DT_UNDEFINED ? ACL_INT32 : zeroPoints2Dtype,
+                                  ACL_FORMAT_ND);
+    auto y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto xOut = TensorDesc({8, 64}, xDtype, ACL_FORMAT_ND);
+    aclTensor* scales2Ptr = scales2Dtype == ACL_DT_UNDEFINED ? nullptr : scales2.ToAclTypeRawPtr();
+    aclTensor* zeroPoints1Ptr = zeroPoints1Dtype == ACL_DT_UNDEFINED ? nullptr : zeroPoints1.ToAclTypeRawPtr();
+    aclTensor* zeroPoints2Ptr = zeroPoints2Dtype == ACL_DT_UNDEFINED ? nullptr : zeroPoints2.ToAclTypeRawPtr();
+    auto ut = OP_API_UT(
+        aclnnAddRmsNormQuantV2,
+        INPUT(x1, x2, gamma, scales1, scales2Ptr, zeroPoints1Ptr, zeroPoints2Ptr, beta, -1L, 1e-5, true),
+        OUTPUT(y1, y2, xOut, (aclTensor*)nullptr));
+    uint64_t workspaceSize = 0;
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_casts_legacy_first_quant_params)
+{
+    for (auto xDtype : {ACL_FLOAT16, ACL_BF16}) {
+        for (auto scalesDtype : {ACL_FLOAT16, ACL_FLOAT}) {
+            for (auto zeroPointsDtype : {ACL_INT8, ACL_INT32}) {
+                SCOPED_TRACE(testing::Message()
+                             << "x=" << xDtype << " scale=" << scalesDtype << " zp=" << zeroPointsDtype);
+                EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, scalesDtype, zeroPointsDtype),
+                          ACLNN_SUCCESS);
+            }
+        }
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, ACL_FLOAT16, ACL_FLOAT), ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_promotes_fp16_scale_without_first_zero_point)
+{
+    for (auto xDtype : {ACL_FLOAT16, ACL_BF16}) {
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, ACL_FLOAT16, ACL_DT_UNDEFINED),
+                  ACLNN_SUCCESS);
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, ACL_FLOAT16, ACL_DT_UNDEFINED, ACL_FLOAT),
+                  ACLNN_SUCCESS);
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, ACL_FLOAT16, ACL_DT_UNDEFINED,
+                                         ACL_DT_UNDEFINED, ACL_INT32),
+                  ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_compatibility_uses_converted_dual_param_types)
+{
+    for (auto xDtype : {ACL_FLOAT16, ACL_BF16}) {
+        for (auto scalesDtype : {ACL_FLOAT16, ACL_FLOAT}) {
+            for (auto zeroPointsDtype : {ACL_INT8, ACL_INT32}) {
+                SCOPED_TRACE(testing::Message()
+                             << "x=" << xDtype << " scale=" << scalesDtype << " zp=" << zeroPointsDtype);
+                EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, scalesDtype, zeroPointsDtype,
+                                                 ACL_FLOAT, ACL_INT32),
+                          ACLNN_SUCCESS);
+            }
+        }
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_preserves_native_quant_param_combinations)
+{
+    for (auto xDtype : {ACL_FLOAT16, ACL_BF16, ACL_FLOAT}) {
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, xDtype, xDtype, xDtype, xDtype),
+                  ACLNN_SUCCESS);
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, xDtype, ACL_DT_UNDEFINED), ACLNN_SUCCESS);
+    }
+    for (auto xDtype : {ACL_FLOAT16, ACL_BF16}) {
+        for (auto zeroPointsDtype : {ACL_INT32, ACL_FLOAT}) {
+            EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, xDtype, ACL_FLOAT, zeroPointsDtype, ACL_FLOAT,
+                                             zeroPointsDtype),
+                      ACLNN_SUCCESS);
+        }
+    }
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_compatibility_rejects_unsupported_effective_types)
+{
+    for (auto zeroPointsDtype : {ACL_UINT8, ACL_INT16, ACL_INT64}) {
+        EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_FLOAT16, ACL_FLOAT, zeroPointsDtype),
+                  ACLNN_ERR_PARAM_INVALID);
+    }
+    EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_FLOAT16, ACL_FLOAT, ACL_INT8, ACL_FLOAT, ACL_INT8),
+              ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(
+        RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_FLOAT16, ACL_FLOAT16, ACL_INT8, ACL_FLOAT16, ACL_INT32),
+        ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_BF16, ACL_BF16, ACL_INT8), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_FLOAT, ACL_FLOAT16, ACL_DT_UNDEFINED),
+              ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(RunQuantParamDtypeCase(op::SocVersion::ASCEND950, ACL_FLOAT, ACL_FLOAT, ACL_INT8),
+              ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, legacy_first_quant_param_conversions_remain_supported)
+{
+    for (auto soc : {op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93, op::SocVersion::ASCEND310P}) {
+        for (auto scalesDtype : {ACL_FLOAT16, ACL_FLOAT}) {
+            for (auto zeroPointsDtype : {ACL_INT8, ACL_INT32}) {
+                SCOPED_TRACE(testing::Message() << "soc=" << static_cast<int>(soc) << " scale=" << scalesDtype
+                                                << " zp=" << zeroPointsDtype);
+                // Exercise both native V2 (per-tensor) and V1 fallback (per-channel).
+                for (bool perTensor : {false, true}) {
+                    EXPECT_EQ(RunQuantParamDtypeCase(soc, ACL_FLOAT16, scalesDtype, zeroPointsDtype, ACL_DT_UNDEFINED,
+                                                     ACL_DT_UNDEFINED, perTensor),
+                              ACLNN_SUCCESS);
+                    if (soc != op::SocVersion::ASCEND310P) {
+                        EXPECT_EQ(RunQuantParamDtypeCase(soc, ACL_BF16, scalesDtype, zeroPointsDtype, ACL_DT_UNDEFINED,
+                                                         ACL_DT_UNDEFINED, perTensor),
+                                  ACLNN_SUCCESS);
+                    }
+                }
+            }
+        }
+    }
+}
+
 TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_requires_x_out_with_optional_res_and_beta)
 {
     for (bool hasResOut : {false, true}) {

@@ -787,6 +787,38 @@ bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRm
     return false;
 }
 
+static aclnnStatus TransformRegbaseQuantParams(AddRmsNormQuantV2InputTensor& inputTensor, aclOpExecutor* executor)
+{
+    if (!IsRegbase()) {
+        return ACLNN_SUCCESS;
+    }
+    const auto xDtype = inputTensor.x1->GetDataType();
+    if (xDtype != op::DataType::DT_FLOAT16 && xDtype != op::DataType::DT_BF16) {
+        return ACLNN_SUCCESS;
+    }
+    CHECK_RET(inputTensor.scales1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const auto isNonFp16 = [](const aclTensor* tensor) {
+        return tensor != nullptr && tensor->GetDataType() != op::DataType::DT_FLOAT16;
+    };
+    // Keep native FP16 tuples unchanged; only promote the first scale when needed.
+    const bool needFp32Scale = xDtype == op::DataType::DT_BF16 || isNonFp16(inputTensor.scales2Optional) ||
+                               isNonFp16(inputTensor.zeroPoints1Optional) || isNonFp16(inputTensor.zeroPoints2Optional);
+    if (inputTensor.scales1->GetDataType() == op::DataType::DT_FLOAT16 && needFp32Scale) {
+        auto scales1Cast = l0op::Cast(inputTensor.scales1, op::DataType::DT_FLOAT, executor);
+        CHECK_RET(scales1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputTensor.scales1 = scales1Cast;
+    }
+    if (inputTensor.zeroPoints1Optional != nullptr &&
+        inputTensor.zeroPoints1Optional->GetDataType() == op::DataType::DT_INT8) {
+        auto zeroPoints1Cast = l0op::Cast(inputTensor.zeroPoints1Optional, op::DataType::DT_INT32, executor);
+        CHECK_RET(zeroPoints1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputTensor.zeroPoints1Optional = zeroPoints1Cast;
+    }
+    // Existing validation still checks the effective types of both quantization paths.
+    return ACLNN_SUCCESS;
+}
+
 void SpecialTransform(AddRmsNormQuantV2InputTensor& inputTensor, aclOpExecutor* executor)
 {
     if (IsRegbase()) {
@@ -875,6 +907,9 @@ aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(const aclTensor* x1, const ac
 
     AddRmsNormQuantV2ACLNN::AddRmsNormQuantV2InputTensor inputTensor = {x1Cont, x2Cont, gammaCont, biasCont,
                                                                         s1Cont, s2Cont, z1Cont,    z2Cont};
+    auto transformRet = AddRmsNormQuantV2ACLNN::TransformRegbaseQuantParams(inputTensor, uniqueExecutorForV2.get());
+    CHECK_RET(transformRet == ACLNN_SUCCESS, transformRet);
+
     AddRmsNormQuantV2ACLNN::ParamStruct paramStruct = {axis, epsilon, divMode};
     if (AddRmsNormQuantV2ACLNN::CheckSupportV2(inputTensor, outputTensor, paramStruct)) {
         OP_LOGD("Enter ComputeAddRmsNormQuantV2 ...");

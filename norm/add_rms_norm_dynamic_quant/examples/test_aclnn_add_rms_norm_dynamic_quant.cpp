@@ -8,6 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cmath>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -24,6 +26,12 @@
     do {                                \
         printf(message, ##__VA_ARGS__); \
     } while (0)
+
+// 在正常返回和错误返回时释放已创建的资源。
+struct ScopeCleanup {
+    std::function<void()> release;
+    ~ScopeCleanup() { release(); }
+};
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
@@ -59,18 +67,46 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr);
+              *deviceAddr = nullptr; return ret);
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
-    for (int64_t i = shape.size() - 2; i >= 0; i--) {
+    for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; i--) {
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); aclrtFree(*deviceAddr); *deviceAddr = nullptr;
+              return ACL_ERROR_FAILURE);
     return 0;
+}
+
+template <typename T>
+float OutputValue(T value)
+{
+    return static_cast<float>(value);
+}
+
+float OutputValue(short value) { return aclFloat16ToFloat(static_cast<aclFloat16>(value)); }
+
+template <typename T>
+bool CheckOutput(const char* name, void* deviceAddr, std::vector<T>& hostData, float expected, float tolerance = 0.0f)
+{
+    auto bytes = hostData.size() * sizeof(T);
+    auto ret = aclrtMemcpy(hostData.data(), bytes, deviceAddr, bytes, ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s failed. ERROR: %d\n", name, ret); return false);
+    for (size_t i = 0; i < hostData.size(); ++i) {
+        float actual = OutputValue(hostData[i]);
+        if (!std::isfinite(actual) || std::fabs(actual - expected) > tolerance) {
+            LOG_PRINT("%s[%zu]: actual=%g, expected=%g, tolerance=%g\n", name, i, actual, expected, tolerance);
+            return false;
+        }
+    }
+    LOG_PRINT("%s: checked %zu elements, expected=%g, PASS\n", name, hostData.size(), expected);
+    return true;
 }
 
 int main()
@@ -110,6 +146,27 @@ int main()
     aclTensor* scale1 = nullptr;
     aclTensor* scale2 = nullptr;
 
+    void* workspaceAddr = nullptr;
+    ScopeCleanup cleanup{[&]() {
+        // 释放设备内存前等待已提交的异步任务结束。
+        aclrtSynchronizeStream(stream);
+        for (auto* tensor : {x1, x2, gamma, smooth1, smooth2, y1, y2, x, scale1, scale2}) {
+            if (tensor != nullptr) {
+                aclDestroyTensor(tensor);
+            }
+        }
+        for (auto* addr :
+             {x1DeviceAddr, x2DeviceAddr, gammaDeviceAddr, smooth1DeviceAddr, smooth2DeviceAddr, y1DeviceAddr,
+              y2DeviceAddr, xDeviceAddr, scale1DeviceAddr, scale2DeviceAddr, workspaceAddr}) {
+            if (addr != nullptr) {
+                aclrtFree(addr);
+            }
+        }
+        aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    }};
+
     int64_t xShapeSize = GetShapeSize(xShape);
     int64_t gammaShapeSize = GetShapeSize(gammaShape);
     int64_t reduceShapeSize = GetShapeSize(reduceShape);
@@ -120,11 +177,11 @@ int main()
     std::vector<short> smooth1HostData(gammaShapeSize, 0x3e00);
     std::vector<short> smooth2HostData(gammaShapeSize, 0x3e00);
 
-    std::vector<short> y1HostData(xShapeSize, 0);
-    std::vector<short> y2HostData(xShapeSize, 0);
+    std::vector<int8_t> y1HostData(xShapeSize, 0);
+    std::vector<int8_t> y2HostData(xShapeSize, 0);
     std::vector<short> xHostData(xShapeSize, 0);
-    std::vector<short> scale1HostData(reduceShapeSize, 0);
-    std::vector<short> scale2HostData(reduceShapeSize, 0);
+    std::vector<float> scale1HostData(reduceShapeSize, 0.0f);
+    std::vector<float> scale2HostData(reduceShapeSize, 0.0f);
 
     float epsilon = 1e-6;
 
@@ -169,7 +226,6 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -181,45 +237,15 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(xShape);
-    std::vector<int8_t> y1Ret(size, 0);
-    ret = aclrtMemcpy(y1Ret.data(), y1Ret.size() * sizeof(y1Ret[0]), y1DeviceAddr, size * sizeof(int8_t),
-                      ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %d\n", i, y1Ret[i]);
-    }
+    // 5. 拷回并检查全部有效输出。当前输入为x1=x2=0.5，gamma=smooth1=smooth2=1.5。
+    // 因此x=1，两路量化结果均为127，scale=2.25/sqrt(1+epsilon)/127。
+    float expectedScale = 2.25f / std::sqrt(1.0f + epsilon) / 127.0f;
+    float scaleTolerance = expectedScale / 8192.0f;
+    bool outputsMatch = CheckOutput("y1", y1DeviceAddr, y1HostData, 127.0f);
+    outputsMatch &= CheckOutput("y2", y2DeviceAddr, y2HostData, 127.0f);
+    outputsMatch &= CheckOutput("x", xDeviceAddr, xHostData, 1.0f);
+    outputsMatch &= CheckOutput("scale1", scale1DeviceAddr, scale1HostData, expectedScale, scaleTolerance);
+    outputsMatch &= CheckOutput("scale2", scale2DeviceAddr, scale2HostData, expectedScale, scaleTolerance);
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(x1);
-    aclDestroyTensor(x2);
-    aclDestroyTensor(gamma);
-    aclDestroyTensor(smooth1);
-    aclDestroyTensor(smooth2);
-    aclDestroyTensor(y1);
-    aclDestroyTensor(y2);
-    aclDestroyTensor(x);
-    aclDestroyTensor(scale1);
-    aclDestroyTensor(scale2);
-
-    // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(x1DeviceAddr);
-    aclrtFree(x2DeviceAddr);
-    aclrtFree(gammaDeviceAddr);
-    aclrtFree(smooth1DeviceAddr);
-    aclrtFree(smooth2DeviceAddr);
-    aclrtFree(y1DeviceAddr);
-    aclrtFree(y2DeviceAddr);
-    aclrtFree(xDeviceAddr);
-    aclrtFree(scale1DeviceAddr);
-    aclrtFree(scale2DeviceAddr);
-
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-    aclrtDestroyStream(stream);
-    aclrtResetDevice(deviceId);
-    aclFinalize();
-    return 0;
+    return outputsMatch ? 0 : 1;
 }

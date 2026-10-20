@@ -99,6 +99,19 @@ static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     OP_CHECK_DTYPE_NOT_MATCH(scale1Out, op::DataType::DT_FLOAT, return false);
     OP_CHECK_DTYPE_NOT_MATCH(scale2Out, op::DataType::DT_FLOAT, return false);
 
+    // Additional consistency checks apply only to the regbase product path.
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SAME(x1, x2, return false);
+        OP_CHECK_DTYPE_NOT_SAME(x1, gamma, return false);
+        if (smoothScale1Optional != nullptr) {
+            OP_CHECK_DTYPE_NOT_SAME(x1, smoothScale1Optional, return false);
+        }
+        if (smoothScale2Optional != nullptr) {
+            OP_CHECK_DTYPE_NOT_SAME(x1, smoothScale2Optional, return false);
+        }
+        OP_CHECK_DTYPE_NOT_SAME(x1, xOut, return false);
+    }
+
     return true;
 }
 

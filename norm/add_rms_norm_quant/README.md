@@ -47,7 +47,7 @@
     y2=round((y*scales2)+zero\_points2)
     $$
 
-`round` 表示按输出数据类型进行舍入及饱和处理。
+`round`表示按输出数据类型进行舍入及饱和处理。
 
 ## 参数说明
 
@@ -119,7 +119,7 @@
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-      <td>表示标准化过程中的偏置项，公式中的`beta`。可选，shape 与 gamma 一致，dtype 与 x1 一致；该输入属于 Kernel/GEIR 接口，V1 ACLNN 接口不提供 beta。</td>
+      <td>表示标准化过程中的偏置项，公式中的`beta`。可选，shape与gamma一致，dtype与x1一致；该输入属于Kernel/GEIR接口，V1 ACLNN接口不提供beta。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -179,15 +179,15 @@
 
 ## 约束说明
 
-- ACLNN 接口的非空指针 Tensor 要求 rank 为 1–8，每一维大小不大于 INT32_MAX（2147483647）；rank=0 标量不在该接口支持范围内。图模式运行时输入的 rank 不大于 8，`gamma` 对应 `x1` 的完整归一化尾轴；`x1`、`x2`、`y1`、`x` 的 shape 一致，量化参数须满足参数说明中的 shape 关系。
-- 动态 shape/rank 属于 GE 图编译能力：图定义中未知维用 `-1` 表示，未知 rank 用 `[-2]` 表示。执行前必须具体化为满足上述 rank、shape 关系和产品约束的实际 shape。ACLNN 两段式接口接收具体的 Tensor 描述，不接受将 `-1`、`-2` 作为实际维长传入。
-- Ascend 950 图模式的输入、输出按连续 ND 存储处理，不支持直接传入任意 stride 或 storage offset 的 Tensor 视图。调用 ACLNN 接口时，`x1`、`x2`、`gamma`、量化参数支持非连续输入，接口先连续化；`y1Out`、启用的 `y2Out`、`xOut` 支持非连续输出视图，由接口回写。两种通路的布局约定分别适用。
-- Ascend 950 支持 shape 合法的空 Tensor；此时输出保留形状推导结果，不读取输入元素。`scales2` 或 `zero_points2` 任一存在即启用第二路量化；仅存在 `zero_points2` 时第二路 scale 按 1 处理。两者均缺省时，图模式 `y2` 是 shape 为 `[1]` 的占位输出，其值无效；ACLNN 的 `y2Out` 仍须满足接口 shape/dtype 校验，但不写入有效量化结果，不应参与数值比对。
+- ACLNN接口的非空指针Tensor要求rank为1–8，每一维大小不大于INT32_MAX（2147483647）；rank=0标量不在该接口支持范围内。图模式运行时输入的rank不大于8，`gamma`对应`x1`的完整归一化尾轴；`x1`、`x2`、`y1`、`x`的shape一致，量化参数须满足参数说明中的shape关系。
+- 动态shape/rank属于GE图编译能力：图定义中未知维用`-1`表示，未知rank用`[-2]`表示。执行前必须具体化为满足上述rank、shape关系和产品约束的实际shape。ACLNN两段式接口接收具体的Tensor描述，不接受将`-1`、`-2`作为实际维长传入。
+- <term>Ascend 950PR&950DT系列产品</term>图模式的输入、输出按连续ND存储处理，不支持直接传入任意stride或storage offset的Tensor视图。调用ACLNN接口时，`x1`、`x2`、`gamma`、量化参数支持非连续输入，接口先连续化；`y1Out`、启用的`y2Out`、`xOut`支持非连续输出视图，由接口回写。两种通路的布局约定分别适用。
+- <term>Ascend 950PR&950DT系列产品</term>支持shape合法的空Tensor；此时输出保留形状推导结果，不读取输入元素。`scales2`或`zero_points2`任一存在即启用第二路量化；仅存在`zero_points2`时第二路scale按1处理。两者均缺省时，图模式`y2`是shape为`[1]`的占位输出，其值无效；ACLNN的`y2Out`仍须满足接口shape/dtype校验，但不写入有效量化结果，不应参与数值比对。
 
 <term>Atlas推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`beta`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。
 
-- Ascend 950 的 RMS 归约覆盖 `gamma` 对应的完整尾轴，归约元素数为这些维度的乘积；`axis=-1` 是量化接口的属性，不把多维 `gamma` 的 RMS 归约收窄为最后一维。beta 存在时其 shape 与 gamma 一致。
-- Kernel/GEIR 参数校验失败通过图构建或 tiling 的失败状态和诊断信息报告；ACLNN 的 161001、161002 为该 API 层返回码，不作为 Kernel/GEIR 的统一返回码。
+- <term>Ascend 950PR&950DT系列产品</term>的RMS归约覆盖`gamma`对应的完整尾轴，归约元素数为这些维度的乘积；`axis=-1`是量化接口的属性，不把多维`gamma`的RMS归约收窄为最后一维。beta存在时其shape与gamma一致。
+- Kernel/GEIR参数校验失败通过图构建或tiling的失败状态和诊断信息报告；ACLNN的161001、161002为该API层返回码，不作为Kernel/GEIR的统一返回码。
 
 ## 调用说明
 

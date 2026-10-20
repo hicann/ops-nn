@@ -112,7 +112,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1（aclTensor*）</td>
+      <td>x1（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2（aclTensor*）</td>
+      <td>x2（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型与`x1`保持一致。</li></ul></td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma（aclTensor*）</td>
+      <td>gamma（const aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`g`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`x1`需要norm（层归一化）的维度保持一致，数据类型与`x1`保持一致。</li></ul></td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales1（aclTensor*）</td>
+      <td>scales1（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致。</li></ul></td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales2Optional（aclTensor*）</td>
+      <td>scales2Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致，与`zeroPoints2Optional`的组合约束参见<a href="#约束说明">约束说明</a>。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints1Optional（aclTensor*）</td>
+      <td>zeroPoints1Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zero_points1`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致。</li></ul></td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints2Optional（aclTensor*）</td>
+      <td>zeroPoints2Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zero_points2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致，与`scales2Optional`的组合约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -311,7 +311,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>输入或输出的数据类型不在支持范围内，rank 或维长超出接口限制，或可选参数组合不受当前产品支持。</td>
+      <td>输入或输出的数据类型不在支持范围内，rank或维长超出接口限制，或可选参数组合不受当前产品支持。</td>
     </tr>
     </tbody></table>
 
@@ -360,12 +360,15 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## 约束说明
 
-- 本接口接收具体的 Tensor shape：rank 为1-8，rank=0标量不支持。动态 shape/rank 的 `-1`（未知维）、`[-2]`（未知 rank）属于 GE 图定义，调用本接口前必须具体化，不能作为实际维长传入。
-- 输入 Tensor 支持非连续视图，接口将其转换为连续存储后计算；输出 `y1Out`、启用的 `y2Out`、`xOut` 支持非连续视图，结果回写到传入的视图。GE 图通路的布局要求参见[算子说明](../README.md)，不以本接口的非连续支持替代图通路约束。
-- 当 `scales2Optional` 与 `zeroPoints2Optional` 同时为空指针时，第二路量化未启用。`y2Out` 仍须满足参数表的非空、shape、dtype约束，但接口不写入有效量化结果，不应读取其值作为第二路输出。图模式对应的 `y2` 为 shape `[1]` 的占位输出。
-- 合法空 Tensor 不执行元素计算，第一段接口返回成功且 workspaceSize 为0；输出 Tensor 的描述由调用者按参数表提供。
+- 本接口接收具体的Tensor shape：rank为1-8，rank=0标量不支持。动态shape/rank的`-1`（未知维）、`[-2]`（未知rank）属于GE图定义，调用本接口前必须具体化，不能作为实际维长传入。
+- 输入Tensor支持非连续视图，接口将其转换为连续存储后计算；输出`y1Out`、启用的`y2Out`、`xOut`支持非连续视图，结果回写到传入的视图。GE图通路的布局要求参见[算子说明](../README.md)，不以本接口的非连续支持替代图通路约束。
+- 当`scales2Optional`与`zeroPoints2Optional`同时为空指针时，第二路量化未启用。`y2Out`仍须满足参数表的非空、shape、dtype约束，但接口不写入有效量化结果，不应读取其值作为第二路输出。图模式对应的`y2`为shape `[1]`的占位输出。
+- 合法空Tensor不执行元素计算，第一段接口返回成功且workspaceSize为0；输出Tensor的描述由调用者按参数表提供。
 
-- Ascend 950 的 RMS 归约覆盖 `gamma` 对应的完整归一化尾轴；`axis=-1` 不把多维 `gamma` 的归约限制为最后一维。元素值约束（如除法量化的 scale 非零）由调用方保证，API 不逐元素扫描 Tensor 并返回专用参数错误码。
+<!-- npu="950" id15 -->
+- <term>Ascend 950PR&950DT系列产品</term>的RMS归约覆盖`gamma`对应的完整归一化尾轴；`axis=-1`不把多维`gamma`的归约限制为最后一维。元素值约束（如除法量化的scale非零）由调用方保证，API不逐元素扫描Tensor并返回专用参数错误码。
+<!-- end id15 -->
+
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
 <!-- npu="950" id13 -->
@@ -377,7 +380,7 @@ aclnnStatus aclnnAddRmsNormQuant(
 <!-- end id14 -->
 
 <!-- npu="310p" id9 -->
-- <term>Atlas推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32 Bytes。
+- <term>Atlas推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32Bytes。
 <!-- end id9 -->
 
 - 数据格式说明：

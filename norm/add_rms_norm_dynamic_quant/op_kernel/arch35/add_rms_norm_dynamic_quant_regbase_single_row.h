@@ -304,13 +304,15 @@ private:
                 inRowsQue.FreeTensor(smooth2Local);
                 RoundFloat2Quant(y2Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
             } else {
-                AscendC::LocalTensor<T_X> smooth2Local = inRowsQue.template DeQue<T_X>();
-                AscendC::LocalTensor<float> tmpTensor = smooth2Local.template ReinterpretCast<float>();
-                ScaleTensor(xLocalFp32, tmpTensor, scalesLocalOut,
-                            idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+                // No smooth2 was enqueued. Reuse the idle input buffer as
+                // reduction scratch, and preserve xLocalFp32 for quant1.
+                AscendC::LocalTensor<float> tmpTensor = inRowsQue.template AllocTensor<float>();
+                Muls(yLocalFp32, xLocalFp32, 1.0f, this->numLastDim);
                 PipeBarrier<PIPE_V>();
-                inRowsQue.FreeTensor(smooth2Local);
-                RoundFloat2Quant(y2Local, xLocalFp32, static_cast<uint32_t>(this->numLastDim));
+                ScaleTensor(yLocalFp32, tmpTensor, scalesLocalOut, idx + ROW_FACTOR);
+                PipeBarrier<PIPE_V>();
+                inRowsQue.FreeTensor(tmpTensor);
+                RoundFloat2Quant(y2Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
             }
         }
         if (this->outQuant1Flag_) {

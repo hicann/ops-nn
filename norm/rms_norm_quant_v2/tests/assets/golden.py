@@ -31,6 +31,23 @@ __golden__ = {"kernel": {"rms_norm_quant_v2": "rms_norm_quant_v2"}}
 __spec__ = {"rms_norm_quant_v2": "RmsNormQuantV2TestSpec"}
 
 
+def _empty_quant_output(shape, dtype):
+    """Construct the requested dtype without evaluating an empty reduction."""
+    if dtype == "int4":
+        from ttk.utilities.dtypes import numpy_int4
+
+        dtype = numpy_int4()
+    elif dtype in ("float8_e5m2", "float8_e4m3fn"):
+        import ml_dtypes
+
+        dtype = getattr(ml_dtypes, dtype)
+    elif dtype == "hifloat8":
+        from en_dtypes import hifloat8
+
+        dtype = hifloat8
+    return np.empty(shape, dtype=dtype)
+
+
 def rms_norm_quant_v2(
     input_x,
     input_gamma,
@@ -61,6 +78,14 @@ def rms_norm_quant_v2(
         if (output_dtypes is not None and len(output_dtypes) > 1)
         else None
     )
+
+    if input_x.size == 0:
+        return (
+            _empty_quant_output(input_x.shape, y1_dtype),
+            _empty_quant_output(input_x.shape, y2_dtype)
+            if input_scales2 is not None
+            else None,
+        )
 
     # Flatten only the normalization axes. Quantization parameters describe
     # their own suffix of x, which need not have the same rank as gamma.

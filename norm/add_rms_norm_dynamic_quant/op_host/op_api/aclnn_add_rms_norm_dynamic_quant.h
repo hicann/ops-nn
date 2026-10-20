@@ -29,6 +29,9 @@ extern "C" {
  *     y1 = dynamicQuant(y, smoothScale1Optional, smoothScale2Optional)
  *     y2 = dynamicQuant(y, smoothScale1Optional, smoothScale2Optional)
  *
+ * @note Ascend 950PR&950DT系列产品：gamma为一维Tensor，长度与x1的最后一维一致。
+ * x2、gamma、非空指针的smoothScale1Optional和smoothScale2Optional、xOut的数据类型与x1一致。
+ * smoothScale1Optional和smoothScale2Optional的shape与gamma一致。
  * @param [in] x1:
  * 公式中的输入`x1`，数据类型支持BFLOAT16、FLOAT16，shape维度支持2-8维。
  * 支持非连续的Tensor，数据格式支持ND。

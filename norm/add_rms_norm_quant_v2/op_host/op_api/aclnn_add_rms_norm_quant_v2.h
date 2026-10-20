@@ -41,24 +41,26 @@ extern "C" {
  * @param [in] scales1:
  * 公式中的输入`scales1`，数据类型支持BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
  * 支持非连续的Tensor，数据格式支持ND。
+ * 各参数支持的数据类型组合参见aclnnAddRmsNormQuantV2接口文档。
  * @param [in] scales2Optional:
  * 公式中的输入`scales2`，数据类型支持BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
- * 支持非连续的Tensor，数据格式支持ND。在Ascend 950上，当本参数为空且zeroPoints2Optional非空时，
+ * 支持非连续的Tensor，数据格式支持ND。在Ascend 950PR&950DT系列产品上，当本参数为空且zeroPoints2Optional非空时，
  * scales2按1处理；其他产品不支持该参数组合。
  * @param [in] zeroPoints1Optional:
- * 公式中的输入`zero_points1`，可选参数，数据类型支持INT32、BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
+ * 公式中的输入`zero_points1`，可选参数，数据类型支持INT8、INT32、BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
  * 支持非连续的Tensor，数据格式支持ND。
+ * Ascend 950PR&950DT系列产品上，仅当x1为FLOAT16或BFLOAT16时支持INT8；具体数据类型组合参见接口文档。
  * @param [in] zeroPoints2Optional:
  * 公式中的输入`zero_points2`，可选参数，数据类型支持INT32、BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
- * 支持非连续的Tensor，数据格式支持ND。在Ascend 950以外的产品上，本参数非空时scales2Optional必须非空。
+ * 支持非连续的Tensor，数据格式支持ND。在Ascend 950PR&950DT系列产品以外的产品上，本参数非空时scales2Optional必须非空。
  * @param [in] betaOptional:
  * 公式中的输入`beta`，可选参数，数据类型支持BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] axis: int64 类型，指定要应用的量化轴，当前仅支持-1。
- * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
- * @param [in] divMode: bool 类型，用于指定静态量化计算的算法。当为False时，静态量化计算计算使用乘法，反之亦然。
+ * @param [in] axis: int64类型，指定要应用的量化轴，当前仅支持-1。
+ * @param [in] epsilon: double类型，层归一化中用到的防止除0的参数。
+ * @param [in] divMode: bool类型，用于指定静态量化计算的算法。当为False时，静态量化计算计算使用乘法，反之亦然。
  * @param [in] y1Out:
- * 公式中的输出`y1`，Ascend 950PR/Ascend 950DT上数据类型支持INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN，
+ * 公式中的输出`y1`，Ascend 950PR&950DT系列产品上数据类型支持INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN，
  * 其他支持产品上数据类型支持INT8，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] y2Out:
@@ -66,11 +68,11 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] xOut:
  * 公式中的输出`x`，数据类型支持BFLOAT16、FLOAT、FLOAT16且需要与x1一致，shape需要与x1一致。
- * 在Ascend 950PR/Ascend 950DT上为必选输出，不支持传入空指针。
+ * 在Ascend 950PR&950DT系列产品上为必选输出，不支持传入空指针。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] rmsNormOut:
  * 公式中的输出`rmsNormout`，数据类型支持BFLOAT16、FLOAT、FLOAT16且需要与x1一致，shape需要与x1一致。
- * 在Ascend 950PR/Ascend 950DT上为可选输出，支持传入空指针，且与betaOptional相互独立。
+ * 在Ascend 950PR&950DT系列产品上为可选输出，支持传入空指针，且与betaOptional相互独立。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。

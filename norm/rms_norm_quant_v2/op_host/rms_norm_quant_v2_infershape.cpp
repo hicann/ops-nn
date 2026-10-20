@@ -15,6 +15,7 @@
 #include <algorithm>
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "rms_norm_quant_v2_empty_shape.h"
 
 static constexpr int INPUT_X_IDX = 0;
 static constexpr int INPUT_SCALE2_IDX = 3;
@@ -40,6 +41,10 @@ static ge::graphStatus InferShape4RmsNormQuantV2(gert::InferShapeContext* contex
     // get input shapes
     const gert::Shape* xShape = context->GetInputShape(INPUT_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    const bool isEmpty = rms_norm_quant::HasEmptyDim(*xShape);
+    if (isEmpty && !rms_norm_quant::CheckEmptyInputShapes(context)) {
+        return GRAPH_FAILED;
+    }
 
     // get output shapes
     gert::Shape* y1Shape = context->GetOutputShape(OUTPUT_Y1_IDX);
@@ -47,7 +52,7 @@ static ge::graphStatus InferShape4RmsNormQuantV2(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
     *y1Shape = *xShape;
-    *y2Shape = HasSecondQuantParam(context) ? *xShape : gert::Shape({1});
+    *y2Shape = HasSecondQuantParam(context) ? *xShape : gert::Shape({isEmpty ? 0 : 1});
 
     OP_LOGD(context, "End to do InferShape4RmsNormQuantV2");
     return GRAPH_SUCCESS;
