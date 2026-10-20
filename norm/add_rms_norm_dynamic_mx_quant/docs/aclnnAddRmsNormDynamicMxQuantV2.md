@@ -193,7 +193,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>x3Optional（const aclTensor*）</td>
       <td>输入</td>
       <td>表示加法计算中的可选输入，残差路径。对应公式中的x3Optional。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>当传入空指针时，V2接口行为与aclnnAddRmsNormDynamicMxQuant完全一致。</li><li>当不为空时，计算公式变为 x = (x3Optional + x1) + x2，shape和数据类型需要与x1保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>当传入空指针时，V2接口行为与aclnnAddRmsNormDynamicMxQuant完全一致。</li><li>当不为空时，计算公式变为x = (x3Optional + x1) + x2，shape和数据类型需要与x1保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -282,7 +282,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示输入加法结果的均方根倒数（含 epsilon）。对应公式中Rms(x)的倒数。</td>
+      <td>表示输入加法结果的均方根倒数（含epsilon）。对应公式中Rms(x)的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参x1保持一致，除最后一维外各维度与x1对应维度保持一致，最后一维为1。rstdOut shape与x1 shape关系举例：若x1 shape为(2,3,4,8)，则rstdOut shape为(2,3,4,1)。</li><li>当outputRstd为False时，允许传入nullptr；传入非空指针时，其内容也不能作为有效计算结果读取。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -479,7 +479,9 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
 
 ## 调用示例
 
-通用编译流程参见[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。以下步骤适用于已安装本仓源码构建的`custom_nn`算子包：将下方代码保存为`example.cpp`，在其所在目录执行。`CANN_INSTALL_DIR`替换为实际CANN安装目录，`CUSTOM_OP_DIR`指向该版本的自定义算子包目录；头文件和库须来自同一套安装。需要g++及Ascend 950设备，示例使用设备0。
+<!-- npu="950" id8 -->
+通用编译流程参见[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。以下步骤适用于已安装本仓源码构建的`custom_nn`算子包：将下方代码保存为`example.cpp`，在其所在目录执行。`CANN_INSTALL_DIR`替换为实际CANN安装目录，`CUSTOM_OP_DIR`指向该版本的自定义算子包目录；头文件和库须来自同一套安装。需要g++及<term>Ascend 950PR&950DT系列产品</term>，示例使用设备0。
+<!-- end id8 -->
 
 ```bash
 CANN_INSTALL_DIR=/path/to/Ascend/cann

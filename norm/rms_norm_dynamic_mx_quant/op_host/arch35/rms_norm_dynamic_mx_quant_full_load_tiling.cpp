@@ -62,21 +62,44 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
     int64_t binAddOutBufLen = Ops::Base::CeilAlign(binAddVls, ubBlockFp32Num_);
 
     // ub切分
-    constexpr int64_t RESERVED_UB_SIZE = 1024; // reserved for ub block align
-    int64_t gammaAlignedSize = Ops::Base::CeilAlign(numN_ * gammaDtypeSize_, ubBlockSize_);
+    constexpr int64_t RESERVED_UB_SIZE = 1024;
+    int64_t gammaAlignedSize = Ops::Base::CeilAlign(numN_, vlFp32_) * gammaDtypeSize_;
     int64_t gammaBetaUbSize = hasInputBeta_ ? gammaAlignedSize * CONST_TWO : gammaAlignedSize;
 
+    // Match every InitBuffer allocation, including complete unmasked load tiles.
+    // This total is monotonic in m, so a binary search retains the largest tile
+    // that fits instead of relying on a linear estimate plus a fixed reserve.
+    const auto getUbSize = [&](int64_t m) {
+        int64_t xSize = m * nMxblockAligned * FP16_BYTES;
+        int64_t normSize = Ops::Base::CeilAlign(m * nMxblockAligned, vlFp32_ * CONST_FOUR) * FP16_BYTES;
+        int64_t reduceTmpCount = m * binAddOutBufLen;
+        if (numN_ > vlFp32_ * CONST_TWO) {
+            reduceTmpCount = (m - 1) * binAddOutBufLen + Ops::Base::CeilAlign(binAddOutBufLen, vlFp32_);
+        }
+        int64_t reduceTmpSize = reduceTmpCount * FP32_BYTES;
+        int64_t rstdSize = Ops::Base::CeilAlign(m * FP32_BYTES, ubBlockSize_);
+        int64_t reduceOutSize = Ops::Base::CeilAlign(m, vlFp32_) * FP32_BYTES;
+        int64_t scaleOutSize = Ops::Base::CeilAlign(m * nMxblockNumAlignedTwo * FP16_BYTES, ubBlockSize_);
+        int64_t scaleScratchSize = Ops::Base::CeilAlign(m * nMxblockNumAlignedTwo, vlFp32_ * CONST_TWO) * FP16_BYTES;
+        int64_t ySize = Ops::Base::CeilAlign(m * nMxblockAligned / CONST_TWO, vlFp32_ * CONST_TWO);
+        if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) == 0) {
+            ySize = Ops::Base::CeilAlign(m, CONST_FOUR) * nMxblockAligned;
+        }
+        return RESERVED_UB_SIZE + gammaBetaUbSize + xSize * DOUBLE_BUFFER + normSize + reduceTmpSize +
+               rstdSize * DOUBLE_BUFFER + reduceOutSize + scaleOutSize * DOUBLE_BUFFER + scaleScratchSize * CONST_TWO +
+               ySize * DOUBLE_BUFFER;
+    };
     int64_t mUbFactorMax = 0;
-    if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) == 0) { // fp8量化
-        mUbFactorMax = (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE - CONST_THREE * nMxblockAligned * DOUBLE_BUFFER) /
-                       (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES +
-                        FP32_BYTES * CONST_THREE + nMxblockAligned * DOUBLE_BUFFER +
-                        nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
-    } else { // fp4量化
-        mUbFactorMax = (ubSize_ - gammaBetaUbSize - RESERVED_UB_SIZE) /
-                       (nMxblockAligned * FP16_BYTES * CONST_THREE + binAddOutBufLen * FP32_BYTES +
-                        FP32_BYTES * CONST_THREE + nMxblockAligned / CONST_TWO * DOUBLE_BUFFER +
-                        nMxblockNumAlignedTwo * FP16_BYTES * CONST_FOUR);
+    int64_t lower = 1;
+    int64_t upper = std::min(mPerTailCore, ubSize_ / nMxblockAligned / FP16_BYTES);
+    while (lower <= upper) {
+        int64_t middle = lower + (upper - lower) / CONST_TWO;
+        if (getUbSize(middle) <= ubSize_) {
+            mUbFactorMax = middle;
+            lower = middle + 1;
+        } else {
+            upper = middle - 1;
+        }
     }
 
     OP_CHECK_IF(

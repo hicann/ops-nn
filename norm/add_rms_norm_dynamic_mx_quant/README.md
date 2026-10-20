@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 算子功能：将Add算子、RmsNorm归一化（相比LayerNorm算子去掉了减去均值的部分）与DynamicMxQuant动态MX量化融合为一次计算，减少搬入搬出操作：先对输入做加法，再做RmsNorm归一化，最后在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果y、加法结果x、量化尺度mxscale及均方根倒数rstd。mxscale的计算算法由scale_alg指定（dst_type为FP8时支持OCP与cuBLAS两种实现，FP4时仅支持OCP），具体计算过程见下方计算公式。
-- V2接口（CANN >= 9.2.0）：新增可选输入x3，当x3不为空时，计算公式变为 x = (x3 + x1) + x2，支持三路残差加法。详见[aclnnAddRmsNormDynamicMxQuantV2](docs/aclnnAddRmsNormDynamicMxQuantV2.md)。
+- V2接口（CANN >= 9.2.0）：新增可选输入x3，当x3不为空时，计算公式变为x = (x3 + x1) + x2，支持三路残差加法。详见[aclnnAddRmsNormDynamicMxQuantV2](docs/aclnnAddRmsNormDynamicMxQuantV2.md)。
 - 计算公式：
 
   当x3为空时（V1接口或V2接口x3传空）：
@@ -182,7 +182,7 @@
     <tr>
       <td>x</td>
       <td>输出</td>
-      <td><ul><li>表示x1和x2的和，对应公式中的x。shape和数据类型与x1一致。</li></ul></td>
+      <td><ul><li>表示输入加法结果，对应公式中的x。shape和数据类型与x1一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -196,7 +196,7 @@
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td><ul><li>表示输入加法结果的均方根倒数（含 epsilon），对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，维度数与x1保持一致，不需要norm的维度（x1的维度减去gamma的维度）与x1对应维度一致，需要norm的维度为1。如x1 shape为(2,3,4,8)、gamma shape为(8,)时，rstd shape为(2,3,4,1)。</li><li>当output_rstd为False时，rstd为无效占位输出。</li></ul></td>
+      <td><ul><li>表示输入加法结果的均方根倒数（含epsilon），对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，维度数与x1保持一致，不需要norm的维度（x1的维度减去gamma的维度）与x1对应维度一致，需要norm的维度为1。如x1 shape为(2,3,4,8)、gamma shape为(8,)时，rstd shape为(2,3,4,1)。</li><li>当output_rstd为False时，rstd为无效占位输出。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

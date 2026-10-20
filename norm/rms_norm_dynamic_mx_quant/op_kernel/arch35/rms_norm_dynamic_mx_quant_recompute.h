@@ -62,7 +62,8 @@ public:
         pipe_->InitBuffer(binaryAddBuf_, VL_FP32 * NUM_TWO * sizeof(float));
         pipe_->InitBuffer(cacheBuf_, (tilingData_->resultCacheId + 1) * UB_BLOCK_SIZE);
 
-        pipe_->InitBuffer(rstdOutQueue_, DOUBLE_BUFFER, tilingData_->baseM * sizeof(float));
+        int64_t rstdBufSize = ops::CeilAlign(tilingData_->baseM, static_cast<int64_t>(VL_FP32)) * sizeof(float);
+        pipe_->InitBuffer(rstdOutQueue_, DOUBLE_BUFFER, rstdBufSize);
 
         int64_t gammaBufSize = tilingData_->baseN * sizeof(T_GAMMA);
         pipe_->InitBuffer(gammaInQueue_, DOUBLE_BUFFER, gammaBufSize);
@@ -70,7 +71,8 @@ public:
             pipe_->InitBuffer(betaInQueue_, DOUBLE_BUFFER, gammaBufSize);
         }
 
-        pipe_->InitBuffer(normOutBuffer_, xBufSize);
+        int64_t normBufSize = ops::CeilAlign(tilingData_->baseN, static_cast<int64_t>(VL_B16 * NUM_TWO)) * sizeof(T_X);
+        pipe_->InitBuffer(normOutBuffer_, normBufSize);
 
         int64_t scaleBufSize = ops::CeilAlign(static_cast<uint32_t>(tilingData_->baseN / tilingData_->mxBlockSize),
                                               VL_B16) *
@@ -118,6 +120,7 @@ public:
 private:
     __aicore__ inline void ComputeBatchRstd(LocalTensor<float>& rstdLocal, int64_t batchOffset, int64_t curM)
     {
+        ClearLastPhysicalTile(rstdLocal, curM, VL_FP32);
         for (int64_t rowIdx = 0; rowIdx < curM; ++rowIdx) {
             int64_t rowGmOffset = batchOffset + rowIdx * tilingData_->numN;
             ComputeOneLineXSquareSum(rstdLocal, rowGmOffset, rowIdx);
@@ -186,14 +189,19 @@ private:
         copyParams.blockLen = static_cast<uint32_t>(len * sizeof(T_GAMMA));
         copyParams.srcStride = 0;
         copyParams.dstStride = 0;
-        DataCopyPadExtParams<T_GAMMA> padParams{false, 0, 0, static_cast<T_GAMMA>(0.0)};
+        int64_t blockElements = UB_BLOCK_SIZE / sizeof(T_GAMMA);
+        DataCopyPadExtParams<T_GAMMA> padParams{
+            true, 0, static_cast<uint8_t>((blockElements - len % blockElements) % blockElements),
+            static_cast<T_GAMMA>(0.0)};
 
         LocalTensor<T_GAMMA> gammaLocal = gammaInQueue_.AllocTensor<T_GAMMA>();
+        PrepareAffineTail(gammaLocal, len, pipe_);
         DataCopyPad(gammaLocal, gammaGm_[offset], copyParams, padParams);
         gammaInQueue_.EnQue(gammaLocal);
 
         if (tilingData_->hasInputBeta) {
             LocalTensor<T_GAMMA> betaLocal = betaInQueue_.AllocTensor<T_GAMMA>();
+            PrepareAffineTail(betaLocal, len, pipe_);
             DataCopyPad(betaLocal, betaGm_[offset], copyParams, padParams);
             betaInQueue_.EnQue(betaLocal);
         }
@@ -382,6 +390,8 @@ private:
         // 计算 norm：y = x * rstd * gamma [+ beta]，结果放入 normOutBuffer_
         // ComputeYOneRow 内部使用 ZEROING + full mask store，最后分块可自动补0到对齐长度
         LocalTensor<T_X> normOutLocal = normOutBuffer_.Get<T_X>();
+        int64_t normCount = ops::CeilAlign(curN, static_cast<int64_t>(VL_FP32));
+        ClearLastPhysicalTile(normOutLocal, normCount, VL_B16 * NUM_TWO);
         if (tilingData_->hasInputBeta) {
             ComputeYOneRow<true>(xLocal, gammaLocal, betaLocal, rstdLocal, normOutLocal, static_cast<uint32_t>(rowIdx),
                                  static_cast<uint32_t>(curN));
@@ -486,6 +496,8 @@ private:
         LocalTensor<int8_t> yOutLocal = yOutQueue_.AllocTensor<int8_t>();
         LocalTensor<uint16_t> maxExpLocal = maxExpBuffer_.Get<uint16_t>();
         LocalTensor<uint16_t> halfScaleLocal = maxhalfScaleBuffer_.Get<uint16_t>();
+        ClearLastPhysicalTile(maxExpLocal, totalScaleInUB, VL_B16);
+        ClearLastPhysicalTile(halfScaleLocal, totalScaleInUB, VL_B16);
 
         auto srcAddr = reinterpret_cast<__ubuf__ T_X*>(yLocal.GetPhyAddr());
         auto maxExpAddr = reinterpret_cast<__ubuf__ uint16_t*>(maxExpLocal.GetPhyAddr());

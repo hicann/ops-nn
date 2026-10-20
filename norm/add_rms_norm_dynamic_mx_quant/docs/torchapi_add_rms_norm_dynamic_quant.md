@@ -233,7 +233,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>y</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>归一化并量化后的结果，公式中的Pi和di。dst_type为40/41（FP4）时，dtype为uint8，两个FP4值打包为一个字节（每4 bit存一个FP4），shape尾轴为x1尾轴的一半；dst_type为35/36（FP8）时，dtype分别为float8_e5m2、float8_e4m3fn，shape与x1一致。</td>
+        <td>归一化并量化后的结果，公式中的Pi和di。dst_type为40/41（FP4）时，dtype为uint8，两个FP4值打包为一个字节（每4bit存一个FP4），shape尾轴为x1尾轴的一半；dst_type为35/36（FP8）时，dtype分别为float8_e5m2、float8_e4m3fn，shape与x1一致。</td>
         <td>uint8（FP4）、float8_e5m2、float8_e4m3fn</td>
         <td>FP4: (..., D/2)；FP8: (..., D)</td>
     </tr>
@@ -257,7 +257,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>rstd</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>输入加法结果的均方根倒数（含 epsilon），公式中Rms(x)的倒数。output_rstd为True时输出有效值；为False时为无效占位输出（内容未定义）。shape为x1.shape[:-1]拼接(1,)。</td>
+        <td>输入加法结果的均方根倒数（含epsilon），公式中Rms(x)的倒数。output_rstd为True时输出有效值；为False时为无效占位输出（内容未定义）。shape为x1.shape[:-1]拼接(1,)。</td>
         <td>float32</td>
         <td>(..., 1)</td>
     </tr>

@@ -82,6 +82,27 @@ constexpr uint32_t FP8_E5M2_MAX = 0x37924925; // 1/57344的float32表示 57334�
 constexpr uint32_t FP8_E4M3_MAX = 0x3b124925; // 1/448的float32表示 448是E4M3所能表示的最大值
 constexpr uint16_t INVALID_FLOAT16 = 0x7c00;
 
+// Unmasked loads consume a complete physical tile. Clear the final tile before
+// its producer writes the valid elements; logical row strides remain unchanged.
+template <typename T>
+__aicore__ inline void ClearLastPhysicalTile(LocalTensor<T> tensor, int64_t count, int64_t tileElements)
+{
+    if (count % tileElements != 0) {
+        AscendC::Duplicate<T>(tensor[count / tileElements * tileElements], static_cast<T>(0), tileElements);
+    }
+}
+
+template <typename T>
+__aicore__ inline void PrepareAffineTail(LocalTensor<T> tensor, int64_t count, TPipe* pipe)
+{
+    if (count % VL_FP32 != 0) {
+        ClearLastPhysicalTile(tensor, count, VL_FP32);
+        auto eventId = pipe->FetchEventID(HardEvent::V_MTE2);
+        SetFlag<HardEvent::V_MTE2>(eventId);
+        WaitFlag<HardEvent::V_MTE2>(eventId);
+    }
+}
+
 template <typename T>
 __aicore__ inline void LoadTensorForDtypeT(__ubuf__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {

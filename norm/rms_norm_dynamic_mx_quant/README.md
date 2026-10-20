@@ -73,12 +73,12 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 910px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">
-  <col style="width: 352px">
-  <col style="width: 213px">
-  <col style="width: 100px">
+  <col style="width: 200px">
+  <col style="width: 200px">
+  <col style="width: 170px">
   </colgroup>
   <thead>
     <tr>
@@ -162,7 +162,7 @@
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td><ul><li>表示归一化后的标准差的倒数，对应公式中Rms(x)的倒数。</li><li>shape为与入参x的shape前几维保持一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>表示归一化分母的倒数，对应公式中Rms(x)的倒数。</li><li>当output_rstd为True时，rank与x相同，shape为x.shape[:-1] + (1,)。例如x为(2,3,4,8)时，rstd为(2,3,4,1)。当output_rstd为False时，rstd为无效占位输出。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -170,11 +170,16 @@
 
 ## 约束说明
 
+- x和y的rank为1–7；gamma和可选beta为一维，长度等于x的尾轴长度，beta的shape及数据类型与gamma相同。
+- 有效rstd的rank与x相同，仅最后一维为1；mxscale的rank为rank(x)+1。
+- 支持空Tensor。x尾轴之外存在空维时不产生有效数据；尾轴为空时，y和mxscale为空，启用的rstd为NaN。
+- 图推导支持未知维（-1）和未知rank（-2）；执行前须具体化为满足上述rank、轴长及数据类型约束的Tensor。
+
 - <term>Ascend 950PR&950DT系列产品</term>：
 
   mxscale的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
-  - mxscale.shape[-2] = (ceil(x.shape[-1] / 32) + 2 - 1) / 2。
+  - mxscale.shape[-2] = ceil(ceil(x.shape[-1] / 32) / 2)。
   - mxscale.shape[-1] = 2。
   - 其他维度与输入x一致。
 
@@ -186,5 +191,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_rms_norm_dynamic_mx_quant](examples/test_aclnn_rms_norm_dynamic_mx_quant.cpp) | 通过[aclnnRmsNormDynamicMxQuant](docs/aclnnRmsNormDynamicMxQuant.md)接口方式调用RmsNormDynamicMxQuant算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/rms_norm_dynamic_mx_quant_proto.h)构图方式调用RmsNormDynamicMxQuant算子。         |
+| aclnn API  | [test_aclnn_rms_norm_dynamic_mx_quant](examples/test_aclnn_rms_norm_dynamic_mx_quant.cpp) | 通过[aclnnRmsNormDynamicMxQuant](docs/aclnnRmsNormDynamicMxQuant.md)接口方式调用RmsNormDynamicMxQuant算子。 |
+| GE图模式 | -  | 通过[算子IR](op_graph/rms_norm_dynamic_mx_quant_proto.h)构图方式调用RmsNormDynamicMxQuant算子。         |

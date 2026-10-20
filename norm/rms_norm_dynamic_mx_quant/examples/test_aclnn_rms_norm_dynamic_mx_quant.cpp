@@ -9,6 +9,9 @@
  */
 
 #include <iostream>
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
 #include <vector>
 #include <cstring>
 #include <cmath>
@@ -48,8 +51,8 @@ bool CheckHardwareSupport()
 {
     const char* socName = aclrtGetSocName();
     if (socName == nullptr) {
-        LOG_PRINT("Warning: Cannot get SOC name, skip hardware check\n");
-        return true;
+        LOG_PRINT("Cannot get SOC name\n");
+        return false;
     }
 
     LOG_PRINT("Current SOC: %s\n", socName);
@@ -100,7 +103,39 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed\n"); return 1);
     return 0;
+}
+
+bool CheckOutputs(const std::vector<uint8_t>& y, const std::vector<uint8_t>& mxscale, const std::vector<float>& rstd,
+                  uint8_t expectedY, double expectedRstd)
+{
+    // For these constant FP16 inputs, the affine result rounds to 1 or 1.5.
+    // OCP uses exponent floor(log2(max(abs(affine)))) - 8 = -8.
+    // E8M0 encodes -8 as 119; E4M3FN encodes 256/384 as 0x78/0x7c.
+    constexpr uint8_t expectedScale = 119;
+    constexpr double rstdRelativeTolerance = 1.0 / 8192.0;
+    for (size_t i = 0; i < y.size(); ++i) {
+        if (y[i] != expectedY) {
+            LOG_PRINT("y[%zu]: got 0x%02x, expected 0x%02x\n", i, y[i], expectedY);
+            return false;
+        }
+    }
+    for (size_t i = 0; i < mxscale.size(); ++i) {
+        if (mxscale[i] != expectedScale) {
+            LOG_PRINT("mxscale[%zu]: got %u, expected %u\n", i, mxscale[i], expectedScale);
+            return false;
+        }
+    }
+    for (size_t i = 0; i < rstd.size(); ++i) {
+        if (!std::isfinite(rstd[i]) ||
+            std::abs(rstd[i] - expectedRstd) > rstdRelativeTolerance * std::abs(expectedRstd)) {
+            LOG_PRINT("rstd[%zu]: got %.9g, expected %.9g\n", i, rstd[i], expectedRstd);
+            return false;
+        }
+    }
+    LOG_PRINT("Checked y=%zu, mxscale=%zu, rstd=%zu elements\n", y.size(), mxscale.size(), rstd.size());
+    return true;
 }
 
 int main()
@@ -119,6 +154,7 @@ int main()
         aclrtDestroyStream(stream);
         aclrtResetDevice(deviceId);
         aclFinalize();
+        // Unsupported hardware is a skipped example, not a failed smoke test.
         return 0;
     }
 
@@ -130,7 +166,7 @@ int main()
     std::vector<int64_t> gammaShape = {hiddenSize};
     std::vector<int64_t> yShape = {batchSize, hiddenSize};
 
-    // MX scale shape: [batchSize, ceil(hiddenSize/32), 2]
+    // MX scale shape: [batchSize, ceil(hiddenSize/64), 2]
     int64_t mxBlockNum = (hiddenSize + 31) / 32;
     int64_t mxscaleDim = (mxBlockNum + 1) / 2;
     std::vector<int64_t> mxscaleShape = {batchSize, mxscaleDim, 2};
@@ -149,19 +185,30 @@ int main()
     aclTensor* mxscale = nullptr;
     aclTensor* rstd = nullptr;
 
-    auto destroyTensor = [](aclTensor*& tensor) {
+    int cleanupStatus = 0;
+    auto checkCleanup = [&](const char* name, int status) {
+        if (status != ACL_SUCCESS) {
+            LOG_PRINT("%s failed. ERROR: %d\n", name, status);
+            if (cleanupStatus == 0) {
+                cleanupStatus = status;
+            }
+        }
+    };
+    auto destroyTensor = [&](aclTensor*& tensor) {
         if (tensor != nullptr) {
-            aclDestroyTensor(tensor);
+            checkCleanup("aclDestroyTensor", aclDestroyTensor(tensor));
             tensor = nullptr;
         }
     };
-    auto freeDeviceAddr = [](void*& deviceAddr) {
+    auto freeDeviceAddr = [&](void*& deviceAddr) {
         if (deviceAddr != nullptr) {
-            aclrtFree(deviceAddr);
+            checkCleanup("aclrtFree", aclrtFree(deviceAddr));
             deviceAddr = nullptr;
         }
     };
     auto releaseResources = [&]() {
+        // Finish any submitted work before freeing tensors or device memory.
+        checkCleanup("aclrtSynchronizeStream", aclrtSynchronizeStream(stream));
         freeDeviceAddr(workspaceAddr);
         destroyTensor(x);
         destroyTensor(gamma);
@@ -173,9 +220,10 @@ int main()
         freeDeviceAddr(yDeviceAddr);
         freeDeviceAddr(mxscaleDeviceAddr);
         freeDeviceAddr(rstdDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        checkCleanup("aclrtDestroyStream", aclrtDestroyStream(stream));
+        checkCleanup("aclrtResetDevice", aclrtResetDevice(deviceId));
+        checkCleanup("aclFinalize", aclFinalize());
+        return cleanupStatus;
     };
 
     // Initialize host data
@@ -325,11 +373,15 @@ int main()
         for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("  rstd[%ld] = %f\n", i, rstdResult[i]);
         }
+        if (!CheckOutputs(yResult, mxscaleResult, rstdResult, 0x78, 1.0 / std::sqrt(1.0 + epsilon))) {
+            releaseResources();
+            return 1;
+        }
     }
 
+    ret = releaseResources();
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
     LOG_PRINT("\n=== RmsNormDynamicMxQuant Test PASSED ===\n");
-
-    releaseResources();
 
     return 0;
 }

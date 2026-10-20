@@ -37,19 +37,19 @@ int64_t RmsNormDynamicMxQuantRecomputeTiling::GetUbSize(int64_t baseN)
     int64_t cacheId = GetCacheId(powerSplit - 1);
     int64_t cacheBufSize = (cacheId + 1) * ubBlockSize_;
 
-    int64_t rstdOutBufSize = baseM_ * FP32_BYTES * DOUBLE_BUFFER;
+    int64_t rstdOutBufSize = Ops::Base::CeilAlign(baseM_, vlFp32_) * FP32_BYTES * DOUBLE_BUFFER;
     int64_t gammaAlignedSize = baseN * gammaDtypeSize_ * DOUBLE_BUFFER;
     int64_t gammaBetaUbSize = hasInputBeta_ ? gammaAlignedSize * CONST_TWO : gammaAlignedSize;
 
-    int64_t normOutBufSize = baseN * FP16_BYTES;
-    int64_t scaleBufSize = static_cast<int64_t>(baseN / mxBlockSize) * FP16_BYTES;
+    int64_t normOutBufSize = Ops::Base::CeilAlign(baseN, vlFp32_ * CONST_FOUR) * FP16_BYTES;
+    int64_t scaleBufSize = Ops::Base::CeilAlign(baseN / mxBlockSize, vlFp32_ * CONST_TWO) * FP16_BYTES;
     int64_t maxExpBufSize = scaleBufSize;
     int64_t maxHalfScaleBufSize = scaleBufSize;
     int64_t scaleOutBufSize = scaleBufSize * DOUBLE_BUFFER;
 
     int64_t yOutBufSize = CONST_FOUR * baseN * DOUBLE_BUFFER;
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        yOutBufSize = baseN / CONST_TWO * DOUBLE_BUFFER;
+        yOutBufSize = Ops::Base::CeilAlign(baseN / CONST_TWO, vlFp32_ * CONST_TWO) * DOUBLE_BUFFER;
     }
 
     return RESERVED_UB_SIZE + xBufSize + xFoldBufSize + xFp32TmpBufSize + binaryAddBufSize + cacheBufSize +
