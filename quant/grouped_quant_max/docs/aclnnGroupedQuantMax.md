@@ -54,8 +54,8 @@ aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(
   const aclTensor  *groupList,
   const char       *roundMode,
   int64_t           dstType,
-  aclTensor        *y,
-  aclTensor        *amax,
+  const aclTensor  *y,
+  const aclTensor  *amax,
   uint64_t         *workspaceSize,
   aclOpExecutor    **executor)
 ```
@@ -145,7 +145,7 @@ aclnnStatus aclnnGroupedQuantMax(
       <td>-</td>
     </tr>
     <tr>
-      <td>y（aclTensor*）</td>
+      <td>y（const&nbsp;aclTensor*）</td>
       <td>输出</td>
       <td>量化后的输出张量，对应公式中y。</td>
       <td><ul><li>数据类型由dstType决定。</li><li>shape与x一致。</li></ul></td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnGroupedQuantMax(
       <td>√</td>
     </tr>
     <tr>
-      <td>amax（aclTensor*）</td>
+      <td>amax（const&nbsp;aclTensor*）</td>
       <td>输出</td>
       <td>x绝对值的最大值，对应公式中amax。</td>
       <td><ul><li>数据类型需与x一致。</li><li>shape固定为[num_groups]。</li></ul></td>
