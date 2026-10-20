@@ -16,9 +16,9 @@ add_kernel_sources(
     AUTO_SYNC false
 )
 
-# arch35: ascend950
+# arch35: ascend950, ascend960dt
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_add_list.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend960dt
     AUTO_SYNC false
 )
