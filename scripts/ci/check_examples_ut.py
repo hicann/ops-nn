@@ -14,7 +14,8 @@
 
 算子判定：目录下存在 op_host 或 op_kernel 子目录，op_host 下存在def文件，
 且目录名不属于公共库（common、*_common 等）；无def文件为接口类算子，不参与统计。
-example 判定：examples 目录不存在，目录内（含子目录）无任何源码文件，
+example 判定：仅扫描暴露aclnn接口的算子（op_api目录存在aclnn_*文件，或CMakeLists声明
+ACLNNTYPE aclnn/aclnn_inner）；examples 目录不存在，目录内（含子目录）无任何源码文件，
 或仅有 arch35 一个子目录且def文件声明支持ascend910b/ascend910_93（纯950等非910芯片算子不统计）。
 ut 判定：tests/ut 目录不存在，或目录内除 CMakeLists.txt 外无任何文件。
 检测结果按类别汇总写入 build/check_examples_ut.csv，
@@ -110,19 +111,46 @@ def is_arch35_only_examples(examples_dir: str) -> bool:
     )
 
 
+# aclnn接口声明：CMakeLists中ACLNNTYPE取aclnn/aclnn_inner视为暴露aclnn接口
+ACLNN_TYPE_RE = re.compile(r"ACLNNTYPE\s+aclnn(_inner)?\b")
+
+
+def has_aclnn_entry(op_path: str) -> bool:
+    """判断算子是否暴露aclnn接口（examples检测前置条件）。
+
+    op_api目录存在aclnn_*文件，或CMakeLists声明ACLNNTYPE aclnn/aclnn_inner视为有aclnn入口；
+    两者皆无的算子不扫描examples。
+    """
+    op_api_dir = os.path.join(op_path, "op_api")
+    if os.path.isdir(op_api_dir):
+        for entry in os.listdir(op_api_dir):
+            if entry.startswith("aclnn_"):
+                return True
+    try:
+        with open(
+            os.path.join(op_path, "CMakeLists.txt"), encoding="utf-8", errors="ignore"
+        ) as file:
+            return bool(ACLNN_TYPE_RE.search(file.read()))
+    except OSError:
+        return False
+
+
 def check_op(op_path: str) -> Optional[OpIssue]:
     """检查单个算子，无问题返回 None。"""
-    missing_examples = True
+    missing_examples = False
     arch35_only_examples = False
-    examples_dir = os.path.join(op_path, "examples")
-    if os.path.isdir(examples_dir):
-        missing_examples = not has_file_with_ext(examples_dir, EXAMPLE_EXTS)
-        # def文件仅声明950等非910芯片的算子，仅有arch35 examples属正常，不视为缺失
-        arch35_only_examples = (
-            not missing_examples
-            and is_arch35_only_examples(examples_dir)
-            and def_supports_910(op_path)
-        )
+    # 未暴露aclnn接口的算子不需要examples，不扫描（不报缺失、不计arch35-only）
+    if has_aclnn_entry(op_path):
+        missing_examples = True
+        examples_dir = os.path.join(op_path, "examples")
+        if os.path.isdir(examples_dir):
+            missing_examples = not has_file_with_ext(examples_dir, EXAMPLE_EXTS)
+            # def文件仅声明950等非910芯片的算子，仅有arch35 examples属正常，不视为缺失
+            arch35_only_examples = (
+                not missing_examples
+                and is_arch35_only_examples(examples_dir)
+                and def_supports_910(op_path)
+            )
 
     missing_ut = True
     ut_dir = os.path.join(op_path, "tests", "ut")
