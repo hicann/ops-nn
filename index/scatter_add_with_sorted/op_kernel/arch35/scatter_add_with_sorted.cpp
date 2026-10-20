@@ -9,15 +9,19 @@
  */
 
 /*!
- * \file scatter_add_with_sorted_apt.cpp
- * \brief scatter_add_with_sorted_apt.cpp
+ * \file scatter_add_with_sorted.cpp
+ * \brief scatter_add_with_sorted.cpp
  */
-#include "arch35/scatter_add_with_sorted_struct.h"
-#include "arch35/scatter_add_with_sorted_simd.h"
-#include "arch35/scatter_add_with_sorted_simd_determ.h"
-#include "arch35/scatter_add_with_sorted_determ_workspace.h"
-#include "arch35/scatter_add_with_sorted_simt.h"
-#include "arch35/scatter_add_with_sorted_simt_determ.h"
+#include "scatter_add_with_sorted_struct.h"
+#include "scatter_add_with_sorted_simd.h"
+#include "scatter_add_with_sorted_simd_determ.h"
+#include "scatter_add_with_sorted_determ_workspace.h"
+#include "scatter_add_with_sorted_simt.h"
+#include "scatter_add_with_sorted_simt_determ.h"
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201
+#include "../arch92/scatter_add_with_sorted_simd_dma.h"
+#include "../arch92/scatter_add_with_sorted_determ_workspace_dma.h"
+#endif
 
 using namespace AscendC;
 using namespace ScatterAddWithSorted;
@@ -32,7 +36,45 @@ __global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR updates,
 
     if constexpr (TEMPLATE_MODE == TPL_MODE_EMPTY) {
         return;
-    } else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMD) {
+    }
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201
+    else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMD_DMA) {
+        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_SIMD_DMA", ScatterAddWithSortedSimdDMATilingData);
+        GET_TILING_DATA_WITH_STRUCT(ScatterAddWithSortedSimdDMATilingData, tilingData, tiling);
+        if constexpr (ADDR_TYPE == TPL_ADDR_B32) {
+            if (tilingData.withPos) {
+                ScatterAddWithSortedSimdDMA<DTYPE_VAR, DTYPE_SORTED_INDEX, true, false> op(tilingData, pipe);
+                op.Init(var, updates, indices, pos, y, workspace);
+                op.Process();
+            } else {
+                ScatterAddWithSortedSimdDMA<DTYPE_VAR, DTYPE_SORTED_INDEX, false, false> op(tilingData, pipe);
+                op.Init(var, updates, indices, pos, y, workspace);
+                op.Process();
+            }
+            SyncAll();
+            pipe.Reset();
+            ScatterAddWithSortedSimdDtermWorkspaceDMA<DTYPE_VAR, DTYPE_SORTED_INDEX> workspaceOp;
+            workspaceOp.Init(var, y, workspace, pipe, &tilingData);
+            workspaceOp.Process();
+        } else if constexpr (ADDR_TYPE == TPL_ADDR_B64) {
+            if (tilingData.withPos) {
+                ScatterAddWithSortedSimdDMA<DTYPE_VAR, DTYPE_SORTED_INDEX, true, true> op(tilingData, pipe);
+                op.Init(var, updates, indices, pos, y, workspace);
+                op.Process();
+            } else {
+                ScatterAddWithSortedSimdDMA<DTYPE_VAR, DTYPE_SORTED_INDEX, false, true> op(tilingData, pipe);
+                op.Init(var, updates, indices, pos, y, workspace);
+                op.Process();
+            }
+            SyncAll();
+            pipe.Reset();
+            ScatterAddWithSortedSimdDtermWorkspaceDMA<DTYPE_VAR, DTYPE_SORTED_INDEX> workspaceOp;
+            workspaceOp.Init(var, y, workspace, pipe, &tilingData);
+            workspaceOp.Process();
+        }
+    }
+#endif
+    else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMD) {
         REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_SIMD", ScatterAddWithSortedSimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(ScatterAddWithSortedSimdTilingData, tilingData, tiling);
 

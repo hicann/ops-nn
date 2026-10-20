@@ -21,6 +21,7 @@
 #define TPL_MODE_SIMD 0
 #define TPL_MODE_SIMT 1
 #define TPL_MODE_EMPTY 2
+#define TPL_MODE_SIMD_DMA 3
 
 #define TPL_SCALAR_FALSE 0
 #define TPL_SCALAR_TRUE 1
@@ -33,12 +34,20 @@
 
 ASCENDC_TPL_ARGS_DECL(ScatterAddWithSorted,
                       ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, 2, ASCENDC_TPL_UI_LIST, TPL_MODE_SIMD, TPL_MODE_SIMT,
-                                            TPL_MODE_EMPTY),
+                                            TPL_MODE_EMPTY, TPL_MODE_SIMD_DMA),
                       ASCENDC_TPL_UINT_DECL(IS_SCALAR, 1, ASCENDC_TPL_UI_LIST, TPL_SCALAR_FALSE, TPL_SCALAR_TRUE),
                       ASCENDC_TPL_UINT_DECL(IS_DETERM, 1, ASCENDC_TPL_UI_LIST, TPL_DETERM_FALSE, TPL_DETERM_TRUE),
                       ASCENDC_TPL_UINT_DECL(ADDR_TYPE, 1, ASCENDC_TPL_UI_LIST, TPL_ADDR_B32, TPL_ADDR_B64));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_SIMD),
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_SIMD_DMA),
+                                     ASCENDC_TPL_UINT_SEL(IS_SCALAR, ASCENDC_TPL_UI_LIST, TPL_SCALAR_FALSE),
+                                     ASCENDC_TPL_UINT_SEL(IS_DETERM, ASCENDC_TPL_UI_LIST, TPL_DETERM_TRUE),
+                                     ASCENDC_TPL_UINT_SEL(ADDR_TYPE, ASCENDC_TPL_UI_LIST, TPL_ADDR_B32)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_SIMD_DMA),
+                                     ASCENDC_TPL_UINT_SEL(IS_SCALAR, ASCENDC_TPL_UI_LIST, TPL_SCALAR_FALSE),
+                                     ASCENDC_TPL_UINT_SEL(IS_DETERM, ASCENDC_TPL_UI_LIST, TPL_DETERM_TRUE),
+                                     ASCENDC_TPL_UINT_SEL(ADDR_TYPE, ASCENDC_TPL_UI_LIST, TPL_ADDR_B64)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_MODE_SIMD),
                                      ASCENDC_TPL_UINT_SEL(IS_SCALAR, ASCENDC_TPL_UI_LIST, TPL_SCALAR_FALSE),
                                      ASCENDC_TPL_UINT_SEL(IS_DETERM, ASCENDC_TPL_UI_LIST, TPL_DETERM_FALSE),
                                      ASCENDC_TPL_UINT_SEL(ADDR_TYPE, ASCENDC_TPL_UI_LIST, TPL_ADDR_B32)),
@@ -88,6 +97,36 @@ struct ScatterAddWithSortedSimtTilingData {
     bool withPos;
     uint64_t tilingKey{0};
 };
+
+struct ScatterAddWithSortedSimdDMATilingData {
+    int64_t varShape[2];
+    int64_t indicesNum;
+    int64_t rowTileNum;
+    int64_t colTileNum;
+    int64_t needCoreNum;
+    int64_t normBlockRow;
+    int64_t tailBlockRow;
+    int64_t normBlockCol;
+    int64_t tailBlockCol;
+    int64_t ubFactorRow;
+    int64_t ubFactorCol;
+
+    int64_t vecAlignSize{0};
+    int64_t indicesWorkspaceBufferSize{0};
+    int64_t coreNumInColDeterm{0};
+    int64_t tailCoreColUbDetermLoop{0};
+    int64_t normalCoreColUbDetermLoop{0};
+    int64_t tailCoreNormalLoopDetermCols{0};
+    int64_t normalCoreNormalLoopDetermCols{0};
+    int64_t tailCoreTailLoopDetermCols{0};
+    int64_t normalCoreTailLoopDetermCols{0};
+    int64_t updatesDeterminBufferSize{0};
+    int64_t outBufferDeterminSize{0};
+    int64_t normalCoreColDetermNum{0};
+    int64_t tailCoreColNumDeterm{0};
+    bool withPos;
+};
+
 struct ScatterAddWithSortedSimdTilingData {
     int64_t needCoreNum{0};
     int64_t indicesNum{0};

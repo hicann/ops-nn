@@ -54,6 +54,9 @@ protected:
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
                                       const gert::Shape& updatesShape);
 
+protected:
+    bool isAscend96_ = false;
+
 public:
     uint64_t varShape_[2] = {0, 0};
     uint64_t totalCoreNum_ = 1;

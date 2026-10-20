@@ -36,13 +36,21 @@ private:
     void DumpTilingInfo() override;
     void SetTilingData() override;
     void DoBlockTiling();
+    void DoBlockTilingDMA(uint64_t baseCol);
     void DoUBTiling();
     void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
                           int64_t colTotalNum);
     void DeterminTemplateUbTiling();
+    bool IsSimdDma();
+    ge::graphStatus SimdDmaTiling();
+    std::tuple<int64_t, int64_t> SimdDmaAutoTiling(int64_t usedCoreNum, int64_t colNumAlign, int64_t colLimitSize);
+    void SetTilingDataDMA();
+    void DumpTilingInfoDMA();
+    uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd) const;
 
 private:
     ScatterAddWithSortedSimdTilingData* tilingData_;
+    ScatterAddWithSortedSimdDMATilingData* tilingDataDMA_;
     int64_t normalCoreColNum_ = 0;
     int64_t coreNumInCol_ = 0;
     int64_t tailCoreColNum_ = 0;
@@ -96,6 +104,9 @@ private:
     int64_t tailCoreNormalLoopDetermCols_ = 0;
     int64_t tailCoreTailLoopDetermCols_ = 0;
     int64_t ubBlock_ = 0;
+
+    bool isModeDMA_ = false;
+    bool isCastIndices_ = false;
 };
 } // namespace optiling
 #endif // SCATTER_ADD_WITH_SORTED_SIMD_TILING_H

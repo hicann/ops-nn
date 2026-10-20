@@ -64,6 +64,9 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::GetPlatformInfo()
         OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName, "tiling", "platform_info", "null", "fail to get platform info"),
         return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    // 960系列NPU架构号为9201，兼容看护环境的旧op_common无开放常量，直接比较架构号数值
+    static constexpr uint64_t ASCEND960_NPU_ARCH = 9201;
+    isAscend96_ = static_cast<uint64_t>(ascendcPlatform.GetCurNpuArch()) == ASCEND960_NPU_ARCH;
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((aivNum <= 0), OP_LOGE_FOR_INVALID_VALUE(opName, "aivNum", std::to_string(aivNum).c_str(), "> 0"),
                 return ge::GRAPH_FAILED);
