@@ -33,17 +33,17 @@ class ADeformableConv2dPassTest : public testing::Test {
 public:
     // 旧 IR: x(0) filter(1) offsets(2) bias?(3) -> y(0)；attrs strides/pads/dilations/groups/data_format/
     //       deformable_groups/modulated
-    NodeConfig MakeDfmCfg(const std::string &name, DataType dt, bool withBias, Format fmt = FORMAT_NCHW,
-        const std::vector<int64_t> &xShape = {1, 16, 48, 48},
-        const std::vector<int64_t> &fShape = {1, 16, 3, 3},
-        const std::vector<int64_t> &yShape = {1, 1, 48, 48})
+    NodeConfig MakeDfmCfg(const std::string& name, DataType dt, bool withBias, Format fmt = FORMAT_NCHW,
+                          const std::vector<int64_t>& xShape = {1, 16, 48, 48},
+                          const std::vector<int64_t>& fShape = {1, 16, 3, 3},
+                          const std::vector<int64_t>& yShape = {1, 1, 48, 48})
     {
         NodeConfig cfg(name);
         cfg.opType = DFM_CONV2D.GetString();
         cfg.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"offsets", CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+                         {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                         {"offsets", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                         {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""}};
         cfg.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         Format fFmt = (fmt == FORMAT_NHWC) ? FORMAT_HWCN : fmt;
         cfg.SetAttr("strides", std::vector<int64_t>{1, 1, 1, 1});
@@ -69,8 +69,8 @@ public:
         return cfg;
     }
 
-    GraphPtr BuildSingleDfmGraph(const std::string &name, bool dav3510, DataType dt, bool withBias,
-        Format fmt = FORMAT_NCHW)
+    GraphPtr BuildSingleDfmGraph(const std::string& name, bool dav3510, DataType dt, bool withBias,
+                                 Format fmt = FORMAT_NCHW)
     {
         TestGraph builder(name.c_str());
         if (dav3510) {
@@ -91,7 +91,7 @@ protected:
     static void SetUpTestCase() { std::cout << "ADeformableConv2dPassTest SetUp" << std::endl; }
     static void TearDownTestCase() { std::cout << "ADeformableConv2dPassTest TearDown" << std::endl; }
 
-    void TestTotalPass(const std::string &passName, GraphPtr &graph, Status expectRes)
+    void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {
         CustomPassContext passContext;
         passContext.SetPassName(passName.c_str());
@@ -107,7 +107,7 @@ protected:
         EXPECT_EQ(res, expectRes);
     }
 
-    GNode GetFirstNodeByType(GraphPtr &graph, const std::string &opType)
+    GNode GetFirstNodeByType(GraphPtr& graph, const std::string& opType)
     {
         GNode node;
         EXPECT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, opType, node));
@@ -121,7 +121,7 @@ protected:
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success)
 {
     struct {
-        const char *pointName;
+        const char* pointName;
         bool dav3510;
         DataType dt;
         bool withBias;
@@ -135,7 +135,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success)
         {"non_dav3510_fp32_bias", false, DT_FLOAT, true, FORMAT_NCHW},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         std::string name = std::string("dfm_fusion_success_") + p.pointName;
         auto graph = BuildSingleDfmGraph(name, p.dav3510, p.dt, p.withBias, p.fmt);
@@ -147,16 +147,37 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success)
     }
 }
 
+TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success_ascend350)
+{
+    NodeConfig cfg = MakeDfmCfg("dfm_fusion_success_ascend350", DT_FLOAT16, true);
+    TestGraph builder("dfm_fusion_success_ascend350");
+    builder.SetSoc(SocConfig("Ascend350", "Ascend350_355e"));
+    builder.AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_fusion_success_ascend350").Build();
+    auto graph = builder.Build();
+
+    EXPECT_TRUE(GraphChecker::HasNode(graph, DFM_CONV2D.GetString()));
+    TestTotalPass("dfm_fusion_success_ascend350", graph, SUCCESS);
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "DeformableOffsets"));
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
+    EXPECT_EQ(GraphChecker::CountNodes(graph, DFM_CONV2D.GetString()), 0);
+
+    GNode conv2d = GetFirstNodeByType(graph, "Conv2D");
+    int64_t offsetX = -1;
+    ASSERT_EQ(conv2d.GetAttr(AscendString("offset_x"), offsetX), GRAPH_SUCCESS);
+    EXPECT_EQ(offsetX, int64_t{0});
+}
+
 // ==========================================================================================
 // 拒绝融合：入度非法 / filter format 非法 / shape 非 4D
 // ==========================================================================================
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::function<GraphPtr()> build;
     } const points[] = {
-        {"bad_filter_format_nd", [this]() {
+        {"bad_filter_format_nd",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_bad_filter", DT_FLOAT16, false);
              TensorInfo badFilter(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, "dfm_no_fusion_bad_filter_filter");
              badFilter.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, FORMAT_ND, {1, 16, 3, 3}));
@@ -165,7 +186,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_bad_filter").Build();
              return builder.Build();
          }},
-        {"x_not_4d", [this]() {
+        {"x_not_4d",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_x_not_4d", DT_FLOAT16, false);
              TensorInfo badX(DT_FLOAT16, FORMAT_NCHW, {1, 16, 48}, "dfm_no_fusion_x_not_4d_x");
              badX.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {1, 16, 48}, FORMAT_NCHW, {1, 16, 48}));
@@ -174,7 +196,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_x_not_4d").Build();
              return builder.Build();
          }},
-        {"output_not_4d", [this]() {
+        {"output_not_4d",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_output_not_4d", DT_FLOAT16, false);
              TensorInfo badOut(DT_FLOAT16, FORMAT_NCHW, {1, 1, 48}, "y");
              badOut.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {1, 1, 48}, FORMAT_NCHW, {1, 1, 48}));
@@ -183,17 +206,19 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_output_not_4d").Build();
              return builder.Build();
          }},
-        {"invalid_input_count", [this]() {
+        {"invalid_input_count",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_invalid_input", DT_FLOAT16, false);
              cfg.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                 {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                 {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+                              {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""}};
              cfg.inputs.resize(2);
              TestGraph builder("dfm_no_fusion_invalid_input");
              builder.SetSocAscend950().AddNode(cfg, {0, 1}).SetOutput("dfm_no_fusion_invalid_input").Build();
              return builder.Build();
          }},
-        {"unknown_ksize", [this]() {
+        {"unknown_ksize",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_unknown_ksize", DT_FLOAT16, false);
              TensorInfo unkFilter(DT_FLOAT16, FORMAT_NCHW, {-1, 16, -1, -1}, "dfm_no_fusion_unknown_ksize_filter");
              unkFilter.SetDesc(
@@ -203,7 +228,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_unknown_ksize").Build();
              return builder.Build();
          }},
-        {"x_format_nd", [this]() {
+        {"x_format_nd",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_no_fusion_x_format_nd", DT_FLOAT16, false);
              TensorInfo badX(DT_FLOAT16, FORMAT_ND, {1, 16, 48, 48}, "dfm_no_fusion_x_format_nd_x");
              badX.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 48, 48}, FORMAT_ND, {1, 16, 48, 48}));
@@ -214,7 +240,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
          }},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         auto graph = p.build();
         EXPECT_TRUE(GraphChecker::HasNode(graph, DFM_CONV2D.GetString()));
@@ -285,17 +311,19 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_attr_and_desc)
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::function<GraphPtr()> build;
-        std::function<void(GraphPtr &)> verify;
+        std::function<void(GraphPtr&)> verify;
     } const points[] = {
-        {"offsets_input_desc_passthrough_nchw", [this]() {
-             NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nchw", DT_FLOAT16, false, FORMAT_NCHW,
-                 {1, 16, 12, 12}, {1, 16, 3, 3}, {1, 1, 4, 4});
+        {"offsets_input_desc_passthrough_nchw",
+         [this]() {
+             NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nchw", DT_FLOAT16, false, FORMAT_NCHW, {1, 16, 12, 12},
+                                         {1, 16, 3, 3}, {1, 1, 4, 4});
              TestGraph builder("dfm_offsets_desc_nchw");
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nchw").Build();
              return builder.Build();
-         }, [](GraphPtr &graph) {
+         },
+         [](GraphPtr& graph) {
              GNode dfmOffset;
              ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "DeformableOffsets", dfmOffset));
              GNode conv2d;
@@ -315,13 +343,15 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              EXPECT_EQ(xIn.GetDataType(), DT_FLOAT16);
              EXPECT_EQ(offsetsIn.GetDataType(), DT_FLOAT16);
          }},
-        {"offsets_output_deformed_shape_nhwc", [this]() {
-             NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nhwc", DT_FLOAT16, false, FORMAT_NHWC,
-                 {1, 12, 12, 16}, {3, 3, 16, 1}, {1, 4, 4, 1});
+        {"offsets_output_deformed_shape_nhwc",
+         [this]() {
+             NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nhwc", DT_FLOAT16, false, FORMAT_NHWC, {1, 12, 12, 16},
+                                         {3, 3, 16, 1}, {1, 4, 4, 1});
              TestGraph builder("dfm_offsets_desc_nhwc");
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nhwc").Build();
              return builder.Build();
-         }, [](GraphPtr &graph) {
+         },
+         [](GraphPtr& graph) {
              GNode dfmOffset;
              GNode conv2d;
              ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "DeformableOffsets", dfmOffset));
@@ -333,7 +363,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              ASSERT_EQ(conv2d.GetAttr(AscendString("strides"), strides), GRAPH_SUCCESS);
              EXPECT_EQ(strides, (std::vector<int64_t>{1, 3, 3, 1}));
          }},
-        {"offsets_attrs_passthrough", [this]() {
+        {"offsets_attrs_passthrough",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_offsets_attrs", DT_FLOAT16, false);
              cfg.SetAttr("strides", std::vector<int64_t>{1, 2, 2, 1});
              cfg.SetAttr("pads", std::vector<int64_t>{1, 1, 1, 1});
@@ -343,7 +374,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              TestGraph builder("dfm_offsets_attrs");
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_attrs").Build();
              return builder.Build();
-         }, [](GraphPtr &graph) {
+         },
+         [](GraphPtr& graph) {
              GNode dfmOffset;
              ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "DeformableOffsets", dfmOffset));
              std::vector<int64_t> ksize;
@@ -367,7 +399,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
          }},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         auto graph = p.build();
         TestTotalPass(std::string("dfm_offsets_") + p.pointName, graph, SUCCESS);
@@ -377,8 +409,8 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
 
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_dynamic_out_hw_unknown_shape_range)
 {
-    NodeConfig cfg = MakeDfmCfg("dfm_dynamic_hw", DT_FLOAT16, false, FORMAT_NCHW,
-        {-1, 16, -1, -1}, {1, 16, 3, 3}, {-1, 1, -1, -1});
+    NodeConfig cfg = MakeDfmCfg("dfm_dynamic_hw", DT_FLOAT16, false, FORMAT_NCHW, {-1, 16, -1, -1}, {1, 16, 3, 3},
+                                {-1, 1, -1, -1});
     TensorDesc xDesc = BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {-1, 16, -1, -1}, FORMAT_NCHW, {-1, 16, -1, -1});
     xDesc.SetShapeRange({{1, 8}, {16, 16}, {8, 64}, {8, 64}});
     cfg.inputs[0].SetDesc(xDesc);
@@ -414,22 +446,22 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_dynamic_out_hw_unknown_shape_range)
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fused_op_impl_mode_enum_is_0x20)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::function<GraphPtr()> build;
     } const points[] = {
-        {"parent_has_hf32_0x40", [this]() {
+        {"parent_has_hf32_0x40",
+         [this]() {
              NodeConfig cfg = MakeDfmCfg("dfm_op_impl_mode_hf32", DT_FLOAT16, false);
              cfg.SetAttr(OP_IMPL_MODE_ENUM.GetString(), int64_t{0x40});
              TestGraph builder("dfm_op_impl_mode_hf32");
              builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_op_impl_mode_hf32").Build();
              return builder.Build();
          }},
-        {"parent_no_impl_mode_attr", [this]() {
-             return BuildSingleDfmGraph("dfm_op_impl_mode_default", true, DT_FLOAT16, false);
-         }},
+        {"parent_no_impl_mode_attr",
+         [this]() { return BuildSingleDfmGraph("dfm_op_impl_mode_default", true, DT_FLOAT16, false); }},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         auto graph = p.build();
         TestTotalPass(std::string("dfm_op_impl_mode_") + p.pointName, graph, SUCCESS);
@@ -446,40 +478,52 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fused_op_impl_mode_enum_is_0x20)
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
 {
     struct {
-        const char *pointName;
+        const char* pointName;
         std::function<void(ADeformableConv2dPassTest&)> run;
     } const points[] = {
-        {"multi_dfm_same_graph", [](ADeformableConv2dPassTest &self) {
+        {"multi_dfm_same_graph",
+         [](ADeformableConv2dPassTest& self) {
              auto cfg1 = self.MakeDfmCfg("dfm_1", DT_FLOAT16, false);
              auto cfg2 = self.MakeDfmCfg("dfm_2", DT_FLOAT16, false);
-             auto graph = TestGraph("g").SetSocAscend950()
-                 .AddNode(cfg1, {0, 1, 2}).AddNode(cfg2, {0, 1, 2})
-                 .SetOutput("dfm_1").SetOutput("dfm_2").Build();
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddNode(cfg1, {0, 1, 2})
+                              .AddNode(cfg2, {0, 1, 2})
+                              .SetOutput("dfm_1")
+                              .SetOutput("dfm_2")
+                              .Build();
              self.TestTotalPass("dfm_topo_multi_same", graph, SUCCESS);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "DeformableOffsets"), 2);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 2);
          }},
-        {"downstream_relu_preserved", [](ADeformableConv2dPassTest &self) {
+        {"downstream_relu_preserved",
+         [](ADeformableConv2dPassTest& self) {
              auto cfg = self.MakeDfmCfg("dfm", DT_FLOAT16, false);
-             auto graph = TestGraph("g").SetSocAscend950()
-                 .AddNode(cfg, {0, 1, 2})
-                 .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16))
-                 .Connect("dfm", 0, "relu", 0)
-                 .SetOutput("relu").Build();
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddNode(cfg, {0, 1, 2})
+                              .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16))
+                              .Connect("dfm", 0, "relu", 0)
+                              .SetOutput("relu")
+                              .Build();
              self.TestTotalPass("dfm_topo_downstream", graph, SUCCESS);
              EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
          }},
-        {"graph_without_dfm", [](ADeformableConv2dPassTest &) {
-             auto graph = TestGraph("g").SetSocAscend950()
-                 .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16), true)
-                 .SetOutput("relu").Build();
+        {"graph_without_dfm",
+         [](ADeformableConv2dPassTest&) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16), true)
+                              .SetOutput("relu")
+                              .Build();
              CustomPassContext passContext;
              passContext.SetPassName("dfm_topo_no_match");
              ADeformableConv2dPass pass({DFM_CONV2D});
              EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
              EXPECT_FALSE(GraphChecker::HasNode(graph, "Conv2D"));
          }},
-        {"reentrant_init_member", [](ADeformableConv2dPassTest &self) {
+        {"reentrant_init_member",
+         [](ADeformableConv2dPassTest& self) {
              auto graph1 = self.BuildSingleDfmGraph("dfm_reentrant_1", true, DT_FLOAT16, true);
              self.TestTotalPass("dfm_reentrant_1", graph1, SUCCESS);
              auto graph2 = self.BuildSingleDfmGraph("dfm_reentrant_2", true, DT_FLOAT16, false);
@@ -487,10 +531,10 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
              EXPECT_EQ(GraphChecker::CountNodes(graph1, "Conv2D"), 1);
              EXPECT_EQ(GraphChecker::CountNodes(graph2, "Conv2D"), 1);
          }},
-        {"fusion_graph_edge_topology", [](ADeformableConv2dPassTest &self) {
+        {"fusion_graph_edge_topology",
+         [](ADeformableConv2dPassTest& self) {
              auto cfg = self.MakeDfmCfg("dfm_edge", DT_FLOAT16, true);
-             auto graph = TestGraph("g").SetSocAscend950()
-                 .AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_edge").Build();
+             auto graph = TestGraph("g").SetSocAscend950().AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_edge").Build();
              self.TestTotalPass("dfm_edge_topology", graph, SUCCESS);
              GNode dfmOffset;
              GNode conv2d;
@@ -507,15 +551,20 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
              EXPECT_NE(convBiasProducer, "DeformableOffsets");
              EXPECT_TRUE(GraphChecker::HasOutEdgeTo(dfmOffset, 0, conv2d, 0));
          }},
-        {"multi_dfm_mixed_eligibility", [](ADeformableConv2dPassTest &self) {
+        {"multi_dfm_mixed_eligibility",
+         [](ADeformableConv2dPassTest& self) {
              auto okCfg = self.MakeDfmCfg("dfm_ok", DT_FLOAT16, false);
              NodeConfig badCfg = self.MakeDfmCfg("dfm_bad", DT_FLOAT16, false);
              TensorInfo badFilter(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, "dfm_bad_filter");
              badFilter.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, FORMAT_ND, {1, 16, 3, 3}));
              badCfg.inputs[1] = badFilter;
-             auto graph = TestGraph("g").SetSocAscend950()
-                 .AddNode(okCfg, {0, 1, 2}).AddNode(badCfg, {0, 1, 2})
-                 .SetOutput("dfm_ok").SetOutput("dfm_bad").Build();
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddNode(okCfg, {0, 1, 2})
+                              .AddNode(badCfg, {0, 1, 2})
+                              .SetOutput("dfm_ok")
+                              .SetOutput("dfm_bad")
+                              .Build();
              CustomPassContext passContext;
              passContext.SetPassName("dfm_mixed_eligibility");
              ADeformableConv2dPass pass({DFM_CONV2D});
@@ -526,7 +575,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
          }},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         p.run(*this);
     }
