@@ -860,6 +860,7 @@ void SetInitOutput(Conv3dBpInputV2RunInfo& runInfoV2, const optiling::OpTypeV2 o
     int32_t doModulo = (otherParams.fmap_d_padding - otherParams.filter_d_dilation) % runInfoV2.stride_d;
     int32_t hoModulo = (otherParams.fmap_h_padding - otherParams.filter_h_dilation) % runInfoV2.stride_h;
     if (doModulo > runInfoV2.pad_t || hoModulo > runInfoV2.pad_d || runInfoV2.stride_h > otherParams.b_shape.h ||
+        runInfoV2.stride_d > otherParams.b_shape.d ||
         ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
           opType == optiling::OpTypeV2::kExtendConvTransposeV2) &&
          (otherParams.output_padding.output_padding_d > 0 || otherParams.output_padding.output_padding_h > 0)) ||
