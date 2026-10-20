@@ -29,9 +29,13 @@ using namespace IndexFill;
 constexpr uint64_t DCACHE_SIZE_SIMT = 128 * 1024;
 constexpr uint64_t SIMD_THRESHOLD = 128;
 constexpr uint64_t INDICES_DENSE_THRESHOLD = 5;
+constexpr uint64_t INDICES_DIVIDED_N_RATIO = 5;
+constexpr uint64_t INDICES_DIVIDED_N_RATIO_960DT = 100;
 constexpr int64_t UB_AGLIN_VALUE = 32;
 constexpr int64_t DUP_ELEMENTS_MIN_THRESHOLD = 256;
 constexpr int64_t INDICES_UB_FACTOR_MIN_THRESHOLD = 512;
+constexpr int64_t REMAIN_INDICES_UB_FACTOR = 1024;
+constexpr uint64_t DENSE_INDICES_THRESHOLD = 2048;
 
 bool IndexFillSimtDenseIndicesTiling::IsCapable()
 {
@@ -39,9 +43,10 @@ bool IndexFillSimtDenseIndicesTiling::IsCapable()
         return false;
     }
 
+    uint64_t ratioBySort = inputData.isAscend960DT ? INDICES_DIVIDED_N_RATIO_960DT : INDICES_DIVIDED_N_RATIO;
     if (inputData.Q * inputData.dtypeSize <= SIMD_THRESHOLD &&
-        inputData.P * inputData.Q * inputData.indicesNum > 2048 &&
-        inputData.indicesNum >= inputData.N * INDICES_DENSE_THRESHOLD) {
+        inputData.P * inputData.Q * inputData.indicesNum > DENSE_INDICES_THRESHOLD &&
+        inputData.indicesNum >= inputData.N * ratioBySort) {
         return true;
     }
     return false;
@@ -109,7 +114,7 @@ void IndexFillSimtDenseIndicesTiling::DoIndicesTilingTask()
     int64_t indicesUbFactor = maxUbIndicesNum;
     int64_t calcBufSize = CalcUsedBufSize(indicesUbFactor, inputData.indicesDtype);
     while (calcBufSize > maxUbAvailable) {
-        indicesUbFactor = indicesUbFactor - 1024;
+        indicesUbFactor = indicesUbFactor - REMAIN_INDICES_UB_FACTOR;
         if (indicesUbFactor <= 0) {
             indicesUbFactor = INDICES_UB_FACTOR_MIN_THRESHOLD;
             break;
@@ -171,6 +176,7 @@ void IndexFillSimtDenseIndicesTiling::SetTilingData()
     tilingData->loopsPerFrontCore = inputData.loopsPerFrontCore;
     tilingData->loopsPerTailCore = inputData.loopsPerTailCore;
     tilingData->indicesUbFactor = inputData.indicesUbFactor;
+    tilingData->fp4Mode = inputData.fp4Support;
     tilingData->tilingKey = GetTilingKey();
 }
 

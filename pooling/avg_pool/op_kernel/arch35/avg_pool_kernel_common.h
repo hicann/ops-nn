@@ -66,6 +66,11 @@ constexpr int32_t THIRTEEN = 13;
 constexpr int32_t FOURTEEN = 14;
 constexpr int32_t FIFTEEN = 15;
 constexpr int32_t SIXTEEN = 16;
+#if __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
+constexpr bool SUPPORT_MERGE_MODE = true;
+#else
+constexpr bool SUPPORT_MERGE_MODE = false;
+#endif
 
 struct CalcDivisorParam {
     int64_t kH = 0;
@@ -1085,6 +1090,18 @@ __aicore__ inline void MergeSumRes(RegDstT& res, const __ubuf__ T* dstLocalAddr,
     LoadOneElement<T>(dstLocalAddr, lastRes, offset);
     Reg::Add(res, res, lastRes, pregOne);
     Reg::LocalMemBar<Reg::MemType::VEC_LOAD, Reg::MemType::VEC_STORE>();
+}
+
+template <bool SupportMergeMode, typename T>
+__aicore__ inline void AddWithMergeMode(Reg::RegTensor<T>& res, Reg::RegTensor<T>& vd1, Reg::MaskReg& mask)
+{
+    if constexpr (SupportMergeMode) {
+        Reg::Add<T, Reg::MaskMergeMode::MERGING>(res, vd1, res, mask);
+    } else {
+        Reg::RegTensor<T> tmp;
+        Reg::Add(tmp, vd1, res, mask);
+        Reg::Move<T, Reg::MaskMergeMode::MERGING>(res, tmp, mask);
+    }
 }
 
 template <bool MaskMergeMode, typename T, typename U>

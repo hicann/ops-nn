@@ -21,6 +21,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "index_fill_tiling_arch35.h"
 #include "index_fill_tiling_common.h"
+#include "version/metadef_version.h"
 
 namespace optiling {
 void CalculatePNQ(gert::Shape& xShape, int64_t dim, IndexFillInputInfo& inputData)
@@ -35,6 +36,39 @@ void CalculatePNQ(gert::Shape& xShape, int64_t dim, IndexFillInputInfo& inputDat
     for (int64_t i = dim + 1; i < xShape.GetDimNum(); i++) {
         inputData.Q *= xShape.GetDim(i);
     }
+}
+
+ge::graphStatus CheckSupportForHif4(gert::TilingContext* context, IndexFillInputInfo& inputData)
+{
+    // FLOAT4在Ascend 960DT且尾轴是偶数时支持
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+    if (inputData.dtype != ge::DataType::DT_HIFLOAT4 && inputData.dtype != ge::DataType::DT_FLOAT4_E2M1 &&
+        inputData.dtype != ge::DataType::DT_FLOAT4_E1M2) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    bool isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+
+    OP_CHECK_IF(
+        !isAscend960DT,
+        OP_LOGE(context->GetNodeName(), "DT_HIFLOAT4, DT_FLOAT4_E2M1 and DT_FLOAT4_E1M2 not support on this platform"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(inputData.Q % TWO != 0,
+                OP_LOGE(context->GetNodeName(), "The number of input in each line must be an even number when dtype is \
+                    DT_HIFLOAT4, DT_FLOAT4_E2M1 and DT_FLOAT4_E1M2."),
+                return ge::GRAPH_FAILED);
+    // HIFLOAT4在kernel按int8进行搬运，尾轴长度减半
+    inputData.Q = inputData.Q / TWO;
+    inputData.dtype = ge::DT_INT8;
+    inputData.dtypeSize = ge::GetSizeByDataType(ge::DT_INT8);
+    inputData.numel = inputData.numel / TWO;
+    inputData.fp4Support = 1;
+#endif
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFillInputInfo& inputData)
@@ -81,6 +115,7 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     inputData.dtype = xDtype;
     inputData.dtypeSize = ge::GetSizeByDataType(xDtype);
 
+    // 校验x和value是否是相同的类型，aclnn侧已经将value转为了x的同类型，这里需要进一步添加校验。
     auto valueDesc = context->GetInputDesc(INDEX_INPUT_VALUE);
     OP_CHECK_NULL_WITH_CONTEXT(context, valueDesc);
     ge::DataType valueDtype = valueDesc->GetDataType();
@@ -96,7 +131,7 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     int64_t xDims = xShape.GetDimNum();
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    int64_t dim = *(attrs->GetAttrPointer<int64_t>(0));
+    int64_t dim = *(attrs->GetAttrPointer<int64_t>(0)); // 获取算子输入的dim属性值.
     dim = dim >= 0 ? dim : dim + xDims;
     if (dim < 0 || dim >= xDims) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -116,6 +151,8 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     uint64_t indicesNum = indicesShape->GetStorageShape().GetShapeSize();
     inputData.indicesNum = indicesNum;
     inputData.numel = xShape.GetShapeSize();
+    OP_CHECK_IF(CheckSupportForHif4(context, inputData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "CheckSupportForHif4 failed."), return ge::GRAPH_FAILED);
 
     auto indicesDesc = context->GetInputDesc(INDEX_INPUT_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
@@ -144,6 +181,7 @@ ge::graphStatus IndexFillCommonTiling::GetPlatformInfo()
         sysWorkspaceSize_ = compileInfo->sysWorkspaceSize;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        inputData.isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
         coreNum_ = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);

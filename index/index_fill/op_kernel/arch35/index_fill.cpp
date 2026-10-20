@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file index_fill_apt.cpp
+ * \file index_fill.cpp
  * \brief
  */
-#include "arch35/index_fill_tiling_key.h"
-#include "arch35/index_fill_struct.h"
-#include "arch35/index_fill_simt.h"
-#include "arch35/index_fill_simd.h"
-#include "arch35/index_fill_simt_dense_indices.h"
+#include "index_fill_tiling_key.h"
+#include "index_fill_struct.h"
+#include "index_fill_simt.h"
+#include "index_fill_simd.h"
+#include "index_fill_simt_dense_indices.h"
 
 using namespace IndexFill;
 
@@ -25,7 +25,7 @@ __global__ __aicore__ void index_fill(GM_ADDR x, GM_ADDR indices, GM_ADDR value,
                                       GM_ADDR tiling)
 {
     AscendC::TPipe tpipe;
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(IndexFillTilingData);
     if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_EMPTY) {
         return;

@@ -164,6 +164,7 @@ void IndexFillSimdTiling::SetTilingData()
     tilingData->blockTailTileNumQ = static_cast<int64_t>(blockTailTileNumQ_);
     tilingData->blockTailUbFactorQ = static_cast<int64_t>(blockTailUbFactorQ_);
     tilingData->blockTailUbTailQ = static_cast<int64_t>(blockTailUbTailQ_);
+    tilingData->fp4Mode = inputData.fp4Support;
 }
 
 void IndexFillSimdTiling::DumpTilingInfo()
@@ -194,5 +195,5 @@ void IndexFillSimdTiling::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "IndexFill tilingInfo is: %s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(IndexFill, IndexFillSimdTiling, 1);
+REGISTER_OPS_TILING_TEMPLATE(IndexFill, IndexFillSimdTiling, 2);
 } // namespace optiling

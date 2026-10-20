@@ -185,6 +185,9 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Init
 {
     valueGm_.SetGlobalBuffer((__gm__ T*)(value));
     fillValue = valueGm_.GetValue(0);
+    if (tilingData_->fp4Mode) {
+        fillValue = fillValue | ((fillValue << FOUR_BIT) & HIGH_FOUR_BIT);
+    }
     indices_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
     maskGm_.SetGlobalBuffer((__gm__ int8_t*)(workspace), tilingData_->n * sizeof(int8_t));
     ZeroMemory(maskGm_, tilingData_->n);

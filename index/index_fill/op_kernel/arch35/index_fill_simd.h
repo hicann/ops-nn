@@ -133,7 +133,7 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, 
 
     pipe_.InitBuffer(xQueue_, DOUBLE_BUFFER, tilingData_.blockFactorUbFactorQ * sizeof(T));
     pipe_.InitBuffer(valueQueue_, 1, tilingData_.blockFactorUbFactorQ * sizeof(T));
-    pipe_.InitBuffer(indicesBuf_, tilingData_.blockFactorUbBufferMask * sizeof(int8_t)); //分配固定大小索引缓冲区
+    pipe_.InitBuffer(indicesBuf_, tilingData_.blockFactorUbBufferMask * sizeof(int8_t)); // 分配固定大小索引缓冲区
 
     InitMask(tilingData_.n);
     SyncAll();
@@ -182,7 +182,7 @@ __aicore__ inline int8_t IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::GetMask(uint64
         uint64_t endNIdx = endIdx % tilingData_.n;
         uint64_t copyLen = 0;
         if (tilingData_.blockFactorUbBufferMask >= tilingData_.n) {
-            //拷贝全部索引
+            // 拷贝全部索引
             if (endPIdx == startPIdx) {
                 copyLen = endNIdx - startNIdx + 1;
                 indicesOffsetBase_ = startNIdx;
@@ -194,7 +194,7 @@ __aicore__ inline int8_t IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::GetMask(uint64
                 indicesOffsetBase_ = 0;
             }
         } else {
-            //拷贝部分索引
+            // 拷贝部分索引
             if (endPIdx == startPIdx) {
                 copyLen = min(static_cast<uint64_t>(endNIdx - startNIdx + 1),
                               static_cast<uint64_t>(tilingData_.blockFactorUbBufferMask));
@@ -222,6 +222,9 @@ template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::ProcessCopy()
 {
     T valScalar = varGm_.GetValue(0);
+    if (tilingData_.fp4Mode) {
+        valScalar = valScalar | ((valScalar << FOUR_BIT) & HIGH_FOUR_BIT);
+    }
     event_t eventIdStoV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventIdStoV);
     WaitFlag<HardEvent::S_V>(eventIdStoV);

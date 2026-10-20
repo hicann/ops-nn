@@ -13,6 +13,7 @@
 
 #include "graph/operator_reg.h"
 #include "graph/operator.h"
+#include "version/metadef_version.h"
 
 namespace ge {
 /**
@@ -26,6 +27,8 @@ namespace ge {
 supported. \n
 * In Ascend 950PR&950DT products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
 double can be supported. \n
+* In Ascend 960 AI Processor, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
+double, hifloat4, float4_e2m1, float4_e1m2 can be supported. \n
 * @li indices: A tensor, which equivalent to a vector or scalar. indices of input tensor to fill in. Must be one of the
 following types:
 *     int32, int64. \n
@@ -34,6 +37,8 @@ following types:
 supported. \n
 * In Ascend 950PR&950DT products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
 double can be supported. \n
+* In Ascend 960 AI Processor, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
+double, hifloat4, float4_e2m1, float4_e1m2 can be supported. \n
 * @par Attributes:
 * dim: A required int. Used to select the dimension of the input tensor. \n
 
@@ -52,12 +57,24 @@ double can be supported. \n
 
 REG_OP(IndexFill)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT64, DT_INT32, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16,
-                          DT_DOUBLE}))
+                          DT_DOUBLE,
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+                          DT_HIFLOAT4, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2
+#endif
+              }))
     .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
     .INPUT(val, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT64, DT_INT32, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16,
-                            DT_DOUBLE}))
+                            DT_DOUBLE,
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+                            DT_HIFLOAT4, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2
+#endif
+                }))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT64, DT_INT32, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16,
-                           DT_DOUBLE}))
+                           DT_DOUBLE,
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+                           DT_HIFLOAT4, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2
+#endif
+               }))
     .REQUIRED_ATTR(dim, Int)
     .OP_END_FACTORY_REG(IndexFill)
 } // namespace ge

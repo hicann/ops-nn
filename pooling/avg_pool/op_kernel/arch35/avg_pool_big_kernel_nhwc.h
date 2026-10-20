@@ -533,12 +533,10 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGatherForAvgNot
                 Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, maskFp32);
                 Reg::Add(res, inFp32, res, maskFp32);
             }
-            Reg::RegTensor<float> tmp;
             Reg::Gather(in, srcAddr + repeatTimes * channelStride, v0, pTail);
             Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
             Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, tailMaskFp32);
-            Reg::Add(tmp, inFp32, res, tailMaskFp32);
-            Reg::Move<float, Reg::MaskMergeMode::MERGING>(res, tmp, tailMaskFp32);
+            AddWithMergeMode<SUPPORT_MERGE_MODE, float>(res, inFp32, tailMaskFp32);
             Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
             Reg::Reduce<Reg::ReduceType::SUM>(res, res, maskAll);
             if constexpr (MERGE) {

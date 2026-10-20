@@ -24,7 +24,8 @@ constexpr uint64_t B8 = 1;
 constexpr uint64_t B16 = 2;
 constexpr uint64_t B32 = 4;
 constexpr uint64_t B64 = 8;
-
+constexpr uint8_t FOUR_BIT = 4;
+constexpr uint8_t HIGH_FOUR_BIT = 0xF0;
 constexpr int32_t MASK_THRESHPLD = 512;
 constexpr uint32_t THREAD_NUM = 2048;
 constexpr uint8_t DB_BUFFER = 2;
@@ -74,6 +75,7 @@ public:
     int64_t tailBlockSize;     // 表示尾块中有多少个元素
     int64_t loopsPerFrontCore; // 前frontCoreNum个核的单核循环次数
     int64_t loopsPerTailCore;  // 尾部这(usedCoreNum-frontCoreNum)个核的单核循环次数
+    int64_t fp4Mode = 0;
     int64_t simtComputeMode; // 枚举值,0:表示根据p*n*q进行simt遍历 1:表示根据p*indicesNum*q进行simt遍历
 
 public:
@@ -135,6 +137,27 @@ public:
     int64_t blockTailTileNumQ;
     int64_t blockTailUbFactorQ;
     int64_t blockTailUbTailQ;
+    int64_t fp4Mode = 0;
+};
+
+class IndexFillSimdDmaTilingData {
+public:
+    uint64_t p;
+    uint64_t n;
+    uint64_t q;
+    uint64_t indicesNum;
+    uint64_t usedCoreNum;
+    uint64_t blockFactorPN;
+    uint64_t tailBlockNumPN;    // 表示前tailBlockNumPN个核，多处理一个block.
+    uint64_t blockFactorAlignQ; // blockFactorAlignQ 表示整个ub中的 q 按照32B对齐后的大小
+    uint64_t blockFactorUbBufferMask;
+    uint64_t indicesUbFactorSizeAlign;
+    uint64_t indicesUbFactor;
+    uint64_t normBlockQNumLoop;
+    uint64_t normBlockQNumTail;
+    uint64_t tailBlockQNumLoop;
+    uint64_t tailBlockQNumTail;
+    int64_t fp4Mode = 0;
 };
 
 } // namespace IndexFill

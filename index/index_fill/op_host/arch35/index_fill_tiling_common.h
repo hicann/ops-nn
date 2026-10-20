@@ -55,7 +55,9 @@ struct IndexFillInputInfo {
     int64_t tailBlockSize;     // 表示尾块中有多少个元素
     int64_t loopsPerFrontCore; // 前frontCoreNum个核的单核循环次数
     int64_t loopsPerTailCore;  // 尾部这(usedCoreNum-frontCoreNum)个核的单核循环次数
+    int64_t fp4Support = 0;    // fp4类型当前芯片或shape是否支持
     int64_t indicesUbFactor;   // ub中每次加载的indicesNum数量
+    bool isAscend960DT = false;
 };
 
 class IndexFillCommonTiling : public Ops::NN::Optiling::TilingBaseClass {

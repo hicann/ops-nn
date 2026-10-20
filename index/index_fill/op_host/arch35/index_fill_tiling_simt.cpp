@@ -26,6 +26,9 @@ namespace optiling {
 using namespace IndexFill;
 
 constexpr uint64_t DCACHE_SIZE_SIMT = 128 * 1024;
+constexpr int64_t MAX_NUMEL_SIZE = 256;
+constexpr int64_t NUM_TWO = 2;
+constexpr uint64_t INDICES_BY_N_THRESHOLD = 5;
 
 bool IndexFillSimtTiling::IsCapable() { return true; }
 
@@ -33,7 +36,8 @@ int64_t IndexFillSimtTiling::CalcSimtUsedCoreNum()
 {
     // 如果输入x大小很小(此时很容易被全量cache)或者indicesNum远远小于n时，才使用p * indicesNum * q做simt遍历; 否则走p *
     // n * q simt遍历
-    simtComputeMode_ = (inputData.numel * inputData.dtypeSize < 256 || inputData.indicesNum <= inputData.N / 5) ?
+    simtComputeMode_ = (inputData.numel * static_cast<int64_t>(inputData.dtypeSize) < MAX_NUMEL_SIZE ||
+                        inputData.indicesNum <= inputData.N / INDICES_BY_N_THRESHOLD) ?
                            SIMT_COMPUTE_MODE_BY_INDICES :
                            SIMT_COMPUTE_MODE_BY_N;
 
@@ -41,8 +45,8 @@ int64_t IndexFillSimtTiling::CalcSimtUsedCoreNum()
     int64_t numelByIndices = static_cast<int64_t>(inputData.P * inputData.Q * inputData.indicesNum);
     int64_t numel = (simtComputeMode_ == SIMT_COMPUTE_MODE_BY_N) ? inputData.numel : numelByIndices;
     int64_t simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
-    while ((simtUsedCoreNum < (coreNum_ / 2)) && (threadNum > MIN_THREAD_NUM)) {
-        threadNum = threadNum / 2;
+    while ((simtUsedCoreNum < (coreNum_ / NUM_TWO)) && (threadNum > MIN_THREAD_NUM)) {
+        threadNum = threadNum / NUM_TWO;
         simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
     }
 
@@ -164,6 +168,7 @@ void IndexFillSimtTiling::SetTilingData()
     tilingData->loopsPerTailCore = inputData.loopsPerTailCore;
     tilingData->simtComputeMode = simtComputeMode_;
     tilingData->tilingKey = GetTilingKey();
+    tilingData->fp4Mode = inputData.fp4Support;
 }
 
 void IndexFillSimtTiling::DumpTilingInfo()

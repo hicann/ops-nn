@@ -82,7 +82,7 @@ public:
 
     __aicore__ inline void ProcessPN(uint64_t pId, uint64_t nId, uint64_t nNums)
     {
-        //搬入x, select value, 搬出x即可
+        // 搬入x, select value, 搬出x即可
         uint64_t xUbStart = this->AlignedToTarget(N_UB_LENGTH, COMPARE_ALIGNED);
         uint64_t gmStartInt8 = (pId * this->N + nId) * sizeof(T);
         this->CopyIn(this->xGm, gmStartInt8, xUbStart, nNums * sizeof(T));

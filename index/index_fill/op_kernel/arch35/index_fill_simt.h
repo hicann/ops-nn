@@ -114,6 +114,9 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, 
     indices_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
     fillValue = valueGm_.GetValue(0);
 
+    if (tilingData_->fp4Mode) {
+        fillValue = fillValue | ((fillValue << FOUR_BIT) & HIGH_FOUR_BIT);
+    }
     // 只有当前核的id位于[0, simdUsedCoreNum)内时，才需下面搬运相关的初始化逻辑.
     if (blockIdx_ >= tilingData_->simdUsedCoreNum) {
         return;

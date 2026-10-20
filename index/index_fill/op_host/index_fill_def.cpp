@@ -14,6 +14,7 @@
  */
 #include <cstdint>
 #include "register/op_def_registry.h"
+#include "version/metadef_version.h"
 namespace {
 static const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_INT64,
                                                     ge::DT_INT32,   ge::DT_BOOL,  ge::DT_FLOAT16, ge::DT_FLOAT,
@@ -36,6 +37,25 @@ static const std::vector<ge::DataType> ascend950IndicesDataType = {
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
     ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+static const std::vector<ge::DataType> ascend960XDataType = {
+    ge::DT_FLOAT16,     ge::DT_FLOAT,      ge::DT_BF16,  ge::DT_INT64,  ge::DT_INT32,    ge::DT_BOOL,
+    ge::DT_INT8,        ge::DT_UINT8,      ge::DT_INT16, ge::DT_DOUBLE, ge::DT_HIFLOAT4, ge::DT_FLOAT4_E2M1,
+    ge::DT_FLOAT4_E1M2, ge::DT_FLOAT16,    ge::DT_FLOAT, ge::DT_BF16,   ge::DT_INT64,    ge::DT_INT32,
+    ge::DT_BOOL,        ge::DT_INT8,       ge::DT_UINT8, ge::DT_INT16,  ge::DT_DOUBLE,   ge::DT_HIFLOAT4,
+    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
+static const std::vector<ge::Format> ascend960FormatList = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> ascend960IndicesDataType = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+#endif
 } // namespace
 
 namespace ops {
@@ -84,10 +104,38 @@ public:
         config_950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "index_fill_apt");
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend350", config_950);
+
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
+        OpAICoreConfig config_960;
+        config_960.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(ascend960XDataType)
+            .Format(ascend960FormatList)
+            .UnknownShapeFormat(ascend960FormatList);
+        config_960.Input("indices")
+            .ParamType(REQUIRED)
+            .DataType(ascend960IndicesDataType)
+            .Format(ascend960FormatList)
+            .UnknownShapeFormat(ascend960FormatList);
+        config_960.Input("value")
+            .ParamType(REQUIRED)
+            .DataType(ascend960XDataType)
+            .Format(ascend960FormatList)
+            .UnknownShapeFormat(ascend960FormatList);
+        config_960.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(ascend960XDataType)
+            .Format(ascend960FormatList)
+            .UnknownShapeFormat(ascend960FormatList);
+        config_960.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend960dt", config_960);
+#endif
     }
 };
 
