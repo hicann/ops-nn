@@ -12,6 +12,8 @@
  * \brief
  */
 
+#include <algorithm>
+#include <cstdint>
 #include "batch_norm_grad_v3_tiling.h"
 #include "op_api/op_util.h"
 #include "op_host/tiling_templates_registry.h"
@@ -76,6 +78,75 @@ static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t TWO = 2;
 static constexpr int64_t THREE = 3;
 static constexpr int64_t BASIC_FACTOR = 64;
+
+// File-local capacity calculations used by the RA tiling implementations.
+namespace {
+inline int64_t RARecomputeBytesPerChannel(int64_t rDim, int64_t rFactor)
+{
+    int64_t blockCount = Ops::Base::CeilDiv(rDim, rFactor);
+    int64_t cacheCount = blockCount <= 1 ? 1 : ULONG_BIT_LEN - __builtin_clzl(blockCount - 1);
+    return FLOAT_BYTE_NUMBER * DOUBLE_BUFFER * (THREE * rFactor + THREE + TWO * cacheCount);
+}
+
+inline void CalcRARecomputeLoopFactors(int64_t blockFactor, int64_t rDim, uint64_t ubSize, int64_t& aFactor,
+                                       int64_t& aFactorAligned, int64_t& rFactor)
+{
+    if (blockFactor <= BASIC_FACTOR || rDim < BASIC_FACTOR) {
+        return;
+    }
+    constexpr int64_t MIN_R_FACTOR = 16;
+    int64_t maxChannels = static_cast<int64_t>(ubSize) / RARecomputeBytesPerChannel(rDim, MIN_R_FACTOR);
+    maxChannels = maxChannels / BASIC_FACTOR * BASIC_FACTOR;
+    if (maxChannels < BASIC_FACTOR) {
+        return;
+    }
+    // Keep a whole core's channels together when possible; otherwise split only
+    // after filling the UB budget at the minimum binary-reduction row count.
+    aFactor = std::min(blockFactor, maxChannels);
+    aFactorAligned = Ops::Base::CeilAlign(aFactor, BASIC_FACTOR);
+    while (rFactor > MIN_R_FACTOR &&
+           aFactorAligned * RARecomputeBytesPerChannel(rDim, rFactor) > static_cast<int64_t>(ubSize)) {
+        rFactor /= TWO;
+    }
+}
+
+inline int64_t CalcRAFullLoadALoopFactor(int64_t blockFactor, int64_t rDim, int64_t binaryRows, int64_t dtypeSize,
+                                         int64_t weightDtypeSize, uint64_t blockSize, uint64_t ubSize,
+                                         int64_t& loopFactorAligned, int64_t vectorChannels = 0)
+{
+    int64_t loopFactor = 0;
+    loopFactorAligned = 0;
+    for (int64_t factor = 1; factor <= blockFactor; ++factor) {
+        int64_t factorAligned = static_cast<int64_t>(
+                                    Ops::Base::CeilDiv(static_cast<uint64_t>(factor * dtypeSize), blockSize) *
+                                    blockSize) /
+                                dtypeSize;
+        int64_t totalBytes = rDim * factorAligned * dtypeSize * DOUBLE_BUFFER * THREE +
+                             factorAligned * FLOAT_BYTE_NUMBER * DOUBLE_BUFFER * TWO +
+                             factorAligned * weightDtypeSize * DOUBLE_BUFFER * THREE +
+                             binaryRows * factorAligned * FLOAT_BYTE_NUMBER * TWO;
+        if (static_cast<uint64_t>(totalBytes) > ubSize) {
+            break;
+        }
+        loopFactor = factor;
+        loopFactorAligned = factorAligned;
+    }
+    // Prefer full fp32 vectors when a narrower vector-aligned tile needs no
+    // extra C loops. This is a performance choice after the exact UB check.
+    if (vectorChannels > 0 && loopFactor < blockFactor) {
+        int64_t vectorFactor = loopFactor / vectorChannels * vectorChannels;
+        if (vectorFactor > 0 &&
+            Ops::Base::CeilDiv(blockFactor, vectorFactor) == Ops::Base::CeilDiv(blockFactor, loopFactor)) {
+            loopFactor = vectorFactor;
+            loopFactorAligned = static_cast<int64_t>(
+                                    Ops::Base::CeilDiv(static_cast<uint64_t>(loopFactor * dtypeSize), blockSize) *
+                                    blockSize) /
+                                dtypeSize;
+        }
+    }
+    return loopFactor;
+}
+} // namespace
 
 template <typename TilingData>
 bool SetRABlockFactorsCommon(TilingData& tilingData, int64_t aDim, int64_t dtypeSize, uint32_t coreNum,

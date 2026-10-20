@@ -261,6 +261,111 @@ __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTenso
     DataCopyPad(dstTensor, srcTensor, params, padParams);
 }
 
+// RC packed data movement and channel folding shared by the RA templates.
+template <typename T>
+__aicore__ inline void PackedCopyChannel(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t channels,
+                                         uint32_t k)
+{
+    NdDmaLoopInfo<2> loop;
+    loop.loopSize[0] = channels;
+    loop.loopSrcStride[0] = 1;
+    loop.loopDstStride[0] = 1;
+    loop.loopSize[1] = k;
+    loop.loopSrcStride[1] = 0;
+    loop.loopDstStride[1] = channels;
+    static constexpr NdDmaConfig config = {false};
+    NdDmaParams<T, 2> params = {loop, static_cast<T>(0)};
+    DataCopy<T, 2, config>(dst, src, params);
+}
+
+template <typename T>
+__aicore__ inline void PackedCopyInput(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t rows,
+                                       uint32_t channels, uint32_t k, bool dense = false)
+{
+    if (dense) {
+        DataCopyExtParams copy{};
+        copy.blockCount = 1;
+        copy.blockLen = rows * channels * sizeof(T);
+        DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+        DataCopyPad(dst, src, copy, pad);
+        return;
+    }
+    uint32_t lanes = k * channels;
+    uint32_t groups = rows / k;
+    uint32_t tail = rows % k * channels;
+    DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+    DataCopyExtParams copy{};
+    copy.blockCount = groups;
+    copy.blockLen = lanes * sizeof(T);
+    copy.dstStride = (VL_FP32 - lanes) * sizeof(T) / ONE_BLK_SIZE;
+    if (groups != 0) {
+        DataCopyPad(dst, src, copy, pad);
+    }
+    if (tail != 0) {
+        copy.blockCount = 1;
+        copy.blockLen = tail * sizeof(T);
+        copy.dstStride = 0;
+        DataCopyPad(dst[groups * VL_FP32], src[groups * lanes], copy, pad);
+    }
+}
+
+template <typename T>
+__aicore__ inline void PackedCopyOutput(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t rows,
+                                        uint32_t channels, uint32_t k)
+{
+    uint32_t lanes = k * channels;
+    uint32_t groups = rows / k;
+    uint32_t tail = rows % k * channels;
+    DataCopyExtParams copy{};
+    copy.blockCount = groups;
+    copy.blockLen = lanes * sizeof(T);
+    copy.srcStride = (VL_FP32 - lanes) * sizeof(T) / ONE_BLK_SIZE;
+    if (groups != 0) {
+        DataCopyPad<T, PaddingMode::Normal>(dst, src, copy);
+    }
+    if (tail != 0) {
+        copy.blockCount = 1;
+        copy.blockLen = tail * sizeof(T);
+        copy.srcStride = 0;
+        DataCopyPad<T, PaddingMode::Normal>(dst[groups * lanes], src[groups * VL_FP32], copy);
+    }
+}
+
+// K is a power of two. Each lane keeps its channel while the K rows are folded.
+__aicore__ inline void PackedFoldChannels(Reg::RegTensor<float>& value, uint32_t channels, uint16_t k)
+{
+    Reg::RegTensor<int32_t> seq;
+    Reg::RegTensor<uint32_t> index;
+    Reg::RegTensor<float> right;
+    Reg::Arange(seq, 0);
+    for (uint16_t half = k / 2; half != 0; half /= 2) {
+        uint32_t count = half * channels;
+        Reg::MaskReg valid = Reg::UpdateMask<float>(count);
+        Reg::Adds<uint32_t, uint32_t, Reg::MaskMergeMode::ZEROING>(index, (Reg::RegTensor<uint32_t>&)seq,
+                                                                   half * channels, valid);
+        Reg::Gather(right, value, index);
+        Reg::Add<float, Reg::MaskMergeMode::ZEROING>(value, value, right, valid);
+    }
+}
+
+// Reverse the fold's layout to broadcast the final C gradients to all K rows.
+__aicore__ inline void PackedBroadcastChannels(Reg::RegTensor<float>& value, uint32_t channels, uint16_t k)
+{
+    Reg::RegTensor<int32_t> seq, index, shifted;
+    Reg::RegTensor<float> next;
+    Reg::Arange(seq, 0);
+    Reg::MaskReg all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+    for (uint16_t copies = 1; copies < k; copies *= 2) {
+        uint32_t count = copies * channels;
+        Reg::MaskReg low = Reg::UpdateMask<float>(count);
+        Reg::Adds(index, seq, -static_cast<int32_t>(copies * channels), all);
+        Reg::Select(shifted, seq, index, low);
+        // Selected indices are nonnegative and always below VL_FP32.
+        Reg::Gather(next, value, (Reg::RegTensor<uint32_t>&)shifted);
+        Reg::Move(value, next, all);
+    }
+}
+
 __aicore__ inline int64_t GetCacheID(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 
 } // namespace BatchNormGradV3
