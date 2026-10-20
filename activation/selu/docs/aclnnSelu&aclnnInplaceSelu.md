@@ -168,15 +168,12 @@ aclnnStatus aclnnInplaceSelu(
       <td>传入的self或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>self和out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
       <td>self和out的shape不匹配。</td>
-    </tr>
-    <tr>
-      <td>参数out的数据类型不是self可转换的。</td>
     </tr>
    </tbody></table>
 

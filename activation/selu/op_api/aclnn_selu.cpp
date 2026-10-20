@@ -63,7 +63,6 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
-    OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
     return true;
 }
 
