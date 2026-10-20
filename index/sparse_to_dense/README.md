@@ -105,6 +105,7 @@
 - `default_value`必须是标量，且和`values`保持相同数据类型。
 - 当`validate_indices`为true时，`indices`每一行对应的索引不能重复，且必须按升序排列。
 - 当`validate_indices`为true时，`indices`每一行索引必须在有效范围内。
+- 在Ascend 950PR/950DT的AI Core实现中，`validate_indices`当前不生效；使用该路径时，调用方需自行确保`indices`满足上述顺序、唯一性和有效范围要求。
 - AI CPU实现不支持`values`、`default_value`、`y`为BFLOAT16。
 
 ## 调用说明
