@@ -332,3 +332,103 @@ TEST_F(conv_tbc_test, test_convTbc_nullptr_error)
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 //   }
 // }
+
+TEST_F(conv_tbc_test, test_convTbc_format_ncl_cubeMathType0)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16};
+    int length = ValidList.size();
+
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    int8_t cubeMathType = 0;
+    for (int i = 0; i < length; i++) {
+        auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
+        auto bias_desc = TensorDesc(bias_dims, ValidList[i], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                            OUTPUT(output_desc), cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(conv_tbc_test, test_convTbc_format_ncl_cubeMathType1)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16};
+    int length = ValidList.size();
+
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    int8_t cubeMathType = 1;
+    for (int i = 0; i < length; i++) {
+        auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
+        auto bias_desc = TensorDesc(bias_dims, ValidList[i], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                            OUTPUT(output_desc), cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(conv_tbc_test, test_convTbc_format_ncl_cubeMathType2)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16};
+    int length = ValidList.size();
+
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    int8_t cubeMathType = 2;
+    for (int i = 0; i < length; i++) {
+        auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
+        auto bias_desc = TensorDesc(bias_dims, ValidList[i], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                            OUTPUT(output_desc), cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(conv_tbc_test, test_convTbc_format_ncl_cubeMathType3)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16};
+    int length = ValidList.size();
+
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    int8_t cubeMathType = 3;
+    for (int i = 0; i < length; i++) {
+        auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
+        auto bias_desc = TensorDesc(bias_dims, ValidList[i], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                            OUTPUT(output_desc), cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}

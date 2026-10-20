@@ -80,6 +80,9 @@ std::string IntToString(const T& intValue)
     return std::to_string(intValue);
 }
 
+constexpr uint32_t C04_VEC_USE_BUFF_NUM = 2;
+constexpr uint32_t VGATHER_REGISTER_SIZE = 256;
+constexpr int64_t SMALL_CHANNEL = 4;
 constexpr int64_t RESERVED_SIZE_8K = 8 * 1024;
 
 struct ConvolutionOpInfo {
@@ -135,6 +138,7 @@ const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* ex
 bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>& newStrides, uint32_t dims);
 void GetUbSize();
 void GetL1Size();
+bool CheckC04UbSize(struct ConvolutionOpInfo& opInfo, int64_t cin, int64_t orgKh, int64_t orgKw);
 bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride,
                     const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias);
 bool CheckL1SizeLimitsDma(uint32_t inputDtypeSize, uint64_t biasL1Size, uint32_t weightDtypeSize, int64_t k0);

@@ -311,11 +311,9 @@ static bool IsConv2DTransposeV2WhiteListCase(const vector<int64_t>& caseInfo, co
     return false;
 }
 
-static bool IsSupportConv2DToConv2DV2() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
-
 static bool IsA5EnableHF32(bool useHf32, const aclTensor* input)
 {
-    return IsSupportConv2DToConv2DV2() && useHf32 && input->GetDataType() == op::DataType::DT_FLOAT;
+    return Ops::NN::AclnnUtil::IsRegbase() && useHf32 && input->GetDataType() == op::DataType::DT_FLOAT;
 }
 
 static bool CheckV2Dilation(const Conv3DTransPoseV2Prarams& params)
@@ -501,8 +499,8 @@ static bool IsConv3DTransposeUseV2(const Conv3DTransPoseV2Prarams& params)
 bool IsSupportConv3DToConv3DV2()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-    return socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || isDAV3510;
+    return socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+           Ops::NN::AclnnUtil::IsRegbase();
 }
 
 bool IsSupportConv1DTransposeTo3D() { return Ops::NN::AclnnUtil::IsRegbase(); }
@@ -624,7 +622,7 @@ static aclnnStatus Conv2dWithFlag(const aclTensor* input, const aclTensor* weigh
     OP_LOGD("new pad: [%ld] [%ld] [%ld] [%ld]", (*pad4)[PAD_TOP_INDEX], (*pad4)[PAD_BOTTOM_INDEX],
             (*pad4)[PAD_LEFT_INDEX], (*pad4)[PAD_RIGHT_INDEX]);
 
-    if (IsSupportConv2DToConv2DV2()) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return Conv2dV2InferShapeAndAddLauncher(input, weight, bias, stride4, pad4, dilation4, groups, dataFormat,
                                                 useHf32, output, executor);
     }

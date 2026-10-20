@@ -2102,3 +2102,291 @@ TEST_F(quant_convolution_test, ascend910B2_test_quantConv3d_input_nullptr_fp16)
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     }
 }
+
+TEST_F(quant_convolution_test, ascend960dt_test_quant_conv2d_dtypes_group)
+{
+    std::vector<vector<aclDataType>> legalDtype = {
+        {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT16,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN,
+         aclDataType::ACL_FLOAT}};
+    const int64_t groups = 1;
+    vector<int64_t> input_dims = {1, 1, 1, 1};
+    vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
+    vector<int64_t> scale_dims = {1};
+    vector<int64_t> bias_dims = {1};
+    vector<int64_t> output_dims = {1, 1, 1, 1};
+    vector<int64_t> strides_dims = {1, 1};
+    vector<int64_t> padding_dims_1 = {0, 0};
+    vector<int64_t> padding_dims_2 = {0, 0, 0, 0};
+    vector<int64_t> dilation_dims = {1, 1};
+    vector<int64_t> output_padding_dims = {0, 0};
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc_1 = IntArrayDesc(padding_dims_1);
+    auto padding_desc_2 = IntArrayDesc(padding_dims_2);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+
+    int32_t offsetx = 0;
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto offset_desc = nullptr;
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto bias_desc = TensorDesc(bias_dims, dtypes[3], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, bias_desc, scale_desc, offset_desc, strides_desc, padding_desc_1,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_UINT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, nullptr, scale_desc, offset_desc, strides_desc, padding_desc_2,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+}
+
+TEST_F(quant_convolution_test, ascend960dt_test_quant_conv3d_dtypes_group)
+{
+    std::vector<vector<aclDataType>> legalDtype = {
+        {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT16,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN,
+         aclDataType::ACL_FLOAT}};
+    const int64_t groups = 1;
+    vector<int64_t> input_dims = {1, 1, 1, 1, 1};
+    vector<int64_t> weight_dims = {1, 1 / groups, 1, 1, 1};
+    vector<int64_t> scale_dims = {1};
+    vector<int64_t> bias_dims = {1};
+    vector<int64_t> output_dims = {1, 1, 1, 1, 1};
+    vector<int64_t> strides_dims = {1, 1, 1};
+    vector<int64_t> padding_dims_1 = {0, 0, 0};
+    vector<int64_t> padding_dims_2 = {0, 0, 0, 0, 0, 0};
+    vector<int64_t> dilation_dims = {1, 1, 1};
+    vector<int64_t> output_padding_dims = {0, 0, 0};
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc_1 = IntArrayDesc(padding_dims_1);
+    auto padding_desc_2 = IntArrayDesc(padding_dims_2);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+
+    int32_t offsetx = 0;
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto offset_desc = nullptr;
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto bias_desc = TensorDesc(bias_dims, dtypes[3], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCDHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, bias_desc, scale_desc, offset_desc, strides_desc, padding_desc_1,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_UINT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCDHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, nullptr, scale_desc, offset_desc, strides_desc, padding_desc_2,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+}
+
+TEST_F(quant_convolution_test, ascend960dt_quant_conv2d_aclnn_weight_nhwc_support_case)
+{
+    std::vector<vector<aclDataType>> legalDtype = {
+        {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT16,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN,
+         aclDataType::ACL_FLOAT}};
+    const int64_t groups = 1;
+    vector<int64_t> input_dims = {1, 1, 1, 1};
+    vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
+    vector<int64_t> scale_dims = {1};
+    vector<int64_t> bias_dims = {1};
+    vector<int64_t> output_dims = {1, 1, 1, 1};
+    vector<int64_t> strides_dims = {1, 1};
+    vector<int64_t> padding_dims_1 = {0, 0};
+    vector<int64_t> padding_dims_2 = {0, 0, 0, 0};
+    vector<int64_t> dilation_dims = {1, 1};
+    vector<int64_t> output_padding_dims = {0, 0};
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc_1 = IntArrayDesc(padding_dims_1);
+    auto padding_desc_2 = IntArrayDesc(padding_dims_2);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+
+    int32_t offsetx = 0;
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto offset_desc = nullptr;
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NHWC).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto bias_desc = TensorDesc(bias_dims, dtypes[3], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, bias_desc, scale_desc, offset_desc, strides_desc, padding_desc_1,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_UINT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, nullptr, scale_desc, offset_desc, strides_desc, padding_desc_2,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+}
+
+TEST_F(quant_convolution_test, ascend960dt_quant_conv3d_aclnn_weight_nhwc_support_case)
+{
+    std::vector<vector<aclDataType>> legalDtype = {
+        {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT16,
+         aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_BF16, aclDataType::ACL_FLOAT},
+        {aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN, aclDataType::ACL_FLOAT8_E4M3FN,
+         aclDataType::ACL_FLOAT}};
+    const int64_t groups = 1;
+    vector<int64_t> input_dims = {1, 1, 1, 1, 1};
+    vector<int64_t> weight_dims = {1, 1 / groups, 1, 1, 1};
+    vector<int64_t> scale_dims = {1};
+    vector<int64_t> bias_dims = {1};
+    vector<int64_t> output_dims = {1, 1, 1, 1, 1};
+    vector<int64_t> strides_dims = {1, 1, 1};
+    vector<int64_t> padding_dims_1 = {0, 0, 0};
+    vector<int64_t> padding_dims_2 = {0, 0, 0, 0, 0, 0};
+    vector<int64_t> dilation_dims = {1, 1, 1};
+    vector<int64_t> output_padding_dims = {0, 0, 0};
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc_1 = IntArrayDesc(padding_dims_1);
+    auto padding_desc_2 = IntArrayDesc(padding_dims_2);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+
+    int32_t offsetx = 0;
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto offset_desc = nullptr;
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NDHWC).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto bias_desc = TensorDesc(bias_dims, dtypes[3], ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCDHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, bias_desc, scale_desc, offset_desc, strides_desc, padding_desc_1,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+    for (auto dtypes : legalDtype) {
+        auto input_desc = TensorDesc(input_dims, dtypes[0], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, dtypes[1], ACL_FORMAT_NCDHW).ValueRange(0, 2);
+        auto scale_desc = TensorDesc(scale_dims, ACL_UINT64, ACL_FORMAT_ND).ValueRange(0, 2);
+        auto output_desc = TensorDesc(output_dims, dtypes[2], ACL_FORMAT_NCDHW).Precision(0, 2);
+        string roundMode = (dtypes[0] == aclDataType::ACL_INT8 || dtypes[0] == aclDataType::ACL_FLOAT8_E4M3FN) ?
+                               "rint" :
+                               "round";
+        auto ut = OP_API_UT(
+            aclnnQuantConvolution, // host api第二段接口名称
+            INPUT(input_desc, weight_desc, nullptr, scale_desc, offset_desc, strides_desc, padding_desc_2,
+                  dilation_desc, transposed, output_padding_desc, groups, offsetx, roundMode.c_str()), // host api输入
+            OUTPUT(output_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
+}

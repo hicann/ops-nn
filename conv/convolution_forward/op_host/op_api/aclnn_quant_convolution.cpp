@@ -99,6 +99,15 @@ const int32_t OFFSET_X_MAX_VALUE = 127;
 const int32_t OFFSET_X_MIN_VALUE = -128;
 const size_t MAX_STR_LEN = 1024;
 const size_t FRACTAL_Z_3D_DIM = 4;
+static constexpr int64_t DIMNCHW_N = 0;
+static constexpr int64_t DIMNCHW_C = 1;
+static constexpr int64_t DIMNCHW_H = 2;
+static constexpr int64_t DIMNCHW_W = 3;
+static constexpr int64_t DIMNCDHW_N = 0;
+static constexpr int64_t DIMNCDHW_C = 1;
+static constexpr int64_t DIMNCDHW_D = 2;
+static constexpr int64_t DIMNCDHW_H = 3;
+static constexpr int64_t DIMNCDHW_W = 4;
 
 const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DEFAULT = {
     // input, weight, output, bias
@@ -132,7 +141,32 @@ static inline ge::AscendString ToString(const std::int64_t value)
 
 namespace {
 
-static bool IsSocSupportND() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
+static const char* NpuArchToString(NpuArch npuArch)
+{
+    switch (npuArch) {
+        case NpuArch::DAV_3510:
+            return "DAV_3510";
+        case NpuArch::DAV_9201:
+            return "DAV_9201";
+        case NpuArch::DAV_9202:
+            return "DAV_9202";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+static bool IsSocSupportND()
+{
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+}
+
+static bool IsSocNeedTranspose()
+{
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+}
 
 } // namespace
 
@@ -625,7 +659,14 @@ public:
                                        GeFormatToString(Format::FORMAT_NCHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
-        if (weightFormat != Format::FORMAT_NCHW) {
+        if (IsSocNeedTranspose()) {
+            if (weightFormat != Format::FORMAT_NCHW && weightFormat != Format::FORMAT_NHWC) {
+                OP_LOGE_FOR_INVALID_FORMAT(
+                    engine.entityName, "filter", GeFormatToString(weightFormat),
+                    GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_NHWC));
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+        } else if (weightFormat != Format::FORMAT_NCHW) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
                                        GeFormatToString(Format::FORMAT_NCHW));
             return ACLNN_ERR_PARAM_INVALID;
@@ -656,10 +697,19 @@ public:
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
-            if (weightFormat != Format::FORMAT_NCDHW) {
-                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                                           GeFormatToString(Format::FORMAT_NCDHW));
-                return ACLNN_ERR_PARAM_INVALID;
+            if (IsSocNeedTranspose()) {
+                if (weightFormat != Format::FORMAT_NCDHW && weightFormat != Format::FORMAT_NDHWC) {
+                    OP_LOGE_FOR_INVALID_FORMAT(
+                        engine.entityName, "filter", GeFormatToString(weightFormat),
+                        GeFormatToString(Format::FORMAT_NCDHW) + " or " + GeFormatToString(Format::FORMAT_NDHWC));
+                    return ACLNN_ERR_PARAM_INVALID;
+                }
+            } else {
+                if (weightFormat != Format::FORMAT_NCDHW) {
+                    OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
+                                               GeFormatToString(Format::FORMAT_NCDHW));
+                    return ACLNN_ERR_PARAM_INVALID;
+                }
             }
         }
         if (outputFormat != Format::FORMAT_NCDHW) {
@@ -1146,8 +1196,8 @@ public:
     aclnnStatus Check(QuantConvEngine& engine) override
     {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-            OP_LOGD("Get Current NpuArch: DAV_3510.");
+        if (IsSocSupportND()) {
+            OP_LOGD("Get Current NpuArch: %s.", NpuArchToString(GetCurrentPlatformInfo().GetCurNpuArch()));
             return ACLNN_SUCCESS;
         }
         switch (socVersion) {
@@ -1244,6 +1294,34 @@ static aclnnStatus ContiguousPreProcess(const aclTensor*& input, const aclTensor
         bias = l0op::Contiguous(bias, executor);
         CHECK_NULLPTR(bias, ACLNN_ERR_INNER_NULLPTR);
     }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus TransposePreProcess(const aclTensor*& weight, Format currentStorageFormat, aclOpExecutor* executor)
+{
+    Format expectedViewFormat;
+    FVector<int64_t> inputDims;
+
+    if (currentStorageFormat == Format::FORMAT_NCHW) {
+        inputDims = {DIMNCHW_N, DIMNCHW_H, DIMNCHW_W, DIMNCHW_C};
+        expectedViewFormat = Format::FORMAT_NHWC;
+    } else {
+        inputDims = {DIMNCDHW_N, DIMNCDHW_D, DIMNCDHW_H, DIMNCDHW_W, DIMNCDHW_C};
+        expectedViewFormat = Format::FORMAT_NDHWC;
+    }
+
+    auto permPre = executor->AllocIntArray(inputDims.data(), inputDims.size());
+    CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    weight = l0op::Transpose(weight, permPre, executor);
+    CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const_cast<aclTensor*>(weight)->SetViewFormat(expectedViewFormat);
+    const_cast<aclTensor*>(weight)->SetStorageFormat(expectedViewFormat);
+    const_cast<aclTensor*>(weight)->SetOriginalFormat(expectedViewFormat);
+
+    OP_LOGD("Transpose weight format from %s to %s.", op::ToString(currentStorageFormat).GetString(),
+            op::ToString(expectedViewFormat).GetString());
     return ACLNN_SUCCESS;
 }
 
@@ -1357,6 +1435,13 @@ public:
             bias = l0op::Cast(bias, DataType::DT_FLOAT, executor);
             CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
+
+        if (IsSocNeedTranspose() && groups == 1) {
+            if (weight->GetStorageFormat() == Format::FORMAT_NCDHW) {
+                return TransposePreProcess(weight, Format::FORMAT_NCDHW, executor);
+            }
+        }
+
         return ACLNN_SUCCESS;
     }
 
@@ -1480,6 +1565,13 @@ public:
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv2d contiguous preprocess failed");
             return ret;
         }
+
+        if (IsSocNeedTranspose() && groups == 1) {
+            if (weight->GetStorageFormat() == Format::FORMAT_NCHW) {
+                return TransposePreProcess(weight, Format::FORMAT_NCHW, executor);
+            }
+        }
+
         return ACLNN_SUCCESS;
     }
 

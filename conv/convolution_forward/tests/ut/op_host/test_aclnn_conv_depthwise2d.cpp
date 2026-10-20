@@ -30,6 +30,7 @@ using namespace std;
 
 #define KEEP_DTYPE 0
 #define ALLOW_FP32_DOWN_PRECISION 1
+#define USE_FP16 2
 #define USE_HF32 3
 static int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 static int8_t cubeMathTypeHF32 = USE_HF32;
@@ -847,5 +848,41 @@ TEST_F(conv_depthwise2d_test, ascend910B2_test_1971)
         EXPECT_EQ(aclRet, ACL_SUCCESS);
 
         // ut.TestPrecision();
+    }
+}
+
+TEST_F(conv_depthwise2d_test, ascend960dt_test_depthwise2d_case_dtypes)
+{
+    struct testDataType {
+        aclDataType dataType;
+        int8_t cubeMathType;
+    };
+    vector<struct testDataType> dataTypes = {
+        {ACL_BF16, USE_FP16}, {ACL_BF16, KEEP_DTYPE}, {ACL_FLOAT, ALLOW_FP32_DOWN_PRECISION}, {ACL_FLOAT, USE_HF32}};
+    vector<int64_t> inp_dims = {2, 16, 32, 16};
+    vector<int64_t> weight_dims = {16, 1, 3, 3};
+    vector<int64_t> kernelSize_dims = {3, 3};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {2, 16, 32, 16};
+    vector<int64_t> strides_dims = {1, 1};
+    vector<int64_t> padding_dims = {1, 1};
+    vector<int64_t> dilation_dims = {1, 1};
+
+    for (auto d : dataTypes) {
+        auto inp_desc = TensorDesc(inp_dims, d.dataType, ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, d.dataType, ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto kernelSize_desc = IntArrayDesc(kernelSize_dims);
+        auto strides_desc = IntArrayDesc(strides_dims);
+        auto padding_desc = IntArrayDesc(padding_dims);
+        auto dilation_desc = IntArrayDesc(dilation_dims);
+        auto output_desc = TensorDesc(output_dims, d.dataType, ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+        auto bias_desc = TensorDesc(bias_dims, d.dataType, ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto ut = OP_API_UT(aclnnConvDepthwise2d, // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, kernelSize_desc, bias_desc, strides_desc, padding_desc,
+                                  dilation_desc), // host api输入
+                            OUTPUT(output_desc), d.cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
     }
 }

@@ -67,6 +67,15 @@ static constexpr int64_t specialChannelIndex = 3;
 static constexpr int64_t SMALL_CHANNEL = 4;
 static constexpr int64_t CONV2D_SHAPE_SIZE = 4;
 static constexpr int64_t CONV3D_SHAPE_SIZE = 5;
+static constexpr int64_t DIMNCHW_N = 0;
+static constexpr int64_t DIMNCHW_C = 1;
+static constexpr int64_t DIMNCHW_H = 2;
+static constexpr int64_t DIMNCHW_W = 3;
+static constexpr int64_t DIMNCDHW_N = 0;
+static constexpr int64_t DIMNCDHW_C = 1;
+static constexpr int64_t DIMNCDHW_D = 2;
+static constexpr int64_t DIMNCDHW_H = 3;
+static constexpr int64_t DIMNCDHW_W = 4;
 static const std::string REFLECTION_MODE = "constant";
 const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
 
@@ -181,7 +190,11 @@ static const aclTensor* ConvL0Warper(std::map<std::string, L0FUNCTION> l0Functio
 
 namespace op {
 
-static bool IsSupportND() { return Ops::NN::AclnnUtil::IsRegbase(); }
+static bool IsSocNeedTranspose()
+{
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+}
 
 static const aclTensor* L0FuncWarperByOpType(std::map<std::string, L0FUNCTION> l0Functions, std::string functionType,
                                              const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
@@ -196,7 +209,7 @@ static const aclTensor* L0FuncWarperByOpType(std::map<std::string, L0FUNCTION> l
         return result;
     }
     L0FUNCTION fn = l0Functions.at(functionType);
-    if (op::IsSupportND() && input->GetViewShape().GetDimNum() == op::CONV2D_SHAPE_SIZE && !transposed) {
+    if (Ops::NN::AclnnUtil::IsRegbase() && input->GetViewShape().GetDimNum() == op::CONV2D_SHAPE_SIZE && !transposed) {
         result = (reinterpret_cast<CONV_WITHDTYPE_FUNCTION>(fn))(input, weight, bias, outputDtype, stride, padding,
                                                                  dilation, groups, useHf32, executor);
     }
@@ -1059,7 +1072,14 @@ private:
         auto outputFormat = engine.meta.output.format;
         OP_LOGD("conv2d transpose: [%d]", engine.params.transposed);
         if (!engine.params.transposed) {
-            if (op::IsSupportND()) {
+            if (IsSocNeedTranspose()) {
+                if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW, Format::FORMAT_NHWC)) {
+                    OP_LOGE_FOR_INVALID_FORMAT(
+                        engine.entityName, "filter", GeFormatToString(weightFormat),
+                        GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_NHWC));
+                    return ACLNN_ERR_PARAM_INVALID;
+                }
+            } else if (Ops::NN::AclnnUtil::IsRegbase()) {
                 if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                     OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
                                                GeFormatToString(Format::FORMAT_NCHW));
@@ -1108,16 +1128,25 @@ private:
         auto inputFormat = engine.meta.input.format;
         auto weightFormat = engine.meta.weight.format;
         auto outputFormat = engine.meta.output.format;
-        if (op::IsSupportND()) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
                                            GeFormatToString(Format::FORMAT_NCDHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
-                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                                           GeFormatToString(Format::FORMAT_NCDHW));
-                return ACLNN_ERR_PARAM_INVALID;
+            if (IsSocNeedTranspose()) {
+                if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCDHW, Format::FORMAT_NDHWC)) {
+                    OP_LOGE_FOR_INVALID_FORMAT(
+                        engine.entityName, "filter", GeFormatToString(weightFormat),
+                        GeFormatToString(Format::FORMAT_NCDHW) + " or " + GeFormatToString(Format::FORMAT_NDHWC));
+                    return ACLNN_ERR_PARAM_INVALID;
+                }
+            } else {
+                if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
+                    OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
+                                               GeFormatToString(Format::FORMAT_NCDHW));
+                    return ACLNN_ERR_PARAM_INVALID;
+                }
             }
             if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
@@ -1719,7 +1748,7 @@ private:
                     "shape[" + std::to_string(i + inputSpaceDimIndex) + "] of x must be greater than or equal to 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (op::IsSupportND() && transposed && weight.IsZeroTensor()) {
+            if (Ops::NN::AclnnUtil::IsRegbase() && transposed && weight.IsZeroTensor()) {
                 continue;
             }
             int64_t weightShapeSpace = weightShape[i + weightSpaceDimIndex];
@@ -2380,6 +2409,28 @@ static aclnnStatus ProcessBias(const aclTensor*& bias, const aclTensor* contiguo
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus TransposeToExpectedViewFormat(const aclTensor* castedWeight, op::Format expectedViewFormat,
+                                                 op::Format currentStorageFormat, const aclTensor*& weight,
+                                                 aclOpExecutor* executor)
+{
+    FVector<int64_t> inputDims;
+    if (expectedViewFormat == op::Format::FORMAT_NHWC && currentStorageFormat == op::Format::FORMAT_NCHW) {
+        inputDims = {op::DIMNCHW_N, op::DIMNCHW_H, op::DIMNCHW_W, op::DIMNCHW_C};
+    } else if (expectedViewFormat == op::Format::FORMAT_NDHWC && currentStorageFormat == op::Format::FORMAT_NCDHW) {
+        inputDims = {op::DIMNCDHW_N, op::DIMNCDHW_D, op::DIMNCDHW_H, op::DIMNCDHW_W, op::DIMNCDHW_C};
+    }
+    auto permPre = executor->AllocIntArray(inputDims.data(), inputDims.size());
+    CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    weight = l0op::Transpose(castedWeight, permPre, executor);
+    CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const_cast<aclTensor*>(weight)->SetViewFormat(expectedViewFormat);
+    const_cast<aclTensor*>(weight)->SetStorageFormat(expectedViewFormat);
+    const_cast<aclTensor*>(weight)->SetOriginalFormat(expectedViewFormat);
+    OP_LOGD("Transpose weight format from %s to %s.", op::ToString(currentStorageFormat).GetString(),
+            op::ToString(expectedViewFormat).GetString());
+    return ACLNN_SUCCESS;
+}
+
 // 实现公共数据预处理，将数据准备为L0可接受的形式
 static aclnnStatus CommonPreProcess(const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias,
                                     const int64_t groups, const bool transposed, const ConvolutionOpInfo& opInfo,
@@ -2426,6 +2477,11 @@ static aclnnStatus CommonPreProcess(const aclTensor*& input, const aclTensor*& w
         // weight format transdata
         weight = l0op::TransData(castedWeight, opInfo.weightFormat, groups, executor);
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if ((opInfo.weightFormat == Format::FORMAT_NHWC && weight->GetStorageFormat() == Format::FORMAT_NCHW) ||
+               (opInfo.weightFormat == Format::FORMAT_NDHWC && weight->GetStorageFormat() == Format::FORMAT_NCDHW)) {
+        auto ret = TransposeToExpectedViewFormat(castedWeight, opInfo.weightFormat, weight->GetStorageFormat(), weight,
+                                                 executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     } else {
         weight = castedWeight;
     }
@@ -2583,11 +2639,11 @@ static void UpdateOutputDtype(const aclTensor* output, struct ConvolutionOpInfo&
     if (socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND310P || cubeMathType == USE_FP16) {
         opInfo.outputDtype = op::DataType::DT_FLOAT16; // 目前底层二进制暂不支持16进32出的场景，故设为FP16运算
     }
-    if ((upperDtype == op::DataType::DT_HIFLOAT8) && op::IsSupportND()) {
+    if ((upperDtype == op::DataType::DT_HIFLOAT8) && Ops::NN::AclnnUtil::IsRegbase()) {
         opInfo.outputDtype = op::DataType::DT_HIFLOAT8; // In conv2d/3d/3dtranspose hif8 case, the output dtype should
                                                         // be hif8.
     }
-    if ((upperDtype == op::DataType::DT_FLOAT8_E4M3FN) && op::IsSupportND()) {
+    if ((upperDtype == op::DataType::DT_FLOAT8_E4M3FN) && Ops::NN::AclnnUtil::IsRegbase()) {
         opInfo.outputDtype = op::DataType::DT_FLOAT8_E4M3FN; // In conv2d/3d/3dtranspose hif8 case, the output dtype
                                                              // should be hif8.
     }
@@ -2612,12 +2668,13 @@ static void UpdateInputDtype(const aclTensor* input, const aclTensor* bias, stru
         opInfo.biasDtype = upperDtype;
         // 因为bias二进制不支持为BF16，所以得转成FP32
         if (upperDtype == op::DataType::DT_BF16 &&
-            (!(transposed && input->GetViewShape().GetDimNum() == CONV_3D_DIM_SIZE)) && !op::IsSupportND()) {
+            (!(transposed && input->GetViewShape().GetDimNum() == CONV_3D_DIM_SIZE)) &&
+            !Ops::NN::AclnnUtil::IsRegbase()) {
             OP_LOGD("Since bias does not support BF16, change the dtype of bias to fp32.");
             opInfo.biasDtype = op::DataType::DT_FLOAT;
         }
         if ((upperDtype == op::DataType::DT_HIFLOAT8 || upperDtype == op::DataType::DT_FLOAT8_E4M3FN) &&
-            (!transposed) && op::IsSupportND()) {
+            (!transposed) && Ops::NN::AclnnUtil::IsRegbase()) {
             OP_LOGD("Bias dtype must be fp32 in hifloat8 or float8_e4m3fn scene for conv forward.");
             opInfo.biasDtype = op::DataType::DT_FLOAT;
         }
@@ -2629,7 +2686,7 @@ void GetConvolutionOpDtype(const aclTensor* input, const aclTensor* weight, cons
 {
     OP_LOGD("Get into GetConvolutionOpDtype Function.");
     DataType upperDtype = GetUpperFloatDataType(input->GetDataType(), weight->GetDataType());
-    if (op::IsSupportND()) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         upperDtype = CalcPromoteTypeCubeMathTypeNew(upperDtype, cubeMathType);
     } else {
         upperDtype = CalcPromoteTypeCubemathtype(upperDtype, cubeMathType);
@@ -3421,7 +3478,7 @@ static bool isNotDMA(const aclTensor* input, const aclTensor* weight, const aclT
         return false;
     }
 
-    if (IsSupportND()) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return !CheckDmaLimits(input, weight, stride, padding, dilation, bias);
     }
 
@@ -3503,15 +3560,23 @@ static bool CanSwitchC04(const aclTensor* input, const aclTensor* weight, const 
 
 // 非C04场景的更新 卷积format
 void GetConvolutionOpFormat(struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight,
-                            const aclTensor* output)
+                            const aclTensor* output, const bool transposed, int64_t groups, const bool dmaFlag)
 {
     opInfo.weightFormat = Format::FORMAT_FRACTAL_Z;
     opInfo.inputFormat = Format::FORMAT_NC1HWC0;
     opInfo.outputFormat = Format::FORMAT_NC1HWC0;
     opInfo.biasFormat = Format::FORMAT_ND;
-    if (op::IsSupportND()) {
-        opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
-                                                                                  Format::FORMAT_NCHW;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        int64_t cin = static_cast<int64_t>(weight->GetViewShape().GetDim(op::DIMNCHW_C));
+        int64_t orgKh = static_cast<int64_t>(weight->GetViewShape().GetDim(op::DIMNCHW_H));
+        int64_t orgKw = static_cast<int64_t>(weight->GetViewShape().GetDim(op::DIMNCHW_W));
+        if (IsSocNeedTranspose() && weight->GetStorageFormat() == Format::FORMAT_NCHW && !transposed && groups == 1 &&
+            !CheckC04UbSize(opInfo, cin, orgKh, orgKw) && !dmaFlag) {
+            opInfo.weightFormat = Format::FORMAT_NHWC;
+        } else {
+            opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
+                                                                                      Format::FORMAT_NCHW;
+        }
         opInfo.inputFormat = input->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
                                                                                 Format::FORMAT_NCHW;
         opInfo.outputFormat = output->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
@@ -3520,15 +3585,19 @@ void GetConvolutionOpFormat(struct ConvolutionOpInfo& opInfo, const aclTensor* i
 }
 
 void GetConvolution3dOpFormat(struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight,
-                              const aclTensor* output)
+                              const aclTensor* output, const bool transposed, int64_t groups)
 {
     opInfo.weightFormat = Format::FORMAT_FRACTAL_Z_3D;
     opInfo.inputFormat = Format::FORMAT_NDC1HWC0;
     opInfo.outputFormat = Format::FORMAT_NDC1HWC0;
     opInfo.biasFormat = Format::FORMAT_ND;
-    if (op::IsSupportND()) {
-        opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
-                                                                                   Format::FORMAT_NCDHW;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (IsSocNeedTranspose() && weight->GetStorageFormat() == Format::FORMAT_NCDHW && !transposed && groups == 1) {
+            opInfo.weightFormat = Format::FORMAT_NDHWC;
+        } else {
+            opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
+                                                                                       Format::FORMAT_NCDHW;
+        }
         opInfo.inputFormat = input->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
                                                                                  Format::FORMAT_NCDHW;
         opInfo.outputFormat = output->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
@@ -3617,19 +3686,20 @@ void GetConvOpInfo(const aclTensor* input, const aclTensor* weight, const aclTen
         conv2dInfo.InitConv2DSplitWInfo(input, weight, stride, padding, dilation);
         if (isConv2DWhiteListCase || conv2dInfo.CanSwitchSplitW(bias, output, groups, opInfo)) {
             OP_LOGD("Entering splitW branch");
-            GetConvolution3dOpFormat(opInfo, input, weight, output);
+            GetConvolution3dOpFormat(opInfo, input, weight, output, transposed, groups);
         } else {
             OP_LOGD("Entering normal C04 branch");
-            GetConvolutionOpFormat(opInfo, input, weight, output);
+            bool dmaFlag = !isNotDMA(input, weight, bias, output, stride, padding, dilation);
+            GetConvolutionOpFormat(opInfo, input, weight, output, transposed, groups, dmaFlag);
         }
     }
 }
 
 void GetConv3dOpInfo(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-                     struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType)
+                     struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType, int64_t groups)
 {
     GetConvolutionOpDtype(input, weight, bias, output, opInfo, transposed, cubeMathType);
-    GetConvolution3dOpFormat(opInfo, input, weight, output);
+    GetConvolution3dOpFormat(opInfo, input, weight, output, transposed, groups);
 }
 
 static aclIntArray* ViewConv1dPad1dAs4d(const aclIntArray* intArray, aclOpExecutor* executor)
@@ -3871,7 +3941,7 @@ static aclnnStatus CheckConv2dWithWeightFZ(const string& entityName, const aclTe
 
 bool isSupportInputHWNC(const aclTensor* input, const ConvolutionOpInfo& opInfo, const int64_t groups)
 {
-    if (!IsSupportND()) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
     if (groups > 1) {
@@ -4026,8 +4096,8 @@ static bool IsSupportConvTranspose1DToBmm(ConvEngine engine)
     if (engine.meta.input.format != op::Format::FORMAT_NCL) {
         return false;
     }
-    if (IsSupportND() && (engine.meta.input.dataType == op::DataType::DT_HIFLOAT8 ||
-                          engine.meta.input.dataType == op::DataType::DT_FLOAT8_E4M3FN)) {
+    if (Ops::NN::AclnnUtil::IsRegbase() && (engine.meta.input.dataType == op::DataType::DT_HIFLOAT8 ||
+                                            engine.meta.input.dataType == op::DataType::DT_FLOAT8_E4M3FN)) {
         return false;
     }
     if (!engine.params.transposed || engine.params.groups != 1) {
@@ -4068,7 +4138,7 @@ static bool IsSupportConvToBmm(ConvEngine engine)
         return false;
     }
 
-    if (op::IsSupportND()) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (engine.meta.input.format != op::Format::FORMAT_NCDHW &&
             engine.meta.input.format != op::Format::FORMAT_NCHW) {
             return false;
@@ -4142,7 +4212,7 @@ static inline aclnnStatus CommonConvImpl(std::map<std::string, L0FUNCTION>& l0Fu
                                          int64_t groups, bool useHf32, aclOpExecutor* executor,
                                          const aclTensor*& convOut, const char* errorMsg)
 {
-    if (op::IsSupportND()) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         convOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride,
                                           padding, dilation, transposed, outputPadding, groups, useHf32, executor);
     } else {
@@ -4337,14 +4407,14 @@ public:
             inputDisContinuous = true;
         }
         // 调用静态函数PreProcess
-        bool needChangeFormat = !op::IsSupportND();
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor,
                                 inputDisContinuous);
     };
 
     aclnnStatus Impl() override
     {
-        if (op::IsSupportND()) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             convOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride,
                                               padding, dilation, transposed, outputPadding, groups, useHf32, executor);
         } else {
@@ -4361,7 +4431,7 @@ public:
     aclnnStatus PostProcess() override
     {
         if (opInfo.inputFormat != Format::FORMAT_NDC1HWC0) {
-            bool needChangeOutFormat = !op::IsSupportND();
+            bool needChangeOutFormat = !Ops::NN::AclnnUtil::IsRegbase();
             auto res = CommonPostProcess(groups, needChangeOutFormat, output, convOut, executor);
             CHECK_RET(res == ACLNN_SUCCESS, res);
         } else {
@@ -4414,7 +4484,8 @@ public:
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
                 op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 调用静态函数PreProcess
-        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, true, false, executor);
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
+        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, false, executor);
     };
 
     aclnnStatus Impl() override
@@ -4530,7 +4601,7 @@ public:
                 op::ToString(opInfo.biasDtype).GetString(), useHf32);
         specialConv1d = isSpecialConv1d(input, weight, stride, padding, dilation) && (groups == 1);
         // 调用静态函数PreProcess
-        bool needChangeFormat = op::IsSupportND() ? false : !specialConv1d;
+        bool needChangeFormat = Ops::NN::AclnnUtil::IsRegbase() ? false : !specialConv1d;
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor,
                                 inputDisContinuous);
     };
@@ -4677,7 +4748,7 @@ public:
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
                 op::ToString(opInfo.biasDtype).GetString(), useHf32);
 
-        bool needChangeFormat = !op::IsSupportND();
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
     };
 
@@ -4690,7 +4761,7 @@ public:
 
     aclnnStatus PostProcess() override
     {
-        bool needChangeOutFormat = !op::IsSupportND();
+        bool needChangeOutFormat = !Ops::NN::AclnnUtil::IsRegbase();
         auto res = CommonPostProcess(groups, needChangeOutFormat, output2d, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
 
@@ -4732,10 +4803,10 @@ public:
         REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWHif8, op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW,
                         op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW);
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_PARAM_INVALID);
-        GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType);
+        GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType, groups);
 
         // 判断是否是PointWise卷积
-        isPointWiseKernelFlag = !op::IsSupportND() && IsSupportConv3DToConv3DV2() &&
+        isPointWiseKernelFlag = !Ops::NN::AclnnUtil::IsRegbase() && IsSupportConv3DToConv3DV2() &&
                                 NeedPointWiseKernel(weight, stride, padding, dilation, groups) &&
                                 !PointWiseKernelBeyondLimits(input);
         // PointWise卷积，biasDtype只能为FLOAT32
@@ -4750,7 +4821,7 @@ public:
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
                 op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 调用静态函数PreProcess
-        bool needChangeFormat = op::IsSupportND() ? false : !isPointWiseKernelFlag;
+        bool needChangeFormat = Ops::NN::AclnnUtil::IsRegbase() ? false : !isPointWiseKernelFlag;
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
     };
 
@@ -4801,7 +4872,7 @@ public:
     CONV_CONSTRUCTOR(Transposed1d)
     aclnnStatus PreProcess() override
     {
-        op::Format dataFormat = op::IsSupportND() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
+        op::Format dataFormat = Ops::NN::AclnnUtil::IsRegbase() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
         RegisterTransposedConvL0Functions(l0Functions, dataFormat);
 
         ConvTranspose1dSwapHW = isConvTransposed1dSwitchHW();
@@ -4848,7 +4919,7 @@ public:
             return ACLNN_ERR_PARAM_INVALID;
         }
         // 调用静态函数PreProcess
-        bool needChangeFormat = op::IsSupportND() ? false : true;
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, false, executor);
     };
 
@@ -4867,7 +4938,7 @@ public:
     aclnnStatus PostProcess() override
     {
         // 按照conv2d 的方式处理bias
-        if (bias != nullptr && op::IsSupportND()) {
+        if (bias != nullptr && Ops::NN::AclnnUtil::IsRegbase()) {
             int64_t biasLength = bias->GetViewShape().GetDim(0);
             bias = l0op::Reshape(bias, {1, biasLength, 1, 1}, executor);
             CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -4879,7 +4950,7 @@ public:
         auto fakeOutput2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW,
                                                   op::Format::FORMAT_NCHW);
         // 调用静态函数PostProcess
-        bool needChangeFormat = op::IsSupportND() ? false : true;
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         auto res = CommonPostProcess(groups, needChangeFormat, fakeOutput2d, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
         // 现在Conv1d转为conv2d来做，所以需要转换输出
@@ -4901,7 +4972,8 @@ private:
     bool isConvTransposed1dSwitchHW() const
     {
         // 针对特定场景进行优化 outW>4096 N=1 inC<=768
-        if (!op::IsSupportND() && output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
+        if (!Ops::NN::AclnnUtil::IsRegbase() &&
+            output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
             input->GetViewShape().GetDim(N_DIM_NCL_INDEX) == 1 &&
             input->GetViewShape().GetDim(C_DIM_NCL_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
             return true;
@@ -4914,7 +4986,7 @@ public:
     CONV_CONSTRUCTOR(Transposed2d)
     aclnnStatus PreProcess() override
     {
-        op::Format dataFormat = op::IsSupportND() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
+        op::Format dataFormat = Ops::NN::AclnnUtil::IsRegbase() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
         RegisterTransposedConvL0Functions(l0Functions, dataFormat);
         REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC,
                         op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC);
@@ -4937,7 +5009,7 @@ public:
             return ACLNN_ERR_PARAM_INVALID;
         }
         // 调用静态函数PreProcess
-        bool needChangeFormat = op::IsSupportND() ? false : true;
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
     };
 
@@ -4954,7 +5026,7 @@ public:
 
     aclnnStatus PostProcess() override
     {
-        if (bias && op::IsSupportND()) {
+        if (bias && Ops::NN::AclnnUtil::IsRegbase()) {
             op::Shape biasShape = bias->GetViewShape();
             int64_t biasLength = biasShape.GetDim(0);
             if (output->GetStorageFormat() == op::Format::FORMAT_NHWC) {
@@ -4968,7 +5040,7 @@ public:
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        bool needChangeFormat = op::IsSupportND() ? false : true;
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         auto res = CommonPostProcess(groups, needChangeFormat, output, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
 
@@ -4988,7 +5060,7 @@ private:
     bool isConvTransposed2dSwitchHW() const
     {
         // 针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
-        if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 &&
+        if (!Ops::NN::AclnnUtil::IsRegbase() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 &&
             (*outputPadding)[0] == 0 &&
             output->GetViewShape().GetDim(W_DIM_NCHW_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
             input->GetViewShape().GetDim(N_DIM_NCHW_INDEX) == 1 &&
@@ -5039,7 +5111,7 @@ public:
     aclnnStatus PreProcess() override
     {
         op::Format dataFormat;
-        if (op::IsSupportND()) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             dataFormat = op::Format::FORMAT_NCDHW;
         } else {
             dataFormat = op::Format::FORMAT_NDC1HWC0;
@@ -5060,8 +5132,8 @@ public:
                         op::DataType::DT_FLOAT, op::Format::FORMAT_NDHWC);
         REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDHWC,
                         op::DataType::DT_BF16, op::Format::FORMAT_NDHWC);
-        GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType);
-        bool needChangeFormat = op::IsSupportND() ? false : true;
+        GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType, groups);
+        bool needChangeFormat = !Ops::NN::AclnnUtil::IsRegbase();
         if (PreProcessCheckOutputDtype(bias, opInfo, entityName) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -5085,7 +5157,7 @@ public:
 
     aclnnStatus ProcessBias(op::Format dstFormat)
     {
-        if (!IsSupportND()) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
             // output format transdata
             convOut = l0op::TransData(convOut, dstFormat, groups, executor);
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -5105,15 +5177,14 @@ public:
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        if (!op::IsSupportND()) {
+        if (!Ops::NN::AclnnUtil::IsRegbase()) {
             // output cast
             convOut = l0op::Cast(convOut, output->GetDataType(), executor);
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        if (op::IsSupportND()) {
-            bool needChangeFormat = op::IsSupportND() ? false : true;
-            auto res = CommonPostProcess(groups, needChangeFormat, output, convOut, executor);
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            auto res = CommonPostProcess(groups, false, output, convOut, executor);
             CHECK_RET(res == ACLNN_SUCCESS, res);
         }
 

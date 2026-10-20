@@ -392,6 +392,28 @@ void GetUbSize()
     g_ubSize = ubSize - RESERVED_SIZE_8K;
 }
 
+bool CheckC04UbSize(struct ConvolutionOpInfo& opInfo, int64_t cin, int64_t orgKh, int64_t orgKw)
+{
+    if (cin > SMALL_CHANNEL) {
+        return false;
+    }
+    GetUbSize();
+    auto it = SplitWInfo::gDataTypeSizeTab.find(opInfo.weightDtype);
+    if (it == SplitWInfo::gDataTypeSizeTab.end()) {
+        return false;
+    }
+    uint32_t weightDSize = it->second;
+    uint32_t k0 = SplitWInfo::BLK_LEN / weightDSize;
+    uint32_t n0 = SplitWInfo::BLK_N;
+
+    uint64_t loadk = orgKh * orgKw * SMALL_CHANNEL;
+    uint64_t fullLoadK = ((loadk + k0 - 1) / k0) * k0;
+
+    uint64_t nMaxStep = ((g_ubSize - VGATHER_REGISTER_SIZE) / fullLoadK / C04_VEC_USE_BUFF_NUM / weightDSize / n0) * n0;
+
+    return nMaxStep != 0;
+}
+
 void GetL1Size()
 {
     if (g_l1Size != 0) {
@@ -419,11 +441,16 @@ bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIn
     int64_t dilationW = (*dilation)[1];
     int64_t padLeft = (*padding)[SplitWInfo::LEFT_INDEX_ATTR];
     int64_t padRight = (*padding)[SplitWInfo::RIGHT_INDEX_ATTR];
-    int64_t m0 = SplitWInfo::BLK_M;
-    int64_t n0 = SplitWInfo::BLK_N;
-    uint32_t weightDtypeSize = SplitWInfo::gDataTypeSizeTab[weight->GetDataType()];
-    uint32_t inputDtypeSize = SplitWInfo::gDataTypeSizeTab[input->GetDataType()];
-    int64_t k0 = SplitWInfo::BLK_LEN / weightDtypeSize;
+    uint64_t m0 = SplitWInfo::BLK_M;
+    uint64_t n0 = SplitWInfo::BLK_N;
+    auto weightDtypeIt = SplitWInfo::gDataTypeSizeTab.find(weight->GetDataType());
+    auto inputDtypeIt = SplitWInfo::gDataTypeSizeTab.find(input->GetDataType());
+    if (weightDtypeIt == SplitWInfo::gDataTypeSizeTab.end() || inputDtypeIt == SplitWInfo::gDataTypeSizeTab.end()) {
+        return true;
+    }
+    uint32_t weightDtypeSize = weightDtypeIt->second;
+    uint32_t inputDtypeSize = inputDtypeIt->second;
+    uint64_t k0 = SplitWInfo::BLK_LEN / weightDtypeIt->second;
     uint64_t nBL1min = n0;
 
     if (orgKh * orgKw * k0 > SplitWInfo::POSK_LIMIT) {
@@ -432,14 +459,18 @@ bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIn
 
     uint64_t biasL1Size = 0;
     if (bias != nullptr) {
-        biasL1Size = ConvAlignB(nBL1min * SplitWInfo::gDataTypeSizeTab[bias->GetDataType()], SplitWInfo::BLK_LEN);
+        auto biasDtypeIt = SplitWInfo::gDataTypeSizeTab.find(bias->GetDataType());
+        if (biasDtypeIt == SplitWInfo::gDataTypeSizeTab.end()) {
+            return true;
+        }
+        biasL1Size = ConvAlignB(nBL1min * biasDtypeIt->second, SplitWInfo::BLK_LEN);
     }
 
     uint64_t kBL1min = k0 * orgKh * orgKw;
     uint64_t weightL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, SplitWInfo::BLK_LEN);
     uint64_t inputL1Size = 0;
     uint64_t orgWo = (win + padLeft + padRight - (dilationW * (orgKw - 1) + 1)) / strideW + 1;
-    uint64_t hoAL1min = orgWo < static_cast<uint64_t>(m0) ? (m0 + orgWo - 1) / orgWo : 1;
+    uint64_t hoAL1min = orgWo < m0 ? (m0 + orgWo - 1) / orgWo : 1;
     uint64_t khDilated = (orgKh - 1) * dilationH + 1;
     uint64_t hiAL1min = Conv2DInferHiL1(hoAL1min, khDilated, hin, strideH);
     uint64_t kAL1min = k0;
