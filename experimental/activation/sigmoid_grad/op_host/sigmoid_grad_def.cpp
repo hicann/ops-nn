@@ -71,6 +71,7 @@ public:
 
         // 支持的芯片版本
         this->AICore().AddConfig("ascend910b", aicoreConfig);
+        this->AICore().AddConfig("ascend910_93", aicoreConfig);
     }
 };
 

@@ -44,6 +44,7 @@ public:
         this->Attr("beta").AttrType(OPTIONAL).Float(1.0f);
         this->Attr("threshold").AttrType(OPTIONAL).Float(20.0f);
         this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
     }
 };
 

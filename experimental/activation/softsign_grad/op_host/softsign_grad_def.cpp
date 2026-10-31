@@ -64,6 +64,7 @@ public:
             .ExtendCfgInfo("opFile.value", "softsign_grad_apt");
         this->AICore().AddConfig("ascend950", aicoreConf);
         this->AICore().AddConfig("ascend910b", aicoreConf);
+        this->AICore().AddConfig("ascend910_93", aicoreConf);
     }
 };
 OP_ADD(SoftsignGrad);

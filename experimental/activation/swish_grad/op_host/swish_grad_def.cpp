@@ -64,8 +64,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "swish_grad");     // 这里制定的值会对应到kernel入口文件名.cpp
-        this->AICore().AddConfig("ascend910b", aicoreConfig); // 其他的soc版本补充部分配置项
+            .ExtendCfgInfo("opFile.value", "swish_grad"); // 这里制定的值会对应到kernel入口文件名.cpp
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
+        this->AICore().AddConfig("ascend910_93", aicoreConfig); // 其他的soc版本补充部分配置项
     }
 };
 OP_ADD(SwishGrad); // 添加算子信息库

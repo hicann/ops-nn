@@ -54,6 +54,7 @@ public:
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "selu");
         this->AICore().AddConfig("ascend910b", aicoreConfig910B);
+        this->AICore().AddConfig("ascend910_93", aicoreConfig910B);
     }
 };
 OP_ADD(Selu);
