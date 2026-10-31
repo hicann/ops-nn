@@ -29,6 +29,7 @@ public:
         this->Attr("log_target").AttrType(OPTIONAL).Bool(false);
 
         this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
     }
 };
 OP_ADD(KlDivLossGrad);

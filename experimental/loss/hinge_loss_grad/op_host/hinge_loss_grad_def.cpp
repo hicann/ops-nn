@@ -29,8 +29,7 @@ namespace ops {
  *
  * 该类定义了HingeLoss梯度算子的接口，包括输入输出规格、支持的数据类型、格式以及AI Core编译配置。
  */
-class HingeLossGrad : public OpDef
-{
+class HingeLossGrad : public OpDef {
 public:
     explicit HingeLossGrad(const char* name) : OpDef(name)
     {

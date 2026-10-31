@@ -120,7 +120,7 @@ static ge::graphStatus ParseAttrs(gert::TilingContext* context, Reduction& reduc
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     // 获取工作空间大小数组
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
