@@ -91,10 +91,12 @@ int RunCase(aclrtStream stream)
     void* gradDevice = nullptr;
     void* xDevice = nullptr;
     void* outDevice = nullptr;
-    void* workspaceAddr = nullptr;
     aclTensor* gradTensor = nullptr;
     aclTensor* xTensor = nullptr;
     aclTensor* outTensor = nullptr;
+    void* workspaceAddr = nullptr;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
 
     ret = CreateAclTensor(gradHost, shape, &gradDevice, ACL_FLOAT, &gradTensor);
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
@@ -102,8 +104,6 @@ int RunCase(aclrtStream stream)
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outHost, shape, &outDevice, ACL_FLOAT, &outTensor);
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
     ret = aclnnMishBackwardGetWorkspaceSize(gradTensor, xTensor, outTensor, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("GetWorkspaceSize failed: %d\n", ret); goto cleanup);
 

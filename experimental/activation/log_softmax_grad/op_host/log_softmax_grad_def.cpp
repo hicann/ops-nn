@@ -40,6 +40,7 @@ public:
         this->Attr("axis").AttrType(OPTIONAL).ListInt({-1});
 
         this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
     }
 };
 
