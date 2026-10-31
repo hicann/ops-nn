@@ -38,6 +38,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "hard_sigmoid_v2");
         this->AICore().AddConfig("ascend910b", aicoreConfig);
+        this->AICore().AddConfig("ascend910_93", aicoreConfig);
     }
 };
 
