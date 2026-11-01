@@ -548,8 +548,4 @@ bool AABiasaddConvFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     return true;
 }
 
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-REG_FUSION_PASS(AABiasaddConvFusion).Stage(CustomPassStage::kCompatibleInherited);
-#endif
-
 } // namespace Ops
