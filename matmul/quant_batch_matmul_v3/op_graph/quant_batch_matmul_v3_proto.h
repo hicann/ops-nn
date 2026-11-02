@@ -259,6 +259,8 @@ float8_e8m0 | (batch, k, m) | (batch, n, k) | (batch, n, ceil(k / 64), 2)       
 
 *\n
 */
+#ifndef OPS_PROTO_DEF_QUANTBATCHMATMULV3
+#define OPS_PROTO_DEF_QUANTBATCHMATMULV3
 REG_OP(QuantBatchMatmulV3)
     .INPUT(x1, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .INPUT(x2, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
@@ -272,6 +274,7 @@ REG_OP(QuantBatchMatmulV3)
     .ATTR(transpose_x2, Bool, false)
     .ATTR(group_size, Int, 0)
     .OP_END_FACTORY_REG(QuantBatchMatmulV3)
+#endif
 } // namespace ge
 
 #endif // OPS_MATMUL_QUANT_BATCH_MATMUL_V3_PROTO_H_

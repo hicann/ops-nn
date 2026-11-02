@@ -17,7 +17,6 @@
 #include "common/op_host/matmul_common_infershape.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
-#include "runtime/infer_datatype_context.h"
 
 namespace {
 constexpr uint32_t X1_INDEX = 0;
@@ -58,6 +57,7 @@ static ge::graphStatus IsInputTensorNull(const gert::InferShapeContext* context)
 
 static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeContext* context)
 {
+    OP_LOGD(GetValidOpName(context), "InferShape4QuantBatchMatmulInplaceAdd enter.");
     OP_CHECK_IF(context == nullptr, OP_LOGE_WITH_INVALID_INPUT("nil", "context"), return ge::GRAPH_FAILED);
     const char* opName = GetValidOpName(context);
     OP_CHECK_IF(IsInputTensorNull(context) != ge::GRAPH_SUCCESS,
@@ -89,16 +89,8 @@ static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeCon
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4QuantBatchMatmulInplaceAdd(gert::InferDataTypeContext* context)
-{
-    OP_CHECK_IF(context == nullptr, OP_LOGE_WITH_INVALID_INPUT("nil", "context"), return ge::GRAPH_FAILED);
-    context->SetOutputDataType(0, ge::DT_FLOAT);
-    return ge::GRAPH_SUCCESS;
-}
 } // namespace
 
 namespace Ops::NN::MatMul {
-IMPL_OP_INFERSHAPE(QuantBatchMatmulInplaceAdd)
-    .InferShape(InferShape4QuantBatchMatmulInplaceAdd)
-    .InferDataType(InferDataType4QuantBatchMatmulInplaceAdd);
+IMPL_OP_INFERSHAPE(QuantBatchMatmulInplaceAdd).InferShape(InferShape4QuantBatchMatmulInplaceAdd);
 }

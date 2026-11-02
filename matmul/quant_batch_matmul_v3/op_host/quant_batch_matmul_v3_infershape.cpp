@@ -22,6 +22,7 @@ constexpr size_t QUANT_BATCH_MATMUL_V3_MAX_SHAPE_SIZE = 6;
 constexpr size_t QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE = 2;
 static ge::graphStatus InferShapeForQuantBatchMatmulV3(gert::InferShapeContext* context)
 {
+    OP_LOGD("QuantBatchMatmulV3", "InferShapeForQuantBatchMatmulV3 enter.");
     if (context == nullptr) {
         OP_LOGE("QuantBatchMatmulV3", "InferShapeContext is null.");
         return ge::GRAPH_FAILED;
