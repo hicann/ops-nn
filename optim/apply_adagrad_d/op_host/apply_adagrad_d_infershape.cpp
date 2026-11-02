@@ -41,6 +41,22 @@ static ge::graphStatus InferShape4ApplyAdagradD(gert::InferShapeContext* context
     return CopyShapeInputToOutputWithIdx(context, input_accum_idx, output_accum_idx);
 }
 
-IMPL_OP_INFERSHAPE(ApplyAdagradD).InferShape(InferShape4ApplyAdagradD);
+static ge::graphStatus InferDataType4ApplyAdagradD(gert::InferDataTypeContext* context)
+{
+    constexpr size_t input_var_idx = 0;
+    constexpr size_t input_num = 4;
+    constexpr size_t output_var_idx = 0;
+    constexpr size_t output_accum_idx = 1;
+    const ge::DataType varDtype = context->GetInputDataType(input_var_idx);
+    for (size_t inputIdx = input_var_idx + 1; inputIdx < input_num; ++inputIdx) {
+        OP_CHECK_IF(context->GetInputDataType(inputIdx) != varDtype,
+                    OP_LOGE(context->GetNodeName(), "All input dtypes must be the same."), return ge::GRAPH_FAILED);
+    }
+    context->SetOutputDataType(output_var_idx, varDtype);
+    context->SetOutputDataType(output_accum_idx, varDtype);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(ApplyAdagradD).InferShape(InferShape4ApplyAdagradD).InferDataType(InferDataType4ApplyAdagradD);
 
 } // namespace ops

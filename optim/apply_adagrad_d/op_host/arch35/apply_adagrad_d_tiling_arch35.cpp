@@ -97,7 +97,7 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype()
     }
 
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
-        auto outputDesc = tilingContext_->GetInputDesc(outputIdx);
+        auto outputDesc = tilingContext_->GetOutputDesc(outputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();
@@ -216,6 +216,13 @@ ge::graphStatus ApplyAdagradDTiling::RunTiling()
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext_->GetNodeName(), "Shape check failed."),
                 return ge::GRAPH_FAILED);
+
+    // FR-001 fix: early return for empty tensors (no kernel launch needed)
+    auto varStorageShape = tilingContext_->GetInputShape(VAR_INDEX);
+    const gert::Shape& varShape = EnsureNotScalar(varStorageShape->GetStorageShape());
+    if (varShape.GetShapeSize() == 0) {
+        return ge::GRAPH_SUCCESS;
+    }
 
     auto attrs = tilingContext_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, attrs);

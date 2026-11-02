@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <array>
 #include <iostream>
 #include <gtest/gtest.h>
 #include <vector>
@@ -54,4 +55,73 @@ TEST_F(ApplyAdagradDTest, scewlg_infer_shape_fp16)
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     gert::Shape expected_output_shape = {64};
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+static void RunInferDataTypeCase(ge::DataType dtype)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradD")->infer_datatype;
+    ASSERT_NE(inferDataTypeFunc, nullptr);
+
+    ge::DataType inputDtype = dtype;
+    ge::DataType outputVarDtype = ge::DT_UNDEFINED;
+    ge::DataType outputAccumDtype = ge::DT_UNDEFINED;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputDataTypes({&inputDtype, &inputDtype, &inputDtype, &inputDtype})
+                      .OutputDataTypes({&outputVarDtype, &outputAccumDtype})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(inferDataTypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), dtype);
+    EXPECT_EQ(context->GetOutputDataType(1), dtype);
+}
+
+static void RunInferDataTypeMismatchCase(size_t mismatchInputIdx)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradD")->infer_datatype;
+    ASSERT_NE(inferDataTypeFunc, nullptr);
+
+    std::array<ge::DataType, 4> inputDtypes = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    inputDtypes[mismatchInputIdx] = ge::DT_FLOAT16;
+    ge::DataType outputVarDtype = ge::DT_UNDEFINED;
+    ge::DataType outputAccumDtype = ge::DT_UNDEFINED;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .NodeInputTd(0, inputDtypes[0], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, inputDtypes[1], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, inputDtypes[2], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, inputDtypes[3], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputDataTypes({&inputDtypes[0], &inputDtypes[1], &inputDtypes[2], &inputDtypes[3]})
+                      .OutputDataTypes({&outputVarDtype, &outputAccumDtype})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(inferDataTypeFunc(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyAdagradDTest, apply_adagrad_d_infer_datatype_follow_var)
+{
+    RunInferDataTypeCase(ge::DT_FLOAT);
+    RunInferDataTypeCase(ge::DT_FLOAT16);
+    RunInferDataTypeCase(ge::DT_BF16);
+}
+
+TEST_F(ApplyAdagradDTest, apply_adagrad_d_infer_datatype_rejects_mismatched_inputs)
+{
+    RunInferDataTypeMismatchCase(1);
+    RunInferDataTypeMismatchCase(2);
+    RunInferDataTypeMismatchCase(3);
 }

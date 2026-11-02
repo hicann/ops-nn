@@ -76,4 +76,4 @@ struct ApplyAdagradD {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 } // namespace ApplyAdagradDOp
-#endif // CANN_CUSTOM_OPS_SQRT_GRAD_DAG_H
+#endif // CANN_CUSTOM_OPS_APPLY_ADAGRAD_D_DAG_H
