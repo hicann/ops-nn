@@ -69,16 +69,7 @@ bash build/custom_opp_ubuntu_aarch64.run --quiet
 
 ## 测试
 
-```bash
-# UT 测试
-bash tests/ut/run.sh
-
-# ST 测试（真实 NPU）
-bash tests/st/run.sh --real
-
-# ST 测试（Mock 模式，无需 NPU）
-bash tests/st/run.sh --mock
-```
+本算子当前暂未提供 UT/ST 用例（`tests/` 目录暂为占位），测试用例将随算子转正一并提供；仓库级测试框架与用例规范参见 [CONTRIBUTING](https://gitcode.com/cann/ops-nn/blob/master/CONTRIBUTING.md)。
 
 ## 精度标准
 
