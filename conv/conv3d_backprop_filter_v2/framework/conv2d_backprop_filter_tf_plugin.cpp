@@ -44,7 +44,16 @@ static Status ParseParamsConv2DBackpropFilter(const ge::Operator& op_src, ge::Op
     OP_LOGD(op_name.GetString(), "update filter format succeeded, now is [%s]",
             ge::TypeUtils::FormatToAscendString(op.GetInputDesc(CV_NUM_0).GetFormat()).GetString());
     // Escape GE require attr [pads] check here
+
+    std::string padding;
     std::vector<int32_t> pad_list = {0, 0, 0, 0};
+    ret = op.GetAttr("padding", padding);
+    if (ret != ge::GRAPH_SUCCESS) {
+        OP_LOGW(op_name.GetString(), "failed to GetAttr(\"padding\") from operator.");
+    } else if (padding == "SAME") {
+        // Use -1 as a SAME placeholder so that tiling recalculates pads via ReCalPaddings after the 2D-to-3D expansion
+        pad_list = std::vector<int32_t>{-1, -1, -1, -1};
+    }
     op.SetAttr("pads", pad_list);
 
     return SUCCESS;

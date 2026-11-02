@@ -62,7 +62,16 @@ static Status ParseParamsConv3DBackpropFilter(const ge::Operator& op_src, ge::Op
     org_tensor_w.SetFormat(ge::FORMAT_DHWCN);
     ret = op.UpdateOutputDesc(kInputIdx0, org_tensor_w);
     OP_LOGE_IF(ret != ge::GRAPH_SUCCESS, FAILED, op_name.GetString(), "failed to update output dw format.");
+
+    std::string padding;
     std::vector<int32_t> pad_list = {0, 0, 0, 0, 0, 0};
+    ret = op.GetAttr("padding", padding);
+    if (ret != ge::GRAPH_SUCCESS) {
+        OP_LOGW(op_name.GetString(), "failed to GetAttr(\"padding\") from operator.");
+    } else if (padding == "SAME") {
+        // Use -1 as a SAME placeholder so that tiling recalculates pads via ReCalPaddings
+        pad_list = std::vector<int32_t>{0, 0, -1, -1, -1, -1};
+    }
     op.SetAttr("pads", pad_list);
 
     OP_LOGD(op_name.GetString(), "update output dw format succeeded.");

@@ -15,6 +15,7 @@
 
 #include <log/log.h>
 #include <cstdint>
+#include <cstring>
 #include <util/math_util.h>
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
@@ -46,6 +47,8 @@ constexpr size_t ENABLE_HF32_INDEX = 5;
 constexpr size_t OUTPUT_PADDING_INDEX = 6;
 constexpr size_t PADDING_INDEX = 7;
 constexpr size_t FROM_DEPTHWISE_INDEX = 9;
+constexpr char PADDING_SAME[] = "SAME";
+constexpr size_t PADDING_SAME_LEN = sizeof(PADDING_SAME) - 1;
 
 constexpr size_t DEFAULT_C0 = 16;
 constexpr size_t DEFAULT_FP32_C0 = 8;
@@ -750,14 +753,36 @@ bool SetOutputDesc(const gert::TilingContext* context, Conv3dBpFilterV2RunInfo& 
     return SetGroupsAttrs(context, runInfoV2, filter_shape_ci);
 }
 
+static bool IsSamePadding(const char* padding)
+{
+    return padding != nullptr && std::strncmp(padding, PADDING_SAME, PADDING_SAME_LEN + 1) == 0;
+}
+
+// RuntimeAttrs has no get-by-name API and attr array order may differ from declaration, so scan all slots for the
+// "SAME" value when the fixed idx misses
+static const char* GetPaddingAttr(const gert::RuntimeAttrs* attrs, size_t paddingAttrIdx)
+{
+    const char* padding = attrs->GetAttrPointer<char>(paddingAttrIdx);
+    if (IsSamePadding(padding)) {
+        return padding;
+    }
+    for (size_t i = 0; i < attrs->GetAttrNum(); ++i) {
+        const char* candidate = attrs->GetAttrPointer<char>(i);
+        if (IsSamePadding(candidate)) {
+            return candidate;
+        }
+    }
+    return nullptr;
+}
+
 void ReCalPaddings(Conv3dBpFilterV2RunInfo& runInfoV2, const char* padding)
 {
     int32_t kernel_d_dilation = (runInfoV2.kd - 1) * runInfoV2.dilation_d + 1;
     int32_t kernel_h_dilation = (runInfoV2.kh - 1) * runInfoV2.dilation_h + 1;
     int32_t kernel_w_dilation = (runInfoV2.kw - 1) * runInfoV2.dilation_w + 1;
     // if pads is invalid and padding is SAME, calc pads ,considerate 2d to 3d ,exclude p_f and p_b
-    if (padding != nullptr && padding[0] == 'S' && runInfoV2.pad_u == -1 && runInfoV2.pad_d == -1 &&
-        runInfoV2.pad_l == -1 && runInfoV2.pad_r == -1) {
+    if (IsSamePadding(padding) && runInfoV2.pad_u == -1 && runInfoV2.pad_d == -1 && runInfoV2.pad_l == -1 &&
+        runInfoV2.pad_r == -1) {
         int64_t tails_d = runInfoV2.di % runInfoV2.stride_d;
         int64_t tails_h = runInfoV2.hi % runInfoV2.stride_h;
         int64_t tails_w = runInfoV2.wi % runInfoV2.stride_w;
@@ -837,6 +862,17 @@ static void SetPadsData(Conv3dBpFilterV2RunInfo& runInfoV2, const int64_t* pads_
     runInfoV2.pad_r = pads_data[pad_idx++];
 }
 
+static bool CheckSamePadsReCaled(const char* op_name, const Conv3dBpFilterV2RunInfo& runInfoV2)
+{
+    OP_CHECK_IF(runInfoV2.pad_u == -1 && runInfoV2.pad_d == -1 && runInfoV2.pad_l == -1 && runInfoV2.pad_r == -1,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    op_name, "pad(u/d/l/r)",
+                    FormatString("(%d/%d/%d/%d)", runInfoV2.pad_u, runInfoV2.pad_d, runInfoV2.pad_l, runInfoV2.pad_r),
+                    FormatString("In Same mode, the values of pad(u/d/l/r) must be recalculated.")),
+                return false);
+    return true;
+}
+
 static bool CheckPadsRange(const char* op_name, const Conv3dBpFilterV2RunInfo& runInfoV2)
 {
     OP_CHECK_IF(!CheckRange(runInfoV2.pad_f, PAD_LOWWER, SHAPE_UPPER),
@@ -898,8 +934,12 @@ bool SetConvBackpropFilterAttrs(const gert::TilingContext* context, Conv3dBpFilt
         PAD_UPPER = INT32_MAX - 1;
     }
 
-    const char* padding = attrs->GetAttrPointer<char>(PADDING_INDEX);
+    const char* padding = GetPaddingAttr(attrs, PADDING_INDEX);
     ReCalPaddings(runInfoV2, padding);
+    if (!CheckSamePadsReCaled(op_name, runInfoV2)) {
+        return false;
+    }
+
     if (!CheckPadsRange(op_name, runInfoV2)) {
         return false;
     }

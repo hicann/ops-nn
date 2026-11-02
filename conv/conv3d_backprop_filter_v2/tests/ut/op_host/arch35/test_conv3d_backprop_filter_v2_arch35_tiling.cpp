@@ -1395,5 +1395,41 @@ TEST_F(Conv3DBackpropFilterV2TilingRunTime3, cases_params_950_thread)
     TestMultiThread(cases_params_950, sizeof(cases_params_950) / sizeof(Conv3DBpFilterV2TilingTestParam), 1);
 }
 
+TEST_F(Conv3DBackpropFilterV2TilingRunTime3, tf_padding_same_recal_when_pads_negative)
+{
+    Conv3DBpFilterV2TilingTestParam tfSameParam = {
+        "tf_padding_same_recal_when_pads_negative",
+        "3510",
+        "3510",
+        COMPILE_INFO_STR_950,
+        {1, 256, 1, 16, 16},
+        {1, 256, 1, 16, 16},
+        {256, 256, 1, 3, 3},
+        {256, 256, 1, 3, 3},
+        {1, 256, 1, 16, 16},
+        {1, 256, 1, 16, 16},
+        ge::FORMAT_NCDHW,
+        ge::FORMAT_NCDHW,
+        ge::FORMAT_NCDHW,
+        ge::FORMAT_NCDHW,
+        ge::FORMAT_NCDHW,
+        ge::FORMAT_NCDHW,
+        ge::DT_FLOAT,
+        {1, 1, 1, 1, 1},
+        {0, 0, -1, -1, -1, -1},
+        {1, 1, 1, 1, 1},
+        1,
+        "NCDHW",
+        "SAME",
+        0,
+        true,
+        true,
+        32,
+        1024,
+        "1 256 256 256 256 1 16 16 1 16 16 1 3 3 1 1 1 1 1 0 0 1 1 1 1 1 1 1 8 2 2 1 1 1 128 128 128 16 8 16 1 1 0 "
+        "48 65536 0 1 1 128 8 512 1 32 128 128 128 1 0 16 0 1 0 "};
+    TestOneParamCase(tfSameParam);
+}
+
 INSTANTIATE_TEST_CASE_P(CONV3DDW950, Conv3DBackpropFilterV2TilingRunTime3, testing::ValuesIn(cases_params_950));
 } // namespace
