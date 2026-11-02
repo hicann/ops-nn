@@ -10,10 +10,12 @@
 
 #include <float.h>
 #include <climits>
+#include <vector>
 
 #include "aclnn_binary_cross_entropy_backward.h"
 #include "binary_cross_entropy_backward.h"
 #include "level0/ones_like.h"
+#include "level0/broadcast_to.h"
 
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transdata.h"
@@ -27,6 +29,8 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 #include "op_api/level2_base_nn.h"
 
 using namespace op;
@@ -165,6 +169,33 @@ static bool CheckReduction(int64_t reduction)
     return true;
 }
 
+// RegBase（DAV_3510/5102/9201/9202/5162，含 Ascend950/350/960 等）走仓内 AscendC
+// BroadcastSch，kernel 已支持 target/weight 广播，aclnn 无需再 expand。
+// 非 RegBase（如 Atlas A2/A3 的 DAV_2201 等）走 ops_legacy TBE：仅 grad_output 参与
+// ELEWISE_WITH_BROADCAST，target/weight 按 self 同形读 GM，需在 aclnn 侧 expand。
+static aclIntArray* GetShape(const op::Shape& broadcastShape, aclOpExecutor* executor)
+{
+    int64_t tensorSize = static_cast<int64_t>(broadcastShape.GetDimNum());
+    std::vector<int64_t> tensorShape(static_cast<size_t>(tensorSize));
+    for (int64_t i = 0; i < tensorSize; ++i) {
+        tensorShape[static_cast<size_t>(i)] = broadcastShape[i];
+    }
+    return executor->AllocIntArray(tensorShape.data(), tensorSize);
+}
+
+static const aclTensor* BroadcastTensor(const aclTensor* tensor, const op::Shape& broadcastShape,
+                                        aclOpExecutor* executor)
+{
+    if (tensor->GetViewShape() == broadcastShape) {
+        return tensor;
+    }
+    auto broadcastShapeIntArray = GetShape(broadcastShape, executor);
+    if (broadcastShapeIntArray == nullptr) {
+        return nullptr;
+    }
+    return l0op::BroadcastTo(tensor, broadcastShapeIntArray, executor);
+}
+
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
                                const aclTensor* weightOptional, int64_t reduction, aclTensor* out)
 {
@@ -249,9 +280,20 @@ aclnnStatus aclnnBinaryCrossEntropyBackwardGetWorkspaceSize(const aclTensor* gra
     auto weightCasted = l0op::Cast(weightTensor, promoteType, uniqueExecutor.get());
     CHECK_RET(weightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    const aclTensor* targetForKernel = targetCasted;
+    const aclTensor* weightForKernel = weightCasted;
+    // 仅非 RegBase 的 legacy 路径需要把 target/weight expand 到 self
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        const op::Shape& selfShape = selfCasted->GetViewShape();
+        targetForKernel = BroadcastTensor(targetCasted, selfShape, uniqueExecutor.get());
+        CHECK_RET(targetForKernel != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        weightForKernel = BroadcastTensor(weightCasted, selfShape, uniqueExecutor.get());
+        CHECK_RET(weightForKernel != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
     // 调用l0算子BinaryCrossEntropyOut进行计算
     static const std::string reductionStr[] = {"none", "mean", "sum"};
-    auto bceGrad = l0op::BinaryCrossEntropyGrad(gradOutputCasted, selfCasted, targetCasted, weightCasted,
+    auto bceGrad = l0op::BinaryCrossEntropyGrad(gradOutputCasted, selfCasted, targetForKernel, weightForKernel,
                                                 reductionStr[reduction], uniqueExecutor.get());
     CHECK_RET(bceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
