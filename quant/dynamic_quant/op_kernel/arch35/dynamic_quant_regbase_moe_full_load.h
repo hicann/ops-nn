@@ -401,7 +401,7 @@ private:
                 if constexpr (isSymmetrical == true) {
                     AscendC::Reg::Div(vreg16, vreg3, vreg10, preg2);
                 } else if constexpr (isSymmetrical == false) {
-                    AscendC::Reg::Div(vregXDivScale, vreg3, vreg10, preg2);
+                    AscendC::Reg::Div<float, &mode>(vregXDivScale, vreg3, vreg10, preg2);
                     AscendC::Reg::Add(vreg16, vregXDivScale, vregDupOffset, preg2);
                 }
                 if constexpr (IsSameType<yDtype, int8_t>::value) {

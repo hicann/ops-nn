@@ -629,7 +629,7 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                     Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                     Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                 }
-                Reg::Div<float>(vregDiv_1, vregInFp32, vregScale, preg0);   // input/scaleOut
+                Reg::Div<float, &divHighPrecisionMode>(vregDiv_1, vregInFp32, vregScale, preg0); // input/scaleOut
                 Reg::Add<float>(vregOutFp32, vregDiv_1, vregOffset, preg0); // input/scaleOut + offset
                 CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                 if constexpr (IsSameType<yDtype, int4b_t>::value) {

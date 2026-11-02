@@ -404,7 +404,7 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                         Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
-                    Reg::Div<float>(vregDiv, vregInFp32, vregOutScale, preg0);
+                    Reg::Div<float, &divHighPrecisionMode>(vregDiv, vregInFp32, vregOutScale, preg0);
                     Reg::Add<float>(vregOutFp32, vregDiv, vregOffset, preg0);
 
                     CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
