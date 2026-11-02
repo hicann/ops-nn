@@ -130,13 +130,29 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, const acl
     return true;
 }
 
+// reduction 取值约定与 GetReductionStr 一致: 0=none, 1=mean, 2=sum
+static constexpr int64_t REDUCTION_NONE_VAL = 0;
+static constexpr int64_t REDUCTION_MEAN_VAL = 1;
+static constexpr int64_t REDUCTION_SUM_VAL = 2;
+
+static bool CheckReductionValid(int64_t reduction)
+{
+    OP_CHECK(reduction == REDUCTION_NONE_VAL || reduction == REDUCTION_MEAN_VAL || reduction == REDUCTION_SUM_VAL,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "reduction must be 0(none), 1(mean) or 2(sum), but got: %ld.", reduction),
+             return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, int64_t reduction, const aclTensor* out,
                                const aclTensor* isTarget)
 {
     // 1. 检查参数是否为空指针
     CHECK_COND(CheckNotNull(self, target, out, isTarget), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
 
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    // 2. 检查 reduction 取值合法: 仅支持 0(none), 1(mean), 2(sum)
+    CHECK_COND(CheckReductionValid(reduction), ACLNN_ERR_PARAM_INVALID, "CheckReductionValid failed!");
+
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_COND(CheckDtypeValid(self, target, out, isTarget), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
 
     // 4. 检查输出输出shape
@@ -144,10 +160,6 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
 
     return ACLNN_SUCCESS;
 }
-
-// reduction 取值约定与 GetReductionStr 一致: 0=none, 1=mean, 2=sum
-static constexpr int64_t REDUCTION_NONE_VAL = 0;
-static constexpr int64_t REDUCTION_MEAN_VAL = 1;
 
 static const std::string& GetReductionStr(int64_t reduction)
 {

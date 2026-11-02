@@ -129,7 +129,7 @@ TEST_F(l2_kl_div_backward_test, case_fp_reduction_exceed)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
     // SAMPLE: precision simulate
     // ut.TestPrecision();

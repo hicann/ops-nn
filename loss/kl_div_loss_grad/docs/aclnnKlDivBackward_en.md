@@ -183,8 +183,8 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">gradOutput, self, target, and out are null pointers.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
       <td class="tg-0pky">The data types of gradOutput, self, target, and out are not within the supported range.</td>
     </tr>
     <tr>
@@ -201,6 +201,9 @@ aclnnStatus aclnnKlDivBackward(
     </tr>
     <tr>
       <td class="tg-0lax">The dimension of gradOutput, self, target, or out is greater than 8.</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">The value of reduction is not within the range of 0-3.</td>
     </tr>
   </tbody>
   </table>

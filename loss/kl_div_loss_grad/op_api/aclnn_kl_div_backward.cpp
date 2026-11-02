@@ -101,13 +101,26 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     return true;
 }
 
+// reduction 取值与 Reduction 枚举一致: 0=none, 1=mean, 2=sum, 3=batchmean
+static bool CheckReductionValid(int64_t reduction)
+{
+    OP_CHECK(reduction == None || reduction == Mean || reduction == Sum || reduction == Batchmean,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "reduction must be 0(none), 1(mean), 2(sum) or 3(batchmean), but got: %ld.", reduction),
+             return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                               aclTensor* out)
+                               int64_t reduction, aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    // 2. 检查reduction取值是否合法
+    CHECK_RET(CheckReductionValid(reduction), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(gradOutput, self, target, out), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输出输出shape
@@ -182,7 +195,7 @@ aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(const aclTensor* gradOutput, cons
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(gradOutput, self, target, out);
+    auto ret = CheckParams(gradOutput, self, target, reduction, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (self->IsEmpty()) {

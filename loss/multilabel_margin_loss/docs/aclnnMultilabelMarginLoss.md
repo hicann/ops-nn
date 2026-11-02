@@ -202,8 +202,8 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">传入的self、target、out、isTarget为空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
       <td class="tg-0pky">self的数据类型不在支持的范围之内（仅支持FLOAT/FLOAT16/BFLOAT16）。</td>
     </tr>
     <tr>
@@ -217,6 +217,9 @@ aclnnStatus aclnnMultilabelMarginLoss(
     </tr>
     <tr>
       <td class="tg-0pky">out的shape不满足参数说明中的要求。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction值不在0~2范围之内。</td>
     </tr>
   </tbody>
   </table>

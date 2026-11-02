@@ -204,8 +204,8 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">The input self, target, out, and isTarget are null pointers.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
       <td class="tg-0pky">The data type of self is not in the supported range (only FLOAT/FLOAT16/BFLOAT16 is supported).</td>
     </tr>
     <tr>
@@ -219,6 +219,9 @@ aclnnStatus aclnnMultilabelMarginLoss(
     </tr>
     <tr>
       <td class="tg-0pky">The shape of out does not meet the requirements in Parameters.</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">The value of reduction is not within the range of 0-2.</td>
     </tr>
   </tbody>
   </table>

@@ -130,7 +130,7 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失。</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">与self保持一致</td>
+      <td class="tg-0pky">数据类型要为self可推导的数据类型，推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
       <td class="tg-0pky">√</td>
@@ -181,12 +181,12 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">传入的gradOutput、self、target和out是空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
       <td class="tg-0pky">gradOutput、self、target和out的数据类型不在支持的范围内时。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、out的数据类型不一致。</td>
+      <td class="tg-0pky">self不可cast到out的数据类型。</td>
     </tr>
     <tr>
       <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
@@ -199,6 +199,9 @@ aclnnStatus aclnnKlDivBackward(
     </tr>
     <tr>
       <td class="tg-0lax">gradOutput、self、target或者out维度大于8。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">reduction值不在0~3范围之内。</td>
     </tr>
   </tbody>
   </table>
