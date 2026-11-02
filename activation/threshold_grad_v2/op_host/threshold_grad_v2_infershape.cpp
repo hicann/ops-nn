@@ -17,44 +17,24 @@
 
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
-#include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
+#include "op_common/op_host/infershape_broadcast_util.h"
 #include "op_common/log/log.h"
 
 using namespace ge;
 
 namespace ops {
 
-static constexpr uint32_t INPUT_NUM = 3;
+static constexpr size_t INPUT_NUM = 3;
 static constexpr uint32_t OUTPUT_IDX = 0;
 
-// numpy 广播：取最大 rank，对齐到右，逐维取 max（1 维可广播）
 static ge::graphStatus InferShape4ThresholdGradV2(gert::InferShapeContext* context)
 {
-    gert::Shape* out = context->GetOutputShape(OUTPUT_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out);
-
-    size_t rank = 0;
-    const gert::Shape* inShapes[INPUT_NUM] = {nullptr};
-    for (uint32_t i = 0; i < INPUT_NUM; ++i) {
-        inShapes[i] = context->GetInputShape(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, inShapes[i]);
-        size_t dimNum = inShapes[i]->GetDimNum();
-        rank = dimNum > rank ? dimNum : rank;
+    const ge::graphStatus ret = Ops::Base::InferShape4Broadcast(context, INPUT_NUM);
+    if (ret == ge::GRAPH_SUCCESS) {
+        OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s",
+                Ops::Base::ToString(*context->GetOutputShape(OUTPUT_IDX)).c_str());
     }
-
-    out->SetDimNum(rank);
-    for (size_t i = 0; i < rank; ++i) {
-        int64_t dim = 0;
-        for (uint32_t j = 0; j < INPUT_NUM; ++j) {
-            size_t dimNum = inShapes[j]->GetDimNum();
-            int64_t curDim = (i < rank - dimNum) ? 1 : inShapes[j]->GetDim(i - (rank - dimNum));
-            dim = curDim > dim ? curDim : dim;
-        }
-        out->SetDim(i, dim);
-    }
-    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*out).c_str());
-    return ge::GRAPH_SUCCESS;
+    return ret;
 }
 
 static ge::graphStatus InferDataType4ThresholdGradV2(gert::InferDataTypeContext* context)
