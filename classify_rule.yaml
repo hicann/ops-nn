@@ -369,6 +369,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
         - ops/ops-nn/conv/common/op_kernel/arch35/
+        - ops/ops-nn/conv/common/op_kernel/arch51/
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.cpp
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h
@@ -380,8 +381,11 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.h
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.cpp
+        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_51_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35/
+        - ops/ops-nn/conv/conv2d_v2/op_kernel/arch51/
+        - ops/ops-nn/conv/conv2d_v2/op_kernel/conv2d_v2_common_tilingdata.h
         - ops/ops-nn/conv/conv2d_v2/op_kernel/conv2d_v2.cpp
         - ops/ops-nn/conv/conv3d_v2/op_graph/
         - ops/ops-nn/conv/conv3d_v2/op_host/config/ascend950/
@@ -392,6 +396,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/extend_conv2d/op_host/config/ascend950/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
+        - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_51_tiling.cpp
         - ops/ops-nn/conv/extend_conv2d/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
         - ops/ops-nn/conv/quant_conv3d/op_graph/
@@ -405,6 +410,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/quant_conv2d/op_host/config/ascend950/
         - ops/ops-nn/conv/quant_conv2d/op_host/arch35/quant_conv2d_tiling.cpp
         - ops/ops-nn/conv/quant_conv2d/op_kernel/
+        - ops/ops-nn/conv/quant_conv2d/tests/ut/op_host/arch35/test_quant_conv2d_tiling.cpp
         - ops/ops-nn/conv/convolution_forward/op_host/op_api/
       opensource_style: null
       kernel_style: null
