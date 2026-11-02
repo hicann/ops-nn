@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -19,19 +19,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_add_rms_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_add_rms_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
+                                                         GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
 
 class test_fused_add_rms_norm : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "test_fused_add_rms_norm SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "test_fused_add_rms_norm TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "test_fused_add_rms_norm SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "test_fused_add_rms_norm TearDown\n" << endl; }
 };
 
 TEST_F(test_fused_add_rms_norm, test_case_10)
@@ -435,7 +429,6 @@ TEST_F(test_fused_add_rms_norm, test_case_21)
 //     tilingDatafromBin->row_tail = 2;
 //     tilingDatafromBin->last_block_row_tail = 2;
 
-
 //     ICPU_SET_TILING_KEY(4);
 //     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 //     ICPU_RUN_KF(fused_add_rms_norm, blockDim, x1, x2, gamma, y, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
@@ -830,7 +823,6 @@ TEST_F(test_fused_add_rms_norm, test_case_12)
 //     AscendC::GmFree(tiling);
 //     free(path_);
 // }
-
 
 TEST_F(test_fused_add_rms_norm, test_case_32)
 {
