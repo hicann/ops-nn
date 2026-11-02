@@ -116,7 +116,7 @@
     <tr>
       <td>step</td>
       <td>输入</td>
-      <td><ul><li>迭代次数，公式中的t。</li><li>取值范围是大于1的正整数。</li></ul></td>
+      <td><ul><li>单元素输入 Tensor，表示公式中的迭代次数 t。</li><li>取值范围是大于等于1的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
