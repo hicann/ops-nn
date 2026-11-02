@@ -38,8 +38,8 @@
 
 > 说明：如需切换源码分支版本，请参见如下指导。
 >
-> 1. 在源码目录执行`git branch`，查询当前源码版本。
-> 2. 在源码目录执行`git checkout ${tag_version}`，切换到目标分支源码，注意满足源码与CANN版本配套关系。若本地已克隆过该分支源码，执行git pull拉取最新源码。
+> 1. 在源码目录执行`git status --short --branch`，查询当前检出状态。检出版本标签时会处于分离头指针（detached HEAD）状态，这是正常现象；可执行`git describe --tags --exact-match`确认当前标签。
+> 2. 先执行`git fetch origin --tags`更新远端分支和标签信息，再执行`git checkout ${tag_version}`检出目标版本，注意满足源码与CANN版本配套关系。检出版本标签后不要执行`git pull`；如需更新开发分支，应先切换到相应分支，再执行`git pull --ff-only`。
 
 ### 2. 编译AddExample算子
 
