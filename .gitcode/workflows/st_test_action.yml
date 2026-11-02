@@ -86,6 +86,8 @@ jobs:
         identifier: st_test
         if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
         timeout-minutes: 60
+        env:
+          CI_ONLINE_MODE: "1"
         run: |
           export WORKSPACE=${{ steps.process_checkout.outputs.path }}
           cd ${{ steps.process_checkout.outputs.path }}

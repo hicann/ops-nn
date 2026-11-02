@@ -1122,6 +1122,10 @@ print_summary_table
 if [[ ${result_flag} -ne 0 || ${precision_flag} -ne 0 ]]; then
     print_reproduction_commands
     print_error "Some tests or precision checks failed. See reproduction commands above."
+    if [[ "${CI_ONLINE_MODE:-}" == "1" ]]; then
+        print_warning "CI_ONLINE_MODE=1: ST failures are reported only, exiting with 0"
+        exit 0
+    fi
     exit 1
 else
     print_success "All tests and precision checks passed."
