@@ -37,7 +37,7 @@
 struct __attribute__((aligned(8))) InplaceApplyAdagradDATilingData {
     int64_t totalElements;
     int64_t chunkSize;
-    uint8_t globalStepDtype;  // 0=int32, 1=int64
+    uint8_t globalStepDtype; // 0=int32, 1=int64
 };
 
 #endif // INPLACE_APPLY_ADAGRAD_DA_TILING_DATA_H

@@ -58,10 +58,10 @@ constexpr const char* OUTPUT_NAMES[OUTPUT_COUNT] = {"var", "gradient_accumulator
 
 // chunkSize constants (derived from UB budget, 256B aligned)
 // UB 布局：
-//   FP32: 3 VECIN + 3 VECOUT = 6 × chunkSize × 4B
-//   FP16: 3 VECIN(2B) + 3 VECOUT(2B) + 4 TBuf(4B) + 1 scratch(4B) = 32B/elem
-constexpr uint32_t CHUNK_SIZE_FP32 = 7680U; // 6 * 7680 * 4 = 184320 B (< 192KB)
-constexpr uint32_t CHUNK_SIZE_FP16 = 5632U; // (6*2 + 5*4) * 5632 = 180224 B (< 192KB)
+//   FP32: 3 VECIN + 3 VECOUT = 6 × chunkSize × 4B + 1 maskBuf × chunkSize × 1B
+//   FP16: 3 VECIN(2B) + 3 VECOUT(2B) + 4 TBuf(4B) + 1 scratch(4B) + 1 maskBuf(1B) = 33B/elem
+constexpr uint32_t CHUNK_SIZE_FP32 = 7680U; // (6*4 + 1) * 7680 = 192000 B (< 192KB)
+constexpr uint32_t CHUNK_SIZE_FP16 = 5632U; // (6*2 + 5*4 + 1) * 5632 = 185856 B (< 192KB)
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -128,6 +128,20 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context, int64_t
                 OP_LOGE(context, "InplaceApplyAdagradDA: var rank %zu exceeds maximum supported rank %zu",
                         rawVarShape.GetDimNum(), MAX_TENSOR_RANK),
                 return ge::GRAPH_FAILED);
+    // Unknown-dim gate: tiling always runs with bound shapes (README: dynamic shapes are validated by
+    // Tiling after binding). Any negative dim (-1 unknown dim, -2 unknown rank marker) means the shape
+    // was never bound -- reject fast instead of computing garbage tiling (negative totalElements would
+    // flow into CeilDiv/SetBlockDim unchecked). Only var needs checking: tensor inputs 1-3 are forced
+    // equal to var by the exact-match check below, scalar inputs are forced to [1]; dim == 0 (empty
+    // tensor) remains legal.
+    for (size_t d = 0; d < rawVarShape.GetDimNum(); ++d) {
+        OP_CHECK_IF(rawVarShape.GetDim(d) < 0,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: var dim %ld at axis %zu is unknown (negative); dynamic shapes "
+                            "must be bound before execution",
+                            static_cast<long>(rawVarShape.GetDim(d)), d),
+                    return ge::GRAPH_FAILED);
+    }
 
     // Validate formats before shape relations so a format exception case cannot be masked by a deliberately
     // non-scalar/rank-4 shape used to preserve that format through GEIR graph preparation.
@@ -262,14 +276,6 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 static ge::graphStatus InplaceApplyAdagradDATilingFunc(gert::TilingContext* context)
 {
     OP_LOGI(context->GetNodeName(), "Enter InplaceApplyAdagradDATilingFunc");
-    // The current kernel has no device-side mutex/atomic update primitive. Reject
-    // the locking mode instead of silently accepting an unenforced contract.
-    const auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const bool* useLocking = attrs->GetBool(0);
-    OP_CHECK_IF(useLocking != nullptr && *useLocking,
-                OP_LOGE(context, "InplaceApplyAdagradDA: use_locking=true is unsupported by this kernel"),
-                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,

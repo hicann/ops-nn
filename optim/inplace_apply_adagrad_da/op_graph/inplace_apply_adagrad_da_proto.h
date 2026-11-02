@@ -45,9 +45,8 @@ namespace ge {
 
 *@par Attributes:
 *use_locking: An optional bool. Defaults to "False".
-*     If "True", updating of the var and accum tensors will be
-*     protected by a lock; otherwise the behavior is undefined,
-*     but may exhibit less contention . \n
+*     Lock-protected update is not implemented: passing "True" is
+*     rejected with an error at the tiling stage . \n
 
 *@par Outputs:
 *var: A mutable Tensor. Has the same type as "var".

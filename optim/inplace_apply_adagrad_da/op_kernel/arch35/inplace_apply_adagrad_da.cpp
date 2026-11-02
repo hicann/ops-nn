@@ -40,6 +40,8 @@ static constexpr int32_t BUFFER_NUM = 1;
 static constexpr uint32_t SCALAR_UB_SIZE = 64;      // 标量读取 UB buffer 大小
 static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32; // FP32 标量 Cast buffer 大小
 static constexpr DivConfig FP16_DIV_CONFIG = {DivAlgo::DIFF_COMPENSATION};
+static constexpr DivConfig FP32_DIV_CONFIG = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+static constexpr SqrtConfig FP32_SQRT_CONFIG = {SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 static constexpr SqrtConfig FP16_SQRT_CONFIG = {SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 
 template <typename T>
@@ -87,6 +89,24 @@ public:
     }
 
 private:
+    // TF CPU(Eigen/AVX 线程) 以 DAZ+FTZ 语义执行: denormal 输入/中间量冲刷为保符号 ±0。
+    // 标量版: NaN 比较为 false 原样透传; x*0.0f 对 denormal/±0 产生保符号 ±0。
+    static __aicore__ inline float FtzScalar(float v)
+    {
+        return (v > -1.17549435e-38f && v < 1.17549435e-38f) ? (v * 0.0f) : v;
+    }
+
+    // 向量版 denormal 冲刷: |x| < FLT_MIN → 保符号 ±0; NaN(比较 false)/±Inf/normal 原样。
+    // tmp 为临时张量(先 |x| 后 x*0), 掩码复用 maskBuf_; vsel dst==src 别名安全(API 内部同用法)。
+    __aicore__ inline void FlushDenormals(LocalTensor<float>& io, LocalTensor<float>& tmp, uint32_t n)
+    {
+        LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
+        Abs(tmp, io, n);
+        CompareScalar(mask, tmp, 1.17549435e-38f, CMPMODE::LT, n);
+        Muls(tmp, io, 0.0f, n);
+        Select(io, mask, tmp, io, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+    }
+
     // CACHE-SAFE: Scalars are NOT in TilingData; read from GM at runtime.
     __aicore__ inline void ReadScalars()
     {
@@ -105,8 +125,12 @@ private:
         ReadGlobalStep(cpSc);
 
         // Compute derived scalar values
-        l1T_ = (l1Val_ <= 0.0f) ? 0.0f : (l1Val_ * globalStepVal_);
-        l2Tlr_ = l2Val_ * globalStepVal_ * lrVal_;
+        // 分支极性对齐 TF/golden 的 if (l1 > 0): NaN 比较为 false, 与 l1<=0 同走直通分支,
+        // l1T_ 在该分支下不被使用, 置 0 防止 NaN 经标量成员泄漏。
+        l1T_ = (l1Val_ > 0.0f) ? FtzScalar(l1Val_ * globalStepVal_) : 0.0f;
+        // 对齐 TF: l2*(T*lr), 避免 |T*lr|>FP32_MAX 时分母不溢出的结合律差异;
+        // TF CPU(Eigen) 以 DAZ+FTZ 语义执行, 中间量 T*lr 与最终结果均冲刷 denormal。
+        l2Tlr_ = FtzScalar(l2Val_ * FtzScalar(globalStepVal_ * lrVal_));
     }
 
     __aicore__ inline void ReadScalarsFloat(DataCopyExtParams cpSc)
@@ -249,6 +273,8 @@ private:
             // 中间计算 scratch TBuf
             pipe_.InitBuffer(scratchBuf_, chunkSize_ * sizeof(float));
         }
+        // 软阈值 Select 掩码 TBuf（uint8 视图，fp32/fp16 路径共用；按字节数分配）
+        pipe_.InitBuffer(maskBuf_, chunkSize_);
     }
 
     // === CopyIn: GM -> UB（统一 FP32/FP16，存原始 dtype T + EnQue，无 Cast）===
@@ -326,38 +352,57 @@ private:
                                        LocalTensor<float>& grad, LocalTensor<float>& varOut,
                                        LocalTensor<float>& gAccOut, LocalTensor<float>& ggAccOut)
     {
+        // Step 0: 入口 DAZ 冲刷 —— TF 对 denormal 张量输入在首个运算前冲为保符号 ±0。
+        // 关键场景: 正常 ga + denormal grad 时 TF 得 ga(不变), 而精确和为 denormal;
+        // 只冲结果(K0)会把 ga 错误冲零, 必须先冲输入。
+        // (FP32 路径; FP16 输入 cast 到 fp32 后 denormal 域不存在, 无需入口冲刷)
+        FlushDenormals(gAcc, varOut, n);
+        FlushDenormals(grad, varOut, n);
+        FlushDenormals(ggAcc, varOut, n);
+
         // Step 1: Gradient accumulation
         // gAccOut = gAcc + grad
         Add(gAccOut, gAcc, grad, n);
+        // TF DAZ+FTZ: ga+grad 相消产生的 denormal 冲刷为保符号 ±0
+        // (TF: FTZ(ga_new)→±0→thresh=0→num=±0→0/denom; 不冲则 denormal 被 -lr 放大成正常数)
+        FlushDenormals(gAccOut, varOut, n);
         // grad_sq = grad * grad（需要保留 grad 原值，用临时方式）
         // 注意：FP32 路径 gAccOut 即 gAcc 原地（gAcc 不再需要），可直接复用
         // 但 grad 在 Mul 后不再需要，可先算 grad_sq 到 varOut（临时），再加到 ggAcc
         Mul(varOut, grad, grad, n);      // varOut(temp) = grad²
         Add(ggAccOut, ggAcc, varOut, n); // ggAccOut = ggAcc + grad²
+        // TF DAZ+FTZ: gsa_new 的 denormal 冲刷为 ±0(保符号)。
+        // 负 denormal gsa 在 TF 中经 DAZ(-0)+FTZ(+0 grad²) 恒得 +0, 故冲刷后规范 -0→+0,
+        // 使 sqrt 输入与 out2 输出均与 TF 逐位一致。
+        FlushDenormals(ggAccOut, varOut, n);
+        Adds(ggAccOut, ggAccOut, 0.0f, n);
 
         // Step 2+3: Sparsity truncation + parameter update
-        // denom = l2*T*lr + sqrt(gg_acc_out). No epsilon protection (matches TF).
-        Sqrt(varOut, ggAccOut, n);       // varOut(temp) = sqrt(gg_acc_out)
-        Adds(varOut, varOut, l2Tlr_, n); // varOut(temp) = denom
-
-        if (l1Val_ <= 0.0f) {
-            // l1 <= 0: tmp_val = g_acc_out，gAccOut 为 g_acc 输出需保留，用 grad 做临时
-            Muls(grad, gAccOut, -lrVal_, n); // grad(temp) = -lr * g_acc_out
-            Div(varOut, grad, varOut, n);    // varOut = -lr * g_acc_out / denom
+        // tmp = sign(g_acc_out) * max(|g_acc_out| - l1*T, 0)，对任意 t（含 t<0/±Inf/NaN）精确；
+        // NaN l1 与 l1<=0 同走直通分支（对齐 TF/golden 的 if (l1 > 0) 语义）。
+        if (l1Val_ > 0.0f) {
+            // l1 > 0: 精确软阈值（Relu 分解 relu(g-t)-relu(-g-t) 仅在 t>=0 成立，已弃用）
+            Abs(grad, gAccOut, n);       // grad(temp) = |g_acc_out|
+            Adds(grad, grad, -l1T_, n);  // grad(temp) = |g| - l1*T
+            Relu(grad, grad, n);         // grad(temp) = thresh（Relu(NaN)=NaN，设备已证）
+            Muls(ggAcc, grad, -1.0f, n); // ggAcc(temp) = -thresh
+            LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
+            CompareScalar(mask, gAccOut, 0.0f, CMPMODE::GE, n);
+            Select(varOut, mask, grad, ggAcc, SELMODE::VSEL_TENSOR_TENSOR_MODE, n); // varOut = g>=0 ? thresh : -thresh
+            Muls(ggAcc, grad, 0.0f, n); // ggAcc(temp) = thresh*0（有限→±0，NaN*0=NaN 保传播）
+            CompareScalar(mask, gAccOut, 0.0f, CMPMODE::EQ, n);
+            Select(grad, mask, ggAcc, varOut, SELMODE::VSEL_TENSOR_TENSOR_MODE, n); // grad = g==0 ? thresh*0 : 上一步
+            Muls(grad, grad, -lrVal_, n);                                           // grad(temp) = -lr * tmp_val
         } else {
-            // l1 > 0: Relu-based sign replacement
-            // tmp = sign(g_acc_out) * max(|g_acc_out| - l1*T, 0)
-            //     = max(g_acc_out - l1*T, 0) - max(-g_acc_out - l1*T, 0)
-            // 用 gAcc(temp) 和 ggAcc(temp) 不行（ggAcc 已是输出），需用 grad（已不需要）
-            Adds(grad, gAccOut, -l1T_, n);  // grad(temp) = g_acc_out - l1*T
-            Relu(grad, grad, n);            // grad(temp) = relu(g_acc_out - l1*T)
-            Muls(ggAcc, gAccOut, -1.0f, n); // ggAcc(temp) = -g_acc_out
-            Adds(ggAcc, ggAcc, -l1T_, n);   // ggAcc(temp) = -g_acc_out - l1*T
-            Relu(ggAcc, ggAcc, n);          // ggAcc(temp) = relu(-g_acc_out - l1*T)
-            Sub(grad, grad, ggAcc, n);      // grad(temp) = tmp_val
-            Muls(grad, grad, -lrVal_, n);   // grad(temp) = -lr * tmp_val
-            Div(varOut, grad, varOut, n);   // varOut = -lr * tmp_val / denom
+            // l1 <= 0 或 NaN: tmp_val = g_acc_out，gAccOut 为 g_acc 输出需保留，用 grad 做临时
+            Muls(grad, gAccOut, -lrVal_, n); // grad(temp) = -lr * g_acc_out
         }
+        // denom = l2*T*lr + sqrt(gg_acc_out). No epsilon protection (matches TF).
+        FlushDenormals(grad, varOut, n);                      // num(=-lr*tmp) 冲刷
+        Sqrt<float, FP32_SQRT_CONFIG>(varOut, ggAccOut, n);   // varOut(temp) = sqrt(gg_acc_out)
+        Adds(varOut, varOut, l2Tlr_, n);                      // varOut(temp) = denom
+        FlushDenormals(varOut, ggAcc, n);                     // denom 冲刷(相消 denormal 边角)
+        Div<float, FP32_DIV_CONFIG>(varOut, grad, varOut, n); // varOut = -lr * tmp_val / denom
     }
 
     // === ComputeCoreF16: 纯 FP32 计算（FP16 路径，使用独立 scratch buffer）===
@@ -369,31 +414,39 @@ private:
         // Step 1: Gradient accumulation
         // gAccOutF32 = gAccF32 + gradF32（gAccF32 原地复用为输出）
         Add(gAccOutF32, gAccF32, gradF32, n);
+        // TF DAZ+FTZ 对齐: ga_new 相消 denormal 冲刷(同 FP32 路径, 保符号)
+        FlushDenormals(gAccOutF32, scratch, n);
         // scratch = grad²
         Mul(scratch, gradF32, gradF32, n);
         // ggAccOutF32 = ggAccF32 + grad²（ggAccF32 原地复用为输出）
         Add(ggAccOutF32, ggAccF32, scratch, n);
+        // TF DAZ+FTZ 对齐: gsa_new 冲刷 + -0→+0 规范(同 FP32 路径)
+        FlushDenormals(ggAccOutF32, scratch, n);
+        Adds(ggAccOutF32, ggAccOutF32, 0.0f, n);
 
-        // Step 2+3: Sparsity truncation + parameter update
-        Sqrt<float, FP16_SQRT_CONFIG>(varOutF32, ggAccOutF32, n); // varOutF32(temp) = sqrt(gg_acc_out)
-        Adds(varOutF32, varOutF32, l2Tlr_, n);                    // varOutF32(temp) = denom
-
-        if (l1Val_ <= 0.0f) {
-            // l1 <= 0: tmp_val = g_acc_out，gAccOutF32 为 g_acc 输出需保留，用 scratch 做临时
-            Muls(scratch, gAccOutF32, -lrVal_, n); // scratch = -lr * g_acc_out
-            Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n);
+        // Step 2+3: Sparsity truncation + parameter update（精确软阈值，同 ComputeCore）
+        if (l1Val_ > 0.0f) {
+            // l1 > 0: 精确软阈值（用 scratch/gradF32/varOutF32 做临时，gradF32 在 Mul 后不再需要）
+            Abs(scratch, gAccOutF32, n);      // scratch = |g|
+            Adds(scratch, scratch, -l1T_, n); // scratch = |g| - l1*T
+            Relu(scratch, scratch, n);        // scratch = thresh
+            Muls(gradF32, scratch, -1.0f, n); // gradF32 = -thresh
+            LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
+            CompareScalar(mask, gAccOutF32, 0.0f, CMPMODE::GE, n);
+            Select(varOutF32, mask, scratch, gradF32, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+            Muls(gradF32, scratch, 0.0f, n); // gradF32 = thresh*0（NaN*0=NaN 保传播）
+            CompareScalar(mask, gAccOutF32, 0.0f, CMPMODE::EQ, n);
+            Select(scratch, mask, gradF32, varOutF32, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+            Muls(scratch, scratch, -lrVal_, n); // scratch = -lr * tmp_val
         } else {
-            // l1 > 0: Relu-based sign replacement
-            // 用 scratch 和 gradF32 做临时（gradF32 在 Mul 后不再需要）
-            Adds(scratch, gAccOutF32, -l1T_, n);
-            Relu(scratch, scratch, n);
-            Muls(gradF32, gAccOutF32, -1.0f, n);
-            Adds(gradF32, gradF32, -l1T_, n);
-            Relu(gradF32, gradF32, n);
-            Sub(scratch, scratch, gradF32, n);
-            Muls(scratch, scratch, -lrVal_, n);
-            Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n);
+            // l1 <= 0 或 NaN: tmp_val = g_acc_out，gAccOutF32 为 g_acc 输出需保留，用 scratch 做临时
+            Muls(scratch, gAccOutF32, -lrVal_, n); // scratch = -lr * g_acc_out
         }
+        FlushDenormals(scratch, gradF32, n);                           // num 冲刷
+        Sqrt<float, FP16_SQRT_CONFIG>(varOutF32, ggAccOutF32, n);      // varOutF32(temp) = sqrt(gg_acc_out)
+        Adds(varOutF32, varOutF32, l2Tlr_, n);                         // varOutF32(temp) = denom
+        FlushDenormals(varOutF32, gradF32, n);                         // denom 冲刷(相消 denormal 边角)
+        Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n); // varOutF32 = -lr * tmp_val / denom
     }
 
     // === CopyOut: DeQue + DataCopyPad + FreeTensor（统一 FP32/FP16，无 Cast）===
@@ -456,6 +509,7 @@ private:
     // FP16 路径：独立 FP32 TBuf（Cast 目标）
     TBuf<TPosition::VECCALC> gAccF32Buf_, ggAccF32Buf_, gradF32Buf_, varOutF32Buf_;
     TBuf<TPosition::VECCALC> scratchBuf_; // FP16 路径中间计算 scratch
+    TBuf<TPosition::VECCALC> maskBuf_;    // 软阈值 Select 掩码（uint8 视图）
 
     // Global tensors for read
     GlobalTensor<T> gAccGM_, ggAccGM_, gradGM_;

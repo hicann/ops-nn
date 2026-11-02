@@ -12,16 +12,59 @@
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_datatype_context.h"
+#include "op_common/log/log.h"
+
+#include <set>
 
 using namespace ge;
 
 namespace ops {
 
+// 输入索引（var=0, gradient_accumulator=1, gradient_squared_accumulator=2, grad=3,
+//            lr=4, l1=5, l2=6, global_step=7）
+constexpr uint32_t GLOBAL_STEP_INPUT_INDEX = 7;
+constexpr uint32_t OUTPUT_COUNT = 3;
+constexpr const char* INPUT_NAMES[GLOBAL_STEP_INPUT_INDEX + 1] = {
+    "var", "gradient_accumulator", "gradient_squared_accumulator", "grad", "lr", "l1", "l2", "global_step"};
+
 static ge::graphStatus InferDataType4InplaceApplyAdagradDA(gert::InferDataTypeContext* context)
 {
-    constexpr uint32_t OUTPUT_COUNT = 3;
+    // 缺失输入的 GetInputDataType 返回 DT_UNDEFINED, 由下方 dtype 域校验统一拒绝
+    const ge::DataType varDtype = context->GetInputDataType(0);
+    const std::set<ge::DataType> supportedTensorDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16};
+    OP_CHECK_IF(supportedTensorDtypes.count(varDtype) == 0,
+                OP_LOGE(context,
+                        "InplaceApplyAdagradDA: input var has unsupported dtype %d; supported dtypes are {FLOAT, "
+                        "FLOAT16}",
+                        static_cast<int>(varDtype)),
+                return ge::GRAPH_FAILED);
+
+    // 张量与标量输入(1..6)先校验支持域, 再校验与 var 的 dtype 一致性
+    for (uint32_t i = 1; i < GLOBAL_STEP_INPUT_INDEX; ++i) {
+        const ge::DataType inputDtype = context->GetInputDataType(i);
+        OP_CHECK_IF(supportedTensorDtypes.count(inputDtype) == 0,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input %s has unsupported dtype %d; supported dtypes are {FLOAT, "
+                            "FLOAT16}",
+                            INPUT_NAMES[i], static_cast<int>(inputDtype)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(inputDtype != varDtype,
+                    OP_LOGE(context, "InplaceApplyAdagradDA: input %s dtype %d must match input var dtype %d",
+                            INPUT_NAMES[i], static_cast<int>(inputDtype), static_cast<int>(varDtype)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    const ge::DataType globalStepDtype = context->GetInputDataType(GLOBAL_STEP_INPUT_INDEX);
+    const std::set<ge::DataType> supportedGlobalStepDtypes = {ge::DT_INT32, ge::DT_INT64};
+    OP_CHECK_IF(supportedGlobalStepDtypes.count(globalStepDtype) == 0,
+                OP_LOGE(context,
+                        "InplaceApplyAdagradDA: input global_step has unsupported dtype %d; supported dtypes are "
+                        "{INT32, INT64}",
+                        static_cast<int>(globalStepDtype)),
+                return ge::GRAPH_FAILED);
+
     for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {
-        context->SetOutputDataType(i, context->GetInputDataType(0));
+        context->SetOutputDataType(i, varDtype);
     }
     return ge::GRAPH_SUCCESS;
 }

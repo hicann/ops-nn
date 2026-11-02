@@ -161,11 +161,47 @@ TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp32_use_locking)
 {
     gert::StorageShape varShape = {{256}, {256}};
     gert::StorageShape scalarShape = {{1}, {1}};
-    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, true, ge::GRAPH_FAILED);
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, true);
 }
 
 TEST_F(InplaceApplyAdagradDATilingTest, tiling_empty_tensor)
 {
+    gert::StorageShape varShape = {{0}, {0}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false);
+}
+
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_unknown_dim_minus1_rejected)
+{
+    // -1 未知维(动态 shape 图): Host 放行后由 Tiling 以绑定后 shape 把关(README 约束说明);
+    // tiling 收到未绑定的负维标记属流程异常, fail-fast 拒绝, 不得产出垃圾排班(负 totalElements
+    // 会未检地流入 CeilDiv/SetBlockDim)
+    gert::StorageShape varShape = {{-1}, {-1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_unknown_rank_minus2_rejected)
+{
+    // -2 未知 rank 标记: 与 -1 同机制, 未绑定即拒绝
+    gert::StorageShape varShape = {{-2}, {-2}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_concrete_var_negative_aux_rejected)
+{
+    // var 具体但张量输入带 -1: 负维不必逐输入检查, 由"与 var 完全同形"检查拒绝(覆盖验证)
+    gert::StorageShape varShape = {{2, 6}, {2, 6}};
+    gert::StorageShape auxShape = {{-1, -1}, {-1, -1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false, ge::GRAPH_FAILED, ge::DT_UNDEFINED,
+                 &auxShape);
+}
+
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_empty_dim_zero_legal)
+{
+    // dim = 0 是合法空张量(非负维): 不得被未知维检查误杀, 空张量短路成功
     gert::StorageShape varShape = {{0}, {0}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false);

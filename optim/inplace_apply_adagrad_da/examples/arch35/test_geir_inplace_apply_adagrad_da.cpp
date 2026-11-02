@@ -255,7 +255,7 @@ ExpectedOutputs ComputeGolden(const StaticInputs& inputs)
                                                  inputs.grad[index] * inputs.grad[index];
         const float positive = std::max(gradientAccumulator - l1Threshold, 0.0F);
         const float negative = std::max(-gradientAccumulator - l1Threshold, 0.0F);
-        const float sparseGradient = inputs.l1 == 0.0F ? gradientAccumulator : positive - negative;
+        const float sparseGradient = inputs.l1 <= 0.0F ? gradientAccumulator : positive - negative;
         const float denominator = l2Term + std::sqrt(gradientSquaredAccumulator);
 
         expected.values[0][index] = -inputs.lr * sparseGradient / denominator;

@@ -30,13 +30,75 @@ using namespace ge;
 
 namespace ops {
 
+// 输入索引（var=0, gradient_accumulator=1, gradient_squared_accumulator=2, grad=3,
+//            lr=4, l1=5, l2=6, global_step=7）
+constexpr uint32_t INPUT_COUNT = 8;
 // 输出数量: var, gradient_accumulator, gradient_squared_accumulator
 constexpr uint32_t OUTPUT_COUNT = 3;
+// 张量输入范围 [1, 4): shape 必须与 var 完全一致
+constexpr uint32_t TENSOR_INPUT_END = 4;
+// 标量输入范围 [4, 8): 必须为 1-element [1]
+constexpr uint32_t SCALAR_INPUT_END = 8;
+// FORMAT_ND 公开契约 rank 0..8
+constexpr size_t MAX_TENSOR_RANK = 8;
+constexpr const char* INPUT_NAMES[INPUT_COUNT] = {
+    "var", "gradient_accumulator", "gradient_squared_accumulator", "grad", "lr", "l1", "l2", "global_step"};
+
+// 动态 shape 标记(未知维): 图构造期无法判定关系, 该输入的关系校验留给 tiling 以绑定后 shape 把关
+static bool HasUnknownDim(const gert::Shape& shape)
+{
+    const size_t dimNum = shape.GetDimNum();
+    for (size_t i = 0; i < dimNum; ++i) {
+        if (shape.GetDim(i) < 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
 static ge::graphStatus InferShape4InplaceApplyAdagradDA(gert::InferShapeContext* context)
 {
+    // 必选输入存在性校验: 缺失输入的 GetInputShape 返回空指针
+    for (uint32_t i = 0; i < INPUT_COUNT; ++i) {
+        OP_CHECK_IF(
+            context->GetInputShape(i) == nullptr,
+            OP_LOGE(context, "InplaceApplyAdagradDA: required input[%u] is missing; input name=%s", i, INPUT_NAMES[i]),
+            return ge::GRAPH_FAILED);
+    }
+
     const gert::Shape* varShape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+
+    OP_CHECK_IF(varShape->GetDimNum() > MAX_TENSOR_RANK,
+                OP_LOGE(context, "InplaceApplyAdagradDA: var rank %zu exceeds maximum supported rank %zu",
+                        varShape->GetDimNum(), MAX_TENSOR_RANK),
+                return ge::GRAPH_FAILED);
+
+    const bool varShapeUnknown = HasUnknownDim(*varShape);
+
+    // 张量输入 shape 必须与 var 完全一致 (gAcc=1, ggAcc=2, grad=3);
+    // 任一侧含未知维(-1/-2)时图构造期无法判定, 留给 tiling 校验绑定后 shape
+    for (uint32_t i = 1; i < TENSOR_INPUT_END; ++i) {
+        const gert::Shape* tensorShape = context->GetInputShape(i);
+        OP_CHECK_IF(!varShapeUnknown && !HasUnknownDim(*tensorShape) && *tensorShape != *varShape,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input[%u] shape must exactly match var shape; input name=%s, "
+                            "actual shape=%s, legal shape=%s",
+                            i, INPUT_NAMES[i], Ops::Base::ToString(*tensorShape).c_str(),
+                            Ops::Base::ToString(*varShape).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // 标量输入必须为 1-element [1] (lr=4, l1=5, l2=6, global_step=7);
+    // 含未知维时同样留给 tiling 校验
+    for (uint32_t i = TENSOR_INPUT_END; i < SCALAR_INPUT_END; ++i) {
+        const gert::Shape* scalarShape = context->GetInputShape(i);
+        OP_CHECK_IF(!HasUnknownDim(*scalarShape) && (scalarShape->GetDimNum() != 1 || scalarShape->GetDim(0) != 1),
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input[%u] must have scalar shape [1]; input name=%s, actual "
+                            "shape=%s, legal shape=[1]",
+                            i, INPUT_NAMES[i], Ops::Base::ToString(*scalarShape).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
 
     // All outputs have the same shape as var
     for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {

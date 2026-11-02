@@ -99,7 +99,9 @@ public:
             .AutoContiguous();
 
         // Attribute
-        this->Attr("use_locking").Bool(false);
+        // AttrType(OPTIONAL) 不能省: 链式 API 中 .Bool(false) 只设默认值, 必填性由 .AttrType 控制,
+        // 框架默认必填; proto.h/README 公开契约为"可选、默认 false"(家族算子 101 处均显式声明 OPTIONAL)。
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)
