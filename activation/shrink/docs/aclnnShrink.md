@@ -87,16 +87,16 @@ aclnnStatus aclnnShrink(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示待转换的目标张量，公式中的self。</td>
-      <td>支持空Tensor。</td>
+      <td><ul><li>支持空Tensor。</li><li>支持动态 shape（-1 未知维）与动态秩（-2）标记，图模式下按输入透传，运行期按最终具体形状校验。</li><li>元素总数受 int64 与设备内存约束。</li><li>NaN 输入按死区输出 0（不传播 NaN）；±inf 输入分别按正区/负区处理，输出为 x∓bias 的 IEEE 算术结果（与 bias=±inf 组合时为 inf∓inf=NaN）。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>ND；支持空 Tensor 与 -1/-2 动态标记</td>
       <td>√</td>
     </tr>
      <tr>
       <td>lambd（aclScalar*）</td>
       <td>输入</td>
-      <td>表示转换过程中用于判断self大小的阈值，公式中的lambd。</td>
+      <td>表示转换过程中用于判断self大小的阈值，公式中的lambd。dtype须为FLOAT（非FLOAT返回161002）；FLOAT16 输入时 lambd 先转为输入 dtype（`static_cast&lt;T&gt;`）再参与比较，阈值附近与实数公式可能不同（如 x=fp16(0.5009765625)、lambd=0.5008 时实数公式判正区、设备判死区输出 0）。取值为非负数（NaN 及负数含 -inf 返回161002——NaN 非数、不属非负数域）；lambd=+inf 时全部输入按死区输出 0（含 ±inf 输入，严格比较 inf>inf 为假）。</td>
       <td>取值为非负数。</td>
       <td>FLOAT</td>
       <td>-</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnShrink(
      <tr>
       <td>bias（aclScalar*）</td>
       <td>输入</td>
-      <td>表示转换过程中添加到目标张量的偏差值，公式中的bias。</td>
+      <td>表示转换过程中添加到目标张量的偏差值，公式中的bias。dtype须为FLOAT（非FLOAT返回161002）；FLOAT16 输入时 bias 同样先转为输入 dtype 后参与加减。bias=±inf 时活跃区按 IEEE 算术计算：有限输入输出相应 ±inf，±inf 输入构成 inf∓inf 时输出 NaN；死区仍输出 0。bias 为 NaN 时返回161002（NaN 非实数，不属任意实数域）。</td>
       <td>取值为任意实数。</td>
       <td>FLOAT</td>
       <td>-</td>
@@ -117,10 +117,10 @@ aclnnStatus aclnnShrink(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出目标张量，公式中的out。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li><li>dtype需要与self一致。</li><li>格式需要与self一致（不一致返回161002）。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>ND，shape 与 self 一致</td>
       <td>√</td>
     </tr>
        <tr>
@@ -168,18 +168,30 @@ aclnnStatus aclnnShrink(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self、lambd或out是空指针。</td>
+      <td>传入的self、lambd、bias或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>self、lambd或out的数据类型不在支持的范围之内。</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
+      <td>self、lambd或out的数据类型不在支持的范围之内（lambd、bias仅支持FLOAT标量）。</td>
     </tr>
     <tr>
       <td>self和out的shape不一致。</td>
     </tr>
     <tr>
+      <td>self和out的dtype不一致。</td>
+    </tr>
+    <tr>
+      <td>self和out的格式不一致。</td>
+    </tr>
+    <tr>
+      <td>self或out使用私有存储格式（如FRACTAL_NZ；本算子仅支持ND）。</td>
+    </tr>
+    <tr>
       <td>lambd值为负数。</td>
+    </tr>
+    <tr>
+      <td>lambd或bias为NaN（NaN 非数，不属声明的取值域）。</td>
     </tr>
   </tbody></table>
 
@@ -236,6 +248,7 @@ aclnnStatus aclnnShrink(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -296,10 +309,11 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   return 0;
 }
 
-int main() {
+int main(int argc, char** argv) {
   // 1. （固定写法）device/stream初始化，参考acl API手册
-  // 根据自己的实际device填写deviceId
-  int32_t deviceId = 0;
+  // deviceId 可由命令行参数指定（如 ./test_aclnn_shrink 6），缺省为 0；
+  // 亦可用环境变量 ASCEND_RT_VISIBLE_DEVICES 把逻辑设备映射到物理设备
+  int32_t deviceId = (argc > 1) ? static_cast<int32_t>(strtol(argv[1], nullptr, 10)) : 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   // check根据自己的需要处理
@@ -314,69 +328,83 @@ int main() {
   aclScalar* lambd = nullptr;
   aclScalar* bias = nullptr;
   aclTensor* out = nullptr;
+  void* workspaceAddr = nullptr;
+  uint64_t workspaceSize = 0;
   std::vector<float> selfHostData = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   float lambdValue = 0.5f;
   float biasValue = 0.0;
-  // 创建self aclTensor
+  // 创建self aclTensor（失败路径经 CleanupResources 统一释放已创建资源）
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建lambd aclTensor
+  CHECK_RET(ret == ACL_SUCCESS,
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
+  // 创建lambd aclScalar
   lambd = aclCreateScalar(&lambdValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(lambd != nullptr, return ret);
-  // 创建bias aclTensor
+  CHECK_RET(lambd != nullptr, LOG_PRINT("aclCreateScalar(lambd) failed.\n");
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return 1);
+  // 创建bias aclScalar
   bias = aclCreateScalar(&biasValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(bias != nullptr, return ret);
+  CHECK_RET(bias != nullptr, LOG_PRINT("aclCreateScalar(bias) failed.\n");
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return 1);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS,
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的API名称
-  uint64_t workspaceSize = 0;
+  // 3. 调用CANN算子库API，需要修改为具体的Api名称
   aclOpExecutor* executor;
   // 调用aclnnShrink第一段接口
   ret = aclnnShrinkGetWorkspaceSize(self, lambd, bias, out, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnShrinkGetWorkspaceSize failed. ERROR: %d\n", ret);
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
-  void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
+              CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                               stream, deviceId);
+              return ret);
   }
   // 调用aclnnShrink第二段接口
   ret = aclnnShrink(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnShrink failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnShrink failed. ERROR: %d\n", ret);
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
 
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
 
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                     size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+            CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize,
+                             stream, deviceId);
+            return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. 释放aclTensor，需要根据具体API的接口定义修改
-  aclDestroyTensor(self);
-  aclDestroyScalar(lambd);
-  aclDestroyScalar(bias);
-  aclDestroyTensor(out);
-
-  // 7. 释放device资源，需要根据具体API的接口定义修改
-  aclrtFree(selfDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
-  aclrtDestroyStream(stream);
-  aclrtResetDevice(deviceId);
-  aclFinalize();
-
+  // 6. 正常路径：释放全部资源
+  CleanupResources(self, lambd, bias, out, selfDeviceAddr, outDeviceAddr, workspaceAddr, workspaceSize, stream,
+                   deviceId);
   return 0;
 }
 ```

@@ -29,27 +29,23 @@ static ge::graphStatus InferShape4Shrink(gert::InferShapeContext* context)
 {
     const gert::Shape* inputShape = context->GetInputShape(0);
     if (inputShape == nullptr) {
+        OP_LOGE(context->GetNodeName(),
+                "Shrink: the input shape of input_x is null; the InferShape context is incomplete");
         return ge::GRAPH_FAILED;
-    }
-
-    // Propagate empty tensor: if input has 0 elements, output is also empty
-    if (inputShape->GetShapeSize() == 0) {
-        gert::Shape* outputShape = context->GetOutputShape(0);
-        if (outputShape == nullptr) {
-            return ge::GRAPH_FAILED;
-        }
-        *outputShape = *inputShape;
-        return ge::GRAPH_SUCCESS;
     }
 
     gert::Shape* outputShape = context->GetOutputShape(0);
     if (outputShape == nullptr) {
+        OP_LOGE(context->GetNodeName(),
+                "Shrink: the output shape slot of output_y is null; the InferShape context is incomplete");
         return ge::GRAPH_FAILED;
     }
 
+    // Propagate empty tensor: if input has 0 elements, output is also empty
     *outputShape = *inputShape;
-
-    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*outputShape).c_str());
+    if (inputShape->GetShapeSize() != 0) {
+        OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*outputShape).c_str());
+    }
     return ge::GRAPH_SUCCESS;
 }
 

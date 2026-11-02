@@ -163,6 +163,20 @@ static ge::graphStatus ShrinkTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(ShrinkTilingData), 0, sizeof(ShrinkTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
+    // 空 Tensor（totalIdx==0）：零元素输出无需启动计算，但 blockFactor/usedCoreNum/ubFactor
+    // 按零值公式会得出 0 并以 SetBlockDim(0) 拒绝执行（TTK 判 INVALID_TILING），与
+    // aclnn 通路文档声明 self/out 支持空 Tensor 冲突。按仓库惯例（celu 等）单核空跑。
+    if (totalIdx == 0) {
+        tiling->totalNum = 0;
+        tiling->blockFactor = 0;
+        tiling->lambd = (lambd < 0.0f) ? 0.0f : lambd;
+        tiling->bias = bias;
+        tiling->ubFactor = 0;
+        context->SetBlockDim(1);
+        ASCENDC_TPL_SEL_PARAM(context, 0);
+        return ge::GRAPH_SUCCESS;
+    }
+
     tiling->totalNum = totalIdx;
     tiling->blockFactor = CeilDiv(totalIdx, coreNum);
     int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
@@ -175,8 +189,9 @@ static ge::graphStatus ShrinkTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
 
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer);
+    // def 驱动 dtype：dtype 由 _def.cpp 的 DataType 列表经构建系统注入
+    // DTYPE_INPUT_X 编译宏，TilingKey 只编码 BUFFER_MODE 调度维度。
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(useDoubleBuffer));
 
     return ge::GRAPH_SUCCESS;
 }

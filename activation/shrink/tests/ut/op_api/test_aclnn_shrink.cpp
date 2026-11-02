@@ -64,9 +64,10 @@ TEST_F(l2_shrink_test, case_3)
 
     auto ut = OP_API_UT(aclnnShrink, INPUT(tensor_desc, lambd, bias), OUTPUT(out_tensor_desc));
 
+    // 公开契约：out 的 dtype 必须与 self 一致（aclnnShrink.md 161002），fp16 输入配 fp32 输出须拒绝
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_shrink_test, case_4)
@@ -78,9 +79,10 @@ TEST_F(l2_shrink_test, case_4)
 
     auto ut = OP_API_UT(aclnnShrink, INPUT(tensor_desc, lambd, bias), OUTPUT(out_tensor_desc));
 
+    // 公开契约：out 的 dtype 必须与 self 一致（aclnnShrink.md 161002），fp32 输入配 fp16 输出须拒绝
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_shrink_test, case_5)

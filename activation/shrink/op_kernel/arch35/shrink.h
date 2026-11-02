@@ -84,6 +84,14 @@ private:
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void Shrink<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR out, const ShrinkTilingData* tilingData)
 {
+    // 空 Tensor 分支：tiling 置零（totalNum/blockFactor/ubFactor==0，SetBlockDim(1) 单核空跑），
+    // 跳过 buffer 初始化，Process 由 blockLength_<=0 直接返回。
+    if (tilingData->totalNum == 0 || tilingData->blockFactor == 0 || tilingData->ubFactor == 0) {
+        blockLength_ = 0;
+        ubLength_ = 0;
+        return;
+    }
+
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
     ubLength_ = tilingData->ubFactor;
@@ -112,8 +120,10 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t 
 {
     LocalTensor<T> inLocal = inputQueue_.template AllocTensor<T>();
 
-    // byteLen is uint16_t (max 65535); Tiling ensures currentNum * sizeof(T) <= 65535
-    DataCopyPad(inLocal, gmIn_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
+    // DataCopyPad 须配 DataCopyExtParams（5 参显式 rsv=0，blockLen 为 uint32）；
+    // DataCopyPad+DataCopyParams 组合违反 A5/A6 API 硬约束（blockLen uint16 截断风险）。
+    // Tiling 仍将单次搬运限制在 65535 字节以内、blockCount=1、stride=0。
+    DataCopyPad(inLocal, gmIn_[progress * ubLength_], {1, static_cast<uint32_t>(currentNum * sizeof(T)), 0, 0, 0},
                 {false, 0, 0, 0});
 
     inputQueue_.EnQue(inLocal);
@@ -124,8 +134,8 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t
 {
     LocalTensor<T> outLocal = outputQueue_.template DeQue<T>();
 
-    // byteLen is uint16_t (max 65535); Tiling ensures currentNum * sizeof(T) <= 65535
-    DataCopyPad(gmOut_[progress * ubLength_], outLocal, {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
+    // 同 CopyIn：DataCopyExtParams 显式 rsv=0，blockLen 以 uint32 传递。
+    DataCopyPad(gmOut_[progress * ubLength_], outLocal, {1, static_cast<uint32_t>(currentNum * sizeof(T)), 0, 0, 0});
 
     outputQueue_.FreeTensor(outLocal);
 }
@@ -145,6 +155,16 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
     int64_t typeSize = sizeof(T);
     int64_t computeAlignment = 256 / typeSize;
     int64_t computeNum = ((currentNum + computeAlignment - 1) / computeAlignment) * computeAlignment;
+
+    // 对齐尾区填充：CopyIn 只搬运 currentNum 个有效元素，Compares 按 computeNum 读取，
+    // [currentNum, computeNum) 区间未写入即被读取（尾块/小形状必触发）。用标量写 0 消除
+    // 未初始化读：不能对 inLocal[currentNum] 整块 Duplicate——其字节偏移未必 32B 对齐
+    // （向量级 API 要求目标地址对齐，实测未对齐触发 aivec VEC_ERROR），而标量写无对齐
+    // 要求。尾区长度 < computeAlignment（fp32 64 / fp16 128）且仅尾块触发，开销可忽略。
+    // 填充值不进入输出（Adds/Select/CopyOut 均以 currentNum 为界），死区语义下 0 为中性值。
+    for (int64_t i = currentNum; i < computeNum; i++) {
+        inLocal.SetValue(i, static_cast<T>(0));
+    }
 
     // Phase 1: Compute masks from original self
     Compares(maskNeg, inLocal, static_cast<T>(-lambd_), CMPMODE::LT, computeNum);

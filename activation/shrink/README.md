@@ -25,7 +25,9 @@
   \end{cases}
   $$
 
-  其中`lambd`为阈值参数（默认0.5），`bias`为偏移量参数（默认0.0）。当`lambd < 0`时，内部钳位为0。
+  其中`lambd`为阈值参数（默认0.5），`bias`为偏移量参数（默认0.0）。`lambd < 0`时的行为分通路：Kernel/GEIR（图模式）tiling 阶段内部钳位为0后计算；aclnn 调用（aclnnShrink）则按参数校验拒绝并返回161002（见[aclnnShrink](./docs/aclnnShrink.md)）。
+
+  **dtype 语义**：FLOAT16 输入时，`lambd`/`bias` 先转换为 FLOAT16（`static_cast<T>`）后再参与阈值比较与加减——阈值附近与按实数公式构造的参考实现可能不同（如 `x=fp16(0.5009765625)`、`lambd=0.5008` 时实数公式判正区输出约 0.50098，设备判死区输出 0）；FLOAT 输入无此差异。
 
 ## 参数说明
 
@@ -53,9 +55,16 @@
     <td>ND</td>
   </tr>
   <tr>
+    <td>output_y</td>
+    <td>输出</td>
+    <td>输出张量，对应公式中的out。与input_x的dtype和shape完全相同。</td>
+    <td>FLOAT16、FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
     <td>lambd</td>
     <td>属性</td>
-    <td>阈值参数，对应公式中的lambd。当self_i>lambd时进入正区域，self_i&lt;-lambd时进入负区域。默认值为0.5。当lambd&lt;0时，内部钳位为0。</td>
+    <td>阈值参数，对应公式中的lambd。当self_i>lambd时进入正区域，self_i&lt;-lambd时进入负区域。默认值为0.5。`lambd&lt;0`时：图模式内部钳位为0，aclnn调用返回161002。</td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
@@ -66,22 +75,17 @@
     <td>FLOAT</td>
     <td>-</td>
   </tr>
-  <tr>
-    <td>output_y</td>
-    <td>输出</td>
-    <td>输出张量，对应公式中的out。与input_x的dtype和shape完全相同。</td>
-    <td>FLOAT16、FLOAT</td>
-    <td>ND</td>
-  </tr>
 </tbody></table>
 
 ## 约束说明
 
- 无
+- ND 输入；空 Tensor（0 元素）与动态 shape（-1 未知维）、动态秩（-2）均按输入 shape 透传，输出与输入一致。
+- `lambd < 0`：图模式（Kernel/GEIR）tiling 内部钳位为 0；aclnn 调用按非法参数拒绝（161002）。
+- 非有限值语义（与内核实现一致）：NaN 输入两侧阈值比较均为假，按死区输出 0（不按 IEEE 传播 NaN）；+inf/-inf 输入分别落入正区/负区，输出为 `x-bias`/`x+bias` 的 IEEE 算术结果（bias=0 时输出 ±inf）。`lambd = +inf` 时全部输入落入死区输出 0（含 ±inf 输入，严格比较 inf>inf 为假）。`bias = ±inf` 时活跃区按 IEEE 算术计算：有限输入输出相应 ±inf；±inf 输入构成 inf∓inf 时输出 NaN（算术产生的 NaN 会传播到输出，区别于 NaN 输入的死区 0）。`lambd`/`bias` 为 NaN 标量时按域外拒绝：aclnn 调用返回 161002（NaN 非数，不属"非负数/任意实数"声明域）。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
-|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_shrink](./examples/test_aclnn_shrink.cpp) | 通过[aclnnShrink](./docs/aclnnShrink.md)接口方式调用Shrink算子。 |
 | 图模式 | - | 通过[算子IR](./op_graph/shrink_proto.h)构图方式调用Shrink算子。 |

@@ -13,21 +13,24 @@
  */
 
 /*!
- * @file shrink_apt.cpp
+ * @file shrink.cpp
  * @brief Shrink kernel entry (arch35)
  *
+ * def 驱动 dtype 模式：dtype 由 _def.cpp 的 DataType 列表经构建系统注入
+ * DTYPE_INPUT_X 编译宏（对齐 hard_shrink/relu6 的规范改造），TilingKey 不再
+ * 编码运算 dtype，仅保留 BUFFER_MODE 调度维度。
+ *
  * Template parameters (matching shrink_tiling_key.h):
- *   - D_T_X: Data type, from ASCENDC_TPL_DATATYPE_DECL
  *   - BUFFER_MODE: Buffer mode (0=single, 1=double), from ASCENDC_TPL_UINT_DECL
  */
 #include "arch35/shrink.h"
 
-template <typename D_T_X, int BUFFER_MODE>
+template <int BUFFER_MODE>
 __global__ __aicore__ void shrink(GM_ADDR self, GM_ADDR out, [[maybe_unused]] GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ShrinkTilingData);
     GET_TILING_DATA_WITH_STRUCT(ShrinkTilingData, tilingData, tiling);
-    NsShrink::Shrink<D_T_X, BUFFER_MODE> op;
+    NsShrink::Shrink<DTYPE_INPUT_X, BUFFER_MODE> op;
     op.Init(self, out, &tilingData);
     op.Process();
 }

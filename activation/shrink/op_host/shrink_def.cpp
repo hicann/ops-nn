@@ -36,8 +36,10 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("lambd").Float(0.5f);
-        this->Attr("bias").Float(0.0f);
+        // 可选属性：与 shrink_proto.h 的 .ATTR(lambd, Float, 0.5) 默认值语义一致，
+        // 省略属性时按默认值执行（安装包 op-info 亦须记录为带默认的可选项）。
+        this->Attr("lambd").AttrType(OPTIONAL).Float(0.5f);
+        this->Attr("bias").AttrType(OPTIONAL).Float(0.0f);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
@@ -46,8 +48,10 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "shrink_apt");
+            .ExtendCfgInfo("opFile.value", "shrink");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        // ascend350 与 ascend950 同为 dav_3510（arch35）架构，共享 arch35 tiling 与内核
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(Shrink);
