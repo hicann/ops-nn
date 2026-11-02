@@ -83,7 +83,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with self.<br>The data type must satisfy the data type deduction rule with the data types of self and target (see the <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -93,7 +93,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradOutput and target.<br>The data type must satisfy the data type deduction rules with gradOutput and target (see <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -103,7 +103,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradOutput and self.<br>The data type must satisfy the data type deduction rules with self and gradOutput (see <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -121,9 +121,9 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">Output</td>
       <td class="tg-0pky">Output loss.</td>
       <td class="tg-0pky">The data type must satisfy the data type deduction rules with self (see <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
-      <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
+      <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16, DOUBLE</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>

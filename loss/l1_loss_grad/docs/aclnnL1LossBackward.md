@@ -81,7 +81,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与self、target的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -91,7 +91,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -101,7 +101,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型要与self、gradOutput满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -119,9 +119,9 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失</td>
       <td class="tg-0pky">数据类型要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
-      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
