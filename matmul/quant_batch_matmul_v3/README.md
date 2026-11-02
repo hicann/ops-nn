@@ -180,4 +180,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
+| GEIR接口 | [test_geir_quant_batch_matmul_v3](examples/test_geir_quant_batch_matmul_v3.cpp) | 通过[QuantBatchMatmulV3算子IR](docs/ascendir_QuantBatchMatmulV3.md)构图并调用算子。 |
 | aclnn接口  | [test_aclnn_quant_matmul_v3](examples/test_aclnn_quant_matmul_v3_at.cpp) | 通过<br>[aclnnQuantMatmulV3](docs/aclnnQuantMatmulV3.md)<br>[aclnnQuantMatmulV4](docs/aclnnQuantMatmulV4.md)<br>[aclnnQuantMatmulWeightNz](docs/aclnnQuantMatmulWeightNz.md)<br>[aclnnQuantMatmulV5](../quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV3算子。 |
