@@ -27,7 +27,7 @@
 
 #include "ge_api.h"
 #include "ge_api_types.h"
-#include "ge_error_codes.h"
+#include "graph/error_codes.h"
 #include "ge_ir_build.h"
 #include "graph.h"
 #include "graph/operator.h"
