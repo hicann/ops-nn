@@ -2564,8 +2564,8 @@ static bool Is3DPaddingAllZero(const aclIntArray* padding)
     return true;
 }
 
-static bool IsW1B1FmNDxFmtAndAttrOk(const ConvolutionBackwardInputTensor& inputTensor,
-                                    const ConvolutionBackwardParams& params)
+static bool IsW1FmNDxFmtAndAttrOk(const ConvolutionBackwardInputTensor& inputTensor,
+                                  const ConvolutionBackwardParams& params)
 {
     // only support NCDHW
     if (inputTensor.gradOutput->GetStorageFormat() != op::Format::FORMAT_NCDHW ||
@@ -2594,8 +2594,7 @@ static bool IsW1B1FmNDxFmtAndAttrOk(const ConvolutionBackwardInputTensor& inputT
     return true;
 }
 
-static bool IsW1B1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor,
-                               const ConvolutionBackwardParams& params)
+static bool IsW1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor, const ConvolutionBackwardParams& params)
 {
     // kernel=1
     op::Shape weightShape = inputTensor.weight->GetViewShape();
@@ -2606,9 +2605,39 @@ static bool IsW1B1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor
 
     op::Shape inputShape = params.transposed ? inputTensor.gradOutput->GetViewShape() :
                                                inputTensor.input->GetViewShape();
-    // 本规格仅限batch = 1
-    if (inputShape.GetDim(NCDHW_N_DIM) != 1) {
-        return false;
+    // batch>1走bmm广播路径, 仅拦截以下两类实测严重劣化场景
+    // 1. K=1(Cout=1)且batch较大且M维(Cin)过窄：bmm收缩维为1，cube利用率1/16，大batch下计算reload且窄M无法摊薄
+    // 2. fp32且中等空间维+大batch+小K大M(Cout<=128且Cin>256)：m/k失衡，W^T按batch重复读的开销被放大
+    if (inputShape.GetDim(NCDHW_N_DIM) > 1) {
+        constexpr int64_t BMM_MIN_BATCH_WHEN_K_EQUAL_1 = 16;
+        constexpr int64_t BMM_MAX_CIN_WHEN_K_EQUAL_1 = 128;
+        constexpr int64_t BMM_FP32_MIN_DHW = 512;
+        constexpr int64_t BMM_FP32_MAX_DHW = 2048;
+        constexpr int64_t BMM_FP32_MIN_BATCH = 16;
+        constexpr int64_t BMM_FP32_MAX_K = 128;
+        constexpr int64_t BMM_FP32_MIN_M = 256;
+        int64_t batchDim = inputShape.GetDim(NCDHW_N_DIM);
+        int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
+        int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+        int64_t dhwDim = inputShape.GetDim(NCDHW_D_DIM) * inputShape.GetDim(NCDHW_H_DIM) *
+                         inputShape.GetDim(NCDHW_W_DIM);
+        if (cOutDim == 1 && batchDim >= BMM_MIN_BATCH_WHEN_K_EQUAL_1 && cInDim < BMM_MAX_CIN_WHEN_K_EQUAL_1) {
+            OP_LOGD("K=1(Cout=1) with large batch and narrow M(Cin<%ld), bmm degrade, fallback to conv, "
+                    "batch = %ld, Cout = %ld, Cin = %ld.",
+                    BMM_MAX_CIN_WHEN_K_EQUAL_1, batchDim, cOutDim, cInDim);
+            return false;
+        }
+        if (inputTensor.input->GetDataType() == DataType::DT_FLOAT) {
+            if (dhwDim >= BMM_FP32_MIN_DHW && dhwDim < BMM_FP32_MAX_DHW && batchDim >= BMM_FP32_MIN_BATCH &&
+                cOutDim <= BMM_FP32_MAX_K && cInDim > BMM_FP32_MIN_M) {
+                OP_LOGD("fp32 with mid spatial dim([%ld, %ld)), large batch(>=%ld), small K(Cout<=%ld) and large "
+                        "M(Cin>%ld), m/k imbalance, bmm degrade, fallback to conv, D*H*W = %ld, batch = %ld, "
+                        "Cout = %ld, Cin = %ld.",
+                        BMM_FP32_MIN_DHW, BMM_FP32_MAX_DHW, BMM_FP32_MIN_BATCH, BMM_FP32_MAX_K, BMM_FP32_MIN_M, dhwDim,
+                        batchDim, cOutDim, cInDim);
+                return false;
+            }
+        }
     }
     // Din, Hin, Win不能同时为1
     if (inputShape.GetDim(NCDHW_D_DIM) == 1 && inputShape.GetDim(NCDHW_H_DIM) == 1 &&
@@ -2618,12 +2647,15 @@ static bool IsW1B1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor
     return true;
 }
 
-static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTensor,
-                                 const ConvolutionBackwardParams& params)
+static bool IsW1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTensor,
+                               const ConvolutionBackwardParams& params)
 {
-    OP_LOGD("Enter IsW1B1FmNDxTransToMm");
-    // only support  ASCEND950
+    OP_LOGD("Enter IsW1FmNDxTransToMm");
     if (!(Ops::NN::AclnnUtil::IsRegbase())) {
+        return false;
+    }
+    auto gradOutTensor = params.transposed ? inputTensor.input : inputTensor.gradOutput;
+    if (gradOutTensor->GetViewShape().GetDim(NCDHW_N_DIM) > 1 && !l0op::IsSocVersion960()) {
         return false;
     }
     // do not support 8bit
@@ -2631,20 +2663,20 @@ static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTens
         inputTensor.input->GetDataType() == DataType::DT_FLOAT8_E4M3FN) {
         return false;
     }
-    if (!IsW1B1FmNDxFmtAndAttrOk(inputTensor, params)) {
+    if (!IsW1FmNDxFmtAndAttrOk(inputTensor, params)) {
         return false;
     }
-    if (!IsW1B1FmNDxShapeOk(inputTensor, params)) {
+    if (!IsW1FmNDxShapeOk(inputTensor, params)) {
         return false;
     }
     // 是否是超大shape,超过l2cache(128MB)进行拦截
-    if (IsGreaterL2Cache(inputTensor, params)) {
+    if (gradOutTensor->GetViewShape().GetDim(NCDHW_N_DIM) == 1 && IsGreaterL2Cache(inputTensor, params)) {
         return false;
     }
     OP_LOGD("Original ConvBackpropInput can convert to Matmul, "
-            "from [w.shape(Cout, Cin, 1, 1, 1), Dy.shape(1, Cout, Dout=Din, Hout=Hin, Wout=Win), Dx.shape(1, Cin, Din, "
-            "Hin, Win)] "
-            "to [a.shape(Cout, Cin), b.shape(Cout, Din*Hin*Win), c.shape(Cin, Din*Win*Hin)].");
+            "from [w.shape(Cout, Cin, 1, 1, 1), Dy.shape(N, Cout, Dout=Din, Hout=Hin, Wout=Win), Dx.shape(N, Cin, "
+            "Din, Hin, Win)] "
+            "to [a.shape(Cin, Cout), b.shape(N, Cout, Din*Hin*Win), c.shape(N, Cin, Din*Win*Hin)].");
     return true;
 }
 
@@ -2764,11 +2796,11 @@ static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTe
     return Dw1x1TransToMmMode::BATCH_N;
 }
 
-static aclnnStatus CalculateW1B1FmNDxByMm(ConvolutionBackwardInputTensor& inputTensor,
-                                          ConvolutionBackwardResult& outputTensor, ConvolutionBackwardParams& params,
-                                          aclOpExecutor* executor)
+static aclnnStatus CalculateW1FmNDxByMm(ConvolutionBackwardInputTensor& inputTensor,
+                                        ConvolutionBackwardResult& outputTensor, ConvolutionBackwardParams& params,
+                                        aclOpExecutor* executor)
 {
-    OP_LOGD("Enter CalculateW1B1FmNDxByMm");
+    OP_LOGD("Enter CalculateW1FmNDxByMm");
     auto wTensor = inputTensor.weight;
     op::Shape weightShape = wTensor->GetViewShape();
     auto gradOutTensor = params.transposed ? inputTensor.input : inputTensor.gradOutput;
@@ -2777,35 +2809,51 @@ static aclnnStatus CalculateW1B1FmNDxByMm(ConvolutionBackwardInputTensor& inputT
     OP_LOGD("gradOutTensor is: %s", gradOutTensor->ToString().GetString());
     int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
     int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+    int64_t nOutDim = gradOutShape.GetDim(NCDHW_N_DIM);
     int64_t dOutDim = gradOutShape.GetDim(NCDHW_D_DIM);
     int64_t hOutDim = gradOutShape.GetDim(NCDHW_H_DIM);
     int64_t wOutDim = gradOutShape.GetDim(NCDHW_W_DIM);
-    // Weight: reshape from(Cout, Cin, 1, 1, 1) to(Cout, Cin)
-    op::Shape tmpShape = op::Shape({cOutDim, cInDim});
-    auto mat1ForMm = executor->CreateView(wTensor, tmpShape, wTensor->GetViewOffset());
-    OP_CHECK_NULL(mat1ForMm, return ACLNN_ERR_INNER_NULLPTR);
-    op::Strides mat1ViewStride = op::Strides({mat1ForMm->GetViewStrides()[1], mat1ForMm->GetViewStrides()[0]});
-    mat1ForMm->SetStorageFormat(Format::FORMAT_ND);
-    mat1ForMm->SetOriginalFormat(Format::FORMAT_ND);
-    tmpShape = op::Shape({cInDim, cOutDim});
-    mat1ForMm->SetViewShape(tmpShape);
-    mat1ForMm->SetViewFormat(Format::FORMAT_ND);
-    mat1ForMm->SetViewStrides(mat1ViewStride);
-    OP_LOGD("mat1ForMm is: %s", mat1ForMm->ToString().GetString());
+    const aclTensor* matmulOut = nullptr;
+    if (nOutDim == 1) {
+        // Weight: reshape from(Cout, Cin, 1, 1, 1) to(Cout, Cin)
+        op::Shape tmpShape = op::Shape({cOutDim, cInDim});
+        auto mat1ForMm = executor->CreateView(wTensor, tmpShape, wTensor->GetViewOffset());
+        OP_CHECK_NULL(mat1ForMm, return ACLNN_ERR_INNER_NULLPTR);
+        op::Strides mat1ViewStride = op::Strides({mat1ForMm->GetViewStrides()[1], mat1ForMm->GetViewStrides()[0]});
+        mat1ForMm->SetStorageFormat(Format::FORMAT_ND);
+        mat1ForMm->SetOriginalFormat(Format::FORMAT_ND);
+        tmpShape = op::Shape({cInDim, cOutDim});
+        mat1ForMm->SetViewShape(tmpShape);
+        mat1ForMm->SetViewFormat(Format::FORMAT_ND);
+        mat1ForMm->SetViewStrides(mat1ViewStride);
+        OP_LOGD("mat1ForMm is: %s", mat1ForMm->ToString().GetString());
 
-    // Dy: reshape from(1, Cout, Dout, Hout, Wout) to(Cout, Dout*Hout*Wout)
-    FVector<int64_t> mat2ShapeVec = {cOutDim, dOutDim * hOutDim * wOutDim};
-    aclIntArray* mat2ShapeArray = executor->AllocIntArray(mat2ShapeVec.data(), mat2ShapeVec.size());
-    OP_CHECK_NULL(mat2ShapeArray, return ACLNN_ERR_INNER_NULLPTR);
-    auto mat2ForMm = l0op::Reshape(gradOutTensor, mat2ShapeArray, executor);
-    OP_CHECK_NULL(mat2ForMm, return ACLNN_ERR_INNER_NULLPTR);
-    OP_LOGD("mat2ForMm is: %s", mat2ForMm->ToString().GetString());
+        // Dy: reshape from(1, Cout, Dout, Hout, Wout) to(Cout, Dout*Hout*Wout)
+        FVector<int64_t> mat2ShapeVec = {cOutDim, dOutDim * hOutDim * wOutDim};
+        aclIntArray* mat2ShapeArray = executor->AllocIntArray(mat2ShapeVec.data(), mat2ShapeVec.size());
+        OP_CHECK_NULL(mat2ShapeArray, return ACLNN_ERR_INNER_NULLPTR);
+        auto mat2ForMm = l0op::Reshape(gradOutTensor, mat2ShapeArray, executor);
+        OP_CHECK_NULL(mat2ForMm, return ACLNN_ERR_INNER_NULLPTR);
+        OP_LOGD("mat2ForMm is: %s", mat2ForMm->ToString().GetString());
 
-    auto matmulOut = ExecMmOp(mat1ForMm, mat2ForMm, nullptr, params.cubeMathType, executor);
+        matmulOut = ExecMmOp(mat1ForMm, mat2ForMm, nullptr, params.cubeMathType, executor);
+    } else {
+        // batch>1: Dy内存布局为(N, Cout, D, H, W)，无法零拷贝拼出(Cout, N*DHW)的2D矩阵，
+        // 改用batch维广播的bmm: Weight[1, Cout, Cin](转置) x Dy[N, Cout, D*H*W] -> Dx[N, Cin, D*H*W]
+        auto mat1ForBmm = ViewWithShapeAndReformatND(wTensor, {1, cOutDim, cInDim}, executor);
+        OP_CHECK_NULL(mat1ForBmm, return ACLNN_ERR_INNER_NULLPTR);
+        auto mat2ForBmm = ViewWithShapeAndReformatND(gradOutTensor, {nOutDim, cOutDim, dOutDim * hOutDim * wOutDim},
+                                                     executor);
+        OP_CHECK_NULL(mat2ForBmm, return ACLNN_ERR_INNER_NULLPTR);
+        auto mmOutForBmm = ViewWithShapeAndReformatND(outputTensor.gradInput,
+                                                      {nOutDim, cInDim, dOutDim * hOutDim * wOutDim}, executor);
+        OP_CHECK_NULL(mmOutForBmm, return ACLNN_ERR_INNER_NULLPTR);
+        matmulOut = ExecBatchMatmulOp(mat1ForBmm, mat2ForBmm, mmOutForBmm, true, false, params.cubeMathType, executor);
+    }
     OP_CHECK_NULL(matmulOut, return ACLNN_ERR_INNER_NULLPTR);
     OP_LOGD("matmulOut is: %s", matmulOut->ToString().GetString());
-    // Dx: reshape from(Cin, Din*Win*Hin) to(1, Cin, Din=Dout, Hin=Hout, Win=Wout)
-    tmpShape = op::Shape({1, cInDim, dOutDim, hOutDim, wOutDim});
+    // Dx: reshape from(N, Cin, Din*Win*Hin) to(N, Cin, Din=Dout, Hin=Hout, Win=Wout)
+    op::Shape tmpShape = op::Shape({nOutDim, cInDim, dOutDim, hOutDim, wOutDim});
     auto* gradInputND = ViewWithShape(matmulOut, tmpShape, executor);
     OP_CHECK_NULL(gradInputND, return ACLNN_ERR_INNER_NULLPTR);
     OP_LOGD("gradInputND is: %s", gradInputND->ToString().GetString());
@@ -2821,17 +2869,17 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
 {
     OP_LOGD("Enter CalculateConv3DBackwardByMatmulImpl");
     // 是否满足新的条件
-    bool w1B1FmNDxTransToMmFlag = IsW1B1FmNDxTransToMm(inputTensor, params); // 判定条件函数
+    bool w1FmNDxTransToMmFlag = IsW1FmNDxTransToMm(inputTensor, params); // 判定条件函数
     auto dw1x1Mode = GetDw1x1TransToMmMode(inputTensor, params);
     auto conv2MmMode = GetConv3DBp2MmMode(inputTensor, params);
-    if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_NO_MM && !w1B1FmNDxTransToMmFlag &&
+    if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_NO_MM && !w1FmNDxTransToMmFlag &&
         dw1x1Mode == Dw1x1TransToMmMode::NONE) {
         return ACLNN_SUCCESS;
     }
     if ((*params.outputMask)[0]) {
-        if (w1B1FmNDxTransToMmFlag) {
+        if (w1FmNDxTransToMmFlag) {
             // 新的adapt逻辑
-            auto status = CalculateW1B1FmNDxByMm(inputTensor, outputTensor, params, executor);
+            auto status = CalculateW1FmNDxByMm(inputTensor, outputTensor, params, executor);
             CHECK_RET(status == ACLNN_SUCCESS, status);
             conv3DBp2MatmulMask[0] = true;
         } else {

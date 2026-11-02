@@ -160,6 +160,7 @@ aclnnStatus N2HChangeInput(const aclTensor*& input, aclOpExecutor* executor);
 void GetConv3DTransposeAdapterParam(const aclTensor* input, const aclIntArray* stride, const aclIntArray* padding,
                                     const aclIntArray* dilation, const aclIntArray* outputPadding,
                                     aclOpExecutor* executor, TransposeAdaptParam* params);
+bool IsSocVersion960();
 } // namespace l0op
 
 #endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_CONVOLUTION_OP_H

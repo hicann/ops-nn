@@ -2750,6 +2750,39 @@ TEST_F(convolution_backward_test, ascend950_test_Conv3DBackwardW1B1FmNDxByMm)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
+// cover aclnn_convolution_backward.cpp IsW1FmNDxTransToMm batch>1:
+// 960 3D 1x1x1 kernel + batch>1 dx broadcast bmm / dw batchN matmul
+TEST_F(convolution_backward_test, ascend960_test_Conv3DBackwardW1FmNDxByMmBatchN)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_9201);
+    auto input_tensor_desc = TensorDesc({4, 4, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto weight_tensor_desc = TensorDesc({6, 4, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto grad_output_tensor_desc = TensorDesc({4, 6, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+
+    auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{6});
+    auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    int groups = 1;
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, false});
+    auto gradInput = TensorDesc({4, 4, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradWeight = TensorDesc({6, 4, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradBias = TensorDesc({6}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+              padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
 TEST_F(convolution_backward_test, ascend910B2_test_Conv3DBackward_Fp32_USE_HF32)
 {
     auto input_tensor_desc = TensorDesc({1, 16, 2, 10, 10}, ACL_FLOAT, ACL_FORMAT_NCDHW);
@@ -3175,7 +3208,7 @@ TEST_F(convolution_backward_test, ascend910B2_test_Conv3DBackwardDxByMm_FmEqKern
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-// cover aclnn_convolution_backward.cpp L2420-L2423/L2703-L2708: 950 3D dw IsW1B1FmNDxTransToMm
+// cover aclnn_convolution_backward.cpp L2420-L2423/L2703-L2708: 950 3D dw IsW1FmNDxTransToMm
 // kernel 1 IsTransTo1x1Dw stride != kernel
 TEST_F(convolution_backward_test, ascend950_test_Conv3DBackward_dw_kernel3_pad0)
 {
@@ -3210,7 +3243,7 @@ TEST_F(convolution_backward_test, ascend950_test_Conv3DBackward_dw_kernel3_pad0)
 }
 
 // cover aclnn_convolution_backward.cpp L2409-L2412/L2509-L2512/L2698-L2701: 950 3D 1x1x1 kernel +
-// dilation=2 IsW1B1FmNDxTransToMm / Is1x1DwTransToMm / IsTransTo1x1Dw dilation != 1
+// dilation=2 IsW1FmNDxTransToMm / Is1x1DwTransToMm / IsTransTo1x1Dw dilation != 1
 TEST_F(convolution_backward_test, ascend950_test_Conv3DBackward_w1b1_dilation2)
 {
     op::NpuArchManager archManager(NpuArch::DAV_3510);
@@ -3415,7 +3448,7 @@ TEST_F(convolution_backward_test, ascend950_test_Conv3DTransposeBackward_Bf16)
 
 // cover aclnn_convolution_backward.cpp L2099-L2101/L2391-L2393/L2680-L2682/L3010-L3012:
 // 950 3D HIFLOAT8: 8bit matmul(NO_MM), dx Conv3dv2NCDHWHif8,
-// gradWeight FP32 (dw 8bit ), IsW1B1FmNDxTransToMm/IsTransTo1x1Dw 8bit
+// gradWeight FP32 (dw 8bit ), IsW1FmNDxTransToMm/IsTransTo1x1Dw 8bit
 TEST_F(convolution_backward_test, ascend950_test_Conv3DTransposeBackward_Hif8)
 {
     op::NpuArchManager archManager(NpuArch::DAV_3510);

@@ -1272,7 +1272,7 @@ bool CheckTransposeN2HEnable(const aclTensor* input, const aclTensor* weight, ac
     return CheckN2HNoHkWkL1Probe(input, weight, stride5, outputPadding5);
 }
 
-static bool IsSocVersion960()
+bool IsSocVersion960()
 {
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
