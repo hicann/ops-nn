@@ -60,7 +60,7 @@ bool ConvBackpropFusionUtilsPass::CheckSocAndIntrinsic(const std::map<std::strin
     return true;
 }
 
-bool ConvBackpropFusionUtilsPass::IsArch35()
+bool ConvBackpropFusionUtilsPass::IsArchAfter35()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
@@ -68,7 +68,7 @@ bool ConvBackpropFusionUtilsPass::IsArch35()
         return false;
     }
     const std::string soc = platformInfo.str_info.short_soc_version;
-    return SUPPORT_SOC_LIST.find(soc) != SUPPORT_SOC_LIST.end() && SUPPORT_SOC_LIST.at(soc) == NpuArch::DAV_3510;
+    return SUPPORT_SOC_LIST.find(soc) != SUPPORT_SOC_LIST.end();
 }
 
 bool ConvBackpropFusionUtilsPass::IsUnknownRankShape(const std::vector<int64_t>& dims)

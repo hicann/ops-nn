@@ -97,7 +97,7 @@ protected:
     // 是否是动态算子调用，带D算子为false，950中动静归一全部为true
     bool isDynamic = true;
 
-    bool isArch35 = true;
+    bool isArchAfter35 = true;
 };
 
 } // namespace ops

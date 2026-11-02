@@ -124,7 +124,7 @@ bool DepthwiseDfFusionPass::ValidateFilterDesc(const GNode& matchedNode)
 {
     OP_CHECK_IF(!ValidateFilterShapePositive(),
                 OP_LOGD(GetNodeType().GetString(), "ValidateFilterShapePositive failed"), return false);
-    if (isArch35) {
+    if (isArchAfter35) {
         // input_size是否const仅在动态场景有意义(D算子input_size为属性恒为const)；
         // TensorDesc不含const信息，需经节点查producer是否Const，故在调用侧求值后传入
         const bool isInputSizeConst = !isDynamic || IsInputSizeConst(matchedNode);
@@ -158,7 +158,7 @@ bool DepthwiseDfFusionPass::MeetRequirements(const GNode& matchedNode)
     OP_CHECK_IF(matchedNode.GetType(matchedTypeAsc) != GRAPH_SUCCESS,
                 OP_LOGD(GetNodeType().GetString(), "GetType failed"), return false);
     isDynamic = (matchedTypeAsc.GetString() == std::string(DEPTHWISE_DYN.GetString()));
-    isArch35 = ConvBackpropFusionUtilsPass::IsArch35();
+    isArchAfter35 = ConvBackpropFusionUtilsPass::IsArchAfter35();
     OP_CHECK_IF(!GetNodeDesc(matchedNode), OP_LOGE(GetNodeType().GetString(), "GetNodeDesc failed"), return false);
     const TensorDesc& filterDesc = isDynamic ? input1Desc : input0Desc;
     ge::Format originFormat = filterDesc.GetOriginFormat();
@@ -215,7 +215,7 @@ bool DepthwiseDfFusionPass::BuildOptionalTranspose(EsGraphBuilder& builder, cons
     }
     TensorDesc transposeOutDesc;
     EsTensorHolder transposeOut;
-    if (isArch35) {
+    if (isArchAfter35) {
         TransposeNodeConfig config = TransposeNodeConfig::Create(iFilterHolder, TRANSPOSE_PERM,
                                                                  nodeNamePrefix + "/Transpose", originFormat);
         OP_CHECK_IF(!ConvBackpropFusionUtilsPass::CreateTransposeNode(builder, config, transposeOut, transposeOutDesc,
@@ -279,7 +279,7 @@ GraphUniqPtr DepthwiseDfFusionPass::BuildDynamicTargetNode(EsGraphBuilder& build
                                                            const TensorDesc& targetFilterDesc)
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
-    const std::string outputName = isArch35 ? "y" : "input_grad";
+    const std::string outputName = isArchAfter35 ? "y" : "input_grad";
     GNode targetNode = CompliantNodeBuilder(graph)
                            .OpType(targetOpType.c_str())
                            .Name(targetNodeName.c_str())
@@ -388,7 +388,7 @@ GraphUniqPtr DepthwiseDfFusionPass::Replacement(const GNode& matchedNode)
                                   reshapeOutput, targetFilterDesc),
                 OP_LOGE(GetNodeType().GetString(), "BuildReshapeNode failed"), return nullptr);
     std::string targetOpType = matchedType;
-    if (isArch35) {
+    if (isArchAfter35) {
         targetOpType.erase(0, strlen(DEPTHWISE_PREFIX));
     }
     std::string targetNodeName = nodeNamePrefix + "/dx";

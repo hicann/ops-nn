@@ -83,7 +83,7 @@ bool DepthwiseDwMulFusionPass::ValidateFilterDesc(const GNode& matchedNode)
     OP_CHECK_IF(filterSize.size() != FILTER_DIM_EXPECT,
                 OP_LOGE(GetNodeType().GetString(), "filter dim only supports 4 dims, got %zu.", filterSize.size()),
                 return false);
-    if (isArch35) {
+    if (isArchAfter35) {
         for (auto filterDim : filterSize) {
             OP_CHECK_IF(filterDim <= 0,
                         OP_LOGE(GetNodeType().GetString(), "%ld in filter shape should be positive.", filterDim),
@@ -116,7 +116,7 @@ bool DepthwiseDwMulFusionPass::MeetRequirements(const GNode& matchedNode)
     OP_CHECK_IF(matchedNode.GetType(matchedTypeAsc) != GRAPH_SUCCESS,
                 OP_LOGD(GetNodeType().GetString(), "GetType failed"), return false);
     isDynamic = (matchedTypeAsc.GetString() == std::string(DEPTHWISE_DYN.GetString()));
-    isArch35 = ConvBackpropFusionUtilsPass::IsArch35();
+    isArchAfter35 = ConvBackpropFusionUtilsPass::IsArchAfter35();
     OP_CHECK_IF(!GetNodeDesc(matchedNode), OP_LOGE(GetNodeType().GetString(), "GetNodeDesc failed"), return false);
     if (isDynamic) {
         // input1.valueDepend=required)：动态算子filter_size输入必须为Const节点
@@ -296,7 +296,7 @@ bool DepthwiseDwMulFusionPass::BuildOptionalTranspose(EsGraphBuilder& builder, g
                                                       const TensorDesc& reshapeOutDesc, TensorDesc& finalOutDesc,
                                                       EsTensorHolder& finalOutput) const
 {
-    if (isArch35) {
+    if (isArchAfter35) {
         TransposeNodeConfig config = TransposeNodeConfig::Create(reshapeOutput, TRANSPOSE_PERM,
                                                                  nodeNamePrefix + "/Transpose", originFormat);
         OP_CHECK_IF(!ConvBackpropFusionUtilsPass::CreateTransposeNode(builder, config, finalOutput, finalOutDesc,

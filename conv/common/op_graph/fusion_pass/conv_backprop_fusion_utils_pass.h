@@ -84,7 +84,9 @@ struct UnsqueezeNodeInfo {
 
 // 支持的SOC列表
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                         {"Ascend350", NpuArch::DAV_3510}};
+                                                         {"Ascend350", NpuArch::DAV_3510},
+                                                         {"Ascend960DT", NpuArch::DAV_9201},
+                                                         {"Ascend960PR", NpuArch::DAV_9202}};
 
 // Transpose排列常量
 const std::vector<int32_t> FILTER_TRANSPOSE_PERM = {4, 3, 0, 1, 2}; // DHWCN -> NCDHW
@@ -122,7 +124,7 @@ public:
 
     static bool CheckSocAndIntrinsic(const std::map<std::string, NpuArch>& supportSocList, NpuArch& npuArch);
 
-    static bool IsArch35();
+    static bool IsArchAfter35();
 
     static bool IsUnknownRankShape(const std::vector<int64_t>& dims);
 
