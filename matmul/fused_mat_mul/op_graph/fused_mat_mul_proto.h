@@ -26,7 +26,8 @@ namespace ge {
  * float32 is supported for the the following fused_op_types: "","relu","add","mul".
  * @li x2: A matrix tensor. Must be one of the following types: float16, bfloat16, float32.
  * float32 is supported for the the following fused_op_types: "","relu","add","mul".
- * @li bias: An optional tensor. 1D. Must be one of the following types: float16, bfloat16, float32.
+ * @li bias: An optional tensor. When supported, its shape is [N] or [1, N].
+ * For "quant" and "relu_quant", only [N] is supported. It must have type float16, bfloat16, or float32.
  * bfloat16 is only supported in Ascend 950PR&950DT products. For "quant" and "relu_quant", bias only supports float16.
  * @li x3: An Optional tensor. For "add", "mul" and "scale_add", x3 is the fused matrix input. For "quant" and
  * "relu_quant", x3 must be a uint64 tensor with shape [1], carrying the encoded logical quantization parameter.
