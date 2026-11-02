@@ -63,12 +63,12 @@ namespace ge {
     else :
             out_depth = (in_depth + pad_front + pad_backend - ksize_d + stride_d - 1) / stride_d + 1
             out_height = (in_height + pad_top + pad_bottom - ksize_h + stride_h - 1) / stride_h + 1
-            out_width = (in_width + in_width + pad_right - ksize_w + stride_w - 1) / stride_w + 1
+            out_width = (in_width + pad_left + pad_right - ksize_w + stride_w - 1) / stride_w + 1
             if  (out_depth - 1) * stride_d >= in_depth + pad_front :
                     out_depth = out_depth - 1
             if  (out_height - 1) * stride_h >= in_height + pad_top :
                     out_height = out_height - 1
-            if  (out_width - 1) * stride_w >= in_width + in_width :
+            if  (out_width - 1) * stride_w >= in_width + pad_left :
                     out_width = out_width - 1
   It not support out_depth < 0, out_height < 0 or out_width < 0.
 * @endcode
