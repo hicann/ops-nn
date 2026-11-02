@@ -179,7 +179,7 @@
       <td>
         <ul>
           <li>表示入参gamma的梯度，对应公式中的`dgammaOut`。shape与输入`gamma`一致。</li>
-          <li>数据类型、shape与输入gamma的保持一致。</li>
+          <li>数据类型固定为FLOAT32，shape与输入gamma保持一致。</li>
         </ul>
       </td>
       <td>FLOAT32</td>
@@ -191,7 +191,7 @@
       <td>
         <ul>
           <li>表示正向入参beta的反向梯度，对应公式中的`dbetaOut`。shape与输入`gamma`一致。</li>
-          <li>数据类型、shape与输入gamma的保持一致。</li>
+          <li>数据类型固定为FLOAT32，shape与输入gamma保持一致。</li>
         </ul>
       </td>
       <td>FLOAT32</td>

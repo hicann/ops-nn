@@ -52,7 +52,7 @@ namespace ge {
 * @li dx: The gradient of input "x" after quantization, Has the same type and shape as "x".
 *         A Tensor. Support dtype: hifloat8/int8, support format: ND.
 *         Support shape: 2-8 dimensions.
-* @li dgamma: The gradient of input "gamma". Has the same type and shape as "gamma".
+* @li dgamma: The gradient of input "gamma". Has the same shape as "gamma" and type float32.
 *             A Tensor. Support dtype: float32, support format: ND.
 *             Support shape: 1-7 dimensions.
 */

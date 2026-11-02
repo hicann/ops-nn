@@ -40,9 +40,9 @@ namespace ge {
 * @par Outputs
 * @li dx: The gradient of input "x", Has the same type and shape as "x".
 *     A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
-* @li dgamma: The gradient of input "gamma", Has the same type and shape as "gamma".
+* @li dgamma: The gradient of input "gamma", Has the same shape as "gamma" and type float32.
 *     A Tensor. Support dtype: [float32], support format: [ND].
-* @li dbeta: The gradient of input "beta", Has the same type and shape as "beta".
+* @li dbeta: The gradient of input "beta". Has the same shape as "gamma" and type float32.
 *     A Tensor. Support dtype: [float32], support format: [ND].
 */
 REG_OP(AddLayerNormGrad)
