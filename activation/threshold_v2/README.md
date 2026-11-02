@@ -13,12 +13,12 @@
 
 ## 功能说明
 
-- 算子功能：对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。
+- 算子功能：对输入x进行阈值操作。当x中的elements小于等于threshold时，返回value；否则，返回elements。
 
 - 计算公式：
 
 $$
-out(x) = \begin{cases} x, & x\gt threshold \\ value, & otherwise \end{cases}
+out(x) = \begin{cases} value, & x \le threshold \\ x, & otherwise \end{cases}
 $$
 
 ## 参数说明
@@ -78,5 +78,5 @@ $$
 | 调用方式　| 样例代码　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　| 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
 | -----------| -----------------------------------------------------------------------------| ----------------------------------------------------------------------------------------------------------|
 | 图模式　　| [test_geir_threshold_v2.cpp](./examples/test_geir_threshold_v2.cpp)　　　　 | 通过[算子IR](./op_graph/threshold_v2_proto.h)构图方式调用ThresholdV2算子。　　　　　　　　　　　　　　　 |
-| aclnn调用 | [test_aclnn_threshold](../threshold/examples/test_aclnn_threshold.cpp)　　　　　　　　 | 通过[aclnnThreshold](../threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用ThresholdV2算子。　　　　|
-| aclnn调用 | [test_aclnn_inplace_threshold](../threshold/examples/test_aclnn_inplace_threshold.cpp) | 通过[aclnnInplaceThreshold](../threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用ThresholdV2算子。 |
+| aclnn调用 | [test_aclnn_threshold](./examples/test_aclnn_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用。　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
+| aclnn调用 | [test_aclnn_inplace_threshold](./examples/test_aclnn_inplace_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用（结果写回输入张量）。　　　　　　　　　　　　　　　　　　　　　　　　　　 |

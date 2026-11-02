@@ -80,71 +80,90 @@ int main()
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> selfShape = {8};
-    std::vector<int64_t> outShape = {8};
     void* selfDeviceAddr = nullptr;
-    void* outDeviceAddr = nullptr;
     aclTensor* self = nullptr;
     aclScalar* threshold = nullptr;
     aclScalar* value = nullptr;
-    aclTensor* out = nullptr;
     std::vector<float> selfHostData = {0, 1, 2, 3, 4.1, 5, 6, 7};
-    std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     float thresholdVal = 4.1f;
     float valueVal = 10.0f;
+    void* inplaceWorkspaceAddr = nullptr;
+    // 失败路径统一释放已申请的资源，避免中途失败时泄漏
+    auto releaseResources = [&]() {
+        if (self != nullptr) {
+            aclDestroyTensor(self);
+        }
+        if (threshold != nullptr) {
+            aclDestroyScalar(threshold);
+        }
+        if (value != nullptr) {
+            aclDestroyScalar(value);
+        }
+        if (selfDeviceAddr != nullptr) {
+            aclrtFree(selfDeviceAddr);
+        }
+        if (inplaceWorkspaceAddr != nullptr) {
+            aclrtFree(inplaceWorkspaceAddr);
+        }
+        aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    };
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
     // 创建threshold aclScalar
     threshold = aclCreateScalar(&thresholdVal, aclDataType::ACL_FLOAT);
-    CHECK_RET(threshold != nullptr, return ret);
+    CHECK_RET(threshold != nullptr, releaseResources(); return ret);
     // 创建value aclScalar
     value = aclCreateScalar(&valueVal, aclDataType::ACL_FLOAT);
-    CHECK_RET(value != nullptr, return ret);
-    // 创建out aclTensor
-    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(value != nullptr, releaseResources(); return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
-    // 调用aclnnThreshold第一段接口
-    ret = aclnnThresholdGetWorkspaceSize(self, threshold, value, out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThresholdGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    // aclnnInplaceThreshold接口调用示例
+    uint64_t inplaceWorkspaceSize = 0;
+    aclOpExecutor* inplaceExecutor;
+    // 调用aclnnInplaceThreshold第一段接口
+    ret = aclnnInplaceThresholdGetWorkspaceSize(self, threshold, value, &inplaceWorkspaceSize, &inplaceExecutor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceThresholdGetWorkspaceSize failed. ERROR: %d\n", ret);
+              releaseResources(); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    if (inplaceWorkspaceSize > 0) {
+        ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); releaseResources();
+                  return ret);
     }
-    // 调用aclnnThreshold第二段接口
-    ret = aclnnThreshold(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThreshold failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnInplaceThreshold第二段接口
+    ret = aclnnInplaceThreshold(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceThreshold failed. ERROR: %d\n", ret); releaseResources();
+              return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); releaseResources();
+              return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(outShape);
-    std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+    // inplace接口的计算结果写回self，需要从selfDeviceAddr拷贝结果
+    auto inplaceSize = GetShapeSize(selfShape);
+    std::vector<float> inplaceResultData(inplaceSize, 0);
+    ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), selfDeviceAddr,
+                      inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+              releaseResources(); return ret);
+    for (int64_t i = 0; i < inplaceSize; i++) {
+        LOG_PRINT("aclnnInplaceThreshold result[%ld] is: %f\n", i, inplaceResultData[i]);
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(self);
     aclDestroyScalar(threshold);
     aclDestroyScalar(value);
-    aclDestroyTensor(out);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
     aclrtFree(selfDeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
+    if (inplaceWorkspaceSize > 0) {
+        aclrtFree(inplaceWorkspaceAddr);
     }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);

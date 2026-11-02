@@ -89,7 +89,9 @@ static ge::graphStatus ThresholdTilingFunc(gert::TilingContext* context)
     if (totalElements == 0) {
         tiling.needCoreNum = 1;
         context->SetBlockDim(1);
-        (*context->GetTilingData<ThresholdTilingData>()) = tiling;
+        auto* tilingData = context->GetTilingData<ThresholdTilingData>();
+        OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+        *tilingData = tiling;
 
         return SetUbAndTilingKey(context, ubSize);
     }
@@ -108,7 +110,9 @@ static ge::graphStatus ThresholdTilingFunc(gert::TilingContext* context)
 
     // 6. Set TilingData
     context->SetBlockDim(tiling.needCoreNum);
-    (*context->GetTilingData<ThresholdTilingData>()) = tiling;
+    auto* tilingData = context->GetTilingData<ThresholdTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+    *tilingData = tiling;
 
     return SetUbAndTilingKey(context, ubSize);
 }

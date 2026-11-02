@@ -21,14 +21,15 @@ extern "C" {
  * @brief aclnnThreshold的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
  *
- * 算子功能: 对输入self进行阈值操作。当self中的元素大于threshold时，返回元素本身；否则，返回value。
- * @param [in] self: npu device侧的aclTensor，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * 算子功能: 对输入self进行阈值操作。当self中的元素小于等于threshold时，返回value；否则，返回元素本身。
+ * @param [in] self: npu device侧的aclTensor，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
  * 支持[非连续的Tensor](),数据格式支持ND[参考](#)
- * @param [in] threshold: npu device侧的aclScalar，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * @param [in] threshold: npu
+ * device侧的aclScalar，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
  * 表示对输入self的元素进行大小判断的阈值。
- * @param [in] value: npu device侧的aclScalar，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
- * 表示输入self的元素小于阈值时的返回值。
- * @param [out] out: npu device侧的aclTensor，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * @param [in] value: npu device侧的aclScalar，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * 表示输入self的元素小于等于阈值时的返回值。
+ * @param [out] out: npu device侧的aclTensor，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
  * 支持非连续的Tensor。且数据类型、数据格式和shape需要与self一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
@@ -53,13 +54,15 @@ ACLNN_API aclnnStatus aclnnThreshold(void* workspace, uint64_t workspaceSize, ac
  * @brief aclnnInplaceThreshold的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_math
  *
- * 算子功能: 对输入self进行阈值操作。当self中的元素大于threshold时，返回元素本身；否则，返回value。
- * @param [in] selfRef: npu device侧的aclTensor，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * 算子功能: 对输入self进行阈值操作。当self中的元素小于等于threshold时，返回value；否则，返回元素本身。
+ * @param [in] selfRef: npu
+ * device侧的aclTensor，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
  * 支持[非连续的Tensor](),数据格式支持ND[参考](#)
- * @param [in] threshold: npu device侧的aclScalar，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * @param [in] threshold: npu
+ * device侧的aclScalar，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
  * 表示对输入self的元素进行大小判断的阈值。
- * @param [in] value: npu device侧的aclScalar，支持数据类型FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
- * 表示输入self的元素小于阈值时的返回值。
+ * @param [in] value: npu device侧的aclScalar，支持数据类型BFLOAT16、FLOAT、FLOAT16、INT32、INT8、UINT8、INT16、INT64。
+ * 表示输入self的元素小于等于阈值时的返回值。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

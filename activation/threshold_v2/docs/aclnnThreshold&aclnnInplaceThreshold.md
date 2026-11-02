@@ -23,11 +23,11 @@
 
 ## 功能说明
 
-- 接口功能：对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。
+- 接口功能：对输入x进行阈值操作。当x中的elements小于等于threshold时，返回value；否则，返回elements。
 - 计算公式：
 
 $$
-out(x) = \begin{cases} x, & x\gt threshold \\ value, & otherwise \end{cases}
+out(x) = \begin{cases} value, & x \le threshold \\ x, & otherwise \end{cases}
 $$
 
 ## 函数原型
@@ -113,7 +113,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
-      <td>-</td>
+      <td><ul><li>必选，无默认值。</li><li>数值域无限制，任意标量值均可传入。</li><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -122,8 +122,8 @@ aclnnStatus aclnnInplaceThreshold(
       <tr>
       <td>value（aclScalar*）</td>
       <td>输入</td>
-      <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
-      <td>-</td>
+      <td>表示输入self的元素小于等于阈值时的返回值，公式中的输入value。</td>
+      <td><ul><li>必选，无默认值。</li><li>数值域无限制，任意标量值均可传入。</li><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出张量，公式中的输出out。</td>
-      <td>shape需要与self一致。</td>
+      <td><ul><li>shape需要与self一致。</li><li>数据类型需可由self的数据类型转换得到。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>ND</td>
       <td>0-8</td>
@@ -191,15 +191,12 @@ aclnnStatus aclnnInplaceThreshold(
       <td>传入的self、threshold、value或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>self和threshold、value不满足数据类型推导规则。</td>
-    </tr>
-      <tr>
-      <td>self与threshold、value推导后的数据类型无法转换为指定输出out的类型。</td>
+      <td>self的数据类型无法转换为指定输出out的数据类型。</td>
     </tr>
       <tr>
       <td>self和out的shape超过8维，或者两者shape不一致。</td>
@@ -285,7 +282,7 @@ aclnnStatus aclnnInplaceThreshold(
       <tr>
       <td>value（aclScalar*）</td>
       <td>输入</td>
-      <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
+      <td>表示输入self的元素小于等于阈值时的返回值，公式中的输入value。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
     </tr>
@@ -321,12 +318,9 @@ aclnnStatus aclnnInplaceThreshold(
       <td>传入的selfRef、threshold或value是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>selfRef的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>selfRef和threshold、value不满足数据类型推导规则。</td>
     </tr>
     <tr>
       <td>selfRef的shape超过8维。</td>
@@ -612,15 +606,11 @@ int main()
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> selfShape = {8};
-    std::vector<int64_t> outShape = {8};
     void* selfDeviceAddr = nullptr;
-    void* outDeviceAddr = nullptr;
     aclTensor* self = nullptr;
     aclScalar* threshold = nullptr;
     aclScalar* value = nullptr;
-    aclTensor* out = nullptr;
     std::vector<float> selfHostData = {0, 1, 2, 3, 4.1, 5, 6, 7};
-    std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     float thresholdVal = 4.1f;
     float valueVal = 10.0f;
     // 创建self aclTensor
@@ -632,9 +622,6 @@ int main()
     // 创建value aclScalar
     value = aclCreateScalar(&valueVal, aclDataType::ACL_FLOAT);
     CHECK_RET(value != nullptr, return ret);
-    // 创建out aclTensor
-    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     // aclnnInplaceThreshold接口调用示例
@@ -659,9 +646,10 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+    // inplace接口的计算结果写回self，需要从selfDeviceAddr拷贝结果
     auto inplaceSize = GetShapeSize(selfShape);
     std::vector<float> inplaceResultData(inplaceSize, 0);
-    ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), outDeviceAddr,
+    ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), selfDeviceAddr,
                       inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < inplaceSize; i++) {
@@ -672,11 +660,9 @@ int main()
     aclDestroyTensor(self);
     aclDestroyScalar(threshold);
     aclDestroyScalar(value);
-    aclDestroyTensor(out);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
     aclrtFree(selfDeviceAddr);
-    aclrtFree(outDeviceAddr);
     if (inplaceWorkspaceSize > 0) {
         aclrtFree(inplaceWorkspaceAddr);
     }

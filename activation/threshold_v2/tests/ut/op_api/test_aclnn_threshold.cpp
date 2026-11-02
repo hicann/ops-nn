@@ -9,7 +9,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../../../op_host/op_api/aclnn_threshold.h"
+#include "../../../op_api/aclnn_threshold.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
@@ -303,6 +303,21 @@ TEST_F(l2_threshold_test, l2_test_self_dtype_cant_cast_out_dtype)
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// self与out为可转换dtype组合(fp32->fp16),合法路径应放行
+TEST_F(l2_threshold_test, l2_test_self_dtype_castable_out_dtype)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto threshold = ScalarDesc(4);
+    auto value = ScalarDesc(10);
+
+    auto ut = OP_API_UT(aclnnThreshold, INPUT(selfDesc, threshold, value), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // threshold_测试：self的float32数据类型在支持范围内

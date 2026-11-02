@@ -7,6 +7,20 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ---------------------------------------------------------------------------------------------------------
+common@ops-nn:
+  src:
+    release:
+      style:
+        - ops/ops-nn/docs/zh/op_api_list.md
+        - ops/ops-nn/docs/en/op_api_list.md
+        - ops/ops-nn/docs/zh/menu_aclnn_api.md
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code: null
+      non_delivery: null
+      open_source: null
+
 HPTG1@ops-nn:
     src:
         release:
@@ -618,6 +632,10 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_static_group_quant_hifp8.h
         - ops/ops-nn/activation/threshold/
         - ops/ops-nn/activation/threshold_grad_v2_d/op_api/
+        - ops/ops-nn/activation/threshold_v2/op_api/
+        - ops/ops-nn/activation/threshold_v2/docs/aclnnThreshold&aclnnInplaceThreshold.md
+        - ops/ops-nn/activation/threshold_v2/docs/aclnnThreshold&aclnnInplaceThreshold_en.md
+        - ops/ops-nn/activation/threshold_v2/README.md
         - ops/ops-nn/rnn/bidirection_lstm/op_host/bidirection_lstm_tiling.cpp
         - ops/ops-nn/quant/dequant_situ_quant/
         - ops/ops-nn/quant/situ_mx_quant/
@@ -705,6 +723,10 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/threshold/examples/
         - ops/ops-nn/activation/threshold_grad_v2_d/tests/
         - ops/ops-nn/activation/threshold_grad_v2_d/examples/
+        - ops/ops-nn/activation/threshold_v2/tests/ut/op_api/CMakeLists.txt
+        - ops/ops-nn/activation/threshold_v2/tests/ut/op_api/test_aclnn_threshold.cpp
+        - ops/ops-nn/activation/threshold_v2/examples/test_aclnn_threshold.cpp
+        - ops/ops-nn/activation/threshold_v2/examples/test_aclnn_inplace_threshold.cpp
         - ops/ops-nn/quant/dequant_situ_quant/tests/
         - ops/ops-nn/quant/dequant_situ_quant/examples/
         - ops/ops-nn/quant/situ_mx_quant/tests/

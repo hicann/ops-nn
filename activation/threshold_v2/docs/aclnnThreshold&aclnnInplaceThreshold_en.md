@@ -25,11 +25,11 @@
 
 ## Function
 
-- Description: Performs a threshold operation on the input x. When elements in x are greater than threshold, the elements are returned; otherwise, value is returned.
+- Description: Performs a threshold operation on the input x. When elements in x are less than or equal to threshold, value is returned; otherwise, the elements are returned.
 - Formula:
 
 $$
-out(x) = \begin{cases} x, & x\gt threshold \\ value, & otherwise \end{cases}
+out(x) = \begin{cases} value, & x \le threshold \\ x, & otherwise \end{cases}
 $$
 
 ## Function Prototype

@@ -9,7 +9,7 @@
 |  <term>Atlas A2系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
 |  <term>Atlas推理系列产品</term>     |     ×    |
-|  <term>Atlas训练系列产品</term>    |     ×    |
+|  <term>Atlas训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -75,6 +75,4 @@ $$
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_threshold](./examples/test_aclnn_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用Threshold算子。    |
-| aclnn调用 | [test_aclnn_inplace_threshold](./examples/test_aclnn_inplace_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用Threshold算子。    |
 | 图模式调用 | [test_geir_threshold](./examples/test_geir_threshold.cpp)   | 通过<a href="op_graph/threshold_relu_proto.h">算子IR</a>构图方式调用Threshold算子。 |

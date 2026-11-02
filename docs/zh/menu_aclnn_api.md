@@ -433,7 +433,7 @@
 - [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md)
 - [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md)
 - [aclnnThnnFusedGruCellBackward](../../rnn/thnn_fused_gru_cell_grad/docs/aclnnThnnFusedGruCellBackward.md)
-- [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)
+- [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold_v2/docs/aclnnThreshold&aclnnInplaceThreshold.md)
 - [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md)
 - [aclnnTopKTopPSample](../../index/top_k_top_p_sample/docs/aclnnTopKTopPSample.md)
 - [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md)
