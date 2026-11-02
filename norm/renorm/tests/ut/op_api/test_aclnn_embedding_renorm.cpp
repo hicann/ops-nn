@@ -641,3 +641,39 @@ TEST_F(l2EmbeddingRenormTest, testcase_040_indices_0d)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// D=1且触发缩放的场景: Regbase 上 Renorm 直出 x*scale，验证没有多余的 Mul
+// golden: [[1.0],[0.5]] (row0: norm=3>1 -> scale=1/3; row1: norm=0.5<=1 不变)
+TEST_F(l2EmbeddingRenormTest, testcase_041_single_column_scaled)
+{
+    auto selfDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3.0, 0.5});
+    auto indicesDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1});
+    double normType = 1.;
+    double maxNorm = 1.;
+    auto ut = OP_API_UT(aclnnEmbeddingRenorm, INPUT(selfDesc, indicesDesc, maxNorm, normType), OUTPUT());
+
+    // test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // precision simulate
+    ut.TestPrecision();
+}
+
+// D=1且FP16的场景: 验证去掉 aclnn 侧 Cast 后，内核内部 FP32 中间精度路径正确
+// golden: [[1.0],[0.5]] (row0: norm=3>1 -> scale=1/3; row1: norm=0.5<=1 不变)
+TEST_F(l2EmbeddingRenormTest, testcase_042_single_column_fp16)
+{
+    auto selfDesc = TensorDesc({2, 1}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{3.0, 0.5}).Precision(0.01, 0.01);
+    auto indicesDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1});
+    double normType = 1.;
+    double maxNorm = 1.;
+    auto ut = OP_API_UT(aclnnEmbeddingRenorm, INPUT(selfDesc, indicesDesc, maxNorm, normType), OUTPUT());
+
+    // test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // precision simulate
+    ut.TestPrecision();
+}
