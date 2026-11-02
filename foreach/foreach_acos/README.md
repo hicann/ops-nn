@@ -55,17 +55,13 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行反余弦运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行反余弦运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape（维度及每一维长度）与入参`x`对应位置的Tensor一致。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
 - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：不支持BFLOAT16。
-
-## 约束说明
-
-- 输出不支持非连续Tensor。
 
 ## 调用说明
 

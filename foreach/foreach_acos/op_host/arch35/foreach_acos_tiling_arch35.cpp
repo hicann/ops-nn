@@ -95,7 +95,7 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ACOS),
+    OP_CHECK_IF((tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ACOS)),
                 OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ACOS %d", tensorNum,
                         MAX_TENSOR_NUM_FOREACH_ACOS),
                 return ge::GRAPH_FAILED);
@@ -111,16 +111,29 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
         int64_t numel = idxTensorShape.GetShapeSize();
+        OP_CHECK_IF((numel < 0 || totalElements > INT64_MAX - numel),
+                    OP_LOGE(context, "totalElements of %luth tensor is overflow when accumulating ", i),
+                    return ge::GRAPH_FAILED);
         totalElements += numel;
         tilingData->prefixSums[i + 1] = totalElements;
 
-        // Get dtype from first tensor (all tensors must have same dtype)
+        // All tensors must have the same dtype; validate cross-instance consistency.
+        auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorDtypePtr);
+        ge::DataType curDtype = idxTensorDtypePtr->GetDataType();
         if (i == 0) {
-            auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX, i);
-            OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorDtypePtr);
-            dataType = idxTensorDtypePtr->GetDataType();
+            dataType = curDtype;
+        } else if (curDtype != dataType) {
+            OP_LOGE(context, "dtype of %luth tensor is inconsistent with the first tensor's dtype", i);
+            return ge::GRAPH_FAILED;
         }
     }
+
+    // Guard the rounding arithmetic below: totalElements + MIN_PER_CORE_ELEMENTS - 1 and
+    // totalElements + needCoreNum - 1 (needCoreNum <= maxCoreNum < MIN_PER_CORE_ELEMENTS)
+    // must not overflow int64.
+    OP_CHECK_IF((totalElements > INT64_MAX - (MIN_PER_CORE_ELEMENTS - 1)),
+                OP_LOGE(context, "totalElements %ld exceeds safe upper bound", totalElements), return ge::GRAPH_FAILED);
 
     // 4. Compute needCoreNum first (MDE Section 2.1):
     //    needCoreNum = min(maxCoreNum, max(1, ceil(totalElements / MIN_PER_CORE_ELEMENTS)))

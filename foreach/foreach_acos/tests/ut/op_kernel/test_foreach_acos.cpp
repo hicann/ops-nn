@@ -17,6 +17,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <cstdlib>
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
@@ -61,7 +62,7 @@ TEST_F(foreach_acos_test, test_case_float_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./acos_data/ && python3 compare_data.py 'float32'");
+    ASSERT_EQ(std::system("cd ./acos_data/ && python3 compare_data.py 'float32'"), 0);
 }
 
 TEST_F(foreach_acos_test, test_case_float16_2)
@@ -94,7 +95,7 @@ TEST_F(foreach_acos_test, test_case_float16_2)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./acos_data/ && python3 compare_data.py 'float16'");
+    ASSERT_EQ(std::system("cd ./acos_data/ && python3 compare_data.py 'float16'"), 0);
 }
 
 TEST_F(foreach_acos_test, test_case_bfloat16_3)
@@ -127,5 +128,5 @@ TEST_F(foreach_acos_test, test_case_bfloat16_3)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./acos_data/ && python3 compare_data.py 'bfloat16_t'");
+    ASSERT_EQ(std::system("cd ./acos_data/ && python3 compare_data.py 'bfloat16_t'"), 0);
 }
