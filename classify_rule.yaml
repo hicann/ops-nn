@@ -1631,6 +1631,22 @@ norm-c@ops-nn:
       non_delivery: null
       open_source: null
 
+HPTG2@ops-nn:
+  src:
+    release:
+      style:
+        - ops/ops-nn/scripts/
+        - ops/ops-nn/cmake/
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code:
+        - ops/ops-nn/tests/
+        - ops/ops-nn/build.sh
+        - ops/ops-nn/CMakeLists.txt
+      non_delivery: null
+      open_source: null
+
 HPTG5@ops-nn:
   src:
     release:
