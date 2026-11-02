@@ -73,6 +73,8 @@ constexpr uint16_t BIAS_BUFFER_FLAG_0 = 4;
 constexpr uint16_t BIAS_BUFFER_FLAG_1 = 5;
 constexpr uint16_t X2_SCALE_BUFFER_FLAG_0 = 0;
 constexpr uint16_t X2_SCALE_BUFFER_FLAG_1 = 1;
+constexpr uint16_t MTE1_WAIT_MMAD_FLAG_3 = 3;
+constexpr uint16_t MTE1_WAIT_MMAD_FLAG_2 = 2;
 
 constexpr static uint64_t DEQ_SCALE_MUL = 0xFFFFE000;
 constexpr static uint32_t DEQ_SCALE_MUL32 = 0xFFFFE000;

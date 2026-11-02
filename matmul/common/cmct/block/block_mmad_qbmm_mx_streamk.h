@@ -427,7 +427,11 @@ public:
             }
             dataCopyParams.dstStride = tileL1L0Param.curPadBKL1 - curGmBKL1NZ;
         }
-        AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams, ENABLE_PREALLOCATE_MTE2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams, true);
+#else
+        AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams);
+#endif
     }
 
     __aicore__ inline void InitA1(const AscendC::LocalTensor<AType>& al1Local, const TileL1L0Param& tileL1L0Param)
@@ -881,7 +885,11 @@ public:
         dn2nzParams.dstNzNStride = 1;
         dn2nzParams.dstNzMatrixStride = 0;
 
-        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams, ENABLE_PREALLOCATE_MTE2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams, true);
+#else
+        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyTransScaleAMTE2(const GlobalTensor<ScaleAType>& aScaleGlobal,
@@ -926,7 +934,11 @@ public:
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 0;
 
-        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams, ENABLE_PREALLOCATE_MTE2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams, true);
+#else
+        AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyNontransScaleBMTE2(const GlobalTensor<ScaleAType>& bScaleGlobal,
@@ -970,7 +982,11 @@ public:
 
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 0;
-        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams, ENABLE_PREALLOCATE_MTE2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams, true);
+#else
+        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyTransScaleBMTE2(const GlobalTensor<ScaleAType>& bScaleGlobal,
@@ -1010,7 +1026,11 @@ public:
 
         dn2nzParams.dstNzNStride = 1;
         dn2nzParams.dstNzMatrixStride = 0;
-        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams, ENABLE_PREALLOCATE_MTE2);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams, true);
+#else
+        AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyAInL1(AscendC::GlobalTensor<AType> aGlobal, TileL1L0Param tileL1L0Param,
@@ -1068,11 +1088,6 @@ private:
     constexpr static uint64_t HALF_L0A_SIZE = L0A_SIZE / DOUBLE_BUFFER_COUNT; // L0A_SIZE 定义在cmct的arch.h中, 单位B
     constexpr static int32_t C0_SIZE = AscendC::AuxGetC0Size<AType>(); // Atype=8Bit,C0_SIZE=32; Atype=4Bit,C0_SIZE=64;
     constexpr static int32_t BIAS_C0 = AscendC::AuxGetC0Size<BiasType>();
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
-    constexpr static bool ENABLE_PREALLOCATE_MTE2 = true;
-#else
-    constexpr static bool ENABLE_PREALLOCATE_MTE2 = false;
-#endif
     uint64_t m_;
     uint64_t n_;
     uint64_t k_;

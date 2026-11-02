@@ -312,7 +312,11 @@ private:
         nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilAlign(transA ? curKL1 : curML1, BLOCK_CUBE);
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(aL1Local_[offsetAL1], aGlobal[offsetA], nd2nzParams, true);
+#else
         AscendC::DataCopy(aL1Local_[offsetAL1], aGlobal[offsetA], nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyAInL1(AscendC::GlobalTensor<AType> aGlobal, uint64_t curML1, uint64_t curKL1,
@@ -355,7 +359,11 @@ private:
             offsetBL1 = l1BufferBOffset_[0] +
                         l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curNL1, transB ? BLOCK_CUBE : C0_SIZE);
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopy(bL1Local_[offsetBL1], bGlobal[offsetB], nd2nzParams, true);
+#else
         AscendC::DataCopy(bL1Local_[offsetBL1], bGlobal[offsetB], nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyBiasInL1(const AscendC::GlobalTensor<BiasType>& biasGlobal,
@@ -379,7 +387,11 @@ private:
         AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(scaleL1BufId);
         AscendC::DataCopyPadParams padParams;
         AscendC::DataCopyParams scaleParam{1, static_cast<uint16_t>(curNL1 * sizeof(uint64_t)), 0, 0};
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        AscendC::DataCopyPad(scaleL1Local, scaleGlobal, scaleParam, padParams, true);
+#else
         AscendC::DataCopyPad(scaleL1Local, scaleGlobal, scaleParam, padParams);
+#endif
         AscendC::SetFlag<AscendC::HardEvent::MTE2_FIX>(scaleL1BufId);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_FIX>(scaleL1BufId);
     }

@@ -457,7 +457,11 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
     uint64_t offset = matmulParam_.CalcAGMOffsetInnerLoop(0, kOffset);
     AscendC::Nd2NzParams nd2nzParam;
     matmulParam_.CalNd2NzParamA(nd2nzParam, isTailAL1);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    AscendC::DataCopy(al1Local_[l1BufferAOffset_[aL1BufferID_]], aGlobal[offset], nd2nzParam, true);
+#else
     AscendC::DataCopy(al1Local_[l1BufferAOffset_[aL1BufferID_]], aGlobal[offset], nd2nzParam);
+#endif
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
@@ -467,7 +471,11 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
     uint64_t offset = matmulParam_.CalcBGMOffsetInnerLoop(0, kOffset);
     AscendC::Nd2NzParams nd2nzParam;
     matmulParam_.CalNd2NzParamB(nd2nzParam, isTailBL1);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    AscendC::DataCopy(bL1Local_[l1BufferBOffset_[bL1BufferID_]], bGlobal[offset], nd2nzParam, true);
+#else
     AscendC::DataCopy(bL1Local_[l1BufferBOffset_[bL1BufferID_]], bGlobal[offset], nd2nzParam);
+#endif
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
