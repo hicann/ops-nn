@@ -118,7 +118,16 @@ bool Conv3dTiling::CheckInputFormat()
     } else {
         conv3dSupportFormatSet = {{ConvFormat::NCDHW, ConvFormat::NCDHW},
                                   {ConvFormat::NDHWC, ConvFormat::DHWCN},
-                                  {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}};
+                                  {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D},
+                                  {ConvFormat::NCDHW, ConvFormat::DHWCN}};
+    }
+
+    // (NCDHW, DHWCN) 组合的 group conv(OptGroup 搬运路径)尚未支持, 先明确拒绝
+    if (attrInfo.groups != 1 && descInfo.fMapType.format == ConvFormat::NCDHW &&
+        descInfo.weightType.format == ConvFormat::DHWCN) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeType, "groups", std::to_string(attrInfo.groups),
+                                              "fmap NCDHW + weight DHWCN does not support group conv yet");
+        return false;
     }
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==

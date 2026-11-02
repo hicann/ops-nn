@@ -157,7 +157,8 @@ const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV2D_FORMAT_LIST_9201
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW},
     {ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_NDHWC},
-    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDHWC}};
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDHWC},
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_NCDHW}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_FORMAT_LIST_9201 = {
     {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW},

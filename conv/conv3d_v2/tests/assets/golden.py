@@ -37,8 +37,62 @@ import numpy as np
 # Set to False to use PyTorch implementation
 
 __golden__ = {
-    "kernel": {"conv3dv2": "conv3d_v2_golden", "conv3d_v2": "conv3d_v2_golden"}
+    "kernel": {"conv3dv2": "conv3d_v2_golden", "conv3d_v2": "conv3d_v2_golden"},
+    "e2e": {"aclnnConvolution": "aclnn_convolution_golden"},
 }
+
+
+def aclnn_convolution_golden(
+    input,
+    weight,
+    bias,
+    stride,
+    padding,
+    dilation,
+    transposed,
+    outputPadding,
+    groups,
+    output,
+    cubeMathType,
+    **kwargs,
+):
+    """Golden for aclnnConvolution (conv3d, NCDHW, non-transposed).
+
+    Param order follows aclnnConvolutionGetWorkspaceSize. Tensors are numpy
+    arrays; attr lists follow conv3d 3-element convention [sd, sh, sw].
+    """
+    import torch
+    import torch.nn.functional as F
+
+    if transposed:
+        raise RuntimeError("aclnn_convolution_golden only supports transposed=False")
+
+    def to_torch(t):
+        if isinstance(t, torch.Tensor):
+            return t.contiguous()
+        return torch.from_numpy(np.ascontiguousarray(t))
+
+    x = to_torch(input)
+    w = to_torch(weight)
+    b = to_torch(bias) if bias is not None else None
+
+    in_dtype = x.dtype
+    calc_dtype = torch.float64 if in_dtype == torch.float32 else torch.float32
+    x = x.to(calc_dtype)
+    w = w.to(calc_dtype)
+    if b is not None:
+        b = b.to(calc_dtype)
+
+    y = F.conv3d(
+        x,
+        w,
+        b,
+        stride=tuple(stride),
+        padding=tuple(padding),
+        dilation=tuple(dilation),
+        groups=int(groups),
+    )
+    return [y.to(in_dtype)]
 
 
 NCDHW_FORMAT = "NCDHW"

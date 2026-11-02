@@ -145,7 +145,7 @@ TEST(ConvBaseUtilsTest, SupportConv2dFormatListFuseNotEmpty)
 TEST(ConvBaseUtilsTest, SupportConv3dFormatListNotEmpty)
 {
     EXPECT_FALSE(SUPPORT_CONV3D_FORMAT_LIST.empty());
-    EXPECT_EQ(SUPPORT_CONV3D_FORMAT_LIST.size(), 3u);
+    EXPECT_EQ(SUPPORT_CONV3D_FORMAT_LIST.size(), 4u);
 }
 
 TEST(ConvBaseUtilsTest, SupportQuantConvFormatListNotEmpty)

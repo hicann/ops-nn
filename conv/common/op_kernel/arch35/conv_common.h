@@ -260,6 +260,9 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrMMod
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04 ||
                   CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
         weightStartAddr = convOps->nIdxStart * convOps->k0;
+    } else if constexpr (CONV::B_FORMAT == ConvFormat::DHWCN) {
+        // DHWCN (kD,kH,kW,Cin,Co): Co 最内连续, 多核切 Co 的核基址偏移为 nIdxStart
+        weightStartAddr = convOps->nIdxStart;
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
     }
@@ -317,6 +320,9 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrHWod
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04 ||
                   CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
         weightStartAddr = convOps->nIdxStart * convOps->k0;
+    } else if constexpr (CONV::B_FORMAT == ConvFormat::DHWCN) {
+        // DHWCN (kD,kH,kW,Cin,Co): Co 最内连续, 多核切 Co 的核基址偏移为 nIdxStart
+        weightStartAddr = convOps->nIdxStart;
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
     }

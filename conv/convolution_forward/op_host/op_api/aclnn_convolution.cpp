@@ -4821,8 +4821,19 @@ public:
                 op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
                 op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 调用静态函数PreProcess
-        bool needChangeFormat = Ops::NN::AclnnUtil::IsRegbase() ? false : !isPointWiseKernelFlag;
-        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        // 满足转置门槛时不让 CommonPreProcess 改 weight 格式(否则变成 FRACTAL_Z_3D 后转置检查不过)
+        bool needChangeFormat = NeedTransposeWeightToDHWCN() ?
+                                    false :
+                                    (Ops::NN::AclnnUtil::IsRegbase() ? false : !isPointWiseKernelFlag);
+        auto ret = CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+        // weight NCDHW 时 Dn2Nz 源离散读, MTE2 受限: 转成 DHWCN 排布(Co 最内连续)走 Dn2Nz 搬运
+        if (NeedTransposeWeightToDHWCN()) {
+            ret = TransposeWeightToDHWCN();
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+        return ACLNN_SUCCESS;
     };
 
     aclnnStatus Impl() override
@@ -4849,6 +4860,68 @@ public:
     ~Conv3dImpl() override = default;
 
 private:
+    // weight NCDHW -> DHWCN 转置条件:
+    // 1. 仅 DAV_3510: 新路径(NCDHW fmap + DHWCN weight + NCDHW out)的 kernel 搬运在 3510 实现
+    // 2. 仅 fp16/bf16: def/binary 表当前只扩展了这两种 dtype 组合
+    // 3. fmap/weight/out 均 NCDHW: 与新路径的 format 组合一致
+    // 4. groups==1 且非 transposed: group conv / 转置卷积的 DHWCN 路径未支持
+    // 5. 非 pointwise 且 kD*kH*kW > 1: 1x1x1 kernel 无 Dn2Nz 源离散读问题, 转置无收益
+    // 6. weight 规模阈值: 过小的 weight conv 耗时本就低, ~19us 的转置开销得不偿失
+    bool NeedTransposeWeightToDHWCN() const
+    {
+        constexpr int64_t minWeightNumel = 32768; // 64KB fp16
+        // 仅 DAV_3510: DHWCN weight 的 kernel 搬运路径只在 3510 注册;
+        // 9201/9202 有自己的 IsSocNeedTranspose 路径, 其他芯片无该路径转后 tiling 会失败
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+            return false;
+        }
+        // 注意: 不排除 IsRegbase —— 950(DAV_3510) 本身就是 regbase 芯片, 转置正是 regbase 模式下的优化
+        if (transposed || groups != 1 || isPointWiseKernelFlag) {
+            return false;
+        }
+        if (opInfo.inputDtype != op::DataType::DT_FLOAT16 && opInfo.inputDtype != op::DataType::DT_BF16) {
+            return false;
+        }
+        if (opInfo.weightDtype != opInfo.inputDtype) {
+            return false;
+        }
+        if (op::GetPrimaryFormat(input->GetStorageFormat()) != Format::FORMAT_NCDHW ||
+            op::GetPrimaryFormat(output->GetStorageFormat()) != Format::FORMAT_NCDHW) {
+            return false;
+        }
+        if (op::GetPrimaryFormat(weight->GetStorageFormat()) != Format::FORMAT_NCDHW) {
+            return false;
+        }
+        auto weightShape = weight->GetViewShape();
+        if (weightShape.GetDimNum() != CONV3D_SHAPE_SIZE) {
+            OP_LOGD("Conv3d transpose REJECT: weight dim=%d != 5", static_cast<int>(weightShape.GetDimNum()));
+            return false;
+        }
+        const int64_t kernelSize = weightShape.GetDim(2) * weightShape.GetDim(3) * weightShape.GetDim(4);
+        if (kernelSize == 1 || weight->Numel() < minWeightNumel) {
+            OP_LOGD("Conv3d transpose REJECT: kernelSize=%ld numel=%ld", kernelSize, weight->Numel());
+            return false;
+        }
+        return true;
+    }
+
+    // NCDHW (Co, Cin, kD, kH, kW) -> DHWCN (kD, kH, kW, Cin, Co), perm = (2, 3, 4, 1, 0)
+    aclnnStatus TransposeWeightToDHWCN()
+    {
+        int64_t permArr[CONV3D_SHAPE_SIZE] = {2, 3, 4, 1, 0};
+        auto perm = executor->AllocIntArray(permArr, CONV3D_SHAPE_SIZE);
+        CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto transposedWeight = l0op::Transpose(weight, perm, executor);
+        CHECK_RET(transposedWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const_cast<aclTensor*>(transposedWeight)->SetViewFormat(Format::FORMAT_DHWCN);
+        const_cast<aclTensor*>(transposedWeight)->SetStorageFormat(Format::FORMAT_DHWCN);
+        const_cast<aclTensor*>(transposedWeight)->SetOriginalFormat(Format::FORMAT_DHWCN);
+        weight = transposedWeight;
+        opInfo.weightFormat = Format::FORMAT_DHWCN;
+        OP_LOGD("Conv3d weight transposed NCDHW->DHWCN for MTE2 throughput.");
+        return ACLNN_SUCCESS;
+    }
+
     bool isPointWiseKernelFlag = false;
 };
 
