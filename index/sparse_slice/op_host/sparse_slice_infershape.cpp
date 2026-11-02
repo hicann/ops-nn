@@ -160,5 +160,7 @@ IMPL_OP_INFERSHAPE(SparseSlice)
     .InferShape(InferShapeForSparseSlice)
     .InferShapeRange(InferShapeRangeForSparseSlice)
     .InferDataType(InferDtypeForSparseSlice)
-    .InputsDataDependency({SHAPE_IDX, START_IDX, SIZE_IDX});
+    .InputsDataDependency({SHAPE_IDX, START_IDX, SIZE_IDX})
+    .OutputShapeDependOnCompute({0, 1});
+
 } // namespace ops
