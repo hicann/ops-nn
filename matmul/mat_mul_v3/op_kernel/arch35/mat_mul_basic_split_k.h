@@ -43,11 +43,13 @@ __aicore__ inline void MatMulBasicSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
     using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型
-    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, NONE_FULL_LOAD_MODE>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape,
+                                                                         Blaze::Gemm::NONE_FULL_LOAD_MODE>;
 
     // 定义MMAD类型
     using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasicSplitK<
-        NONE_FULL_LOAD_MODE, IS_SPLIT_SINGLE_CORE_K, Blaze::Gemm::KernelMmadMultiBlockBasic, NON_CONTIGIOUS_TYPE>;
+        Blaze::Gemm::NONE_FULL_LOAD_MODE, IS_SPLIT_SINGLE_CORE_K, Blaze::Gemm::KernelMmadMultiBlockBasic,
+        NON_CONTIGIOUS_TYPE>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 

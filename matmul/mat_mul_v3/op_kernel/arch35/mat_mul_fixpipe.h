@@ -29,9 +29,6 @@ __aicore__ inline void MatMulFixpipeOptiTensorKernel(GM_ADDR aGM, GM_ADDR bGM, G
                                                      GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
                                                      int64_t batch = 0)
 {
-    // 定义L1和L0的TileShape
-    using L0TileShape = AscendC::Shape<_128, _256, _64>;
-
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
     using BType = B_TYPE;

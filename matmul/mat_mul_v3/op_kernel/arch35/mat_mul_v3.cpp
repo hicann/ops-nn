@@ -25,8 +25,6 @@
 #include "mat_mul_stream_k_kernel.h"
 #include "mat_mul_fixpipe_opti.h"
 #include "mat_mul_input_k_eq_zero_clear_output.h"
-#include "mat_mul_streamk_basic_cmct.h"
-#include "mat_mul_fixpipe_opti_basic_cmct.h"
 #include "mat_mul_pingpong_basic.h"
 #include "mat_mul_basic_split_k.h"
 #include "mat_mul_bl1_full_load.h"
@@ -163,28 +161,10 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
                                                     Blaze::Gemm::MatMulL0C2Out::ND_FIXPIPE_1_2>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-                         (MODEL == MAT_MUL_STREAM_K || MODEL == MAT_MUL_SK_SPLIT_K) &&
-                         L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
-                               MatMulL0C2Out::ON_THE_FLY>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-                         (MODEL == MAT_MUL_STREAM_K || MODEL == MAT_MUL_SK_SPLIT_K) &&
-                         L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
-                               MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_K_EQUAL_ZERO && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
         TPipe pipe;
         GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, cGM, tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
-                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                     layout::RowMajor, B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM,
-                                                                                         workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC &&
                          L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp16场景 tensor api场景
@@ -192,34 +172,18 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
         MatmulV3Advanced::MatMulBL1FullLoadKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC,
                                                   FULL_LOAD, L0C2OUT_MODEL>(aGM, bGM, biasGM, cGM, workspaceGM,
                                                                             tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                     layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulFixpipeOptiTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
                                                         layoutC, FULL_LOAD, L0C2OUT_MODEL>(aGM, bGM, biasGM, cGM,
                                                                                            workspaceGM, tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                     layout::RowMajor>(aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulFixpipeOptiTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
                                                         layoutC, FULL_LOAD, L0C2OUT_MODEL>(aGM, bGM, biasGM, cGM,
                                                                                            workspaceGM, tilingData);
-    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
-                         MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
-        MatmulV3Advanced::MatMulFixpipeOptiActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                     layout::RowMajor, B_FULL_LOAD_MODE>(aGM, bGM, biasGM, cGM,
-                                                                                         workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC &&
                          L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp32场景切换tensor api 场景
