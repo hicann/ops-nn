@@ -35,6 +35,14 @@
   {\rm y}_i = {\rm log}_2(x_i) (i=0,1,...n-1)
   $$
 
+- 输入值域与特殊值语义：输入应为正数。对浮点输入元素`x`：
+  - `x = 0`：输出负无穷（-inf）。
+  - `x < 0`：输出NaN。
+  - `x = +inf`：输出正无穷（+inf）。
+  - `x = -inf`：输出NaN。
+  - `x = NaN`：输出NaN（透传）。
+  - `x > 0`（正常正数）：输出log2(x)。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnForeachLog2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachLog2”接口执行计算。
@@ -42,7 +50,7 @@
 ```Cpp
 aclnnStatus aclnnForeachLog2GetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -95,7 +103,7 @@ aclnnStatus aclnnForeachLog2(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示按元素以2为底做对数函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -149,23 +157,30 @@ aclnnStatus aclnnForeachLog2(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
-    </tr>
-    <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
+      <td>x与out的Tensor列表数量不一致。</td>
+    </tr>
+    <tr>
+      <td>x与out的shape不满足约束。</td>
+    </tr>
+    <tr>
       <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x或out中的Tensor是空指针。</td>
+    </tr>
+    <tr>
+      <td>x或out中的Tensor使用了私有格式。</td>
     </tr>
   </tbody></table>
 
@@ -214,6 +229,7 @@ aclnnStatus aclnnForeachLog2(
 
 ## 约束说明
 
+- 张量列表中Tensor的个数n需满足1≤n≤256。
 - 确定性计算：
   - aclnnForeachLog2默认确定性实现。
 

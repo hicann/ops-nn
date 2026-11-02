@@ -125,3 +125,60 @@ TEST_F(ForeachLog2Tiling, foreach_log2_bfloat16)
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
+
+TEST_F(ForeachLog2Tiling, foreach_log2_unsupported_dtype)
+{
+    struct ForeachLog2CompileInfo {
+    } compileInfo;
+    // DT_INT32 不在支持列表内（FLOAT/FLOAT16/BF16），应在 ValidateForeachLog2 的 dtype 白名单校验处被拒绝。
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachLog2Tiling, foreach_log2_output_dtype_mismatch)
+{
+    struct ForeachLog2CompileInfo {
+    } compileInfo;
+    // y 的 dtype 与 x 不一致，应在 ValidateForeachLog2 的 y-dtype 校验处被拒绝。
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachLog2Tiling, foreach_log2_output_shape_mismatch)
+{
+    struct ForeachLog2CompileInfo {
+    } compileInfo;
+    // y 的 shape 与对应位置 x 的 shape 不一致，应在 ValidateForeachLog2 的 shape 严格一致校验处被拒绝。
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}

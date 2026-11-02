@@ -59,10 +59,11 @@ static string to_string(const std::stringstream& tiling_data)
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
 {
-    auto data = tiling_data->GetData();
     string result;
-    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
-        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+    const int64_t* data = reinterpret_cast<const int64_t*>(tiling_data->GetData());
+    size_t len = tiling_data->GetDataSize() / sizeof(int64_t);
+    for (size_t i = 0; i < len; i++) {
+        result += std::to_string(data[i]);
         result += " ";
     }
 
@@ -148,7 +149,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_1)
     ASSERT_EQ(tiling_key, 2000000008);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::cout << tiling_data_result << std::endl;
+    EXPECT_EQ(tiling_data_result, "30073159695 549755813892 8 ");
 }
 
 TEST_F(EmbeddingTiling, embedding_simt_tiling_2)
@@ -231,7 +232,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_2)
     ASSERT_EQ(tiling_key, 2000000002);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::cout << tiling_data_result << std::endl;
+    EXPECT_EQ(tiling_data_result, "8598323210 549755813897 18 ");
 }
 
 TEST_F(EmbeddingTiling, embedding_simt_tiling_3)
@@ -314,7 +315,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_3)
     ASSERT_EQ(tiling_key, 2000000004);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::cout << tiling_data_result << std::endl;
+    EXPECT_EQ(tiling_data_result, "47311749174 4398046511173 928 ");
 }
 
 TEST_F(EmbeddingTiling, embedding_simt_tiling_4)
@@ -397,7 +398,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_4)
     ASSERT_EQ(tiling_key, 2000000001);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::cout << tiling_data_result << std::endl;
+    EXPECT_EQ(tiling_data_result, "51606716469 4398046511173 572 ");
 }
 
 TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
@@ -494,7 +495,7 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 101);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::cout << tiling_data_result << std::endl;
+    EXPECT_EQ(tiling_data_result, "2048 10496000 2163 164 400 1640 1 500 1 64 165888 45056 ");
 }
 
 // ==================== embedding_tiling_simt.cpp OP_LOGE_FOR Error Branches ====================

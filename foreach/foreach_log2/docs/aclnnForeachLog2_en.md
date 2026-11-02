@@ -37,6 +37,14 @@
   {\rm y}_i = {\rm log}_2(x_i) (i=0,1,...n-1)
   $$
 
+- Value range and special-value semantics: The input should be positive. For a floating-point input element `x`:
+  - `x = 0`: outputs negative infinity (-inf).
+  - `x < 0`: outputs NaN.
+  - `x = +inf`: outputs positive infinity (+inf).
+  - `x = -inf`: outputs NaN.
+  - `x = NaN`: outputs NaN (passed through).
+  - `x > 0` (normal positive value): outputs log2(x).
+
 ## Function Prototype
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call the "aclnnForeachLog2GetWorkspaceSize" API first to obtain the workspace size required for computation and the executor that contains the computation process of the operator, and then call the "aclnnForeachLog2" API to perform the computation.
@@ -44,7 +52,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 ```Cpp
 aclnnStatus aclnnForeachLog2GetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -97,11 +105,11 @@ aclnnStatus aclnnForeachLog2(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>List of output tensors for element-wise base-2 logarithm computation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>Data type and data format must be the same as those of the input parameter `x`, and the shape size must be greater than or equal to that of `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>Data type and data format must be the same as those of the input parameter `x`, and the shape size must be equal to that of `x`.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -151,23 +159,30 @@ aclnnStatus aclnnForeachLog2(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
-    </tr>
-    <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
+      <td>The number of tensors in x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The shapes of x and out do not meet the constraints.</td>
+    </tr>
+    <tr>
       <td>The number of dimensions of tensors in x or out exceeds 8.</td>
+    </tr>
+    <tr>
+      <td>A tensor in x or out is a null pointer.</td>
+    </tr>
+    <tr>
+      <td>A tensor in x or out uses a private format.</td>
     </tr>
   </tbody></table>
 
@@ -216,6 +231,7 @@ aclnnStatus aclnnForeachLog2(
 
 ## Constraints
 
+- The number n of tensors in the tensor list must satisfy 1 ≤ n ≤ 256.
 - Deterministic computation:
   - aclnnForeachLog2 defaults to a deterministic implementation.
 
