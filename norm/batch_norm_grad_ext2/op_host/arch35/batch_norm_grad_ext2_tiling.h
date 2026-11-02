@@ -39,7 +39,7 @@ static constexpr int64_t DIM_NUM_5 = 5;
 
 static constexpr int64_t INPUT_NUM = 5;
 
-// Attr属性 index
+// Attr属性 index（op 定义仅声明 epsilon/data_format/is_training 三个 attr）
 constexpr int64_t PARAM_ATTRS_EPSILON_INDEX = 0;
 constexpr int64_t PARAM_ATTRS_DATA_FORMAT_INDEX = 1;
 constexpr int64_t PARAM_ATTRS_ISTRAING_INDEX = 2;

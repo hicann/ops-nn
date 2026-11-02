@@ -64,6 +64,7 @@ x_backprop = y_backprop * scale / sqrt(var + epsilon)
 
 - `y_backprop`和`x`的shape一致。
 - `scale`、`reserve_space_1`、`reserve_space_2`均为1D，长度等于C。
+- **不支持空 tensor**：`y_backprop`/`x` 的所有维度必须大于 0（shape 中不能含 0 维，如 `(4, 8, 0, 16)`）。传入含 0 维的空 tensor 时，tiling 校验失败并返回 `y_backprop ... dim ... should be greater than 0`。
 
 ## 调用说明
 

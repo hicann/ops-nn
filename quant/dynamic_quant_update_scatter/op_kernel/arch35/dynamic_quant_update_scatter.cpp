@@ -30,7 +30,7 @@ extern "C" __global__ __aicore__ void dynamic_quant_update_scatter(GM_ADDR var, 
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(DynamicQuantUpdateScatterRegbaseTilingData);
-    if (var == nullptr || varScale == nullptr || indices == nullptr || updates == nullptr || tiling == nullptr) {
+    if (var == nullptr || varScale == nullptr || indices == nullptr || updates == nullptr) {
         return;
     }
 

@@ -236,6 +236,7 @@ public:
         }
 
         float partial = 0.0f;
+        float partialComp = 0.0f;
         const int64_t tileRows = td_->ubTileRows > 0 ? td_->ubTileRows : 1;
         // Split very large row counts into bounded tiles so the kernel does not rely on one giant loop.
         for (int64_t tileBase = 0; tileBase < rows_; tileBase += tileRows) {
@@ -247,7 +248,12 @@ public:
                 if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_NONE) {
                     WriteScalarOutput(outputIndex, loss);
                 } else {
-                    partial += loss;
+                    // Kahan compensated summation: n can reach tens of millions and naive
+                    // fp32 accumulation loses ~sqrt(n)*eps of relative accuracy.
+                    const float addY = loss - partialComp;
+                    const float addT = partial + addY;
+                    partialComp = (addT - partial) - addY;
+                    partial = addT;
                 }
             }
         }
@@ -609,13 +615,18 @@ private:
         }
 
         float total = 0.0f;
+        float totalComp = 0.0f;
         const float dFloat = static_cast<float>(td_->d);
         for (int64_t x1Index = 0; x1Index < x1OnlyCount; ++x1Index) {
             const int64_t x1Base = sharedX1Base +
                                    LinearOffsetForAxes(x1Index, x1OnlyAxes, x1OnlyRank, td_->x1OutStrides);
             const float a = ReadAsFloat(x1Gm_, x1Base);
             const float scale = a / sqrt(dFloat * a * a + td_->eps);
-            total += SumSortedNegativeTargetLoss(scale, sortedStats, prefix, x2OnlyCount);
+            const float groupLoss = SumSortedNegativeTargetLoss(scale, sortedStats, prefix, x2OnlyCount);
+            const float groupY = groupLoss - totalComp;
+            const float groupT = total + groupY;
+            totalComp = (groupT - total) - groupY;
+            total = groupT;
         }
         return total;
     }
@@ -647,6 +658,7 @@ private:
         }
 
         float partial = 0.0f;
+        float partialComp = 0.0f;
         const int64_t groupsPerCore = (sharedCount + td_->usedCoreNum - 1) / td_->usedCoreNum;
         const int64_t start = blockIdx_ * groupsPerCore;
         const int64_t end = start + groupsPerCore > sharedCount ? sharedCount : start + groupsPerCore;
@@ -665,7 +677,11 @@ private:
                 const float groupSum = ComputeFeatureBroadcastGroupSampled(sharedIndex, sharedAxes, sharedRank,
                                                                            x1OnlyAxes, x1OnlyRank, x1OnlyCount,
                                                                            x2OnlyAxes, x2OnlyRank, x2OnlyCount);
-                partial += groupSum * neutralScale * sharedScale;
+                const float sampledAdd = groupSum * neutralScale * sharedScale;
+                const float sampledY = sampledAdd - partialComp;
+                const float sampledT = partial + sampledY;
+                partialComp = (sampledT - partial) - sampledY;
+                partial = sampledT;
             }
             FinishReduction(partial);
             return true;
@@ -675,7 +691,11 @@ private:
             const float groupSum = ComputeFeatureBroadcastGroup(sharedIndex, sharedAxes, sharedRank, x1OnlyAxes,
                                                                 x1OnlyRank, x1OnlyCount, x2OnlyAxes, x2OnlyRank,
                                                                 x2OnlyCount);
-            partial += groupSum * neutralScale;
+            const float exactAdd = groupSum * neutralScale;
+            const float exactY = exactAdd - partialComp;
+            const float exactT = partial + exactY;
+            partialComp = (exactT - partial) - exactY;
+            partial = exactT;
         }
 
         FinishReduction(partial);
@@ -712,17 +732,37 @@ private:
         float dot = 0.0f;
         float s1 = 0.0f;
         float s2 = 0.0f;
+        float dotComp = 0.0f;
+        float s1Comp = 0.0f;
+        float s2Comp = 0.0f;
         for (int64_t c = 0; c < td_->d; ++c) {
             const float a = ReadAsFloat(x1Gm_, x1Base + c * td_->x1ReduceStride);
             const float b = ReadAsFloat(x2Gm_, x2Base + c * td_->x2ReduceStride);
-            dot += a * b;
-            s1 += a * a;
-            s2 += b * b;
+            // Kahan compensated accumulation.
+            const float dotAdd = a * b - dotComp;
+            const float dotSum = dot + dotAdd;
+            dotComp = (dotSum - dot) - dotAdd;
+            dot = dotSum;
+            const float s1Add = a * a - s1Comp;
+            const float s1Sum = s1 + s1Add;
+            s1Comp = (s1Sum - s1) - s1Add;
+            s1 = s1Sum;
+            const float s2Add = b * b - s2Comp;
+            const float s2Sum = s2 + s2Add;
+            s2Comp = (s2Sum - s2) - s2Add;
+            s2 = s2Sum;
         }
 
-        const float denom = sqrt(s1 + td_->eps) * sqrt(s2 + td_->eps);
-        const float cos = dot / denom;
+        const float norm1 = sqrt(s1 + td_->eps);
+        const float norm2 = sqrt(s2 + td_->eps);
         const float target = ReadAsFloat(tgtGm_, targetOffset);
+        // 说明：1 - cos 在 cos -> 1 时存在 fp32 灾难性抵消。实测对比（025，3432 采样）：
+        //   本式 1 - dot/S :           max err 2.47e-7 (mean 4.8e-8)   <= 最优
+        //   |a/|a| - b/|b||^2 / 2 :    max err 2.14e-4 (mean 2.5e-6)
+        //   (s1*s2-dot^2)/(...) :      max err 2.07e-4 (mean 2.4e-6)
+        //   半角 sin^2/(1+cos) :       max err 1.95e-4 (mean 2.2e-6)
+        // 直接式已是 fp32 下精度最好的，故保留；不能再靠算子侧提升。
+        const float cos = dot / (norm1 * norm2);
         if (target == 1.0f) {
             return 1.0f - cos;
         }
@@ -844,8 +884,13 @@ private:
         WaitFlag<HardEvent::MTE2_S>(eventMTE2S);
 
         float total = 0.0f;
+        float totalComp = 0.0f;
         for (int64_t core = 0; core < td_->usedCoreNum; ++core) {
-            total += partials.GetValue(core * COSINE_EMBEDDING_LOSS_WS_CORE_STRIDE);
+            const float coreValue = partials.GetValue(core * COSINE_EMBEDDING_LOSS_WS_CORE_STRIDE);
+            const float coreY = coreValue - totalComp;
+            const float coreT = total + coreY;
+            totalComp = (coreT - total) - coreY;
+            total = coreT;
         }
         if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_MEAN) {
             total *= td_->meanCoef;

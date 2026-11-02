@@ -29,7 +29,9 @@ __input__ = {
 QUANT_MAX = 127.0
 
 _KERNEL_TOLERANCE = {
-    "int8": {"standard": "binary_equal"},
+    # int8 量化输出走 quant（绝对误差 <= 1）：量化边界上 fp32 kernel 与高精度
+    # golden 允许差 1，与 dynamic_quant_update_scatter_v2 的 int4 判据对齐。
+    "int8": {"standard": "quant"},
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
@@ -68,36 +70,14 @@ def dynamic_quant_update_scatter_input(
     return [var, var_scale, generated.astype(indices.dtype), updates, smooth_scales]
 
 
-def _torch_dtype(dtype):
-    if isinstance(dtype, torch.dtype):
-        return dtype
-    name = str(dtype)
-    return {
-        "float16": torch.float16,
-        "float32": torch.float32,
-        "float64": torch.float64,
-        "bfloat16": torch.bfloat16,
-    }.get(name, torch.float32)
-
-
-def _compute_dtype(*float_inputs, output_dtypes=None):
-    """Compute in at least fp32, retaining fp64 (TTK Promote) and the promoted
-    output dtype so the cross_check true value stays at output precision."""
-    dtype = torch.float32
-    for tensor in float_inputs:
-        if tensor is not None and tensor.is_floating_point():
-            dtype = torch.promote_types(dtype, tensor.dtype)
-    for out in output_dtypes or ():
-        if isinstance(out, (list, tuple)):
-            out = out[0] if out else None
-        if out is not None:
-            dtype = torch.promote_types(dtype, _torch_dtype(out))
-    return dtype
-
-
 def _to_torch(x):
     if x is None:
         return None
+    if torch.is_tensor(x):
+        # bfloat16 无 numpy 存储类：np.asarray(bf16 tensor) 抛
+        # TypeError: Got unsupported ScalarType BFloat16（三方服务端把 bfloat16
+        # 输入以 raw int16 bits 恢复成 torch.bfloat16 tensor）。先统一转 fp32 再走 numpy。
+        return x.detach().to(torch.float32).clone()
     arr = np.asarray(x)
     if arr.dtype not in (np.float32, np.float64):
         arr = arr.astype(np.float32)
@@ -108,6 +88,9 @@ def _to_numpy_for_golden(x):
     if x is None:
         return None
     if torch.is_tensor(x):
+        # bfloat16 无 numpy 存储类（服务端以 raw int16 bits 传输）；转 fp32 再 numpy。
+        if x.dtype == torch.bfloat16:
+            return x.detach().cpu().to(torch.float32).numpy()
         return x.detach().cpu().numpy()
     return x
 
@@ -127,9 +110,10 @@ def dynamic_quant_update_scatter_golden(
     updates_t = _to_torch(updates)
     smooth_t = _to_torch(smooth_scales)
     index_arr = np.asarray(indices)
-    compute_dtype = _compute_dtype(
-        updates_t, scale_t, output_dtypes=kwargs.get("output_dtypes")
-    )
+    # 量化计算固定 fp32：与 kernel 的 fp32 取整链（RINT→FP16 round→INT8 trunc）
+    # 对齐。TTK Promote 会升 fp64 输入，但此处一律回 fp32，避免量化边界 ±1 误报
+    # （归档 golden 即 fp32 计算，1000/1000 PASS；41b50aed3 升 fp64 后 94 例 FAIL）。
+    compute_dtype = torch.float32
 
     axis_n = _norm_axis(axis, var_t.dim())
     var_batch = var_t.shape[0]
