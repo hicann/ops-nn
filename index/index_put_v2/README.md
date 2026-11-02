@@ -77,7 +77,7 @@
       <tr>
         <td>unsafe</td>
         <td>输入</td>
-        <td>检查索引是否在有效范围内标志位。<ul><li>unsafe为True时，索引越界会直接报错退出执行；</li><li>当unsafe为False时，如果出现了索引越界，就可能出现运行时异常。</li></ul></td>
+        <td>是否跳过索引越界检查的标志位。<ul><li>unsafe为True时，不检查索引是否越界；</li><li>unsafe为False时，检查索引是否越界。</li></ul></td>
         <td>-</td>
         <td>-</td>
       </tr>
