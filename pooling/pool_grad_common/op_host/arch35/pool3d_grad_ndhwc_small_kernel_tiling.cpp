@@ -208,18 +208,18 @@ bool Pool3DGradNDHWCSmallKernelCommonTiling::TrySplitAlignC()
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         int64_t left = 1;
         int64_t right = Ops::Base::CeilDiv(inputData->cX / 2, baseData.moveDataNumCacheLine);
-        int64_t bestSplit = 1;
+        int64_t bestInner = tmpCAligned;
         while (left <= right) {
             int64_t mid = left + (right - left) / 2;
             splitData.cOutputInner = mid * baseData.moveDataNumCacheLine;
             if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
+                bestInner = splitData.cOutputInner;
                 left = mid + 1;
             } else {
                 right = mid - 1;
             }
         }
-        splitData.cOutputInner = bestSplit * baseData.moveDataNumCacheLine;
+        splitData.cOutputInner = std::min(bestInner, inputData->cX);
         if (splitData.cOutputInner > baseData.proDataNumInOneBeat) {
             splitData.cOutputInner = baseData.proDataNumInOneBeat;
         }

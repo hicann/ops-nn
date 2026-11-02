@@ -620,8 +620,8 @@ TEST_F(MaxPool3DGradNdhwcBigTiling, non_overlap_k_eq_s_claimed_by_big_kernel)
     gert::StorageShape dxShape = {{2, 13, 13, 65, 8}, {2, 13, 13, 65, 8}};
     auto attrs = MakeAttrs({1, 4, 4, 8, 1}, {1, 4, 4, 8, 1}, "VALID", {0, 0, 0, 0, 0, 0});
     RunBigTilingCase(xShape, yShape, dxShape, attrs, {1, 4, 4, 8, 1}, {1, 4, 4, 8, 1}, ge::DT_FLOAT16,
-                     GET_TPL_TILING_KEY(TPL_INT32, 0, 1, 0, 0), true, 2048, 288, 64, 8, 16384, 1024, 32768, 4, 4, 4, 4,
-                     9, 8);
+                     GET_TPL_TILING_KEY(TPL_INT32, 0, 1, 0, 0), true, 256, 288, 8, 8, 4096, 256, 8192, 4, 4, 4, 4, 9,
+                     8);
 }
 
 // k < s（g1_11/g1_12 形态）: kv=128, C=8, fp16 —— 应被大 kernel 认领
@@ -633,8 +633,8 @@ TEST_F(MaxPool3DGradNdhwcBigTiling, non_overlap_k_lt_s_claimed_by_big_kernel)
     gert::StorageShape dxShape = {{2, 13, 13, 65, 8}, {2, 13, 13, 65, 8}};
     auto attrs = MakeAttrs({1, 4, 4, 8, 1}, {1, 7, 6, 11, 1}, "VALID", {0, 0, 0, 0, 0, 0});
     RunBigTilingCase(xShape, yShape, dxShape, attrs, {1, 4, 4, 8, 1}, {1, 7, 6, 11, 1}, ge::DT_FLOAT16,
-                     GET_TPL_TILING_KEY(TPL_INT32, 0, 1, 0, 0), true, 2048, 72, 64, 8, 16384, 1024, 118272, 2, 7, 3, 6,
-                     6, 11);
+                     GET_TPL_TILING_KEY(TPL_INT32, 0, 1, 0, 0), true, 256, 72, 8, 8, 4096, 256, 29568, 2, 7, 3, 6, 6,
+                     11);
 }
 
 // k == s + 大 C（g1_10 精确形态）: kv=128, C=64, fp16 —— 大 kernel 认领,
