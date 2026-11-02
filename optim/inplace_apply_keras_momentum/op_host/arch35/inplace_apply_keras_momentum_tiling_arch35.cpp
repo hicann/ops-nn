@@ -34,6 +34,7 @@
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "optim/inplace_apply_keras_momentum/op_kernel/arch35/inplace_apply_keras_momentum_tiling_data.h"
+#include "inplace_apply_keras_momentum_tiling_arch35.h"
 
 namespace optiling {
 
@@ -133,7 +134,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     auto varFormat = inputDesc->GetFormat().GetStorageFormat();
     OP_CHECK_IF(varFormat != ge::FORMAT_ND,
-                OP_LOGE(opName, "var format must be ND, got %d", static_cast<int32_t>(varFormat)),
+                OP_LOGE_FOR_INVALID_FORMAT(opName, "var", ge::TypeUtils::FormatToSerialString(varFormat).c_str(), "ND"),
                 return ge::GRAPH_FAILED);
 
     auto accumDesc = context->GetInputDesc(1);
@@ -219,9 +220,14 @@ static void CalcUbTiling(InplaceApplyKerasMomentumTilingData* tiling, uint64_t u
 static void CalcBlockTiling(InplaceApplyKerasMomentumTilingData* tiling, int64_t totalElements, uint32_t minDtypeBits,
                             int64_t coreNum)
 {
+    // SetBlockDim 的块数按 16 位调度：超过 65535 的块不会被任何核执行，对应输出区间
+    // 将保持输入原值。将并行度钳制到 MAX_BLOCK_NUM，超出部分通过增大 blockFormer
+    // （每块多次 UB 迭代）吸收。
+    constexpr uint32_t MAX_BLOCK_NUM = 65535;
     uint32_t calcCoreNum = static_cast<uint32_t>((totalElements * minDtypeBits + MIN_TILING_BITS - 1) /
                                                  MIN_TILING_BITS);
     calcCoreNum = std::min(calcCoreNum, static_cast<uint32_t>(coreNum));
+    calcCoreNum = std::min(calcCoreNum, MAX_BLOCK_NUM);
     if (calcCoreNum == 0) {
         calcCoreNum = 1;
     }
@@ -235,8 +241,18 @@ static void CalcBlockTiling(InplaceApplyKerasMomentumTilingData* tiling, int64_t
             tiling->blockFormer = ELEM_ALIGN_FACTOR;
         }
     }
-    tiling->blockNum = static_cast<uint32_t>(
+    uint32_t blockNum = static_cast<uint32_t>(
         CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFormer)));
+    // blockFormer 被 tileLength 钳制后 blockNum 仍可能超过 MAX_BLOCK_NUM，此时按
+    // MAX_BLOCK_NUM 反推 blockFormer，保证最终 blockNum 不越过 16 位调度上限。
+    if (blockNum > MAX_BLOCK_NUM) {
+        tiling->blockFormer = CeilAlign(
+            static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(MAX_BLOCK_NUM))),
+            static_cast<int64_t>(ELEM_ALIGN_FACTOR));
+        blockNum = static_cast<uint32_t>(
+            CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFormer)));
+    }
+    tiling->blockNum = blockNum;
 }
 
 static ge::graphStatus InplaceApplyKerasMomentumTilingFunc(gert::TilingContext* context)
@@ -253,6 +269,13 @@ static ge::graphStatus InplaceApplyKerasMomentumTilingFunc(gert::TilingContext* 
     uint8_t useNesterov = 0;
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalElements, &dataType, &useNesterov) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(!IsTilingTotalElementsValid(totalElements),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "totalElements",
+                                                      std::to_string(totalElements).c_str(),
+                                                      "totalElements must be in [0, 4294967295] to fit uint32 "
+                                                      "tiling data"),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
                 return ge::GRAPH_FAILED);

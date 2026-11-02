@@ -55,7 +55,20 @@ namespace ge {
  *@li accum: A mutable tensor. Has the same type as input "accum". inplace_with(accum).
  *
  *@attention Constraints:
- * The input tensors var/accum/grad must have the same shape.
+ * The input tensors var/accum/grad must have the same shape and dtype, with rank <= 8.
+ * lr/momentum must be scalar tensors or shape-{1} tensors with dtype FLOAT.
+ * Empty tensors (zero elements) are accepted and leave the data unchanged.
+ * Dynamic shape/rank is supported via -1/-2 graph descriptors; runtime feed tensors must
+ * carry concrete shapes (for example [4,4]), not -1/-2.
+ * Only contiguous ND storage is supported; non-contiguous inputs are outside the contract.
+ * The total number of elements of var/accum/grad must not exceed UINT32_MAX (4294967295);
+ * larger inputs are rejected at tiling. No additional 4GiB logical byte limit is imposed;
+ * the feasible size also depends on the device physical memory.
+ * blockNum is capped at 65535 internally; larger shapes are handled by increasing
+ * blockFormer rather than rejecting the shape.
+ * Invalid inputs are rejected at tiling with predefined error codes: rank > 8 -> EZ0012,
+ * shape mismatch -> EZ0010, non-ND format -> EZ0017, unsupported dtype -> EZ0019,
+ * element count outside [0, UINT32_MAX] -> EZ0026.
  *
  *@par Third-party framework compatibility
  * Compatible with the TensorFlow operator ResourceApplyKerasMomentum.

@@ -20,6 +20,7 @@
  *   - dtype: FP32（原生直算，SCH_MODE=0）
  *   - shape: [4, 4]（共 16 元素）
  *   - 模式: 标准模式（use_nesterov=false） + Nesterov 模式（use_nesterov=true）各一组
+ *   - 动态用例: Case3 图 desc 用 [-1,4]，Case4 图 desc 用 [-2]；feed Tensor 始终使用实际 [4,4]
  *   - 双输出独立比对: var_out + accum_out 分别与 CPU Golden（FP64）比对
  */
 
@@ -194,13 +195,15 @@ struct TestInput {
     std::vector<float> grad;
     float lr;
     float momentum;
-    std::vector<int64_t> shape;
+    std::vector<int64_t> shape;      // concrete shape carried by runtime feeds
+    std::vector<int64_t> desc_shape; // graph declaration shape, may be -1 / -2
 };
 
 TestInput GenTestInput(uint32_t seed)
 {
     TestInput ti;
     ti.shape = {4, 4};
+    ti.desc_shape = {4, 4};
     size_t n = 16;
     ti.var.resize(n);
     ti.accum.resize(n);
@@ -249,7 +252,9 @@ GeirOutput RunGeir(const TestInput& ti, bool use_nesterov)
     ge::Tensor grad_tensor = MakeFp32Tensor(ti.grad, ti.shape);
     ge::Tensor momentum_tensor = MakeFp32ScalarTensor(ti.momentum);
 
-    // 创建 5 个输入 placeholder（op::Data），desc 与 tensor 数据匹配
+    // 创建 5 个输入 placeholder（op::Data）。
+    // 图的 desc 可以声明动态 shape（-1/-2）；RunGraph 的 feed tensor 必须携带
+    // 实际 shape（ti.shape），否则 GE 无法分配/执行动态输入。
     auto make_data_op = [&](const std::string& data_name, const std::vector<int64_t>& shape) -> op::Data {
         TensorDesc desc(ge::Shape(shape), FORMAT_ND, DT_FLOAT);
         desc.SetRealDimCnt(static_cast<int32_t>(shape.size()));
@@ -260,10 +265,10 @@ GeirOutput RunGeir(const TestInput& ti, bool use_nesterov)
         return data_op;
     };
 
-    auto var_op = make_data_op("data_var", ti.shape);
-    auto accum_op = make_data_op("data_accum", ti.shape);
+    auto var_op = make_data_op("data_var", ti.desc_shape);
+    auto accum_op = make_data_op("data_accum", ti.desc_shape);
     auto lr_op = make_data_op("data_lr", {1});
-    auto grad_op = make_data_op("data_grad", ti.shape);
+    auto grad_op = make_data_op("data_grad", ti.desc_shape);
     auto momentum_op = make_data_op("data_momentum", {1});
 
     // 设置算子输入（通过 set_input_xxx）
@@ -273,9 +278,9 @@ GeirOutput RunGeir(const TestInput& ti, bool use_nesterov)
     op_inst.set_input_grad(grad_op);
     op_inst.set_input_momentum(momentum_op);
 
-    // 设置输出 desc（双输出: var + accum）
-    TensorDesc var_out_desc(ge::Shape(ti.shape), FORMAT_ND, DT_FLOAT);
-    var_out_desc.SetRealDimCnt(static_cast<int32_t>(ti.shape.size()));
+    // 设置输出 desc（双输出: var + accum）；图声明可沿用动态 desc。
+    TensorDesc var_out_desc(ge::Shape(ti.desc_shape), FORMAT_ND, DT_FLOAT);
+    var_out_desc.SetRealDimCnt(static_cast<int32_t>(ti.desc_shape.size()));
     op_inst.update_output_desc_var(var_out_desc);
     op_inst.update_output_desc_accum(var_out_desc);
 
@@ -431,10 +436,11 @@ int main(int argc, char** argv)
         }
     }
 
-    // 用例 3: 动态 shape -1（某一维未知），desc shape 用 [-1, 4]，实际数据 [4, 4]
+    // 用例 3: 动态 shape -1（某一维未知），图 desc 用 [-1, 4]，实际 feed 数据 [4, 4]
     {
         TestInput ti = GenTestInput(/*seed=*/456);
-        ti.shape = {-1, 4}; // desc 用动态 shape
+        ti.shape = {4, 4};
+        ti.desc_shape = {-1, 4}; // 仅图声明使用动态 shape
         total++;
         LOG_PRINT("\n----------------------------------------");
         LOG_PRINT("[Case3_DynamicShape_-1] desc_shape=[-1,4], actual=[4,4]");
@@ -464,10 +470,11 @@ int main(int argc, char** argv)
         }
     }
 
-    // 用例 4: 动态 shape -2（rank 未知），desc shape 用 [-2]，实际数据 [4, 4]
+    // 用例 4: 动态 shape -2（rank 未知），图 desc 用 [-2]，实际 feed 数据 [4, 4]
     {
         TestInput ti = GenTestInput(/*seed=*/789);
-        ti.shape = {-2}; // desc 用动态 rank
+        ti.shape = {4, 4};
+        ti.desc_shape = {-2}; // 仅图声明使用动态 rank
         total++;
         LOG_PRINT("\n----------------------------------------");
         LOG_PRINT("[Case4_DynamicRank_-2] desc_shape=[-2], actual=[4,4]");

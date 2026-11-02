@@ -53,6 +53,22 @@ __golden__ = {
     "kernel": {"inplace_apply_keras_momentum": "inplace_apply_keras_momentum_golden"}
 }
 
+# 本 Golden 内部已按 FP32 计算并显式回 cast 到原 dtype；若使用会触发 TTK
+# Promote 的判据（mixed/mix_tolerance），TTK 会在调用前把 FP16/BF16 输入和
+# 输出 dtype 都升为 FP32，导致本文件按输入 dtype 判断饱和/回 cast 的分支失效。
+# 因此这里声明不触发 Promote 的统计相对误差判据，保留原始 dtype 语义。
+__spec__ = {"inplace_apply_keras_momentum": "InplaceApplyKerasMomentumTestSpec"}
+
+
+class InplaceApplyKerasMomentumTestSpec:
+    """InplaceApplyKerasMomentum 的 Kernel 精度判据声明。"""
+
+    tolerance = {
+        "float16": {"standard": "stat_rel_err"},
+        "bfloat16": {"standard": "stat_rel_err"},
+        "float32": {"standard": "stat_rel_err"},
+    }
+
 
 def _resolve_tf_dtype(np_arr):
     """从 numpy 数组推断 TF dtype，处理 BF16-as-void。"""
@@ -64,28 +80,21 @@ def _resolve_tf_dtype(np_arr):
         return tf.bfloat16
     if "float16" in dt_str:
         return tf.float16
-    if "float64" in dt_str:
-        return tf.float64
     return tf.float32
 
 
-def _to_bridge_numpy(arr, tf_dtype):
-    """将任意 dtype 的 numpy 数组转为中间 numpy dtype，供 TF Variable/constant 创建。
+def _to_bridge_numpy(arr):
+    """将任意 dtype 的 numpy 数组转为 FP32 中间表示，供 TF Variable/constant 创建。
 
-    BF16-as-void: 转 float32（BF16 ⊂ FP32，无损）。
-    float64 (Promote mode): 保持 float64。
-    其他: 转 float32（FP16/BF16 ⊂ FP32，无损）。
+    BF16-as-void: 转 float32（BF16 指数范围与 FP32 相同，但尾数被截断，
+                   本转换只用于把 BF16 数值无损送入 TF 的 FP32 计算）。
+    FP16/BF16/FP32 均转 float32；算子契约固定使用 FP32 中间计算。
     """
     a = np.asarray(arr)
     if a.dtype.kind == "V" and a.dtype.itemsize == 2:
         u16 = a.view(np.uint16)
         u32 = u16.astype(np.uint32) << 16
-        f32 = u32.view(np.float32).copy()
-        if tf_dtype == tf.float64:
-            return f32.astype(np.float64)
-        return f32
-    if tf_dtype == tf.float64:
-        return np.asarray(a, dtype=np.float64)
+        return u32.view(np.float32).copy()
     return np.asarray(a, dtype=np.float32)
 
 
@@ -114,16 +123,17 @@ def inplace_apply_keras_momentum_golden(
     lr_scalar = np.asarray(lr).reshape(())
     mom_scalar = np.asarray(momentum).reshape(())
 
-    # 对齐 kernel SCH_MODE=1：FP16/BF16 升精度到 FP32 计算
+    # 与 Kernel 对齐：FP16/BF16 输入统一升 FP32 计算。
+    # BF16 的指数范围与 FP32 相同，中间量（如 lr*grad）可能在 FP32 溢出为 ±Inf；
+    # 这是算子声明的“FP32 中间精度”语义，不是 Golden 的精度缺陷，也不等价于
+    # FP64 数学真值。FP16 输出在回写前做 ±65504 饱和，BF16/FP32 不做该饱和。
     compute_dtype = tf.float32
 
-    var_v = tf.Variable(_to_bridge_numpy(var, compute_dtype), dtype=compute_dtype)
-    accum_v = tf.Variable(_to_bridge_numpy(accum, compute_dtype), dtype=compute_dtype)
-    lr_t = tf.constant(_to_bridge_numpy(lr_scalar, compute_dtype), dtype=compute_dtype)
-    grad_t = tf.constant(_to_bridge_numpy(grad, compute_dtype), dtype=compute_dtype)
-    mom_t = tf.constant(
-        _to_bridge_numpy(mom_scalar, compute_dtype), dtype=compute_dtype
-    )
+    var_v = tf.Variable(_to_bridge_numpy(var), dtype=compute_dtype)
+    accum_v = tf.Variable(_to_bridge_numpy(accum), dtype=compute_dtype)
+    lr_t = tf.constant(_to_bridge_numpy(lr_scalar), dtype=compute_dtype)
+    grad_t = tf.constant(_to_bridge_numpy(grad), dtype=compute_dtype)
+    mom_t = tf.constant(_to_bridge_numpy(mom_scalar), dtype=compute_dtype)
 
     # 直接调用 TensorFlow 原生算子（in-place 更新 Variable，FP32 计算）
     tf.raw_ops.ResourceApplyKerasMomentum(
