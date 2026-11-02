@@ -539,9 +539,12 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>传入的x1、x2、x2Scale或out是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="4">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>x1、x2或out不满足<a href="#空tensor支持情况">空Tensor支持情况</a>中的约束，或bias、x1Scale、x2Scale、x2Offset传入了不支持的空Tensor。</td>
+      </tr>
+      <tr>
+        <td>yScale、x1Offset、x2Offset或yOffset传入了当前量化模式不支持的非空可选参数。</td>
       </tr>
       <tr>
         <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的数据类型和数据格式不在支持的范围之内。</td>

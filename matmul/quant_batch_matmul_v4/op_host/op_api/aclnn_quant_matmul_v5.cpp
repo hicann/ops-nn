@@ -275,8 +275,8 @@ static inline bool CheckInputAttrExistence(const TupleAttr& boolsTrans, int64_t 
     return true;
 }
 
-static inline bool CheckInputExistence(TupleInput& inputTensors, TupleQuant& quantTensors, const aclTensor* out,
-                                       bool& isA8W4)
+static inline aclnnStatus CheckInputExistence(TupleInput& inputTensors, TupleQuant& quantTensors, const aclTensor* out,
+                                              bool& isA8W4)
 {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
@@ -287,34 +287,34 @@ static inline bool CheckInputExistence(TupleInput& inputTensors, TupleQuant& qua
     auto x2Offset = std::get<INDEX_X2_OFFSET_IN_QUANT_TUPLE>(quantTensors);
     auto yOffset = std::get<INDEX_Y_OFFSET_IN_QUANT_TUPLE>(quantTensors);
     // 必选参数
-    OP_CHECK_NULL(x1, return false);
-    OP_CHECK_NULL(x2, return false);
-    OP_CHECK_NULL(x2Scale, return false);
-    OP_CHECK_NULL(out, return false);
+    OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2Scale, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(out, return ACLNN_ERR_PARAM_NULLPTR);
     isA8W4 = isA8W4Float(x1, x2) || isA8W4Int(x1, x2);
 
     // 不支持参数
     if (!isA8W4 && yScale != nullptr && !yScale->IsEmpty()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "yScale", "not empty/null",
                                               "The value of yScale must be empty tensor or nullptr");
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (x1Offset != nullptr && !x1Offset->IsEmpty()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "x1Offset", "not empty/null",
                                               "The value of x1Offset must be empty tensor or nullptr");
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (isA8W4 && x2Offset != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "x2Offset", "not empty/null",
                                               "The value of x2Offset must be empty tensor or nullptr");
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (yOffset != nullptr && !yOffset->IsEmpty() && !isA8W4Int(x1, x2)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "yOffset", "not empty/null",
                                               "The value of yOffset must be empty tensor or nullptr");
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
-    return true;
+    return ACLNN_SUCCESS;
 }
 
 static inline bool CheckDimRange(TupleInput& inputTensors, TupleQuant& quantTensors, const aclTensor* out)
@@ -1069,7 +1069,8 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput& inputTensors, TupleQuant& qu
     bool& transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
 
     CHECK_RET(executor != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    CHECK_RET(CheckInputExistence(inputTensors, quantTensors, out, isA8W4), ACLNN_ERR_PARAM_NULLPTR);
+    auto existenceRet = CheckInputExistence(inputTensors, quantTensors, out, isA8W4);
+    CHECK_RET(existenceRet == ACLNN_SUCCESS, existenceRet);
 
     bool tempTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(x1, transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
@@ -1174,7 +1175,8 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     bool& transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool& transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
     bool isA8W4 = false;
-    CHECK_RET(CheckInputExistence(inputTensors, quantTensors, out, isA8W4), ACLNN_ERR_PARAM_NULLPTR);
+    auto existenceRet = CheckInputExistence(inputTensors, quantTensors, out, isA8W4);
+    CHECK_RET(existenceRet == ACLNN_SUCCESS, existenceRet);
     const bool isA8W8Perblock = IsA8W8Perblock(x1, x2, x1Scale, x2Scale);
     if (isA8W8Perblock) {
         CHECK_RET(CheckA8W8PerblockBiasDtype(bias), ACLNN_ERR_PARAM_INVALID);
