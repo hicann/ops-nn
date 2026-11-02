@@ -471,3 +471,153 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg2_fp4_e2m1_dst7_f
     AscendC::GmFree(tilingDatafromBin);
     free(path_);
 }
+
+// 尾块场景: dimNeg1=200 < blockW(256) 且非32B对齐，CopyOut 中 dataLen(200) != ubRowLen_(256)。
+// 用于覆盖 scaleSrcStride = (2 * ubRowLen_ - CeilAlign(2 * dataLen, 32)) / 32 的尾块分支:
+// 满块(dimNeg1=256)时该值为 0，走不到槽位补齐逻辑。
+TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_tail_dimNeg1_200_unaligned)
+{
+    size_t inputXSize = 128 * 200 * sizeof(half);
+    size_t outputY1 = 128 * 200 * sizeof(int8_t);
+    size_t outputScale1 = 128 * 4 * 2 * sizeof(int8_t);
+    size_t outputY2 = 128 * 200 * sizeof(int8_t);
+    size_t outputScale2 = 2 * 200 * 2 * sizeof(int8_t);
+    size_t tiling_data_size = sizeof(DynamicMxQuantWithDualAxisTilingData);
+    uint32_t blockDim = 2;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputXSize);
+    uint8_t* y1 = (uint8_t*)AscendC::GmAlloc(outputY1);
+    uint8_t* scale1 = (uint8_t*)AscendC::GmAlloc(outputScale1);
+    uint8_t* y2 = (uint8_t*)AscendC::GmAlloc(outputY2);
+    uint8_t* scale2 = (uint8_t*)AscendC::GmAlloc(outputScale2);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
+
+    tilingDatafromBin->totalCoreNum = 64;
+    tilingDatafromBin->usedCoreNum = 2;
+    tilingDatafromBin->roundMode = 4;
+    tilingDatafromBin->dstType = 35;
+    tilingDatafromBin->scaleAlg = 0;
+    tilingDatafromBin->blockSize = 32;
+    tilingDatafromBin->dim0 = 1;
+    tilingDatafromBin->dimNeg2 = 128;
+    tilingDatafromBin->dimNeg1 = 200;
+    tilingDatafromBin->blockW = 256;
+    tilingDatafromBin->splitBlockH = 64;
+    tilingDatafromBin->tilingKey = 0;
+    tilingDatafromBin->dimNeg2Tail = 64;
+    tilingDatafromBin->dimNeg1Tail = 200;
+    tilingDatafromBin->dimNeg2SplitBlockNum = 2;
+    tilingDatafromBin->dimNeg1BlockNum = 1;
+    tilingDatafromBin->blockPerHeadCore = 1;
+    tilingDatafromBin->blockPerTailCore = 0;
+    tilingDatafromBin->headCoreNum = 2;
+    tilingDatafromBin->dimNeg2IsOdd = 0;
+    tilingDatafromBin->dimNeg1IsOdd = 1;
+    tilingDatafromBin->dimNeg1IsPad = 1;
+    tilingDatafromBin->blockCountPerBatch = 2;
+    tilingDatafromBin->scale1ColCountPerBatch = 8;
+    tilingDatafromBin->scale2RowCountPerBatch = 4;
+    tilingDatafromBin->dstTypeMax = 0.0f;
+    tilingDatafromBin->invDstTypeMax = 1.0f / 6.0f;
+
+    ICPU_SET_TILING_KEY(0);
+
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
+        ::dynamic_mx_quant_with_dual_axis<0, 4, 0>(x, y1, scale1, y2, scale2, workSpace, tiling);
+    };
+    ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(y1);
+    AscendC::GmFree(scale1);
+    AscendC::GmFree(y2);
+    AscendC::GmFree(scale2);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tilingDatafromBin);
+    free(path_);
+}
+
+// 尾块场景: dimNeg1=224 < blockW(256) 但32B对齐，dataLen 与 ubRowLen_ 仍不相等。
+// 该组合下按 dataLen 推算槽位宽度(旧公式)得到 0，按 ubRowLen_ 推算(新公式)得到 2，
+// 用于防止后续把 scaleSrcStride 改回按 dataLen 推算。
+TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_tail_dimNeg1_224_aligned)
+{
+    size_t inputXSize = 128 * 224 * sizeof(half);
+    size_t outputY1 = 128 * 224 * sizeof(int8_t);
+    size_t outputScale1 = 128 * 4 * 2 * sizeof(int8_t);
+    size_t outputY2 = 128 * 224 * sizeof(int8_t);
+    size_t outputScale2 = 2 * 224 * 2 * sizeof(int8_t);
+    size_t tiling_data_size = sizeof(DynamicMxQuantWithDualAxisTilingData);
+    uint32_t blockDim = 2;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputXSize);
+    uint8_t* y1 = (uint8_t*)AscendC::GmAlloc(outputY1);
+    uint8_t* scale1 = (uint8_t*)AscendC::GmAlloc(outputScale1);
+    uint8_t* y2 = (uint8_t*)AscendC::GmAlloc(outputY2);
+    uint8_t* scale2 = (uint8_t*)AscendC::GmAlloc(outputScale2);
+
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    DynamicMxQuantWithDualAxisTilingData* tilingDatafromBin = reinterpret_cast<DynamicMxQuantWithDualAxisTilingData*>(
+        tiling);
+
+    tilingDatafromBin->totalCoreNum = 64;
+    tilingDatafromBin->usedCoreNum = 2;
+    tilingDatafromBin->roundMode = 4;
+    tilingDatafromBin->dstType = 35;
+    tilingDatafromBin->scaleAlg = 0;
+    tilingDatafromBin->blockSize = 32;
+    tilingDatafromBin->dim0 = 1;
+    tilingDatafromBin->dimNeg2 = 128;
+    tilingDatafromBin->dimNeg1 = 224;
+    tilingDatafromBin->blockW = 256;
+    tilingDatafromBin->splitBlockH = 64;
+    tilingDatafromBin->tilingKey = 0;
+    tilingDatafromBin->dimNeg2Tail = 64;
+    tilingDatafromBin->dimNeg1Tail = 224;
+    tilingDatafromBin->dimNeg2SplitBlockNum = 2;
+    tilingDatafromBin->dimNeg1BlockNum = 1;
+    tilingDatafromBin->blockPerHeadCore = 1;
+    tilingDatafromBin->blockPerTailCore = 0;
+    tilingDatafromBin->headCoreNum = 2;
+    tilingDatafromBin->dimNeg2IsOdd = 0;
+    tilingDatafromBin->dimNeg1IsOdd = 1;
+    tilingDatafromBin->dimNeg1IsPad = 0;
+    tilingDatafromBin->blockCountPerBatch = 2;
+    tilingDatafromBin->scale1ColCountPerBatch = 8;
+    tilingDatafromBin->scale2RowCountPerBatch = 4;
+    tilingDatafromBin->dstTypeMax = 0.0f;
+    tilingDatafromBin->invDstTypeMax = 1.0f / 6.0f;
+
+    ICPU_SET_TILING_KEY(0);
+
+    auto kernel_func = [](GM_ADDR x, GM_ADDR y1, GM_ADDR scale1, GM_ADDR y2, GM_ADDR scale2, GM_ADDR workSpace,
+                          GM_ADDR tiling) {
+        ::dynamic_mx_quant_with_dual_axis<0, 4, 0>(x, y1, scale1, y2, scale2, workSpace, tiling);
+    };
+    ICPU_RUN_KF(kernel_func, blockDim, x, y1, scale1, y2, scale2, workSpace, tiling);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(y1);
+    AscendC::GmFree(scale1);
+    AscendC::GmFree(y2);
+    AscendC::GmFree(scale2);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tilingDatafromBin);
+    free(path_);
+}
