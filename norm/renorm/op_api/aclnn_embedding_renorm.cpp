@@ -13,7 +13,6 @@
 #include "level0/arange.h"
 #include "aclnn_kernels/reshape.h"
 #include "op_api/scatter_update.h"
-#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/gather_v2.h"
 #include "level0/mul.h"
@@ -56,6 +55,9 @@ static constexpr size_t MAX_DIM_LEN = 8;
  *                      ViewCopy(workspace_8)
  *                           |
  *                          self
+ *
+ * Regbase(A5) 上 Renorm(inferType=1) 直出完整缩放结果 x*scale，
+ * 跳过 GatherV2(workspace_5) 与 Mul(workspace_6)，结果直接进入 ScatterUpdate。
  */
 
 // 检查是否有空tensor
@@ -214,40 +216,43 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor* selfRef, const aclTe
         maxNorm = std::numeric_limits<float>::infinity();
     }
 
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        firstGatherV2 = l0op::Cast(firstGatherV2, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(firstGatherV2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
     // 调用l0算子Renorm进行计算，mid_output-> embeddingRenormRenorm
-    auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,
-                               static_cast<float>(maxNorm), 2, uniqueExecutor.get());
-    CHECK_RET(renorm != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-
-    // 对第二次GatherV2的indices的数据进行处理
-    int64_t indicesDim0 = indicesReshape->GetViewShape().GetDim(0);
-
-    // indices size转换为tensor
-    op::Shape indicesShape = {indicesDim0};
-    const aclTensor* index = (uniqueExecutor.get())->AllocTensor(indicesShape, op::DataType::DT_INT32);
-    CHECK_RET(index != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto start = (uniqueExecutor.get())->AllocScalar(0);
-    auto end = (uniqueExecutor.get())->AllocScalar(indicesDim0);
-    auto step = (uniqueExecutor.get())->AllocScalar(1);
-    // 调用L0算子Arange
-    auto indicesTensor = l0op::Arange(start, end, step, index, false, uniqueExecutor.get());
-    CHECK_RET(indicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 调用l0算子GatherV2进行计算
-    auto secondGatherV2 = l0op::GatherV2(renorm, GATHERV2_DEFAULT_AXIS, indicesTensor, uniqueExecutor.get());
-    CHECK_RET(secondGatherV2 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-
-    // 进行Mul计算
-    auto update = l0op::Mul(firstGatherV2, secondGatherV2, uniqueExecutor.get());
-    CHECK_RET(update != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
+    // Regbase(A5): Renorm 内核直出完整缩放结果 x*scale（与 aclnnRenorm 的 inferType=1 路径一致），
+    //              内核内部已按 FP32 完成中间计算并 Cast 回原 dtype，结果直接作为 update，
+    //              禁止再用 firstGatherV2 乘一次（会得到 x^2*scale）。
+    // 老平台: Renorm 仅返回规约后的缩放因子，需 Gather 展开后与输入相乘恢复 x*scale。
+    const aclTensor* update = nullptr;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        update = l0op::Cast(update, selfRef->GetDataType(), uniqueExecutor.get());
+        auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,
+                                   static_cast<float>(maxNorm), 1, uniqueExecutor.get());
+        CHECK_RET(renorm != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
+        update = renorm;
+    } else {
+        auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,
+                                   static_cast<float>(maxNorm), 2, uniqueExecutor.get());
+        CHECK_RET(renorm != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
+        // 对第二次GatherV2的indices的数据进行处理
+        int64_t indicesDim0 = indicesReshape->GetViewShape().GetDim(0);
+
+        // indices size转换为tensor
+        op::Shape indicesShape = {indicesDim0};
+        const aclTensor* index = (uniqueExecutor.get())->AllocTensor(indicesShape, op::DataType::DT_INT32);
+        CHECK_RET(index != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto start = (uniqueExecutor.get())->AllocScalar(0);
+        auto end = (uniqueExecutor.get())->AllocScalar(indicesDim0);
+        auto step = (uniqueExecutor.get())->AllocScalar(1);
+        // 调用L0算子Arange
+        auto indicesTensor = l0op::Arange(start, end, step, index, false, uniqueExecutor.get());
+        CHECK_RET(indicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 调用l0算子GatherV2进行计算
+        auto secondGatherV2 = l0op::GatherV2(renorm, GATHERV2_DEFAULT_AXIS, indicesTensor, uniqueExecutor.get());
+        CHECK_RET(secondGatherV2 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
+        // 进行Mul计算
+        update = l0op::Mul(firstGatherV2, secondGatherV2, uniqueExecutor.get());
         CHECK_RET(update != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
