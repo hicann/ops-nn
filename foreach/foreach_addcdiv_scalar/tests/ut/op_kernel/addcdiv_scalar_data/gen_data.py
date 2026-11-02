@@ -26,7 +26,12 @@ def parse_str_to_shape_list(shape_str):
     return shape_list
 
 
-def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
+TAIL_MARKER = -999.0
+
+
+def gen_data_and_golden(
+    shape_str, scale_value=2.0, d_type="float32", out_shape_str=None
+):
     d_type_dict = {
         "float32": np.float32,
         "float16": np.float16,
@@ -35,6 +40,9 @@ def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
     }
     np_type = d_type_dict[d_type]
     shape_list = parse_str_to_shape_list(shape_str)
+    out_shape_list = None
+    if out_shape_str is not None:
+        out_shape_list = parse_str_to_shape_list(out_shape_str)
     if d_type == "bfloat16_t":
         scalars = np.array([scale_value for i in range(len(shape_list))]).astype(
             np.float32
@@ -58,6 +66,18 @@ def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
                 tmp_input[i] + tmp_tensor1[i] / tmp_tensor2[i] * scalars[index]
             )
 
+        if out_shape_list is not None:
+            # out 元素数大于 x1 的场景：golden 覆盖 out 全长（前 x1 numel 为计算值，尾部为标记值），
+            # 另生成 outinit 文件（全长标记值）作为 out 的初始内存——kernel 只应写前 x1 numel 个元素
+            out_numel = int(np.prod(out_shape_list[index]))
+            x_numel = int(np.prod(shape))
+            tmp_out_init = np.full((out_numel,), TAIL_MARKER, dtype=np_type)
+            tmp_golden = np.full((out_numel,), TAIL_MARKER, dtype=np_type)
+            for i in range(x_numel):
+                tmp_golden[i] = (
+                    tmp_input[i] + tmp_tensor1[i] / tmp_tensor2[i] * scalars[index]
+                )
+
         tmp_golden = tmp_golden.astype(np_type)
 
         tmp_input.astype(np_type).tofile(f"{d_type}_input_t_foreach_addcdiv{index}.bin")
@@ -70,12 +90,17 @@ def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
         tmp_golden.astype(np_type).tofile(
             f"{d_type}_golden_t_foreach_addcdiv{index}.bin"
         )
+        if out_shape_list is not None:
+            tmp_out_init.astype(np_type).tofile(
+                f"{d_type}_outinit_t_foreach_addcdiv{index}.bin"
+            )
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Param num must be 4.")
+    if len(sys.argv) not in (4, 5):
+        print("Param num must be 4 or 5 (with optional out_shape).")
         exit(1)
     # 清理bin文件
     os.system("rm -rf *.bin")
-    gen_data_and_golden(sys.argv[1], sys.argv[2], sys.argv[3])
+    out_shape_str = sys.argv[4] if len(sys.argv) == 5 else None
+    gen_data_and_golden(sys.argv[1], sys.argv[2], sys.argv[3], out_shape_str)

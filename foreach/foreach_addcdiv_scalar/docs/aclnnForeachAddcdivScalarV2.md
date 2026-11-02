@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>x1（aclTensorList*）</td>
       <td>输入</td>
       <td>表示混合运算中加法的第一个输入张量列表。公式中的`x1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`x3`的shape一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>空TensorList（长度为0）按no-op处理并返回成功。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`x3`的shape一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示混合运算中除法的第一个输入张量列表。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>x3（aclTensorList*）</td>
       <td>输入</td>
       <td>表示混合运算中除法的第二个输入张量列表。对应公式中的`x3`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape与入参`x1`的shape一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -182,15 +182,18 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>传入的x1、x2、x3、scalar、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>x1、x2、x3、scalar和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2、x3、out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2、x3、out的shape不满足约束。</td>
+      <td>x1、x2、x3、out的shape不满足约束（含out的shape size小于x1的shape size）。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x3、out中存在空Tensor。</td>
     </tr>
     <tr>
       <td>x1、x2、x3或out中的Tensor的元素数据类型不一致。</td>

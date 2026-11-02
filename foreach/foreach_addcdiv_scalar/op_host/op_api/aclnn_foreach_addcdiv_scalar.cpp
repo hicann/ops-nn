@@ -61,35 +61,30 @@ static inline bool CheckNotNull(const aclTensorList* x1, const aclTensorList* x2
 static inline bool CheckFormat(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
                                const aclTensor* scalar, const aclTensorList* out)
 {
-    if (IsPrivateFormat(scalar->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
+    if (scalar->GetStorageFormat() != Format::FORMAT_ND) {
+        const std::string reason = "The format of scalar must be ND.";
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),
+            (std::vector<const char*>{"scalar", "aclnnForeachAddcdivScalar",
+                                      (std::to_string(static_cast<int>(scalar->GetStorageFormat()))).c_str(),
+                                      reason.c_str()}));
         return false;
     }
     for (uint64_t i = 0; i < x1->Size(); i++) {
-        if (IsPrivateFormat((*out)[i]->GetStorageFormat()) || IsPrivateFormat((*x1)[i]->GetStorageFormat()) ||
-            IsPrivateFormat((*x2)[i]->GetStorageFormat()) || IsPrivateFormat((*x3)[i]->GetStorageFormat())) {
-            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s",
-                                   "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
-            REPORT_PREDEFINED_ERR_MSG(
-                "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),
-                (std::vector<const char*>{
-                    std::string((IsPrivateFormat((*out)[i]->GetStorageFormat()) ?
-                                     "out" :
-                                     (IsPrivateFormat((*x1)[i]->GetStorageFormat()) ?
-                                          "x1" :
-                                          (IsPrivateFormat((*x2)[i]->GetStorageFormat()) ? "x2" : "x3"))))
-                        .c_str(),
-                    "aclnnForeachAddcdivScalar",
-                    (std::to_string(static_cast<int>(
-                         (IsPrivateFormat((*out)[i]->GetStorageFormat()) ?
-                              (*out)[i]->GetStorageFormat() :
-                              (IsPrivateFormat((*x1)[i]->GetStorageFormat()) ?
-                                   (*x1)[i]->GetStorageFormat() :
-                                   (IsPrivateFormat((*x2)[i]->GetStorageFormat()) ? (*x2)[i]->GetStorageFormat() :
-                                                                                    (*x3)[i]->GetStorageFormat()))))))
-                        .c_str(),
-                    "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW."}));
-            return false;
+        const aclTensor* tensors[4] = {(*x1)[i], (*x2)[i], (*x3)[i], (*out)[i]};
+        const char* names[4] = {"x1", "x2", "x3", "out"};
+        for (uint32_t j = 0; j < 4; ++j) {
+            if (tensors[j]->GetStorageFormat() != Format::FORMAT_ND) {
+                const std::string reason = "The format of x1/x2/x3/out must be ND.";
+                OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),
+                    (std::vector<const char*>{
+                        names[j], "aclnnForeachAddcdivScalar",
+                        (std::to_string(static_cast<int>(tensors[j]->GetStorageFormat()))).c_str(), reason.c_str()}));
+                return false;
+            }
         }
     }
     return true;

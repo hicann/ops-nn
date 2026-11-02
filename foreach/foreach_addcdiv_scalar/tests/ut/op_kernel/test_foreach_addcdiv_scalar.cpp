@@ -152,3 +152,45 @@ TEST_F(foreach_addcdiv_scalar_test, test_case_bfloat16_3)
 
     system("cd ./addcdiv_scalar_data/ && python3 compare_data.py 'bfloat16_t'");
 }
+
+// out 元素数大于 x1（numel 32 >= 24）的执行级用例：验证 kernel 只写前 x1 numel 个元素、out 尾部保持初始值
+TEST_F(foreach_addcdiv_scalar_test, test_case_out_larger_4)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{4, 6}};
+    std::vector<std::vector<uint64_t>> outShapeInfos = {{32}};
+    system("cp -rf "
+           "../../../../foreach/foreach_addcdiv_scalar/tests/ut/op_kernel/addcdiv_scalar_data ./");
+    system("chmod -R 755 ./addcdiv_scalar_data/");
+    system("cd ./addcdiv_scalar_data/ && python3 gen_data.py '{{4, 6}}' 3 'float32' '{32}'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 1;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 1, 4);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateTensorListForeachAddcdivScalar<float>(shapeInfos, "float32", "input");
+    uint8_t* tensor1 = CreateTensorListForeachAddcdivScalar<float>(shapeInfos, "float32", "tensor1");
+    uint8_t* tensor2 = CreateTensorListForeachAddcdivScalar<float>(shapeInfos, "float32", "tensor2");
+    uint8_t* out = CreateTensorListForeachAddcdivScalar<float>(outShapeInfos, "float32", "outinit");
+    uint8_t* scalar = (uint8_t*)AscendC::GmAlloc(sizeof(float));
+    *((float*)scalar) = 3;
+
+    ICPU_SET_TILING_KEY(2);
+    ICPU_RUN_KF(foreach_addcdiv_scalar, blockDim, x1, tensor1, tensor2, scalar, out, workspace, tiling);
+
+    FreeTensorListForeachAddcdivScalar<float>(out, outShapeInfos, "float32");
+    AscendC::GmFree((void*)x1);
+    AscendC::GmFree((void*)scalar);
+    AscendC::GmFree((void*)tensor1);
+    AscendC::GmFree((void*)tensor2);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./addcdiv_scalar_data/ && python3 compare_data.py 'float32'");
+}
