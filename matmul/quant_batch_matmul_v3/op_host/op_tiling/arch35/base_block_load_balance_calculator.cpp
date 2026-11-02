@@ -153,15 +153,6 @@ bool BaseBlockCalculator::RearrangeBasicBlock(const BaseBlockRes& baseBlockInit)
     return AdjustBaseBlockDefault();
 }
 
-double BaseBlockCalculator::CalBalanceRate(uint64_t baseM, uint64_t baseN) const
-{
-    uint64_t singleCoreMaxRound = ops::CeilDiv(
-        ops::CeilDiv(inputParams_.mSize, baseM) * ops::CeilDiv(inputParams_.nSize, baseN),
-        static_cast<uint64_t>(compileInfo_.aicNum));
-    return static_cast<double>(inputParams_.mSize) * inputParams_.nSize / compileInfo_.aicNum /
-           (singleCoreMaxRound * baseM * baseN);
-}
-
 bool BaseBlockCalculator::IsBalanceAFullLoad(uint64_t baseM, uint64_t baseN) const
 {
     if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans()) {
@@ -174,7 +165,7 @@ bool BaseBlockCalculator::IsBalanceAFullLoad(uint64_t baseM, uint64_t baseN) con
     uint64_t nBlockCnt = ops::CeilDiv(inputParams_.nSize, baseN);
     // mcnt为1/2/4...且为核数因数时，ASW可保证所有核上的计算对M的依赖不换行，可做A全载。
     return singleCoreASize <= compileInfo_.l1Size / LB_AFULLLOAD_SINGLE_CORE_A_SCALER && mBlockCnt <= nBlockCnt &&
-           (mBlockCnt * nBlockCnt <= static_cast<uint64_t>(compileInfo_.aicNum) ||
+           (batchCoreCnt_ * mBlockCnt * nBlockCnt <= static_cast<uint64_t>(compileInfo_.aicNum) ||
             (mBlockCnt <= winShortEdge && compileInfo_.aicNum % mBlockCnt == 0));
 }
 
@@ -315,7 +306,8 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
     bool curIsAFullLoad = IsBalanceAFullLoad(baseBlockInit.baseM, baseBlockInit.baseN);
     uint64_t curM = baseBlockInit.baseM;
     uint64_t curN = baseBlockInit.baseN;
-    uint64_t curTotalBlockCnt = ops::CeilDiv(inputParams_.mSize, curM) * ops::CeilDiv(inputParams_.nSize, curN);
+    uint64_t curTotalBlockCnt = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, curM) *
+                                ops::CeilDiv(inputParams_.nSize, curN);
     // 计算达10轮及以上，避免局部最优，用默认基本块。
     if (ops::CeilDiv(curTotalBlockCnt, static_cast<uint64_t>(compileInfo_.aicNum)) >= 10UL) {
         baseBlockRes_ = baseBlockInit;
@@ -352,14 +344,14 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
                            (1 - socSpecAdjustBalanceInfo.l2Bw / socSpecAdjustBalanceInfo.hbmBw) * cmRange;
     // 考虑scale的影响
     double cubeBoundParam = (static_cast<double>(curM) + curN) / (static_cast<double>(curM) * curN);
-    double balanceRate = CalBalanceRate(curM, curN);
+    double balanceRate = GetBalanceRate(curM, curN);
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlign) {
         uint64_t curMaxBaseN = std::min(
             maxBaseN, ops::FloorAlign(compileInfo_.l0cSize / qmmv3_tiling_const::DATA_SIZE_L0C / curBaseM, baseNAlign));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlign) {
             double curCubeBoundParam = (static_cast<double>(curBaseM) + curBaseN) /
                                        (static_cast<double>(curBaseM) * curBaseN);
-            double curBalanceRate = CalBalanceRate(curBaseM, curBaseN);
+            double curBalanceRate = GetBalanceRate(curBaseM, curBaseN);
             bool cubeBoundCond = curCubeBoundParam <= cubeBoundEdge && curBalanceRate > balanceRate;
             bool balanceCond = ((curCubeBoundParam / curBalanceRate) < (cubeBoundParam / balanceRate)) ||
                                (IsDoubleEqual(curCubeBoundParam / curBalanceRate, cubeBoundParam / balanceRate) &&

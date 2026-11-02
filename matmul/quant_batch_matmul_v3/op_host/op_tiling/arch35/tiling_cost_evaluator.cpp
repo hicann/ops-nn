@@ -371,24 +371,24 @@ void TilingCostEvaluator::EvaluateAicTime(const CaseInfo& caseInfo, const QuantB
     bool isMte2longerMte1 = res.mte2TotalTime > oneBlockMte1time * kIter;
 
     double totalTime = 0;
+    double mte2TimeForFirstKl1 = (res.mte2TotalTime / static_cast<double>(roundPerCore)) *
+                                 (kL1d / static_cast<double>(caseInfo.kSize));
     if (isMmadLongerMte2 && isMmadlongerMte1) {
         // mmad为瓶颈：mte2首次加载不重叠，后续被mmad掩盖
-        totalTime = res.mte2TotalTime * (kL1d / static_cast<double>(caseInfo.kSize)) + res.mmadTotalTime;
+        totalTime = mte2TimeForFirstKl1 + res.mmadTotalTime;
     } else if (!isMmadLongerMte2 && isMte2longerMte1) {
         // mte2为瓶颈：mmad/mte1在每个kL1块内被mte2掩盖
         totalTime = res.mte2TotalTime +
                     (isMmadlongerMte1 ? oneBlockMmadtime : oneBlockMte1time) * (kL1d / caseInfo.baseK);
     } else if (!isMmadlongerMte1 && !isMte2longerMte1) {
         // mte1为瓶颈：mte2首次加载 + mte1全量 + mmad末尾块
-        totalTime = res.mte2TotalTime * (kL1d / static_cast<double>(caseInfo.kSize)) + res.mte1TotalTime +
-                    oneBlockMmadtime;
+        totalTime = mte2TimeForFirstKl1 + res.mte1TotalTime + oneBlockMmadtime;
     }
 
     // 4. fixp是否成为瓶颈
     if (oneRoundFixpTime > res.mmadTotalTime / static_cast<double>(roundPerCore)) {
         // fixp单轮耗时超过mmad单轮，fixp成为瓶颈
-        totalTime = res.mte2TotalTime * (kL1d / static_cast<double>(caseInfo.kSize)) +
-                    oneBlockMmadtime * (kL1d / caseInfo.baseK) + res.fixpipeTotalTime;
+        totalTime = mte2TimeForFirstKl1 + oneBlockMmadtime * (kL1d / caseInfo.baseK) + res.fixpipeTotalTime;
     } else {
         // fixp可被mmad掩盖，仅追加单轮fixp耗时
         totalTime += oneRoundFixpTime;

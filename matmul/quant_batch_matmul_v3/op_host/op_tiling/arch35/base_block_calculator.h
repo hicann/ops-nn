@@ -100,7 +100,6 @@ private:
     bool RearrangeBasicBlock(const BaseBlockRes& baseBlockInit);
     uint64_t CalMaxBasicBlockLimited(uint64_t shapeSize, uint64_t alignUnit, uint64_t l0BufferSize,
                                      bool isSplite) const;
-    double CalBalanceRate(uint64_t baseM, uint64_t baseN) const;
     bool IsBalanceAFullLoad(uint64_t baseM, uint64_t baseN) const;
     void GetBaseK(BaseBlockRes& baseBlockTemp);
     bool IsBaseK64Aligned(ge::DataType dtype) const;
