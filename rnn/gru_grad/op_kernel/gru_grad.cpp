@@ -35,8 +35,6 @@
 // ---- 优化栈 (dav_3510)：基础 API（裸 Mmad/Fixpipe）路径 --------------------------------------
 #include "arch35/gru_grad_arch35.h"
 
-#ifndef _GRU_GRAD_ARCH35_GET_TILING_DATA_H_
-#define _GRU_GRAD_ARCH35_GET_TILING_DATA_H_
 // dav_3510 的 asc 树无 GET_TILING_DATA_WITH_STRUCT：自补实现。
 // ⚠ 必须用字节循环——宏展开位于 __global__ __aicore__ 函数体内，glibc memcpy 是 __host__ 函数，
 //   会报 "call to __host__ function from __global__"。
@@ -49,7 +47,6 @@ __aicore__ inline void GruGradLoadTilingData(GM_ADDR src, T* dst, int64_t bytes)
         d[i] = s[i];
     }
 }
-#endif
 #else
 // ---- 基线 (ascend910b / ascend910_93)：KFC 高阶 API 路径（语义不变）---------------------------
 #include "arch22/gru_grad_arch22.h"

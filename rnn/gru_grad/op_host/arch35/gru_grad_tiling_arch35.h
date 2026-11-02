@@ -64,6 +64,8 @@ private:
 
     bool ValidateInputShape(int idx, const std::vector<int64_t>& e);
     bool ValidateOutputShape(int idx, const std::vector<int64_t>& e);
+    bool ValidateAndLogShape(bool isInput, int idx, const std::vector<int64_t>& expected, const char* name);
+    void LogTCubeTiling(const char* nm, const AscendC::tiling::TCubeTiling& q);
     void LogShapeCheck(bool isInput, int index, const std::vector<int64_t>& expected, const char* name, bool ok);
 
 private:

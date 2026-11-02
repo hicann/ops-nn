@@ -74,7 +74,7 @@ ge::graphStatus GruGradTilingArch35::GetPlatformInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo_);
 
     sysAicCoreNum_ = static_cast<int64_t>(compileInfo_->aicCoreNum);
-    OP_LOGD(nodeName_, "sysAicCoreNum=%ld.", (long)sysAicCoreNum_);
+    OP_LOGD(nodeName_, "sysAicCoreNum=%ld.", static_cast<long>(sysAicCoreNum_));
     sysAivCoreNum_ = static_cast<int64_t>(compileInfo_->aivCoreNum);
     tilingData_.ubSize = compileInfo_->ubSizePlatForm;
 
@@ -309,6 +309,22 @@ void GruGradTilingArch35::LogShapeCheck(bool isInput, int index, const std::vect
     }
 }
 
+bool GruGradTilingArch35::ValidateAndLogShape(bool isInput, int idx, const std::vector<int64_t>& expected,
+                                              const char* name)
+{
+    bool ok = isInput ? ValidateInputShape(idx, expected) : ValidateOutputShape(idx, expected);
+    LogShapeCheck(isInput, idx, expected, name, ok);
+    return ok;
+}
+
+void GruGradTilingArch35::LogTCubeTiling(const char* nm, const AscendC::tiling::TCubeTiling& q)
+{
+    OP_LOGD(nodeName_, "%s M=%ld N=%ld Ka=%ld sM=%ld sN=%ld bM=%ld bN=%ld bK=%ld usedC=%ld.", nm,
+            static_cast<long>(q.M), static_cast<long>(q.N), static_cast<long>(q.Ka), static_cast<long>(q.singleCoreM),
+            static_cast<long>(q.singleCoreN), static_cast<long>(q.baseM), static_cast<long>(q.baseN),
+            static_cast<long>(q.baseK), static_cast<long>(q.usedCoreNum));
+}
+
 bool GruGradTilingArch35::CheckParamsShape()
 {
     int64_t TS = tilingData_.totalSteps;
@@ -330,36 +346,25 @@ bool GruGradTilingArch35::CheckParamsShape()
             B, I, H, TS, tilingData_.isSeqLength);
 
     bool ret = true;
-    auto ci = [this](int i, auto& e, const char* n) {
-        bool ok = ValidateInputShape(i, e);
-        LogShapeCheck(true, i, e, n, ok);
-        return ok;
-    };
-    auto co = [this](int i, auto& e, const char* n) {
-        bool ok = ValidateOutputShape(i, e);
-        LogShapeCheck(false, i, e, n, ok);
-        return ok;
-    };
-
-    ret = ci(GG_INPUT_WI, wiD, "w_input") && ret;
-    ret = ci(GG_INPUT_WH, whD, "w_hidden") && ret;
-    ret = ci(GG_INPUT_H0, ihD, "init_h") && ret;
-    ret = ci(GG_INPUT_H, hidD, "h") && ret;
-    ret = ci(GG_INPUT_R, hidD, "r") && ret;
-    ret = ci(GG_INPUT_Z, hidD, "z") && ret;
-    ret = ci(GG_INPUT_N, hidD, "n") && ret;
-    ret = ci(GG_INPUT_HN, hidD, "hn") && ret;
-    ret = ci(GG_INPUT_DY, hidD, "dy") && ret;
-    ret = ci(GG_INPUT_DH, ihD, "dh") && ret;
-    ret = co(GG_OUT_DX, dxD, "dx") && ret;
-    ret = co(GG_OUT_DHP, ihD, "dh_prev") && ret;
-    ret = co(GG_OUT_DWI, wiD, "dw_input") && ret;
-    ret = co(GG_OUT_DWH, whD, "dw_hidden") && ret;
-    ret = co(GG_OUT_DBI, biD, "db_input") && ret;
-    ret = co(GG_OUT_DBH, bhD, "db_hidden") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_WI, wiD, "w_input") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_WH, whD, "w_hidden") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_H0, ihD, "init_h") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_H, hidD, "h") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_R, hidD, "r") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_Z, hidD, "z") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_N, hidD, "n") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_HN, hidD, "hn") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_DY, hidD, "dy") && ret;
+    ret = ValidateAndLogShape(true, GG_INPUT_DH, ihD, "dh") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DX, dxD, "dx") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DHP, ihD, "dh_prev") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DWI, wiD, "dw_input") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DWH, whD, "dw_hidden") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DBI, biD, "db_input") && ret;
+    ret = ValidateAndLogShape(false, GG_OUT_DBH, bhD, "db_hidden") && ret;
     if (tilingData_.isSeqLength) {
         std::vector<int64_t> bsD = {tilingData_.timeStep};
-        ret = ci(GG_INPUT_BS, bsD, "batch_sz") && ret;
+        ret = ValidateAndLogShape(true, GG_INPUT_BS, bsD, "batch_sz") && ret;
     }
     return ret;
 }
@@ -485,8 +490,10 @@ ge::graphStatus GruGradTilingArch35::GetDwIhMMTiling(matmul_tiling::DataType mmD
     ClampDepth(tilingData_.dwIhMMParam);
     auto& q = tilingData_.dwIhMMParam;
     OP_LOGD(nodeName_, "dwIhMM M=%ld N=%ld Ka=%ld Kb=%ld sM=%ld sN=%ld sK=%ld bM=%ld bN=%ld bK=%ld usedCores=%ld.",
-            (long)q.M, (long)q.N, (long)q.Ka, (long)q.Kb, (long)q.singleCoreM, (long)q.singleCoreN, (long)q.singleCoreK,
-            (long)q.baseM, (long)q.baseN, (long)q.baseK, (long)q.usedCoreNum);
+            static_cast<long>(q.M), static_cast<long>(q.N), static_cast<long>(q.Ka), static_cast<long>(q.Kb),
+            static_cast<long>(q.singleCoreM), static_cast<long>(q.singleCoreN), static_cast<long>(q.singleCoreK),
+            static_cast<long>(q.baseM), static_cast<long>(q.baseN), static_cast<long>(q.baseK),
+            static_cast<long>(q.usedCoreNum));
     return ge::GRAPH_SUCCESS;
 }
 
@@ -554,17 +561,10 @@ ge::graphStatus GruGradTilingArch35::GetDxMMTiling(matmul_tiling::DataType mmDat
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM GetTiling fail."),
                     return ge::GRAPH_FAILED);
     ClampDepth(tilingData_.dxMMParam);
-    auto pr = [&](const char* nm, AscendC::tiling::TCubeTiling& q) {
-        OP_LOGD(nodeName_, "%s M=%ld N=%ld Ka=%ld sM=%ld sN=%ld bM=%ld bN=%ld bK=%ld usedC=%ld.", nm, (long)q.M,
-                (long)q.N, (long)q.Ka, (long)q.singleCoreM, (long)q.singleCoreN, (long)q.baseM, (long)q.baseN,
-                (long)q.baseK, (long)q.usedCoreNum);
-
-        return ge::GRAPH_SUCCESS;
-    };
-    pr("dwIh", tilingData_.dwIhMMParam);
-    pr("dwHh", tilingData_.dwHhMMParam);
-    pr("dgate", tilingData_.dgateMMParam);
-    pr("dx", tilingData_.dxMMParam);
+    LogTCubeTiling("dwIh", tilingData_.dwIhMMParam);
+    LogTCubeTiling("dwHh", tilingData_.dwHhMMParam);
+    LogTCubeTiling("dgate", tilingData_.dgateMMParam);
+    LogTCubeTiling("dx", tilingData_.dxMMParam);
     return ge::GRAPH_SUCCESS;
 }
 
