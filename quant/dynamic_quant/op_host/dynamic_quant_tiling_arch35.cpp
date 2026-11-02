@@ -76,6 +76,15 @@ constexpr uint32_t PER_CHANNEL_RESERVED_FACTOR = 8;
 constexpr uint32_t PER_CHANNEL_FLOAT_BUF_NUM = 4;
 // row 对齐到 16 字节
 constexpr uint32_t ROW_ALIGN_SIZE = 16;
+// 输出 row 对齐到 32 字节，INT4 输出对齐到 64 字节
+constexpr uint32_t OUTPUT_ROW_ALIGN_SIZE = 32;
+constexpr uint32_t OUTPUT_ROW_ALIGN_SIZE_INT4 = 64;
+// pertoken 开 double buffer 时 scale/offset 两个队列的 UB 上界：
+// 2 buffer * align8(multiRowNum <= 255) 个 float * 4 字节 * 2 个队列
+constexpr uint64_t PT_DB_CONST_BYTES = 4096;
+// pertoken 开 double buffer 时额外预留：该路径会把 UB 用到接近上限，需覆盖各队列 32 字节对齐
+// 和框架开销（原有分支估算保守，实际占用远低于上限，RESERVED_LENGTH 未被真正压满）
+constexpr uint64_t PT_DB_RESERVED_BYTES = 2048;
 // UB 队列平滑 buffer 系数
 constexpr uint32_t SMOOTH_QUEUE_FACTOR = 2;
 // UB 队列主 buffer 系数
@@ -553,6 +562,9 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
     uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH;
     uint32_t smoothBuffer = (hasSmooth ? 1UL : 0UL);
     uint32_t offsetBuffer = 1UL;
+    // pertoken：非 pertensor、非 MOE，perchannel 在上层已分流到 CalculateTilingDataForPerChannel
+    // 必须在 quantMode_ 被改写前取值
+    const bool isPerToken = (quantMode_ == TPL_COMMON_FULL_LOAD && groupNum == 0);
 
     uint64_t calcSize = static_cast<uint64_t>(alignedRowLen) *
                         (smoothBuffer * SMOOTH_BYTES_SIZE + REQUIRED_BYTES_SIZE + offsetBuffer * OFFSET_BYTES_SIZE);
@@ -588,9 +600,27 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
             quantMode_ = groupNum > 0 ? TPL_MOE_PER_TENSOR_LARGE_SHAPE : TPL_PER_TENSOR_LARGE_SHAPE;
         }
     } else if (calcDbSize > maxUseUbSize) {
-        useDb = false;
-        // 取UB可以处理的row数量
-        uint32_t ubAvail = static_cast<uint32_t>(maxUseUbSize) / static_cast<uint32_t>(calcSize);
+        // 一个UB可以装下一个row，但按 calcDbSize 估算无法开启double buffer。
+        // pertoken 场景下 calcDbSize 把 scale/offset 按每元素 4 字节计入，远大于 kernel 实际占用
+        // （arch35 full-load 只申请 in/out/smooth/scale/offset 五个队列，scale/offset 为常数项），
+        // 因此先按真实占用重算，能开 DB 就开；算不下时回退到原来的不开 DB 分支。
+        uint32_t ubAvail = 0;
+        if (isPerToken) {
+            uint64_t alignOutLen = (yDtype == ge::DT_INT4) ? AlignUp<OUTPUT_ROW_ALIGN_SIZE_INT4>(rowLen) :
+                                                             AlignUp<OUTPUT_ROW_ALIGN_SIZE>(rowLen);
+            // 双 buffer 下每个 row 的占用：x、smooth 各 2 份，y 2 份
+            uint64_t frameBytes = DOUBLE *
+                                  ((ONE + smoothBuffer) * DOUBLE * static_cast<uint64_t>(alignedRowLen) + alignOutLen);
+            uint64_t usedConst = PT_DB_CONST_BYTES + PT_DB_RESERVED_BYTES;
+            ubAvail = (maxUseUbSize > usedConst) ? static_cast<uint32_t>((maxUseUbSize - usedConst) / frameBytes) : 0;
+        }
+        if (ubAvail > 0) {
+            useDb = true;
+        } else {
+            useDb = false;
+            // 取UB可以处理的row数量
+            ubAvail = static_cast<uint32_t>(maxUseUbSize) / static_cast<uint32_t>(calcSize);
+        }
         multiRowNumHeadCore = std::min({ubAvail, COMPARE_INT, rowPerHeadCore});
         multiRowNumTailCore = std::min({ubAvail, COMPARE_INT, rowPerTailCore});
         if (quantMode_ != TPL_PER_TENSOR_FULL_LOAD) {

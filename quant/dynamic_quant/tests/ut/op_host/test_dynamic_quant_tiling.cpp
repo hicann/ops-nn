@@ -1333,7 +1333,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_03)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 96);
+    ASSERT_EQ(tiling_key, 97);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
