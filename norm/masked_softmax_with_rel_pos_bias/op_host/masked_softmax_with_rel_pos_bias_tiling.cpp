@@ -296,7 +296,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetAttenMaskTensorDims(co
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetBiasTensorDims()
 {
-    auto bias_shape = context_->GetInputShape(BIAS_INPUT_INDEX);
+    auto bias_shape = context_->GetRequiredInputShape(BIAS_INPUT_INDEX);
     if (bias_shape == nullptr) {
         bias_shape = context_->GetInputShape(ATTEN_INPUT_INDEX);
         existAtten = false;
@@ -326,17 +326,25 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetBiasTensorDims()
         bias_s2_ = static_cast<uint32_t>(bias_shape->GetStorageShape().GetDim(DIM_4));
     }
     if (bias_b_ != 1 || bias_w_ != 1) {
-        OP_LOGE(context_, "Do tiling failed, bias_b_[%u]), bias_b_[%u]", bias_b_, bias_w_);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "relative_pos_bias",
+                                              Ops::Base::ToString(bias_shape->GetStorageShape()).c_str(),
+                                              "the B and W dims of relative_pos_bias must be 1");
         return ge::GRAPH_FAILED;
     }
     if (bias_b_ == 0 || bias_w_ == 0 || bias_n_ == 0 || bias_s1_ == 0 || bias_s2_ == 0) {
-        OP_LOGE(context_, "Do tiling failed,  bias_b_[%u],  bias_w_[%u], bias_n_[%u], bias_s1_[%u], bias_s2_[%u]",
-                bias_b_, bias_w_, bias_n_, bias_s1_, bias_s2_);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "relative_pos_bias",
+                                              Ops::Base::ToString(bias_shape->GetStorageShape()).c_str(),
+                                              "all dims of relative_pos_bias must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     if (!(n_ == bias_n_ && s1_ == bias_s1_ && s2_ == bias_s2_)) {
-        OP_LOGE(context_, "Do tiling failed, n_[%u], bias_n_[%u], s1_[%u], bias_s1_[%u], s2_[%u], bias_s2_[%u]", n_,
-                bias_n_, s1_, bias_s1_, s2_, bias_s2_);
+        auto xShape = context_->GetRequiredInputShape(X_INPUT_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
+        std::string incorrectShapes = Ops::Base::ToString(xShape->GetStorageShape()) + " and " +
+                                      Ops::Base::ToString(bias_shape->GetStorageShape());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and relative_pos_bias",
+                                               incorrectShapes.c_str(),
+                                               "the N, S1 and S2 dims of relative_pos_bias must match x");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

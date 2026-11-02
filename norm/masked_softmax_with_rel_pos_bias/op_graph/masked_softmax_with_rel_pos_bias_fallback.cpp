@@ -31,7 +31,7 @@ static graphStatus MaskedSoftmaxWithRelPosBiasHostExecuteFunc(OpExecuteContext* 
     auto x = hostApiCtx->GetInputTensor(X_INDEX);
     OP_CHECK_IF(x == nullptr, OP_LOGE("aclnnfallback", "x is null"), return GRAPH_FAILED);
 
-    auto relativePosBias = hostApiCtx->GetInputTensor(RELATIVE_POS_BIAS_INDEX);
+    auto relativePosBias = hostApiCtx->GetRequiredInputTensor(RELATIVE_POS_BIAS_INDEX);
     OP_CHECK_IF(relativePosBias == nullptr, OP_LOGE("aclnnfallback", "relative_pos_bias is null"), return GRAPH_FAILED);
 
     auto y = hostApiCtx->GetOutputTensor(Y_INDEX);
