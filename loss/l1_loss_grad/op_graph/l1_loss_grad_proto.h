@@ -31,14 +31,12 @@ namespace ge {
 * reduction: An optional attribute of type String. Defaults to "mean". \n
 
 * @par Outputs:
-* y: A Tensor. Has the same type as "grads". \n
+* y: A Tensor. Has the same type as "grads" and the broadcasted shape of grads, predict and label. \n
 
 * @attention Constraints:
-* @li In Atlas A2 products and
-* Atlas A3 products,
-* broadcasting is not allowed between input grads, input predict and input label, the three inputs must have the same
-shape. \n
-
+* @li In Atlas A2 products and Atlas A3 products, broadcasting is not allowed between grads, predict and label; all
+* three inputs must have the same shape. \n
+* @li On Ascend 950, the three inputs can be broadcast-compatible, and output y has their broadcasted shape. \n
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator L1LossGrad.
 */
