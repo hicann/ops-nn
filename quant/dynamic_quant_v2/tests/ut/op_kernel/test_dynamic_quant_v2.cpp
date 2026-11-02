@@ -508,3 +508,106 @@ TEST_F(dynamic_quant_v2_test, test_case_moe_pertensor_largeshape)
     AscendC::GmFree(workSpace);
     AscendC::GmFree(tiling);
 }
+
+// bf16 行内极值交替 ±bf16 最大值时, 行极差 2*bf16max 超出 fp32 表示范围:
+// 验证溢出防护生效——scale 为有限值且等于两端分别除以量化粒度再作差的结果, offset 约 -0.5,
+// int4 输出正/负极值分别饱和到 +7 / -8, 而非溢出时 scale=inf、输出全 7
+TEST_F(dynamic_quant_v2_test, test_case_bf16_extreme_range)
+{
+    const size_t rowNum = 128;
+    const size_t rowLen = 1024;
+    size_t inputByteSize = rowNum * rowLen * sizeof(uint16_t);
+    size_t smoothScalesByteSize = rowLen * sizeof(uint16_t);
+    size_t outputByteSize = rowNum * rowLen; // int4 两元素打包为 1 字节
+    size_t scaleByteSize = rowNum * sizeof(float);
+    size_t offsetByteSize = rowNum * sizeof(float);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingData);
+    uint32_t blockDim = 24;
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSize);
+    uint8_t* group_index = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offsetByteSize);
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    // 输入交替 +bf16max(0x7F7F) / -bf16max(0xFF7F), smooth 置 1.0(bf16 0x3F80)
+    uint16_t* inputU16 = reinterpret_cast<uint16_t*>(input);
+    uint16_t* smoothU16 = reinterpret_cast<uint16_t*>(smooth_scales);
+    for (size_t i = 0; i < rowNum * rowLen; i++) {
+        inputU16[i] = (i % 2 == 0) ? 0x7F7F : 0xFF7F;
+    }
+    for (size_t i = 0; i < rowLen; i++) {
+        smoothU16[i] = 0x3F80;
+    }
+
+    DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
+    tilingDatafromBin->coreNum = 24;
+    tilingDatafromBin->rowLen = rowLen;
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->rowPerHeadCore = 6;
+    tilingDatafromBin->rowPerTailCore = 5;
+    tilingDatafromBin->multiRowNumHeadCore = 6;
+    tilingDatafromBin->multiRowNumTailCore = 5;
+    tilingDatafromBin->innerLoopEle = 6;
+    tilingDatafromBin->innerLoopTimes = 1;
+    tilingDatafromBin->innerLoopTail = 0;
+    tilingDatafromBin->groupNum = 8;
+    tilingDatafromBin->alignGroupNum = 8;
+    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->sizeH = 0;
+    tilingDatafromBin->sizeX = 0;
+    tilingDatafromBin->sizeZOut = 0;
+    tilingDatafromBin->sizeCopyRow = 0;
+    tilingDatafromBin->numCopyRow = 0;
+    tilingDatafromBin->numHeadCore = 0;
+    tilingDatafromBin->numTailCore = 0;
+    tilingDatafromBin->numHeadTimes = 0;
+    tilingDatafromBin->numTailTimes = 0;
+    tilingDatafromBin->numLastTailRow = 0;
+    tilingDatafromBin->alignType = 0;
+    tilingDatafromBin->ubSize = 191 * 1024;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    // 期望值按 kernel 溢出分支同款 fp32 算法计算: scale = max/粒度 - min/粒度, offset = 7 - max/scale
+    // (int4 量化粒度 15.0, 与 dynamic_quant_base.h 的 DYNAMIC_QUANT_INT4_SCALE/OFFSET 一致)
+    const float maxV = 3.3895313892515355e+38f;
+    const float minV = -maxV;
+    const float expScale = maxV / 15.0f - minV / 15.0f;
+    const float expOffset = 7.0f - maxV / expScale;
+
+    // int4 两元素打包为一字节(低位在前), 按有符号 nibble 解包
+    auto unpackInt4 = [](uint8_t packed, size_t nibbleIdx) {
+        int v = (nibbleIdx == 0) ? (packed & 0x0F) : ((packed >> 4) & 0x0F);
+        return (v > 7) ? (v - 16) : v;
+    };
+
+    for (uint32_t tilingKey : {0u, 2u}) { // bf16 常规路径 / bf16 双行路径
+        ICPU_SET_TILING_KEY(tilingKey);
+        ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                    (uint8_t*)(tilingDatafromBin));
+
+        float* scaleF32 = reinterpret_cast<float*>(scale);
+        float* offsetF32 = reinterpret_cast<float*>(offset);
+        for (size_t r : {size_t(0), size_t(63), size_t(127)}) {
+            EXPECT_LT(scaleF32[r], 3.5e+38f); // scale 不应为 inf
+            EXPECT_GT(scaleF32[r], 1e+37f);
+            EXPECT_NEAR(scaleF32[r], expScale, expScale * 1e-3f);
+            EXPECT_NEAR(offsetF32[r], expOffset, 1e-3f);
+        }
+        EXPECT_EQ(unpackInt4(output[0], 0), 7);  // 正极值饱和 +7
+        EXPECT_EQ(unpackInt4(output[0], 1), -8); // 负极值饱和 -8
+        EXPECT_EQ(unpackInt4(output[1], 0), 7);
+        EXPECT_EQ(unpackInt4(output[1], 1), -8);
+    }
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(smooth_scales);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(offset);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+}

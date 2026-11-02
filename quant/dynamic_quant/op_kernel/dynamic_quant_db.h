@@ -166,10 +166,10 @@ private:
             ComputeRowMinMax(i, inLocal, tempCast, temp, smoothLocal, max_value, min_value);
 
             if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                scale = GetMax((max_value - min_value) / DYNAMIC_QUANT_INT4_SCALE, DYNAMIC_QUANT_EPSINON);
+                scale = GetAsymQuantScale(max_value, min_value, DYNAMIC_QUANT_INT4_SCALE);
                 offset = DYNAMIC_QUANT_INT4_OFFSET - max_value / scale;
             } else {
-                scale = GetMax((max_value - min_value) / DYNAMIC_QUANT_INT8_SCALE, DYNAMIC_QUANT_EPSINON);
+                scale = GetAsymQuantScale(max_value, min_value, DYNAMIC_QUANT_INT8_SCALE);
                 offset = DYNAMIC_QUANT_INT8_OFFSET - max_value / scale;
             }
             back_scale = 1 / scale;

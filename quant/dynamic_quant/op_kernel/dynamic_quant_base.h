@@ -186,13 +186,25 @@ public:
         }
     }
 
+    // 非对称量化行内极差 (max_value - min_value) 在 bf16 极值输入（|x| > FLT_MAX/2）下会超出
+    // fp32 表示范围溢出为 inf，导致 scale=inf、y 全饱和；溢出时改用两端分别除以量化粒度再作差，
+    // 结果仍在 fp32 可表示范围内，正常场景（极差不溢出）计算路径保持不变
+    __aicore__ inline float GetAsymQuantScale(float max_value, float min_value, float quantScale)
+    {
+        float range = max_value - min_value;
+        if (unlikely(range > MAX_FLOAT_VALUE)) {
+            return GetMax(max_value / quantScale - min_value / quantScale, DYNAMIC_QUANT_EPSINON);
+        }
+        return GetMax(range / quantScale, DYNAMIC_QUANT_EPSINON);
+    }
+
     __aicore__ inline void GetScaleAndOffset(float max_value, float min_value, float& scale, float& offset)
     {
         if (ORIG_DTYPE_Y == DT_INT4) {
-            scale = GetMax((max_value - min_value) / DYNAMIC_QUANT_INT4_SCALE, DYNAMIC_QUANT_EPSINON);
+            scale = GetAsymQuantScale(max_value, min_value, DYNAMIC_QUANT_INT4_SCALE);
             offset = DYNAMIC_QUANT_INT4_OFFSET - max_value / scale;
         } else {
-            scale = GetMax((max_value - min_value) / DYNAMIC_QUANT_INT8_SCALE, DYNAMIC_QUANT_EPSINON);
+            scale = GetAsymQuantScale(max_value, min_value, DYNAMIC_QUANT_INT8_SCALE);
             offset = DYNAMIC_QUANT_INT8_OFFSET - max_value / scale;
         }
     }
