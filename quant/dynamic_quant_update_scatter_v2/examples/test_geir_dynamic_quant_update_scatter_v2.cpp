@@ -44,7 +44,8 @@ const int H = 32; // Hidden size
 
 #define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                                                 \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
-    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
+    auto placeholder##intputIndex = op::Data("placeholder" + std::to_string(intputIndex))                           \
+                                        .set_attr_index(intputIndex - 1);                                           \
     TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
                                                             intputDtype);                                           \
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
@@ -66,7 +67,7 @@ const int H = 32; // Hidden size
 
 #define ADD_CONST_INPUT(intputIndex, intputName, intputDtype, inputShape)                                           \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
-    auto placeholder##intputIndex = op::Const("placeholder" + intputIndex);                                         \
+    auto placeholder##intputIndex = op::Const("placeholder" + std::to_string(intputIndex));                         \
     TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
                                                             intputDtype);                                           \
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \

@@ -31,7 +31,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../../op_graph/multi_add_rms_norm_dynamic_quant_proto.h"
+#include "../op_graph/multi_add_rms_norm_dynamic_quant_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0

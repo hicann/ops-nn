@@ -24,6 +24,7 @@
 #include "ge_error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
+#include "array_ops.h"
 #include "ge_ir_build.h"
 #include "../op_graph/lamb_next_m_v_with_decay_proto.h"
 
@@ -87,12 +88,12 @@ int main(int argc, char* argv[])
     if (!inputs.empty() && !outputs.empty()) {
         graph.SetInputs(inputs).SetOutputs(outputs);
     }
-    ge::Session* session = new Session({});
+    ge::Session* session = new Session(std::map<AscendString, AscendString>());
     if (session == nullptr) {
         return FAILED;
     }
     uint32_t graph_id = 0;
-    session->AddGraph(graph_id, graph, {});
+    session->AddGraph(graph_id, graph, std::map<AscendString, AscendString>());
     std::vector<ge::Tensor> output;
     if (session->RunGraph(graph_id, input, output) != SUCCESS) {
         delete session;

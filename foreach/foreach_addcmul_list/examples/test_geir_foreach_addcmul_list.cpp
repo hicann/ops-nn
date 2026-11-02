@@ -23,6 +23,8 @@
 #include "ge_api.h"
 #include "ge_ir_build.h"
 #include "array_ops.h"
+#include "gnode.h"
+#include "named_io_node_builder.h"
 #include "../op_graph/foreach_addcmul_list_proto.h"
 
 using namespace ge;
@@ -58,41 +60,63 @@ static Operator MkF32(const string& name, int idx, vector<int64_t> shape, vector
 
 int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator>& outputs, Graph& graph)
 {
-    auto op1 = op::ForeachAddcmulList("foreachAddcmulList1");
     const int N = 1;
     vector<int64_t> tShape = {256};
     int idx = 0;
-    op1.create_dynamic_input_x1(N);
-    for (int i = 0; i < N; ++i) {
-        auto d = MkF32("x1_" + std::to_string(i), idx++, tShape, input);
-        graph.AddOp(d);
+    // 用 NamedIoNodeBuilder 按 IR 定义顺序（x1,x2,x3,scalars）构建节点，
+    // 避免旧 Operator 序列化按端口名排序导致静态输入前置、推导表错位
+    vector<GNode> dataNodes;
+    auto addData = [&](const string& name, const vector<int64_t>& shape) {
+        auto d = MkF32(name, idx++, shape, input);
+        dataNodes.push_back(graph.AddNodeByOp(d));
         inputs.push_back(d);
-        op1.set_dynamic_input_x1(i, d);
-    }
-    op1.create_dynamic_input_x2(N);
+    };
+    NamedIoNodeBuilder builder(graph);
+    builder.Type("ForeachAddcmulList").Name("foreachAddcmulList1");
+    TensorDesc xd(ge::Shape(tShape), FORMAT_ND, DT_FLOAT);
+    TensorDesc sd(ge::Shape({(int64_t)N}), FORMAT_ND, DT_FLOAT);
+    int port = 0;
     for (int i = 0; i < N; ++i) {
-        auto d = MkF32("x2_" + std::to_string(i), idx++, tShape, input);
-        graph.AddOp(d);
-        inputs.push_back(d);
-        op1.set_dynamic_input_x2(i, d);
+        addData("x1_" + std::to_string(i), tShape);
+        builder.AddInput(("x1" + std::to_string(i)).c_str(), xd);
+        port++;
     }
-    op1.create_dynamic_input_x3(N);
     for (int i = 0; i < N; ++i) {
-        auto d = MkF32("x3_" + std::to_string(i), idx++, tShape, input);
-        graph.AddOp(d);
-        inputs.push_back(d);
-        op1.set_dynamic_input_x3(i, d);
+        addData("x2_" + std::to_string(i), tShape);
+        builder.AddInput(("x2" + std::to_string(i)).c_str(), xd);
+        port++;
     }
-    auto dS = MkF32("scalars", idx++, {N}, input);
-    graph.AddOp(dS);
-    inputs.push_back(dS);
-    op1.set_input_scalars(dS);
-    op1.create_dynamic_output_y(N);
     for (int i = 0; i < N; ++i) {
-        TensorDesc yd(ge::Shape(tShape), FORMAT_ND, DT_FLOAT);
-        op1.update_dynamic_output_desc_y(i, yd);
+        addData("x3_" + std::to_string(i), tShape);
+        builder.AddInput(("x3" + std::to_string(i)).c_str(), xd);
+        port++;
     }
-    outputs.push_back(op1);
+    addData("scalars", {N});
+    builder.AddInput("scalars", sd);
+    port++;
+    for (int i = 0; i < N; ++i) {
+        builder.AddOutput(("y" + std::to_string(i)).c_str(), xd);
+    }
+    AscendString errMsg;
+    auto opNode = builder.Build(errMsg);
+    if (opNode == nullptr) {
+        printf("NamedIoNodeBuilder Build failed: %s\n", errMsg.GetString());
+        return FAILED;
+    }
+    for (int k = 0; k < port; ++k) {
+        if (graph.AddDataEdge(dataNodes[k], 0, *opNode, k) != GRAPH_SUCCESS) {
+            printf("AddDataEdge failed at port %d\n", k);
+            return FAILED;
+        }
+    }
+    vector<std::pair<GNode, int32_t>> outPorts;
+    for (int i = 0; i < N; ++i) {
+        outPorts.push_back({*opNode, i});
+    }
+    if (graph.SetOutputs(outPorts) != GRAPH_SUCCESS) {
+        printf("SetOutputs failed\n");
+        return FAILED;
+    }
     return SUCCESS;
 }
 
@@ -109,8 +133,8 @@ int main(int argc, char* argv[])
     if (CreateOppInGraph(input, inputs, outputs, graph) != SUCCESS) {
         return FAILED;
     }
-    if (!inputs.empty() && !outputs.empty())
-        graph.SetInputs(inputs).SetOutputs(outputs);
+    if (!inputs.empty())
+        graph.SetInputs(inputs); // outputs 已在 CreateOppInGraph 内经 GNode 端口设置
     map<AscendString, AscendString> opts = {};
     Session* session = new Session(opts);
     if (session == nullptr) {

@@ -54,7 +54,8 @@ using std::vector;
 #define ADD_INPUT(inputIndex, inputName, inputShape, inputFormat)                                          \
     do {                                                                                                   \
         vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                      \
-        auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);             \
+        auto placeholder##inputIndex = op::Data("placeholder" + std::to_string(inputIndex))                \
+                                           .set_attr_index(inputIndex - 1);                                \
         TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), \
                                                                inputFormat, DT_FLOAT);                     \
         placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                   \

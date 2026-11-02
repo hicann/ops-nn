@@ -96,28 +96,37 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
     return SUCCESS;
 }
 
-// Add one Data placeholder in NDC1HWC0 format and wire it to the given op input.
-// origin 与 storage 同为 NDC1HWC0(6D)直通:若 origin 写 NCDHW(5D),GE 会插 TransData,
-// 而 Ascend950 的 opp 没有 NCDHW<->NDC1HWC0 的 TransData 内核 -> 选引擎失败。
-#define ADD_INPUT(idx, opInputName, inDtype, inShape)                                             \
-    vector<int64_t> ph##idx##_shape = inShape;                                                    \
-    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(0);                          \
-    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_NDC1HWC0, inDtype); \
-    ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                              \
-    ph##idx##_desc.SetFormat(FORMAT_NDC1HWC0);                                                    \
-    ph##idx##_desc.SetOriginFormat(FORMAT_NDC1HWC0);                                              \
-    ph##idx##_desc.SetOriginShape(ge::Shape(ph##idx##_shape));                                    \
-    Tensor tensor_ph##idx;                                                                        \
-    ret = GenOnesData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype, 2);               \
-    if (ret != SUCCESS) {                                                                         \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());            \
-        return FAILED;                                                                            \
-    }                                                                                             \
-    ph##idx.update_input_desc_x(ph##idx##_desc);                                                  \
-    ph##idx.update_output_desc_y(ph##idx##_desc);                                                 \
-    input.push_back(tensor_ph##idx);                                                              \
-    graph.AddOp(ph##idx);                                                                         \
-    op_node.set_input_##opInputName(ph##idx);                                                     \
+// Add one Data placeholder and wire it to the given op input.
+// Data 占位节点: format/origin 全用 FORMAT_ND + 6 维 (N, D, C1, H, W, C0) shape：
+// - Ascend950 的 GE 在 CheckInternalFormat 阶段不允许用户图 Data 节点携带内部格式
+//   NDC1HWC0 作 origin format(报 "Origin_format NDC1HWC0 is not supported")，故 Data 用 ND;
+// - 算子 infershape 要求输入为 6 维(NDC1HWC0 排布)，故 shape 本身取 6 维。
+// 算子节点输入 desc(见 update_input_desc_*)另行声明 format/origin=NDC1HWC0，以满足
+// 引擎选择阶段算子 binary 的格式白名单(否则报 "origin format ND ... not supported")。
+#define ADD_INPUT(idx, opInputName, inDtype, inShape)                                               \
+    vector<int64_t> ph##idx##_shape = inShape;                                                      \
+    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(idx - 1);                      \
+    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_ND, inDtype);         \
+    ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                                \
+    ph##idx##_desc.SetFormat(FORMAT_ND);                                                            \
+    ph##idx##_desc.SetOriginFormat(FORMAT_ND);                                                      \
+    ph##idx##_desc.SetOriginShape(ge::Shape(ph##idx##_shape));                                      \
+    Tensor tensor_ph##idx;                                                                          \
+    ret = GenOnesData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype, 2);                 \
+    if (ret != SUCCESS) {                                                                           \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());              \
+        return FAILED;                                                                              \
+    }                                                                                               \
+    ph##idx.update_input_desc_x(ph##idx##_desc);                                                    \
+    ph##idx.update_output_desc_y(ph##idx##_desc);                                                   \
+    input.push_back(tensor_ph##idx);                                                                \
+    graph.AddOp(ph##idx);                                                                           \
+    TensorDesc ph##idx##_opdesc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_NDC1HWC0, inDtype); \
+    ph##idx##_opdesc.SetFormat(FORMAT_NDC1HWC0);                                                    \
+    ph##idx##_opdesc.SetOriginFormat(FORMAT_NDC1HWC0);                                              \
+    ph##idx##_opdesc.SetOriginShape(ge::Shape(ph##idx##_shape));                                    \
+    op_node.update_input_desc_##opInputName(ph##idx##_opdesc);                                      \
+    op_node.set_input_##opInputName(ph##idx);                                                       \
     inputs.push_back(ph##idx)
 
 #define ADD_OUTPUT(opOutputName, outDtype, outShape)                                             \
@@ -132,7 +141,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     Status ret = SUCCESS;
     auto op_node = op::INTrainingUpdateGrad("in_training_update_grad_op");
 
-    // NDC1HWC0 (N, D, C1, H, W, C0); variance/mean/outputs carry spatial dims = 1.
+    // 6 维 storage shape (N, D, C1, H, W, C0)，C0=16；variance/mean/outputs 的空间维为 1。
     std::vector<int64_t> spatialShape = {2, 1, 1, 2, 2, 16};
     std::vector<int64_t> reducedShape = {2, 1, 1, 1, 1, 16};
 

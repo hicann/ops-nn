@@ -23,6 +23,8 @@
 #include "ge_api.h"
 #include "ge_ir_build.h"
 #include "array_ops.h"
+#include "gnode.h"
+#include "named_io_node_builder.h"
 #include "../op_graph/foreach_add_list_inplace_proto.h"
 
 using namespace ge;
@@ -61,29 +63,58 @@ static Operator MakeData(const string& name, int idx, vector<int64_t> shape, Dat
 
 int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator>& outputs, Graph& graph)
 {
-    auto op1 = op::ForeachAddListInplace("foreachAddListInplace1");
     const int N = 2; // 2 tensors per list
     vector<int64_t> tShape = {4};
     int idx = 0;
-    op1.create_dynamic_input_x1(N);
-    for (int i = 0; i < N; ++i) {
-        auto d = MakeData("x1_" + std::to_string(i), idx++, tShape, DT_FLOAT, input);
-        graph.AddOp(d);
+    // 用 NamedIoNodeBuilder 按 IR 定义顺序（x1,x2,alpha）构建节点，
+    // 避免旧 Operator 序列化按端口名排序导致静态输入(alpha)前置、推导实例表错位
+    vector<GNode> dataNodes;
+    auto addData = [&](const string& name, const vector<int64_t>& shape) {
+        auto d = MakeData(name, idx++, shape, DT_FLOAT, input);
+        dataNodes.push_back(graph.AddNodeByOp(d));
         inputs.push_back(d);
-        op1.set_dynamic_input_x1(i, d);
-    }
-    op1.create_dynamic_input_x2(N);
+    };
+    NamedIoNodeBuilder builder(graph);
+    builder.Type("ForeachAddListInplace").Name("foreachAddListInplace1");
+    TensorDesc xd(ge::Shape(tShape), FORMAT_ND, DT_FLOAT);
+    TensorDesc ad(ge::Shape({1}), FORMAT_ND, DT_FLOAT);
+    int port = 0;
     for (int i = 0; i < N; ++i) {
-        auto d = MakeData("x2_" + std::to_string(i), idx++, tShape, DT_FLOAT, input);
-        graph.AddOp(d);
-        inputs.push_back(d);
-        op1.set_dynamic_input_x2(i, d);
+        addData("x1_" + std::to_string(i), tShape);
+        builder.AddInput(("x1" + std::to_string(i)).c_str(), xd);
+        port++;
     }
-    auto dA = MakeData("alpha", idx++, {1}, DT_FLOAT, input);
-    graph.AddOp(dA);
-    inputs.push_back(dA);
-    op1.set_input_alpha(dA);
-    outputs.push_back(op1); // inplace: op as graph output
+    for (int i = 0; i < N; ++i) {
+        addData("x2_" + std::to_string(i), tShape);
+        builder.AddInput(("x2" + std::to_string(i)).c_str(), xd);
+        port++;
+    }
+    addData("alpha", {1});
+    builder.AddInput("alpha", ad);
+    port++;
+    for (int i = 0; i < N; ++i) { // inplace: 动态输出与输入 x1 同名(ref pairing)
+        builder.AddOutput(("x1" + std::to_string(i)).c_str(), xd);
+    }
+    AscendString errMsg;
+    auto opNode = builder.Build(errMsg);
+    if (opNode == nullptr) {
+        printf("NamedIoNodeBuilder Build failed: %s\n", errMsg.GetString());
+        return FAILED;
+    }
+    for (int k = 0; k < port; ++k) {
+        if (graph.AddDataEdge(dataNodes[k], 0, *opNode, k) != GRAPH_SUCCESS) {
+            printf("AddDataEdge failed at port %d\n", k);
+            return FAILED;
+        }
+    }
+    vector<std::pair<GNode, int32_t>> outPorts; // inplace: op 作为图输出
+    for (int i = 0; i < N; ++i) {
+        outPorts.push_back({*opNode, i});
+    }
+    if (graph.SetOutputs(outPorts) != GRAPH_SUCCESS) {
+        printf("SetOutputs failed\n");
+        return FAILED;
+    }
     return SUCCESS;
 }
 
@@ -100,8 +131,8 @@ int main(int argc, char* argv[])
     if (CreateOppInGraph(input, inputs, outputs, graph) != SUCCESS) {
         return FAILED;
     }
-    if (!inputs.empty() && !outputs.empty())
-        graph.SetInputs(inputs).SetOutputs(outputs);
+    if (!inputs.empty())
+        graph.SetInputs(inputs); // outputs 已在 CreateOppInGraph 内经 GNode 端口设置
     map<AscendString, AscendString> opts = {};
     Session* session = new Session(opts);
     if (session == nullptr) {
