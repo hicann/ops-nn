@@ -175,10 +175,7 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* target, const ac
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
                        const aclTensor* weightOptional, const aclTensor* posWeightOptional, const aclTensor* out)
 {
-    if (self->IsEmpty()) {
-        return true;
-    }
-
+    // 0 尺寸维度仍参与 shape / broadcast 比较，空 self 不能跳过校验。
     // target与self, out的shape必须一致
     OP_CHECK_SHAPE_NOT_EQUAL(self, target, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);

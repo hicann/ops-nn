@@ -244,6 +244,41 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_empty)
     ut.TestPrecision();
 }
 
+TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_empty_shape_invalid)
+{
+    int64_t reduction = None;
+    uint64_t workspace_size = 0;
+
+    auto gradOutput = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto input = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto target = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                        OUTPUT(output));
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+
+    auto targetMismatch = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outputEmpty = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto utTarget = OP_API_UT(
+        aclnnBinaryCrossEntropyWithLogitsBackward,
+        INPUT(gradOutput, input, targetMismatch, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+        OUTPUT(outputEmpty));
+    workspace_size = 0;
+    aclRet = utTarget.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+
+    auto gradOutputMismatch = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto utGrad = OP_API_UT(
+        aclnnBinaryCrossEntropyWithLogitsBackward,
+        INPUT(gradOutputMismatch, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+        OUTPUT(outputEmpty));
+    workspace_size = 0;
+    aclRet = utGrad.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_dtype_promotion)
 {
     vector<float> target_value;
