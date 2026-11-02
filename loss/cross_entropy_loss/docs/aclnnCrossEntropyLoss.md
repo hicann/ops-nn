@@ -124,7 +124,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <td>输入</td>
     <td>表示标签，公式中的y。</td>
     <td>-</td>
-    <td>INT32、INT64</td>
+    <td>INT32<span><sup>2</sup></span>、INT64</td>
     <td>ND</td>
     <td>(N)<br>N与input第零维相等。数值范围为[0, C)，当指定了ignoreIndex时，target的值也可以等于ignoreIndex。</td>
     <td>√</td>
@@ -251,6 +251,12 @@ aclnnStatus aclnnCrossEntropyLoss(
     </tr>
     </tbody>
     </table>
+
+  <!-- npu="A3,910b" id7 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    - 上表数据类型列中的角标 <span title="Atlas A3/A2 不支持"><sup>2</sup></span> 代表该系列不支持的数据类型
+    - target不支持INT32
+  <!-- end id7 -->
 
 - **返回值**
 
