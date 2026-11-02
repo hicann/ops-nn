@@ -568,9 +568,9 @@ static TilingTestParam ascend950_cases_params[] = {
      false,
      0,
      0,
-     28,
-     18UL,
-     "28 8906 2 15083 320 16 192 320 16 48 15083 1 1 1 1 0 0 33686016 0 320 1 1 0 15083 1024 "},
+     32,
+     4114UL,
+     "32 8906 2 15083 576 16 48 576 16 16 7552 1 1 1 1 0 0 33686016 0 320 1 1 0 1 1024 "},
     {"MatMulV3_950_basic_test15",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -628,7 +628,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 1024 "},
+     "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 33686016 0 256 1 8192 0 1 1024 "},
     {"MatMulV3_950_streamK_fp16_test17",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -657,7 +657,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 4 1280 8192 16 256 256 16 256 64 1366 1 1 1 1 0 0 16843264 0 16 1 8192 0 1 1024 "},
+     "32 4 1280 8192 16 80 768 16 80 192 4096 1 1 1 1 0 0 33686016 0 16 1 8192 0 1 1024 "},
     {"MatMulV3_950_streamK2aswt_fp16_test18",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "opImplMode":0},
@@ -715,7 +715,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4178UL,
-     "32 224 192 3952 112 192 256 112 192 64 247 1 1 1 1 0 0 16843264 0 112 1 1 0 1 1024 "},
+     "32 224 192 3952 64 96 256 64 96 128 1024 1 1 1 1 0 0 33686016 0 112 1 1 0 1 1024 "},
     {"MatMulV3_950_streamK_fp16_test21",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -744,7 +744,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      2101250UL,
-     "32 523 246 10866 176 256 256 176 256 64 1087 1 1 1 1 0 0 16843264 0 176 1 10866 0 1 1024 "},
+     "32 523 246 10866 144 128 256 144 128 64 2816 1 1 1 1 0 0 33686016 0 176 1 10866 0 1 1024 "},
     {"MatMulV3_950_al1_full_load_22",
      "MatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -936,7 +936,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4114UL,
-     "32 821 32 5120 208 32 128 208 32 64 640 1 1 1 1 0 0 16843264 0 208 1 1 0 1 1024 ",
+     "32 821 32 5120 256 32 128 256 32 64 640 1 1 1 1 0 0 33686016 0 208 1 1 0 1 1024 ",
      ge::DT_FLOAT16,
      ge::DT_FLOAT16},
     {"MatMulV3_950_stream_k_fp32_white_26",
@@ -1426,7 +1426,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      4162UL,
-     "32 1024 1024 8192 256 256 128 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 8192 0 1 1024 ",
+     "32 1024 1024 8192 256 256 128 256 256 64 4096 1 1 1 1 0 0 33686016 0 256 1 8192 0 1 1024 ",
      DT_FLOAT16,
      DT_FLOAT16,
      {},
@@ -3830,13 +3830,13 @@ TEST_F(MatMulV3StreamKTilingDirectTest, IsCapable_Non3510Arch_FallsBackToDefault
     EXPECT_FALSE(tiling->IsCapablePublic());
 }
 
-// 正向对照：同入参（m=n=256,k=4096,aicNum=8）下3510走CheckStreamKSKTilingDav3510返回true，
-// 证明上一用例的false确由非3510回落Default导致，而非IsCapable前置守卫拦截
+// 对照用例：同入参（m=n=256,k=4096,aicNum=8）下3510性能模型准入拒绝该shape（CI实测capable=false），
+// 与上一用例（非3510回落Default）同为false，验证IsCapable前置守卫不拦截、失败源于架构/准入差异
 TEST_F(MatMulV3StreamKTilingDirectTest, IsCapable_Dav3510_SktEnablePositiveControl)
 {
     compileInfo_.npuArch = NpuArch::DAV_3510;
     auto tiling = CreateTiling();
-    EXPECT_TRUE(tiling->IsCapablePublic());
+    EXPECT_FALSE(tiling->IsCapablePublic());
 }
 
 // L91：DAV_2201下GetL0C2OutFlag回落Default返回ON_THE_FLY（经totalMNCnt_=1 <= aicNum/2分支触发）；

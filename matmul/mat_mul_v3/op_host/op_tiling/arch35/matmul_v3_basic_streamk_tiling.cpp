@@ -65,46 +65,6 @@ bool CheckStreamKSKTilingDefault(const MatmulV3CompileInfo& /* compileInfo */, c
     return false;
 }
 
-bool CheckStreamKSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                 MatMulV3RunInfo& runInfo, const gert::TilingContext* /* context */)
-{
-    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
-    if (ops::CeilAlign(static_cast<uint64_t>(args.kValue), BASIC_BLOCK_SIZE_256) <
-        std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_256_BYTE) / args.aDtypeSize) {
-        OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK value[%lu]", args.kValue);
-        return false;
-    }
-
-    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
-    uint64_t kAlignedValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_8);
-    MatMulV3TilingHelper::ResetBase(compileInfo, args, runInfo);
-    uint64_t alignValue = runInfo.baseN;
-
-    if (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32) {
-        if (kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum) {
-            alignValue = FP32_MIN_BASE_BLOCK;
-        } else {
-            alignValue = BLOCK_BYTE_SIZE;
-        }
-    }
-    // FP32场景MN小K大走SK模板提升精度
-    bool isNdFormat = args.aFormat == ge::FORMAT_ND && args.bFormat == ge::FORMAT_ND;
-    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
-    bool isSKSupport = mAlignedValue * nAlignedValue < FP32_MN_SHAPE_THRESHOLD &&
-                       kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum && isFp32 &&
-                       isNdFormat;
-    // 判断mn是否需要已经能切32份及以上
-    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, alignValue);
-    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, alignValue);
-    if (mCnt * nCnt > compileInfo.aicNum / NUM_TWO && !isSKSupport) {
-        OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK mCnt[%lu], nCnt[%lu]", mCnt, nCnt);
-        return false;
-    }
-    OP_LOGI(args.opName, "MatMulV3 tiling enable state is DoBasicApiSplitK.");
-    return true;
-}
-
 double GetMte2Perf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, int64_t usedCoreNum,
                    MatMulV3RunInfo& runInfo, fe::PlatFormInfos* platformInfo)
 {
@@ -139,8 +99,70 @@ double GetNegPerf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& ar
     return (vecPerf + fixpPerf) / (static_cast<double>(usedCoreNum) / compileInfo.aicNum);
 }
 
-bool CheckStreamKSKTilingDav9201(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                 MatMulV3RunInfo& runInfo, const gert::TilingContext* context)
+// 纯FP32场景SK切K承担保精度职责(走SK模板的SK_SPLIT_K切分提升精度)，沿用原硬边界准入判定：
+// MN小K大强制准入(isSKSupport) + mn份数门限。调用方需保证args为纯FP32且已过k轴门限；
+// 准入成功后的tiling配置由DoSkOpTilingDefault启发式生成。
+bool CheckStreamKSKFp32SplitKSupport(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                     MatMulV3RunInfo& runInfo)
+{
+    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_8);
+    MatMulV3TilingHelper::ResetBase(compileInfo, args, runInfo);
+    uint64_t alignValue = runInfo.baseN;
+
+    if (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32) {
+        if (kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum) {
+            alignValue = FP32_MIN_BASE_BLOCK;
+        } else {
+            alignValue = BLOCK_BYTE_SIZE;
+        }
+    }
+    // FP32场景MN小K大走SK模板提升精度
+    bool isNdFormat = args.aFormat == ge::FORMAT_ND && args.bFormat == ge::FORMAT_ND;
+    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
+    bool isSKSupport = mAlignedValue * nAlignedValue < FP32_MN_SHAPE_THRESHOLD &&
+                       kAlignedValue >= BASIC_BLOCK_SIZE_16 * compileInfo.aicNum * compileInfo.aicNum && isFp32 &&
+                       isNdFormat;
+    // 判断mn是否需要已经能切32份及以上
+    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, alignValue);
+    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, alignValue);
+    if (mCnt * nCnt > compileInfo.aicNum / NUM_TWO && !isSKSupport) {
+        OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK mCnt[%lu], nCnt[%lu]", mCnt, nCnt);
+        return false;
+    }
+    OP_LOGI(args.opName, "MatMulV3 tiling enable state is DoBasicApiSplitK.");
+    return true;
+}
+
+// 候选baseM/baseN合法性校验：SK执行路径要求候选baseM/baseN不超过256，超出时DoOpTiling尾部的
+// kValueMax(L0A容量/max(base)按baseK对齐)会退化为0使baseK=0，并在CalL1Tiling中触发除零，此类候选直接跳过；
+// 3510在非32核(如28核)配置下GetRebalanceBlock可能给出base>256的候选，9201/9202沿用原行为直通
+bool IsStreamKSKBaseValidDefault(const MatMulV3RunInfo& /* runInfoTmp */, const MatMulV3Args& /* args */)
+{
+    return true;
+}
+
+bool IsStreamKSKBaseValidDav3510(const MatMulV3RunInfo& runInfoTmp, const MatMulV3Args& args)
+{
+    uint64_t baseKAlignValue = !args.isATrans || args.isBTrans ? BASIC_BLOCK_SIZE_128 / args.aDtypeSize :
+                                                                 BASIC_BLOCK_SIZE_16;
+    uint64_t kValueMax = ops::FloorAlign(
+        L0A_SIZE_2 / DB_SIZE / args.aDtypeSize / std::max(runInfoTmp.baseM, runInfoTmp.baseN), baseKAlignValue);
+    return kValueMax != 0UL;
+}
+
+using IsStreamKSKBaseValidFunc = bool (*)(const MatMulV3RunInfo&, const MatMulV3Args&);
+
+const static std::map<NpuArch, IsStreamKSKBaseValidFunc> IsStreamKSKBaseValidFuncMap = {
+    {NpuArch::DAV_3510, IsStreamKSKBaseValidDav3510},
+    {NpuArch::DAV_9201, IsStreamKSKBaseValidDefault},
+    {NpuArch::DAV_9202, IsStreamKSKBaseValidDefault},
+};
+
+// 性能模型SK准入主体（3510非FP32与9201/9202共用）：按k切分候选逐一评估cube/mem边界收益并采纳最优配置
+bool CheckStreamKSKPerfModelAdmission(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                      MatMulV3RunInfo& runInfo, const gert::TilingContext* context)
 {
     MatMulV3TilingHelper::ResetBase(compileInfo, args, runInfo);
     MatMulV3TilingHelper::GetRebalanceBlock(compileInfo, args, runInfo, context);
@@ -173,6 +195,13 @@ bool CheckStreamKSKTilingDav9201(const MatmulV3CompileInfo& compileInfo, const M
         if (singleCoreMaxRoundTmp > 1) {
             continue;
         }
+        auto baseValidIter = (IsStreamKSKBaseValidFuncMap.find(compileInfo.npuArch) ==
+                              IsStreamKSKBaseValidFuncMap.end()) ?
+                                 IsStreamKSKBaseValidDefault :
+                                 IsStreamKSKBaseValidFuncMap.at(compileInfo.npuArch);
+        if (!baseValidIter(runInfoTmp, args)) {
+            continue;
+        }
         double curMte2Perf = GetMte2Perf(compileInfo, args, mCntTmp * nCntTmp * kCnt, runInfoTmp, platformInfo);
         double negPerf = GetNegPerf(compileInfo, args, kCnt, mCntTmp * nCntTmp * kCnt, platformInfo);
         double curCubePerf = runInfoTmp.baseM * runInfoTmp.baseN *
@@ -201,6 +230,31 @@ bool CheckStreamKSKTilingDav9201(const MatmulV3CompileInfo& compileInfo, const M
         }
     }
     return runInfo.tailInfo.kCnt > 1;
+}
+
+// DAV_3510的SK准入：k轴门限(纯FP32保精度与性能模型路径共用) + FP32走保精度保留路径(SK_SPLIT_K)，
+// 其余(fp16/bf16/hf32，NZ与ND同路径)走性能模型准入
+bool CheckStreamKSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                 MatMulV3RunInfo& runInfo, const gert::TilingContext* context)
+{
+    // k轴门限：k过小时streamK切K无并行收益，仅引入fixup/结构开销，沿用主线硬边界准入
+    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
+    if (ops::CeilAlign(static_cast<uint64_t>(args.kValue), BASIC_BLOCK_SIZE_256) <
+        std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_256_BYTE) / args.aDtypeSize) {
+        OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK value[%lu]", args.kValue);
+        return false;
+    }
+    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
+    if (isFp32) {
+        return CheckStreamKSKFp32SplitKSupport(compileInfo, args, runInfo);
+    }
+    return CheckStreamKSKPerfModelAdmission(compileInfo, args, runInfo, context);
+}
+
+bool CheckStreamKSKTilingDav9201(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                 MatMulV3RunInfo& runInfo, const gert::TilingContext* context)
+{
+    return CheckStreamKSKPerfModelAdmission(compileInfo, args, runInfo, context);
 }
 
 using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&,
@@ -329,6 +383,7 @@ void DoSkOpTilingDav9201(const MatmulV3CompileInfo& /* compileInfo */, const Mat
 using DoSkOpTilingFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, DoSkOpTilingFunc> DoSkOpTilingFuncMap = {
+    {NpuArch::DAV_3510, DoSkOpTilingDav9201}, // 3510性能模型准入与9201同构，复用薄实现
     {NpuArch::DAV_9201, DoSkOpTilingDav9201},
     {NpuArch::DAV_9202, DoSkOpTilingDav9201},
 };
@@ -369,9 +424,12 @@ MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
 void MatMulV3BasicStreamKTiling::DoSkOpTiling()
 {
     OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoStreamK.");
-    auto iter = (DoSkOpTilingFuncMap.find(compileInfo_.npuArch) == DoSkOpTilingFuncMap.end()) ?
-                    DoSkOpTilingDefault :
-                    DoSkOpTilingFuncMap.at(compileInfo_.npuArch);
+    // 性能模型准入已选定配置(tailInfo.kCnt>=2)走薄实现；
+    // 纯FP32保精度/非ND等保留路径准入(kCnt未定)走Default启发式生成配置
+    auto iter = (runInfo_.tailInfo.kCnt > 1UL &&
+                 DoSkOpTilingFuncMap.find(compileInfo_.npuArch) != DoSkOpTilingFuncMap.end()) ?
+                    DoSkOpTilingFuncMap.at(compileInfo_.npuArch) :
+                    DoSkOpTilingDefault;
     return iter(compileInfo_, args_, runInfo_);
 }
 

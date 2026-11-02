@@ -524,7 +524,7 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     // 切K场景，要求输出size同时小于L0C和UB
     uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ?
                                      compileInfo.l0CSize :
-                                     std::min(compileInfo.l0CSize, compileInfo.ubSize);
+                                     std::min(compileInfo.l0CSize, compileInfo.ubSize * GetAivToAicRatio(compileInfo));
 
     uint64_t batchNum = IsMatMulTiling(args, compileInfo.npuArch) ? 1UL : args.batchInfo->batchA;
     double l2CacheUsage = std::max(
