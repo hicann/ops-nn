@@ -19,20 +19,18 @@ namespace ge {
 
  * @par Inputs:
  * @li x: A tensor of type int32, specifying the input. The format must be
- * FRACTAL_NZ, NC1HWC0 or DNC1HWC0. Shape support 4D ~ 6D.
+ * ND. Shape supports rank 1 through 8.
  * @li req_scale:A required Tensor. The type only support uint64. The format
- * must be NC1HWC0 or NDC1HWC0. If req_scale is 1D tensor, shape must be same as
- * the last dimension of x. Otherwise the number of dimensions should be equal to
- * x, the last dimension of shape should be same as x, others must be 1.
- * Shape support 5D ~ 6D. Shape must be 1 in n,d,h,w. \n
+ * must be ND. Shape supports rank 0 through 8, and rank cannot exceed x. The
+ * shape of req_scale must be broadcastable to x. \n
 
  * @par Attributes:
  * relu_flag: An optional bool, specifying whether to perform ReLU,
  * either "True" or "False". Defaults to "False" . \n
 
  * @par Outputs:
- * y: The dequantized output tensor of type int8. The format must be FRACTAL_NZ,
- * NC1HWC0 or NDC1HWC0. The shape is same as x. \n
+ * y: The dequantized output tensor of type int8. The format must be ND. The
+ * shape is same as x. \n
 
  * @par Third-party framework compatibility
  * It is a custom operator. It has no corresponding operator in Caffe.
