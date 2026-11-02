@@ -393,7 +393,8 @@ void ConvBase::GetSupportedFormats(bool is2dFlag, std::stringstream& ss,
             supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST_MAP.at(archKey) :
                                         SUPPORT_CONV3D_FORMAT_LIST_MAP.at(archKey);
         } else {
-            supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
+            supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST_MAP.at(archKey) :
+                                        SUPPORT_CONV3D_DEFAULT_FORMAT_LIST_MAP.at(archKey);
         }
     } else if (platformInfoPtr != nullptr && IsCubeVectorFuseSoc(*platformInfoPtr)) {
         if (extendConvFlag) {

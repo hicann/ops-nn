@@ -58,7 +58,10 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
     // Condition group 4: single-core split
     bool singleCoreOk = numBlocksRes.nDim == 1;
 
-    if (opTypeOk && tilingModeOk && l1FullLoad && formatOk && dtypeOk && singleCoreOk) {
+    // Condition group 5: arch (9201/9202 do not support simplified group conv)
+    bool archOk = opInfo_->npuArch != NpuArch::DAV_9201 && opInfo_->npuArch != NpuArch::DAV_9202;
+
+    if (opTypeOk && tilingModeOk && l1FullLoad && formatOk && dtypeOk && singleCoreOk && archOk) {
         return CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV;
     }
 

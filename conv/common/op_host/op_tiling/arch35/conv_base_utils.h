@@ -178,6 +178,15 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_DEFAULT_FORMAT_LIST = 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_DEFAULT_FORMAT_LIST = {
     {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW}};
 
+// Ascend960DT (9201/9202) fmap, weight, output support format list for HIFLOAT8
+const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_DEFAULT_FORMAT_LIST_9201 = {
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW}};
+
+const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_DEFAULT_FORMAT_LIST_9201 = {
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW},
+    {ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_NCDHW}};
+
 // ExtendConv2D fmap, weight, output supprot format list
 const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
@@ -219,6 +228,14 @@ const std::map<std::string, std::vector<std::vector<ge::Format>>> EXTENDCONV2D_S
     {NPU_ARCH_KEY_3510, EXTENDCONV2D_SUPPORT_FORMAT_LIST},
     {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORT_FORMAT_LIST_FUSE},
     {NPU_ARCH_KEY_9201, EXTENDCONV2D_SUPPORT_FORMAT_LIST_9201}};
+
+const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV2D_DEFAULT_FORMAT_LIST_MAP = {
+    {NPU_ARCH_KEY_3510, SUPPORT_CONV2D_DEFAULT_FORMAT_LIST},
+    {NPU_ARCH_KEY_9201, SUPPORT_CONV2D_DEFAULT_FORMAT_LIST_9201}};
+
+const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV3D_DEFAULT_FORMAT_LIST_MAP = {
+    {NPU_ARCH_KEY_3510, SUPPORT_CONV3D_DEFAULT_FORMAT_LIST},
+    {NPU_ARCH_KEY_9201, SUPPORT_CONV3D_DEFAULT_FORMAT_LIST_9201}};
 
 struct ConvParamInfo {
     // Fmap, Weight, Output, FmapOri(for attr) param info
