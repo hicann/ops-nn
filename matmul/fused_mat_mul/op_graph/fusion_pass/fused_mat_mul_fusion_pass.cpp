@@ -33,9 +33,11 @@
  *
  * The s8s4 path reuses the open-sourced PostCube utils (common/op_graph/cube_utils, the renamed
  * FixPipe capability) to fold the post op chain into a FixPipe node and then replace
- * {matmul + FixPipe} with a single FusedMatMul node; the Relu->AscendQuant chain swap and the
- * forbidden-node ability flag are provided by the canndev collaboration passes (see the notes
- * before the s8s4 section).
+ * {matmul + FixPipe} with a single FusedMatMul node. The graph-order [Relu, AscendQuant] chain
+ * folds the Relu only (the postcube units require the quant before the activation): the trailing
+ * AscendQuant is then absorbed into the FusedMatMul(relu_quant) replace (the canndev
+ * TransferOpToFusedMatMul semantics), while the forbidden-node ability flag stays provided by
+ * the canndev FixPipeAbilityProcessPass (see the notes before the s8s4 section).
  */
 
 #include "fused_mat_mul_fusion_pass.h"
@@ -101,6 +103,7 @@ constexpr size_t kMatmulDimNum = 2;
 constexpr int64_t kMaxMergedMDim = INT32_MAX;
 constexpr int64_t kFmmX3InputIdx = 3;          // FusedMatMul.x3 (quant scale/offset scalar)
 constexpr int64_t kPostCubeQuantScale0Idx = 2; // FixPipe.quant_scale_0
+constexpr int64_t kFmmQuantInputStrategy = 21; // canndev FMM_QUANT_INPUT_STRATEGY (SetQuantOffsetScale)
 constexpr size_t kReluQuantChainOpNum = 2;     // op count of the [Relu, AscendQuant] post-cube chain
 
 // x1/x2/out/bias dtype combinations: DAV_3510 supports fp16/bf16/fp32(hf32), s8s4 fp16 only
@@ -830,10 +833,12 @@ private:
     bool committed_ = false;
 };
 
-// The Relu->AscendQuant swap is NOT inlined: it is carried by the canndev FixPipeReluQuantPass
-// (a builtin pass scheduled before the ops-nn plugin passes). The postcube units require the
-// quant (pre_conv) before the activation (pre_act), so the chain matching below consumes the
-// already-swapped graph.
+// The Relu->AscendQuant swap never applies to a matmul head: the canndev FixPipeReluQuantPass
+// white list is Conv2D/Conv2DTranspose only, so the graph-order [Relu, AscendQuant] chain is the
+// production form (the swapped [AscendQuant, Relu] order is also accepted when some producer
+// already emits it). The postcube units require the quant (pre_conv) before the activation
+// (pre_act), so the graph-order chain folds the Relu only and ReplacePostCubeWithFusedMatMul
+// absorbs the trailing AscendQuant for the full relu_quant fusion.
 
 // Get the in-graph GNodePtr of the matmul node: the PostCube utils works on GNodePtr, resolve it
 // through the first output node and back to its input source (same way as the conv pass does).
@@ -1062,10 +1067,34 @@ Status ReplacePostCubeWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const 
         return FAILED;
     }
 
+    // The trailing AscendQuant of the graph-order [Relu, AscendQuant] chain: the postcube units
+    // require the quant (pre_conv) before the activation (pre_act) and the unit walk is
+    // forward-only, so the chain folds the Relu only and the FixPipe output feeds the original
+    // AscendQuant. canndev never swaps a matmul chain (the FixPipeReluQuantPass white list is
+    // Conv2D/Conv2DTranspose only); it derives relu_quant from the matched pattern instead and
+    // absorbs this trailing quant in TransferOpToFusedMatMul (the FusedMatMul output takes over
+    // the quant output and the x3 scalar is built from the quant scale/offset attrs with
+    // FMM_QUANT_INPUT_STRATEGY=21). The single-consumer gate matches the canndev pattern
+    // requirement that the intermediate Relu is exclusively consumed by the quant.
+    GNodePtr trailingQuantNode = nullptr;
+    auto fixPipeConsumers = postCubeNode->GetOutDataNodesAndPortIndexs(0);
+    if (fixPipeConsumers.size() == 1 && fixPipeConsumers[0].first != nullptr) {
+        AscendString consumerType;
+        if (fixPipeConsumers[0].first->GetType(consumerType) == GRAPH_SUCCESS && consumerType == kOpTypeAscendQuant) {
+            trailingQuantNode = fixPipeConsumers[0].first;
+        }
+    }
+
     std::vector<AscendString> fusionOpList;
     FUSION_PASS_CHECK(postCubeNode->GetAttr(kAttrFusionOpList, fusionOpList) != GRAPH_SUCCESS,
                       OPS_LOG_E(kPassName, "Get fusion_op_list from FixPipe failed."), return FAILED);
-    const std::string fusedOpType = GetFusedOpTypeFromChain(fusionOpList);
+    std::string fusedOpType = GetFusedOpTypeFromChain(fusionOpList);
+    // The partial [Relu] fold of a graph-order [Relu, AscendQuant] chain fuses as relu_quant
+    // (aligned with the canndev fused_op_type derived from the matched pattern, not from the
+    // folded op list).
+    if (trailingQuantNode != nullptr && fusedOpType == kFusedOpTypeRelu) {
+        fusedOpType = kFusedOpTypeReluQuant;
+    }
     FUSION_PASS_CHECK(fusedOpType.empty(), OPS_LOG_E(kPassName, "Fusion op list is not supported by FusedMatMul."),
                       return FAILED);
 
@@ -1087,13 +1116,28 @@ Status ReplacePostCubeWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const 
         FUSION_PASS_CHECK(matmulNode.GetInputDesc(kBiasInputIdx, biasDesc) != SUCCESS,
                           OPS_LOG_E(kPassName, "Failed to get bias input desc."), return FAILED);
     }
+    if (trailingQuantNode != nullptr) {
+        // The trailing quant was not folded by the postcube utils: build the x3 scalar provider
+        // (offset const + scale const + SetQuantOffsetScale) and wire it into the FixPipe
+        // quant_scale_0 input, the same scalar the utils' Strategy21 creates for a folded
+        // quant, so the boundary transfer below maps it onto FusedMatMul.x3.
+        auto functionParam = std::make_shared<PostCubeFunctionParam>("quant_scale_0", postCubeNode,
+                                                                     static_cast<uint32_t>(kPostCubeQuantScale0Idx));
+        PostCubeAddInputBase addInput;
+        FUSION_PASS_CHECK(addInput.CreateScalarInputNode(*graph, functionParam, trailingQuantNode,
+                                                         kFmmQuantInputStrategy) != GRAPH_SUCCESS,
+                          OPS_LOG_E(kPassName, "Create the x3 scalar input from the trailing quant failed."),
+                          return FAILED);
+    }
     if (hasX3) {
         FUSION_PASS_CHECK(postCubeNode->GetInputDesc(kPostCubeQuantScale0Idx, x3Desc) != SUCCESS,
                           OPS_LOG_E(kPassName, "Failed to get FixPipe quant_scale_0 desc."), return FAILED);
     }
 
-    // Boundary inputs: matmul x1/x2/bias and FixPipe quant_scale_0 (-> FusedMatMul.x3),
-    // the output is the FixPipe output 0.
+    // Boundary inputs: matmul x1/x2/bias and FixPipe quant_scale_0 (-> FusedMatMul.x3), the
+    // output is the FixPipe output 0, or the trailing quant output 0 when the [Relu, AscendQuant]
+    // chain absorbs the quant (the quant node is then part of the replaced region, the same
+    // canndev oldNodes semantics).
     int64_t graphIndex = 0;
     SubgraphBoundary boundary;
     if (AddMatmulBoundaryInputs(boundary, matmulNode, hasBias, graphIndex) != SUCCESS) {
@@ -1107,7 +1151,8 @@ Status ReplacePostCubeWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const 
     }
     {
         SubgraphOutput subgraphOutput;
-        FUSION_PASS_CHECK(subgraphOutput.SetOutput({*postCubeNode, 0}) != GRAPH_SUCCESS ||
+        const GNode& boundaryOutNode = (trailingQuantNode != nullptr) ? *trailingQuantNode : *postCubeNode;
+        FUSION_PASS_CHECK(subgraphOutput.SetOutput({boundaryOutNode, 0}) != GRAPH_SUCCESS ||
                               boundary.AddOutput(0, std::move(subgraphOutput)) != GRAPH_SUCCESS,
                           OPS_LOG_E(kPassName, "Add boundary output failed."), return FAILED);
     }
@@ -1124,16 +1169,18 @@ Status ReplacePostCubeWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const 
     // s8s4 only supports fp16, enable_hf32 keeps the default value (false).
     auto rY = es::FusedMatMul(inputs.x1, inputs.x2, inputs.bias, rX3, transX1, transX2, false, fusedOpType.c_str());
 
-    // Inputs inherit the matmul/fixpipe descs, the output inherits the FixPipe output desc.
+    // Inputs inherit the matmul/fixpipe descs, the output inherits the FixPipe output desc, or
+    // the trailing quant output desc (int8) when the quant is absorbed.
     GNode fusedMatMulNode = *rY.GetProducer();
     InheritMatmulInputDescs(fusedMatMulNode, matmulNode);
     if (hasX3) {
         fusedMatMulNode.UpdateInputDesc(kFmmX3InputIdx, x3Desc);
     }
-    TensorDesc fixPipeOutputDesc;
-    FUSION_PASS_CHECK(postCubeNode->GetOutputDesc(0, fixPipeOutputDesc) != SUCCESS,
-                      OPS_LOG_E(kPassName, "Failed to get FixPipe output desc."), return FAILED);
-    fusedMatMulNode.UpdateOutputDesc(0, fixPipeOutputDesc);
+    const GNodePtr& fusedOutputSrcNode = (trailingQuantNode != nullptr) ? trailingQuantNode : postCubeNode;
+    TensorDesc fusedOutputDesc;
+    FUSION_PASS_CHECK(fusedOutputSrcNode->GetOutputDesc(0, fusedOutputDesc) != SUCCESS,
+                      OPS_LOG_E(kPassName, "Failed to get fusion output desc."), return FAILED);
+    fusedMatMulNode.UpdateOutputDesc(0, fusedOutputDesc);
 
     FUSION_PASS_CHECK(!CopyOtherAttrs(matmulNode, fusedMatMulNode, kPassName),
                       OPS_LOG_E(kPassName, "Copy other attrs failed."), return FAILED);
@@ -1145,8 +1192,9 @@ Status ReplacePostCubeWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const 
     GraphUniqPtr replaceGraph = replaceGraphBuilder.BuildAndReset({rY});
     FUSION_PASS_CHECK(ReplaceSubgraphWithReport(boundary, *replaceGraph, passContext) != SUCCESS,
                       OPS_LOG_E(kPassName, "SubgraphRewriter replace failed."), return FAILED);
-    OPS_LOG_I(kPassName, "FusedMatMul fusion success! matmul=%s, fused_op_type=%s, path=postcube(s8s4).",
-              NodeName(matmulNode).c_str(), fusedOpType.c_str());
+    OPS_LOG_I(kPassName, "FusedMatMul fusion success! matmul=%s, fused_op_type=%s, path=postcube(s8s4)%s.",
+              NodeName(matmulNode).c_str(), fusedOpType.c_str(),
+              (trailingQuantNode != nullptr) ? ", trailing quant absorbed" : "");
     return SUCCESS;
 }
 
@@ -1208,9 +1256,11 @@ Status RunPostCubePath(GraphPtr& graph, CustomPassContext& passContext)
             continue;
         }
 
-        // The Relu->AscendQuant chain is expected to have been swapped into quant-first (see
-        // the note above); when the swap pass is absent, the Relu-only partial fusion applies -
-        // the canndev behavior in the same environment.
+        // The graph-order [Relu, AscendQuant] chain folds the Relu only (see the note above);
+        // ReplacePostCubeWithFusedMatMul absorbs the trailing AscendQuant into the
+        // FusedMatMul(relu_quant) replace, the same way the canndev pass derives relu_quant from
+        // the matched pattern and absorbs the quant node in TransferOpToFusedMatMul. The
+        // swapped [AscendQuant, Relu] order (when a producer already emits it) folds fully.
 
         // Fold the post-cube chain into a FixPipe node.
         Status preRes = PostCubeFusionImpl(graph, matmulNode, passContext);
@@ -1268,9 +1318,9 @@ Status FusedMatMulFusionPass::Run(GraphPtr& graph, CustomPassContext& passContex
     return GRAPH_NOT_CHANGED;
 }
 
-// #if GE_COMPILER_VERSION_NUM >= GE_COMPILER_TARGET_VERSION_NUM
-// REG_FUSION_PASS(FusedMatMulFusionPass)
-//     .Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
-// #endif
+#if GE_COMPILER_VERSION_NUM >= GE_COMPILER_TARGET_VERSION_NUM
+REG_FUSION_PASS(FusedMatMulFusionPass)
+    .Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
+#endif
 
 } // namespace ops

@@ -730,13 +730,16 @@ constexpr char kFusedOpTypeQuant[] = "quant";
 constexpr char kFusedOpTypeReluQuant[] = "relu_quant";
 
 // The post op chain appended after the matmul node. RELU_QUANT keeps the original Relu->Quant
-// order; RELU_QUANT_SWAPPED builds the already-swapped Quant->Relu order, i.e. the graph the
-// canndev FixPipeReluQuantPass produces before this pass runs in production.
+// order, the production form (the canndev FixPipeReluQuantPass swap never applies to a matmul
+// head, its white list is Conv2D/Conv2DTranspose only); RELU_QUANT_SWAPPED builds the
+// Quant->Relu order for a producer that already emits it.
 enum class PostOp { NONE, RELU, QUANT, RELU_QUANT, RELU_QUANT_SWAPPED, LEAKY_RELU };
 
 struct MatmulPostCubeParam {
     DataType dtype = DT_FLOAT16;
     DataType quantOutDtype = DT_INT8; // the output dtype of AscendQuant
+    float quantScale = 1.0F;          // the AscendQuant scale attr
+    float quantOffset = 0.0F;         // the AscendQuant offset attr
     std::vector<int64_t> x1Dims = {256, 128};
     std::vector<int64_t> x2Dims = {128, 256};
     std::vector<int64_t> yDims = {256, 256};
@@ -795,7 +798,8 @@ es::EsTensorHolder MakeLeakyReluNode(es::EsGraphBuilder& graphBuilder, const es:
 }
 
 // AscendQuant: x(fp16) -> y(int8), scale/offset are attrs.
-es::EsTensorHolder MakeAscendQuantNode(es::EsGraphBuilder& graphBuilder, const es::EsTensorHolder& x)
+es::EsTensorHolder MakeAscendQuantNode(es::EsGraphBuilder& graphBuilder, const es::EsTensorHolder& x, float scale,
+                                       float offset)
 {
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto quantNode = es::CompliantNodeBuilder(graph)
@@ -804,8 +808,8 @@ es::EsTensorHolder MakeAscendQuantNode(es::EsGraphBuilder& graphBuilder, const e
                          .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                          .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                          .IrDefAttrs({
-                             {"scale", es::CompliantNodeBuilder::kEsAttrRequired, "Float", CreateFrom(1.0F)},
-                             {"offset", es::CompliantNodeBuilder::kEsAttrRequired, "Float", CreateFrom(0.0F)},
+                             {"scale", es::CompliantNodeBuilder::kEsAttrRequired, "Float", CreateFrom(scale)},
+                             {"offset", es::CompliantNodeBuilder::kEsAttrRequired, "Float", CreateFrom(offset)},
                              {"sqrt_mode", es::CompliantNodeBuilder::kEsAttrOptional, "Bool", CreateFrom(false)},
                              {"round_mode", es::CompliantNodeBuilder::kEsAttrOptional, "String",
                               CreateFrom(AscendString("Round"))},
@@ -818,6 +822,48 @@ es::EsTensorHolder MakeAscendQuantNode(es::EsGraphBuilder& graphBuilder, const e
     }
     auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(quantNode, 0);
     return es::EsTensorHolder(yHolder);
+}
+
+// The float payload of a scalar Const node created by the utils' CreateScalarConstNode (the
+// "value" Tensor attr).
+float GetScalarConstValue(const GNode& constNode)
+{
+    Tensor weight;
+    EXPECT_EQ(constNode.GetAttr("value", weight), GRAPH_SUCCESS);
+    EXPECT_EQ(weight.GetSize(), sizeof(float));
+    float value = 0.0F;
+    (void)memcpy(&value, weight.GetData(), sizeof(float));
+    return value;
+}
+
+// Verify the whole x3 scalar chain of a quant-fused FusedMatMul: the SetQuantOffsetScale
+// producer on x3, its const inputs carrying the AscendQuant scale/offset, and the
+// _quant_output_data_type/_input_strategy attrs the runtime unpacks the scalar with. Shared by
+// the folded-quant path (the postcube utils' Strategy21) and the trailing-quant absorption: both
+// must produce the byte-for-byte identical x3 payload.
+void VerifyFusedMatMulX3(const GNodePtr& fusedMatMul, float expectedScale, float expectedOffset,
+                         DataType expectedQuantDtype)
+{
+    auto x3Node = fusedMatMul->GetInDataNodesAndPortIndexs(3).first;
+    ASSERT_NE(x3Node, nullptr);
+    AscendString x3Type;
+    ASSERT_EQ(x3Node->GetType(x3Type), GRAPH_SUCCESS);
+    EXPECT_EQ(x3Type, kOpTypeSetQuantOffsetScale);
+
+    // input 0 = the offset const, input 1 = the scale const (the CreateScalarInputNode wiring).
+    auto offsetNode = x3Node->GetInDataNodesAndPortIndexs(0).first;
+    auto scaleNode = x3Node->GetInDataNodesAndPortIndexs(1).first;
+    ASSERT_NE(offsetNode, nullptr);
+    ASSERT_NE(scaleNode, nullptr);
+    EXPECT_FLOAT_EQ(GetScalarConstValue(*offsetNode), expectedOffset);
+    EXPECT_FLOAT_EQ(GetScalarConstValue(*scaleNode), expectedScale);
+
+    int64_t quantOutputDtype = -1;
+    EXPECT_EQ(x3Node->GetAttr("_quant_output_data_type", quantOutputDtype), GRAPH_SUCCESS);
+    EXPECT_EQ(quantOutputDtype, static_cast<int64_t>(expectedQuantDtype));
+    int64_t inputStrategy = -1;
+    EXPECT_EQ(x3Node->GetAttr("_input_strategy", inputStrategy), GRAPH_SUCCESS);
+    EXPECT_EQ(inputStrategy, 21); // the canndev FMM_QUANT_INPUT_STRATEGY
 }
 
 std::shared_ptr<Graph> BuildMatmulPostOpGraph(const MatmulPostCubeParam& param)
@@ -861,7 +907,7 @@ std::shared_ptr<Graph> BuildMatmulPostOpGraph(const MatmulPostCubeParam& param)
         SetNodeOutputDesc(*tail.GetProducer(), tailDims, tailDtype);
     }
     if (param.postOp == PostOp::QUANT || param.postOp == PostOp::RELU_QUANT) {
-        tail = MakeAscendQuantNode(graphBuilder, tail);
+        tail = MakeAscendQuantNode(graphBuilder, tail, param.quantScale, param.quantOffset);
         SetNodeInputDesc(*tail.GetProducer(), 0, tailDims, tailDtype);
         tailDtype = param.quantOutDtype;
         SetNodeOutputDesc(*tail.GetProducer(), tailDims, tailDtype);
@@ -874,7 +920,7 @@ std::shared_ptr<Graph> BuildMatmulPostOpGraph(const MatmulPostCubeParam& param)
     if (param.postOp == PostOp::RELU_QUANT_SWAPPED) {
         // The quant-first order produced by the canndev FixPipeReluQuantPass: AscendQuant first,
         // then the Relu re-created on the int8 output.
-        tail = MakeAscendQuantNode(graphBuilder, tail);
+        tail = MakeAscendQuantNode(graphBuilder, tail, param.quantScale, param.quantOffset);
         SetNodeInputDesc(*tail.GetProducer(), 0, tailDims, tailDtype);
         tailDtype = param.quantOutDtype;
         SetNodeOutputDesc(*tail.GetProducer(), tailDims, tailDtype);
@@ -998,17 +1044,19 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeQuantToFmmFusionSuccess)
     ASSERT_NE(fusedMatMul, nullptr);
     EXPECT_EQ(GetFusedOpTypeAttr(fusedMatMul), kFusedOpTypeQuant);
     // The x3 input must be connected (the SetQuantOffsetScale scalar generated by the postcube utils).
-    auto x3Node = fusedMatMul->GetInDataNodesAndPortIndexs(3).first;
-    EXPECT_NE(x3Node, nullptr);
+    VerifyFusedMatMulX3(fusedMatMul, param.quantScale, param.quantOffset, param.quantOutDtype);
     EXPECT_EQ(CountNodesByType(graph, kOpTypeSetQuantOffsetScale), 1);
 }
 
 // matmul + quant + relu (the order the canndev FixPipeReluQuantPass produces) fuses to
 // FusedMatMul with fused_op_type = relu_quant: the pass consumes the already-swapped graph,
-// the same way as the canndev FusedMatMulFusionPass relies on the canndev swap pass.
+// the same way as the canndev FusedMatMulFusionPass relies on the canndev swap pass. The
+// distinct scale/offset values make the folded x3 payload verified directionally.
 TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantToFmmFusionSuccess)
 {
     MatmulPostCubeParam param;
+    param.quantScale = 2.5F;
+    param.quantOffset = -1.5F;
     param.postOp = PostOp::RELU_QUANT_SWAPPED;
     std::shared_ptr<Graph> graph = BuildMatmulPostOpGraph(param);
 
@@ -1023,17 +1071,19 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantToFmmFusionSuccess)
     GNodePtr fusedMatMul = FindNodeByType(graph, kOpTypeFusedMatMul);
     ASSERT_NE(fusedMatMul, nullptr);
     EXPECT_EQ(GetFusedOpTypeAttr(fusedMatMul), kFusedOpTypeReluQuant);
-    auto x3Node = fusedMatMul->GetInDataNodesAndPortIndexs(3).first;
-    EXPECT_NE(x3Node, nullptr);
+    VerifyFusedMatMulX3(fusedMatMul, param.quantScale, param.quantOffset, param.quantOutDtype);
 }
 
-// matmul + relu + ascendquant in the ORIGINAL order (the swap pass absent) fuses the Relu only:
-// the postcube units require quant before activation, so without the canndev swap pass the
-// chain degrades to the partial fusion, the same behavior of the canndev FusedMatMulFusionPass
-// in the same environment.
-TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantOriginalOrderFusesReluOnly)
+// matmul + relu + ascendquant in the ORIGINAL graph order (the production form, the swap never
+// applies to a matmul head) fuses to a single FusedMatMul(relu_quant): the postcube units require
+// the quant before the activation, so the fold covers the Relu only and the trailing AscendQuant
+// is absorbed into the replace (the output takes over the quant output and the x3 scalar is built
+// from the quant scale/offset attrs), the same canndev TransferOpToFusedMatMul semantics.
+TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantOriginalOrderFullFusion)
 {
     MatmulPostCubeParam param;
+    param.quantScale = 2.5F;
+    param.quantOffset = -1.5F;
     param.postOp = PostOp::RELU_QUANT;
     std::shared_ptr<Graph> graph = BuildMatmulPostOpGraph(param);
 
@@ -1042,7 +1092,52 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantOriginalOrderFusesReluOnly)
     EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 1);
     EXPECT_EQ(CountNodesByType(graph, kOpTypeMatMulV3), 0);
     EXPECT_EQ(CountNodesByType(graph, kOpTypeRelu), 0);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeAscendQuant), 0);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeFixPipe), 0);
+
+    GNodePtr fusedMatMul = FindNodeByType(graph, kOpTypeFusedMatMul);
+    ASSERT_NE(fusedMatMul, nullptr);
+    EXPECT_EQ(GetFusedOpTypeAttr(fusedMatMul), kFusedOpTypeReluQuant);
+
+    // The absorbed x3 payload must be byte-for-byte identical to the folded one (the same
+    // VerifyFusedMatMulX3 asserts both): const scale/offset + _quant_output_data_type +
+    // _input_strategy=21.
+    VerifyFusedMatMulX3(fusedMatMul, param.quantScale, param.quantOffset, param.quantOutDtype);
+
+    // The fused output inherits the quant output desc (int8), not the FixPipe fp16 one.
+    TensorDesc outputDesc;
+    EXPECT_EQ(fusedMatMul->GetOutputDesc(0, outputDesc), GRAPH_SUCCESS);
+    EXPECT_EQ(outputDesc.GetDataType(), DT_INT8);
+}
+
+// The quant absorption is gated by the canndev pattern requirement that the intermediate Relu is
+// exclusively consumed by the quant: with an extra consumer of the Relu (the FixPipe output has
+// two consumers after the fold) the chain keeps the partial relu-only fusion and both the quant
+// and the extra consumer stay in the graph.
+TEST_F(FusedMatMulPostCubePathTest, postcubeReluQuantWithExtraReluConsumerFusesReluOnly)
+{
+    MatmulPostCubeParam param;
+    param.postOp = PostOp::RELU_QUANT;
+    std::shared_ptr<Graph> graph = BuildMatmulPostOpGraph(param);
+
+    // Attach a second consumer (another Relu) to the original Relu output.
+    GNodePtr reluNode = FindNodeByType(graph, kOpTypeRelu);
+    ASSERT_NE(reluNode, nullptr);
+    auto extraRelu = es::CompliantNodeBuilder(graph.get())
+                         .OpType(kOpTypeRelu)
+                         .Name("ExtraRelu")
+                         .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                         .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                         .Build();
+    ASSERT_EQ(AddEdgeAndUpdatePeerDesc(*graph, *reluNode, 0, extraRelu, 0), GRAPH_SUCCESS);
+    SetNodeInputDesc(extraRelu, 0, param.yDims, param.dtype);
+    SetNodeOutputDesc(extraRelu, param.yDims, param.dtype);
+
+    Status status = RunPostCubePass(graph);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 1);
     EXPECT_EQ(CountNodesByType(graph, kOpTypeAscendQuant), 1);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeRelu), 1); // the extra consumer stays
     GNodePtr fusedMatMul = FindNodeByType(graph, kOpTypeFusedMatMul);
     ASSERT_NE(fusedMatMul, nullptr);
     EXPECT_EQ(GetFusedOpTypeAttr(fusedMatMul), kFusedOpTypeRelu);
