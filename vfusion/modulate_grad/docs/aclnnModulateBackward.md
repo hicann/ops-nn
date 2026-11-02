@@ -140,7 +140,7 @@ aclnnStatus aclnnModulateBackward(
       <td>数据类型和shape需要与input相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>(batch_size, seq_len, hidden_dim)</td>
       <td>√</td>
     </tr>
     <tr>
@@ -150,7 +150,7 @@ aclnnStatus aclnnModulateBackward(
       <td>数据类型和shape需要与scale相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>(batch_size, hidden_dim)</td>
       <td>√</td>
     </tr>
         <tr>
@@ -160,7 +160,7 @@ aclnnStatus aclnnModulateBackward(
       <td>数据类型和shape需要与shift相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>(batch_size, hidden_dim)</td>
       <td>√</td>
     </tr>
     <tr>
