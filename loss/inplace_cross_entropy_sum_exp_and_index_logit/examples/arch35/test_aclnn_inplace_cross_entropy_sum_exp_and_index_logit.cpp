@@ -101,7 +101,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 int main()
 {
     // 1. 固定写法，device/stream初始化, 参考acl API
-    int32_t deviceId = 1;
+    int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
