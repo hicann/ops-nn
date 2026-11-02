@@ -38,8 +38,8 @@ namespace ge {
  * @li min_ps: An optional tensor in [batch, ], Defaults to "None". Acts as the minp-value sampled for each batch. The
  * supported types are: float16, bfloat16, float32, Supports non-contiguous tensors.\n
  * @par Outputs:
- * @li logits_select_idx: A 2D tensor which is the sequence of numbers, format supports ND, and must be a non-null
- * pointer. The supported types are: int64. \n
+ * @li logits_select_idx: A 1D tensor of shape [batch] containing the selected index for each batch. The format
+ * supports ND, and it must be a non-null pointer. The supported type is int64. \n
  * @li logits_top_kp_select: An optional 2D tensor. Acts as the logits remaining in the logits file after undergoing the
  * topK-topP-minP calculation process. When `is_need_logits=False`, it is disabled and outputs a null pointer; when
  * `is_need_logits=True`, it is enabled and outputs a dimension that must be [batch, voc_size]. The supported types are:
