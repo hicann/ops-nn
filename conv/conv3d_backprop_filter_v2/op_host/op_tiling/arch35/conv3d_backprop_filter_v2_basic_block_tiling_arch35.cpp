@@ -282,7 +282,7 @@ void Conv3DDWV2BasicBlockTilingArch35::SetBasicBlockAttrsTiling()
     mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw * runInfo_.cin1_g *
                      static_cast<uint64_t>(BLOCK_CUBE);
     mmInfo_.kValue = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
-    blockTiling_.usedCoreNum = platformInfo_.core_num;
+    blockTiling_.coreNum = platformInfo_.core_num;
 }
 
 bool Conv3DDWV2BasicBlockTilingArch35::IsCapable()
@@ -1002,7 +1002,7 @@ void Conv3DDWV2BasicBlockTilingArch35::TranslateTuningData(
     dwt.singleCoreCin = tunerTiling->singleCoreCin;
     dwt.singleCoreBatchDout = tunerTiling->singleCoreBatchDout;
     dwt.streamkType = tunerTiling->streamkType;
-    dwt.usedCoreNum = tunerTiling->usedCoreNum;
+    dwt.coreNum = tunerTiling->coreNum == 0 ? platformInfo_.core_num : tunerTiling->coreNum;
     dwt.singleCoreM = tunerTiling->singleCoreM;
     dwt.singleCoreN = tunerTiling->singleCoreN;
     dwt.singleCoreK = tunerTiling->singleCoreK;
@@ -1023,7 +1023,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
         return ge::GRAPH_SUCCESS;
     }
     conv_bp_v2_kernel::TConv3DDwTiling& dwt = tilingData_.dwTiling;
-    dwt.usedCoreNum = blockTiling_.usedCoreNum;
+    dwt.coreNum = blockTiling_.coreNum;
     dwt.singleCoreM = blockTiling_.singleCoreM;
     dwt.singleCoreN = blockTiling_.singleCoreN;
     dwt.singleCoreK = blockTiling_.singleCoreK;
@@ -1081,7 +1081,10 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::PostTiling()
         return ge::GRAPH_FAILED;
     }
 
-    context_->SetBlockDim(tilingData_.dwTiling.usedCoreNum);
+    // usedCoreNum不随tilingData下发(kernel侧不消费),host直接用于SetBlockDim;
+    // 为0表示模板未计算实际用核数（知识库回填/dload/winograd路径），回退coreNum保持原行为
+    uint32_t blockDim = blockTiling_.usedCoreNum > 0 ? blockTiling_.usedCoreNum : tilingData_.dwTiling.coreNum;
+    context_->SetBlockDim(blockDim);
     context_->GetRawTilingData()->SetDataSize(tilingData_size);
     // kernel使用CrossCoreSetFlag接口的模式0，建议开启batchmode模式，使算子独占全部所需核资源，否则多流场景可能导致死锁
     context_->SetScheduleMode(1);
@@ -1338,9 +1341,9 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
        << " singleCoreCout: " << tiling.singleCoreCout << " singleCoreHo: " << tiling.singleCoreHo
        << " splitWo: " << tiling.splitWo << " singleCoreBatch: " << tiling.singleCoreBatch
        << " singleCoreCin: " << tiling.singleCoreCin << " singleCoreBatchDout: " << tiling.singleCoreBatchDout
-       << " streamkType: " << tiling.streamkType << " usedCoreNum: " << tiling.usedCoreNum
-       << " singleCoreM: " << tiling.singleCoreM << " singleCoreN: " << tiling.singleCoreN
-       << " singleCoreK: " << tiling.singleCoreK;
+       << " streamkType: " << tiling.streamkType << " coreNum: " << tiling.coreNum
+       << " usedCoreNum: " << blockTiling_.usedCoreNum << " singleCoreM: " << tiling.singleCoreM
+       << " singleCoreN: " << tiling.singleCoreN << " singleCoreK: " << tiling.singleCoreK;
     OP_LOGI(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
 }

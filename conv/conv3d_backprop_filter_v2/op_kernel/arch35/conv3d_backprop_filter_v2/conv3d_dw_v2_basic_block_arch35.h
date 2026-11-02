@@ -54,7 +54,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (block_idx >= usedCoreNum_) {
+        if (block_idx >= coreNum_) {
             // vector GetBlockIdx() 与 Cube不同，此处注意使用全局变量准确
             return;
         }
@@ -73,7 +73,7 @@ protected:
     uint64_t tailCnt_;
     uint64_t calRound_;
     uint32_t deterAddCoreNum_ = 0;
-    uint64_t usedCoreNum_;
+    uint64_t coreNum_;
     uint32_t streamkType_;
     uint64_t singleCoreBatch_; // 在基本块场景，singleCoreBatch用于表示单核batch
     uint64_t singleShapeK_;
@@ -97,11 +97,11 @@ protected:
         batchDoutNcnt_ = nCnt_ * this->tiling_->dk * this->tiling_->realGroup;
 
         if (streamkType_ == NO_STREAMK_CALC) {
-            calRound_ = Ceil(totalCnt_, usedCoreNum_);
+            calRound_ = Ceil(totalCnt_, coreNum_);
             tailCnt_ = 0;
         } else {
-            calRound_ = totalCnt_ / usedCoreNum_;
-            tailCnt_ = totalCnt_ - calRound_ * usedCoreNum_;
+            calRound_ = totalCnt_ / coreNum_;
+            tailCnt_ = totalCnt_ - calRound_ * coreNum_;
         }
     }
 
@@ -109,7 +109,7 @@ protected:
     {
         Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge>::InitTilingData(
             tilingData);
-        usedCoreNum_ = tilingData->dwTiling.usedCoreNum;
+        coreNum_ = tilingData->dwTiling.coreNum;
         streamkType_ = tilingData->dwTiling.streamkType;
         singleCoreBatch_ = tilingData->dwTiling.singleCoreBatchDout;
         singleShapeK_ = tilingData->dwTiling.singleCoreK;
@@ -147,8 +147,7 @@ protected:
             batchIdx = batchDoutIdx / this->tiling_->dout;
             doutIdx = batchDoutIdx - batchIdx * this->tiling_->dout;
         }
-        uint64_t tailBlockIdx = basicBlockIdx / usedCoreNum_ * usedCoreNum_ +
-                                basicBlockIdx % usedCoreNum_ / deterAddCoreNum_;
+        uint64_t tailBlockIdx = basicBlockIdx / coreNum_ * coreNum_ + basicBlockIdx % coreNum_ / deterAddCoreNum_;
         uint32_t groupIdx = tailBlockIdx % this->tiling_->realGroup;
         uint32_t dkIdx = (tailBlockIdx / this->tiling_->realGroup) % this->tiling_->dk;
         this->nCoreIndx_ = (tailBlockIdx / this->tiling_->realGroup / this->tiling_->dk) % nCnt_;
@@ -326,7 +325,7 @@ protected:
             uint32_t groupIdx = basicBlockIdx % this->tiling_->realGroup;
 
             CalSingleBasicBlock(dkIdx, groupIdx);
-            basicBlockIdx += usedCoreNum_;
+            basicBlockIdx += coreNum_;
         }
         // streamkType != 0时，才有尾轮的确定性计算
         if (streamkType_ != NO_STREAMK_CALC) {
@@ -446,7 +445,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (block_idx >= this->usedCoreNum_) {
+        if (block_idx >= this->coreNum_) {
             this->dw_.End();
             return;
         }

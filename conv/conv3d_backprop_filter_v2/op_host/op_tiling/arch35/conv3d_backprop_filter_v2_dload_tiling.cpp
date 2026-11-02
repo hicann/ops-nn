@@ -165,7 +165,7 @@ ge::graphStatus Conv3DBackpropFilterV2DLoadTiling::DoOpTiling()
     blockTiling_.blockBaseM = DLOAD_BASE_M;
     blockTiling_.blockBaseN = DLOAD_BASE_N_PER_HKWK * runInfo_.kh * runInfo_.kw;
     blockTiling_.blockBaseK = DLOAD_BASE_K;
-    blockTiling_.usedCoreNum = platformInfo_.core_num;
+    blockTiling_.coreNum = platformInfo_.core_num;
     blockTiling_.singleCoreM = DLOAD_BASE_M;
     blockTiling_.singleCoreN = blockTiling_.blockBaseN;
     blockTiling_.singleCoreK = static_cast<uint64_t>(DLOAD_BASE_K);

@@ -85,7 +85,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreCin);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatchDout);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, streamkType);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
+TUNING_TILING_DATA_FIELD_DEF(uint32_t, coreNum);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreM);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreN);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreK);
@@ -120,7 +120,7 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropFilterTunerTiling, singleCoreHo), FIELD(Conv3DBackpropFilterTunerTiling, splitWo),
     FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatch), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreCin),
     FIELD(Conv3DBackpropFilterTunerTiling, singleCoreBatchDout), FIELD(Conv3DBackpropFilterTunerTiling, streamkType),
-    FIELD(Conv3DBackpropFilterTunerTiling, usedCoreNum), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreM),
+    FIELD(Conv3DBackpropFilterTunerTiling, coreNum), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreM),
     FIELD(Conv3DBackpropFilterTunerTiling, singleCoreN), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreK),
     FIELD(Conv3DBackpropFilterTunerTiling, isSplitKernelHW), FIELD(Conv3DBackpropFilterTunerTiling, groupEnlarge),
     FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection), FIELD(Conv3DBackpropFilterTunerTiling, reservedParam1),

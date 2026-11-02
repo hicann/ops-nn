@@ -70,7 +70,7 @@ struct TConv3DDwTiling {
     uint32_t singleCoreHo = 1;
     uint32_t splitWo = 128;
     uint32_t streamkType = 1;
-    uint32_t usedCoreNum = 1;
+    uint32_t coreNum = 1;
     uint32_t singleCoreM = 1;
     uint32_t singleCoreN = 1;
     uint32_t singleCoreK = 1;

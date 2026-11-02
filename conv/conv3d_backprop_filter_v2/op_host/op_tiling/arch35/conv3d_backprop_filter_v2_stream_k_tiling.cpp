@@ -82,7 +82,7 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
     if (Conv3DDWV2BasicBlockTilingArch35::GetTilingFromRepo()) {
         OP_LOGD(opName_, "Conv3DBackpropFilterV2 AscendC: get tiling from knowledge_tiling success.");
         PrintBasickBlockTilingData();
-        blockTiling_.usedCoreNum = platformInfo_.core_num;
+        blockTiling_.coreNum = platformInfo_.core_num;
         isGetTilingFromRepo = true;
         return ge::GRAPH_SUCCESS;
     }
@@ -390,7 +390,7 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
     uint64_t totalCnt = mCnt * nCnt * runInfo_.kd * runInfo_.real_g;
     blockTiling_.coreBindDirection = totalCnt < platformInfo_.core_num ? STREAM_K : MN_STREAM_K;
     blockTiling_.singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
-    blockTiling_.usedCoreNum = platformInfo_.core_num;
+    blockTiling_.coreNum = platformInfo_.core_num;
     uint64_t streamkCnt = totalCnt % platformInfo_.core_num;
     if (streamkCnt == CONST_ZERO) {
         // 没有尾轮基本块
@@ -424,8 +424,18 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
         blockTiling_.coreStreamK = 0;
         blockTiling_.coreBindDirection = MN_STREAM_K;
     }
-    OP_LOGD(opName_, "Finish doing basic block stream k tiling, totalCnt[%lu], coreStreamK[%u].", totalCnt,
-            blockTiling_.coreStreamK);
+
+    blockTiling_.usedCoreNum = CalcUsedCoreNum(totalCnt);
+    OP_LOGD(opName_, "Finish doing basic block stream k tiling, totalCnt[%lu], coreStreamK[%u], usedCoreNum[%u].",
+            totalCnt, blockTiling_.coreStreamK, blockTiling_.usedCoreNum);
+}
+
+uint32_t Conv3DBackpropFilterV2StreamKTiling::CalcUsedCoreNum(uint64_t totalCnt) const
+{
+    const uint64_t coreNum = platformInfo_.core_num;
+    const uint64_t activeCnt = blockTiling_.streamkType == NO_STREAMK_CALC ? totalCnt :
+                                                                             blockTiling_.coreStreamK * totalCnt;
+    return static_cast<uint32_t>(std::min(coreNum, activeCnt));
 }
 
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
@@ -435,7 +445,7 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
     size_t userWorkSpaceSize = 0;
     if (blockTiling_.streamkType != NO_STREAMK_CALC) {
         constexpr uint64_t WORKSPACE_PIECE_NUM = 2; // 2: 1 space for Cube and 1 space for Vector
-        userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.usedCoreNum * platformInfo_.l0c_size;
+        userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.coreNum * platformInfo_.l0c_size;
     }
     workspaces[0] = userWorkSpaceSize;
     if (IsSocVersion960()) {

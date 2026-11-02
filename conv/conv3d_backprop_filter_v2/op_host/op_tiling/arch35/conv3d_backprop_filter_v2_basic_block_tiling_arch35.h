@@ -55,6 +55,7 @@ struct TilingValueDwArch35 {
 
 struct BasicBlockTilingParamsArch35 {
     uint32_t usedCoreNum = 0;
+    uint32_t coreNum = 0;
     uint32_t blockBaseM = 128;
     uint32_t blockBaseN = 128;
     uint32_t blockBaseK = 128;

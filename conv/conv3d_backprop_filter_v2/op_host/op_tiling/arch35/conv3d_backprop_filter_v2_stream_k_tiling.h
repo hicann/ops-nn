@@ -60,6 +60,8 @@ private:
 
     void DoStreamKTiling();
 
+    uint32_t CalcUsedCoreNum(uint64_t totalCnt) const;
+
     void DoStreamkByBatchDout();
 
     void DoStreamkByHWout();
