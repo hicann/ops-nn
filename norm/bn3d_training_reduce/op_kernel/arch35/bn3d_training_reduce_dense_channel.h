@@ -70,6 +70,9 @@ constexpr uint16_t KAHAN_BLOCK_CHUNKS = 8;
 // 冻结输入在 K=8 时仍有 square_sum RMSE 1.57 的稳定失败。仅这条非 split-reduce
 // 路径把块内链再减半，性能关键的 300000 路线仍保持 K=8。
 constexpr uint16_t SUBR_FP16_BLOCK_CHUNKS = 4;
+// FP16 融合路径的块内平方累加也会舍弃低位，块尾 Kahan 无法恢复块内已丢失的误差。
+// 缩短这条链，避免单 tile 的长通道在最终 FP32 舍入前累积过多误差。
+constexpr uint16_t FUSED_FP16_BLOCK_CHUNKS = 2;
 constexpr float FP32_MAX_FINITE = std::numeric_limits<float>::max();
 
 template <typename T_X, bool C0_PACKED>
@@ -906,7 +909,8 @@ private:
         const uint32_t rowStride = static_cast<uint32_t>(r0Align_);
         const uint32_t validLen = static_cast<uint32_t>(numR0_);
         const uint16_t chunks = static_cast<uint16_t>((validLen + VL_FP32 - 1) / VL_FP32);
-        const KahanSplit sp = MakeKahanSplit(chunks);
+        const uint16_t blockChunks = IsSameType<T_X, half>::value ? FUSED_FP16_BLOCK_CHUNKS : KAHAN_BLOCK_CHUNKS;
+        const KahanSplit sp = MakeKahanSplit(chunks, blockChunks);
         const uint16_t numBlocks = sp.numBlocks;
         const uint16_t period = sp.period;
         const uint16_t period0 = sp.period0;
