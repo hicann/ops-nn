@@ -29,7 +29,7 @@ namespace ge {
 /**
  *@brief Lp norm update step: compute y = max(x^(1/p), eps_eff) elementwise.
  *@par Inputs:
- * x: A ND Tensor of type FLOAT16, FLOAT or BFLOAT16.
+ * x: A ND Tensor of type FLOAT16 or FLOAT.
  *@par Attributes:
  * @li p: Int, default 2. Norm order. ±inf mapped via INT_MAX/INT_MIN.
  * @li epsilon: Float, default 1e-12. Numerical stability constant.
@@ -39,8 +39,8 @@ namespace ge {
 #ifndef OPS_PROTO_DEF_LPNORMUPDATE
 #define OPS_PROTO_DEF_LPNORMUPDATE
 REG_OP(LpNormUpdate)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(p, Int, 2)
     .ATTR(epsilon, Float, 1.0e-12f)
     .OP_END_FACTORY_REG(LpNormUpdate)
