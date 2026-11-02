@@ -677,3 +677,286 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_contiguous)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// *** issue 7105: mean/invstd shape校验（长度必须与input的channel轴一致） ***
+// mean长度小于C: 越界读场景, 修复前静默返回成功并输出错值
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_mean_shape_less_than_c)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// mean长度大于C: 修复前内核报561103内部错误码
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_mean_shape_greater_than_c)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1, 0});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// invstd长度与C不一致: 修复前报561103内部错误码
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_invstd_shape_not_equal_c)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// *** issue 7106: weight可选参数校验（非空时dtype/format/shape必须合法） ***
+// weight dtype非法: 修复前静默返回成功, 后续kernel计算出错值
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_weight_invalid_dtype)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-8, 8);
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weight shape非法(长度C-1): 修复前静默返回成功
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_weight_shape_less_than_c)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weight shape非法(长度C+1): 修复前静默返回成功
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_weight_shape_greater_than_c)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weight为空指针nullptr: 可选参数, 合法
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_weight_nullptr_valid)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnBatchNormReduceBackward,
+        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, (aclTensor*)nullptr, inputG, weightG, biasG),
+        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// weight格式非法(私有格式NC1HWC0): 修复前静默返回成功
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_weight_invalid_format)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_NC1HWC0).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// *** issue 7104: 空Tensor输出填零（所有架构一致，不再依赖IsRegbase） ***
+// input第0维为0(空Tensor): 输出应为0, 修复前A2上保留调用方缓冲区脏数据
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_empty_input_fill_zero)
+{
+    auto gradOutDesc = TensorDesc({0, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({0, 3, 1, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// input中间维为0(空Tensor): 输出应为0
+TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_empty_mid_dim_fill_zero)
+{
+    auto gradOutDesc = TensorDesc({2, 3, 0, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+    auto inputDesc = TensorDesc({2, 3, 0, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-8.0, 8.0);
+
+    auto meanDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2, 2, 1});
+    auto invstdDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.125, 0.1, 0.3});
+    auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{3, 3, 3});
+
+    bool inputG = true;
+    bool weightG = true;
+    bool biasG = true;
+
+    auto sumDyDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto sumDyXmuDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

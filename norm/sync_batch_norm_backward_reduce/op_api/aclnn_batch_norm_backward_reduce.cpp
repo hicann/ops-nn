@@ -127,7 +127,8 @@ static inline bool CheckDtypeInSupportList(const aclTensor* checkParam, const ch
     return true;
 }
 static bool CheckDtypeValid(InputParamT* inputParamTensorList, size_t inputListSize,
-                            OutputParamT* outputParamTensorList, size_t outputListSize, const bool* outputMask)
+                            OutputParamT* outputParamTensorList, size_t outputListSize, const bool* outputMask,
+                            const aclTensor* weight)
 {
     // 检查数据类型是否在支持列表内，out类型需要根据对应mask值来确定是否需要判断
     bool dtypeInList = true;
@@ -139,6 +140,13 @@ static bool CheckDtypeValid(InputParamT* inputParamTensorList, size_t inputListS
     // gradOut和input数据类型必须一样
     OP_CHECK_DTYPE_NOT_MATCH(inputParamTensorList[0].param, (inputParamTensorList[1].param)->GetDataType(),
                              return false);
+
+    // weight为可选参数，非空时数据类型必须在支持列表内
+    if (weight != nullptr) {
+        dtypeInList = CheckDtypeInSupportList(weight, "weight", true);
+        CHECK_RET(dtypeInList, false);
+    }
+
     for (size_t i = 0; i < outputListSize; i++) {
         size_t maskIdx = GetMaskIdx(i);
         bool mask = outputMask[maskIdx];
@@ -163,7 +171,7 @@ static inline bool CheckFormatEqual(const aclTensor* leftParam, const char* left
 }
 
 static bool CheckFormat(InputParamT* inputParamTensorList, size_t inputListSize, OutputParamT* outputParamTensorList,
-                        size_t outputListSize, const bool* outputMask)
+                        size_t outputListSize, const bool* outputMask, const aclTensor* weight)
 {
     // 输入的格式需要一致
     if ((inputParamTensorList[0].param)->GetStorageFormat() != (inputParamTensorList[1].param)->GetStorageFormat()) {
@@ -185,6 +193,15 @@ static bool CheckFormat(InputParamT* inputParamTensorList, size_t inputListSize,
         }
     }
 
+    // weight为可选参数，非空时格式不能是私有格式
+    if (weight != nullptr && IsPrivateFormat(weight->GetStorageFormat())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW;"
+                "but weight format is %s, please check.",
+                ToString(weight->GetStorageFormat()).GetString());
+        return false;
+    }
+
     // 输出格式不能是私有格式
     for (size_t i = 0; i < outputListSize; i++) {
         size_t maskIdx = GetMaskIdx(i);
@@ -202,8 +219,9 @@ static bool CheckFormat(InputParamT* inputParamTensorList, size_t inputListSize,
     return true;
 }
 
-static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, OutputParamT* outputParamTensorList,
-                       size_t outputListSize, const bool* outputMask)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+                       const aclTensor* weight, OutputParamT* outputParamTensorList, size_t outputListSize,
+                       const bool* outputMask)
 {
     // 所有输入的维度都不能低于2且不能超过8
     OP_CHECK_MIN_DIM(gradOut, BN_MIN_SUPPORT_DIMS_NUMS, return false);
@@ -219,7 +237,27 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, OutputP
         return false;
     }
 
+    // mean/invstd长度必须与input的channel轴长度一致，否则内核按C读取会越界或漏出内部错误码
     op::Shape expectShape = {dimC};
+    if (mean->GetViewShape() != expectShape) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected tensor for mean to have same size as channel of input, but got %s.",
+                op::ToString(mean->GetViewShape()).GetString());
+        return false;
+    }
+    if (invstd->GetViewShape() != expectShape) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "expected tensor for invstd to have same size as channel of input, but got %s.",
+                op::ToString(invstd->GetViewShape()).GetString());
+        return false;
+    }
+
+    // weight为可选参数，非空时长度必须与input的channel轴长度一致
+    if (weight != nullptr && weight->GetViewShape() != expectShape) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "expected tensor for weight to have same size as channel of input, but got %s.",
+                op::ToString(weight->GetViewShape()).GetString());
+        return false;
+    }
     for (size_t i = 0; i < outputListSize; i++) {
         size_t maskIdx = GetMaskIdx(i);
         bool mask = outputMask[maskIdx];
@@ -234,9 +272,9 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, OutputP
 }
 
 static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
-                               const aclTensor* invstd, const bool inputG, const bool weightG, const bool biasG,
-                               const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* gradWeight,
-                               const aclTensor* gradBias)
+                               const aclTensor* invstd, const aclTensor* weight, const bool inputG, const bool weightG,
+                               const bool biasG, const aclTensor* sumDy, const aclTensor* sumDyXmu,
+                               const aclTensor* gradWeight, const aclTensor* gradBias)
 {
     // 0. 参数组装
     InputParamT inputParamTensorList[DEFAULT_INPUT_TENSOR_PARAM_CNT] = {
@@ -253,15 +291,16 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input,
     CHECK_RET(CheckOutputNotNull(outputParamTensorList, outputListSize, outputMask), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    bool ret = CheckDtypeValid(inputParamTensorList, inputListSize, outputParamTensorList, outputListSize, outputMask);
+    bool ret = CheckDtypeValid(inputParamTensorList, inputListSize, outputParamTensorList, outputListSize, outputMask,
+                               weight);
     CHECK_RET(ret, ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查数据格式是否支持
-    ret = CheckFormat(inputParamTensorList, inputListSize, outputParamTensorList, outputListSize, outputMask);
+    ret = CheckFormat(inputParamTensorList, inputListSize, outputParamTensorList, outputListSize, outputMask, weight);
     CHECK_RET(ret, ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查Shape是否支持
-    ret = CheckShape(gradOut, input, outputParamTensorList, outputListSize, outputMask);
+    ret = CheckShape(gradOut, input, mean, invstd, weight, outputParamTensorList, outputListSize, outputMask);
     CHECK_RET(ret, ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
@@ -436,9 +475,9 @@ static aclnnStatus OutputParamFillZeroForEmptyTensor(const aclTensor* input, boo
     auto dimC = input->GetViewShape()[1];
     aclnnStatus outFillRet = ACLNN_SUCCESS;
 
-    // C维不能为空
-    if (dimC != 0 && Ops::NN::AclnnUtil::IsRegbase()) {
-        // 空Tensor情况下，输出都为0
+    // C维不能为空。空Tensor情况下输出统一填0（对空集求和为0），
+    // 所有架构一致执行：若仅在regbase上填零，A2会静默保留调用方缓冲区的脏数据
+    if (dimC != 0) {
         aclTensor* fillZeroTensorTmp = FillScalar(dimC, 0, executor);
         CHECK_RET(fillZeroTensorTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         outFillRet = OutputParamCastAndViewCopy(fillZeroTensorTmp, fillZeroTensorTmp, fillZeroTensorTmp, inputG,
@@ -466,7 +505,8 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(const aclTensor* gradOu
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(gradOut, input, mean, invstd, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias);
+    auto ret = CheckParams(gradOut, input, mean, invstd, weight, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight,
+                           gradBias);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空Tensor处理
