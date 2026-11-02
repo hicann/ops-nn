@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -127,6 +128,21 @@ static void CheckFormatNZ(const aclTensor* x)
     }
 }
 
+static void WarnUnsupportedAttrs(const aclTensor* updates, int64_t axis, int64_t quantAxis, int64_t reduction)
+{
+    if (reduction != 1) {
+        OP_LOGW("Only reduction=1 (update) is supported, but got %ld. The update operation will be used.", reduction);
+    }
+    if (axis != -2) {
+        OP_LOGW("axis=%ld is outside the documented support (axis=-2). The value will be forwarded unchanged.", axis);
+    }
+    const int64_t lastDim = static_cast<int64_t>(updates->GetViewShape().GetDimNum()) - 1;
+    if (quantAxis != -1 && quantAxis != lastDim) {
+        OP_LOGW("Only quantAxis=-1 or %ld is supported, but got %ld. Execution results are not guaranteed.", lastDim,
+                quantAxis);
+    }
+}
+
 static aclnnStatus CheckParams(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
                                const aclTensor* quantScales, const aclTensor* quantZeroPoints)
 {
@@ -166,6 +182,11 @@ aclnnStatus aclnnInplaceQuantScatterGetWorkspaceSize(aclTensor* selfRef, const a
     // 参数检查
     auto ret = CheckParams(selfRef, indices, updates, quantScales, quantZeroPoints);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // Preserve the existing Regbase behavior.
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        WarnUnsupportedAttrs(updates, axis, quantAxis, reduction);
+    }
 
     if (selfRef->IsEmpty() || indices->IsEmpty() || updates->IsEmpty() || quantScales->IsEmpty()) {
         *workspaceSize = 0;

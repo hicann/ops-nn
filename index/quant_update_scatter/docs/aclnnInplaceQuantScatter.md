@@ -187,6 +187,8 @@ aclnnStatus aclnnInplaceQuantScatter(
   - <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - selfRef、updates最后一维的大小必须32 Byte对齐。
 
+    - `axis`、`quantAxis`或`reduction`超出文档支持范围时记录warning，不改变原有返回码和执行行为。无论`reduction`取值如何，均执行update操作。
+
   <!-- end id8 -->
 
 - **返回值：**

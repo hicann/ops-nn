@@ -54,7 +54,7 @@ const aclTensor* GatherElementsV2(const aclTensor* self, const aclTensor* index,
     }
 
     if (!CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[GatherElementsV2] indices must be in int32, float32, float16, bfloat16");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[GatherElementsV2] self must be in int32, float32, float16, bfloat16");
         return nullptr;
     }
 

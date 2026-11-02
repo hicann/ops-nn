@@ -189,6 +189,8 @@ aclnnStatus aclnnInplaceQuantScatter(
   - <term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
     - The last dimension size of selfRef and updates must be 32 Byte aligned.
 
+    - Values outside the documented ranges of `axis`, `quantAxis`, or `reduction` produce warning logs without changing existing return codes or execution behavior. The operation always uses update semantics regardless of `reduction`.
+
   <!-- end id8 -->
 
 - **Return value**

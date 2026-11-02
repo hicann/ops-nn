@@ -100,7 +100,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(self, CURRENT_DTYPE_SUPPORT_LIST, return false);
     if (!index->IsEmpty() && !CheckType(index->GetDataType(), INDEX_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnGather not implemented for index dtype %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "aclnnGather index dtype is %s, but only int32 and int64 are supported; use a supported dtype.",
                 op::ToString(index->GetDataType()).GetString());
         return false;
     }
@@ -119,7 +120,10 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
 
     // self与index的维度需要相同
     if (selfDim2 != indexDim2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Index tensor must have the same number of dimensions as input tensor.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "aclnnGather requires matching self and index ranks (a scalar counts as rank 1), but got %ld and %ld; "
+                "reshape self or index to matching ranks.",
+                selfDim2, indexDim2);
         return false;
     }
 
@@ -133,8 +137,9 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
 
     // dim取值范围不能超过tensor本身的维度
     if (dim < (-selfDim2) || dim >= selfDim2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld)",
-                -selfDim2, selfDim2 - 1, dim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "aclnnGather dim is %ld, but must be in [%ld, %ld]; use a dim within the self rank.", dim, -selfDim2,
+                selfDim2 - 1);
         return false;
     }
 
@@ -150,13 +155,16 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
         if (i != noNeedCheckDim) {
             if (curIndexShape > curSelfShape) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                        "Size does not match at dimension %zu, expected index shape %ld smaller than self shape %ld", i,
-                        curIndexShape, curSelfShape);
+                        "aclnnGather index.shape[%zu]=%ld exceeds self.shape[%zu]=%ld at a non-gather dimension; "
+                        "resize index so it does not exceed self at this dimension.",
+                        i, curIndexShape, i, curSelfShape);
                 return false;
             }
         } else {
             if (curSelfShape == 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Size does not match at dimension %zu, expected index shape to be 0",
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "aclnnGather self.shape[%zu] is 0 while index is non-empty; "
+                        "use an empty index or a non-empty self along dim.",
                         i);
                 return false;
             }
@@ -445,7 +453,6 @@ aclnnStatus aclnnGatherGetWorkspaceSize(const aclTensor* self, const int64_t dim
     L2_DFX_PHASE_1(aclnnGather, DFX_IN(self, dim, index), DFX_OUT(out));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 参数检查
     auto ret = CheckParams(self, dim, index, out);
