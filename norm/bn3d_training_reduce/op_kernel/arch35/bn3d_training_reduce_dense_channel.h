@@ -67,9 +67,9 @@ constexpr uint32_t NUM_ACC_AND_COMP = 2;
 // 再大（如 16）能省一半补偿开销但误差贴到竞品同量级，rmse 是绝对误差之比、余量太薄。
 constexpr uint16_t KAHAN_BLOCK_CHUNKS = 8;
 // 普通 FP16 sub-R 的单次搬运接近 1K 个 VL chunk，且最终还要跨多个搬运块合并；
-// 冻结输入在 K=8 时仍有 square_sum RMSE 1.57 的稳定失败。仅这条非 split-reduce
-// 路径把块内链再减半，性能关键的 300000 路线仍保持 K=8。
-constexpr uint16_t SUBR_FP16_BLOCK_CHUNKS = 4;
+// 块尾补偿无法恢复块内已丢失的平方和低位，因此非 split-reduce 路径使用 K=2；
+// 多槽合并还需保留主值相加的舍入误差。300000 路线仍保持 K=8。
+constexpr uint16_t SUBR_FP16_BLOCK_CHUNKS = 2;
 // FP16 融合路径的块内平方累加也会舍弃低位，块尾 Kahan 无法恢复块内已丢失的误差。
 // 缩短这条链，避免单 tile 的长通道在最终 FP32 舍入前累积过多误差。
 constexpr uint16_t FUSED_FP16_BLOCK_CHUNKS = 2;
@@ -344,8 +344,16 @@ private:
             } else {
                 AccumulateChannelFull(c, accUb);
             }
-            // 多槽时先把 numAccSlots_ 个槽两两折叠回槽 0，收尾逻辑保持不变。
-            FoldAccSlots(accUb);
+            // FP16 sub-R 的多个搬运块使用独立累加槽，槽间合并也必须保留舍入低位。
+            if constexpr (IsSameType<T_X, half>::value) {
+                if (isSubR_ != 0) {
+                    FoldAccSlots<false>(accUb);
+                } else {
+                    FoldAccSlots(accUb);
+                }
+            } else {
+                FoldAccSlots(accUb);
+            }
             if constexpr (C0_PACKED) {
                 FinalizeChannelC0(accUb, sumUb, squareSumUb, j);
             } else {
@@ -1083,12 +1091,13 @@ private:
     // 把 numAccSlots_ 个槽两两折叠归并回槽 0。每个槽是一个双分量数
     // value = acc - comp；槽间主值相加也会产生新舍入。BF16 / FP32 路径用
     // TwoSum 把该误差同步并入 comp；旧实现只做 Σacc - Σcomp，会在大输出的临界
-    // 舍入点丢 1 ULP。FP16 多槽路径的平方和已在块内做双链平衡，其低位与槽主值存在
-    // 相关性；对已正确舍入的结果再套这一层会反向移动 1 ULP，因此保持原有折叠口径。
+    // 舍入点丢 1 ULP。FP16 sub-R 配合 K=2 的短块同样保留槽间舍入误差；
+    // FP16 full-R 和 split-reduce 保持原有折叠策略。
     // activeSlots 每趟减半。
     // 趟数由 Host 算好（foldPasses_ = log2(numAccSlots_)）传进来，__VEC_SCOPE__ 内
     // 没有任何数据依赖分支；activeSlots 逐趟减半是纯标量运算，同族 BinaryAddVF 同样写法。
     // 单槽时 foldPasses_ == 0，整个 scope 空转，行为与改动前逐位一致。
+    template <bool KEEP_FP16_SIMPLE = true>
     __aicore__ inline void FoldAccSlots(__ubuf__ float* accUb)
     {
         if (numAccSlots_ <= 1) {
@@ -1110,7 +1119,7 @@ private:
             RegTensor<float> tmp;
             RegTensor<float> zeroReg;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            if constexpr (!IsSameType<T_X, half>::value) {
+            if constexpr (!KEEP_FP16_SIMPLE || !IsSameType<T_X, half>::value) {
                 Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
             }
 
@@ -1128,7 +1137,8 @@ private:
                         LoadAlign<float, LoadDist::DIST_NORM>(rhs, accUb + hi + componentOffset);
                         LoadAlign<float, LoadDist::DIST_NORM>(comp, accUb + compBase + lo + componentOffset);
                         LoadAlign<float, LoadDist::DIST_NORM>(rhsComp, accUb + compBase + hi + componentOffset);
-                        MergeAccRegisters(lhs, rhs, comp, rhsComp, t, bb, err, tmp, zeroReg, pregFull);
+                        MergeAccRegisters<KEEP_FP16_SIMPLE>(lhs, rhs, comp, rhsComp, t, bb, err, tmp, zeroReg,
+                                                            pregFull);
                         StoreAlign<float, StoreDist::DIST_NORM>(accUb + lo + componentOffset, lhs, pregFull);
                         StoreAlign<float, StoreDist::DIST_NORM>(accUb + compBase + lo + componentOffset, comp,
                                                                 pregFull);
