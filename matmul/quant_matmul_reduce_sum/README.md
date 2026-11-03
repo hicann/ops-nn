@@ -20,7 +20,7 @@
   out = \sum_{i=0}^{batch}(x1_i @ x2_i) * x1Scale * x2Scale
   $$
 
-  其中 $x1$, $x2$, $out$ 分别是维度为 $(batch, M, K)$, $(batch, K, N)$ 和 $(M, N)$ 的矩阵。$x1Scale$ 和 $x2Scale$ 分别是维度为 $(batch, M)$ 和 $(N,)$ 的向量。
+  其中 $x1$, $x2$, $out$ 分别是维度为 $(batch, M, K)$, $(batch, K, N)$ 和 $(M, N)$ 的矩阵。$x1Scale$ 是形状为 $(batch, M)$ 的二维缩放张量，为每个批次的每一行提供缩放值；$x2Scale$ 是形状为 $(N,)$ 的一维缩放向量。
 
 ## 参数说明
 
@@ -57,7 +57,7 @@
     <tr>
       <td>x1Scale</td>
       <td>输入</td>
-      <td>对矩阵乘结果进行行缩放的一维向量。</td>
+      <td>形状为 (batch, M) 的二维缩放张量，为每个批次的每一行提供缩放值。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
