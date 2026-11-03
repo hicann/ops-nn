@@ -40,6 +40,8 @@ ND.
 * @li is_training: (Optional) A bool value. Whether the operation is in training mode. Default: true
 * @li epsilon: (Optional) A small float32 value added for numerical stability. Default: 1e-5
 * @li output_mask: (Optional) A ListBool of length 3, ordered as dx, dweight, dbias. Default: {true, true, true}.
+* Output masking is supported on Ascend 950PR&950DT and Ascend 960DT products.
+* On Atlas A2 and Atlas A3 products, only the default value {true, true, true} is supported.
 
 * @par Outputs:
 * @li dx: Gradient of the loss w.r.t the input, a tensor of type float16/bfloat16/float32. Supported formats: NCHW,
