@@ -9,13 +9,19 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""Torch CPU input and golden plugin for DeepNorm."""
+"""Torch CPU input and golden plugin for DeepNorm.
+
+Enable mode uses FP32 intermediates and returns the declared output dtypes.
+Promote mode keeps an FP64 reference for cross_check error ratios; the
+third-party implementation uses FP32 intermediates and declared output dtypes.
+Empty reductions produce NaN mean/rstd, while zero leading dimensions leave
+all outputs empty, matching the arch35 empty-input kernel.
+"""
 
 import hashlib
 
 import numpy as np
 import torch
-import ml_dtypes  # noqa: F401 - registers bfloat16 with NumPy
 
 
 __spec__ = {
@@ -47,9 +53,9 @@ _KERNEL_TOLERANCE = {
 }
 
 _ACLNN_TOLERANCE = {
-    "float32": {"standard": "stat_rel_err"},
-    "float16": {"standard": "stat_rel_err"},
-    "bfloat16": {"standard": "stat_rel_err"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
 }
 
 
@@ -57,18 +63,22 @@ def _is_torch_tensor(value):
     return torch.is_tensor(value)
 
 
-def _shape_of(value):
-    return tuple(value.shape)
-
-
-def _to_torch_fp64(value):
+def _to_torch(value):
     if _is_torch_tensor(value):
-        return value.detach().cpu().to(torch.float64)
-    return torch.as_tensor(np.asarray(value).astype(np.float64), dtype=torch.float64)
+        return value.detach().cpu()
+    array = np.asarray(value)
+    if array.dtype.name == "bfloat16":
+        # NumPy bf16 has no torch.from_numpy bridge. Conversion is exact.
+        return torch.from_numpy(array.astype(np.float32)).to(torch.bfloat16)
+    return torch.from_numpy(array)
 
 
 def _numpy_dtype_from_name(dtype_name):
     if dtype_name in ("bfloat16", "bf16"):
+        # Only the NumPy BF16 bridge needs this optional CPU dependency.
+        # Remote Torch references must also work without ml_dtypes installed.
+        import ml_dtypes
+
         return ml_dtypes.bfloat16
     return np.dtype(dtype_name)
 
@@ -81,6 +91,8 @@ def _dtype_name(dtype):
         return "float16"
     if text in ("torch.bfloat16", "bfloat16"):
         return "bfloat16"
+    if text in ("torch.float64", "float64"):
+        return "float64"
     return np.dtype(dtype).name
 
 
@@ -91,66 +103,48 @@ def _torch_dtype_from_name(dtype_name):
         return torch.float16
     if dtype_name in ("bfloat16", "bf16"):
         return torch.bfloat16
-    return torch.float32
+    if dtype_name in ("float64", "fp64"):
+        return torch.float64
+    raise ValueError(f"Unsupported DeepNorm output dtype: {dtype_name}")
 
 
-def _output_shapes(x, gamma):
-    x_shape = _shape_of(x)
-    gamma_ndim = len(_shape_of(gamma))
-    mean_shape = x_shape[: len(x_shape) - gamma_ndim] + (1,) * gamma_ndim
-    return mean_shape, mean_shape, x_shape
+def _validate_inputs(x, gx, beta, gamma):
+    values = (x, gx, beta, gamma)
+    if any(value is None for value in values):
+        raise ValueError("DeepNorm requires x, gx, beta and gamma")
+    dtype = _dtype_name(x.dtype)
+    if dtype not in ("float16", "bfloat16", "float32", "float64"):
+        raise ValueError(f"Unsupported DeepNorm input dtype: {dtype}")
+    if any(_dtype_name(value.dtype) != dtype for value in values):
+        raise ValueError("DeepNorm input dtypes must match")
+    if not (2 <= len(x.shape) <= 8 and 1 <= len(gamma.shape) < len(x.shape)):
+        raise ValueError("Invalid DeepNorm input ranks")
+    if tuple(gx.shape) != tuple(x.shape) or tuple(beta.shape) != tuple(gamma.shape):
+        raise ValueError("DeepNorm x/gx and beta/gamma shapes must match")
+    if tuple(gamma.shape) != tuple(x.shape[-len(gamma.shape) :]):
+        raise ValueError("DeepNorm gamma must match x trailing dimensions")
 
 
-def _zero_numpy(shape, dtype_name):
-    return np.zeros(shape, dtype=_numpy_dtype_from_name(dtype_name))
-
-
-def _fallback_kernel_outputs(x, gamma, output_dtypes=None, output_shapes=None):
-    if output_shapes:
-        mean_shape, rstd_shape, y_shape = output_shapes
-    else:
-        mean_shape, rstd_shape, y_shape = _output_shapes(x, gamma)
-    y_dtype = _dtype_name(np.asarray(x).dtype)
-    if output_dtypes and len(output_dtypes) >= 3:
-        y_dtype = output_dtypes[2]
-    return (
-        _zero_numpy(mean_shape, "float32"),
-        _zero_numpy(rstd_shape, "float32"),
-        _zero_numpy(y_shape, y_dtype),
-    )
-
-
-def _fallback_aclnn_outputs(mean_out, rstd_out, y_out):
-    if _is_torch_tensor(mean_out):
-        return (
-            torch.zeros_like(mean_out),
-            torch.zeros_like(rstd_out),
-            torch.zeros_like(y_out),
-        )
-    return (
-        np.zeros_like(mean_out),
-        np.zeros_like(rstd_out),
-        np.zeros_like(y_out),
-    )
-
-
-def _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon):
-    x64 = _to_torch_fp64(x)
-    gx64 = _to_torch_fp64(gx)
-    beta64 = _to_torch_fp64(beta)
-    gamma64 = _to_torch_fp64(gamma)
-    gamma_ndim = gamma64.dim()
-    if x64.dim() <= gamma_ndim or x64.numel() == 0 or gamma64.numel() == 0:
-        raise ValueError("invalid or empty DeepNorm shape for golden computation")
-
-    reduce_axes = tuple(range(x64.dim() - gamma_ndim, x64.dim()))
-    hidden = x64 * float(alpha) + gx64
-    mean64 = torch.mean(hidden, dim=reduce_axes, keepdim=True)
-    centered = hidden - mean64
-    var64 = torch.mean(centered * centered, dim=reduce_axes, keepdim=True)
-    rstd64 = torch.rsqrt(var64 + float(epsilon))
-    y64 = centered * rstd64 * gamma64 + beta64
-    return mean64, rstd64, y64
+def _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon, promoted=False):
+    _validate_inputs(x, gx, beta, gamma)
+    operands = tuple(_to_torch(value) for value in (x, gx, beta, gamma))
+    # Keep a high-precision anchor for cross_check, including when the
+    # framework supplies promoted FP32 inputs for FP16/BF16 cases. Ordinary
+    # execution and the third-party implementation retain FP32 intermediates.
+    compute_dtype = torch.float64 if promoted else torch.float32
+    operands = tuple(value.to(compute_dtype) for value in operands)
+    x_work, gx_work, beta_work, gamma_work = operands
+    gamma_ndim = gamma_work.dim()
+    if x_work.dim() <= gamma_ndim:
+        raise ValueError("x rank must exceed gamma rank")
+    reduce_axes = tuple(range(x_work.dim() - gamma_ndim, x_work.dim()))
+    hidden = x_work * alpha + gx_work
+    mean = torch.mean(hidden, dim=reduce_axes, keepdim=True)
+    centered = hidden - mean
+    var = torch.mean(centered * centered, dim=reduce_axes, keepdim=True)
+    rstd = torch.rsqrt(var + epsilon)
+    y = centered * rstd * gamma_work + beta_work
+    return mean, rstd, y
 
 
 def _torch_to_numpy(tensor, dtype_name):
@@ -159,7 +153,7 @@ def _torch_to_numpy(tensor, dtype_name):
             tensor.to(torch.bfloat16)
             .to(torch.float32)
             .numpy()
-            .astype(ml_dtypes.bfloat16)
+            .astype(_numpy_dtype_from_name("bfloat16"))
         )
     return (
         tensor.to(_torch_dtype_from_name(dtype_name))
@@ -178,17 +172,16 @@ def deep_norm_golden(
     output_dtypes=None,
     output_ori_shapes=None,
     output_shapes=None,
+    golden_mode="Enable",
     **kwargs,
 ):
     """Return (mean, rstd, y) for TTK kernel mode."""
-    try:
-        mean, rstd, y = _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon)
-    except ValueError:
-        return _fallback_kernel_outputs(
-            x, gamma, output_dtypes, output_ori_shapes or output_shapes
-        )
+    promoted = golden_mode == "Promote"
+    mean, rstd, y = _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon, promoted)
 
-    y_dtype = _dtype_name(np.asarray(x).dtype)
+    if promoted:
+        return tuple(value.numpy() for value in (mean, rstd, y))
+    y_dtype = _dtype_name(x.dtype)
     mean_dtype = "float32"
     rstd_dtype = "float32"
     if output_dtypes and len(output_dtypes) >= 3:
@@ -212,14 +205,40 @@ def deep_norm_aclnn_golden(
     mean_out=None,
     rstd_out=None,
     y_out=None,
+    golden_mode=None,
     **kwargs,
 ):
     """Return (meanOut, rstdOut, yOut) for TTK ACLNN mode."""
-    try:
-        mean, rstd, y = _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon)
-    except ValueError:
-        return _fallback_aclnn_outputs(mean_out, rstd_out, y_out)
+    _validate_inputs(x, gx, beta, gamma)
+    if any(value is None for value in (mean_out, rstd_out, y_out)):
+        raise ValueError("DeepNorm ACLNN requires all three output slots")
+    x_dtype, y_dtype = _dtype_name(x.dtype), _dtype_name(y_out.dtype)
+    if golden_mode is not None:
+        promoted = golden_mode == "Promote"
+    else:
+        # Compatibility with ACLNN TTK versions that omit golden_mode and keep
+        # pure output slots at their declared dtype. Accept only exact supported
+        # Promote pairs, rather than treating every mismatch as Promote.
+        promote_pairs = {
+            ("float32", "float16"),
+            ("float32", "bfloat16"),
+            ("float64", "float32"),
+        }
+        promoted = (x_dtype, y_dtype) in promote_pairs
+        if not promoted and (x_dtype != y_dtype or x_dtype == "float64"):
+            raise ValueError(
+                "Cannot resolve DeepNorm ACLNN precision mode from dtype pair"
+            )
+    if not promoted and x_dtype == "float64":
+        raise ValueError("FP64 input is supported only as a promoted CPU reference")
+    mean, rstd, y = _compute_deep_norm(x, gx, beta, gamma, alpha, epsilon, promoted)
 
+    if promoted:
+        return (
+            (mean, rstd, y)
+            if _is_torch_tensor(x)
+            else tuple(value.numpy() for value in (mean, rstd, y))
+        )
     if _is_torch_tensor(y_out):
         return mean.to(mean_out.dtype), rstd.to(rstd_out.dtype), y.to(y_out.dtype)
     return (
@@ -359,11 +378,12 @@ class _DeepNormCompose:
         self.epsilon = float(epsilon)
 
     def __call__(self, x, gx, beta, gamma, **kwargs):
+        _validate_inputs(x, gx, beta, gamma)
         out_dtype = x.dtype
-        x_work = x.to(torch.float64)
-        gx_work = gx.to(torch.float64)
-        beta_work = beta.to(torch.float64)
-        gamma_work = gamma.to(torch.float64)
+        x_work = x.to(torch.float32)
+        gx_work = gx.to(torch.float32)
+        beta_work = beta.to(torch.float32)
+        gamma_work = gamma.to(torch.float32)
         gamma_ndim = gamma_work.dim()
         reduce_axes = tuple(range(x_work.dim() - gamma_ndim, x_work.dim()))
         hidden = x_work * self.alpha + gx_work

@@ -109,9 +109,6 @@ inline ge::graphStatus CheckDeepNormShapeValue(const gert::TilingContext* contex
 
     // Check shape value
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", "0", "shape dim cannot be 0"),
-                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(gxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gx", "invalid",
                                                           "shape should equal x shape"),

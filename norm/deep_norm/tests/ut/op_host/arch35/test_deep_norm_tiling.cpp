@@ -362,11 +362,76 @@ TEST_F(DeepNormTilingArch35, deep_norm_arch35_rstd_reduce_dim_mismatch)
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }
 
-// zero dim in x (empty tensor) must fail.
-TEST_F(DeepNormTilingArch35, deep_norm_arch35_x_zero_dim)
+// A zero leading dim makes all outputs empty; it still needs a successful
+// no-op tiling instead of rejecting a valid empty tensor.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_leading_zero_dim)
 {
     int64_t key = -1;
     // x = {4, 0, 128}; a leading dim is 0.
     auto status = RunDeepNormArch35Tiling({4, 0}, 128, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 2);
+}
+
+// A zero reduced dim leaves mean/rstd non-empty. Key 2 owns filling those
+// outputs with NaN, avoiding zero-length loads in the normal kernels.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_reduce_zero_dim)
+{
+    int64_t key = -1;
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({9, 4, 11, 9, 12, 1}, 0, ge::DT_FLOAT16, UB_SIZE_240K, key, &tiling);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 2);
+    EXPECT_EQ(tiling.numRow, 42768);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_reduce_empty_large_rows_are_tiled)
+{
+    int64_t key = -1;
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({4194304}, 0, ge::DT_FLOAT, UB_SIZE_240K, key, &tiling);
+    ASSERT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 2);
+    EXPECT_EQ(tiling.numRow, 4194304U);
+    EXPECT_GT(tiling.rowPerCore, tiling.tileLength);
+    EXPECT_EQ(tiling.tileLength, 4096U);
+    EXPECT_LE(tiling.tileLength * sizeof(float), UB_SIZE_240K - 2048U);
+    EXPECT_FLOAT_EQ(tiling.avgFactor, 0.0f);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_reduce_empty_small_ub_is_bounded)
+{
+    int64_t key = -1;
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({10000}, 0, ge::DT_FLOAT, 4096, key, &tiling);
+    ASSERT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 2);
+    EXPECT_EQ(tiling.tileLength, 512U);
+    EXPECT_EQ(tiling.tileLength % 8, 0U);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_reduce_empty_insufficient_ub)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({100}, 0, ge::DT_FLOAT, 2048, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_leading_zero_after_large_dimensions)
+{
+    int64_t key = -1;
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({65536, 65536, 0}, 4, ge::DT_FLOAT, UB_SIZE_240K, key, &tiling);
+    ASSERT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 2);
+    EXPECT_EQ(tiling.numRow, 0U);
+    EXPECT_EQ(tiling.rowPerCore, 0U);
+    EXPECT_EQ(tiling.tileLength, 0U);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_reduce_empty_nonzero_rows_over_uint32)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({65536, 65536}, 0, ge::DT_FLOAT, UB_SIZE_240K, key);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }

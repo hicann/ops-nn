@@ -100,6 +100,55 @@ private:
     float avgFactor_ = 0.0f;
 };
 
+// Empty-input fallback. The normal kernels cannot issue zero-length loads. For
+// an empty reduced axis mean/rstd are the reduction of an empty set (NaN),
+// while y is empty and requires no write. A zero leading dimension makes
+// numRow zero, in which case this kernel is intentionally a no-op.
+class DeepNormReduceEmpty {
+public:
+    __aicore__ inline void Init(GM_ADDR mean, GM_ADDR rstd, const DeepNormTilingData* tilingData)
+    {
+        const uint64_t rowStart = static_cast<uint64_t>(GetBlockIdx()) * tilingData->rowPerCore;
+        if (rowStart >= tilingData->numRow) {
+            rowWork_ = 0;
+            return;
+        }
+        const uint32_t remain = static_cast<uint32_t>(tilingData->numRow - rowStart);
+        rowWork_ = (remain > tilingData->rowPerCore) ? tilingData->rowPerCore : remain;
+        rowsPerLoop_ = tilingData->tileLength;
+        meanGm_.SetGlobalBuffer((__gm__ float*)mean + rowStart, rowWork_);
+        rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + rowStart, rowWork_);
+        pipe_.InitBuffer(outQueue_, 1, rowsPerLoop_ * sizeof(float));
+    }
+
+    __aicore__ inline void Process()
+    {
+        if (rowWork_ == 0) {
+            return;
+        }
+        LocalTensor<float> nanLocal = outQueue_.AllocTensor<float>();
+        Duplicate(nanLocal, AscendC::NumericLimits<float>::QuietNaN(), rowsPerLoop_);
+        outQueue_.EnQue(nanLocal);
+        nanLocal = outQueue_.DeQue<float>();
+        for (uint64_t offset = 0; offset < rowWork_; offset += rowsPerLoop_) {
+            const uint32_t remaining = static_cast<uint32_t>(rowWork_ - offset);
+            const uint32_t count = remaining < rowsPerLoop_ ? remaining : rowsPerLoop_;
+            DataCopyExtParams params{1, count * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+            DataCopyPad(meanGm_[offset], nanLocal, params);
+            DataCopyPad(rstdGm_[offset], nanLocal, params);
+        }
+        outQueue_.FreeTensor(nanLocal);
+    }
+
+private:
+    TPipe pipe_;
+    TQue<QuePosition::VECOUT, 1> outQueue_;
+    GlobalTensor<float> meanGm_;
+    GlobalTensor<float> rstdGm_;
+    uint32_t rowWork_ = 0;
+    uint32_t rowsPerLoop_ = 0;
+};
+
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void DeepNorm<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean,
                                                       GM_ADDR rstd, GM_ADDR y, const DeepNormTilingData* tilingData)

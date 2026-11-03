@@ -24,6 +24,9 @@ using AscendC::Reg::LocalMemBar;
 using AscendC::Reg::MemType;
 
 constexpr uint32_t DEEP_NORM_REDUCE_TMP_ELEMS = 2 * DEEP_NORM_VL_FP32;
+// A uint32_t reduce axis needs at most 32 occupied binary levels. Each level
+// uses one aligned block; the 1024-byte cache fits PARTIAL_RESERVED_SIZE.
+constexpr uint16_t DEEP_NORM_BINARY_LEVELS = 32;
 
 template <typename U>
 __aicore__ inline U DeepNormMin(U lhs, U rhs)
@@ -43,8 +46,8 @@ private:
                                                   uint64_t offset, uint32_t count);
     __aicore__ inline void CopyOutTensor(GlobalTensor<T>& gm, LocalTensor<T>& local, uint64_t offset, uint32_t count);
     __aicore__ inline void CopyOutScalar(GlobalTensor<float>& gm, LocalTensor<float>& local, uint64_t offset);
-    __aicore__ inline void InitScalar(LocalTensor<float>& scalar);
-    __aicore__ inline void AccumulateScalar(LocalTensor<float>& dst, LocalTensor<float>& src);
+    __aicore__ inline void AccumulateBinary(LocalTensor<float>& tileSum, uint32_t tileIndex);
+    __aicore__ inline void FinalizeBinary(LocalTensor<float>& dst, uint32_t tileCount);
     __aicore__ inline void ScaleScalar(LocalTensor<float>& scalar, float scale);
     __aicore__ inline uint32_t GetPowerSplit(uint32_t count) const;
     __aicore__ inline void ComputeH(LocalTensor<T>& x, LocalTensor<T>& gx, LocalTensor<float>& h, uint32_t count);
@@ -66,6 +69,7 @@ private:
     TQue<QuePosition::VECOUT, 1> rstdQue_;
     TBuf<TPosition::VECCALC> calcBuf_;
     TBuf<TPosition::VECCALC> tileSumBuf_;
+    TBuf<TPosition::VECCALC> binarySumBuf_;
     TBuf<TPosition::VECCALC> reduceTmpBuf_;
 
     GlobalTensor<T> xGm_;
@@ -124,6 +128,7 @@ __aicore__ inline void DeepNormPartialLoad<T>::Init(GM_ADDR x, GM_ADDR gx, GM_AD
     pipe_.InitBuffer(rstdQue_, 1, DEEP_NORM_BLOCK_SIZE);
     pipe_.InitBuffer(calcBuf_, fp32Bytes);
     pipe_.InitBuffer(tileSumBuf_, DEEP_NORM_BLOCK_SIZE);
+    pipe_.InitBuffer(binarySumBuf_, DEEP_NORM_BINARY_LEVELS * DEEP_NORM_BLOCK_SIZE);
     pipe_.InitBuffer(reduceTmpBuf_, DEEP_NORM_REDUCE_TMP_ELEMS * sizeof(float));
 }
 
@@ -159,33 +164,55 @@ __aicore__ inline void DeepNormPartialLoad<T>::CopyOutScalar(GlobalTensor<float>
 }
 
 template <typename T>
-__aicore__ inline void DeepNormPartialLoad<T>::InitScalar(LocalTensor<float>& scalar)
+__aicore__ inline void DeepNormPartialLoad<T>::AccumulateBinary(LocalTensor<float>& tileSum, uint32_t tileIndex)
 {
-    __local_mem__ float* ptr = (__local_mem__ float*)scalar.GetPhyAddr();
+    // Occupied levels are the set bits in the number of preceding tiles.
+    // Merge equal-size adjacent groups, just like carrying a binary counter.
+    uint16_t mergeLevels = 0;
+    while ((tileIndex & 1U) != 0U) {
+        ++mergeLevels;
+        tileIndex >>= 1;
+    }
+    LocalTensor<float> binarySum = binarySumBuf_.Get<float>();
+    __local_mem__ float* cachePtr = (__local_mem__ float*)binarySum.GetPhyAddr();
+    __local_mem__ float* sumPtr = (__local_mem__ float*)tileSum.GetPhyAddr();
     __VEC_SCOPE__
     {
-        RegTensor<float> value;
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+        RegTensor<float> sumReg;
+        RegTensor<float> cachedReg;
         MaskReg mask = CreateMask<float, MaskPattern::VL1>();
-        Duplicate(value, 0.0f, mask);
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ptr, value, mask);
+        DataCopy<float, LoadDist::DIST_BRC_B32>(sumReg, sumPtr);
+        for (uint16_t level = 0; level < mergeLevels; ++level) {
+            DataCopy<float, LoadDist::DIST_BRC_B32>(cachedReg, cachePtr + level * DEEP_NORM_BLK_B32);
+            Add(sumReg, cachedReg, sumReg, mask);
+        }
+        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(cachePtr + mergeLevels * DEEP_NORM_BLK_B32, sumReg, mask);
     }
 }
 
 template <typename T>
-__aicore__ inline void DeepNormPartialLoad<T>::AccumulateScalar(LocalTensor<float>& dst, LocalTensor<float>& src)
+__aicore__ inline void DeepNormPartialLoad<T>::FinalizeBinary(LocalTensor<float>& dst, uint32_t tileCount)
 {
+    LocalTensor<float> binarySum = binarySumBuf_.Get<float>();
+    __local_mem__ float* cachePtr = (__local_mem__ float*)binarySum.GetPhyAddr();
     __local_mem__ float* dstPtr = (__local_mem__ float*)dst.GetPhyAddr();
-    __local_mem__ float* srcPtr = (__local_mem__ float*)src.GetPhyAddr();
     __VEC_SCOPE__
     {
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        RegTensor<float> dstReg;
-        RegTensor<float> srcReg;
         RegTensor<float> result;
+        RegTensor<float> cachedReg;
         MaskReg mask = CreateMask<float, MaskPattern::VL1>();
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dstReg, dstPtr);
-        DataCopy<float, LoadDist::DIST_BRC_B32>(srcReg, srcPtr);
-        Add(result, dstReg, srcReg, mask);
+        Duplicate(result, 0.0f, mask);
+        // Fold the residual groups from small to large, keeping the tail balanced.
+        // Unoccupied cache slots are never read, so the cache can be reused by
+        // the variance pass and subsequent rows without clearing it.
+        for (uint16_t level = 0; level < DEEP_NORM_BINARY_LEVELS; ++level) {
+            if ((tileCount & (1U << level)) != 0U) {
+                DataCopy<float, LoadDist::DIST_BRC_B32>(cachedReg, cachePtr + level * DEEP_NORM_BLK_B32);
+                Add(result, cachedReg, result, mask);
+            }
+        }
         DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr, result, mask);
     }
 }
@@ -339,34 +366,36 @@ __aicore__ inline void DeepNormPartialLoad<T>::ProcessRow(uint64_t row)
     LocalTensor<float> calc = calcBuf_.Get<float>();
 
     LocalTensor<float> mean = meanQue_.template AllocTensor<float>();
-    InitScalar(mean);
+    uint32_t tileIndex = 0;
     for (uint64_t col = 0; col < numCol_; col += tileLength_) {
         uint32_t count = static_cast<uint32_t>(DeepNormMin(static_cast<uint64_t>(tileLength_), numCol_ - col));
         LocalTensor<T> x = CopyInTensor(xQue_, xGm_, rowOffset + col, count);
         LocalTensor<T> gx = CopyInTensor(gxQue_, gxGm_, rowOffset + col, count);
         ComputeH(x, gx, calc, count);
         NormCommon::NormCommonRegbase::CalculateReduceSum(calc, tileSum, reduceTmpBuf_, count, GetPowerSplit(count));
-        AccumulateScalar(mean, tileSum);
+        AccumulateBinary(tileSum, tileIndex++);
         xQue_.FreeTensor(x);
         gxQue_.FreeTensor(gx);
     }
+    FinalizeBinary(mean, tileIndex);
     ScaleScalar(mean, avgFactor_);
     meanQue_.EnQue(mean);
     mean = meanQue_.template DeQue<float>();
     CopyOutScalar(meanGm_, mean, row);
 
     LocalTensor<float> rstd = rstdQue_.template AllocTensor<float>();
-    InitScalar(rstd);
+    tileIndex = 0;
     for (uint64_t col = 0; col < numCol_; col += tileLength_) {
         uint32_t count = static_cast<uint32_t>(DeepNormMin(static_cast<uint64_t>(tileLength_), numCol_ - col));
         LocalTensor<T> x = CopyInTensor(xQue_, xGm_, rowOffset + col, count);
         LocalTensor<T> gx = CopyInTensor(gxQue_, gxGm_, rowOffset + col, count);
         ComputeCenteredSquare(x, gx, mean, calc, count);
         NormCommon::NormCommonRegbase::CalculateReduceSum(calc, tileSum, reduceTmpBuf_, count, GetPowerSplit(count));
-        AccumulateScalar(rstd, tileSum);
+        AccumulateBinary(tileSum, tileIndex++);
         xQue_.FreeTensor(x);
         gxQue_.FreeTensor(gx);
     }
+    FinalizeBinary(rstd, tileIndex);
     __VEC_SCOPE__ { LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>(); }
     NormCommon::ComputeRstdNewtonRaphson<true, true>(rstd, rstd, 1, eps_, avgFactor_, DEEP_NORM_VL_FP32);
     rstdQue_.EnQue(rstd);

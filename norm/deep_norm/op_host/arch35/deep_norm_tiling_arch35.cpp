@@ -43,6 +43,7 @@ constexpr uint32_t POWER_TWO_FOLD = 2;     // power-of-two fold factor
 constexpr uint32_t SCALAR_QUEUE_COUNT = 3; // mean/rstd queues plus the sum buffer
 constexpr uint32_t MIN_REDUCE_TMP_ELEMS = 2 * VL_FP32;
 constexpr uint32_t MAX_PARTIAL_TILE_LENGTH = 4096;
+constexpr uint64_t TILING_KEY_REDUCE_EMPTY = 2U;
 // The legacy arch22 kernel switches from its intermediate Extra path to the
 // true Common path above these limits. Arch35 can keep that intermediate range
 // in the tighter regbase full-load layout, then use bounded three-pass partial-load beyond it.
@@ -134,6 +135,84 @@ static ge::graphStatus GetShapeInfo(const gert::TilingContext* context, int64_t&
         numRow *= dim;
     }
     return ge::GRAPH_SUCCESS;
+}
+
+// Returns true when x has no elements.  A zero in a leading dimension makes all
+// outputs empty; a zero in a reduced dimension additionally requires mean/rstd
+// to be filled with NaN by the dedicated key-2 kernel.
+static bool IsEmptyTensor(const gert::TilingContext* context)
+{
+    auto xShapePtr = context->GetInputShape(INPUT_X_INDEX);
+    if (xShapePtr == nullptr) {
+        return false;
+    }
+    const gert::Shape& xShape = xShapePtr->GetStorageShape();
+    for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
+        if (xShape.GetDim(i) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedCoreNum, int64_t numCol, int64_t numRow,
+                                     int64_t rowPerCore, int64_t numColAlign, int64_t powerSplit, float eps,
+                                     float alpha, uint32_t tileLength, uint64_t tilingKey);
+
+// The normal kernels require a positive reduce length.  For an empty input,
+// y is empty and no x/gx/gamma/beta access is valid; if the reduced axis is
+// empty, mean and rstd are defined as NaN for each leading row.
+static ge::graphStatus SetReduceEmptyTiling(gert::TilingContext* context, int64_t coreNum, uint64_t ubSize)
+{
+    auto xShapePtr = context->GetInputShape(INPUT_X_INDEX);
+    auto gammaShapePtr = context->GetInputShape(INPUT_GAMMA_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShapePtr);
+
+    const gert::Shape& xShape = xShapePtr->GetStorageShape();
+    const gert::Shape& gammaShape = gammaShapePtr->GetStorageShape();
+    const size_t leadingDims = xShape.GetDimNum() - gammaShape.GetDimNum();
+    bool hasZeroLeadingDim = false;
+    for (size_t i = 0; i < leadingDims; ++i) {
+        const int64_t dim = xShape.GetDim(i);
+        OP_CHECK_IF(dim < 0,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "leading dimensions must be nonnegative"),
+                    return ge::GRAPH_FAILED);
+        hasZeroLeadingDim = hasZeroLeadingDim || dim == 0;
+    }
+    // A zero leading dimension makes every output empty, regardless of the
+    // product of the other dimensions. Check this before multiplying them.
+    int64_t numRow = hasZeroLeadingDim ? 0 : 1;
+    for (size_t i = 0; !hasZeroLeadingDim && i < leadingDims; ++i) {
+        const int64_t dim = xShape.GetDim(i);
+        OP_CHECK_IF(numRow > static_cast<int64_t>(UINT32_MAX) / dim,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "numRow must fit uint32"),
+                    return ge::GRAPH_FAILED);
+        numRow *= dim;
+    }
+
+    const int64_t usedCoreNum = (numRow == 0) ? 1 : std::min(numRow, coreNum);
+    const int64_t rowPerCore = (numRow == 0) ? 0 : CeilDiv(numRow, usedCoreNum);
+    uint32_t rowsPerLoop = 0;
+    if (numRow != 0) {
+        OP_CHECK_IF(ubSize <= PARTIAL_RESERVED_SIZE,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(ubSize).c_str(),
+                                                          "UB cannot hold an empty-reduce tile"),
+                    return ge::GRAPH_FAILED);
+        uint64_t capacity = (ubSize - PARTIAL_RESERVED_SIZE) / sizeof(float);
+        capacity = std::min(capacity, static_cast<uint64_t>(MAX_PARTIAL_TILE_LENGTH));
+        capacity = capacity / BLK_B32 * BLK_B32;
+        OP_CHECK_IF(capacity < BLK_B32,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(ubSize).c_str(),
+                                                          "UB cannot hold an aligned empty-reduce tile"),
+                    return ge::GRAPH_FAILED);
+        rowsPerLoop = static_cast<uint32_t>(capacity);
+    }
+    // tileLength is unused by key 2 and carries the bounded NaN output tile.
+    return SetTilingData(context, usedCoreNum, 0, numRow, rowPerCore, 0, 0, 0.0f, 0.0f, rowsPerLoop,
+                         TILING_KEY_REDUCE_EMPTY);
 }
 
 // Reads the alpha/epsilon attributes, falling back to the operator defaults when absent.
@@ -245,7 +324,7 @@ static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedC
     tiling->powerSplit = static_cast<uint32_t>(powerSplit);
     tiling->eps = eps;
     tiling->alpha = alpha;
-    tiling->avgFactor = 1.0f / static_cast<float>(numCol);
+    tiling->avgFactor = numCol == 0 ? 0.0f : 1.0f / static_cast<float>(numCol);
     tiling->tileLength = tileLength;
 
     context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
@@ -278,6 +357,10 @@ static ge::graphStatus DeepNormTilingFunc(gert::TilingContext* context)
         GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "GetPlatformInfo error"),
         return ge::GRAPH_FAILED);
+
+    if (IsEmptyTensor(context)) {
+        return SetReduceEmptyTiling(context, coreNum, ubSize);
+    }
 
     int64_t numCol = 0;
     int64_t numRow = 0;

@@ -284,3 +284,40 @@ TEST(DeepNormKernelArch35, Bf16PartialLoadZeroVariance)
 {
     RunPartialLoadCase<bfloat16_t>({1, 257, 128, 1, 1, false, true, 1e-5f, 2e-2f, 2e-2f});
 }
+
+TEST(DeepNormKernelArch35, ReduceEmptyWritesMultipleTilesAndTail)
+{
+    constexpr uint32_t rows = 8193;
+    constexpr uint32_t guard = 8;
+    auto dummy = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    auto mean = reinterpret_cast<uint8_t*>(AscendC::GmAlloc((rows + guard) * sizeof(float)));
+    auto rstd = reinterpret_cast<uint8_t*>(AscendC::GmAlloc((rows + guard) * sizeof(float)));
+    auto tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(sizeof(DeepNormTilingData)));
+    auto meanData = reinterpret_cast<float*>(mean);
+    auto rstdData = reinterpret_cast<float*>(rstd);
+    for (uint32_t i = 0; i < rows + guard; ++i) {
+        meanData[i] = 123.0f;
+        rstdData[i] = 456.0f;
+    }
+    auto tilingData = reinterpret_cast<DeepNormTilingData*>(tiling);
+    *tilingData = DeepNormTilingData{};
+    tilingData->numCore = 1;
+    tilingData->numRow = rows;
+    tilingData->rowPerCore = rows;
+    tilingData->tileLength = 4096;
+    ICPU_SET_TILING_KEY(2);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(deep_norm, 1, dummy, dummy, dummy, dummy, mean, rstd, dummy, dummy, tiling);
+    for (uint32_t i = 0; i < rows; ++i) {
+        EXPECT_TRUE(std::isnan(meanData[i])) << i;
+        EXPECT_TRUE(std::isnan(rstdData[i])) << i;
+    }
+    for (uint32_t i = rows; i < rows + guard; ++i) {
+        EXPECT_EQ(meanData[i], 123.0f);
+        EXPECT_EQ(rstdData[i], 456.0f);
+    }
+    AscendC::GmFree(dummy);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(tiling);
+}

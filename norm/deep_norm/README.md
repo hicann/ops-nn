@@ -2,29 +2,32 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
-|  <term>Atlas A3系列产品</term>   |     √    |
-|  <term>Atlas A2系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
-|  <term>Atlas推理系列产品</term>    |     √    |
-|  <term>Atlas训练系列产品</term>    |     ×    |
-|  <term>Kirin X90处理器系列产品</term> | √ |
-|  <term>Kirin 9030处理器系列产品</term> | √ |
+| 产品                                    | 是否支持 |
+| :-------------------------------------- | :------: |
+| <term>Ascend 950PR&950DT系列产品</term> |    √    |
+| <term>Atlas A3系列产品</term>           |    √    |
+| <term>Atlas A2系列产品</term>           |    √    |
+| <term>Atlas 200I/500 A2推理产品</term>  |    ×    |
+| <term>Atlas推理系列产品</term>          |    √    |
+| <term>Atlas训练系列产品</term>          |    ×    |
+| <term>Kirin X90处理器系列产品</term>    |    √    |
+| <term>Kirin 9030处理器系列产品</term>   |    √    |
 
 ## 功能说明
 
-- 算子功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
+- 算子功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。具体地说，先将输入张量`x`乘以权重`alpha`后与`gx`相加，得到中间张量`x'`；再沿归一化维度计算`x'`的均值`mean`和标准差倒数`rstd`，完成归一化，并通过`gamma`缩放、`beta`偏置得到输出张量`y`。算子同时输出`mean`、`rstd`和`y`。
 - 计算公式：
 
   $$
-  DeepNorm(x_i^{\prime}) = (x_i^{\prime} - \bar{x^{\prime}}) * rstd * gamma + beta,
+  \begin{aligned}
+  x_i^{\prime} &= \mathrm{alpha} \cdot x_i + \mathrm{gx}_i \\
+  \mathrm{mean} &= \frac{1}{n}\sum_{i=1}^{n}x_i^{\prime} \\
+  \mathrm{rstd} &= \frac{1}{\sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i^{\prime} - \mathrm{mean})^2 + \mathrm{epsilon}}} \\
+  y_i &= (x_i^{\prime} - \mathrm{mean}) \cdot \mathrm{rstd} \cdot \mathrm{gamma}_i + \mathrm{beta}_i
+  \end{aligned}
   $$
 
-  $$
-  \text { where } rstd = \frac{1}{\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps}} , \quad x^{\prime}_i = alpha * x_i + gx_i
-  $$
+  其中，归一化维度为`x`中与`gamma`的shape对应的尾部维度，`n`为这些维度的大小之积。上述公式针对固定前导维度索引的一组数据，`i`为该组归一化维度展平后的元素索引；`gamma`、`beta`在不同组之间共享。`x'`为计算过程中的中间张量，`mean`和`rstd`为每组数据的统计量，`y`为最终输出，`epsilon`为加到方差上的数值稳定项。
 
 ## 参数说明
 
@@ -54,7 +57,7 @@
     <tr>
       <td>gx</td>
       <td>输入</td>
-      <td>不支持空Tensor。输入数据的梯度，用于反向传播，公式中的输入`gx`。数据类型与输入`x`一致，shape与输入`x`一致。</td>
+      <td>不支持空Tensor。与加权后的`x`逐元素相加的输入数据，对应公式中的`gx`。数据类型与输入`x`一致，shape与输入`x`一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -82,36 +85,35 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td>添加到分母中的值，以确保数值稳定，用于防止除0错误，对应公式中的eps。默认值为1e-06f。</td>
+      <td>计算`rstd`时加到`x'`的方差上的数值稳定项，用于防止除0错误，对应公式中的`epsilon`。默认值为1e-06f。</td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>不支持空Tensor。计算输出的均值，用于归一化操作，公式中的输出`mean`。shape与输入`x`满足broadcast关系（前几维（不需要norm的维度）与输入`x`一致，其余维度为1）。</td>
+      <td>不支持空Tensor。中间张量`x'`沿归一化维度计算得到的均值，对应公式中的输出`mean`，用于计算`rstd`和`y`。shape与输入`x`满足broadcast关系（前几维（不需要norm的维度）与输入`x`一致，其余维度为1）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>不支持空Tensor。计算输出的标准差倒数，用于归一化操作，公式中的输出`rstd`。shape与输入`x`满足broadcast关系（前几维（不需要norm的维度）与输入`x`一致，其余维度为1）。</td>
+      <td>不支持空Tensor。中间张量`x'`沿归一化维度计算方差、加上`epsilon`后开平方得到的倒数，对应公式中的输出`rstd`，用于计算`y`。shape与输入`x`满足broadcast关系（前几维（不需要norm的维度）与输入`x`一致，其余维度为1）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>不支持空Tensor。归一化后的输出数据，公式中的输出`y`。数据类型与输入`x`一致，shape与输入`x`一致。</td>
+      <td>不支持空Tensor。中间张量`x'`经归一化、`gamma`缩放和`beta`偏置后的结果，对应公式中的输出`y`。数据类型与输入`x`一致，shape与输入`x`一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-  - <term>Atlas推理系列产品</term>：所有输入参数和输出参数y的数据类型不支持BFLOAT16。
-
-  - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：所有输入参数和输出参数y的数据类型不支持BFLOAT16。
+- <term>Atlas推理系列产品</term>：所有输入参数和输出参数y的数据类型不支持BFLOAT16。
+- <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：所有输入参数和输出参数y的数据类型不支持BFLOAT16。
 
 ## 约束说明
 
@@ -124,7 +126,7 @@
 
 ## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_deep_norm](examples/test_aclnn_deep_norm.cpp) | 通过[aclnnDeepNorm](docs/aclnnDeepNorm.md)接口方式调用DeepNorm算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/deep_norm_proto.h)构图方式调用DeepNorm算子。         |
+| 调用方式  | 样例代码                                                 | 说明                                                                |
+| --------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| aclnn接口 | [test_aclnn_deep_norm](examples/test_aclnn_deep_norm.cpp) | 通过[aclnnDeepNorm](docs/aclnnDeepNorm.md)接口方式调用DeepNorm算子。 |
+| 图模式    | -                                                        | 通过[算子IR](op_graph/deep_norm_proto.h)构图方式调用DeepNorm算子。   |

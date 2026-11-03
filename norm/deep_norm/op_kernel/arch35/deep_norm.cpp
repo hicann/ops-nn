@@ -40,5 +40,9 @@ extern "C" __global__ __aicore__ void deep_norm(GM_ADDR x, GM_ADDR gx, GM_ADDR b
         NsDeepNorm::DeepNormPartialLoad<DTYPE_X> op;
         op.Init(x, gx, beta, gamma, mean, rstd, y, tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(2)) {
+        NsDeepNorm::DeepNormReduceEmpty op;
+        op.Init(mean, rstd, tilingData);
+        op.Process();
     }
 }
