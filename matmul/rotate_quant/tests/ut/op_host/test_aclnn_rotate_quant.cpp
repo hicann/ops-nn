@@ -207,9 +207,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_dtype_unsupported_fa
 // rot 不是方阵
 TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_rot_not_square_fail)
 {
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 32}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
 
     int64_t axis = -1;
@@ -273,7 +273,7 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_rot_dim_fail)
 // y shape 与 x shape 不一致
 TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_y_shape_fail)
 {
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -295,9 +295,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_y_shape_fail)
 // scale shape 与 M 不一致
 TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_shape_fail)
 {
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
 
     int64_t axis = -1;
@@ -317,9 +317,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_shape_fail)
 // x N 不能被 rot K 整除
 TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_n_not_divisible_fail)
 {
-    TensorDesc x_desc = TensorDesc({4, 100}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 100}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 240}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({32, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 240}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
 
     int64_t axis = -1;
@@ -339,9 +339,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_n_not_divisible_fail)
 // empty tensor
 TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_empty_tensor)
 {
-    TensorDesc x_desc = TensorDesc({0, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({0, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({0, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({0, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
 
     int64_t axis = -1;
@@ -382,9 +382,9 @@ TEST_F(l2_rotate_quant_test, ascend910B2_rotate_quant_bf16_int8_fail)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_success_int8)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
@@ -410,9 +410,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_axis)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_round_mode)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("trunc");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
@@ -424,9 +424,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_round_mode)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_scale_alg)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 1, 0.0, false),
@@ -438,9 +438,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_scale_alg)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_dst_type_max)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 1.0, false),
@@ -452,9 +452,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_dst_type_max)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_trans_true)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, true),
@@ -466,9 +466,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_trans_true)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_nz_format_invalid)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 1, 16, 16});
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
@@ -480,10 +480,10 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_nz_format_invalid)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_alpha_not_null_int_mode)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc alpha_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 256}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("rint");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, alpha_desc, -1, roundMode, 0, 0.0, false),
@@ -495,9 +495,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_alpha_not_null_int_mode)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_success)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({4, 8}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 32}, ACL_INT32, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     char* roundMode = const_cast<char*>("floor");
     auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
@@ -509,7 +509,7 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_success)
 TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_shape_invalid)
 {
     SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x_desc = TensorDesc({4, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT32, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);

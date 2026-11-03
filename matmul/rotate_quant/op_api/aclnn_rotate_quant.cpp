@@ -44,6 +44,10 @@ static const char* const kOpName = "aclnnRotateQuantGetWorkspaceSize";
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int64_t DIM_MIN = 2;
 static constexpr int64_t N_DIM_ALIGNMENT = 8;
+static constexpr int64_t N_MIN = 128;
+static constexpr int64_t N_MAX = 16000;
+static constexpr int64_t K_MIN = 16;
+static constexpr int64_t K_MAX = 1024;
 static constexpr double ZERO = 0.0;
 static constexpr double SIX = 6.0;
 static constexpr double TWELVE = 12.0;
@@ -368,6 +372,18 @@ static bool CheckIntRotationShape(const aclTensor* x, const aclTensor* rotation)
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "M, N", FormatString("%ld, %ld", M, N).c_str(),
                                               FormatString("The value of %s must be non-negative", "M and N").c_str()),
         return false);
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        OP_CHECK(N >= N_MIN && N <= N_MAX,
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     kOpName, "N", FormatString("%ld", N).c_str(),
+                     FormatString("The value of %s must be in range [%ld, %ld]", "N", N_MIN, N_MAX).c_str()),
+                 return false);
+        OP_CHECK(K >= K_MIN && K <= K_MAX,
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     kOpName, "rotK", FormatString("%ld", K).c_str(),
+                     FormatString("The value of %s must be in range [%ld, %ld]", "rotK", K_MIN, K_MAX).c_str()),
+                 return false);
+    }
     OP_CHECK(N % N_DIM_ALIGNMENT == 0,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                  kOpName, "N", FormatString("%ld", N).c_str(),
