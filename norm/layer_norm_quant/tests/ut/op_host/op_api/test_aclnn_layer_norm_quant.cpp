@@ -174,3 +174,221 @@ TEST_F(l2_layer_norm_quant_test, ascend910b_case_non_aligned_001)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// gamma为1维的正向回归，覆盖2维首维校验的旁路分支
+TEST_F(l2_layer_norm_quant_test, case_static_gamma_1d_001)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gamma为2维时第一维必须为1，否则其余行会被静默丢弃
+TEST_F(l2_layer_norm_quant_test, case_static_err_gamma_first_dim_not_1)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// zeroPointsOptional的shape需要与scale保持一致（即[1]），否则其余元素会被静默丢弃
+TEST_F(l2_layer_norm_quant_test, case_static_err_zero_points_shape_invalid)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            5,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// scaleOut的dtype必须为FLOAT
+TEST_F(l2_layer_norm_quant_test, case_static_err_scale_out_dtype_invalid)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// scaleOut的shape为x的shape剔除最后一维
+TEST_F(l2_layer_norm_quant_test, case_static_err_scale_out_shape_invalid)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = TensorDesc(
+        {
+            9,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// scaleOut不允许为空指针
+TEST_F(l2_layer_norm_quant_test, case_static_err_scale_out_nullptr)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
+
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_os = nullptr;
+    int quantMode = 0;
+    double eps = 1e-6;
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, quantMode, eps),
+        OUTPUT(tensor_desc_y, tensor_desc_os));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}

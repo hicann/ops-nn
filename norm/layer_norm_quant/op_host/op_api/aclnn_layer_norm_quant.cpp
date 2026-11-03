@@ -77,7 +77,7 @@ static inline bool CheckPlatform()
 
 inline static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                 const aclTensor* scale, const aclTensor* zeroPointsOptional, int quantMode,
-                                aclTensor* res)
+                                aclTensor* res, aclTensor* scaleOut)
 {
     // 校验输入是否为空指针
     OP_CHECK_NULL(x, return false);
@@ -85,6 +85,7 @@ inline static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, cons
     OP_CHECK_NULL(beta, return false);
     OP_CHECK_NULL(scale, return false);
     OP_CHECK_NULL(res, return false);
+    OP_CHECK_NULL(scaleOut, return false);
     if (quantMode == 0) {
         OP_CHECK_NULL(zeroPointsOptional, return false);
     }
@@ -101,7 +102,7 @@ static inline bool CheckOptInputDtype(const aclTensor* tensorPtr, op::DataType d
 }
 
 static bool CheckDtype(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-                       const aclTensor* zeroPointsOptional, const aclTensor* res)
+                       const aclTensor* zeroPointsOptional, const aclTensor* res, const aclTensor* scaleOut)
 {
     // 检查 x 的数据类型是否在 AddLayerNormQuant 算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x, GetDtypeSupportList(), return false);
@@ -112,11 +113,13 @@ static bool CheckDtype(const aclTensor* x, const aclTensor* gamma, const aclTens
     CHECK_RET(CheckOptInputDtype(zeroPointsOptional, op::DataType::DT_INT8), false);
 
     OP_CHECK_DTYPE_NOT_MATCH(res, op::DataType::DT_INT8, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(scaleOut, op::DataType::DT_FLOAT, return false);
     return true;
 }
 
 static bool CheckShape(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-                       const aclTensor* zeroPointsOptional, int quantMode, const aclTensor* res)
+                       const aclTensor* zeroPointsOptional, int quantMode, const aclTensor* res,
+                       const aclTensor* scaleOut)
 {
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(gamma, GAMMA_STATIC_DIM, return false);
@@ -133,28 +136,45 @@ static bool CheckShape(const aclTensor* x, const aclTensor* gamma, const aclTens
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of gamma should be equal to last dims of shape x"), return false);
     OP_CHECK((gamma->GetViewShape() == beta->GetViewShape()),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of beta should same as gamma"), return false);
+    // quantMode为0时gamma支持2维且第一维为1，避免仅读取第一行导致其余行被静默丢弃
+    if (!gamma->IsEmpty() && gammaDimNums == GAMMA_STATIC_DIM) {
+        OP_CHECK((gamma->GetViewShape().GetDim(0) == 1),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "First dim of gamma should be 1 when gamma is 2d"), return false);
+    }
 
     size_t scaleDimNums = scale->GetViewShape().GetDimNum();
-    size_t zeroPointsOptionalDimNums = zeroPointsOptional->GetViewShape().GetDimNum();
     OP_CHECK((scaleDimNums == 1 && scale->GetViewShape().GetDim(0) == 1),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should be equal to [1]"), return false);
-    OP_CHECK((scaleDimNums == zeroPointsOptionalDimNums),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should same as zeroPointsOptional"), return false);
+    // zeroPointsOptional的shape需要与scale保持一致（即[1]），避免仅读取首个元素导致其余元素被静默丢弃
+    if (!zeroPointsOptional->IsEmpty()) {
+        OP_CHECK((zeroPointsOptional->GetViewShape() == scale->GetViewShape()),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of zeroPointsOptional should be same as scale"), return false);
+    }
 
     OP_CHECK((x->GetViewShape() == res->GetViewShape()),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of res should same as x"), return false);
+
+    // scaleOut的shape为x的shape剔除最后一维
+    size_t scaleOutDimNums = scaleOut->GetViewShape().GetDimNum();
+    OP_CHECK((scaleOutDimNums + 1 == xDimNums),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scaleOut should be x shape without last dim"), return false);
+    for (size_t i = 0; i < scaleOutDimNums; i++) {
+        OP_CHECK((scaleOut->GetViewShape().GetDim(i) == x->GetViewShape().GetDim(i)),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scaleOut should be x shape without last dim"),
+                 return false);
+    }
 
     return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                const aclTensor* scale, const aclTensor* zeroPointsOptional, int quantMode,
-                               aclTensor* res)
+                               aclTensor* res, aclTensor* scaleOut)
 {
     // 1. 检查数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckDtype(x, gamma, beta, scale, zeroPointsOptional, res), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtype(x, gamma, beta, scale, zeroPointsOptional, res, scaleOut), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查入参间的shape关系
-    CHECK_RET(CheckShape(x, gamma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(x, gamma, beta, scale, zeroPointsOptional, quantMode, res, scaleOut), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -172,10 +192,11 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTen
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 提前检查参数是否为空指针
-    CHECK_RET(CheckNotNull(x, gamma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x, gamma, beta, scale, zeroPointsOptional, quantMode, res, scaleOut),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(x, gamma, beta, scale, zeroPointsOptional, quantMode, res);
+    auto ret = CheckParams(x, gamma, beta, scale, zeroPointsOptional, quantMode, res, scaleOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空tensor场景处理
