@@ -13,17 +13,17 @@
  * \brief index full load
  */
 
-#include "arch35/index.h"
-#include "arch35/index_perf.h"
-#include "arch35/index_simd.h"
-#include "arch35/index_full_load.h"
-#include "arch35/index_no_continuous.h"
-#include "arch35/index_perf_no_continuous.h"
-#include "arch35/index_broadcast.h"
-#include "arch35/index_nocon_broadcast.h"
-#include "arch35/index_tiling_key.h"
-#include "arch35/index_tiling_data.h"
-#include "arch92/index_full_load_dma.h"
+#include "index.h"
+#include "index_perf.h"
+#include "index_simd.h"
+#include "index_full_load.h"
+#include "index_no_continuous.h"
+#include "index_perf_no_continuous.h"
+#include "index_broadcast.h"
+#include "index_nocon_broadcast.h"
+#include "index_tiling_key.h"
+#include "index_tiling_data.h"
+#include "../arch92/index_full_load_dma.h"
 
 using namespace Index;
 
