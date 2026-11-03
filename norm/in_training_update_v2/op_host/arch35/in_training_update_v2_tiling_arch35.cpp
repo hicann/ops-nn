@@ -90,7 +90,7 @@ constexpr int64_t DMA_MAX_BLOCK_LENGTH_BYTES = 2097151;
 constexpr int64_t DMA_MAX_GM_STRIDE_BYTES = (1LL << 40) - 1;
 constexpr int64_t RESERVED_UB_BYTES = 13632;
 constexpr int64_t X_Y_QUEUE_BUFFER_COUNT = 4;
-constexpr int64_t STAT_BUFFER_COUNT = 8;
+constexpr int64_t STAT_BUFFER_COUNT = 10;
 constexpr int64_t FLOAT16_BYTES = sizeof(uint16_t);
 constexpr int64_t FLOAT_BYTES = sizeof(float);
 

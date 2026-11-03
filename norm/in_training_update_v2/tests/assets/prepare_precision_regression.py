@@ -89,20 +89,32 @@ def prepare(output):
                 "infinite_mean_std",
                 "exact_mean",
                 "affine_offset_cancellation",
+                "mean_low_zero_std",
+                "half_overflow_boundary",
             ):
                 if mode == "affine_offset_cancellation" and dtype != "float32":
                     continue  # These finite FP32 inputs exceed the FP16 range.
+                if mode == "half_overflow_boundary" and dtype != "float16":
+                    continue
                 name = f"intu2_fix_{dtype}_{layout}_{mode}"
                 shape = (1, 1, 1, 3) if layout == "NCHW" else (1, 1, 3, 1)
                 if mode == "exact_mean":
                     shape = (1, 1, 1, 6290) if layout == "NCHW" else (1, 1, 6290, 1)
+                if mode == "mean_low_zero_std" and dtype == "float16":
+                    shape = (1, 1, 1, 8197) if layout == "NCHW" else (1, 1, 8197, 1)
+                if mode == "half_overflow_boundary":
+                    shape = (1, 2, 1, 3) if layout == "NCHW" else (1, 1, 3, 2)
                 stat = (1, 1, 1, 1)
+                if mode == "half_overflow_boundary":
+                    stat = (1, 2, 1, 1) if layout == "NCHW" else (1, 1, 1, 2)
                 cancellation = mode == "cancellation"
                 x = (
                     np.full(shape, -1.50390625, dtype=dtype)
                     if mode == "exact_mean"
                     else np.full(shape, 65504.0, dtype=dtype)
                     if cancellation
+                    else np.ones(shape, dtype=dtype)
+                    if mode in ("mean_low_zero_std", "half_overflow_boundary")
                     else np.array([1.0, 2.0, 3.0], dtype=dtype).reshape(shape)
                 )
                 # Deliberately negative raw variance exercises the documented clamp.
@@ -120,7 +132,28 @@ def prepare(output):
                     None,
                 ]
                 epsilon = 1e-5
-                if mode == "infinite_mean_std":
+                if mode == "mean_low_zero_std":
+                    inputs[0].fill(
+                        1.9990234375 if dtype == "float16" else np.float32(1.0 / 3.0)
+                    )
+                    r = shape[1] * shape[2] if layout == "NHWC" else shape[2] * shape[3]
+                    inputs[1].fill(np.float32(float(inputs[0].reshape(-1)[0]) * r))
+                    inputs[2].fill(0.0)
+                    inputs[3] = inputs[4] = None
+                    epsilon = 0.0
+                elif mode == "half_overflow_boundary":
+                    # Exact y is +/-65519.9990234375: finite when rounded
+                    # directly to FP16, but FP32 intermediate rounding ties
+                    # at +/-65520 and would otherwise narrow to infinity.
+                    signs = np.array([1.0, -1.0], dtype=np.float32).reshape(stat)
+                    inputs[0] = (
+                        np.broadcast_to(signs * 65504.0, shape).astype(dtype).copy()
+                    )
+                    inputs[1] = signs * np.float32(-47.9970703125)
+                    inputs[2].fill(0.0)
+                    inputs[3] = inputs[4] = None
+                    epsilon = 1.0
+                elif mode == "infinite_mean_std":
                     inputs[1].fill(np.inf)
                     inputs[3] = inputs[4] = None
                     epsilon = np.inf
@@ -159,6 +192,8 @@ def prepare(output):
                     "zero_std_round",
                     "square_inf_noaffine",
                     "infinite_mean_std",
+                    "mean_low_zero_std",
+                    "half_overflow_boundary",
                 ):
                     shapes = (shape, stat, stat, None, None, None, None)
                     formats = (layout,) * 3 + ("ND",) * 4

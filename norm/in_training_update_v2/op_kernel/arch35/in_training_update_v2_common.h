@@ -79,18 +79,87 @@ __aicore__ inline void StoreFp32ToY(__ubuf__ T* dst, RegTensor<float>& src, Mask
     }
 }
 
-template <bool HAS_AFFINE, bool ZERO_EPSILON>
+// Error of a+b relative to an already rounded result. Callers keep a and b
+// distinct from error so the low part survives cancellation.
+__aicore__ inline void SumError(RegTensor<float>& error, RegTensor<float>& a, RegTensor<float>& b,
+                                RegTensor<float>& rounded, MaskReg& mask)
+{
+    RegTensor<float> virtualB;
+    RegTensor<float> temp;
+    Reg::Sub(virtualB, rounded, a, mask);
+    Reg::Sub(temp, rounded, virtualB, mask);
+    Reg::Sub(error, a, temp, mask);
+    Reg::Sub(virtualB, b, virtualB, mask);
+    Reg::Add(error, error, virtualB, mask);
+}
+
+template <typename T>
+__aicore__ inline void CorrectRoundedY(RegTensor<float>& value, RegTensor<float>& error, MaskReg& mask)
+{
+    RegTensor<float> corrected;
+    RegTensor<float> tail;
+    RegTensor<float> check;
+    MaskReg finiteValue;
+    MaskReg finiteError;
+    Reg::Sub(check, value, value, mask);
+    Reg::Compares<float, CMPMODE::EQ>(finiteValue, check, 0.0f, mask);
+    Reg::Sub(check, error, error, mask);
+    Reg::Compares<float, CMPMODE::EQ>(finiteError, check, 0.0f, mask);
+    Reg::And(finiteValue, finiteValue, finiteError, mask);
+    Reg::Add(corrected, value, error, mask);
+    if constexpr (!std::is_same<T, float>::value) {
+        // FP64->FP32->FP16 can round a value below 65520 to the FP32 tie
+        // 65520 and then to Inf. Preserve the low-part direction at that tie.
+        Reg::Sub(tail, value, corrected, mask);
+        Reg::Add(tail, tail, error, mask);
+        MaskReg boundary;
+        MaskReg inward;
+        Reg::Compares<float, CMPMODE::EQ>(boundary, corrected, 65520.0f, mask);
+        Reg::Compares<float, CMPMODE::LT>(inward, tail, 0.0f, mask);
+        Reg::And(boundary, boundary, inward, mask);
+        Reg::Adds(check, corrected, -0x1p-8f, mask);
+        Reg::Select(corrected, check, corrected, boundary);
+        Reg::Compares<float, CMPMODE::EQ>(boundary, corrected, -65520.0f, mask);
+        Reg::Compares<float, CMPMODE::GT>(inward, tail, 0.0f, mask);
+        Reg::And(boundary, boundary, inward, mask);
+        Reg::Adds(check, corrected, 0x1p-8f, mask);
+        Reg::Select(corrected, check, corrected, boundary);
+    }
+    Reg::Select(value, corrected, value, finiteValue);
+}
+
+template <typename T, bool HAS_AFFINE, bool ZERO_EPSILON>
 __aicore__ inline void ComputeNormalizedY(RegTensor<float>& dst, RegTensor<float>& xReg, RegTensor<float>& sumReg,
                                           RegTensor<float>& meanReg, RegTensor<float>& scaleReg,
-                                          RegTensor<float>& betaReg, RegTensor<float>& restoreReg, float negativeInvR,
-                                          float negativeInvRCorrection, MaskReg& validMask)
+                                          RegTensor<float>& betaReg, RegTensor<float>& restoreReg,
+                                          RegTensor<float>& scaleErrorReg, RegTensor<float>& biasErrorReg,
+                                          MaskReg& validMask)
 {
     if constexpr (HAS_AFFINE) {
         // ComputeAffine selects the centering point and incorporates its
         // low part in beta. Fuse the product and offset to avoid rounding
         // the product before cancellation with beta.
         Reg::Sub(dst, xReg, meanReg, validMask);
+        RegTensor<float> centered;
+        RegTensor<float> centerError;
+        RegTensor<float> product;
+        RegTensor<float> productError;
+        RegTensor<float> outputError;
+        RegTensor<float> negativeMean;
+        Reg::Muls(centered, dst, 1.0f, validMask);
+        Reg::Muls(negativeMean, meanReg, -1.0f, validMask);
+        SumError(centerError, xReg, negativeMean, centered, validMask);
+        Reg::Mul(product, centered, scaleReg, validMask);
+        Reg::Muls(productError, product, -1.0f, validMask);
+        Reg::Muls(outputError, centered, 1.0f, validMask);
+        Reg::MulDstAdd(outputError, scaleReg, productError, validMask);
+        Reg::Muls(productError, outputError, 1.0f, validMask);
         Reg::MulDstAdd(dst, scaleReg, betaReg, validMask);
+        SumError(outputError, product, betaReg, dst, validMask);
+        Reg::Add(outputError, outputError, productError, validMask);
+        Reg::MulDstAdd(centerError, scaleReg, outputError, validMask);
+        Reg::MulDstAdd(centered, scaleErrorReg, centerError, validMask);
+        Reg::Add(outputError, centered, biasErrorReg, validMask);
 
         // Reassociation is not valid for an infinite or NaN scale. Retain
         // x * scale + (beta - mean * scale) in these lanes.
@@ -111,25 +180,48 @@ __aicore__ inline void ComputeNormalizedY(RegTensor<float>& dst, RegTensor<float
         // Extreme finite scales are stored with a power-of-two exponent.
         Reg::Mul(dst, dst, restoreReg, validMask);
         Reg::Mul(dst, dst, restoreReg, validMask);
+        Reg::Mul(outputError, outputError, restoreReg, validMask);
+        Reg::Mul(outputError, outputError, restoreReg, validMask);
+        CorrectRoundedY<T>(dst, outputError, validMask);
     } else {
-        Reg::Muls(dst, xReg, 1.0f, validMask);
-        Reg::Axpy(dst, sumReg, negativeInvR, validMask);
-        Reg::Axpy(dst, sumReg, negativeInvRCorrection, validMask);
+        RegTensor<float> simpleCenteredReg;
+        MaskReg finiteSumMask;
+        Reg::Sub(simpleCenteredReg, sumReg, sumReg, validMask);
+        Reg::Compares<float, CMPMODE::EQ>(finiteSumMask, simpleCenteredReg, 0.0f, validMask);
+        RegTensor<float> centered;
+        RegTensor<float> centerError;
+        RegTensor<float> negativeMean;
+        RegTensor<float> outputError;
+        Reg::Muls(negativeMean, meanReg, -1.0f, validMask);
+        Reg::Sub(centered, xReg, meanReg, validMask);
+        SumError(centerError, xReg, negativeMean, centered, validMask);
+        // Without affine, biasError stores the low part of the mean. It
+        // remains significant when the rounded mean is exactly equal to x.
+        Reg::Sub(centerError, centerError, biasErrorReg, validMask);
         if constexpr (ZERO_EPSILON) {
-            RegTensor<float> simpleCenteredReg;
             MaskReg zeroStdMask;
-            Reg::Sub(simpleCenteredReg, xReg, meanReg, validMask);
+            MaskReg zeroCenteredMask;
             Reg::Compares<float, CMPMODE::EQ>(zeroStdMask, scaleReg, 0.0f, validMask);
-            Reg::Select(dst, simpleCenteredReg, dst, zeroStdMask);
+            Reg::Compares<float, CMPMODE::EQ>(zeroCenteredMask, centered, 0.0f, validMask);
+            Reg::And(zeroStdMask, zeroStdMask, zeroCenteredMask, validMask);
+            Reg::Select(centered, centerError, centered, zeroStdMask);
         }
-        Reg::Div(dst, dst, scaleReg, validMask);
+        Reg::Div(dst, centered, scaleReg, validMask);
+        Reg::Muls(outputError, dst, -1.0f, validMask);
+        Reg::MulDstAdd(outputError, scaleReg, centered, validMask);
+        Reg::Add(outputError, outputError, centerError, validMask);
+        Reg::Muls(centered, dst, -1.0f, validMask);
+        Reg::MulDstAdd(centered, scaleErrorReg, outputError, validMask);
+        Reg::Div(outputError, centered, scaleReg, validMask);
+        // The direct fallback remains authoritative for non-finite sums.
+        Reg::Sub(simpleCenteredReg, xReg, sumReg, validMask);
+        Reg::Div(simpleCenteredReg, simpleCenteredReg, scaleReg, validMask);
+        Reg::Select(dst, dst, simpleCenteredReg, finiteSumMask);
+        CorrectRoundedY<T>(dst, outputError, validMask);
         // With an infinite standard deviation, finite original x and mean
         // normalize to zero even if their FP32 difference overflowed.
         RegTensor<float> infiniteStdResult;
         MaskReg infiniteStdMask;
-        MaskReg finiteSumMask;
-        Reg::Sub(infiniteStdResult, sumReg, sumReg, validMask);
-        Reg::Compares<float, CMPMODE::EQ>(finiteSumMask, infiniteStdResult, 0.0f, validMask);
         Reg::Compares<float, CMPMODE::EQ>(infiniteStdMask, scaleReg, static_cast<float>(INFINITY), validMask);
         Reg::And(infiniteStdMask, infiniteStdMask, finiteSumMask, validMask);
         Reg::Muls(infiniteStdResult, xReg, 0.0f, validMask);
@@ -139,8 +231,9 @@ __aicore__ inline void ComputeNormalizedY(RegTensor<float>& dst, RegTensor<float
 
 __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squareSum, __ubuf__ float* mean,
                                         __ubuf__ float* unbiasedVar, __ubuf__ float* stdValue,
-                                        __ubuf__ float* sumForNormalize, int64_t count, float invR,
-                                        float invRCorrection, float rForZeroCheck, float bessel, float epsilon)
+                                        __ubuf__ float* sumForNormalize, __ubuf__ float* stdError,
+                                        __ubuf__ float* meanLow, int64_t count, float invR, float invRCorrection,
+                                        float rForZeroCheck, float bessel, float epsilon)
 {
     // Form the small correction separately: rounding 1 + 1/(R-1) to FP32
     // before multiplying can discard significant variance output bits.
@@ -162,6 +255,9 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         RegTensor<float> stdReg;
         RegTensor<float> specialReg;
         RegTensor<float> nanReg;
+        RegTensor<float> varLowReg;
+        RegTensor<float> stdErrorReg;
+        RegTensor<float> varHighReg;
         MaskReg negativeMask;
         MaskReg positiveMask;
         MaskReg zeroMask;
@@ -201,7 +297,9 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
 
         Reg::Sub(varReg, varReg, meanSquareReg, validMask);
         Reg::Sub(varErrorReg, varErrorReg, meanSquareErrorReg, validMask);
+        Reg::Muls(varHighReg, varReg, 1.0f, validMask);
         Reg::Add(varReg, varReg, varErrorReg, validMask);
+        SumError(varLowReg, varHighReg, varErrorReg, varReg, validMask);
 
         // Residual recovery intentionally forms Inf-Inf for non-finite inputs.
         // Fall back to the public direct expression in those lanes so the
@@ -221,6 +319,8 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         Reg::Select(varReg, varReg, tempReg, scaledSquareFiniteMask);
 
         Reg::Duplicate(zeroReg, 0.0f, validMask);
+        Reg::Select(varLowReg, varLowReg, zeroReg, scaledSquareFiniteMask);
+        Reg::Select(varLowReg, varLowReg, zeroReg, meanSquareFiniteMask);
 
         // A two-float reciprocal still has a third-order residual. It can
         // manufacture a tiny positive variance for an exactly constant plane
@@ -246,10 +346,15 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         Reg::And(zeroMask, zeroMask, positiveMask, validMask);
         Reg::And(zeroMask, zeroMask, negativeMask, validMask);
         Reg::Select(varReg, simpleVarReg, varReg, zeroMask);
+        Reg::Select(varLowReg, zeroReg, varLowReg, zeroMask);
 
         Reg::Compares<float, CMPMODE::LT>(negativeMask, varReg, 0.0f, validMask);
         Reg::Select(varReg, zeroReg, varReg, negativeMask);
+        Reg::Select(varLowReg, zeroReg, varLowReg, negativeMask);
         Reg::Adds(tempReg, varReg, epsilon, validMask);
+        Reg::Duplicate(specialReg, epsilon, validMask);
+        SumError(stdErrorReg, varReg, specialReg, tempReg, validMask);
+        Reg::Add(stdErrorReg, stdErrorReg, varLowReg, validMask);
         Reg::Compares<float, CMPMODE::GT>(positiveMask, tempReg, 0.0f, validMask);
         Reg::Compares<float, CMPMODE::EQ>(zeroMask, tempReg, 0.0f, validMask);
         Reg::Duplicate(specialReg, 1.0f, validMask);
@@ -258,6 +363,15 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         Reg::Duplicate(nanReg, static_cast<float>(NAN), validMask);
         Reg::Select(stdReg, stdReg, nanReg, positiveMask);
         Reg::Select(stdReg, tempReg, stdReg, zeroMask);
+        Reg::Muls(varHighReg, stdReg, -1.0f, validMask);
+        Reg::MulDstAdd(varHighReg, stdReg, tempReg, validMask);
+        Reg::Add(varHighReg, varHighReg, stdErrorReg, validMask);
+        Reg::Muls(specialReg, stdReg, 2.0f, validMask);
+        Reg::Div(stdErrorReg, varHighReg, specialReg, validMask);
+        Reg::Sub(finiteCheckReg, stdErrorReg, stdErrorReg, validMask);
+        Reg::Compares<float, CMPMODE::EQ>(positiveMask, finiteCheckReg, 0.0f, validMask);
+        Reg::Select(stdErrorReg, stdErrorReg, zeroReg, positiveMask);
+        Reg::StoreAlign<float, StoreDist::DIST_NORM>(stdError, stdErrorReg, validMask);
         Reg::Duplicate(specialReg, bessel, validMask);
         Reg::Compares<float, CMPMODE::EQ>(besselZeroMask, specialReg, 0.0f, validMask);
         Reg::Select(tempReg, zeroReg, varReg, besselZeroMask);
@@ -269,9 +383,25 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         Reg::Axpy(meanErrorReg, sumReg, invR, validMask);
         Reg::Axpy(meanErrorReg, sumReg, invRCorrection, validMask);
         Reg::Add(specialReg, meanReg, meanErrorReg, validMask);
+        Reg::Sub(meanSquareReg, meanReg, specialReg, validMask);
+        Reg::Add(meanErrorReg, meanSquareReg, meanErrorReg, validMask);
         Reg::Sub(finiteCheckReg, meanReg, meanReg, validMask);
         Reg::Compares<float, CMPMODE::EQ>(positiveMask, finiteCheckReg, 0.0f, validMask);
         Reg::Select(meanReg, specialReg, meanReg, positiveMask);
+        Reg::Select(meanErrorReg, meanErrorReg, zeroReg, positiveMask);
+        // Clear the split reciprocal's third-order residual when the mean
+        // is exactly representable. Otherwise gamma or a zero denominator
+        // could amplify that artificial residual into a different category.
+        Reg::Duplicate(specialReg, rForZeroCheck, validMask);
+        Reg::Mul(meanSquareReg, meanReg, specialReg, validMask);
+        Reg::Muls(finiteCheckReg, meanSquareReg, -1.0f, validMask);
+        Reg::Muls(meanSquareErrorReg, meanReg, 1.0f, validMask);
+        Reg::MulDstAdd(meanSquareErrorReg, specialReg, finiteCheckReg, validMask);
+        Reg::Compare<float, CMPMODE::EQ>(scaledSquareFiniteMask, meanSquareReg, sumReg, validMask);
+        Reg::Compares<float, CMPMODE::EQ>(meanSquareFiniteMask, meanSquareErrorReg, 0.0f, validMask);
+        Reg::And(scaledSquareFiniteMask, scaledSquareFiniteMask, meanSquareFiniteMask, validMask);
+        Reg::Select(meanErrorReg, zeroReg, meanErrorReg, scaledSquareFiniteMask);
+        Reg::StoreAlign<float, StoreDist::DIST_NORM>(meanLow, meanErrorReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(mean, meanReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(unbiasedVar, tempReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(stdValue, stdReg, validMask);
@@ -281,7 +411,7 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
 
 __aicore__ inline void ComputeAffine(__ubuf__ float* gamma, __ubuf__ float* beta, __ubuf__ float* stdValue,
                                      __ubuf__ float* betaValue, __ubuf__ float* mean, __ubuf__ float* restore,
-                                     int64_t count, float invR, float invRCorrection, float exactR)
+                                     __ubuf__ float* scaleError, __ubuf__ float* biasError, int64_t count)
 {
     __VEC_SCOPE__
     {
@@ -289,13 +419,19 @@ __aicore__ inline void ComputeAffine(__ubuf__ float* gamma, __ubuf__ float* beta
         RegTensor<float> betaReg;
         RegTensor<float> stdReg;
         RegTensor<float> scaleReg;
-        RegTensor<float> sumReg;
         RegTensor<float> meanReg;
         RegTensor<float> meanErrorReg;
         RegTensor<float> correctedBetaReg;
         RegTensor<float> finiteCheckReg;
         RegTensor<float> restoreReg;
         RegTensor<float> scaledGammaReg;
+        RegTensor<float> gammaWorkReg;
+        RegTensor<float> betaOriginalReg;
+        RegTensor<float> meanOriginalReg;
+        RegTensor<float> meanLowReg;
+        RegTensor<float> scaleErrorReg;
+        RegTensor<float> biasErrorReg;
+        RegTensor<float> stdErrorReg;
         MaskReg gammaFiniteMask;
         MaskReg scaleOverflowMask;
         MaskReg positiveStdMask;
@@ -314,32 +450,28 @@ __aicore__ inline void ComputeAffine(__ubuf__ float* gamma, __ubuf__ float* beta
         Reg::And(scaleOverflowMask, scaleOverflowMask, gammaFiniteMask, validMask);
         Reg::And(scaleOverflowMask, scaleOverflowMask, positiveStdMask, validMask);
         Reg::Muls(scaledGammaReg, gammaReg, 0x1p-96f, validMask);
+        Reg::Select(gammaWorkReg, scaledGammaReg, gammaReg, scaleOverflowMask);
         Reg::Div(scaledGammaReg, scaledGammaReg, stdReg, validMask);
         Reg::Select(scaleReg, scaledGammaReg, scaleReg, scaleOverflowMask);
         Reg::Muls(scaledGammaReg, betaReg, 0x1p-96f, validMask);
         Reg::Select(betaReg, scaledGammaReg, betaReg, scaleOverflowMask);
+        Reg::Muls(betaOriginalReg, betaReg, 1.0f, validMask);
+        Reg::LoadAlign<float, LoadDist::DIST_NORM>(stdErrorReg, scaleError);
+        Reg::Muls(scaleErrorReg, scaleReg, -1.0f, validMask);
+        Reg::MulDstAdd(scaleErrorReg, stdReg, gammaWorkReg, validMask);
+        Reg::Muls(gammaWorkReg, scaleReg, -1.0f, validMask);
+        Reg::MulDstAdd(gammaWorkReg, stdErrorReg, scaleErrorReg, validMask);
+        Reg::Div(scaleErrorReg, gammaWorkReg, stdReg, validMask);
         Reg::Duplicate(restoreReg, 1.0f, validMask);
         Reg::Duplicate(scaledGammaReg, 0x1p48f, validMask);
         Reg::Select(restoreReg, scaledGammaReg, restoreReg, scaleOverflowMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(restore, restoreReg, validMask);
-        // betaValue still holds the original sum from PrepareBaseStats.
-        // Correct the affine offset before reusing this buffer for beta, so
-        // the spatial loop does not require an additional statistic buffer.
-        Reg::LoadAlign<float, LoadDist::DIST_NORM>(sumReg, betaValue);
+        // Base statistics stage the mean low part in biasError. Correct the
+        // affine offset before reusing that buffer for the affine low part.
         Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanReg, mean);
-        Reg::Muls(meanErrorReg, meanReg, -1.0f, validMask);
-        Reg::Axpy(meanErrorReg, sumReg, invR, validMask);
-        Reg::Axpy(meanErrorReg, sumReg, invRCorrection, validMask);
-        // Exact representable means must not retain the third-order error
-        // of the split reciprocal, which an extreme gamma could amplify.
-        Reg::Muls(scaledGammaReg, meanReg, exactR, validMask);
-        Reg::Muls(finiteCheckReg, scaledGammaReg, -1.0f, validMask);
-        Reg::Axpy(finiteCheckReg, meanReg, exactR, validMask);
-        Reg::Compare<float, CMPMODE::EQ>(gammaFiniteMask, scaledGammaReg, sumReg, validMask);
-        Reg::Compares<float, CMPMODE::EQ>(positiveStdMask, finiteCheckReg, 0.0f, validMask);
-        Reg::And(gammaFiniteMask, gammaFiniteMask, positiveStdMask, validMask);
-        Reg::Duplicate(scaledGammaReg, 0.0f, validMask);
-        Reg::Select(meanErrorReg, scaledGammaReg, meanErrorReg, gammaFiniteMask);
+        Reg::Muls(meanOriginalReg, meanReg, 1.0f, validMask);
+        Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanErrorReg, biasError);
+        Reg::Muls(meanLowReg, meanErrorReg, 1.0f, validMask);
         Reg::Muls(correctedBetaReg, meanErrorReg, -1.0f, validMask);
         Reg::MulDstAdd(correctedBetaReg, scaleReg, betaReg, validMask);
         Reg::Sub(finiteCheckReg, scaleReg, scaleReg, validMask);
@@ -361,6 +493,26 @@ __aicore__ inline void ComputeAffine(__ubuf__ float* gamma, __ubuf__ float* beta
         Reg::Select(meanReg, scaledGammaReg, meanReg, positiveStdMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(mean, meanReg, validMask);
         Reg::Select(betaReg, correctedBetaReg, betaReg, finiteScaleMask);
+        // Recover the affine offset low part for the chosen centering point.
+        Reg::Sub(meanOriginalReg, meanOriginalReg, meanReg, validMask);
+        Reg::Mul(gammaWorkReg, scaleReg, meanOriginalReg, validMask);
+        Reg::Muls(stdErrorReg, gammaWorkReg, -1.0f, validMask);
+        Reg::Muls(biasErrorReg, scaleReg, 1.0f, validMask);
+        Reg::MulDstAdd(biasErrorReg, meanOriginalReg, stdErrorReg, validMask);
+        Reg::Muls(gammaWorkReg, gammaWorkReg, -1.0f, validMask);
+        Reg::Add(correctedBetaReg, betaOriginalReg, gammaWorkReg, validMask);
+        SumError(stdErrorReg, betaOriginalReg, gammaWorkReg, correctedBetaReg, validMask);
+        Reg::Sub(biasErrorReg, stdErrorReg, biasErrorReg, validMask);
+        Reg::Muls(gammaWorkReg, scaleReg, -1.0f, validMask);
+        Reg::MulDstAdd(gammaWorkReg, meanLowReg, biasErrorReg, validMask);
+        Reg::Muls(biasErrorReg, meanOriginalReg, -1.0f, validMask);
+        Reg::MulDstAdd(biasErrorReg, scaleErrorReg, gammaWorkReg, validMask);
+        Reg::Muls(gammaWorkReg, meanLowReg, -1.0f, validMask);
+        Reg::MulDstAdd(gammaWorkReg, scaleErrorReg, biasErrorReg, validMask);
+        Reg::Sub(correctedBetaReg, correctedBetaReg, betaReg, validMask);
+        Reg::Add(biasErrorReg, correctedBetaReg, gammaWorkReg, validMask);
+        Reg::StoreAlign<float, StoreDist::DIST_NORM>(scaleError, scaleErrorReg, validMask);
+        Reg::StoreAlign<float, StoreDist::DIST_NORM>(biasError, biasErrorReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(stdValue, scaleReg, validMask);
         Reg::StoreAlign<float, StoreDist::DIST_NORM>(betaValue, betaReg, validMask);
     }
@@ -441,6 +593,8 @@ protected:
         pipe_->InitBuffer(unbiasedVarBuf_, tiling_->statBufferBytes);
         pipe_->InitBuffer(scaleBuf_, tiling_->statBufferBytes);
         pipe_->InitBuffer(biasBuf_, tiling_->statBufferBytes);
+        pipe_->InitBuffer(scaleErrorBuf_, tiling_->statBufferBytes);
+        pipe_->InitBuffer(biasErrorBuf_, tiling_->statBufferBytes);
     }
 
     __aicore__ inline LocalTensor<float> StageStat(TQue<QuePosition::VECIN, 1>& queue, const GlobalTensor<float>& gm,
@@ -463,8 +617,8 @@ protected:
         const float rForZeroCheck = (tiling_->r <= MAX_EXACT_FP32_INTEGER) ? static_cast<float>(tiling_->r) :
                                                                              static_cast<float>(NAN);
         ComputeBaseStats((__ubuf__ float*)sumLocal.GetPhyAddr(), (__ubuf__ float*)squareLocal.GetPhyAddr(), MeanAddr(),
-                         VarAddr(), ScaleAddr(), BiasAddr(), count, tiling_->invR, tiling_->invRCorrection,
-                         rForZeroCheck, tiling_->bessel, tiling_->epsilon);
+                         VarAddr(), ScaleAddr(), BiasAddr(), ScaleErrorAddr(), BiasErrorAddr(), count, tiling_->invR,
+                         tiling_->invRCorrection, rForZeroCheck, tiling_->bessel, tiling_->epsilon);
         statAQue_.FreeTensor(sumLocal);
         statBQue_.FreeTensor(squareLocal);
     }
@@ -479,10 +633,8 @@ protected:
         if constexpr (HAS_AFFINE) {
             LocalTensor<float> gammaLocal = StageStat(statAQue_, gammaGm_, gammaOffset, count);
             LocalTensor<float> betaLocal = StageStat(statBQue_, betaGm_, betaOffset, count);
-            ComputeAffine(
-                (__ubuf__ float*)gammaLocal.GetPhyAddr(), (__ubuf__ float*)betaLocal.GetPhyAddr(), ScaleAddr(),
-                BiasAddr(), MeanAddr(), VarAddr(), count, tiling_->invR, tiling_->invRCorrection,
-                tiling_->r <= MAX_EXACT_FP32_INTEGER ? static_cast<float>(tiling_->r) : static_cast<float>(NAN));
+            ComputeAffine((__ubuf__ float*)gammaLocal.GetPhyAddr(), (__ubuf__ float*)betaLocal.GetPhyAddr(),
+                          ScaleAddr(), BiasAddr(), MeanAddr(), VarAddr(), ScaleErrorAddr(), BiasErrorAddr(), count);
             statAQue_.FreeTensor(gammaLocal);
             statBQue_.FreeTensor(betaLocal);
         }
@@ -604,6 +756,16 @@ protected:
 
     __aicore__ inline __ubuf__ float* BiasAddr() { return (__ubuf__ float*)biasBuf_.Get<float>().GetPhyAddr(); }
 
+    __aicore__ inline __ubuf__ float* ScaleErrorAddr()
+    {
+        return (__ubuf__ float*)scaleErrorBuf_.Get<float>().GetPhyAddr();
+    }
+
+    __aicore__ inline __ubuf__ float* BiasErrorAddr()
+    {
+        return (__ubuf__ float*)biasErrorBuf_.Get<float>().GetPhyAddr();
+    }
+
     TPipe* pipe_ = nullptr;
     const INTrainingUpdateV2TilingData* tiling_ = nullptr;
     GlobalTensor<T> xGm_;
@@ -627,6 +789,8 @@ protected:
     TBuf<> unbiasedVarBuf_;
     TBuf<> scaleBuf_;
     TBuf<> biasBuf_;
+    TBuf<> scaleErrorBuf_;
+    TBuf<> biasErrorBuf_;
 };
 
 } // namespace INTrainingUpdateV2Ops

@@ -144,8 +144,8 @@ private:
         __ubuf__ float* scale = this->ScaleAddr();
         __ubuf__ float* beta = this->BiasAddr();
         __ubuf__ float* restore = this->VarAddr();
-        const float negativeInvR = -this->tiling_->invR;
-        const float negativeInvRCorrection = -this->tiling_->invRCorrection;
+        __ubuf__ float* scaleError = this->ScaleErrorAddr();
+        __ubuf__ float* biasError = this->BiasErrorAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> sumReg;
@@ -153,24 +153,26 @@ private:
             RegTensor<float> scaleReg;
             RegTensor<float> betaReg;
             RegTensor<float> restoreReg;
+            RegTensor<float> scaleErrorReg;
+            RegTensor<float> biasErrorReg;
             RegTensor<float> xReg;
             RegTensor<float> yReg;
             uint32_t validCount = static_cast<uint32_t>(count);
             MaskReg validMask = UpdateMask<float>(validCount);
             Reg::LoadAlign<float, LoadDist::DIST_NORM>(scaleReg, scale);
+            Reg::LoadAlign<float, LoadDist::DIST_NORM>(scaleErrorReg, scaleError);
+            Reg::LoadAlign<float, LoadDist::DIST_NORM>(biasErrorReg, biasError);
             if constexpr (HAS_AFFINE) {
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanReg, mean);
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(betaReg, beta);
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(restoreReg, restore);
             } else {
                 Reg::LoadAlign<float, LoadDist::DIST_NORM>(sumReg, sum);
-                if constexpr (ZERO_EPSILON) {
-                    Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanReg, mean);
-                }
+                Reg::LoadAlign<float, LoadDist::DIST_NORM>(meanReg, mean);
             }
             LoadXToFp32(x, xReg, validMask, 0);
-            ComputeNormalizedY<HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg, restoreReg,
-                                                         negativeInvR, negativeInvRCorrection, validMask);
+            ComputeNormalizedY<T, HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg, restoreReg,
+                                                            scaleErrorReg, biasErrorReg, validMask);
             StoreFp32ToY(y, yReg, validMask, 0);
         }
     }
@@ -216,8 +218,8 @@ private:
         __ubuf__ float* scale = this->ScaleAddr();
         __ubuf__ float* beta = this->BiasAddr();
         __ubuf__ float* restore = this->VarAddr();
-        const float negativeInvR = -this->tiling_->invR;
-        const float negativeInvRCorrection = -this->tiling_->invRCorrection;
+        __ubuf__ float* scaleError = this->ScaleErrorAddr();
+        __ubuf__ float* biasError = this->BiasErrorAddr();
         const uint16_t fullLoops = static_cast<uint16_t>(extent / VL_FP32);
         const uint16_t totalLoops = static_cast<uint16_t>((extent + VL_FP32 - 1) / VL_FP32);
         const uint32_t tailCount = static_cast<uint32_t>(extent) - fullLoops * VL_FP32;
@@ -228,25 +230,27 @@ private:
             RegTensor<float> scaleReg;
             RegTensor<float> betaReg;
             RegTensor<float> restoreReg;
+            RegTensor<float> scaleErrorReg;
+            RegTensor<float> biasErrorReg;
             RegTensor<float> xReg;
             RegTensor<float> yReg;
             MaskReg fullMask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
             Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(scaleReg, scale + coefficientIndex);
+            Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(scaleErrorReg, scaleError + coefficientIndex);
+            Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(biasErrorReg, biasError + coefficientIndex);
             if constexpr (HAS_AFFINE) {
                 Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, mean + coefficientIndex);
                 Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(betaReg, beta + coefficientIndex);
                 Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(restoreReg, restore + coefficientIndex);
             } else {
                 Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(sumReg, sum + coefficientIndex);
-                if constexpr (ZERO_EPSILON) {
-                    Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, mean + coefficientIndex);
-                }
+                Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, mean + coefficientIndex);
             }
             for (uint16_t loop = 0; loop < fullLoops; ++loop) {
                 const uint32_t offset = loop * VL_FP32;
                 LoadXToFp32(x, xReg, fullMask, offset);
-                ComputeNormalizedY<HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg, restoreReg,
-                                                             negativeInvR, negativeInvRCorrection, fullMask);
+                ComputeNormalizedY<T, HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg,
+                                                                restoreReg, scaleErrorReg, biasErrorReg, fullMask);
                 StoreFp32ToY(y, yReg, fullMask, offset);
             }
             for (uint16_t loop = fullLoops; loop < totalLoops; ++loop) {
@@ -254,8 +258,8 @@ private:
                 MaskReg tailMask = UpdateMask<float>(tail);
                 const uint32_t offset = loop * VL_FP32;
                 LoadXToFp32(x, xReg, tailMask, offset);
-                ComputeNormalizedY<HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg, restoreReg,
-                                                             negativeInvR, negativeInvRCorrection, tailMask);
+                ComputeNormalizedY<T, HAS_AFFINE, ZERO_EPSILON>(yReg, xReg, sumReg, meanReg, scaleReg, betaReg,
+                                                                restoreReg, scaleErrorReg, biasErrorReg, tailMask);
                 StoreFp32ToY(y, yReg, tailMask, offset);
             }
         }

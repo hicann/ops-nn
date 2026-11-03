@@ -200,11 +200,31 @@ def _compute(
         gamma_matrix = _reshape_affine(gamma_tensor.to(dtype=dtype), n, c, "gamma")
         beta_matrix = _reshape_affine(beta_tensor.to(dtype=dtype), n, c, "beta")
         scale = torch.div(gamma_matrix, std_value)
-        bias = torch.sub(beta_matrix, torch.mul(scale, current_mean))
-        y = torch.add(
-            torch.mul(x_compute, scale.reshape(broadcast_shape)),
-            bias.reshape(broadcast_shape),
+        centered_y = torch.add(
+            torch.mul(
+                torch.div(
+                    torch.sub(x_compute, current_mean.reshape(broadcast_shape)),
+                    std_value.reshape(broadcast_shape),
+                ),
+                gamma_matrix.reshape(broadcast_shape),
+            ),
+            beta_matrix.reshape(broadcast_shape),
         )
+        if bool(torch.all(torch.isfinite(scale))):
+            # Center before the extreme affine product: x == mean must
+            # preserve beta even when x*scale would erase it in FP64.
+            y = centered_y
+        else:
+            # Retain the existing direct-expression IEEE categories for
+            # non-finite scales; only finite-scale cancellation is changed.
+            bias = torch.sub(beta_matrix, torch.mul(scale, current_mean))
+            direct_y = torch.add(
+                torch.mul(x_compute, scale.reshape(broadcast_shape)),
+                bias.reshape(broadcast_shape),
+            )
+            y = torch.where(
+                torch.isfinite(scale).reshape(broadcast_shape), centered_y, direct_y
+            )
     else:
         y = torch.div(
             torch.sub(x_compute, current_mean.reshape(broadcast_shape)),
@@ -284,6 +304,17 @@ def _customize_inputs(
     del sum, square_sum
     layout = _layout(kwargs)
     testcase_name = testcase_name or ""
+    if "mean_low_zero_std" in testcase_name:
+        x = np.full_like(
+            x,
+            1.9990234375
+            if np.asarray(x).dtype == np.float16
+            else np.float32(1.0 / 3.0),
+        )
+    if "affine_beta_retained" in testcase_name:
+        x = np.ones_like(x)
+        gamma = np.full_like(gamma, -np.finfo(np.float32).max)
+        beta = np.full_like(beta, 0.125)
     if "exact_zero_var" in (testcase_name or ""):
         # Keep one complete spatial plane exactly constant.  This locks the
         # epsilon=0 IEEE category regression that otherwise depends on random
@@ -345,12 +376,23 @@ def _customize_inputs(
     if "negvar" in testcase_name:
         sum_value = np.ones_like(sum_value, dtype=np.float32)
         square_value = np.zeros_like(square_value, dtype=np.float32)
+    if "mean_low_zero_std" in testcase_name or "affine_beta_retained" in testcase_name:
+        # Fixed externally supplied statistics isolate centering from a
+        # zero/clamped variance, independently of reduction implementation.
+        r = x.shape[1] * x.shape[2] if layout == "NHWC" else x.shape[2] * x.shape[3]
+        sum_value = np.full_like(sum_value, np.float32(float(x.reshape(-1)[0]) * r))
+        square_value = np.zeros_like(square_value, dtype=np.float32)
     if "r1_nanvar" in testcase_name:
         sum_value = np.full_like(sum_value, np.nan, dtype=np.float32)
         square_value = np.full_like(square_value, np.nan, dtype=np.float32)
     if "r1_infvar" in testcase_name:
         sum_value = np.zeros_like(sum_value, dtype=np.float32)
         square_value = np.full_like(square_value, np.inf, dtype=np.float32)
+    if "sum_nonfinite" in testcase_name:
+        # Exercise non-finite statistics with finite x. Keep a fourth channel
+        # as a normal control alongside +Inf, -Inf and NaN sum lanes.
+        sum_value.reshape(-1)[:3] = (np.inf, -np.inf, np.nan)
+        square_value.reshape(-1)[:3] = 0.0
     if variance is not None:
         variance = np.maximum(np.asarray(variance), np.float32(0.125)).astype(
             np.float32, copy=False
@@ -364,6 +406,23 @@ def _customize_inputs(
         mean,
         variance,
     )
+
+
+def _absolute_error_limit(dtype, golden_at_max_error, floor):
+    """Use the output-dtype ULP at the maximum finite error's Golden value.
+
+    opbase mixed_tolerance_standard sections 2.1.2/2.3 define a dynamic
+    anchor, rather than the ULP at 1.0. Keep the maximum-finite spacing
+    bounded: numpy.spacing(max_finite) itself overflows to infinity.
+    """
+    with np.errstate(over="ignore", invalid="ignore"):
+        anchor = np.abs(np.asarray(golden_at_max_error, dtype=dtype))
+        if not np.isfinite(anchor):
+            return floor
+        ulp = np.spacing(anchor)
+        if np.isinf(ulp):
+            ulp = np.spacing(np.nextafter(anchor, anchor.dtype.type(0)))
+    return max(floor, 32.0 * float(ulp))
 
 
 def _check_mixed_tolerance(actual, golden, output_index):
@@ -387,38 +446,56 @@ def _check_mixed_tolerance(actual, golden, output_index):
 
     actual_flat = actual_array.reshape(-1)
     golden_flat = golden_array.reshape(-1)
-    golden_nan = np.isnan(golden_flat)
-    golden_posinf = np.isposinf(golden_flat)
-    golden_neginf = np.isneginf(golden_flat)
-    golden_finite = np.isfinite(golden_flat)
-    special_matches = (
-        (golden_nan & np.isnan(actual_flat))
-        | (golden_posinf & np.isposinf(actual_flat))
-        | (golden_neginf & np.isneginf(actual_flat))
-    )
-    finite_pairs = golden_finite & np.isfinite(actual_flat)
-    category_matches = special_matches | finite_pairs
-    if not np.all(category_matches):
-        mismatch_count = int(np.count_nonzero(~category_matches))
+    mismatch_count = 0
+    matched_count = 0
+    max_abs_error = 0.0
+    golden_at_max_error = 0.0
+    # Bound temporary masks and FP64 copies without changing the per-element
+    # criterion, global matched ratio, category count or maximum-error gate.
+    for start in range(0, actual_flat.size, 1 << 20):
+        actual_chunk = actual_flat[start : start + (1 << 20)]
+        golden_chunk = golden_flat[start : start + (1 << 20)]
+        if np.any(np.isinf(actual_chunk)):
+            # The public standard compares infinite actual values against
+            # Golden narrowed with RNE to the actual output dtype. Values
+            # below the finite/Inf midpoint still remain category errors.
+            with np.errstate(over="ignore", invalid="ignore"):
+                golden_chunk = np.where(
+                    np.isinf(actual_chunk),
+                    golden_chunk.astype(actual_array.dtype).astype(golden_chunk.dtype),
+                    golden_chunk,
+                )
+        special_matches = (
+            (np.isnan(golden_chunk) & np.isnan(actual_chunk))
+            | (np.isposinf(golden_chunk) & np.isposinf(actual_chunk))
+            | (np.isneginf(golden_chunk) & np.isneginf(actual_chunk))
+        )
+        finite_pairs = np.isfinite(golden_chunk) & np.isfinite(actual_chunk)
+        mismatch_count += int(np.count_nonzero(~(special_matches | finite_pairs)))
+        matched_count += int(np.count_nonzero(special_matches))
+        if np.any(finite_pairs):
+            actual_f64 = actual_chunk[finite_pairs].astype(np.float64)
+            golden_f64 = golden_chunk[finite_pairs].astype(np.float64)
+            abs_error = np.abs(actual_f64 - golden_f64)
+            finite_matched = abs_error <= (
+                limits["atol"] + limits["rtol"] * np.abs(golden_f64)
+            )
+            matched_count += int(np.count_nonzero(finite_matched))
+            max_index = int(np.argmax(abs_error))
+            chunk_max_error = float(abs_error[max_index])
+            if chunk_max_error > max_abs_error:
+                max_abs_error = chunk_max_error
+                golden_at_max_error = float(golden_f64[max_index])
+
+    if mismatch_count:
         raise AssertionError(
             f"output {output_index} has {mismatch_count} NaN/Inf category mismatches"
         )
 
-    matched = special_matches.copy()
-    max_abs_error = 0.0
-    if np.any(finite_pairs):
-        actual_f64 = actual_flat[finite_pairs].astype(np.float64)
-        golden_f64 = golden_flat[finite_pairs].astype(np.float64)
-        abs_error = np.abs(actual_f64 - golden_f64)
-        finite_matched = abs_error <= (
-            limits["atol"] + limits["rtol"] * np.abs(golden_f64)
-        )
-        matched[finite_pairs] = finite_matched
-        max_abs_error = float(np.max(abs_error))
-
-    matched_ratio = float(np.count_nonzero(matched)) / float(matched.size)
-    ulp_at_one = float(np.spacing(np.array(1.0, dtype=actual_array.dtype)))
-    max_abs_limit = max(limits["max_abs"], 32.0 * ulp_at_one)
+    matched_ratio = float(matched_count) / float(actual_flat.size)
+    max_abs_limit = _absolute_error_limit(
+        actual_array.dtype, golden_at_max_error, limits["max_abs"]
+    )
     if matched_ratio < _REQUIRED_MATCHED_RATIO or max_abs_error > max_abs_limit:
         raise AssertionError(
             f"output {output_index} violates mixed tolerance: "
