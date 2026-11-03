@@ -116,3 +116,33 @@ def test_e2e_uses_native_ttk_promote_path():
     assert "e2e" not in _G.__golden__
     assert set(_G.InplaceSubTfSpec.third_party) == {"torch"}
     assert set(_G.InplaceSubKernelSpec.third_party) == {"torch"}
+
+
+@pytest.mark.parametrize("dtype_name", ["complex32", "complex64"])
+@pytest.mark.parametrize(
+    "update_values",
+    [
+        [complex(np.inf, 2), complex(3, -np.inf)],
+        [complex(np.inf, np.inf), complex(-np.inf, -np.inf)],
+        [complex(np.nan, 2), complex(3, np.nan)],
+    ],
+)
+def test_third_party_complex_special_values_keep_components_independent(
+    dtype_name, update_values
+):
+    import torch
+
+    dtype = getattr(torch, dtype_name)
+    x = torch.tensor([[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]], dtype=dtype)
+    v = torch.tensor([update_values], dtype=dtype)
+    before = x.clone()
+    output = _G._InplaceSubTorchCompose()(x, torch.tensor([-1], dtype=torch.int32), v)[
+        0
+    ]
+    expected = torch.view_as_real(before).clone()
+    expected[1] -= torch.view_as_real(v[0])
+    assert output.dtype == dtype
+    torch.testing.assert_close(
+        torch.view_as_real(output), expected, rtol=0, atol=0, equal_nan=True
+    )
+    torch.testing.assert_close(x, before, rtol=0, atol=0)

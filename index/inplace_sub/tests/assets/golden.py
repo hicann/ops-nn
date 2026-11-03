@@ -202,6 +202,8 @@ class _InplaceSubTorchCompose:
     """Independent Torch provider using index_put_ accumulation semantics."""
 
     def __call__(self, x, indices, v, **kwargs):
+        import torch
+
         del kwargs
         y, idx, updates, result_dtype, return_torch = _prepare_inplace_sub_inputs(
             x, indices, v
@@ -213,7 +215,14 @@ class _InplaceSubTorchCompose:
         updates = updates.expand(update_shape)
         # Accumulation preserves duplicate-index behavior independently of the
         # TensorFlow scatter used by the CPU golden.
-        y.index_put_((idx.reshape(-1),), -updates, accumulate=True)
+        if y.is_complex():
+            # Keep the components independent: CUDA complex accumulation can
+            # introduce cross-component NaNs for infinite updates.
+            torch.view_as_real(y).index_put_(
+                (idx.reshape(-1),), -torch.view_as_real(updates), accumulate=True
+            )
+        else:
+            y.index_put_((idx.reshape(-1),), -updates, accumulate=True)
         return [_restore_inplace_sub_output(y, result_dtype, return_torch)]
 
 
