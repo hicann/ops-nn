@@ -35,6 +35,7 @@ static constexpr int INDEX_Y_SCALE_IN_QUANT_TUPLE = 2;
 static constexpr int INDEX_X1_OFFSET_IN_QUANT_TUPLE = 3;
 static constexpr int INDEX_X2_OFFSET_IN_QUANT_TUPLE = 4;
 
+static const int X1_FIXED_DIM_NUM_A4W4_PERGROUP = 2;
 static const int X2_FIXED_DIM_NUM_A4W4 = 2;
 static const int64_t INT4_NUMS_IN_INT8 = 2;
 static const int64_t MIN_DIM_NUM_ND = 2;
@@ -51,6 +52,8 @@ static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
 static const int64_t PERGROUP_GROUP_SIZE = 32;
 static const int64_t PERGROUP_GROUPSIZEK_SIZE = 256;
+static const int64_t A4W4_PERGROUP_K_ALIGN_SIZE = 1024;
+static const int64_t A4W4_PERGROUP_N_ALIGN_SIZE = 256;
 static const int64_t HIFP4_GROUP_SIZE = 64;
 static const int64_t MXFP_DIVISOR_SIZE = 64;
 static const int64_t MXFP_MULTI_BASE_SIZE = 2;
@@ -381,47 +384,9 @@ void QuantMatmulChecker::Init()
     }
 }
 
-bool QuantMatmulChecker::IsA4W4PergroupNonSymmetric(const uint64_t groupSizeK) const
+bool QuantMatmulChecker::IsA4W4PergroupNonSymmetric() const
 {
-    if (x1Scale_ == nullptr || x2Scale_ == nullptr || x2Offset_ == nullptr) {
-        return false;
-    }
-
-    if (x1Scale_->GetDataType() != op::DataType::DT_FLOAT || x1Scale_->GetViewShape().GetDimNum() <= 1) {
-        return false;
-    }
-
-    if (x2Scale_->GetDataType() != op::DataType::DT_FLOAT || x2Scale_->GetViewShape().GetDimNum() <= 1) {
-        return false;
-    }
-
-    if (x2Offset_->GetDataType() != op::DataType::DT_FLOAT16 || x2Offset_->GetViewShape().GetDimNum() <= 1) {
-        return false;
-    }
-
-    auto bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors_);
-    if (bias != nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "bias", "not null",
-                                              "in A4W4 pergroup non-symmetric scenario, bias must be null");
-        return false;
-    }
-
-    int64_t m = (transposeX1_ ? x1_->GetViewShape().GetDim(1) : x1_->GetViewShape().GetDim(0));
-    int64_t k = (transposeX2_ ? x2_->GetViewShape().GetDim(1) : x2_->GetViewShape().GetDim(0));
-    int64_t n = (transposeX2_ ? x2_->GetViewShape().GetDim(0) : x2_->GetViewShape().GetDim(1));
-
-    int32_t ALIGN1024 = 1024;
-    int32_t ALIGN256 = 256;
-    if (k % ALIGN1024 != 0 || n % ALIGN256 != 0) {
-        return false;
-    }
-
-    return (IsInt4Input(x1_, x2_) && (x1Scale_->GetViewShape().GetDim(0) == m) &&
-            (x1Scale_->GetViewShape().GetDim(1) == 1) &&
-            (x2Scale_->GetViewShape().GetDim(0) == CeilDiv(k, static_cast<int64_t>(groupSizeK))) &&
-            (x2Scale_->GetViewShape().GetDim(1) == n) &&
-            (x2Offset_->GetViewShape().GetDim(0) == CeilDiv(k, static_cast<int64_t>(groupSizeK))) &&
-            (x2Offset_->GetViewShape().GetDim(1) == n));
+    return isA4W4_ && x1Scale_ != nullptr && x2Scale_ != nullptr && x2Offset_ != nullptr;
 }
 
 std::string QuantMatmulChecker::GetX1ScaleName() const { return GetInputName(X1SCALE_NAME, interfaceType_); }
@@ -775,7 +740,7 @@ bool QuantMatmulChecker::InferGroupSizeK(const aclTensor* x1, const aclTensor* x
 }
 
 bool QuantMatmulChecker::InferGroupSizeN(const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
-                                         bool transX2, uint64_t groupSizeK, uint64_t& groupSizeN) const
+                                         bool transX2, uint64_t& groupSizeN) const
 {
     auto x2DimNum = x2->GetViewShape().GetDimNum();
     auto x2ScaleDimNum = x2Scale->GetViewShape().GetDimNum();
@@ -795,7 +760,7 @@ bool QuantMatmulChecker::InferGroupSizeN(const aclTensor* x2, const aclTensor* x
             scaleSizeN = inputSizeN;
         }
     } else {
-        if (IsA4W4PergroupNonSymmetric(groupSizeK)) {
+        if (IsA4W4PergroupNonSymmetric()) {
             scaleSizeN = transX2 ? x2Scale->GetViewShape().GetDim(x2ScaleDimNum - 1) :
                                    x2Scale->GetViewShape().GetDim(x2ScaleDimNum - PENULTIMATE_DIM);
         } else {
@@ -822,7 +787,7 @@ bool QuantMatmulChecker::InferGroupSize(int64_t& groupSize)
 
     CHECK_RET(InferGroupSizeM(x1, x1Scale, x2Scale, transX1, groupSizeMnk.m), false);
     CHECK_RET(InferGroupSizeK(x1, x1Scale, x2Scale, transX1, groupSizeMnk.k), false);
-    CHECK_RET(InferGroupSizeN(x2, x1Scale, x2Scale, transX2, groupSizeMnk.k, groupSizeMnk.n), false);
+    CHECK_RET(InferGroupSizeN(x2, x1Scale, x2Scale, transX2, groupSizeMnk.n), false);
 
     OP_LOGD("Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeMnk.m, groupSizeMnk.n,
             groupSizeMnk.k);
@@ -911,6 +876,43 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
     return true;
 }
 
+bool QuantMatmulChecker::CheckDimValueA4W4PergroupNonSymmetric() const
+{
+    if (!IsAligned<int64_t>(x1KDim_, A4W4_PERGROUP_K_ALIGN_SIZE, apiName_) ||
+        !IsAligned<int64_t>(x2NDim_, A4W4_PERGROUP_N_ALIGN_SIZE, apiName_)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "x1 K, x2 N", FormatString("%ld, %ld", x1KDim_, x2NDim_).c_str(),
+            "when the quantization mode is K-G with INT4 inputs, K must be a positive multiple of 1024 "
+            "and N must be a positive multiple of 256");
+        return false;
+    }
+    if (x1Scale_->GetViewShape().GetDim(0) != x1MDim_ || x1Scale_->GetViewShape().GetDim(1) != 1) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            apiName_, GetX1ScaleName().c_str(), op::ToString(x1Scale_->GetViewShape()).GetString(),
+            FormatString("when the quantization mode is K-G with INT4 inputs, the shape must be [%ld, 1]", x1MDim_)
+                .c_str());
+        return false;
+    }
+    const int64_t groupNum = CeilDiv(x1KDim_, PERGROUP_GROUPSIZEK_SIZE);
+    if (x2Scale_->GetViewShape().GetDim(0) != groupNum || x2Scale_->GetViewShape().GetDim(1) != x2NDim_) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            apiName_, GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetViewShape()).GetString(),
+            FormatString("when the quantization mode is K-G with INT4 inputs, the shape must be [%ld, %ld]", groupNum,
+                         x2NDim_)
+                .c_str());
+        return false;
+    }
+    if (x2Offset_->GetViewShape().GetDim(0) != groupNum || x2Offset_->GetViewShape().GetDim(1) != x2NDim_) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            apiName_, GetX2OffsetName().c_str(), op::ToString(x2Offset_->GetViewShape()).GetString(),
+            FormatString("when the quantization mode is K-G with INT4 inputs, the shape must be [%ld, %ld]", groupNum,
+                         x2NDim_)
+                .c_str());
+        return false;
+    }
+    return true;
+}
+
 bool QuantMatmulChecker::CheckDimValue() const
 {
     if (x1Scale_ != nullptr) {
@@ -920,6 +922,8 @@ bool QuantMatmulChecker::CheckDimValue() const
         } else if (IsHif4Input(x1_, x2_)) {
             CHECK_RET(CheckDimValueHif4(), false);
             return true;
+        } else if (IsA4W4PergroupNonSymmetric()) {
+            return CheckDimValueA4W4PergroupNonSymmetric();
         } else if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
             CHECK_RET(CheckDimValuePerblock(), false);
             return true;
@@ -934,10 +938,7 @@ bool QuantMatmulChecker::CheckDimValue() const
         return false;
     }
 
-    const uint64_t groupSizeK = static_cast<uint64_t>(groupSize_ & GROUP_MNK_BIT_SIZE);
-    bool isA4W4PergroupNonSymmetric = IsA4W4PergroupNonSymmetric(groupSizeK);
-    if (!isA4W4PergroupNonSymmetric && x2Scale_->GetViewShape().GetDim(0) != x2NDim_ &&
-        x2Scale_->GetViewShape().GetDim(0) != 1) {
+    if (x2Scale_->GetViewShape().GetDim(0) != x2NDim_ && x2Scale_->GetViewShape().GetDim(0) != 1) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             apiName_, GetX2ScaleName().c_str(), std::to_string(x2Scale_->GetViewShape().GetDim(0)).c_str(),
             FormatString(
@@ -949,15 +950,12 @@ bool QuantMatmulChecker::CheckDimValue() const
     }
 
     if (x2Offset_ != nullptr) {
-        if (!isA4W4PergroupNonSymmetric) {
-            CHECK_RET(OpCheckWrongDimension(interfaceType_, X2OFFSET_NAME, x2Offset_, 1UL, apiName_), false);
-            if (x2Offset_->GetViewShape().GetDim(0) != x2NDim_ && x2Offset_->GetViewShape().GetDim(0) != 1) {
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                    apiName_, GetX2OffsetName().c_str(), std::to_string(x2Offset_->GetViewShape().GetDim(0)).c_str(),
-                    FormatString("the first dimension of %s must be %ld or 1", GetX2OffsetName().c_str(), x2NDim_)
-                        .c_str());
-                return false;
-            }
+        CHECK_RET(OpCheckWrongDimension(interfaceType_, X2OFFSET_NAME, x2Offset_, 1UL, apiName_), false);
+        if (x2Offset_->GetViewShape().GetDim(0) != x2NDim_ && x2Offset_->GetViewShape().GetDim(0) != 1) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                apiName_, GetX2OffsetName().c_str(), std::to_string(x2Offset_->GetViewShape().GetDim(0)).c_str(),
+                FormatString("the first dimension of %s must be %ld or 1", GetX2OffsetName().c_str(), x2NDim_).c_str());
+            return false;
         }
     }
     return true;
@@ -1100,6 +1098,19 @@ bool QuantMatmulChecker::CheckShapeInt4() const
     if (transposeX1_) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "transposeX1", transposeX1_ ? "true" : "false",
                                               "in A4W4 scenario, transposeX1 must be false");
+        return false;
+    }
+    if (IsA4W4PergroupNonSymmetric() && !transposeX2_) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "transposeX1, transposeX2",
+            FormatString("%s, %s", transposeX1_ ? "true" : "false", transposeX2_ ? "true" : "false").c_str(),
+            "in A4W4 scenario, transposeX1 must be false and transposeX2 must be true");
+        return false;
+    }
+    if (IsA4W4PergroupNonSymmetric() && x1_->GetViewShape().GetDimNum() != X1_FIXED_DIM_NUM_A4W4_PERGROUP) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(apiName_, "x1",
+                                                 FormatString("%zuD", x1_->GetViewShape().GetDimNum()).c_str(),
+                                                 "in A4W4 K-G scenario, the shape dim of x1 must be 2D");
         return false;
     }
     if (x2_->GetViewShape().GetDimNum() != X2_FIXED_DIM_NUM_A4W4) {
@@ -1248,13 +1259,14 @@ bool QuantMatmulChecker::CheckScaleDimRange() const
 
     auto x1ScaleDim = x1Scale_->GetViewShape().GetDimNum();
     auto x2ScaleDim = x2Scale_->GetViewShape().GetDimNum();
-    const uint64_t groupSizeK = static_cast<uint64_t>(groupSize_ & GROUP_MNK_BIT_SIZE);
     if (IsMicroScaling(x1Scale_, x2Scale_)) {
         CHECK_RET(CheckMxScaleDimRange(x1ScaleDim, x2ScaleDim), false);
     } else if (IsHif4Input(x1_, x2_)) {
         CHECK_RET(CheckHif4ScaleDimRange(x1ScaleDim, x2ScaleDim), false);
-    } else if (IsA4W4PergroupNonSymmetric(groupSizeK)) {
-        return true;
+    } else if (IsA4W4PergroupNonSymmetric()) {
+        CHECK_RET(OpCheckWrongDimension(interfaceType_, X1SCALE_NAME, x1Scale_, 2UL, apiName_), false);
+        CHECK_RET(OpCheckWrongDimension(interfaceType_, X2SCALE_NAME, x2Scale_, 2UL, apiName_), false);
+        CHECK_RET(OpCheckWrongDimension(interfaceType_, X2OFFSET_NAME, x2Offset_, 2UL, apiName_), false);
     } else {
         CHECK_RET(CheckNormalScaleDimRange(x1ScaleDim, x2ScaleDim), false);
     }
@@ -1268,7 +1280,7 @@ bool QuantMatmulChecker::CheckGroupSize() const
         return true;
     }
     const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
-    if (IsA4W4PergroupNonSymmetric(groupSizeMnk.k)) {
+    if (IsA4W4PergroupNonSymmetric()) {
         CHECK_RET(CheckA4W4PergroupNonSymmetricGroupSize(groupSizeMnk, apiName_), false);
     } else if (IsHif4Input(x1_, x2_)) {
         CHECK_RET(CheckHif4GroupSize(groupSize_, groupSizeMnk, apiName_), false);
@@ -1716,6 +1728,8 @@ aclnnStatus QuantMatmulChecker::CheckDtypeOnlyL0c2out() const
         CHECK_RET(CheckDtypeValidOnOnlyL0c2outForA4W4(), ACLNN_ERR_PARAM_INVALID);
     } else if (!isA4W4_ && x1Scale_ == nullptr) { // pertensor/perchannel
         CHECK_RET(CheckL0c2outAndL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
+    } else if (IsA4W4PergroupNonSymmetric()) {
+        CHECK_RET(CheckL0C2outOrL0C2ubPertokenPergroup(), ACLNN_ERR_PARAM_INVALID);
     } else if (x1_->GetDataType() == op::DataType::DT_INT8 || (isA4W4_ && x1Scale_ != nullptr)) { // pertoken
         CHECK_RET(CheckOnlyL0c2outPertoken(), ACLNN_ERR_PARAM_INVALID);
     } else {
@@ -1935,11 +1949,9 @@ bool QuantMatmulChecker::CheckL0C2outOrL0C2ubPertokenPergroup() const
     CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2OFFSET_NAME, x2Offset_, {op::DataType::DT_FLOAT16}, apiName_),
               false);
 
-    if (transposeX1_ != false || transposeX2_ != true) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            apiName_, "transposeX1, transposeX2",
-            FormatString("%s, %s", transposeX1_ ? "true" : "false", transposeX2_ ? "true" : "false").c_str(),
-            "in A4W4 scenario, transposeX1 must be false and transposeX2 must be true");
+    if (bias_ != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "bias", "not null",
+                                              "in A4W4 pergroup non-symmetric scenario, bias must be null");
         return false;
     }
     return true;
@@ -2044,7 +2056,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
         CHECK_RET(CheckMicroScaling(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsHif4Input(x1_, x2_)) { // hif4
         CHECK_RET(CheckHif4Scaling(), ACLNN_ERR_PARAM_INVALID);
-    } else if (IsInt4Input(x1_, x2_) && x2Offset_ != nullptr) { // pertoken
+    } else if (IsA4W4PergroupNonSymmetric()) { // pertoken-pergroup
         CHECK_RET(CheckL0C2outOrL0C2ubPertokenPergroup(), ACLNN_ERR_PARAM_INVALID);
     } else if (IsInt8Input(x1_, x2_) || IsInt4Input(x1_, x2_)) { // pertoken
         CHECK_RET(CheckL0c2outOrL0c2ubPertoken(), ACLNN_ERR_PARAM_INVALID);

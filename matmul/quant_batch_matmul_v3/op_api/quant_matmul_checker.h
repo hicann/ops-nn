@@ -40,7 +40,7 @@ public:
     ~QuantMatmulChecker() = default;
     void Init();
     aclnnStatus CheckParams() const;
-    bool IsA4W4PergroupNonSymmetric(const uint64_t groupSizeK) const;
+    bool IsA4W4PergroupNonSymmetric() const;
     bool InferGroupSize(int64_t& groupSize);
 
 private:
@@ -81,6 +81,7 @@ private:
     int64_t InferOutputShape(std::vector<int64_t>& batchRecord) const;
     bool CheckDimValue() const;
     bool CheckDimValuePertokenDoubleScale() const;
+    bool CheckDimValueA4W4PergroupNonSymmetric() const;
     bool CheckDimValuePerblock() const;
     bool CheckGroupSizeShape(uint64_t groupSizeM) const;
     bool CheckMXFP4FP8ParamsNDOrNZ() const;
@@ -99,7 +100,7 @@ private:
     bool InferGroupSizeK(const aclTensor* x1, const aclTensor* x1Scale, const aclTensor* x2Scale, bool transX1,
                          uint64_t& groupSizeK) const;
     bool InferGroupSizeN(const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, bool transX2,
-                         uint64_t groupSizeK, uint64_t& groupSizeN) const;
+                         uint64_t& groupSizeN) const;
     bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t& groupSize, const char* dimensionName) const;
 
 public:

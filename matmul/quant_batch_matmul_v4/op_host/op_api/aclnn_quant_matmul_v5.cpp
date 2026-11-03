@@ -1191,7 +1191,6 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     const TupleQuant quantTuple = std::tie(reformatedX1Scale, reformatedX2Scale, reformatedYScale, x1Offset, x2Offset,
                                            yOffset, reformatedBias, groupSizeReal, interfaceType);
     bool isA8W4I = isA8W4IntAfterPre(x1, x2); // 前处理是将x2的数据类型转成了INT4
-    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
 
     auto castedScale = ProcessScaleTensor(reformatedX2Scale);
     int64_t dtype = 0;
@@ -1201,7 +1200,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out, false,
                                     "aclnnQuantMatmulV5GetWorkspaceSize");
     qmmV3Checker.Init();
-    bool isA4W4PergroupNonSymmetric = qmmV3Checker.IsA4W4PergroupNonSymmetric(groupSizeK) &&
+    bool isA4W4PergroupNonSymmetric = qmmV3Checker.IsA4W4PergroupNonSymmetric() &&
                                       CheckFormat(inputTensors, quantTensors, out);
     ret = CheckParams(qmmV3Checker, isA8W4I, isA8W4F);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

@@ -868,13 +868,22 @@ aclnnStatus aclnnQuantMatmulV5(
       | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------|   ------- | -------------------------------------- |
       | INT8                      | INT8                      | FLOAT32| FLOAT32/BFLOAT16  | null     | null     |  null/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
       | INT8                      | INT8                      | FLOAT32     | FLOAT32           | null     |  null     | null/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
-      | INT4                      | INT4                      | FLOAT32| FLOAT32/BFLOAT16  | null     | null     |  null/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
-      | INT4                      | INT4                      | FLOAT32     | FLOAT32           | null     |  null     | null/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
+      | INT4/INT32                | INT4/INT32                | FLOAT32| FLOAT32/BFLOAT16  | null     | null     |  null/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
+      | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32           | null     |  null     | null/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
       | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | null     |  null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | null     |  null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
 
-    - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致。
-    - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
+  - x1的约束：
+    - 当数据类型为INT4或INT32时，支持2~6维ND格式，transposeX1为false。
+    - 当数据类型为INT4时，shape为(batch, m, k)，要求k为偶数，batch可不存在。
+    - 当数据类型为INT32时，每个INT32数据存放8个INT4数据，shape为(batch, m, ceil(k / 8))，要求k为8的倍数，batch可不存在。
+  - x2的约束：
+    - 当数据类型为INT4或INT32时，仅支持2维ND格式。
+    - 当数据类型为INT4时，transposeX2为true时shape为(n, k)，要求k为偶数；transposeX2为false时shape为(k, n)，要求n为偶数。
+    - 当数据类型为INT32时，每个INT32数据存放8个INT4数据，transposeX2为true时shape为(n, ceil(k / 8))，要求k为8的倍数；transposeX2为false时shape为(k, ceil(n / 8))，要求n为8的倍数。
+
+  - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致。
+  - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
 
   </details>
 
@@ -982,14 +991,15 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
 
-    |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| x2offset| yOffset shape| [gsM, gsN, gsK]|
-    | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------| ------------ | ------------ |
-    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)|(ceil(k / 256), n)| null | [0, 0, 256]|
+    |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| x2offset| yOffset shape| [gsM, gsN, gsK]|groupSize|
+    | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------| ------------ | ------------ | ------------ |
+    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)|(ceil(k / 256), n)| null | [0, 0, 256]/[1, 1, 256]|256/4295033088|
 
+  - groupSize支持传入256或4295033088，分别对应[gsM, gsN, gsK]为[0, 0, 256]或[1, 1, 256]；其中为0的gsM、gsN会根据输入shape推导为1，推导后的groupSize为4295033088。
   - x1的约束：
-    - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
+    - 当数据类型为INT4时，仅支持2维ND格式，k需与1024对齐。transposeX1为false。
   - x2的约束：
-    - 当数据类型为INT4时，k需与1024对齐，n需与256对齐。transposeX2为true。
+    - 当数据类型为INT4时，仅支持2维ND格式，k需与1024对齐，n需与256对齐。transposeX2为true。
   - x2Scale的约束：
     - 当x1、x2为INT4时，x2Scale的shape为(ceil(k / 256), n)。
 
