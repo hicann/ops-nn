@@ -15,7 +15,6 @@
 
 #include <string>
 #include <vector>
-#include "base/err_msg.h"
 #include "log/log.h"
 #include "op_fallback.h"
 
@@ -35,23 +34,28 @@ constexpr size_t QUANTMATMULIA_TRANS_X1_INDEX = 0;
 constexpr size_t QUANTMATMULIA_TRANS_X2_INDEX = 1;
 constexpr size_t QUANTMATMULIA_TRANS_GROUP_SIZE_INDEX = 2;
 
+static void ReportMissingQuantMatmulObject(const char* functionName, const char* objectName)
+{
+    const std::string reason = std::string(functionName) + ": Fallback execute framework-provided " + objectName +
+                               " is nullptr; check fallback context construction and operator registration";
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {"aclnnQuantBatchMatmulInplaceAdd", reason.c_str()};
+    OP_LOGE_WITHOUT_REPORT("aclnnQuantBatchMatmulInplaceAdd", "%s", reason.c_str());
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+}
+
 static graphStatus QuantBatchMatmulInplaceAddExecuteFunc(OpExecuteContext* host_api_ctx)
 {
-    OP_CHECK_IF(host_api_ctx == nullptr, OP_LOGE_WITH_INVALID_INPUT("aclnnQuantBatchMatmulInplaceAdd", "host_api_ctx"),
-                return GRAPH_FAILED);
+    OP_CHECK_IF(host_api_ctx == nullptr, ReportMissingQuantMatmulObject(__func__, "host_api_ctx"), return GRAPH_FAILED);
     auto x1 = host_api_ctx->GetInputTensor(QUANTMATMULIA_INPUTX1_INDEX);
-    OP_CHECK_IF(x1 == nullptr, OP_LOGE_WITH_INVALID_INPUT("aclnnQuantBatchMatmulInplaceAdd", "x1"),
-                return GRAPH_FAILED);
+    OP_CHECK_IF(x1 == nullptr, ReportMissingQuantMatmulObject(__func__, "x1"), return GRAPH_FAILED);
     auto x2 = host_api_ctx->GetInputTensor(QUANTMATMULIA_INPUTX2_INDEX);
-    OP_CHECK_IF(x2 == nullptr, OP_LOGE_WITH_INVALID_INPUT("aclnnQuantBatchMatmulInplaceAdd", "x2"),
-                return GRAPH_FAILED);
+    OP_CHECK_IF(x2 == nullptr, ReportMissingQuantMatmulObject(__func__, "x2"), return GRAPH_FAILED);
     auto x2Scale = host_api_ctx->GetInputTensor(QUANTMATMULIA_X2SCALE_INDEX);
-    OP_CHECK_IF(x2Scale == nullptr, OP_LOGE_WITH_INVALID_INPUT("aclnnQuantBatchMatmulInplaceAdd", "x2Scale"),
-                return GRAPH_FAILED);
+    OP_CHECK_IF(x2Scale == nullptr, ReportMissingQuantMatmulObject(__func__, "x2Scale"), return GRAPH_FAILED);
     auto x1Scale = host_api_ctx->GetOptionalInputTensor(QUANTMATMULIA_X1SCALE_INDEX);
     auto attrs = host_api_ctx->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_INPUT("aclnnQuantBatchMatmulInplaceAdd", "attrs"),
-                return GRAPH_FAILED);
+    OP_CHECK_IF(attrs == nullptr, ReportMissingQuantMatmulObject(__func__, "attrs"), return GRAPH_FAILED);
     const bool* transposeX1Ptr = attrs->GetBool(QUANTMATMULIA_TRANS_X1_INDEX);
     const bool* transposeX2Ptr = attrs->GetBool(QUANTMATMULIA_TRANS_X2_INDEX);
     const bool transposeX1 = (transposeX1Ptr != nullptr ? *transposeX1Ptr : false);
@@ -62,13 +66,9 @@ static graphStatus QuantBatchMatmulInplaceAddExecuteFunc(OpExecuteContext* host_
     // execute opapi
     auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantBatchMatmulInplaceAdd, x1, x2, x1Scale, x2Scale,
                                               yRef, transposeX1, transposeX2, groupSize);
-    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, ({
-                    const std::string _msg = "api_ret failed:" + std::to_string(apiRet);
-                    OP_LOGE_WITHOUT_REPORT("Execute aclnnfallback quant_batch_matmul_inplace_add", "%s", _msg.c_str());
-                    const std::vector<const char*> _msgKey = {"message"};
-                    const std::vector<const char*> _msgValue = {_msg.c_str()};
-                    REPORT_PREDEFINED_ERR_MSG("EZ1001", _msgKey, _msgValue);
-                }),
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT("aclnnQuantBatchMatmulInplaceAdd",
+                                       "Fallback execute: aclnnQuantBatchMatmulInplaceAdd failed with rc=%u", apiRet),
                 return GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }

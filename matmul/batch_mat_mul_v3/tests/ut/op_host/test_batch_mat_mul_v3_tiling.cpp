@@ -2399,7 +2399,7 @@ TEST_F(DebugTilingTestForMatmulCommon, DebugTilingContext_NullInputShape)
 
     // 显式置空 input0 对应的输入 Chain 指针，构造“有输入但 shape 为 null 的场景”，
     // 使 DebugTilingContext 内 TensorDesc2String(GetInputShape(0), ...) 命中 null 分支
-    context->GetContext()->values[0] = nullptr;
+    holder.GetContext<gert::KernelContext>()->GetContext()->values[0] = nullptr;
 
     string str = Ops::NN::DebugTilingContext(context);
     EXPECT_NE(str.find("input0"), string::npos);

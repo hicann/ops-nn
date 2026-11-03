@@ -154,7 +154,9 @@ bool BatchMatmulV3BaseTiling::GetBatchInfo()
                          batchInfo_.batchB5 != 1UL;
     if (batch3Invalid || batch2Invalid || batch1Invalid || batch0Invalid || batch4Invalid || batch5Invalid) {
         {
-            Ops::NN::ReportMatmulParamError(args_.opName, "Is M broadcast to N situation, do not support!");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                args_.opName, "x1, x2", "x1=" + Ops::Base::ToString(aShape) + ", x2=" + Ops::Base::ToString(bShape),
+                "Corresponding batch dimensions of x1 and x2 must be equal or one of them must be 1");
         }
         return false;
     }
@@ -174,7 +176,8 @@ bool BatchMatmulV3BaseTiling::GetBiasWithBatchInfo()
     }
     if (biasDims == NO_BATCH_SHAPE_DIM) {
         {
-            Ops::NN::ReportMatmulParamError(args_.opName, " Dim number of bias must not be 2 !");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(args_.opName, "bias", std::to_string(biasDims),
+                                                     "Bias rank must not be 2");
         }
         return false;
     }
@@ -183,7 +186,8 @@ bool BatchMatmulV3BaseTiling::GetBiasWithBatchInfo()
     uint64_t biasMValue = biasShape[biasDims - NO_BATCH_SHAPE_DIM];
     if (biasMValue != 1UL) {
         {
-            Ops::NN::ReportMatmulParamError(args_.opName, "M of Bias must be 1 !");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(args_.opName, "bias", Ops::Base::ToString(biasShape),
+                                                  "The penultimate dimension (M) of bias must be 1");
         }
         return false;
     }
@@ -199,7 +203,11 @@ bool BatchMatmulV3BaseTiling::GetBiasWithBatchInfo()
                           batchBias4 == batchInfo_.batchC4 && batchBias5 == batchInfo_.batchC5;
     if (batchInfo_.biasWithBatch && !biasBatchValid) {
         {
-            Ops::NN::ReportMatmulParamError(args_.opName, "Batch of Bias  must be equal to C !");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                args_.opName, "bias, y",
+                "bias=" + Ops::Base::ToString(biasShape) +
+                    ", y=" + Ops::Base::ToString(context_->GetOutputShape(0)->GetOriginShape()),
+                "Batch dimensions of bias must equal the corresponding output batch dimensions");
         }
         return false;
     }
