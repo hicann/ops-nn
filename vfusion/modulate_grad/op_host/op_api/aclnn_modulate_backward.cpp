@@ -127,61 +127,76 @@ static bool CheckDtypeConsistency(const aclTensor* grad_output, const aclTensor*
     return true;
 }
 
-static bool CheckMaxDimension(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
-                              const aclTensor* shift)
+static bool CheckFormat(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
+                        const aclTensor* shift, const aclTensor* grad_input, const aclTensor* grad_scale,
+                        const aclTensor* grad_shift)
 {
-    op::Shape gradoutputShape = grad_output->GetViewShape();
-    size_t gradoutputDimNum = gradoutputShape.GetDimNum();
-    op::Shape inputShape = input->GetViewShape();
-    size_t inputDimNum = inputShape.GetDimNum();
-    if (gradoutputDimNum != MAX_SUPPORT_DIM || inputDimNum != MAX_SUPPORT_DIM) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of self must be 3");
+    if (grad_output->GetStorageFormat() != Format::FORMAT_ND || input->GetStorageFormat() != Format::FORMAT_ND ||
+        grad_input->GetStorageFormat() != Format::FORMAT_ND ||
+        (scale != nullptr && scale->GetStorageFormat() != Format::FORMAT_ND) ||
+        (shift != nullptr && shift->GetStorageFormat() != Format::FORMAT_ND) ||
+        (grad_scale != nullptr && grad_scale->GetStorageFormat() != Format::FORMAT_ND) ||
+        (grad_shift != nullptr && grad_shift->GetStorageFormat() != Format::FORMAT_ND)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "All input and output tensors only support ND format");
         return false;
     }
-    if ((grad_output->IsEmpty() || input->IsEmpty()) && ((CheckNotNullForScaleAndShift(scale) && !scale->IsEmpty()) ||
-                                                         (CheckNotNullForScaleAndShift(shift) && !shift->IsEmpty()))) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when grad_output or input is empty, scale and shift must be empty");
-        return false;
-    }
-
     return true;
 }
 
-static bool CheckDimension(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
-                           const aclTensor* shift)
+static bool CheckShape(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
+                       const aclTensor* shift, const aclTensor* grad_input, const aclTensor* grad_scale,
+                       const aclTensor* grad_shift)
 {
-    auto gradoutput_Shape = grad_output->GetViewShape();
-    // 检查Format
-    if (input->GetStorageFormat() != Format::FORMAT_ND || grad_output->GetStorageFormat() != Format::FORMAT_ND ||
-        (CheckNotNullForScaleAndShift(scale) && scale->GetStorageFormat() != Format::FORMAT_ND) ||
-        (CheckNotNullForScaleAndShift(shift) && shift->GetStorageFormat() != Format::FORMAT_ND)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, got input format %d, grad_output format %d",
-                static_cast<int32_t>(input->GetStorageFormat()), static_cast<int32_t>(grad_output->GetStorageFormat()));
+    const auto gradOutputShape = grad_output->GetViewShape();
+    if (gradOutputShape.GetDimNum() != MAX_SUPPORT_DIM || input->GetViewShape().GetDimNum() != MAX_SUPPORT_DIM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_output and input must be 3-dimensional tensors");
         return false;
     }
-    if (CheckNotNullForScaleAndShift(scale)) {
-        auto scale_Shape = scale->GetViewShape();
-        if (scale_Shape.GetDimNum() != SCALE_DIM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dim is not equal 2");
+    if (gradOutputShape != input->GetViewShape() || gradOutputShape != grad_input->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_output, input and grad_input must have the same shape");
+        return false;
+    }
+
+    if (scale == nullptr && grad_scale != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_scale requires scale to be provided");
+        return false;
+    }
+    if (scale != nullptr) {
+        const auto scaleShape = scale->GetViewShape();
+        if (scaleShape.GetDimNum() != SCALE_DIM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale must be a 2-dimensional tensor");
             return false;
         }
-        if (gradoutput_Shape.GetDim(0) != scale_Shape.GetDim(FIRST_DIM) ||
-            gradoutput_Shape.GetDim(LAST_DIM) != scale_Shape.GetDim(MIDDLE_DIM)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradoutput_Shape dim0 or dim 2 not match scale dim 0 or dim 1");
+        if (gradOutputShape.GetDim(FIRST_DIM) != scaleShape.GetDim(FIRST_DIM) ||
+            gradOutputShape.GetDim(LAST_DIM) != scaleShape.GetDim(MIDDLE_DIM) ||
+            (grad_scale != nullptr && scaleShape != grad_scale->GetViewShape())) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale or grad_scale shape does not match grad_output");
             return false;
         }
     }
-    if (CheckNotNullForScaleAndShift(shift)) {
-        auto shift_Shape = shift->GetViewShape();
-        if (shift_Shape.GetDimNum() != SCALE_DIM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shift dim is not equal 2");
+
+    if (shift == nullptr && grad_shift != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_shift requires shift to be provided");
+        return false;
+    }
+    if (shift != nullptr) {
+        const auto shiftShape = shift->GetViewShape();
+        if (shiftShape.GetDimNum() != SCALE_DIM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shift must be a 2-dimensional tensor");
             return false;
         }
-        if (gradoutput_Shape.GetDim(FIRST_DIM) != shift_Shape.GetDim(FIRST_DIM) ||
-            gradoutput_Shape.GetDim(LAST_DIM) != shift_Shape.GetDim(MIDDLE_DIM)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradoutput_Shape dim0 or dim 2 not match shift dim 0 or dim 1");
+        if (gradOutputShape.GetDim(FIRST_DIM) != shiftShape.GetDim(FIRST_DIM) ||
+            gradOutputShape.GetDim(LAST_DIM) != shiftShape.GetDim(MIDDLE_DIM) ||
+            (grad_shift != nullptr && shiftShape != grad_shift->GetViewShape())) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shift or grad_shift shape does not match grad_output");
             return false;
         }
+    }
+
+    if (grad_output->IsEmpty() &&
+        ((scale != nullptr && !scale->IsEmpty()) || (shift != nullptr && !shift->IsEmpty()))) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when grad_output is empty, scale and shift must be empty or absent");
+        return false;
     }
     return true;
 }
@@ -198,10 +213,12 @@ static aclnnStatus CheckParams(const aclTensor* grad_output, const aclTensor* in
     // 3.检查数据类型一致性
     CHECK_RET(CheckDtypeConsistency(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift),
               ACLNN_ERR_PARAM_INVALID);
-    // 4.检查维度是否超过8维 在这里不会超过8维
-    CHECK_RET(CheckMaxDimension(grad_output, input, scale, shift), ACLNN_ERR_PARAM_INVALID);
-    // 5.检查维度是否匹配
-    CHECK_RET(CheckDimension(grad_output, input, scale, shift), ACLNN_ERR_PARAM_INVALID);
+    // 4.检查数据格式
+    CHECK_RET(CheckFormat(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift),
+              ACLNN_ERR_PARAM_INVALID);
+    // 5.检查shape及可选输入输出关系
+    CHECK_RET(CheckShape(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

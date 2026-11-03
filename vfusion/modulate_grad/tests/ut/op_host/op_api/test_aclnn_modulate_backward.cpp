@@ -365,7 +365,7 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_18)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-// grad_output 为空 tensor 且 scale/shift 传 nullptr 时，CheckMaxDimension 不允许解引用空指针
+// grad_output、input和grad_input的shape必须一致
 TEST_F(l2_modulate_backward_test, ascend910B_case_19)
 {
     auto grad_output_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
@@ -378,18 +378,17 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_19)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    EXPECT_EQ(workspace_size, 0);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// grad_output 为空 tensor 但 scale/shift 非空时，CheckMaxDimension 的拦截逻辑需保持有效
+// 输入为空 tensor 但 scale/shift 非空时，软件校验需拦截
 TEST_F(l2_modulate_backward_test, ascend910B_case_20)
 {
-    auto grad_output_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
-    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_output_desc = TensorDesc({32, 0, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 0, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
-    auto grad_input_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 0, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
 
@@ -399,4 +398,91 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_20)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_21)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_22)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_scale_desc = TensorDesc({32, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, grad_scale_desc, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_23)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, grad_scale_desc, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_24)
+{
+    auto grad_output_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(workspace_size, 0);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_25)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_modulate_backward_test, ascend910B_case_26)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

@@ -196,26 +196,41 @@ aclnnStatus aclnnModulateBackward(
   </colgroup>
   <thead>
     <tr>
-      <th>返回值</th>
-      <th>错误码</th>
+      <th>返回码</th>
+      <th>码值</th>
       <th>描述</th>
     </tr></thead>
   <tbody>
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的grad_output或input等入参是空指针。</td>
+      <td>grad_output、input或grad_input为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>grad_output、input、scale、shift的数据类型和数据格式不在支持的范围之内。</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
+      <td>grad_output、input、scale、shift、grad_input、grad_scale或grad_shift的数据类型不在支持范围内。</td>
     </tr>
     <tr>
-      <td>grad_output、input、scale、shift之间的shape不满足约束。</td>
+      <td>input、scale、shift、grad_input、grad_scale或grad_shift的数据类型与grad_output的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>input为空tensor，且scale或shift不为空tensor。</td>
+      <td>grad_output、input、scale、shift、grad_input、grad_scale或grad_shift的数据格式不是ND。</td>
+    </tr>
+    <tr>
+      <td>grad_output或input不是3维。</td>
+    </tr>
+    <tr>
+      <td>grad_output、input与grad_input的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>scale或shift不是2维，或者shape与grad_output不满足约束。</td>
+    </tr>
+    <tr>
+      <td>grad_scale与scale的shape不一致，grad_shift与shift的shape不一致，或者提供grad_scale但未提供scale、提供grad_shift但未提供shift。</td>
+    </tr>
+    <tr>
+      <td>grad_output为空Tensor时，scale或shift不是空Tensor。</td>
     </tr>
   </tbody>
   </table>
@@ -257,38 +272,6 @@ aclnnStatus aclnnModulateBackward(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
-  第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-  <col style="width: 250px">
-  <col style="width: 130px">
-  <col style="width: 650px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回值</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的grad_output或input是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>输入和输出的数据类型和数据格式不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>input、scale、shift之间的shape不满足约束。</td>
-    </tr>
-    <tr>
-      <td>输入维度超过3维</td>
-    </tr>
-  </tbody>
-  </table>
-
 ## 约束说明
 
 - 确定性计算：
@@ -297,9 +280,14 @@ aclnnStatus aclnnModulateBackward(
 - scale和shift是二维向量，第一维需要和input的第一维shape相同，第二维需要和input的第三维shape相同。
 - 输入grad_output的shape需要和输入input的shape保持一致，均为3维 [B, L, D]。
 - 数据格式仅支持ND；各tensor的dtype必须一致（FLOAT16/FLOAT/BFLOAT16）。
-- scale和shift为可选输入：未提供scale/shift时，对应的grad_scale/grad_shift不输出。
+- scale和shift为可选输入：未提供scale/shift时，对应的grad_scale/grad_shift不输出；未提供scale时，grad_input = grad_output。
 - 支持空Tensor（B/L/D任一为0）：直接返回对应shape的空输出；此时scale和shift必须为空或缺失。
 - 支持动态shape（含-1维度）：tiling在运行期按实际shape计算多核与UB切分，无需重新编译；rank固定为3。
+
+
+- 精度说明：
+  - kernel 内部以 fp32 累加归约（grad_scale = Σ input·grad_output, grad_shift = Σ grad_output），结果经 RNE 舍回输出 dtype。
+  - 测试参考（golden）以 fp64 计算后同样经 RNE 舍回输出 dtype，与 kernel 舍入路径一致。
 
 ## 调用示例
 

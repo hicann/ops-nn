@@ -5800,6 +5800,16 @@
   </tr>
   <tr>
     <td>vfusion</td>
+    <td><a href="../../vfusion/modulate_grad/README.md">modulate_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>Modulate算子的反向传播，根据输出梯度计算输入x、scale和shift的梯度。</td>
+  </tr>
+  <tr>
+    <td>vfusion</td>
     <td><a href="../../vfusion/multi_scale_deformable_attention_grad/README.md">multi_scale_deformable_attention_grad</a></td>
     <td>✓</td>
     <td>✓</td>
