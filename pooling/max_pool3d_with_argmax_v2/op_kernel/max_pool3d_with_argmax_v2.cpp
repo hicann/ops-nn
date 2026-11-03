@@ -15,7 +15,8 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
 #include "./arch35/max_pool3d_with_argmax_v2_big_kernel_regbase.h"
 #include "./arch35/max_pool3d_with_argmax_v2_ksize_one.h"
 #include "./arch35/max_pool3d_with_argmax_v2_gather.h"
@@ -88,7 +89,8 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_AD
 #endif
     TPipe pipe;
 
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
     using namespace MaxPool3DWithArgmaxV2WithSimt;
