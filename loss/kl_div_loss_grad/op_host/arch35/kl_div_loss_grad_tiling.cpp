@@ -135,6 +135,24 @@ ge::graphStatus KlDivLossGradTiling::CalcOutputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus KlDivLossGradTiling::CheckInputShape()
+{
+    auto inputShape = context_->GetInputShape(INPUT_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
+    const gert::Shape& selfShape = EnsureNotScalar(inputShape->GetStorageShape());
+
+    auto outputShape = context_->GetOutputShape(OUTPUT_Y_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    const gert::Shape& outShape = EnsureNotScalar(outputShape->GetStorageShape());
+
+    OP_CHECK_IF(selfShape != outShape,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "self", ToString(selfShape).c_str(),
+                    "The shape of parameter self must be the same as the shape of parameter out"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
 {
     float reducationCof = 1.0;
@@ -201,6 +219,9 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(CheckInputShape() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "check input shape failed"),
                 return ge::GRAPH_FAILED);
 
     auto input0Desc = context_->GetInputDesc(0);
