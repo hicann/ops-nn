@@ -91,8 +91,12 @@ static graphStatus GetAvgPoolV2XShape(const gert::CompileTimeTensorDesc* tensorD
                                       AvgPoolV2Inputs& inputs)
 {
     // Get fmap Dim
+    // 图推理阶段算子输入 desc 的 origin format 可能是泛化占位 ND，不在 format2str 映射表中，
+    // 若直接 format2str.at() 会因键缺失抛出 std::out_of_range。数据格式以属性 data_format 为准，
+    // 故对映射表做存在性保护，origin format 不在表中时回退到属性传入的格式。
     const Format xdataFormat = tensorDescIn->GetOriginFormat();
-    std::string dataFormat = format2str.at(xdataFormat);
+    auto formatIter = format2str.find(xdataFormat);
+    std::string dataFormat = (formatIter != format2str.end()) ? formatIter->second : std::string(dataFormatArray);
     if ((dataFormat != "NCHW" && dataFormat != "NHWC") and (dataFormat != dataFormatArray)) {
         OP_LOGE_FOR_INVALID_FORMAT(opName, "data_format", dataFormat.c_str(), "NCHW or NHWC");
         return GRAPH_FAILED;
@@ -197,11 +201,8 @@ static graphStatus InferShapeForAvgPoolV2(InferShapeContext* context)
     }
 
     // Get input data_format
-    const gert::ContinuousVector* dataFormatPtr = attrs->GetAttrPointer<gert::ContinuousVector>(
-        DATA_FORMAT_IDX_AVGPOOLV2);
-    OP_LOGE_IF(dataFormatPtr == nullptr, GRAPH_FAILED, opName, "Get data format failed.");
-    const char* dataFormatArray = static_cast<const char*>(dataFormatPtr->GetData());
-    OP_LOGE_IF(dataFormatArray == nullptr, GRAPH_FAILED, opName, "data format is null.");
+    const char* dataFormatArray = attrs->GetAttrPointer<char>(DATA_FORMAT_IDX_AVGPOOLV2);
+    OP_LOGE_IF(dataFormatArray == nullptr, GRAPH_FAILED, opName, "Get data format failed.");
 
     // Get input padding mode
     const char* paddingModePtr = attrs->GetAttrPointer<char>(PADDING_MODE_IDX_AVGPOOLV2);

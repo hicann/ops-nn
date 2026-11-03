@@ -63,11 +63,21 @@ struct AvgPoolInputs {
 };
 
 static graphStatus GetAvgPoolXShape(const gert::CompileTimeTensorDesc* tensorDescIn, const std::string& opName,
-                                    const InferShapeContext* context, AvgPoolInputs& inputs)
+                                    const InferShapeContext* context, const char* dataFormatArray,
+                                    AvgPoolInputs& inputs)
 {
     // Get fmap Dim
+    // 图推理阶段算子输入 desc 的 origin format 可能是泛化占位 ND，不在 format2str 映射表中，
+    // 若直接 format2str.at() 会因键缺失抛出 std::out_of_range。数据格式以属性 data_format 为准，
+    // 故对映射表做存在性保护，origin format 不在表中时回退到属性传入的格式。
     const Format xdataFormat = tensorDescIn->GetOriginFormat();
-    std::string dataFormat = format2str.at(xdataFormat);
+    auto formatIter = format2str.find(xdataFormat);
+    std::string dataFormat;
+    if (formatIter != format2str.end()) {
+        dataFormat = formatIter->second;
+    } else if (dataFormatArray != nullptr) {
+        dataFormat = dataFormatArray;
+    }
     if (dataFormat != "NCHW" && dataFormat != "NHWC") {
         OP_LOGE_FOR_INVALID_FORMAT(opName, "data_format", dataFormat.c_str(), "NCHW or NHWC");
         return GRAPH_FAILED;
@@ -187,6 +197,9 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
+    // Get input data_format
+    const char* dataFormatArray = attrs->GetAttrPointer<char>(DATA_FORMAT_IDX_AVGPOOL);
+
     // Get input shape
     const gert::Shape* xShape = context->GetInputShape(X_IDX_AVGPOOL);
     OP_LOGE_IF(xShape == nullptr, GRAPH_FAILED, opName, "fmap is null.");
@@ -197,7 +210,7 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
         Ops::Base::SetUnknownRank(*outputShape);
         return GRAPH_SUCCESS;
     }
-    if (GetAvgPoolXShape(tensorDescIn, opName, context, inputs) != GRAPH_SUCCESS) {
+    if (GetAvgPoolXShape(tensorDescIn, opName, context, dataFormatArray, inputs) != GRAPH_SUCCESS) {
         return GRAPH_FAILED;
     }
 
