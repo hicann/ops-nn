@@ -20,6 +20,14 @@
 
 namespace ConvolutionBackpropFunc {
 
+template <HardEvent evt>
+static __aicore__ inline void SyncEvent()
+{
+    event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
+    SetFlag<evt>(eventId);
+    WaitFlag<evt>(eventId);
+}
+
 template <class Intf>
 static __aicore__ inline void CalcL0cParams(Intf* self, bool tailCinExist)
 {
@@ -37,7 +45,6 @@ static __aicore__ inline void CalcL0cParams(Intf* self, bool tailCinExist)
     }
     self->ctx.head_ = self->ctx.nLoopHead_;
     self->ctx.cinRemainLen_ = self->ctx.nLoopCinRemainLen_;
-    return;
 }
 
 template <class Intf>
@@ -64,9 +71,7 @@ static __aicore__ inline void GatherDepthwise(Intf* self, uint32_t hwkLength, ui
     uint32_t hwkSrcStride = indexLength * coutCin0;
     GatherDepthwiseSimdVf<typename Intf::DstT>(srcPtr, dstPtr, indexPtr, sreg, sregTail, indexLength, loopSize,
                                                hwkSrcStride, strideHwk, self->ctx.baseUseM_);
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
 }
 
 template <class Intf>
@@ -249,9 +254,7 @@ static __aicore__ inline void Rearrange2GmNormalGroup(Intf* self, const GlobalTe
                                           self->ctx.baseUseM_;
     Rearrange2GmScatter(self, srcStride, loopSize, indexLength, coutNum);
 
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
 
     if (!flag) {
         NormalGroupDataCopyPadDkEqOne(self, output, srcStride, coutNum);
@@ -315,9 +318,7 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf* self, cons
     Rearrange2GmScatterBaseNUndividedSimdVf<typename Intf::DstT>(srcPtr, dstPtr, indexPtr, sreg, tailSreg, iterWk,
                                                                  iterCout, wkSrcStride, coutDstStride);
 
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
     if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
         DataCopyPadBaseNUndivided(self, output, srcStride, cutMNSize);
     } else {
@@ -345,9 +346,7 @@ static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(Intf* self, const
         ctx.srcPtr, ctx.dstPtr, ctx.indexPtr, ctx.sreg, ctx.tailSreg, iterCin, iterCout, iterHkWk, hkWkSrcStride,
         cinSrcStride, coutDstStride, hkWkDstStride);
 
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
     DataCopyPadDkEqOneForNDHWC(self, output, cutMNSize, ctx.baseCin);
 }
 
@@ -368,9 +367,7 @@ static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(Intf* self, const
         ctx.srcPtr, ctx.dstPtr, ctx.indexPtr, ctx.sreg, ctx.tailSreg, iterCin, iterCout, hkWkSrcStride, cinSrcStride,
         srcStride, ctx.baseCin, ctx.coutNum, ctx.c0PerReg);
 
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
     DataCopyPadDkEqOneForDHWCN(self, output, cutMNSize, srcStride);
 }
 
@@ -394,9 +391,7 @@ static __aicore__ inline void Rearrange2GmScatterDeter(Intf* self, const uint32_
                                                         iterCin, iterCout, hkWkSrcStride, cinSrcStride, cinDstStride,
                                                         coutDstStride, self->ctx.hwK_);
 
-    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    SyncEvent<HardEvent::V_MTE3>();
     DataCopyPadDkEqOne(self, output, cutMNSize, ctx.baseCin);
 }
 
@@ -547,10 +542,9 @@ static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(Intf* self, const Globa
         tailN = (self->ctx.singleShapeCin_ * self->ctx.hwK_ - cutMNSize.usedNSize) / self->ctx.hwK_;
     }
 
-    uint64_t tailNSize = tailN;
-    ub2GmParams.srcStride = ((baseCin - tailNSize) * DST_DTYPE_BYTES) >> ONE_BLK_SHIFT_SIZE;
-    ub2GmParams.blockLen = tailNSize * DST_DTYPE_BYTES;
-    ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - tailNSize) * DST_DTYPE_BYTES;
+    ub2GmParams.srcStride = ((baseCin - tailN) * DST_DTYPE_BYTES) >> ONE_BLK_SHIFT_SIZE;
+    ub2GmParams.blockLen = tailN * DST_DTYPE_BYTES;
+    ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - tailN) * DST_DTYPE_BYTES;
     ub2GmParams.blockCount = cutMNSize.curMSize * self->ctx.hwK_;
     DataCopyPad(output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
 }
@@ -590,9 +584,7 @@ static __aicore__ inline void UBRearrange2Gm(Intf* self, const GlobalTensor<type
             Rearrange2GmScatterDeterForDHWCN(self, srcStride, output, cutMNSize);
         }
     }
-    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    SyncEvent<HardEvent::MTE3_MTE2>();
 }
 } // namespace ConvolutionBackpropFunc
 
