@@ -614,8 +614,15 @@ protected:
         LocalTensor<float> squareLocal = StageStat(statBQue_, squareSumGm_, statOffset, count);
         // Bias staging holds the original sum for no-affine centering. It is
         // overwritten by beta when the complete affine pair is present.
-        const float rForZeroCheck = (tiling_->r <= MAX_EXACT_FP32_INTEGER) ? static_cast<float>(tiling_->r) :
-                                                                             static_cast<float>(NAN);
+        // Large R is also exact in FP32 when removing trailing zero bits
+        // leaves at most 24 significant bits. Keep exact-mean/variance
+        // detection for those R values without accepting a rounded R.
+        int64_t rSignificand = tiling_->r;
+        while (rSignificand > MAX_EXACT_FP32_INTEGER && (rSignificand & 1) == 0) {
+            rSignificand >>= 1;
+        }
+        const float rForZeroCheck = (rSignificand <= MAX_EXACT_FP32_INTEGER) ? static_cast<float>(tiling_->r) :
+                                                                               static_cast<float>(NAN);
         ComputeBaseStats((__ubuf__ float*)sumLocal.GetPhyAddr(), (__ubuf__ float*)squareLocal.GetPhyAddr(), MeanAddr(),
                          VarAddr(), ScaleAddr(), BiasAddr(), ScaleErrorAddr(), BiasErrorAddr(), count, tiling_->invR,
                          tiling_->invRCorrection, rForZeroCheck, tiling_->bessel, tiling_->epsilon);
