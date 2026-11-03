@@ -8,10 +8,12 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "base/err_mgr.h"
 #include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -31,43 +33,62 @@ namespace optiling {
 ge::graphStatus TilingPrepareExpandIntoJaggedPermute(gert::TilingParseContext* context);
 } // namespace optiling
 
-namespace error_message {
+namespace {
+class ScopedErrorContext {
+public:
+    ScopedErrorContext() : savedContext_(error_message::GetErrMgrContext())
+    {
+        auto context = savedContext_;
+        context.work_stream_id = reinterpret_cast<std::uintptr_t>(this);
+        error_message::SetErrMgrContext(context);
+        (void)error_message::GetErrMgrRawErrorMessages();
+    }
+
+    ~ScopedErrorContext()
+    {
+        (void)error_message::GetErrMgrRawErrorMessages();
+        error_message::SetErrMgrContext(savedContext_);
+    }
+
+private:
+    error_message::ErrorManagerContext savedContext_;
+};
+
 struct CapturedError {
+    size_t count = 0;
     std::string code;
     std::vector<std::string> keys;
     std::vector<std::string> values;
 };
-static thread_local CapturedError g_lastError;
-static thread_local int g_reportCount = 0;
 
-__attribute__((weak)) int32_t ReportPredefinedErrMsg(const char* errorCode, const std::vector<const char*>& keys,
-                                                     const std::vector<const char*>& values)
+CapturedError CaptureError()
 {
-    g_lastError.code = errorCode == nullptr ? "" : errorCode;
-    g_lastError.keys.clear();
-    g_lastError.values.clear();
-    for (const auto* key : keys) {
-        g_lastError.keys.emplace_back(key == nullptr ? "" : key);
+    CapturedError captured;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    captured.count = errors.size();
+    if (errors.empty()) {
+        return captured;
     }
-    for (const auto* value : values) {
-        g_lastError.values.emplace_back(value == nullptr ? "" : value);
+    const auto& error = errors.back();
+    captured.code = error.error_id == nullptr ? "" : error.error_id.get();
+    for (const auto& key : error.args_key) {
+        captured.keys.emplace_back(key == nullptr ? "" : key.get());
     }
-    ++g_reportCount;
-    return 0;
+    for (const auto& value : error.args_value) {
+        captured.values.emplace_back(value == nullptr ? "" : value.get());
+    }
+    return captured;
 }
-
-static void ResetCapture()
-{
-    g_lastError = {};
-    g_reportCount = 0;
-}
-} // namespace error_message
+} // namespace
 
 class ExpandIntoJaggedPermuteTiling : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "ExpandIntoJaggedPermuteTiling SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "ExpandIntoJaggedPermuteTiling TearDown" << std::endl; }
+
+private:
+    ScopedErrorContext errorContext_;
 };
 
 TEST_F(ExpandIntoJaggedPermuteTiling, test_tiling_int32)
@@ -146,12 +167,13 @@ TEST_F(ExpandIntoJaggedPermuteTiling, test_tiling_int32)
 
 static void ExpectSingleStageError(const std::string& reason)
 {
-    ASSERT_EQ(error_message::g_reportCount, 1);
-    EXPECT_EQ(error_message::g_lastError.code, "EZ1008");
-    ASSERT_EQ(error_message::g_lastError.keys, (std::vector<std::string>{"opName", "reason"}));
-    ASSERT_EQ(error_message::g_lastError.values.size(), 2U);
-    EXPECT_EQ(error_message::g_lastError.values[0], "ExpandIntoJaggedPermute");
-    EXPECT_NE(error_message::g_lastError.values[1].find(reason), std::string::npos);
+    const auto error = CaptureError();
+    ASSERT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ1008");
+    ASSERT_EQ(error.keys, (std::vector<std::string>{"opName", "reason"}));
+    ASSERT_EQ(error.values.size(), 2U);
+    EXPECT_EQ(error.values[0], "ExpandIntoJaggedPermute");
+    EXPECT_NE(error.values[1].find(reason), std::string::npos);
 }
 
 TEST_F(ExpandIntoJaggedPermuteTiling, null_tiling_context_reports_stage_failure_once)
@@ -159,14 +181,12 @@ TEST_F(ExpandIntoJaggedPermuteTiling, null_tiling_context_reports_stage_failure_
     auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ExpandIntoJaggedPermute");
     ASSERT_NE(impl, nullptr);
     ASSERT_NE(impl->tiling, nullptr);
-    error_message::ResetCapture();
     EXPECT_EQ(impl->tiling(nullptr), ge::GRAPH_FAILED);
     ExpectSingleStageError("TilingContext is nullptr");
 }
 
 TEST_F(ExpandIntoJaggedPermuteTiling, null_parse_context_reports_stage_failure_once)
 {
-    error_message::ResetCapture();
     EXPECT_EQ(optiling::TilingPrepareExpandIntoJaggedPermute(nullptr), ge::GRAPH_FAILED);
     ExpectSingleStageError("TilingParseContext is nullptr");
 }

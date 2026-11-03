@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "base/err_mgr.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
@@ -34,37 +35,53 @@ ge::graphStatus ValidateOutputViewSpanForExpandIntoJaggedPermute(gert::TilingCon
                                                                  int64_t outputOffset, int64_t outputStride);
 } // namespace optiling
 
-namespace error_message {
+namespace {
+class ScopedErrorContext {
+public:
+    ScopedErrorContext() : savedContext_(error_message::GetErrMgrContext())
+    {
+        auto context = savedContext_;
+        context.work_stream_id = reinterpret_cast<std::uintptr_t>(this);
+        error_message::SetErrMgrContext(context);
+        (void)error_message::GetErrMgrRawErrorMessages();
+    }
+
+    ~ScopedErrorContext()
+    {
+        (void)error_message::GetErrMgrRawErrorMessages();
+        error_message::SetErrMgrContext(savedContext_);
+    }
+
+private:
+    error_message::ErrorManagerContext savedContext_;
+};
+
 struct CapturedError {
+    size_t count = 0;
     std::string code;
     std::vector<std::string> keys;
     std::vector<std::string> values;
 };
-static thread_local CapturedError g_lastError;
-static thread_local int g_reportCount = 0;
 
-__attribute__((weak)) int32_t ReportPredefinedErrMsg(const char* errorCode, const std::vector<const char*>& keys,
-                                                     const std::vector<const char*>& values)
+CapturedError CaptureError()
 {
-    g_lastError.code = errorCode == nullptr ? "" : errorCode;
-    g_lastError.keys.clear();
-    g_lastError.values.clear();
-    for (const auto* key : keys) {
-        g_lastError.keys.emplace_back(key == nullptr ? "" : key);
+    CapturedError captured;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    captured.count = errors.size();
+    if (errors.empty()) {
+        return captured;
     }
-    for (const auto* value : values) {
-        g_lastError.values.emplace_back(value == nullptr ? "" : value);
+    const auto& error = errors.back();
+    captured.code = error.error_id == nullptr ? "" : error.error_id.get();
+    for (const auto& key : error.args_key) {
+        captured.keys.emplace_back(key == nullptr ? "" : key.get());
     }
-    ++g_reportCount;
-    return 0;
+    for (const auto& value : error.args_value) {
+        captured.values.emplace_back(value == nullptr ? "" : value.get());
+    }
+    return captured;
 }
-
-static void ResetCapture()
-{
-    g_lastError = {};
-    g_reportCount = 0;
-}
-} // namespace error_message
+} // namespace
 
 namespace {
 constexpr char OP_TYPE[] = "ExpandIntoJaggedPermute";
@@ -190,17 +207,18 @@ TilingResult RunTiling(gert::StorageShape& permute, gert::StorageShape& inputOff
         }
         return result;
     }
-    error_message::ResetCapture();
+    ScopedErrorContext errorContext;
     result.status = impl->tiling(context);
     if (outputSlotCleared) {
         runContext->values[runContext->input_size + outputIndex] = savedOutputSlot;
     }
-    result.errorCount = static_cast<size_t>(error_message::g_reportCount);
-    result.errorId = error_message::g_lastError.code;
-    result.errorKeys = error_message::g_lastError.keys;
-    result.errorValues = error_message::g_lastError.values;
-    if (error_message::g_lastError.values.size() == 2U) {
-        result.errorMessage = error_message::g_lastError.values[0] + ": " + error_message::g_lastError.values[1];
+    const auto error = CaptureError();
+    result.errorCount = error.count;
+    result.errorId = error.code;
+    result.errorKeys = error.keys;
+    result.errorValues = error.values;
+    if (error.values.size() == 2U) {
+        result.errorMessage = error.values[0] + ": " + error.values[1];
     }
     if (result.status != ge::GRAPH_SUCCESS) {
         return result;
@@ -263,6 +281,7 @@ ge::graphStatus RunViewSpan(int64_t outputSize, int64_t outputOffset, int64_t ou
                       .TilingData(tilingData.get())
                       .Workspace(workspace)
                       .Build();
+    ScopedErrorContext errorContext;
     return optiling::ValidateOutputViewSpanForExpandIntoJaggedPermute(holder.GetContext<gert::TilingContext>(),
                                                                       outputSize, outputOffset, outputStride);
 }
@@ -404,14 +423,15 @@ TEST(ExpandIntoJaggedPermuteTiling950, NullContextReportsStageFailureOnce)
 {
     auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl(OP_TYPE);
     ASSERT_NE(impl, nullptr);
-    error_message::ResetCapture();
+    ScopedErrorContext errorContext;
     EXPECT_EQ(impl->tiling(nullptr), ge::GRAPH_FAILED);
-    ASSERT_EQ(error_message::g_reportCount, 1);
-    EXPECT_EQ(error_message::g_lastError.code, "EZ1008");
-    ASSERT_EQ(error_message::g_lastError.keys, (std::vector<std::string>{"opName", "reason"}));
-    ASSERT_EQ(error_message::g_lastError.values.size(), 2U);
-    EXPECT_EQ(error_message::g_lastError.values[0], OP_TYPE);
-    EXPECT_NE(error_message::g_lastError.values[1].find("TilingContext is nullptr"), std::string::npos);
+    const auto error = CaptureError();
+    ASSERT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ1008");
+    ASSERT_EQ(error.keys, (std::vector<std::string>{"opName", "reason"}));
+    ASSERT_EQ(error.values.size(), 2U);
+    EXPECT_EQ(error.values[0], OP_TYPE);
+    EXPECT_NE(error.values[1].find("TilingContext is nullptr"), std::string::npos);
 }
 
 void CheckFrameworkResourceFailure(FailurePoint failurePoint, const std::string& reason)
