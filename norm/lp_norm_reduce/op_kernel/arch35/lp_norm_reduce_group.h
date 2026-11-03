@@ -58,6 +58,38 @@
 
 namespace NsLpNormReduce {
 
+// Keep the rounding residual when combining fp32 group partials. Read one
+// 32-byte block at a time so narrow/padded rows never require a full-VL load.
+__simd_vf__ inline void ReduceGroupSumVf(__ubuf__ float* dst, __ubuf__ float* src, uint32_t rows, uint32_t rowStride)
+{
+    AscendC::Reg::RegTensor<float> sum;
+    AscendC::Reg::RegTensor<float> correction;
+    AscendC::Reg::RegTensor<float> term;
+    AscendC::Reg::RegTensor<float> next;
+    AscendC::Reg::RegTensor<float> zero;
+    AscendC::Reg::MaskReg finite;
+    uint32_t lanes = UB_BLOCK_F32;
+    auto mask = AscendC::Reg::UpdateMask<float>(lanes);
+    AscendC::Reg::Duplicate(zero, 0.0f);
+    for (uint32_t a = 0; a < rowStride; a += UB_BLOCK_F32) {
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BLK>(sum, src + a);
+        AscendC::Reg::Duplicate(correction, 0.0f);
+        for (uint32_t r = 1; r < rows; ++r) {
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BLK>(term, src + r * rowStride + a);
+            AscendC::Reg::Sub(term, term, correction, mask);
+            AscendC::Reg::Add(next, sum, term, mask);
+            AscendC::Reg::Sub(correction, next, sum, mask);
+            AscendC::Reg::Sub(correction, correction, term, mask);
+            // All partials are nonnegative. Reset the residual for Inf/NaN:
+            // an Inf - Inf residual must not turn a later finite addition into NaN.
+            AscendC::Reg::Compares<float, AscendC::CMPMODE::LT>(finite, next, __builtin_huge_valf(), mask);
+            AscendC::Reg::Select(correction, correction, zero, finite);
+            AscendC::Reg::Move(sum, next, mask);
+        }
+        AscendC::Reg::StoreAlign(dst + a, sum, mask);
+    }
+}
+
 // ===========================================================================
 // LpNormReduceGroupKernel<DType> —— Group 模板 kernel 类（tilingKey=1）
 //
@@ -376,7 +408,7 @@ __aicore__ inline void LpNormReduceGroupKernel<DType>::Phase2Process()
         SetFlag<HardEvent::MTE2_V>(evMTE2toV_); // RAW：MTE2 写 preRes → V 读
         WaitFlag<HardEvent::MTE2_V>(evMTE2toV_);
 
-        // 2b) Reduce（V/Reduce 硬件）：RA pattern、R=rGroupCnt 全载单 chunk、dst=cacheBuf[0]
+        // 2b) RA reduction across all group partials, dst=cacheBuf[0].
         //     （无二分树层级）；公式 max/min/Σ 跨核 partial 合并（ReduceSum/Max/Min
         //     按 pOrder 分发）；⚠ srcShape 必须用 aLenUb（padded）——ReduceXxx 按
         //     aLenUb 行步长读
@@ -389,6 +421,11 @@ __aicore__ inline void LpNormReduceGroupKernel<DType>::Phase2Process()
             AscendC::ReduceMin<float, AscendC::Pattern::Reduce::RA, /*isReuseSource=*/true>(
                 cacheBuf_.template Get<float>()[0], preReduceResult_.template Get<float>(),
                 preReduceResultTail_.template Get<uint8_t>(), srcShape, /*srcInnerPad=*/true);
+        } else if constexpr (std::is_same_v<DT, float>) {
+            asc_vf_call<ReduceGroupSumVf>(
+                reinterpret_cast<__ubuf__ float*>(cacheBuf_.template Get<float>().GetPhyAddr()),
+                reinterpret_cast<__ubuf__ float*>(preReduceResult_.template Get<float>().GetPhyAddr()),
+                static_cast<uint32_t>(td_->rGroupCnt), static_cast<uint32_t>(aLenUb));
         } else {
             AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, /*isReuseSource=*/true>(
                 cacheBuf_.template Get<float>()[0], preReduceResult_.template Get<float>(),
