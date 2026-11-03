@@ -27,7 +27,7 @@ __aicore__ inline bool IsCacheOpTiling(const ScatterElementsV2TilingData* tiling
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecCacheScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                          ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                          const ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
                                           GM_ADDR workspace)
 {
     if (tiling_data->mode >= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_BEGIN &&
@@ -43,7 +43,7 @@ __aicore__ inline void ExecCacheScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR 
 
 template <typename T, typename U>
 __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                           ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe)
+                                           const ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe)
 {
     KernelScatterElementsV2<T, U> op;
     op.Init(tiling_data, pipe, var, indices, updates);
@@ -56,7 +56,7 @@ __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecScatterOpImpl(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                         ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                         const ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
                                          GM_ADDR workspace)
 {
     if (IsCacheOpTiling(tiling_data)) {
@@ -68,7 +68,8 @@ __aicore__ inline void ExecScatterOpImpl(GM_ADDR var, GM_ADDR indices, GM_ADDR u
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                     ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe, GM_ADDR workspace)
+                                     const ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                     GM_ADDR workspace)
 {
     ExecScatterOpImpl<T, U, IsScalar>(var, indices, updates, tiling_data, pipe, workspace);
 }
@@ -83,7 +84,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
                                                           GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
-    ScatterElementsV2TilingData* __restrict tilingDevice = &tiling_data;
+    const ScatterElementsV2TilingData* __restrict tilingDevice = &tiling_data;
     AscendC::TPipe pipe;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
 #if (defined(DTYPE_VAR))
