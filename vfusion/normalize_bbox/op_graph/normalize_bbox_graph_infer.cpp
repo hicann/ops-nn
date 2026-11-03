@@ -21,15 +21,28 @@
 namespace ops {
 namespace {
 constexpr size_t INPUT_BOXES_IDX = 0;
+constexpr size_t INPUT_SHAPE_HW_IDX = 1;
 constexpr size_t OUTPUT_Y_IDX = 0;
 } // namespace
 
-static ge::graphStatus NormalizeBBoxInferDataType(gert::InferDataTypeContext* context)
+ge::graphStatus NormalizeBBoxInferDataType(gert::InferDataTypeContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "NormalizeBBoxInferDataType enter");
-    context->SetOutputDataType(OUTPUT_Y_IDX, context->GetInputDataType(INPUT_BOXES_IDX));
+    const auto boxesDtype = context->GetInputDataType(INPUT_BOXES_IDX);
+    OP_CHECK_IF(boxesDtype != ge::DT_FLOAT16 && boxesDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "boxes", Ops::Base::ToString(boxesDtype),
+                                                      "only float16 and float32 are supported"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context->GetInputDataType(INPUT_SHAPE_HW_IDX) != ge::DT_INT32,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context->GetNodeName(), "shape_hw",
+                    Ops::Base::ToString(context->GetInputDataType(INPUT_SHAPE_HW_IDX)), "only int32 is supported"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "NormalizeBBoxInferDataType end");
-    return ge::GRAPH_SUCCESS;
+    return context->SetOutputDataType(OUTPUT_Y_IDX, boxesDtype);
 }
 
 IMPL_OP(NormalizeBBox).InferDataType(NormalizeBBoxInferDataType);

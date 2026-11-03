@@ -224,11 +224,13 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::GetShapeAttrsInfo()
 ge::graphStatus NormalizeBBoxTilingForRegbase::ComputeTileLen()
 {
     uint64_t divisorBlocks = reversedBox_ ? 2 : 1;
-    uint64_t ubBufFactor = 2 + 2 + divisorBlocks;
+    const uint64_t computeDtypeSize = sizeof(float);
+    const uint64_t computeBytesPerElem = boxesDType_ == ge::DT_FLOAT16 ? computeDtypeSize : 0;
+    const uint64_t ubBytesPerElem = 4 * boxesDtypeSize_ + divisorBlocks * computeDtypeSize + computeBytesPerElem;
     uint64_t blockAlignElems = VREPEAT_SIZE / boxesDtypeSize_;
     uint64_t tileLen = 0;
     if (ubSize_ > UB_RESERVE) {
-        tileLen = (ubSize_ - UB_RESERVE) / (ubBufFactor * boxesDtypeSize_);
+        tileLen = (ubSize_ - UB_RESERVE) / ubBytesPerElem;
     }
     tileLen = tileLen / blockAlignElems * blockAlignElems;
     if (tileLen > MAX_TILE_LEN) {
@@ -241,9 +243,10 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::ComputeTileLen()
     tilingData_.boxesBufferBytes = tileLen * boxesDtypeSize_;
     tilingData_.shapeBufferBytes = BLOCK_SIZE;
     tilingData_.hwCastBufferBytes = BLOCK_SIZE * 2;
-    tilingData_.divisorBufferBytes = tileLen * boxesDtypeSize_ * divisorBlocks;
+    tilingData_.divisorBufferBytes = tileLen * computeDtypeSize * divisorBlocks;
     const uint64_t requiredUb = UB_RESERVE + tilingData_.boxesBufferBytes * 2 * 2 + tilingData_.shapeBufferBytes +
-                                tilingData_.hwCastBufferBytes + tilingData_.divisorBufferBytes;
+                                tilingData_.hwCastBufferBytes + tilingData_.divisorBufferBytes +
+                                tileLen * computeBytesPerElem;
     OP_CHECK_IF(requiredUb > ubSize_,
                 OP_LOGE(opName_, "UB is too small: required=%luB available=%luB.", requiredUb, ubSize_),
                 return ge::GRAPH_FAILED);

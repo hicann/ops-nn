@@ -5,11 +5,11 @@
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------: |
 | <term>Ascend 950PR&950DT系列产品</term> | √ |
-| <term>Atlas A3系列产品</term>| × |
-| <term>Atlas A2系列产品</term> | × |
-| <term>Atlas 200I/500 A2推理产品</term> | × |
-| <term>Atlas推理系列产品</term> | × |
-| <term>Atlas训练系列产品</term> | × |
+| <term>Atlas A3系列产品</term>| √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -37,12 +37,6 @@
 | y | 输出 | 换算后的相对坐标，shape和数据类型与`boxes`一致。 | FLOAT、FLOAT16 | ND |
 | reversed_box | 可选属性 | 指定`boxes`的坐标轴位置，默认值为false。 | BOOL | - |
 
-### 产品差异说明
-
-| 产品 | 静态shape能力 | 动态shape能力 | shape/rank及空Tensor限制 |
-| --- | --- | --- | --- |
-| <term>Ascend 950PR&950DT系列产品</term> | 输入、输出均为ND | 支持动态shape和动态rank，输入、输出均为ND | `boxes`的rank为2～8；支持batch或非坐标维为0的空Tensor，坐标维必须为4 |
-
 ## 约束说明
 
 - `shape_hw`的batch必须与`boxes`的batch一致。
@@ -62,6 +56,6 @@
 
 本算子不提供aclnn单算子接口，通过图引擎（Graph Engine，GE）图模式调用。
 
-| 调用方式 | 调用样例 | 说明 |
+| 调用方式 | 样例代码 | 说明 |
 | --- | --- | --- |
 | GE图模式 | [test_geir_normalize_bbox.cpp](examples/arch35/test_geir_normalize_bbox.cpp) | 通过[NormalizeBBox算子IR](op_graph/normalize_bbox_proto.h)构图并调用算子。 |

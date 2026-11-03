@@ -38,6 +38,26 @@ constexpr uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
 constexpr uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 
+// Use one power-of-two scale for the complete reduction, including sub-R
+// carries. This prevents finite FLOAT inputs overflowing before cancellation.
+template <typename T_IN>
+__aicore__ inline void GetSumScale(uint64_t reduceNum, float& scale, float& restore)
+{
+    if constexpr (IsSameType<T_IN, float>::value) {
+        uint32_t power = static_cast<uint32_t>(64 - AscendC::CountLeadingZero(reduceNum - 1));
+        restore = static_cast<float>(uint64_t{1} << power);
+        scale = 1.0f / restore;
+    }
+}
+
+template <typename T_IN>
+__simd_callee__ inline void ScaleSumValue(RegTensor<float>& value, float scale, MaskReg& mask)
+{
+    if constexpr (IsSameType<T_IN, float>::value) {
+        AscendC::Reg::Muls(value, value, scale, mask);
+    }
+}
+
 // fp16 → fp32 提升（输入侧）。输出恒 fp32，故本算子无 fp32→fp16 回写的 castTraitB322B16。
 constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
     AscendC::Reg::RegLayout::ZERO,

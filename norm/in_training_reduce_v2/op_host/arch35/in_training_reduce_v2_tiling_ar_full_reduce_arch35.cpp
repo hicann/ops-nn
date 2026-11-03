@@ -81,7 +81,8 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
         return DoSubRTiling(rAlign, binAddQuotient, elemSize);
     }
     // 折叠临时缓存单行字节数（保守按字节计）
-    uint64_t binAddBufferOneline = Ops::Base::CeilAlign((binAddQuotient + vlfp32 - 1) / vlfp32, ubfp32) * sizeof(float);
+    uint64_t binAddBufferOneline = Ops::Base::CeilAlign((binAddQuotient + vlfp32 - 1) / vlfp32, ubfp32) *
+                                   sizeof(float) * ACC_COMPONENTS;
 
     // 单行 UB 占用（删 gamma/beta/y/mean/var/rstd/meanFp32）：
     //   inQueueX_:            rAlign * elemSize        # 双 buf → * 2

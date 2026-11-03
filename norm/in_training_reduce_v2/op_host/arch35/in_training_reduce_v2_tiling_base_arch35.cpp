@@ -158,6 +158,10 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
             return ge::GRAPH_FAILED);
         r = nextR;
     }
+    OP_CHECK_IF(r <= 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(GetNodeName(), "x", ToString(xStorageShape).c_str(),
+                                                      "The product of spatial dimensions must be positive"),
+                return ge::GRAPH_FAILED);
     int64_t totalRows = 0;
     int64_t totalElements = 0;
     OP_CHECK_IF(!CheckedMulNonNegative(a1, a0, totalRows),
@@ -203,6 +207,12 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::CheckOutputShapes()
     const size_t channelAxis = IsChannelLast(format) ? rank - 1 : DIM_1;
     for (uint32_t index : {OUTPUT_SUM_INDEX, OUTPUT_SQUARE_SUM_INDEX}) {
         const char* outputName = index == OUTPUT_SUM_INDEX ? "sum" : "square_sum";
+        auto outputDesc = context_->GetOutputDesc(index);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+        const ge::Format outputFormat = outputDesc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(outputFormat != ge::FORMAT_ND,
+                    OP_LOGE_FOR_INVALID_FORMAT(GetNodeName(), outputName, ToString(outputFormat).c_str(), "ND"),
+                    return ge::GRAPH_FAILED);
         auto outputShape = context_->GetOutputShape(index);
         OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
         const auto& shape = outputShape->GetStorageShape();

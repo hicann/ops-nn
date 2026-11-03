@@ -27,6 +27,23 @@ protected:
     static void TearDownTestCase() { std::cout << "relu6grad TearDown" << std::endl; }
 };
 
+TEST_F(relu6grad, relu6grad_infer_shape_rank9_rejected_for_each_input)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape rank9 = {{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}};
+    gert::StorageShape scalar = {{1}, {1}};
+    for (size_t input = 0; input < 2; ++input) {
+        gert::StorageShape output = {{}, {}};
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(2, 1)
+                          .IrInstanceNum({1, 1})
+                          .InputShapes({input == 0 ? &rank9 : &scalar, input == 1 ? &rank9 : &scalar})
+                          .OutputShapes({&output})
+                          .Build();
+        EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    }
+}
+
 TEST_F(relu6grad, relu6grad_infer_shape_same_fp32)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;

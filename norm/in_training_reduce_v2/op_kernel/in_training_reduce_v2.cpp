@@ -25,11 +25,18 @@ using namespace INTrainingReduceV2Ops;
 #define TILINGKEY_AR_FULL_REDUCE 200000
 #define TILINGKEY_ARA_REDUCE 400000
 
+// Expand the key into one literal without expanding the reserved TILING_KEY_VAR token.
+#define IN_TRAINING_REDUCE_V2_STRINGIFY_IMPL(expression) #expression
+#define IN_TRAINING_REDUCE_V2_TILING_EXPR(key) IN_TRAINING_REDUCE_V2_STRINGIFY_IMPL(TILING_KEY_VAR == key)
+
 extern "C" __global__ __aicore__ void in_training_reduce_v2(GM_ADDR x, GM_ADDR sum, GM_ADDR square_sum,
                                                             GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(INTrainingReduceV2ARFullReduceTilingData);
+    // OOM instrumentation locates tensor bounds after the registered TilingData.
+    REGISTER_TILING_FOR_TILINGKEY(IN_TRAINING_REDUCE_V2_TILING_EXPR(TILINGKEY_ARA_REDUCE),
+                                  INTrainingReduceV2ARAReduceTilingData);
     if (TILING_KEY_IS(TILINGKEY_AR_FULL_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARFullReduceTilingData, tilingData, tiling);
         INTrainingReduceV2ARFullReduce<DTYPE_X> op(&tilingData);

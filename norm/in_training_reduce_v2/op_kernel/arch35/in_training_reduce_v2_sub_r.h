@@ -56,6 +56,7 @@ public:
         sqGm_ = &sqGm;
         totalRows_ = totalRows;
         numR_ = numR;
+        GetSumScale<T_X>(static_cast<uint64_t>(numR_), sumScale_, sumRestore_);
         rFactor_ = rFactor;
         numChunks_ = numChunks;
         tailLen_ = tailLen;
@@ -139,6 +140,7 @@ private:
     {
         __ubuf__ T_X* xUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
         uint32_t numSeg = (count + VL_FP32 - 1) / VL_FP32;
+        const float scale = sumScale_;
         __VEC_SCOPE__
         {
             RegTensor<float> xReg;
@@ -162,9 +164,10 @@ private:
                 MaskReg pregSeg = UpdateMask<float>(sreg);
                 LoadTensorForDtypeTIn<T_X>(xUb, xReg, pregSeg, s * VL_FP32);
                 ShiftLefts((RegTensor<uint32_t>&)xReg, (RegTensor<uint32_t>&)xReg, static_cast<int16_t>(0), pregSeg);
-                AccumulateWithError(sumAccReg, sumLow, xReg, pregFull); // Σx：累进原始 x
-                Mul(sqReg, xReg, xReg, pregFull);                       // HIGH-1：先逐元素平方
-                AccumulateWithError(sqAccReg, sqLow, sqReg, pregFull);  // Σx²：累进已平方值
+                Mul(sqReg, xReg, xReg, pregFull); // HIGH-1：先逐元素平方
+                ScaleSumValue<T_X>(xReg, scale, pregFull);
+                AccumulateWithError(sumAccReg, sumLow, xReg, pregFull);
+                AccumulateWithError(sqAccReg, sqLow, sqReg, pregFull); // Σx²：累进已平方值
             }
             ReduceWithError(sumAccReg, sumLow, pregFull);
             ReduceWithError(sqAccReg, sqLow, pregFull);
@@ -184,6 +187,7 @@ private:
                                          __ubuf__ float* sqDst, uint32_t nChunks)
     {
         uint32_t numSeg = (nChunks + VL_FP32 - 1) / VL_FP32;
+        const float restore = sumRestore_;
         __VEC_SCOPE__
         {
             RegTensor<float> sumReg;
@@ -225,6 +229,7 @@ private:
             ReduceWithError(sqAccReg, sqLow, pregFull);
             if constexpr (FINAL_OUTPUT) {
                 Add(sumAccReg, sumAccReg, sumLow, pregOne);
+                ScaleSumValue<T_X>(sumAccReg, restore, pregOne);
                 Add(sqAccReg, sqAccReg, sqLow, pregOne);
             } else {
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumDst + correctionStride_, sumLow, pregOne);
@@ -259,6 +264,8 @@ private:
     GlobalTensor<T_SUM>* sqGm_{nullptr};
     int64_t totalRows_{0};
     int64_t numR_{0};
+    float sumScale_{1.0f};
+    float sumRestore_{1.0f};
     uint32_t rFactor_{0};
     int64_t numChunks_{0};
     uint32_t tailLen_{0};

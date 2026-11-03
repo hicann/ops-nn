@@ -703,7 +703,8 @@ TEST_F(NormalizeBBoxTiling, tiling_tilelen_ub_budget_capped)
 
 // Additional op_host branch coverage.
 //   Constants mirrored from normalize_bbox_regbase_tiling.cpp:
-//     UB_RESERVE=32*1024=32768, UB_BUF_FACTOR=5(normal)/6(reversed), VREPEAT_SIZE=256,
+//     UB_RESERVE=32*1024=32768, VREPEAT_SIZE=256,
+//     per-element UB: fp32=20/24B, fp16=16/20B (normal/reversed),
 //     MAX_TILE_LEN=8192.
 //     blockAlignElems = VREPEAT_SIZE/dsize -> fp32:64, fp16:128 (also the tileLen floor clamp).
 // Covered branches:
@@ -731,18 +732,24 @@ TEST_F(NormalizeBBoxTiling, tiling_fail_platform_zero_ubsize)
 }
 
 // ---- tileLen minimum viable UB: reserve + explicit minimum buffers --------------------------
-// Normal fp32/fp16 both need 1376B beyond UB_RESERVE at their minimum 256B-repeat tile:
-// boxes queues 1024B + shape 32B + cast 64B + divisor 256B.
+// Minimum tiles use 1024B for boxes queues and 96B for image dimensions.
+// FP32 adds a 256B divisor; FP16 adds a 512B divisor and 512B fp32 compute buffer.
 TEST_F(NormalizeBBoxTiling, tiling_tilelen_small_ub_clamp_to_blockalign)
 {
     constexpr uint64_t kUbReserve = 32u * 1024u;
-    constexpr uint64_t kMinimumBuffers = 1376u;
-    auto f32 = RunTiling({1, 4096, 4}, {1, 3}, NORMAL_LAYOUT, ge::DT_FLOAT, CORE_NUM, kUbReserve + kMinimumBuffers);
-    auto f16 = RunTiling({1, 4096, 4}, {1, 3}, NORMAL_LAYOUT, ge::DT_FLOAT16, CORE_NUM, kUbReserve + kMinimumBuffers);
+    constexpr uint64_t kMinimumFp32Buffers = 1376u;
+    constexpr uint64_t kMinimumFp16Buffers = 2144u;
+    auto f32 = RunTiling({1, 4096, 4}, {1, 3}, NORMAL_LAYOUT, ge::DT_FLOAT, CORE_NUM, kUbReserve + kMinimumFp32Buffers);
+    auto f16 = RunTiling({1, 4096, 4}, {1, 3}, NORMAL_LAYOUT, ge::DT_FLOAT16, CORE_NUM,
+                         kUbReserve + kMinimumFp16Buffers);
     ASSERT_EQ(f32.status, ge::GRAPH_SUCCESS);
     ASSERT_EQ(f16.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(f32.tilingData.tileLen, 64u);  // clamped to blockAlignElems (fp32)
     EXPECT_EQ(f16.tilingData.tileLen, 128u); // clamped to blockAlignElems (fp16)
+    EXPECT_EQ(f16.tilingData.divisorBufferBytes, 512u);
+    const auto insufficient = RunTiling({1, 4096, 4}, {1, 3}, NORMAL_LAYOUT, ge::DT_FLOAT16, CORE_NUM,
+                                        kUbReserve + kMinimumFp16Buffers - 1);
+    EXPECT_EQ(insufficient.status, ge::GRAPH_FAILED);
 }
 
 // ---- UB below the reserved/runtime requirement must be rejected -----------------------------

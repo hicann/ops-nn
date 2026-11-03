@@ -41,7 +41,7 @@ struct NormalizeBBoxTilingData {
     int64_t shapeElements;       // shape_hw 总元素数（batch*3）
     uint64_t boxesBufferBytes;   // boxes input/output 各 queue 单 buffer 字节数
     uint64_t shapeBufferBytes;   // shape_hw queue 字节数
-    uint64_t hwCastBufferBytes;  // int32->fp32/half 临时 buffer 字节数
+    uint64_t hwCastBufferBytes;  // int32->fp32 临时 buffer 字节数
     uint64_t divisorBufferBytes; // divisor buffer 字节数
 };
 #pragma pack(pop)

@@ -45,15 +45,19 @@ inline ge::graphStatus InferShape4INTrainingReduceV2(gert::InferShapeContext* co
     gert::Shape* squareSumShape = context->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, squareSumShape);
 
+    const auto* xDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
+    const ge::Format originFormat = xDesc->GetOriginFormat();
+    OP_CHECK_IF(originFormat != ge::FORMAT_ND && originFormat != ge::FORMAT_NCHW && originFormat != ge::FORMAT_NHWC &&
+                    originFormat != ge::FORMAT_NCDHW && originFormat != ge::FORMAT_NDHWC,
+                OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", Ops::Base::ToString(originFormat).c_str(),
+                                           "ND, NCHW, NHWC, NCDHW or NDHWC"),
+                return ge::GRAPH_FAILED);
     if (Ops::Base::IsUnknownRank(*xShape)) {
         Ops::Base::SetUnknownRank(*sumShape);
         Ops::Base::SetUnknownRank(*squareSumShape);
         return ge::GRAPH_SUCCESS;
     }
-
-    const auto* xDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
-    const ge::Format originFormat = xDesc->GetOriginFormat();
     const bool isChannelLast = (originFormat == ge::FORMAT_NHWC || originFormat == ge::FORMAT_NDHWC);
 
     const size_t rank = xShape->GetDimNum();

@@ -21,10 +21,10 @@ Only one registration key is needed: kernel and GEIR both resolve the snake-case
 operator name and share :class:`INTrainingReduceV2KernelSpec`.  The legacy
 ``__golden__`` entry remains available and calls the same Torch computation core.
 
-The reference math uses Torch operators.  Promote mode computes both statistics
-in FP64 and preserves FP64 outputs.  TTK's FP16-to-FP32 input promotion alone is
-insufficient for a high-precision reference to this operator's FP32 accumulation
-and outputs.  Other modes follow the kernel's FP32 computation and output contract.
+The TestSpec reference computes both statistics in FP64 and preserves FP64
+outputs independently of the comparison mode.  TTK's FP16-to-FP32 input promotion
+alone is insufficient for this operator's FP32 accumulation and outputs.  The
+legacy entry retains its historical FP32 output contract outside Promote mode.
 """
 
 import numpy as np
@@ -187,7 +187,9 @@ class INTrainingReduceV2KernelSpec:
     """Shared kernel/GEIR TestSpec; parameters follow def.cpp (``x`` only)."""
 
     def golden(x, **kwargs):
-        return _kernel_golden(x, **kwargs)
+        reference_kwargs = dict(kwargs)
+        reference_kwargs["golden_mode"] = "Promote"
+        return _kernel_golden(x, **reference_kwargs)
 
     third_party = {"torch": _INTrainingReduceV2Compose}
     tolerance = _TOL

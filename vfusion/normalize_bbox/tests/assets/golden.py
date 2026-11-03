@@ -11,10 +11,9 @@
 
 """NormalizeBBox kernel/GEIR golden (TestSpec multi-path form).
 
-The mathematical golden uses Torch tensor composition and honors TTK Promote:
-it computes in the dtype presented by the framework and never narrows a promoted
-fp64/fp32 input.  The independent third-party compose mirrors the arch35 kernel's
-dtype-dependent int32 -> fp32 [-> fp16] divisor construction and division path.
+The mathematical reference preserves TTK Promote and performs at least fp32
+division, so int32 image dimensions are never narrowed to fp16. The independent
+GPU composition follows the formula rather than reproducing kernel casts.
 """
 
 import numpy as np
@@ -73,6 +72,8 @@ def _compute(boxes, shape_hw, reversed_box=False):
     active reference precision and never cuts a promoted input back down.
     """
     boxes_tensor = _as_tensor(boxes)
+    if boxes_tensor.dtype == torch.float16:
+        boxes_tensor = boxes_tensor.to(torch.float32)
     shape_tensor = _as_tensor(shape_hw)
 
     batch = boxes_tensor.shape[0]
@@ -108,7 +109,7 @@ def _numpy_outputs(outputs, output_dtypes=None):
 
 
 class _NormalizeBBoxCompose:
-    """Independent Torch compose matching the arch35 kernel operation order."""
+    """Independent GPU reference for coordinate normalization."""
 
     def __init__(self, reversed_box=False, **kwargs):
         self.reversed_box = _resolve_reversed_box(reversed_box, kwargs)
@@ -121,14 +122,9 @@ class _NormalizeBBoxCompose:
                 f"got {output_dtype}"
             )
 
-        # NormalizeBBoxKernel::LoadHW, line for line at dtype level:
-        # shape input is int32, then Cast int32 -> fp32, and fp16 boxes take one
-        # additional Cast fp32 -> fp16 before Div; fp32 boxes stay in fp32.
-        shape_i32 = shape_hw.to(dtype=torch.int32)
-        hw_f32 = shape_i32.to(dtype=torch.float32)
-        hw_compute = (
-            hw_f32.to(dtype=torch.float16) if output_dtype == torch.float16 else hw_f32
-        )
+        # Image dimensions may exceed the finite fp16 range even when the
+        # normalized coordinates are representable. Divide before narrowing.
+        hw_compute = shape_hw.to(dtype=torch.float32)
         height = hw_compute[:, 0]
         width = hw_compute[:, 1]
         divisor4 = torch.stack((height, width, height, width), dim=1)
@@ -141,8 +137,7 @@ class _NormalizeBBoxCompose:
             divisor_shape = (batch,) + (1,) * (rank - 2) + (4,)
         divisor = torch.reshape(divisor4, divisor_shape)
 
-        # NormalizeBBoxKernel::CopyDivide performs Div directly in boxes dtype.
-        output = torch.div(boxes, divisor)
+        output = torch.div(boxes.to(torch.float32), divisor)
         return [output.to(dtype=output_dtype)]
 
 
@@ -168,6 +163,7 @@ def normalize_bbox_golden(boxes, shape_hw, reversed_box=False, **kwargs):
     input_is_tensor = isinstance(boxes, torch.Tensor)
     reversed_value = _resolve_reversed_box(reversed_box, kwargs)
     output = _compute(boxes, shape_hw, reversed_value)[0]
+    output = output.to(dtype=_as_tensor(boxes).dtype)
     if input_is_tensor:
         return output
     return output.detach().cpu().numpy()

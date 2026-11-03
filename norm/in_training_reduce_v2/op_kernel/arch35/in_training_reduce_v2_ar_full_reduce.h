@@ -34,15 +34,22 @@ using AscendC::Reg::UpdateMask;
 
 constexpr uint32_t ALIGN_32_FACTOR = 32;
 
+__simd_callee__ inline void ReduceFullARParts(RegTensor<float>& values, RegTensor<float>& low, MaskReg& valid)
+{
+    MaskReg full = CreateMask<float, MaskPattern::ALL>();
+    ShiftLefts((RegTensor<uint32_t>&)values, (RegTensor<uint32_t>&)values, static_cast<int16_t>(0), valid);
+    ShiftLefts((RegTensor<uint32_t>&)low, (RegTensor<uint32_t>&)low, static_cast<int16_t>(0), valid);
+    ReduceWithError(values, low, full);
+}
+
 // Preserve horizontal addition errors before rounding each full-AR partial.
 __simd_callee__ inline void ReduceFullAR(RegTensor<float>& result, RegTensor<float>& values, MaskReg& valid)
 {
     RegTensor<float> low;
     MaskReg full = CreateMask<float, MaskPattern::ALL>();
     MaskReg one = CreateMask<float, MaskPattern::VL1>();
-    ShiftLefts((RegTensor<uint32_t>&)values, (RegTensor<uint32_t>&)values, static_cast<int16_t>(0), valid);
     Duplicate(low, 0.0f, full);
-    ReduceWithError(values, low, full);
+    ReduceFullARParts(values, low, valid);
     Add(result, values, low, one);
 }
 
@@ -62,6 +69,7 @@ public:
         numN_ = tilingData->numN;
         numC_ = tilingData->numC;
         numR_ = tilingData->numR;
+        GetSumScale<T_X>(static_cast<uint64_t>(numR_), sumScale_, sumRestore_);
         rAlign_ = tilingData->rAlign;
         binaryAddQuotient_ = static_cast<uint32_t>(tilingData->binaryAddQuotient);
         perCoreCnt_ = tilingData->perCoreCnt;
@@ -219,6 +227,8 @@ private:
     __aicore__ inline void CalculateSumLessThanVL(__ubuf__ T_X* xInUb, __ubuf__ TSum* sumUb, uint16_t curRows,
                                                   uint32_t numColAlign, uint32_t reduceNum)
     {
+        const float scale = sumScale_;
+        const float restore = sumRestore_;
         __VEC_SCOPE__
         {
             RegTensor<float> x;
@@ -230,7 +240,9 @@ private:
 
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
+                ScaleSumValue<T_X>(x, scale, pregLoop);
                 ReduceFullAR(sum, x, pregLoop); // Σx：对原始 x 规约
+                ScaleSumValue<T_X>(sum, restore, pregOne);
                 StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
@@ -262,11 +274,14 @@ private:
                                                      uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
+        const float scale = sumScale_;
+        const float restore = sumRestore_;
         __VEC_SCOPE__
         {
             RegTensor<float> x;
             RegTensor<float> xFold;
             RegTensor<float> sum;
+            RegTensor<float> low;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
@@ -275,8 +290,13 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregFull, i * numColAlign);
                 LoadTensorForDtypeTIn<T_X>(xInUb + VL_FP32, xFold, pregTail, i * numColAlign);
                 ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
-                Add(x, x, xFold, pregFull); // 折叠原始 x
-                ReduceFullAR(sum, x, pregFull);
+                ScaleSumValue<T_X>(x, scale, pregFull);
+                ScaleSumValue<T_X>(xFold, scale, pregTail);
+                Duplicate(low, 0.0f, pregFull);
+                AccumulateWithError(x, low, xFold, pregFull);
+                ReduceFullARParts(x, low, pregFull);
+                Add(sum, x, low, pregOne);
+                ScaleSumValue<T_X>(sum, restore, pregOne);
                 StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
@@ -312,6 +332,8 @@ private:
     __aicore__ inline void CalculateSumCommon(__ubuf__ T_X* xInUb, __ubuf__ TSum* sumUb, __ubuf__ float* tmpUb,
                                               uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
+        const float scale = sumScale_;
+        const float restore = sumRestore_;
         uint32_t binaryAddQuotient = binaryAddQuotient_;
         uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
 
@@ -326,7 +348,7 @@ private:
             RegTensor<float> xFold;
             RegTensor<float> sumReg;
             RegTensor<float> vSum;
-            RegTensor<float> partial;
+            RegTensor<float> low;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
@@ -337,10 +359,15 @@ private:
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb, x, pregFull, offset);
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddQuotient, xFold, pregFull, offset);
-                    Add(x, x, xFold, pregFull);
-                    ReduceFullAR(partial, x, pregFull);
+                    ScaleSumValue<T_X>(x, scale, pregFull);
+                    ScaleSumValue<T_X>(xFold, scale, pregFull);
+                    Duplicate(low, 0.0f, pregFull);
+                    AccumulateWithError(x, low, xFold, pregFull);
+                    ReduceFullARParts(x, low, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), partial, pregOne);
+                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign * 2 + r), x, pregOne);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                        tmpUb + static_cast<uint32_t>((i * 2 + 1) * lastBinaryAddNumAlign + r), low, pregOne);
                 }
                 uint32_t sregRemainder = binaryAddRemainder - binaryAddRemainderFloorLoop * VL_FP32;
                 for (uint16_t r = 0;
@@ -352,20 +379,33 @@ private:
                                                pregLoop, offset);
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
-                    Add(x, x, xFold, pregFull);
-                    ReduceFullAR(partial, x, pregFull);
+                    ScaleSumValue<T_X>(x, scale, pregFull);
+                    ScaleSumValue<T_X>(xFold, scale, pregLoop);
+                    Duplicate(low, 0.0f, pregFull);
+                    AccumulateWithError(x, low, xFold, pregFull);
+                    ReduceFullARParts(x, low, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), partial,
+                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign * 2 + binaryAddRemainderFloorLoop), x,
                         pregOne);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                        tmpUb +
+                            static_cast<uint32_t>((i * 2 + 1) * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop),
+                        low, pregOne);
                 }
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
                      r++) {
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
-                    ReduceFullAR(partial, x, pregFull);
+                    ScaleSumValue<T_X>(x, scale, pregFull);
+                    Duplicate(low, 0.0f, pregFull);
+                    ReduceFullARParts(x, low, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
-                        partial, pregOne);
+                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign * 2 + binaryAddRemainderCeilLoop + r),
+                        x, pregOne);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                        tmpUb +
+                            static_cast<uint32_t>((i * 2 + 1) * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
+                        low, pregOne);
                 }
             }
         } // 关闭 store 阶段 __VEC_SCOPE__（与 Σx² 一致：分作用域强制 store→load 顺序，防跨语句冒险）。
@@ -373,21 +413,28 @@ private:
         {
             RegTensor<float> x;
             RegTensor<float> acc;
+            RegTensor<float> low;
             RegTensor<float> vSum;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             uint16_t slotSeg = (binaryAddQuotientLoop + VL_FP32 - 1) / VL_FP32;
             for (uint16_t i = 0; i < curRows; ++i) {
                 uint32_t sregSlot = binaryAddQuotientLoop;
-                Duplicate(acc, static_cast<float>(0.0), pregFull);
+                Duplicate(acc, 0.0f, pregFull);
+                Duplicate(low, 0.0f, pregFull);
                 for (uint16_t s = 0; s < slotSeg; ++s) {
                     MaskReg pregSeg = UpdateMask<float>(sregSlot); // 尾段部分槽的有效掩码
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + s * VL_FP32));
+                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign * 2 + s * VL_FP32));
                     // 尾段无效 lane 清零后累加
                     ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregSeg);
-                    Add(acc, acc, x, pregFull);
+                    AccumulateWithError(acc, low, x, pregFull);
+                    DataCopy(x, tmpUb + static_cast<uint32_t>((i * 2 + 1) * lastBinaryAddNumAlign + s * VL_FP32));
+                    ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregSeg);
+                    Add(low, low, x, pregFull);
                 }
-                ReduceFullAR(vSum, acc, pregFull);
+                ReduceFullARParts(acc, low, pregFull);
+                Add(vSum, acc, low, pregOne);
+                ScaleSumValue<T_X>(vSum, restore, pregOne);
                 StoreOneElementForDtypeTOut<TSum>(sumUb, vSum, pregOne, i);
             }
         }
@@ -500,6 +547,8 @@ private:
     int64_t numN_{0};
     int64_t numC_{0};
     int64_t numR_{0};
+    float sumScale_{1.0f};
+    float sumRestore_{1.0f};
     uint64_t rAlign_;
     uint32_t binaryAddQuotient_;
     int64_t perCoreCnt_;

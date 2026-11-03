@@ -32,17 +32,11 @@ constexpr int64_t NB_BLOCK_SIZE = 32;
 constexpr int64_t NB_VREPEAT_SIZE = 256;
 constexpr int64_t NB_DOUBLE_BUFFER = 2;
 constexpr uint64_t NB_ODD_LANE_MASK = 0xAAAAAAAAAAAAAAAAULL; // odd lanes (x-system coords) -> w
-constexpr int64_t NB_MASK_ELEM_WIDTH = 128;                  // mask Duplicate covers 128 CompT elements per repeat
+constexpr int64_t NB_MASK_ELEM_WIDTH = 128;                  // divisor coverage alignment (two fp32 repeats)
 constexpr size_t NB_MASK_WORD_COUNT = 2;
 constexpr uint8_t NB_DUPLICATE_REPEAT_COUNT = 1;
 constexpr uint8_t NB_DUPLICATE_BLOCK_STRIDE = 1;
 constexpr uint8_t NB_DUPLICATE_REPEAT_STRIDE = 8;
-
-// Compute type: boxes dtype is half or float, Div runs in-place (CompT == T).
-template <typename T>
-struct DivCompute {
-    using Type = T;
-};
 
 template <typename T, bool reversedBox>
 class NormalizeBBoxKernel {
@@ -52,7 +46,8 @@ public:
     __aicore__ inline void Init(GM_ADDR boxes, GM_ADDR shape_hw, GM_ADDR y);
     __aicore__ inline void Process();
 
-    using CompT = typename DivCompute<T>::Type;
+    // Keep int32 image dimensions in fp32, including dimensions above 65504.
+    using CompT = float;
 
 private:
     __aicore__ inline void LoadHW(int64_t b, CompT& h, CompT& w);
@@ -82,8 +77,9 @@ private:
     TQue<QuePosition::VECIN, NB_DOUBLE_BUFFER> boxesInQue_;
     TQue<QuePosition::VECOUT, NB_DOUBLE_BUFFER> boxesOutQue_;
     TQue<QuePosition::VECIN, 1> shapeInQue_; // shape_hw 3 int32 per batch
-    TBuf<TPosition::VECCALC> hwCastBuf_;     // int32 -> f32 [-> half] scratch for h/w
+    TBuf<TPosition::VECCALC> hwCastBuf_;     // int32 -> f32 scratch for h/w
     TBuf<TPosition::VECCALC> divisorBuf_;    // divisor block(s), in CompT
+    TBuf<TPosition::VECCALC> computeBuf_;    // fp16 boxes -> fp32 division scratch
 
     GlobalTensor<T> boxesGm_;
     GlobalTensor<T> yGm_;
@@ -126,14 +122,15 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Init(GM_ADDR boxes, 
     tpipe_.InitBuffer(boxesInQue_, NB_DOUBLE_BUFFER, tiling_.boxesBufferBytes);
     tpipe_.InitBuffer(boxesOutQue_, NB_DOUBLE_BUFFER, tiling_.boxesBufferBytes);
     tpipe_.InitBuffer(shapeInQue_, 1, tiling_.shapeBufferBytes); // 3 int32 fits in one 32B block
-    tpipe_.InitBuffer(hwCastBuf_, tiling_.hwCastBufferBytes);    // f32 + half scratch
+    tpipe_.InitBuffer(hwCastBuf_, tiling_.hwCastBufferBytes);
     // divisor is in CompT: normal needs 1 full-width block; reversed needs divH + divW (2 blocks)
     tpipe_.InitBuffer(divisorBuf_, tiling_.divisorBufferBytes);
+    if constexpr (std::is_same_v<T, half>) {
+        tpipe_.InitBuffer(computeBuf_, tileLen_ * sizeof(CompT));
+    }
 }
 
-// Load shape_hw[b] = [h, w, *] (int32) -> Cast to CompT scalars h, w.
-// CompT is float for float and half for half. The divisor is built in CompT, so
-// the whole divide runs in CompT (cast chain: int32->f32->[f16 for half boxes]->divide).
+// Load shape_hw[b] = [h, w, *] without narrowing the int32 dimensions to fp16.
 template <typename T, bool reversedBox>
 __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::LoadHW(int64_t b, CompT& h, CompT& w)
 {
@@ -149,21 +146,10 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::LoadHW(int64_t b, Co
     PipeBarrier<PIPE_V>();
 
     event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    if constexpr (std::is_same_v<CompT, half>) {
-        LocalTensor<half> hwHalf = hwCastBuf_.Get<half>()[16]; // separate 32B block (byte 32)
-        Cast(hwHalf, hwF32, RoundMode::CAST_RINT, 3);          // float32 -> half
-        PipeBarrier<PIPE_V>();
-        SetFlag<HardEvent::V_S>(eventVS);
-        WaitFlag<HardEvent::V_S>(eventVS);
-        h = hwHalf.GetValue(0);
-        w = hwHalf.GetValue(1);
-    } else {
-        // CompT == float: read h/w directly as float
-        SetFlag<HardEvent::V_S>(eventVS);
-        WaitFlag<HardEvent::V_S>(eventVS);
-        h = hwF32.GetValue(0);
-        w = hwF32.GetValue(1);
-    }
+    SetFlag<HardEvent::V_S>(eventVS);
+    WaitFlag<HardEvent::V_S>(eventVS);
+    h = hwF32.GetValue(0);
+    w = hwF32.GetValue(1);
     shapeInQue_.FreeTensor(shapeLocal);
 }
 
@@ -176,10 +162,8 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::BuildDivisorNormal(c
     Duplicate(divisor, h, divWidth); // all lanes = h
     PipeBarrier<PIPE_V>();
     // overwrite odd lanes (x-system coords) with w via masked Duplicate.
-    // DAV_3510 Vector lane count is dtype-dependent: 128 for 2-byte (half), 64 for 4-byte (float).
-    // mask[2] has 128 bits, but only the first 64 are effective for 4-byte CompT on 3510,
-    // so elements 64+ would keep h instead of w if we used a single 128-element repeat.
-    // Process in chunks of 256/sizeof(CompT) elements (64 for float, 128 for half) to cover all dtypes.
+    // Each 256B repeat holds 64 fp32 divisors and uses the first 64 mask bits.
+    // Fill every repeat separately so all odd lanes receive the width.
     constexpr int32_t maskElemWidth = NB_VREPEAT_SIZE / static_cast<int32_t>(sizeof(CompT));
     uint64_t mask[NB_MASK_WORD_COUNT] = {NB_ODD_LANE_MASK, NB_ODD_LANE_MASK};
     for (int32_t off = 0; off < divWidth; off += maskElemWidth) {
@@ -198,7 +182,7 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::BuildConstBlock(cons
 }
 
 // CopyIn one tile -> Div by divisor -> CopyOut.
-// half/float: Div runs directly in T (CompT == T).
+// fp16 inputs are widened before division and rounded once on output.
 template <typename T, bool reversedBox>
 __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::CopyDivide(int64_t gmOffset, int64_t processLen,
                                                                        const LocalTensor<CompT>& divisor)
@@ -211,7 +195,16 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::CopyDivide(int64_t g
 
     boxesIn = boxesInQue_.template DeQue<T>();
     LocalTensor<T> boxesOut = boxesOutQue_.template AllocTensor<T>();
-    Div(boxesOut, boxesIn, divisor, static_cast<int32_t>(processLen));
+    if constexpr (std::is_same_v<T, half>) {
+        LocalTensor<CompT> compute = computeBuf_.Get<CompT>();
+        Cast(compute, boxesIn, RoundMode::CAST_NONE, static_cast<int32_t>(processLen));
+        PipeBarrier<PIPE_V>();
+        Div(compute, compute, divisor, static_cast<int32_t>(processLen));
+        PipeBarrier<PIPE_V>();
+        Cast(boxesOut, compute, RoundMode::CAST_RINT, static_cast<int32_t>(processLen));
+    } else {
+        Div(boxesOut, boxesIn, divisor, static_cast<int32_t>(processLen));
+    }
     boxesInQue_.FreeTensor(boxesIn);
     boxesOutQue_.EnQue(boxesOut);
 

@@ -45,3 +45,10 @@ TEST(Relu6GradGraphInfer, RejectsMismatchedInputsWithoutLegacyVerifier)
     CheckDtype(ge::DT_FLOAT16, ge::DT_FLOAT, ge::GRAPH_FAILED);
     CheckDtype(ge::DT_BF16, ge::DT_FLOAT16, ge::GRAPH_FAILED);
 }
+
+TEST(Relu6GradGraphInfer, RejectsUnsupportedMatchingDataTypes)
+{
+    CheckDtype(ge::DT_INT32, ge::DT_INT32, ge::GRAPH_FAILED);
+    CheckDtype(ge::DT_BOOL, ge::DT_BOOL, ge::GRAPH_FAILED);
+    CheckDtype(ge::DT_DOUBLE, ge::DT_DOUBLE, ge::GRAPH_FAILED);
+}

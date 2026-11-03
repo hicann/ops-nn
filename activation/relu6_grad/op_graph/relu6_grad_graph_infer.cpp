@@ -18,8 +18,15 @@ ge::graphStatus InferDataType4Relu6Grad(gert::InferDataTypeContext* context)
         return ge::GRAPH_FAILED;
     }
     const auto dtype = context->GetInputDataType(0);
+    OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_FLOAT && dtype != ge::DT_BF16,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "gradients", Ops::Base::ToString(dtype).c_str(),
+                                          "FLOAT16, FLOAT, BFLOAT16"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(dtype != context->GetInputDataType(1),
-                OP_LOGE(context->GetNodeName(), "gradients and features must have the same dtype."),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context->GetNodeName(), "gradients, features",
+                    (Ops::Base::ToString(dtype) + ", " + Ops::Base::ToString(context->GetInputDataType(1))).c_str(),
+                    "gradients and features must have the same dtype"),
                 return ge::GRAPH_FAILED);
     return context->SetOutputDataType(0, dtype);
 }

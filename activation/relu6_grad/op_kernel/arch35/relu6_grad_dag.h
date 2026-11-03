@@ -60,9 +60,8 @@ struct Relu6Grad {
 };
 
 // Promoted path for half / bfloat16_t: cast inputs to PromoteT (float) for
-// cmp/and/sel to (a) match the DSL fallback in relu6_grad.py that lifts to
-// fp32 when fp16 vcmpsel is unavailable, (b) keep boundary comparison
-// against 0 and 6 stable across half/bf16. Result is cast back to T with
+// cmp/and/sel to keep boundary comparison against 0 and 6 stable across
+// half/bf16. Result is cast back to T with
 // round-to-nearest-even.
 template <typename T, typename PromoteT>
 struct Relu6GradFloatCast {

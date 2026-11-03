@@ -2,14 +2,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
-|  <term>Atlas A3系列产品</term>   |     √    |
-|  <term>Atlas A2系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
-|  <term>Atlas推理系列产品</term>     |     ×    |
-|  <term>Atlas训练系列产品</term>    |     ×    |
+| 产品 | 是否支持 |
+| :--- | :---: |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -26,49 +26,17 @@
   $$
 
   其中：
+
   - gradients：对应Relu6操作的反向传播梯度。
   - features：作为输入传递给对应Relu6操作的特征，或其输出，使用任一者产生相同结果。
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 820px"><colgroup>
-  <col style="width: 100px">
-  <col style="width: 150px">
-  <col style="width: 190px">
-  <col style="width: 260px">
-  <col style="width: 120px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出/属性</th>
-      <th>描述</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>gradients</td>
-      <td>输入</td>
-      <td>传递给对应Relu6操作的反向传播梯度，公式中的gradients。</td>
-      <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>features</td>
-      <td>输入</td>
-      <td>作为输入传递给对应Relu6操作的特征，或其输出，使用任一者产生相同结果，公式中的features。与gradients的shape关系见约束说明。</td>
-      <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>backprops</td>
-      <td>输出</td>
-      <td>公式中的输出张量，shape由输入shape按各产品的广播约束确定，见约束说明。</td>
-      <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-  </tbody></table>
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| --- | --- | --- | --- | --- |
+| gradients | 输入 | 传递给对应Relu6操作的反向传播梯度，公式中的gradients。 | FLOAT16、FLOAT、BFLOAT16 | ND |
+| features | 输入 | 作为输入传递给对应Relu6操作的特征，或其输出，使用任一者产生相同结果，公式中的features。与gradients的shape关系见约束说明。 | FLOAT16、FLOAT、BFLOAT16 | ND |
+| backprops | 输出 | 公式中的输出张量，shape由输入shape按各产品的广播约束确定，见约束说明。 | FLOAT16、FLOAT、BFLOAT16 | ND |
 
 ## 约束说明
 
@@ -124,12 +92,12 @@ In0/In1 ─CopyInBrc─ Cast(->fp32) ─+
 把fp16/bf16整体提升到fp32做cmp/and/sel，末端用`CAST_MODE_RINT`
 （round-to-nearest-even）回退到原dtype。原因：
 
-1. 与DSL `relu6_grad.py`在fp16vcmpsel不可用时fallback到fp32的行为一致；
+1. 比较和选择操作统一使用fp32中间精度；
 2. 上下界0.0和6.0在fp16/bf16中均能精确表达，但cmp走fp32路径更稳健，
    且dy是NaN/Inf时fp32中间不会被半精度范围截断。
 
 ## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                            |
-| ---------------- | --------------------------- |-----------------------------------------------|
-| GE图模式 | [test_geir_relu6_grad.cpp](examples/arch35/test_geir_relu6_grad.cpp)  | 通过[算子IR](op_graph/relu6_grad_proto.h)构图方式调用Relu6Grad算子。 |
+| 调用方式 | 样例代码 | 说明 |
+| --- | --- | --- |
+| GE图模式 | [test_geir_relu6_grad.cpp](examples/arch35/test_geir_relu6_grad.cpp) | 通过[算子IR](op_graph/relu6_grad_proto.h)构图方式调用Relu6Grad算子。 |

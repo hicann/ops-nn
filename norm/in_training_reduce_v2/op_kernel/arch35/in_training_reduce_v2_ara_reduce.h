@@ -42,7 +42,7 @@ template <typename T_X>
 __simd_callee__ inline void AraLoadAndAccumulate(__ubuf__ T_X* xUb, RegTensor<float>& xReg, RegTensor<float>& squareReg,
                                                  RegTensor<float>& sumAcc, RegTensor<float>& squareAcc,
                                                  RegTensor<float>& sumLow, RegTensor<float>& squareLow, MaskReg& pregC,
-                                                 MaskReg& pregFull, uint32_t offset)
+                                                 MaskReg& pregFull, uint32_t offset, float sumScale)
 {
     if constexpr (IsSameType<T_X, float>::value) {
         LoadAlign(xReg, xUb + offset);
@@ -53,8 +53,9 @@ __simd_callee__ inline void AraLoadAndAccumulate(__ubuf__ T_X* xUb, RegTensor<fl
     }
     // fp32 直载不消费 pregC；用 zeroing mask 显式清掉尾 C 的无效 lane。
     ShiftLefts((RegTensor<uint32_t>&)xReg, (RegTensor<uint32_t>&)xReg, static_cast<int16_t>(0), pregC);
-    AccumulateWithError(sumAcc, sumLow, xReg, pregFull);
     Mul(squareReg, xReg, xReg, pregFull);
+    ScaleSumValue<T_X>(xReg, sumScale, pregFull);
+    AccumulateWithError(sumAcc, sumLow, xReg, pregFull);
     AccumulateWithError(squareAcc, squareLow, squareReg, pregFull);
 }
 
@@ -74,7 +75,8 @@ __simd_vf__ inline void AraInitAccumulatorsVf(__ubuf__ float* sumUb, __ubuf__ fl
 
 template <typename T_X, uint16_t ROW_TAIL>
 __simd_vf__ inline void AraAccumulateChunkVf(__ubuf__ T_X* xUb, __ubuf__ float* sumUb, __ubuf__ float* squareSumUb,
-                                             uint16_t cLoops, uint16_t rowGroups, uint32_t currentC, uint32_t rowStride)
+                                             uint16_t cLoops, uint16_t rowGroups, uint32_t currentC, uint32_t rowStride,
+                                             float sumScale)
 {
     RegTensor<float> globalSum;
     RegTensor<float> globalSumLow;
@@ -127,27 +129,27 @@ __simd_vf__ inline void AraAccumulateChunkVf(__ubuf__ T_X* xUb, __ubuf__ float* 
         for (uint16_t group = 0; group < rowGroups; ++group) {
             uint32_t rowBase = static_cast<uint32_t>(group) * ARA_PAIRWISE_GROUP;
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc0, squareAcc0, sumLow0, squareLow0, pregC, pregFull,
-                                      rowBase * rowStride + cOffset);
+                                      rowBase * rowStride + cOffset, sumScale);
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc1, squareAcc1, sumLow1, squareLow1, pregC, pregFull,
-                                      (rowBase + 1) * rowStride + cOffset);
+                                      (rowBase + 1) * rowStride + cOffset, sumScale);
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc2, squareAcc2, sumLow2, squareLow2, pregC, pregFull,
-                                      (rowBase + 2) * rowStride + cOffset);
+                                      (rowBase + 2) * rowStride + cOffset, sumScale);
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc3, squareAcc3, sumLow3, squareLow3, pregC, pregFull,
-                                      (rowBase + 3) * rowStride + cOffset);
+                                      (rowBase + 3) * rowStride + cOffset, sumScale);
         }
 
         uint32_t tailBase = static_cast<uint32_t>(rowGroups) * ARA_PAIRWISE_GROUP;
         if constexpr (ROW_TAIL > 0) {
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc0, squareAcc0, sumLow0, squareLow0, pregC, pregFull,
-                                      tailBase * rowStride + cOffset);
+                                      tailBase * rowStride + cOffset, sumScale);
         }
         if constexpr (ROW_TAIL > 1) {
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc1, squareAcc1, sumLow1, squareLow1, pregC, pregFull,
-                                      (tailBase + 1) * rowStride + cOffset);
+                                      (tailBase + 1) * rowStride + cOffset, sumScale);
         }
         if constexpr (ROW_TAIL > 2) {
             AraLoadAndAccumulate<T_X>(xUb, xReg, squareReg, sumAcc2, squareAcc2, sumLow2, squareLow2, pregC, pregFull,
-                                      (tailBase + 2) * rowStride + cOffset);
+                                      (tailBase + 2) * rowStride + cOffset, sumScale);
         }
 
         AccumulateWithError(sumAcc0, sumLow0, sumAcc1, pregFull);
@@ -180,7 +182,7 @@ __simd_vf__ inline void AraAccumulateChunkVf(__ubuf__ T_X* xUb, __ubuf__ float* 
 template <typename T_X>
 __simd_vf__ inline void AraAccumulateSmallChannelsVf(__ubuf__ T_X* xUb, __ubuf__ float* sumUb,
                                                      __ubuf__ float* squareSumUb, uint32_t currentR, uint32_t currentC,
-                                                     uint32_t rowStride, uint32_t channelOffset)
+                                                     uint32_t rowStride, uint32_t channelOffset, float sumScale)
 {
     RegTensor<uint32_t> rowOffsets;
     RegTensor<uint32_t> offsets;
@@ -225,8 +227,9 @@ __simd_vf__ inline void AraAccumulateSmallChannelsVf(__ubuf__ T_X* xUb, __ubuf__
                 Cast<float, T_X, castTraitB162B32>(xReg, unpacked, pregR);
             }
             ShiftLefts((RegTensor<uint32_t>&)xReg, (RegTensor<uint32_t>&)xReg, static_cast<int16_t>(0), pregR);
-            AccumulateWithError(sumAcc, sumLow, xReg, pregFull);
             Mul(squareReg, xReg, xReg, pregFull);
+            ScaleSumValue<T_X>(xReg, sumScale, pregFull);
+            AccumulateWithError(sumAcc, sumLow, xReg, pregFull);
             AccumulateWithError(squareAcc, squareLow, squareReg, pregFull);
         }
         ReduceWithError(sumAcc, sumLow, pregFull);
@@ -248,7 +251,9 @@ __simd_vf__ inline void AraAccumulateSmallChannelsVf(__ubuf__ T_X* xUb, __ubuf__
     }
 }
 
-__simd_vf__ inline void AraFinalizeVf(__ubuf__ float* sumUb, __ubuf__ float* squareUb, uint16_t cLoops)
+template <typename T_X>
+__simd_vf__ inline void AraFinalizeVf(__ubuf__ float* sumUb, __ubuf__ float* squareUb, uint16_t cLoops,
+                                      float sumRestore)
 {
     RegTensor<float> hi;
     RegTensor<float> lo;
@@ -260,6 +265,7 @@ __simd_vf__ inline void AraFinalizeVf(__ubuf__ float* sumUb, __ubuf__ float* squ
         LoadAlign(lo, sumUb + ARA_CORRECTION_STRIDE + offset);
         ClearNonFiniteCorrection(lo, full);
         Add(hi, hi, lo, full);
+        ScaleSumValue<T_X>(hi, sumRestore, full);
         StoreAlign(sumUb + offset, hi, full);
         LoadAlign(hi, squareUb + offset);
         LoadAlign(lo, squareUb + ARA_CORRECTION_STRIDE + offset);
@@ -278,6 +284,7 @@ public:
     {
         blockIdx_ = GetBlockIdx();
         numR_ = tilingData->numR;
+        GetSumScale<T_X>(numR_, sumScale_, sumRestore_);
         numC_ = tilingData->numC;
         totalTiles_ = tilingData->totalTiles;
         tilesPerCore_ = tilingData->tilesPerCore;
@@ -338,9 +345,9 @@ public:
                 inQueueX_.FreeTensor(xLocal);
             }
 
-            asc_vf_call<AraFinalizeVf>((__ubuf__ float*)sumLocal.GetPhyAddr(),
-                                       (__ubuf__ float*)squareSumLocal.GetPhyAddr(),
-                                       static_cast<uint16_t>((currentC + VL_FP32 - 1) / VL_FP32));
+            asc_vf_call<AraFinalizeVf<T_X>>((__ubuf__ float*)sumLocal.GetPhyAddr(),
+                                            (__ubuf__ float*)squareSumLocal.GetPhyAddr(),
+                                            static_cast<uint16_t>((currentC + VL_FP32 - 1) / VL_FP32), sumRestore_);
             outQueueSum_.EnQue<TSum>(sumLocal);
             outQueueSquareSum_.EnQue<TSum>(squareSumLocal);
             CopyOut(nIdx * numC_ + cOffset, currentC);
@@ -397,25 +404,25 @@ private:
 
         if (currentC <= ARA_GATHER_MAX_CHANNELS && numR_ >= VL_FP32) {
             asc_vf_call<AraAccumulateSmallChannelsVf<T_X>>(xUb, sumUb, squareSumUb, currentR, currentC, rowStride,
-                                                           channelOffset);
+                                                           channelOffset, sumScale_);
             return;
         }
         switch (rowTail) {
             case 0:
                 asc_vf_call<AraAccumulateChunkVf<T_X, 0>>(xUb, sumUb, squareSumUb, cLoops, rowGroups, currentC,
-                                                          rowStride);
+                                                          rowStride, sumScale_);
                 break;
             case 1:
                 asc_vf_call<AraAccumulateChunkVf<T_X, 1>>(xUb, sumUb, squareSumUb, cLoops, rowGroups, currentC,
-                                                          rowStride);
+                                                          rowStride, sumScale_);
                 break;
             case 2:
                 asc_vf_call<AraAccumulateChunkVf<T_X, 2>>(xUb, sumUb, squareSumUb, cLoops, rowGroups, currentC,
-                                                          rowStride);
+                                                          rowStride, sumScale_);
                 break;
             default:
                 asc_vf_call<AraAccumulateChunkVf<T_X, 3>>(xUb, sumUb, squareSumUb, cLoops, rowGroups, currentC,
-                                                          rowStride);
+                                                          rowStride, sumScale_);
                 break;
         }
     }
@@ -448,6 +455,8 @@ private:
 
     uint64_t blockIdx_{0};
     uint64_t numR_{0};
+    float sumScale_{1.0f};
+    float sumRestore_{1.0f};
     uint64_t numC_{0};
     uint64_t totalTiles_{0};
     uint64_t tilesPerCore_{0};
