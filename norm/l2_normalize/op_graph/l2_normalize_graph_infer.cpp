@@ -42,6 +42,10 @@ IMPLEMT_VERIFIER(L2Normalize, VerifyL2Normalize)
 {
     const auto x = op.GetInputDesc("x");
     const auto y = op.GetOutputDesc("y");
+    if (x.GetDataType() != DT_UNDEFINED && x.GetDataType() != DT_FLOAT16 && x.GetDataType() != DT_FLOAT) {
+        OP_LOGE("L2Normalize", "x must be FLOAT16 or FLOAT32.");
+        return GRAPH_FAILED;
+    }
     const auto shape = x.GetShape();
     if (shape.GetDims() != UNKNOWN_RANK && (shape.GetDimNum() == 0U || shape.GetDimNum() > 8U)) {
         OP_LOGE("L2Normalize", "x rank must be in [1, 8].");

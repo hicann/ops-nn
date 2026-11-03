@@ -36,8 +36,9 @@
 #ifndef OPS_NORM_L2_NORMALIZE_BASE_H_
 #define OPS_NORM_L2_NORMALIZE_BASE_H_
 
-#include "kernel_operator.h"            // Ascend C kernel framework
-#include "adv_api/reduce/reduce.h"      // AscendC::ReduceSum (AR / RA)
+#include "kernel_operator.h"       // Ascend C kernel framework
+#include "adv_api/reduce/reduce.h" // AscendC::ReduceSum (AR / RA)
+#include "l2_normalize_scaling.h"
 #include "l2_normalize_tiling_struct.h" // L2NormalizeTilingData / MAX_PATTERN_RANK
 
 namespace NsL2Normalize {
@@ -71,7 +72,8 @@ constexpr AscendC::Reg::CastTrait CAST_TRAIT_FROM_FP32_FP16{
     AscendC::RoundMode::CAST_RINT};
 
 // 高精度模式（设计文档 §7「精度处理」认可的备选：ST 实测超差时切 0-ULP，不换数据流）：
-//   Sqrt 恒 0-ULP FTZ_FALSE（fp16/fp32 同）：默认 INTRINSIC Sqrt 对 subnormal 输入 FTZ
+//   FP16 uses 0-ULP FTZ_FALSE. FP32 uses the scaled norm helpers below.
+//   默认 INTRINSIC Sqrt 对 subnormal 输入 FTZ
 //   刷 0，eps<=0 且 x² 落 fp32 subnormal 窗口（|x|<1.08e-19）时 denom 被刷成 0 →
 //   y=±inf，与 golden（numpy IEEE 保留 subnormal）NaN/Inf mismatch（FR-P1-001 L1_094）。
 //   FP16 division remains 0-ULP but does not need FP32 subnormal normalization:
@@ -101,7 +103,7 @@ __aicore__ inline int64_t CeilDivI64(int64_t a, int64_t b) { return a / b + ((a 
 // S2+S3 PreElewise：Cast(b16→fp32) + Square 同一 VF（fp32 实例链长 1）
 template <typename DType>
 __simd_vf__ inline void CastSquareVfImpl(__ubuf__ DType* src, __ubuf__ float* dst, uint32_t totalElems,
-                                         uint16_t repeatTime)
+                                         uint16_t repeatTime, float inputScale)
 {
     constexpr bool IsFp32 = AscendC::IsSameType<DType, float>::value;
     AscendC::Reg::RegTensor<float> f32Reg;
@@ -114,6 +116,7 @@ __simd_vf__ inline void CastSquareVfImpl(__ubuf__ DType* src, __ubuf__ float* ds
 
         if constexpr (IsFp32) {
             AscendC::Reg::LoadAlign(f32Reg, src + off); // fp32 原生装载，无 Cast
+            AscendC::Reg::Muls(f32Reg, f32Reg, inputScale, mask);
         } else {
             AscendC::Reg::RegTensor<DType> b16Reg;
             AscendC::Reg::LoadAlign<DType, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, src + off);
@@ -122,6 +125,59 @@ __simd_vf__ inline void CastSquareVfImpl(__ubuf__ DType* src, __ubuf__ float* ds
 
         AscendC::Reg::Mul(f32Reg, f32Reg, f32Reg, mask); // square：x*x（NaN/Inf IEEE 传播）
         AscendC::Reg::StoreAlign(dst + off, f32Reg, mask);
+    }
+}
+
+// Expand dense squared rows backwards in place. With validA <= paddedA/2,
+// every source of a nonzero destination block precedes that block; backward
+// traversal preserves all unread dense values. Masked Gather zeroes row padding.
+__simd_vf__ inline void ExpandDenseSquaresVf(__ubuf__ float* tile, uint32_t validA, uint32_t paddedA, uint32_t validR,
+                                             uint32_t total, int16_t aShift, uint16_t repeats)
+{
+    using namespace AscendC;
+    Reg::RegTensor<uint32_t> lane, index, row, column, aMask, source;
+    Reg::RegTensor<float> value, zero;
+    Reg::MaskReg validRows, validColumns, valid;
+    auto all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+    Reg::Arange(reinterpret_cast<Reg::RegTensor<int32_t>&>(lane), 0);
+    Reg::Duplicate(aMask, paddedA - 1);
+    Reg::Duplicate(zero, 0.0f);
+    for (uint16_t i = 0; i < repeats; ++i) {
+        const uint32_t off = (static_cast<uint32_t>(repeats) - 1 - i) * REP_F32;
+        uint32_t remaining = total - off;
+        auto mask = Reg::UpdateMask<float>(remaining);
+        Reg::Adds(index, lane, off, all);
+        Reg::ShiftRights(row, index, aShift, all);
+        Reg::And(column, index, aMask, all);
+        Reg::Muls(source, row, validA, all);
+        Reg::Add(source, source, column, all);
+        Reg::Compares<uint32_t, CMPMODE::LT>(validRows, row, validR, mask);
+        Reg::Compares<uint32_t, CMPMODE::LT>(validColumns, column, validA, mask);
+        Reg::And(valid, validRows, validColumns, mask);
+        Reg::Gather(value, tile, source, valid);
+        Reg::Select(value, value, zero, valid);
+        Reg::StoreAlign(tile + off, value, mask);
+        Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
+    }
+}
+
+// Dense tail-A tiles repeat the small denominator vector without padded GM rows.
+__simd_vf__ inline void DenseDenomVf(__ubuf__ float* denom, __ubuf__ float* dense, uint32_t width, uint32_t count,
+                                     uint16_t repeats)
+{
+    using namespace AscendC;
+    Reg::RegTensor<uint32_t> lane, index, widthMask;
+    Reg::RegTensor<float> value;
+    Reg::Arange(reinterpret_cast<Reg::RegTensor<int32_t>&>(lane), 0);
+    Reg::Duplicate(widthMask, width - 1);
+    uint32_t remaining = count;
+    for (uint16_t i = 0; i < repeats; ++i) {
+        const uint32_t off = static_cast<uint32_t>(i) * REP_F32;
+        auto mask = Reg::UpdateMask<float>(remaining);
+        Reg::Adds(index, lane, off, mask);
+        Reg::And(index, index, widthMask, mask);
+        Reg::Gather(value, denom, index, mask);
+        Reg::StoreAlign(dense + off, value, mask);
     }
 }
 
@@ -457,7 +513,16 @@ __simd_vf__ inline void DivCastVfImpl(__ubuf__ DType* xPost, __ubuf__ float* den
         AscendC::Reg::LoadAlign(dReg, denomBcast + off); // denom_bcast（fp32，已按 x_post 布局物化）
         if constexpr (IsFp32) {
             AscendC::Reg::LoadAlign(xReg, xPost + off); // fp32 原生装载
-            AscendC::Reg::Div(xReg, xReg, dReg, mask);  // y = x / denom
+            AscendC::Reg::RegTensor<float> magnitude, highX, lowX, scaledX;
+            AscendC::Reg::MaskReg scaled, low;
+            AscendC::Reg::Abs(magnitude, dReg, mask);
+            AscendC::Reg::Compares<float, CMPMODE::LT>(scaled, dReg, 0.0f, mask);
+            AscendC::Reg::Compares<float, CMPMODE::LT>(low, magnitude, SCALE_NORM_SPLIT, mask);
+            AscendC::Reg::Muls(highX, xReg, SCALE_DOWN, mask);
+            AscendC::Reg::Muls(lowX, xReg, SCALE_LOW_NUMERATOR, mask);
+            AscendC::Reg::Select(scaledX, lowX, highX, low);
+            AscendC::Reg::Select(xReg, scaledX, xReg, scaled);
+            AscendC::Reg::Div<float, &SCALE_DIV_MODE>(xReg, xReg, magnitude, mask);
             AscendC::Reg::StoreAlign(y + off, xReg, mask);
         } else {
             AscendC::Reg::RegTensor<DType> xB16, yB16;
@@ -553,6 +618,8 @@ protected:
     __aicore__ inline void DividePass(int64_t chunkGmOff, int64_t aLen, bool needCopyInX,
                                       int64_t wsSlotOff); // 除法遍 S8–S12
     __aicore__ inline void PostElewise();                 // S6+S7
+    __aicore__ inline uint32_t GetScalingFlags(uint32_t count);
+    __aicore__ inline void RecomputeScaled(int64_t gmOff, int64_t aLen, uint32_t flags);
 
     // ─── CopyIn / CopyOut（§5.2 / §5.4）───
     __aicore__ inline int32_t BuildUBAxes(int64_t aLen, int64_t rLen, UBAxisDesc out[]) const;
@@ -561,7 +628,7 @@ protected:
     __aicore__ inline void EmitTileCopyOut(int64_t baseGmOff, const UBAxisDesc ubAxes[], int32_t K,
                                            AscendC::LocalTensor<DType>& yLocal); // 发射体（group P3 继承）
     __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLen,
-                                        AscendC::LocalTensor<DType>& preInLocal);
+                                        AscendC::LocalTensor<DType>& preInLocal, bool forReduction = false);
     __aicore__ inline void CopyInDenom(int64_t wsSlotOff); // S9 denom 搬入
     __aicore__ inline void DoCopyOutTile(int64_t baseGmOff, int64_t aLen, int64_t rLen,
                                          AscendC::LocalTensor<DType>& yLocal);
@@ -587,6 +654,13 @@ protected:
     // ─── tilingdata ───
     const L2NormalizeTilingData* td_ = nullptr;
     AscendC::TPipe* pipe_ = nullptr;
+    bool denseInput_ = false;
+    uint32_t denseRows_ = 0;
+    uint32_t denseWidth_ = 0;
+    float inputScale_ = 1.0f;
+    float scaleMarker_ = SCALE_HIGH_MARKER;
+    float normEncode_ = 1.0f;
+    AscendC::TEventID evVtoS_ = 0;
 
     // ─── pattern / 二分树派生量（Init 一次现算，§5.1）───
     bool isTailR_ = false;
@@ -716,6 +790,9 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::Init(GM_ADDR x, GM_ADDR y, 
     }
 
     // ── eventID 获取（范式硬约束：FetchEventID 获取、禁硬编码）──
+    if constexpr (AscendC::IsSameType<DType, float>::value) {
+        evVtoS_ = pipe_->FetchEventID<HardEvent::V_S>();
+    }
     evMTE2toV_ = pipe_->FetchEventID<HardEvent::MTE2_V>();
     evVtoMTE2_ = pipe_->FetchEventID<HardEvent::V_MTE2>();
     evVtoMTE3_ = pipe_->FetchEventID<HardEvent::V_MTE3>();
@@ -811,8 +888,14 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::Process()
         }
         chunkGmOff += aChunkStart * td_->axisStride[td_->aSplitIdx];
 
+        inputScale_ = 1.0f;
         DoOneAChunk(chunkGmOff, aLen); // ── reduce 遍 S1–S5：s 就绪于 cacheBuf 树根 ──
         PostElewise();                 // ── S6+S7：denom = sqrt(max(s, eps)) → B3 ──
+
+        if constexpr (AscendC::IsSameType<DType, float>::value) {
+            const uint32_t flags = GetScalingFlags(static_cast<uint32_t>(aUnit));
+            RecomputeScaled(chunkGmOff, aLen, flags);
+        }
 
         if (td_->rLoopCntTotal == 1) {
             // 路径 A · R 全载单遍：denom 驻 B3，x_tile 驻 B0（S8 免二次读），单轮除法
@@ -861,7 +944,7 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunk(int64_t outerGm
         int64_t rChunkMain = 0;
         int64_t rLenMain = 0;
         const int64_t rOffMain = UnravelRLoop(rIdx, rOuterIdx, rChunkMain, rLenMain);
-        DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, xLocal); // S1 主块 → B0
+        DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, xLocal, true); // S1 主块 → B0
         SetFlag<HardEvent::MTE2_V>(evMTE2toV_);
         WaitFlag<HardEvent::MTE2_V>(evMTE2toV_); // B0 就绪
 
@@ -878,8 +961,8 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunk(int64_t outerGm
             int64_t rLenTail = 0;
             const int64_t rOffTail = UnravelRLoop(rIdx + bisectionPos_, rOuterIdxT, rChunkTail, rLenTail);
             SetFlag<HardEvent::V_MTE2>(evVtoMTE2_);
-            WaitFlag<HardEvent::V_MTE2>(evVtoMTE2_);                     // B0 WAR：本轮 CastSquareVf 已读 B0
-            DoCopyInTile(outerGmOff + rOffTail, aLen, rLenTail, xLocal); // S1 尾块（复用 B0）
+            WaitFlag<HardEvent::V_MTE2>(evVtoMTE2_);                           // B0 WAR：本轮 CastSquareVf 已读 B0
+            DoCopyInTile(outerGmOff + rOffTail, aLen, rLenTail, xLocal, true); // S1 尾块（复用 B0）
             SetFlag<HardEvent::MTE2_V>(evMTE2toV_);
             WaitFlag<HardEvent::MTE2_V>(evMTE2toV_);
             CastSquareVf(xPtr, preResTailPtr); // S2+S3 → B2
@@ -962,7 +1045,7 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::DoOneAChunkFp16Exact(int64_
         int64_t rChunkMain = 0;
         int64_t rLenMain = 0;
         const int64_t rOffMain = UnravelRLoop(rIdx, rOuterIdx, rChunkMain, rLenMain);
-        DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, xLocal); // S1 → B0
+        DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, xLocal, true); // S1 → B0
         SetFlag<HardEvent::MTE2_V>(evMTE2toV_);
         WaitFlag<HardEvent::MTE2_V>(evMTE2toV_); // B0 就绪
 
@@ -1078,10 +1161,53 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::PostElewise()
 
     const uint16_t repeatTime = static_cast<uint16_t>(CeilDivU32(laneN, static_cast<uint32_t>(REP_F32_U16)));
 
-    asc_vf_call<PostElewiseVfImpl>(rootPtr, denomPtr, laneN, td_->eps, repeatTime);
+    if constexpr (AscendC::IsSameType<DType, float>::value) {
+        if (inputScale_ == 1.0f) {
+            asc_vf_call<PrepareScaledNormVf>(rootPtr, denomPtr, laneN, td_->eps, repeatTime);
+        } else {
+            const float scaledEps = (td_->eps * inputScale_) * inputScale_;
+            asc_vf_call<ScaledPostElewiseVf>(rootPtr, denomPtr, laneN, scaledEps, scaleMarker_, normEncode_,
+                                             repeatTime);
+        }
+    } else {
+        asc_vf_call<PostElewiseVfImpl>(rootPtr, denomPtr, laneN, td_->eps, repeatTime);
+    }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+
+template <typename DType>
+__aicore__ inline uint32_t L2NormalizeBaseKernel<DType>::GetScalingFlags(uint32_t count)
+{
+    auto scratch = preReduceResult_.template Get<float>();
+    auto* denom = reinterpret_cast<__ubuf__ float*>(postReduceResult_.template Get<float>().GetPhyAddr());
+    auto* flag = reinterpret_cast<__ubuf__ float*>(scratch.GetPhyAddr());
+    const uint16_t repeats = static_cast<uint16_t>(CeilDivU32(count, REP_F32));
+    asc_vf_call<ScalingFlagsVf>(denom, flag, count, repeats);
+    SetFlag<HardEvent::V_S>(evVtoS_);
+    WaitFlag<HardEvent::V_S>(evVtoS_);
+    return static_cast<uint32_t>(scratch.GetValue(0));
+}
+
+template <typename DType>
+__aicore__ inline void L2NormalizeBaseKernel<DType>::RecomputeScaled(int64_t gmOff, int64_t aLen, uint32_t flags)
+{
+    // Low slices first: their encoded norms cannot collide with the -1 high marker.
+    for (uint32_t pass = 0; pass < 2; ++pass) {
+        const uint32_t bit = pass == 0 ? 2U : 1U;
+        if ((flags & bit) == 0) {
+            continue;
+        }
+        inputScale_ = pass == 0 ? SCALE_UP : SCALE_DOWN;
+        scaleMarker_ = pass == 0 ? SCALE_LOW_MARKER : SCALE_HIGH_MARKER;
+        normEncode_ = pass == 0 ? SCALE_LOW_ENCODE : 1.0f;
+        SetFlag<HardEvent::V_MTE2>(evVtoMTE2_);
+        WaitFlag<HardEvent::V_MTE2>(evVtoMTE2_);
+        DoOneAChunk(gmOff, aLen);
+        PostElewise();
+    }
+}
+
 // BuildUBAxes（§5.2）：tail-R → 内 bundle = R、外 bundle = A；tail-A → 内 A、外 R。
 //   out[0] 为 burst 尾轴（最内层，GM stride 1）；split 轴 padded 取
 //   aUbFactor / rUbFactorAlign；非 split 的 burst 尾轴整根 CeilAlign（按 D_T 计）；
@@ -1243,8 +1369,24 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::EmitTileCopyIn(int64_t base
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType>
 __aicore__ inline void L2NormalizeBaseKernel<DType>::DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLen,
-                                                                  AscendC::LocalTensor<DType>& preInLocal)
+                                                                  AscendC::LocalTensor<DType>& preInLocal,
+                                                                  bool forReduction)
 {
+    const int64_t paddedA = td_->aUbFactor * td_->innerAProdAlign;
+    denseInput_ = forReduction && td_->rLoopCntTotal > 1 && !isTailR_ && td_->axisNum == 3 && td_->aSplitIdx == 0 &&
+                  aLen == 1 && td_->aUbFactor == 1 && td_->rSplitIdx == 1 && td_->axisStride[2] == 1 &&
+                  td_->axisStride[1] == td_->axisShape[2] && paddedA >= 2 * td_->axisShape[2] && paddedA <= REP_F32 &&
+                  (paddedA & (paddedA - 1)) == 0;
+    if (denseInput_) {
+        denseRows_ = static_cast<uint32_t>(rLen);
+        denseWidth_ = static_cast<uint32_t>(td_->axisShape[2]);
+        DataCopyExtParams copy{};
+        copy.blockCount = 1;
+        copy.blockLen = static_cast<uint32_t>(rLen * denseWidth_ * sizeof(DType));
+        DataCopyPadExtParams<DType> pad{false, 0, 0, 0};
+        DataCopyPad(preInLocal, xGm_[baseGmOff], copy, pad);
+        return;
+    }
     UBAxisDesc ubAxes[MAX_PATTERN_RANK];
     const int32_t K = BuildUBAxes(aLen, rLen, ubAxes);
     EmitTileCopyIn(baseGmOff, ubAxes, K, preInLocal);
@@ -1395,7 +1537,16 @@ __aicore__ inline void L2NormalizeBaseKernel<DType>::CastSquareVf(__ubuf__ DType
     const uint32_t totalElems = static_cast<uint32_t>(td_->aUbFactor * td_->innerAProdAlign * td_->rUbFactorAlign *
                                                       td_->innerRProdAlign);
     const uint16_t repeatTime = static_cast<uint16_t>(CeilDivU32(totalElems, static_cast<uint32_t>(REP_F32_U16)));
-    asc_vf_call<CastSquareVfImpl<DType>>(src, dst, totalElems, repeatTime);
+    if (denseInput_) {
+        const uint32_t denseElems = denseRows_ * denseWidth_;
+        const uint16_t denseRepeats = static_cast<uint16_t>(CeilDivU32(denseElems, REP_F32));
+        asc_vf_call<CastSquareVfImpl<DType>>(src, dst, denseElems, denseRepeats, inputScale_);
+        const uint32_t paddedA = static_cast<uint32_t>(td_->aUbFactor * td_->innerAProdAlign);
+        const int16_t shift = static_cast<int16_t>(CalLog2(paddedA));
+        asc_vf_call<ExpandDenseSquaresVf>(dst, denseWidth_, paddedA, denseRows_, totalElems, shift, repeatTime);
+    } else {
+        asc_vf_call<CastSquareVfImpl<DType>>(src, dst, totalElems, repeatTime, inputScale_);
+    }
 }
 
 // ExtensionPad 清零（S3a，§9.3 决策表）：tail-R 按 A entry 逐行清 / tail-A 单段连续清

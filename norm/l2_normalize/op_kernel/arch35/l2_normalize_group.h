@@ -90,16 +90,40 @@ public:
         }
     }
 
-    // tail-R 输出可消费其他核的 denom，因此所有核都必须参加第二次屏障。
+    // Phase 3 distributes R chunks across cores for both tail-R and tail-A.
+    // All consumers wait until every denominator slot is ready.
     __aicore__ inline void ProcessGroup()
     {
         Phase1Process();
         SyncAll(); // SetScheduleMode(1) 配套
         Phase2Process();
-        if (Base::isTailR_) {
+        if constexpr (AscendC::IsSameType<DType, float>::value) {
+            SyncAll();
+            const uint32_t flags = GetGroupScalingFlags();
+            for (uint32_t pass = 0; pass < 2; ++pass) {
+                const uint32_t bit = pass == 0 ? 2U : 1U;
+                if ((flags & bit) == 0) {
+                    continue;
+                }
+                Base::inputScale_ = pass == 0 ? SCALE_UP : SCALE_DOWN;
+                Base::scaleMarker_ = pass == 0 ? SCALE_LOW_MARKER : SCALE_HIGH_MARKER;
+                Base::normEncode_ = pass == 0 ? SCALE_LOW_ENCODE : 1.0f;
+                Phase1Process();
+                SyncAll();
+                Phase2Process();
+                SyncAll();
+            }
+        } else {
             SyncAll();
         }
-        Phase3Process();
+        const int64_t width = Base::td_->axisShape[2];
+        if (!Base::isTailR_ && Base::td_->axisNum == 3 && Base::td_->axisShape[0] == 1 &&
+            Base::td_->axisStride[2] == 1 && Base::td_->axisStride[1] == width && p2ChunkCount_ == 1 && width > 0 &&
+            width <= REP_F32 && (width & (width - 1)) == 0) {
+            Phase3DenseTailA();
+        } else {
+            Phase3Process();
+        }
     }
 
 private:
@@ -112,6 +136,7 @@ private:
     __aicore__ inline void Phase2CopyInPartial(int64_t aOff, int64_t aLen);
     // ─── Phase 3：keepdims 广播除法（§5.2–§5.3）───
     __aicore__ inline void Phase3Process();
+    __aicore__ inline void Phase3DenseTailA();
     __aicore__ inline void UnravelAFlat(int64_t aFlat, int64_t aIdx[]) const;
     __aicore__ inline int64_t UnravelRLoopP3(int64_t rIdx, int64_t rOuterIdx[], int64_t& rChunkIdx, int64_t& rLen,
                                              int64_t rUbFactorP3) const;
@@ -123,10 +148,40 @@ private:
     __aicore__ inline void DoCopyOutTileP3(const ASeg& seg, int64_t rOff, int64_t rLen, int64_t rUbFactorP3,
                                            AscendC::LocalTensor<DType>& yLocal);
 
+    __aicore__ inline uint32_t GetGroupScalingFlags();
+    int64_t p2ChunkWidth_ = 0;
+    int64_t p2SlotStride_ = 0;
+    int64_t p2ChunkCount_ = 0;
     int64_t aTotal_ = 0; // ∏(所有 A 轴 axisShape) = partial 区列数
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+
+// Every core scans the same immutable denominator slots before any retry. This
+// gives a uniform predicate for SyncAll even when high/low slices coexist.
+// The scan is bounded by A, while the Group path parallelizes the much larger R.
+template <typename DType>
+__aicore__ inline uint32_t L2NormalizeGroupKernel<DType>::GetGroupScalingFlags()
+{
+    uint32_t flags = 0;
+    for (int64_t slot = 0; slot < p2ChunkCount_; ++slot) {
+        const int64_t aOff = slot * p2ChunkWidth_;
+        const int64_t count = MinI64(p2ChunkWidth_, aTotal_ - aOff);
+        DataCopyExtParams copy{};
+        copy.blockCount = 1;
+        copy.blockLen = static_cast<uint32_t>(count * sizeof(float));
+        DataCopyPadExtParams<float> pad{true, 0, 0, 0};
+        DataCopyPad(Base::postReduceResult_.template Get<float>(),
+                    Base::wsGm_[Base::td_->rGroupCnt * aTotal_ + slot * p2SlotStride_], copy, pad);
+        SetFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+        WaitFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+        flags |= Base::GetScalingFlags(static_cast<uint32_t>(count));
+        SetFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_);
+        WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_);
+    }
+    return flags;
+}
+
 // Phase1Process（§5.3）：2D 坐标映射（G5）+ R 方向大小核式均匀分配（G6）+
 //   aPerCore=1 单 A chunk + 局部 rCount 归约 + partial 写 workspace。
 // ════════════════════════════════════════════════════════════════════════════
@@ -220,7 +275,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::DoOneAChunkGroup(int64_t o
         int64_t rLenMain = 0;
         const int64_t rOffMain = Base::UnravelRLoop(rStart + rIdx, rOuterIdx, rChunkMain, rLenMain);
 
-        Base::DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, preInLocal); // S1 主块 → B0（继承）
+        Base::DoCopyInTile(outerGmOff + rOffMain, aLen, rLenMain, preInLocal, true); // S1 主块 → B0（继承）
         SetFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
         WaitFlag<HardEvent::MTE2_V>(Base::evMTE2toV_); // B0 就绪
 
@@ -244,7 +299,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::DoOneAChunkGroup(int64_t o
 
             SetFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_);
             WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_); // B0 WAR：本轮 CastSquareVf 已读 B0
-            Base::DoCopyInTile(outerGmOff + rOffTail, aLen, rLenTail, preInLocal); // S1 尾块（复用 B0）
+            Base::DoCopyInTile(outerGmOff + rOffTail, aLen, rLenTail, preInLocal, true); // S1 尾块（复用 B0）
             SetFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
             WaitFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
             Base::CastSquareVf(preIn, preResTail); // S2+S3 → B2
@@ -369,6 +424,10 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2Process()
     const int64_t slotStride = Base::isTailR_ ? aUbFactorP2 : CeilAlignI64(aUbFactorP2, bsElem); // denom 槽位步长
     const int64_t aSplitChunkCntP2 = CeilDivI64(aTotal_, aUbFactorP2);
 
+    p2ChunkWidth_ = aUbFactorP2;
+    p2SlotStride_ = slotStride;
+    p2ChunkCount_ = aSplitChunkCntP2;
+
     // ── 2) 大小核均衡（G8；实际参与核数 usedCoreNumP2 可能 < usedCoreNum）──
     const int64_t aSmallCoreLoopCntP2 = aSplitChunkCntP2 / Base::td_->usedCoreNum;
     const int64_t aBigCoreCntP2 = aSplitChunkCntP2 % Base::td_->usedCoreNum;
@@ -426,8 +485,28 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2Process()
                 Base::postReduceResult_.template Get<float>().GetPhyAddr());
             const uint16_t repeatTime = static_cast<uint16_t>(
                 CeilDivU32(static_cast<uint32_t>(aLenUb), static_cast<uint32_t>(REP_F32_U16)));
-            asc_vf_call<PostElewiseVfImpl>(rootPtr, denomPtr, static_cast<uint32_t>(aLenUb), Base::td_->eps,
-                                           repeatTime);
+            if constexpr (AscendC::IsSameType<DType, float>::value) {
+                if (Base::inputScale_ == 1.0f) {
+                    asc_vf_call<PrepareScaledNormVf>(rootPtr, denomPtr, static_cast<uint32_t>(aLenUb), Base::td_->eps,
+                                                     repeatTime);
+                } else {
+                    // Preserve all normal slice denominators; update only this pass's marker.
+                    DataCopyExtParams copy{};
+                    copy.blockCount = 1;
+                    copy.blockLen = static_cast<uint32_t>(aLen * sizeof(float));
+                    DataCopyPadExtParams<float> pad{true, 0, 0, 0};
+                    DataCopyPad(Base::postReduceResult_.template Get<float>(),
+                                Base::wsGm_[Base::td_->rGroupCnt * aTotal_ + aLoopIdx * slotStride], copy, pad);
+                    SetFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+                    WaitFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+                    const float eps = (Base::td_->eps * Base::inputScale_) * Base::inputScale_;
+                    asc_vf_call<ScaledPostElewiseVf>(rootPtr, denomPtr, static_cast<uint32_t>(aLenUb), eps,
+                                                     Base::scaleMarker_, Base::normEncode_, repeatTime);
+                }
+            } else {
+                asc_vf_call<PostElewiseVfImpl>(rootPtr, denomPtr, static_cast<uint32_t>(aLenUb), Base::td_->eps,
+                                               repeatTime);
+            }
         }
 
         // 2d) S2d: denom 中转写 workspace denom 区本核槽位（denom 区起点 = rGroupCnt × aTotal）：
@@ -451,10 +530,8 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2Process()
         }
     }
     SetFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_); // Phase 2→3 边界：ws 写→读序 + tail-R B3 覆写
-    if (Base::isTailR_) {
-        // 在生产核消费本地事件；空闲核不能等待从未发出的事件。
-        WaitFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_);
-    }
+    // Consume on producers before the global barrier; idle cores never wait on this event.
+    WaitFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_);
 }
 
 // S2a: workspace partial 区 [rGroupCnt, aTotal] fp32 dense 行优先 → B1（复用 Phase 1
@@ -475,6 +552,61 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase2CopyInPartial(int64_
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// A full power-of-two inner A row can be copied as one dense R*A burst.
+// This avoids one short GM transfer per R row, while using the same division VF
+// and the unchanged Phase 1/2 denominator and workspace contract.
+template <typename DType>
+__aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3DenseTailA()
+{
+    const int64_t width = Base::td_->axisShape[2];
+    const int64_t rTotal = Base::td_->axisShape[1];
+    const int64_t rTile = MinI64(Base::td_->rUbFactor,
+                                 Base::td_->preBufSize / (static_cast<int64_t>(sizeof(float)) * width));
+    const int64_t chunks = CeilDivI64(rTotal, rTile);
+    const int64_t first = static_cast<int64_t>(GetBlockIdx());
+    if (first >= chunks) {
+        return;
+    }
+    auto xLocal = Base::preInBuf_.template Get<DType>();
+    auto yLocal = Base::preReduceResult_.template Get<DType>();
+    auto dLocal = Base::postReduceResult_.template Get<float>();
+    auto* x = reinterpret_cast<__ubuf__ DType*>(xLocal.GetPhyAddr());
+    auto* y = reinterpret_cast<__ubuf__ DType*>(yLocal.GetPhyAddr());
+    auto* d = reinterpret_cast<__ubuf__ float*>(dLocal.GetPhyAddr());
+    auto* broadcast = reinterpret_cast<__ubuf__ float*>(Base::preReduceResultTail_.template Get<float>().GetPhyAddr());
+    DataCopyExtParams normCopy{};
+    normCopy.blockCount = 1;
+    normCopy.blockLen = static_cast<uint32_t>(width * sizeof(float));
+    DataCopyPadExtParams<float> normPad{true, 0, 0, 0};
+    DataCopyPad(dLocal, Base::wsGm_[Base::td_->rGroupCnt * aTotal_], normCopy, normPad);
+    for (int64_t chunk = first; chunk < chunks; chunk += Base::td_->usedCoreNum) {
+        if (chunk != first) {
+            WaitFlag<HardEvent::MTE3_V>(Base::evMTE3toV_);
+            WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_);
+        }
+        const int64_t rows = MinI64(rTile, rTotal - chunk * rTile);
+        const uint32_t count = static_cast<uint32_t>(rows * width);
+        DataCopyExtParams copy{};
+        copy.blockCount = 1;
+        copy.blockLen = count * sizeof(DType);
+        DataCopyPadExtParams<DType> pad{false, 0, 0, 0};
+        DataCopyPad(xLocal, Base::xGm_[chunk * rTile * width], copy, pad);
+        SetFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+        WaitFlag<HardEvent::MTE2_V>(Base::evMTE2toV_);
+        const uint16_t repeats = static_cast<uint16_t>(CeilDivU32(count, REP_F32));
+        asc_vf_call<DenseDenomVf>(d, broadcast, static_cast<uint32_t>(width), count, repeats);
+        constexpr bool hiPrec = !AscendC::IsSameType<DType, float>::value;
+        asc_vf_call<DivCastVfImpl<DType, hiPrec>>(x, broadcast, y, count, repeats);
+        SetFlag<HardEvent::V_MTE3>(Base::evVtoMTE3_);
+        WaitFlag<HardEvent::V_MTE3>(Base::evVtoMTE3_);
+        DataCopyPad(Base::yGm_[chunk * rTile * width], yLocal, copy);
+        if (chunk + Base::td_->usedCoreNum < chunks) {
+            SetFlag<HardEvent::MTE3_V>(Base::evMTE3toV_);
+            SetFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_);
+        }
+    }
+}
+
 // Phase3Process（§5.3）：keepdims 广播除法——denom 槽位布局沿用 Phase 2，
 //   tail-R 按槽位 × R chunk 分核；tail-A 保持自产自销。A 子 tile = LastA 行扫描段。
 //   每 (段 × R chunk) tile 落 B0/B1/B2 基址（单 tile ≤ preBufSize 构造性保证），
@@ -504,10 +636,6 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     const int64_t aSmallCoreLoopCntP2 = aSplitChunkCntP2 / Base::td_->usedCoreNum;
     const int64_t aBigCoreCntP2 = aSplitChunkCntP2 % Base::td_->usedCoreNum;
     const int64_t aBigCoreLoopCntP2 = aSmallCoreLoopCntP2 + (aBigCoreCntP2 > 0 ? 1 : 0);
-    const int64_t usedCoreNumP2 = (aSmallCoreLoopCntP2 > 0) ? Base::td_->usedCoreNum : aBigCoreCntP2;
-    if (!Base::isTailR_ && blockIdx >= usedCoreNumP2) {
-        return; // 与 Phase 2 同界早退（自产自销，无跨核依赖）
-    }
     int64_t aLoopStart = 0;
     int64_t aLoopEnd = 0;
     if (blockIdx < aBigCoreCntP2) {
@@ -519,7 +647,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     }
     int64_t rLoopStart = 0;
     int64_t rLoopStep = 1;
-    if (Base::isTailR_ && aSplitChunkCntP2 < Base::td_->usedCoreNum) {
+    if (aSplitChunkCntP2 < Base::td_->usedCoreNum) {
         // 核号 = rRank * 槽位数 + slot。每个槽的核数允许相差 1。
         // 同槽各核只写互不重叠的 R chunk，分母及算术顺序不变。
         aLoopStart = blockIdx % aSplitChunkCntP2;
@@ -576,9 +704,8 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
     const uint16_t repPerRow = static_cast<uint16_t>(
         CeilDivU32(static_cast<uint32_t>(rBundleP3), static_cast<uint32_t>(REP_F32_U16)));
 
-    bool firstMte2 = !Base::isTailR_; // tail-R 已经在生产核消费事件并完成全核屏障
-    bool pendingV2M = false;          // 有未消费的 Set<V_MTE2>（上轮末尾配对发出）
-    bool pendingM3V = false;          // 有未消费的 Set<MTE3_V>（上轮末尾配对发出）
+    bool pendingV2M = false; // 有未消费的 Set<V_MTE2>（上轮末尾配对发出）
+    bool pendingM3V = false; // 有未消费的 Set<MTE3_V>（上轮末尾配对发出）
     const int32_t lastAIdx = Base::LastAAxis();
     for (int64_t aLoopIdx = aLoopStart; aLoopIdx < aLoopEnd; ++aLoopIdx) {
         const int64_t aOff = aLoopIdx * aUbFactorP2;
@@ -590,10 +717,7 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
 
         if (Base::isTailR_) {
             // S9a · 每槽一次 dense 装载：ws 槽位 → B3（MTE2）
-            if (firstMte2) {
-                WaitFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_); // Phase 2→3 边界（§5.5）
-                firstMte2 = false;
-            } else if (pendingV2M) {
+            if (pendingV2M) {
                 WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_); // B3+B0 双 WAR（上槽 Broadcast/DivCast
                 pendingV2M = false;                            //   V 读 → 本槽 S9a/S8 MTE2 覆写）
             }
@@ -642,10 +766,6 @@ __aicore__ inline void L2NormalizeGroupKernel<DType>::Phase3Process()
                         WaitFlag<HardEvent::V_MTE2>(Base::evVtoMTE2_); // B0/B2 WAR（上轮 DivCast/Broadcast V 读）
                         pendingV2M = false;
                     } // 全局首个 S8 无 WAR（Phase 1 V drain，§5.5）
-                    if (firstMte2) { // tail-A：ws 写→读边界（首段 S9 前）
-                        WaitFlag<HardEvent::MTE3_MTE2>(Base::evMTE3toMTE2_);
-                        firstMte2 = false;
-                    }
                     DoCopyInTileP3(seg, rOff, rLen, rUbFactorP3, xLocal); // S8: x GM 二次读 → B0（段）
                     if (!Base::isTailR_) {
                         CopyInDenomSegP3(wsSlot, seg, subLaneP3, rBundleP3); // S9 tail-A: 广播 → B2（段）
