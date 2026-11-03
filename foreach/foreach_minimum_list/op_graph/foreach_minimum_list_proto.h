@@ -18,15 +18,14 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
- * @brief Apply minimum operation for each tensor in tensor list with a list of scalar in manner
- * of element-wise the number of tensors in tensor list shall be equal to the number of scalars
- * in scalar list
+ * @brief Apply the element-wise minimum operation to corresponding tensors in two tensor lists.
+ * The two tensor lists shall contain the same number of tensors with matching shapes.
  * @par Inputs:
  * Two inputs:
- * @li x: A tensor list containing multiple tensors
- * @li scalars: A scalar list in form of tensor with only multiple elements
+ * @li x1: The first tensor list
+ * @li x2: The second tensor list
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are minimum with the scalars in scalar list
+ * @li y: A tensor list containing the element-wise minimum of each corresponding x1 and x2 tensor
  */
 REG_OP(ForeachMinimumList)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))

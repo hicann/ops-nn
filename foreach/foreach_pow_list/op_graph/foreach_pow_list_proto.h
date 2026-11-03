@@ -18,14 +18,13 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
- * @brief Apply power operation for a scalar with each tensor in a tensor list
- * in manner of element-wise
+ * @brief Apply the element-wise power operation to corresponding tensors in two tensor lists.
  * @par Inputs:
  * Two inputs:
  * @li x1: A tensor list containing multiple tensors
- * @li x2: Another tensor list containing multiple tensorsr
+ * @li x2: Another tensor list containing multiple tensors
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are power with the scalars in scalar list
+ * @li y: A tensor list containing each corresponding x1 tensor raised to the power of x2
  */
 REG_OP(ForeachPowList)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))

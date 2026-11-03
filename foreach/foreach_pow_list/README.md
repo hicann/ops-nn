@@ -74,10 +74,11 @@
 ## 约束说明
 
 - 输出不支持非连续Tensor。
+- <term>Ascend 950PR&950DT系列产品</term>：aclnn API或GE图模式单次调用支持1至256组张量；超过256组时需分批调用。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_pow_list](examples/test_aclnn_foreach_pow_list.cpp) | 通过[aclnnForeachPowList](docs/aclnnForeachPowList.md)接口方式调用ForeachPowList算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_pow_list_proto.h)构图方式调用ForeachPowList算子。         |
+| aclnn API  | [test_aclnn_foreach_pow_list](examples/test_aclnn_foreach_pow_list.cpp) | 通过[aclnnForeachPowList](docs/aclnnForeachPowList.md)接口方式调用ForeachPowList算子。 |
+| GE图模式 | -  | 通过[算子IR](op_graph/foreach_pow_list_proto.h)构图方式调用ForeachPowList算子。         |

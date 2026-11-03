@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <utility>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_minimum_list.h"
@@ -25,6 +26,34 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
+template <typename F>
+class ScopeGuard {
+public:
+    explicit ScopeGuard(const F& cleanup) : cleanup_(cleanup), active_(true) {}
+    ScopeGuard(ScopeGuard&& other) noexcept : cleanup_(std::move(other.cleanup_)), active_(other.active_)
+    {
+        other.active_ = false;
+    }
+    ScopeGuard(const ScopeGuard&) = delete;
+    ScopeGuard& operator=(const ScopeGuard&) = delete;
+    ~ScopeGuard()
+    {
+        if (active_) {
+            cleanup_();
+        }
+    }
+
+private:
+    F cleanup_;
+    bool active_;
+};
+
+template <typename F>
+ScopeGuard<F> MakeScopeGuard(F cleanup)
+{
+    return ScopeGuard<F>(cleanup);
+}
+
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
@@ -36,14 +65,22 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 
 int Init(int32_t deviceId, aclrtStream* stream)
 {
-    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+        aclFinalize();
+        return ret;
+    }
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
-    return 0;
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+        return ret;
+    }
+    return ACL_SUCCESS;
 }
 
 template <typename T>
@@ -51,23 +88,31 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
                     aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
-    // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-    // 调用aclrtMemcpy将host侧数据复制到device侧内存上
-    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-    // 计算连续tensor的strides
+    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret);
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return ret;
+    }
+
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = shape.size() - 2; i >= 0; i--) {
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
-    return 0;
+    if (*tensor == nullptr) {
+        LOG_PRINT("aclCreateTensor failed.\n");
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return ACL_ERROR_FAILURE;
+    }
+    return ACL_SUCCESS;
 }
 
 int main()
@@ -75,7 +120,7 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
@@ -98,6 +143,56 @@ int main()
     aclTensor* other2 = nullptr;
     aclTensor* out1 = nullptr;
     aclTensor* out2 = nullptr;
+    aclTensorList* tensorListInput1 = nullptr;
+    aclTensorList* tensorListInput2 = nullptr;
+    aclTensorList* tensorListOutput = nullptr;
+    void* workspaceAddr = nullptr;
+
+    auto cleanup = MakeScopeGuard([&]() {
+        if (workspaceAddr != nullptr) {
+            aclrtFree(workspaceAddr);
+        }
+        if (tensorListInput1 != nullptr) {
+            aclDestroyTensorList(tensorListInput1);
+        } else {
+            if (input1 != nullptr)
+                aclDestroyTensor(input1);
+            if (input2 != nullptr)
+                aclDestroyTensor(input2);
+        }
+        if (tensorListInput2 != nullptr) {
+            aclDestroyTensorList(tensorListInput2);
+        } else {
+            if (other1 != nullptr)
+                aclDestroyTensor(other1);
+            if (other2 != nullptr)
+                aclDestroyTensor(other2);
+        }
+        if (tensorListOutput != nullptr) {
+            aclDestroyTensorList(tensorListOutput);
+        } else {
+            if (out1 != nullptr)
+                aclDestroyTensor(out1);
+            if (out2 != nullptr)
+                aclDestroyTensor(out2);
+        }
+        if (input1DeviceAddr != nullptr)
+            aclrtFree(input1DeviceAddr);
+        if (input2DeviceAddr != nullptr)
+            aclrtFree(input2DeviceAddr);
+        if (other1DeviceAddr != nullptr)
+            aclrtFree(other1DeviceAddr);
+        if (other2DeviceAddr != nullptr)
+            aclrtFree(other2DeviceAddr);
+        if (out1DeviceAddr != nullptr)
+            aclrtFree(out1DeviceAddr);
+        if (out2DeviceAddr != nullptr)
+            aclrtFree(out2DeviceAddr);
+        if (stream != nullptr)
+            aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    });
     std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
     std::vector<float> input2HostData = {7, 8, 9};
     std::vector<float> other1HostData = {6, 5, 4, 3, 2, 1};
@@ -124,11 +219,11 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     std::vector<aclTensor*> tempInput1{input1, input2};
-    aclTensorList* tensorListInput1 = aclCreateTensorList(tempInput1.data(), tempInput1.size());
+    tensorListInput1 = aclCreateTensorList(tempInput1.data(), tempInput1.size());
     std::vector<aclTensor*> tempInput2{other1, other2};
-    aclTensorList* tensorListInput2 = aclCreateTensorList(tempInput2.data(), tempInput2.size());
+    tensorListInput2 = aclCreateTensorList(tempInput2.data(), tempInput2.size());
     std::vector<aclTensor*> tempOutput{out1, out2};
-    aclTensorList* tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
+    tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
@@ -139,7 +234,6 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMinimumListGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -171,23 +265,5 @@ int main()
         LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
     }
 
-    // 6. 释放aclTensor，需要根据具体API的接口定义修改
-    aclDestroyTensorList(tensorListInput1);
-    aclDestroyTensorList(tensorListInput2);
-    aclDestroyTensorList(tensorListOutput);
-
-    // 7.释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(input1DeviceAddr);
-    aclrtFree(input2DeviceAddr);
-    aclrtFree(other1DeviceAddr);
-    aclrtFree(other2DeviceAddr);
-    aclrtFree(out1DeviceAddr);
-    aclrtFree(out2DeviceAddr);
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-    aclrtDestroyStream(stream);
-    aclrtResetDevice(deviceId);
-    aclFinalize();
     return 0;
 }

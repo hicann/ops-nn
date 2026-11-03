@@ -98,8 +98,9 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
 {
     // tensorlist size检查
     if (x1->Size() != x2->Size() || x1->Size() != out->Size()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor lists must have the same number of tensors, got %lu and %lu",
-                x1->Size(), x2->Size());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Tensor lists must have the same number of tensors, got x1=%lu, x2=%lu and out=%lu", x1->Size(),
+                x2->Size(), out->Size());
         return false;
     }
 

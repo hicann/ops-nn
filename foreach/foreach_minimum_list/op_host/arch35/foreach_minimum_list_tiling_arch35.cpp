@@ -16,9 +16,11 @@
  */
 
 #include <cstring>
+#include <limits>
 #include "log/log.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
+#include "util/shape_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/foreach_minimum_list_tiling_data.h"
@@ -28,6 +30,7 @@ namespace optiling {
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int32_t INPUT_IDX_1 = 1;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t ALIGN_SIZE = 32;
 constexpr int32_t MAX_TENSOR_NUM = 256;
@@ -40,9 +43,9 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE_WITHOUT_REPORT(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE_WITHOUT_REPORT(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -51,7 +54,7 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -67,16 +70,35 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     ForeachMinimumListTilingData* tiling = context->GetTilingData<ForeachMinimumListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMinimumListTilingData), 0, sizeof(ForeachMinimumListTilingData)) != EOK,
-                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM,
-                OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
+                OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "x1", static_cast<int64_t>(tensorNum),
+                                              ("within the range [0, " + std::to_string(MAX_TENSOR_NUM) + "]").c_str()),
                 return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < tensorNum; i++) {
-        auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
-        auto storageShape = shapePtr->GetStorageShape();
+        auto x1ShapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
+        auto x2ShapePtr = context->GetDynamicInputShape(INPUT_IDX_1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1ShapePtr);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x2ShapePtr);
+        const auto& storageShape = x1ShapePtr->GetStorageShape();
+        OP_CHECK_IF(
+            storageShape != x2ShapePtr->GetStorageShape(),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), ("x1[" + std::to_string(i) + "] and x2[" + std::to_string(i) + "]").c_str(),
+                (Ops::Base::ToString(storageShape) + " and " + Ops::Base::ToString(x2ShapePtr->GetStorageShape()))
+                    .c_str(),
+                "Corresponding tensors in x1 and x2 must have the same storage shape"),
+            return ge::GRAPH_FAILED);
         int64_t numel = storageShape.GetShapeSize();
+        OP_CHECK_IF(
+            numel < 0 || totalElements > std::numeric_limits<int64_t>::max() - numel,
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                context->GetNodeName(), ("x1[" + std::to_string(i) + "]").c_str(), std::to_string(numel).c_str(),
+                ("The tensor element count must be non-negative, and adding it to the preceding total " +
+                 std::to_string(totalElements) + " must not exceed INT64_MAX")
+                    .c_str()),
+            return ge::GRAPH_FAILED);
         tiling->tensorSizes[i] = numel;
         totalElements += numel;
     }
@@ -91,9 +113,17 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     } else {
         tiling->perCoreElements = std::min(static_cast<int64_t>(65536), Ops::Base::CeilDiv(totalElements, coreNum));
         tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
-        tiling->needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
-        tiling->lastCoreElements = totalElements - tiling->perCoreElements * (tiling->needCoreNum - 1);
-        context->SetBlockDim(tiling->needCoreNum);
+        int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
+        OP_CHECK_IF(needCoreNum > std::numeric_limits<int32_t>::max(),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context->GetNodeName(), "x1", std::to_string(totalElements).c_str(),
+                        ("The total tensor-list element count requires " + std::to_string(needCoreNum) +
+                         " blocks, exceeding the tiling-data limit INT32_MAX")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        tiling->lastCoreElements = totalElements - tiling->perCoreElements * (needCoreNum - 1);
+        context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     }
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
@@ -112,7 +142,8 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     } else if (dataType == ge::DT_INT32) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_MINIMUM_LIST_TPL_SCH_MODE_INT32);
     } else {
-        OP_LOGE(context, "unsupported dtype for foreach_minimum_list");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x1", Ops::Base::ToString(dataType).c_str(),
+                                  "float32, float16, bfloat16, int32");
         return ge::GRAPH_FAILED;
     }
     context->SetTilingKey(tilingKey);
