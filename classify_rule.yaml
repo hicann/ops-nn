@@ -2611,6 +2611,10 @@ VC8@ops-nn:
       - ops/ops-nn/pooling/avg_pool/avg_pool_infershape.cpp
       - ops/ops-nn/pooling/avg_pool/avg_pool_infershape_common.h
       - ops/ops-nn/pooling/avg_pool/op_host/
+      - ops/ops-nn/index/arg_max_grad/op_kernel/arch35/arg_max_grad_tiling_key.h
+      - ops/ops-nn/index/arg_max_grad/op_kernel/arch35/arg_max_grad_tiling_data.h
+      - ops/ops-nn/index/arg_max_grad/op_kernel/arch35/arg_max_grad_vf.h
+      - ops/ops-nn/index/arg_max_grad/op_kernel/arch35/arg_max_grad_nd.h
 sort@ops-nn:
   src:
     release:
