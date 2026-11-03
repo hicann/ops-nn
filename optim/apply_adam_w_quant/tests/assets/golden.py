@@ -41,9 +41,9 @@ _KERNEL_TOLERANCE = {
 }
 
 _ACLNN_TOLERANCE = {
-    "float32": {"standard": "mix_tolerance"},
-    "float16": {"standard": "mix_tolerance"},
-    "bfloat16": {"standard": "mix_tolerance"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
     "uint8": {"standard": "quant"},
 }
 
