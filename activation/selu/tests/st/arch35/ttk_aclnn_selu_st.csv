@@ -39,7 +39,6 @@ L2_aclnnSelu_exc_null_001,aclnnSelu,"(None,(5181,5704,1,1,),)","('int32','float1
 L2_aclnnSelu_exc_null_003,aclnnSelu,"((108,131,112,131,),None,)","('int32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,EX-S102; 约束违反; expect ACL_ERROR_INVALID_PARAM
 L2_aclnnSelu_exc_null_004,aclnnSelu,"(None,None,)","('float32','int32',)","('ND','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,EX-S103; 约束违反; expect ACL_ERROR_INVALID_PARAM
 L2_aclnnSelu_exc_shape_001,aclnnSelu,"((7,6,5866986,),(),)","('float32','bfloat16',)","('ND','ND',)",,,,,,"(1,)",,,"((-128,127,),)",,输出shape与期望不匹配; expect ACL_ERROR_SHAPE_NOT_MATCH
-L2_aclnnSelu_exc_rank_001,aclnnSelu,"((2,2,2,2,2,2,2,2,2,),(2,1668274,2,2,2,2,2,2,),)","('float32','float32',)","('ND','ND',)",,,,,,"(1,)",,,"((6.103515625e-05,6.103515625e-05,),)",,EX-S106; 约束违反; expect ACL_ERROR_INVALID_DIMENSION
 L2_aclnnSelu_exc_format_004,aclnnSelu,"((676,582,),(676,582,),)","('int8','int8',)","('NCHW','ND',)",,,,,,"(1,)",,,"((nan,nan,),)",,EX-S92; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT
 L1_aclnnSelu_mixed_dtype_005,aclnnSelu,"((7,16,26,30,27,),(7,16,26,30,27,),)","('float16','int32',)","('NHWC','ND',)",,,,,,"(1,)",,,"((-100,100,),)",,混合 dtype f16→i32; l0::Cast 运行时转换
 L1_aclnnSelu_mixed_dtype_006,aclnnSelu,"((),(),)","('int8','int32',)","('NHWC','ND',)",,,,,,"(1,)",,,"((-2,-1,),)",,EX-S94; 约束违反; expect ACL_ERROR_FORMAT_NOT_SUPPORT

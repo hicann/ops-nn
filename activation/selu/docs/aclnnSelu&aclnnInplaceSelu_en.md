@@ -105,7 +105,7 @@ aclnnStatus aclnnInplaceSelu(
       <td><ul><li>Empty tensors are supported.</li><li>The shape must be the same as that of out.</li></ul></td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>Any dimension</td>
       <td>√</td>
     </tr>
     <tr>
@@ -115,7 +115,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>shape must be consistent with self.</td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>Any dimension</td>
       <td>√</td>
     </tr>
       <tr>
@@ -258,7 +258,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>Empty tensors are supported.</td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>Any dimension</td>
       <td>√</td>
     </tr>
        <tr>

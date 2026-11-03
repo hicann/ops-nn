@@ -56,7 +56,7 @@
     <td>公式中的输入x。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>任意维</td>
   </tr>
   <tr>
     <td>y</td>
@@ -64,7 +64,7 @@
     <td>公式中的输出y，shape与输入x相同。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>任意维</td>
   </tr>
 </tbody></table>
 

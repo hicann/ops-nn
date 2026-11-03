@@ -103,7 +103,7 @@ aclnnStatus aclnnInplaceSelu(
       <td><ul><li>支持空Tensor。</li><li>shape需要与out一致。</li></ul></td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>任意维</td>
       <td>√</td>
     </tr>
     <tr>
@@ -113,7 +113,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>shape需要与self一致。</td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>任意维</td>
       <td>√</td>
     </tr>
       <tr>
@@ -253,7 +253,7 @@ aclnnStatus aclnnInplaceSelu(
       <td>支持空Tensor。</td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>任意维</td>
       <td>√</td>
     </tr>
        <tr>
