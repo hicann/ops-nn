@@ -623,7 +623,7 @@
     {"name":"ReshapeAndCacheNdSiso", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
     {"name":"ReshapeAndCacheCompress", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
     {"name":"ReshapeAndCacheCompressRope", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
-    {"name":"ModulateGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
+    {"name":"ModulateGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},
     {"name":"LayerNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync" : true},
     {"name":"LayerNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync" : true},
     {"name":"QuantPerChannel", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync" : true},

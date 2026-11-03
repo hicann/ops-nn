@@ -33,11 +33,13 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(co
         grad_shift = executor->AllocTensor(grad_shiftShape, shift->GetDataType());
     }
     const aclTensor* grad_input = executor->AllocTensor(grad_inputShape, grad_output->GetDataType());
-    const aclTensor* launcher_scale = scale != nullptr ? scale : grad_input;
-    const aclTensor* launcher_shift = shift != nullptr ? shift : grad_input;
+    // 缺席的可选输入按原样(空指针)传入启动器,由 tiling 的可选存在性检测与
+    // regbase TILING_KEY 编译期变体(或非 regbase 平台的运行时标志)跳过对它的读取;
+    // 不再用 grad_input 占位,避免未初始化数据被当作 scale/shift 参与计算。
+    // 可选输出缺席时保留占位(内核变体不写它,包装层对空结果已有守卫)。
     const aclTensor* launcher_grad_scale = grad_scale != nullptr ? grad_scale : grad_input;
     const aclTensor* launcher_grad_shift = grad_shift != nullptr ? grad_shift : grad_input;
-    ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad, OP_INPUT(grad_output, input, launcher_scale, launcher_shift),
+    ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad, OP_INPUT(grad_output, input, scale, shift),
                                 OP_OUTPUT(grad_input, launcher_grad_scale, launcher_grad_shift));
     return std::make_tuple(grad_input, grad_scale, grad_shift);
 }

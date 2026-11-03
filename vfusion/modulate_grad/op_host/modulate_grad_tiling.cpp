@@ -18,12 +18,14 @@
 #include <vector>
 #include "error_util.h"
 #include "log/log.h"
+#include "op_host/tiling_util.h"
 #include "platform/platform_infos_def.h"
 #include "platform/platform_info.h"
 #include "register/op_def_registry.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "util/math_util.h"
+#include "modulate_grad_tiling_arch35.h"
 
 namespace optiling {
 struct ModulateGradTilingData {
@@ -61,6 +63,15 @@ static ge::graphStatus ReportTilingFailure(const char* opName, const std::string
     return ge::GRAPH_FAILED;
 }
 
+static bool IsOptionalInputPresent(const gert::StorageShape* input)
+{
+    if (input == nullptr) {
+        return false;
+    }
+    const gert::Shape shape = input->GetStorageShape();
+    return shape.GetDimNum() > 0 && shape.GetShapeSize() > 0;
+}
+
 void PrintTilingData(gert::TilingContext* context, ModulateGradTilingData& tiling)
 {
     OP_LOGD(context, "B:%lu.", tiling.B);
@@ -82,7 +93,14 @@ void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t numBlocks)
 {
     uint64_t B = tiling->B;
     uint64_t D = tiling->D;
-    if (numBlocks == 0) {
+    if (numBlocks == 0 || B == 0 || D == 0 || B * D == 0) {
+        tiling->splitB = 0;
+        tiling->coresPerB = 1;
+        tiling->usedCores = 1;
+        tiling->formerNum = 0;
+        tiling->formerLength = 0;
+        tiling->tailNum = 1;
+        tiling->tailLength = 0;
         return;
     }
     numBlocks = numBlocks < B * D ? numBlocks : B * D;
@@ -113,33 +131,229 @@ void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t numBlocks)
         tiling->tailLength = bPerCore;
     }
 }
-static ge::graphStatus TilingFunc(gert::TilingContext* context)
+static ge::graphStatus ValidateModulateGradTilingInputs(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
+    constexpr uint32_t GRAD_OUTPUT_INDEX = 0;
     constexpr uint32_t INPUT_INDEX = 1;
     constexpr uint32_t SCALE_INDEX = 2;
     constexpr uint32_t SHIFT_INDEX = 3;
-    uint32_t has_scale = 0;
-    uint32_t has_shift = 0;
+    const gert::StorageShape* gradOutputShape = context->GetInputShape(GRAD_OUTPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradOutputShape);
+    const gert::StorageShape* inputShape = context->GetInputShape(INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+    const gert::Shape gradOutputStorage = gradOutputShape->GetStorageShape();
+    const gert::Shape inputStorage = inputShape->GetStorageShape();
+    if (gradOutputStorage.GetDimNum() != 3 || inputStorage.GetDimNum() != 3) {
+        OP_LOGE(context, "modulate_grad requires grad_output and input rank 3, got %zu and %zu.",
+                gradOutputStorage.GetDimNum(), inputStorage.GetDimNum());
+        return ge::GRAPH_FAILED;
+    }
+    for (size_t i = 0; i < 3; ++i) {
+        // Tiling runs on concrete runtime shapes; negative dims are unresolved or invalid.
+        if (gradOutputStorage.GetDim(i) < 0 || inputStorage.GetDim(i) < 0) {
+            OP_LOGE(context, "modulate_grad requires non-negative dims at tiling, grad_output dim %ld, input dim %ld.",
+                    gradOutputStorage.GetDim(i), inputStorage.GetDim(i));
+            return ge::GRAPH_FAILED;
+        }
+        if (gradOutputStorage.GetDim(i) != inputStorage.GetDim(i)) {
+            OP_LOGE(context, "modulate_grad requires grad_output shape equal to input shape, dim %zu: %ld vs %ld.", i,
+                    gradOutputStorage.GetDim(i), inputStorage.GetDim(i));
+            return ge::GRAPH_FAILED;
+        }
+    }
+    const int64_t B = inputStorage.GetDim(0);
+    const int64_t D = inputStorage.GetDim(2);
+    const bool inputEmpty = (inputStorage.GetShapeSize() == 0);
+    auto checkOptional = [&](const gert::StorageShape* opt, const char* name) -> ge::graphStatus {
+        if (opt == nullptr) {
+            return ge::GRAPH_SUCCESS;
+        }
+        const gert::Shape s = opt->GetStorageShape();
+        // An absent optional input is kept as a rank-0 or zero-size empty placeholder;
+        // treat every zero-size optional as absent and skip further validation.
+        if (s.GetDimNum() == 0 || s.GetShapeSize() == 0) {
+            if (!inputEmpty) {
+                OP_LOGD(context, "modulate_grad %s is empty (treated as absent).", name);
+            }
+            return ge::GRAPH_SUCCESS;
+        }
+        if (inputEmpty) {
+            OP_LOGE(context, "modulate_grad requires %s empty or absent when grad_output/input is empty.", name);
+            return ge::GRAPH_FAILED;
+        }
+        if (s.GetDimNum() != 2) {
+            OP_LOGE(context, "modulate_grad requires %s rank 2, got %zu.", name, s.GetDimNum());
+            return ge::GRAPH_FAILED;
+        }
+        if (s.GetDim(0) < 0 || s.GetDim(1) < 0) {
+            OP_LOGE(context, "modulate_grad requires non-negative %s dims at tiling.", name);
+            return ge::GRAPH_FAILED;
+        }
+        if (static_cast<int64_t>(s.GetDim(0)) != B || static_cast<int64_t>(s.GetDim(1)) != D) {
+            OP_LOGE(context, "modulate_grad requires %s shape [%ld, %ld], got [%ld, %ld].", name, B, D, s.GetDim(0),
+                    s.GetDim(1));
+            return ge::GRAPH_FAILED;
+        }
+        return ge::GRAPH_SUCCESS;
+    };
+    const gert::StorageShape* scaleShape = context->GetOptionalInputShape(SCALE_INDEX);
+    const gert::StorageShape* shiftShape = context->GetOptionalInputShape(SHIFT_INDEX);
+    if (checkOptional(scaleShape, "scale") != ge::GRAPH_SUCCESS ||
+        checkOptional(shiftShape, "shift") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const ge::DataType inputDtype = context->GetInputDesc(INPUT_INDEX)->GetDataType();
+    if (inputDtype != ge::DT_FLOAT16 && inputDtype != ge::DT_BF16 && inputDtype != ge::DT_FLOAT) {
+        OP_LOGE(context, "modulate_grad unsupported input dtype %d.", static_cast<int32_t>(inputDtype));
+        return ge::GRAPH_FAILED;
+    }
+    const ge::DataType gradOutputDtype = context->GetInputDesc(GRAD_OUTPUT_INDEX)->GetDataType();
+    if (gradOutputDtype != inputDtype) {
+        OP_LOGE(context, "modulate_grad requires grad_output dtype %d equal to input dtype %d.",
+                static_cast<int32_t>(gradOutputDtype), static_cast<int32_t>(inputDtype));
+        return ge::GRAPH_FAILED;
+    }
+    // 输入 format 校验（仅必选输入，其 IR 索引不受可选输入压缩影响）。
+    const ge::Format gradOutputFormat = context->GetInputDesc(GRAD_OUTPUT_INDEX)->GetFormat().GetStorageFormat();
+    const ge::Format inputFormat = context->GetInputDesc(INPUT_INDEX)->GetFormat().GetStorageFormat();
+    if (gradOutputFormat != ge::FORMAT_ND || inputFormat != ge::FORMAT_ND) {
+        OP_LOGE(context, "modulate_grad requires ND format, got grad_output format %d, input format %d.",
+                static_cast<int32_t>(gradOutputFormat), static_cast<int32_t>(inputFormat));
+        return ge::GRAPH_FAILED;
+    }
+    // 可选输入 dtype/format 校验：仅校验在场（非零尺寸）的 scale/shift，缺席或零尺寸占位
+    // 按“视为缺席”约定跳过；desc 经 IR 索引获取，规避 TTK 压缩列表的运行时索引漂移，
+    // 在场但 desc 未实例化时无校验依据，跳过。
+    auto checkOptionalDesc = [&](const gert::StorageShape* opt, uint32_t irIndex, const char* name) -> ge::graphStatus {
+        if (!IsOptionalInputPresent(opt)) {
+            return ge::GRAPH_SUCCESS;
+        }
+        const auto* desc = context->GetOptionalInputDesc(irIndex);
+        if (desc == nullptr) {
+            return ge::GRAPH_SUCCESS;
+        }
+        const ge::DataType dtype = desc->GetDataType();
+        if (dtype != inputDtype) {
+            OP_LOGE(context, "modulate_grad requires %s dtype %d equal to input dtype %d.", name,
+                    static_cast<int32_t>(dtype), static_cast<int32_t>(inputDtype));
+            return ge::GRAPH_FAILED;
+        }
+        const ge::Format format = desc->GetFormat().GetStorageFormat();
+        if (format != ge::FORMAT_ND) {
+            OP_LOGE(context, "modulate_grad requires %s ND format, got format %d.", name, static_cast<int32_t>(format));
+            return ge::GRAPH_FAILED;
+        }
+        return ge::GRAPH_SUCCESS;
+    };
+    if (checkOptionalDesc(scaleShape, SCALE_INDEX, "scale") != ge::GRAPH_SUCCESS ||
+        checkOptionalDesc(shiftShape, SHIFT_INDEX, "shift") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 输出 dtype/shape 校验（可选输出仅在对应可选输入在场时校验）。可选输出可能未被实例化：
+    // GE 图模式保留空占位（输出总数=3，IR 索引即运行时索引），TTK kernel 直连模式按在场压缩
+    // 运行时输出列表（输出总数=在场数，在场的可选输出依次排在 grad_input 之后）。
+    // tiling 运行时不提供输出实例信息（GetIrOutputInstanceInfo 为空），按输出总数推导运行时索引。
+    const bool scalePresent = IsOptionalInputPresent(scaleShape);
+    const bool shiftPresent = IsOptionalInputPresent(shiftShape);
+    const size_t outputNum = context->GetComputeNodeOutputNum();
+    const uint32_t gradScaleIdx = 1U;
+    const uint32_t gradShiftIdx = (outputNum < 3U) ? (1U + (scalePresent ? 1U : 0U)) : 2U;
+    auto checkOutput = [&](uint32_t index, const gert::StorageShape* expect, bool required,
+                           const char* name) -> ge::graphStatus {
+        const auto* desc = context->GetOutputDesc(index);
+        const gert::StorageShape* out = context->GetOutputShape(index);
+        if (desc == nullptr || out == nullptr) {
+            if (required) {
+                OP_LOGE(context, "modulate_grad missing required output %s desc/shape.", name);
+                return ge::GRAPH_FAILED;
+            }
+            return ge::GRAPH_SUCCESS;
+        }
+        const ge::DataType dtype = desc->GetDataType();
+        if (dtype != ge::DT_UNDEFINED && dtype != inputDtype) {
+            OP_LOGE(context, "modulate_grad requires %s dtype %d equal to input dtype %d.", name,
+                    static_cast<int32_t>(dtype), static_cast<int32_t>(inputDtype));
+            return ge::GRAPH_FAILED;
+        }
+        if (expect != nullptr) {
+            const gert::Shape outShape = out->GetStorageShape();
+            const gert::Shape expectShape = expect->GetStorageShape();
+            if (outShape.GetDimNum() != expectShape.GetDimNum()) {
+                OP_LOGE(context, "modulate_grad requires %s rank %zu, got %zu.", name, expectShape.GetDimNum(),
+                        outShape.GetDimNum());
+                return ge::GRAPH_FAILED;
+            }
+            for (size_t i = 0; i < outShape.GetDimNum(); ++i) {
+                if (outShape.GetDim(i) != expectShape.GetDim(i)) {
+                    OP_LOGE(context, "modulate_grad requires %s dim %zu equal to %ld, got %ld.", name, i,
+                            expectShape.GetDim(i), outShape.GetDim(i));
+                    return ge::GRAPH_FAILED;
+                }
+            }
+        }
+        return ge::GRAPH_SUCCESS;
+    };
+    if (checkOutput(0, inputShape, true, "grad_input") != ge::GRAPH_SUCCESS ||
+        checkOutput(gradScaleIdx, scalePresent ? scaleShape : nullptr, scalePresent, "grad_scale") !=
+            ge::GRAPH_SUCCESS ||
+        checkOutput(gradShiftIdx, shiftPresent ? shiftShape : nullptr, shiftPresent, "grad_shift") !=
+            ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus TilingFunc(gert::TilingContext* context)
+{
+    constexpr uint32_t INPUT_INDEX = 1;
+    constexpr uint32_t SCALE_INDEX = 2;
+    constexpr uint32_t SHIFT_INDEX = 3;
+    if (ValidateModulateGradTilingInputs(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const gert::StorageShape* scaleInput = context->GetOptionalInputShape(SCALE_INDEX);
+    const gert::StorageShape* shiftInput = context->GetOptionalInputShape(SHIFT_INDEX);
+    const bool scalePresent = IsOptionalInputPresent(scaleInput);
+    const bool shiftPresent = IsOptionalInputPresent(shiftInput);
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return ModulateGradTilingArch35(context, scalePresent, shiftPresent);
+    }
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for the non-regbase architecture");
     ModulateGradTiling tilingData;
-    ModulateGradTilingData tiling;
+    ModulateGradTilingData tiling{};
     const gert::StorageShape* input_shape = context->GetInputShape(INPUT_INDEX);
-    auto scale_input = context->GetOptionalInputShape(SCALE_INDEX);
-    auto shift_input = context->GetOptionalInputShape(SHIFT_INDEX);
-    if (scale_input != nullptr && scale_input->GetStorageShape().GetDimNum() > 0) {
-        has_scale = 1;
+    OP_CHECK_NULL_WITH_CONTEXT(context, input_shape);
+    const gert::Shape inputStorageShape = input_shape->GetStorageShape();
+    if (inputStorageShape.GetDimNum() != 3) {
+        OP_LOGE(context, "modulate_grad input rank must be 3, got %zu.", inputStorageShape.GetDimNum());
+        return ge::GRAPH_FAILED;
     }
-    if (shift_input != nullptr && shift_input->GetStorageShape().GetDimNum() > 0) {
-        has_shift = 1;
+    const uint64_t B = inputStorageShape.GetDim(0);
+    const uint64_t L = inputStorageShape.GetDim(1);
+    const uint64_t D = inputStorageShape.GetDim(2);
+    const ge::DataType inputDtype = context->GetInputDesc(INPUT_INDEX)->GetDataType();
+    switch (inputDtype) {
+        case ge::DT_FLOAT16:
+            tiling.dataType = 0;
+            tiling.dataTypeSize = 2;
+            break;
+        case ge::DT_BF16:
+            tiling.dataType = 1;
+            tiling.dataTypeSize = 2;
+            break;
+        case ge::DT_FLOAT:
+            tiling.dataType = 2;
+            tiling.dataTypeSize = 4;
+            break;
+        default:
+            OP_LOGE(context, "modulate_grad unsupported input dtype %d.", static_cast<int32_t>(inputDtype));
+            return ge::GRAPH_FAILED;
     }
-    const uint64_t B = input_shape->GetStorageShape().GetDim(0);
-    const uint64_t L = input_shape->GetStorageShape().GetDim(1);
-    const uint64_t D = input_shape->GetStorageShape().GetDim(2);
     tiling.B = B;
     tiling.L = L;
     tiling.D = D;
-    tiling.has_scale = has_scale;
-    tiling.has_shift = has_shift;
+    tiling.has_scale = scalePresent ? 1U : 0U;
+    tiling.has_shift = shiftPresent ? 1U : 0U;
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     const uint32_t block_dim = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "ascendcPlatform CoreNum: %u.", block_dim);

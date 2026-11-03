@@ -19,6 +19,7 @@
 #include "infershape_test_util.h"
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 class ModulateGradProto : public testing::Test {
 protected:
@@ -75,6 +76,46 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_without_scale_shift)
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 16, 128]");
 }
 
+TEST_F(ModulateGradProto, modulate_grad_infershape_unknown_rank_propagates)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ModulateGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradOutputShape = {{ge::UNKNOWN_DIM_NUM}, {ge::UNKNOWN_DIM_NUM}};
+    gert::StorageShape inputShape = {{ge::UNKNOWN_DIM_NUM}, {ge::UNKNOWN_DIM_NUM}};
+    gert::StorageShape gradInputShape;
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1, 0, 0}, {1, 0, 0})
+                      .InputShapes({&gradOutputShape, &inputShape})
+                      .OutputShapes({&gradInputShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_TRUE(Ops::Base::IsUnknownRank(*context->GetOutputShape(0)));
+}
+
+TEST_F(ModulateGradProto, modulate_grad_infershape_known_non_three_rank_rejected)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ModulateGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradOutputShape = {{4, 16}, {4, 16}};
+    gert::StorageShape inputShape = {{4, 16}, {4, 16}};
+    gert::StorageShape gradInputShape;
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1, 0, 0}, {1, 0, 0})
+                      .InputShapes({&gradOutputShape, &inputShape})
+                      .OutputShapes({&gradInputShape})
+                      .Build();
+
+    EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 // Real GE keeps optional outputs at their fixed IR index (no compaction); an absent optional is a
 // present-but-empty placeholder. So all 4 inputs / 3 outputs exist, the absent optional input is an
 // empty shape, and grad_scale/grad_shift stay at IR index 1/2 respectively.
@@ -128,6 +169,35 @@ TEST_F(ModulateGradProto, modulate_grad_infershape_shift_only)
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 16, 128]");
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[4, 128]"); // grad_shift at fixed IR index 2
+}
+
+// Empty grad_output/input with a size-0-but-nonzero-dim placeholder (0, 1): the placeholder is
+// empty by shape size and must be treated as absent (consistent with the tiling-side rule),
+// not rejected as a present tensor against the empty input.
+TEST_F(ModulateGradProto, modulate_grad_infershape_empty_input_with_zero_size_placeholder)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ModulateGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradOutputShape = {{0, 1, 1}, {0, 1, 1}};
+    gert::StorageShape inputShape = {{0, 1, 1}, {0, 1, 1}};
+    gert::StorageShape scaleShape = {{}, {}};         // scale absent
+    gert::StorageShape shiftShape = {{0, 1}, {0, 1}}; // size-0 placeholder, matches [B, D] = [0, 1]
+    gert::StorageShape gradInputShape;
+    gert::StorageShape gradScaleShape;
+    gert::StorageShape gradShiftShape;
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 3)
+                      .IrInstanceNum({1, 1, 1, 1}, {1, 1, 1})
+                      .InputShapes({&gradOutputShape, &inputShape, &scaleShape, &shiftShape})
+                      .OutputShapes({&gradInputShape, &gradScaleShape, &gradShiftShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[0, 1, 1]");
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[0, 1]");
 }
 
 TEST_F(ModulateGradProto, modulate_grad_inferdtype_with_scale_shift)
