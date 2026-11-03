@@ -16,21 +16,11 @@
  */
 
 #include <iostream>
-#include <fstream>
-#include <vector>
 #include <gtest/gtest.h>
-
-#include "log/log.h"
-#include "kernel_run_context_facker.h"
-#include "test_cube_util.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "platform/platform_infos_def.h"
-#include "ut_op_util.h"
-#include "op_host/tiling_base.h"
+#include "tiling_context_faker.h"
+#include "tiling_case_executor.h"
 #include "../../../../op_kernel/arch35/foreach_maximum_scalar_list_tiling_data.h"
 
-using namespace ut_util;
 using namespace std;
 using namespace ge;
 
@@ -39,6 +29,8 @@ constexpr int32_t TILING_KEY_FLOAT16 = 1;
 constexpr int32_t TILING_KEY_INT32 = 2;
 constexpr int32_t TILING_KEY_BF16 = 3;
 
+struct ForeachMaximumScalarListCompileInfo {};
+
 class ForeachMaximumScalarListTilingTest : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "ForeachMaximumScalarListTilingTest SetUp" << std::endl; }
@@ -46,326 +38,387 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachMaximumScalarListTilingTest TearDown" << std::endl; }
 };
 
+// 正向：x (4,4) float32，scalars (1,) float32，y (4,4) float32，tiling key = 0
 TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_float32_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    string compile_info_string = R"({
-                                    "hardware_info": {
-                                        "BT_SIZE": 0,
-                                        "load3d_constraints": "1",
-                                        "Intrinsic_fix_pipe_l0c2out": false,
-                                        "Intrinsic_data_move_l12ub": true,
-                                        "Intrinsic_data_move_l0c2ub": true,
-                                        "Intrinsic_data_move_out2l1_nd2nz": false,
-                                        "UB_SIZE": 262144,
-                                        "L2_SIZE": 33554432,
-                                        "L1_SIZE": 524288,
-                                        "L0A_SIZE": 65536,
-                                        "L0B_SIZE": 65536,
-                                        "L0C_SIZE": 131072,
-                                        "CORE_NUM": 64
-                                    }
-                                })";
-    map<string, string> soc_infos;
-    map<string, string> aicore_spec;
-    map<string, string> intrinsics;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-
-    fe::PlatFormInfos platform_info;
-    platform_info.Init();
-
-    struct ForeachMaximumScalarListCompileInfo {
-    } compile_info;
-
-    std::string op_type("ForeachMaximumScalarList");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-
-    auto kernel_holder = gert::KernelRunContextFaker()
-                             .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
-                                      reinterpret_cast<void*>(&platform_info)})
-                             .Outputs({&compile_info})
-                             .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
-                                                                                            soc_version_infos);
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-
-    gert::StorageShape inputShape = {{4, 4}, {4, 4}};
-    gert::StorageShape scalarShape = {{1}, {1}};
-    gert::StorageShape outputShape = {{4, 4}, {4, 4}};
-
-    auto param = gert::TilingData::CreateCap(4096);
-    ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-
-    auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(2, 1)
-                      .IrInstanceNum({1, 1})
-                      .InputShapes({&inputShape, &scalarShape})
-                      .OutputShapes({&outputShape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, TILING_KEY_FLOAT);
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = TILING_KEY_FLOAT;
+    vector<size_t> expectWorkspaces = {0};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, EMPTY_EXPECT_TILING_DATA, expectWorkspaces);
 }
 
+// 正向：x (4,4) float16，scalars (1,) float32，y (4,4) float16，tiling key = 1
 TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_float16_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    string compile_info_string = R"({
-                                    "hardware_info": {
-                                        "BT_SIZE": 0,
-                                        "load3d_constraints": "1",
-                                        "Intrinsic_fix_pipe_l0c2out": false,
-                                        "Intrinsic_data_move_l12ub": true,
-                                        "Intrinsic_data_move_l0c2ub": true,
-                                        "Intrinsic_data_move_out2l1_nd2nz": false,
-                                        "UB_SIZE": 262144,
-                                        "L2_SIZE": 33554432,
-                                        "L1_SIZE": 524288,
-                                        "L0A_SIZE": 65536,
-                                        "L0B_SIZE": 65536,
-                                        "L0C_SIZE": 131072,
-                                        "CORE_NUM": 64
-                                    }
-                                })";
-    map<string, string> soc_infos;
-    map<string, string> aicore_spec;
-    map<string, string> intrinsics;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-
-    fe::PlatFormInfos platform_info;
-    platform_info.Init();
-
-    struct ForeachMaximumScalarListCompileInfo {
-    } compile_info;
-
-    std::string op_type("ForeachMaximumScalarList");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-
-    auto kernel_holder = gert::KernelRunContextFaker()
-                             .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
-                                      reinterpret_cast<void*>(&platform_info)})
-                             .Outputs({&compile_info})
-                             .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
-                                                                                            soc_version_infos);
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-
-    gert::StorageShape inputShape = {{4, 4}, {4, 4}};
-    gert::StorageShape scalarShape = {{1}, {1}};
-    gert::StorageShape outputShape = {{4, 4}, {4, 4}};
-
-    auto param = gert::TilingData::CreateCap(4096);
-    ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-
-    auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(2, 1)
-                      .IrInstanceNum({1, 1})
-                      .InputShapes({&inputShape, &scalarShape})
-                      .OutputShapes({&outputShape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, TILING_KEY_FLOAT16);
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = TILING_KEY_FLOAT16;
+    vector<size_t> expectWorkspaces = {0};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, EMPTY_EXPECT_TILING_DATA, expectWorkspaces);
 }
 
+// 正向：x (4,4) int32，scalars (1,) int64，y (4,4) int32，tiling key = 2
 TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_int32_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    string compile_info_string = R"({
-                                    "hardware_info": {
-                                        "BT_SIZE": 0,
-                                        "load3d_constraints": "1",
-                                        "Intrinsic_fix_pipe_l0c2out": false,
-                                        "Intrinsic_data_move_l12ub": true,
-                                        "Intrinsic_data_move_l0c2ub": true,
-                                        "Intrinsic_data_move_out2l1_nd2nz": false,
-                                        "UB_SIZE": 262144,
-                                        "L2_SIZE": 33554432,
-                                        "L1_SIZE": 524288,
-                                        "L0A_SIZE": 65536,
-                                        "L0B_SIZE": 65536,
-                                        "L0C_SIZE": 131072,
-                                        "CORE_NUM": 64
-                                    }
-                                })";
-    map<string, string> soc_infos;
-    map<string, string> aicore_spec;
-    map<string, string> intrinsics;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-
-    fe::PlatFormInfos platform_info;
-    platform_info.Init();
-
-    struct ForeachMaximumScalarListCompileInfo {
-    } compile_info;
-
-    std::string op_type("ForeachMaximumScalarList");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
-
-    auto kernel_holder = gert::KernelRunContextFaker()
-                             .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
-                                      reinterpret_cast<void*>(&platform_info)})
-                             .Outputs({&compile_info})
-                             .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
-                                                                                            soc_version_infos);
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-
-    gert::StorageShape inputShape = {{4, 4}, {4, 4}};
-    gert::StorageShape scalarShape = {{1}, {1}};
-    gert::StorageShape outputShape = {{4, 4}, {4, 4}};
-
-    auto param = gert::TilingData::CreateCap(4096);
-    ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-
-    auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(2, 1)
-                      .IrInstanceNum({1, 1})
-                      .InputShapes({&inputShape, &scalarShape})
-                      .OutputShapes({&outputShape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, TILING_KEY_INT32);
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = TILING_KEY_INT32;
+    vector<size_t> expectWorkspaces = {0};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, EMPTY_EXPECT_TILING_DATA, expectWorkspaces);
 }
 
+// 正向：x (4,4) bf16，scalars (1,) float32，y (4,4) bf16，tiling key = 3
 TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_bf16_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    string compile_info_string = R"({
-                                    "hardware_info": {
-                                        "BT_SIZE": 0,
-                                        "load3d_constraints": "1",
-                                        "Intrinsic_fix_pipe_l0c2out": false,
-                                        "Intrinsic_data_move_l12ub": true,
-                                        "Intrinsic_data_move_l0c2ub": true,
-                                        "Intrinsic_data_move_out2l1_nd2nz": false,
-                                        "UB_SIZE": 262144,
-                                        "L2_SIZE": 33554432,
-                                        "L1_SIZE": 524288,
-                                        "L0A_SIZE": 65536,
-                                        "L0B_SIZE": 65536,
-                                        "L0C_SIZE": 131072,
-                                        "CORE_NUM": 64
-                                    }
-                                })";
-    map<string, string> soc_infos;
-    map<string, string> aicore_spec;
-    map<string, string> intrinsics;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = TILING_KEY_BF16;
+    vector<size_t> expectWorkspaces = {0};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, EMPTY_EXPECT_TILING_DATA, expectWorkspaces);
+}
 
-    fe::PlatFormInfos platform_info;
-    platform_info.Init();
+// 反向：x shape size 为 16，y shape size 为 4，y 元素个数小于 x，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_shape_smaller_than_input_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{2, 2}, {2, 2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 
-    struct ForeachMaximumScalarListCompileInfo {
-    } compile_info;
+// 反向：y 的 origin/view shape (5,4) 与 x (4,4) 不同，即使 y 元素个数更大，Tiling 也应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_view_shape_larger_than_input_reject_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{5, 4}, {5, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 
-    std::string op_type("ForeachMaximumScalarList");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+// 反向：x (4,4) 与 y (16,) 元素数同为 16 但 origin/view shape 不同，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_view_shape_same_numel_diff_shape_reject_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{16}, {16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 
-    auto kernel_holder = gert::KernelRunContextFaker()
-                             .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
-                                      reinterpret_cast<void*>(&platform_info)})
-                             .Outputs({&compile_info})
-                             .Build();
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
-                                                                                            soc_version_infos);
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+// 反向：x (4,4) 元素数 16，y (3,6) 元素数 18 但 origin/view shape 不同，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_view_shape_larger_and_diff_shape_reject_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{3, 6}, {3, 6}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 
-    gert::StorageShape inputShape = {{4, 4}, {4, 4}};
-    gert::StorageShape scalarShape = {{1}, {1}};
-    gert::StorageShape outputShape = {{4, 4}, {4, 4}};
+// 正向：x 与 y 的 origin/view shape 相同 (4,4)，y 的 storage shape (5,4) 更大，Tiling 应成功
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_view_shape_same_storage_larger_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {5, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
 
-    auto param = gert::TilingData::CreateCap(4096);
-    ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    TilingInfo tilingInfo;
+    ASSERT_TRUE(ExecuteTiling(tilingContextPara, tilingInfo));
+    EXPECT_EQ(tilingInfo.tilingKey, TILING_KEY_FLOAT);
+    ASSERT_GE(tilingInfo.tilingDataSize, sizeof(ForeachMaximumScalarListTilingData));
+    auto tilingData = reinterpret_cast<const ForeachMaximumScalarListTilingData*>(tilingInfo.tilingData.get());
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(tilingData->tensorCount, 1);
+    // totalElements/tensorElements 按 x 的 storage 元素个数统计，而非 y
+    EXPECT_EQ(tilingData->totalElements, 16);
+    EXPECT_EQ(tilingData->tensorElements[0], 16);
+}
 
-    auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(2, 1)
-                      .IrInstanceNum({1, 1})
-                      .InputShapes({&inputShape, &scalarShape})
-                      .OutputShapes({&outputShape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+// 反向：x 为 9 维，超过 8 维上限，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_input_dim_exceeds_max_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "ForeachMaximumScalarList",
+        {
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 4}, {1, 1, 1, 1, 1, 1, 1, 1, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {
+            {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, TILING_KEY_BF16);
+// 反向：y 为 9 维，超过 8 维上限，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_dim_exceeds_max_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "ForeachMaximumScalarList",
+        {
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 多实例正向用例：x/y 各 2 个实例，关键覆盖 i=1 时 GetOutputDesc(1)/GetOutputShape(1) 的扁平实例索引分支。
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_multi_instance_success_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  // DYNAMIC_INPUT x: 2 instances, (4,4) and (4,), float32
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  // scalars: 2 elements, one per x tensor
+                                                  {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  // DYNAMIC_OUTPUT y: 2 instances, (4,4) and (4,)
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {2, 1}, {2}, &compileInfo, 64, 262144, 4096);
+
+    TilingInfo tilingInfo;
+    ASSERT_TRUE(ExecuteTiling(tilingContextPara, tilingInfo));
+    EXPECT_EQ(tilingInfo.tilingKey, TILING_KEY_FLOAT);
+    ASSERT_GE(tilingInfo.tilingDataSize, sizeof(ForeachMaximumScalarListTilingData));
+    auto tilingData = reinterpret_cast<const ForeachMaximumScalarListTilingData*>(tilingInfo.tilingData.get());
+    ASSERT_NE(tilingData, nullptr);
+    EXPECT_EQ(tilingData->tensorCount, 2);
+    EXPECT_EQ(tilingData->totalElements, 20);
+    EXPECT_EQ(tilingData->tensorElements[0], 16);
+    EXPECT_EQ(tilingData->tensorElements[1], 4);
+}
+
+// 反向：x 2 个实例、y 1 个实例，x/y 实例数不一致，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_xy_instance_num_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {2, 1}, {1}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 1 个实例、y 2 个实例，x/y 实例数不一致，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_xy_instance_num_mismatch_002)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {1, 1}, {2}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 2 个实例，但 scalars 只有 1 个元素，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_scalars_count_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {2, 1}, {2}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 为 FLOAT 时 scalars 应为 FLOAT，此处传入 INT64，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_scalars_dtype_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 列表内 dtype 不一致（FLOAT / FLOAT16），Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_input_list_dtype_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{4}, {4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {2, 1}, {2}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 元素数为负，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_invalid_numel_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{-1, 4}, {-1, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{-1, 4}, {-1, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 为 FLOAT，y 为 INT32，dtype 不一致，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_dtype_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 正向：空 TensorList（x、y 实例数均为 0），应与 aclnn 早返回一致，no-op 成功且 tiling key = FLOAT
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_empty_tensor_list_success_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    std::vector<gert::TilingContextPara::TensorDescription> inputDesc;
+    std::vector<gert::TilingContextPara::TensorDescription> outputDesc;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList", inputDesc, outputDesc,
+                                              std::vector<uint32_t>{0, 0}, std::vector<uint32_t>{0}, &compileInfo, 64,
+                                              262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+// 反向：x/y 实例数为 0，但 scalars 有 1 个元素，长度不一致，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_empty_x_nonempty_scalars_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {}, {0, 1}, {0}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// 反向：x 为 FORMAT_ND，y 为 FORMAT_NCHW，storage format 不一致，Tiling 应失败
+TEST_F(ForeachMaximumScalarListTilingTest, test_tiling_output_format_mismatch_001)
+{
+    ForeachMaximumScalarListCompileInfo compileInfo;
+    gert::TilingContextPara tilingContextPara("ForeachMaximumScalarList",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_NCHW},
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
 }

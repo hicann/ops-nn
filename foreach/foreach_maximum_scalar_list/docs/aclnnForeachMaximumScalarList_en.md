@@ -89,8 +89,8 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>x (aclTensorList*)</td>
       <td>Input</td>
-      <td>Input tensor list for the maximum computation, corresponding to `x` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
+      <td>Input tensor list for the maximum computation, corresponding to <code>x</code> in the formula.</td>
+      <td><ul><li>Empty tensors are supported.</li><li>The maximum length is 256.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -99,9 +99,9 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>scalars (aclScalarList*)</td>
       <td>Input</td>
-      <td>Input scalar list for the maximum computation, corresponding to `scalars` in the formula.</td>
-      <td><ul><li>The number of elements equals the number of tensors in `x`.</li><li>The data type corresponds to the data type of input parameter `x` as follows:<ul><li>If the data type of input parameter `x` is FLOAT32, FLOAT16, or BFLOAT16, the data type of `scalars` supports FLOAT32 and DOUBLE.</li><li>If the data type of input parameter `x` is INT32, the data type of `scalars` supports only INT64.</li></ul></li></ul></td>
-      <td>FLOAT32, INT64, DOUBLE</td>
+      <td>Input scalar list for the maximum computation, corresponding to <code>scalars</code> in the formula.</td>
+      <td><ul><li>The number of elements equals the number of tensors in <code>x</code>, and the maximum length is 256; only the number of elements is constrained, and the rank is not limited.</li><li>The data type corresponds to the data type of input parameter <code>x</code> as follows:<ul><li>If the data type of input parameter <code>x</code> is FLOAT32, FLOAT16, or BFLOAT16, <code>scalars</code> supports FLOAT32; the aclnn API additionally supports DOUBLE (converted to FLOAT32 internally before computation).</li><li>If the data type of input parameter <code>x</code> is INT32, <code>scalars</code> supports INT64; the aclnn API additionally supports INT32 (converted to INT64 internally before computation).</li></ul></li></ul></td>
+      <td>FLOAT32, DOUBLE, INT32, INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -109,8 +109,8 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
-      <td>Represents the output tensor list for the maximum operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to that of input parameter `x`.</li></ul></td>
+      <td>Represents the output tensor list for the maximum operation, corresponding to <code>y</code> in the formula.</td>
+      <td><ul><li>Empty tensors are supported.</li><li>The maximum length is 256, and the tensor list length must be the same as that of <code>x</code>.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter <code>x</code>, and the shape size is greater than or equal to that of input parameter <code>x</code>.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -164,23 +164,32 @@ aclnnStatus aclnnForeachMaximumScalarList(
       <td>x, scalars, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data types of x, scalars, or out are not supported.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The tensor list lengths of x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The length of the scalars scalar list is not equal to the tensor list length of x.</td>
     </tr>
     <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
       <td>The dimensions of tensors in x or out exceed 8.</td>
+    </tr>
+    <tr>
+      <td>The shapes of x and out do not meet the constraints.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The tensor list length of x or out exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -231,6 +240,10 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 - Deterministic computation:
   - aclnnForeachMaximumScalarList defaults to a deterministic implementation.
+- The number of tensors in input `x` and output `out` must be less than or equal to 256, and the tensor list length of `out` must be the same as that of `x`.
+- The shape size of each tensor in `out` must be greater than or equal to that of the corresponding tensor in `x`.
+- The scalar list length of input `scalars` must be the same as the tensor list length of `x`, and the maximum number of elements is 256.
+- Input `x` and output `out` support non-contiguous tensors; non-contiguous inputs are converted to contiguous tensors before computation, and non-contiguous outputs are written back from the contiguous result.
 
 ## Example
 

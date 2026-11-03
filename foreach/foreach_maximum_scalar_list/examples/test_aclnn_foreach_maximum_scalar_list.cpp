@@ -20,6 +20,14 @@
         }                            \
     } while (0)
 
+#define CHECK_RET_AND_LOG(cond, message, return_expr) \
+    do {                                              \
+        if (!(cond)) {                                \
+            LOG_PRINT(message);                       \
+            return return_expr;                       \
+        }                                             \
+    } while (0)
+
 #define LOG_PRINT(message, ...)         \
     do {                                \
         printf(message, ##__VA_ARGS__); \
@@ -108,10 +116,10 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建alpha1 aclScalar
     alpha1 = aclCreateScalar(&alpha1Value, aclDataType::ACL_FLOAT);
-    CHECK_RET(alpha1 != nullptr, return ret);
+    CHECK_RET_AND_LOG(alpha1 != nullptr, "aclCreateScalar for alpha1 failed.\n", ACL_ERROR_FAILURE);
     // 创建alpha2 aclScalar
     alpha2 = aclCreateScalar(&alpha2Value, aclDataType::ACL_FLOAT);
-    CHECK_RET(alpha2 != nullptr, return ret);
+    CHECK_RET_AND_LOG(alpha2 != nullptr, "aclCreateScalar for alpha2 failed.\n", ACL_ERROR_FAILURE);
     // 创建out1 aclTensor
     ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);

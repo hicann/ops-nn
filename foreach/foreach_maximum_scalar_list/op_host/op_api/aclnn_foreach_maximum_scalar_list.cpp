@@ -66,6 +66,12 @@ static inline bool CheckFormat(const aclTensorList* x, const aclTensorList* out)
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
             return false;
         }
+        if ((*x)[i]->GetStorageFormat() != (*out)[i]->GetStorageFormat()) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x[%lu] and out[%lu] must be the same, x[%s], out[%s].", i, i,
+                    op::ToString((*x)[i]->GetStorageFormat()).GetString(),
+                    op::ToString((*out)[i]->GetStorageFormat()).GetString());
+            return false;
+        }
     }
     return true;
 }
@@ -74,6 +80,11 @@ static inline bool CheckDtypeValid(const aclTensorList* x, const aclScalarList* 
 {
     if (x->Size() == 0) {
         return true;
+    }
+
+    if (scalars->Size() != x->Size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of scalars must be the same as the number of tensors");
+        return false;
     }
 
     const auto& dtypeSupportList = GetDtypeSupportList();
@@ -116,14 +127,11 @@ static inline bool CheckShape(const aclTensorList* x, const aclScalarList* scala
         return false;
     }
 
-    // tensor 维度检查
+    // tensor 维度检查，且 out 的 view shape 必须与 x 完全一致
     for (uint64_t i = 0; i < x->Size(); i++) {
         OP_CHECK_MAX_DIM((*x)[i], MAX_SUPPORT_DIMS_NUMS, return false);
-    }
-
-    // x和out的shape必须一致
-    for (uint64_t i = 0; i < x->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*x)[i], (*out)[i], return false);
+        OP_CHECK_MAX_DIM((*out)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL((*out)[i], (*x)[i], return false);
     }
     return true;
 }

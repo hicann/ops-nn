@@ -15,7 +15,9 @@
  * \brief arch35 (Ascend950) tiling implementation for foreach_maximum_scalar_list
  */
 
+#include <limits>
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
@@ -27,9 +29,11 @@ namespace optiling {
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int64_t INPUT_IDX_SCALARS = 1;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
 constexpr int32_t MAX_TENSOR_NUM = 256;
+constexpr uint32_t MAX_DIM_NUM = 8U;
 
 struct ForeachMaximumScalarListCompileInfo {};
 
@@ -60,10 +64,6 @@ static ge::graphStatus ForeachMaximumScalarListTilingFunc(gert::TilingContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    ge::DataType dataType = inputDesc->GetDataType();
-
     ForeachMaximumScalarListTilingData* tiling = context->GetTilingData<ForeachMaximumScalarListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMaximumScalarListTilingData), 0,
@@ -73,14 +73,148 @@ static ge::graphStatus ForeachMaximumScalarListTilingFunc(gert::TilingContext* c
     OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM,
                 OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
                 return ge::GRAPH_FAILED);
+    // 校验 x 与 y 的 Tensor 数量一致，Kernel 按 x 的 count 写 y，数量不一致会越界写
+    OP_CHECK_IF(context->GetComputeNodeOutputNum() != tensorNum,
+                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+                    context->GetNodeName(), "x and y",
+                    (std::to_string(tensorNum) + " and " + std::to_string(context->GetComputeNodeOutputNum())).c_str(),
+                    "The tensor nums in {x, y} must be the same"),
+                return ge::GRAPH_FAILED);
+
+    if (tensorNum == 0) {
+        // 空 TensorList 为 no-op；同时校验 scalars 长度必须为 0，保持各列表长度一致
+        auto emptyScalarsShapePtr = context->GetRequiredInputShape(INPUT_IDX_SCALARS);
+        int64_t emptyScalarsCount = 0;
+        if (emptyScalarsShapePtr != nullptr) {
+            emptyScalarsCount = emptyScalarsShapePtr->GetStorageShape().GetShapeSize();
+        }
+        OP_CHECK_IF(emptyScalarsCount != 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "scalars",
+                                                  std::to_string(emptyScalarsCount).c_str(), "0"),
+                    return ge::GRAPH_FAILED);
+        // 空 TensorList 为 no-op，与 aclnn 的 x->Size()==0 早返回语义一致；无数据时使用 FLOAT tiling key
+        tiling->tensorCount = 0;
+        tiling->totalElements = 0;
+        tiling->needCoreNum = 1;
+        context->SetBlockDim(1);
+        size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+        currentWorkspace[0] = WS_SYS_SIZE;
+        context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
+        context->SetTilingKey(GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_LIST_TPL_SCH_MODE_FLOAT));
+        return ge::GRAPH_SUCCESS;
+    }
+
+    auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    ge::DataType dataType = inputDesc->GetDataType();
+
+    // 校验 scalars 元素个数与 x 张量个数一致，Kernel 按 tensorId 索引 scalars，数量不足会越界读取
+    auto scalarsShapePtr = context->GetRequiredInputShape(INPUT_IDX_SCALARS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsShapePtr);
+    int64_t scalarsCount = scalarsShapePtr->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF(static_cast<uint64_t>(scalarsCount) != tensorNum,
+                OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "scalars", std::to_string(scalarsCount).c_str(),
+                                              std::to_string(tensorNum).c_str()),
+                return ge::GRAPH_FAILED);
+    // 校验 scalars 的 dtype 与 x 匹配：x=INT32 -> INT64；其余(float16/float32/bf16) -> FLOAT
+    auto scalarsDesc = context->GetRequiredInputDesc(INPUT_IDX_SCALARS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsDesc);
+    const ge::DataType expectedScalarDtype = (dataType == ge::DT_INT32) ? ge::DT_INT64 : ge::DT_FLOAT;
+    OP_CHECK_IF(
+        scalarsDesc->GetDataType() != expectedScalarDtype,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "scalars",
+            ge::TypeUtils::DataTypeToSerialString(scalarsDesc->GetDataType()).c_str(),
+            ("The dtype of scalars must be " + std::string(ge::TypeUtils::DataTypeToSerialString(expectedScalarDtype)) +
+             " when the dtype of x is " + std::string(ge::TypeUtils::DataTypeToSerialString(dataType)))
+                .c_str()),
+        return ge::GRAPH_FAILED);
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 
     for (uint64_t i = 0; i < tensorNum; i++) {
+        auto tensorDesc = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        OP_CHECK_IF(tensorDesc == nullptr, OP_LOGE(context, "The input %lu desc is null.", i), return ge::GRAPH_FAILED);
+        // 校验 x 列表内各 Tensor 的 dtype 一致
+        OP_CHECK_IF(
+            tensorDesc->GetDataType() != dataType,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(tensorDesc->GetDataType()).c_str(),
+                ("The dtypes of all tensors in the tensor list must be the same. "
+                 "Currently, the dtype of the " +
+                 std::to_string(i) + "th tensor is inconsistent with that (" +
+                 ge::TypeUtils::DataTypeToSerialString(dataType) + ") of other tensors")
+                    .c_str()),
+            return ge::GRAPH_FAILED);
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
         auto storageShape = shapePtr->GetStorageShape();
+        // 校验 x 的维度不超过 8 维
+        OP_CHECK_IF(storageShape.GetDimNum() > MAX_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "x", std::to_string(storageShape.GetDimNum()).c_str(),
+                        ("The shape dim of the " + std::to_string(i) +
+                         "th tensor in the tensor list should be less than or equal to " + std::to_string(MAX_DIM_NUM))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
         int64_t numel = storageShape.GetShapeSize();
+        OP_CHECK_IF(numel < 0,
+                    OP_LOGE(context, "The element count of x[%lu] must be non-negative, but got %ld.", i, numel),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(totalElements > std::numeric_limits<int64_t>::max() - numel - MIN_PER_CORE,
+                    OP_LOGE(context, "The total element count overflows at x[%lu].", i), return ge::GRAPH_FAILED);
+        auto outputDesc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+        auto outputShape = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+        // 校验 y 的 dtype 与 x 一致
+        OP_CHECK_IF(
+            outputDesc->GetDataType() != dataType,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(outputDesc->GetDataType()).c_str(),
+                "The dtype of y must be the same as x"),
+            return ge::GRAPH_FAILED);
+        // 校验 y 的 storage format 与 x 一致
+        OP_CHECK_IF(outputDesc->GetStorageFormat() != tensorDesc->GetStorageFormat(),
+                    OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+                        context->GetNodeName(), "y",
+                        ge::TypeUtils::FormatToSerialString(outputDesc->GetStorageFormat()).c_str(),
+                        ("The storage format of y must be the same as x, which is " +
+                         ge::TypeUtils::FormatToSerialString(tensorDesc->GetStorageFormat()))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        const gert::Shape& outputStorageShape = outputShape->GetStorageShape();
+        // 校验 y 的维度不超过 8 维
+        OP_CHECK_IF(outputStorageShape.GetDimNum() > MAX_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "y", std::to_string(outputStorageShape.GetDimNum()).c_str(),
+                        ("The shape dim of the " + std::to_string(i) +
+                         "th tensor in tensor list y must be less than or equal to " + std::to_string(MAX_DIM_NUM))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        // 校验 y 的 view shape 与对应位置的 x 严格一致
+        const gert::Shape& xOrigin = shapePtr->GetOriginShape();
+        const gert::Shape& yOrigin = outputShape->GetOriginShape();
+        OP_CHECK_IF(xOrigin != yOrigin,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "x and y",
+                        (Ops::Base::ToString(xOrigin) + " and " + Ops::Base::ToString(yOrigin)).c_str(),
+                        ("The view shape of the " + std::to_string(i) +
+                         "th tensor in tensor list y must be the same as that of the tensor in the same position of x")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        // 校验 y 的元素个数不小于对应位置的 x，Kernel 按 x 的 numel 写 y，y 过小会越界写
+        int64_t outShapeSize = outputStorageShape.GetShapeSize();
+        OP_CHECK_IF(outShapeSize < numel,
+                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                        context->GetNodeName(), "x and y",
+                        (std::to_string(numel) + " and " + std::to_string(outShapeSize)).c_str(),
+                        ("The shape size of the " + std::to_string(i) +
+                         "th tensor in tensor list y should be greater than or equal to that of the tensor "
+                         "in the same position of the another tensor list x")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
         tiling->tensorElements[i] = numel;
         totalElements += numel;
     }

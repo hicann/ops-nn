@@ -87,8 +87,8 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>x（aclTensorList*）</td>
       <td>输入</td>
-      <td>表示取最大值运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td>表示取最大值运算的输入张量列表，对应公式中的<code>x</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>支持的最大长度为256个。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -97,9 +97,9 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
-      <td>表示取最大值运算的输入标量列表，对应公式中的`scalars`。</td>
-      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32、DOUBLE。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
-      <td>FLOAT32、INT64、DOUBLE</td>
+      <td>表示取最大值运算的输入标量列表，对应公式中的<code>scalars</code>。</td>
+      <td><ul><li>元素个数与<code>x</code>中Tensor的个数相等，且支持的最大长度为256个；仅约束元素个数，不限制 rank。</li><li>数据类型与入参<code>x</code>的数据类型具有一定对应关系：<ul><li>当入参<code>x</code>的数据类型为FLOAT32、FLOAT16、BFLOAT16时，<code>scalars</code>支持FLOAT32；aclnn接口额外支持DOUBLE（内部转换为FLOAT32后参与计算）。</li><li>当入参<code>x</code>的数据类型为INT32时，<code>scalars</code>支持INT64；aclnn接口额外支持INT32（内部转换为INT64后参与计算）。</li></ul></li></ul></td>
+      <td>FLOAT32、DOUBLE、INT32、INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -107,8 +107,8 @@ aclnnStatus aclnnForeachMaximumScalarList(
     <tr>
       <td>out（aclTensorList*）</td>
       <td>输出</td>
-      <td>表示取最大值运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td>表示取最大值运算的输出张量列表，对应公式中的<code>y</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>支持的最大长度为256个，且TensorList长度需要与<code>x</code>的TensorList长度相等。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参<code>x</code>的数据类型和数据格式一致，shape size大于等于入参<code>x</code>的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -162,23 +162,32 @@ aclnnStatus aclnnForeachMaximumScalarList(
       <td>传入的x、scalars、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>x、scalars、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
+      <td>x与out的TensorList长度不一致。</td>
+    </tr>
+    <tr>
+      <td>scalars的ScalarList长度与x的TensorList长度不相等。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x与out的shape不满足约束。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>x或out的TensorList长度超过256。</td>
     </tr>
   </tbody></table>
 
@@ -229,6 +238,10 @@ aclnnStatus aclnnForeachMaximumScalarList(
 
 - 确定性计算：
   - aclnnForeachMaximumScalarList默认确定性实现。
+- 输入`x`、输出`out`支持包含的最大Tensor个数均为256，且`out`的TensorList长度需要与`x`的TensorList长度相等。
+- 输出`out`的shape size需大于等于`x`中对应位置Tensor的shape size。
+- 输入`scalars`的ScalarList长度需要与`x`的TensorList长度相等，支持的最大元素个数为256。
+- 输入`x`、输出`out`支持非连续Tensor；非连续输入会先转换为连续Tensor参与计算，非连续输出通过连续结果回写。
 
 ## 调用示例
 
