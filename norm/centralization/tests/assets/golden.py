@@ -22,7 +22,7 @@ def _normalized_axes(axes, rank):
 
 
 def _centralize(x, axes):
-    compute = x.float() if x.dtype == torch.float16 else x
+    compute = x.double()
     result = compute - torch.mean(
         compute, dim=_normalized_axes(axes, x.dim()), keepdim=True
     )

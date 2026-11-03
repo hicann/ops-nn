@@ -98,6 +98,7 @@ public:
 
 private:
     static constexpr int64_t kLargeChunkElements = 256;
+    static constexpr uint16_t kMaxAccSlots = 16;
     static constexpr int64_t kMaxIrregularScalarKeepTile = 16;
 
     __aicore__ inline int64_t Min(int64_t lhs, int64_t rhs) const { return lhs < rhs ? lhs : rhs; }
@@ -228,6 +229,46 @@ private:
         AccumulateContiguousAt(input, sum, 0, validElements);
     }
 
+    // 把 numSlots 个独立的 fp32 部分和按两两折叠归并到槽 0（通用树形归约）。
+    // 与 norm_common 的 DichotomyAdd 同一思路，对所有 dtype 生效。
+    __aicore__ inline void FoldAccumulatorSlots(LocalTensor<float>& sum, uint16_t numSlots, int64_t stride,
+                                                int64_t validElements)
+    {
+        if (numSlots <= 1) {
+            return;
+        }
+        __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
+        const uint16_t loops = static_cast<uint16_t>((validElements + V_LENGTH - 1) / V_LENGTH);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> lhsReg;
+            RegTensor<float> rhsReg;
+            RegTensor<float> outReg;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            uint16_t active = numSlots;
+            for (uint16_t pass = 0; pass < 16 && active > 1; ++pass) {
+                const uint16_t half = static_cast<uint16_t>(active / 2);
+                for (uint16_t g = 0; g < half; ++g) {
+                    for (uint16_t loop = 0; loop < loops; ++loop) {
+                        const uint32_t offset = static_cast<uint32_t>(loop) * V_LENGTH;
+                        const uint32_t remaining = static_cast<uint32_t>(validElements) - offset;
+                        uint32_t activeCount = remaining < V_LENGTH ? remaining : V_LENGTH;
+                        MaskReg pregLoop = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+                        const uint32_t lhsOffset = static_cast<uint32_t>(g) * static_cast<uint32_t>(stride) + offset;
+                        const uint32_t rhsOffset = static_cast<uint32_t>(g + half) * static_cast<uint32_t>(stride) +
+                                                   offset;
+                        LoadRegForDtype<float>(sumAddr, lhsReg, pregLoop, lhsOffset);
+                        LoadRegForDtype<float>(sumAddr, rhsReg, pregLoop, rhsOffset);
+                        Add(outReg, lhsReg, rhsReg, pregLoop);
+                        StoreRegForDtype<float>(sumAddr, outReg, pregLoop, lhsOffset);
+                    }
+                }
+                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+                active = half;
+            }
+        }
+    }
+
     __aicore__ inline void ScaleSumToMeanAt(LocalTensor<float>& sum, int64_t sumOffset, int64_t validElements)
     {
         __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
@@ -252,6 +293,206 @@ private:
     __aicore__ inline void ScaleSumToMean(LocalTensor<float>& sum, int64_t validElements)
     {
         ScaleSumToMeanAt(sum, 0, validElements);
+    }
+
+    // ---- 连续路径补偿归约（Neumaier + hi/lo 均值）----
+    __aicore__ inline void AccumulateContiguousNeumaierAt(LocalTensor<T>& input, LocalTensor<float>& sum,
+                                                          int64_t sumOffset, int64_t corrOffset, int64_t validElements,
+                                                          int64_t inputOffset = 0)
+    {
+        __local_mem__ T* inputAddr = (__local_mem__ T*)input.GetPhyAddr();
+        __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
+        const uint16_t loops = static_cast<uint16_t>((validElements + V_LENGTH - 1) / V_LENGTH);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> xReg;
+            RegTensor<float> sumReg;
+            RegTensor<float> corrReg;
+            RegTensor<float> tReg;
+            RegTensor<float> c1Reg;
+            RegTensor<float> c2Reg;
+            RegTensor<float> addReg;
+            RegTensor<float> absSum;
+            RegTensor<float> absX;
+            MaskReg dom;
+            MaskReg fin;
+            RegTensor<float> zeroReg;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            Duplicate(zeroReg, 0.0f, pregFull);
+            for (uint16_t loop = 0; loop < loops; ++loop) {
+                const uint32_t offset = static_cast<uint32_t>(loop) * V_LENGTH;
+                const uint32_t remaining = static_cast<uint32_t>(validElements) - offset;
+                uint32_t activeCount = remaining < V_LENGTH ? remaining : V_LENGTH;
+                MaskReg pregLoop = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+                LoadRegForDtype<T>(inputAddr, xReg, pregLoop, static_cast<uint32_t>(inputOffset) + offset);
+                LoadRegForDtype<float>(sumAddr, sumReg, pregLoop, static_cast<uint32_t>(sumOffset) + offset);
+                LoadRegForDtype<float>(sumAddr, corrReg, pregLoop, static_cast<uint32_t>(corrOffset) + offset);
+                // Neumaier: t = sum + x; corr += (sum - t) + x（真值 = sum + corr）
+                Add(tReg, sumReg, xReg, pregLoop);
+                Abs(absSum, sumReg, pregLoop);
+                Abs(absX, xReg, pregLoop);
+                Compare<float, CMPMODE::GE>(dom, absSum, absX, pregLoop);
+                Sub(c1Reg, sumReg, tReg, pregLoop);
+                Add(c1Reg, c1Reg, xReg, pregLoop);
+                Sub(c2Reg, xReg, tReg, pregLoop);
+                Add(c2Reg, c2Reg, sumReg, pregLoop);
+                Select(addReg, c1Reg, c2Reg, dom);
+                // inf/NaN 保护：t 非有限时补偿置 0，避免 inf-inf=NaN 污染
+                Abs(absSum, tReg, pregLoop);
+                Compares<float, CMPMODE::LE>(fin, absSum, 3.4028235e38f, pregLoop);
+                Select(addReg, addReg, zeroReg, fin);
+                Add(corrReg, corrReg, addReg, pregLoop);
+                StoreRegForDtype<float>(sumAddr, tReg, pregLoop, static_cast<uint32_t>(sumOffset) + offset);
+                StoreRegForDtype<float>(sumAddr, corrReg, pregLoop, static_cast<uint32_t>(corrOffset) + offset);
+            }
+        }
+    }
+
+    __aicore__ inline void FoldAccumulatorSlotsNeumaier(LocalTensor<float>& sum, uint16_t numSlots, int64_t stride,
+                                                        int64_t corrBase, int64_t validElements)
+    {
+        if (numSlots <= 1) {
+            return;
+        }
+        __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
+        const uint16_t loops = static_cast<uint16_t>((validElements + V_LENGTH - 1) / V_LENGTH);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> lhsS;
+            RegTensor<float> lhsC;
+            RegTensor<float> rhsS;
+            RegTensor<float> rhsC;
+            RegTensor<float> tReg;
+            RegTensor<float> c1Reg;
+            RegTensor<float> c2Reg;
+            RegTensor<float> addReg;
+            RegTensor<float> absL;
+            RegTensor<float> absR;
+            MaskReg dom;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            uint16_t active = numSlots;
+            for (uint16_t pass = 0; pass < 16 && active > 1; ++pass) {
+                const uint16_t half = static_cast<uint16_t>(active / 2);
+                for (uint16_t g = 0; g < half; ++g) {
+                    for (uint16_t loop = 0; loop < loops; ++loop) {
+                        const uint32_t offset = static_cast<uint32_t>(loop) * V_LENGTH;
+                        const uint32_t remaining = static_cast<uint32_t>(validElements) - offset;
+                        uint32_t activeCount = remaining < V_LENGTH ? remaining : V_LENGTH;
+                        MaskReg pregLoop = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+                        const uint32_t lo = static_cast<uint32_t>(g) * static_cast<uint32_t>(stride) + offset;
+                        const uint32_t hi = static_cast<uint32_t>(g + half) * static_cast<uint32_t>(stride) + offset;
+                        const uint32_t clo = static_cast<uint32_t>(corrBase) + lo;
+                        const uint32_t chi = static_cast<uint32_t>(corrBase) + hi;
+                        LoadRegForDtype<float>(sumAddr, lhsS, pregLoop, lo);
+                        LoadRegForDtype<float>(sumAddr, lhsC, pregLoop, clo);
+                        LoadRegForDtype<float>(sumAddr, rhsS, pregLoop, hi);
+                        LoadRegForDtype<float>(sumAddr, rhsC, pregLoop, chi);
+                        Add(tReg, lhsS, rhsS, pregLoop);
+                        Abs(absL, lhsS, pregLoop);
+                        Abs(absR, rhsS, pregLoop);
+                        Compare<float, CMPMODE::GE>(dom, absL, absR, pregLoop);
+                        Sub(c1Reg, lhsS, tReg, pregLoop);
+                        Add(c1Reg, c1Reg, rhsS, pregLoop);
+                        Sub(c2Reg, rhsS, tReg, pregLoop);
+                        Add(c2Reg, c2Reg, lhsS, pregLoop);
+                        Select(addReg, c1Reg, c2Reg, dom);
+                        Add(lhsC, lhsC, addReg, pregLoop);
+                        Add(lhsC, lhsC, rhsC, pregLoop);
+                        StoreRegForDtype<float>(sumAddr, tReg, pregLoop, lo);
+                        StoreRegForDtype<float>(sumAddr, lhsC, pregLoop, clo);
+                    }
+                }
+                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+                active = half;
+            }
+        }
+    }
+
+    __aicore__ inline void FinalizeMeanHiLoAt(LocalTensor<float>& sum, int64_t sumOffset, int64_t corrOffset,
+                                              int64_t validElements)
+    {
+        __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
+        const float invReduce = 1.0f / static_cast<float>(tiling_->reduceCount);
+        const float nValue = static_cast<float>(tiling_->reduceCount);
+        const uint16_t loops = static_cast<uint16_t>((validElements + V_LENGTH - 1) / V_LENGTH);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> sumReg;
+            RegTensor<float> corrReg;
+            RegTensor<float> meanReg;
+            RegTensor<float> meanLowReg;
+            RegTensor<float> nReg;
+            RegTensor<float> cReg;
+            RegTensor<float> mHi;
+            RegTensor<float> mLo;
+            RegTensor<float> nHi;
+            RegTensor<float> nLo;
+            RegTensor<float> tmpReg;
+            RegTensor<float> pReg;
+            RegTensor<float> eReg;
+            RegTensor<float> t1;
+            RegTensor<float> t2;
+            RegTensor<float> t3;
+            RegTensor<float> t4;
+            RegTensor<float> rReg;
+            RegTensor<float> negMeanReg;
+            RegTensor<float> absMeanReg;
+            RegTensor<float> zeroReg;
+            MaskReg fin;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            Duplicate(zeroReg, 0.0f, pregFull);
+            for (uint16_t loop = 0; loop < loops; ++loop) {
+                const uint32_t offset = static_cast<uint32_t>(loop) * V_LENGTH;
+                const uint32_t remaining = static_cast<uint32_t>(validElements) - offset;
+                uint32_t activeCount = remaining < V_LENGTH ? remaining : V_LENGTH;
+                MaskReg pregLoop = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+                LoadRegForDtype<float>(sumAddr, sumReg, pregLoop, static_cast<uint32_t>(sumOffset) + offset);
+                LoadRegForDtype<float>(sumAddr, corrReg, pregLoop, static_cast<uint32_t>(corrOffset) + offset);
+                Duplicate(nReg, nValue, pregLoop);
+                Div(meanReg, sumReg, nReg, pregLoop);
+                // r = sum - mean*N：向量 FMA（MulDstAdd），精确除法残差
+                Muls(negMeanReg, meanReg, -1.0f, pregLoop);
+                MulDstAdd<float, AscendC::Reg::MaskMergeMode::ZEROING>(negMeanReg, nReg, sumReg, pregLoop);
+                Add(tmpReg, negMeanReg, corrReg, pregLoop);
+                Div(meanLowReg, tmpReg, nReg, pregLoop);
+                // mean 非有限（组内含 inf/NaN）时，除法残差无意义且会引入 NaN；置 0 以保持 y = x - mean
+                Abs(absMeanReg, meanReg, pregLoop);
+                Compares<float, CMPMODE::LE>(fin, absMeanReg, 3.4028235e38f, pregLoop);
+                Select(meanLowReg, meanLowReg, zeroReg, fin);
+                StoreRegForDtype<float>(sumAddr, meanReg, pregLoop, static_cast<uint32_t>(sumOffset) + offset);
+                StoreRegForDtype<float>(sumAddr, meanLowReg, pregLoop, static_cast<uint32_t>(corrOffset) + offset);
+            }
+        }
+    }
+
+    __aicore__ inline void CentralizeContiguousHiLoAt(LocalTensor<T>& input, LocalTensor<T>& output,
+                                                      LocalTensor<float>& mean, int64_t meanOffset,
+                                                      int64_t meanLowOffset, int64_t validElements,
+                                                      int64_t inputOffset = 0, int64_t outputOffset = 0)
+    {
+        __local_mem__ T* inputAddr = (__local_mem__ T*)input.GetPhyAddr();
+        __local_mem__ T* outputAddr = (__local_mem__ T*)output.GetPhyAddr();
+        __local_mem__ float* meanAddr = (__local_mem__ float*)mean.GetPhyAddr();
+        const uint16_t loops = static_cast<uint16_t>((validElements + V_LENGTH - 1) / V_LENGTH);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> xReg;
+            RegTensor<float> hiReg;
+            RegTensor<float> loReg;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            for (uint16_t loop = 0; loop < loops; ++loop) {
+                const uint32_t offset = static_cast<uint32_t>(loop) * V_LENGTH;
+                const uint32_t remaining = static_cast<uint32_t>(validElements) - offset;
+                uint32_t activeCount = remaining < V_LENGTH ? remaining : V_LENGTH;
+                MaskReg pregLoop = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+                LoadRegForDtype<T>(inputAddr, xReg, pregLoop, static_cast<uint32_t>(inputOffset) + offset);
+                LoadRegForDtype<float>(meanAddr, hiReg, pregLoop, static_cast<uint32_t>(meanOffset) + offset);
+                LoadRegForDtype<float>(meanAddr, loReg, pregLoop, static_cast<uint32_t>(meanLowOffset) + offset);
+                Sub(xReg, xReg, hiReg, pregLoop);
+                Sub(xReg, xReg, loReg, pregLoop);
+                StoreRegForDtype<T>(outputAddr, xReg, pregLoop, static_cast<uint32_t>(outputOffset) + offset);
+            }
+        }
     }
 
     __aicore__ inline void CentralizeContiguousAt(LocalTensor<T>& input, LocalTensor<T>& output,

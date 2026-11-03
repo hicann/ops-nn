@@ -36,13 +36,21 @@ __aicore__ inline void ProcessSmallWholeBlockTask(int64_t outer)
     LocalTensor<T> input = inQueue_.DeQue<T>();
     LocalTensor<T> output = outQueue_.AllocTensor<T>();
     LocalTensor<float> sum = sumBuf_.Get<float>();
-    ZeroSumTile(sum, meanElements);
+    const uint16_t numSlots = static_cast<uint16_t>(tiling_->numAccSlots > 0 ? tiling_->numAccSlots : 1);
+    const int64_t sumStride = AlignToVector(tiling_->smallContiguousMeanElements);
+    for (uint16_t slot = 0; slot < numSlots; ++slot) {
+        ZeroSumTileAt(sum, static_cast<int64_t>(slot) * sumStride, meanElements);
+    }
     PipeBarrier<PIPE_V>();
+    uint16_t slot = 0;
     for (int64_t r = 0; r < tiling_->reduceCount; ++r) {
         const int64_t rowOffset = r * rowStride;
-        AccumulateContiguousAt(input, sum, 0, rowElements, rowOffset);
+        AccumulateContiguousAt(input, sum, static_cast<int64_t>(slot) * sumStride, rowElements, rowOffset);
+        slot = static_cast<uint16_t>((slot + 1 == numSlots) ? 0 : (slot + 1));
     }
-    ScaleSumToMean(sum, meanElements);
+    FoldAccumulatorSlots(sum, numSlots, sumStride, meanElements);
+    PipeBarrier<PIPE_V>();
+    ScaleSumToMeanAt(sum, 0, meanElements);
     PipeBarrier<PIPE_V>();
     for (int64_t r = 0; r < tiling_->reduceCount; ++r) {
         const int64_t rowOffset = r * rowStride;
@@ -112,6 +120,83 @@ __aicore__ inline void CentralizeRowsSmallInner(LocalTensor<T>& input, LocalTens
     }
 }
 
+__aicore__ inline void AccumulateRowsSmallInnerKahan(LocalTensor<T>& input, LocalTensor<float>& sum, int64_t sumOffset,
+                                                     int64_t corrOffset, int64_t validRows, int64_t innerCount,
+                                                     int64_t rowStride)
+{
+    __local_mem__ T* inputAddr = (__local_mem__ T*)input.GetPhyAddr();
+    __local_mem__ float* sumAddr = (__local_mem__ float*)sum.GetPhyAddr();
+    __VEC_SCOPE__
+    {
+        RegTensor<float> xReg;
+        RegTensor<float> sumReg;
+        RegTensor<float> corrReg;
+        RegTensor<float> tReg;
+        RegTensor<float> c1Reg;
+        RegTensor<float> c2Reg;
+        RegTensor<float> addReg;
+        RegTensor<float> absSum;
+        RegTensor<float> absX;
+        MaskReg dom;
+        MaskReg fin;
+        RegTensor<float> zeroReg;
+        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+        uint32_t activeCount = static_cast<uint32_t>(innerCount);
+        const uint16_t rowLoops = static_cast<uint16_t>(validRows);
+        MaskReg preg = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+        Duplicate(zeroReg, 0.0f, pregFull);
+        LoadRegForDtype<float>(sumAddr, sumReg, preg, static_cast<uint32_t>(sumOffset));
+        LoadRegForDtype<float>(sumAddr, corrReg, preg, static_cast<uint32_t>(corrOffset));
+        for (uint16_t r = 0; r < rowLoops; ++r) {
+            LoadRegForDtype<T>(inputAddr, xReg, preg, static_cast<uint32_t>(r * rowStride));
+            Add(tReg, sumReg, xReg, preg);
+            Abs(absSum, sumReg, preg);
+            Abs(absX, xReg, preg);
+            Compare<float, CMPMODE::GE>(dom, absSum, absX, preg);
+            Sub(c1Reg, sumReg, tReg, preg);
+            Add(c1Reg, c1Reg, xReg, preg);
+            Sub(c2Reg, xReg, tReg, preg);
+            Add(c2Reg, c2Reg, sumReg, preg);
+            Select(addReg, c1Reg, c2Reg, dom);
+            Abs(absSum, tReg, preg);
+            Compares<float, CMPMODE::LE>(fin, absSum, 3.4028235e38f, preg);
+            Select(addReg, addReg, zeroReg, fin);
+            Add(corrReg, corrReg, addReg, preg);
+            sumReg = tReg;
+        }
+        StoreRegForDtype<float>(sumAddr, sumReg, preg, static_cast<uint32_t>(sumOffset));
+        StoreRegForDtype<float>(sumAddr, corrReg, preg, static_cast<uint32_t>(corrOffset));
+    }
+}
+
+__aicore__ inline void CentralizeRowsSmallInnerHiLo(LocalTensor<T>& input, LocalTensor<T>& output,
+                                                    LocalTensor<float>& mean, int64_t meanOffset, int64_t meanLowOffset,
+                                                    int64_t validRows, int64_t innerCount, int64_t rowStride)
+{
+    __local_mem__ T* inputAddr = (__local_mem__ T*)input.GetPhyAddr();
+    __local_mem__ T* outputAddr = (__local_mem__ T*)output.GetPhyAddr();
+    __local_mem__ float* meanAddr = (__local_mem__ float*)mean.GetPhyAddr();
+    __VEC_SCOPE__
+    {
+        RegTensor<float> xReg;
+        RegTensor<float> hiReg;
+        RegTensor<float> loReg;
+        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+        uint32_t activeCount = static_cast<uint32_t>(innerCount);
+        const uint16_t rowLoops = static_cast<uint16_t>(validRows);
+        MaskReg preg = activeCount == V_LENGTH ? pregFull : UpdateMask<float>(activeCount);
+        LoadRegForDtype<float>(meanAddr, hiReg, preg, static_cast<uint32_t>(meanOffset));
+        LoadRegForDtype<float>(meanAddr, loReg, preg, static_cast<uint32_t>(meanLowOffset));
+        for (uint16_t r = 0; r < rowLoops; ++r) {
+            const uint32_t rowOffset = static_cast<uint32_t>(r * rowStride);
+            LoadRegForDtype<T>(inputAddr, xReg, preg, rowOffset);
+            Sub(xReg, xReg, hiReg, preg);
+            Sub(xReg, xReg, loReg, preg);
+            StoreRegForDtype<T>(outputAddr, xReg, preg, rowOffset);
+        }
+    }
+}
+
 __aicore__ inline void ProcessLargeContiguousSmallInnerTask(int64_t outer)
 {
     const int64_t innerCount = tiling_->contiguousInnerCount;
@@ -119,19 +204,21 @@ __aicore__ inline void ProcessLargeContiguousSmallInnerTask(int64_t outer)
     const int64_t rowStride = AlignToVector(innerCount);
     const int64_t base = ContiguousBase(outer, 0);
     LocalTensor<float> sum = sumBuf_.Get<float>();
+    const int64_t corrOffset = AlignToVector(innerCount);
     ZeroSumTile(sum, innerCount);
+    ZeroSumTileAt(sum, corrOffset, innerCount);
     PipeBarrier<PIPE_V>();
 
     for (int64_t reduceOffset = 0; reduceOffset < tiling_->reduceCount; reduceOffset += reduceTile) {
         const int64_t validRows = Min(reduceTile, tiling_->reduceCount - reduceOffset);
         CopyInRowsPadded(base + reduceOffset * innerCount, validRows, innerCount, rowStride);
         LocalTensor<T> input = inQueue_.DeQue<T>();
-        AccumulateRowsSmallInner(input, sum, validRows, innerCount, rowStride);
+        AccumulateRowsSmallInnerKahan(input, sum, 0, corrOffset, validRows, innerCount, rowStride);
         PipeBarrier<PIPE_V>();
         inQueue_.FreeTensor(input);
     }
 
-    ScaleSumToMean(sum, innerCount);
+    FinalizeMeanHiLoAt(sum, 0, corrOffset, innerCount);
     PipeBarrier<PIPE_V>();
 
     for (int64_t reduceOffset = 0; reduceOffset < tiling_->reduceCount; reduceOffset += reduceTile) {
@@ -140,7 +227,7 @@ __aicore__ inline void ProcessLargeContiguousSmallInnerTask(int64_t outer)
         CopyInRowsPadded(gmOffset, validRows, innerCount, rowStride);
         LocalTensor<T> input = inQueue_.DeQue<T>();
         LocalTensor<T> output = outQueue_.AllocTensor<T>();
-        CentralizeRowsSmallInner(input, output, sum, validRows, innerCount, rowStride);
+        CentralizeRowsSmallInnerHiLo(input, output, sum, 0, corrOffset, validRows, innerCount, rowStride);
         PipeBarrier<PIPE_V>();
         outQueue_.EnQue(output);
         inQueue_.FreeTensor(input);
@@ -159,19 +246,30 @@ __aicore__ inline void ProcessLargeContiguousSmallInner(uint32_t core, uint32_t 
 __aicore__ inline void ProcessContiguousTask(int64_t outer, int64_t innerOffset, int64_t validElements)
 {
     LocalTensor<float> sum = sumBuf_.Get<float>();
-    ZeroSumTile(sum, validElements);
+    const uint16_t numSlots = static_cast<uint16_t>(tiling_->numAccSlots > 0 ? tiling_->numAccSlots : 1);
+    const int64_t sumStride = kLargeChunkElements;
+    const int64_t corrBase = static_cast<int64_t>(numSlots) * sumStride;
+    for (uint16_t slot = 0; slot < numSlots; ++slot) {
+        ZeroSumTileAt(sum, static_cast<int64_t>(slot) * sumStride, validElements);
+        ZeroSumTileAt(sum, corrBase + static_cast<int64_t>(slot) * sumStride, validElements);
+    }
     PipeBarrier<PIPE_V>();
 
     const int64_t base = ContiguousBase(outer, innerOffset);
+    uint16_t slot = 0;
     for (int64_t r = 0; r < tiling_->reduceCount; ++r) {
         CopyInContiguous(base + r * tiling_->contiguousInnerCount, validElements);
         LocalTensor<T> input = inQueue_.DeQue<T>();
-        AccumulateContiguous(input, sum, validElements);
+        AccumulateContiguousNeumaierAt(input, sum, static_cast<int64_t>(slot) * sumStride,
+                                       corrBase + static_cast<int64_t>(slot) * sumStride, validElements);
         PipeBarrier<PIPE_V>();
         inQueue_.FreeTensor(input);
+        slot = static_cast<uint16_t>((slot + 1 == numSlots) ? 0 : (slot + 1));
     }
 
-    ScaleSumToMean(sum, validElements);
+    FoldAccumulatorSlotsNeumaier(sum, numSlots, sumStride, corrBase, validElements);
+    PipeBarrier<PIPE_V>();
+    FinalizeMeanHiLoAt(sum, 0, corrBase, validElements);
     PipeBarrier<PIPE_V>();
 
     for (int64_t r = 0; r < tiling_->reduceCount; ++r) {
@@ -179,7 +277,7 @@ __aicore__ inline void ProcessContiguousTask(int64_t outer, int64_t innerOffset,
         CopyInContiguous(offset, validElements);
         LocalTensor<T> input = inQueue_.DeQue<T>();
         LocalTensor<T> output = outQueue_.AllocTensor<T>();
-        CentralizeContiguous(input, output, sum, validElements);
+        CentralizeContiguousHiLoAt(input, output, sum, 0, corrBase, validElements);
         PipeBarrier<PIPE_V>();
         outQueue_.EnQue(output);
         inQueue_.FreeTensor(input);

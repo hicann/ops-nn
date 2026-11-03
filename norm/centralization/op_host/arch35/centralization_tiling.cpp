@@ -38,8 +38,8 @@ constexpr int64_t kMaxIrregularScalarKeepTile = 16;
 constexpr int64_t kSmallIrregularVectorTileElements = 64;
 constexpr int64_t kIrregularKeepTileTaskPressure = 4;
 constexpr int64_t kSmallContiguousMaxWorkingSetElements = 1024;
-constexpr int64_t kMaxShapeDim = std::numeric_limits<int32_t>::max();
-constexpr int64_t kMaxShapeElements = std::numeric_limits<int32_t>::max();
+constexpr int64_t kMaxShapeDim = std::numeric_limits<int64_t>::max();
+constexpr int64_t kMaxShapeElements = std::numeric_limits<int64_t>::max();
 constexpr size_t kSmallContiguousMaxWorkingSetBytes = 16UL * 1024UL;
 constexpr size_t kLargeContiguousSmallInnerMaxBufferBytes = 64UL * 1024UL;
 constexpr size_t kSystemWorkspaceBytes = 16UL * 1024UL * 1024UL;
@@ -65,7 +65,7 @@ static ge::graphStatus CheckedMul(gert::TilingContext* context, const char* labe
     }
     if (lhs != 0 && rhs > limit / lhs) {
         return ReportInvalidShape(context, label, std::to_string(lhs) + "*" + std::to_string(rhs),
-                                  "shape-derived product exceeds the supported int32 range");
+                                  "shape-derived product exceeds the supported int64 range");
     }
     result = lhs * rhs;
     return GRAPH_SUCCESS;
@@ -89,7 +89,7 @@ static ge::graphStatus ValidateRuntimeDim(gert::TilingContext* context, int64_t 
     }
     if (dim > kMaxShapeDim) {
         return ReportInvalidShape(context, "x", std::to_string(dim),
-                                  "each runtime dimension must be in [0, 2147483647]");
+                                  "each runtime dimension must be in [0, 9223372036854775807]");
     }
     return GRAPH_SUCCESS;
 }
@@ -118,8 +118,25 @@ static ge::graphStatus SetBufferBytes(gert::TilingContext* context, const char* 
     return GRAPH_SUCCESS;
 }
 
+// 选择均值累加的槽数：2 的幂，且槽缓冲占用不超过 UB 的 1/16。
+// 这是通用做法（参考 bn3d_training_reduce 的 PickAccSlots / 通用 DichotomyAdd），
+// 对所有 dtype 生效，不区分 fp32/fp16。
+static int64_t ChooseAccSlots(int64_t count, int64_t sumElements, uint64_t ubSize)
+{
+    if (count <= 1 || sumElements <= 0) {
+        return 1;
+    }
+    const int64_t perSlotBytes = sumElements * static_cast<int64_t>(sizeof(float));
+    const int64_t budgetBytes = static_cast<int64_t>(ubSize) / 16;
+    int64_t slots = 1;
+    while (slots < 16 && (slots * 2) <= count && (slots * 2) * perSlotBytes <= budgetBytes) {
+        slots *= 2;
+    }
+    return slots;
+}
+
 static ge::graphStatus ConfigureBufferBytes(gert::TilingContext* context, CentralizationTilingData* tiling,
-                                            ge::DataType dtype)
+                                            ge::DataType dtype, uint64_t ubSize)
 {
     const int64_t blockElems = dtype == DT_FLOAT ? 8LL : 16LL;
     const size_t elementBytes = DataTypeBytes(dtype);
@@ -133,7 +150,7 @@ static ge::graphStatus ConfigureBufferBytes(gert::TilingContext* context, Centra
             return GRAPH_FAILED;
         }
     } else {
-        smallInputElements = AlignToBlockElements(tiling->smallContiguousBlockElements, blockElems);
+        smallInputElements = AlignToVectorElements(tiling->smallContiguousBlockElements);
     }
     int64_t largeInputElements = 0;
     if (largeContiguousSmallInner) {
@@ -153,11 +170,25 @@ static ge::graphStatus ConfigureBufferBytes(gert::TilingContext* context, Centra
                                     (largeContiguousSmallInner ? AlignToVectorElements(tiling->contiguousInnerCount) :
                                                                  kGenericContiguousTileElements);
 
+    const bool useAccumulatorSlots = tiling->contiguousGeneric != 0 && !largeContiguousSmallInner &&
+                                     !(smallContiguous && tiling->smallContiguousMode == 1);
+    if (useAccumulatorSlots) {
+        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, sumElements, ubSize);
+    } else if (tiling->largePath != 0) {
+        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, 1, ubSize);
+    } else {
+        tiling->numAccSlots = 1;
+    }
+    // 连续路径 slot 同时保存 sum 与 correction，buffer 翻倍
+    // 连续 slot / largeContiguousSmallInner 需要 sum+correction 双区
+    const int64_t sumBufferElements = sumElements * tiling->numAccSlots *
+                                      ((useAccumulatorSlots || largeContiguousSmallInner) ? 2 : 1);
+
     if (SetBufferBytes(context, "generic input buffer bytes", inputElements, elementBytes,
                        tiling->genericInputBufferBytes) != GRAPH_SUCCESS ||
         SetBufferBytes(context, "generic output buffer bytes", inputElements, elementBytes,
                        tiling->genericOutputBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "generic sum buffer bytes", sumElements, sizeof(float),
+        SetBufferBytes(context, "generic sum buffer bytes", sumBufferElements, sizeof(float),
                        tiling->genericSumBufferBytes) != GRAPH_SUCCESS ||
         SetBufferBytes(context, "large trailing input buffer bytes", kKernelTileElements, elementBytes,
                        tiling->largeTrailingInputBufferBytes) != GRAPH_SUCCESS ||
@@ -223,6 +254,11 @@ static ge::graphStatus ResolveAxes(gert::TilingContext* context, int64_t rank, s
     std::array<bool, kMaxRank> used{};
     for (size_t i = 0; i < attr->GetSize(); ++i) {
         int64_t axis = data[i];
+        if (axis < -rank) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes", std::to_string(data[i]).c_str(),
+                                                  "each axis must be unique and within [-rank, rank)");
+            return GRAPH_FAILED;
+        }
         if (axis < 0) {
             axis += rank;
         }
@@ -417,22 +453,32 @@ static ge::graphStatus BuildTilingData(gert::TilingContext* context, const gert:
     tiling->reduceCount = 1;
     totalCount = 1;
 
+    bool isEmpty = false;
+    for (int64_t i = 0; i < rank; ++i) {
+        tiling->dims[i] = shape.GetDim(i);
+        if (ValidateRuntimeDim(context, tiling->dims[i]) != GRAPH_SUCCESS) {
+            return GRAPH_FAILED;
+        }
+        isEmpty = isEmpty || tiling->dims[i] == 0;
+    }
+    if (isEmpty) {
+        totalCount = 0;
+        tiling->totalCount = 0;
+        return GRAPH_SUCCESS;
+    }
+
     int64_t originalStrides[kMaxRank] = {};
     int64_t stride = 1;
     for (int64_t i = rank - 1; i >= 0; --i) {
         originalStrides[i] = stride;
-        const int64_t dim = shape.GetDim(i);
-        if (ValidateRuntimeDim(context, dim) != GRAPH_SUCCESS ||
-            CheckedProductAppend(context, "original stride", dim, stride) != GRAPH_SUCCESS) {
+        if (CheckedProductAppend(context, "original stride", tiling->dims[i], stride) != GRAPH_SUCCESS) {
             return GRAPH_FAILED;
         }
     }
     int64_t keepIndex = 0;
     int64_t reduceIndex = 0;
     for (int64_t i = 0; i < rank; ++i) {
-        tiling->dims[i] = shape.GetDim(i);
-        if (ValidateRuntimeDim(context, tiling->dims[i]) != GRAPH_SUCCESS ||
-            CheckedProductAppend(context, "total element count", tiling->dims[i], totalCount) != GRAPH_SUCCESS) {
+        if (CheckedProductAppend(context, "total element count", tiling->dims[i], totalCount) != GRAPH_SUCCESS) {
             return GRAPH_FAILED;
         }
         if (isReduce[static_cast<size_t>(i)]) {
@@ -579,6 +625,13 @@ static ge::graphStatus ConfigureLargePath(gert::TilingContext* context, Centrali
     tiling->rowParallel = (coresPerRow <= 1) ? 1 : 0;
     if (tiling->rowParallel != 0) {
         blockDim = static_cast<uint32_t>(std::max<int64_t>(1, std::min<int64_t>(coreNum, tiling->groupCount)));
+        // 行并行：先把每个 group 的 mean 落 workspace，再按 32B block 并行写输出。
+        if (CalcLargeWorkspaceBytes(context, tiling->groupCount, tiling->alignedCoresPerRow, workspace[0]) !=
+            GRAPH_SUCCESS) {
+            return GRAPH_FAILED;
+        }
+        // SyncAll requires every launched core to be co-resident.
+        context->SetScheduleMode(1);
     } else {
         int64_t reduceParallelBlockDim = 0;
         if (CheckedMul(context, "large reduce block dim", tiling->groupCount, coresPerRow, kMaxShapeElements,
@@ -598,10 +651,29 @@ static ge::graphStatus ConfigureLargePath(gert::TilingContext* context, Centrali
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus FinalizePath(gert::TilingContext* context, CentralizationTilingData* tiling, ge::DataType dtype,
-                                    uint32_t key, uint32_t blockDim)
+// DataCopyExtParams 的 rowCount/blockCount 是 uint16，blockLen/srcStride/dstStride 是 uint32。
+// 计数本身用 64 位，只有真正落到这些硬件 ABI 字段的 tile 尺寸需要在这里显式收口。
+static ge::graphStatus ValidateKernelAbi(gert::TilingContext* context, const CentralizationTilingData* tiling)
 {
-    if (ConfigureBufferBytes(context, tiling, dtype) != GRAPH_SUCCESS) {
+    constexpr int64_t kAbiCountMax = std::numeric_limits<uint16_t>::max();
+    if (tiling->rowsPerBatch > kAbiCountMax || tiling->rowsPerLoop > kAbiCountMax) {
+        return ReportInvalidShape(context, "rowsPerBatch", std::to_string(tiling->rowsPerBatch),
+                                  "DataCopyExtParams row count must be <= 65535");
+    }
+    if (tiling->smallContiguous != 0 && tiling->reduceCount > kAbiCountMax) {
+        return ReportInvalidShape(context, "reduceCount", std::to_string(tiling->reduceCount),
+                                  "small contiguous DataCopyExtParams block count must be <= 65535");
+    }
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus FinalizePath(gert::TilingContext* context, CentralizationTilingData* tiling, ge::DataType dtype,
+                                    uint32_t key, uint32_t blockDim, uint64_t ubSize)
+{
+    if (ConfigureBufferBytes(context, tiling, dtype, ubSize) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    if (ValidateKernelAbi(context, tiling) != GRAPH_SUCCESS) {
         return GRAPH_FAILED;
     }
     tiling->blockFactor = tiling->groupCount > 0 ? CeilDiv(tiling->groupCount, static_cast<int64_t>(blockDim)) : 1;
@@ -691,7 +763,7 @@ static ge::graphStatus ConfigurePath(gert::TilingContext* context, Centralizatio
         tiling->rowParallel = 0;
         tiling->rowsPerLoop = 1;
         tiling->rowsPerBatch = 1;
-        return FinalizePath(context, tiling, dtype, kEmptyKey, 1);
+        return FinalizePath(context, tiling, dtype, kEmptyKey, 1, ubSize);
     }
 
     tiling->largePath = tiling->reduceCount > kLargeReduceThreshold ? 1 : 0;
@@ -728,14 +800,10 @@ static ge::graphStatus ConfigurePath(gert::TilingContext* context, Centralizatio
                    kMaxShapeElements, smallContiguousBlockElements) != GRAPH_SUCCESS) {
         return GRAPH_FAILED;
     }
-    const int64_t smallContiguousAlignedElements = CeilDiv(smallContiguousBlockElements, blockElems) * blockElems;
-    const int64_t smallContiguousVectorRowElements = CeilDiv(tiling->contiguousInnerCount, kRegbaseVectorElements) *
-                                                     kRegbaseVectorElements;
+    const int64_t smallContiguousAlignedElements = AlignToVectorElements(smallContiguousBlockElements);
     int64_t smallContiguousUbElements = smallContiguousAlignedElements;
-    if (tiling->contiguousInnerCount != 1 &&
-        CheckedMul(context, "small contiguous UB elements", tiling->reduceCount, smallContiguousVectorRowElements,
-                   kMaxShapeElements, smallContiguousUbElements) != GRAPH_SUCCESS) {
-        return GRAPH_FAILED;
+    if (tiling->contiguousInnerCount != 1) {
+        smallContiguousUbElements = tiling->reduceCount * AlignToVectorElements(tiling->contiguousInnerCount);
     }
     const size_t elementBytes = dtype == DT_FLOAT ? sizeof(float) : sizeof(uint16_t);
     const size_t smallContiguousWorkingSetBytes = static_cast<size_t>(smallContiguousUbElements) * elementBytes;
@@ -782,7 +850,7 @@ static ge::graphStatus ConfigurePath(gert::TilingContext* context, Centralizatio
     } else {
         ApplyGenericScalarPath(tiling, blockDim);
     }
-    return FinalizePath(context, tiling, dtype, key, blockDim);
+    return FinalizePath(context, tiling, dtype, key, blockDim, ubSize);
 }
 } // namespace
 

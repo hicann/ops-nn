@@ -24,22 +24,24 @@
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 | :--- | :--- | :--- | :--- | :--- |
-| x | 输入 | 待中心化的张量。rank为1至8，执行时各维度必须为具体非负整数。 | FLOAT、FLOAT16 | ND |
-| axes | 属性 | 均值归约轴，LIST_INT，默认值为 `{-1}`。支持负轴；轴必须唯一且位于 `[-rank, rank)`。未设置或设置为空时使用最后一个轴。 | LIST_INT | - |
+| x | 输入 | 待中心化的张量。 | FLOAT、FLOAT16 | ND |
+| axes | 属性 | 均值归约轴，LIST_INT。支持负轴，轴必须唯一且位于 `[-rank, rank)`；是否可选及默认值见约束说明。 | LIST_INT | - |
 | y | 输出 | 与x的shape、dtype相同。 | FLOAT、FLOAT16 | ND |
 
 ## 约束说明
 
 - <term>Ascend 950PR&950DT系列产品</term>：
-  - 输入和输出必须具有相同的shape与dtype；归约轴必须唯一且位于有效范围内。
-  - 支持动态 shape/rank 建图；执行时各维度必须已经确定。
-  - 支持空 tensor，输出保持与输入相同的 shape 和 dtype。
-  - 输入和输出支持 ND 格式。
+  - 输入和输出支持FLOAT、FLOAT16数据类型和ND格式，且shape与dtype必须相同。
+  - 输入rank为1至8。支持动态shape/rank建图，执行时各维度必须已经确定。
+  - 每个执行时维度和输入总元素数均不超过 9223372036854775807（int64 上限；实际受设备内存约束）。
+  - `axes`可选，默认值为 `{-1}`；未设置或设置为空时使用最后一个轴。
+  - 支持空tensor，输出保持与输入相同的shape和dtype。
 
 ## 调用说明
 
 | 调用方式 | 样例代码 | 说明 |
 | :--- | :--- | :--- |
-| 图模式调用 | [test_geir_centralization](examples/test_geir_centralization.cpp) | 通过算子 IR 构图方式调用 Centralization 算子。 |
+| 图模式调用 | [test_geir_centralization](examples/test_geir_centralization.cpp) | 通过算子IR构图方式调用Centralization算子，IR定义见 [centralization_proto.h](op_graph/centralization_proto.h)。 |
+| TensorFlow 解析通路 | - | 通过 TensorFlow 自定义算子 `Centralization`（OriginOpType=Centralization）经 GE 解析执行，参数与算子IR一致（x 输入、axes 可选属性、y 输出）。 |
 
-当前支持GE图模式和TensorFlow解析通路，不提供aclnn、PyTorch或ONNX专用接口。
+当前支持GE图模式和TensorFlow解析通路，不提供aclnn、PyTorch或ONNX专用接口。本算子仅支持 ND 格式，不支持 FRACTAL_NZ、FRACTAL_Z 等格式。

@@ -53,6 +53,7 @@ private:
     static constexpr int64_t kTileElements = 1024;
     static constexpr int64_t kReduceLayerElements = 256;
     static constexpr int64_t kWorkspaceElements = 32 / sizeof(float);
+    static constexpr uint16_t kMaxAccSlots = 16;
     static constexpr bool kUseCompensatedReduce = IsSameType<T, float>::value || IsSameType<T, half>::value;
 
     struct CompensatedSum {
@@ -179,28 +180,52 @@ private:
     {
         const int64_t chunkCount = (tiling_->reduceCount + kTileElements - 1) / kTileElements;
         const int64_t rowBase = RowBase(row);
-        float partial = 0.0f;
+        const uint16_t numSlots = static_cast<uint16_t>(
+            (tiling_->numAccSlots > 0 && tiling_->numAccSlots <= kMaxAccSlots) ? tiling_->numAccSlots : 1);
+        float slots[kMaxAccSlots] = {0.0f};
+        uint16_t slot = 0;
         for (int64_t chunk = 0; chunk < chunkCount; ++chunk) {
             const int64_t col = chunk * kTileElements;
             const int64_t validElements = Min(kTileElements, tiling_->reduceCount - col);
-            partial += ReduceTile(rowBase + col, validElements);
+            slots[slot] += ReduceTile(rowBase + col, validElements);
+            slot = static_cast<uint16_t>((slot + 1 == numSlots) ? 0 : (slot + 1));
         }
-        return partial / static_cast<float>(tiling_->reduceCount);
+        for (uint16_t active = numSlots; active > 1; active = static_cast<uint16_t>(active / 2)) {
+            const uint16_t half = static_cast<uint16_t>(active / 2);
+            for (uint16_t g = 0; g < half; ++g) {
+                slots[g] += slots[g + half];
+            }
+        }
+        return slots[0] / static_cast<float>(tiling_->reduceCount);
     }
 
     __aicore__ inline float ReduceRowSingleCoreCompensated(int64_t row)
     {
         const int64_t chunkCount = (tiling_->reduceCount + kTileElements - 1) / kTileElements;
         const int64_t rowBase = RowBase(row);
-        CompensatedSum partial{0.0f, 0.0f};
+        const uint16_t numSlots = static_cast<uint16_t>(
+            (tiling_->numAccSlots > 0 && tiling_->numAccSlots <= kMaxAccSlots) ? tiling_->numAccSlots : 1);
+        CompensatedSum slots[kMaxAccSlots];
+        for (uint16_t i = 0; i < kMaxAccSlots; ++i) {
+            slots[i] = CompensatedSum{0.0f, 0.0f};
+        }
+        uint16_t slot = 0;
         for (int64_t chunk = 0; chunk < chunkCount; ++chunk) {
             const int64_t col = chunk * kTileElements;
             const int64_t validElements = Min(kTileElements, tiling_->reduceCount - col);
             const CompensatedSum tilePartial = ReduceTileCompensated(rowBase + col, validElements);
-            AddCompensated(partial, tilePartial.sum);
-            AddCompensated(partial, tilePartial.correction);
+            AddCompensated(slots[slot], tilePartial.sum);
+            AddCompensated(slots[slot], tilePartial.correction);
+            slot = static_cast<uint16_t>((slot + 1 == numSlots) ? 0 : (slot + 1));
         }
-        return TotalCompensated(partial) / static_cast<float>(tiling_->reduceCount);
+        for (uint16_t active = numSlots; active > 1; active = static_cast<uint16_t>(active / 2)) {
+            const uint16_t half = static_cast<uint16_t>(active / 2);
+            for (uint16_t g = 0; g < half; ++g) {
+                AddCompensated(slots[g], slots[g + half].sum);
+                AddCompensated(slots[g], slots[g + half].correction);
+            }
+        }
+        return TotalCompensated(slots[0]) / static_cast<float>(tiling_->reduceCount);
     }
 
     __aicore__ inline void CopyInTile(int64_t offset, int64_t validElements)
@@ -416,8 +441,8 @@ private:
     __aicore__ inline void ProcessMultiCoreReduce(uint32_t core, uint32_t /*cores*/)
     {
         const uint32_t coresPerRow = static_cast<uint32_t>(tiling_->coresPerRow);
-        const uint32_t row = core / coresPerRow;
-        if (row >= static_cast<uint32_t>(tiling_->groupCount)) {
+        const int64_t row = static_cast<int64_t>(core) / static_cast<int64_t>(coresPerRow);
+        if (row >= tiling_->groupCount) {
             return;
         }
         const uint32_t localCore = core % coresPerRow;

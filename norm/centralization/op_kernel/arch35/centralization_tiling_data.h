@@ -32,6 +32,9 @@ struct CentralizationTilingData {
     int64_t contiguousInnerCount = 1;
     int64_t contiguousInnerTileElements = 0;
     int64_t contiguousInnerTileCount = 0;
+    // 通用连续路径的均值累加槽数（2 的幂，1 表示单链累加）。
+    // 多个槽轮转累加后两两折叠，把 fp32 累加链长由 R 降到 R/numAccSlots + log2(numAccSlots)。
+    int64_t numAccSlots = 1;
     int64_t smallContiguous = 0;
     int64_t smallContiguousMode = 0;
     int64_t smallContiguousBlockElements = 0;
