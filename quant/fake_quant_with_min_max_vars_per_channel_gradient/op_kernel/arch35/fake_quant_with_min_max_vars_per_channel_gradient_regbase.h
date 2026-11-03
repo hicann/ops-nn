@@ -34,8 +34,11 @@ constexpr uint32_t VEC_ADDR_ALIGN_BYTES = 32;
 constexpr uint32_t SPLIT_MODE_ROWS = 0;
 constexpr uint32_t SPLIT_MODE_DCHUNKS = 1;
 
+// Nudge zero-point rounding is half-away-from-zero (CAST_ROUND -> ::ROUND::A): TF's Nudge()
+// uses std::round, and RNE would shift the nudged interval by one scale when zp_raw lands
+// exactly on n + 0.5.
 static constexpr Reg::CastTrait castTraitFp32ToInt32 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::SAT,
-                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
 static constexpr Reg::CastTrait castTraitInt32ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
                                                         Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 

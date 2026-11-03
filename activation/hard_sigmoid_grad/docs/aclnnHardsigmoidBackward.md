@@ -23,7 +23,19 @@
 
 ## 功能说明
 
-接口功能：[aclnnHardsigmoid](../../hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)的反向传播。
+接口功能：[aclnnHardsigmoid](../../hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)的反向传播，计算 HardSigmoid 对输入的梯度。
+
+计算公式：
+
+$$
+HardsigmoidBackward(grad\_output, self)=
+\begin{cases}
+&grad\_output \ast \alpha, &if(0 < \alpha \ast self + \beta < 1) \\
+&0, &otherwise
+\end{cases}
+$$
+
+其中 $\alpha$ 固定为 $1/6$、$\beta$ 固定为 $0.5$，判定区间等价于 $self \in (-3, 3)$（开区间）。输出 out 为公式中的 grad_input，即 self 的梯度。
 
 ## 函数原型
 
@@ -96,7 +108,7 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>为self的梯度值，公式中的grad\_input。</td>
-      <td><ul><li>gradOutput与self、out的shape一致。</li><li>数据类型需要是self与gradOutput推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li></ul></td>
+      <td><ul><li>支持空Tensor；任一输入为空Tensor时输出为空Tensor。</li><li>gradOutput与self、out的shape一致。</li><li>数据类型需要是self与gradOutput推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）；上表所列类型为推荐输出类型，可转换的更宽类型当前版本亦被接受，混合宽度输入时中间计算按PromoteType(gradOutput, self)推导类型进行。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -154,12 +166,15 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>传入的gradOutput、self、out是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>gradOutput和self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>gradOutput、self、out的shape不同。</td>
+    </tr>
+    <tr>
+      <td>gradOutput、self、out的维度（rank）不在0-8范围内。</td>
     </tr>
     <tr>
       <td>gradOutput和self推导后的数据类型不能转换成out的数据类型。</td>
@@ -211,6 +226,10 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 ## 约束说明
 
+- 数据类型：输入需为BFLOAT16、FLOAT16或FLOAT；混合宽度输入时，中间计算按PromoteType(gradOutput, self)推导类型进行，再转换为out的数据类型。
+- 数据格式：推荐ND格式；FRACTAL_NZ格式输入当前版本可被接受并按ND语义计算。
+- 规模：单张量元素总数建议不超过2^31-1；更高维度（0-8维内）不受限。
+- 动态shape：支持含-1/-2的动态shape构图，实际执行前需推导为确定的静态shape。
 - 确定性计算：
   - aclnnHardsigmoidBackward默认确定性实现。
 

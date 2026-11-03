@@ -133,8 +133,13 @@ private:
 
     int64_t blockLength_ = 0;
     int64_t ubLength_ = 0;
-    float alpha_ = 0.16666666f;
+    float alpha_ = 0.16666667f;
     float beta_ = 0.5f;
+    // Open interval (maskLo_, maskHi_) equivalent to 0 < alpha*x + beta < 1,
+    // precomputed in double by the host so x is compared directly against exact
+    // bounds (default ±3) without the fp32-rounded alpha*x+beta chain.
+    float maskLo_ = -3.0f;
+    float maskHi_ = 3.0f;
 };
 
 template <typename T>
@@ -148,6 +153,8 @@ __aicore__ inline void HardSigmoidGrad<T>::Init(GM_ADDR gradOutput, GM_ADDR self
     ubLength_ = tilingData->ubFactor;
     alpha_ = tilingData->alpha;
     beta_ = tilingData->beta;
+    maskLo_ = tilingData->maskLo;
+    maskHi_ = tilingData->maskHi;
 
     gmGradOutput.SetGlobalBuffer((__gm__ T*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(),
                                  blockLength_);
@@ -180,14 +187,16 @@ __aicore__ inline void HardSigmoidGrad<T>::CopyIn(int64_t progress, int64_t curr
     LocalTensor<T> gradLocal = gradOutputQueue.template AllocTensor<T>();
     LocalTensor<T> selfLocal = selfQueue.template AllocTensor<T>();
 
-    DataCopyParams copyParams;
-    copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(T);
-    copyParams.srcStride = 0;
-    copyParams.dstStride = 0;
+    // FR-06 fix: GM-side moves use DataCopyExtParams so the byte length lives in
+    // a uint32 field instead of DataCopyParams' uint16 blockLen.
+    DataCopyExtParams copyExtParams;
+    copyExtParams.blockCount = 1;
+    copyExtParams.blockLen = static_cast<uint32_t>(currentNum * sizeof(T));
+    copyExtParams.srcStride = 0;
+    copyExtParams.dstStride = 0;
 
-    DataCopyPad(gradLocal, gmGradOutput[progress * ubLength_], copyParams, {false, 0, 0, 0});
-    DataCopyPad(selfLocal, gmSelf[progress * ubLength_], copyParams, {false, 0, 0, 0});
+    DataCopyPad(gradLocal, gmGradOutput[progress * ubLength_], copyExtParams, {false, 0, 0, 0});
+    DataCopyPad(selfLocal, gmSelf[progress * ubLength_], copyExtParams, {false, 0, 0, 0});
 
     gradOutputQueue.EnQue(gradLocal);
     selfQueue.EnQue(selfLocal);
@@ -211,53 +220,51 @@ __aicore__ inline void HardSigmoidGrad<T>::Compute(int64_t currentNum)
         // ── Cast→fp32→Cast back pipeline (half / bf16) ──
         LocalTensor<float> gradFp32 = gradFp32Buf.Get<float>();
         LocalTensor<float> selfFp32 = selfFp32Buf.Get<float>();
-        LocalTensor<float> tmp = tmpBuf.Get<float>();
+        LocalTensor<float> resultFp32 = tmpBuf.Get<float>();
 
-        // API-1 fix: pre-fill the FULL alignedCount window with -1.0 (outside (0,1))
-        // BEFORE compute. Guarantees CompareScalar tail bits at [currentNum, alignedCount)
-        // are deterministic. Host-side ubFactor is 256B-aligned ⇒ alignedCount ≤ ubLength_.
-        Duplicate(tmp, -1.0f, alignedCount);
+        // API-1 fix (FR-02 form): pre-fill the FULL alignedCount window with a
+        // deterministic out-of-interval value BEFORE widening, so CompareScalar
+        // tail bits at [currentNum, alignedCount) stay deterministic.
+        Duplicate(selfFp32, maskHi_, alignedCount);
 
         // Step 1: Cast T → fp32 (lossless widening for both half and bf16).
         Cast(gradFp32, gradLocal, RoundMode::CAST_NONE, currentNum);
         Cast(selfFp32, selfLocal, RoundMode::CAST_NONE, currentNum);
 
-        // Step 2: tmp = alpha * selfFp32 + beta  (in fp32).
-        Muls(tmp, selfFp32, alpha_, currentNum);
-        Adds(tmp, tmp, beta_, currentNum);
+        // Step 2: result-in-fp32 = gradOutputFp32 * alpha  (reuse tmp buffer).
+        Muls(resultFp32, gradFp32, alpha_, currentNum);
 
-        // Step 3: result-in-fp32 = gradOutputFp32 * alpha  (reuse selfFp32 buffer).
-        Muls(selfFp32, gradFp32, alpha_, currentNum);
+        // Step 3: mask = (self > maskLo), select. Direct comparison against the
+        // host-computed bound avoids the fp32 rounding flip just below 3.0.
+        CompareScalar(maskLocal, selfFp32, maskLo_, CMPMODE::GT, alignedCount);
+        Select(resultFp32, maskLocal, resultFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
-        // Step 4: mask = (tmp > 0), select.
-        CompareScalar(maskLocal, tmp, 0.0f, CMPMODE::GT, alignedCount);
-        Select(selfFp32, maskLocal, selfFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+        // Step 4: mask = (self < maskHi), select.
+        CompareScalar(maskLocal, selfFp32, maskHi_, CMPMODE::LT, alignedCount);
+        Select(resultFp32, maskLocal, resultFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
-        // Step 5: mask = (tmp < 1), select.
-        CompareScalar(maskLocal, tmp, 1.0f, CMPMODE::LT, alignedCount);
-        Select(selfFp32, maskLocal, selfFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
-
-        // Step 6: Cast fp32 result → T (per-T RoundMode trait).
-        Cast(resultLocal, selfFp32, CastDownRound<T>::value, currentNum);
+        // Step 5: Cast fp32 result → T (per-T RoundMode trait).
+        Cast(resultLocal, resultFp32, CastDownRound<T>::value, currentNum);
     } else {
         // ── fp32 native pipeline (T = float) ──
         LocalTensor<T> tmpLocal = tmpBuf.Get<T>();
 
-        Duplicate(tmpLocal, static_cast<T>(-1.0f), alignedCount);
+        Duplicate(tmpLocal, static_cast<T>(maskHi_), alignedCount);
+        // Self copy keeps the CompareScalar tail window deterministic without
+        // touching the queue-owned input tensor. A same-width Cast(fp32->fp32)
+        // is not a defined copy primitive; adding +0.0 preserves every value
+        // (incl. NaN/Inf) while filling exactly the currentNum prefix.
+        Adds(tmpLocal, selfLocal, static_cast<T>(0), currentNum);
 
-        // Step 1: tmp = alpha * self + beta.
-        Muls(tmpLocal, selfLocal, static_cast<T>(alpha_), currentNum);
-        Adds(tmpLocal, tmpLocal, static_cast<T>(beta_), currentNum);
-
-        // Step 2: result = grad_output * alpha.
+        // Step 1: result = grad_output * alpha.
         Muls(resultLocal, gradLocal, static_cast<T>(alpha_), currentNum);
 
-        // Step 3: mask = (tmp > 0), select.
-        CompareScalar(maskLocal, tmpLocal, static_cast<T>(0), CMPMODE::GT, alignedCount);
+        // Step 2: mask = (self > maskLo), select.
+        CompareScalar(maskLocal, tmpLocal, static_cast<T>(maskLo_), CMPMODE::GT, alignedCount);
         Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
-        // Step 4: mask = (tmp < 1), select.
-        CompareScalar(maskLocal, tmpLocal, static_cast<T>(1), CMPMODE::LT, alignedCount);
+        // Step 3: mask = (self < maskHi), select.
+        CompareScalar(maskLocal, tmpLocal, static_cast<T>(maskHi_), CMPMODE::LT, alignedCount);
         Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
     }
 
@@ -271,13 +278,14 @@ __aicore__ inline void HardSigmoidGrad<T>::CopyOut(int64_t progress, int64_t cur
 {
     LocalTensor<T> resultLocal = gradInputQueue.template DeQue<T>();
 
-    DataCopyParams copyParams;
-    copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(T);
-    copyParams.srcStride = 0;
-    copyParams.dstStride = 0;
+    // FR-06 fix: GM-side move uses DataCopyExtParams (uint32 blockLen in bytes).
+    DataCopyExtParams copyExtParams;
+    copyExtParams.blockCount = 1;
+    copyExtParams.blockLen = static_cast<uint32_t>(currentNum * sizeof(T));
+    copyExtParams.srcStride = 0;
+    copyExtParams.dstStride = 0;
 
-    DataCopyPad(gmGradInput[progress * ubLength_], resultLocal, copyParams);
+    DataCopyPad(gmGradInput[progress * ubLength_], resultLocal, copyExtParams);
     gradInputQueue.FreeTensor(resultLocal);
 }
 

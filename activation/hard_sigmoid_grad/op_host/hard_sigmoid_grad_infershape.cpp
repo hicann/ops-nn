@@ -26,8 +26,16 @@ namespace ops {
 
 static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* context)
 {
-    const gert::Shape* input_shape = context->GetInputShape(0);
+    // FR-04 fix: the proto declares y with the same shape as input_x (input 1),
+    // not grads (input 0); take the declared source so equal-size/different-shape
+    // inputs cannot leak the grads shape into the output metadata.
+    const gert::Shape* input_shape = context->GetInputShape(1);
     if (input_shape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+
+    const gert::Shape* grad_shape = context->GetInputShape(0);
+    if (grad_shape == nullptr) {
         return ge::GRAPH_FAILED;
     }
 
@@ -36,11 +44,71 @@ static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* conte
         return ge::GRAPH_FAILED;
     }
 
+    // Defensive host-side gate (proto declares 0D-8D and equal-shape inputs):
+    // reject rank overflow and statically-known shape divergence here instead
+    // of deferring them to the tiling stage. Unknown (-1) dims are dynamic
+    // placeholders and are skipped by the per-dim comparison; an unknown rank
+    // (-2 marker: dim_num==1 && dim[0]==-2) defers the whole decision to
+    // runtime by marking the output as unknown rank too.
+    const bool gradUnknownRank = grad_shape->GetDimNum() == 1 && grad_shape->GetDim(0) == -2;
+    const bool selfUnknownRank = input_shape->GetDimNum() == 1 && input_shape->GetDim(0) == -2;
+    // A statically-known side must still respect the 0D-8D proto limit even
+    // when the other side is unknown-rank; only the pairwise rank/dim checks
+    // are deferred to runtime.
+    constexpr int64_t MAX_RANK = 8;
+    if (!gradUnknownRank && grad_shape->GetDimNum() > MAX_RANK) {
+        OP_LOGE(context->GetNodeName(), "[InferShape] rank exceeds 0D-8D limit: grads=%ld", grad_shape->GetDimNum());
+        return ge::GRAPH_FAILED;
+    }
+    if (!selfUnknownRank && input_shape->GetDimNum() > MAX_RANK) {
+        OP_LOGE(context->GetNodeName(), "[InferShape] rank exceeds 0D-8D limit: input_x=%ld", input_shape->GetDimNum());
+        return ge::GRAPH_FAILED;
+    }
+    // Unknown rank on the declared output source (input_x) forces an unknown-rank
+    // output. When only grads is unknown-rank while input_x is known, the output
+    // shape is already determined by input_x; grads is re-checked against it by
+    // the tiling stage at runtime.
+    if (selfUnknownRank) {
+        gert::Shape unknownShape;
+        unknownShape.AppendDim(-2);
+        *output_shape = unknownShape;
+        OP_LOGI(context->GetNodeName(), "[InferShape] unknown-rank input_x, defer to runtime");
+        return ge::GRAPH_SUCCESS;
+    }
+    if (gradUnknownRank) {
+        *output_shape = *input_shape;
+        OP_LOGI(context->GetNodeName(), "[InferShape] unknown-rank grads, output follows input_x");
+        return ge::GRAPH_SUCCESS;
+    }
+    if (grad_shape->GetDimNum() != input_shape->GetDimNum()) {
+        OP_LOGE(context->GetNodeName(), "[InferShape] input rank mismatch: grads=%ld, input_x=%ld",
+                grad_shape->GetDimNum(), input_shape->GetDimNum());
+        return ge::GRAPH_FAILED;
+    }
+    for (int64_t dim = 0; dim < input_shape->GetDimNum(); ++dim) {
+        const int64_t gradDim = grad_shape->GetDim(dim);
+        const int64_t selfDim = input_shape->GetDim(dim);
+        if (gradDim >= 0 && selfDim >= 0 && gradDim != selfDim) {
+            OP_LOGE(context->GetNodeName(), "[InferShape] input shape mismatch at dim %ld: grads=%ld, input_x=%ld", dim,
+                    gradDim, selfDim);
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     *output_shape = *input_shape;
     OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*output_shape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(HardSigmoidGrad).InferShape(InferShape4HardSigmoidGrad);
+static ge::graphStatus InferDataType4HardSigmoidGrad(gert::InferDataTypeContext* context)
+{
+    // The proto declares y with the same dtype as input_x (input 1); deriving
+    // from grads (input 0) made mixed-width inputs emit the wrong output dtype
+    // and clash with framework-side NetOutput types in graph mode.
+    context->SetOutputDataType(0, context->GetInputDataType(1));
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(HardSigmoidGrad).InferShape(InferShape4HardSigmoidGrad).InferDataType(InferDataType4HardSigmoidGrad);
 
 } // namespace ops

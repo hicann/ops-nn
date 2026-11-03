@@ -33,7 +33,7 @@ namespace ge {
 * y: A ND tensor with the same type and shape as 'input_x'.
 
 * @par Attributes:
-* @li alpha: An optional float. Slope of the operator, defaults to 0.16666666.
+* @li alpha: An optional float. Slope of the operator, defaults to 0.16666667 (= 1/6).
 * @li beta: An optional float. Offset of the operator, defaults to 0.5.
 
 *@par Third-party framework compatibility
@@ -43,8 +43,10 @@ REG_OP(HardSigmoidGrad)
     .INPUT(grads, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(input_x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .ATTR(alpha, Float, 0.16666666)
+    .ATTR(alpha, Float, 0.16666667)
     .ATTR(beta, Float, 0.5)
-    .OP_END_FACTORY_REG(HardSigmoidGrad) // namespace ge
+    .OP_END_FACTORY_REG(HardSigmoidGrad)
+
+} // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_HARD_SIGMOID_GRAD_OPS_H_

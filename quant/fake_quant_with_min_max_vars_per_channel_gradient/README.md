@@ -39,7 +39,8 @@
   $$backprops\_wrt\_max[c] = \sum_{i: x_i > nudgedMax[c]} gradients_i$$
 
   - 当某通道`x`为NaN时，`mask = 0`（NaN比较结果为false）；当`gradients`为NaN时，NaN通过乘法自然传播。
-  - 当某通道`max[c] <= min[c]`（退化，覆盖 `|min[c]| + |max[c]| = 0` 与 `min[c] == max[c] != 0` 的零宽区间）时：`backprops_wrt_x`透传`gradients`，`backprops_wrt_min/max`为0。退化透传以该通道`x`非NaN为前提；若`x`为NaN，仍按上一条NaN规则得`mask = 0`（即`backprops_wrt_x = 0`）。
+  - 仅当某通道`min[c] == 0`且`max[c] == 0`（双零通道，TF特例）时：`backprops_wrt_x`透传`gradients`，`backprops_wrt_min/max`为0。该透传以该通道`x`非NaN为前提；若`x`为NaN，仍按上一条NaN规则得`mask = 0`（即`backprops_wrt_x = 0`）。
+  - 其余`max[c] <= min[c]`的退化通道无透传特判，Nudge按上式原样求值：`min[c] == max[c] != 0`时`scale = 0`、零点被裁剪至量化边界，nudged区间坍缩至`[0, 0]`（仅`x == 0`元素通过mask）；`max[c] < min[c]`时`scale < 0`、nudged区间反转（`nudgedMin[c] > nudgedMax[c]`，mask恒为0）。两种形态下越界梯度均按mask与越界条件正常计入`backprops_wrt_min/max`。
   - backprops_wrt_min/max的跨行归约使用Kahan补偿求和，减少浮点累加误差。
 
 ## 参数说明
@@ -134,7 +135,7 @@
 - `num_bits`取值范围为[2, 16]。
 - `x`的rank范围必须为[1, 8]，且各维非空（`C >= 1`、元素总数 > 0）。
 - 支持动态shape：shape中的`-1`表示未知维、`-2`表示未知rank，运行期由实际输入确定；推导阶段对未知维不做跨输入比较。
-- 当某通道`max[c] <= min[c]`（退化，覆盖 `|min[c]| + |max[c]| = 0` 与 `min[c] == max[c] != 0` 的零宽区间）时，该通道`backprops_wrt_x`透传`gradients`，`backprops_wrt_min/max`为0。
+- 仅当某通道`min[c] == 0`且`max[c] == 0`（双零通道，TF特例）时，该通道`backprops_wrt_x`透传`gradients`、`backprops_wrt_min/max`为0；其余`max[c] <= min[c]`退化通道（`min[c] == max[c] != 0`、`max[c] < min[c]`）无透传特判，按Nudge原始公式求值（`scale <= 0`时nudged区间坍缩或反转、mask近乎为空），越界梯度正常计入`backprops_wrt_min/max`。
 - 约束校验位置：跨输入形状关系（`gradients`与`x`同形、`min`/`max`为rank-1且长度等于`x`最后一维C、`min`与`max`长度相等）与`x`的rank范围[1, 8]在Host InferShape阶段校验；`x`各维非空（`C >= 1`、元素总数 > 0）与`num_bits`取值范围在Tiling阶段校验（Tiling先于Kernel执行）。上述任一不满足时返回`GRAPH_FAILED`，非法输入不会下发到Kernel；数据类型由算子注册约束（仅FLOAT32）。
 - Nudge中间量（`scale`、`zp`、`nudgedMin`、`nudgedMax`）与反向梯度均在FLOAT32下求值；`scale`严格按`(max[c]-min[c])/(qMax-qMin)`的**单步Sub后单步Div**计算（与同仓前向算子`FakeQuantWithMinMaxVarsPerChannel`及TF参考模型一致），以保证与参考实现逐位一致。
 - 特殊取值（`min`/`max`/`x`/`gradients`取`±FLT_MAX`、`±inf`或次正规数等）不在本算子定义域内：该域下`scale`、`nudgedMin/nudgedMax`、掩码与通道和由FLOAT32中间结果（可能出现`±inf`/`NaN`）与设备浮点行为共同决定，本文档不承诺其取值，对此类输入的比较结果不作为精度判定依据。

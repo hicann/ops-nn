@@ -16,6 +16,7 @@
  */
 
 #include <cmath>
+#include <limits>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -84,7 +85,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 }
 
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
-                                         float& alpha, float& beta)
+                                         float& alpha, float& beta, float& maskLo, float& maskHi)
 {
     auto inputGrad = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
@@ -94,16 +95,49 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
     auto selfShape = EnsureNotScalar(inputSelf->GetStorageShape());
 
-    OP_CHECK_IF(gradShape.GetShapeSize() != selfShape.GetShapeSize(),
-                OP_LOGE(context, "HardSigmoidGrad: input shape mismatch: grad=%ld, self=%ld", gradShape.GetShapeSize(),
-                        selfShape.GetShapeSize()),
+    // FR-04 fix: compare both inputs dimension-by-dimension (rank first, then
+    // every dim) instead of only the element count, so equal-size / different-shape
+    // inputs like [2,3] vs [3,2] are rejected as the proto declaration requires
+    // (y has the same type and shape as input_x).
+    OP_CHECK_IF(gradShape.GetDimNum() != selfShape.GetDimNum(),
+                OP_LOGE(context, "HardSigmoidGrad: input rank mismatch: grad=%ld, self=%ld", gradShape.GetDimNum(),
+                        selfShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (int64_t dim = 0; dim < gradShape.GetDimNum(); ++dim) {
+        OP_CHECK_IF(gradShape.GetDim(dim) != selfShape.GetDim(dim),
+                    OP_LOGE(context, "HardSigmoidGrad: input shape mismatch at dim %ld: grad=%ld, self=%ld", dim,
+                            gradShape.GetDim(dim), selfShape.GetDim(dim)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // Explicit 0D-8D rank gate matching the proto declaration; the aclnn entry
+    // already rejects via OP_CHECK_MAX_DIM, keep the kernel entry consistent.
+    constexpr int64_t MAX_RANK = 8;
+    OP_CHECK_IF(gradShape.GetDimNum() > MAX_RANK,
+                OP_LOGE(context, "HardSigmoidGrad: input rank exceeds 0D-8D limit: %ld", gradShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
     totalLength = gradShape.GetShapeSize();
+    // Guard the framework overflow sentinel: a dim-product overflow surfaces as
+    // an invalid (negative) shape size and must be rejected here instead of
+    // flowing into blockFactor and silently skipping every core's compute.
+    // totalLength == 0 stays legal and takes the empty-tensor fast path below.
+    OP_CHECK_IF(totalLength < 0, OP_LOGE(context, "HardSigmoidGrad: invalid total element count: %ld", totalLength),
+                return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
+
+    // FR-05 fix: both inputs must share one dtype; the kernel instantiates a
+    // single template T for both, so mixed-width inputs would be reinterpreted
+    // element-wise and fail on device (VEC_ERROR) instead of being rejected here.
+    auto inputSelfDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputSelfDesc);
+    OP_CHECK_IF(dataType != inputSelfDesc->GetDataType(),
+                OP_LOGE(context, "HardSigmoidGrad: input dtype mismatch: grad=%d, self=%d",
+                        static_cast<int32_t>(dataType), static_cast<int32_t>(inputSelfDesc->GetDataType())),
+                return ge::GRAPH_FAILED);
 
     // Get alpha and beta from attrs (with defaults)
     const auto* alphaAttr = context->GetAttrs()->GetFloat(0);
@@ -111,15 +145,47 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     alpha = (alphaAttr != nullptr) ? static_cast<float>(*alphaAttr) : (1.0f / 6.0f);
     beta = (betaAttr != nullptr) ? static_cast<float>(*betaAttr) : 0.5f;
 
-    // SEC-2: validate attribute numerics. alpha must be finite & non-zero (alpha=0
-    // collapses HardSigmoid into a constant beta, output gradient is identically 0
-    // which is degenerate); beta must be finite. NaN/Inf would propagate through
-    // Muls/Adds/CompareScalar leading to undefined behavior.
-    OP_CHECK_IF(!std::isfinite(alpha) || std::fpclassify(alpha) == FP_ZERO,
-                OP_LOGE(context, "HardSigmoidGrad: alpha must be finite and nonzero, got %f", alpha),
+    // SEC-2: validate attribute numerics. NaN/Inf would propagate through
+    // Muls/Adds/CompareScalar leading to undefined behavior; alpha == 0 stays
+    // legal (the open interval degenerates to the full range and the result
+    // path naturally yields grad * 0 == 0).
+    OP_CHECK_IF(!std::isfinite(alpha), OP_LOGE(context, "HardSigmoidGrad: alpha must be finite, got %f", alpha),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!std::isfinite(beta), OP_LOGE(context, "HardSigmoidGrad: beta must be finite, got %f", beta),
                 return ge::GRAPH_FAILED);
+
+    // FR-02 fix: derive the open interval (maskLo, maskHi) equivalent to
+    // 0 < alpha*x + beta < 1 in double precision, so the kernel compares x
+    // directly against exact bounds (default ±3) instead of the fp32-rounded
+    // alpha*x+beta chain that flips the element just below 3.0.
+    double loD;
+    double hiD;
+    if (alpha == 0.0f) {
+        // Degenerate full range: the mask stays true and result = grad * 0 == 0.
+        maskLo = -std::numeric_limits<float>::max();
+        maskHi = std::numeric_limits<float>::max();
+        return ge::GRAPH_SUCCESS;
+    }
+    if (alpha > 0.0f) {
+        loD = -static_cast<double>(beta) / static_cast<double>(alpha);
+        hiD = (1.0 - static_cast<double>(beta)) / static_cast<double>(alpha);
+    } else {
+        loD = (1.0 - static_cast<double>(beta)) / static_cast<double>(alpha);
+        hiD = -static_cast<double>(beta) / static_cast<double>(alpha);
+    }
+    maskLo = static_cast<float>(loD);
+    maskHi = static_cast<float>(hiD);
+    // Align the float bounds' rounding direction with the strict kernel
+    // comparisons (self > maskLo, self < maskHi): widen outwards by one ulp
+    // only when the exact bound is not representable, so no representable
+    // in-range input is excluded. Exactly representable bounds (default ±3.0)
+    // stay untouched and keep the open-interval semantics.
+    if (static_cast<double>(maskHi) < hiD) {
+        maskHi = std::nextafterf(maskHi, std::numeric_limits<float>::infinity());
+    }
+    if (static_cast<double>(maskLo) > loD) {
+        maskLo = std::nextafterf(maskLo, -std::numeric_limits<float>::infinity());
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -168,7 +234,8 @@ static void GetBufferConfig(ge::DataType dataType, int64_t& bufferNum, int64_t& 
 // PERF-3: small workloads collapse to single core. API-2: ubFactor aligned on
 // max(ubBlockSize, 256B) so CompareScalar's alignedCount never overflows the tmpBuf.
 static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalLength, ge::DataType dataType,
-                                      uint64_t ubSize, int64_t coreNum, float alpha, float beta)
+                                      uint64_t ubSize, int64_t coreNum, float alpha, float beta, float maskLo,
+                                      float maskHi)
 {
     HardSigmoidGradTilingData* tiling = context->GetTilingData<HardSigmoidGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -201,6 +268,8 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
     tiling->totalLength = totalLength;
     tiling->alpha = alpha;
     tiling->beta = beta;
+    tiling->maskLo = maskLo;
+    tiling->maskHi = maskHi;
     context->SetBlockDim(usedCoreNum);
 
     uint32_t schMode = (dataType == ge::DT_BF16)    ? HARD_SIGMOID_GRAD_MODE_BFLOAT16 :
@@ -221,8 +290,8 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
 
     int64_t totalLength;
     ge::DataType dataType;
-    float alpha, beta;
-    OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta) != ge::GRAPH_SUCCESS,
+    float alpha, beta, maskLo, maskHi;
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta, maskLo, maskHi) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
@@ -231,7 +300,7 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
     if (totalLength == 0) {
         return SetEmptyTensorTiling(context, dataType);
     }
-    return FillTilingData(context, totalLength, dataType, ubSize, coreNum, alpha, beta);
+    return FillTilingData(context, totalLength, dataType, ubSize, coreNum, alpha, beta, maskLo, maskHi);
 }
 
 static ge::graphStatus TilingParseForHardSigmoidGrad([[maybe_unused]] gert::TilingParseContext* context)

@@ -18,10 +18,14 @@ TensorFlow `third_party` competitor is provided for cross-checking.
 
 Contract (README):
   - q_min = 1 if narrow_range else 0, q_max = 2^num_bits - 1,
-    scale = (max - min) / (q_max - q_min), nudged zero point = round(q_min - min/scale) clipped
-    to [q_min, q_max], nudged_min = (q_min - zp) * scale, nudged_max = (q_max - zp) * scale.
-  - degenerate channel (max <= min): pass gradients through, bp_min/bp_max = 0 (realised with
-    -inf/+inf nudged bounds, matching the forward/TF reference).
+    scale = (max - min) / (q_max - q_min), nudged zero point = round(q_min - min/scale)
+    (half away from zero, as TF std::round) clipped to [q_min, q_max],
+    nudged_min = (q_min - zp) * scale, nudged_max = (q_max - zp) * scale.
+  - only a both-zero channel (min == 0 and max == 0) passes gradients through with
+    bp_min/bp_max = 0 (TF special case); every other max <= min channel keeps the raw
+    nudge formula above: min == max != 0 collapses the nudged interval to [0, 0]
+    (mask keeps only x == 0) and max < min reverses it (mask empty), so the out-of-range
+    gradients still land in bp_min/bp_max.
   - backprops_wrt_x = gradients * mask, mask = (nudged_min <= x <= nudged_max); a NaN element
     yields mask = 0.
   - backprops_wrt_min = sum_{x < nudged_min} gradients, backprops_wrt_max = sum_{x > nudged_max}
@@ -49,7 +53,16 @@ __golden__ = {
 __spec__ = {
     "FakeQuantWithMinMaxVarsPerChannelGradient": (
         "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
-    )
+    ),
+    # snake_case / tf python API keys so the ttk e2e route (which resolves the
+    # golden by the CSV api_name) picks this golden up, aligned with the OA
+    # master __spec__ registration shape.
+    "fake_quant_with_min_max_vars_per_channel_gradient": (
+        "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
+    ),
+    "tf.quantization.fake_quant_with_min_max_vars_per_channel_gradient": (
+        "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
+    ),
 }
 
 
@@ -60,8 +73,16 @@ def _as_tensor(value):
 
 
 def fake_quant_with_min_max_vars_per_channel_gradient_golden(
-    gradients, x, min, max, *, num_bits=8, narrow_range=False, **kwargs
+    gradients, x, min, max, num_bits=8, narrow_range=False, **kwargs
 ):
+    # ttk e2e calls golden with 6 positional args; attributes absent from the case
+    # CSV arrive as the TF python-signature default None (the real op defaults live
+    # in the op registration: num_bits=8, narrow_range=False). Accept positional or
+    # keyword attrs and normalize None to the op defaults (issue #14).
+    if num_bits is None:
+        num_bits = 8
+    if narrow_range is None:
+        narrow_range = False
     import torch
 
     g = _as_tensor(gradients)
@@ -80,51 +101,58 @@ def fake_quant_with_min_max_vars_per_channel_gradient_golden(
     # Div, matching the forward FakeQuantWithMinMaxVarsPerChannel and the TF reference
     # (README「约束说明」). Extreme/special min/max (+/-FLT_MAX, +/-inf) are outside the
     # documented domain; this reference keeps the plain fp32 evaluation for them.
-    degenerate = mx <= mn
-    safe_min = torch.where(degenerate, torch.zeros_like(mn), mn)
-    safe_max = torch.where(degenerate, torch.ones_like(mx), mx)
-    scale = (safe_max - safe_min) / q_range
-    zp = q_min - safe_min / scale
-    nudged_zp = torch.clamp(torch.round(zp), float(q_min), float(q_max))
+    # No degeneracy short-circuit: TF's Nudge() applies the raw formula even when
+    # max <= min (scale <= 0 reverses/collapses the nudged interval and the masks follow);
+    # only min == 0 and max == 0 keeps the TF pass-through special case below.
+    scale = (mx - mn) / q_range
+    zp = q_min - mn / scale
+    # Round half away from zero (TF std::round), not torch.round (round-half-to-even):
+    # a zp_raw == n + 0.5 channel would otherwise shift the nudged interval by one scale.
+    rounded = torch.sign(zp) * torch.floor(torch.abs(zp) + 0.5)
+    nudged_zp = torch.clamp(rounded, float(q_min), float(q_max))
     nudged_min = (q_min - nudged_zp) * scale
     nudged_max = (q_max - nudged_zp) * scale
-    nudged_min = torch.where(
-        degenerate, torch.full_like(nudged_min, float("-inf")), nudged_min
-    )
-    nudged_max = torch.where(
-        degenerate, torch.full_like(nudged_max, float("inf")), nudged_max
-    )
 
     shape = [1] * x.dim()
     shape[-1] = channel
     n_min = nudged_min.reshape(shape)
     n_max = nudged_max.reshape(shape)
+    zero_both = ((mn == 0) & (mx == 0)).reshape(shape)
 
-    mask = ((x >= n_min) & (x <= n_max)).to(x.dtype)
-    bpx = g * mask
+    between = ((x >= n_min) & (x <= n_max)).to(x.dtype)
+    # Known benign divergence from the kernel's sentinel implementation for
+    # zero_both channels: TF (and this reference) propagate bpx = g even when x
+    # is NaN, while the kernel's [-inf, +inf] nudged-interval sentinel yields 0
+    # for NaN comparisons (documented in the regbase kernel comment). Test data
+    # does not cover NaN in this channel.
+    bpx = torch.where(zero_both, g, g * between)
 
-    min_mask = (x < n_min).to(x.dtype)
-    max_mask = (x > n_max).to(x.dtype)
-    not_deg = (~degenerate).to(x.dtype)
+    min_mask = ((x < n_min) & ~zero_both).to(x.dtype)
+    max_mask = ((x > n_max) & ~zero_both).to(x.dtype)
+    # Both-zero channels contribute exactly zero (TF short-circuit): a plain g*mask would
+    # give inf*0=NaN for +/-inf gradients and pollute the reductions.
+    zero_g = torch.zeros_like(g)
+    min_contrib = torch.where(zero_both, zero_g, g * min_mask)
+    max_contrib = torch.where(zero_both, zero_g, g * max_mask)
     if x.dim() > 1:
         dims = tuple(range(x.dim() - 1))
-        bpm = (g * min_mask).to(torch.float64).sum(dim=dims).to(x.dtype)
-        bpmx = (g * max_mask).to(torch.float64).sum(dim=dims).to(x.dtype)
+        bpm = min_contrib.to(torch.float64).sum(dim=dims).to(x.dtype)
+        bpmx = max_contrib.to(torch.float64).sum(dim=dims).to(x.dtype)
     else:
-        bpm = g * min_mask
-        bpmx = g * max_mask
+        bpm = min_contrib
+        bpmx = max_contrib
 
     return [
         (bpx * 1.0).numpy(),
-        (bpm * not_deg).numpy(),
-        (bpmx * not_deg).numpy(),
+        bpm.numpy(),
+        bpmx.numpy(),
     ]
 
 
 class _TfCompetitor:
-    def __init__(self, *, num_bits=8, narrow_range=False, **kwargs):
-        self.num_bits = int(num_bits)
-        self.narrow_range = bool(narrow_range)
+    def __init__(self, num_bits=None, narrow_range=None, **kwargs):
+        self.num_bits = 8 if num_bits is None else int(num_bits)
+        self.narrow_range = False if narrow_range is None else bool(narrow_range)
 
     def __call__(self, gradients, x, min, max, **kwargs):
         import tensorflow as tf
@@ -148,10 +176,14 @@ class _TfCompetitor:
 class FakeQuantWithMinMaxVarsPerChannelGradientTestSpec:
     """TestSpec for the newer TTK spec convention (Kernel/GEIR route)."""
 
-    def golden(gradients, x, min, max, *, num_bits=8, narrow_range=False, **kwargs):
+    def golden(gradients, x, min, max, num_bits=8, narrow_range=False, **kwargs):
         return fake_quant_with_min_max_vars_per_channel_gradient_golden(
             gradients, x, min, max, num_bits=num_bits, narrow_range=narrow_range
         )
 
     third_party = {"tf": _TfCompetitor}
-    tolerance = {"float32": {"standard": "mix_tolerance"}}
+    # Tolerance per spec.yaml numerical_tolerance (rtol/atol 1e-5, max_relative):
+    # tightens the mix_tolerance table values for this quantization compute operator.
+    tolerance = {
+        "float32": {"standard": "mix_tolerance", "rtol": 1.0e-5, "atol": 1.0e-5}
+    }

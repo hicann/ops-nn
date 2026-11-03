@@ -19,6 +19,12 @@ struct HardSigmoidGradTilingData {
     int64_t ubFactor = 0;      // elements per UB tile
     float alpha = 1.0f / 6.0f; // alpha parameter (matches PyTorch hardsigmoid)
     float beta = 0.5f;         // beta parameter
+    // Open interval (maskLo, maskHi) equivalent to 0 < alpha*x + beta < 1,
+    // computed in double on the host so the kernel compares x directly against
+    // exact bounds (default ±3) instead of the fp32-rounded alpha*x+beta chain.
+    // alpha == 0 degenerates to the full float range (result is grad*0 == 0).
+    float maskLo = -3.0f;
+    float maskHi = 3.0f;
 };
 
 #endif
