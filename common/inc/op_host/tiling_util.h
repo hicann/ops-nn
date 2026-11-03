@@ -49,6 +49,27 @@ static inline bool IsRegbaseSocVersion(const gert::TilingContext* context)
     return IsRegbaseNpuArch(npuArch);
 }
 
+static bool IsSimtSupportedNpuArch(NpuArch npuArch)
+{
+    const static std::set<NpuArch> simtSupportedNpuArchs = {Ops::Base::DAV_3510, Ops::Base::DAV_5102,
+                                                            Ops::Base::DAV_9201, Ops::Base::DAV_9202};
+    return simtSupportedNpuArchs.find(npuArch) != simtSupportedNpuArchs.end();
+}
+
+static inline bool IsSimtSupported(const gert::TilingParseContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    return IsSimtSupportedNpuArch(npuArch);
+}
+
+static inline bool IsSimtSupported(const gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    return IsSimtSupportedNpuArch(npuArch);
+}
+
 inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
 {
     if (inShape.IsScalar()) {

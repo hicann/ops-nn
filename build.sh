@@ -398,7 +398,7 @@ usage() {
   echo "                     Example: --ccache=off to disable ccache"
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b"
-	echo "    --soc supported prefixes: [ascend910b ascend910_93 ascend950 ascend350 ascend310p kirinx90 kirin9030 mc62 ascend5162a], case-insensitive"
+	echo "    --soc supported prefixes: [ascend910b ascend910_93 ascend950 ascend350 ascend310p kirinx90 kirin9030 mc62 ascend5162], case-insensitive"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to custom"
   echo "    --tfplugin build optf_plugin_nn.so"
   echo "    --onnxplugin build oponnx_plugin_nn.so"
