@@ -1538,3 +1538,51 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_conv_leakyrelu_case)
                          false, 1,               // enableHf32Mode, groups
                          "SPECIFIC", 0, "NCHW"); // errorCaseStatus, format
 }
+
+TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_conv2d_dma_nchw_case)
+{
+    ExtendConv2DTestCase({1, 16, 1, 34}, {1, 3, 3}, {257, 257, 0, 0}, {1, 1}, {1, 1}, ge::DT_INT8, ge::DT_FLOAT16,
+                         ge::DT_FLOAT16,         // inDataType, out0DataType, out1DataType
+                         true, false, false,     // isHasBias, isHasScale0, isHasScale1,
+                         true, false,            // isHasReluWeight0, isHasReluWeight1
+                         false, false,           // isHasClipValue0, isHasClipValue1
+                         true, false, false,     // enableRelu0, enableRelu1, dualOutput
+                         false, 1,               // enableHf32Mode, groups
+                         "SPECIFIC", 0, "NCHW"); // errorCaseStatus, format
+}
+
+TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_conv2d_dma_nhwc_case)
+{
+    ExtendConv2DTestCase({1, 16, 1, 34}, {1, 3, 3}, {257, 257, 0, 0}, {1, 1}, {1, 1}, ge::DT_INT8, ge::DT_FLOAT16,
+                         ge::DT_FLOAT16,         // inDataType, out0DataType, out1DataType
+                         true, false, false,     // isHasBias, isHasScale0, isHasScale1,
+                         true, false,            // isHasReluWeight0, isHasReluWeight1
+                         false, false,           // isHasClipValue0, isHasClipValue1
+                         true, false, false,     // enableRelu0, enableRelu1, dualOutput
+                         false, 1,               // enableHf32Mode, groups
+                         "SPECIFIC", 0, "NHWC"); // errorCaseStatus, format
+}
+
+TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_conv2d_dma_nchw_group_case)
+{
+    ExtendConv2DTestCase({1, 16, 1, 34}, {2, 3, 3}, {257, 257, 0, 0}, {1, 1}, {1, 1}, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                         ge::DT_FLOAT16,         // inDataType, out0DataType, out1DataType
+                         true, false, false,     // isHasBias, isHasScale0, isHasScale1,
+                         true, false,            // isHasReluWeight0, isHasReluWeight1
+                         false, false,           // isHasClipValue0, isHasClipValue1
+                         true, false, false,     // enableRelu0, enableRelu1, dualOutput
+                         false, 2,               // enableHf32Mode, groups
+                         "SPECIFIC", 0, "NCHW"); // errorCaseStatus, format
+}
+
+TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_conv2d_dma_nhwc_group_case)
+{
+    ExtendConv2DTestCase({1, 16, 1, 34}, {2, 3, 3}, {257, 257, 0, 0}, {1, 1}, {1, 1}, ge::DT_INT8, ge::DT_FLOAT16,
+                         ge::DT_FLOAT16,         // inDataType, out0DataType, out1DataType
+                         true, false, false,     // isHasBias, isHasScale0, isHasScale1,
+                         true, false,            // isHasReluWeight0, isHasReluWeight1
+                         false, false,           // isHasClipValue0, isHasClipValue1
+                         true, false, false,     // enableRelu0, enableRelu1, dualOutput
+                         false, 2,               // enableHf32Mode, groups
+                         "SPECIFIC", 0, "NHWC"); // errorCaseStatus, format
+}

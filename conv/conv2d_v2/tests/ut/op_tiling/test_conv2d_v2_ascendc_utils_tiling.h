@@ -54,6 +54,7 @@ constexpr uint32_t MEM_SIZE_300K = 307200;
 // 基本块相关常量
 constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_64 = 64;
 constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_128 = 128;
+constexpr uint32_t BASICBLOCK_BOUNDARY_VALUE_256 = 256;
 constexpr uint32_t BASICBLOCK_INIT_VALUE_64 = 64;
 constexpr uint32_t BASICBLOCK_INIT_VALUE_128 = 128;
 constexpr uint32_t BASICBLOCK_INIT_VALUE_256 = 256;

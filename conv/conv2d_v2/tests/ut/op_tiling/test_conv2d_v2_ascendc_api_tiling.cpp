@@ -42,6 +42,20 @@ PlatformInfo SetPlatFormInfo()
     return platformInfo;
 }
 
+PlatformInfo SetPlatFormInfo_960DT()
+{
+    PlatformInfo platformInfo;
+    platformInfo.npuArch = NpuArch::DAV_9201;
+    platformInfo.l1Size = 524288;
+    platformInfo.l0ASize = 65536;
+    platformInfo.l0BSize = 65536;
+    platformInfo.l0CSize = 262144;
+    platformInfo.ubSize = 385024;
+    platformInfo.btSize = 4096;
+    platformInfo.fbSize = 2048;
+    return platformInfo;
+}
+
 void SetDtype(ConvTilingBase& testTiling, ConvDtype fmapDtype, ConvDtype weightDtype,
               ConvDtype biasDtype = ConvDtype::FLOAT16, ConvDtype scaleType = ConvDtype::INT64)
 {
@@ -2304,4 +2318,145 @@ TEST_F(TestConv2dTiling, test_CheckL0DoubleBuffer)
     algo.l1TilingCalc.kBL1MaxSize = testTiling.l0TilingInfo.kL0;
     algo.l1Flags.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     algo.CheckL0DoubleBuffer();
+}
+
+TEST_F(TestConv2dTiling, test_conv2d_check_format_soc_960DT)
+{
+    Conv2dTiling testTiling(SetPlatFormInfo_960DT());
+    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
+    testTiling.descInfo.fMapType.format = ConvFormat::NCHW;
+    auto ret = testTiling.CheckFormat();
+    EXPECT_EQ(ret, true);
+
+    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
+    testTiling.descInfo.fMapType.format = ConvFormat::NHWC;
+    ret = testTiling.CheckFormat();
+    EXPECT_EQ(ret, false);
+}
+
+TEST_F(TestConv2dTiling, test_conv2d_GetBandWidthCof_soc_960DT)
+{
+    PlatformInfo platformInfo = SetPlatFormInfo_960DT();
+    Conv2dTiling testTiling(platformInfo);
+    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
+    auto res = testTiling.GetBandWidthCof();
+    EXPECT_EQ(res, 1);
+
+    testTiling.descInfo.weightType.format = ConvFormat::NCHW;
+    res = testTiling.GetBandWidthCof();
+    EXPECT_EQ(res, 4);
+}
+
+TEST_F(TestConv2dTiling, test_conv2d_hwmode_weight_nhwc_soc_960DT)
+{
+    uint64_t orgCi = 16;
+    uint64_t orgHi = 1;
+    uint64_t orgWi = 1;
+    uint64_t orgCo = 16;
+    uint64_t orgKh = 1;
+    uint64_t orgKw = 1;
+    uint64_t orgHo = orgHi;
+    uint64_t orgWo = orgWi;
+    Conv2dTiling testTiling(SetPlatFormInfo_960DT());
+
+    testTiling.SetOrgWeightShape(orgCo, orgKh, orgKw);
+    testTiling.SetOrgFmapShape(orgCi, orgHi, orgWi);
+    testTiling.SetSingleWeightShape(orgCi, orgKh, orgKw);
+    testTiling.SetSingleOutputShape(orgCo, orgHo, orgWo, 1);
+    testTiling.SetOutputOrder(0);
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NHWC, ConvDtype::FLOAT16);
+    testTiling.SetFmapType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
+    testTiling.SetGroups(1);
+
+    optiling::Conv2DTilingData tilingData;
+    int64_t ret = testTiling.GetTiling(tilingData);
+    EXPECT_EQ(ret, 0);
+}
+
+TEST_F(TestConv2dTiling, test_conv2d_mmode_weight_nhwc_soc_960DT)
+{
+    uint64_t orgCi = 16;
+    uint64_t orgHi = 1;
+    uint64_t orgWi = 1;
+    uint64_t orgCo = 16;
+    uint64_t orgKh = 1;
+    uint64_t orgKw = 1;
+    uint64_t orgHo = orgHi;
+    uint64_t orgWo = orgWi;
+    Conv2dTiling testTiling(SetPlatFormInfo_960DT());
+
+    testTiling.SetOrgWeightShape(orgCo, orgKh, orgKw);
+    testTiling.SetOrgFmapShape(orgCi, orgHi, orgWi);
+    testTiling.SetSingleWeightShape(orgCi, orgKh, orgKw);
+    testTiling.SetSingleOutputShape(orgCo, orgHo * orgWo, 1);
+    testTiling.SetOutputOrder(1);
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NHWC, ConvDtype::FLOAT16);
+    testTiling.SetFmapType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
+    testTiling.SetGroups(1);
+
+    optiling::Conv2DTilingData tilingData;
+    int64_t ret = testTiling.GetTiling(tilingData);
+    EXPECT_EQ(ret, 0);
+}
+
+TEST_F(TestConv2dTiling, test_algo_BB_GetTiling_weight_nhwc_960DT)
+{
+    Conv2dTiling testTiling(SetPlatFormInfo_960DT());
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetFmapType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCHW, ConvDtype::FLOAT16);
+    testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
+    testTiling.InferCubeInfo();
+    testTiling.shapeInfo.orgCo = 128;
+    testTiling.shapeInfo.orgHi = 256;
+    testTiling.shapeInfo.orgWi = 256;
+    testTiling.shapeInfo.orgCi = 32;
+    testTiling.shapeInfo.singleCi = 32;
+    testTiling.shapeInfo.orgkH = 3;
+    testTiling.shapeInfo.orgkW = 3;
+    testTiling.shapeInfo.enlarge = 2;
+    testTiling.shapeInfo.orgHo = 16;
+    testTiling.shapeInfo.orgWo = 16;
+    testTiling.shapeInfo.singleCi = 32;
+    testTiling.shapeInfo.singlekH = 3;
+    testTiling.shapeInfo.singlekW = 3;
+    testTiling.attrInfo.dilationH = 1;
+    testTiling.attrInfo.dilationW = 1;
+    testTiling.attrInfo.padLeft = 1;
+    testTiling.attrInfo.padRight = 1;
+    testTiling.attrInfo.padTop = 1;
+    testTiling.attrInfo.padBottom = 1;
+    testTiling.attrInfo.strideH = 1;
+    testTiling.attrInfo.strideW = 1;
+    testTiling.attrInfo.groups = 1;
+    testTiling.optGroupFlag = false;
+    Conv2DBasicBlockInfo conv2DBasicBlockInfo;
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
+    algo->availableL1Size = 512 * 1024;
+
+    conv2DBasicBlockInfo.fDim = 8;
+    conv2DBasicBlockInfo.mDim = 4;
+    conv2DBasicBlockInfo.nDim = 2;
+    conv2DBasicBlockInfo.batchDim = 1;
+    conv2DBasicBlockInfo.groupDim = 1;
+    conv2DBasicBlockInfo.aicoreNum = 32;
+    conv2DBasicBlockInfo.mIn = 3 * 1024;
+    conv2DBasicBlockInfo.mTile = 256;
+    conv2DBasicBlockInfo.nTile = 256;
+    conv2DBasicBlockInfo.mCut = 1;
+    conv2DBasicBlockInfo.nCut = 1;
+    conv2DBasicBlockInfo.batch = 4;
+    conv2DBasicBlockInfo.iterateMNOrder = conv_tiling::IterateMNOrder::ITER_M_FST;
+
+    bool ret = false;
+    optiling::Conv2DTilingData tilingData;
+    testTiling.shapeInfo.singleM = 256 * 256 / 4;
+    testTiling.shapeInfo.singleCo = 64;
+    auto apiStrategy = std::make_shared<conv_tiling::ConvAPIStrategy>();
+    ret = testTiling.GetTiling(conv2DBasicBlockInfo, tilingData, apiStrategy);
+    EXPECT_EQ(ret, true);
 }

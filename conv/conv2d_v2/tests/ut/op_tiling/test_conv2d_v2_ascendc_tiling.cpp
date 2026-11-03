@@ -461,6 +461,35 @@ void GetInitBasicBlockMN(TilingParam& tilingData, uint64_t& basicBlockM, uint64_
     }
 }
 
+void Get512InitBasicBlockMN(TilingParam& tilingData, uint64_t& basicBlockM, uint64_t& basicBlockN)
+{
+    uint64_t howo = tilingData.hout * tilingData.wout;
+    uint64_t khkw = tilingData.kh * tilingData.kw;
+    uint64_t shsw = tilingData.strideH * tilingData.strideW;
+    if (tilingData.cout <= BASICBLOCK_BOUNDARY_VALUE_128) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_1024;
+        basicBlockN = BASICBLOCK_INIT_VALUE_128;
+    } else if (tilingData.cout > BASICBLOCK_BOUNDARY_VALUE_128 && tilingData.cout <= BASICBLOCK_BOUNDARY_VALUE_256) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_512;
+        basicBlockN = BASICBLOCK_INIT_VALUE_256;
+    } else if (howo <= BASICBLOCK_BOUNDARY_VALUE_128) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_128;
+        basicBlockN = BASICBLOCK_INIT_VALUE_1024;
+    } else if (howo > BASICBLOCK_BOUNDARY_VALUE_128 && howo <= BASICBLOCK_BOUNDARY_VALUE_256) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_256;
+        basicBlockN = BASICBLOCK_INIT_VALUE_512;
+    } else if (khkw > shsw) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_512;
+        basicBlockN = BASICBLOCK_INIT_VALUE_256;
+    } else if (khkw < shsw) {
+        basicBlockM = BASICBLOCK_INIT_VALUE_256;
+        basicBlockN = BASICBLOCK_INIT_VALUE_512;
+    } else {
+        basicBlockM = BASICBLOCK_INIT_VALUE_256;
+        basicBlockN = BASICBLOCK_INIT_VALUE_256;
+    }
+}
+
 bool CmpFirstAdjustMnTile(TilingParam& tilingData, int64_t& mTile, int64_t& nTile, BasicParams basicParams,
                           vector<int64_t> pads)
 {
@@ -518,21 +547,25 @@ bool CmpFirstAdjustMnTile(TilingParam& tilingData, int64_t& mTile, int64_t& nTil
 }
 
 void SelectMmodeAlgorithm(TilingParam& tilingData, bool& mBasicBlockModeFlag, DtypeSize dtypeSize, vector<int64_t> pads,
-                          bool hasScale)
+                          bool hasScale, optiling::conv_ops_tiling::ConvTilingParseInfo& compile_info)
 {
     uint32_t featuremapDtyeSize = dtypeSize.fMapDtypeSize;
     bool hasBias = tilingData.hasBias;
     mBasicBlockModeFlag = false;
     uint64_t basicBlockM = 0;
     uint64_t basicBlockN = 0;
-    GetInitBasicBlockMN(tilingData, basicBlockM, basicBlockN);
+    if (compile_info.l0cSize == MEM_SIZE_512K) {
+        Get512InitBasicBlockMN(tilingData, basicBlockM, basicBlockN);
+    } else {
+        GetInitBasicBlockMN(tilingData, basicBlockM, basicBlockN);
+    }
     uint64_t mCut = ConvCeilDiv(tilingData.wout * tilingData.hout, basicBlockM);
     uint64_t nCut = ConvCeilDiv(tilingData.cout, basicBlockN);
     uint64_t group = tilingData.groups;
     if (tilingData.groupOpt != 0) {
         group = tilingData.groupOpt;
     }
-    if (mCut * nCut * tilingData.batch * group <= AIC_NUM) {
+    if (mCut * nCut * tilingData.batch * group <= compile_info.aicoreNum) {
         return;
     }
     int64_t biasSize = 0;
@@ -664,7 +697,7 @@ void CheckGroupsTiling(TilingParam& tilingData, uint64_t tilingKey)
 }
 
 bool CheckValidTilingDataPartOne(TilingParam& tilingData, DtypeSize dtypeSize, std::vector<int64_t> pads, bool hasScale,
-                                 uint64_t tilingKey)
+                                 uint64_t tilingKey, optiling::conv_ops_tiling::ConvTilingParseInfo& compile_info)
 {
     uint64_t k0 = CUBE_C0_SIZE / dtypeSize.fMapDtypeSize;
     bool hasBias = tilingData.hasBias;
@@ -690,7 +723,7 @@ bool CheckValidTilingDataPartOne(TilingParam& tilingData, DtypeSize dtypeSize, s
     int64_t padBottom = pads[1];
     int32_t splitModeFromCmp = GetSplitMode(tilingData, featuremapDtyeSize, weightDtyeSize, hasScale, isC04Flag);
     if (outputOrder == 1) {
-        SelectMmodeAlgorithm(tilingData, mBasicBlockModeFlag, dtypeSize, pads, hasScale);
+        SelectMmodeAlgorithm(tilingData, mBasicBlockModeFlag, dtypeSize, pads, hasScale, compile_info);
     }
     if (mBasicBlockModeFlag) {
         if (tilingData.hoL0 >= tilingData.wout * tilingData.hout) {
@@ -703,7 +736,7 @@ bool CheckValidTilingDataPartOne(TilingParam& tilingData, DtypeSize dtypeSize, s
     EXPECT_LE(CalcUsdL1Size(tilingData, dtypeSize, padCompensationValue, hasScale, isC04Flag), MEM_SIZE_512K);
     EXPECT_LE(CalcUsdL0ASize(tilingData, outputOrder, featuremapDtyeSize, pbAL0), MEM_SIZE_64K);
     EXPECT_LE(CalcUsdL0BSize(tilingData, weightDtyeSize, pbBL0), MEM_SIZE_64K);
-    EXPECT_LE(CalcUsdL0CSize(tilingData, outputOrder, pbCL0), MEM_SIZE_256K);
+    EXPECT_LE(CalcUsdL0CSize(tilingData, outputOrder, pbCL0), compile_info.l0cSize);
     return mBasicBlockModeFlag;
 }
 
@@ -762,9 +795,10 @@ void CheckMModeTilingDataValidForConv2d(TilingParam& tilingData, DtypeSize dtype
 }
 
 void CheckValidTilingData(TilingParam& tilingData, DtypeSize dtypeSize, std::vector<int64_t> pads, bool hasScale,
-                          uint64_t tilingKey)
+                          uint64_t tilingKey, optiling::conv_ops_tiling::ConvTilingParseInfo& compile_info)
 {
-    bool mBasicBlockModeFlag = CheckValidTilingDataPartOne(tilingData, dtypeSize, pads, hasScale, tilingKey);
+    bool mBasicBlockModeFlag = CheckValidTilingDataPartOne(tilingData, dtypeSize, pads, hasScale, tilingKey,
+                                                           compile_info);
     uint64_t k0 = CUBE_C0_SIZE / dtypeSize.fMapDtypeSize;
     bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
     bool dma_flag = (tilingKey & 0x2000) >> NUM_13;
@@ -837,6 +871,7 @@ struct Conv2DParams {
     std::string padMode;
     bool isErrorCaseFlag;
     std::string format;
+    std::string npuArch = "3510";
 };
 
 void Conv2DTestCase(const Conv2DParams& params)
@@ -913,15 +948,30 @@ void Conv2DTestCase(const Conv2DParams& params)
         "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
         "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
         "core_type_list": "CubeCore,VectorCore"}})";
+    if (params.npuArch == "9201") {
+        compile_info_string = R"({"hardware_info":
+            {"BT_SIZE": 0, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false,
+            "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true,
+            "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 196608,
+            "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
+            "BT_SIZE": 4096, "L0C_SIZE": 524288, "CORE_NUM": 80}})";
+    }
     std::map<std::string, std::string> soc_infos, aicore_spec, intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    std::map<std::string, std::string> soc_version_infos = {{"NpuArch", "3510"}};
+    std::map<std::string, std::string> soc_version_infos = {{"NpuArch", params.npuArch}};
     aicore_spec.insert({"fb0_size", "4096"});
 
     // Initialize platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
+    if (params.npuArch == "9201") {
+        compile_info.aicoreNum = 80;
+        compile_info.l0cSize = MEM_SIZE_512K;
+    } else {
+        compile_info.aicoreNum = AIC_NUM;
+        compile_info.l0cSize = MEM_SIZE_256K;
+    }
 
     // Create tiling data and workspace
     auto tilingDataPtr = gert::TilingData::CreateCap(MEM_SIZE_4K);
@@ -988,7 +1038,8 @@ void Conv2DTestCase(const Conv2DParams& params)
     // (computed from attrs) and on ConvTilingCache-hit runs (restored from snapshot)
     uint8_t expectedHf32 = (params.dtype == ge::DT_FLOAT && params.enableHf32Mode) ? 1 : 0;
     EXPECT_EQ(tilingParam.hf32Enable, expectedHf32) << "Case [" << params.fmShape.size() << "] hf32Enable mismatch";
-    EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim, AIC_NUM);
+    EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim,
+              compile_info.aicoreNum);
     EXPECT_GE(tilingParam.batchDim, 1);
     EXPECT_GE(tilingParam.hoDim, 1);
     EXPECT_GE(tilingParam.nDim, 1);
@@ -997,7 +1048,7 @@ void Conv2DTestCase(const Conv2DParams& params)
     dtypeSize.fMapDtypeSize = featuremapDtyeSize;
     dtypeSize.weightDtypeSize = weightDtyeSize;
     if (tilingParam.batchDim > 0 && tilingParam.hoDim > 0 && tilingParam.nDim > 0 && tilingParam.groupDim > 0) {
-        CheckValidTilingData(tilingParam, dtypeSize, padsVec, hasScale, tilingKey);
+        CheckValidTilingData(tilingParam, dtypeSize, padsVec, hasScale, tilingKey, compile_info);
     }
 }
 } // namespace
@@ -7634,4 +7685,605 @@ INSTANTIATE_TEST_CASE_P(NewConv2dCases, Conv2dParameterizedTest,
                                                        1,
                                                        "SPECIFIC",
                                                        false,
-                                                       "NCHW"}));
+                                                       "NCHW"},
+                                          Conv2DParams{{1, 40, 29, 595},
+                                                       {80, 11, 11},
+                                                       {4, 4, 5, 5},
+                                                       {43, 15},
+                                                       {1, 44},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       2,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW"},
+                                          Conv2DParams{{1, 32, 512, 512},
+                                                       {128, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{4, 256, 69, 92},
+                                                       {512, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 512, 52, 72},
+                                                       {512, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 320, 104, 152},
+                                                       {320, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 320, 128, 128},
+                                                       {320, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{5, 640, 35, 35},
+                                                       {1280, 4, 4},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{5, 640, 32, 32},
+                                                       {1280, 1, 1},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{9, 960, 32, 32},
+                                                       {1536, 1, 1},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{6, 256, 64, 64},
+                                                       {256, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{36, 32, 32, 32},
+                                                       {64, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 128, 20, 27},
+                                                       {64, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 64, 64},
+                                                       {160, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{18, 1, 275, 80},
+                                                       {256, 3, 3},
+                                                       {0, 0, 0, 0},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{8, 1056, 29, 29},
+                                                       {1056, 5, 5},
+                                                       {2, 2, 2, 2},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1056,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 128, 20, 27},
+                                                       {64, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 64, 64},
+                                                       {160, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 256, 32, 32},
+                                                       {512, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 512, 20, 20},
+                                                       {1024, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 256, 32, 32},
+                                                       {256, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{6, 256, 64, 64},
+                                                       {512, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{6, 512, 32, 32},
+                                                       {1024, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_BF16,
+                                                       0,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{2, 128, 88, 160},
+                                                       {128, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       2,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 144, 1, 128},
+                                                       {144, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 144, 1, 256},
+                                                       {144, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 144, 1, 300},
+                                                       {144, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{1, 144, 1, 32},
+                                                       {144, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{10, 128, 12, 32},
+                                                       {128, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT,
+                                                       1,
+                                                       0,
+                                                       true,
+                                                       2,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{4, 256, 41, 55},
+                                                       {512, 1, 1},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{4, 512, 41, 55},
+                                                       {512, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{8, 512, 65, 65},
+                                                       {512, 3, 3},
+                                                       {0, 0, 0, 0},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{5, 512, 65, 65},
+                                                       {512, 3, 3},
+                                                       {0, 0, 0, 0},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{8, 512, 65, 65},
+                                                       {512, 3, 3},
+                                                       {0, 0, 0, 0},
+                                                       {2, 2},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 320, 104, 152},
+                                                       {4, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 4, 128, 128},
+                                                       {320, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 4, 144, 112},
+                                                       {320, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 4, 96, 160},
+                                                       {320, 3, 3},
+                                                       {1, 1, 1, 1},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NHWC",
+                                                       "9201"},
+                                          Conv2DParams{{4, 640, 32, 32},
+                                                       {1280, 1, 1},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{4, 640, 32, 32},
+                                                       {1280, 1, 1},
+                                                       {0, 0, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 1, 34},
+                                                       {2, 3, 3},
+                                                       {257, 257, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 1, 34},
+                                                       {2, 3, 3},
+                                                       {257, 257, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       1,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 1, 34},
+                                                       {2, 3, 3},
+                                                       {257, 257, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       2,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"},
+                                          Conv2DParams{{1, 16, 1, 34},
+                                                       {2, 3, 3},
+                                                       {257, 257, 0, 0},
+                                                       {1, 1},
+                                                       {1, 1},
+                                                       ge::DT_FLOAT16,
+                                                       1,
+                                                       0,
+                                                       false,
+                                                       2,
+                                                       "SPECIFIC",
+                                                       false,
+                                                       "NCHW",
+                                                       "9201"}));

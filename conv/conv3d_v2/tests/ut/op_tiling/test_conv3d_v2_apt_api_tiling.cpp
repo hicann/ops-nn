@@ -21,10 +21,15 @@
 #include "../../../../common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_HWmode.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_BBmode.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv3d_dimension_strategy.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv_basic_block.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv3d_basic_block_strategy.h"
 
 using namespace std;
 using namespace conv_tiling;
 using namespace conv_tiling_algo_m;
+using namespace conv_tiling_algo_bb;
 
 namespace {
 // 硬件相关常量
@@ -82,6 +87,20 @@ PlatformInfo SetPlatFormInfo()
     platformInfo.btSize = MEM_SIZE_4K;
     platformInfo.fbSize = MEM_SIZE_4K;
     platformInfo.aivPerAic = NUM_2;
+    return platformInfo;
+}
+
+PlatformInfo SetPlatFormInfo_960DT()
+{
+    PlatformInfo platformInfo;
+    platformInfo.npuArch = NpuArch::DAV_9201;
+    platformInfo.l1Size = 524288;
+    platformInfo.l0ASize = 65536;
+    platformInfo.l0BSize = 65536;
+    platformInfo.l0CSize = 262144;
+    platformInfo.ubSize = 385024;
+    platformInfo.btSize = 4096;
+    platformInfo.fbSize = 2048;
     return platformInfo;
 }
 
@@ -4528,4 +4547,118 @@ TEST_F(TestConv3dV2Tiling, NetWorks_ND2NZ_limits)
 
     int64_t ret1 = testTiling.GetTiling(tilingData);
     EXPECT_EQ(ret1, -1);
+}
+
+TEST_F(TestConv3dV2Tiling, BBmode_FullPipeline_kd3)
+{
+    constexpr uint32_t AIC_NUM_9201 = 64;
+    PlatformInfo platform960DT = SetPlatFormInfo_960DT();
+    conv_tiling::Conv3dTiling testTiling(platform960DT);
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+    testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+    testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
+    testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::BFLOAT16);
+    testTiling.InferCubeInfo();
+
+    testTiling.shapeInfo.orgCo = 128;
+    testTiling.shapeInfo.orgCi = 64;
+    testTiling.shapeInfo.orgHi = 32;
+    testTiling.shapeInfo.orgWi = 32;
+    testTiling.shapeInfo.orgDi = 32;
+    testTiling.shapeInfo.orgkH = 3;
+    testTiling.shapeInfo.orgkW = 3;
+    testTiling.shapeInfo.orgkD = 3;
+    testTiling.shapeInfo.singlekH = 3;
+    testTiling.shapeInfo.singlekW = 3;
+    testTiling.shapeInfo.singlekD = 3;
+    testTiling.shapeInfo.singleCi = 64;
+    testTiling.shapeInfo.orgHo = 30;
+    testTiling.shapeInfo.orgWo = 30;
+    testTiling.shapeInfo.orgDo = 30;
+    testTiling.shapeInfo.singleM = 30 * 30;
+    testTiling.shapeInfo.singleCo = 128;
+    testTiling.attrInfo.strideH = 1;
+    testTiling.attrInfo.strideW = 1;
+    testTiling.attrInfo.strideD = 1;
+    testTiling.attrInfo.dilationH = 1;
+    testTiling.attrInfo.dilationW = 1;
+    testTiling.attrInfo.dilationD = 1;
+    testTiling.attrInfo.groups = 1;
+    testTiling.hasBias = false;
+    testTiling.enableInnerBatch = false;
+    testTiling.innerBatch = 1;
+    testTiling.optGroupFlag = false;
+
+    // Phase 1: ConvBasicBlock
+    ConvAscendcShapesInfo bbShapeInfo;
+    bbShapeInfo.batch = 2;
+    bbShapeInfo.ci = 64;
+    bbShapeInfo.hi = 32;
+    bbShapeInfo.wi = 32;
+    bbShapeInfo.di = 32;
+    bbShapeInfo.co = 128;
+    bbShapeInfo.kh = 3;
+    bbShapeInfo.kw = 3;
+    bbShapeInfo.kd = 3;
+    bbShapeInfo.ho = 30;
+    bbShapeInfo.wo = 30;
+    bbShapeInfo.dout = 30;
+    ConvAscendcAttrInfo bbAttrInfo;
+    bbAttrInfo.strideH = 1;
+    bbAttrInfo.strideW = 1;
+    bbAttrInfo.strideD = 1;
+    bbAttrInfo.dilationH = 1;
+    bbAttrInfo.dilationW = 1;
+    bbAttrInfo.dilationD = 1;
+    bbAttrInfo.groups = 1;
+    ConvAscendcDescInfo bbDescInfo;
+    bbDescInfo.weightDtype = ge::DT_BF16;
+    bbDescInfo.fMapDtype = ge::DT_BF16;
+    bbDescInfo.biasDtype = ge::DT_BF16;
+    bbDescInfo.outDtype = ge::DT_BF16;
+    ConvOpsConstParams bbConvOpsConstParams;
+    bbConvOpsConstParams.m0 = 16;
+    bbConvOpsConstParams.n0 = 16;
+    bbConvOpsConstParams.k0 = 16;
+    ConvAscendcTilingFlag bbFlagInfo;
+    PlatformInfo bbPlatformInfo = platform960DT;
+    ConvOriGroupInfo bbOriGroupInfo;
+    ConvOptGroupInfo bbOptGroupInfo;
+    FixpipeInfo bbFixpipeInfo;
+
+    auto strategy = std::make_shared<conv_tiling::Conv3DBasicBlockStrategy>();
+    conv_tiling::BBCommonParams params = {bbShapeInfo,    bbDescInfo,
+                                          bbAttrInfo,     bbConvOpsConstParams,
+                                          bbFlagInfo,     ConvAscendcFeatureFlag::IS_LOAD3D_FLAG,
+                                          bbPlatformInfo, AIC_NUM_9201,
+                                          MEM_SIZE_512K,  MEM_SIZE_256K,
+                                          bbOriGroupInfo, bbOptGroupInfo,
+                                          bbFixpipeInfo,  &testTiling,
+                                          false,          1};
+    conv_tiling::BasicBlockInfo basicBlockInfo;
+    conv_tiling::ConvBasicBlock flow(params, basicBlockInfo, strategy);
+    bool phase1Ok = flow.SelectMModeAlgorithm();
+    ASSERT_TRUE(phase1Ok);
+    flow.BasicBlock();
+
+    EXPECT_GT(basicBlockInfo.fDim, 0);
+    EXPECT_GT(basicBlockInfo.nDim, 0);
+    EXPECT_GT(basicBlockInfo.mTile, 0);
+    EXPECT_GT(basicBlockInfo.nTile, 0);
+    EXPECT_GT(basicBlockInfo.mCut, 0);
+    EXPECT_GT(basicBlockInfo.nCut, 0);
+    EXPECT_GT(basicBlockInfo.mIn, 0);
+    EXPECT_EQ(basicBlockInfo.doCut, bbShapeInfo.dout);
+
+    // Phase 2: BBmode Process
+    auto apiStrategy = std::make_shared<conv_tiling::Conv3DAPIStrategy>();
+    ConvTilingAlgorithmBBmode algoBB(&testTiling, basicBlockInfo, apiStrategy);
+    int64_t ret = algoBB.Process();
+    EXPECT_EQ(ret, 0);
+
+    EXPECT_GT(basicBlockInfo.kTile, 0);
+    EXPECT_GT(algoBB.l1TilingParams.kAL1, 0);
+    EXPECT_GT(algoBB.l1TilingParams.kBL1, 0);
+    EXPECT_GT(algoBB.l1TilingParams.mAL1Value, 0);
+    EXPECT_GT(algoBB.l1TilingParams.nBL1Value, 0);
 }
