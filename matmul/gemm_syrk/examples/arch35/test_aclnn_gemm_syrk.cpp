@@ -105,10 +105,9 @@ void Finalize(int32_t deviceId, aclrtStream stream)
 // GemmSyrk: C = alpha * (A @ A^T) + beta * C, C输入输出同地址原地更新。
 // A为(128, 64)全1.0，C为(128, 128)全2.0（对称），alpha=beta=1.0时
 // 结果为 64 * 1.0 + 2.0 = 66.0。
-int AclnnGemmSyrkTest(int32_t deviceId, aclrtStream& stream)
+int AclnnGemmSyrkTest(aclrtStream& stream)
 {
-    auto ret = Init(deviceId, &stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+    int ret = ACL_SUCCESS;
 
     std::vector<int64_t> aShape = {128, 64};
     std::vector<int64_t> cShape = {128, 128};
@@ -172,10 +171,9 @@ int AclnnGemmSyrkTest(int32_t deviceId, aclrtStream& stream)
 
 // transpose_x场景：a以转置的(64, 128)存储（k=64, m=128），计算
 // C = alpha * (A^T @ A) + beta * C。a、C同为全1.0/全2.0，结果同样为66.0。
-int AclnnGemmSyrkTransTest(int32_t deviceId, aclrtStream& stream)
+int AclnnGemmSyrkTransTest(aclrtStream& stream)
 {
-    auto ret = Init(deviceId, &stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+    int ret = ACL_SUCCESS;
 
     std::vector<int64_t> aShape = {64, 128};
     std::vector<int64_t> cShape = {128, 128};
@@ -240,10 +238,13 @@ int main()
 {
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = AclnnGemmSyrkTest(deviceId, stream);
+    auto ret = Init(deviceId, &stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+
+    ret = AclnnGemmSyrkTest(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnGemmSyrkTest failed. ERROR: %d\n", ret); return ret);
 
-    ret = AclnnGemmSyrkTransTest(deviceId, stream);
+    ret = AclnnGemmSyrkTransTest(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnGemmSyrkTransTest failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
