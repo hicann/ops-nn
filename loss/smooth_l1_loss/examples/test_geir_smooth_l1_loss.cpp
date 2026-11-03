@@ -106,12 +106,17 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
     for (uint32_t i = 0; i < shapes.size(); i++) {
         size *= shapes[i];
     }
-    uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t* pData = new (std::nothrow) int32_t[data_len];
-    for (uint32_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+    size_t data_len = size * GetDataTypeSize(data_type);
+    float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        printf("%s - ERROR - [XIR]: Allocate input buffer failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    for (size_t i = 0; i < size; ++i) {
+        pData[i] = static_cast<float>(value);
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -164,6 +169,7 @@ int main(int argc, char* argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create graph failed\n", GetTime().c_str());
+        ge::GEFinalize();
         return FAILED;
     }
 
@@ -183,6 +189,7 @@ int main(int argc, char* argv[])
     ge::Session* session = new Session(build_options);
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create session failed\n", GetTime().c_str());
+        ge::GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create session success\n", GetTime().c_str());
@@ -190,6 +197,12 @@ int main(int argc, char* argv[])
     std::map<AscendString, AscendString> graph_options = {};
     uint32_t graph_id = 0;
     ret = session->AddGraph(graph_id, graph, graph_options);
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Add graph failed\n", GetTime().c_str());
+        delete session;
+        ge::GEFinalize();
+        return FAILED;
+    }
     printf("%s - INFO - [XIR]: Add graph success\n", GetTime().c_str());
 
     printf("%s - INFO - [XIR]: Start to run graph\n", GetTime().c_str());
@@ -207,14 +220,29 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Run graph success\n", GetTime().c_str());
 
     int output_num = output.size();
+    if (output_num != 1) {
+        printf("%s - ERROR - [XIR]: Expect 1 output, got %d\n", GetTime().c_str(), output_num);
+        delete session;
+        ge::GEFinalize();
+        return FAILED;
+    }
+    int64_t expect_output_size = 8 * 16;
     for (int i = 0; i < output_num; i++) {
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
+        if (output_shape != expect_output_size) {
+            printf("%s - ERROR - [XIR]: Output %d shape size %ld mismatch, expect %ld\n", GetTime().c_str(), i,
+                   static_cast<long>(output_shape), static_cast<long>(expect_output_size));
+            delete session;
+            ge::GEFinalize();
+            return FAILED;
+        }
         std::cout << "output " << i << " shape size = " << output_shape
                   << ", dtype = " << output[i].GetTensorDesc().GetDataType() << std::endl;
     }
 
     printf("%s - INFO - [XIR]: GE IR pathway verification PASSED\n", GetTime().c_str());
 
+    delete session;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Finalize failed\n", GetTime().c_str());

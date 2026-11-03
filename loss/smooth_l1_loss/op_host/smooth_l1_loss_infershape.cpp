@@ -43,6 +43,10 @@ static ge::graphStatus SmoothL1LossInferShapeFunc(gert::InferShapeContext* conte
             return GRAPH_FAILED;
         }
         for (size_t i = 0; i < predictDimNum; i++) {
+            if (predict->GetDim(i) < UNKNOWN_DIM_VALUE_ || label->GetDim(i) < UNKNOWN_DIM_VALUE_) {
+                OP_LOGE(context->GetNodeName(), "Input dim must be non-negative or -1 (unknown dim).");
+                return GRAPH_FAILED;
+            }
             if (predict->GetDim(i) != UNKNOWN_DIM_VALUE_ && label->GetDim(i) != UNKNOWN_DIM_VALUE_ &&
                 predict->GetDim(i) != label->GetDim(i)) {
                 OP_LOGE(context->GetNodeName(), "Input[predict]'s shape is not equal to Input[label]'s.");
@@ -59,21 +63,5 @@ static ge::graphStatus SmoothL1LossInferShapeFunc(gert::InferShapeContext* conte
     OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*loss).c_str());
     return ge::GRAPH_SUCCESS;
 }
-
-graphStatus SmoothL1LossInferDtypeFunc(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "SmoothL1LossInferDtypeFunc begin.");
-
-    auto predictDtype = context->GetInputDataType(INDEX_PREDICT);
-    OP_CHECK_IF((predictDtype != ge::DT_FLOAT) && (predictDtype != ge::DT_FLOAT16) && (predictDtype != ge::DT_BF16),
-                OP_LOGE(context->GetNodeName(), "predict only supports float, float16 and bfloat16"),
-                return GRAPH_FAILED);
-
-    context->SetOutputDataType(INDEX_LOSS, predictDtype);
-
-    OP_LOGD(context->GetNodeName(), "SmoothL1LossInferDtypeFunc end.");
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(SmoothL1Loss).InferShape(SmoothL1LossInferShapeFunc).InferDataType(SmoothL1LossInferDtypeFunc);
+IMPL_OP_INFERSHAPE(SmoothL1Loss).InferShape(SmoothL1LossInferShapeFunc);
 } // namespace ops

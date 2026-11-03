@@ -9,11 +9,13 @@
  */
 
 #include "register/op_impl_registry.h"
+#include <cfloat>
 #include <cmath>
 #include "platform/platform_ascendc.h"
 #include "log/log.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_common/op_host/util/math_util.h"
+#include "util/shape_util.h"
 #include "smooth_l1_loss_tiling_arch35.h"
 #include <set>
 
@@ -34,8 +36,7 @@ constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 constexpr int64_t BUFFER_NUM_DB = 9;
 constexpr int64_t BUFFER_NUM_SB = 7;
 constexpr float NEGTIVE_CONST_HALF = -0.5f;
-constexpr float CONST_HALF = 0.5f;     // 二次项系数 0.5（与 NEGTIVE_CONST_HALF 对偶）
-constexpr float SIGMA_EPSILON = 1e-6f; // sigma 判零阈值，|sigma| 小于该值时按 0 处理规避除零
+constexpr float CONST_HALF = 0.5f; // 二次项系数 0.5（与 NEGTIVE_CONST_HALF 对偶）
 constexpr size_t MAX_DIM_NUM = 8;
 
 static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
@@ -70,16 +71,18 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
 
     auto predictShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, predictShape);
+    auto labelShape = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
+    OP_CHECK_IF(Ops::Base::IsUnknownRank(predictShape->GetStorageShape()) ||
+                    Ops::Base::IsUnknownRank(labelShape->GetStorageShape()),
+                OP_LOGE(context, "unknown-rank input must be materialized before tiling"), return ge::GRAPH_FAILED);
+
     auto predictStorageShape = EnsureNotScalar(predictShape->GetStorageShape());
-    int64_t totalIdx = predictStorageShape.GetShapeSize();
+    auto labelStorageShape = EnsureNotScalar(labelShape->GetStorageShape());
 
     OP_CHECK_IF(predictStorageShape.GetDimNum() > MAX_DIM_NUM,
                 OP_LOGE(context, "predict dim num must be <= 8, got %zu", predictStorageShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
-
-    auto labelShape = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
-    auto labelStorageShape = EnsureNotScalar(labelShape->GetStorageShape());
     OP_CHECK_IF(labelStorageShape.GetDimNum() > MAX_DIM_NUM,
                 OP_LOGE(context, "label dim num must be <= 8, got %zu", labelStorageShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
@@ -90,12 +93,21 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
     for (size_t i = 0; i < predictStorageShape.GetDimNum(); i++) {
         int64_t predictDim = predictStorageShape.GetDim(i);
         int64_t labelDim = labelStorageShape.GetDim(i);
-        if (predictDim != -1 && labelDim != -1 && predictDim != labelDim) {
+        OP_CHECK_IF(predictDim < 0 || labelDim < 0,
+                    OP_LOGE(context,
+                            "input dim must be non-negative at tiling time (dynamic/unknown dims must be "
+                            "resolved), predict %ld, label %ld at dim %zu",
+                            predictDim, labelDim, i),
+                    return ge::GRAPH_FAILED);
+        if (predictDim != labelDim) {
             OP_LOGE(context, "predict and label shape mismatch at dim %zu, predict %ld, label %ld", i, predictDim,
                     labelDim);
             return ge::GRAPH_FAILED;
         }
     }
+    int64_t totalIdx = predictStorageShape.GetShapeSize();
+    OP_CHECK_IF(totalIdx < 0, OP_LOGE(context, "predict element count overflows int64, got %ld", totalIdx),
+                return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -124,10 +136,15 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* sigmaPtr = attrs->GetAttrPointer<float>(0);
     float sigma = (sigmaPtr == nullptr) ? 1.0f : *sigmaPtr;
-    OP_CHECK_IF(sigma < 0, OP_LOGE(context, "sigma must be non-negative, got %f", sigma), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sigma < 0 || std::isnan(sigma), OP_LOGE(context, "sigma must be non-negative, got %f", sigma),
+                return ge::GRAPH_FAILED);
 
     tiling->Sigma = sigma;
-    tiling->MultiplyValue = fabsf(sigma) < SIGMA_EPSILON ? 0.0f : CONST_HALF / sigma;
+    float multiplyValue = (sigma == 0.0f) ? 0.0f : CONST_HALF / sigma;
+    if (std::isinf(multiplyValue)) {
+        multiplyValue = FLT_MAX;
+    }
+    tiling->MultiplyValue = multiplyValue;
     tiling->AddsValue = NEGTIVE_CONST_HALF * sigma;
 
     int64_t usedCoreNum = 1;
