@@ -101,9 +101,6 @@ private:
             momentumValue = static_cast<float>(momentum.GetValue(0));
         }
         factor_ = momentumValue == 0.0f ? 0.0f : 1.0f / momentumValue;
-        if constexpr (IsSameType<T_MOMENTUM, half>::value) {
-            factor_ = static_cast<float>(static_cast<half>(factor_));
-        }
     }
 
     template <typename T>
@@ -312,7 +309,7 @@ private:
                     ApplyPreFoldedAffine<T_X, HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg,
                                                                      mask);
                 } else if constexpr (HAS_SCALE == HAS_OFFSET) {
-                    ApplyCorrectedFoldedAffine<T_X>(xReg, meanReg, rstdReg, offsetReg, yReg, mask);
+                    ApplyCorrectedFoldedAffine<T_X, HAS_SCALE>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg, mask);
                 } else {
                     NormalizeOneSided<HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg, mask);
                 }
@@ -378,7 +375,8 @@ private:
                         ApplyPreFoldedAffine<T_X, HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg,
                                                                          yReg, mask);
                     } else if constexpr (HAS_SCALE == HAS_OFFSET) {
-                        ApplyCorrectedFoldedAffine<T_X>(xReg, meanReg, rstdReg, offsetReg, yReg, mask);
+                        ApplyCorrectedFoldedAffine<T_X, HAS_SCALE>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg,
+                                                                   mask);
                     } else {
                         NormalizeOneSided<HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg,
                                                                  mask);
