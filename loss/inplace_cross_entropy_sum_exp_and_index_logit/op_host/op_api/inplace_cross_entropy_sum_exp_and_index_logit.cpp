@@ -18,7 +18,7 @@
 
 using namespace op;
 
-namespace InplaceCrossEntropySumExpAndIndexLogitl0op {
+namespace l0op {
 
 OP_TYPE_REGISTER(InplaceCrossEntropySumExpAndIndexLogit);
 
@@ -41,4 +41,4 @@ bool InplaceCrossEntropySumExpAndIndexLogit(aclTensor* vocabParallelLogits, cons
     return true;
 }
 
-} // namespace InplaceCrossEntropySumExpAndIndexLogitl0op
+} // namespace l0op

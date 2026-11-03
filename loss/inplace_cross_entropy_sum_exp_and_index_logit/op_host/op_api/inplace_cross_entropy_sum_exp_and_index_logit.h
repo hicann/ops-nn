@@ -13,7 +13,7 @@
 
 #include "opdev/op_executor.h"
 
-namespace InplaceCrossEntropySumExpAndIndexLogitl0op {
+namespace l0op {
 
 bool InplaceCrossEntropySumExpAndIndexLogit(aclTensor* vocabParallelLogits, const aclTensor* target,
                                             const aclTensor* globalLogitsMax, int64_t vocabStartIndex,
@@ -21,6 +21,6 @@ bool InplaceCrossEntropySumExpAndIndexLogit(aclTensor* vocabParallelLogits, cons
                                             const aclTensor* sumExpLogits, const aclTensor* targetOffset,
                                             const aclTensor* targetMask, aclOpExecutor* executor);
 
-} // namespace InplaceCrossEntropySumExpAndIndexLogitl0op
+} // namespace l0op
 
 #endif // INPLACE_CROSS_ENTROPY_SUMEXP_AND_INDEX_LOGIT_L0OP_H_

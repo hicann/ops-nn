@@ -59,9 +59,9 @@ aclnnStatus InplaceCrossEntropySumExpAndIndexLogitCommonProcess(
 
     // 输出（predicted / sum_exp / offset / mask）由调用方分配，均为连续张量；
     // exp 不单独分配 —— 它被折叠成 logitsRef 本身（in-place 输出）
-    bool ok = InplaceCrossEntropySumExpAndIndexLogitl0op::InplaceCrossEntropySumExpAndIndexLogit(
-        logitsRef, target, globalLogitsMax, vocabStartIndex, vocabEndIndex, predictedLogits, sumExpLogits, targetOffset,
-        targetMask, uniqueExecutor.get());
+    bool ok = l0op::InplaceCrossEntropySumExpAndIndexLogit(logitsRef, target, globalLogitsMax, vocabStartIndex,
+                                                           vocabEndIndex, predictedLogits, sumExpLogits, targetOffset,
+                                                           targetMask, uniqueExecutor.get());
     CHECK_RET(ok, ACLNN_ERR_INNER);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
