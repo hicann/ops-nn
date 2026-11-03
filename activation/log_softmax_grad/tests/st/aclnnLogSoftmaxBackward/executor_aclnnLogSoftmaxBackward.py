@@ -14,20 +14,14 @@ import torch
 from atk.configs.dataset_config import InputDataset
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
-from atk.configs.results_config import TaskResult
-from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat
 
 
 @register("aclnn_logsoftmaxbackward")
 class AclnnLogSoftmaxApi(BaseApi):
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-        origin_dtype = input_data.kwargs["gradOutput"].dtype
-        dim = input_data.kwargs["dim"]
         input_g = input_data.kwargs["gradOutput"]
         input_o = input_data.kwargs["output"]
 
-
-        m = torch.nn.LogSoftmax(dim=dim)
         if (input_g.dtype == torch.float16) or (input_g.dtype == torch.bfloat16):
             input_g = input_g.to(torch.float32)
             input_o = input_o.to(torch.float32)

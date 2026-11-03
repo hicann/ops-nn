@@ -1,6 +1,6 @@
 {
     "op_type": "InstanceNorm",
-    "op_list": [ 
+    "op_list": [
       {
         "bin_filename": "InstanceNorm_float32_float32_float32_NCHW",
         "inputs": [

@@ -25,7 +25,7 @@
 namespace optiling {
 class SyncBNTrainingUpdateTiling {
 public:
-    explicit SyncBNTrainingUpdateTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit SyncBNTrainingUpdateTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
     SyncBNTrainingUpdateTilingData* tiling;
 
@@ -43,5 +43,5 @@ private:
     ge::DataType runningMeanUpdateDtype;
     float momentum_ = 0.0f;
 };
-};     // namespace optiling
+}; // namespace optiling
 #endif // SYNC_BN_TRAINING_UPDATE_TILING_H
