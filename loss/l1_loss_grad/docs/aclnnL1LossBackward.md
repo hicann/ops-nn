@@ -118,7 +118,7 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失</td>
-      <td class="tg-0pky">数据类型要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
+      <td class="tg-0pky">shape为gradOutput、self、target三个输入做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape。<br>数据类型要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">0-8</td>

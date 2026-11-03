@@ -19,6 +19,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
 
@@ -53,16 +54,16 @@ static bool IsAiCoreSupport(const aclTensor* gradOutput, const aclTensor* self, 
 }
 
 // AiCore的执行逻辑
-static void L1LossGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                             int64_t reduction, aclTensor* gradInput, aclOpExecutor* executor)
+static const aclTensor* L1LossGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                         int64_t reduction, aclTensor* gradInput, aclOpExecutor* executor)
 {
     L0_DFX(L1LossGradAiCore, gradOutput, self, target, reduction, gradInput);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(L1LossGrad, OP_INPUT(gradOutput, self, target), OP_OUTPUT(gradInput),
                                            OP_ATTR(REDUCTION_STR[reduction]));
-    if (ret != ACL_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "L1LossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
-    }
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                         "L1LossGrad ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return gradInput;
 }
 
 const aclTensor* L1LossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
@@ -94,7 +95,6 @@ const aclTensor* L1LossGrad(const aclTensor* gradOutput, const aclTensor* self, 
     if (gradInput == nullptr) {
         return gradInput;
     }
-    L1LossGradAiCore(gradOutput, self, target, reduction, gradInput, executor);
-    return gradInput;
+    return L1LossGradAiCore(gradOutput, self, target, reduction, gradInput, executor);
 }
 } // namespace l0op
