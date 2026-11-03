@@ -183,8 +183,8 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
       <tr>
       <td>vocabEndIndex</td>
       <td>输入</td>
-      <td>表示分到本卡上的结束索引，公式中的vocabEndIndex。</td>
-      <td><ul><li>取值范围为[vocabStartIndex, min(vocabStartIndex + weight.size(0) - 1, max(target) - 1)]，且不超过16777216。</li></ul></td>
+      <td>表示分到本卡上的结束索引（不包含在分片内），公式中的vocabEndIndex，即本卡负责的编号为左闭右开区间 [vocabStartIndex, vocabEndIndex)。</td>
+      <td><ul><li>取值范围为[vocabStartIndex, vocabStartIndex + weight.size(0)]，且不超过16777216。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

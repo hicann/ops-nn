@@ -35,10 +35,10 @@
      $$
      sum\_exp\_logits\_local = sum(exp(sub\_res), dim=-1)
      $$
-  5. 计算$target$小于$vocab\_start\_index$或$target$大于$vocab\_end\_index$的mask
+  5. 计算$target$小于$vocab\_start\_index$或$target$大于等于$vocab\_end\_index$的mask
 
      $$
-     target\_mask = (target < vocab\_start\_index) | (target > vocab\_end\_index)
+     target\_mask = (target < vocab\_start\_index) | (target >= vocab\_end\_index)
      $$
   6. 计算$masked\_target$
 
@@ -120,7 +120,7 @@
     <tr>
       <td>vocab_end_index</td>
       <td>属性</td>
-      <td><ul><li>表示分到本卡上的结束索引，公式中的vocab_end_index。</li><li>取值范围为[vocab_start_index, min(vocab_start_index + weight.size(0) - 1, max(target) - 1)]。</li></ul></td>
+      <td><ul><li>表示分到本卡上的结束索引（不包含在分片内），公式中的vocab_end_index，即本卡负责的编号为左闭右开区间 [vocab_start_index, vocab_end_index)。</li><li>取值范围为[vocab_start_index, vocab_start_index + weight.size(0)]。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>

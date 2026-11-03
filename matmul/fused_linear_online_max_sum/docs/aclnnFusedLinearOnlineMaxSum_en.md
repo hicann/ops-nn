@@ -51,10 +51,10 @@
      $$
      sumExpLogitsLocalOut = sum(exp(subRes), dim=-1)
      $$
-  5. Compute the mask where $target$ is less than $vocabStartIndex$ or $target$ is greater than $vocabEndIndex$
+  5. Compute the mask where $target$ is less than $vocabStartIndex$ or $target$ is greater than or equal to $vocabEndIndex$
 
      $$
-     targetMask = (target < vocabStartIndex) | (target > vocabEndIndex)
+     targetMask = (target < vocabStartIndex) | (target >= vocabEndIndex)
      $$
   6. Compute $maskedTargetOut$
 
@@ -185,8 +185,8 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
       <tr>
       <td>vocabEndIndex</td>
       <td>Input</td>
-      <td>Indicates the end index allocated to the current device, namely vocabEndIndex in the formula.</td>
-      <td><ul><li>The value range is [vocabStartIndex, min(vocabStartIndex + weight.size(0) - 1, max(target) - 1)].</li></ul></td>
+      <td>Indicates the end index (excluded from the shard) allocated to the current device, namely vocabEndIndex in the formula. The IDs handled by the current device form a left-closed and right-open interval [vocabStartIndex, vocabEndIndex).</td>
+      <td><ul><li>The value range is [vocabStartIndex, vocabStartIndex + weight.size(0)], and must not exceed 16777216.</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

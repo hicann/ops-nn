@@ -36,7 +36,13 @@
     $$
 
     $$
-    y = \left(\sum_{i=0}^{n-1}|x_i|^{p}\right)^{\frac{1}{{p}}}  (i=0,1,...n-1)
+    y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
+    $$
+
+    where $x_i$ denotes the $i$-th tensor in the input list, $m_i$ denotes the number of elements in $x_i$, and $y_i$ denotes the norm result of $x_i$:
+
+    $$
+    y_i = \left(\sum_{j=0}^{m_i-1}|x_{i,j}|^{p}\right)^{\frac{1}{{p}}}
     $$
   <!-- end id7 -->
 
@@ -47,22 +53,28 @@
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
 
+    $$
+    y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
+    $$
+
+    where $x_i$ denotes the $i$-th tensor in the input list, $m_i$ denotes the number of elements in $x_i$, and $y_i$ denotes the norm result of $x_i$:
+
     - scalar = +Inf:
 
       $$
-      y = \max|x_i|
+      y_i = \max_{0 \le j < m_i}|x_{i,j}|
       $$
 
     - int(scalar) = 1:
 
       $$
-      y = \sum_{i=0}^{n-1}|x_i|
+      y_i = \sum_{j=0}^{m_i-1}|x_{i,j}|
       $$
 
     - other:
 
       $$
-      y = \left(\sum_{i=0}^{n-1}|x_i|^{2}\right)^{\frac{1}{{2}}}
+      y_i = \left(\sum_{j=0}^{m_i-1}|x_{i,j}|^{2}\right)^{\frac{1}{{2}}}
       $$
   <!-- end id8 -->
 
