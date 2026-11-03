@@ -134,6 +134,10 @@ constexpr aclDataType kATenScalarTypeToAclDataTypeTable[static_cast<int64_t>(at:
 #undef DEFINE_ENUM
 };
 
+// 旧版 CANN 头文件未提供 HiF4 枚举，使用对应的 aclDataType 数值以兼容这些头文件。
+constexpr aclDataType ACL_HIFLOAT4_NUM = static_cast<aclDataType>(42);
+constexpr aclDataType ACL_HIFLOAT4_SCALE_NUM = static_cast<aclDataType>(43);
+
 #define ENUM_OFFSET(new_name, old_name) new_name = static_cast<int>(old_name) + g_toAclOffset,
 
 enum class DType {
@@ -148,6 +152,8 @@ enum class DType {
                         ENUM_OFFSET(FLOAT8_E4M3FN, ACL_FLOAT8_E4M3FN) ENUM_OFFSET(FLOAT8_E8M0, ACL_FLOAT8_E8M0)
                             ENUM_OFFSET(FLOAT6_E3M2, ACL_FLOAT6_E3M2) ENUM_OFFSET(FLOAT6_E2M3, ACL_FLOAT6_E2M3)
                                 ENUM_OFFSET(FLOAT4_E2M1, ACL_FLOAT4_E2M1) ENUM_OFFSET(FLOAT4_E1M2, ACL_FLOAT4_E1M2)
+                                    ENUM_OFFSET(HIFLOAT4, ACL_HIFLOAT4_NUM)
+                                        ENUM_OFFSET(HIFLOAT4_SCALE, ACL_HIFLOAT4_SCALE_NUM)
 };
 
 namespace op_infer {
@@ -178,10 +184,6 @@ typedef struct {
 typedef struct {
     const at::Tensor& tensor;
 } StorageShapeTensor;
-
-// HIFLOAT4（4-bit浮点，aclDataType=42）由目标CANN版本定义，旧版本acl头文件未提供该枚举，
-// 以数值常量表达以保证向前兼容；与op_plugin_for_lingqu基线中ACL_HIFLOAT4的4-bit处理行为保持一致
-constexpr aclDataType ACL_HIFLOAT4_NUM = static_cast<aclDataType>(42);
 
 inline bool Is4BitDtype(const aclDataType acl_data_type)
 {
