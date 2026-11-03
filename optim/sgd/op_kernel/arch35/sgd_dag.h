@@ -102,8 +102,7 @@ struct SgdDag {
     using OpStatF = Bind<Vec::Cast<T, U, 0>, OpCopyInStat>;
 
     // ── Step 1：权重衰减 grad = gradient + parameters * wd ──────────────────
-    // wd == 0 时【真正跳过】而不是乘 0（spec numerical_stability.skip_zero_branches；
-    // 且 0 * inf = NaN 会污染结果）。
+    // wd == 0时跳过权重衰减乘法，避免0 * inf产生NaN并污染结果。
     using VarWeightDecay = Placeholder::Var<T, SGD_VAR_IDX_WEIGHT_DECAY>;
     using OpParamMulWd = Bind<Vec::Muls<T>, OpParamF, VarWeightDecay>;
     using OpGradWithWd = Bind<Vec::Add<T>, OpGradInF, OpParamMulWd>;

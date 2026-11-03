@@ -22,13 +22,29 @@ namespace {
 constexpr size_t PARAMETERS_INDEX = 0;
 } // namespace
 
-static ge::graphStatus InferDataTypeForSgd(gert::InferDataTypeContext* context)
+ge::graphStatus InferDataTypeForSgd(gert::InferDataTypeContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "InferDataTypeForSgd begin.");
-    // accum / stat 不是图输出（靠覆写输入 GM 原地回写），故此处只有一路。
-    context->SetOutputDataType(PARAMETERS_INDEX, context->GetInputDataType(PARAMETERS_INDEX));
+    const auto dtype = context->GetInputDataType(PARAMETERS_INDEX);
+    OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_FLOAT && dtype != ge::DT_BF16,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "parameters", Ops::Base::ToString(dtype).c_str(),
+                                          "FLOAT16, FLOAT, BFLOAT16"),
+                return ge::GRAPH_FAILED);
+    const char* inputNames[] = {"parameters", "gradient", "learning_rate", "accum", "momentum", "stat"};
+    for (size_t input = 1; input < 6; ++input) {
+        const auto inputDtype = context->GetInputDataType(input);
+        OP_CHECK_IF(inputDtype != dtype,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context->GetNodeName(), (std::string("parameters, ") + inputNames[input]).c_str(),
+                        (Ops::Base::ToString(dtype) + ", " + Ops::Base::ToString(inputDtype)).c_str(),
+                        "all inputs must have the same dtype as parameters"),
+                    return ge::GRAPH_FAILED);
+    }
     OP_LOGD(context, "InferDataTypeForSgd end.");
-    return ge::GRAPH_SUCCESS;
+    return context->SetOutputDataType(PARAMETERS_INDEX, dtype);
 }
 
 IMPL_OP(SGD).InferDataType(InferDataTypeForSgd);

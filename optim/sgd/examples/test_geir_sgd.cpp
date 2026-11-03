@@ -54,7 +54,7 @@ using std::string;
 using std::vector;
 #define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape, inputValue)                                     \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
-    auto placeholder##intputIndex = op::Data("placeholder" + std::to_string(intputIndex))                           \
+    auto placeholder##intputIndex = op::Data(("placeholder" + std::to_string(intputIndex)).c_str())                 \
                                         .set_attr_index(intputIndex - 1);                                           \
     TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
                                                             intputDtype);                                           \
@@ -78,7 +78,7 @@ using std::vector;
 
 #define ADD_CONST_INPUT(intputIndex, intputName, intputDtype, inputShape)                                           \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
-    auto placeholder##intputIndex = op::Const("placeholder" + std::to_string(intputIndex));                         \
+    auto placeholder##intputIndex = op::Const(("placeholder" + std::to_string(intputIndex)).c_str());               \
     TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
                                                             intputDtype);                                           \
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
@@ -328,7 +328,13 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
     std::string file_path = "./dump";
-    aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+    ret = aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Dump graph failed\n", GetTime().c_str());
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
     printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
     std::vector<ge::Tensor> output;
     ret = session->RunGraph(graph_id, input, output);

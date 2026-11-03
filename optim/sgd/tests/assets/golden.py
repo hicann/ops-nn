@@ -11,13 +11,13 @@
 
 """SGD multi-path TestSpec golden (kernel + GEIR).
 
-The CPU true-value path is a composition of Torch tensor operators.  Its
-arithmetic is kept identical to the legacy ``sgd_golden`` entry:
+The CPU true-value path is a composition of Torch tensor operators following
+the operator's formula:
 
     grad     = gradient + parameters * weight_decay      (when weight_decay != 0)
     accum_t  = accum * momentum + grad                   (unconditional)
     accum_t -= grad * (1 - stat) * dampening             (when dampening != 0)
-    p_out    = p - (grad*lr + accum_t*m*lr)               (Nesterov)
+    p_out    = p - (grad + accum_t*m)*lr                 (Nesterov)
                p - accum_t*lr                            (otherwise)
 
 ``momentum == 0`` only masks the accum/stat writeback; it never skips the
@@ -25,11 +25,10 @@ arithmetic is kept identical to the legacy ``sgd_golden`` entry:
 NaN into parameters according to IEEE 754, while accum/stat retain their input
 bit patterns (including NaN payloads and negative zero).
 
-The third-party implementation deliberately differs only in the Nesterov
-parenthesization: arch35 ``sgd_dag.h`` computes
-``p - (grad + accum_t * momentum) * learning_rate`` to satisfy its TensorScalar
-slot constraint.  Cross-check must reproduce that actual device operation
-order, then cast all three writeback values to the NPU input dtype.
+The Nesterov update direction is summed before multiplication by learning rate.
+Distributing that multiplication changes IEEE 754 results for infinite learning
+rates. Both references retain this grouping and cast writeback values to the
+requested output dtype.
 
 The CPU oracle evaluates intermediate arithmetic in float64 to avoid sharing
 float32 overflow with the device. The independent third-party composition keeps
@@ -46,12 +45,12 @@ except ImportError:  # pragma: no cover - TTK normally provides ml_dtypes.
     _NP_BFLOAT16 = None
 
 
-__spec__ = {"sgd": "SgdKernelSpec"}
+__spec__ = {"sgd": "SgdKernelSpec", "SGD": "SgdKernelSpec"}
 
 # Compatibility entry for existing kernel CSVs and callers.  Both entries call
 # the same _compute function; this mapping must remain until all old loaders have
 # migrated to TestSpec.
-__golden__ = {"kernel": {"sgd": "sgd_golden"}}
+__golden__ = {"kernel": {"sgd": "sgd_golden", "SGD": "sgd_golden"}}
 
 
 _TOL = {
@@ -128,8 +127,8 @@ def _compute(
     """CPU reference shared by TestSpec and the legacy entry.
 
     Inputs and outputs are Torch tensors.  This is the high-precision CPU
-    true-value path, so it keeps the legacy expanded Nesterov formula; the
-    independent ``_SgdCompose`` below follows the grouped arch35 DAG order.
+    true-value path. It preserves the formula's grouping for nonfinite values;
+    the independent ``_SgdCompose`` below uses float32 intermediates.
 
     Attribute defaults are ``None`` so that ``_attr`` can resolve each one
     from the ``attributes`` container when the caller did not pass a named
@@ -168,13 +167,9 @@ def _compute(
     if dampening_value != 0.0:
         accum_t = accum_t - grad * ((1.0 - s) * dampening_value)
 
-    # Preserve the already-validated legacy true-value ordering.  This is
-    # mathematically equivalent to the grouped DAG form, but intentionally
-    # independent from it for cross-checking.
+    # Sum the update direction before multiplying by a possibly infinite rate.
     if use_nesterov:
-        p_new = p - (
-            grad * learning_rate_value + accum_t * momentum_value * learning_rate_value
-        )
+        p_new = p - (grad + accum_t * momentum_value) * learning_rate_value
     else:
         p_new = p - accum_t * learning_rate_value
 
@@ -384,8 +379,7 @@ class _SgdCompose:
             dampening_term = torch.mul(grad, stat_active_damped)
             accum_t = torch.sub(accum_t, dampening_term)
 
-        # Step 4: reproduce the real grouped Nesterov DAG, not the expanded
-        # legacy true-value expression.
+        # Step 4: sum the Nesterov update direction before scaling it.
         if self.nesterov:
             accum_t_momentum = torch.mul(accum_t, momentum_value)
             nesterov_sum = torch.add(grad, accum_t_momentum)
@@ -406,7 +400,7 @@ class _SgdCompose:
 
 
 class SgdKernelSpec:
-    """Kernel and GEIR share the snake_case ``sgd`` registration."""
+    """Kernel and GEIR accept both snake_case and graph operator names."""
 
     def golden(
         parameters,

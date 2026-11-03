@@ -13,6 +13,7 @@
  * \brief
  */
 #include "sgd_tiling.h"
+#include <limits>
 #include <graph/utils/type_utils.h>
 #include "error_util.h"
 #include "register/op_def_registry.h"
@@ -59,7 +60,7 @@ ge::graphStatus SgdRegbaseTiling::GetAttr()
     nesterov_ = (nesterovAttr != nullptr) ? *nesterovAttr : false;
 
     // 对齐 ascend910b 的两条属性语义校验（canndev nn_training_ops.cc:1932-1955）。
-    // 走结构化上报宏（R6），非裸 OP_LOGE。
+    // 属性非法时使用结构化错误上报。
     OP_CHECK_IF(nesterov_ && dampening_ != 0.0f,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dampening",
                                                       std::to_string(dampening_).c_str(),
@@ -71,7 +72,7 @@ ge::graphStatus SgdRegbaseTiling::GetAttr()
                                                       "attr weight_decay must be more than or equal to 0"),
                 return ge::GRAPH_FAILED);
 
-    // 属性"是否为 0"固化为编译期分支（spec numerical_stability.skip_zero_branches）：
+    // 属性"是否为 0"固化为编译期分支：
     // 条件不成立时【真正跳过】该子图，而不是乘 0 —— 0 * inf = NaN 会污染结果。
     useNesterovKey_ = nesterov_ ? 1U : 0U;
     hasWeightDecayKey_ = (weightDecay_ != 0.0f) ? 1U : 0U;
@@ -91,13 +92,22 @@ ge::graphStatus SgdRegbaseTiling::CheckRank(const gert::Shape& input0Shape)
 
 ge::graphStatus SgdRegbaseTiling::CheckNotEmpty(const gert::Shape& input0Shape)
 {
-    // 空 Tensor（任意一轴或多轴为 0）按 spec error_codes 归 null_input，拒绝为非法。
-    // 本算子无"空进空出"语义 —— accum / stat 的原地回写在 numel == 0 下无定义。
-    OP_CHECK_IF(input0Shape.GetShapeSize() == 0,
-                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext_->GetNodeName(), "parameters",
-                                                          std::to_string(input0Shape.GetShapeSize()).c_str(),
-                                                          "empty tensor (any axis being 0) is not supported by SGD"),
-                return ge::GRAPH_FAILED);
+    int64_t elementCount = 1;
+    for (size_t axis = 0; axis < input0Shape.GetDimNum(); ++axis) {
+        const int64_t dim = input0Shape.GetDim(axis);
+        OP_CHECK_IF(
+            dim == 0,
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext_->GetNodeName(), "parameters", "0",
+                                                      "empty tensor (any axis being 0) is not supported by SGD"),
+            return ge::GRAPH_FAILED);
+        // Tiling receives concrete runtime dimensions, unlike InferShape.
+        OP_CHECK_IF(dim < 0 || elementCount > std::numeric_limits<int64_t>::max() / dim,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        tilingContext_->GetNodeName(), "parameters", Ops::Base::ToString(input0Shape).c_str(),
+                        "runtime dimensions must be positive and their product must fit in int64"),
+                    return ge::GRAPH_FAILED);
+        elementCount *= dim;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -120,7 +130,6 @@ ge::graphStatus SgdRegbaseTiling::CheckSameShape(int32_t inputIdx, const gert::S
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     // 严格相等，不做广播 —— "可广播但不相等"（如 [2,3] vs [1,3]）同样判非法，
-    // 对齐 spec 的 shape_mismatch 口径。
     if (inputShape->GetStorageShape() != input0Shape) {
         return ge::GRAPH_FAILED;
     }
@@ -149,7 +158,7 @@ ge::graphStatus SgdRegbaseTiling::CheckShapeAndType()
 
     // 检查全部输入的shape与dtype；不能仅依赖parameters的rank校验。
     // 内层 CheckRank 已用 OP_LOGE_FOR_INVALID_SHAPEDIM 结构化上报，此处只作调用链留痕，
-    // 不重复打 ERROR（R6 要求的是"校验必须走结构化宏"，不是"每层都再报一次"）。
+    // 不重复上报同一错误。
     OP_CHECK_IF(CheckRank(inputStorageShape) != ge::GRAPH_SUCCESS, OP_LOGD(tilingContext_, "rank check failed"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckNotEmpty(inputStorageShape) != ge::GRAPH_SUCCESS,
@@ -288,7 +297,6 @@ ge::graphStatus SgdRegbaseTiling::RunTiling()
     }
     // GetAttr / CheckShapeAndType 内部对非法输入已用 OP_LOGE_FOR_INVALID_* 结构化上报，
     // 此处只作调用链留痕、不重复打 ERROR —— 与上面 CheckRank / CheckNotEmpty 的处理一致。
-    // R6 要求的是"校验必须走结构化宏"，不是"每层都再报一次"。
     OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGD(tilingContext_, "Get attr failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckShapeAndType() != ge::GRAPH_SUCCESS, OP_LOGD(tilingContext_, "Shape and dtype check failed."),
                 return ge::GRAPH_FAILED);

@@ -39,10 +39,67 @@ constexpr int64_t UNKNOWN_RANK_DIM = -2;
 
 // UNKNOWN_RANK 在 GE 下表现为 dims == {-2}，须透传而非按 rank 拒绝。
 bool IsUnknownRank(const gert::Shape* shape) { return shape->GetDimNum() == 1 && shape->GetDim(0) == UNKNOWN_RANK_DIM; }
+
+ge::graphStatus CheckInputShapes(gert::InferShapeContext* context, const gert::Shape* paramShape)
+{
+    const char* inputNames[] = {"parameters", "gradient", "learning_rate", "accum", "momentum", "stat"};
+    for (size_t input = 0; input < 6; ++input) {
+        const auto* shape = context->GetInputShape(input);
+        OP_CHECK_NULL_WITH_CONTEXT(context, shape);
+        if (IsUnknownRank(shape)) {
+            continue;
+        }
+        const bool isScalarInput = input == 2 || input == 4;
+        const size_t rank = shape->GetDimNum();
+        if (!isScalarInput) {
+            OP_CHECK_IF(rank < MIN_DIM_NUM || rank > MAX_DIM_NUM,
+                        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), inputNames[input],
+                                                     std::to_string(rank).c_str(), "1 ~ 8 dims"),
+                        return ge::GRAPH_FAILED);
+        }
+        for (size_t axis = 0; axis < rank; ++axis) {
+            const int64_t dim = shape->GetDim(axis);
+            OP_CHECK_IF(dim == 0 && !isScalarInput,
+                        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), inputNames[input], "0",
+                                                                  "empty tensors are not supported"),
+                        return ge::GRAPH_FAILED);
+            OP_CHECK_IF(isScalarInput && (dim == 0 || dim > 1),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), inputNames[input],
+                                                              Ops::Base::ToString(*shape).c_str(),
+                                                              "must contain exactly one element"),
+                        return ge::GRAPH_FAILED);
+        }
+        // Unknown dimensions and unknown rank are resolved at runtime. Only
+        // reject shape relationships that are already known to be invalid.
+        if (isScalarInput || IsUnknownRank(paramShape)) {
+            continue;
+        }
+        OP_CHECK_IF(rank != paramShape->GetDimNum(),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), (std::string("parameters, ") + inputNames[input]).c_str(),
+                        Ops::Base::ToString(std::vector<const gert::Shape*>{paramShape, shape}).c_str(),
+                        "must have the same shape as parameters"),
+                    return ge::GRAPH_FAILED);
+        for (size_t axis = 0; axis < rank; ++axis) {
+            const int64_t dim = shape->GetDim(axis);
+            const int64_t paramDim = paramShape->GetDim(axis);
+            OP_CHECK_IF(dim >= 0 && paramDim >= 0 && dim != paramDim,
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context->GetNodeName(), (std::string("parameters, ") + inputNames[input]).c_str(),
+                            Ops::Base::ToString(std::vector<const gert::Shape*>{paramShape, shape}).c_str(),
+                            "must have the same shape as parameters"),
+                        return ge::GRAPH_FAILED);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
 } // namespace
 
 static ge::graphStatus InferShapeForSgd(gert::InferShapeContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "InferShapeForSgd begin.");
 
     const auto* attrs = context->GetAttrs();
@@ -65,19 +122,11 @@ static ge::graphStatus InferShapeForSgd(gert::InferShapeContext* context)
                                                       "attr weight_decay must be more than or equal to 0"),
                 return ge::GRAPH_FAILED);
 
-    // 这里守的是「框架没把 shape 递过来」（返回 nullptr），属于内部失败，不是 parameters 取值非法，
-    // 所以用裸 OP_LOGE 而非 OP_LOGE_FOR_INVALID_*：后者会走 REPORT_PREDEFINED_ERR_MSG 报 EZ0009/EZ0010，
-    // 对用户提示「你的 shape 不合法」，而此刻并不知道用户给了什么。真正的 shape 取值校验在下面的 dimNum 分支。
     const gert::Shape* paramShape = context->GetInputShape(PARAMETERS_INDEX);
     OP_CHECK_IF(paramShape == nullptr, OP_LOGE(context, "Get input shape of parameters returns nullptr."),
                 return ge::GRAPH_FAILED);
-    if (!IsUnknownRank(paramShape)) {
-        const size_t dimNum = paramShape->GetDimNum();
-        OP_CHECK_IF(dimNum < MIN_DIM_NUM || dimNum > MAX_DIM_NUM,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "parameters", std::to_string(dimNum).c_str(),
-                                                 "1 ~ 8 dims"),
-                    return ge::GRAPH_FAILED);
-    }
+    OP_CHECK_IF(CheckInputShapes(context, paramShape) != ge::GRAPH_SUCCESS,
+                OP_LOGD(context, "Input shape validation failed."), return ge::GRAPH_FAILED);
 
     ge::graphStatus ret = Ops::Base::InferShape4Elewise(context);
     OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForSgd failed."), return ge::GRAPH_FAILED);
@@ -85,8 +134,6 @@ static ge::graphStatus InferShapeForSgd(gert::InferShapeContext* context)
     return ret;
 }
 
-// 双挂仍然必须：漏 InferDataType 会导致 GE 侧输出 dtype 推导缺失/推错，是拷模板时的高频漏项
-// （step3 GATE 明列）。但 InferDataType 只在图场景使用，按交付件划分落在
-// op_graph/sgd_graph_infer.cpp；此处只挂图与单算子共用的 InferShape。
+// InferDataType is registered separately in op_graph/sgd_graph_infer.cpp.
 IMPL_OP_INFERSHAPE(SGD).InferShape(InferShapeForSgd);
 } // namespace ops

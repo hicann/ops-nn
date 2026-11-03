@@ -301,8 +301,7 @@ TEST_F(TestSgdTiling, sgd_tiling_reject_empty_tensor)
 }
 
 // ── DFX：空 tensor「全空间」枚举 ────────────────────────────────────────────
-// changwei-op-dev step5-verify §5.4 要求：空 tensor = **任意一轴或多轴为 0**，
-// 必须逐形态真跑分类，不能只验一个维度，结论要写成「仅支持哪个轴为空」。
+// 空Tensor包括任意一轴或多轴为0的情形，逐形态检查拒绝行为。
 // 本算子的契约是【所有形态一律拒绝】（无空进空出语义），故下面每一条都断言 GRAPH_FAILED。
 // 若将来放开某一轴，本组用例会立刻在该形态上变红，逼迫同步更新契约与文档。
 //
@@ -421,7 +420,7 @@ TEST_F(TestSgdTiling, sgd_tiling_accept_scalar_shape_any_single_element)
 
 TEST_F(TestSgdTiling, sgd_tiling_reject_dtype_mismatch)
 {
-    // 9 个张量位必须同 dtype（parameters 为 fp32，其余为 fp16）
+    // 全部输入必须同dtype（parameters为fp32，其余为fp16）。
     gert::StorageShape param = {{2, 4}, {2, 4}};
     gert::StorageShape one = {{1}, {1}};
     ASSERT_EQ(
@@ -436,4 +435,27 @@ TEST_F(TestSgdTiling, sgd_tiling_reject_unsupported_dtype)
     ASSERT_EQ(
         RunSgdTiling(param, param, one, param, one, param, ge::DT_INT32, ge::DT_INT32, 0.0f, 0.0f, false, nullptr),
         ge::GRAPH_FAILED);
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_reject_shape_size_overflow)
+{
+    // Metadata-only shapes: no tensor storage is allocated for these sizes.
+    uint64_t key = 0;
+    EXPECT_EQ(RunSgdTilingNormal({4294967297LL, 4294967297LL}, ge::DT_FLOAT, 0.0f, 0.0f, false, &key),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_reject_overflowing_scalar_shape)
+{
+    gert::StorageShape param = {{2, 4}, {2, 4}};
+    const int64_t maxDim = std::numeric_limits<int64_t>::max();
+    // Unchecked signed multiplication can wrap this element count to one.
+    gert::StorageShape invalidScalar = {{maxDim, maxDim}, {maxDim, maxDim}};
+    gert::StorageShape one = {{1}, {1}};
+    EXPECT_EQ(RunSgdTiling(param, param, invalidScalar, param, one, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f,
+                           false, nullptr),
+              ge::GRAPH_FAILED);
+    EXPECT_EQ(RunSgdTiling(param, param, one, param, invalidScalar, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f,
+                           false, nullptr),
+              ge::GRAPH_FAILED);
 }

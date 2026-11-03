@@ -24,6 +24,7 @@
  */
 
 #include <gtest/gtest.h> // NOLINT
+#include <array>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -164,4 +165,73 @@ TEST_F(SGD, sgd_infershape_nonnegative_weight_decay_boundaries)
     for (float weightDecay : {-0.0f, 0.5f, std::numeric_limits<float>::infinity()}) {
         EXPECT_EQ(RunSgdInferShape(bigShape, scalarShape, 0.0f, weightDecay, false), ge::GRAPH_SUCCESS);
     }
+}
+
+namespace {
+using SgdShapes = std::array<gert::StorageShape, SGD_INPUT_NUM>;
+
+SgdShapes NormalSgdShapes()
+{
+    gert::StorageShape tensor = {{2, 3}, {2, 3}};
+    gert::StorageShape scalar = {{1}, {1}};
+    return {tensor, tensor, scalar, tensor, scalar, tensor};
+}
+
+ge::graphStatus RunSgdShapes(SgdShapes& shapes)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SGD")->infer_shape;
+    gert::StorageShape output = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(SGD_INPUT_NUM, SGD_OUTPUT_NUM)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&shapes[0], &shapes[1], &shapes[2], &shapes[3], &shapes[4], &shapes[5]})
+                      .OutputShapes({&output})
+                      .NodeAttrs({{"dampening", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+    return inferShapeFunc(holder.GetContext<gert::InferShapeContext>());
+}
+} // namespace
+
+TEST_F(SGD, sgd_infershape_rejects_each_empty_axis)
+{
+    for (gert::StorageShape empty : {gert::StorageShape{{0, 3}, {0, 3}}, gert::StorageShape{{3, 0}, {3, 0}}}) {
+        auto shapes = NormalSgdShapes();
+        for (size_t input : {0U, 1U, 3U, 5U}) {
+            shapes[input] = empty;
+        }
+        EXPECT_EQ(RunSgdShapes(shapes), ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(SGD, sgd_infershape_rejects_non_scalar_learning_rate_and_momentum)
+{
+    for (size_t input : {2U, 4U}) {
+        auto shapes = NormalSgdShapes();
+        shapes[input] = {{1, 2}, {1, 2}};
+        EXPECT_EQ(RunSgdShapes(shapes), ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(SGD, sgd_infershape_rejects_shape_and_rank_mismatch)
+{
+    for (size_t input : {1U, 3U, 5U}) {
+        for (gert::StorageShape mismatch : {gert::StorageShape{{3, 2}, {3, 2}}, gert::StorageShape{{6}, {6}}}) {
+            auto shapes = NormalSgdShapes();
+            shapes[input] = mismatch;
+            EXPECT_EQ(RunSgdShapes(shapes), ge::GRAPH_FAILED);
+        }
+    }
+}
+
+TEST_F(SGD, sgd_infershape_preserves_partial_and_unknown_rank_inputs)
+{
+    auto shapes = NormalSgdShapes();
+    shapes[0] = {{2, -1}, {2, -1}};
+    shapes[2] = {{-1, 1}, {-1, 1}};
+    shapes[4] = {{-2}, {-2}};
+    EXPECT_EQ(RunSgdShapes(shapes), ge::GRAPH_SUCCESS);
+    shapes[0] = {{-2}, {-2}};
+    EXPECT_EQ(RunSgdShapes(shapes), ge::GRAPH_SUCCESS);
 }
