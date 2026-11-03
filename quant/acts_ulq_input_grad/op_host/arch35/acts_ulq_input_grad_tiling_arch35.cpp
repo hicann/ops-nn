@@ -28,6 +28,7 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "op_common/op_host/util/shape_util.h"
 #include "../../op_kernel/arch35/acts_ulq_input_grad_tiling_data.h"
 #include "../../op_kernel/arch35/acts_ulq_input_grad_tiling_key.h"
 
@@ -71,9 +72,15 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
     return ge::GRAPH_SUCCESS;
 }
 
-// 三输入 + 输出 shape 完全一致校验（无广播，spec shape_mismatch），输出元素总数
-static ge::graphStatus GetShapeAndCheck(gert::TilingContext* context, int64_t* totalIdx)
+// 三输入 + 输出 shape 完全一致校验（无广播，spec shape_mismatch），输出元素总数。
+// isDynamicShape：任一输入/输出含未知 rank（-2）或动态维（-1）时置 true——GE 图编译期会在
+// PlaceHolder 子图上调一次 tiling（shape 为 -1/-2 占位），校验与切分计算无意义，运行期会以
+// 具体形状重新走本函数完整校验（对齐 multi_add_rms_norm_dynamic_quant 等仓内惯例）。
+// 动态分支与空 Tensor 短路共用占位 tiling（dim0=0），避免 GetShapeSize()=-1 进入
+// CalcTilingData 后 blockFormer 归零导致 blockNum=CeilDiv(-1,0) 除零。
+static ge::graphStatus GetShapeAndCheck(gert::TilingContext* context, int64_t* totalIdx, bool* isDynamicShape)
 {
+    *isDynamicShape = false;
     auto inYGrad = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inYGrad);
     auto shapeYGrad = EnsureNotScalar(inYGrad->GetStorageShape());
@@ -86,6 +93,15 @@ static ge::graphStatus GetShapeAndCheck(gert::TilingContext* context, int64_t* t
     auto outXGrad = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outXGrad);
     auto shapeXGrad = EnsureNotScalar(outXGrad->GetStorageShape());
+
+    if (Ops::Base::IsUnknownRank(shapeYGrad) || Ops::Base::IsUnknownRank(shapeMinMask) ||
+        Ops::Base::IsUnknownRank(shapeMaxMask) || Ops::Base::IsUnknownRank(shapeXGrad) ||
+        Ops::Base::IsUnknownShape(shapeYGrad) || Ops::Base::IsUnknownShape(shapeMinMask) ||
+        Ops::Base::IsUnknownShape(shapeMaxMask) || Ops::Base::IsUnknownShape(shapeXGrad)) {
+        *isDynamicShape = true;
+        *totalIdx = 0;
+        return ge::GRAPH_SUCCESS;
+    }
 
     OP_CHECK_IF(shapeYGrad.GetShapeSize() != shapeMinMask.GetShapeSize() ||
                     shapeYGrad.GetShapeSize() != shapeMaxMask.GetShapeSize() ||
@@ -152,12 +168,14 @@ static ge::graphStatus CheckDtypeCombination(gert::TilingContext* context, ge::D
     return ge::GRAPH_SUCCESS;
 }
 
-// 获取 shape / dtype，并做三输入 shape 一致 + dtype 组合校验（DESIGN.md §3.4 校验）
+// 获取 shape / dtype，并做三输入 shape 一致 + dtype 组合校验（DESIGN.md §3.4 校验）。
+// 动态占位（isDynamicShape）仅跳过 shape 一致性校验；dtype 与 shape 无关（GE dtype 推导先于
+// tiling 且无未知态），仍照常校验，非法 dtype 组合在编译期即拦截，与静态图行为一致。
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalIdx, ge::DataType* yGradDtype,
-                                         ge::DataType* maskDtype)
+                                         ge::DataType* maskDtype, bool* isDynamicShape)
 {
-    OP_CHECK_IF(GetShapeAndCheck(context, totalIdx) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAndCheck error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndCheck(context, totalIdx, isDynamicShape) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndCheck error"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckDtypeCombination(context, yGradDtype, maskDtype) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "CheckDtypeCombination error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -223,7 +241,8 @@ static ge::graphStatus ActsULQInputGradTilingFunc(gert::TilingContext* context)
     int64_t totalIdx;
     ge::DataType yGradDtype;
     ge::DataType maskDtype;
-    OP_CHECK_IF(GetShapeAttrsInfo(context, &totalIdx, &yGradDtype, &maskDtype) != ge::GRAPH_SUCCESS,
+    bool isDynamicShape = false;
+    OP_CHECK_IF(GetShapeAttrsInfo(context, &totalIdx, &yGradDtype, &maskDtype, &isDynamicShape) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3、workspace
@@ -236,16 +255,18 @@ static ge::graphStatus ActsULQInputGradTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(ActsULQInputGradTilingData), 0, sizeof(ActsULQInputGradTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    // 空 Tensor 短路（dim0=0），避免除零 / 非法搬运（spec §5.3）
+    // 空 Tensor 短路（dim0=0，最终 tiling 形态）与动态 shape 编译期占位（-1/-2，运行期以
+    // 具体 shape 重新 tiling 覆盖）共用出口：均产出 dim0=0 / ubFormer=1 / BlockDim=1 的安全
+    // 占位，避免 ubFormer 为 0 时除零与非法定长（spec §5.3）。
     // TilingKey 仅 BUFFER_MODE 维度（dtype 由 def 驱动的 DTYPE_* 宏承担）。
-    if (totalIdx == 0) {
+    if (totalIdx == 0 || isDynamicShape) {
         // ubFormer 必须设为正数：kernel Process 计算 loopCount=(blockLength_+ubFormer_-1)/ubFormer_，
         // 若 ubFormer_=0（memset 清零）则除零崩溃。设 ubFormer=1 时 blockLength_=0 → loopCount=0，
         // 循环不执行，安全返回（kernel 侧另有 blockLength_==0 提前返回双保险）。
         tiling->dim0 = 0;
         tiling->ubFormer = 1;
         context->SetBlockDim(1);
-        ASCENDC_TPL_SEL_PARAM(context, 0); // BUFFER_MODE=0（空 Tensor 无实际计算）
+        ASCENDC_TPL_SEL_PARAM(context, 0); // BUFFER_MODE=0（占位 tiling 无实际计算）
         return ge::GRAPH_SUCCESS;
     }
 

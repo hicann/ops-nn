@@ -44,7 +44,7 @@
   | FLOAT | BOOL | FLOAT |
   | FLOAT | FLOAT | FLOAT |
 
-- clamp_min_mask与clamp_max_mask的语义值应为0或1。
+- clamp_min_mask与clamp_max_mask的语义值应为0或1；掩码取值为(0,1)区间的连续浮点时，按一般逐元素乘法语义计算（`x_grad = y_grad * mask_min * mask_max`）。
 - 三个输入与输出的shape必须完全一致（无广播），支持空Tensor。
 
 ## 调用说明

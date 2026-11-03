@@ -38,16 +38,21 @@ static constexpr int64_t CLAMP_MIN_MASK_INDEX = 1;
 static constexpr int64_t CLAMP_MAX_MASK_INDEX = 2;
 static constexpr int64_t X_GRAD_INDEX = 0;
 
-// Verify 等价校验（对齐 A2 ActsULQInputGradVerify）：两掩码 dtype 必须一致
+// Verify 等价校验（对齐 A2 ActsULQInputGradVerify）：两掩码 dtype 必须一致。
+// 错误信息带实际 dtype 值（y_grad / 两 mask）与支持列表，便于定位非法组合
+// （abnormal_scenario_analysis 9.3 修改项：错误信息补充实际 dtype 值）。
 static ge::graphStatus Verify4ActsULQInputGrad(gert::InferDataTypeContext* context)
 {
+    const ge::DataType yGradType = context->GetInputDataType(Y_GRAD_INDEX);
     const ge::DataType clampMinMaskType = context->GetInputDataType(CLAMP_MIN_MASK_INDEX);
     const ge::DataType clampMaxMaskType = context->GetInputDataType(CLAMP_MAX_MASK_INDEX);
     OP_CHECK_IF(clampMinMaskType != clampMaxMaskType,
                 OP_LOGE(context->GetNodeName(),
-                        "The type of clamp_min_mask must be same as clamp_max_mask, but got clamp_min_mask=%d, "
-                        "clamp_max_mask=%d.",
-                        static_cast<int>(clampMinMaskType), static_cast<int>(clampMaxMaskType)),
+                        "The type of clamp_min_mask must be same as clamp_max_mask, but got y_grad.dtype=%s, "
+                        "clamp_min_mask.dtype=%s, clamp_max_mask.dtype=%s. Supported: clamp_min_mask and "
+                        "clamp_max_mask must be the same dtype, one of BOOL, FLOAT16 or FLOAT.",
+                        Ops::Base::ToString(yGradType).c_str(), Ops::Base::ToString(clampMinMaskType).c_str(),
+                        Ops::Base::ToString(clampMaxMaskType).c_str()),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

@@ -192,6 +192,54 @@ TEST_F(ActsUlqInputGradTilingTest, empty_tensor_shortcut)
     EXPECT_EQ(info.blockNum, 1u);
 }
 
+// -------------------- 动态 shape 编译期占位（-1 / -2，运行期重新 tiling 覆盖） --------------------
+
+// 全输入动态维（-1）：编译期 PlaceHolder 子图 tiling 跳过校验，产出 dim0=0/ubFormer=1/BlockDim=1 占位
+TEST_F(ActsUlqInputGradTilingTest, dynamic_shape_placeholder_shortcut)
+{
+    gert::TilingContextPara ctx(kOpType,
+                                {{{{{-1, -1}, {-1, -1}}, DT_FLOAT16, FORMAT_ND},
+                                  {{{-1, -1}, {-1, -1}}, DT_BOOL, FORMAT_ND},
+                                  {{{-1, -1}, {-1, -1}}, DT_BOOL, FORMAT_ND}}},
+                                {{{{{-1, -1}, {-1, -1}}, DT_FLOAT16, FORMAT_ND}}}, &g_compileInfoStub);
+    // 动态占位：dim0=0（GetShapeSize 对 -1 为 -1，不得进入 CalcTilingData 除零），
+    // ubFormer=1 防除零，SetBlockDim(1)，SUCCESS。
+    TilingInfo info;
+    ASSERT_TRUE(ExecuteTiling(ctx, info));
+    const auto* td = reinterpret_cast<const ActsULQInputGradTilingData*>(info.tilingData.get());
+    EXPECT_EQ(td->dim0, 0);
+    EXPECT_EQ(td->ubFormer, 1);
+    EXPECT_EQ(info.blockNum, 1u);
+}
+
+// 未知 rank（-2）：同动态占位出口
+TEST_F(ActsUlqInputGradTilingTest, unknown_rank_placeholder_shortcut)
+{
+    gert::TilingContextPara ctx(kOpType,
+                                {{{{{-2}, {-2}}, DT_FLOAT, FORMAT_ND},
+                                  {{{-2}, {-2}}, DT_FLOAT, FORMAT_ND},
+                                  {{{-2}, {-2}}, DT_FLOAT, FORMAT_ND}}},
+                                {{{{{-2}, {-2}}, DT_FLOAT, FORMAT_ND}}}, &g_compileInfoStub);
+    TilingInfo info;
+    ASSERT_TRUE(ExecuteTiling(ctx, info));
+    const auto* td = reinterpret_cast<const ActsULQInputGradTilingData*>(info.tilingData.get());
+    EXPECT_EQ(td->dim0, 0);
+    EXPECT_EQ(td->ubFormer, 1);
+    EXPECT_EQ(info.blockNum, 1u);
+}
+
+// 静态 y_grad + 动态掩码（-1）：跳过 shape 一致性校验（对齐 infershape 动态分支），
+// dtype 校验保留——混合浮点非法组合在编译期仍拦截
+TEST_F(ActsUlqInputGradTilingTest, dynamic_shape_with_illegal_dtype_still_rejected)
+{
+    gert::TilingContextPara ctx(kOpType,
+                                {{{{{2, 3}, {2, 3}}, DT_FLOAT16, FORMAT_ND},
+                                  {{{-1, -1}, {-1, -1}}, DT_FLOAT, FORMAT_ND},
+                                  {{{-1, -1}, {-1, -1}}, DT_FLOAT, FORMAT_ND}}},
+                                {{{{{2, 3}, {2, 3}}, DT_FLOAT16, FORMAT_ND}}}, &g_compileInfoStub);
+    ExecuteTestCase(ctx, ge::GRAPH_FAILED);
+}
+
 // -------------------- 异常用例（GRAPH_FAILED） --------------------
 
 // 三输入 shape 不一致
