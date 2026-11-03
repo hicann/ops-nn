@@ -97,18 +97,47 @@ static const aclTensor* SetTensorToNZFormat(const aclTensor* input, op::Shape& s
 }
 
 bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertokenScale, const aclTensor* yScale,
-                          const aclTensor* x1Offset, const aclTensor* yOffset, int64_t groupSize)
+                          const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset,
+                          int64_t groupSize)
 {
     auto& x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto& x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    const bool isArch92S8S4 = IsNpuArch92() && isA8W4Int(x1, x2);
+    const bool isMsd = isA8W4Msd(x1, x2, scale, pertokenScale);
+
+    if ((isA8W4Float(x1, x2) || (isArch92S8S4 && !isMsd)) && x2Offset != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "A8W4 requires x2Offset to be null in floating-point or npuArch DAV9201/9202 A8W4 "
+                "[int8/4] scenarios with FLOAT scales.");
+        return false;
+    }
+
+    if (isArch92S8S4 && !isMsd) {
+        if (scale == nullptr || pertokenScale == nullptr || scale->GetDataType() != op::DataType::DT_FLOAT ||
+            pertokenScale->GetDataType() != op::DataType::DT_FLOAT) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported A8W4 [int8/4] scale combination.");
+            return false;
+        }
+        if (groupSize != 64 && groupSize != 128) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales only supports groupSize 64 "
+                    "or 128.");
+            return false;
+        }
+        if (yScale != nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales requires yScale to be null.");
+            return false;
+        }
+    }
 
     if (x1Offset != nullptr && x1Offset->GetViewShape().GetShapeSize() != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support x1Offset.");
         return false;
     }
 
-    if (yOffset != nullptr && yOffset->GetViewShape().GetShapeSize() != 0 && !isA8W4Msd(x1, x2, scale, pertokenScale)) {
+    if (yOffset != nullptr && yOffset->GetViewShape().GetShapeSize() != 0 && !isMsd) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yOffset.");
         return false;
     }
@@ -135,7 +164,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
             return false;
         }
 
-        if (groupSize != 0 && !isPerblockGroup) {
+        if (groupSize != 0 && !isPerblockGroup && !(isArch92S8S4 && !isMsd)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support groupSize.");
             return false;
         }
@@ -259,21 +288,17 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor* x1, const 
     OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(x2Scale, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(out, return ACLNN_ERR_PARAM_NULLPTR);
-    if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), x1Scale, yScale, x1Offset, yOffset, groupSize)) {
+    if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), x1Scale, yScale, x1Offset, x2Offset, yOffset, groupSize)) {
         return ACLNN_ERR_PARAM_INVALID;
     }
-    auto ret = quant_matmul_v4::internal::CheckWeightNzParamsDAV3510(x1, x2, x1Scale, x2Scale, out);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    if (x2 == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "QuantMatmul WeightNz do not support x2 is nullptr.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     int64_t viewDimNum = x2->GetViewShape().GetDimNum();
     if (viewDimNum < MIN_DIM_NUM_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2's view dimNum should greater than 1, but is %ld.", viewDimNum);
         return ACLNN_ERR_PARAM_INVALID;
     }
+
+    auto ret = quant_matmul_v4::internal::CheckWeightNzParamsDAV3510(x1, x2, x1Scale, x2Scale, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 修改传入tensor的format和shape
     ret = preProcessTensor(x1, x2, x1Scale, x2Scale);

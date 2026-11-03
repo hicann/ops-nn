@@ -393,6 +393,10 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor& mandatoryTensors, TupleOpti
         CHECK_RET(CheckInputAttrExistence(boolsTrans, mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDimRangeA8W4(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckScaleDimRangeA8W4(mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
+    } else if (IsNpuArch92() && isA8W4Int(x1, x2) && !isA8W4Msd(x1, x2, scale, perTokenScale)) {
+        CHECK_RET(CheckInputAttrExistence(boolsTrans, mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckDimRangeA8W4(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckScaleDimRangeA8W4(mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
     } else {
         CHECK_RET(CheckDimRange(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
     }
@@ -461,7 +465,7 @@ static bool IsX1Transdata(const aclTensor* x1, const aclTensor* x2, int64_t dtyp
 
 static aclnnStatus A8W4ProcessYScaleTensor(const aclTensor* x1Scale, const aclTensor*& yScale, aclOpExecutor* executor)
 {
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 || IsNpuArch92()) {
         // A8W4场景输入的INT64转为UINT64
         if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
             auto castYScale = executor->CreateView(yScale, yScale->GetViewShape(), yScale->GetViewOffset());
@@ -503,6 +507,10 @@ static aclnnStatus TensorPreProcess(const aclTensor* x1, const aclTensor* x2, co
     bool isA8W4F = isA8W4Float(x1, x2);
     if (isA8W4F) {
         CHECK_RET(A8W4ProcessYScaleTensor(x1Scale, yScale, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+        // HiF4 uses groupSize -1 instead of the packed M/N/K encoding.
+        if (x2->GetDataType() == Ops::NN::DT_HIFLOAT4) {
+            return ACLNN_SUCCESS;
+        }
         CHECK_RET(A8W4InferGroupSize(groupSize), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
     }
@@ -668,10 +676,11 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
         const aclTensor* matmulNdRet = nullptr;
         matmulNdRet = l0op::TransData(matmulRet, Format::FORMAT_ND, 0, executor);
 
-        CHECK_RET(PostMatmulCalcProcess(matmulNdRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+        ret = PostMatmulCalcProcess(matmulNdRet, std::tie(x1, x2, out), executor);
     } else {
-        CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
+        ret = PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor);
     }
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }
 } // namespace internal

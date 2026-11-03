@@ -494,4 +494,105 @@ TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeIllegal)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
+enum class Arch92S8S4ExtraInput { NONE, X2_OFFSET, Y_SCALE, BIAS };
+
+struct Arch92S8S4Param {
+    string caseName;
+    int64_t k;
+    int64_t groupSize;
+    vector<int64_t> x1ScaleShape;
+    aclDataType x1ScaleType;
+    vector<int64_t> x2ScaleShape;
+    Arch92S8S4ExtraInput extraInput;
+    aclnnStatus expectRet;
+};
+
+static vector<Arch92S8S4Param> GetArch92S8S4Params()
+{
+    using ExtraInput = Arch92S8S4ExtraInput;
+    return {
+        {"Valid", 128, 64, {16, 1}, ACL_FLOAT, {2, 64}, ExtraInput::NONE, ACLNN_SUCCESS},
+        {"RejectsEmptyX2Offset", 128, 64, {16, 1}, ACL_FLOAT, {2, 64}, ExtraInput::X2_OFFSET, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsX1ScaleDtype", 128, 64, {16, 1}, ACL_FLOAT16, {2, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsGroupSize32", 128, 32, {16, 1}, ACL_FLOAT, {2, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsYScale", 128, 64, {16, 1}, ACL_FLOAT, {2, 64}, ExtraInput::Y_SCALE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsX1ScaleRank1", 128, 64, {16}, ACL_FLOAT, {2, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsX2ScaleRank1", 128, 64, {16, 1}, ACL_FLOAT, {64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsEmptyX1Scale", 128, 64, {0, 1}, ACL_FLOAT, {2, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsBias", 128, 64, {16, 1}, ACL_FLOAT, {2, 64}, ExtraInput::BIAS, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsX1ScaleShape", 128, 64, {16, 2}, ACL_FLOAT, {2, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsX2ScaleShape", 128, 64, {16, 1}, ACL_FLOAT, {3, 64}, ExtraInput::NONE, ACLNN_ERR_PARAM_INVALID},
+        {"RejectsKNotDivisibleByGroupSize",
+         192,
+         128,
+         {16, 1},
+         ACL_FLOAT,
+         {2, 64},
+         ExtraInput::NONE,
+         ACLNN_ERR_PARAM_INVALID},
+    };
+}
+
+class l2_QuantBatchMatmulWeightNzArch92S8S4_test : public testing::TestWithParam<Arch92S8S4Param> {};
+
+TEST_P(l2_QuantBatchMatmulWeightNzArch92S8S4_test, GetWorkspaceSize)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_9201);
+    const auto& param = GetParam();
+    TensorDesc x1Desc({16, param.k}, ACL_INT8, ACL_FORMAT_ND);
+    // Non-transposed [K, N] uses [N1, K1, K0, N0]; N0=64 and K0=16.
+    TensorDesc x2Desc({param.k, 64}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, param.k / 16, 16, 64});
+    TensorDesc x1ScaleDesc(param.x1ScaleShape, param.x1ScaleType, ACL_FORMAT_ND);
+    TensorDesc x2ScaleDesc(param.x2ScaleShape, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2OffsetDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc yScaleDesc({1, 64}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc biasDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc outDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    uint64_t workspaceSize = 0;
+
+    const auto runCase = [&]() -> aclnnStatus {
+        switch (param.extraInput) {
+            case Arch92S8S4ExtraInput::X2_OFFSET: {
+                auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                    INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, x2OffsetDesc,
+                                          nullptr, nullptr, false, false, param.groupSize),
+                                    OUTPUT(outDesc));
+                return ut.TestGetWorkspaceSize(&workspaceSize);
+            }
+            case Arch92S8S4ExtraInput::Y_SCALE: {
+                auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                    INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yScaleDesc, nullptr, nullptr,
+                                          nullptr, nullptr, false, false, param.groupSize),
+                                    OUTPUT(outDesc));
+                return ut.TestGetWorkspaceSize(&workspaceSize);
+            }
+            case Arch92S8S4ExtraInput::BIAS: {
+                auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                    INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                          biasDesc, false, false, param.groupSize),
+                                    OUTPUT(outDesc));
+                return ut.TestGetWorkspaceSize(&workspaceSize);
+            }
+            case Arch92S8S4ExtraInput::NONE: {
+                auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                    INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                          nullptr, false, false, param.groupSize),
+                                    OUTPUT(outDesc));
+                return ut.TestGetWorkspaceSize(&workspaceSize);
+            }
+        }
+        ADD_FAILURE() << "Unknown optional input for case: " << param.caseName;
+        return ACLNN_ERR_PARAM_INVALID;
+    };
+
+    EXPECT_EQ(runCase(), param.expectRet);
+    if (param.expectRet != ACLNN_SUCCESS) {
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(Arch92S8S4, l2_QuantBatchMatmulWeightNzArch92S8S4_test,
+                         testing::ValuesIn(GetArch92S8S4Params()),
+                         [](const testing::TestParamInfo<Arch92S8S4Param>& info) { return info.param.caseName; });
+
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulWeightNz, l2_QuantBatchMatmulWeightNz_test, testing::ValuesIn(GetParams()));

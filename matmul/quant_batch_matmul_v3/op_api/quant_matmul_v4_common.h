@@ -21,6 +21,7 @@
 #include "opdev/platform.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "opdev/common_types.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 
 namespace quant_matmul_v4 {
 // Constants
@@ -100,13 +101,23 @@ using TupleQuant = std::tuple<const aclTensor*, const aclTensor*, const aclTenso
                               const aclTensor*, const aclTensor*, const int64_t&, const int64_t&>;
 using TupleAttr = std::tuple<bool, bool>;
 
+static inline bool IsNpuArch92()
+{
+    const auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+}
+
 static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
 {
     if (x1 == nullptr || x2 == nullptr) {
         return false;
     }
+    const auto x2Format = ge::GetPrimaryFormat(x2->GetStorageFormat());
+    const bool isHiF4Nz = IsNpuArch92() && x2->GetDataType() == Ops::NN::DT_HIFLOAT4 &&
+                          x2Format == op::Format::FORMAT_FRACTAL_NZ;
     return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
-           (x2->GetDataType() == op::DataType::DT_FLOAT || x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1);
+           (x2->GetDataType() == op::DataType::DT_FLOAT || x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 ||
+            isHiF4Nz);
 }
 
 static inline bool isA8W4Int(const aclTensor* x1, const aclTensor* x2)
@@ -161,7 +172,8 @@ static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2S
         return false;
     }
     return x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
-           x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+           (x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 ||
+            (IsNpuArch92() && x2Scale->GetDataType() == Ops::NN::DT_HIFLOAT4_SCALE));
 }
 
 static inline bool IsTCG(const aclTensor* x1Scale, const aclTensor* x2Scale)
@@ -172,6 +184,9 @@ static inline bool IsTCG(const aclTensor* x1Scale, const aclTensor* x2Scale)
 
 static inline int64_t SelectNzK0Value(op::DataType dataType, const bool isA8W4Float)
 {
+    if (IsNpuArch92() && (dataType == op::DataType::DT_FLOAT4_E2M1 || dataType == Ops::NN::DT_HIFLOAT4)) {
+        return NZ_K0_VALUE_INT4_TRANS;
+    }
     switch (dataType) {
         case op::DataType::DT_INT4:
             return NZ_K0_VALUE_INT4_TRANS;
