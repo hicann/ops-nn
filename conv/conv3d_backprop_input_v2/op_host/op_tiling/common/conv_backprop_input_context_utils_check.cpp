@@ -35,7 +35,13 @@ bool GetFusionMode(Conv3dBpInputV2RunInfo& runInfoV2, const char* opName, const 
         return true;
     }
     auto attrs = context->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "attrs"), return false);
+    OP_CHECK_IF(
+        attrs == nullptr,
+        OP_LOGE(opName,
+                "GetFusionMode: framework ComputeNodeInfo is missing; RuntimeAttrs cannot be read for operator %s. "
+                "Initialize framework tiling metadata before attribute access.",
+                opName == nullptr ? "<unknown>" : opName),
+        return false);
     size_t idx = K_FUSION_MODE_CONV3D_TRANSPOSE_IDX;
     if (idx < attrs->GetAttrNum()) {
         const int64_t* fusionMode = attrs->GetAttrPointer<int64_t>(idx);
