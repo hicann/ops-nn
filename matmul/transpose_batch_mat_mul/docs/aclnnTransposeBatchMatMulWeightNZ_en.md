@@ -190,7 +190,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>If the input data types have a deduction relationship, this parameter processes the derived data type by default. The enumeration values are as follows:<ul>
             <li>0: KEEP_DTYPE, computes with the input data type unchanged.</li>
             <li>1: ALLOW_FP32_DOWN_PRECISION, supports converting input data to a lower precision for computation. When the input data type is FLOAT32, it is converted to HFLOAT32 for computation. For other data types, the input type is kept for computation.</li>
-            <li>2: USE_FP16, supports converting the input to FLOAT16 for computation. This option is not supported when the input data type is BFLOAT16.</li>
+            <li>2: USE_FP16, supports converting the input to FLOAT16 for computation. This option does not take effect when the input data type is BFLOAT16; computation is performed with the input data type.</li>
             <li>3: USE_HF32, supports converting the input to data type HFLOAT32 for computation. When the input data type is FLOAT32, it is converted to HFLOAT32 for computation.</li></ul>
         </td>
         <td>INT8</td>
@@ -281,24 +281,54 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>The input x1, x2, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
-      <td>The data type of x1, x2, or out is not in the supported range.</td>
-    </tr>
-    <tr>
-      <td>The second dimension of x1 is not equal to the first dimension of x2.</td>
+      <td rowspan="16">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="16">161002</td>
+      <td>The data type of x1, x2, or out is not in the supported range, or the data types of x1 and x2 are different.</td>
     </tr>
     <tr>
       <td>The dimension size of the ViewShape of x1 or x2 is not equal to 3.</td>
     </tr>
     <tr>
+      <td>The length of permX1, permX2, or permY is not equal to 3, or their values are not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>The second dimension of x1 is not equal to the first dimension of x2, or the batch dimensions of x1 and x2 are not equal.</td>
+    </tr>
+    <tr>
+      <td>x1 or x2 is an empty tensor.</td>
+    </tr>
+    <tr>
       <td>The StorageFormat of x2 is not FORMAT_FRACTAL_NZ.</td>
     </tr>
     <tr>
-      <td>The data type of scale is not in the supported range.</td>
+      <td>The StorageFormat of x1 or out is FORMAT_FRACTAL_NZ.</td>
     </tr>
     <tr>
-      <td>The value of batchSplitFactor is not in the supported range.</td>
+      <td>The StorageShape dimension size of x2 is not equal to 5, or the k-axis or n-axis size of x2 is 1.</td>
+    </tr>
+    <tr>
+      <td>The data type of scale is not in the supported range, or its shape is not one-dimensional, or its length is not equal to B*N.</td>
+    </tr>
+    <tr>
+      <td>bias is not null.</td>
+    </tr>
+    <tr>
+      <td>The value of cubeMathType is not in the supported range, or the current product does not support the configured data type combination.</td>
+    </tr>
+    <tr>
+      <td>batchSplitFactor is less than or equal to 0, or cannot evenly divide batch when it is greater than 1, or is not equal to 1 when scale is not null.</td>
+    </tr>
+    <tr>
+      <td>B, N, K, or B*K is not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>When x2 is transposed, the combination of permX2, scale, or batchSplitFactor is not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>batch*N is greater than INT64_MAX, or when scale is not null, B*N is not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>The shape of out is inconsistent with the calculated shape.</td>
     </tr>
   </tbody>
   </table>
@@ -353,7 +383,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 <!-- npu="A3,910b" id7 -->
 - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
   - The value range of B is [1, 65536), and the value range of N is [1, 65536).
-  - When the input shape of x1 is (B, M, K), K <= 65535; when the input shape of x1 is (M, B, K), B * K <= 65535.
+  - When the input shape of x1 is (B, M, K), K <= 65535; when the input shape of x1 is (M, B, K), if scale is not empty or batchSplitFactor is not equal to 1, both K and B * K must be less than 65536.
   - In the ND format corresponding to the NZ format of x2, the second and third dimensions must be divisible by 16.
   - The StorageFormat of x2 must be NZ format.
   - x1 and x2 must have the same dtype.

@@ -195,7 +195,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>如果输入的数据类型存在互相推导关系，该参数默认对推导后的数据类型进行处理。具体的枚举值如下：<ul>
             <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
             <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当数据为其他数据类型时，保持输入类型计算。</li>
-            <li>2：USE_FP16，支持将输入降为FLOAT16精度计算，当输入数据类型为BFLOAT16时不支持该选项。</li>
+            <li>2：USE_FP16，支持将输入降为FLOAT16精度计算，当输入数据类型为BFLOAT16时该选项不生效，保持输入数据类型进行计算。</li>
             <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。</li></ul>
         </td>
         <td>INT8</td>
@@ -288,24 +288,54 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>传入的x1、x2或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
-      <td>x1、x2或out的数据类型不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>x1的第二维和x2的第一维度不相等。</td>
+      <td rowspan="16">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="16">161002</td>
+      <td>x1、x2或out的数据类型不在支持的范围内，或x1与x2的数据类型不一致。</td>
     </tr>
     <tr>
       <td>x1或x2的ViewShape的维度大小不等于3。</td>
     </tr>
     <tr>
+      <td>permX1、permX2或permY的长度不等于3，或其取值不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>x1的第二维和x2的第一维度不相等，或x1和x2的batch维度不相等。</td>
+    </tr>
+    <tr>
+      <td>x1或x2为空tensor。</td>
+    </tr>
+    <tr>
       <td>x2的StorageFormat不为FORMAT_FRACTAL_NZ格式。</td>
     </tr>
     <tr>
-      <td>scale的数据类型不在支持的范围内。</td>
+      <td>x1或out的StorageFormat为FORMAT_FRACTAL_NZ格式。</td>
     </tr>
     <tr>
-      <td>batchSplitFactor的数值大小不在支持的范围内。</td>
+      <td>x2的StorageShape维度大小不等于5，或x2的k轴、n轴大小为1。</td>
+    </tr>
+    <tr>
+      <td>scale的数据类型不在支持的范围内，或其shape不是一维，或长度不等于B*N。</td>
+    </tr>
+    <tr>
+      <td>bias不为空。</td>
+    </tr>
+    <tr>
+      <td>cubeMathType的取值不在支持的范围内，或当前产品不支持所设置的数据类型组合。</td>
+    </tr>
+    <tr>
+      <td>batchSplitFactor小于等于0，或大于1时不能整除batch，或scale不为空时不等于1。</td>
+    </tr>
+    <tr>
+      <td>B、N、K或B*K的取值不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>x2转置时，permX2、scale或batchSplitFactor的取值组合不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>batch*N大于INT64_MAX，或scale不为空时B*N的取值不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>out的shape与计算得到的shape不一致。</td>
     </tr>
   </tbody>
   </table>
@@ -360,7 +390,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 <!-- npu="A3,910b" id7 -->
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
-  - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
+  - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，若scale不为空或batchSplitFactor不等于1，则K和B * K都必须小于65536。
   - x2的NZ格式对应的ND格式中，第二维和第三维都必须被16整除。
   - x2的StorageFormat必须为NZ格式。
   - x1和x2的dtype必须相同。
