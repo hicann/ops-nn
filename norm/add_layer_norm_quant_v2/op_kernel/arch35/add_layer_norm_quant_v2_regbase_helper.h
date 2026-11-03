@@ -43,6 +43,8 @@ using AscendC::Reg::Truncate;
 #define IS_LAYERNORM_RES_EXIST ((OPT_CODE & LAYERNORM_RES_CODE) > 0)
 
 #define IS_DIV_SCALE (((TILING_KEY / 10) % 10) == 1)
+// static per-tensor
+#define IS_PER_TENSOR_SCALE (((TILING_KEY / 1000) % 10) == 9)
 
 #define CONST_CONDITIONAL_EXPR(_cond, _expr) \
     if constexpr (_cond) {                   \
@@ -110,6 +112,20 @@ __aicore__ inline void LoadQuantParams(__ubuf__ T* ubAddr, RegTensor<float>& dst
     } else {
         RegTensor<T> dstB16;
         LoadAlign<T, LoadDist::DIST_UNPACK_B16>(dstB16, (__ubuf__ T*)ubAddr + offset);
+        Cast<float, T, castTraitB162B32>(dstTensor, dstB16, preg);
+    }
+}
+
+// static per-tensor：scales/zero_points 在 GM 中只有 1 个元素（UB 也只搬入了首元素），
+// 用 DIST_BRC 把首元素广播到整个寄存器，供后续所有 col 分块复用。
+template <typename T>
+__aicore__ inline void LoadScalarQuantParam(__ubuf__ T* ubAddr, RegTensor<float>& dstTensor, MaskReg& preg)
+{
+    if constexpr (IsSameType<T, float>::value) {
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dstTensor, (__ubuf__ float*)ubAddr);
+    } else {
+        RegTensor<T> dstB16;
+        LoadAlign<T, LoadDist::DIST_BRC_B16>(dstB16, (__ubuf__ T*)ubAddr);
         Cast<float, T, castTraitB162B32>(dstTensor, dstB16, preg);
     }
 }

@@ -29,7 +29,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scale1,
                                 GM_ADDR scale2, GM_ADDR zeroOffset1, GM_ADDR zeroOffset2, GM_ADDR y1, GM_ADDR y2,
                                 GM_ADDR x, GM_ADDR layernormRes, GM_ADDR workspace,
-                                const AddLayerNormQuantRegbaseTilingData* tilingData)
+                                const AddLayerNormQuantV2RegbaseTilingData* tilingData)
     {
         uint32_t coreIdx = GetBlockIdx();
 
@@ -185,24 +185,28 @@ public:
                                               LocalTensor<SCALE_TYPE> offset1Local,
                                               LocalTensor<SCALE_TYPE> offset2Local, int64_t offset, int32_t copyLen)
     {
+        // static per-tensor：GM 中只有 1 个元素，只搬首元素（后续由 LoadScalarQuantParam 广播）
+        int32_t realCopyLen = IS_PER_TENSOR_SCALE ? 1 : copyLen;
+        int64_t realOffset = IS_PER_TENSOR_SCALE ? 0 : offset;
+
         DataCopyExtParams quantCopyParams;
         quantCopyParams.blockCount = 1;
-        quantCopyParams.blockLen = copyLen * sizeof(SCALE_TYPE);
+        quantCopyParams.blockLen = realCopyLen * sizeof(SCALE_TYPE);
         quantCopyParams.srcStride = 0;
         quantCopyParams.dstStride = 0;
-        DataCopyPad(scale1Local, scale1Gm_[offset], quantCopyParams, {});
+        DataCopyPad(scale1Local, scale1Gm_[realOffset], quantCopyParams, {});
         scale1Queue_.EnQue(scale1Local);
 
         if constexpr (IS_SCALE2_EXIST) {
-            DataCopyPad(scale2Local, scale2Gm_[offset], quantCopyParams, {});
+            DataCopyPad(scale2Local, scale2Gm_[realOffset], quantCopyParams, {});
             scale2Queue_.EnQue(scale2Local);
         }
         if constexpr (IS_OFFSET1_EXIST) {
-            DataCopyPad(offset1Local, zeroOffset1Gm_[offset], quantCopyParams, {});
+            DataCopyPad(offset1Local, zeroOffset1Gm_[realOffset], quantCopyParams, {});
             zeroOffset1Queue_.EnQue(offset1Local);
         }
         if constexpr (IS_OFFSET2_EXIST) {
-            DataCopyPad(offset2Local, zeroOffset2Gm_[offset], quantCopyParams, {});
+            DataCopyPad(offset2Local, zeroOffset2Gm_[realOffset], quantCopyParams, {});
             zeroOffset2Queue_.EnQue(offset2Local);
         }
     }
@@ -252,6 +256,15 @@ public:
             RegTensor<int8_t> quantOut1;
             RegTensor<int8_t> quantOut2;
             MaskReg pregLoop;
+            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+
+            // static per-tensor：标量参数只广播一次，所有 row/col 分块复用
+            if constexpr (IS_PER_TENSOR_SCALE) {
+                LoadScalarQuantParam(scale1Addr, scale1, pregMain);
+                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, LoadScalarQuantParam(scale2Addr, scale2, pregMain));
+                CONST_CONDITIONAL_EXPR(IS_OFFSET1_EXIST, LoadScalarQuantParam(offset1Addr, offset1, pregMain));
+                CONST_CONDITIONAL_EXPR(IS_OFFSET2_EXIST, LoadScalarQuantParam(offset2Addr, offset2, pregMain));
+            }
 
             for (uint16_t k = 0; k < (uint16_t)rowsCount; k++) {
                 uint32_t sreg0 = colsCount;
@@ -259,12 +272,15 @@ public:
                 for (uint16_t i = 0; i < colsLoopCount; i++) {
                     pregLoop = UpdateMask<float>(sreg0);
                     LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
-                    LoadQuantParams(scale1Addr, scale1, pregLoop, i * vlFp32);
-                    CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, LoadQuantParams(scale2Addr, scale2, pregLoop, i * vlFp32));
-                    CONST_CONDITIONAL_EXPR(IS_OFFSET1_EXIST,
-                                           LoadQuantParams(offset1Addr, offset1, pregLoop, i * vlFp32));
-                    CONST_CONDITIONAL_EXPR(IS_OFFSET2_EXIST,
-                                           LoadQuantParams(offset2Addr, offset2, pregLoop, i * vlFp32));
+                    if constexpr (!IS_PER_TENSOR_SCALE) {
+                        LoadQuantParams(scale1Addr, scale1, pregLoop, i * vlFp32);
+                        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
+                                               LoadQuantParams(scale2Addr, scale2, pregLoop, i * vlFp32));
+                        CONST_CONDITIONAL_EXPR(IS_OFFSET1_EXIST,
+                                               LoadQuantParams(offset1Addr, offset1, pregLoop, i * vlFp32));
+                        CONST_CONDITIONAL_EXPR(IS_OFFSET2_EXIST,
+                                               LoadQuantParams(offset2Addr, offset2, pregLoop, i * vlFp32));
+                    }
 
                     LoadAlign(x, ((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign));
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, ((__ubuf__ float*)meanAddr + k));

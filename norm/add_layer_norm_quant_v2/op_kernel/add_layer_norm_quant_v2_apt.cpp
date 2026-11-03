@@ -40,6 +40,20 @@
 #define TILING_WELFORD_BIAS_ELEWISE_DYN_QUANT 8121
 #define TILING_WELFORD_BIAS_BRC_DYN_QUANT 8122
 
+// static per-tensor（scales/zero_points 为 [1]）
+#define TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE_PT 9000
+#define TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE_PT 9001
+#define TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE_PT 9002
+#define TILING_WELFORD_BIAS_NONE_MUL_SCALE_PT 9100
+#define TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE_PT 9101
+#define TILING_WELFORD_BIAS_BRC_MUL_SCALE_PT 9102
+#define TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE_PT 9010
+#define TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE_PT 9011
+#define TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE_PT 9012
+#define TILING_WELFORD_BIAS_NONE_DIV_SCALE_PT 9110
+#define TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE_PT 9111
+#define TILING_WELFORD_BIAS_BRC_DIV_SCALE_PT 9112
+
 #define SUCCESSOR_NUMBER_OF_ONE 2
 
 #ifdef DTYPE_SCALES1
@@ -107,8 +121,8 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant_v2(GM_ADDR x1, GM_ADD
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     AscendC::TPipe pipe;
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
-    GET_TILING_DATA_WITH_STRUCT(AddLayerNormQuantRegbaseTilingData, tilingDataIn, tiling);
-    const AddLayerNormQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
+    GET_TILING_DATA_WITH_STRUCT(AddLayerNormQuantV2RegbaseTilingData, tilingDataIn, tiling);
+    const AddLayerNormQuantV2RegbaseTilingData* __restrict tilingData = &tilingDataIn;
 
     if (TILING_KEY_IS(0)) {
         // 0 Tiling, Do Nothing.
@@ -149,6 +163,44 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant_v2(GM_ADDR x1, GM_ADD
                                    AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_MUL_SCALE)) {
         CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    }
+
+    else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_NONE_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_NONE_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_DIV_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_DIV_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseFullLoad);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_NONE_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_NONE_MUL_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE_PT,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_MUL_SCALE_PT)) {
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_MUL_SCALE_PT,
                                    AddLayerNormQuantRegbase::KernelAddLayerNormV2StaticQuantRegbaseWelford);
     }
 

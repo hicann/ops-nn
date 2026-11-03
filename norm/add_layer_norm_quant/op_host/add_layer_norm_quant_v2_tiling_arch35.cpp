@@ -37,6 +37,8 @@ constexpr uint32_t TILING_BIAS_BRC = 2;
 constexpr uint32_t TILING_DIV_MODE = 10;
 constexpr uint32_t TILING_DYN_MODE = 20;
 
+constexpr uint32_t TILING_PER_TENSOR = 1000;
+
 constexpr int64_t QUANT_OUT_NUMS_SOLE = 1;
 constexpr int64_t QUANT_OUT_NUMS_DUAL = 2;
 constexpr size_t DEFAULT_WORKSPACE_SIZE = 32;
@@ -64,6 +66,7 @@ static inline int64_t ConditionalIncreaseOne(int64_t value, bool cond)
     }
 }
 
+// 与 V1 AddLayerNormQuantRegbaseTiling::HasZeroDim 同实现
 static inline bool HasZeroDim(const gert::StorageShape* s)
 {
     if (nullptr == s) {
@@ -96,13 +99,13 @@ void AddLayerNormQuantV2RegbaseTiling::ComputeBinaryAddVars()
 }
 
 // kernel 侧 bias 缓冲：IS_BIAS_ELEWISE 已按 BUFFER_NUM 份计入 inOut/elewise 队列；
-// IS_BIAS_BROADCAST 下 kernel 同样 InitBuffer 一份 bias（full-load 1 份、welford BUFFER_NUM 份），
-// 但 UB 记账原先只算 ELEWISE，导致 broadcast bias 的缓冲未计入 → UB 越界 → 设备 VEC_ERROR。
-// rank-1 bias 已在 GetShapeInfo 中并入 weightTensorNums_（作为一份 weight buffer），
-// 只有 rank>1 的 broadcast bias 需要在这里补一份，避免重复计数。
+// IS_BIAS_BROADCAST 下 kernel 另行 InitBuffer（full-load 1 份、welford BUFFER_NUM 份），
+// UB 记账必须单独补一份，否则 broadcast bias 的缓冲未计入 → UB 越界 → 设备 VEC_ERROR。
+// 分类改为按元素数后，所有 broadcast bias（[N]、[1, N] 等）统一由这里补，
+// weightTensorNums_ 恒为 gamma+beta 的 2 份，避免与 rank 判据耦合产生重复/漏计。
 int64_t AddLayerNormQuantV2RegbaseTiling::GetExtraBroadcastBiasBufNum() const
 {
-    return ((this->biasType_ == BIAS_TYPE::BROADCAST_BIAS) && (this->weightTensorNums_ == CONST_2)) ? 1 : 0;
+    return (this->biasType_ == BIAS_TYPE::BROADCAST_BIAS) ? 1 : 0;
 }
 
 void AddLayerNormQuantV2RegbaseTiling::ApplyFullLoadTilingResult(int64_t rowStep, int64_t binaryAddNum)
@@ -118,7 +121,8 @@ void AddLayerNormQuantV2RegbaseTiling::ApplyFullLoadTilingResult(int64_t rowStep
     this->ubTilingPolicy_ = UB_TILING_POLICY::FULL_LOAD;
 }
 
-void AddLayerNormQuantV2RegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLayerNormQuantRegbaseTilingData* tiling)
+void AddLayerNormQuantV2RegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(
+    AddLayerNormQuantV2RegbaseTilingData* tiling)
 {
     tiling->set_rowsPerCore(this->rowsPerCore_);
     tiling->set_rowsPerTailCore(this->rowsPerTailCore_);
@@ -157,6 +161,11 @@ void AddLayerNormQuantV2RegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(Add
         }
     } else if (divMode_) {
         tilingKey += TILING_DIV_MODE;
+    }
+
+    // static per-tensor：只作用于 static（dynamic 无 scales）
+    if (this->isPerTensor_) {
+        tilingKey += TILING_PER_TENSOR;
     }
 
     // deal with small N case:
@@ -278,10 +287,10 @@ bool AddLayerNormQuantV2RegbaseTiling::GetAttrs()
     this->needOutputX_ = GetOptionalAttr<bool>(attrs, X_OUT_IDX, false);
     this->divMode_ = GetOptionalAttr<bool>(attrs, DIV_MODE_IDX, true);
 
-    OP_CHECK_IF(this->eps_ <= 0,
-                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "epsilon", std::to_string(this->eps_).c_str(),
-                                          "greater than zero"),
-                return false);
+    // epsilon <= 0 不阻塞，仅告警后继续执行（保留可诊断性）
+    if (this->eps_ <= 0) {
+        OP_LOGW("GetAttrs", "Got epsilon %f is not greater than 0.", this->eps_);
+    }
     OP_CHECK_IF(
         ((quantModeStr != "dynamic") && (quantModeStr != "static")),
         OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "quant_mode", quantModeStr.c_str(), "'dynamic' or 'static'"),
@@ -319,18 +328,29 @@ bool AddLayerNormQuantV2RegbaseTiling::GetShapeInfo()
     if (nullptr == biasShape) {
         this->biasType_ = BIAS_TYPE::NO_BIAS;
     } else {
-        size_t biasDimNum = biasShape->GetStorageShape().GetDimNum();
-        this->biasType_ = (biasDimNum == gammaDimNum) ? BIAS_TYPE::BROADCAST_BIAS : BIAS_TYPE::ELEWISE_BIAS;
-        this->weightTensorNums_ += (biasDimNum == 1) ? 1 : 0;
+        // bias 分类按元素数判定
+        // perTensor 下 gamma 为 [1, N]（rank 2），而 bias == x1 也是 rank 2，
+        // 若按 rank 判定会把 x1 形状的 bias 误判为 broadcast，导致 kernel 只取第 0 行广播。
+        bool biasSameSizeAsX1 = (biasShape->GetStorageShape().GetShapeSize() == xShape.GetShapeSize());
+        this->biasType_ = biasSameSizeAsX1 ? BIAS_TYPE::ELEWISE_BIAS : BIAS_TYPE::BROADCAST_BIAS;
     }
 
+    // gamma 占 x1 的最后 gammaDimNum 维，gamma 的维数不能超过 x1 的维数；
+    // 该约束对 perTensor 同样成立（perTensor 只豁免尾维逐维相等，不豁免维数关系）。
+    OP_CHECK_IF((xDimNum < gammaDimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "x1 and gamma",
+                    (std::to_string(xDimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
+                    "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
+                return false);
+    size_t normDimNum = this->isPerTensor_ ? (gammaDimNum - 1) : gammaDimNum;
     uint64_t numRow = 1;
-    for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
+    for (size_t i = 0; i < xDimNum - normDimNum; i++) {
         numRow *= xShape.GetDim(i);
     }
     uint64_t numCol = 1;
-    for (size_t i = 0; i < gammaDimNum; i++) {
-        numCol *= gammaShape.GetDim(i);
+    for (size_t i = 0; i < normDimNum; i++) {
+        numCol *= gammaShape.GetDim(gammaDimNum - normDimNum + i);
     }
     this->rows_ = numRow;
     this->cols_ = numCol;
@@ -638,6 +658,8 @@ bool AddLayerNormQuantV2RegbaseTiling::CheckTensorAndAttr()
                         "Got x1/x2/y1/x shape not equal OR gamma/beta Shape not equal, tiling FAILED."),
                 return false);
 
+    // 含 0 维的空 tensor 在 tiling 侧拒绝（位置与 V1 一致）：归一化轴为 0 的场景已由分发器
+    // 提前分流到 empty-input kernel，能走到这里的空 tensor 都没有兜底路径。
     OP_CHECK_IF(HasZeroDim(x1Shape),
                 OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x1", "0", "greater than 0"), return false);
     OP_CHECK_IF(HasZeroDim(gammaShape),
@@ -646,9 +668,14 @@ bool AddLayerNormQuantV2RegbaseTiling::CheckTensorAndAttr()
 }
 
 static inline bool checkOptionalShape(const size_t x1DimNum, const gert::StorageShape* gammaShape,
-                                      const gert::StorageShape* optionalShape)
+                                      const gert::StorageShape* optionalShape, bool isPerTensor)
 {
     if (*optionalShape == *gammaShape) {
+        return true;
+    }
+
+    // static per-tensor：scales/zero_points 为 [1]，按单个标量广播到整块 gamma tile
+    if (isPerTensor && (optionalShape->GetStorageShape().GetShapeSize() == 1)) {
         return true;
     }
 
@@ -697,34 +724,50 @@ bool AddLayerNormQuantV2RegbaseTiling::CheckOptionalTensor()
     this->offset1Exist_ = (nullptr != offset1Shape);
     this->offset2Exist_ = (nullptr != offset2Shape);
 
-    OP_CHECK_IF(((this->scale1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale1Shape))),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale1 and gamma",
-                                                       (Ops::Base::ToString(scale1Shape->GetStorageShape()) + " and " +
-                                                        Ops::Base::ToString(gammaShape->GetStorageShape()))
-                                                           .c_str(),
-                                                       "The shapes of scale1 and gamma should be the same"),
-                return false);
-    OP_CHECK_IF(((this->scale2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale2Shape))),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale2 and gamma",
-                                                       (Ops::Base::ToString(scale2Shape->GetStorageShape()) + " and " +
-                                                        Ops::Base::ToString(gammaShape->GetStorageShape()))
-                                                           .c_str(),
-                                                       "The shapes of scale2 and gamma should be the same"),
-                return false);
-    OP_CHECK_IF(((this->offset1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset1Shape))),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints1 and gamma",
-                                                       (Ops::Base::ToString(offset1Shape->GetStorageShape()) + " and " +
-                                                        Ops::Base::ToString(gammaShape->GetStorageShape()))
-                                                           .c_str(),
-                                                       "The shapes of zeroPoints1 and gamma should be the same"),
-                return false);
-    OP_CHECK_IF(((this->offset2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset2Shape))),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints2 and gamma",
-                                                       (Ops::Base::ToString(offset2Shape->GetStorageShape()) + " and " +
-                                                        Ops::Base::ToString(gammaShape->GetStorageShape()))
-                                                           .c_str(),
-                                                       "The shapes of zeroPoints2 and gamma should be the same"),
-                return false);
+    // static per-tensor 判据与 aclnn L2 一致：gamma 为 [1, x1 的最后一维]，
+    // 且 scales1 为 1 维、元素数为 1。
+    if ((!this->isDynamicQuant_) && this->scale1Exist_) {
+        const gert::Shape& gammaStorage = gammaShape->GetStorageShape();
+        const gert::Shape& scale1Storage = scale1Shape->GetStorageShape();
+        const gert::Shape& x1Storage = x1Shape->GetStorageShape();
+        this->isPerTensor_ = (gammaStorage.GetDimNum() == 2) && (gammaStorage.GetDim(0) == 1) &&
+                             (gammaStorage.GetDim(1) == x1Storage.GetDim(elewiseDimNum - 1)) &&
+                             (scale1Storage.GetDimNum() == 1) && (scale1Storage.GetShapeSize() == 1);
+    }
+    OP_LOGW("CheckOptionalTensor", "isPerTensor=%d", this->isPerTensor_);
+
+    OP_CHECK_IF(
+        ((this->scale1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale1Shape, this->isPerTensor_))),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale1 and gamma",
+                                               (Ops::Base::ToString(scale1Shape->GetStorageShape()) + " and " +
+                                                Ops::Base::ToString(gammaShape->GetStorageShape()))
+                                                   .c_str(),
+                                               "The shapes of scale1 and gamma should be the same"),
+        return false);
+    OP_CHECK_IF(
+        ((this->scale2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale2Shape, this->isPerTensor_))),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale2 and gamma",
+                                               (Ops::Base::ToString(scale2Shape->GetStorageShape()) + " and " +
+                                                Ops::Base::ToString(gammaShape->GetStorageShape()))
+                                                   .c_str(),
+                                               "The shapes of scale2 and gamma should be the same"),
+        return false);
+    OP_CHECK_IF(
+        ((this->offset1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset1Shape, this->isPerTensor_))),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints1 and gamma",
+                                               (Ops::Base::ToString(offset1Shape->GetStorageShape()) + " and " +
+                                                Ops::Base::ToString(gammaShape->GetStorageShape()))
+                                                   .c_str(),
+                                               "The shapes of zeroPoints1 and gamma should be the same"),
+        return false);
+    OP_CHECK_IF(
+        ((this->offset2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset2Shape, this->isPerTensor_))),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints2 and gamma",
+                                               (Ops::Base::ToString(offset2Shape->GetStorageShape()) + " and " +
+                                                Ops::Base::ToString(gammaShape->GetStorageShape()))
+                                                   .c_str(),
+                                               "The shapes of zeroPoints2 and gamma should be the same"),
+        return false);
 
     const gert::Tensor* scale1Tensor = context_->GetOptionalInputTensor(SCALE1_IDX);
     this->dataTypeScale_ = (nullptr != scale1Tensor) ? scale1Tensor->GetDataType() : ge::DataType::DT_FLOAT;

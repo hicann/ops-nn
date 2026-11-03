@@ -739,6 +739,16 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2(gert::TilingContext* context)
     OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
                 return ge::GRAPH_FAILED);
     if (useRegbase) {
+        // UpdateShapeInfo 内部用 size_t 计算 x1_dim_num - gamma_dim_num，gamma 维数大于 x1 维数时会下溢成
+        // 2^64-1 导致死循环，这里先拦截（aclnn 侧 L2 已有同样校验，此守卫覆盖 GE/直连 tiling 路径）。
+        size_t x1DimNumV2 = context->GetInputShape(X1_IDX)->GetStorageShape().GetDimNum();
+        size_t gammaDimNumV2 = context->GetInputShape(GAMMA_IDX)->GetStorageShape().GetDimNum();
+        OP_CHECK_IF((x1DimNumV2 < gammaDimNumV2),
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        context->GetNodeName(), "x1 and gamma",
+                        (std::to_string(x1DimNumV2) + " and " + std::to_string(gammaDimNumV2)).c_str(),
+                        "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
+                    return ge::GRAPH_FAILED);
         uint32_t tmp_cols = 1;
         uint32_t tmp_rows = 1;
         UpdateShapeInfo(context, tmp_cols, tmp_rows);
@@ -752,7 +762,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2(gert::TilingContext* context)
         OP_CHECK_IF(!(addLayerNormQuantV2RegTiling.DoTiling()), OP_LOGE(context, "Tiling failed."),
                     return ge::GRAPH_FAILED);
         OP_LOGW(context, "AddLayerNormQuantV2 Regbase tiling success, set tiling data");
-        AddLayerNormQuantRegbaseTilingData tiling;
+        AddLayerNormQuantV2RegbaseTilingData tiling;
         addLayerNormQuantV2RegTiling.SetTilingDataAndTilingKeyAndWorkSpace(&tiling);
         return ge::GRAPH_SUCCESS;
     }

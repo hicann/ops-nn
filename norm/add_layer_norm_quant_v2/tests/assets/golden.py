@@ -89,11 +89,12 @@ def _as_tensor(a):
 
 
 def _empty_outputs(x, gamma, quant_mode, has_scales2):
-    """空 tensor（gamma 维为 0）语义：y1/y2/x/layernorm_res 空；dynamic 的 out_scales 填 -inf。
+    """空 tensor 语义（A5 口径，与 V1 对齐）：y1/y2/x/layernorm_res 为空；
+    dynamic 且归一化轴为 0（cols==0 && rows!=0）时，走 empty-input kernel，out_scales 填 -inf。
 
-    依据 op_kernel/arch35/add_layer_norm_quant_v2_empty_input_kernel.h：空输入路径只写
-    dynamic 的 out_scales（NegativeInfinity），其余输出不写出。tiling 仅在 cols==0 && rows!=0
-    时进 key=9（前导轴为 0 会被 HasZeroDim 拒收）。
+    aclnn 判据：dynamic 且 outScales1 为空 → no-op；static 且 x1 为空 → no-op；
+    其余空 tensor 继续下发，由 empty kernel（key=9）写 dynamic 的 out_scales。
+    注意 A2/A3 无 empty kernel，一律 no-op，out_scales 内容未定义。
     """
     dev = x.device
     x_shape = tuple(x.shape)
@@ -401,30 +402,34 @@ class _AddLayerNormQuantV2Compose:
             sc1 = (
                 s1.reshape(-1)[0] if s1.numel() == 1 else s1.reshape(tuple(gamma.shape))
             )
-            y1 = (
-                _i8(y / sc1 + (0.0 if z1 is None else z1.reshape(tuple(gamma.shape))))
-                if self.div_mode
-                else _i8(
-                    y * sc1 + (0.0 if z1 is None else z1.reshape(tuple(gamma.shape)))
+            # perTensor 下 zero_points 与 scales 同为 [1]：单元素先取标量，
+            # 否则 reshape 到 gamma 形状（如 [1, 128]）会因元素数不足报错。
+            off1 = (
+                0.0
+                if z1 is None
+                else (
+                    z1.reshape(-1)[0]
+                    if z1.numel() == 1
+                    else z1.reshape(tuple(gamma.shape))
                 )
             )
+            y1 = _i8(y / sc1 + off1) if self.div_mode else _i8(y * sc1 + off1)
             if s2 is not None:
                 sc2 = (
                     s2.reshape(-1)[0]
                     if s2.numel() == 1
                     else s2.reshape(tuple(gamma.shape))
                 )
-                y2 = (
-                    _i8(
-                        y / sc2
-                        + (0.0 if z2 is None else z2.reshape(tuple(gamma.shape)))
-                    )
-                    if self.div_mode
-                    else _i8(
-                        y * sc2
-                        + (0.0 if z2 is None else z2.reshape(tuple(gamma.shape)))
+                off2 = (
+                    0.0
+                    if z2 is None
+                    else (
+                        z2.reshape(-1)[0]
+                        if z2.numel() == 1
+                        else z2.reshape(tuple(gamma.shape))
                     )
                 )
+                y2 = _i8(y / sc2 + off2) if self.div_mode else _i8(y * sc2 + off2)
             else:
                 y2 = torch.zeros((1,), dtype=torch.int8, device=x.device)
             os1 = torch.ones((1,), dtype=torch.float32, device=x.device)

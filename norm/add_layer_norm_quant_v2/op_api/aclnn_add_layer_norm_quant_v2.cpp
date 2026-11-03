@@ -132,17 +132,73 @@ static bool CheckDtypeValidV2(const aclTensor* x1, const aclTensor* x2, const ac
     return true;
 }
 
-static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const aclTensor* beta,
-                            const aclTensor* scales1Optional, const aclTensor* outScales1Out, bool isDynQuant)
+// regbase(A5) 专用形状校验：在原有逻辑基础上补充维数检查与 gamma 尾维逐维检查，
+// 并把 dynamic 的 outScales 口径改为「x1 去掉 gamma 所占尾维后的前缀」。
+static bool CheckShapeRelV2Regbase(const aclTensor* x1, const aclTensor* gamma, const aclTensor* scales1Optional,
+                                   const aclTensor* outScales1Out, bool isDynQuant)
 {
-    OP_CHECK_MAX_DIM(x1, MAX_SUPPORT_DIMS_NUMS, return false);
-    OP_CHECK_MAX_DIM(gamma, MAX_SUPPORT_DIMS_NUMS, return false);
-
     size_t x1DimNums = x1->GetViewShape().GetDimNum();
     size_t gammaDimNums = gamma->GetViewShape().GetDimNum();
 
-    OP_CHECK((gamma->GetViewShape() == beta->GetViewShape()),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta shape must be same as gamma"), return false);
+    // per-tensor 判定需读取 x1 的最后一维，先保证 x1 至少 1 维
+    OP_CHECK((x1DimNums >= 1), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of x1 should be greater than 0"), return false);
+
+    // static per-tensor 场景不要求 gamma 与 x1 的尾维逐维相等
+    bool isPerTensor = false;
+    if ((!isDynQuant) && (nullptr != scales1Optional) && (gammaDimNums == 2)) {
+        isPerTensor = (gamma->GetViewShape().GetDim(0) == 1 &&
+                       gamma->GetViewShape().GetDim(1) == x1->GetViewShape().GetDim(x1DimNums - 1) &&
+                       scales1Optional->GetViewShape().GetDimNum() == 1 &&
+                       scales1Optional->GetViewShape().GetShapeSize() == 1);
+    }
+
+    // gamma 占 x1 的最后 gammaDimNums 维，因此 gamma 的维数不能超过 x1 的维数；
+    // 该约束对 per-tensor 同样成立（per-tensor 只豁免尾维逐维相等，不豁免维数关系）。
+    OP_CHECK((x1DimNums >= gammaDimNums),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of gamma should not be greater than DimNum of x1"), return false);
+
+    // 除了 static per-tensor，gamma 必须等于 x1 的后 gammaDimNums 维
+    if (!isPerTensor) {
+        for (size_t i = 0; i < gammaDimNums; i++) {
+            OP_CHECK((x1->GetViewShape().GetDim(i + x1DimNums - gammaDimNums) == gamma->GetViewShape().GetDim(i)),
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of gamma should be equal to the last %zu dims of x1",
+                             gammaDimNums),
+                     return false);
+        }
+    }
+
+    if (!isDynQuant) {
+        bool isPerChannel = (nullptr != scales1Optional) && (scales1Optional->GetViewShape() == gamma->GetViewShape());
+        OP_CHECK((isPerTensor || isPerChannel),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid gamma/scales1 shape combination for static quantization"),
+                 return false);
+    } else {
+        size_t reduceDimNum = outScales1Out->GetViewShape().GetDimNum();
+        OP_CHECK((x1DimNums >= 2), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In dyn quant, x1.dims() >= 2 should be followed"),
+                 return false);
+
+        // outScales1Out 为 x1 去掉 gamma 所占尾维后的前缀
+        OP_CHECK(
+            (reduceDimNum == (x1DimNums - gammaDimNums)),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of outScales1Out should be equal to (x1DimNum - gammaDimNum)"),
+            return false);
+        for (size_t i = 0; i < reduceDimNum; i++) {
+            OP_CHECK(
+                (x1->GetViewShape().GetDim(i) == outScales1Out->GetViewShape().GetDim(i)),
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "Shape of outScales should be equal to the prefix shape of x1 without the last gamma dims"),
+                return false);
+        }
+    }
+    return true;
+}
+
+// 非 regbase(A2/A3)：沿用原有行为，不做任何新增校验
+static bool CheckShapeRelV2Default(const aclTensor* x1, const aclTensor* gamma, const aclTensor* scales1Optional,
+                                   const aclTensor* outScales1Out, bool isDynQuant)
+{
+    size_t x1DimNums = x1->GetViewShape().GetDimNum();
+    size_t gammaDimNums = gamma->GetViewShape().GetDimNum();
 
     if (!isDynQuant) {
         bool isPerTensor = (nullptr != scales1Optional) &&
@@ -169,6 +225,22 @@ static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const a
         }
     }
     return true;
+}
+
+static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const aclTensor* beta,
+                            const aclTensor* scales1Optional, const aclTensor* outScales1Out, bool isDynQuant)
+{
+    OP_CHECK_MAX_DIM(x1, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(gamma, MAX_SUPPORT_DIMS_NUMS, return false);
+
+    OP_CHECK((gamma->GetViewShape() == beta->GetViewShape()),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta shape must be same as gamma"), return false);
+
+    // regbase(A5) 与其它产品支持面不同，分支处理，避免改动 A2/A3 依赖的原有校验
+    if (Ops::NN::AclnnUtil::IsRegbase(GetCurrentPlatformInfo().GetCurNpuArch())) {
+        return CheckShapeRelV2Regbase(x1, gamma, scales1Optional, outScales1Out, isDynQuant);
+    }
+    return CheckShapeRelV2Default(x1, gamma, scales1Optional, outScales1Out, isDynQuant);
 }
 
 static bool CheckOptCombValidV2(const aclTensor* scales1Optional, const aclTensor* scales2Optional,
@@ -399,9 +471,14 @@ static aclnnStatus PrepareContiguousAndCompute(
 {
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty() || outScales1Out->IsEmpty() ||
                           outScales2Out->IsEmpty();
+    // 空 tensor 判据与 V1 一致：非 regbase 一律 no-op；regbase 仅在"确实无事可做"时 no-op——
+    // dynamic 且 outScales1 为空（无行可写），或 static 且 x1 为空（无数据可算）。
+    // dynamic 且归一化轴为 0（x1 空但 outScales1 非空）时仍需下发 empty-input kernel 写 out_scales。
+    bool isDynQuant = IsDynamicQuantV2(quantMode);
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool regbaseEmptySkip = (isDynQuant && outScales1Out->IsEmpty()) || ((!isDynQuant) && x1->IsEmpty());
     if ((hasEmptyTensor && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) ||
-        (outScales1Out->IsEmpty() && Ops::NN::AclnnUtil::IsRegbase(curArch))) {
+        (regbaseEmptySkip && Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         OP_LOGW("Got empty tensor in aclnnAddLayerNormQuantV2!");
         *workspaceSize = 0;
         return ACLNN_SUCCESS;

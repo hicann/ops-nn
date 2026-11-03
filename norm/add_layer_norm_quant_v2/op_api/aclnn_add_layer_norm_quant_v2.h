@@ -76,10 +76,12 @@ extern "C" {
  * 公式中的输出`layernormRes`，数据类型支持BFLOAT16、FLOAT、FLOAT16且需要与x1一致，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] outScales1Out:
- * 公式中的输入`out_scales1`，数据类型支持FLOAT，shape需要和x1剔除最后一维一致。
+ * 公式中的输出`out_scales1`，数据类型支持FLOAT，shape需要为x1剔除gamma所占尾维后的前缀（维度数 = x1维度数 −
+gamma维度数）。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] outScales2Out:
- * 公式中的输入`out_scales2`，数据类型支持FLOAT，shape需要和x1剔除最后一维一致。
+ * 公式中的输出`out_scales2`，数据类型支持FLOAT，shape需要为x1剔除gamma所占尾维后的前缀（维度数 = x1维度数 −
+gamma维度数）。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
 * @param [out] executor: 返回op执行器，包含算子计算流程。

@@ -39,7 +39,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR smooth1,
                                 GM_ADDR smooth2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1,
                                 GM_ADDR outScale2, GM_ADDR layernormRes, GM_ADDR workspace,
-                                const AddLayerNormQuantRegbaseTilingData* tilingData)
+                                const AddLayerNormQuantV2RegbaseTilingData* tilingData)
     {
         uint32_t coreIdx = GetBlockIdx();
         tilingData_ = tilingData;
@@ -862,7 +862,7 @@ private:
     int64_t outNums_;
 
     TPipe* pipe_ = nullptr;
-    const AddLayerNormQuantRegbaseTilingData* tilingData_;
+    const AddLayerNormQuantV2RegbaseTilingData* tilingData_;
 };
 #undef COLS_
 #undef COLS_TAIL_

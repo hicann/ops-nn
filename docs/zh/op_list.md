@@ -3406,7 +3406,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个下游的量化算子融合起来，减少搬入搬出操作。</td>
+    <td>LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。</td>
   </tr>
   <tr>
     <td>norm</td>
