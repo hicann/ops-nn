@@ -179,9 +179,14 @@ typedef struct {
     const at::Tensor& tensor;
 } StorageShapeTensor;
 
+// HIFLOAT4（4-bit浮点，aclDataType=42）由目标CANN版本定义，旧版本acl头文件未提供该枚举，
+// 以数值常量表达以保证向前兼容；与op_plugin_for_lingqu基线中ACL_HIFLOAT4的4-bit处理行为保持一致
+constexpr aclDataType ACL_HIFLOAT4_NUM = static_cast<aclDataType>(42);
+
 inline bool Is4BitDtype(const aclDataType acl_data_type)
 {
-    return acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4;
+    return acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4 ||
+           acl_data_type == ACL_HIFLOAT4_NUM;
 }
 
 inline int64_t ConvertToAclStorageOffset(const at::Tensor& at_tensor, const aclDataType acl_data_type)

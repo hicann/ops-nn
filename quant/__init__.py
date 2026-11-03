@@ -11,9 +11,11 @@
 from .mx_to_block_mx_quant import mx_to_block_mx_quant
 from .dequant_situ_quant import dequant_situ_quant
 from .situ_mx_quant import situ_mx_quant
+from .swiglu_hi_f4_quant import swiglu_hi_f4_quant
 
 __all__ = [
     "mx_to_block_mx_quant",
     "dequant_situ_quant",
     "situ_mx_quant",
+    "swiglu_hi_f4_quant",
 ]
