@@ -31,6 +31,12 @@ constexpr float SCALE_LOW_MARKER = -2.0f;
 constexpr uint32_t SCALE_LANES = 64;
 constexpr AscendC::Reg::DivSpecificMode SCALE_DIV_MODE{AscendC::Reg::MaskMergeMode::ZEROING, false,
                                                        AscendC::DivAlgo::PRECISION_1ULP_FTZ_FALSE};
+// Retained finite norms in the first pass have sums in [2^-120, 2^124),
+// below the fast-inverse sqrt limit 2^126. Keep their original 0-ULP mode.
+// High/low lanes become retry markers; rescaled passes retain the full-range
+// 1-ULP FTZ_FALSE mode independently of the ordinary-input precision choice.
+constexpr AscendC::Reg::SqrtSpecificMode NORMAL_SQRT_MODE_0ULP{AscendC::Reg::MaskMergeMode::ZEROING, true,
+                                                               AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 constexpr AscendC::Reg::SqrtSpecificMode SCALE_SQRT_MODE{AscendC::Reg::MaskMergeMode::ZEROING, false,
                                                          AscendC::SqrtAlgo::PRECISION_1ULP_FTZ_FALSE};
 
@@ -50,7 +56,7 @@ __simd_vf__ inline void PrepareScaledNormVf(__ubuf__ float* sums, __ubuf__ float
         Reg::Maxs(sum, sum, eps, mask);
         Reg::Compares<float, CMPMODE::GE>(high, sum, SCALE_SUM_HIGH, mask);
         Reg::Compares<float, CMPMODE::LT>(low, sum, SCALE_SUM_LOW, mask);
-        Reg::Sqrt<float, &SCALE_SQRT_MODE>(norm, sum, mask);
+        Reg::Sqrt<float, &NORMAL_SQRT_MODE_0ULP>(norm, sum, mask);
         Reg::Select(norm, highMarker, norm, high);
         Reg::Select(norm, lowMarker, norm, low);
         Reg::StoreAlign(denom + off, norm, mask);

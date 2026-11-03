@@ -72,7 +72,8 @@ constexpr AscendC::Reg::CastTrait CAST_TRAIT_FROM_FP32_FP16{
     AscendC::RoundMode::CAST_RINT};
 
 // 高精度模式（设计文档 §7「精度处理」认可的备选：ST 实测超差时切 0-ULP，不换数据流）：
-//   FP16 uses 0-ULP FTZ_FALSE. FP32 uses the scaled norm helpers below.
+//   FP16 and ordinary FP32 norms use 0-ULP FTZ_FALSE. FP32 high/low retries
+//   use the scaled 1-ULP FTZ_FALSE helpers below; FP32 Div remains 1-ULP FTZ_FALSE.
 //   默认 INTRINSIC Sqrt 对 subnormal 输入 FTZ
 //   刷 0，eps<=0 且 x² 落 fp32 subnormal 窗口（|x|<1.08e-19）时 denom 被刷成 0 →
 //   y=±inf，与 golden（numpy IEEE 保留 subnormal）NaN/Inf mismatch（FR-P1-001 L1_094）。
@@ -439,7 +440,7 @@ __simd_vf__ inline void FinalizeSumVfImpl(__ubuf__ float* sPtr, __ubuf__ float* 
 }
 
 // S6+S7 PostElewise：Maxs(eps) + Sqrt 同一 VF（全 fp32 域；eps 钳在平方和上，§9.6）
-// Sqrt 恒 0-ULP FTZ_FALSE（IEEE 正确舍入，subnormal 输入不刷零，见 SQRT_MODE_0ULP 注释）。
+// FP16 input path only: Sqrt uses 0-ULP FTZ_FALSE on the FP32 intermediate.
 __simd_vf__ inline void PostElewiseVfImpl(__ubuf__ float* rootPtr, __ubuf__ float* denomPtr, uint32_t laneN, float eps,
                                           uint16_t repeatTime)
 {
