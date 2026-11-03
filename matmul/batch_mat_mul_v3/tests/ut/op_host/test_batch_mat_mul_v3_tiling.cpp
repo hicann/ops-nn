@@ -1136,7 +1136,7 @@ static TilingTestParam ascend950_cases_params[] = {
      1858UL,
      "32 1 200 64 64 1 1 1 16 208 32 1 1 1 1 0 0 0 0 57344 13312 0 1 1 1 1 1 1 0 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
      "0 0 0 1 1 1 1 1 0 0 0 4 0 10240 40 10240 1 1 1 1 5 5 5 256 1 256 8 8 8 0 1 1 16 208 32 16843264 16 1 0 4 1 4 2 "
-     "1 "}};
+     "1  0 "}};
 
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3910B, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3950, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend950_cases_params));

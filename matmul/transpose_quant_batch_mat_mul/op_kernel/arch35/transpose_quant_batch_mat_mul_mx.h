@@ -49,7 +49,7 @@ __aicore__ inline void TqbmmMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     const auto& tCubeTiling = tilingData.matMulTilingData.tCubeTiling;
     Params params = {{tCubeTiling.M, tCubeTiling.N, tCubeTiling.Ka, tilingData.cBatchDimAll},
                      {aGM, bGM, cGM, bias, perTokenScale, scale},
-                     {tilingData.kL1, tilingData.kL1, tilingData.l1BufferNum},
+                     {tilingData.kL1, tilingData.scaleKL1, tilingData.l1BufferNum},
                      {static_cast<int64_t>(tCubeTiling.baseM), static_cast<int64_t>(tCubeTiling.baseN),
                       tilingData.matMulTilingData.mTailCnt, tilingData.matMulTilingData.nTailCnt,
                       tilingData.matMulTilingData.mBaseTailSplitCnt, tilingData.matMulTilingData.nBaseTailSplitCnt,

@@ -19,6 +19,9 @@
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
 
 namespace optiling {
+struct QuantBatchMatmulInfo;
+struct QuantBatchMatmulV3CompileInfo;
+
 namespace transpose_quant_batch_mat_mul_advanced {
 class TransposeQuantBatchMatMulAswTiling : public MatMulV3BaseTiling {
 public:
@@ -33,8 +36,6 @@ protected:
 
     uint64_t GetTilingKey() const override;
 
-    uint64_t GetNumBlocks() const override;
-
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
     ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const override;
@@ -42,6 +43,13 @@ protected:
     std::vector<size_t> GetWorkspaceSize() const override;
     void CapBaseMForDequantUb();
     void CalL1Tiling();
+    void ApplyQbmmLoadBalanceBaseBlock(const QuantBatchMatmulInfo& qbmmParams,
+                                       const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo);
+    void ApplyQbmmMxTailWindow(const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo);
+    void ApplyQbmmMxL1Tiling(const QuantBatchMatmulInfo& qbmmParams,
+                             const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo);
+    void BuildQbmmParams(QuantBatchMatmulInfo& qbmmParams) const;
+    bool BuildQbmmCompileInfo(QuantBatchMatmulV3CompileInfo& qbmmCompileInfo) const;
     void CalStepKs();
     uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit);
     void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
@@ -56,8 +64,13 @@ private:
     uint32_t batchSplitFactor_ = 1;
     uint32_t scaleFactorA_ = 1;
     uint32_t scaleFactorB_ = 1;
+    uint32_t scaleKL1_ = 0;
+    uint32_t mTailTile_ = 1;
+    uint32_t nTailTile_ = 1;
     bool isMXFP4_ = false;
     bool isHIFP4_ = false;
+    bool isMxL1Tiled_ = false;
+    bool isMxTailWindowed_ = false;
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

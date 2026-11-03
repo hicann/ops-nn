@@ -100,6 +100,7 @@ struct BatchMatMulV3TilingData {
     uint32_t broadcastAxisA = 4;
     uint32_t broadcastAxisB = 4;
     uint32_t splitSingleCoreKBase = 0; // 单核切K基准值
+    uint32_t scaleKL1 = 0;
 };
 #pragma pack(pop)
 

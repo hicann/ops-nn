@@ -20,6 +20,12 @@
 #include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
 #include "matmul/common/op_host/math_util_nn.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/base_block_calculator.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_tiling_base.h"
+#include "tiling/platform/platform_ascendc.h"
 
 using Ops::NN::MathUtil;
 namespace optiling {
@@ -48,7 +54,20 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
     } else if (IsMxFp8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
                        context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP8;
-        CalL1Tiling();
+        if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+            QuantBatchMatmulInfo qbmmParams;
+            BuildQbmmParams(qbmmParams);
+            QuantBatchMatmulV3CompileInfo qbmmCompileInfo = {};
+            if (!BuildQbmmCompileInfo(qbmmCompileInfo)) {
+                CalL1Tiling();
+            } else {
+                ApplyQbmmLoadBalanceBaseBlock(qbmmParams, qbmmCompileInfo);
+                ApplyQbmmMxTailWindow(qbmmCompileInfo);
+                ApplyQbmmMxL1Tiling(qbmmParams, qbmmCompileInfo);
+            }
+        } else {
+            CalL1Tiling();
+        }
     } else if (IsHIFP8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_HIFP8;
         if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr &&
@@ -150,6 +169,299 @@ void TransposeQuantBatchMatMulAswTiling::CapBaseMForDequantUb()
         runInfo_.baseM -= BASIC_BLOCK_SIZE_16;
     }
     runInfo_.singleCoreM = runInfo_.baseM;
+}
+
+void TransposeQuantBatchMatMulAswTiling::BuildQbmmParams(QuantBatchMatmulInfo& qbmmParams) const
+{
+    qbmmParams.opName = args_.opName;
+    qbmmParams.mSize = args_.mValue;
+    qbmmParams.nSize = args_.nValue;
+    qbmmParams.kSize = args_.kValue;
+    qbmmParams.transA = args_.isATrans;
+    qbmmParams.transB = args_.isBTrans;
+    qbmmParams.aDtype = args_.aType;
+    qbmmParams.bDtype = args_.bType;
+    qbmmParams.cDtype = args_.cType;
+    qbmmParams.scaleDtype = context_->GetOptionalInputDesc(SCALE_X2_IDX)->GetDataType();
+    qbmmParams.perTokenScaleDtype = context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType();
+    qbmmParams.isMxPerGroup = true;
+    qbmmParams.batchA = batchInfo_->batchA;
+    qbmmParams.batchB = batchInfo_->batchB;
+    qbmmParams.batchC = batchInfo_->batchC;
+}
+
+bool TransposeQuantBatchMatMulAswTiling::BuildQbmmCompileInfo(QuantBatchMatmulV3CompileInfo& qbmmCompileInfo) const
+{
+    fe::PlatFormInfos* platformInfo = context_->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        OP_LOGE(args_.opName, "platformInfo is null, skip qbmm tiling.");
+        return false;
+    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    qbmmCompileInfo.ubSize = 0UL;
+    qbmmCompileInfo.l1Size = 0UL;
+    qbmmCompileInfo.l2Size = 0UL;
+    qbmmCompileInfo.l0cSize = 0UL;
+    qbmmCompileInfo.l0aSize = 0UL;
+    qbmmCompileInfo.l0bSize = 0UL;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, qbmmCompileInfo.ubSize);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, qbmmCompileInfo.l1Size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, qbmmCompileInfo.l2Size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, qbmmCompileInfo.l0cSize);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, qbmmCompileInfo.l0aSize);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, qbmmCompileInfo.l0bSize);
+    qbmmCompileInfo.aicNum = ascendcPlatform.GetCoreNumAic();
+    qbmmCompileInfo.aivNum = ascendcPlatform.GetCoreNumAiv();
+    qbmmCompileInfo.npuArch = compileInfo_.npuArch;
+    qbmmCompileInfo.socVersion = compileInfo_.socVersion;
+    return true;
+}
+
+void TransposeQuantBatchMatMulAswTiling::ApplyQbmmLoadBalanceBaseBlock(
+    const QuantBatchMatmulInfo& qbmmParams, const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo)
+{
+    BaseBlockCalculator calculator(qbmmParams, qbmmCompileInfo, batchInfo_->batchC, context_->GetPlatformInfo());
+    if (!calculator.Compute(BaseBlockMode::LOAD_BALANCE)) {
+        OP_LOGD(args_.opName, "qbmm load balance base block search failed, keep default base block.");
+        return;
+    }
+    const BaseBlockRes& baseBlock = calculator.GetOutput();
+    runInfo_.baseM = baseBlock.baseM;
+    runInfo_.baseN = baseBlock.baseN;
+    runInfo_.baseK = baseBlock.baseK;
+    runInfo_.singleCoreM = baseBlock.baseM;
+    runInfo_.singleCoreN = baseBlock.baseN;
+}
+
+void TransposeQuantBatchMatMulAswTiling::ApplyQbmmMxTailWindow(const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo)
+{
+    const uint64_t aicNum = qbmmCompileInfo.aicNum;
+    const uint64_t baseM = runInfo_.baseM;
+    const uint64_t baseN = runInfo_.baseN;
+    const uint64_t mBlockCnt = ops::CeilDiv(args_.mValue, baseM);
+    const uint64_t nBlockCnt = ops::CeilDiv(args_.nValue, baseN);
+    const uint64_t totalBlockCnt = batchInfo_->batchC * mBlockCnt * nBlockCnt;
+    const uint64_t mTail = args_.mValue - (mBlockCnt - 1UL) * baseM;
+    const uint64_t nTail = args_.nValue - (nBlockCnt - 1UL) * baseN;
+    const uint64_t totalWinCnt = ops::CeilDiv(totalBlockCnt, aicNum);
+    const uint64_t tailWinBlockCnt = totalBlockCnt % aicNum;
+    const uint64_t windowLen = optiling::GetAswWindowLen(compileInfo_.npuArch, aicNum);
+    constexpr uint64_t balanceFixpKThreshold = 1024UL;
+    constexpr uint64_t minNBlockCntFixpBalanced = 8UL;
+
+    uint64_t mBaseTailSplitCnt = 1UL;
+    uint64_t nBaseTailSplitCnt = 1UL;
+    uint64_t mTailMain = 0UL;
+    uint64_t nTailMain = 0UL;
+
+    const uint64_t mBaseTail = args_.mValue % baseM;
+    const uint64_t nBaseTail = args_.nValue % baseN;
+    const bool isInnerAxisAlign = args_.kValue * args_.aDtypeSize % qmmv3_tiling_const::MTE2_ADDRESS_ALIGN_SIZE == 0UL;
+    const bool balanceAfterFixp = args_.kValue < balanceFixpKThreshold ||
+                                  (args_.kValue == balanceFixpKThreshold && nBlockCnt >= minNBlockCntFixpBalanced);
+    if (mBlockCnt != 1UL && nBlockCnt != 1UL) {
+        if (mBaseTail > 0UL && (isInnerAxisAlign || args_.mValue >= qmmv3_tiling_const::LOAD_BALANCE_THRESHOLD)) {
+            const uint64_t baseTailCntMax = std::min((baseM - mBaseTail) / BASIC_BLOCK_SIZE_16, mBlockCnt);
+            const uint64_t windowSize = std::min(windowLen, mBlockCnt);
+            const uint64_t mainWindowNum = mBlockCnt / windowSize - 1UL;
+            const uint64_t tailWindowSize = mBlockCnt - mainWindowNum * windowSize;
+            uint64_t perfRes = (mainWindowNum + 1UL) * baseM;
+            uint64_t mergeWindowNum = 1UL;
+            for (uint64_t mergeLen = tailWindowSize - 1UL; mergeLen < baseTailCntMax;
+                 mergeLen += windowSize, ++mergeWindowNum) {
+                const uint64_t newTailMain = MathUtil::Align(
+                    MathUtil::CeilDivision(mergeLen * baseM + mBaseTail, mergeLen + 1UL), BASIC_BLOCK_SIZE_16);
+                const uint64_t curPerf = (mainWindowNum + 1UL - mergeWindowNum) * baseM + mergeWindowNum * newTailMain;
+                if (curPerf <= perfRes) {
+                    perfRes = curPerf;
+                    mTailMain = newTailMain;
+                    mBaseTailSplitCnt = mergeLen + 1UL;
+                }
+            }
+        }
+        if (nBaseTail > 0UL && args_.isBTrans && !balanceAfterFixp &&
+            (isInnerAxisAlign || args_.nValue >= qmmv3_tiling_const::LOAD_BALANCE_THRESHOLD)) {
+            const uint64_t baseTailCntMax = std::min((baseN - nBaseTail) / BASIC_BLOCK_SIZE_16, nBlockCnt);
+            const uint64_t totalWindows = MathUtil::CeilDivision(nBlockCnt * mBlockCnt, aicNum);
+            uint64_t mainWindows = MathUtil::CeilDivision((nBlockCnt - 1UL) * mBlockCnt + mBlockCnt % aicNum, aicNum);
+            if (nBlockCnt * mBlockCnt <= aicNum ||
+                (mBlockCnt % aicNum == 0UL && (nBlockCnt % windowLen == 0UL || windowLen % nBlockCnt == 0UL))) {
+                mainWindows = totalWindows;
+            }
+            const uint64_t tailWindows = totalWindows - mainWindows;
+            uint64_t perfRes = mainWindows * baseN + tailWindows * nBaseTail;
+            for (uint64_t mergeLen = 1UL; mergeLen < baseTailCntMax; ++mergeLen) {
+                const uint64_t newTailMain = MathUtil::Align(
+                    MathUtil::CeilDivision(mergeLen * baseN + nBaseTail, mergeLen + 1UL), BASIC_BLOCK_SIZE_16);
+                const uint64_t newMainRound = (mergeLen < nBlockCnt - 1UL) ?
+                                                  MathUtil::CeilDivision((nBlockCnt - 1UL - mergeLen) * mBlockCnt +
+                                                                             (mergeLen + 1UL) * mBlockCnt % aicNum,
+                                                                         aicNum) :
+                                                  0UL;
+                const uint64_t newTailRound = (mergeLen > 0UL) ?
+                                                  std::min(MathUtil::CeilDivision(
+                                                               mergeLen * mBlockCnt + mBlockCnt % aicNum, aicNum),
+                                                           totalWindows - newMainRound) :
+                                                  0UL;
+                const uint64_t newTailLast = mergeLen * (baseN - newTailMain) + nBaseTail;
+                const uint64_t curPerf = newMainRound * baseN + newTailRound * newTailMain +
+                                         (totalWindows - newMainRound - newTailRound) * newTailLast;
+                if (curPerf < perfRes) {
+                    perfRes = curPerf;
+                    nTailMain = newTailMain;
+                    nBaseTailSplitCnt = mergeLen + 1UL;
+                }
+            }
+        }
+    }
+
+    uint32_t mTailTile = 1UL;
+    uint32_t nTailTile = 1UL;
+    if (tailWinBlockCnt != 0UL) {
+        const bool isPreSplitM = mTail >= nTail;
+        const uint64_t tileMax = aicNum / tailWinBlockCnt;
+        const uint64_t tailBaseM = mBaseTailSplitCnt != 1UL ? mTailMain : baseM;
+        const uint64_t mTailSplitSize = std::min(args_.mValue, tailBaseM);
+        const uint64_t nTailSplitSize = std::min(args_.nValue, baseN);
+        const auto getSplitAlignNum = [&args = args_](bool isMSplit) -> uint64_t {
+            return isMSplit ? qmmv3_tiling_const::CUBE_BLOCK :
+                              (args.isBTrans ? qmmv3_tiling_const::CUBE_BLOCK :
+                                               qmmv3_tiling_const::L1_ALIGN_SIZE / args.bDtypeSize);
+        };
+        const uint64_t mTileMax = std::min(tileMax, MathUtil::CeilDivision(mTailSplitSize, getSplitAlignNum(true)));
+        const uint64_t nTileMax = std::min(tileMax, MathUtil::CeilDivision(nTailSplitSize, getSplitAlignNum(false)));
+        const uint64_t preSplitMax = isPreSplitM ? mTileMax : nTileMax;
+        const uint64_t secSplitMax = isPreSplitM ? nTileMax : mTileMax;
+        const uint64_t preSplitSize = isPreSplitM ? mTailSplitSize : nTailSplitSize;
+        const uint64_t secSplitSize = isPreSplitM ? nTailSplitSize : mTailSplitSize;
+
+        uint64_t preSplit = 1UL;
+        uint64_t secSplit = 1UL;
+        uint64_t preSplitValid = 1UL;
+        uint64_t secSplitValid = 1UL;
+        uint64_t preSplitAlignValid = 1UL;
+        uint64_t secSplitAlignValid = 1UL;
+        const auto canIncreaseTailSplit = [&](bool isPreSplit) -> bool {
+            const uint64_t nextPreSplit = isPreSplit ? preSplit + 1UL : preSplit;
+            const uint64_t nextSecSplit = isPreSplit ? secSplit : secSplit + 1UL;
+            const uint64_t mTile = isPreSplitM ? nextPreSplit : nextSecSplit;
+            const uint64_t nTile = isPreSplitM ? nextSecSplit : nextPreSplit;
+            return (isPreSplit ? preSplit : secSplit) < (isPreSplit ? preSplitMax : secSplitMax) &&
+                   mTile * nTile * tailWinBlockCnt <= aicNum;
+        };
+        const auto getTailSplitState = [&](bool isPreSplit, uint64_t split) -> uint64_t {
+            const bool isMSplit = isPreSplit == isPreSplitM;
+            const bool needWeightNzCheck = args_.bFormat == ge::FORMAT_FRACTAL_NZ && !isMSplit;
+            if (needWeightNzCheck) {
+                if (!((isPreSplit && mTail >= nTail) || (!isPreSplit && mTail < nTail))) {
+                    const uint64_t tailN = baseN / split;
+                    if (tailN % (qmmv3_tiling_const::L1_ALIGN_SIZE / args_.bDtypeSize) != 0UL) {
+                        return 0UL;
+                    }
+                }
+            }
+            const bool isInnerAxis = !isMSplit && !args_.isBTrans;
+            if (!isInnerAxis || totalWinCnt != 1UL) {
+                return 1UL;
+            }
+            const uint64_t splitAlignNum = isMSplit ? BASIC_BLOCK_SIZE_32 / args_.aDtypeSize :
+                                                      BASIC_BLOCK_SIZE_32 / args_.bDtypeSize;
+            return MathUtil::CeilDivision(isMSplit ? mTailSplitSize : nTailSplitSize, split) % splitAlignNum == 0UL ?
+                       2UL :
+                       1UL;
+        };
+        while (canIncreaseTailSplit(true) || canIncreaseTailSplit(false)) {
+            if (canIncreaseTailSplit(true)) {
+                ++preSplit;
+                const uint64_t splitState = getTailSplitState(true, preSplit);
+                if (splitState > 0UL) {
+                    preSplitValid = preSplit;
+                }
+                if (splitState > 1UL) {
+                    preSplitAlignValid = preSplit;
+                }
+            }
+            if (canIncreaseTailSplit(false)) {
+                ++secSplit;
+                const uint64_t splitState = getTailSplitState(false, secSplit);
+                if (splitState > 0UL) {
+                    secSplitValid = secSplit;
+                }
+                if (splitState > 1UL) {
+                    secSplitAlignValid = secSplit;
+                }
+            }
+        }
+        const uint64_t preTile = preSplitAlignValid != 1UL ? preSplitAlignValid : preSplitValid;
+        const uint64_t secTile = secSplitAlignValid != 1UL ? secSplitAlignValid : secSplitValid;
+        if (isPreSplitM) {
+            mTailTile = static_cast<uint32_t>(preTile);
+            nTailTile = static_cast<uint32_t>(secTile);
+        } else {
+            mTailTile = static_cast<uint32_t>(secTile);
+            nTailTile = static_cast<uint32_t>(preTile);
+        }
+    }
+
+    runInfo_.mBaseTailSplitCnt = mBaseTailSplitCnt;
+    runInfo_.nBaseTailSplitCnt = nBaseTailSplitCnt;
+    runInfo_.tailInfo.mTailMain = mTailMain;
+    runInfo_.tailInfo.nTailMain = nTailMain;
+    mTailTile_ = mTailTile;
+    nTailTile_ = nTailTile;
+    runInfo_.usedCoreNum = (totalWinCnt > 1UL || tailWinBlockCnt == 0UL) ? aicNum :
+                                                                           tailWinBlockCnt * mTailTile * nTailTile;
+    isMxTailWindowed_ = true;
+}
+
+void TransposeQuantBatchMatMulAswTiling::ApplyQbmmMxL1Tiling(const QuantBatchMatmulInfo& qbmmParams,
+                                                             const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo)
+{
+    constexpr uint64_t maxScaleBaseNWithDb = 256UL;
+    const bool isUbQuant = args_.cType == ge::DT_BF16;
+    const bool isScaleInvalid = !isUbQuant && runInfo_.baseN > maxScaleBaseNWithDb;
+    const bool l0cEnough = runInfo_.baseM * runInfo_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C *
+                               qmmv3_tiling_const::DOUBLE_BUFFER_NUM <=
+                           qbmmCompileInfo.l0cSize;
+    runInfo_.dbL0C = (l0cEnough && !isScaleInvalid) ? qmmv3_tiling_const::DOUBLE_BUFFER_NUM : 1UL;
+
+    L1TilingDataCalculator l1Calculator(qbmmParams, qbmmCompileInfo, runInfo_.baseM, runInfo_.baseN, runInfo_.baseK);
+    if (!l1Calculator.Compute(L1TilingMode::DEFAULT)) {
+        OP_LOGD(args_.opName, "qbmm L1 tiling failed, fallback to legacy CalL1Tiling path.");
+        CalL1Tiling();
+        return;
+    }
+    const L1TilingData& l1TilingData = l1Calculator.GetOutput();
+    runInfo_.stepKa = l1TilingData.stepKa_;
+    runInfo_.stepKb = l1TilingData.stepKb_;
+    runInfo_.depthA1 = l1TilingData.depthKa_;
+    runInfo_.depthB1 = l1TilingData.depthKb_;
+    scaleFactorA_ = static_cast<uint32_t>(l1TilingData.scaleFactorA_);
+    scaleFactorB_ = static_cast<uint32_t>(l1TilingData.scaleFactorB_);
+    runInfo_.singleCoreM = runInfo_.baseM;
+    runInfo_.singleCoreN = runInfo_.baseN;
+
+    const uint64_t kL1 = std::min(l1TilingData.stepKa_, l1TilingData.stepKb_) * runInfo_.baseK;
+    scaleKL1_ = static_cast<uint32_t>(
+        std::min(l1TilingData.scaleFactorA_ * l1TilingData.stepKa_, l1TilingData.scaleFactorB_ * l1TilingData.stepKb_) *
+        runInfo_.baseK);
+
+    const uint64_t scaleGroupSize = qmmv3_tiling_const::MX_GROUP_SIZE;
+    auto getSizeWithDtype = [](uint64_t shape, ge::DataType dtype) -> uint64_t {
+        return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+    };
+    uint64_t usedL1Size = getSizeWithDtype(runInfo_.baseN * kL1, qbmmParams.bDtype) *
+                          qmmv3_tiling_const::L1_FOUR_BUFFER;
+    usedL1Size += getSizeWithDtype(runInfo_.baseN * ops::CeilDiv(static_cast<uint64_t>(scaleKL1_), scaleGroupSize),
+                                   qbmmParams.scaleDtype) *
+                  qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    usedL1Size += getSizeWithDtype(runInfo_.baseM * kL1, qbmmParams.aDtype) * qmmv3_tiling_const::L1_FOUR_BUFFER;
+    usedL1Size += getSizeWithDtype(runInfo_.baseM * ops::CeilDiv(static_cast<uint64_t>(scaleKL1_), scaleGroupSize),
+                                   qbmmParams.perTokenScaleDtype) *
+                  qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    runInfo_.l1BufferNum = usedL1Size < qbmmCompileInfo.l1Size ? qmmv3_tiling_const::L1_FOUR_BUFFER :
+                                                                 qmmv3_tiling_const::L1_TWO_BUFFER;
+    isMxL1Tiled_ = true;
 }
 
 void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
@@ -300,8 +612,6 @@ uint64_t TransposeQuantBatchMatMulAswTiling::GetTilingKey() const
                               static_cast<uint64_t>(apiLevel_));
 }
 
-uint64_t TransposeQuantBatchMatMulAswTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
-
 ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingData(TilingResult& tiling) const
 {
     return GetTilingDataImpl<BatchMatMulV3TilingData>(tiling);
@@ -325,6 +635,16 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingDataProcess(BatchMa
             tilingData.matMulTilingData.tCubeTiling.mxTypePara += (SCALER_FACTOR_DEFAULT << SCALER_FACTOR_B_BIT) +
                                                                   SCALER_FACTOR_DEFAULT;
         }
+    }
+    if (isMxScale) {
+        // 950/960 共用 Blaze MX kernel，两架构都消费 scaleKL1，不可按 npuArch 隔离写入；
+        // 未走 qbmm L1 tiling 时兜底值必须等于 kL1（scaleFactor=1），直接引用基类写入的
+        // tilingData.kL1，避免重复推导公式与基类 kL1 的 min+钳4 定义产生偏差。
+        tilingData.scaleKL1 = isMxL1Tiled_ ? scaleKL1_ : tilingData.kL1;
+    }
+    if (isMxTailWindowed_) {
+        tilingData.matMulTilingData.mTailCnt = mTailTile_;
+        tilingData.matMulTilingData.nTailCnt = nTailTile_;
     }
     tilingData.batchSplitFactor = batchSplitFactor_;
     return ret;
