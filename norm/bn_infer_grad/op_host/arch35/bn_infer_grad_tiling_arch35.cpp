@@ -25,6 +25,7 @@
 #include "bn_infer_grad_tiling_capacity.h"
 #include "../../op_kernel/arch35/bn_infer_grad_tiling_key.h"
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <graph/utils/type_utils.h>
@@ -438,6 +439,11 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, attrs);
     const float* epsPtr = attrs->GetFloat(0);
     epsilon_ = (epsPtr != nullptr) ? *epsPtr : 0.0001f;
+    // 必须显式拒绝非有限值：NaN <= 0 与 +inf <= 0 均为 false，仅比较大小会放行
+    // NaN/+inf，随后进入 tiling/kernel 产生 NaN/Inf 输出。
+    OP_CHECK_IF(!std::isfinite(epsilon_) || epsilon_ <= 0.0f,
+                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: epsilon %f must be finite and greater than 0", epsilon_),
+                return ge::GRAPH_FAILED);
 
     // 归一化：去 size-1 维 + 前补 1
     PadAndSqueeze(raw_input_shapes_, raw_output_shapes_, max_bro_shape_, normal_input_shapes_, normal_output_shapes_);

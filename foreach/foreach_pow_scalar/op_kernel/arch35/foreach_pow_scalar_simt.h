@@ -32,6 +32,69 @@ using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
 
+constexpr float INT32_MAX_PLUS_ONE = 2147483648.0f;
+constexpr float PARITY_DIVISOR = 2.0f;
+constexpr float FLOAT32_INT_PRECISION_BOUND = 16777216.0f;
+constexpr uint32_t FLOAT32_QNAN = 0x7FC00000u;
+
+__simt_callee__ inline float SimtQNaN()
+{
+    uint32_t bits = FLOAT32_QNAN;
+    float v;
+    __builtin_memcpy(&v, &bits, sizeof(v));
+    return v;
+}
+
+__simt_callee__ inline bool IsIntegerExp(float exp)
+{
+    if (!isfinite(exp)) {
+        return false;
+    }
+    float absExp = fabsf(exp);
+    if (absExp >= FLOAT32_INT_PRECISION_BOUND) {
+        return true;
+    }
+    // 与 torch 精确对齐：仅当指数值为精确整数时走负底数整数幂路径。
+    // 原实现用 1e-6 容差，会把 |exp|<1e-6 的非零非整数指数（如 -FLT_MIN）
+    // 误判为整数 0，使负底数输出 1.0 而非 torch 的 NaN。torch 对 fp32 指数
+    // 的整数判定为精确判定（非整数指数的舍入由 dtype 本身完成，如
+    // 2.0000001 在 fp32 中恰为 2.0）。
+    return exp == rintf(exp);
+}
+
+/**
+ * \brief pow(base, exp) for a negative base and an integral exponent.
+ *
+ * PyTorch preserves the sign of a negative base when the exponent is an odd
+ * integer, even when the magnitude overflows to infinity. powf() on the NPU
+ * computes exp(exp*log(|base|)) and loses that sign, so handle it explicitly.
+ * Values at +2^31 are treated as INT32_MAX (odd) because an int32 scalar is
+ * converted to float before reaching this kernel.
+ */
+__simt_callee__ inline float NegBaseIntExp(float base, float exp, bool int32Scalar)
+{
+    // Compute the magnitude on |base| so powf never sees a negative base, then
+    // restore the sign from the exponent parity. This keeps the magnitude path
+    // identical to the original powf(x, exp) for both positive and negative
+    // exponents (a reciprocal of a power underflows where powf does not).
+    float result = powf(fabsf(base), exp);
+    bool odd;
+    if (fabsf(exp) >= INT32_MAX_PLUS_ONE) {
+        // fp32 在该量级只表示偶数（ULP=256），float 标量下恒为偶；
+        // 仅 int32 标量会把 2^31-1（奇）转成浮点 2^31，需按 INT32_MAX 视为奇。
+        if (int32Scalar && exp == INT32_MAX_PLUS_ONE) {
+            odd = true;
+        } else if (int32Scalar) {
+            odd = (fmodf(fabsf(exp), PARITY_DIVISOR) == 1.0f);
+        } else {
+            odd = false;
+        }
+    } else {
+        odd = ((static_cast<int32_t>(rintf(exp)) & 1) != 0);
+    }
+    return odd ? -result : result;
+}
+
 /**
  * \brief Get the GM address of the idx-th tensor in a TensorList
  */
@@ -101,7 +164,7 @@ __simt_callee__ inline int32_t PowiImpl(int32_t base, int32_t exp)
 template <typename T, typename S>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarSimt(int32_t tensorId, int64_t count,
                                                                                    GM_ADDR xList, GM_ADDR yList,
-                                                                                   S scalarVal)
+                                                                                   S scalarVal, bool isBf16)
 {
     using C = typename ComputeType<T>::type;
     __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
@@ -116,7 +179,36 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarSi
         } else {
             C xCompute = static_cast<C>(xVal);
             C sCompute = static_cast<C>(scalarVal);
-            C result = powf(xCompute, sCompute);
+            // torch 先按输入 dtype 解释标量（fp16/bf16 先把指数舍入到本 dtype 再判定）：
+            // fp16 下 -FLT_MIN 下溢为 -0 → 整数 0 → 负底数结果 1.0；bf16 下 3.001
+            // 舍入为 3.0 → 整数，而 3.01 舍入为非整数 → NaN；fp32 保留原值精确判定。
+            if constexpr (std::is_same_v<T, half>) {
+                sCompute = static_cast<C>(static_cast<half>(scalarVal));
+            } else if constexpr (std::is_same_v<T, bfloat16_t>) {
+                sCompute = static_cast<C>(static_cast<bfloat16_t>(scalarVal));
+            }
+            C result;
+            // 有限负底数才需要 torch 的整数/非整数指数语义；|x|=inf 遵循 C99 pow 特例
+            // （如 pow(-inf, -12.5)=+0、pow(-inf, 2.5)=+inf、奇整数保号），走 powf。
+            const bool finiteNeg = isfinite(static_cast<float>(xCompute)) && xCompute < static_cast<C>(0);
+            // PyTorch's bf16 _foreach_pow returns +inf for this case while fp16/fp32
+            // preserve the negative sign; keep bf16 on the original powf path.
+            if (finiteNeg && IsIntegerExp(static_cast<float>(sCompute))) {
+                if (!isBf16) {
+                    result = static_cast<C>(NegBaseIntExp(static_cast<float>(xCompute), static_cast<float>(sCompute),
+                                                          std::is_integral_v<S>));
+                } else {
+                    result = powf(xCompute, sCompute);
+                }
+            } else if (finiteNeg && !isinf(static_cast<float>(sCompute))) {
+                // 有限负底数 + 有限非整数指数：torch 语义为 NaN；NPU powf 按 |x| 计算会给出
+                // 有限值（如 pow(-0.005, -FLT_MIN) 得 1.0），需显式置 NaN。
+                result = static_cast<C>(SimtQNaN());
+            } else {
+                // 无穷指数保留给 powf 的特殊值路径：pow(-2, +inf)=+inf、
+                // pow(-0.5, +inf)=0、pow(-1, ±inf)=1；NaN 指数也由此返回 NaN。
+                result = powf(xCompute, sCompute);
+            }
             yData[idx] = static_cast<T>(result);
         }
     }
@@ -136,7 +228,7 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, const Forea
             continue;
         }
         AscendC::Simt::VF_CALL<OpForeachPowScalarSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y,
-                                                             scalarVal);
+                                                             scalarVal, tilingGm->isBf16 != 0);
     }
 }
 

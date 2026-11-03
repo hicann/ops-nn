@@ -262,6 +262,13 @@ static ge::graphStatus SingleLayerLstmTilingFunc(gert::TilingContext* context)
                                iDim, hDim);
         return ge::GRAPH_FAILED;
     }
+    constexpr int64_t kMaxUint32 = static_cast<int64_t>(UINT32_MAX);
+    if (tDim > kMaxUint32 || bDim > kMaxUint32 || iDim > kMaxUint32 || hDim > kMaxUint32) {
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                               "T / B / input_size / hidden_size must fit uint32; got %ld %ld %ld %ld", tDim, bDim,
+                               iDim, hDim);
+        return ge::GRAPH_FAILED;
+    }
 
     const uint32_t timeStep = static_cast<uint32_t>(tDim);
     const uint32_t batch = static_cast<uint32_t>(bDim);

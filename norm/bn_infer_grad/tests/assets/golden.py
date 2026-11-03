@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
-# -----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -8,63 +8,81 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# -----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+"""BNInferGrad 独立 Golden：Kernel、GEIR。"""
 
-import numpy as np
-
-
-__golden__ = {"kernel": {"bn_infer_grad": "bn_infer_grad_golden"}}
+import torch
 
 
-def bn_infer_grad_golden(grads, scale, batch_variance, *, epsilon=0.0001, **kwargs):
-    """
-    Compute BNInferGrad through the PyTorch batch-norm inference backward API.
+__spec__ = {"bn_infer_grad": "BNInferGradKernelSpec"}
 
-    In inference mode, native_batch_norm_backward calculates:
-        grad_input = grad_out * weight / sqrt(running_var + epsilon)
 
-    BNInferGrad does not expose input or running_mean because they do not
-    affect grad_input in this mode, so zero placeholders are supplied.
-    """
-    import torch
+_L0 = {
+    "float16": {"standard": "cross_check", "level": "L0"},
+    "bfloat16": {"standard": "cross_check", "level": "L0"},
+    "float32": {"standard": "cross_check", "level": "L0"},
+}
 
-    def to_torch(array):
-        array = np.asarray(array)
-        if array.dtype.name == "bfloat16":
-            return torch.from_numpy(array.astype(np.float32).copy()).to(torch.bfloat16)
-        return torch.from_numpy(array.copy())
 
-    grads_array = np.asarray(grads)
-    grads_torch = to_torch(grads_array)
-    scale_torch = to_torch(scale)
-    variance_torch = to_torch(batch_variance)
-    if grads_torch.numel() == 0:
-        grad_input = torch.empty_like(grads_torch)
-        if grad_input.dtype == torch.bfloat16:
-            return grad_input.to(torch.float32).cpu().numpy().astype(grads_array.dtype)
-        return grad_input.cpu().numpy()
+def _compute(grads, scale, batch_variance, epsilon, format_x):
+    is_torch = isinstance(grads, torch.Tensor)
+    if not is_torch:
+        from ttk.utilities.dtypes import numpy_to_torch_tensor, torch_to_numpy_tensor
 
-    input_torch = torch.zeros_like(grads_torch)
-    running_mean_torch = torch.zeros_like(scale_torch)
+        grads = numpy_to_torch_tensor(grads)
+        scale = numpy_to_torch_tensor(scale)
+        batch_variance = numpy_to_torch_tensor(batch_variance)
+    shape_x = grads.shape
+    output_dtype = grads.dtype
 
-    grad_input, _, _ = torch.ops.aten.native_batch_norm_backward(
-        grads_torch,
-        input_torch,
-        scale_torch,
-        running_mean_torch,
-        variance_torch,
-        None,
-        None,
-        False,
-        float(epsilon),
-        [True, False, False],
+    if grads.numel() == 0 or scale.numel() == 0 or batch_variance.numel() == 0:
+        result = torch.zeros(grads.shape, dtype=output_dtype, device=grads.device)
+        return result if is_torch else torch_to_numpy_tensor(result.detach().cpu())
+
+    if len(scale.shape) == 1 and format_x == "NCHW":
+        channel_shape = (1, scale.shape[0], *((1,) * (grads.ndim - 2)))
+        scale = scale.reshape(channel_shape)
+        batch_variance = batch_variance.reshape(channel_shape)
+
+    # 参考实现在 FP64 中计算后再回写输出 dtype：输入取到 ±FLT_MAX 时
+    # grads*scale / scale*rsqrt 任一结合顺序在 FP32 中间域都会溢出为 inf，
+    # 而真实结果可能仍是有限值（如 scale=-FLT_MAX、variance=FLT_MAX 时
+    # 结果为 grads*1.8e19）。FP64 中间域无此溢出，作为参考口径更准确；
+    # 输出仍按 dtype 舍入，常规值域与 FP32 计算逐位一致。
+    grads_c = grads.to(torch.float64) if grads.is_floating_point() else grads
+    scale_c = scale.to(torch.float64) if scale.is_floating_point() else scale
+    var_c = (
+        batch_variance.to(torch.float64)
+        if batch_variance.is_floating_point()
+        else batch_variance
     )
-    if grad_input.dtype == torch.bfloat16:
-        return (
-            grad_input.detach()
-            .to(torch.float32)
-            .cpu()
-            .numpy()
-            .astype(grads_array.dtype)
-        )
-    return grad_input.detach().cpu().numpy()
+
+    data_add = torch.add(var_c, epsilon)
+    data_abs = torch.abs(data_add)
+    data_sqrt = torch.sqrt(data_abs)
+    # 文档公式：grads * scale / sqrt(|variance + epsilon|)
+    scale_broadcast = torch.broadcast_to(scale_c, shape_x)
+    result = torch.divide(torch.multiply(grads_c, scale_broadcast), data_sqrt)
+    result = result.to(output_dtype)
+    return result if is_torch else torch_to_numpy_tensor(result.detach().cpu())
+
+
+def bn_infer_grad_golden(grads, scale, batch_variance, epsilon=0.0001, **kwargs):
+    input_formats = kwargs.get("input_formats") or ()
+    format_x = str(input_formats[0]).upper() if input_formats else "NCHW"
+    return [_compute(grads, scale, batch_variance, epsilon, format_x)]
+
+
+class _TorchBNInferGrad:
+    """Torch competitor used by three-party precision and performance runs."""
+
+    def __call__(instance, grads, scale, batch_variance, epsilon=0.0001, **kwargs):
+        input_formats = kwargs.get("input_formats") or ()
+        format_x = str(input_formats[0]).upper() if input_formats else "NCHW"
+        return [_compute(grads, scale, batch_variance, epsilon, format_x)]
+
+
+class BNInferGradKernelSpec:
+    golden = staticmethod(bn_infer_grad_golden)
+    third_party = {"torch": _TorchBNInferGrad}
+    tolerance = _L0

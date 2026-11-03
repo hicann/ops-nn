@@ -27,6 +27,7 @@ namespace optiling {
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int32_t INPUT_IDX_1 = 1;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
 constexpr int32_t MAX_TENSOR_NUM = 256;
@@ -60,10 +61,28 @@ static ge::graphStatus ForeachPowScalarTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
+    auto scalarShape = context->GetRequiredInputShape(INPUT_IDX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+    OP_CHECK_IF(scalarShape->GetStorageShape().GetShapeSize() != 1,
+                OP_LOGE(context, "scalar element count[%ld] must be 1", scalarShape->GetStorageShape().GetShapeSize()),
+                return ge::GRAPH_FAILED);
+
     // 3. Get dtype for tiling key
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dataType = inputDesc->GetDataType();
+
+    // x 列表所有成员 dtype 必须一致（README 约束）：kernel 按首成员 dtype 选模板并以同一类型
+    // 遍历全部成员读写，混合 dtype 会按错误宽度写入输出缓冲造成越界写，必须在此拒绝。
+    for (uint64_t i = 1; i < tensorNum; i++) {
+        auto memberDesc = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, memberDesc);
+        OP_CHECK_IF(
+            memberDesc->GetDataType() != dataType,
+            OP_LOGE(context, "x[%lu] dtype %d differs from x[0] dtype %d; all tensors in x must share one dtype", i,
+                    static_cast<int32_t>(memberDesc->GetDataType()), static_cast<int32_t>(dataType)),
+            return ge::GRAPH_FAILED);
+    }
 
     // 4. Fill tiling data
     ForeachPowScalarTilingData* tiling = context->GetTilingData<ForeachPowScalarTilingData>();
@@ -75,6 +94,7 @@ static ge::graphStatus ForeachPowScalarTilingFunc(gert::TilingContext* context)
                 OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
                 return ge::GRAPH_FAILED);
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
+    tiling->isBf16 = (dataType == ge::DT_BF16) ? 1 : 0;
     int64_t totalElements = 0;
 
     for (uint64_t i = 0; i < tensorNum; i++) {

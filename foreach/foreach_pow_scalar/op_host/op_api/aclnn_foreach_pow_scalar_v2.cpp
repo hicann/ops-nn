@@ -52,6 +52,11 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scal
 
 static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
 {
+    if (self->Size() != out->Size()) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "x list size %lu must equal out list size %lu", self->Size(),
+                               out->Size());
+        return false;
+    }
     for (uint64_t i = 0; i < self->Size(); i++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
@@ -91,16 +96,16 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 
 static inline bool CheckDtypePowScalar(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
 {
+    if (self->Size() == 0) {
+        return true;
+    }
     const auto& dtypeSupportList = GetDtypeSupportList();
-    auto selfDtyte_1 = (*self)[0]->GetDataType();
     if (dtypeSupportList.size() == 0) {
         OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
                                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
-    if (self->Size() == 0) {
-        return true;
-    }
+    auto selfDtyte_1 = (*self)[0]->GetDataType();
 
     // checkself input dtype, and check the releation of input and out
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
@@ -125,6 +130,11 @@ static inline bool CheckDtypePowScalar(const aclTensorList* self, const aclScala
 
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
 {
+    if (self->Size() != out->Size()) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "x list size %lu must equal out list size %lu", self->Size(),
+                               out->Size());
+        return false;
+    }
     // tensor 维度检查
     for (uint64_t m = 0; m < self->Size(); m++) {
         OP_CHECK_MAX_DIM((*self)[m], MAX_SUPPORT_DIMS_NUMS, return false);

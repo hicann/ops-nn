@@ -32,7 +32,7 @@
  *     ④ var_sqrt   = sqrt(var_abs)                  (Sqrt)
  *     ⑤ rsqrt      = 1.0 / var_sqrt                 (Duplicate(1.0) + Div)
  *     ⑥ 同 FP32 路径选择有限的等价乘法顺序
- *     ⑦ Cast x_backprop_fp32 → x_backprop           (Cast, CAST_ROUND)
+ *     ⑦ Cast x_backprop_fp32 → x_backprop           (Cast, CAST_RINT)
  *
  * 内存模型对齐 Broadcast 范式参考算子 adam_apply_one_assign：
  *   TBuf + 分 dtype NDDMA DataCopy + 多维坐标系统 (GetCoreRange / FlatToEffectiveCoord / CalcInputOffset)。
@@ -111,9 +111,13 @@ class BNInferGradKernel {
     AscendC::GlobalTensor<T> gmOut_;          // GM 输出 x_backprop
     // ⛔ Broadcast 算子一律用 TBuf 管理 UB，禁止 TQue / 裸指针
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes]; // UB buffer (P 槽位)
-    AscendC::MultiCopyParams<T, ND> nddmaParamsGrads_;
-    AscendC::MultiCopyParams<float, ND> nddmaParamsScale_;
-    AscendC::MultiCopyParams<float, ND> nddmaParamsVariance_;
+    // MultiCopyParams 为纯聚合（loopInfo + constantValue），SetupNddmaParams 只写 loopInfo；
+    // 三参 DataCopy(dst, src, params) 无条件按值消费 params.constantValue（与 pad 配置无关）
+    // → 必须聚合初始化清零，否则 mssanitizer initcheck 报 constantValue 未初始化读。
+    // 参照 bn3d_training_reduce_grad_kernel.h:750-754 的同源修复。
+    AscendC::MultiCopyParams<T, ND> nddmaParamsGrads_ = {};
+    AscendC::MultiCopyParams<float, ND> nddmaParamsScale_ = {};
+    AscendC::MultiCopyParams<float, ND> nddmaParamsVariance_ = {};
     int64_t nddmaOuterItersGrads_;
     int64_t nddmaOuterItersScale_;
     int64_t nddmaOuterItersVariance_;
@@ -351,7 +355,7 @@ __aicore__ inline void BNInferGradKernel<T, RANK>::Process()
                             buf_[UB4].Get<float>(), AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, count);
 
             // ⑨ Cast x_backprop_fp32(UB0) → x_backprop(fp16/bf16, UB1)
-            AscendC::Cast(buf_[UB1].Get<T>(), buf_[UB0].Get<float>(), AscendC::RoundMode::CAST_ROUND, count);
+            AscendC::Cast(buf_[UB1].Get<T>(), buf_[UB0].Get<float>(), AscendC::RoundMode::CAST_RINT, count);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);

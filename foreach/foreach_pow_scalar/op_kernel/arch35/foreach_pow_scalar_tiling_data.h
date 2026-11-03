@@ -21,6 +21,7 @@
 struct ForeachPowScalarTilingData {
     int32_t needCoreNum = 0;
     int32_t tensorCount = 0;
+    int32_t isBf16 = 0;
     int64_t totalElements = 0;
     int64_t tensorElements[256] = {0};
 };

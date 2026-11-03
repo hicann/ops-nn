@@ -45,7 +45,7 @@ kernel依次完成输入投影、全时间轴递推、输出散布。片上布�
 
 反向由公共`aclnnLstmBackward → l0op::SingleLayerLstmGrad`完成，消费相同声明类型的保存状态。
 
-**参数说明：**
+## 参数说明
 
 以下为内部算子`SingleLayerLstm`的参数，公共接口参见`aclnnLSTM`的参数列表。`T`为序列长度，`B`为batch大小，`I/H`为内部张量的物理输入/隐藏维度；公开逻辑维度与补齐约束见下文。FLOAT、FLOAT16、BFLOAT16分别对应FP32、FP16、BF16。
 

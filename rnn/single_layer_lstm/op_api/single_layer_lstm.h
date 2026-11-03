@@ -26,7 +26,7 @@ namespace l0op {
  * on-chip feasibility test comes from single_layer_lstm_budget.h, which both sides include; the
  * dtype, attribute and alignment rules are restated here and must be kept in step with tiling.
  *
- * `x` is [T, B, I]; `initH` is [1, B, H] or [B, H]. A null `initH` answers false: init_h is REQUIRED.
+ * `x` is [T, B, I]; `initH` is [B, H]. A null `initH` answers false: init_h is REQUIRED.
  * `reason`, written only on a false answer, names the rule that was broken, because on ascend950 the
  * caller reports the refusal instead of quietly choosing another node. */
 bool SingleLayerLstmSupports(const aclTensor* x, const aclTensor* initH, const char* direction,

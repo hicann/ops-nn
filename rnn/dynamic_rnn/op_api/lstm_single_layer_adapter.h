@@ -210,11 +210,23 @@ inline aclnnStatus BuildSingleLayerLstm(const DenseInputs& in, const DenseOutput
     const int64_t h = (*in.params)[0]->GetViewShape().GetDim(0) / 4;
     const auto dtype = in.input->GetDataType();
     constexpr int64_t MAX_DIM = std::numeric_limits<uint32_t>::max();
-    OP_CHECK(t > 0 && batch >= 0 && inputSize >= 0 && h >= 0 && in.layers > 0 && t <= MAX_DIM && batch <= MAX_DIM &&
+    OP_CHECK(t >= 0 && batch >= 0 && inputSize >= 0 && h >= 0 && in.layers > 0 && t <= MAX_DIM && batch <= MAX_DIM &&
                  inputSize <= MAX_DIM - 7 && h <= MAX_DIM / 4 - 7,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ascend950 LSTM requires positive T and nonnegative B/I/H "
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ascend950 LSTM requires nonnegative T/B/I/H "
                                               "with storage extents representable by the kernel tiling."),
              return ACLNN_ERR_PARAM_INVALID);
+    // T=0（空序列）与其它 SoC 的空输入语义对齐：y 与各 saved-state 输出为空，不发生
+    // 任何下发；hy/cy 取初始状态（hx 为空时为零）。等价于非 A5 路径的 IsEmpty 早退，
+    // 但需显式写出非空的 hy/cy（其形状为 [L,B,H]）。
+    if (t == 0) {
+        const bool hasInit = in.hx != nullptr && in.hx->Size() >= 2;
+        const aclTensor* hySrc = hasInit ? (*in.hx)[0] : Zeros({in.layers, batch, h}, dtype, executor);
+        const aclTensor* cySrc = hasInit ? (*in.hx)[1] : Zeros({in.layers, batch, h}, dtype, executor);
+        CHECK_RET(hySrc != nullptr && cySrc != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        aclnnStatus st = CopyPublic(hySrc, out.hy, executor);
+        CHECK_RET(st == ACLNN_SUCCESS, st);
+        return CopyPublic(cySrc, out.cy, executor);
+    }
     // B=0 or H=0 has empty public results. I=0 still has a nonempty recurrence,
     // so this branch deliberately does not use IsEmpty().
     if (batch == 0 || h == 0) {

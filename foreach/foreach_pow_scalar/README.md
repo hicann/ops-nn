@@ -63,7 +63,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行n次方运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型与入参`x`的数据类型一致，shape size大于等于入参`x`的shape size。</td>
+      <td>表示进行n次方运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型与入参`x`的数据类型一致，shape必须与入参`x`完全一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -79,6 +79,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_pow_scalar](examples/test_aclnn_foreach_pow_scalar.cpp) | 通过[aclnnForeachPowScalar](docs/aclnnForeachPowScalar.md)接口方式调用ForeachPowScalar算子。 |
-| aclnn接口  | [test_aclnn_foreach_pow_scalar_v2](examples/test_aclnn_foreach_pow_scalar_v2.cpp) | 通过[aclnnForeachPowScalarV2](docs/aclnnForeachPowScalarV2.md)接口方式调用ForeachPowScalarV2算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_proto.h)构图方式调用ForeachPowScalar算子。         |
+| aclnn API  | [test_aclnn_foreach_pow_scalar](examples/test_aclnn_foreach_pow_scalar.cpp) | 通过[aclnnForeachPowScalar](docs/aclnnForeachPowScalar.md)接口方式调用ForeachPowScalar算子。 |
+| aclnn API  | [test_aclnn_foreach_pow_scalar_v2](examples/test_aclnn_foreach_pow_scalar_v2.cpp) | 通过[aclnnForeachPowScalarV2](docs/aclnnForeachPowScalarV2.md)接口方式调用ForeachPowScalarV2算子。 |
+| GE图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_proto.h)构图方式调用ForeachPowScalar算子。         |

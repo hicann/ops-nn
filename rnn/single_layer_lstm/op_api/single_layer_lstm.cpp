@@ -83,13 +83,16 @@ bool SingleLayerLstmSupports(const aclTensor* x, const aclTensor* initH, const c
 
     const op::Shape& xShape = x->GetViewShape();
     const op::Shape& hShape = initH->GetViewShape();
-    if (xShape.GetDimNum() != 3 || hShape.GetDimNum() == 0) {
-        return no("x must be [T, B, I] and initH must have at least one dimension");
+    if (xShape.GetDimNum() != 3 || hShape.GetDimNum() != 2) {
+        return no("x must be [T, B, I] and initH must be [B, H]");
     }
     const int64_t steps = xShape.GetDim(0);
     const int64_t batch = xShape.GetDim(1);
     const int64_t inputSize = xShape.GetDim(2);
-    const int64_t hidden = hShape.GetDim(hShape.GetDimNum() - 1);
+    const int64_t hidden = hShape.GetDim(1);
+    if (hShape.GetDim(0) != batch) {
+        return no("initH batch extent must equal x batch extent");
+    }
     if (steps <= 0 || batch <= 0 || inputSize <= 0 || hidden <= 0) {
         return no("every extent of T, B, input_size and hidden_size must be positive");
     }

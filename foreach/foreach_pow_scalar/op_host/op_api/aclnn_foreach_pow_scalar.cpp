@@ -48,6 +48,10 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensor* scal
 
 static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
 {
+    if (self->Size() != out->Size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x list size %lu must equal out list size %lu", self->Size(), out->Size());
+        return false;
+    }
     for (uint64_t i = 0; i < self->Size(); i++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
@@ -72,16 +76,16 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 
 static inline bool CheckDtypePowScalar(const aclTensorList* self, const aclTensor* scalar, const aclTensorList* out)
 {
+    if (self->Size() == 0) {
+        return true;
+    }
     const auto& dtypeSupportList = GetDtypeSupportList();
-    auto selfDtyte_1 = (*self)[0]->GetDataType();
     if (dtypeSupportList.size() == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
-    if (self->Size() == 0) {
-        return true;
-    }
+    auto selfDtyte_1 = (*self)[0]->GetDataType();
 
     // checkself input dtype, and check the releation of input and out
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
@@ -104,8 +108,22 @@ static inline bool CheckDtypePowScalar(const aclTensorList* self, const aclTenso
     return true;
 }
 
+static inline bool CheckScalar(const aclTensor* scalar)
+{
+    if (scalar->GetViewShape().GetShapeSize() != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The element count of scalar must be 1, but got %ld.",
+                scalar->GetViewShape().GetShapeSize());
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
 {
+    if (self->Size() != out->Size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x list size %lu must equal out list size %lu", self->Size(), out->Size());
+        return false;
+    }
     // tensor 维度检查
     for (uint64_t m = 0; m < self->Size(); m++) {
         OP_CHECK_MAX_DIM((*self)[m], MAX_SUPPORT_DIMS_NUMS, return false);
@@ -128,7 +146,10 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    // 2. 检查 scalar 是否仅包含一个元素
+    CHECK_RET(CheckScalar(scalar), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypePowScalar(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);

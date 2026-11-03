@@ -1040,8 +1040,14 @@ static aclnnStatus CheckDtypes(const LstmDataParamsIn& inputs, const LstmDataPar
     info.dtype = inputs.input->GetDataType();
     ret = CheckTensorListDtype(inputs.params, info.dtype, "params");
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    ret = CheckTensorListDtype(inputs.hx, info.dtype, "hx");
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // hx 为可选输入（nullptr 合法，语义为零初始状态）；为空时跳过 dtype 校验，
+    // 与 CheckShapes/LstmDataProcessParams 的 if (inputs.hx) 判空口径一致。
+    // 原实现未判空直接传入 CheckTensorListDtype（内部调 ->Size()），packed 用例
+    // hx=nullptr 时在 GetWorkspaceSize 阶段 SIGSEGV。
+    if (inputs.hx != nullptr) {
+        ret = CheckTensorListDtype(inputs.hx, info.dtype, "hx");
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
     OP_CHECK_DTYPE_NOT_SUPPORT(inputs.batchSizes, INT_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK_DTYPE_NOT_MATCH(outputs.output, info.dtype, return ACLNN_ERR_PARAM_INVALID);
@@ -1452,7 +1458,10 @@ static aclnnStatus LstmDataGetWorkspaceSize(LstmDataParamsIn& inputs, LstmDataPa
     // 转连续
     auto inputCtg = l0op::Contiguous(inputs.input, uniqueExecutor.get());
     auto paramsCtg = ProcessInputContiguous(inputs.params, uniqueExecutor.get());
-    auto hxCtg = ProcessInputContiguous(inputs.hx, uniqueExecutor.get());
+    // hx 为可选输入（nullptr 合法，语义为零初始状态，与 DENSE 路径一致）；
+    // 原实现未判空直接进入 ProcessInputContiguous 的 inputParam->Size()，
+    // packed 用例 hx=nullptr 时在 GetWorkspaceSize 阶段 SIGSEGV。
+    auto hxCtg = inputs.hx == nullptr ? nullptr : ProcessInputContiguous(inputs.hx, uniqueExecutor.get());
     auto batchSizesCtg = l0op::Contiguous(inputs.batchSizes, uniqueExecutor.get());
     inputs.input = inputCtg;
     inputs.params = paramsCtg;

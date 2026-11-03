@@ -25,12 +25,12 @@ namespace ge {
  * Three inputs, including:
  * @li grads: A tensor of type float16 or float32 or bfloat16. Indicates the gradient of the BathNorm output parameter
  "y".
- * Shape support 4D and 5D. Format support NHWC, NCHW or NC1HWC0.
- * @li scale: A 1D tensor of type float32. Shape must be C channel.
- * Specifies the scaling factor. Has the same format as "grads".
- * @li batch_variance: A 1D tensor of type float32. Calculated variance, that is, the value of BatchNorm output
+ * Shape support 2D to 5D. Format support NHWC, NCHW or NC1HWC0.
+ * @li scale: A 1D ND tensor of type float32. Shape must be C channel.
+ * Specifies the scaling factor.
+ * @li batch_variance: A 1D ND tensor of type float32. Calculated variance, that is, the value of BatchNorm output
  parameter "batch_variance".
- * Shape must be C channel. Has the same format as "grads". \n
+ * Shape must be C channel. \n
 
 
  * @par Attributes:

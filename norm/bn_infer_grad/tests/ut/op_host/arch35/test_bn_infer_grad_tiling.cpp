@@ -75,7 +75,7 @@ static bool RunOneCase(const std::vector<int64_t>& gradsShape, ge::DataType grad
                        ge::Format gradsOriginFormat = ge::FORMAT_NCHW,
                        ge::Format scaleOriginFormat = ge::FORMAT_RESERVED,
                        ge::Format varOriginFormat = ge::FORMAT_RESERVED,
-                       ge::Format outputOriginFormat = ge::FORMAT_RESERVED)
+                       ge::Format outputOriginFormat = ge::FORMAT_RESERVED, float epsilon = kEpsilon)
 {
     int64_t channels = 1;
     if (gradsShape.size() >= 2) {
@@ -113,7 +113,7 @@ static bool RunOneCase(const std::vector<int64_t>& gradsShape, ge::DataType grad
     };
     // 属性：epsilon(0)
     std::vector<gert::TilingContextPara::OpAttr> attrs = {
-        {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(kEpsilon)},
+        {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)},
     };
 
     // GetShapeInfo/DoTilingAndSet 直接读取该 compileInfo（UT 不跑 TilingParse）
@@ -260,6 +260,39 @@ TEST_F(BNInferGradTilingTest, LargeShape_MultiCore)
     TilingInfo info;
     ASSERT_TRUE(RunOneCase({256, 64, 28, 28}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info));
     EXPECT_GE(info.blockNum, 1u);
+}
+
+// epsilon 专项包装：其余参数取合法默认（fp32、NCHW、rank1 scale/var）
+static bool RunOneCaseEpsilon(const std::vector<int64_t>& gradsShape, float epsilon, ge::graphStatus expectStatus,
+                              TilingInfo& info)
+{
+    return RunOneCase(gradsShape, ge::DT_FLOAT, expectStatus, info, /*scaleLen*/ -1, /*varLen*/ -1, /*scaleRank*/ 1,
+                      /*varRank*/ 1, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_ND, ge::FORMAT_ND, {},
+                      ge::DT_UNDEFINED, ge::FORMAT_RESERVED, ge::FORMAT_NCHW, ge::FORMAT_RESERVED, ge::FORMAT_RESERVED,
+                      ge::FORMAT_RESERVED, epsilon);
+}
+
+// ---------------------------------------------------------------------------
+// 负例：epsilon 非有限（NaN / +inf）应被拒绝（tiling 要求 epsilon 有限且 >0；
+// NaN<=0 与 +inf<=0 均为 false，仅比较大小会放行）
+// ---------------------------------------------------------------------------
+TEST_F(BNInferGradTilingTest, Reject_EpsilonNaN)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCaseEpsilon({2, 8, 4, 4}, std::numeric_limits<float>::quiet_NaN(), ge::GRAPH_FAILED, info));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_EpsilonPositiveInf)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCaseEpsilon({2, 8, 4, 4}, std::numeric_limits<float>::infinity(), ge::GRAPH_FAILED, info));
+}
+
+// 正例对照：合法 epsilon 仍通过
+TEST_F(BNInferGradTilingTest, Accept_EpsilonFinitePositive)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunOneCaseEpsilon({2, 8, 4, 4}, 1e-5f, ge::GRAPH_SUCCESS, info));
 }
 
 // ---------------------------------------------------------------------------

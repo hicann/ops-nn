@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：对输入张量列表x中的每个张量进行指数运算，指数为张量scale，对应公式中的`exponent`。
+- 接口功能：对输入张量列表x中的每个张量进行指数运算，指数为标量scalar，对应公式中的`exponent`。
 
 - 计算公式：
 
@@ -44,7 +44,7 @@
 aclnnStatus aclnnForeachPowScalarGetWorkspaceSize(
   const aclTensorList *x,
   const aclTensor     *scalar,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -107,7 +107,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行n次方运算的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape必须与入参`x`完全一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -161,17 +161,15 @@ aclnnStatus aclnnForeachPowScalar(
       <td>传入的x、scalar、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x、scalar、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
-      <td>x与out的shape不满足约束。</td>
+      <td>x与out的shape不满足约束，或x与out的TensorList长度不一致。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
