@@ -200,7 +200,7 @@ aclnnStatus aclnnForeachZeroInplace(
 
 ## 约束说明
 
-- aclnnForeachZeroInplace在Atlas A2/A3系列产品上支持非连续Tensor的原地清零，仅更新各Tensor逻辑view对应的元素，shape、stride和offset保持不变，view范围之外的storage数据保持不变。
+- aclnnForeachZeroInplace在Atlas A2系列产品和Atlas A3系列产品上支持非连续Tensor的原地清零，仅更新各Tensor逻辑view对应的元素，shape、stride和offset保持不变，view范围之外的storage数据保持不变。
 - x为空TensorList或所有Tensor均为空时，执行成功空操作。
 - 调用方需保证可写Tensor的逻辑元素以及列表中各Tensor的可写区域不重叠；共享storage的多个互不重叠view可以使用。
 - 确定性计算：

@@ -185,4 +185,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_multi_add_rms_norm_dynamic_quant](examples/arch35/test_geir_multi_add_rms_norm_dynamic_quant.cpp) | 通过[算子IR](op_graph/multi_add_rms_norm_dynamic_quant_proto.h)构图方式调用MultiAddRmsNormDynamicQuant算子。 |
+| 图模式 | [test_geir_multi_add_rms_norm_dynamic_quant](examples/test_geir_multi_add_rms_norm_dynamic_quant.cpp) | 通过[算子IR](op_graph/multi_add_rms_norm_dynamic_quant_proto.h)构图方式调用MultiAddRmsNormDynamicQuant算子。 |

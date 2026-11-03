@@ -195,7 +195,7 @@ y = gamma * ((x - mean) * rstd) + beta         // 归一化 + 仿射变换
 
 ## 2. 总体架构
 
-LayerNormV4在950（arch35）平台上有三个算法分支，通过**TILING_KEY**在编译期动态选择：
+LayerNormV4在Ascend 950（arch35）平台上有三个算法分支，通过**TILING_KEY**在编译期动态选择：
 
 | TILING_KEY | 算法 | 模板优先级 | 适用场景 |
 |-----------|------|--------|---------|
@@ -594,9 +594,9 @@ TwoPassPerf的IsCapable条件: isRegBase + rowAlign硬限制 + 联立阈值 + UB
 | `op_host/layer_norm_v4_regbase_two_pass_tiling.cpp` | Host CPU | TwoPass tiling参数计算（含IsCapable, DoOpTiling） |
 | `op_kernel/arch35/layer_norm_v4_two_pass_perf.h` | AI Core（设备端） | TwoPass Perf优化版kernel |
 | `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` | Host CPU | TwoPass Perf tiling（含IsCapable中的A/R阈值定义） |
-| `op_kernel/layer_norm_v4_apt.h` | AI Core（设备端） | 950平台kernel入口和TILING_KEY分派 |
+| `op_kernel/layer_norm_v4_apt.h` | AI Core（设备端） | Ascend 950平台kernel入口和TILING_KEY分派 |
 | `op_host/layer_norm_v4_tiling.h` | Host CPU | Tiling数据结构定义（各模板共享） |
-| `op_host/layer_norm_v4_def.cpp:191` | Host CPU | 950平台配置，注册为`layer_norm_v4_apt` |
+| `op_host/layer_norm_v4_def.cpp:191` | Host CPU | Ascend 950平台配置，注册为`layer_norm_v4_apt` |
 
 代码分层小结：
 

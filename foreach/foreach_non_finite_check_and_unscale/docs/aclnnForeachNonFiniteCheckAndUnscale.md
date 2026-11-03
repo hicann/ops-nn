@@ -230,7 +230,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
 
 ## 约束说明
 
-- aclnnForeachNonFiniteCheckAndUnscale在Atlas A2/A3系列产品上支持非连续scaledGrads的原地反缩放，仅检查和更新各Tensor逻辑view对应的元素，view范围之外的storage数据保持不变。
+- aclnnForeachNonFiniteCheckAndUnscale在Atlas A2系列产品和Atlas A3系列产品上支持非连续scaledGrads的原地反缩放，仅检查和更新各Tensor逻辑view对应的元素，view范围之外的storage数据保持不变。
 - foundInf和invScale支持带非零offset、共享较大storage的单元素子视图；foundInf的原值在未发现非有限输入时保留，invScale始终只读。各Tensor的shape、stride和offset保持不变。
 - 调用方需保证梯度的可写逻辑元素及各可写参数区域不重叠，且与invScale的读取区域不重叠；共享storage中的互不重叠view可以使用。
 - 多次调用共享scaledGrads或foundInf时，调用方需建立stream执行先后关系。
