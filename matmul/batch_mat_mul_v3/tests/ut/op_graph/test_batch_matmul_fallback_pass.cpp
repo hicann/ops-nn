@@ -44,26 +44,14 @@ struct OpApiParams {
 // Include the fallback source to make the static function accessible
 #include "../../../op_graph/batch_mat_mul_v3_fallback.cpp"
 
+// Build ComputeNodeInfo (attrs included) through the public OpKernelContextBuilder API, so the
+// test never hand-rolls gert::RuntimeAttrs' private memory layout and no longer redefines the
+// library symbol gert::RuntimeAttrs::GetPointerByIndex (which relied on
+// --allow-multiple-definition, an ODR violation).
+#include "compute_node_info_faker.h"
+
 using namespace fallback;
 using namespace ge;
-
-// Override RuntimeAttrs::GetPointerByIndex with a simple layout so we can
-// set up attribute data without the full library RuntimeAttrs machinery.
-// The build uses --allow-multiple-definition, so this overrides the library version.
-namespace gert {
-const void* RuntimeAttrs::GetPointerByIndex(size_t index) const
-{
-    // Layout: [placeholder_ (8 bytes)] [attr_num (8)] [reserved_ (40)] [offsets[]] [data]
-    // Total before offsets: 8 + 8 + 40 = 56 bytes
-    auto* bytePtr = reinterpret_cast<const uint8_t*>(this);
-    auto* offsets = reinterpret_cast<const size_t*>(bytePtr + 56);
-    // Sentinel value (-1) indicates a null attribute pointer
-    if (offsets[index] == static_cast<size_t>(-1)) {
-        return nullptr;
-    }
-    return bytePtr + 8 + offsets[index];
-}
-} // namespace gert
 
 namespace {
 
@@ -87,79 +75,33 @@ gert::Tensor MakeTensor3D(int64_t b, int64_t m, int64_t k, int64_t n, DataType d
     return MakeTensor({b, m, k}, dtype);
 }
 
-// Build a ComputeNodeInfo with valid RuntimeAttrs that contain transSelf and transMat2.
-// The attrs are placed at offsets 0 and 1 in the attr data area.
-// Use nullAttrIndex = 0 or 1 to make a specific attr pointer return null.
+// Build a ComputeNodeInfo for BatchMatMul (2 attrs: trans_self, trans_mat2) through the public
+// builder API. attrCount truncates the appended attrs so the dropped indices resolve to null
+// with the real library semantics; the fallback rejects a null attr pointer.
 struct ComputeNodeInfoHelper {
-    std::vector<uint8_t> buffer;
-    gert::ComputeNodeInfo* nodeInfo;
+    gert::ComputeNodeInfoFaker faker;
+    const void* nodeInfo = nullptr;
 
-    bool transSelf;
-    bool transMat2;
-
-    ComputeNodeInfoHelper(bool tSelf, bool tMat2, int nullAttrIndex = -1, const char* nodeType = "BatchMatMul",
-                          size_t irInputs = 3, size_t irOutputs = 1, size_t inputs = 3, size_t outputs = 1)
-        : transSelf(tSelf), transMat2(tMat2)
+    ComputeNodeInfoHelper(const bool tSelf, const bool tMat2, const size_t attrCount = 2,
+                          const char* nodeType = "BatchMatMul", size_t irInputs = 3, size_t irOutputs = 1)
     {
-        // RuntimeAttrsDef layout: attr_num(8) + reserved_[40] + offsets[2](16) + bool[2](2)
-        constexpr size_t attrNum = 2;
-        // offset[0] points to right after the offset array (56 + 16 = 72)
-        // offset[1] points to 1 byte after offset[0]
-        constexpr size_t dataOffset = 56 + sizeof(size_t) * attrNum; // 56 + 16 = 72
-        constexpr size_t runtimeAttrDataSize = dataOffset + sizeof(bool) * attrNum;
-
-        size_t baseSize = 0;
-        auto status = gert::ComputeNodeInfo::CalcSize(irInputs, irOutputs, inputs, outputs, baseSize);
-        EXPECT_EQ(status, GRAPH_SUCCESS);
-        size_t totalSize = baseSize + runtimeAttrDataSize;
-
-        buffer.resize(totalSize);
-        std::memset(buffer.data(), 0, totalSize);
-        nodeInfo = reinterpret_cast<gert::ComputeNodeInfo*>(buffer.data());
-        nodeInfo->Init(irInputs, irOutputs, inputs, outputs, runtimeAttrDataSize, nodeType, nodeType);
-
+        faker.NodeType(nodeType).IrInstanceNum(std::vector<uint32_t>(irInputs, 1), std::vector<uint32_t>(irOutputs, 1));
         for (size_t i = 0; i < irInputs; ++i) {
-            auto* insInfo = nodeInfo->MutableInputInstanceInfo(i);
-            insInfo->SetInstanceStart(static_cast<uint32_t>(i));
-            insInfo->SetInstantiationNum(1);
+            faker.InputTd(i, DT_FLOAT, FORMAT_ND, FORMAT_ND);
         }
         for (size_t i = 0; i < irOutputs; ++i) {
-            auto* insInfo = nodeInfo->MutableOutputInstanceInfo(i);
-            insInfo->SetInstanceStart(static_cast<uint32_t>(i));
-            insInfo->SetInstantiationNum(1);
+            faker.OutputTd(i, DT_FLOAT, FORMAT_ND, FORMAT_ND);
         }
-        for (size_t i = 0; i < inputs; ++i) {
-            auto* td = nodeInfo->MutableInputTdInfo(i);
-            td->SetDataType(DT_FLOAT);
-            td->SetStorageFormat(FORMAT_ND);
-            td->SetOriginFormat(FORMAT_ND);
+        if (attrCount >= 1) {
+            faker.AppendAttr(tSelf); // trans_self
         }
-        for (size_t i = 0; i < outputs; ++i) {
-            auto* td = nodeInfo->MutableOutputTdInfo(i);
-            td->SetDataType(DT_FLOAT);
-            td->SetStorageFormat(FORMAT_ND);
-            td->SetOriginFormat(FORMAT_ND);
+        if (attrCount >= 2) {
+            faker.AppendAttr(tMat2); // trans_mat2
         }
-
-        auto* attrs = nodeInfo->MutableAttrs();
-        uint8_t* attrData = reinterpret_cast<uint8_t*>(attrs) + sizeof(uint64_t);
-        *reinterpret_cast<size_t*>(attrData) = attrNum;
-        auto* offsets = reinterpret_cast<size_t*>(attrData + sizeof(size_t) + 40);
-        offsets[0] = dataOffset;
-        offsets[1] = dataOffset + sizeof(bool);
-        // Use sentinel (-1) to make a specific attr pointer return null
-        if (nullAttrIndex == 0) {
-            offsets[0] = static_cast<size_t>(-1);
-        } else if (nullAttrIndex == 1) {
-            offsets[1] = static_cast<size_t>(-1);
-        }
-        uint8_t* vals = attrData + dataOffset;
-        vals[0] = transSelf ? 1 : 0;
-        vals[1] = transMat2 ? 1 : 0;
+        nodeInfo = faker.Build();
     }
 
-    gert::RuntimeAttrs* GetAttrs() const { return nodeInfo->MutableAttrs(); }
-    void* AsVoidPtr() { return buffer.data(); }
+    void* AsVoidPtr() { return const_cast<void*>(nodeInfo); }
 };
 
 // Helper: constructs a mock OpExecutePrepareContext.
@@ -335,7 +277,8 @@ TEST_F(BatchMatmulFallbackTest, Matmul1D)
 // Error: transSelf attr is null
 TEST_F(BatchMatmulFallbackTest, TransSelfAttrNull)
 {
-    ComputeNodeInfoHelper cnih(false, false, /*nullAttrIndex=*/0);
+    // 0 个属性被追加: trans_self/trans_mat2 取属性时均为 null, fallback 校验 trans_self 时失败
+    ComputeNodeInfoHelper cnih(false, false, /*attrCount=*/0);
     auto self = MakeTensor2D(2, 3, 4);
     auto mat2 = MakeTensor2D(3, 4, 5);
     auto output = MakeTensor2D(2, 4, 5);
@@ -346,7 +289,8 @@ TEST_F(BatchMatmulFallbackTest, TransSelfAttrNull)
 // Error: transMat2 attr is null
 TEST_F(BatchMatmulFallbackTest, TransMat2AttrNull)
 {
-    ComputeNodeInfoHelper cnih(false, false, /*nullAttrIndex=*/1);
+    // 仅追加 trans_self: trans_mat2 取属性时为 null
+    ComputeNodeInfoHelper cnih(false, false, /*attrCount=*/1);
     auto self = MakeTensor2D(2, 3, 4);
     auto mat2 = MakeTensor2D(3, 4, 5);
     auto output = MakeTensor2D(2, 4, 5);

@@ -1,0 +1,95 @@
+# caseName format: m k n antiQuantOffsetExistFlag biasFlag transA transB group xDtype weightDtype
+#                  antiQuantScaleDtype yDtype aicNum aivNum weightFormat(0:ND,1:NZ)
+#                  [ubSize l0cSize tilingDataCap]
+# Note: group value: -1: per channel, 0: per tensor, > 0: per group (or MX group when scale dtype is E8M0)
+# Column value: -1 means skip the check; expectMTailTile supports the sentinel HIF4_MX (see cpp
+# HIF4_MX_EXPECT_MTILE, derived from whether the CANN runtime registers DT_HIFLOAT4_SCALE).
+caseName,expectSuccess,expectStatus,runFramework,whiteBoxUtils,expectBlockDim,expectEnablePreAlloc,expectDbL0c,expectMTailTile,expectNTailTile,expectEvadeDuplicateBlock,whiteBoxNzSplit,whiteBoxQuadruple,whiteBoxBaseK,whiteBoxEvade,whiteBoxPreAlloc,whiteBoxReSplit,whiteBoxMxReSplit,whiteBoxTailLoop,noWorkspace
+# w8 per-channel transB with uint64 scale: FIXPIPE path, baseN 1024 -> divided by CeilDiv(1024, 240);
+# nBlockCnt*mBlockCnt >= aicNum so ReSplitBasicBlock returns early; k > 1024 with big L1 load ->
+# ClosePreAllocCond true -> preAlloc off; totalWinCnt > 1 keeps it off
+M_3072_2048_4096_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,16,0,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# per-tensor w8 + offset + bias: mTail(128) < nTail, ReSplitBasicBlock loop picks a better block,
+# non-MX bias UB check runs, tail window resplit both directions (M-direction stays 1); k > 1024
+# with big AL1+BL1 load -> ClosePreAllocCond true -> preAlloc off
+M_128_2048_256_1_1_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,0,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# per-channel w8: baseN(369) clamps to baseNMax(240) then tail resplit while-loop shrinks baseN to
+# 192; mBlockCnt(1) < singleWinM(4) -> mainRow = 0; totalBlockCnt(31) > aicNum with 1x1 tiles ->
+# evadeDuplicateBlock path computes lastRoundBaseN/BaseNTail
+M_128_256_5900_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,16,1,2,1,1,1,0,0,0,1,0,0,0,1,0
+# per-channel w8 small n: single round (totalWinCnt == 1), tail tiles 1x1, k > 1024 keeps the
+# big-L1 condition on with totalWinCnt==1 && tiles==1 -> preAlloc stays off
+M_128_2048_640_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,16,0,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# transA: baseM aligned by GetShapeWithDataType(L1_ALIGN_SIZE, aDtype); single round with a
+# 15-block tail window -> blockDim = tailWinBlockCnt * 1 * 1
+M_130_512_256_0_0_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,15,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# w8 per-channel ND transB on NZ-less layout with bias: deep IsInValidWeighNzTailSplit checks
+# (16-align of nTail/split, perchannel bias divisibility), mTail(2048 tail) >= nTail; white-box
+# ReSplitBasicBlock covers the baseM==128&&baseN>240 guard and the bias UB continue
+M_2048_512_128_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,16,1,2,1,1,-1,1,0,1,0,0,1,0,0,0
+# w4(INT4) per-channel ND + bias: special A16S4-ND branch of IsInValidWeighNzTailSplit (2-align,
+# baseN min 16); white-box splitCnt combos
+M_2048_512_128_0_1_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,-1,-1,-1,1,0,1,0,0,0,0,0,0
+# w4(INT4) per-channel NZ no-transB: baseNAlignSize = GetShapeWithDataType(32, INT4) = 64 in
+# CalculateBaseN / ReSplitBasicBlock / tail split
+M_2048_512_256_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_16_16_1,1,GRAPH_SUCCESS,0,1,16,1,2,1,1,-1,0,0,1,0,0,0,0,0,0
+# w4(INT4) per-channel NZ, single M-block with 25 N-blocks (baseN clamps to 192): tailWin(9) keeps
+# the 1x1 tail tiles and totalBlockCnt(25) > aicNum triggers the evadeDuplicateBlock path on the NZ
+# layout (baseNAlignSize 64 branch)
+M_128_256_4800_0_0_0_0_-1_FLOAT16_INT4_UINT64_FLOAT16_16_16_1,1,GRAPH_SUCCESS,0,1,16,1,2,1,1,1,0,0,0,0,0,0,0,0,0
+# a16w4(FP4) per-channel with uint64 scale: FP4+PER_CHANNEL branch of CheckBasicBlockL1BufferSize
+# inside the ReSplitBasicBlock loop
+M_128_512_256_0_0_0_0_-1_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# a16w8 per-group transB group=128: full pergroup solver (CalculateBasicBlockTiling ->
+# GetBasicBlockSolution -> GetMte2Cost -> stable_sort), CUBE_VECTOR_ANTIQUANT key; baseK=128 > 64
+# so ubQuadruple stays false (ratio 1.0 in GetMte2Cost)
+M_256_1024_512_0_0_0_1_128_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# a16w8 per-group transB group=64: baseK=64 enables the OpenUBQuadrupleBufferCond inside
+# GetMte2Cost (mSize > 128 -> 0.75 ratio branch)
+M_512_1024_512_0_0_0_1_64_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# a16w4(FP4) per-group transB group=64: FP4 branch of CheckBufferSize (L1 with mx scale) and the
+# PER_GROUP + FP4 mx-scale add in CheckL1QuadrupleBufferSize via white-box calls
+M_256_512_256_0_0_0_1_64_FLOAT16_FLOAT4E2M1_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,1,0,0,0,0,0,0,0
+# a16w4(FP4) per-group transB group=64 small shape: small baseM/baseN/baseK open the L1 quadruple
+# buffer template in GetPerGroupCustomConfig
+M_64_256_128_0_0_0_1_64_FLOAT16_FLOAT4E2M1_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,1,0,0,0,0,0,0,0
+# BF16 x with FLOAT bias: isBiasFp32 bit in GetTilingKey, BF16 branch in pergroup solver
+M_256_1024_256_1_1_0_1_128_BF16_INT8_BF16_BF16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# MX FP4 (E8M0 scale, group=32): m=2048 makes ReSplitBasicBlock break on baseM > 128 before any
+# candidate; ReSplitBasicBlockForCoreNum then halves baseN; isA16MxFp4 caps baseK by
+# CeilAlign(kSize, 64); DoLibApiTiling writes mxTypePara=257
+M_2048_1024_512_0_0_0_0_32_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,16,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# MX FP4 with bias, small m: ReSplitBasicBlock evaluates FP4 candidates (Is4BitInput mte2 cost,
+# MX skips the bias UB check), CheckBasicBlockL1BufferSize FP4+MX branch with bias; white-box
+# ReSplitBasicBlockForCoreNum covers the baseM/baseN halving branches
+M_128_1024_512_0_1_0_0_32_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,1,0,0
+# MX HIFLOAT4 with HIFLOAT4_SCALE dtype: HIF4 branches of CalcBasicBlockBaseK (fp32 scale deduct)
+# and CheckBasicBlockL1BufferSize, CUBE_ANTIQUANT key branch; mTailTile depends on the CANN
+# runtime's registration of DT_HIFLOAT4_SCALE (HIF4_MX sentinel, see the note above)
+M_128_512_256_0_0_0_0_64_FLOAT16_HIFLOAT4_HIFLOAT4SCALE_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,HIF4_MX,1,-1,0,0,0,0,0,0,0,0,0
+# FP8E4M3FN weight per-group transB: CUBE_VECTOR_ANTIQUANT via the fp8 member of the dtype list
+M_256_1024_256_0_0_0_1_128_FLOAT16_FP8E4M3_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,0,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# small L0C: baseM*baseN*float*2 > l0cSize -> dbL0c = 1 (CheckAntiQuantScale passes but L0C fails)
+M_128_512_256_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0_253952_16384_4096,1,GRAPH_SUCCESS,0,1,12,1,1,1,1,-1,0,0,0,0,0,0,0,0,0
+# per-tensor fp16 scale (shape {1}): non-uint64 scale on per-tensor -> IsCapable false ->
+# DoTiling returns GRAPH_PARAM_INVALID (framework falls back to ASWGeneral)
+M_128_512_256_0_0_0_0_0_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,0,GRAPH_PARAM_INVALID,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# per-channel fp16 scale: IsCapable false (uint64 required)
+M_128_512_256_0_0_0_0_-1_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,0,GRAPH_PARAM_INVALID,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# per-group INT8 no-transB: optimized per-group template requires transposed weight
+M_128_1024_256_0_0_0_0_128_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,0,GRAPH_PARAM_INVALID,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# per-group INT4 no-transB ND: incapable
+M_128_1024_256_0_0_0_0_64_FLOAT16_INT4_FLOAT16_FLOAT16_16_16_0,0,GRAPH_PARAM_INVALID,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# per-group FP4 no-transB ND: incapable
+M_128_1024_256_0_0_0_0_64_FLOAT16_FLOAT4E2M1_FLOAT16_FLOAT16_16_16_0,0,GRAPH_PARAM_INVALID,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# raw tiling data capacity < sizeof(ASW tiling data): InstantiateTilingData fails -> GRAPH_FAILED
+M_128_512_256_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0_253952_262144_8,0,GRAPH_FAILED,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0
+# no workspace attached: GetWorkspaceSizes returns null -> GetWorkspaceSize fails
+M_128_512_256_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,0,GRAPH_FAILED,0,0,0,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,1
+# framework path on 9201: w8 per-channel with uint64 scale needs NZ weight (ND would require
+# fp16 scale) -> ASWMix selected by registry, baseNAlignSize = GetShapeWithDataType(32, INT8) = 4
+FW_128_512_256_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_16_16_1,1,GRAPH_SUCCESS,1,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# framework path on 9201: a16w8 per-group transB group=128 -> ASWMix pergroup flow
+FW_256_1024_256_1_1_0_1_128_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,1,GRAPH_SUCCESS,1,1,0,1,2,1,1,-1,0,0,0,0,0,0,0,0,0
+# framework path on 9201: MX FP4 (E8M0 scale 3D shape, group=32, k/n 64 aligned) -> ASWMix MX flow
+FW_128_1024_512_0_0_0_0_32_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_FLOAT16_16_16_0,1,GRAPH_SUCCESS,1,1,16,1,2,1,1,-1,0,0,0,0,0,0,0,0,0

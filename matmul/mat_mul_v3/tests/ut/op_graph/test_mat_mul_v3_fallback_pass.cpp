@@ -39,20 +39,14 @@ struct OpApiParams {
 
 #include "../../../op_graph/mat_mul_v3_fallback.cpp"
 
+// Build ComputeNodeInfo (attrs included) through the public OpKernelContextBuilder API, so the
+// test never hand-rolls gert::RuntimeAttrs' private memory layout and no longer redefines the
+// library symbol gert::RuntimeAttrs::GetPointerByIndex (which relied on
+// --allow-multiple-definition, an ODR violation).
+#include "compute_node_info_faker.h"
+
 using namespace fallback;
 using namespace ge;
-
-namespace gert {
-const void* RuntimeAttrs::GetPointerByIndex(size_t index) const
-{
-    auto* bytePtr = reinterpret_cast<const uint8_t*>(this);
-    auto* offsets = reinterpret_cast<const size_t*>(bytePtr + 56);
-    if (offsets[index] == static_cast<size_t>(-1)) {
-        return nullptr;
-    }
-    return bytePtr + 8 + offsets[index];
-}
-} // namespace gert
 
 namespace {
 
@@ -66,67 +60,33 @@ gert::Tensor MakeTensor(std::initializer_list<int64_t> dims, DataType dtype, For
     return gert::Tensor(storageShape, storageFormat, gert::kOnDeviceHbm, dtype, dummyAddr);
 }
 
+// Build a ComputeNodeInfo for MatMul (2 attrs: trans_self, trans_mat2) through the public
+// builder API. attrCount truncates the appended attrs so the dropped indices resolve to null
+// with the real library semantics; the fallback rejects a null attr pointer.
 struct ComputeNodeInfoHelper {
-    std::vector<uint8_t> buffer;
-    gert::ComputeNodeInfo* nodeInfo;
+    gert::ComputeNodeInfoFaker faker;
+    const void* nodeInfo = nullptr;
 
-    ComputeNodeInfoHelper(int nullAttrIndex = -1, const char* nodeType = "MatMul", size_t irInputs = 3,
-                          size_t irOutputs = 1, size_t inputs = 3, size_t outputs = 1)
+    ComputeNodeInfoHelper(const size_t attrCount = 2, const char* nodeType = "MatMul", size_t irInputs = 3,
+                          size_t irOutputs = 1)
     {
-        constexpr size_t attrNum = 2;
-        constexpr size_t dataOffset = 56 + sizeof(size_t) * attrNum;
-        constexpr size_t runtimeAttrDataSize = dataOffset + sizeof(bool) * attrNum;
-
-        size_t baseSize = 0;
-        auto status = gert::ComputeNodeInfo::CalcSize(irInputs, irOutputs, inputs, outputs, baseSize);
-        EXPECT_EQ(status, GRAPH_SUCCESS);
-        size_t totalSize = baseSize + runtimeAttrDataSize;
-
-        buffer.resize(totalSize);
-        std::memset(buffer.data(), 0, totalSize);
-        nodeInfo = reinterpret_cast<gert::ComputeNodeInfo*>(buffer.data());
-        nodeInfo->Init(irInputs, irOutputs, inputs, outputs, runtimeAttrDataSize, nodeType, nodeType);
-
+        faker.NodeType(nodeType).IrInstanceNum(std::vector<uint32_t>(irInputs, 1), std::vector<uint32_t>(irOutputs, 1));
         for (size_t i = 0; i < irInputs; ++i) {
-            auto* insInfo = nodeInfo->MutableInputInstanceInfo(i);
-            insInfo->SetInstanceStart(static_cast<uint32_t>(i));
-            insInfo->SetInstantiationNum(1);
+            faker.InputTd(i, DT_FLOAT, FORMAT_ND, FORMAT_ND);
         }
         for (size_t i = 0; i < irOutputs; ++i) {
-            auto* insInfo = nodeInfo->MutableOutputInstanceInfo(i);
-            insInfo->SetInstanceStart(static_cast<uint32_t>(i));
-            insInfo->SetInstantiationNum(1);
+            faker.OutputTd(i, DT_FLOAT, FORMAT_ND, FORMAT_ND);
         }
-        for (size_t i = 0; i < inputs; ++i) {
-            auto* td = nodeInfo->MutableInputTdInfo(i);
-            td->SetDataType(DT_FLOAT);
-            td->SetStorageFormat(FORMAT_ND);
-            td->SetOriginFormat(FORMAT_ND);
+        if (attrCount >= 1) {
+            faker.AppendAttr(false); // trans_self
         }
-        for (size_t i = 0; i < outputs; ++i) {
-            auto* td = nodeInfo->MutableOutputTdInfo(i);
-            td->SetDataType(DT_FLOAT);
-            td->SetStorageFormat(FORMAT_ND);
-            td->SetOriginFormat(FORMAT_ND);
+        if (attrCount >= 2) {
+            faker.AppendAttr(false); // trans_mat2
         }
-
-        auto* attrs = nodeInfo->MutableAttrs();
-        uint8_t* attrData = reinterpret_cast<uint8_t*>(attrs) + sizeof(uint64_t);
-        *reinterpret_cast<size_t*>(attrData) = attrNum;
-        auto* offsets = reinterpret_cast<size_t*>(attrData + sizeof(size_t) + 40);
-        offsets[0] = dataOffset;
-        offsets[1] = dataOffset + sizeof(bool);
-        if (nullAttrIndex == 0) {
-            offsets[0] = static_cast<size_t>(-1);
-        } else if (nullAttrIndex == 1) {
-            offsets[1] = static_cast<size_t>(-1);
-        }
-        uint8_t* vals = attrData + dataOffset;
-        vals[0] = 0;
-        vals[1] = 0;
+        nodeInfo = faker.Build();
     }
 
-    void* AsVoidPtr() { return buffer.data(); }
+    void* AsVoidPtr() { return const_cast<void*>(nodeInfo); }
 };
 
 struct MockContext {
@@ -235,7 +195,8 @@ TEST_F(MatMulV3FallbackTest, AttrsIsNull)
 
 TEST_F(MatMulV3FallbackTest, TransSelfAttrNull)
 {
-    ComputeNodeInfoHelper cnih(/*nullAttrIndex=*/0);
+    // 0 个属性被追加: trans_self/trans_mat2 取属性时均为 null, fallback 校验 trans_self 时失败
+    ComputeNodeInfoHelper cnih(/*attrCount=*/0);
     auto self = MakeTensor({2, 3}, DT_FLOAT);
     auto mat2 = MakeTensor({3, 4}, DT_FLOAT);
     auto output = MakeTensor({2, 4}, DT_FLOAT);
@@ -245,7 +206,8 @@ TEST_F(MatMulV3FallbackTest, TransSelfAttrNull)
 
 TEST_F(MatMulV3FallbackTest, TransMat2AttrNull)
 {
-    ComputeNodeInfoHelper cnih(/*nullAttrIndex=*/1);
+    // 仅追加 trans_self: trans_mat2 取属性时为 null
+    ComputeNodeInfoHelper cnih(/*attrCount=*/1);
     auto self = MakeTensor({2, 3}, DT_FLOAT);
     auto mat2 = MakeTensor({3, 4}, DT_FLOAT);
     auto output = MakeTensor({2, 4}, DT_FLOAT);

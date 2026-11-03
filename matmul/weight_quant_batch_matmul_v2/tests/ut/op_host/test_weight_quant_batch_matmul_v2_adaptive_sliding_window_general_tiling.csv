@@ -1,0 +1,58 @@
+# caseName format: m k n antiQuantOffsetExistFlag biasFlag transA transB group xDtype weightDtype
+#                  antiQuantScaleDtype yDtype aicNum aivNum weightFormat(0:ND,1:NZ)
+#                  [ubSize l0cSize tilingDataCap]
+# Note: group value: -1: per channel, 0: per tensor, > 0: per group (or MX group when scale dtype is E8M0)
+# Column value: -1 means skip the check.
+caseName,expectSuccess,runFramework,whiteBoxUtils,expectBlockDim,expectEnablePreAlloc,expectDbL0c,expectMTailTile,expectNTailTile,disableTailWinLogic,noWorkspace,whiteBoxNzSplit
+# per-tensor ND, mBlockCnt(1) < singleWinM(4), tail window resplit on ND, k<=1024 keeps preAlloc on
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,1,16,1,2,4,2,0,0,0
+# mBlockCnt(16) > nBlockCnt(1): singleWinM=16/mainRow divisible; totalBlockCnt%aicNum==0 skips tail resplit
+G_2048_1024_128_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,1,1,0,0,0
+# transB with baseN > baseNMax and baseN % baseNMax(0) < baseNMax/2: redivide by CeilDiv(baseN, baseNMax)
+G_128_512_4096_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,1,1,0,0,0
+# transB with baseN % baseNMax >= baseNMax/2 (200 % 128 = 72): baseN clamps to baseNMax
+G_128_512_3200_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,1,1,0,0,0
+# transB with baseN % baseNMax < baseNMax/2: bad-tail branch divides baseN by CeilDiv(baseN, baseNMax)
+G_128_512_2560_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,1,1,0,0,0
+# transA: baseM aligned by GetShapeWithDataType(L1_ALIGN_SIZE, aDtype), mTail(50) < nTail(128)
+G_130_512_256_0_0_1_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,2,2,0,0,0
+# a16w4 per-group + antiquantOffset + bias: CalStepKs PER_GROUP recompute/scale*2/l1+bias, tail resplit skipped
+G_128_1024_256_1_1_0_0_128_FLOAT16_INT4_FLOAT16_FLOAT16_16_16_0,1,0,0,2,1,2,1,1,0,0,0
+# MX antiquant(FLOAT4_E2M1 weight + FLOAT8E8M0 scale): mxTypePara branch in DoLibApiTiling
+G_128_512_256_0_0_0_0_0_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_FLOAT16_16_16_0,1,0,0,16,1,2,4,2,0,0,0
+# NZ + transB + per-channel + bias: deep IsInValidWeighNzTailSplit checks (tailN 16-align / nTail 8-align pass)
+G_2048_512_128_0_1_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_15_15_1,1,0,0,15,1,2,5,2,0,0,0
+# nTail(127) % splitCnt != 0 -> tail resplit judged invalid
+G_2048_512_127_0_1_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_15_15_1,1,0,0,15,1,2,5,1,0,0,0
+# (nTail/splitCnt) % 8 != 0 -> tail resplit judged invalid
+G_2048_512_116_0_1_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_15_15_1,1,0,0,15,1,2,5,1,0,0,0
+# NZ + no-transB per-group: CalcTailBasicBlock skips via isPerGroup/isNzWeightNoTrans
+G_128_1024_256_0_0_0_0_128_FLOAT16_INT4_FLOAT16_FLOAT16_16_16_1,1,0,0,2,1,2,1,1,0,0,0
+# NZ + no-transB per-tensor: isNzWeightNoTrans early return; white-box IsInValidWeighNzTailSplit call
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_1,1,0,0,2,1,2,1,1,0,0,1
+# small L0C size: baseM*baseN*float*2 > l0cSize -> dbL0c = 1
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0_253952_65536_4096,1,0,0,16,1,1,4,2,0,0,0
+# big UB: stepK reaches 4; aL1+bL1>=128KB and k>1024 with multi-round -> ClosePreAllocCond -> preAlloc off
+G_2048_2048_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0_1048576_262144_4096,1,0,0,16,0,2,1,1,0,0,0
+# single-round tail resplit keeps blockDim = tailWin*mTile*nTile; ClosePreAllocCond is evaluated before
+# tail tiling so the aL1+bL1 large condition still holds -> preAlloc stays off
+G_2048_2048_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_64_64_0_1048576_262144_4096,1,0,0,64,0,2,2,1,0,0,0
+# mBlockCnt(5) not divisible by singleWinM(4) and >= singleWinM: mainRow = mBlockCnt/singleWinM - 1
+G_640_512_1024_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,2,1,0,0,0
+# transB small n: baseN falls to MIN_BASIC_BLOCK_N(32)
+G_128_512_128_0_0_0_1_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,16,1,2,2,2,0,0,0
+# BF16 x with FLOAT bias: isBiasFp32 in GetTilingKey
+G_128_1024_256_1_1_0_0_128_BF16_INT4_BF16_BF16_16_16_0,1,0,0,2,1,2,1,1,0,0,0
+# raw tiling data capacity < sizeof(ASW tiling data): InstantiateTilingData fails
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0_253952_262144_8,0,0,0,0,-1,-1,-1,-1,0,0,0
+# white-box: useTailWinLogic cleared before DoTiling -> CalcTailBasicBlock skipped, tail tiles stay 1x1
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,1,0,0,2,1,2,1,1,1,0,0
+# no workspace attached: GetWorkspaceSizes returns null -> GetWorkspaceSize fails after tiling is computed
+G_128_512_256_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_16_16_0,0,0,0,0,-1,-1,-1,-1,0,1,0
+# NZ + transB + per-channel + bias with mTail(10) < nTail(128): preSplit enters the deep NZ check while
+# secSplit hits the (!isPreSplit && mTail < nTail) early-return
+G_1930_512_256_0_1_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_31_31_1,1,0,0,31,1,2,5,4,0,0,0
+# framework path on 9201: a16w4 per-group ND no-transB (ASWMix incapable) -> ASWGeneral selected
+FW_128_1024_256_1_1_0_0_128_FLOAT16_INT4_FLOAT16_FLOAT16_16_16_0,1,1,0,2,1,2,1,1,0,0,0
+# framework path on 9201: w8 per-channel with non-uint64 scale (ASWMix incapable) -> ASWGeneral selected
+FW_128_512_256_0_0_0_0_-1_FLOAT16_INT8_FLOAT16_FLOAT16_16_16_0,1,1,0,16,1,2,4,2,0,0,0
