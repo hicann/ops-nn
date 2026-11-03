@@ -18,6 +18,8 @@
 
 #### 方式一：通过 build.sh 构建（推荐）
 
+> **执行目录：仓库根目录**（`build.sh` 位于根目录，产物输出到 `build_out/`）。
+
 ```sh
 # 构建整包（包含所有算子）
 bash build.sh --torch_extension
@@ -54,7 +56,12 @@ bash build.sh --torch_extension --experimental
 
 #### 方式二：直接使用 python3 -m build 构建
 
+> **执行目录：`torch_extension/`**（打包配置 `setup.py` 位于该目录，仓库根目录下无法执行；产物输出到 `torch_extension/dist/`）。
+
 ```sh
+# 先切换到 torch_extension 目录
+cd torch_extension
+
 # 安装依赖
 python3 -m pip install -r requirements.txt
 
@@ -68,11 +75,15 @@ TORCH_EXTENSION_OPS=swiglu_group TORCH_EXTENSION_VENDOR=custom python3 -m build 
 ### 安装
 
 ```sh
-# 安装整包
+# 方式二产物安装（在 torch_extension/ 目录下）
 python3 -m pip install dist/cann_ops_nn-*.whl
 
-# 安装单算子包
+# 方式二产物安装（单算子包）
 python3 -m pip install dist/cann_ops_nn_custom-*.whl
+
+# 方式一产物安装（在仓库根目录下，wheel 位于 build_out/）
+python3 -m pip install build_out/cann_ops_nn-*.whl
+python3 -m pip install build_out/cann_ops_nn_custom-*.whl
 ```
 
 ### 整包与子包共存机制
@@ -98,8 +109,8 @@ pip uninstall cann-ops-nn-custom
 ## 目录结构
 
 ```
+├── build.sh                                  # 构建脚本（支持 --torch_extension 参数）
 ├── torch_extension
-│   ├── build.sh                              # 构建脚本（支持 --torch_extension 参数）
 │   ├── setup.py                              # wheel 打包配置（自动收集分布式算子）
 │   ├── requirements.txt
 │   └── cann_ops_nn                           # 整包安装目录（框架公共部分）
