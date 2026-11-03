@@ -91,7 +91,7 @@ aclnnStatus aclnnDeepNorm(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据，通常为神经网络的中间层输出，对应公式中的`x`。</td>
-      <td>支持空Tensor。</td>
+      <td>不支持空Tensor。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnDeepNorm(
       <td>gx（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据的梯度，用于反向传播，对应公式中的`gx`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnDeepNorm(
       <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示偏置参数，用于调整归一化后的输出，对应公式中的`beta`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnDeepNorm(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示缩放参数，用于调整归一化后的输出，对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnDeepNorm(
       <td>meanOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的均值，用于归一化操作，对应公式中的`mean`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnDeepNorm(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示计算输出的标准差倒数，用于归一化操作，对应公式中`rstd`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnDeepNorm(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的输出数据，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`的维度相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>

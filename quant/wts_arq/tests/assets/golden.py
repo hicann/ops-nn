@@ -16,6 +16,13 @@ frontend plugin (framework/wts_arq_tf_plugin.cpp maps OriginOpType "WtsARQ"),
 so the CPU golden is implemented with TensorFlow; numpy is used only for I/O
 conversion and the torch third_party stays the independent GPU-leg reference.
 
+Delivery note: the operator is GE IR graph mode only. TensorFlow does NOT
+register a callable `tf.compat.v1.WtsARQ` interface, so no TF e2e route is
+registered here (TTK e2e would fail to resolve such an api_name with
+inspect.signature — "接口无法调用"); the callable pathway is graph mode
+(TF graph node -> aclgrphParseTensorFlow -> GE), covered by the kernel/GEIR
+TestSpec below.
+
 Semantics (README.md formula, kernel.h and DESIGN.md §3.5/§3.6):
     range fix:  w_min = min(w_min, 0), w_max = max(w_max, 0)
     scale:      offset_flag=true  -> w_max/255 - w_min/255
@@ -41,13 +48,11 @@ import torch
 
 __golden__ = {
     "kernel": {"wts_arq": "wts_arq_golden"},
-    "e2e": {"tf.compat.v1.WtsARQ": "wts_arq_e2e_golden"},
 }
 
 __spec__ = {
     "wts_arq": "WtsArqTestSpec",
     "WtsARQ": "WtsArqTestSpec",
-    "tf.compat.v1.WtsARQ": "WtsArqE2eSpec",
 }
 
 SCALE_EPS = 1.1920929e-07
@@ -58,12 +63,6 @@ SCALE_EPS = 1.1920929e-07
 # is not set as the default judge here). Keys must cover every dtype registered
 # in op_host/wts_arq_def.cpp: DT_FLOAT16, DT_FLOAT.
 _TOL_KERNEL = {
-    "float32": {"standard": "mix_tolerance"},
-    "float16": {"standard": "mix_tolerance"},
-}
-
-# e2e(TF frontend) route judge: same scale/format of the operator as kernel.
-_TOL_E2E = {
     "float32": {"standard": "mix_tolerance"},
     "float16": {"standard": "mix_tolerance"},
 }
@@ -134,26 +133,6 @@ def wts_arq_golden(w, w_min, w_max, num_bits=8, offset_flag=False, **kwargs):
     return [y_np]
 
 
-def wts_arq_e2e_golden(w, w_min, w_max, num_bits=8, offset_flag=False, **kwargs):
-    """e2e(TF frontend) golden: TF tensors in, numpy arrays out.
-
-    The e2e route feeds framework tensors through the same TestSpec dispatch;
-    converting at the boundary keeps one computation source of truth.
-    """
-
-    def _np(x):
-        return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
-
-    return wts_arq_golden(
-        _np(w),
-        _np(w_min),
-        _np(w_max),
-        num_bits=num_bits,
-        offset_flag=offset_flag,
-        **kwargs,
-    )
-
-
 def _torch_compute(w, w_min, w_max, offset_flag):
     """Independent torch implementation used as the cross_check third_party."""
     w32 = torch.as_tensor(w).detach().cpu().to(torch.float32)
@@ -200,15 +179,13 @@ class WtsArqTestSpec:
     tolerance = _TOL_KERNEL
 
 
-class WtsArqE2eSpec:
-    """wts_arq e2e(TF frontend) TestSpec: same golden compute, own judge."""
-
-    third_party = {"torch": _WtsArqCompose}
-    tolerance = _TOL_E2E
-
-
 # Delivery scope:
-#   registered: kernel + GEIR (GEIR reuses the kernel TestSpec) + e2e(TF frontend)
-#   not registered: aclnn/torch — the operator declares GE IR graph mode only
-#   (README.md "仅 GE IR 图模式"); the TensorFlow frontend is mapped through
-#   framework/wts_arq_tf_plugin.cpp (OriginOpType "WtsARQ").
+#   registered: kernel + GEIR (GEIR reuses the kernel TestSpec)
+#   not registered: aclnn/torch/e2e(TF frontend) — the operator declares GE IR
+#   graph mode only (README.md "仅 GE IR 图模式"); the TensorFlow frontend is
+#   mapped through framework/wts_arq_tf_plugin.cpp (OriginOpType "WtsARQ"),
+#   but TensorFlow itself does NOT register a callable `tf.compat.v1.WtsARQ`
+#   interface, so TTK's e2e(TF) cannot resolve it (inspect.signature fails),
+#   i.e. "接口无法调用". No e2e route is therefore registered here; the correct
+#   invocation is the graph-mode route (TF graph node -> aclgrphParseTensorFlow
+#   -> GE), which the kernel/GEIR TestSpec above covers.
