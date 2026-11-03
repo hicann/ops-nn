@@ -40,10 +40,11 @@ using std::vector;
 #define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                       \
     vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                      \
     auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);                             \
-    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND,      \
+    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_NDHWC,   \
                                                            inputDtype);                                                \
     placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                   \
-    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                               \
+    placeholder##inputIndex##_desc.SetFormat(FORMAT_NDHWC);                                                            \
+    placeholder##inputIndex##_desc.SetOriginFormat(FORMAT_NDHWC);                                                      \
     Tensor tensor_placeholder##inputIndex;                                                                             \
     ret = GenOnesData(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, \
                       inputDtype, 2);                                                                                  \
@@ -52,6 +53,7 @@ using std::vector;
         return FAILED;                                                                                                 \
     }                                                                                                                  \
     placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                       \
+    placeholder##inputIndex.update_output_desc_y(placeholder##inputIndex##_desc);                                      \
     input.push_back(tensor_placeholder##inputIndex);                                                                   \
     graph.AddOp(placeholder##inputIndex);                                                                              \
     add1.set_input_##inputName(placeholder##inputIndex);                                                               \
@@ -78,8 +80,10 @@ using std::vector;
     add1.update_input_desc_##inputName(placeholder##inputIndex##_desc);                                                \
     inputs.push_back(placeholder##inputIndex)
 
-#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
-    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
+#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                          \
+    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_NDHWC, outputDtype); \
+    outputName##outputIndex##_desc.SetFormat(FORMAT_NDHWC);                                                    \
+    outputName##outputIndex##_desc.SetOriginFormat(FORMAT_NDHWC);                                              \
     add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 #define LOG_PRINT(message, ...)         \
@@ -179,7 +183,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     Status ret = SUCCESS;
     // 自定义代码：添加单算子定义到图中
     auto add1 = op::MaxPool3D("max_pool3_d");
-    vector<vector<int64_t>> shapes = {{4, 1, 4, 4, 6}, {4, 1, 1, 3, 6}};
+    vector<vector<int64_t>> shapes = {{4, 4, 4, 4, 6}, {4, 1, 1, 3, 6}};
     vector<vector<int64_t>> attrs = {{1, 2, 3, 2, 1}, {1, 4, 4, 1, 1}, {0, 0, 0, 0, 0, 0}};
 
     ADD_INPUT(1, x, inDtype, shapes[0]);
@@ -188,6 +192,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     ADD_INPUT_ATTR(strides, attrs[1]);
     ADD_INPUT_ATTR(padding, "CALCULATED");
     ADD_INPUT_ATTR(pads, attrs[2]);
+    ADD_INPUT_ATTR(data_format, "NDHWC");
     outputs.push_back(add1);
     // 添加完毕
     return SUCCESS;
