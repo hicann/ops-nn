@@ -194,6 +194,16 @@ TEST(HardSigmoidTilingTest, Int32)
     EXPECT_EQ(result.tilingData.f32BufferBytes, 11840 * static_cast<int64_t>(sizeof(float)));
 }
 
+TEST(HardSigmoidTilingTest, Scalar)
+{
+    const auto result = RunTilingCase({}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.blockDim, 1U);
+    EXPECT_EQ(result.tilingData.totalElements, 1);
+    EXPECT_EQ(result.tilingData.blockFactor, 1);
+    EXPECT_GT(result.tilingData.ubFactor, 0);
+}
+
 TEST(HardSigmoidTilingTest, CustomAttributes)
 {
     const auto result = RunTilingCase({1024}, ge::DT_FLOAT, 0.2f, 0.4f);

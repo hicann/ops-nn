@@ -11,21 +11,16 @@
 # ----------------------------------------------------------------------------
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
 
 
 @register("aclnn_hard_sigmoid")
 class TorchHardSigmoid(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-
         x = input_data.kwargs["x"]
 
         m = torch.nn.Hardsigmoid()
         output = m(x)
 
         return output
-

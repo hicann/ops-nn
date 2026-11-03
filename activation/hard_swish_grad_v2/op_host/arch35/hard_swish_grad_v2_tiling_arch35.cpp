@@ -77,18 +77,10 @@ static ge::graphStatus CheckShapeInfo(const gert::TilingContext* context, gert::
 {
     auto inputGradOutput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGradOutput);
-    OP_CHECK_IF(inputGradOutput->GetStorageShape().GetDimNum() == 0,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "grad_output", "0",
-                                                         "The dim num of grad_output must be at least 1"),
-                return ge::GRAPH_FAILED);
     shapeGradOutput = EnsureNotScalar(inputGradOutput->GetStorageShape());
 
     auto inputSelf = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
-    OP_CHECK_IF(inputSelf->GetStorageShape().GetDimNum() == 0,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "self", "0",
-                                                         "The dim num of self must be at least 1"),
-                return ge::GRAPH_FAILED);
     auto shapeSelf = EnsureNotScalar(inputSelf->GetStorageShape());
     OP_CHECK_IF(shapeGradOutput != shapeSelf,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -99,10 +91,6 @@ static ge::graphStatus CheckShapeInfo(const gert::TilingContext* context, gert::
 
     auto outputOut = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputOut);
-    OP_CHECK_IF(outputOut->GetStorageShape().GetDimNum() == 0,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "out", "0",
-                                                         "The dim num of out must be at least 1"),
-                return ge::GRAPH_FAILED);
     auto shapeOut = EnsureNotScalar(outputOut->GetStorageShape());
     OP_CHECK_IF(shapeOut != shapeGradOutput,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(

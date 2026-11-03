@@ -31,6 +31,9 @@
   \end{cases}
   $$
 
+  对于非有限值，算子按比较、选择和乘法运算执行：`self`为NaN时，两次比较结果均为false，`gradSelf`取1；
+  当`gradOutput`为正负Inf且`gradSelf`为0时，输出遵循IEEE 754乘法语义，结果为NaN。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 970px"><colgroup>

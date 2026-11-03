@@ -28,7 +28,6 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/apply_adagrad_proto.h"
 
@@ -263,6 +262,7 @@ int main(int argc, char* argv[])
     ret = session->AddGraph(graph_id, graph, graph_options);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Session add ir compute graph failed\n", GetTime().c_str());
+        session.reset();
         GEFinalize();
         return FAILED;
     }
@@ -276,6 +276,7 @@ int main(int argc, char* argv[])
     ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
+        session.reset();
         GEFinalize();
         return FAILED;
     }
@@ -291,11 +292,13 @@ int main(int argc, char* argv[])
         uint32_t dtype_size = GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
         if (input_shape < 0 || dtype_size == 0 ||
             static_cast<uint64_t>(input_shape) > std::numeric_limits<uint32_t>::max() / dtype_size) {
+            session.reset();
             GEFinalize();
             return FAILED;
         }
         uint32_t data_size = static_cast<uint32_t>(input_shape) * dtype_size;
         if (WriteDataToFile(input_file, data_size, input_data_i) != SUCCESS) {
+            session.reset();
             GEFinalize();
             return FAILED;
         }
@@ -311,11 +314,13 @@ int main(int argc, char* argv[])
         uint32_t dtype_size = GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
         if (output_shape < 0 || dtype_size == 0 ||
             static_cast<uint64_t>(output_shape) > std::numeric_limits<uint32_t>::max() / dtype_size) {
+            session.reset();
             GEFinalize();
             return FAILED;
         }
         uint32_t data_size = static_cast<uint32_t>(output_shape) * dtype_size;
         if (WriteDataToFile(output_file, data_size, output_data_i) != SUCCESS) {
+            session.reset();
             GEFinalize();
             return FAILED;
         }

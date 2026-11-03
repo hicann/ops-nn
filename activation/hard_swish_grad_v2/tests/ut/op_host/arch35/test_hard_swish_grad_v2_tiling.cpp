@@ -303,9 +303,12 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_dim_num_over_8)
     EXPECT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
 }
 
-TEST_F(HardSwishGradV2TilingArch35, test_tiling_scalar_rejected)
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_scalar)
 {
     gert::StorageShape scalar = {{}, {}};
     HardSwishGradV2Arch35TilingData tiling{};
-    EXPECT_EQ(RunArch35Tiling(scalar, scalar, scalar, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
+    ASSERT_EQ(RunArch35Tiling(scalar, scalar, scalar, ge::DT_FLOAT, tiling), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling.totalNum, 1);
+    EXPECT_EQ(tiling.blockFactor, 1);
+    EXPECT_GT(tiling.ubFactor, 0);
 }

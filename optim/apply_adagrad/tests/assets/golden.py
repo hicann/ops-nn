@@ -9,6 +9,11 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
@@ -16,6 +21,7 @@ import torch
 
 __spec__ = {
     "apply_adagrad": "ApplyAdagradKernelSpec",
+    "ApplyAdagrad": "ApplyAdagradKernelSpec",
     "tf.raw_ops.ApplyAdagrad": "ApplyAdagradTfRefSpec",
     "tf.raw_ops.ResourceApplyAdagrad": "ApplyAdagradTfResourceSpec",
 }
@@ -24,7 +30,10 @@ __spec__ = {
 # runners resolve ``__spec__``; older codecheck probes only inspect
 # ``__golden__`` or a top-level ``*_golden`` function.
 __golden__ = {
-    "kernel": {"apply_adagrad": "apply_adagrad_golden"},
+    "kernel": {
+        "apply_adagrad": "apply_adagrad_golden",
+        "ApplyAdagrad": "apply_adagrad_golden",
+    },
     "e2e": {
         "tf.raw_ops.ApplyAdagrad": "apply_adagrad_tf_ref_golden",
         "tf.raw_ops.ResourceApplyAdagrad": "apply_adagrad_tf_resource_golden",
@@ -36,23 +45,25 @@ _TOL = {
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
 }
+_GOLDEN_PYTHON_ENV = "APPLY_ADAGRAD_GOLDEN_PYTHON"
 
 
 def _run_tf_apply_adagrad(
-    var, accum, lr, grad, update_slots=True, use_locking=False, **kwargs
+    var,
+    accum,
+    lr,
+    grad,
+    update_slots=True,
+    use_locking=False,
+    compute_dtype=None,
+    **kwargs,
 ):
-    import tensorflow as tf
-
     del kwargs
-    # TTK normally supplies numpy arrays (including ml-dtypes bfloat16), while
-    # direct smoke callers may supply torch tensors.  CPU torch cannot expose
-    # bfloat16 through numpy, so promote only the transport representation and
-    # keep the TensorFlow reference dtype explicit.
     if isinstance(var, torch.Tensor):
-        tf_dtype = (
-            tf.bfloat16
+        native_dtype = (
+            "bfloat16"
             if var.dtype == torch.bfloat16
-            else tf.as_dtype(var.detach().cpu().numpy().dtype)
+            else str(var.detach().cpu().numpy().dtype)
         )
         var_array = (
             var.detach().cpu().float().numpy()
@@ -79,7 +90,74 @@ def _run_tf_apply_adagrad(
         accum_array = np.asarray(accum)
         grad_array = np.asarray(grad)
         lr_value = np.asarray(lr).reshape(-1)[0]
-        tf_dtype = tf.as_dtype(var_array.dtype)
+        native_dtype = var_array.dtype.name
+    if native_dtype == "bfloat16":
+        var_array = np.asarray(var_array, dtype=np.float32)
+        accum_array = np.asarray(accum_array, dtype=np.float32)
+        grad_array = np.asarray(grad_array, dtype=np.float32)
+        lr_value = np.asarray(lr_value, dtype=np.float32)
+
+    with tempfile.TemporaryDirectory(prefix="apply_adagrad_golden_") as temp_dir:
+        input_path = Path(temp_dir) / "input.npz"
+        output_path = Path(temp_dir) / "output.npz"
+        np.savez(
+            input_path,
+            var=np.ascontiguousarray(var_array),
+            accum=np.ascontiguousarray(accum_array),
+            lr=np.asarray(lr_value),
+            grad=np.ascontiguousarray(grad_array),
+            update_slots=np.asarray(update_slots, dtype=np.bool_),
+            use_locking=np.asarray(use_locking, dtype=np.bool_),
+            native_dtype=np.asarray(native_dtype),
+            compute_dtype=np.asarray(compute_dtype or ""),
+        )
+        worker_env = os.environ.copy()
+        worker_env.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+        worker_env.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+        worker_env["TORCH_DEVICE_BACKEND_AUTOLOAD"] = "0"
+        worker_env.pop("LD_LIBRARY_PATH", None)
+        python_executable = worker_env.get(_GOLDEN_PYTHON_ENV, sys.executable)
+        subprocess.run(
+            [
+                python_executable,
+                str(Path(__file__).resolve()),
+                "--tensorflow-worker",
+                str(input_path),
+                str(output_path),
+            ],
+            check=True,
+            env=worker_env,
+        )
+        with np.load(output_path) as output_data:
+            var_out = output_data["var"].copy()
+            accum_out = output_data["accum"].copy()
+        if native_dtype == "bfloat16":
+            from ml_dtypes import bfloat16
+
+            var_out = var_out.astype(bfloat16)
+            accum_out = accum_out.astype(bfloat16)
+        return [var_out, accum_out]
+
+
+def _run_tensorflow_worker(input_path, output_path):
+    with np.load(input_path) as input_data:
+        var_array = np.ascontiguousarray(input_data["var"])
+        accum_array = np.ascontiguousarray(input_data["accum"])
+        grad_array = np.ascontiguousarray(input_data["grad"])
+        lr_value = np.asarray(input_data["lr"]).reshape(-1)[0]
+        update_slots = bool(input_data["update_slots"].item())
+        use_locking = bool(input_data["use_locking"].item())
+        native_dtype_name = str(input_data["native_dtype"].item())
+        compute_dtype_name = str(input_data["compute_dtype"].item())
+
+    import tensorflow as tf
+
+    native_dtype = tf.as_dtype(native_dtype_name)
+    tf_dtype = tf.as_dtype(compute_dtype_name) if compute_dtype_name else native_dtype
+    var_array = np.asarray(var_array, dtype=tf_dtype.as_numpy_dtype)
+    accum_array = np.asarray(accum_array, dtype=tf_dtype.as_numpy_dtype)
+    grad_array = np.asarray(grad_array, dtype=tf_dtype.as_numpy_dtype)
+    lr_value = np.asarray(lr_value, dtype=tf_dtype.as_numpy_dtype)
 
     graph = tf.Graph()
     with graph.as_default():
@@ -100,16 +178,31 @@ def _run_tf_apply_adagrad(
     with tf.compat.v1.Session(graph=graph) as session:
         session.run(init)
         var_out, accum_out = session.run([output, accum_ref])
-    return [np.asarray(var_out), np.asarray(accum_out)]
+    if native_dtype != tf_dtype:
+        with np.errstate(over="ignore", invalid="ignore"):
+            var_out = np.asarray(var_out, dtype=native_dtype.as_numpy_dtype)
+            accum_out = np.asarray(accum_out, dtype=native_dtype.as_numpy_dtype)
+    if native_dtype == tf.bfloat16:
+        var_out = np.asarray(var_out, dtype=np.float32)
+        accum_out = np.asarray(accum_out, dtype=np.float32)
+    np.savez(output_path, var=np.asarray(var_out), accum=np.asarray(accum_out))
 
 
 def apply_adagrad_golden(
     var, accum, lr, grad, update_slots=True, use_locking=False, **kwargs
 ):
     """Return the single output declared by the ApplyAdagrad kernel schema."""
-    return _run_tf_apply_adagrad(
-        var, accum, lr, grad, update_slots, use_locking, **kwargs
-    )[:1]
+    del use_locking, kwargs
+    output = _ApplyAdagradKernelTorchCompose(update_slots=update_slots)(
+        var, accum, lr, grad
+    )[0]
+    if isinstance(var, torch.Tensor):
+        return [output]
+
+    output_dtype = np.asarray(var).dtype
+    if output.dtype == torch.bfloat16:
+        output = output.to(torch.float32)
+    return [output.detach().cpu().numpy().astype(output_dtype, copy=False)]
 
 
 class _ApplyAdagradTfCompose:
@@ -239,3 +332,11 @@ class ApplyAdagradTfResourceSpec:
     golden = staticmethod(apply_adagrad_tf_resource_golden)
     third_party: ClassVar[dict] = {"torch": _ApplyAdagradTorchCompose}
     tolerance = _TOL
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4 or sys.argv[1] != "--tensorflow-worker":
+        raise SystemExit(
+            "golden.py is a TTK plugin; direct execution requires --tensorflow-worker"
+        )
+    _run_tensorflow_worker(sys.argv[2], sys.argv[3])

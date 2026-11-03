@@ -151,7 +151,11 @@ ge::graphStatus ApplyAdagradTiling::CheckDtype()
 bool ApplyAdagradTiling::CheckIsScalar(int32_t inputIdx)
 {
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
+    const std::string paramName = "input[" + std::to_string(inputIdx) + "] shape";
+    OP_CHECK_IF(inputShape == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), paramName.c_str(), "nullptr",
+                                                      "Input shape must not be null"),
+                return false);
     auto storageShape = inputShape->GetStorageShape();
     return storageShape.IsScalar() || storageShape.GetShapeSize() == 1;
 }

@@ -185,15 +185,45 @@ TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_014)
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-// self和out格式相同但不在支持范围内
+// self和out格式相同时由后续流程处理
 TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_015)
 {
+    const std::vector<std::pair<std::vector<int64_t>, aclFormat>> cases = {{{2, 3}, ACL_FORMAT_ND},
+                                                                           {{2, 3}, ACL_FORMAT_NC},
+                                                                           {{2, 3, 4}, ACL_FORMAT_NCL},
+                                                                           {{1, 2, 3, 4}, ACL_FORMAT_NCHW},
+                                                                           {{1, 2, 3, 4}, ACL_FORMAT_NHWC},
+                                                                           {{1, 2, 3, 4, 5}, ACL_FORMAT_NCDHW},
+                                                                           {{1, 2, 3, 4, 5}, ACL_FORMAT_NDHWC}};
+    for (const auto& [shape, format] : cases) {
+        auto selfDesc = TensorDesc(shape, ACL_FLOAT, format);
+        auto outDesc = TensorDesc(shape, ACL_FLOAT, format);
+        auto ut = OP_API_UT(aclnnHardsigmoid, INPUT(selfDesc), OUTPUT(outDesc));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    }
+}
+
+// self和out格式不一致
+TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_016)
+{
     auto selfDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
-    auto outDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto outDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NHWC);
     auto ut = OP_API_UT(aclnnHardsigmoid, INPUT(selfDesc), OUTPUT(outDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 保持历史校验口径，格式相同时不在ACLNN层增加白名单限制
+TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_017)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ);
+    auto outDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ);
+    auto ut = OP_API_UT(aclnnHardsigmoid, INPUT(selfDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_hardsigmoid_test, WorkspaceSizeNull)

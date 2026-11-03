@@ -41,6 +41,9 @@
   \end{cases}
   $$
 
+  对于非有限值，算子按比较、选择和乘法运算执行：`self`为NaN时，两次比较结果均为false，`gradSelf`取1；
+  当`gradOutput`为正负Inf且`gradSelf`为0时，输出遵循IEEE 754乘法语义，结果为NaN。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnHardswishBackwardV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardswishBackwardV2”接口执行计算。
@@ -95,7 +98,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -105,7 +108,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput、out相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -115,7 +118,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
        <tr>

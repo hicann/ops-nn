@@ -141,7 +141,7 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
 static void DoFailedTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr,
                          gert::StorageShape& grad, ge::DataType varDtype, ge::DataType accumDtype, ge::DataType lrDtype,
                          ge::DataType gradDtype, gert::StorageShape* outputShape = nullptr,
-                         ge::DataType outputDtype = ge::DT_UNDEFINED)
+                         ge::DataType outputDtype = ge::DT_UNDEFINED, bool missingLrShape = false)
 {
     optiling::ApplyAdagradCompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -168,7 +168,7 @@ static void DoFailedTest(gert::StorageShape& var, gert::StorageShape& accum, ger
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 1)
                       .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({&var, &accum, &lr, &grad})
+                      .InputShapes({&var, &accum, missingLrShape ? nullptr : &lr, &grad})
                       .OutputShapes({varOut})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -253,6 +253,16 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_large_axis)
     DoTest(var, accum, lr, grad, varOut, ge::DT_FLOAT, ge::FORMAT_ND, true, false, "131073 2560 8768 35072 ", true, 52);
 }
 
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_scalar)
+{
+    gert::StorageShape var = {{}, {}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{}, {}};
+    gert::StorageShape grad = var;
+    gert::StorageShape varOut = var;
+    DoTest(var, accum, lr, grad, varOut, ge::DT_FLOAT, ge::FORMAT_ND, true, false, "1 512 8768 35072 ", true, 1);
+}
+
 TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_empty_tensor)
 {
     auto varDtype = ge::DT_FLOAT;
@@ -323,6 +333,16 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_lr_non_scalar_failed)
     gert::StorageShape lr = {{2}, {2}};
     gert::StorageShape grad = {{16}, {16}};
     DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_missing_lr_shape_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, nullptr,
+                 ge::DT_UNDEFINED, true);
 }
 
 TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_mismatched_dtype_failed)

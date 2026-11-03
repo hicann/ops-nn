@@ -36,6 +36,21 @@ TEST_F(l2_hardswish_backward_v2_test, normal_dtype_float32_format_nd)
     ut.TestPrecision();
 }
 
+TEST_F(l2_hardswish_backward_v2_test, normal_scalar_float32_format_nd)
+{
+    auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardswishBackwardV2, INPUT(gradOutputDesc, selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    ut.TestPrecision();
+}
+
 // 正常场景_float32_nhwc
 TEST_F(l2_hardswish_backward_v2_test, normal_dtype_float32_format_nhwc)
 {

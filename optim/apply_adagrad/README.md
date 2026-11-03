@@ -96,7 +96,7 @@
 
 ## 约束说明
 
-- var、accum、grad的shape需相同，lr需为标量。
+- var、accum、grad的shape需相同，lr需为标量，支持0维标量或shape为(1,)的1元素Tensor。
 - var、accum、lr、grad的数据类型需相同。
 - use_locking属性作为兼容属性接入，当前无特殊并发控制实现。
 
