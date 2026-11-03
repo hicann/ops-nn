@@ -58,15 +58,18 @@ public:
         sumSquareUWorkspace_.SetGlobalBuffer((__gm__ float*)workspace_ + WORKSPACE_ALIGNED_SIZE / FLOAT_SIZE);
 
         // init que for in and out
-        pipe_.InitBuffer(inQue_, BUFFER_NUM, HALF_BUFFER_SIZE);  // 2 * 8k
-        pipe_.InitBuffer(inFp32Que_, BUFFER_NUM, BUFFER_SIZE);   // 2 * 16k
-        pipe_.InitBuffer(outQue_, BUFFER_NUM, HALF_BUFFER_SIZE); // 2 * 8k
-        pipe_.InitBuffer(outFp32Que_, BUFFER_NUM, BUFFER_SIZE);  // 2 * 16k
-        pipe_.InitBuffer(ub1Buf_, BUFFER_SIZE);                  // 16k
-        pipe_.InitBuffer(ub2Buf_, BUFFER_SIZE);                  // 16k
-        pipe_.InitBuffer(ub3Buf_, BUFFER_SIZE);                  // 16k
-        pipe_.InitBuffer(ub4Buf_, BUFFER_SIZE);                  // 16k
-        pipe_.InitBuffer(ub5Buf_, BUFFER_SIZE);                  // 16k
+        // inQue_ 单缓冲 16k：ProcessU 把 r(≤2928) 与 c(mSize≤4096) 打包到同一张量，
+        // c 位于 BUFFER_SIZE_FP16=4096 元素偏移，需 8192 元素容量（对齐 fp32 TYPICAL
+        // inQue_ 的 BUFFER_SIZE*num=2 布局）；原 8k 缓冲使 c 写入越界到 inFp32Que_ 槽
+        pipe_.InitBuffer(inQue_, BUFFER_NUM, HALF_BUFFER_SIZE * 2); // 2 * 16k
+        pipe_.InitBuffer(inFp32Que_, BUFFER_NUM, BUFFER_SIZE);      // 2 * 16k
+        pipe_.InitBuffer(outQue_, BUFFER_NUM, HALF_BUFFER_SIZE);    // 2 * 8k
+        pipe_.InitBuffer(outFp32Que_, BUFFER_NUM, BUFFER_SIZE);     // 2 * 16k
+        pipe_.InitBuffer(ub1Buf_, BUFFER_SIZE);                     // 16k
+        pipe_.InitBuffer(ub2Buf_, BUFFER_SIZE);                     // 16k
+        pipe_.InitBuffer(ub3Buf_, BUFFER_SIZE);                     // 16k
+        pipe_.InitBuffer(ub4Buf_, BUFFER_SIZE);                     // 16k
+        pipe_.InitBuffer(ub5Buf_, BUFFER_SIZE);                     // 16k
 
         int64_t sumSquareUWsNum = CeilAlign(
             tilingData_.rRcCoreNumToUse * (tilingData_.rRcLoopCount + 1) * (tilingData_.cRcLoopCount + 1), 128);
@@ -164,6 +167,8 @@ private:
         } else {
             int64Local.SetValue(0, tilingData_.n);
             int64Local.SetValue(1, tilingData_.m);
+            int64Local.SetValue(2, 0);
+            int64Local.SetValue(3, 0);
             AscendC::PipeBarrier<PIPE_ALL>();
             AscendC::Cast(floatLocal, int64Local, AscendC::RoundMode::CAST_ROUND, INT64_NUM_BLOCK);
         }
@@ -296,7 +301,10 @@ private:
 
         rLocal = inQue_.DeQue<T>();
         auto cLocal = rLocal[BUFFER_SIZE_FP16];
-        rcWeight_ = 1 / (beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_));
+        const float denom = beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_);
+        // 不 clamp；denom==0 时 rcWeight_=inf，r_out*c_out>0 时 u=0、sum_square_u=0，
+        // r_out*c_out==0 或 denom<0 时为 NaN。
+        rcWeight_ = 1 / denom;
 
         auto cCastBuf = ub1Buf_.Get<float>();
         AscendC::Cast(cCastBuf, cLocal, AscendC::RoundMode::CAST_NONE, mSize);

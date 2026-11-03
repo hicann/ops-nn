@@ -160,6 +160,8 @@ private:
         } else {
             int64Local.SetValue(0, tilingData_.n);
             int64Local.SetValue(1, tilingData_.m);
+            int64Local.SetValue(2, 0);
+            int64Local.SetValue(3, 0);
             AscendC::PipeBarrier<PIPE_ALL>();
             AscendC::Cast(floatLocal, int64Local, AscendC::RoundMode::CAST_ROUND, INT64_NUM_BLOCK);
         }
@@ -262,7 +264,10 @@ private:
 
         rLocal = inQue_.DeQue<float>();
         auto cLocal = rLocal[BUFFER_SIZE_FP32];
-        rcWeight_ = 1 / (beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_));
+        const float denom = beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_);
+        // 不 clamp；denom==0 时 rcWeight_=inf，r_out*c_out>0 时 u=0、sum_square_u=0，
+        // r_out*c_out==0 或 denom<0 时为 NaN。
+        rcWeight_ = 1 / denom;
 
         auto cTmp = ub1Buf_.Get<float>();
         auto rTmp = ub2Buf_.Get<float>();

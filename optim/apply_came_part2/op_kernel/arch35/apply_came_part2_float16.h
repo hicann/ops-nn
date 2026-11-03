@@ -321,6 +321,8 @@ __aicore__ inline void ApplyCamePart2Float16<T>::CopyInScalar()
         AscendC::LocalTensor<int64_t> int64Local = scalarBuf_.Get<int64_t>();
         int64Local.SetValue(0, tilingData_.n);
         int64Local.SetValue(1, tilingData_.m);
+        int64Local.SetValue(2, 0);
+        int64Local.SetValue(3, 0);
         AscendC::PipeBarrier<PIPE_ALL>();
         AscendC::LocalTensor<float> floatLocal = scalarBuf_.Get<float>();
         AscendC::Cast(floatLocal, int64Local, AscendC::RoundMode::CAST_ROUND, INT64_PER_BLOCK);
@@ -704,6 +706,9 @@ __aicore__ inline void ApplyCamePart2Float16<T>::ProcessU()
     }
 
     // calc denominator, not in cycle
+    // 不做 clamp，直接取 1/denominator：denominator==0 时 rcCoefficient_=inf，
+    // r_out*c_out>0 时 u = grad/sqrt(inf) = 0、sum_square_u=0；
+    // r_out*c_out==0 或 denominator<0 时 sqrt 得到 NaN，u/sum_square_u 为 NaN（与 golden 一致）。
     float denominator = beta2_ * sumR_ / n_ + (1 - beta2_) * sumGradRc_ / (m_ * n_);
     rcCoefficient_ = 1 / denominator;
 

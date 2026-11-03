@@ -91,11 +91,11 @@ static const int64_t TYPICAL_1024 = 1024;
 static const int64_t TYPICAL_4096 = 4096;
 static const int64_t TYPICAL_116736 = 116736;
 
-// TYPICAL 路径 kernel 为固定缓冲布局（fp32 典型约 112KB、fp16 典型约 128KB，均为编译期常量，见
+// TYPICAL 路径 kernel 为固定缓冲布局（fp32 典型 176KB、fp16 典型 192KB，均为编译期常量，见
 // apply_came_part2_typical_net.h / apply_came_part2_float16_typical_net.h），无法随运行时 ubSize 自适应。
-// 路由 TYPICAL 前校验 ubSize 满足最小容量（128KB 布局 + 32KB 余量），不满足则回落 NORMAL 路径
-// （runtime 自适应切分），避免小 UB 平台固定缓冲越界。
-static const int64_t TYPICAL_MIN_UB_BYTES = 160 * 1024;
+// 路由 TYPICAL 前校验 ubSize 满足最小容量（fp16 典型 192KB 布局，取两典型路径最大者），不满足则
+// 回落 NORMAL 路径（runtime 自适应切分），避免小 UB 平台固定缓冲越界。
+static const int64_t TYPICAL_MIN_UB_BYTES = 192 * 1024;
 
 static const int64_t SYS_WORKSPACE = 16LL * 1024 * 1024;
 static const int64_t MAX_WORKSPACE = 30LL * 1024 * 1024 * 1024;
@@ -414,6 +414,18 @@ static bool CheckParamsShape(const gert::TilingContext* context)
     auto sumGradRcShape = inputShape3->GetStorageShape();
     auto rInShape = inputShape4->GetStorageShape();
     auto cInShape = inputShape5->GetStorageShape();
+
+    // 动态 rank（dims={-2}）：def 声明 DynamicRankSupportFlag(true) 且随附 [-2] 动态示例，
+    // 形状运行时解析后此处才被调用；未知 rank 占位（GetDimNum()==1）不是具体 rank-1 拒绝，
+    // 静态 shape/rank 校验放行
+    constexpr int64_t UNKNOWN_RANK_DIM_VALUE = -2;
+    const gert::Shape* tensorShapes[6] = {&gridShape,      &sumGradRShape, &sumGradCShape,
+                                          &sumGradRcShape, &rInShape,      &cInShape};
+    for (auto shape : tensorShapes) {
+        if (shape->GetDimNum() == 1 && shape->GetDim(0) == UNKNOWN_RANK_DIM_VALUE) {
+            return true;
+        }
+    }
 
     auto gridDimNum = gridShape.GetDimNum();
     auto sumGradRDimNum = sumGradRShape.GetDimNum();

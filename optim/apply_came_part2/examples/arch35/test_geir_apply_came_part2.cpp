@@ -117,8 +117,8 @@ InputFeeds MakeFeeds(const ShapeVector& gradShape, const ShapeVector& rShape, co
     const std::vector<float> gradPattern = {0.5F, -0.3F, 0.8F, 0.2F, -0.6F, 0.4F, -0.1F, 0.7F};
     const std::vector<float> sgrPattern = {0.4F, 0.2F, -0.5F, 0.3F};
     const std::vector<float> sgcPattern = {0.3F, -0.2F, 0.6F, 0.1F, -0.4F, 0.5F, 0.2F, -0.3F};
-    const std::vector<float> rPattern = {0.6F, 0.1F, -0.4F, 0.5F};
-    const std::vector<float> cPattern = {0.5F, -0.3F, 0.7F, 0.2F, -0.5F, 0.4F, 0.1F, -0.2F};
+    const std::vector<float> rPattern = {0.6F, 0.1F, 0.4F, 0.5F};
+    const std::vector<float> cPattern = {0.5F, 0.3F, 0.7F, 0.2F, 0.5F, 0.4F, 0.1F, 0.2F};
 
     FillPattern(feeds.grad, gradCount, gradPattern);
     FillPattern(feeds.sum_grad_r, rCount, sgrPattern);

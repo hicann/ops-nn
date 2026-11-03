@@ -16,6 +16,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 using namespace gert;
@@ -51,7 +52,19 @@ static ge::graphStatus Infershape4ApplyCamePart2(gert::InferShapeContext* contex
     OP_LOGD(context, "Begin ApplyCamePart2Infershape.");
     const gert::Shape* gradShape = context->GetInputShape(INDEX_IN_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    // 动态 Rank（dims={-2}）场景：def 声明 DynamicRankSupportFlag(true) 且随附 [-2]
+    // 动态示例；对齐同仓 apply_came_part3/sgd 约定，任一输入未知 rank 时输出全部置
+    // unknown rank 并放行，避免把 {-2}（GetDimNum()==1）当作具体 rank-1 拒绝
     size_t gradDimNum = gradShape->GetDimNum();
+    if (Ops::Base::IsUnknownRank(*gradShape)) {
+        OP_LOGD(context, "ApplyCamePart2 input is unknown rank (-2), set outputs to unknown rank");
+        for (size_t i = 0; i < 4; ++i) {
+            auto* outputShape = context->GetOutputShape(i);
+            OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+            Ops::Base::SetUnknownRank(*outputShape);
+        }
+        return ge::GRAPH_SUCCESS;
+    }
     OP_CHECK_IF(gradDimNum != MAX_DIM_NUM,
                 OP_LOGE_FOR_INVALID_SHAPEDIM("ApplyCamePart2", "grad", std::to_string(gradDimNum) + "D", "2D"),
                 return GRAPH_FAILED);
