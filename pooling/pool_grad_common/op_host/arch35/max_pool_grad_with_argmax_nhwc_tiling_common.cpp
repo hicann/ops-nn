@@ -39,8 +39,10 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingConte
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride);
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride);
+    int64_t hKernelSpan = (inputData->hKernel - 1) * inputData->hDilation + 1;
+    int64_t wKernelSpan = (inputData->wKernel - 1) * inputData->wDilation + 1;
+    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + hKernelSpan - 1, inputData->hStride);
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + wKernelSpan - 1, inputData->wStride);
 
     int64_t inputPlaneSizeHW = hInputInner * wInputInner;
     int64_t outputPlaneSizeHW = splitData.hOutputInner * splitData.wOutputInner;

@@ -160,6 +160,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
 
     padH_ = tilingData.padH;
     padW_ = tilingData.padW;
+    dilationH_ = tilingData.dilationH;
+    dilationW_ = tilingData.dilationW;
 
     nOutputInner_ = tilingData.nOutputInner;
     nOutputTail_ = tilingData.nOutputTail;
