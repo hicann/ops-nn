@@ -8,13 +8,18 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 #include <random>
 
 #include "acl/acl.h"
-#include "../op_api/aclnn_rotate_quant.h"
+#include "aclnnop/aclnn_rotate_quant.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -65,6 +70,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return 1);
     return 0;
 }
 
@@ -101,17 +107,31 @@ int main()
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
     {
+        // V1普通RotateQuant：根据芯片选择受支持的输出类型和scale布局。
+        const char* socName = aclrtGetSocName();
+        CHECK_RET(socName != nullptr, LOG_PRINT("aclrtGetSocName failed.\n"); return 1);
+        std::string soc(socName);
+        std::transform(soc.begin(), soc.end(), soc.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        const bool isInt = soc.rfind("ascend910b", 0) == 0 || soc.rfind("ascend910_93", 0) == 0;
+        const bool isMx = soc.rfind("ascend950", 0) == 0 || soc.rfind("ascend350", 0) == 0 ||
+                          soc.rfind("ascend960dt", 0) == 0 || soc.rfind("ascend960pr", 0) == 0;
+        CHECK_RET(isInt || isMx, LOG_PRINT("Unsupported SOC for this example: %s\n", socName); return 1);
+        LOG_PRINT("Current SOC: %s; mode=ordinary, y=%s, scale=%s\n", socName, isMx ? "FLOAT8_E4M3FN" : "INT8",
+                  isMx ? "FLOAT8_E8M0" : "FLOAT");
+
         // 2. 构造输入与输出，需要根据API的接口自定义构造
-        // x: (M, N), rot: (K, K), y: (M, N), scale: (M,)
-        // Constraints: rot must be square, N % K == 0, N % 8 == 0
-        int64_t M = 1024;
-        int64_t N = 256;
-        int64_t K = 64;
+        // 所有输入行共用一个二维旋转矩阵，取K=N，直接计算x @ rotation后量化。
+        // x: (M, N), rot: (K, K), y: (M, N)
+        // INT scale: (M,); MX scale: (M, CeilDiv(N, 64), 2)
+        const int64_t M = 1024;
+        const int64_t N = 256;
+        const int64_t K = 64;
 
         std::vector<int64_t> xShape = {M, N};
         std::vector<int64_t> rotShape = {K, K};
         std::vector<int64_t> yShape = {M, N};
-        std::vector<int64_t> scaleShape = {M};
+        std::vector<int64_t> scaleShape = isMx ? std::vector<int64_t>{M, (N + 63) / 64, 2} : std::vector<int64_t>{M};
 
         // 创建x aclTensor (BF16)
         auto xHostData = GenerateRandomBf16Data(M * N, 42);
@@ -131,36 +151,45 @@ int main()
         std::unique_ptr<void, aclError (*)(void*)> rotAddrPtr(rotDeviceAddr, aclrtFree);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create rot tensor failed.\n"); return ret);
 
-        // 创建y aclTensor (INT8)
+        // 创建y aclTensor：INT8和FLOAT8_E4M3FN每个元素均占一个字节。
         std::vector<int8_t> yHostData(M * N, 0);
         void* yDeviceAddr = nullptr;
         aclTensor* yTensor = nullptr;
-        ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_INT8, &yTensor);
+        ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr,
+                              isMx ? aclDataType::ACL_FLOAT8_E4M3FN : aclDataType::ACL_INT8, &yTensor);
         std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yTensorPtr(yTensor, aclDestroyTensor);
         std::unique_ptr<void, aclError (*)(void*)> yAddrPtr(yDeviceAddr, aclrtFree);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create y tensor failed.\n"); return ret);
 
-        // 创建scale aclTensor (FLOAT32)
-        std::vector<float> scaleHostData(M, 0.0f);
+        // 创建scale aclTensor：INT模式使用FLOAT，MX模式使用一字节的FLOAT8_E8M0原始编码。
+        auto scaleSize = GetShapeSize(scaleShape);
+        std::vector<float> scaleHostData(isMx ? 0 : scaleSize, 0.0f);
+        std::vector<uint8_t> scaleMxHostData(isMx ? scaleSize : 0, 0);
         void* scaleDeviceAddr = nullptr;
         aclTensor* scaleTensor = nullptr;
-        ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scaleTensor);
+        if (isMx) {
+            ret = CreateAclTensor(scaleMxHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                                  &scaleTensor);
+        } else {
+            ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scaleTensor);
+        }
         std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scaleTensorPtr(scaleTensor, aclDestroyTensor);
         std::unique_ptr<void, aclError (*)(void*)> scaleAddrPtr(scaleDeviceAddr, aclrtFree);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create scale tensor failed.\n"); return ret);
 
         // 3. 调用CANN算子库API，需要修改为具体的Api名称
-        // 调用aclnnRotateQuant第一段接口
+        // 调用V1第一段接口执行普通旋转量化，alpha传nullptr关闭clamp。
         int64_t axis = -1;
-        char* roundMode = const_cast<char*>("rint");
+        char roundMode[] = "rint";
         int64_t scaleAlg = 0;
         double dstTypeMax = 0.0;
         bool trans = false;
         uint64_t workspaceSize = 0;
         aclOpExecutor* executor = nullptr;
-        ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans,
-                                            yTensor, scaleTensor, &workspaceSize, &executor);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+        ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax,
+                                               trans, yTensor, scaleTensor, &workspaceSize, &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+                  return ret);
 
         // 根据第一段接口计算出的workspaceSize申请device内存
         void* workspaceAddr = nullptr;
@@ -183,22 +212,31 @@ int main()
         auto ySize = GetShapeSize(yShape);
         std::vector<int8_t> yResult(ySize, 0);
         ret = aclrtMemcpy(yResult.data(), ySize * sizeof(int8_t), yDeviceAddr, ySize * sizeof(int8_t),
-                        ACL_MEMCPY_DEVICE_TO_HOST);
+                          ACL_MEMCPY_DEVICE_TO_HOST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y result failed.\n"); return ret);
 
-        auto scaleSize = GetShapeSize(scaleShape);
-        std::vector<float> scaleResult(scaleSize, 0.0f);
-        ret = aclrtMemcpy(scaleResult.data(), scaleSize * sizeof(float), scaleDeviceAddr, scaleSize * sizeof(float),
-                        ACL_MEMCPY_DEVICE_TO_HOST);
+        void* scaleResult = isMx ? static_cast<void*>(scaleMxHostData.data()) :
+                                   static_cast<void*>(scaleHostData.data());
+        auto scaleBytes = scaleSize * (isMx ? sizeof(uint8_t) : sizeof(float));
+        ret = aclrtMemcpy(scaleResult, scaleBytes, scaleDeviceAddr, scaleBytes, ACL_MEMCPY_DEVICE_TO_HOST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result failed.\n"); return ret);
 
         // 打印部分结果
         constexpr int64_t kPrintLimit = 5;
         for (int64_t i = 0; i < kPrintLimit && i < static_cast<int64_t>(yResult.size()); i++) {
-            LOG_PRINT("y[%ld] = %d\n", i, static_cast<int>(yResult[i]));
+            if (isMx) {
+                // FP8/E8M0仅打印原始编码，不能直接按INT8/FLOAT解释。
+                LOG_PRINT("y[%ld] code = 0x%02x\n", i, static_cast<unsigned>(static_cast<uint8_t>(yResult[i])));
+            } else {
+                LOG_PRINT("y[%ld] = %d\n", i, static_cast<int>(yResult[i]));
+            }
         }
-        for (int64_t i = 0; i < kPrintLimit && i < static_cast<int64_t>(scaleResult.size()); i++) {
-            LOG_PRINT("scale[%ld] = %f\n", i, scaleResult[i]);
+        for (int64_t i = 0; i < kPrintLimit && i < scaleSize; i++) {
+            if (isMx) {
+                LOG_PRINT("scale[%ld] code = 0x%02x\n", i, static_cast<unsigned>(scaleMxHostData[i]));
+            } else {
+                LOG_PRINT("scale[%ld] = %f\n", i, scaleHostData[i]);
+            }
         }
     }
 

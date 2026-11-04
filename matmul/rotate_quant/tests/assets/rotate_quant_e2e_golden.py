@@ -9,7 +9,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""Ordinary Ascend 950 references for the original and operator-repository Torch APIs."""
+"""Ascend 950 references for ordinary and grouped Torch RotateQuant APIs."""
 
 import os
 import sys
@@ -19,8 +19,10 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from rotate_quant_kernel_golden import (
     _as_numpy,
+    _shape_dtype_failure,
+    compare_grouped_outputs,
     compare_quantized,
-    compare_scale,
+    compute_grouped_rotate_mx,
     compute_rotate_mx,
     np_fp4_e2m1,
     np_mx_scale,
@@ -99,75 +101,32 @@ def _compare_torch_outputs(
     golden_y,
     golden_scale,
     *,
-    raw_scale,
     compare_context=None,
 ):
     y, golden_y = _as_numpy(y), _as_numpy(golden_y)
-    if y.shape != golden_y.shape or y.dtype != golden_y.dtype:
-        y_result = {"pass": False, "precision": 0.0}
-    else:
-        if golden_y.dtype == np.uint8:
-            y, golden_y = _unpack_fp4(y), _unpack_fp4(golden_y)
-        y_result = compare_quantized(y, golden_y, compare_context)
+    y_failure = _shape_dtype_failure(y, golden_y)
+    if y_failure is None and golden_y.dtype == np.uint8:
+        y, golden_y = _unpack_fp4(y), _unpack_fp4(golden_y)
 
     scale, golden_scale = _as_numpy(scale), _as_numpy(golden_scale)
-    if raw_scale:
-        valid = scale.dtype == np.uint8 and golden_scale.dtype == np.uint8
-    else:
-        # Original torch_npu versions expose E8M0 or its uint8 storage carrier.
-        valid = all(
-            value.dtype == np.uint8
-            or ("float8_e8m0" in value.dtype.name and value.dtype.itemsize == 1)
-            for value in (scale, golden_scale)
-        )
+    valid = scale.dtype == np.uint8 and golden_scale.dtype == np.uint8
     if valid:
-        scale_result = compare_scale(
-            scale.view(np_mx_scale), golden_scale.view(np_mx_scale)
-        )
-    else:
-        scale_result = {"pass": False, "precision": 0.0}
-    return [y_result, scale_result]
-
-
-class TorchNpuRotateQuantTestSpec:
-    """Original op-plugin interface: packed FP4 Y and E8M0 scale."""
-
-    @staticmethod
-    def golden(
-        x,
-        rotation,
-        *,
-        alpha=None,
-        dst_dtype=None,
-        axis=-1,
-        round_mode="rint",
-        scale_alg=0,
-        dst_type_max=0.0,
-        transpose_y=False,
-        **kwargs,
-    ):
-        return _ordinary_torch_golden(
-            x,
-            rotation,
-            alpha=alpha,
-            dst_dtype=dst_dtype,
-            axis=axis,
-            round_mode=round_mode,
-            scale_alg=scale_alg,
-            dst_type_max=dst_type_max,
-            transpose_y=transpose_y,
-        )
-
-    @staticmethod
-    def compare(y, scale, golden_y, golden_scale, *, compare_context=None, **kwargs):
-        return _compare_torch_outputs(
+        return compare_grouped_outputs(
             y,
-            scale,
+            scale.view(np_mx_scale),
             golden_y,
-            golden_scale,
-            raw_scale=False,
-            compare_context=compare_context,
+            golden_scale.view(np_mx_scale),
+            compare_context,
+            preserve_tail=False,
         )
+    return [
+        y_failure or compare_quantized(y, golden_y, compare_context),
+        {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": "Torch scale must retain its uint8 E8M0 storage dtype",
+        },
+    ]
 
 
 class CannOpsNnRotateQuantTestSpec:
@@ -189,10 +148,29 @@ class CannOpsNnRotateQuantTestSpec:
         group_list_type=0,
         **kwargs,
     ):
-        if group_list is not None:
-            raise ValueError("Ordinary RotateQuant E2E golden requires group_list=None")
         if group_list_type not in (0, 1):
             raise ValueError("group_list_type must be 0 or 1")
+        if group_list is not None:
+            if (axis is not None and axis not in (-1, x.ndim - 1)) or transpose_y:
+                raise ValueError(
+                    "RotateQuant requires the last axis and transpose_y=False"
+                )
+            dtype = _mx_dtype(dst_dtype)
+            y, scale = compute_grouped_rotate_mx(
+                x,
+                rotation,
+                alpha,
+                group_list,
+                group_list_type,
+                dtype,
+                "rint" if round_mode is None else str(round_mode),
+                0 if scale_alg is None else int(scale_alg),
+                0.0 if dst_type_max is None else float(dst_type_max),
+            )
+            return [
+                _pack_fp4(y) if dtype == "float4_e2m1" else y,
+                scale.view(np.uint8).copy(),
+            ]
         y, scale = _ordinary_torch_golden(
             x,
             rotation,
@@ -214,12 +192,10 @@ class CannOpsNnRotateQuantTestSpec:
             scale,
             golden_y,
             golden_scale,
-            raw_scale=True,
             compare_context=compare_context,
         )
 
 
 __spec__ = {
-    "torch_npu.npu_rotate_quant": "TorchNpuRotateQuantTestSpec",
     "torch.ops.cann_ops_nn.rotate_quant": "CannOpsNnRotateQuantTestSpec",
 }
