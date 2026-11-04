@@ -1015,3 +1015,105 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_sigmoid_nondefault_scale_failed)
         EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
     }
 }
+
+TEST_F(l2_fusedmatmul_test, ascend960dt_test_empty_op_type_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960dt_test_relu_with_bias_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960dt_test_16cast32_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "16cast32", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960dt_test_16cast32_y_dtype_invalid)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "16cast32", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960pr_test_empty_op_type_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960pr_test_relu_with_bias_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960pr_test_16cast32_success)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "16cast32", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend960pr_test_16cast32_y_dtype_invalid)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "16cast32", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}

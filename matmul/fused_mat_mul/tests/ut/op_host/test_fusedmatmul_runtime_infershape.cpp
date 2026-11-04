@@ -221,3 +221,52 @@ TEST_F(FusedMatMulErrorReportTest, InvalidBatchBroadcastReportsOneParameterError
 
 TEST_F(FusedMatMulErrorReportTest, ValidBatchBroadcastDoesNotReportError) { CheckBatchBroadcast(1, ge::GRAPH_SUCCESS); }
 } // namespace
+
+TEST(FusedMatMulInferShape16Cast32, Basic)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMatMul");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    gert::StorageShape x1 = {{4, 32}, {4, 32}};
+    gert::StorageShape x2 = {{32, 64}, {32, 64}};
+    gert::StorageShape bias = {{}, {}};
+    gert::StorageShape x3 = {{}, {}};
+    gert::StorageShape y = {{}, {}};
+    auto holder = CreateFusedMatMulHolder(x1, x2, bias, x3, y, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                          ge::DT_FLOAT16, false, false, false, "16cast32");
+    auto* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(impl->infer_shape(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 64]");
+}
+
+TEST(FusedMatMulInferShape16Cast32, TransposeX2)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMatMul");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    gert::StorageShape x1 = {{4, 32}, {4, 32}};
+    gert::StorageShape x2 = {{64, 32}, {64, 32}};
+    gert::StorageShape bias = {{}, {}};
+    gert::StorageShape x3 = {{}, {}};
+    gert::StorageShape y = {{}, {}};
+    auto holder = CreateFusedMatMulHolder(x1, x2, bias, x3, y, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                          ge::DT_FLOAT16, false, true, false, "16cast32");
+    auto* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(impl->infer_shape(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[4, 64]");
+}
+
+TEST(FusedMatMulInferShape16Cast32, MismatchedKFails)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMatMul");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    gert::StorageShape x1 = {{4, 32}, {4, 32}};
+    gert::StorageShape x2 = {{31, 64}, {31, 64}};
+    gert::StorageShape bias = {{}, {}};
+    gert::StorageShape x3 = {{}, {}};
+    gert::StorageShape y = {{}, {}};
+    auto holder = CreateFusedMatMulHolder(x1, x2, bias, x3, y, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                          ge::DT_FLOAT16, false, false, false, "16cast32");
+    EXPECT_EQ(impl->infer_shape(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
