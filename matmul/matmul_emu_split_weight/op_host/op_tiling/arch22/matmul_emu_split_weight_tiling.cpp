@@ -11,6 +11,8 @@
 #include "matmul_emu_split_weight_tiling.h"
 #include "matmul_emu_split_weight_tiling_key.h"
 #include "error_util.h"
+#include "matmul/common/op_host/matmul_error_report.h"
+#include <string>
 #include "matmul/common/op_host/math_util_nn.h"
 #include <cmath>
 
@@ -40,8 +42,13 @@ bool MatmulEmuSplitWeightBaseTiling::IsCapable() { return true; }
 ge::graphStatus MatmulEmuSplitWeightBaseTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "platformInfo is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        platformInfo == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError(context_->GetNodeName(),
+                                             "Platform information is null; check tiling platform initialization.");
+        },
+        return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     aicNum_ = ascendcPlatform.GetCoreNumAic();
     return ge::GRAPH_SUCCESS;
@@ -50,8 +57,13 @@ ge::graphStatus MatmulEmuSplitWeightBaseTiling::GetPlatformInfo()
 ge::graphStatus MatmulEmuSplitWeightBaseTiling::ExtractAttrs()
 {
     auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(attrs == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "attrs is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        attrs == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError(context_->GetNodeName(),
+                                             "Tiling attributes are null; check operator attribute initialization.");
+        },
+        return ge::GRAPH_FAILED);
 
     const int32_t* yDtypePtr = attrs->GetAttrPointer<int32_t>(INDEX_ATTR_Y_DTYPE);
     yDtype_ = (yDtypePtr != nullptr) ? *yDtypePtr : Y_DTYPE_FP32;
@@ -89,24 +101,41 @@ ge::graphStatus MatmulEmuSplitWeightBaseTiling::ValidateShape()
 
     OP_TILING_CHECK(
         xShape.GetDimNum() != NUM_TWO || wHighShape.GetDimNum() != NUM_TWO || wLowShape.GetDimNum() != NUM_TWO,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "all inputs must be 2D"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x, w_high, w_low",
+            (std::to_string(xShape.GetDimNum()) + ", " + std::to_string(wHighShape.GetDimNum()) + ", " +
+             std::to_string(wLowShape.GetDimNum()))
+                .c_str(),
+            "All inputs must have rank 2."),
+        return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(m_ == 0 || m_ > static_cast<uint64_t>(INT32_MAX) || n_ == 0 ||
                         n_ > static_cast<uint64_t>(INT32_MAX) || k_ == 0 || k_ > static_cast<uint64_t>(INT32_MAX),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "m, k, n of x, w must be within the range (0, INT32_MAX], "
-                                          "got m=%lu, k=%lu, n=%lu",
-                                          m_, k_, n_),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "x, w_high",
+                        (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(wHighShape)).c_str(),
+                        "M, K and N must be in [1, INT32_MAX] after applying transpose_x and transpose_w."),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(k_ != wHighK_,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "x K(%lu) must match w_high K(%lu)", k_, wHighK_),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(k_ != wLowK_,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "x K(%lu) must match w_low K(%lu)", k_, wLowK_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        k_ != wHighK_,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, w_high",
+            (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(wHighShape)).c_str(),
+            "The contraction dimensions K of x and w_high must match after applying transpose_x and transpose_w."),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        k_ != wLowK_,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, w_low",
+            (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(wLowShape)).c_str(),
+            "The contraction dimensions K of x and w_low must match after applying transpose_x and transpose_w."),
+        return ge::GRAPH_FAILED);
     OP_TILING_CHECK(n_ != wLowN_,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "w_high N(%lu) must match w_low N(%lu)", n_, wLowN_),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "w_high, w_low",
+                        (Ops::Base::ToString(wHighShape) + ", " + Ops::Base::ToString(wLowShape)).c_str(),
+                        "The output dimensions N of w_high and w_low must match after applying transpose_w."),
                     return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -114,12 +143,14 @@ ge::graphStatus MatmulEmuSplitWeightBaseTiling::ValidateShape()
 
 ge::graphStatus MatmulEmuSplitWeightBaseTiling::ValidateAttrs()
 {
-    OP_TILING_CHECK(yDtype_ != Y_DTYPE_FP32,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "y_dtype only supports 0 (FP32), got %d", yDtype_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        yDtype_ != Y_DTYPE_FP32,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "y_dtype", std::to_string(yDtype_).c_str(), "0 (FP32)"),
+        return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         std::fabs(scale_ - EXPECTED_SCALE) > 1e-7f,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "w_low_scale only supports 1/256 (0.00390625), got %f", scale_),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "w_low_scale", std::to_string(scale_).c_str(),
+                                              "Must equal 0.00390625 (1/256), within a tolerance of 1e-7."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -195,16 +226,32 @@ ge::graphStatus MatmulEmuSplitWeightBaseTiling::GetWorkspaceSize()
 ge::graphStatus MatmulEmuSplitWeightBaseTiling::PostTiling()
 {
     size_t sizeTilingData = sizeof(MatmulEmuSplitWeightTilingData);
-    OP_TILING_CHECK(sizeTilingData % sizeof(uint64_t) != 0,
-                    OP_LOGE(context_->GetNodeName(), "tiling data size[%zu] is not aligned to 8", sizeTilingData),
-                    return ge::GRAPH_FAILED);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    OP_TILING_CHECK(
+        sizeTilingData % sizeof(uint64_t) != 0,
+        {
+            const std::string reason = "Tiling data size " + std::to_string(sizeTilingData) +
+                                       " bytes must be aligned to 8 bytes; check the tiling data layout.";
+            Ops::NN::ReportMatmulTilingError(context_->GetNodeName(), reason.c_str());
+        },
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context_->GetRawTilingData() == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError(context_->GetNodeName(),
+                                             "Raw tiling data storage is null; check tiling context initialization.");
+        },
+        return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(sizeTilingData);
     context_->SetBlockDim(tilingData_.usedCoreNum);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OP_TILING_CHECK(workspaces == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspaces is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        workspaces == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError(
+                context_->GetNodeName(), "Workspace size output storage is null; check tiling context initialization.");
+        },
+        return ge::GRAPH_FAILED);
     workspaces[0] = workspaceSize_;
 
     auto tilingPtr = static_cast<MatmulEmuSplitWeightTilingData*>(context_->GetRawTilingData()->GetData());

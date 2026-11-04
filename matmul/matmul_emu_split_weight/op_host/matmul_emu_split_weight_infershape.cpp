@@ -10,6 +10,8 @@
 
 #include "register/op_impl_registry.h"
 #include "error_util.h"
+#include "matmul/common/op_host/matmul_error_report.h"
+#include <string>
 
 namespace {
 const size_t kXIdx = 0;
@@ -27,8 +29,13 @@ const size_t kAttrTransWIdx = 2;
 namespace Ops::NN::MatMul {
 ge::graphStatus InferShapeForMatmulEmuSplitWeight(gert::InferShapeContext* context)
 {
-    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "context is null"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        context == nullptr,
+        {
+            Ops::NN::ReportMatmulInferShapeError("MatmulEmuSplitWeight",
+                                                 "InferShapeContext is null; check the infer-shape invocation.");
+        },
+        return ge::GRAPH_FAILED);
     auto op_name = context->GetNodeName();
     auto xShape = context->GetInputShape(kXIdx);
     auto wHighShape = context->GetInputShape(kWHighIdx);
@@ -38,16 +45,33 @@ ge::graphStatus InferShapeForMatmulEmuSplitWeight(gert::InferShapeContext* conte
 
     OP_CHECK_IF(
         xShape == nullptr || wHighShape == nullptr || wLowShape == nullptr || yShape == nullptr || attrs == nullptr,
-        CUBE_INNER_ERR_REPORT(op_name, "input or output shape or attrs is null"), return ge::GRAPH_FAILED);
+        {
+            if (xShape == nullptr || wHighShape == nullptr || wLowShape == nullptr) {
+                OP_LOGE_WITH_INVALID_INPUT(op_name,
+                                           xShape == nullptr ? "x" : (wHighShape == nullptr ? "w_high" : "w_low"));
+            } else {
+                const char* reason = yShape == nullptr ? "Output y shape storage is null." :
+                                                         "Infer-shape attributes are null.";
+                Ops::NN::ReportMatmulInferShapeError(op_name, reason);
+            }
+        },
+        return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(xShape->GetDimNum() != kMinDimNum || wHighShape->GetDimNum() != kMinDimNum ||
                     wLowShape->GetDimNum() != kMinDimNum,
-                CUBE_INNER_ERR_REPORT(op_name, "all inputs must be 2D"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    op_name, "x, w_high, w_low",
+                    (std::to_string(xShape->GetDimNum()) + ", " + std::to_string(wHighShape->GetDimNum()) + ", " +
+                     std::to_string(wLowShape->GetDimNum()))
+                        .c_str(),
+                    "All inputs must have rank 2."),
+                return ge::GRAPH_FAILED);
 
     auto transXPtr = attrs->GetAttrPointer<bool>(kAttrTransXIdx);
     auto transWPtr = attrs->GetAttrPointer<bool>(kAttrTransWIdx);
     OP_CHECK_IF(transXPtr == nullptr || transWPtr == nullptr,
-                CUBE_INNER_ERR_REPORT(op_name, "transX or transW attr is null"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITH_INVALID_INPUT(op_name, transXPtr == nullptr ? "transpose_x" : "transpose_w"),
+                return ge::GRAPH_FAILED);
     bool transX = *transXPtr;
     bool transW = *transWPtr;
 
@@ -58,11 +82,23 @@ ge::graphStatus InferShapeForMatmulEmuSplitWeight(gert::InferShapeContext* conte
     int64_t wLowK = transW ? wLowShape->GetDim(1) : wLowShape->GetDim(0);
     int64_t wLowN = transW ? wLowShape->GetDim(0) : wLowShape->GetDim(1);
 
-    OP_CHECK_IF(K != wHighK, CUBE_INNER_ERR_REPORT(op_name, "x K(%ld) must match w_high K(%ld)", K, wHighK),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(K != wLowK, CUBE_INNER_ERR_REPORT(op_name, "x K(%ld) must match w_low K(%ld)", K, wLowK),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(N != wLowN, CUBE_INNER_ERR_REPORT(op_name, "w_high N(%ld) must match w_low N(%ld)", N, wLowN),
+    OP_CHECK_IF(
+        K != wHighK,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            op_name, "x, w_high", (Ops::Base::ToString(*xShape) + ", " + Ops::Base::ToString(*wHighShape)).c_str(),
+            "The contraction dimensions K of x and w_high must match after applying transpose_x and transpose_w."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        K != wLowK,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            op_name, "x, w_low", (Ops::Base::ToString(*xShape) + ", " + Ops::Base::ToString(*wLowShape)).c_str(),
+            "The contraction dimensions K of x and w_low must match after applying transpose_x and transpose_w."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(N != wLowN,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    op_name, "w_high, w_low",
+                    (Ops::Base::ToString(*wHighShape) + ", " + Ops::Base::ToString(*wLowShape)).c_str(),
+                    "The output dimensions N of w_high and w_low must match after applying transpose_w."),
                 return ge::GRAPH_FAILED);
 
     yShape->SetDimNum(kMinDimNum);

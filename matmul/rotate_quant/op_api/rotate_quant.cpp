@@ -38,8 +38,12 @@ static std::tuple<aclTensor*, aclTensor*> RotateQuantAICore(const aclTensor* x, 
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
         RotateQuant, OP_INPUT(x, rotation, alpha, groupList), OP_OUTPUT(yOut, scaleOut),
         OP_ATTR(dstType, axis, roundMode, scaleAlg, dstTypeMax, trans, groupListType));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr),
-                                         "RotateQuant add to aicore launch list failed.");
+    if (retAicore != ACLNN_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_STATIC_WORKSPACE_INVALID,
+                               "Failed to add RotateQuant to the AICore launch list, error code: %d.",
+                               static_cast<int>(retAicore));
+        return std::tuple(nullptr, nullptr);
+    }
     return std::tie(yOut, scaleOut);
 }
 
@@ -57,7 +61,9 @@ const std::tuple<aclTensor*, aclTensor*> RotateQuant(const aclTensor* x, const a
         int64_t M = x->GetViewShape().GetDim(0);
         auto scaleAlloc = executor->AllocTensor(op::Shape({M}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
         if (yAlloc == nullptr || scaleAlloc == nullptr) {
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocTensor failed for yOut or scaleOut.");
+            OP_LOGE_WITHOUT_REPORT(
+                ACLNN_ERR_INNER_NULLPTR,
+                "Failed to allocate y or scale tensor in RotateQuant; AllocTensor returned nullptr.");
             return std::tuple(nullptr, nullptr);
         }
         yOut = yAlloc;

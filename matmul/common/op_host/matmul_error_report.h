@@ -19,7 +19,7 @@ namespace Ops {
 namespace NN {
 inline void ReportMatmulParamError(const char* opName, const std::string& message)
 {
-    OP_LOGE_WITHOUT_REPORT(opName == nullptr ? "Matmul" : opName, "%s", message.c_str());
+    OP_LOGE_LIBOPAPI_REPORT(opName == nullptr ? "Matmul" : opName, "%s", message.c_str());
     const std::vector<const char*> keys = {"message"};
     const std::vector<const char*> values = {message.c_str()};
     REPORT_PREDEFINED_ERR_MSG("EZ1001", keys, values);
@@ -28,10 +28,28 @@ inline void ReportMatmulParamError(const char* opName, const std::string& messag
 inline void ReportMatmulTilingError(const char* opName, const std::string& reason)
 {
     const char* name = opName == nullptr ? "Matmul" : opName;
-    OP_LOGE_WITHOUT_REPORT(name, "%s", reason.c_str());
+    OP_LOGE_LIBOPAPI_REPORT(name, "%s", reason.c_str());
     const std::vector<const char*> keys = {"opName", "reason"};
     const std::vector<const char*> values = {name, reason.c_str()};
     REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+}
+
+inline void ReportMatmulExecutionError(const char* opName, const std::string& reason)
+{
+    const char* name = opName == nullptr ? "Matmul" : opName;
+    OP_LOGE_LIBOPAPI_REPORT(name, "%s", reason.c_str());
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {name, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1009", keys, values);
+}
+
+inline void ReportMatmulInferShapeError(const char* opName, const std::string& reason)
+{
+    const char* name = opName == nullptr ? "Matmul" : opName;
+    OP_LOGE_LIBOPAPI_REPORT(name, "%s", reason.c_str());
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {name, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
 }
 } // namespace NN
 } // namespace Ops

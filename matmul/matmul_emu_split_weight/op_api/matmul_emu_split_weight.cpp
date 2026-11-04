@@ -29,19 +29,29 @@ const aclTensor* MatmulEmuSplitWeight(const aclTensor* x, const aclTensor* wHigh
     L0_DFX(MatmulEmuSplitWeight, x, wHigh, wLow, outDtype, wLowScale, yDtype, transposeX, transposeW);
 
     auto out = executor->AllocTensor(outDtype, Format::FORMAT_ND, Format::FORMAT_ND);
-    OP_CHECK_NULL(out, return nullptr);
+    if (out == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                               "Failed to allocate the MatmulEmuSplitWeight output tensor; see the allocator error.");
+        return nullptr;
+    }
 
     auto ret = INFER_SHAPE(MatmulEmuSplitWeight, OP_INPUT(x, wHigh, wLow), OP_OUTPUT(out),
                            OP_ATTR(wLowScale, transposeX, transposeW, yDtype));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_INFERSHAPE_ERROR,
+                               "Failed to infer the output shape for MatmulEmuSplitWeight, error code: %d.",
+                               static_cast<int>(ret));
         return nullptr;
     }
 
     ret = ADD_TO_LAUNCHER_LIST_AICORE(MatmulEmuSplitWeight, OP_INPUT(x, wHigh, wLow), OP_OUTPUT(out),
                                       OP_ATTR(wLowScale, transposeX, transposeW, yDtype));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
-                                         "MatmulEmuSplitWeight ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_STATIC_WORKSPACE_INVALID,
+                               "Failed to prepare the MatmulEmuSplitWeight kernel for execution, error code: %d.",
+                               static_cast<int>(ret));
+        return nullptr;
+    }
     return out;
 }
 

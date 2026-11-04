@@ -9,6 +9,7 @@
  */
 
 #include "../../../common/inc/op_host/op_const_def_nn.h"
+#include "matmul/common/op_host/matmul_error_report.h"
 #include "aclnn_rotate_quant.h"
 #include "aclnn_rotate_quant_v2.h"
 #include <algorithm>
@@ -113,14 +114,21 @@ static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     if (found != socSupportDtypes.end()) {
         return *(found->second);
     }
-    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for arch %u is not implemented", static_cast<uint32_t>(curArch));
+    Ops::NN::ReportMatmulExecutionError(
+        kOpName, Ops::NN::FormatString("Architecture %u has no RotateQuant implementation; supported "
+                                       "architectures are DAV_2201, DAV_3510, DAV_9201 and DAV_9202.",
+                                       static_cast<uint32_t>(curArch))
+                     .c_str());
     return EMPTY_LIST;
 }
 
 static bool CheckOutDtypeValid(const aclTensor* yOut)
 {
     auto yDtype = yOut->GetDataType();
-    auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
+    const auto& outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
+    if (outList.size() == 0) {
+        return false;
+    }
     if (std::find(outList.begin(), outList.end(), yDtype) != outList.end()) {
         return true;
     }
@@ -152,6 +160,9 @@ static bool CheckScaleDtypeValid(const aclTensor* scaleOut, const aclTensor* yOu
     auto yDtype = yOut->GetDataType();
     auto scaleDtype = scaleOut->GetDataType();
     const std::initializer_list<op::DataType>* scaleList = &GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
+    if (scaleList->size() == 0) {
+        return false;
+    }
     if (yDtype == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4)) {
         scaleList = &SCALE_DTYPE_SUPPORT_LIST_HIF4;
     }
@@ -190,19 +201,19 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* rotation, const ac
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut,
                             const aclTensor* scaleOut)
 {
-    OP_CHECK(CheckType(x->GetDataType(), GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)),
+    const auto& inList = GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES);
+    if (inList.size() == 0) {
+        return false;
+    }
+    OP_CHECK(CheckType(x->GetDataType(), inList),
              OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                  kOpName, "x", op::ToString(x->GetDataType()).GetString(),
-                 FormatString("The dtype of %s must be in %s", "x",
-                              op::ToString(GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)).GetString())
-                     .c_str()),
+                 FormatString("The dtype of %s must be in %s", "x", op::ToString(inList).GetString()).c_str()),
              return false);
-    OP_CHECK(CheckType(rotation->GetDataType(), GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)),
+    OP_CHECK(CheckType(rotation->GetDataType(), inList),
              OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                  kOpName, "rotation", op::ToString(rotation->GetDataType()).GetString(),
-                 FormatString("The dtype of %s must be in %s", "rotation",
-                              op::ToString(GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)).GetString())
-                     .c_str()),
+                 FormatString("The dtype of %s must be in %s", "rotation", op::ToString(inList).GetString()).c_str()),
              return false);
     OP_CHECK(x->GetDataType() == rotation->GetDataType(),
              OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

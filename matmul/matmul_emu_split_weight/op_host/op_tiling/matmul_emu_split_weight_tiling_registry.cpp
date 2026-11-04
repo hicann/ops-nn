@@ -14,6 +14,7 @@
 
 #include "register/op_impl_registry.h"
 #include "error_util.h"
+#include "matmul/common/op_host/matmul_error_report.h"
 #include "op_host/tiling_templates_registry.h"
 #include "op_common/op_host/util/op_const_def.h"
 
@@ -30,11 +31,21 @@ REGISTER_TILING_TEMPLATE("MatmulEmuSplitWeight", MatmulEmuSplitWeightTiling, MAT
 
 static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "context is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError("MatmulEmuSplitWeight",
+                                             "Tiling context is null; check the registered tiling invocation.");
+        },
+        return ge::GRAPH_FAILED);
     auto platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "platformInfo is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        platformInfo == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError("MatmulEmuSplitWeight",
+                                             "Platform information is null; check tiling platform initialization.");
+        },
+        return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto npuArch = ascendcPlatform.GetCurNpuArch();
     if (npuArch == Ops::Base::DAV_3510) {
@@ -46,14 +57,29 @@ static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* conte
 
 static ge::graphStatus TilingPrepareForMatmulEmuSplitWeight(gert::TilingParseContext* context)
 {
-    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "context is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError("MatmulEmuSplitWeight",
+                                             "Tiling context is null; check the registered tiling invocation.");
+        },
+        return ge::GRAPH_FAILED);
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "platformInfo is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        platformInfo == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError("MatmulEmuSplitWeight",
+                                             "Platform information is null; check tiling platform initialization.");
+        },
+        return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompiledInfo<MatmulEmuSplitWeightCompileInfo>();
-    OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "compileInfoPtr is null"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        compileInfoPtr == nullptr,
+        {
+            Ops::NN::ReportMatmulTilingError(
+                "MatmulEmuSplitWeight", "Compile-info storage is null; check tiling-prepare context initialization.");
+        },
+        return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr->l1Size);

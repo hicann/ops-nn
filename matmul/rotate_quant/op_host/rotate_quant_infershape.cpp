@@ -14,6 +14,8 @@
  */
 
 #include "../../../common/inc/op_host/op_const_def_nn.h"
+#include "matmul/common/op_host/log_format_util.h"
+#include "matmul/common/op_host/matmul_error_report.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
 #include "log/log.h"
@@ -70,14 +72,14 @@ static ge::graphStatus CheckComputeNodeNum(gert::InferShapeContext* context)
 {
     size_t inputNum = context->GetComputeNodeInputNum();
     if (inputNum < INPUT_NUM_MIN_ROTATE_QUANT || inputNum > INPUT_NUM_MAX_ROTATE_QUANT) {
-        OP_LOGE(context, "Input num must be in [%u, %u], but got %zu", INPUT_NUM_MIN_ROTATE_QUANT,
-                INPUT_NUM_MAX_ROTATE_QUANT, inputNum);
+        OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+            context->GetNodeName(), "x, rotation, alpha, group_list", Ops::NN::FormatString("%zu", inputNum).c_str(),
+            "Provide x and rotation, with optional alpha and group_list (2 to 4 inputs).");
         return ge::GRAPH_FAILED;
     }
 
     if (context->GetComputeNodeOutputNum() != OUTPUT_NUM_ROTATE_QUANT) {
-        OP_LOGE(context, "Output num must be %u, but got %zu", OUTPUT_NUM_ROTATE_QUANT,
-                context->GetComputeNodeOutputNum());
+        OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "y, scale", context->GetComputeNodeOutputNum(), "2");
         return ge::GRAPH_FAILED;
     }
 
@@ -92,7 +94,11 @@ static ge::graphStatus InferShapeCheck(gert::InferShapeContext* context)
 
     for (uint32_t i = 0; i < OUTPUT_NUM_ROTATE_QUANT; ++i) {
         if (context->GetOutputShape(i) == nullptr) {
-            OP_LOGE(context, "Output shape %u is nullptr", i);
+            Ops::NN::ReportMatmulInferShapeError(
+                context->GetNodeName(),
+                Ops::NN::FormatString(
+                    "Output shape storage at index %u is null; check InferShape output initialization.", i)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -105,7 +111,9 @@ static ge::graphStatus CheckAlphaShape(gert::InferShapeContext* context)
     const gert::Shape* alphaShape = context->GetOptionalInputShape(ALPHA_INDEX);
     if (alphaShape != nullptr) {
         if (alphaShape->GetDimNum() != ALPHA_DIM_NUM || alphaShape->GetDim(0) != ALPHA_DIM_SIZE) {
-            OP_LOGE(context, "alpha shape must be (1), but got %zu dims", alphaShape->GetDimNum());
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "alpha",
+                                                  Ops::Base::ToString(*alphaShape).c_str(),
+                                                  "alpha must have shape [1].");
             return ge::GRAPH_FAILED;
         }
     }
@@ -118,19 +126,22 @@ static ge::graphStatus CheckInputShape4Int(gert::InferShapeContext* context)
     const gert::Shape* rotShape = context->GetInputShape(ROT_INDEX);
 
     if (xShape == nullptr || rotShape == nullptr) {
-        OP_LOGE(context, "Input shape is nullptr");
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), xShape == nullptr ? "x" : "rotation");
         return ge::GRAPH_FAILED;
     }
 
     size_t xDimNum = xShape->GetDimNum();
     if (xDimNum != DIMENSION_2) {
-        OP_LOGE(context, "x shape dimension must be 2, but got %zu", xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+                                                 Ops::NN::FormatString("%zu", xDimNum).c_str(), "x must have rank 2.");
         return ge::GRAPH_FAILED;
     }
 
     size_t rotDimNum = rotShape->GetDimNum();
     if (rotDimNum != DIMENSION_2) {
-        OP_LOGE(context, "rot shape dimension must be 2, but got %zu", rotDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "rotation",
+                                                 Ops::NN::FormatString("%zu", rotDimNum).c_str(),
+                                                 "rotation must have rank 2.");
         return ge::GRAPH_FAILED;
     }
 
@@ -138,16 +149,23 @@ static ge::graphStatus CheckInputShape4Int(gert::InferShapeContext* context)
     int64_t rotK = rotShape->GetDim(0);
     int64_t rotN = rotShape->GetDim(1);
     if (rotK != rotN) {
-        OP_LOGE(context, "rot must be a square matrix, but got shape [%ld, %ld]", rotK, rotN);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rotation",
+                                              Ops::Base::ToString(*rotShape).c_str(),
+                                              "rotation must be a square matrix.");
         return ge::GRAPH_FAILED;
     }
 
     if (rotK == 0) {
-        OP_LOGE(context, "rot K dimension cannot be zero");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rotation",
+                                              Ops::Base::ToString(*rotShape).c_str(), "rotation K must be nonzero.");
         return ge::GRAPH_FAILED;
     }
     if (xN % rotK != 0) {
-        OP_LOGE(context, "x N dimension (%ld) must be divisible by rot K dimension (%ld)", xN, rotK);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, rotation",
+                                               Ops::NN::FormatString("%s, %s", Ops::Base::ToString(*xShape).c_str(),
+                                                                     Ops::Base::ToString(*rotShape).c_str())
+                                                   .c_str(),
+                                               "x N must be divisible by rotation K.");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -159,14 +177,15 @@ static ge::graphStatus CheckInputShape4Mx(gert::InferShapeContext* context)
     const gert::Shape* rotShape = context->GetInputShape(ROT_INDEX);
 
     if (xShape == nullptr || rotShape == nullptr) {
-        OP_LOGE(context, "Input shape is nullptr");
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), xShape == nullptr ? "x" : "rotation");
         return ge::GRAPH_FAILED;
     }
 
     size_t xDimNum = xShape->GetDimNum();
     if (xDimNum < MIN_X_DIM_NUM || xDimNum > MAX_X_DIM_NUM) {
-        OP_LOGE(context, "For mxfp8, x shape dimension must be in [%d, %d], but got %zu", MIN_X_DIM_NUM, MAX_X_DIM_NUM,
-                xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+                                                 Ops::NN::FormatString("%zu", xDimNum).c_str(),
+                                                 "For MXFP output, x must have rank between 1 and 7.");
         return ge::GRAPH_FAILED;
     }
 
@@ -175,8 +194,12 @@ static ge::graphStatus CheckInputShape4Mx(gert::InferShapeContext* context)
     const size_t minRotRank = groupShape != nullptr ? 3 : MIN_ROT_DIM_NUM;
     const size_t maxRotRank = groupShape != nullptr ? 4 : MAX_ROT_DIM_NUM;
     if (rotDimNum < minRotRank || rotDimNum > maxRotRank) {
-        OP_LOGE(context, "For mxfp8, rot shape dimension must be in [%zu, %zu], but got %zu", minRotRank, maxRotRank,
-                rotDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "rotation", Ops::NN::FormatString("%zu", rotDimNum).c_str(),
+            Ops::NN::FormatString(
+                "For MXFP output, rotation rank must be between %zu and %zu for the selected group mode.", minRotRank,
+                maxRotRank)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -185,16 +208,23 @@ static ge::graphStatus CheckInputShape4Mx(gert::InferShapeContext* context)
     int64_t rotSecondLastDim = rotShape->GetDim(rotDimNum - 2);
 
     if (rotSecondLastDim != rotLastDim) {
-        OP_LOGE(context, "rot last two dimensions must be equal, but got [%ld, %ld]", rotSecondLastDim, rotLastDim);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rotation",
+                                              Ops::Base::ToString(*rotShape).c_str(),
+                                              "The last two dimensions of rotation must be equal.");
         return ge::GRAPH_FAILED;
     }
 
     if (rotLastDim == 0) {
-        OP_LOGE(context, "rot K dimension cannot be zero");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rotation",
+                                              Ops::Base::ToString(*rotShape).c_str(), "rotation K must be nonzero.");
         return ge::GRAPH_FAILED;
     }
     if (xN % rotLastDim != 0) {
-        OP_LOGE(context, "x last dimension (%ld) must be divisible by rot K dimension (%ld)", xN, rotLastDim);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, rotation",
+                                               Ops::NN::FormatString("%s, %s", Ops::Base::ToString(*xShape).c_str(),
+                                                                     Ops::Base::ToString(*rotShape).c_str())
+                                                   .c_str(),
+                                               "The last dimension of x must be divisible by rotation K.");
         return ge::GRAPH_FAILED;
     }
 
@@ -218,7 +248,12 @@ static ge::graphStatus CheckInputShape4Mx(gert::InferShapeContext* context)
         int64_t nKRatio = xN / rotLastDim;
         int64_t rotFirstDim = rotShape->GetDim(0);
         if (rotFirstDim != nKRatio) {
-            OP_LOGE(context, "For 3D rot, first dimension (%ld) must equal N/K (%ld)", rotFirstDim, nKRatio);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "x, rotation",
+                Ops::NN::FormatString("%s, %s", Ops::Base::ToString(*xShape).c_str(),
+                                      Ops::Base::ToString(*rotShape).c_str())
+                    .c_str(),
+                "For a 3D rotation, its first dimension must equal x N divided by rotation K.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -279,6 +314,8 @@ static ge::graphStatus InferShape4Mx(gert::InferShapeContext* context)
 static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
 {
     if (context == nullptr) {
+        Ops::NN::ReportMatmulInferShapeError("RotateQuant",
+                                             "InferShape context is null; check the shape inference invocation.");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "Begin to do InferShape RotateQuant");
@@ -303,19 +340,23 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
         if (yDtype == ge::DT_FLOAT4_E2M1 || yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2 ||
             yDtype == Ops::NN::DT_HIFLOAT4) {
             OP_CHECK_IF(CheckInputShape4Mx(context) == ge::GRAPH_FAILED,
-                        OP_LOGE(context, "Invalid input shape for mxfp8"), return ge::GRAPH_FAILED);
+                        OP_LOGE_WITHOUT_REPORT(context, "Invalid input shape for mxfp8"), return ge::GRAPH_FAILED);
             return InferShape4Mx(context);
         } else {
-            OP_LOGE(context,
-                    "For dav3510, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4, but got %d",
-                    static_cast<int32_t>(yDtype));
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "y_dtype", Ops::NN::FormatString("%d", static_cast<int32_t>(yDtype)).c_str(),
+                "For this platform, supported output dtypes are FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2 and HIFLOAT4.");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_CHECK_IF(std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
-                    OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(CheckInputShape4Int(context) == ge::GRAPH_FAILED, OP_LOGE(context, "Invalid input shape for int"),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "y_dtype",
+                                                  Ops::NN::FormatString("%d", static_cast<int32_t>(yDtype)).c_str(),
+                                                  "For Ascend910B, supported output dtypes are INT4 and INT8."),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckInputShape4Int(context) == ge::GRAPH_FAILED,
+                    OP_LOGE_WITHOUT_REPORT(context, "Invalid input shape for int"), return ge::GRAPH_FAILED);
         return InferShape4Int(context);
     }
 }
@@ -323,6 +364,8 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
 static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* context)
 {
     if (context == nullptr) {
+        Ops::NN::ReportMatmulInferShapeError("RotateQuant",
+                                             "InferDataType context is null; check the dtype inference invocation.");
         return ge::GRAPH_FAILED;
     }
 
@@ -348,12 +391,18 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
             context->SetOutputDataType(Y_INDEX, Ops::NN::DT_HIFLOAT4);
             context->SetOutputDataType(SCALE_INDEX, Ops::NN::DT_HIFLOAT4_SCALE);
         } else {
-            OP_LOGE(context, "For dav3510, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "y_dtype", Ops::NN::FormatString("%d", static_cast<int32_t>(yDtype)).c_str(),
+                "For this platform, supported output dtypes are FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2 and HIFLOAT4.");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_CHECK_IF(std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
-                    OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "y_dtype",
+                                                  Ops::NN::FormatString("%d", static_cast<int32_t>(yDtype)).c_str(),
+                                                  "For Ascend910B, supported output dtypes are INT4 and INT8."),
+            return ge::GRAPH_FAILED);
         context->SetOutputDataType(Y_INDEX, yDtype);
         context->SetOutputDataType(SCALE_INDEX, ge::DT_FLOAT);
     }
