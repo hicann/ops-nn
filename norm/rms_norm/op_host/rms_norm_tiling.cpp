@@ -220,6 +220,35 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
             return false;
         }
     }
+    // 非regbase平台：rstd元素数必须等于归一化行数 x.numel / gamma.numel，
+    // 否则内核按行数写rstd会产生越界写（aclnnGemmaRmsNorm #7333）。
+    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        const gert::Shape& xStorageShape = xShape->GetStorageShape();
+        const gert::Shape& gammaStorageShape = gammaShape->GetStorageShape();
+        const gert::Shape& rstdStorageShape = rstdShape->GetStorageShape();
+        bool allShapeKnown = true;
+        for (size_t i = 0; i < xStorageShape.GetDimNum(); i++) {
+            allShapeKnown = allShapeKnown && xStorageShape.GetDim(i) >= 0;
+        }
+        for (size_t i = 0; i < gammaStorageShape.GetDimNum(); i++) {
+            allShapeKnown = allShapeKnown && gammaStorageShape.GetDim(i) >= 0;
+        }
+        for (size_t i = 0; i < rstdStorageShape.GetDimNum(); i++) {
+            allShapeKnown = allShapeKnown && rstdStorageShape.GetDim(i) >= 0;
+        }
+        if (allShapeKnown) {
+            int64_t xNumel = xStorageShape.GetShapeSize();
+            int64_t gammaNumel = gammaStorageShape.GetShapeSize();
+            int64_t rstdNumel = rstdStorageShape.GetShapeSize();
+            int64_t rowNum = (gammaNumel != 0) ? xNumel / gammaNumel : 0;
+            OP_TILING_CHECK(rstdNumel != rowNum,
+                            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                                context->GetNodeName(), "rstd", ToString(rstdStorageShape).c_str(),
+                                "the element number of output rstd must be equal to the number of normalized rows "
+                                "(x.numel / gamma.numel)"),
+                            return false);
+        }
+    }
     return true;
 }
 

@@ -181,7 +181,7 @@ aclnnStatus aclnnRmsNormQuant(
   - <term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16；`scale`的shape为`[1]`；出参`y`的数据类型仅支持INT8。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16；`offset`仅支持INT8；`scale`的shape为`[1]`；出参`y`的数据类型仅支持INT8、INT4。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16；`offset`仅支持INT8；`scale`的shape为`[1]`；出参`y`的数据类型仅支持INT8、INT32（INT4量化结果通过INT32承载，此时`y`的最后一维为`x`最后一维的1/8，不支持直接以INT4数据类型声明输出）。
   <!-- end id8 -->
 
   <!-- npu="950" id15 -->
@@ -267,12 +267,9 @@ aclnnStatus aclnnRmsNormQuant(
 
 ## 约束说明
 
-<!-- npu="950" id16 -->
-- <term>Ascend 950PR&950DT系列产品</term>：空Tensor是shape中存在0的Tensor，不等同于空指针或标量。满足其余shape、数据类型约束时，支持`x`与`y`均为空Tensor，第一段接口返回0字节workspace，第二段接口不执行计算。必选参数仍须提供Tensor对象。
+<!-- npu="950,A3,910b,310p,310b" id16 -->
+- <term>Ascend 950PR&950DT系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：空Tensor是shape中存在0的Tensor，不等同于空指针或标量。满足其余shape、数据类型约束时，支持`x`与`y`均为空Tensor，第一段接口返回0字节workspace，第二段接口不执行计算。必选参数仍须提供Tensor对象。
 <!-- end id16 -->
-<!-- npu="A3,910b,310p,310b" id17 -->
-- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：不支持空Tensor。
-<!-- end id17 -->
 
 - 当输入参数scale或offset的值为NaN，或者RmsNorm的计算结果（对应计算公式中的$quant\_in_i$）为NaN时，该接口的最终输出结果为0。
 
@@ -285,6 +282,9 @@ aclnnStatus aclnnRmsNormQuant(
 <!-- npu="950" id11 -->
 - <term>Ascend 950PR&950DT系列产品</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
 <!-- end id11 -->
+<!-- npu="A3,910b" id18 -->
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：INT4量化结果须以INT32数据类型声明，此时`y`的最后一维必须是`x`最后一维的1/8；不支持直接以INT4数据类型声明输出。
+<!-- end id18 -->
 - 各产品型号支持数据类型说明：
 
   <!-- npu="A3,910b" id12 -->
@@ -294,8 +294,8 @@ aclnnStatus aclnnRmsNormQuant(
     | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
     | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
     | BFLOAT16  | BFLOAT16      | BFLOAT16      | BFLOAT16      | INT8           | DOUBLE      |INT8      |
-    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
-    | BFLOAT16  | BFLOAT16      | BFLOAT16      | BFLOAT16      | INT8           | DOUBLE      |INT4      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT32（承载INT4）      |
+    | BFLOAT16  | BFLOAT16      | BFLOAT16      | BFLOAT16      | INT8           | DOUBLE      |INT32（承载INT4）      |
   <!-- end id12 -->
 
   <!-- npu="310p,310b" id13 -->

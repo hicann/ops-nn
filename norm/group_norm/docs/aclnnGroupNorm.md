@@ -108,7 +108,7 @@ aclnnStatus aclnnGroupNorm(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的缩放因子（权重），对应公式中的`γ`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选输入：允许传空指针，为空时按γ=1代入计算。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnGroupNorm(
       <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的偏移量，对应公式中的`β`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选输入：允许传空指针，为空时按β=0代入计算。</li><li>数据类型与self相同。</li><li>元素数量需与C相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>

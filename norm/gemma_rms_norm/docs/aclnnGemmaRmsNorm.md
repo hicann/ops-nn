@@ -123,7 +123,7 @@ aclnnStatus aclnnGemmaRmsNorm(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x的标准差倒数，用于归一化操作，对应公式中的`Rms(x)`的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li><li>元素数必须等于归一化行数，即`x`的元素数除以`gamma`的元素数。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>

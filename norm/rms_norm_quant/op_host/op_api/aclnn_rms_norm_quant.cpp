@@ -258,28 +258,29 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
 
     int64_t scaleDimNum = static_cast<int64_t>(inputTensor.scale->GetViewShape().GetDimNum());
     if (scaleDimNum != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of scale must be 1, but get [%ld]", scaleDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM("aclnnRmsNormQuant", "scale", std::to_string(scaleDimNum).c_str(), "1");
         return false;
     }
     int64_t gammaDimNum = static_cast<int64_t>(inputTensor.gamma->GetViewShape().GetDimNum());
     int64_t gammaLastDim = inputTensor.gamma->GetViewShape().GetDim(gammaDimNum - 1);
     int64_t xDimNum = static_cast<int64_t>(inputTensor.x->GetViewShape().GetDimNum());
     int64_t xLastDim = inputTensor.x->GetViewShape().GetDim(xDimNum - 1);
-    int64_t scaleLength = inputTensor.scale->GetViewShape().GetDim(0);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        OP_CHECK(scaleLength == 1 || scaleLength == xLastDim,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "The length of scale must be 1 or x last dimension (%ld), "
-                         "but got %ld.",
-                         xLastDim, scaleLength),
-                 return false);
+        int64_t scaleLength = inputTensor.scale->GetViewShape().GetDim(0);
+        OP_CHECK(
+            scaleLength == 1 || scaleLength == xLastDim,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                "aclnnRmsNormQuant", "scale", std::to_string(scaleLength).c_str(),
+                (std::string("the length of scale must be 1 or the last dim of x (") + std::to_string(xLastDim) + ")")
+                    .c_str()),
+            return false);
     } else {
-        // A2/A3 的 kernel 仅按标量读取 scale（只取 scale[0] 广播到全部输出），只支持 shape 为 [1] 的 scale；
-        // 空 scale（长度 0）时 kernel 会从空 tensor 地址读取，必须一并拦截。
-        OP_CHECK(scaleLength == 1,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of scale must be 1 on this platform, but got %ld.",
-                         scaleLength),
-                 return false);
+        int64_t scaleLength = inputTensor.scale->GetViewShape().GetDim(0);
+        OP_CHECK(
+            scaleLength == 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnRmsNormQuant", "scale", std::to_string(scaleLength).c_str(),
+                                                     "the length of scale must be 1 on this platform"),
+            return false);
     }
     if (gammaLastDim != xLastDim) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnRmsNormQuant", "x", std::to_string(xLastDim).c_str(),
@@ -291,16 +292,14 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
     int64_t yDimNum = static_cast<int64_t>(y->GetViewShape().GetDimNum());
     int64_t outLastDim = y->GetViewShape().GetDim(yDimNum - 1);
     if (outDtype == op::DataType::DT_INT32) {
-        if (Ops::NN::AclnnUtil::IsRegbase()) {
-            OP_CHECK(CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum - 1),
-                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                         "aclnnRmsNormQuant", "x,y",
-                         (std::string(op::ToString(inputTensor.x->GetViewShape()).GetString()) + ", " +
-                          op::ToString(y->GetViewShape()).GetString())
-                             .c_str(),
-                         "the first n-1 dims of x and y should be the same"),
-                     return false);
-        }
+        OP_CHECK(CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum - 1),
+                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                     "aclnnRmsNormQuant", "x,y",
+                     (std::string(op::ToString(inputTensor.x->GetViewShape()).GetString()) + ", " +
+                      op::ToString(y->GetViewShape()).GetString())
+                         .c_str(),
+                     "the first n-1 dims of x and y should be the same"),
+                 return false);
         OP_CHECK(
             xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnRmsNormQuant", "y", std::to_string(outLastDim).c_str(),
@@ -330,10 +329,26 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
                          "x shape should be the same as y shape"),
                      return false);
         } else {
+            // A2/A3：INT4 量化结果须以 INT32 打包张量声明（y 最后一维为 x 最后一维的 1/8），
+            // 不支持直接以 INT4 数据类型声明输出。
+            OP_CHECK(outDtype != op::DataType::DT_INT4,
+                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                         "aclnnRmsNormQuant", "y", op::ToString(outDtype).GetString(),
+                         "on this platform int4 output must be declared as int32 with the last dim of y equal to "
+                         "1/8 of the last dim of x"),
+                     return false);
+            OP_CHECK(CheckShapeDimWithFrontN(inputTensor.x->GetViewShape(), y->GetViewShape(), xDimNum),
+                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                         "aclnnRmsNormQuant", "x,y",
+                         (std::string(op::ToString(inputTensor.x->GetViewShape()).GetString()) + ", " +
+                          op::ToString(y->GetViewShape()).GetString())
+                             .c_str(),
+                         "x shape should be the same as y shape"),
+                     return false);
             OP_CHECK(xLastDim == outLastDim,
                      OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                          "aclnnRmsNormQuant", "x", std::to_string(xLastDim).c_str(),
-                         "if outType is int4 or int8, x last dim must be equal with out last dim"),
+                         "if outType is int8, x last dim must be equal with out last dim"),
                      return false);
         }
     }
@@ -476,6 +491,13 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     if (!isRegbase) {
         const auto paramRet = CheckParams(inputTensorOri, y);
         CHECK_RET(paramRet == ACLNN_SUCCESS, paramRet);
+        if (x->IsEmpty()) {
+            // Shape validation guarantees an empty y. 空Tensor在所有平台均按成功空转处理：
+            // 返回0字节workspace，第二段不执行计算。
+            *workspaceSize = 0;
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
     }
     int32_t yType = y->GetDataType();
     if (yType == op::DataType::DT_INT32) {

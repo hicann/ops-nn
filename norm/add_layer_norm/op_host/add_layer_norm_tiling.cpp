@@ -97,45 +97,47 @@ enum class DATA_TYPE : uint32_t { FP16 = 1, FP32 = 2, BF16 = 3 };
  *
  * UB occupancy composition
  *  1. NORMAL CASE (COL=LAST_DIM, ROW=?)
- *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL*BN +
- * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*COL*BN + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN +
+ *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL +
+ * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*COL + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN +
  * DT_FLOAT*COUNT(x_buf,y_buf,z_buf)*ROW*COL + DT_FLOAT*64 + UB_RESERVED UB = DT*(3+(ENABLE_X_OUT?1:0))*ROW*LAST_DIM*BN
- * + GAMMADT*2*LAST_DIM*BN + 4*ROW*2*BN + 4*3*ROW*LAST_DIM + 4*64 + UB_RESERVED UB =
- * ROW*DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN + GAMMADT*2*LAST_DIM*BN + ROW*4*2*BN + ROW*4*3*LAST_DIM + 4*64 +
- * UB_RESERVED UB = ROW*(DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN + 4*2*BN + 4*3*LAST_DIM) + GAMMADT*2*LAST_DIM*BN + 4*64 +
- * UB_RESERVED ROW = (UB - (GAMMADT*2*LAST_DIM*BN + 4*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN +
+ * + GAMMADT*2*LAST_DIM + 4*ROW*2*BN + 4*3*ROW*LAST_DIM + 4*64 + UB_RESERVED UB =
+ * ROW*DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN + GAMMADT*2*LAST_DIM + ROW*4*2*BN + ROW*4*3*LAST_DIM + 4*64 +
+ * UB_RESERVED UB = ROW*(DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN + 4*2*BN + 4*3*LAST_DIM) + GAMMADT*2*LAST_DIM + 4*64 +
+ * UB_RESERVED ROW = (UB - (GAMMADT*2*LAST_DIM + 4*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*LAST_DIM*BN +
  * 4*2*BN + 4*3*LAST_DIM)
  *  2. NORMAL CASE WITH SINGLE ROW (ROW=1, COL=LAST_DIM)
- *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL*BN +
+ *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL +
  * DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN + DT_FLOAT*COUNT(x_buf,y_buf)*COL + DT_FLOAT*64 + UB_RESERVED UB =
- * DT*(3+(ENABLE_X_OUT?1:0))*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM*BN + DT_FLOAT*1*2*BN + DT_FLOAT*2*LAST_DIM + DT_FLOAT*64
- * + UB_RESERVED UB >? DT*(3+(ENABLE_X_OUT?1:0))*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM*BN + DT_FLOAT*1*2*BN +
+ * DT*(3+(ENABLE_X_OUT?1:0))*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM + DT_FLOAT*1*2*BN + DT_FLOAT*2*LAST_DIM + DT_FLOAT*64
+ * + UB_RESERVED UB >? DT*(3+(ENABLE_X_OUT?1:0))*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM + DT_FLOAT*1*2*BN +
  * DT_FLOAT*2*LAST_DIM + DT_FLOAT*64 + UB_RESERVED
  *  3. NORMAL CASE WITH SINGLE ROW EXT SHARE X/Y VECIN/OUT QUEUE (ROW=1, COL=LAST_DIM)
- *   UB = DT*COUNT(X1,Y)*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL*BN + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN +
- * DT_FLOAT*COUNT(x_buf,y_buf)*COL + DT_FLOAT*64 + UB_RESERVED UB = DT*(2)*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM*BN +
- * DT_FLOAT*1*2*BN + DT_FLOAT*2*LAST_DIM + DT_FLOAT*64 + UB_RESERVED UB >? DT*(2)*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM*BN
+ *   UB = DT*COUNT(X1,Y)*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN +
+ * DT_FLOAT*COUNT(x_buf,y_buf)*COL + DT_FLOAT*64 + UB_RESERVED UB = DT*(2)*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM +
+ * DT_FLOAT*1*2*BN + DT_FLOAT*2*LAST_DIM + DT_FLOAT*64 + UB_RESERVED UB >? DT*(2)*1*LAST_DIM*BN + GAMMADT*2*LAST_DIM
  * + DT_FLOAT*1*2*BN + DT_FLOAT*2*LAST_DIM + DT_FLOAT*64 + UB_RESERVED
  *  4. SLICE REDUCE AXIS WITH FULL LOAD GAMMA/BETA/X (ROW=1, COL=?)
- *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*LAST_DIM*BN +
- * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*LAST_DIM*BN + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN + DT_FLOAT*COUNT(x_buf)*LAST_DIM +
+ *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*LAST_DIM +
+ * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*LAST_DIM + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN + DT_FLOAT*COUNT(x_buf)*LAST_DIM +
  * DT_FLOAT*COUNT(y_buf,z_buf)*COL + DT_FLOAT*64 + DT_FLOAT*COUNT(mean_buf,rstd_buf) + UB_RESERVED UB =
- * DT*(3+(ENABLE_X_OUT?1:0))*1*COL*BN + GAMMADT*2*LAST_DIM*BN + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM + DT_FLOAT*2*COL +
- * DT_FLOAT*64 + DT_FLOAT*2 + UB_RESERVED UB = COL*DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2*LAST_DIM*BN +
+ * DT*(3+(ENABLE_X_OUT?1:0))*1*COL*BN + GAMMADT*2*LAST_DIM + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM + DT_FLOAT*2*COL +
+ * DT_FLOAT*64 + DT_FLOAT*2 + UB_RESERVED UB = COL*DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2*LAST_DIM +
  * DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM + COL*DT_FLOAT*2 + DT_FLOAT*64 + DT_FLOAT*2 + UB_RESERVED UB =
- * COL*(DT*(3+(ENABLE_X_OUT?1:0))*1*BN + DT_FLOAT*2) + GAMMADT*2*LAST_DIM*BN + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM +
- * DT_FLOAT*64 + DT_FLOAT*2 + UB_RESERVED COL = (UB - (GAMMADT*2*LAST_DIM*BN + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM +
+ * COL*(DT*(3+(ENABLE_X_OUT?1:0))*1*BN + DT_FLOAT*2) + GAMMADT*2*LAST_DIM + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM +
+ * DT_FLOAT*64 + DT_FLOAT*2 + UB_RESERVED COL = (UB - (GAMMADT*2*LAST_DIM + DT_FLOAT*1*2*BN + DT_FLOAT*1*LAST_DIM +
  * DT_FLOAT*64 + DT_FLOAT*2 + DT_FLOAT*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*1*BN + DT_FLOAT*2)
  *  5. SLICE EXT (ROW=1, COL=?)
- *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL*BN +
- * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*COL*BN + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN + DT_FLOAT*COUNT(x_buf,y_buf,z_buf)*COL
- * + DT_FLOAT*64 + UB_RESERVED UB = DT*(3+(ENABLE_X_OUT?1:0))*1*COL*BN + GAMMADT*2*COL*BN +
- * DT*(BIAS_BROADCAST?1:0)*COL*BN + DT_FLOAT*1*2*BN + DT_FLOAT*3*COL + DT_FLOAT*64 + UB_RESERVED UB =
- * COL*DT*(3+(ENABLE_X_OUT?1:0))*1*BN + COL*(GAMMADT*2*BN + DT*(BIAS_BROADCAST?1:0)*BN) + DT_FLOAT*1*2*BN +
- * COL*DT_FLOAT*3 + DT_FLOAT*64 + UB_RESERVED UB = COL*(DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*(2*BN) +
- * DT*(BIAS_BROADCAST?1:0)*BN + DT_FLOAT*3) + DT_FLOAT*1*2*BN + DT_FLOAT*64 + UB_RESERVED COL = (UB - (DT_FLOAT*1*2*BN +
- * DT_FLOAT*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2*BN + DT*(BIAS_BROADCAST?1:0)*BN +
+ *   UB = DT*COUNT(X1,X2,Y,(ENABLE_X_OUT?X:NULL))*ROW*COL*BN + GAMMADT*COUNT(Gamma,Beta)*COL +
+ * DT*COUNT(BIAS_BROADCAST?BIAS:NULL)*COL + DT_FLOAT*ROW*COUNT(Mean,Rstd)*BN + DT_FLOAT*COUNT(x_buf,y_buf,z_buf)*COL
+ * + DT_FLOAT*64 + UB_RESERVED UB = DT*(3+(ENABLE_X_OUT?1:0))*1*COL*BN + GAMMADT*2*COL +
+ * DT*(BIAS_BROADCAST?1:0)*COL + DT_FLOAT*1*2*BN + DT_FLOAT*3*COL + DT_FLOAT*64 + UB_RESERVED UB =
+ * COL*DT*(3+(ENABLE_X_OUT?1:0))*1*BN + COL*(GAMMADT*2 + DT*(BIAS_BROADCAST?1:0)) + DT_FLOAT*1*2*BN +
+ * COL*DT_FLOAT*3 + DT_FLOAT*64 + UB_RESERVED UB = COL*(DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2 +
+ * DT*(BIAS_BROADCAST?1:0) + DT_FLOAT*3) + DT_FLOAT*1*2*BN + DT_FLOAT*64 + UB_RESERVED COL = (UB - (DT_FLOAT*1*2*BN +
+ * DT_FLOAT*64 + UB_RESERVED)) / (DT*(3+(ENABLE_X_OUT?1:0))*1*BN + GAMMADT*2 + DT*(BIAS_BROADCAST?1:0) +
  * DT_FLOAT*3)
+ *  注：gamma/beta/bias 为常驻参数，在 Process() 起始处加载一次并全核复用，不参与
+ *  CopyIn->Compute->CopyOut 轮转，UB 预算中其大小不乘 bufferNum（双缓冲对它们无意义）。
  */
 inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataType, ge::DataType betagammaDataType,
                                           int32_t bufferNum, int64_t numCol, bool enableXOut, enum BIAS_TYPE biasType,
@@ -166,7 +168,7 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
         // Tensor(n_dim != 1): x1(dtype)/x2(dtype)/y(dtype)/x_que(dtype)/x(fp32)/z(fp32)/y(fp32)
         // Tensor(n_dim == 1): beta(float32)/gamma(float32)/bias(dtype)
         // other Tensor: transposeSrcBuf(int16)/transposeDstBuf(int16)/orBuf(int16)
-        auto betaGammaBufSize = sizeof(float) * 2 * numColAligned * bufferNum;
+        auto betaGammaBufSize = sizeof(float) * 2 * numColAligned;
         auto preRowInputOutputBufSize = dtSize * 3 * numColAligned * bufferNum; // x1/x2/y
         auto preRowTmpBufSize = sizeof(float) * 2 * numColAligned;              // x_buf/z_buf
         auto preRowReduceBufSize = sizeof(float) * 64;                          // y_buf
@@ -190,8 +192,8 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
     if (isSpecialReduceTiling) {
         // Tensor(n_dim != 1): x1(dtype)/x2(dtype)/y(dtype)/mean(fp32)/rstd(fp32)/x_que(dtype)/x(fp32)/z(fp32)/y(fp32)
         // Tensor(n_dim == 1): beta(float32)/gamma(float32)/bias(dtype)
-        auto betaGammaBufSize = sizeof(float) * 2 * numColAligned * bufferNum;
-        auto biasBufSize = dtSize * biasNum * numColAligned * bufferNum;
+        auto betaGammaBufSize = sizeof(float) * 2 * numColAligned;
+        auto biasBufSize = dtSize * biasNum * numColAligned;
         auto preRowInputOutputBufSize = static_cast<unsigned long>(dtSize) * 3U *
                                             static_cast<unsigned long>(numColAligned) *
                                             static_cast<unsigned long>(bufferNum) +
@@ -210,19 +212,17 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
         }
     }
     // try 910 normal tiling case:
-    auto tmpRow = static_cast<double>(static_cast<long>(maxUbSize) -
-                                      (static_cast<long>(betagammaDtSize) * 2L * static_cast<long>(numColAligned) *
-                                           static_cast<long>(bufferNum) +
-                                       static_cast<long>(dtSize) * static_cast<long>(biasNum) *
-                                           static_cast<long>(numColAligned) * static_cast<long>(bufferNum) +
-                                       4L * 64L + static_cast<long>(UB_RESERVED_BYTE))) /
+    auto tmpRow = static_cast<double>(
+                      static_cast<long>(maxUbSize) -
+                      (static_cast<long>(betagammaDtSize) * 2L * static_cast<long>(numColAligned) +
+                       static_cast<long>(dtSize) * static_cast<long>(biasNum) * static_cast<long>(numColAligned) +
+                       4L * 64L + static_cast<long>(UB_RESERVED_BYTE))) /
                   static_cast<double>(dtSize * (3 + additionalOutputNum) * numColAligned * bufferNum +
                                       4 * 2 * bufferNum + 4 * 3 * numColAligned);
     // try normal tiling special case, 2 is fp16 or bf16 dtype size
     bool isSpecialTiling = (!is310P) && (isBroadcastBias) && isAllInputFP16;
     // beta, gamma, bias on ub, count(beta, gamma) = 2, mul(4, 64) required by mean and rstd
-    int64_t ubCacheSize = sizeof(float) * 2 * numColAligned * bufferNum + dtSize * numColAligned * bufferNum + 4 * 64 +
-                          UB_RESERVED_BYTE;
+    int64_t ubCacheSize = sizeof(float) * 2 * numColAligned + dtSize * numColAligned + 4 * 64 + UB_RESERVED_BYTE;
     // ubsize for one row compute, we have 3 TQue and 2 fp32 TBuf, and count(mean, rstd) = 2 TQues, which size is 4
     // Bytes
     int64_t preRowSize = dtSize * 3 * numColAligned * bufferNum + sizeof(float) * 2 * bufferNum +
@@ -245,9 +245,7 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
     int64_t singleRowQueSize = static_cast<int64_t>(dtSize) * (3L + static_cast<int64_t>(additionalOutputNum)) * 1L *
                                static_cast<int64_t>(numCol) * static_cast<int64_t>(bufferNum);
     // 2 tmp TBuf + 2 weight TBuf, fp32 dtsize is 4.
-    int64_t singleRowBufSize = (4L * 2L +
-                                static_cast<int64_t>(betagammaDtSize) * 2L * static_cast<int64_t>(bufferNum)) *
-                               static_cast<int64_t>(numCol);
+    int64_t singleRowBufSize = (4L * 2L + static_cast<int64_t>(betagammaDtSize) * 2L) * static_cast<int64_t>(numCol);
     // 64 for rep elements, fp32 dtsize is 4.
     int64_t singleRowConstSize = static_cast<int64_t>(4 * 1 * 2 * bufferNum + 4 * 64 + UB_RESERVED_BYTE);
     uint64_t tmpUbSize = static_cast<uint64_t>(singleRowQueSize + singleRowBufSize + singleRowConstSize);
@@ -261,7 +259,7 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
     singleRowQueSize = static_cast<int64_t>(dtSize) * OUTPUT_RSTD_INDEX * 1 * static_cast<int64_t>(numCol) *
                        static_cast<int64_t>(bufferNum);
     // 2 tmp TBuf + 2 weight TBuf, fp32 dtsize is 4.
-    singleRowBufSize = static_cast<int64_t>(4 * 2 + betagammaDtSize * 2 * bufferNum) * static_cast<int64_t>(numCol);
+    singleRowBufSize = static_cast<int64_t>(4 * 2 + betagammaDtSize * 2) * static_cast<int64_t>(numCol);
     // 2 tmp TBuf + 2 weight TBuf, fp32 dtsize is 4， 64 is tmpBuffer size for compute.
     singleRowConstSize = static_cast<int64_t>(4 * 1 * 2 * bufferNum + 4 * 64 + UB_RESERVED_BYTE);
     tmpUbSize = static_cast<uint64_t>(singleRowQueSize + singleRowBufSize + singleRowConstSize);
@@ -315,7 +313,7 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
     int64_t ubColNumSlice = static_cast<int64_t>(dtSize * (3 + additionalOutputNum) * bufferNum + 4 * 2);
     // 2 weight Buf, 1 bias Buf, fp32 dtsize is 4, rep element for fp 32 is 64.
     int64_t ubConstSlice = static_cast<int64_t>(betagammaDtSize) * 2 * static_cast<int64_t>(numCol) +
-                           static_cast<int64_t>(dtSize * biasNum * bufferNum) * static_cast<int64_t>(numCol) +
+                           static_cast<int64_t>(dtSize * biasNum) * static_cast<int64_t>(numCol) +
                            static_cast<int64_t>(dtSize * 2 * bufferNum) + 4 * static_cast<int64_t>(numCol) +
                            static_cast<int64_t>(4 * 64 + UB_RESERVED_BYTE);
     double tmpCol = static_cast<double>(static_cast<int64_t>(maxUbSize) - ubConstSlice) /
@@ -335,8 +333,7 @@ inline TILING_TYPE AddLayerNormTilingImpl(uint64_t maxUbSize, ge::DataType dataT
     ubColNumSlice = static_cast<int64_t>(dtSize) *
                         (static_cast<int64_t>(OUTPUT_X_INDEX) + static_cast<int64_t>(additionalOutputNum)) *
                         static_cast<int64_t>(bufferNum) +
-                    static_cast<int64_t>(betagammaDtSize) * 2L * static_cast<int64_t>(bufferNum) +
-                    static_cast<int64_t>(dtSize) * biasNum * static_cast<int64_t>(bufferNum) +
+                    static_cast<int64_t>(betagammaDtSize) * 2L + static_cast<int64_t>(dtSize) * biasNum +
                     static_cast<int64_t>(FOUR_NUM) * static_cast<int64_t>(OUTPUT_X_INDEX);
     tmpCol = static_cast<double>(static_cast<int64_t>(maxUbSize) - ubConstSlice) / static_cast<double>(ubColNumSlice);
     colPerTime = floor(tmpCol);
