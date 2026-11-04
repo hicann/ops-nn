@@ -45,7 +45,7 @@ echo "OS_TYPE: ${OS_TYPE}"
 echo "task_name: ${task_name}"
 
 cd ${WORKSPACE}
-echo $(grep -E "^VERSION_ID=" /etc/os-release | cut -d'"' -f2)
+grep -E "^VERSION_ID=" /etc/os-release | cut -d'"' -f2
 if [[ "${task_name}" == *ubuntu24* ]]; then
     if sudo update-alternatives --set gcc /usr/bin/gcc-16 2>/dev/null; then
         echo "Switched to gcc-16"
