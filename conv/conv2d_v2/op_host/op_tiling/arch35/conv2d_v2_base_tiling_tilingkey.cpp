@@ -257,11 +257,12 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         return true;
     }
 
-    // Pad must not exceed kernel size.
-    if (tilingData_.get_padLeft() > tilingData_.get_kernelW() ||
-        tilingData_.get_padRight() > tilingData_.get_kernelW() ||
-        tilingData_.get_padTop() > tilingData_.get_kernelH() ||
-        tilingData_.get_padBottom() > tilingData_.get_kernelH()) {
+    // Pad must be smaller than kernel size (small kernel register-window logic
+    // assumes pad < kernel; pad == kernel also breaks it).
+    if (tilingData_.get_padLeft() >= tilingData_.get_kernelW() ||
+        tilingData_.get_padRight() >= tilingData_.get_kernelW() ||
+        tilingData_.get_padTop() >= tilingData_.get_kernelH() ||
+        tilingData_.get_padBottom() >= tilingData_.get_kernelH()) {
         return true;
     }
 
