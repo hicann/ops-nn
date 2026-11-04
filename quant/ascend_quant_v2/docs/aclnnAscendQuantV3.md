@@ -103,7 +103,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>数据类型、数据格式需要和`x`的数据类型和数据格式一致。</li><li>当数据格式为NZ时，`scale`的所有元素值为1。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>如果`x`的数据类型不是FLOAT32，数据类型需要和`x`的数据类型一致。</li><li>当数据格式为NZ时，`scale`的所有元素值为1。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
       <td>1-8</td>
