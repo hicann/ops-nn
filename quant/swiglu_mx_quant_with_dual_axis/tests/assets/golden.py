@@ -10,60 +10,57 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 """
-TTK custom golden for swiglu_mx_quant_with_dual_axis.
+TTK golden / TestSpec for swiglu_mx_quant_with_dual_axis — Kernel / GEIR /
+ACLNN / E2E.
 
-Fused operator = SwiGLU activation (mode 0) followed by dual-axis (-1 / -2)
-dynamic MX block quantization. It produces FOUR outputs:
+Fused operator = SwiGLU activation (mode 0) + dual-axis (-1 / -2) dynamic MX
+block quantization with FOUR outputs: y1 / mx_scale1 / y2 / mx_scale2.
 
-    y1        : -1 axis (column direction) quantized elements (FP4/FP8)
-    mx_scale1 : -1 axis block scales (FLOAT8_E8M0)
-    y2        : -2 axis (row direction) quantized elements (FP4/FP8)
-    mx_scale2 : -2 axis block scales (FLOAT8_E8M0)
+Math core (torch, CPU fp32):
+    swiglu : torch.nn.functional.silu body (silu(x) = x * sigmoid(x)); the
+             intermediate is rounded back to the input precision (fp16/bf16)
+             before quantization (kernel intermediate storage contract).
+    mx     : per 32-block dynamic MX quantization on both axes. OCP scale
+             floor(log2(amax)) - emax or cuBLAS scale (FP8, mantissa-aware
+             round-up). E8M0 exponent bytes, pair packing, -2 axis interleave
+             and the grouped compact layout (group_index is CUMSUM mode:
+             [floor(M/64)+G, N, 2] with per-group pair gaps) are encoding /
+             layout steps.
 
-This golden is an INDEPENDENT CPU reference. It never invokes the NPU operator
-under test. Every function is composed from already-merged sibling goldens that
-share one MX element-quantization core, so there is no algorithm drift:
-
-    - SwiGLU (mode 0) body    <- torch.nn.functional.silu (Torch SiLU/Swish),
-                                 semantics per quant/swiglu_mx_quant/golden.py::_swiglu
-    - -1 / -2 axis quant      <- quant/dynamic_mx_quant_with_dual_axis/golden.py::_mx_quantize
-    - grouped -2 axis quant   <- quant/grouped_dynamic_mx_quant/golden.py::_grouped_mx_quantize
-
-MX/FP4 quantization keeps the standard NumPy implementation on purpose: the
-fused op is NOT required to be a single Torch API. Only the SwiGLU activation
-body is expressed with Torch F.silu; block quant, E8M0 scale encoding and the
-dual-axis / grouped packing remain the merged NumPy sibling-golden code above.
-
-Inputs (positional, in op-def order):
-    x           : numpy array (fp16/bf16), 2-D [M, 2N]
-    group_index : numpy int64 array, OPTIONAL (absent -> None), shape [G],
-                  cumsum row boundaries, each > 0 and last == M
-
-Attributes (keyword, names match swiglu_mx_quant_with_dual_axis_def.cpp):
-    activate_left   : bool  (default True)  True -> Swish(front half) * back half
-    round_mode      : str   (default "rint")  rint / round / floor
-    scale_alg       : int   (default 0)     0 = OCP, 1 = cuBLAS (FP8 only)
-    dst_type        : int   (default 35)    35=E5M2, 36=E4M3FN, 40=E2M1, 41=E1M2
-    max_dtype_value : float (default 0.0)   reserved, only 0.0 supported
-
-Semantics note (documented conflict, resolved by evidence):
-    README stage-1 text writes the Swish target on the wrong half. The kernel
-    (regbase.h ComputeVfSwiglu), docs/aclnnSwigluMxQuantWithDualAxis.md, and the
-    sibling golden swiglu_mx_quant all agree that activate_left=True applies
-    SiLU/Swish to the FRONT half: res = silu(front) * back, where
-    silu(x) = x * sigmoid(x). This golden follows the kernel/aclnn semantics,
-    not the README prose.
+E2E note: torch_npu exposes no npu_swiglu_mx_quant_with_dual_axis binding, so
+the framework-layer entry is the in-repo torch extension
+(quant/swiglu_mx_quant_with_dual_axis/torch_extension), reached as
+cann_ops_nn.swiglu_mx_quant_with_dual_axis. dst_type there uses the CANN codes
+(35/36/40/41) rather than torch ScalarType enums.
 """
 
-import copy
-import re
+import math
 
 import numpy as np
 
 __golden__ = {
     "kernel": {
         "swiglu_mx_quant_with_dual_axis": "swiglu_mx_quant_with_dual_axis_golden"
-    }
+    },
+    "aclnn": {
+        "aclnnSwigluMxQuantWithDualAxis": "aclnn_swiglu_mx_quant_with_dual_axis_golden"
+    },
+    "e2e": {
+        "cann_ops_nn.swiglu_mx_quant_with_dual_axis": "swiglu_mx_quant_with_dual_axis_e2e_golden"
+    },
+}
+
+__input__ = {
+    "aclnn": {"aclnnSwigluMxQuantWithDualAxis": "dual_axis_group_index_input"},
+    "e2e": {
+        "cann_ops_nn.swiglu_mx_quant_with_dual_axis": "dual_axis_group_index_input"
+    },
+}
+
+__spec__ = {
+    "swiglu_mx_quant_with_dual_axis": "SwigluMxQuantWithDualAxisKernelSpec",
+    "aclnnSwigluMxQuantWithDualAxis": "AclnnSwigluMxQuantWithDualAxisSpec",
+    "cann_ops_nn.swiglu_mx_quant_with_dual_axis": "SwigluMxQuantWithDualAxisE2ESpec",
 }
 
 
@@ -80,7 +77,24 @@ DATA_TYPE_INT_TO_STR = {
     42: "hifloat4",
 }
 
+TORCH_DTYPE_ENUM_TO_DST_TYPE = {
+    23: 35,
+    24: 36,
+    291: 35,
+    292: 36,
+    296: 40,
+    297: 41,
+}
+
 BLOCK_SIZE = 32
+
+# dst_type -> (emax, mant_bits, min_exp, max_norm)
+_DST_TYPE_MAP = {
+    40: (2, 1, 0, 6.0),
+    41: (0, 2, 0, 1.75),
+    36: (8, 3, -6, 448.0),
+    35: (15, 2, -14, 57344.0),
+}
 
 
 def _numpy_mx_dtype(mx_ele_dtype):
@@ -129,415 +143,252 @@ def _get_dtype_range(dt):
 
 
 # ---------------------------------------------------------------------------
-# SwiGLU (mode 0) activation body -- torch.nn.functional.silu
-#   The gated half is activated with the standard Torch SiLU/Swish op
-#   (silu(x) = x * sigmoid(x)) rather than a hand-rolled sigmoid, per the
-#   reference standard "SwiGLU body uses Torch F.silu". The half-selection and
-#   the element-wise product with the linear half stay in fp32. Semantics match
-#   the kernel (regbase.h ComputeVfSwiglu) and the sibling golden
-#   quant/swiglu_mx_quant/golden.py::_swiglu (mode 0): silu(gate) * linear.
+# Torch math core
 # ---------------------------------------------------------------------------
-def _swiglu_mode0(x_fp32, activate_left):
-    """SwiGLU mode 0 on a 2-D [M, 2N] tensor, split on the last axis.
+def _torch_round_mode(v, round_mode):
+    import torch
 
-    activate_left=True  -> silu(front) * back   (gate = front half)
-    activate_left=False -> silu(back)  * front  (gate = back half)
+    if round_mode in ("rint", "even"):
+        return torch.round(v)
+    if round_mode in ("round", "nearest"):
+        neg = torch.signbit(v)
+        rounded_abs = torch.floor(torch.abs(v) + 0.5)
+        return torch.where(neg, -rounded_abs, rounded_abs)
+    if round_mode == "floor":
+        return torch.floor(v)
+    if round_mode == "ceil":
+        return torch.ceil(v)
+    if round_mode == "trunc":
+        return torch.trunc(v)
+    raise ValueError(f"Unrecognized round mode: {round_mode}")
 
-    The activation is computed by ``torch.nn.functional.silu`` in fp32; the
-    result is returned as a fp32 numpy array so the downstream MX quantization
-    (NumPy) is untouched.
-    """
+
+def _torch_swiglu_mode0(x_t, activate_left, in_dtype_name):
+    """SwiGLU mode 0 on the last axis via torch.nn.functional.silu."""
     import torch
     import torch.nn.functional as F
 
-    xf = np.ascontiguousarray(x_fp32.astype(np.float32))
-    h = xf.shape[-1] // 2
-    a = xf[:, :h]
-    b = xf[:, h:]
-    t_a = torch.from_numpy(np.ascontiguousarray(a))
-    t_b = torch.from_numpy(np.ascontiguousarray(b))
+    h = x_t.shape[-1] // 2
+    a = x_t[..., :h]
+    b = x_t[..., h:]
     if activate_left:
-        res = F.silu(t_a) * t_b
+        res = F.silu(a) * b
     else:
-        res = F.silu(t_b) * t_a
-    return res.detach().cpu().numpy().astype(np.float32)
+        res = F.silu(b) * a
+    # round the SwiGLU intermediate back to the input precision
+    if in_dtype_name == "bfloat16":
+        res = res.to(torch.bfloat16).to(torch.float32)
+    elif in_dtype_name == "float16":
+        res = res.to(torch.float16).to(torch.float32)
+    return res
 
 
-# ---------------------------------------------------------------------------
-# Shared MX element-quantization core
-# (identical across dynamic_mx_quant_with_dual_axis / grouped_dynamic_mx_quant)
-# ---------------------------------------------------------------------------
-def _mx_calculate_share_exp(fp_array, scale_axis, mx_ele_dtype):
-    """OCP shared exponent: floor(log2(amax)) - emax."""
-    FP32_EXPONENT_BIAS = 127
-    FP32_MIN_NORMAL = 2 ** (-FP32_EXPONENT_BIAS + 1)
-    max_norm = _get_dtype_range(mx_ele_dtype)[1]
-    ele_emax = int(np.log2(max_norm))
-    fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdims=True)
-    res = (
-        np.floor(
-            np.log2(fp_abs_max.astype(np.float32) + FP32_MIN_NORMAL * (fp_abs_max == 0))
+def _torch_share_exp(amax, dst_type, scale_alg):
+    """OCP / cuBLAS shared exponent (torch), clipped to the E8M0 range."""
+    import torch
+
+    emax, _, _, max_norm = _DST_TYPE_MAP[dst_type]
+    if scale_alg == 1 and dst_type in (35, 36):
+        s = (amax / max_norm).to(torch.float32)
+        bits = s.view(torch.int32)
+        exponents = ((bits & 0x7F800000) >> 23).to(torch.int16)
+        mantissas = bits & 0x007FFFFF
+        round_up = ((exponents > 0) & (exponents < 254) & (mantissas > 0)) | (
+            (exponents == 0) & (mantissas > 2**22)
         )
-        - ele_emax
-    )
-    res[fp_abs_max == 0] = -float("inf")
-    return res
-
-
-def _mx_calculate_share_exp_nv(fp_array, scale_axis, mx_ele_dtype):
-    """cuBLAS shared exponent (mantissa-aware round up). FP8 only."""
-    max_norm = _get_dtype_range(mx_ele_dtype)[1]
-    fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdims=True).astype(
-        np.float32
-    )
-    s_fp32 = fp_abs_max / max_norm
-    binary_ints = np.array(s_fp32.view(np.uint32))
-    exponent_mask = np.uint32(0x7F800000)
-    mantissa_mask = np.uint32(0x007FFFFF)
-    exponents = (binary_ints & exponent_mask) >> 23
-    exponents_int16 = exponents.astype(np.int16)
-    mantissas = binary_ints & mantissa_mask
-    condition_1 = (exponents_int16 > 0) & (exponents_int16 < 254) & (mantissas > 0)
-    condition_2 = (exponents_int16 == 0) & (mantissas > 2**22)
-    exponents_int16 = np.where(
-        (condition_1 | condition_2), exponents_int16 + 1, exponents_int16
-    )
-    res = (exponents_int16 - 127).astype(np.float32)
-    res[fp_abs_max == 0] = -float("inf")
-    return res
-
-
-def _mx_round_mantissa(fp_array, round_mode):
-    if round_mode in ("rint", "even"):  # tie to even (C rint)
-        fp_array = np.rint(fp_array)
-    elif round_mode in ("round", "nearest"):  # tie away from zero (C round)
-        sign = np.signbit(fp_array)
-        rounded_abs = np.floor(np.abs(fp_array) + np.array([0.5], dtype=fp_array.dtype))
-        fp_array = np.where(sign, -rounded_abs, rounded_abs)
-    elif round_mode == "floor":  # round to minus infinity (C floor)
-        fp_array = np.floor(fp_array)
-    elif round_mode == "ceil":
-        fp_array = np.ceil(fp_array)
-    elif round_mode == "trunc":
-        fp_array = np.trunc(fp_array)
+        exponents = torch.where(round_up, exponents + 1, exponents)
+        share = (exponents - 127).to(torch.float32)
     else:
-        raise Exception(f"Unrecognized round method {round_mode}")
-    return fp_array
+        safe = torch.where(amax > 0, amax, torch.ones_like(amax))
+        share = torch.floor(torch.log2(safe)) - emax
+    share = torch.where(amax == 0, torch.full_like(share, float("-inf")), share)
+    share = torch.where(share > 127, torch.full_like(share, float("nan")), share)
+    share = torch.clamp(share, min=-127)
+    return share
 
 
-def _mx_quantize_to_element_format(fp_array, share_exp, mx_ele_dtype, round_mode):
-    """Cast V / 2^share_exp into the destination MX element format.
+def _torch_quantize_elements(values, share_exp, dst_type, round_mode):
+    import torch
 
-    Handles the private (per-element) exponent normalization, minimum
-    representable exponent clipping and max_norm saturation. The share_exp==-127
-    guard avoids dividing by the clipped minimum scale.
+    _, mant_bits, min_exp, max_norm = _DST_TYPE_MAP[dst_type]
+    ret = values / torch.pow(2.0, share_exp)
+    private_exp = torch.floor(torch.log2(torch.abs(ret) + (ret == 0).to(ret.dtype)))
+    private_exp = torch.clamp(private_exp, min=min_exp)
+    ret = ret / torch.pow(2.0, private_exp) * float(2**mant_bits)
+    ret = _torch_round_mode(ret, round_mode)
+    ret = ret / float(2**mant_bits) * torch.pow(2.0, private_exp)
+    return torch.clamp(ret, min=-max_norm, max=max_norm)
+
+
+def _torch_axis_quant(data_t, axis, dst_type, block_size, round_mode, scale_alg):
+    """Single-axis MX quantization (torch math + numpy E8M0 layout encode).
+
+    Returns (y_t torch fp32, scale_np uint8 [pairs...]).
     """
-    mx_dtype = str(mx_ele_dtype)
-    match = re.search(r"e(\d+)m(\d+)", mx_dtype)
-    if match:
-        exp_bits = int(match.group(1))
-        mantissa_bits = int(match.group(2))
-    else:
-        raise ValueError(f"mx element dtype [{mx_ele_dtype}] is not recognized.")
+    import torch
 
-    ret = np.where(
-        share_exp == -127,
-        np.where(np.signbit(fp_array), -0.0, 0.0),
-        fp_array / (2**share_exp),
-    )
-    private_exp = np.floor(np.log2(np.abs(ret.astype(np.float32)) + (ret == 0))).astype(
-        fp_array.dtype, copy=False
-    )
-    # minimum representable exponent for the element format
-    min_exp = 0 if "float4_e1m2" in mx_dtype else -(2 ** (exp_bits - 1)) + 2
-    private_exp = private_exp.clip(min=min_exp)
-    ret = ret / (2**private_exp) * (2**mantissa_bits)
-    ret = _mx_round_mantissa(ret, round_mode)
-    ret = ret / (2**mantissa_bits) * (2**private_exp)
-    max_norm = _get_dtype_range(mx_dtype)[1]
-    np.clip(ret, a_min=-max_norm, a_max=max_norm, out=ret)
-    return ret
+    ndim = data_t.dim()
+    axis = axis % ndim
+    shape = list(data_t.shape)
+    pre_q = math.prod(shape[:axis]) if axis > 0 else 1
+    q_dim = shape[axis]
+    post_q = math.prod(shape[axis + 1 :]) if axis + 1 < len(shape) else 1
+    flat = data_t.reshape(pre_q, q_dim, post_q)
 
+    n_blocks = math.ceil(q_dim / block_size)
+    n_pairs = (n_blocks + 1) // 2
+    pad_len = n_blocks * block_size - q_dim
+    if pad_len > 0:
+        flat = torch.nn.functional.pad(flat, (0, 0, 0, pad_len))
+    blocks = flat.reshape(pre_q, n_blocks, block_size, post_q)
 
-def _select_share_exp(fp_array, scale_axis, mx_ele_dtype, scale_alg):
-    """Pick OCP / cuBLAS shared exponent, then clip to E8M0 range."""
-    if scale_alg == 0 or (mx_ele_dtype in ("float4_e2m1", "float4_e1m2")):
-        share_exp = _mx_calculate_share_exp(fp_array, scale_axis, mx_ele_dtype)
-    elif scale_alg == 1:
-        share_exp = _mx_calculate_share_exp_nv(fp_array, scale_axis, mx_ele_dtype)
-    else:
-        raise RuntimeError(f"scale_alg is not supported: {scale_alg}")
-    scale_emax = 2 ** (8 - 1) - 1  # 127 for E8M0
-    share_exp[share_exp > scale_emax] = float("NaN")
-    share_exp[share_exp < -scale_emax] = -scale_emax
-    return share_exp
+    amax = torch.amax(torch.abs(blocks), dim=2, keepdim=True)
+    share_exp = _torch_share_exp(amax, dst_type, scale_alg)
+    q = _torch_quantize_elements(blocks, share_exp, dst_type, round_mode)
+    q = torch.nan_to_num(q, nan=0.0)  # NPU casts NaN elements to +0
+    y_t = q.reshape(pre_q, n_blocks * block_size, post_q)[:, :q_dim, :].reshape(shape)
 
-
-# ---------------------------------------------------------------------------
-# Non-grouped dual-axis quant -- from dynamic_mx_quant_with_dual_axis/golden.py
-# ---------------------------------------------------------------------------
-def _mx_reshape_to_blocks(fp_array, axis, block_size):
-    fp_array = np.expand_dims(fp_array, axis=axis + 1)
-    orig_shape = fp_array.shape
-    pad = [[0, 0] for _ in range(len(orig_shape))]
-    pad_size = orig_shape[axis] % block_size
-    pad[axis][1] = block_size - pad_size
-    if pad_size > 0:
-        fp_array = np.pad(fp_array, pad, "constant")
-    padded_shape = fp_array.shape
-    reshape = list(padded_shape)
-    reshape[axis + 1] = block_size
-    reshape[axis] = reshape[axis] // block_size
-    fp_array = fp_array.reshape(reshape)
-    return fp_array, orig_shape, padded_shape
+    # E8M0 bytes + pair packing (slot k of pair p = block 2p+k; pad byte 0)
+    se_np = share_exp[:, :, 0, :].cpu().numpy().astype(np.float32)
+    scale_bytes = np.where(
+        np.isnan(se_np), np.uint8(255), np.clip(se_np + 127.0, 0, 255)
+    ).astype(np.uint8)
+    padded = np.zeros((pre_q, n_pairs * 2, post_q), dtype=np.uint8)
+    padded[:, :n_blocks, :] = scale_bytes
+    pairs = padded.reshape(pre_q, n_pairs, 2, post_q)
+    lead = tuple(shape[:axis])
+    trail = tuple(shape[axis + 1 :])
+    tmp = pairs.reshape(lead + (n_pairs, 2) + trail)
+    k_axis = len(lead) + 1
+    perm = [i for i in range(tmp.ndim) if i != k_axis] + [k_axis]
+    scale_out = np.ascontiguousarray(np.transpose(tmp, perm))
+    return y_t, scale_out
 
 
-def _mx_undo_reshape_to_blocks(fp_array, axis, orig_shape, padded_shape):
-    fp_array = fp_array.reshape(padded_shape)
-    if tuple(padded_shape) != tuple(orig_shape):
-        slices = [slice(0, x) for x in orig_shape]
-        fp_array = fp_array[tuple(slices)]
-    fp_array = np.squeeze(fp_array, axis=axis + 1)
-    return fp_array
-
-
-def _pad_to_even(tensor, axis):
-    if not isinstance(tensor, np.ndarray):
-        raise ValueError("Input must be a numpy ndarray.")
-    if axis < 0 or axis >= tensor.ndim:
-        raise ValueError(
-            f"Axis {axis} is out of bounds for tensor with {tensor.ndim} dimensions."
-        )
-    length = tensor.shape[axis]
-    if length % 2 == 0:
-        return tensor
-    pad_width = [(0, 0)] * tensor.ndim
-    pad_width[axis] = (0, 1)
-    return np.pad(tensor, pad_width, mode="constant", constant_values=2**-127)
-
-
-def _interleave(tensor, axis, n_group=2):
-    if not isinstance(tensor, np.ndarray):
-        raise ValueError("Input must be a numpy ndarray.")
-    if axis < 0 or axis >= tensor.ndim:
-        raise ValueError(
-            f"Axis {axis} is out of bounds for tensor with {tensor.ndim} dimensions."
-        )
-    length = tensor.shape[axis]
-    if length % n_group != 0:
-        raise ValueError(
-            f"Axis length ({length}) must be divisible by n_group ({n_group})"
-        )
-    group_length = length // n_group
-    shape = list(tensor.shape)
-    new_shape = shape[:axis] + [group_length, 2] + shape[axis + 1 :]
-    reshaped = tensor.reshape(new_shape)
-    transpose_order = (
-        list(range(0, axis + 1)) + list(range(axis + 2, len(new_shape))) + [axis + 1]
-    )
-    return reshaped.transpose(transpose_order)
-
-
-def _mx_quantize(fp_array, mx_ele_dtype, axis, block_size, round_mode, scale_alg):
-    """Single-axis dynamic MX quantization. Returns (scale_array, ele_array)."""
-    if not isinstance(fp_array, np.ndarray):
-        raise RuntimeError(
-            f"Input tensor to be quantized should be numpy array. But got {type(fp_array)}"
-        )
-    if fp_array.dtype.name not in ("bfloat16", "float16", "float32"):
-        raise RuntimeError(
-            f"Dtype of input tensor to be quantized is not supported: {fp_array.dtype.name}"
-        )
-    if mx_ele_dtype not in (
-        "float4_e2m1",
-        "float4_e1m2",
-        "float8_e4m3fn",
-        "float8_e5m2",
-    ):
-        raise NotImplementedError(f"Not support {mx_ele_dtype} yet!")
-
-    axis = len(fp_array.shape) + axis if axis < 0 else axis
-    fp_array, orig_shape, padded_shape = _mx_reshape_to_blocks(
-        fp_array, axis, block_size
-    )
-    share_exp = _select_share_exp(fp_array, axis + 1, mx_ele_dtype, scale_alg)
-
-    ele_array = _mx_quantize_to_element_format(
-        fp_array, share_exp, mx_ele_dtype, round_mode
-    )
-    ele_array = _mx_undo_reshape_to_blocks(ele_array, axis, orig_shape, padded_shape)
-    share_exp = np.squeeze(share_exp, axis=axis + 1)
-
-    ele_dtype_np = _numpy_mx_dtype(mx_ele_dtype)
-    scale_array = 2**share_exp
-    if ele_array.dtype.name == "bfloat16":
-        ele_array = ele_array.astype("float32", copy=False)
-    # NPU casts NaN (with/without sign) to positive zero
-    ele_array = np.nan_to_num(ele_array, nan=0.0, copy=False)
-    ele_array = ele_array.astype(ele_dtype_np, copy=False)
-
-    scale_array_pad = _pad_to_even(scale_array, axis=axis)
-    result_shape = copy.deepcopy(list(scale_array_pad.shape))
-    result_shape.append(2)
-    result_shape[axis] = scale_array_pad.shape[axis] // 2
-    # -1 axis (last) does not interleave; -2 axis interleaves every two rows
-    if axis != (len(fp_array.shape) - 1):
-        scale_array_pad = _interleave(scale_array_pad, axis=axis)
-    scale_array_pad = scale_array_pad.reshape(result_shape)
-    scale_array = scale_array_pad.astype(_numpy_mx_dtype("float8_e8m0"), copy=False)
-    return scale_array, ele_array
-
-
-# ---------------------------------------------------------------------------
-# Grouped -2 axis quant -- from quant/grouped_dynamic_mx_quant/golden.py
-# ---------------------------------------------------------------------------
-def _grouped_mx_reshape_to_blocks(fp_array, group_index, axis, block_size):
-    groups = []
-    padded_group_index = []
-    prev = 0
-    for end in group_index:
-        slices = [slice(None)] * fp_array.ndim
-        slices[axis] = slice(prev, end)
-        groups.append(fp_array[tuple(slices)])
-        prev = end
-
-    padded_groups = []
-    padded_index = 0
-    for group in groups:
-        group_len = group.shape[axis]
-        pad_size = (block_size - (group_len % block_size)) % block_size
-        if pad_size > 0:
-            pad_width = [(0, 0)] * group.ndim
-            pad_width[axis] = (0, pad_size)
-            padded_group = np.pad(group, pad_width, mode="constant")
-        else:
-            padded_group = group
-        padded_index = padded_index + group_len + pad_size
-        padded_groups.append(padded_group)
-        padded_group_index.append(padded_index)
-
-    padded_array = np.concatenate(padded_groups, axis=axis)
-    expanded_array = np.expand_dims(padded_array, axis=axis + 1)
-    total_blocks = padded_array.shape[axis] // block_size
-    reshape = list(expanded_array.shape)
-    reshape[axis] = total_blocks
-    reshape.insert(axis + 1, block_size)
-    reshaped_array = expanded_array.reshape(reshape)
-    padded_shape = expanded_array.shape
-    return reshaped_array, padded_group_index, padded_shape
-
-
-def _grouped_mx_undo_reshape_to_blocks(
-    fp_array, group_index, axis, padded_group_index, padded_shape
+def _torch_grouped_axis_rows(
+    data_t, group_index, dst_type, block_size, round_mode, scale_alg
 ):
-    fp_array = fp_array.reshape(padded_shape)
-    fp_array = np.squeeze(fp_array, axis=axis + 1)
-    split_indices = padded_group_index[:-1]
-    groups = np.split(fp_array, split_indices, axis=axis)
-    trimmed_groups = []
-    prev = 0
-    for i, end in enumerate(group_index):
-        original_length = end - prev
-        slices = [slice(None)] * fp_array.ndim
-        slices[axis] = slice(0, original_length)
-        trimmed_groups.append(groups[i][tuple(slices)])
-        prev = end
-    return np.concatenate(trimmed_groups, axis=axis)
+    """Grouped -2 axis quantization (group_index CUMSUM mode).
 
-
-def _reshape_scale_array_pad(scale_array, group_index, axis):
-    """Pack grouped -2 axis scales into [floor(M/64)+G, N, 2] with every-two-row
-    interleave. Group g is placed at pair offset (cumsum_g//64 + g); intra-group
-    rows are padded to even with 2**-127, inter-group gaps filled with 1.
+    Layout (mirrors the merged grouped golden / kernel infershape): work in
+    the BLOCK-ROW domain — group g owns ceil(rows_g / 32) block rows padded
+    to even with zero rows, inter-group gaps are filled with 1.0 (E8M0 byte
+    127); the allocated pair rows = M // 64 + G. Rows are then folded into
+    pairs [pair, col, slot].
     """
-    import math
+    import torch
 
-    scale_array = np.squeeze(scale_array, 1)
+    rows, n_cols = data_t.shape
+    pair_rows = rows // (block_size * 2) + len(group_index)
+    block_rows = pair_rows * 2
+    block_scale = np.zeros((block_rows, n_cols), dtype=np.uint8)
+    y_t = torch.zeros_like(data_t)
+
     cur_idx = 0
-    pre_element = 0
-    for idx, element in enumerate(group_index):
-        next_group_start = (element // 64 + idx + 1) * 2
-        real_idx = cur_idx + math.ceil((element - pre_element) / 32)
-        pad_idx = math.ceil(real_idx / 2) * 2
-        zero_row = np.full((1, scale_array.shape[1]), 2**-127)
-        one_row = np.full((1, scale_array.shape[1]), 1)
-        for i in range(real_idx, pad_idx):
-            scale_array = np.insert(scale_array, i, zero_row, axis=0)
-        for i in range(pad_idx, next_group_start):
-            scale_array = np.insert(scale_array, i, one_row, axis=0)
-        pre_element = element
+    prev = 0
+    start = 0
+    for idx, cum in enumerate(group_index):
+        cum = int(cum)
+        gv = cum - prev
+        prev = cum
+        # every group (including zero-row ones) advances the placement chain
+        # (verified on Ascend950PR: a 0-row group still occupies its slot)
+        next_group_start = (cum // (block_size * 2) + idx + 1) * 2
+        if gv > 0 and start < rows:
+            end = min(start + gv, rows)
+            y_part, sp = _torch_axis_quant(
+                data_t[start:end], 0, dst_type, block_size, round_mode, scale_alg
+            )
+            y_t[start:end] = y_part
+            # pairs (npair, n_cols, 2) -> block rows (npair*2, n_cols)
+            sp_blocks = sp.transpose(0, 2, 1).reshape(-1, n_cols)
+            n_group_blocks = math.ceil(gv / block_size)
+            real_idx = cur_idx + n_group_blocks
+            pad_idx = math.ceil(real_idx / 2) * 2
+            block_scale[cur_idx:real_idx] = sp_blocks[:n_group_blocks]
+            # [real_idx:pad_idx] stays zero (2^-127); gap [pad_idx:next_group_start] = 1.0
+            block_scale[pad_idx:next_group_start] = 127
+            start = end
         cur_idx = next_group_start
 
-    scale_array = (
-        scale_array.reshape(int(scale_array.shape[0] / 2), 2, scale_array.shape[1])
+    scale_np = (
+        block_scale.reshape(pair_rows, 2, n_cols)
         .transpose(0, 2, 1)
-        .reshape(int(scale_array.shape[0] / 2), scale_array.shape[1], 2)
+        .reshape(pair_rows, n_cols, 2)
     )
-    return scale_array
+    return y_t, scale_np
 
 
-def _grouped_mx_quantize(
-    fp_array, group_index, mx_ele_dtype, axis, block_size, round_mode, scale_alg
-):
-    """Grouped single-axis MX quantization (axis=-2). Returns (scale, ele)."""
-    if not isinstance(fp_array, np.ndarray):
-        raise RuntimeError(
-            f"Input tensor to be quantized should be numpy array. But got {type(fp_array)}"
-        )
-    if fp_array.dtype.name not in ("bfloat16", "float16", "float32"):
-        raise RuntimeError(
-            f"Dtype of input tensor to be quantized is not supported: {fp_array.dtype.name}"
-        )
-    if mx_ele_dtype not in (
-        "float4_e2m1",
-        "float4_e1m2",
-        "float8_e4m3fn",
-        "float8_e5m2",
-    ):
-        raise NotImplementedError(f"Not support {mx_ele_dtype} yet!")
+def _torch_dual_axis(x, group_index, kwargs):
+    """Full chain: returns (y1_t, scale1_np, y2_t, scale2_np) with torch math
+    and numpy E8M0 layout encoding."""
+    import torch
 
-    def is_non_reverse_order(arr):
-        if len(arr) <= 1:
-            return True
-        return np.all(np.diff(arr) >= 0)
-
-    if not is_non_reverse_order(group_index):
-        raise RuntimeError("Input tensor group_index should be non-reverse order.")
-
-    axis = len(fp_array.shape) + axis if axis < 0 else axis
-    if axis != 0:
-        raise RuntimeError(f"grouped quant only supports the -2 axis, got axis={axis}")
-    if int(group_index[-1]) != fp_array.shape[axis]:
-        raise RuntimeError(
-            "The last element of group_index should match the -2 axis dimension of x."
+    activate_left = bool(kwargs.get("activate_left", True))
+    round_mode = str(kwargs.get("round_mode", "rint"))
+    scale_alg = int(kwargs.get("scale_alg", 0))
+    dst_type = int(kwargs.get("dst_type", 35))
+    max_dtype_value = float(kwargs.get("max_dtype_value", 0.0))
+    if max_dtype_value != 0.0:
+        raise ValueError(
+            f"max_dtype_value is reserved and only 0.0 is supported, got {max_dtype_value}"
         )
 
-    fp_array, padded_group_index, padded_shape = _grouped_mx_reshape_to_blocks(
-        fp_array, group_index, axis, block_size
-    )
-    share_exp = _select_share_exp(fp_array, axis + 1, mx_ele_dtype, scale_alg)
+    if hasattr(x, "detach"):
+        x_t = x.detach().cpu()
+        in_name = str(x_t.dtype).replace("torch.", "")
+        if x_t.dtype == torch.bfloat16:
+            x_t = x_t.to(torch.float32)
+        else:
+            x_t = x_t.to(torch.float32)
+    else:
+        arr = np.asarray(x)
+        in_name = str(arr.dtype)
+        x_t = torch.from_numpy(np.ascontiguousarray(arr.astype(np.float32)))
 
-    ele_array = _mx_quantize_to_element_format(
-        fp_array, share_exp, mx_ele_dtype, round_mode
-    )
-    ele_array = _grouped_mx_undo_reshape_to_blocks(
-        ele_array, group_index, axis, padded_group_index, padded_shape
-    )
-    share_exp = np.squeeze(share_exp, axis=axis + 1)
+    dst_type_str = DATA_TYPE_INT_TO_STR[dst_type]
+    if dst_type not in _DST_TYPE_MAP:
+        raise NotImplementedError(f"Not support dst_type {dst_type} yet!")
 
-    ele_dtype_np = _numpy_mx_dtype(mx_ele_dtype)
-    scale_array = 2**share_exp
-    if ele_array.dtype.name == "bfloat16":
-        ele_array = ele_array.astype("float32", copy=False)
-    ele_array = np.nan_to_num(ele_array, nan=0.0, copy=False)
-    ele_array = ele_array.astype(ele_dtype_np, copy=False)
-    scale_array = _reshape_scale_array_pad(scale_array, group_index, axis)
-    scale_array = scale_array.astype(_numpy_mx_dtype("float8_e8m0"), copy=False)
-    return scale_array, ele_array
+    swiglu_t = _torch_swiglu_mode0(x_t, activate_left, in_name)
+
+    # -1 axis quant (group-independent)
+    y1_t, scale1_np = _torch_axis_quant(
+        swiglu_t, -1, dst_type, BLOCK_SIZE, round_mode, scale_alg
+    )
+    # -2 axis quant: grouped (cumsum) when group_index is present
+    if group_index is None:
+        y2_t, scale2_np = _torch_axis_quant(
+            swiglu_t, -2, dst_type, BLOCK_SIZE, round_mode, scale_alg
+        )
+    else:
+        gi = np.asarray(group_index).reshape(-1).astype(np.int64)
+        y2_t, scale2_np = _torch_grouped_axis_rows(
+            swiglu_t, gi, dst_type, BLOCK_SIZE, round_mode, scale_alg
+        )
+    return y1_t, scale1_np, y2_t, scale2_np, _numpy_mx_dtype(dst_type_str)
+
+
+def _pack_fp4_to_uint8(ele):
+    if not isinstance(ele, np.ndarray) or "float4" not in str(ele.dtype):
+        return ele
+    if ele.shape[-1] % 2:
+        raise ValueError("FP4 packing requires an even last dim")
+    raw = ele.view(np.uint8) & 0x0F
+    pairs = raw.reshape(raw.shape[:-1] + (-1, 2))
+    packed = pairs[..., 0].astype(np.uint16) | (pairs[..., 1].astype(np.uint16) << 4)
+    return packed.astype(np.uint8)
+
+
+def _y_to_device_repr(y_np, dst_np_dtype, dst_type):
+    y_q = y_np.astype(dst_np_dtype)
+    if dst_type in (40, 41):
+        return _pack_fp4_to_uint8(y_q)
+    return y_q
 
 
 # ---------------------------------------------------------------------------
-# Top-level golden
+# Kernel / GEIR golden
 # ---------------------------------------------------------------------------
 def swiglu_mx_quant_with_dual_axis_golden(
     x,
@@ -550,60 +401,411 @@ def swiglu_mx_quant_with_dual_axis_golden(
     max_dtype_value=0.0,
     **kwargs,
 ):
-    """Golden for swiglu_mx_quant_with_dual_axis.
+    """Golden for swiglu_mx_quant_with_dual_axis (kernel/GEIR path).
 
-    Parameter names/order follow swiglu_mx_quant_with_dual_axis_def.cpp (inputs
-    positional, attributes keyword). All input tensors are numpy.ndarray.
+    Parameter names/order follow swiglu_mx_quant_with_dual_axis_def.cpp
+    (inputs positional, attributes keyword). All input tensors numpy.ndarray.
 
-    Returns:
-        (y1, mx_scale1, y2, mx_scale2)
+    Returns: (y1, mx_scale1, y2, mx_scale2)
     """
-    x = np.asarray(x)
-    if group_index is not None:
-        group_index = np.asarray(group_index).reshape(-1).astype(np.int64)
+    y1_t, s1_np, y2_t, s2_np, dst_dtype = _torch_dual_axis(
+        x,
+        group_index,
+        dict(
+            activate_left=activate_left,
+            round_mode=round_mode,
+            scale_alg=scale_alg,
+            dst_type=dst_type,
+            max_dtype_value=max_dtype_value,
+        ),
+    )
+    y1 = y1_t.cpu().numpy().astype(dst_dtype)
+    y2 = y2_t.cpu().numpy().astype(dst_dtype)
+    from en_dtypes import float8_e8m0
 
-    activate_left = bool(activate_left)
-    round_mode = str(round_mode)
-    scale_alg = int(scale_alg)
-    dst_type = int(dst_type)
-    dst_type_str = DATA_TYPE_INT_TO_STR[dst_type]
+    return [
+        y1,
+        s1_np.view(float8_e8m0),
+        y2,
+        s2_np.view(float8_e8m0),
+    ]
 
-    # 1) SwiGLU in fp32
-    x_fp32 = x.astype(np.float32)
-    swiglu_fp32 = _swiglu_mode0(x_fp32, activate_left)
 
-    # 2) round the SwiGLU intermediate to x precision (fp16/bf16) then back to
-    #    fp32, mirroring the kernel's intermediate storage precision.
-    x_dtype_name = str(x.dtype)
-    if "bfloat16" in x_dtype_name:
-        try:
-            from ml_dtypes import bfloat16 as _bf16
-
-            swiglu_fp32 = swiglu_fp32.astype(_bf16).astype(np.float32)
-        except ImportError:
-            pass
-    elif "float16" in x_dtype_name:
-        swiglu_fp32 = swiglu_fp32.astype(np.float16).astype(np.float32)
-
-    # 3) -1 axis quant (group-independent): y1 / mx_scale1
-    scale1, y1 = _mx_quantize(
-        swiglu_fp32, dst_type_str, -1, BLOCK_SIZE, round_mode, scale_alg
+# ---------------------------------------------------------------------------
+# ACLNN golden (C header parameter order)
+# ---------------------------------------------------------------------------
+def aclnn_swiglu_mx_quant_with_dual_axis_golden(
+    x,
+    groupIndexOptional=None,
+    activateLeft=True,
+    roundModeOptional="rint",
+    scaleAlg=0,
+    dstType=35,
+    maxDtypeValue=0.0,
+    y1Out=None,
+    mxscale1Out=None,
+    y2Out=None,
+    mxscale2Out=None,
+    **kwargs,
+):
+    """Golden for aclnnSwigluMxQuantWithDualAxis (GetWorkspaceSize minus
+    workspaceSize/executor)."""
+    return swiglu_mx_quant_with_dual_axis_golden(
+        x,
+        groupIndexOptional,
+        activate_left=bool(activateLeft),
+        round_mode=str(roundModeOptional) if roundModeOptional is not None else "rint",
+        scale_alg=int(scaleAlg),
+        dst_type=int(dstType),
+        max_dtype_value=float(maxDtypeValue),
     )
 
-    # 4) -2 axis quant: y2 / mx_scale2 (grouped when group_index is present)
-    if group_index is None:
-        scale2, y2 = _mx_quantize(
-            swiglu_fp32, dst_type_str, -2, BLOCK_SIZE, round_mode, scale_alg
-        )
-    else:
-        scale2, y2 = _grouped_mx_quantize(
-            swiglu_fp32,
-            group_index,
-            dst_type_str,
-            -2,
-            BLOCK_SIZE,
-            round_mode,
-            scale_alg,
-        )
 
-    return y1, scale1, y2, scale2
+# ---------------------------------------------------------------------------
+# E2E golden (torch extension signature; device representations)
+# ---------------------------------------------------------------------------
+def swiglu_mx_quant_with_dual_axis_e2e_golden(
+    x,
+    group_index=None,
+    *,
+    activate_left=True,
+    round_mode="rint",
+    scale_alg=0,
+    dst_type=40,
+    max_dtype_value=0.0,
+    **kwargs,
+):
+    """E2E golden for cann_ops_nn.swiglu_mx_quant_with_dual_axis.
+
+    dst_type accepts both the CANN codes used by the torch extension and the
+    torch ScalarType enums. Returns the four outputs in the device-side
+    representation: y1/y2 as fp8 native dtypes or FP4 packed uint8,
+    mx_scale1/2 as uint8 bit-views of E8M0.
+    """
+    dst = TORCH_DTYPE_ENUM_TO_DST_TYPE.get(int(dst_type), int(dst_type))
+    if dst not in _DST_TYPE_MAP:
+        raise ValueError(f"Unsupported dst_type: {dst_type}")
+    y1_t, s1_np, y2_t, s2_np, dst_dtype = _torch_dual_axis(
+        x,
+        group_index,
+        dict(
+            activate_left=activate_left,
+            round_mode=round_mode,
+            scale_alg=scale_alg,
+            dst_type=dst,
+            max_dtype_value=max_dtype_value,
+        ),
+    )
+    y1 = _y_to_device_repr(y1_t.cpu().numpy(), dst_dtype, dst)
+    y2 = _y_to_device_repr(y2_t.cpu().numpy(), dst_dtype, dst)
+    return [
+        np.ascontiguousarray(y1),
+        np.ascontiguousarray(s1_np),
+        np.ascontiguousarray(y2),
+        np.ascontiguousarray(s2_np),
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Input normalization
+# ---------------------------------------------------------------------------
+def dual_axis_group_index_input(x, group_index=None, *extra, **kwargs):
+    """Normalize the CUMSUM-mode group_index in place (non-decreasing, last
+    element == rows)."""
+    if group_index is None:
+        return
+    xshape = tuple(x.shape) if hasattr(x, "shape") else np.asarray(x).shape
+    rows = int(xshape[0])
+    if hasattr(group_index, "copy_"):
+        import torch
+
+        arr = torch.as_tensor(group_index).to(torch.int64)
+        arr = torch.cumsum(torch.sort(arr.clamp(min=0)).values, 0)
+        arr = torch.clamp(arr, max=rows)
+        arr[-1] = rows
+        group_index.copy_(arr)
+    else:
+        arr = np.asarray(group_index).reshape(-1).astype(np.int64)
+        arr = np.sort(np.clip(arr, 0, None))
+        arr = np.minimum(np.cumsum(arr), rows)
+        arr[-1] = rows
+        group_index[...] = arr
+
+
+# ---------------------------------------------------------------------------
+# Custom compare: four outputs, per-dtype standards
+# ---------------------------------------------------------------------------
+
+
+def _ensure_np(t):
+    """Safely convert torch tensors (incl. fp8/bf16/uint8 views) to numpy."""
+    if not hasattr(t, "detach"):
+        return np.asarray(t)
+    import torch
+
+    t = t.detach().cpu()
+    s = str(t.dtype)
+    if "float8_e4m3fn" in s:
+        return t.view(torch.uint8).numpy().view(_np_f8e4m3fn())
+    if "float8_e5m2" in s and "fnuz" not in s:
+        return t.view(torch.uint8).numpy().view(_np_f8e5m2())
+    if "e8m0" in s:
+        # torch float8_e8m0fnu device tensors map to raw E8M0 exponent bytes
+        return t.view(torch.uint8).numpy()
+    if "bfloat16" in s:
+        from ml_dtypes import bfloat16
+
+        return t.view(torch.int16).numpy().view(bfloat16)
+    if s == "torch.uint8":
+        return t.numpy()
+    return t.numpy()
+
+
+def _np_f8e4m3fn():
+    from ml_dtypes import float8_e4m3fn
+
+    return float8_e4m3fn
+
+
+def _np_f8e5m2():
+    from ml_dtypes import float8_e5m2
+
+    return float8_e5m2
+
+
+def _raw_uint8(array):
+    array = np.ascontiguousarray(np.asarray(array))
+    return np.frombuffer(array.tobytes(), dtype=np.uint8)
+
+
+def _bin_compare(actual, expected, output_name):
+    ar, er = _raw_uint8(_ensure_np(actual)), _raw_uint8(_ensure_np(expected))
+    if ar.size != er.size:
+        return {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": f"{output_name} size mismatch: {ar.size} vs {er.size}",
+        }
+    diff = int(np.count_nonzero(ar != er))
+    total = int(ar.size)
+    precision = 100.0 if total == 0 else (total - diff) / total * 100.0
+    return {
+        "pass": diff == 0,
+        "precision": precision,
+        "error_info": None
+        if diff == 0
+        else f"{output_name} mismatch: {diff}/{total} bytes",
+    }
+
+
+def _mx_element_compare(actual, expected, output_name):
+    """FP8 -> 1-LSB (requant); FP4 packed / other -> binary."""
+    a = _ensure_np(actual)
+    e = _ensure_np(expected)
+    if a.size != e.size:
+        return {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": f"{output_name} size mismatch: {a.size} vs {e.size}",
+        }
+    dtype_name = f"{a.dtype} {e.dtype}".lower()
+    if "float8_e4m3" not in dtype_name and "float8_e5m2" not in dtype_name:
+        return _bin_compare(a, e, output_name)
+    af = a.reshape(-1).astype(np.float32)
+    ef = e.reshape(-1).astype(np.float32)
+    lsb_rel = 2.0**-3 if "float8_e4m3" in dtype_name else 2.0**-2
+    step = np.maximum(np.abs(ef) * lsb_rel, 2.0**-9)
+    bad = np.abs(af - ef) > step
+    precision = 100.0 * (1.0 - bad.mean()) if bad.size else 100.0
+    return {
+        "pass": not bad.any(),
+        "precision": precision,
+        "error_info": (
+            None
+            if not bad.any()
+            else f"{output_name} >1LSB mismatch: {int(bad.sum())}/{bad.size}"
+        ),
+    }
+
+
+def _grouped_valid_pair_rows(group_index, rows):
+    """Pair rows covered by the CUMSUM-mode groups (compact placement)."""
+    gi = np.asarray(group_index).reshape(-1).astype(np.int64)
+    # device placement chain (verified on Ascend950PR): group idx works in the
+    # BLOCK-ROW domain, next group start = (cum // 64 + idx + 1) * 2; every
+    # group (including zero-row ones) advances the chain. Valid pair rows are
+    # the pairs covered by each non-empty group's blocks.
+    valid = []
+    cur = 0
+    prev = 0
+    for idx, cum in enumerate(gi):
+        cum = int(cum)
+        gv = cum - prev
+        prev = cum
+        next_start = (cum // 64 + idx + 1) * 2
+        if gv > 0:
+            n_blocks = math.ceil(gv / 32)
+            real_end = min(cur + n_blocks, next_start)
+            valid.extend(range(cur // 2, (real_end + 1) // 2))
+        cur = next_start
+    return np.asarray(sorted(set(valid)), dtype=np.int64)
+
+
+def swiglu_mx_quant_with_dual_axis_compare(
+    y1_npu,
+    mxscale1_npu,
+    y2_npu,
+    mxscale2_npu,
+    y1_gold,
+    mxscale1_gold,
+    y2_gold,
+    mxscale2_gold,
+    compare_context=None,
+    **kwargs,
+):
+    """Per-output compare: y1/y2 per dtype standard; mx_scale1 full binary
+    (-1 axis, no group gaps); mx_scale2 binary on the rows covered by
+    group_index (cumsum) or all rows when un-grouped."""
+    gi = None
+    if compare_context is not None:
+        its = compare_context.input_tensors
+        if its is not None and len(its) > 1 and its[1] is not None:
+            gi = np.asarray(its[1]).reshape(-1).astype(np.int64)
+
+    results = [
+        _mx_element_compare(y1_npu, y1_gold, "y1"),
+        _bin_compare(mxscale1_npu, mxscale1_gold, "mx_scale1"),
+        _mx_element_compare(y2_npu, y2_gold, "y2"),
+    ]
+
+    a2 = _ensure_np(mxscale2_npu)
+    e2 = _ensure_np(mxscale2_gold)
+    if gi is not None and a2.ndim == 3:
+        rows = a2.shape[1]
+        valid = _grouped_valid_pair_rows(gi, rows)
+        if valid.size and valid[-1] < a2.shape[0] and valid[-1] < e2.shape[0]:
+            results.append(_bin_compare(a2[valid], e2[valid], "mx_scale2(valid rows)"))
+        else:
+            results.append(_bin_compare(a2, e2, "mx_scale2"))
+    else:
+        results.append(_bin_compare(a2, e2, "mx_scale2"))
+    return results
+
+
+# ---------------------------------------------------------------------------
+# third_party: independent torch composition reference
+# ---------------------------------------------------------------------------
+class SwigluMxQuantWithDualAxisTorchRef:
+    """Independent third-party reference: pure torch composition.
+
+    torch.nn.functional.silu for the activation; MX block quantization with
+    plain torch ops (amax/log2/floor/pow/round) on both axes; the E8M0 byte
+    encoding is delegated to the layout encoder.
+    """
+
+    def __call__(
+        self,
+        x,
+        group_index=None,
+        *,
+        activate_left=True,
+        round_mode="rint",
+        scale_alg=0,
+        dst_type=35,
+        max_dtype_value=0.0,
+        **kwargs,
+    ):
+        import torch
+        import torch.nn.functional as F
+
+        dst = int(TORCH_DTYPE_ENUM_TO_DST_TYPE.get(dst_type, dst_type))
+        emax, mant_bits, min_exp, max_norm = _DST_TYPE_MAP[dst]
+
+        xf = x.detach().cpu()
+        in_prec = str(xf.dtype).replace("torch.", "")
+        xf = xf.float()
+        h = xf.shape[-1] // 2
+        a, b = xf[..., :h], xf[..., h:]
+        y = (F.silu(a) * b) if activate_left else (F.silu(b) * a)
+        if in_prec == "bfloat16":
+            y = y.to(torch.bfloat16).float()
+        elif in_prec == "float16":
+            y = y.to(torch.float16).float()
+
+        def quant_axis(t, axis):
+            n = t.shape[axis]
+            moved = t.movedim(axis, 0)
+            nb = (n + 31) // 32
+            pad = nb * 32 - n
+            if pad:
+                moved = F.pad(moved, (0, 0) * (moved.dim() - 1) + (0, pad))
+            blocks = moved.reshape(nb, 32, *moved.shape[1:])
+            amax = blocks.abs().amax(dim=1, keepdim=True)
+            if scale_alg == 1 and dst in (35, 36):
+                s = amax / max_norm
+                e = torch.floor(torch.log2(torch.where(s > 0, s, torch.ones_like(s))))
+                mant = s / torch.pow(2.0, e)
+                share = torch.where(mant > 1.0, e + 1, e)
+            else:
+                safe = torch.where(amax > 0, amax, torch.ones_like(amax))
+                share = torch.floor(torch.log2(safe)) - emax
+            share = share.clamp(min=-127, max=127)
+            v = blocks / torch.pow(2.0, share)
+            pe = torch.floor(torch.log2(torch.abs(v) + (v == 0).float())).clamp(
+                min=min_exp
+            )
+            v = v / torch.pow(2.0, pe) * float(2**mant_bits)
+            if round_mode in ("round", "nearest"):
+                neg = torch.signbit(v)
+                v = torch.where(
+                    neg,
+                    -torch.floor(torch.abs(v) + 0.5),
+                    torch.floor(torch.abs(v) + 0.5),
+                )
+            else:
+                v = getattr(torch, round_mode if round_mode != "rint" else "round")(v)
+            v = v / float(2**mant_bits) * torch.pow(2.0, pe)
+            v = torch.clamp(v, min=-max_norm, max=max_norm)
+            v = v.reshape(nb * 32, *moved.shape[1:])[:n]
+            return v.movedim(0, axis), share
+
+        y1, _ = quant_axis(y, -1)
+        y2, _ = quant_axis(y, -2)
+        dst_np = _numpy_mx_dtype(DATA_TYPE_INT_TO_STR[dst])
+        return [y1.numpy().astype(dst_np), y2.numpy().astype(dst_np)]
+
+
+# ---------------------------------------------------------------------------
+# TestSpec classes
+# ---------------------------------------------------------------------------
+class SwigluMxQuantWithDualAxisKernelSpec:
+    """Kernel/GEIR spec (numpy I/O)."""
+
+    golden = swiglu_mx_quant_with_dual_axis_golden
+    compare = swiglu_mx_quant_with_dual_axis_compare
+    third_party = {"torch": SwigluMxQuantWithDualAxisTorchRef}
+    tolerance = {
+        "float8_e4m3fn": {"standard": "binary_equal"},
+        "float8_e5m2": {"standard": "binary_equal"},
+        "float4_e2m1": {"standard": "binary_equal"},
+        "float4_e1m2": {"standard": "binary_equal"},
+        "float8_e8m0": {"standard": "binary_equal"},
+    }
+
+
+class AclnnSwigluMxQuantWithDualAxisSpec:
+    """ACLNN spec (C header parameter order)."""
+
+    golden = aclnn_swiglu_mx_quant_with_dual_axis_golden
+    compare = swiglu_mx_quant_with_dual_axis_compare
+    third_party = {"torch": SwigluMxQuantWithDualAxisTorchRef}
+    tolerance = SwigluMxQuantWithDualAxisKernelSpec.tolerance
+
+
+class SwigluMxQuantWithDualAxisE2ESpec:
+    """E2E spec for the in-repo torch extension entry (device representations)."""
+
+    golden = swiglu_mx_quant_with_dual_axis_e2e_golden
+    compare = swiglu_mx_quant_with_dual_axis_compare
+    third_party = {"torch": SwigluMxQuantWithDualAxisTorchRef}
+    tolerance = SwigluMxQuantWithDualAxisKernelSpec.tolerance
