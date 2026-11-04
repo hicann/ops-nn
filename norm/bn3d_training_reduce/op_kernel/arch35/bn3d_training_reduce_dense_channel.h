@@ -344,9 +344,9 @@ private:
             } else {
                 AccumulateChannelFull(c, accUb);
             }
-            // FP16 sub-R 的多个搬运块使用独立累加槽，槽间合并也必须保留舍入低位。
+            // FP16 sub-R 与普通 full-R 多 tile 的槽间合并均需保留新产生的舍入低位。
             if constexpr (IsSameType<T_X, half>::value) {
-                if (isSubR_ != 0) {
+                if (isSubR_ != 0 || !C0_PACKED) {
                     FoldAccSlots<false>(accUb);
                 } else {
                     FoldAccSlots(accUb);
@@ -1092,7 +1092,7 @@ private:
     // value = acc - comp；槽间主值相加也会产生新舍入。BF16 / FP32 路径用
     // TwoSum 把该误差同步并入 comp；旧实现只做 Σacc - Σcomp，会在大输出的临界
     // 舍入点丢 1 ULP。FP16 sub-R 配合 K=2 的短块同样保留槽间舍入误差；
-    // FP16 full-R 和 split-reduce 保持原有折叠策略。
+    // 普通 FP16 full-R 同样保留该误差；C0 full-R 和 split-reduce 保持原策略。
     // activeSlots 每趟减半。
     // 趟数由 Host 算好（foldPasses_ = log2(numAccSlots_)）传进来，__VEC_SCOPE__ 内
     // 没有任何数据依赖分支；activeSlots 逐趟减半是纯标量运算，同族 BinaryAddVF 同样写法。
