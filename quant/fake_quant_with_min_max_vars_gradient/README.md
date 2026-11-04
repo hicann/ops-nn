@@ -77,14 +77,35 @@
     <tr>
       <td>min</td>
       <td>输入</td>
-      <td><ul><li>表示量化范围的最小值（标量tensor）；</li><li>shape必须为(1,)；</li><li>作为可训练变量参与梯度更新。</li></ul></td>
+      <td><ul><li>表示量化范围的最小值（标量tensor）；</li><li>shape为rank-0标量或(1,)；</li><li>作为可训练变量参与梯度更新。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>max</td>
       <td>输入</td>
-      <td><ul><li>表示量化范围的最大值（标量tensor）；</li><li>shape必须为(1,)；</li><li>作为可训练变量参与梯度更新。</li></ul></td>
+      <td><ul><li>表示量化范围的最大值（标量tensor）；</li><li>shape为rank-0标量或(1,)；</li><li>作为可训练变量参与梯度更新。</li></ul></td>
+      <td>FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>backprops_wrt_x</td>
+      <td>输出</td>
+      <td><ul><li>表示x的梯度，经mask门控后的gradients；</li><li>shape和输入x一致。</li></ul></td>
+      <td>FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>backprops_wrt_min</td>
+      <td>输出</td>
+      <td><ul><li>表示min的梯度，即x &lt; nudgedMin的元素对应的gradients之和；</li><li>shape跟随min/max输入（rank-0标量或(1,)）。</li></ul></td>
+      <td>FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>backprops_wrt_max</td>
+      <td>输出</td>
+      <td><ul><li>表示max的梯度，即x &gt; nudgedMax的元素对应的gradients之和；</li><li>shape跟随min/max输入（rank-0标量或(1,)）。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
@@ -102,39 +123,19 @@
       <td>BOOL</td>
       <td>-</td>
     </tr>
-    <tr>
-      <td>backprops_wrt_x</td>
-      <td>输出</td>
-      <td><ul><li>表示x的梯度，经mask门控后的gradients；</li><li>shape和输入x一致。</li></ul></td>
-      <td>FLOAT</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>backprops_wrt_min</td>
-      <td>输出</td>
-      <td><ul><li>表示min的梯度，即x &lt; nudgedMin的元素对应的gradients之和；</li><li>shape固定为(1,)。</li></ul></td>
-      <td>FLOAT</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>backprops_wrt_max</td>
-      <td>输出</td>
-      <td><ul><li>表示max的梯度，即x &gt; nudgedMax的元素对应的gradients之和；</li><li>shape固定为(1,)。</li></ul></td>
-      <td>FLOAT</td>
-      <td>ND</td>
-    </tr>
   </tbody>
 </table>
 
 ## 约束说明
 
-- 输入`gradients`、`x`的数据类型仅支持FLOAT32，shape必须完全一致（rank与每维大小均相同）。
-- 输入`min`、`max`的数据类型为FLOAT32，shape必须为(1,)。
+- 输入`gradients`、`x`的数据类型仅支持FLOAT32，shape必须完全一致（rank与每维大小均相同），支持rank 0~8。
+- 输入`min`、`max`的数据类型为FLOAT32，shape为rank-0标量或(1,)；`backprops_wrt_min`/`backprops_wrt_max`输出形状跟随`min`/`max`输入。
 - `num_bits`取值范围为[2, 16]。
+- 支持空输入（numel=0）：`backprops_wrt_x`为空tensor，`backprops_wrt_min`/`backprops_wrt_max`输出为0。
 - 当`|min| + |max| < 1e-10`时走退化路径：`backprops_wrt_x`直接透传`gradients`，`backprops_wrt_min`和`backprops_wrt_max`输出为0。
 
 ## 调用说明
 
 | 调用方式 | 样例代码 | 说明 |
 | :--- | :--- | :--- |
-| GE图模式 | - | 通过GE IR构图方式调用FakeQuantWithMinMaxVarsGradient算子（[算子IR定义](op_graph/fake_quant_with_min_max_vars_gradient_proto.h)）。min/max作为标量tensor输入（可训练变量），num_bits/narrow_range作为属性。|
+| GE图模式 | [test_geir_fake_quant_with_min_max_vars_gradient](./examples/test_geir_fake_quant_with_min_max_vars_gradient.cpp) | 通过GE IR构图方式调用FakeQuantWithMinMaxVarsGradient算子（[算子IR定义](op_graph/fake_quant_with_min_max_vars_gradient_proto.h)）。min/max作为标量tensor输入（可训练变量），num_bits/narrow_range作为属性。TensorFlow通路：TF原生算子`FakeQuantWithMinMaxVarsGradient`经TF插件（名称级映射）接入，min/max支持rank-0标量。|

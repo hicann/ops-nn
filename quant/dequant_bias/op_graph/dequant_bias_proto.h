@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file fusion_ops.h
+ * \file dequant_bias_proto.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_FUSION_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_FUSION_OPS_H_
+#ifndef OPS_OP_PROTO_INC_DEQUANT_BIAS_H_
+#define OPS_OP_PROTO_INC_DEQUANT_BIAS_H_
 
 #include "graph/operator_reg.h"
 
@@ -38,7 +38,7 @@ operation.
 * The data type supports float32, bfloat16, float16, int32. Supported format "ND".
 
 * @par Attributes:
-* output_dtype: An int attr. Indicates the data type of the output out. The value is [1, 27].
+* output_dtype: An int attr. Indicates the data type of the output y. The value is [1, 27].
 * A value of 1 indicates that the output type is float16, and a value of 27 indicates that the output type is bfloat16.
 * When the weight_scale data type is float32, this parameter is set to 1; when the weight_scale data type is bfloat16,
 * this parameter is set to 27.
@@ -57,4 +57,4 @@ REG_OP(DequantBias)
     .OP_END_FACTORY_REG(DequantBias)
 } // namespace ge
 
-#endif // OPS_BUILT_IN_OP_PROTO_INC_FUSION_OPS_H_
+#endif // OPS_OP_PROTO_INC_DEQUANT_BIAS_H_

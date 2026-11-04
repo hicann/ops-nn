@@ -92,7 +92,7 @@ aclnnStatus aclnnDequantBias(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作的输入tensor，公式中的A。</td>
-    <td><ul><li>支持空Tensor。</li><li>shape为[M，N]。</li></ul></td>
+    <td><ul><li>支持空Tensor（空输入返回空输出）。</li><li>shape为[M，N]。</li></ul></td>
       <td>INT32</td>
       <td>ND</td>
       <td>2</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnDequantBias(
       <td>weightScale（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入N维度上乘法的权重，公式中的输入weight_scale。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[N]，长度与x的N维长度一致。</li></ul></td>
+      <td><ul><li>支持空Tensor（x为空时weightScale可为空）。</li><li>shape为[N]，长度与x的N维长度一致。</li></ul></td>
       <td>FLOAT，BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnDequantBias(
       <td>activateScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入M维度上乘法的权重，公式中的输入activate_scale。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[M]，长度与x的M维长度一致。</li></ul></td>
+      <td><ul><li>shape为[M]，长度与x的M维长度一致。</li><li>可选输入：传入空Tensor视为不参与计算（与传空指针等价），传入时shape须为[M]。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnDequantBias(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示反量化操作输入N维度上加法的权重，公式中的输入bias。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[N]，长度与x的N维长度一致。</li></ul></td>
+      <td><ul><li>shape为[N]，长度与x的N维长度一致。</li><li>可选输入：传入空Tensor视为不参与计算（与传空指针等价），传入时shape须为[N]。</li></ul></td>
       <td>FLOAT，BFLOAT16，FLOAT16，INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -200,8 +200,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>输入x、weightScale或输出out的数据类型不在支持的范围内。</td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-    <td rowspan="3">561002</td>
+    <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td rowspan="2">561002</td>
     <td>输入activateScaleOptional、biasOptional的数据类型不在支持的范围内。</td>
   </tr>
   <tr>

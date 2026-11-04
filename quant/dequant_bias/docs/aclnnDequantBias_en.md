@@ -94,7 +94,7 @@ aclnnStatus aclnnDequantBias(
       <td>x (aclTensor*)</td>
       <td>Input</td>
       <td>Represents the input tensor of the dequantization operation, which is A in the formula.</td>
-    <td><ul><li>Supports empty tensors.</li><li>The shape is [M, N].</li></ul></td>
+    <td><ul><li>Supports empty tensors (empty input returns empty output).</li><li>The shape is [M, N].</li></ul></td>
       <td>INT32</td>
       <td>ND</td>
       <td>2</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnDequantBias(
       <td>weightScale (aclTensor*)</td>
       <td>Input</td>
       <td>Represents the weight of the multiplication on the N dimension of the dequantization operation input, which is weight_scale in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>shape is [N], and the length is the same as the length of dimension N of x.</li></ul></td>
+      <td><ul><li>Supports empty tensors (weightScale can be empty when x is empty).</li><li>shape is [N], and the length is the same as the length of dimension N of x.</li></ul></td>
       <td>FLOAT, BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnDequantBias(
       <td>activateScaleOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Represents the weight of the multiplication on the M dimension of the dequantization operation input, which is the input activate_scale in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>shape is [M], and the length is the same as the length of dimension M of x.</li></ul></td>
+      <td><ul><li>shape is [M], and the length is the same as the length of dimension M of x.</li><li>Optional input: passing an empty Tensor means it does not participate in the computation (equivalent to passing a null pointer); when provided, the shape must be [M].</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnDequantBias(
       <td>biasOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Represents the weight added to the N dimension of the dequantization operation input, which is the input bias in the formula.</td>
-      <td><ul><li>Supports empty Tensor.</li><li>The shape is [N], and the length is the same as the N dimension length of x.</li></ul></td>
+      <td><ul><li>The shape is [N], and the length is the same as the N dimension length of x.</li><li>Optional input: passing an empty Tensor means it does not participate in the computation (equivalent to passing a null pointer); when provided, the shape must be [N].</li></ul></td>
       <td>FLOAT, BFLOAT16, FLOAT16, INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -202,8 +202,8 @@ The first-phase API performs input parameter validation and returns an error in 
     <td>The data type of input x, weightScale, or output out is not in the supported range.</td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-    <td rowspan="3">561002</td>
+    <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td rowspan="2">561002</td>
     <td>The data type of inputs activateScaleOptional and biasOptional is not in the supported range.</td>
   </tr>
   <tr>

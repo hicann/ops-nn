@@ -115,12 +115,14 @@ int main()
     ret = CreateAclTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_INT32, &input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(input); aclrtFree(inputDeviceAddr); return ret);
     ret = CreateAclTensor(activationHostData, activationShape, &activationDeviceAddr, aclDataType::ACL_FLOAT,
                           &activation);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(input); aclDestroyTensor(weight); aclrtFree(inputDeviceAddr);
+              aclrtFree(weightDeviceAddr); return ret);
     ret = CreateAclTensor(biasHostData, biasShape, &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(input); aclDestroyTensor(weight); aclDestroyTensor(activation);
+              aclrtFree(inputDeviceAddr); aclrtFree(weightDeviceAddr); aclrtFree(activationDeviceAddr); return ret);
 
     std::vector<int64_t> yShape = {40, 256};
     std::vector<int16_t> yHostData(40 * 256, 9);
@@ -128,7 +130,9 @@ int main()
     void* yDeviceAddr = nullptr;
 
     ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT16, &y);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(input); aclDestroyTensor(weight); aclDestroyTensor(activation);
+              aclDestroyTensor(bias); aclrtFree(inputDeviceAddr); aclrtFree(weightDeviceAddr);
+              aclrtFree(activationDeviceAddr); aclrtFree(biasDeviceAddr); return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
@@ -158,10 +162,16 @@ int main()
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(input);
+    aclDestroyTensor(weight);
+    aclDestroyTensor(activation);
+    aclDestroyTensor(bias);
     aclDestroyTensor(y);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
     aclrtFree(inputDeviceAddr);
+    aclrtFree(weightDeviceAddr);
+    aclrtFree(activationDeviceAddr);
+    aclrtFree(biasDeviceAddr);
     aclrtFree(yDeviceAddr);
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);
