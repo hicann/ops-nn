@@ -113,7 +113,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>-</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
-        <td>1-8</td>
+        <td>0-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -133,7 +133,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
       <td>shape需要能够<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到target</td>
       <td>与self保持一致</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
       </tr>
       <tr>
@@ -143,7 +143,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>shape需要能够<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到target</td>
         <td>与self保持一致</td>
         <td>ND</td>
-        <td>1-8</td>
+        <td>0-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -160,10 +160,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出误差。</td>
-        <td>如果reduction = 0，shape与self一致，其他情况shape为[1]</td>
+        <td>如果reduction = 0，shape与self一致；其他情况须为单元素（推荐[1]或标量）</td>
         <td>与target保持一致</td>
         <td>ND</td>
-        <td>与self保持一致</td>
+        <td>reduction = 0时与self一致；reduction ≠ 0时元素个数为1</td>
         <td>√</td>
       </tr>
       <tr>
@@ -213,18 +213,21 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
       <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self或out为空指针。</td>
+      <td>传入的self、target或out为空指针。</td>
       </tr>
       <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self、target、weightOptional和posWeightOptional的数据类型和数据格式不在支持的范围内。</td>
       </tr>
       <tr>
-      <td>self和target维度不一致。</td>
+      <td>self和target维度不一致；或reduction = 0时out与self形状不一致；或reduction ≠ 0时out元素个数不为1。</td>
       </tr>
       <tr>
       <td>weightOptional、posWeightOptional不能扩展成self/target形状。</td>
+      </tr>
+      <tr>
+      <td>reduction取值不在支持的范围内。</td>
       </tr>
     </tbody>
     </table>

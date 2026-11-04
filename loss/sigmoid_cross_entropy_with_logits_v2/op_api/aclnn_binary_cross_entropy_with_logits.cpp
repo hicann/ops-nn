@@ -85,15 +85,16 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
 
 static bool CheckReduction(int64_t reduction, const aclTensor* out)
 {
-    // 如果reduction != None，out的shape应为Scalar
-    if ((reduction != 0) && (out->GetViewShape().GetDimNum() != 0)) {
-        OP_LOGW("Reduction is %ld, out shape must be scalar, but got %s.", reduction,
-                op::ToString(out->GetViewShape()).GetString());
-    }
-
     // 判断reduction取值是否合法
     if ((reduction < 0) || (reduction > REDUCTION_MAX_NUM)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction only support [0, 1, 2], but got %ld.", reduction);
+        return false;
+    }
+
+    // mean/sum 结果为单元素；允许 []/[1]/[1,1]/... 等 numel==1 的业务写法
+    if ((reduction != Reduction::None) && (out->GetViewShape().GetShapeSize() != 1)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction is %ld, out must contain exactly 1 element, but got shape %s.",
+                reduction, op::ToString(out->GetViewShape()).GetString());
         return false;
     }
 
@@ -152,13 +153,14 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, c
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus HandleEmptyTensor(int64_t reduction, aclTensor* out, uint64_t* workspaceSize,
+static aclnnStatus HandleEmptyTensor(const aclTensor* self, int64_t reduction, aclTensor* out, uint64_t* workspaceSize,
                                      UniqueExecutor& uniqueExecutor)
 {
     aclOpExecutor* executor = uniqueExecutor.get();
 
-    // 如果reduction为None，则返回空tensor
+    // 如果reduction为None，out须与self同形；空输出无需写回
     if (reduction == Reduction::None) {
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, self->GetViewShape(), return ACLNN_ERR_PARAM_INVALID);
         *workspaceSize = 0;
         return ACLNN_SUCCESS;
     }
@@ -297,7 +299,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* s
 
     // 空tensor处理
     if (self->IsEmpty()) {
-        ret = HandleEmptyTensor(reduction, out, workspaceSize, uniqueExecutor);
+        ret = HandleEmptyTensor(self, reduction, out, workspaceSize, uniqueExecutor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
         uniqueExecutor.ReleaseTo(executor);

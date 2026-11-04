@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -296,8 +296,8 @@ TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_illegal_re
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// test wrong output shape with reduction
-TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_wrong_output_shape)
+// mean reduction with single-element out [1] is valid
+TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_mean_out_shape_one)
 {
     auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
     auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -314,4 +314,44 @@ TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_wrong_outp
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// mean reduction with out numel != 1 is invalid
+TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_mean_out_numel_invalid)
+{
+    auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto pos_weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    int64_t reduction = Reduction::Mean;
+    auto out_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+
+    auto ut = OP_API_UT(
+        aclnnBinaryCrossEntropyWithLogits,
+        INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
+        OUTPUT(out_tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// empty self with none reduction but mismatched out shape is invalid
+TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_empty_none_out_shape_mismatch)
+{
+    auto self_tensor_desc = TensorDesc({5, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto target_tensor_desc = TensorDesc({5, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto weight_tensor_desc = TensorDesc({5, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto pos_weight_tensor_desc = TensorDesc({5, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    int64_t reduction = Reduction::None;
+    auto out_tensor_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+
+    auto ut = OP_API_UT(
+        aclnnBinaryCrossEntropyWithLogits,
+        INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
+        OUTPUT(out_tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
