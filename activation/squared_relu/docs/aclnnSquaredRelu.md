@@ -101,11 +101,11 @@ aclnnStatus aclnnSquaredRelu(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>输出的张量，公式中的y。</td>
-      <td>输出的数据类型、shape、数据格式与输入的数据类型、shape、数据格式保持一致。</td>
+      <td>输出的数据类型、shape、数据格式与输入的数据类型、shape、数据格式保持一致。支持非连续Tensor，计算结果按out的逻辑视图写入。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
       <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -152,12 +152,21 @@ aclnnStatus aclnnSquaredRelu(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的input或out是空指针。</td>
+      <td>传入的input或out、workspaceSize或executor是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>input的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>out的数据类型与input不一致或不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>out与input的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>输入的维度数超过8。</td>
     </tr>
   </tbody></table>
 
@@ -212,6 +221,7 @@ aclnnStatus aclnnSquaredRelu(
 - 输入值为NaN，输出也为NaN，输入是Inf，输出也是Inf。
 - 输入是-Inf，输出是0。
 - 输入shape只支持维度1至8维，不在范围内执行报错。
+- out支持非连续Tensor，计算结果按out的逻辑视图写入。
 
 ## 调用示例
 

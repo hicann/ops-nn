@@ -522,3 +522,98 @@ TEST_F(SquaredReluTilingData, SquaredReluTilingData_06_huge_shape_maxcore)
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 40);
 }
+// 测试out与input shape不一致时tiling应拒绝，避免kernel按input元素数写出越界
+TEST_F(SquaredReluTilingData, SquaredReluTilingData_07_out_shape_mismatch)
+{
+    auto RunCase = [](gert::StorageShape& x_shape, gert::StorageShape& y_shape) {
+        string compile_info_string = R"({
+             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                               "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                               "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                               "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                               "CORE_NUM": 40}
+                               })";
+        map<string, string> soc_infos;
+        map<string, string> aicore_spec;
+        map<string, string> intrinsics;
+        GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+        fe::PlatFormInfos platform_info;
+        platform_info.Init();
+        optiling::SquaredReluCompileInfo compile_info;
+
+        std::string op_type("SquaredRelu");
+        ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+        auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+        auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+        auto kernel_holder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                          reinterpret_cast<void*>(&platform_info)})
+                                 .Outputs({&compile_info})
+                                 .Build();
+
+        ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicore_spec);
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+            "AICoreintrinsicDtypeMap", intrinsics);
+
+        ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+        auto param = gert::TilingData::CreateCap(4096);
+        auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+        auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+        ASSERT_NE(param, nullptr);
+
+        auto holder = gert::TilingContextFaker()
+                          .NodeIoNum(1, 1)
+                          .IrInstanceNum({1})
+                          .InputShapes({&x_shape})
+                          .OutputShapes({&y_shape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
+
+        gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+        ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
+
+        EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    };
+
+    // out 各维小于 input（issue #7756 场景，容量不足会越界写）
+    gert::StorageShape x_shape = {{4, 8}, {4, 8}};
+    gert::StorageShape y_shape_smaller = {{4, 4}, {4, 4}};
+    RunCase(x_shape, y_shape_smaller);
+
+    // out 元素容量小于 input 元素数
+    gert::StorageShape y_shape_dims = {{8}, {8}};
+    RunCase(x_shape, y_shape_dims);
+
+    // input 维度数超过8（与aclnn L1的维度上限约束对齐，覆盖graph路径）
+    const std::vector<int64_t> dims9(9, 1);
+    gert::Shape rank9Shape;
+    rank9Shape.SetDimNum(dims9.size());
+    for (size_t i = 0; i < dims9.size(); ++i) {
+        rank9Shape.SetDim(i, dims9[i]);
+    }
+    gert::StorageShape x_shape_rank9;
+    x_shape_rank9.MutableOriginShape() = rank9Shape;
+    x_shape_rank9.MutableStorageShape() = rank9Shape;
+    gert::StorageShape y_shape_rank9;
+    y_shape_rank9.MutableOriginShape() = rank9Shape;
+    y_shape_rank9.MutableStorageShape() = rank9Shape;
+    RunCase(x_shape_rank9, y_shape_rank9);
+}

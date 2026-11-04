@@ -94,7 +94,7 @@ cann_ops_nn.situ_glu(
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x` | Tensor | 必选 | SiTU输入，`dim`维度会被均分为门控（gate）与上路径（up）两部分。 | float16、float32、bfloat16 | 1-8维，`dim`维度为偶数 |
+| `x` | Tensor | 必选 | SiTU输入，`dim`维度会被均分为门控（gate）与上路径（up）两部分。 | float16、float32、bfloat16 | 1-25维，`dim`维度为偶数 |
 | `dim` | int | 可选 | 切分维度，取值范围`[-x.dim(), x.dim()-1]`，默认`-1`。 | - | - |
 | `beta` | float | 可选 | SiTU门控部分的缩放系数，控制tanh非线性强度。建议为非零正值，默认`1.0`。 | - | - |
 | `linear_beta` | float | 可选 | up路径线性tanh的缩放系数。大于0时对up施加有界化变换；小于等于0时up直接透传。默认`0.0`。 | - | - |

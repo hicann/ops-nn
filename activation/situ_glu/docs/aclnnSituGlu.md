@@ -138,7 +138,7 @@ aclnnStatus aclnnSituGlu(
       <td><ul><li>支持空Tensor（输出为对应空Tensor）。</li><li>shape必须在入参dim对应的维度上为偶数。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-25</td>
       <td>√</td>
     </tr>
     <tr>
@@ -188,7 +188,7 @@ aclnnStatus aclnnSituGlu(
       <td><ul><li>支持空Tensor。</li><li>shape在入参dim对应的维度上为x的一半，其他维度与x一致。</li><li>数据类型与x一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-25</td>
       <td>×</td>
     </tr>
     <tr>
@@ -238,25 +238,20 @@ aclnnStatus aclnnSituGlu(
       <td>x、out存在空指针。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_INFERSHAPE_ERROR</td>
-      <td rowspan="2">561001</td>
-      <td>x或out的shape维度不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>dim不在指定的取值范围内或x在dim对应维度上不能被2整除。</td>
+      <td>out的数据类型与x不一致。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="2">561002</td>
-      <td>out的维度数与x不一致，或out在dim对应维度上的大小不等于x的一半。</td>
+      <td>dim不在指定的取值范围内或x在dim对应维度上不能被2整除。</td>
     </tr>
     <tr>
-      <td>out的数据类型与x不匹配。</td>
+      <td>out的维度数与x不一致，或out在dim对应维度上的大小不等于x的一半。</td>
     </tr>
   </tbody></table>
 
@@ -306,6 +301,7 @@ aclnnStatus aclnnSituGlu(
 ## 约束说明
 
 - 确定性说明：aclnnSituGlu默认确定性实现。
+- 受框架约束，x的维度数最多支持25。
 
 ## 调用示例
 
