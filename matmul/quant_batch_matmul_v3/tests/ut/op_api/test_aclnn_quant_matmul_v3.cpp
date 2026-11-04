@@ -20,6 +20,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 using namespace ut_str;
 
 struct QuantBatchMatmulV3TestParam {
@@ -360,7 +361,7 @@ TEST_P(l2_QuantBatchMatmulV3_special_test, ascend_special_csv_test)
 
 TEST(QuantBatchMatmulV3EmptyTensor, NzZeroNReturnsEmptyOutputWithoutWorkspace)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (bool transposeX2 : {false, true}) {
         SCOPED_TRACE(testing::Message() << "transposeX2=" << transposeX2);
         std::vector<int64_t> x2Shape = transposeX2 ? std::vector<int64_t>{0, 32} : std::vector<int64_t>{32, 0};

@@ -19,6 +19,7 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "platform/platform_info.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace ops {
 
@@ -47,14 +48,14 @@ constexpr int64_t ALPHA_DIM_SIZE = 1;
 
 const std::initializer_list<ge::DataType> INT_OUT_TYPE_LIST = {ge::DT_INT8, ge::DT_INT4};
 
-static std::set<std::string> RotateQuant950SupportSoc = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
-
-static bool IsRotateQuant950Support()
+static bool IsRotateQuantDav3510Support()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     auto ret = fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo);
-    return (ret == ge::GRAPH_SUCCESS && RotateQuant950SupportSoc.count(platformInfo.str_info.short_soc_version) > 0);
+    return (ret == ge::GRAPH_SUCCESS && (platformInfo.soc_info.arch_type == static_cast<int32_t>(Ops::Base::DAV_3510) ||
+                                         platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9201) ||
+                                         platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9202)));
 }
 
 static bool IsGroupedRotateQuantSupport()
@@ -298,7 +299,7 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
         }
     }
 
-    if (IsRotateQuant950Support()) {
+    if (IsRotateQuantDav3510Support()) {
         if (yDtype == ge::DT_FLOAT4_E2M1 || yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2 ||
             yDtype == Ops::NN::DT_HIFLOAT4) {
             OP_CHECK_IF(CheckInputShape4Mx(context) == ge::GRAPH_FAILED,
@@ -306,7 +307,7 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
             return InferShape4Mx(context);
         } else {
             OP_LOGE(context,
-                    "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4, but got %d",
+                    "For dav3510, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4, but got %d",
                     static_cast<int32_t>(yDtype));
             return ge::GRAPH_FAILED;
         }
@@ -336,7 +337,7 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
         }
     }
 
-    if (IsRotateQuant950Support()) {
+    if (IsRotateQuantDav3510Support()) {
         if (yDtype == ge::DT_FLOAT4_E2M1) {
             context->SetOutputDataType(Y_INDEX, ge::DT_FLOAT4_E2M1);
             context->SetOutputDataType(SCALE_INDEX, ge::DT_FLOAT8_E8M0);
@@ -347,7 +348,7 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
             context->SetOutputDataType(Y_INDEX, Ops::NN::DT_HIFLOAT4);
             context->SetOutputDataType(SCALE_INDEX, Ops::NN::DT_HIFLOAT4_SCALE);
         } else {
-            OP_LOGE(context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4");
+            OP_LOGE(context, "For dav3510, y_dtype must be float4_e2m1, float8_e4m3fn, float8_e5m2 or hifloat4");
             return ge::GRAPH_FAILED;
         }
     } else {

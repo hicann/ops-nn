@@ -50,6 +50,7 @@
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "graph/graph.h"
 #include "graph/utils/type_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "acl/acl_rt.h"
@@ -86,12 +87,6 @@ constexpr int64_t kKNAlignValue = 128;
 constexpr int64_t kMaxBatchKnThreshold = 65536;
 constexpr int32_t kTargetVersionNum = 90100000;
 constexpr int64_t kPattern2InnerAxisLimit = 65536;
-constexpr char kPlatAscend910B[] = "Ascend910B";
-constexpr char kPlatAscend910_93[] = "Ascend910_93";
-constexpr char kPlatAscend950[] = "Ascend950";
-constexpr char kPlatAscend350[] = "Ascend350";
-constexpr char kPlatAscend960DT[] = "Ascend960DT";
-constexpr char kPlatAscend960PR[] = "Ascend960PR";
 
 // 3D shape 索引：x1=[batch, M, K], x2=[batch, K, N]，K 和 N 都在 index 2，
 // kKDimIdx 用于 x1，kNDimIdx 用于 x2，语义不同但值相同。
@@ -180,10 +175,11 @@ std::string GetPlatform()
     FUSION_PASS_CHECK(
         fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
         OPS_LOG_E(kPassName, "Get platform info failed."), return "");
-    static const std::set<std::string> supportPlatList = {kPlatAscend910B, kPlatAscend910_93, kPlatAscend950,
-                                                          kPlatAscend350,  kPlatAscend960DT,  kPlatAscend960PR};
+    static const std::set<int32_t> supportNpuArchList = {
+        static_cast<int32_t>(NpuArch::DAV_2201), static_cast<int32_t>(Ops::Base::DAV_3510),
+        static_cast<int32_t>(NpuArch::DAV_9201), static_cast<int32_t>(NpuArch::DAV_9202)};
     const std::string currentPlat = platformInfo.str_info.short_soc_version;
-    FUSION_PASS_CHECK(supportPlatList.count(currentPlat) == 0,
+    FUSION_PASS_CHECK(supportNpuArchList.count(platformInfo.soc_info.arch_type) == 0,
                       OPS_LOG_W(kPassName, "Fusion TransposeBatchMatMul not supported on this platform."), return "");
     return currentPlat;
 }
@@ -556,8 +552,9 @@ bool CheckBatchMatMulNodePattern1(const GNode& bmmNode, GNodePtr& transNode1, in
         FUSION_PASS_CHECK(!(supportTransNode1 || notSupportTransNode1),
                           OPS_LOG_W(kPassName, "bmm node's shape does not support fusion"), return false);
     } else {
-        // 950/350 平台不需要 KN 对齐检查，而是走 CheckOptimizedBatch 判断是否可走 matmultomul 或 iterbatch 优化模板。
-        // transNode1 必须为 null（950/350 上 A 的 transpose 由 TBE 内部处理，不需要外挂 transpose 节点）。
+        // dav_3510/350 平台不需要 KN 对齐检查，而是走 CheckOptimizedBatch 判断是否可走 matmultomul 或 iterbatch
+        // 优化模板。 transNode1 必须为 null（dav_3510/350 上 A 的 transpose 由 TBE 内部处理，不需要外挂 transpose
+        // 节点）。
         FUSION_PASS_CHECK(transNode1 == nullptr && CheckOptimizedBatch(bmmNode),
                           OPS_LOG_W(kPassName, "bmm node's shape does not support fusion."), return false);
     }
@@ -654,7 +651,7 @@ bool CheckBmmTransposePattern1(GNodePtr& transNode1, GNodePtr& transNode2)
 }
 
 // 收集 Pattern1 周围的 Transpose 节点：
-// transNode2 仅在 950/350 平台保留（B 的 transpose 在非 950/350 上不融合）；
+// transNode2 仅在 dav_3510/350 平台保留（B 的 transpose 在非 dav_3510/350 上不融合）；
 // transNode1 输出有多个消费者时丢弃（不能安全移除）。
 Status CollectTransposeNodesPattern1(const GNode& bmmNode, GNodePtr& transNode1, GNodePtr& transNode2,
                                      GNodePtr& transNode3)

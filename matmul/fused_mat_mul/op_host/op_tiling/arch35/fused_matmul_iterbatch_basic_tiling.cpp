@@ -18,6 +18,7 @@
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 using namespace optiling;
@@ -40,7 +41,7 @@ void SetNeedNdDmaDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3A
 using SetNeedNdDmaFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, SetNeedNdDmaFunc> SetNeedNdDmaFuncMap = {
-    {NpuArch::DAV_3510, SetNeedNdDmaDav3510},
+    {Ops::Base::DAV_3510, SetNeedNdDmaDav3510},
     {NpuArch::DAV_9201, SetNeedNdDmaDav3510},
     {NpuArch::DAV_9202, SetNeedNdDmaDav3510},
 };

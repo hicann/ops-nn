@@ -407,3 +407,95 @@ def unpack_float_to_fp4(weight_float, axis=-1):
         return result.reshape(new_shape)
     else:
         raise ValueError(f"Unsupported axis: {axis}")
+
+
+# ============================================================================
+# Dtype name utility
+# ============================================================================
+
+
+def get_dtype_name(tensor):
+    """Get dtype string from torch.Tensor or numpy.ndarray."""
+    if tensor is None:
+        return None
+    return str(tensor.dtype).replace("torch.", "")
+
+
+# ============================================================================
+# 950 (DAV_3510) parameter validation
+# ============================================================================
+
+
+def validate_wqbmmv2_constraints(
+    x,
+    weight,
+    antiquant_scale,
+    antiquant_offset=None,
+    quant_scale=None,
+    quant_offset=None,
+    bias=None,
+    **kwargs,
+):
+    """Validate WQBMMV2 950 (DAV_3510) parameter constraints and emit warnings.
+
+    Does not modify any tensors. Only warns about configurations that would
+    cause NPU parameter validation failures on DAV_3510.
+
+    Supports both kernel (input_formats) and aclnn (tensor_formats) kwargs.
+    """
+    testcase_name = kwargs.get("testcase_name", "unknown")
+    x_dtype = get_dtype_name(x)
+    weight_dtype = get_dtype_name(weight)
+    scale_dtype = get_dtype_name(antiquant_scale)
+    offset_dtype = get_dtype_name(antiquant_offset)
+    bias_dtype = get_dtype_name(bias)
+
+    formats = kwargs.get("input_formats") or kwargs.get("tensor_formats")
+    weight_format = formats[1] if formats and len(formats) > 1 else "ND"
+
+    is_fp4_weight = weight_dtype in ("float32",)
+    is_fp8_weight = weight_dtype in ("float8_e4m3fn", "hifloat8")
+    is_int8_weight = weight_dtype == "int8"
+
+    if quant_scale is not None:
+        warnings.warn(
+            f"[{testcase_name}] dav_3510 does not support quantScale, must be null. "
+            f"Got dtype={get_dtype_name(quant_scale)}"
+        )
+    if quant_offset is not None:
+        warnings.warn(
+            f"[{testcase_name}] dav_3510 does not support quantOffset, must be null. "
+            f"Got dtype={get_dtype_name(quant_offset)}"
+        )
+
+    if (is_fp4_weight or is_fp8_weight) and antiquant_offset is not None:
+        warnings.warn(
+            f"[{testcase_name}] dav_3510 requires antiquantOffset=null when weight is "
+            f"{weight_dtype}, got dtype={offset_dtype}"
+        )
+
+    if antiquant_scale is not None and scale_dtype != "float8_e8m0":
+        if x_dtype is not None and scale_dtype != x_dtype:
+            warnings.warn(
+                f"[{testcase_name}] dav_3510 requires antiquantScale dtype ({scale_dtype}) "
+                f"to match x dtype ({x_dtype}) when not float8_e8m0"
+            )
+
+    if antiquant_offset is not None and x_dtype is not None:
+        if offset_dtype != x_dtype:
+            warnings.warn(
+                f"[{testcase_name}] dav_3510 requires antiquantOffset dtype ({offset_dtype}) "
+                f"to match x dtype ({x_dtype})"
+            )
+
+    if bias is not None and x_dtype == "bfloat16":
+        if (is_fp4_weight or is_fp8_weight) and bias_dtype != "bfloat16":
+            warnings.warn(
+                f"[{testcase_name}] dav_3510 requires bias dtype=bfloat16 when weight is "
+                f"{weight_dtype} and x=bfloat16, got bias dtype={bias_dtype}"
+            )
+        if is_int8_weight and weight_format == "FRACTAL_NZ" and bias_dtype != "float32":
+            warnings.warn(
+                f"[{testcase_name}] dav_3510 requires bias dtype=float32 when weight is "
+                f"int8+FRACTAL_NZ and x=bfloat16, got bias dtype={bias_dtype}"
+            )

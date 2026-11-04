@@ -24,6 +24,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 using namespace ut_str;
 
 using namespace std;
@@ -331,7 +332,7 @@ TEST_P(l2_QuantBatchMatmulWeightNz_test, QuantBatchMatmulWeightNzFromCsv)
     const auto& param = GetParam();
     std::unique_ptr<op::NpuArchManager> archManager;
     if (param.arch == "DAV_3510") {
-        archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_3510);
+        archManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510);
     }
 
     const aclnnStatus aclRet = RunCaseWithMask(param);
@@ -366,7 +367,7 @@ static aclnnStatus RunInt8WeightNzScaleShapeCase(const std::vector<int64_t>& x1S
 
 TEST(QuantBatchMatmulWeightNzError, RejectsInt8UnsupportedScaleShapesBeforeTiling)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     const std::vector<std::pair<std::vector<int64_t>, std::vector<int64_t>>> scaleShapes = {
         {{128, 1}, {1, 2}}, {{128, 1}, {256}}, {{128}, {1, 2}}, {{7}, {256}}, {{128}, {7}},
     };
@@ -392,7 +393,7 @@ TEST(QuantBatchMatmulWeightNzCompatibility, KeepsLegacyTwoDimensionalX2ScaleOuts
 
 TEST(QuantBatchMatmulWeightNzEmptyTensor, ZeroNReturnsEmptyOutputWithoutWorkspace)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     const std::vector<std::pair<bool, bool>> transposeCases = {
         {false, false},
         {false, true},
@@ -447,7 +448,7 @@ TEST(QuantBatchMatmulWeightNzEmptyTensor, RejectsZeroNOutsideDAV3510)
 
 TEST(QuantBatchMatmulWeightNzEmptyTensor, RejectsZeroKWithNonEmptyOutput)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc({4, 0}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc x2Desc({0, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 0, 16, 32});
     TensorDesc x2ScaleDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
@@ -462,7 +463,7 @@ TEST(QuantBatchMatmulWeightNzEmptyTensor, RejectsZeroKWithNonEmptyOutput)
 
 TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeNormal)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2Desc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
     TensorDesc x1ScaleDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {2});
@@ -479,7 +480,7 @@ TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeNormal)
 
 TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeIllegal)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2Desc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
     TensorDesc x1ScaleDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {2});

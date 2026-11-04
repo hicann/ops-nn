@@ -275,17 +275,17 @@ TEST_P(TestQuantMatmulActivationQuantInferShape, InferDataTypeFromCsv)
     EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT8_E8M0) << "caseName=" << param.caseName;
 }
 
-static const std::vector<QuantMatmulActivationQuantInferShapeParam> kCasesParams950 = LoadParams("Ascend950");
+static const std::vector<QuantMatmulActivationQuantInferShapeParam> kCasesParamsDav3510 = LoadParams("Dav3510");
 
 TEST(QuantMatmulActivationQuantInferShapeCsv, ShouldLoadValidCases)
 {
     for (const auto& error : g_csvLoadErrors) {
         ADD_FAILURE() << error;
     }
-    EXPECT_FALSE(kCasesParams950.empty());
+    EXPECT_FALSE(kCasesParamsDav3510.empty());
 }
 
 INSTANTIATE_TEST_CASE_P(QuantMatmulActivationQuantInferShapeCsv, TestQuantMatmulActivationQuantInferShape,
-                        testing::ValuesIn(kCasesParams950));
+                        testing::ValuesIn(kCasesParamsDav3510));
 
 } // namespace

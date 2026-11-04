@@ -16,6 +16,7 @@
 #include "weight_quant_batch_matmul_v2_tiling_custom_backward_compatible.h"
 #include "op_host/tiling_key.h"
 #include "../../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 constexpr uint64_t SUPPORT_C0_SIZE = 32;
@@ -100,6 +101,6 @@ uint64_t WeightQuantBatchMatmulV2TilingCustomBackwardCompatible::GetTilingKey() 
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2TilingCustomBackwardCompatible,
-                                   static_cast<int32_t>(NpuArch::DAV_3510), CUSTOM_DEPRECATED_PRIORITY);
+                                   static_cast<int32_t>(Ops::Base::DAV_3510), CUSTOM_DEPRECATED_PRIORITY);
 
 } // namespace optiling

@@ -14,6 +14,7 @@
 #include <vector>
 #include <array>
 #include <fstream>
+#include <memory>
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_quant_matmul_v4.h"
@@ -23,6 +24,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 using namespace ut_str;
 
 using namespace std;
@@ -209,9 +211,9 @@ static vector<QuantBatchMatmulV4TestParam> GetParams(const string& socVersion)
     return params;
 }
 
-static const vector<QuantBatchMatmulV4TestParam>& GetParams950Cache()
+static const vector<QuantBatchMatmulV4TestParam>& GetParamsDav3510Cache()
 {
-    static const vector<QuantBatchMatmulV4TestParam> params = GetParams("Ascend950");
+    static const vector<QuantBatchMatmulV4TestParam> params = GetParams("Dav3510");
     return params;
 }
 
@@ -273,7 +275,7 @@ protected:
     static void TearDownTestCase() {}
 };
 
-class l2_QuantBatchMatmulV4_test_950 : public testing::TestWithParam<QuantBatchMatmulV4TestParam> {
+class l2_QuantBatchMatmulV4_test_dav3510 : public testing::TestWithParam<QuantBatchMatmulV4TestParam> {
 protected:
     static void SetUpTestCase() {}
 
@@ -288,13 +290,19 @@ protected:
 
 static void TestOneParamCase(const QuantBatchMatmulV4TestParam& param)
 {
-    SocVersion socVersion = SocVersion::ASCEND950;
-    if (param.socVersion == "Ascend310P3") {
-        socVersion = SocVersion::ASCEND310P;
-    } else if (param.socVersion == "Ascend910B2") {
-        socVersion = SocVersion::ASCEND910B;
+    std::unique_ptr<op::SocVersionManager> socVersionManager;
+    std::unique_ptr<op::NpuArchManager> npuArchManager;
+    if (param.socVersion == "Dav3510") {
+        npuArchManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510);
+    } else {
+        SocVersion socVersion = SocVersion::ASCEND910B;
+        if (param.socVersion == "Ascend310P3") {
+            socVersion = SocVersion::ASCEND310P;
+        } else if (param.socVersion == "Ascend910B2") {
+            socVersion = SocVersion::ASCEND910B;
+        }
+        socVersionManager = std::make_unique<op::SocVersionManager>(socVersion);
     }
-    op::SocVersionManager socVersionManager(socVersion);
     TensorDesc x1_desc = TensorDesc(param.x1, ACL_INT8, ACL_FORMAT_ND, param.x1_stride);
     TensorDesc x2_desc = TensorDesc(param.x2, ACL_INT8, ACL_FORMAT_ND, param.x2_stride);
     TensorDesc scale_desc = TensorDesc(param.scale, param.scaleType, ACL_FORMAT_ND);
@@ -342,7 +350,7 @@ TEST_P(l2_QuantBatchMatmulV4_test_310P, ascend310P_generalTest)
     QuantBatchMatmulV4TestParam param = GetParam();
     TestOneParamCase(param);
 }
-TEST_P(l2_QuantBatchMatmulV4_test_950, ascend950_generalTest)
+TEST_P(l2_QuantBatchMatmulV4_test_dav3510, dav3510_generalTest)
 {
     QuantBatchMatmulV4TestParam param = GetParam();
     TestOneParamCase(param);
@@ -351,13 +359,17 @@ TEST_P(l2_QuantBatchMatmulV4_test_950, ascend950_generalTest)
 TEST_P(l2_QuantBatchMatmulV4_special_test, ascend_special_csv_test)
 {
     const auto& param = GetParam();
-    SocVersion socVersion = SocVersion::ASCEND910B;
-    if (param.socVersion == "Ascend310P3") {
-        socVersion = SocVersion::ASCEND310P;
-    } else if (param.socVersion == "Ascend950") {
-        socVersion = SocVersion::ASCEND950;
+    std::unique_ptr<op::SocVersionManager> socVersionManager;
+    std::unique_ptr<op::NpuArchManager> npuArchManager;
+    if (param.socVersion == "Dav3510") {
+        npuArchManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510);
+    } else {
+        SocVersion socVersion = SocVersion::ASCEND910B;
+        if (param.socVersion == "Ascend310P3") {
+            socVersion = SocVersion::ASCEND310P;
+        }
+        socVersionManager = std::make_unique<op::SocVersionManager>(socVersion);
     }
-    op::SocVersionManager socVersionManager(socVersion);
     TensorDesc x1_desc = param.x1StorageShape.empty() ?
                              TensorDesc(param.x1, param.x1Type, param.x1Format).ValueRange(-1, 1) :
                              TensorDesc(param.x1, param.x1Type, param.x1Format, {1, 1}, 0, param.x1StorageShape)
@@ -432,8 +444,8 @@ TEST_P(l2_QuantBatchMatmulV4_special_test, ascend_special_csv_test)
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test, testing::ValuesIn(GetParams("Ascend910B2")));
 INSTANTIATE_TEST_SUITE_P(Ascend310P_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_310P,
                          testing::ValuesIn(GetParams("Ascend310P3")));
-INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_950,
-                         testing::ValuesIn(GetParams("Ascend950")));
+INSTANTIATE_TEST_SUITE_P(Dav3510_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_dav3510,
+                         testing::ValuesIn(GetParams("Dav3510")));
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV4Special, l2_QuantBatchMatmulV4_special_test,
                          testing::ValuesIn(GetSpecialParams()));
 
@@ -457,10 +469,10 @@ static void TestMultiThread(const QuantBatchMatmulV4TestParam* params, size_t te
     }
 }
 
-TEST_F(l2_QuantBatchMatmulV4_test_950, ascend950_multi_thread)
+TEST_F(l2_QuantBatchMatmulV4_test_dav3510, dav3510_multi_thread)
 {
-    const auto& params950 = GetParams950Cache();
-    TestMultiThread(params950.data(), params950.size(), 3);
+    const auto& paramsDav3510 = GetParamsDav3510Cache();
+    TestMultiThread(paramsDav3510.data(), paramsDav3510.size(), 3);
 }
 
 static aclnnStatus Run310PPertokenBiasCase(aclDataType biasType)
@@ -480,7 +492,7 @@ static aclnnStatus Run310PPertokenBiasCase(aclDataType biasType)
 
 TEST(QuantBatchMatmulV4EmptyTensor, NzZeroNReturnsEmptyOutputWithoutWorkspace)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (bool transposeX2 : {false, true}) {
         SCOPED_TRACE(testing::Message() << "transposeX2=" << transposeX2);
         std::vector<int64_t> x2Shape = transposeX2 ? std::vector<int64_t>{0, 32} : std::vector<int64_t>{32, 0};

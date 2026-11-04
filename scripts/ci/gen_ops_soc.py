@@ -127,6 +127,19 @@ def extract_foreach_opdef_configs(content):
     return list(set(configs))
 
 
+ARCH_TO_SOC = {
+    "DAV_1001": ["ascend910"],
+    "DAV_2002": ["ascend310p"],
+    "DAV_2201": ["ascend910b", "ascend910_93"],
+    "DAV_3002": ["ascend310b"],
+    "DAV_3102": ["ascend610lite"],
+    "DAV_3510": ["ascend950", "ascend350"],
+    "DAV_5102": ["mc62"],
+    "DAV_9201": ["ascend960dt"],
+    "DAV_9202": ["ascend960pr"],
+}
+
+
 def extract_traditional_aicore_configs(content):
     """
     提取传统的 AICore 配置名称
@@ -144,6 +157,12 @@ def extract_traditional_aicore_configs(content):
         for match in matches:
             if match not in configs:
                 configs.append(match)
+
+    arch_matches = re.findall(r"AddConfigByArch.*?(DAV_[0-9]+)", content)
+    for arch in arch_matches:
+        for soc in ARCH_TO_SOC.get(arch, []):
+            if soc not in configs:
+                configs.append(soc)
 
     return configs
 

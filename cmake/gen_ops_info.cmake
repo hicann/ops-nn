@@ -565,7 +565,15 @@ endfunction()
 # check op_type is or not support in compute_unit
 # ######################################################################################################################
 function(check_op_supported OP_NAME COMPUTE_UNIT OP_SUPPORTED_COMPUTE_UNIT)
-  set(cmd "find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep '\.AddConfig(\\s*\"${COMPUTE_UNIT}\"' {} \;")
+  set(_arch_pattern "")
+  if(COMMAND get_npu_arch_by_soc_version)
+    get_npu_arch_by_soc_version("${COMPUTE_UNIT}" _check_npu_arch)
+    if(_check_npu_arch)
+      string(TOUPPER "${_check_npu_arch}" _check_npu_arch_upper)
+      set(_arch_pattern "\\|AddConfigByArch.*${_check_npu_arch_upper}")
+    endif()
+  endif()
+  set(cmd "find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep '\.AddConfig(\\s*\"${COMPUTE_UNIT}\"${_arch_pattern}' {} \;")
   execute_process(
     COMMAND bash -c "${cmd}"
     OUTPUT_VARIABLE op_supported_compute_unit

@@ -48,7 +48,7 @@ using namespace ge;
 using namespace ut_util;
 using namespace optiling;
 
-static const string kAscend950CompileInfo = R"({
+static const string kDav3510CompileInfo = R"({
     "hardware_info": {
         "BT_SIZE": 4096, "load3d_constraints": "0",
         "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -192,7 +192,7 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
 
 static const QuantMatmulActivationQuantTilingCsvLoadResult& GetParamsLoadResult()
 {
-    static const QuantMatmulActivationQuantTilingCsvLoadResult kCases = LoadParams("Ascend950");
+    static const QuantMatmulActivationQuantTilingCsvLoadResult kCases = LoadParams("Dav3510");
     return kCases;
 }
 
@@ -286,8 +286,7 @@ static void SetupTilingParse(const string& opType, const string& compileInfoStr,
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                            intrinsics);
-    map<string, string> socVersionInfos = {
-        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    map<string, string> socVersionInfos = {{{"NpuArch", "3510"}}};
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
@@ -361,7 +360,7 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
 
     fe::PlatFormInfos platformInfo;
     QuantBatchMatmulV3CompileInfo compileInfo;
-    SetupTilingParse(opType, kAscend950CompileInfo, platformInfo, compileInfo);
+    SetupTilingParse(opType, kDav3510CompileInfo, platformInfo, compileInfo);
 
     auto tilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(tilingData, nullptr);
@@ -371,9 +370,9 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    GetPlatFormInfos(kAscend950CompileInfo.c_str(), socInfos, aicoreSpec, intrinsics);
+    GetPlatFormInfos(kDav3510CompileInfo.c_str(), socInfos, aicoreSpec, intrinsics);
     aicoreSpec["cube_freq"] = "1800";
-    map<string, string> socVersionInfos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    map<string, string> socVersionInfos = {{"NpuArch", "3510"}};
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)

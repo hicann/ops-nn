@@ -20,7 +20,7 @@
 
 using namespace std;
 
-class QBMIIA_950_hif8 : public testing::TestWithParam<QuantBatchMatmulInplaceAddTestParam> {
+class QBMIIA_dav3510_hif8 : public testing::TestWithParam<QuantBatchMatmulInplaceAddTestParam> {
 protected:
     static void SetUpTestCase()
     {
@@ -35,11 +35,11 @@ protected:
     }
 };
 
-TEST_P(QBMIIA_950_hif8, generalTest)
+TEST_P(QBMIIA_dav3510_hif8, generalTest)
 {
     QuantBatchMatmulInplaceAddTestParam param = GetParam();
-    QuantBatchMatmulInplaceAddTestUtils::TestOneParamCase950(param, s_funcMapApt);
+    QuantBatchMatmulInplaceAddTestUtils::TestOneParamCaseDav3510(param, s_funcMapApt);
 }
 
-INSTANTIATE_TEST_CASE_P(QBMIIA950, QBMIIA_950_hif8,
-                        testing::ValuesIn(QuantBatchMatmulInplaceAddTestUtils::GetParams("Ascend950", "HIF8_FLOW")));
+INSTANTIATE_TEST_CASE_P(QBMIIA_DAV_3510, QBMIIA_dav3510_hif8,
+                        testing::ValuesIn(QuantBatchMatmulInplaceAddTestUtils::GetParams("Dav3510", "HIF8_FLOW")));

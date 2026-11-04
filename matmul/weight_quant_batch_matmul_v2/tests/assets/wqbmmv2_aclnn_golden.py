@@ -156,7 +156,7 @@ def _aclnn_customize_inputs(
     antiquantGroupSize=None,
     **kwargs,
 ):
-    """ACLNN customize_inputs：e8m0 NaN 修复 + 950 约束校验，in-place 写回。
+    """ACLNN customize_inputs：e8m0 NaN 修复 + dav_3510 约束校验，in-place 写回。
 
     ACLNN 路径框架不捕获 customize_inputs 返回值，必须 in-place 修改。
     """

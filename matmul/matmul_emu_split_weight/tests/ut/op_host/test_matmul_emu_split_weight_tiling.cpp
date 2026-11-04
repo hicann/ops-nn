@@ -58,6 +58,23 @@ protected:
     void TearDown() override { std::cout << "TilingMatmulEmuSplitWeight TearDown" << std::endl; }
 };
 
+static bool IsDav3510CompileInfo(const string& compileInfo)
+{
+    return compileInfo.find(R"("npuArch": "dav3510")") != string::npos ||
+           compileInfo.find(R"("npuArch":"dav3510")") != string::npos;
+}
+
+static void GetPlatFormInfosDavAware(const string& compileInfo, map<string, string>& socInfos,
+                                     map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                                     map<string, string>& socVersion)
+{
+    GetPlatFormInfos(compileInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    if (IsDav3510CompileInfo(compileInfo)) {
+        socVersion.clear();
+        socVersion["NpuArch"] = "3510";
+    }
+}
+
 static string get_map_string(const std::map<string, string>& m, const string& key)
 {
     auto it = m.find(key);
@@ -83,7 +100,7 @@ TEST_P(TilingMatmulEmuSplitWeight, matmul_emu_split_weight_tiling)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(param.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("MatmulEmuSplitWeight"), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatmulEmuSplitWeight")->tiling;
@@ -155,25 +172,25 @@ TEST_P(TilingMatmulEmuSplitWeight, matmul_emu_split_weight_tiling)
     }
 }
 
-static const string COMPILE_INFO_950 = R"({
+static const string COMPILE_INFO_DAV_3510 = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
     "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
     "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "CORE_NUM": 32, "npuArch": "dav3510",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 64}
 })";
 
-// Ascend950 with non-1:2 aic:aiv ratio (cube=32, vector=48), used to verify the 控核 restriction
-static const string COMPILE_INFO_950_BAD_RATIO = R"({
+// DAV_3510 with non-1:2 aic:aiv ratio (cube=32, vector=48), used to verify the 控核 restriction
+static const string COMPILE_INFO_DAV_3510_BAD_RATIO = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
     "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
     "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "CORE_NUM": 32, "npuArch": "dav3510",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 48}
 })";
@@ -199,7 +216,7 @@ static const string COMPILE_INFO_910_93 = R"({
 static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
     // 0: BF16 input + FP32 output, normal shape
     {"bf16_fp32_128_256_128",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},
@@ -213,7 +230,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_SUCCESS},
     // 1: small shape
     {"bf16_fp32_small_16_64",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{16, 64}, {16, 64}},
      {{64, 64}, {64, 64}},
      {{64, 64}, {64, 64}},
@@ -227,7 +244,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_SUCCESS},
     // 2: large shape
     {"bf16_fp32_large_1024",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{1024, 1024}, {1024, 1024}},
      {{1024, 1024}, {1024, 1024}},
      {{1024, 1024}, {1024, 1024}},
@@ -241,7 +258,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_SUCCESS},
     // 3: K mismatch (should fail)
     {"k_mismatch_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{255, 128}, {255, 128}},
      {{255, 128}, {255, 128}},
@@ -255,7 +272,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 4: wLow shape mismatch (should fail)
     {"wlow_shape_mismatch_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 127}, {256, 127}},
@@ -269,7 +286,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 5: invalid scale (should fail)
     {"invalid_scale_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},
@@ -283,7 +300,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 6: unsupported yDtype (should fail)
     {"invalid_ydtype_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},
@@ -297,7 +314,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 7: unsupported dtype FP16 (should fail)
     {"fp16_unsupported_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},
@@ -311,7 +328,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 8: 3D shape (should fail)
     {"3d_shape_fail",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{2, 128, 256}, {2, 128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},
@@ -325,7 +342,7 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      ge::GRAPH_FAILED},
     // 9: aicNum:aivNum not 1:2 (cube=32, vector=48) -> 控核校验失败 (IsCapable returns false)
     {"core_ratio_not_1to2_fail",
-     COMPILE_INFO_950_BAD_RATIO,
+     COMPILE_INFO_DAV_3510_BAD_RATIO,
      {{128, 256}, {128, 256}},
      {{256, 128}, {256, 128}},
      {{256, 128}, {256, 128}},

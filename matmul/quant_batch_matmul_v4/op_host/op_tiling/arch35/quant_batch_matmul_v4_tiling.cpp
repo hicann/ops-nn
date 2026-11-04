@@ -35,6 +35,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_key.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using AscendC::BLOCK_CUBE;
 using namespace Ops::NN;
@@ -326,7 +327,7 @@ bool QuantBatchMatmulV4TilingBase::CheckCoreNum() const
                                                "aicNum and aivNum must be greater than 0");
         return false;
     }
-    uint32_t expectedCoreRatio = npuArch_ == NpuArch::DAV_3510 ? CORE_RATIO_2 : CORE_RATIO_1;
+    uint32_t expectedCoreRatio = npuArch_ == Ops::Base::DAV_3510 ? CORE_RATIO_2 : CORE_RATIO_1;
     if (aivNum_ != expectedCoreRatio * aicNum_) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "aicNum, aivNum",
                                                std::to_string(aicNum_) + ", " + std::to_string(aivNum_),

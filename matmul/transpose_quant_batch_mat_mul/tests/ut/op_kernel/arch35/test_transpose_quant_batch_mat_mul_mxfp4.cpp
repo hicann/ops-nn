@@ -10,7 +10,7 @@
 
 /*!
  * \file test_transpose_quant_batch_mat_mul_mxfp4.cpp
- * \brief Kernel UT for the Ascend950 MXFP4 TENSOR_LEVEL MX tensor API path.
+ * \brief Kernel UT for the DAV_3510 MXFP4 TENSOR_LEVEL MX tensor API path.
  */
 
 #define DTYPE_X1 __fp4e2m1x2

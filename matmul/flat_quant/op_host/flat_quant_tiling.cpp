@@ -22,6 +22,7 @@
 #include "flat_quant_tiling.h"
 #include "platform/soc_spec.h"
 #include "common/inc/op_host/op_const_def_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 // Tiling阶段框架契约类失败(框架对象为空/平台信息异常/策略失败)统一上报EZ1008, 不再生成EZ9999内部码
@@ -79,7 +80,7 @@ constexpr uint64_t WORK_SPACE_SIZE_APT = 48 * 1024 * 1024;
 // ascend950/350(DAV_3510)与ascend960dt/960pr(DAV_9201/DAV_9202)共用arch35 kernel路径
 static bool IsDavidFamilyArch(const NpuArch npuArch)
 {
-    return npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+    return npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
 }
 
 class FlatQuantTiling {
@@ -705,7 +706,7 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
                                "TilingPrepare: got an invalid aicNum " + std::to_string(compileInfo->aicNum) +
                                    " from the platform info; check the SoC platform query and the OPP installation"),
         return ge::GRAPH_FAILED);
-    if (compileInfo->npuArch == NpuArch::DAV_3510) {
+    if (compileInfo->npuArch == Ops::Base::DAV_3510) {
         OP_CHECK_IF(compileInfo->aivNum != (compileInfo->aicNum * 2), // aivNum must == aicNum*2
                     ReportTilingStageError(context->GetNodeName(),
                                            "TilingPrepare: aivNum " + std::to_string(compileInfo->aivNum) +

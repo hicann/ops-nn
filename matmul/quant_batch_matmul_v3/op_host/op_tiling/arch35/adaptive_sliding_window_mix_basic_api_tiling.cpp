@@ -22,6 +22,7 @@
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 #include "util/math_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 constexpr uint32_t DB_SIZE = 2;
@@ -39,7 +40,7 @@ constexpr uint64_t L2_ALIGN_SIZE = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t BASEK_LIMIT = 4095UL;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_BASIC_API_ASW;
 } // namespace
 

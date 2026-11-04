@@ -25,6 +25,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace ut_str;
 
@@ -66,11 +67,11 @@ struct QuantBatchMatmulV5TestParam {
     aclFormat x2Format = aclFormat::ACL_FORMAT_ND;
 };
 
-class l2_QuantBatchMatmulV5_test_950 : public testing::TestWithParam<QuantBatchMatmulV5TestParam> {
+class l2_QuantBatchMatmulV5_test_dav3510 : public testing::TestWithParam<QuantBatchMatmulV5TestParam> {
 protected:
-    static void SetUpTestCase() { cout << "l2_QuantBatchMatmulV5_test_950 SetUp" << endl; }
+    static void SetUpTestCase() { cout << "l2_QuantBatchMatmulV5_test_dav3510 SetUp" << endl; }
 
-    static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV5_test_950 TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV5_test_dav3510 TearDown" << endl; }
 };
 
 class l2_QuantBatchMatmulV5_test_910B2 : public testing::TestWithParam<QuantBatchMatmulV5TestParam> {
@@ -187,9 +188,9 @@ static std::vector<QuantBatchMatmulV5TestParam> LoadParamsFromCsv(const string& 
 static void TestOneParamCase(const QuantBatchMatmulV5TestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
-    const bool isDav3510 = param.caseName.rfind("ascend950", 0) == 0 || param.caseName.rfind("ascend3510", 0) == 0 ||
+    const bool isDav3510 = param.caseName.rfind("dav3510", 0) == 0 || param.caseName.rfind("ascend3510", 0) == 0 ||
                            param.caseName.rfind("ascend910D", 0) == 0;
-    op::NpuArchManager archManager(isDav3510 ? NpuArch::DAV_3510 : NpuArch::DAV_2201);
+    op::NpuArchManager archManager(isDav3510 ? Ops::Base::DAV_3510 : NpuArch::DAV_2201);
     vector<int64_t> stride;
     void* deviceAddr = nullptr;
     aclTensor* x1Desc = nullptr;
@@ -279,7 +280,7 @@ static void TestOneParamCase(const QuantBatchMatmulV5TestParam& param)
     std::cout << "end case " << param.caseName << std::endl;
 }
 
-TEST_P(l2_QuantBatchMatmulV5_test_950, ascend950_generalTest)
+TEST_P(l2_QuantBatchMatmulV5_test_dav3510, dav3510_generalTest)
 {
     QuantBatchMatmulV5TestParam param = GetParam();
     TestOneParamCase(param);
@@ -291,11 +292,11 @@ TEST_P(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_generalTest)
     TestOneParamCase(param);
 }
 
-static const std::vector<QuantBatchMatmulV5TestParam> kCasesParams950 = LoadParamsFromCsv("Ascend950");
+static const std::vector<QuantBatchMatmulV5TestParam> kCasesParamsDav3510 = LoadParamsFromCsv("Dav3510");
 static const std::vector<QuantBatchMatmulV5TestParam> kCasesParams910B2 = LoadParamsFromCsv("Ascend910B2");
 
-INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_950,
-                         testing::ValuesIn(kCasesParams950));
+INSTANTIATE_TEST_SUITE_P(Dav3510_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_dav3510,
+                         testing::ValuesIn(kCasesParamsDav3510));
 INSTANTIATE_TEST_SUITE_P(Ascend910B2_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_910B2,
                          testing::ValuesIn(kCasesParams910B2));
 
@@ -324,9 +325,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_multi_thread)
     TestMultiThread(kCasesParams910B2.data(), kCasesParams910B2.size(), 3);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_k_mismatch_invalid)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_k_mismatch_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({33, 16}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
@@ -340,9 +341,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_k_mismatch_invalid)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_x1_min_dim_invalid)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_x1_min_dim_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({32}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
@@ -476,9 +477,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, npu_arch_error)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_RUNTIME_ERROR);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_mx_scale_transpose_contiguous)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_mx_scale_transpose_contiguous)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({128, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
     TensorDesc x1scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {2, 32, 1});
@@ -493,9 +494,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_mx_scale_transpose_contiguous)
     EXPECT_NE(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W4F_TCG_fp16_ok)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_A8W4F_TCG_fp16_ok)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
     TensorDesc x2scale_desc = TensorDesc({16, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -509,9 +510,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W4F_TCG_fp16_ok)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W8_special_output_reshape)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_A8W8_special_output_reshape)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({1, 32}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 1}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
@@ -526,9 +527,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W8_special_output_reshape)
     EXPECT_NE(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_special_case)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_get_transpose_attr_special_case)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND, {1, 16});
     TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
@@ -543,9 +544,9 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_special_case
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_swap_case)
+TEST_F(l2_QuantBatchMatmulV5_test_dav3510, dav3510_get_transpose_attr_swap_case)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND, {1, 16});
     TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);

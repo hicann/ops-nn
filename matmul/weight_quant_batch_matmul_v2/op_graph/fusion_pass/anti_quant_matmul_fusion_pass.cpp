@@ -61,6 +61,7 @@
 #include "common/op_graph/fusion_pass/weight_quant_fusion_utils.h"
 #include "common/inc/op_graph/cube_utils/cube_fp16_t.h"
 #include "anti_quant_matmul_fusion_pass.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace ops {
 using ge::fusion::GraphUniqPtr;
@@ -149,13 +150,13 @@ static bool CheckPlatform(bool& supportV1)
     }
     const int32_t npuArch = platformInfo.soc_info.arch_type;
     const std::set<int32_t> supportNpuArchList = {static_cast<int32_t>(NpuArch::DAV_2201),
-                                                  static_cast<int32_t>(NpuArch::DAV_3510)};
+                                                  static_cast<int32_t>(Ops::Base::DAV_3510)};
     const std::string soc = platformInfo.str_info.short_soc_version;
     if (supportNpuArchList.count(npuArch) == 0) {
         OP_LOGW(kFusedOpType, "The fusion pass is not supported on SoC [%s]", soc.c_str());
         return false;
     }
-    supportV1 = (npuArch != static_cast<int32_t>(NpuArch::DAV_3510));
+    supportV1 = (npuArch != static_cast<int32_t>(Ops::Base::DAV_3510));
     return true;
 }
 

@@ -20,6 +20,7 @@
 #include "matmul_v3_tiling_key.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -84,7 +85,7 @@ protected:
     MatMulV3Args args_;
     bool isSelfSlice_ = false;
     int64_t kBValue_ = 0;
-    NpuArch arch_ = NpuArch::DAV_3510;
+    NpuArch arch_ = Ops::Base::DAV_3510;
 
 private:
     bool ExtractNonContiguousDims(int64_t (&mkDims)[2], int64_t (&knDims)[2]);

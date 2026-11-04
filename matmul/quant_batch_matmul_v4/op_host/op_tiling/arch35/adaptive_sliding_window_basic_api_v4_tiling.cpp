@@ -25,6 +25,7 @@
 #include "quant_batch_matmul_v4_checker_for_mmads8s4.h"
 #include "quant_batch_matmul_v4_tiling.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using Ops::NN::MathUtil;
 
@@ -124,7 +125,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
     auto* platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    if (!(ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510)) {
+    if (!(ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_3510)) {
         return false;
     }
     if (!CheckPertileDtype()) {

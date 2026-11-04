@@ -18,6 +18,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 using namespace optiling;
@@ -92,7 +93,7 @@ bool CheckBatchDav3510(const MatMulV3Args& args)
 using CheckBatchFunc = bool (*)(const MatMulV3Args&);
 
 const static std::map<NpuArch, CheckBatchFunc> CheckBatchFuncMap = {
-    {NpuArch::DAV_3510, CheckBatchDav3510},
+    {Ops::Base::DAV_3510, CheckBatchDav3510},
     {NpuArch::DAV_9201, CheckBatchDav3510},
     {NpuArch::DAV_9202, CheckBatchDav3510},
 };

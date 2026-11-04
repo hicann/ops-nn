@@ -20,6 +20,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 using namespace op;
@@ -518,7 +519,7 @@ TEST_F(l2_addmm_test, addmm_alpha_zero_success)
 
 TEST_F(l2_addmm_test, addmm_alpha_zero_beta_zero_success)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto mat1 = TensorDesc({4, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto mat2 = TensorDesc({4, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -657,7 +658,7 @@ TEST_F(l2_addmm_test, case_inplace_fp16_4mm4)
 
 TEST_F(l2_addmm_test, inplace_addmm_alpha_zero_beta_zero_success)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({4, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto mat1 = TensorDesc({4, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto mat2 = TensorDesc({4, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -672,7 +673,7 @@ TEST_F(l2_addmm_test, inplace_addmm_alpha_zero_beta_zero_success)
 }
 
 // inplace FP16 515*512
-TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_01)
+TEST_F(l2_addmm_test, dav3510_inplace_fp16_512mm512_01)
 {
     auto self = TensorDesc({512, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -686,11 +687,11 @@ TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_01)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // inplace FP16 515*512
-TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_02)
+TEST_F(l2_addmm_test, dav3510_inplace_fp16_512mm512_02)
 {
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -704,11 +705,11 @@ TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_02)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // inplace FP16 515*512 c和y类型FP32  a和b类型FP16  ALLOW_FP32_DOWN_PRECISION
-TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_03)
+TEST_F(l2_addmm_test, dav3510_inplace_fp16_512mm512_03)
 {
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -722,13 +723,13 @@ TEST_F(l2_addmm_test, ascend950_inplace_fp16_512mm512_03)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // out == fp32 && BF16 && ALLOW_FP32_DOWN_PRECISION => invalid
-TEST_F(l2_addmm_test, ascend950_inplace_bf16_512mm512_02)
+TEST_F(l2_addmm_test, dav3510_inplace_bf16_512mm512_02)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({512, 512}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -741,13 +742,13 @@ TEST_F(l2_addmm_test, ascend950_inplace_bf16_512mm512_02)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // out == fp32 && BF16 && KEEP_DTYPE => success
-TEST_F(l2_addmm_test, ascend950_inplace_bf16_512mm512_03)
+TEST_F(l2_addmm_test, dav3510_inplace_bf16_512mm512_03)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({512, 512}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -760,11 +761,11 @@ TEST_F(l2_addmm_test, ascend950_inplace_bf16_512mm512_03)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // inplace fp32
-TEST_F(l2_addmm_test, ascend950_inplace_fp32_512mm512_allow_fp32_down_precision)
+TEST_F(l2_addmm_test, dav3510_inplace_fp32_512mm512_allow_fp32_down_precision)
 {
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -778,11 +779,11 @@ TEST_F(l2_addmm_test, ascend950_inplace_fp32_512mm512_allow_fp32_down_precision)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // inplace fp32
-TEST_F(l2_addmm_test, ascend950_inplace_fp32_512mm512_keep_dtype)
+TEST_F(l2_addmm_test, dav3510_inplace_fp32_512mm512_keep_dtype)
 {
     auto self = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -796,7 +797,7 @@ TEST_F(l2_addmm_test, ascend950_inplace_fp32_512mm512_keep_dtype)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install 950 kernel
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);  // no install dav_3510 kernel
 }
 
 // 空tensor2
@@ -864,10 +865,10 @@ TEST_F(l2_addmm_test, case_empty_tensor_3)
              ACL_FORMAT_ND, {-5, 5}, beta, alpha, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, cubeMathType);
 }
 
-// 接口整改异常用例 - 950
-TEST_F(l2_addmm_test, addmm_950_fp16_fp16_fp32_keep_dtype)
+// 接口整改异常用例 - dav_3510
+TEST_F(l2_addmm_test, addmm_dav3510_fp16_fp16_fp32_keep_dtype)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -883,9 +884,9 @@ TEST_F(l2_addmm_test, addmm_950_fp16_fp16_fp32_keep_dtype)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_addmm_test, addmm_950_bf16_bf16_fp32_keep_dtype)
+TEST_F(l2_addmm_test, addmm_dav3510_bf16_bf16_fp32_keep_dtype)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -901,9 +902,9 @@ TEST_F(l2_addmm_test, addmm_950_bf16_bf16_fp32_keep_dtype)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_addmm_test, addmm_950_fp16_fp16_use_fp32_add_with_2d_self)
+TEST_F(l2_addmm_test, addmm_dav3510_fp16_fp16_use_fp32_add_with_2d_self)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -919,9 +920,9 @@ TEST_F(l2_addmm_test, addmm_950_fp16_fp16_use_fp32_add_with_2d_self)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_addmm_test, addmm_950_bf16_bf16_use_fp32_add_with_2d_self)
+TEST_F(l2_addmm_test, addmm_dav3510_bf16_bf16_use_fp32_add_with_2d_self)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -937,9 +938,9 @@ TEST_F(l2_addmm_test, addmm_950_bf16_bf16_use_fp32_add_with_2d_self)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_addmm_test, addmm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -955,9 +956,9 @@ TEST_F(l2_addmm_test, addmm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -973,9 +974,9 @@ TEST_F(l2_addmm_test, addmm_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -991,9 +992,9 @@ TEST_F(l2_addmm_test, addmm_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1009,9 +1010,9 @@ TEST_F(l2_addmm_test, addmm_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1027,9 +1028,9 @@ TEST_F(l2_addmm_test, addmm_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_dav3510_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1155,10 +1156,10 @@ TEST_F(l2_addmm_test, addmm_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
 }
 
 // 原地操作
-// 接口整改异常用例 - 950
-TEST_F(l2_addmm_test, addmm_inplace_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - dav_3510
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1174,9 +1175,9 @@ TEST_F(l2_addmm_test, addmm_inplace_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_inplace_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1192,9 +1193,9 @@ TEST_F(l2_addmm_test, addmm_inplace_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_inplace_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1210,9 +1211,9 @@ TEST_F(l2_addmm_test, addmm_inplace_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_inplace_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1301,9 +1302,9 @@ TEST_F(l2_addmm_test, addmm_910b_bf16_bf16_keep_dtype)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_addmm_test, addmm_inplace_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1319,9 +1320,9 @@ TEST_F(l2_addmm_test, addmm_inplace_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmm_test, addmm_inplace_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmm_test, addmm_inplace_dav3510_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);

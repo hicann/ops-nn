@@ -18,12 +18,13 @@
 #include "quant_matmul_activation_mx_quant_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/quant_matmul_activation_quant_tiling_key.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace QuantMatmulActivationQuantArch35TilingKey;
 
 namespace {
 constexpr int32_t MX_BASIC_API_TILING_PRIORITY = 0;
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510)};
 } // namespace
 
 namespace optiling {

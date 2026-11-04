@@ -69,12 +69,12 @@ constexpr uint64_t ESTIMATED_SCALE_K = 4096UL;
 constexpr uint32_t SCALER_FACTOR_MAX = 127U;
 constexpr uint32_t SCALER_FACTOR_MIN = 1U;
 // Fixed Ascend 950 theoretical parameters used by the DAV_3510 performance models.
-constexpr double ASCEND_950_MAX_HBM_BW_TBPS = 4.0;
-constexpr double ASCEND_950_MAX_L2_BW_TBPS = 5.2;
+constexpr double DAV_3510_MAX_HBM_BW_TBPS = 4.0;
+constexpr double DAV_3510_MAX_L2_BW_TBPS = 5.2;
 constexpr double MTE2_BW_UTILIZATION = 0.9;
 // One TB/s transfers 10^6 bytes per microsecond.
 constexpr double BYTES_PER_US_PER_TBPS = 1000.0 * 1000.0;
-constexpr double ASCEND_950_CUBE_FREQ_MHZ = 1650.0;
+constexpr double DAV_3510_CUBE_FREQ_MHZ = 1650.0;
 constexpr uint64_t B8_CUBE_MACS_PER_CYCLE = 16UL * 32UL * 16UL;
 } // namespace qmmv3_tiling_const
 

@@ -116,7 +116,7 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
                           "cube_core_cnt": 24, "vector_core_cnt": 48, "core_type_list": "CubeCore,VectorCore"}
                           })";
     } else {
-        // Ascend950 platform setup. Keep Intrinsic_mmad as s8s4 to trigger supportMmadS8S4 branch.
+        // DAV_3510 platform setup. Keep Intrinsic_mmad as s8s4 to trigger supportMmadS8S4 branch.
         compileInfoStr = R"({
         "hardware_info" : {
             "BT_SIZE" : 4096,
@@ -136,8 +136,7 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
             "cube_core_cnt": 32,
             "vector_core_cnt": 64,
             "core_type_list": "CubeCore,VectorCore",
-            "socVersion" : "Ascend950",
-            "NpuArch" : "3510"
+            "npuArch" : "dav3510"
         }})";
     }
 
@@ -150,6 +149,8 @@ static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApi
     aicoreSpec["cube_freq"] = "1800";
     if (param.socVersion == "Ascend910B") {
         version["Short_SoC_version"] = "Ascend910B";
+    } else {
+        version["NpuArch"] = "3510";
     }
 
     fe::PlatFormInfos platformInfo;
@@ -239,8 +240,8 @@ TEST_P(TestQuantBatchMatmulV4PergroupBasicApiTiling, ShapeGuard)
     }
 }
 
-// Guard framework for Ascend950/Ascend910B:
-// 1) Ascend950 keeps Intrinsic_mmad=s8s4.
+// Guard framework for DAV_3510/Ascend910B:
+// 1) DAV_3510 keeps Intrinsic_mmad=s8s4.
 // 2) Ascend910B maps Short_SoC_version=Ascend910B.
 // 3) Verify by only changing x1/x2 dims below.
 // 4) Add future guard cases in this table.

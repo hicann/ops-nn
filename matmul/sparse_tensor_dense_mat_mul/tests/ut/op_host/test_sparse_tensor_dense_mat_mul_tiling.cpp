@@ -72,8 +72,7 @@ void TestSparseTensorDenseMatMulTiling(gert::StorageShape& x1_indices_shape, ger
     map<string, string> intrinsics;
     map<string, string> version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    version["Short_SoC_version"] = "Ascend950";
-    version["SoC_version"] = "Ascend950PR_9589";
+    version["NpuArch"] = "3510";
 
     // platform info
     fe::PlatFormInfos platform_info;

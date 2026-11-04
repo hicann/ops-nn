@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 namespace ops {
 static constexpr int32_t DEFAULT_SCALE_ALG = 0;
 static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
@@ -72,16 +73,16 @@ public:
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
         this->Attr("scale_alg").AttrType(OPTIONAL).Int(DEFAULT_SCALE_ALG);
         this->Attr("dst_type_max").AttrType(OPTIONAL).Float(DEFAULT_DST_TYPE_MAX);
-        OpAICoreConfig config950;
-        config950.DynamicCompileStaticFlag(true)
+        OpAICoreConfig configDav3510;
+        configDav3510.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend950", config950);
-        this->AICore().AddConfig("ascend350", config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, configDav3510);
+        this->AICore().AddConfig("ascend350", configDav3510);
     }
 };
 

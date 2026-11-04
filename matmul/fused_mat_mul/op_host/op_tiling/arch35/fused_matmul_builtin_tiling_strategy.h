@@ -21,6 +21,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_strategy.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_strategy.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace fused_matmul {
@@ -38,7 +39,7 @@ constexpr int32_t BATCH_STREAM_K_INHERITED_FROM_BMMV3 = 8;
 constexpr int32_t INPUT_K_EQUAL_ZERO_INHERITED_FROM_BMMV3 = 9;
 
 const static std::map<NpuArch, std::vector<int32_t>> FusedMatMulPrioritiesMap = {
-    {NpuArch::DAV_3510,
+    {Ops::Base::DAV_3510,
      {strategy::INPUT_K_EQUAL_ZERO_INHERITED_FROM_BMMV3, strategy::BATCH_STREAM_K_INHERITED_FROM_BMMV3,
       strategy::MERGE_BATCH_BASICAPI_INHERITED_FROM_BMMV3, strategy::ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3,
       strategy::AL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3, strategy::BL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3,

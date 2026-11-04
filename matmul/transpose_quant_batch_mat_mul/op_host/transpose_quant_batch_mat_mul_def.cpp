@@ -14,6 +14,7 @@
 #include "register/op_def_registry.h"
 #include "version/metadef_version.h"
 #include "../../../common/inc/op_host/op_const_def_nn.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 // HIFP4 类型(DT_HIFLOAT4/DT_HIFLOAT4_SCALE)仅 CANN 9.3.0 及以上支持，旧版本 ops info 校验不识别该枚举值
@@ -617,7 +618,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("softsync.flag", "true");
-        this->AICore().AddConfig("ascend950", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
         this->AICore().AddConfig("ascend960dt", aicore_config);
         this->AICore().AddConfig("ascend960pr", aicore_config);
         this->AICore().AddConfig("ascend350", aicore_config);

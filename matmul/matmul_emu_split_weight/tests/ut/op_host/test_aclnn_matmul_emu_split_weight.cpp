@@ -19,6 +19,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../op_api/matmul_emu_split_weight.cpp"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace std;
@@ -350,10 +351,10 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend910_93_matmul_emu_split_weight_bf1
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-// // Ascend950 正常场景: UT环境缺少平台信息，tiling返回错误
-// TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_tiling_fail)
+// // DAV_3510 正常场景: UT环境缺少平台信息，tiling返回错误
+// TEST_F(l2_matmul_emu_split_weight_test, DAV_3510_matmul_emu_split_weight_tiling_fail)
 // {
-//     SocVersionManager versionManager(SocVersion::ASCEND950);
+//     op::NpuArchManager archManager(Ops::Base::DAV_3510);
 //     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
 //     TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
 //     TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
@@ -369,13 +370,13 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend910_93_matmul_emu_split_weight_bf1
 //     EXPECT_NE(aclRet, ACLNN_SUCCESS);
 // }
 
-// Ascend950 非连续 tensor: 实际验证非连续输入在真实库（LD_PRELOAD 模式）下处理失败，
+// DAV_3510 非连续 tensor: 实际验证非连续输入在真实库（LD_PRELOAD 模式）下处理失败，
 // 返回 ACLNN_ERR_INNER_NULLPTR (561103)。注意：手动运行不预加载真实库时，
 // stub 的 Contiguous 直接返回原 tensor，会返回 ACLNN_SUCCESS 导致本用例 FAIL。
 // build.sh 的 POST_BUILD 带 LD_PRELOAD=libopapi_math.so，稳定返回 561103。
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_non_contiguous_fail)
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_non_contiguous_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND, {256 * 2, 1}, 0, {128, 256});
     TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
@@ -392,9 +393,9 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_non_co
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_bf16_fp32_success)
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_bf16_fp32_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
@@ -410,9 +411,9 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_bf16_f
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_l0_infershape_k_mismatch_returns_nullptr)
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_l0_infershape_k_mismatch_returns_nullptr)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto executor = CREATE_EXECUTOR();
     ASSERT_NE(executor.get(), nullptr);
 
@@ -434,9 +435,9 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_l0_inf
 }
 
 // 直接调用 L0 且成功（K 匹配），覆盖 DA:45 (return out)
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_l0_infershape_success)
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_l0_infershape_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto executor = CREATE_EXECUTOR();
     ASSERT_NE(executor.get(), nullptr);
 
@@ -459,9 +460,9 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_l0_inf
 
 // 转置张量视图，使 IsTransposeLastTwoDims 返回 true，覆盖 aclnn 中 CreateView 分支
 // (DA:253,255,263,265,273,275)
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_transpose_path)
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_transpose_path)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     // x shape {128,256}, strides {1,128} → IsTransposeLastTwoDims 要求 viewStrides[0]==1 &&
     // viewStrides[1]==viewShape[0] 128 == viewShape[0]==128 → true
     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND, {1, 128}, 0, {256, 128});

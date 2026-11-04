@@ -23,6 +23,7 @@
 #include "base_block_calculator.h"
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 constexpr uint64_t MIN_REDUCED_STEP_K = 2UL;
@@ -31,7 +32,7 @@ constexpr uint64_t MAX_REDUCED_STEP_K = 8UL;
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
 
 const std::vector<int32_t> supportedNpuArch = {
-    static_cast<int32_t>(NpuArch::DAV_3510), static_cast<int32_t>(NpuArch::DAV_9201),
+    static_cast<int32_t>(Ops::Base::DAV_3510), static_cast<int32_t>(NpuArch::DAV_9201),
     static_cast<int32_t>(NpuArch::DAV_9202), static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::CUBE_BASIC_API_ASW;
 } // namespace
@@ -69,7 +70,7 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowCubeBasicAPITiling::IsWithoutBatchTilingData() const
 {
     // The software S4S4 fallback needs AIV preprocessing and the full tiling data layout.
-    return (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+    return (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
            IsTensorApiEnabled() && inputParams_.batchC == 1UL && !isSupportS4S4_;
 }
 
@@ -133,7 +134,7 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetKernelType() const
 uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     switch (npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
         case NpuArch::DAV_9201: {
             const bool tensorApiEnabled = IsTensorApiEnabled();
             if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && !tensorApiEnabled) {
@@ -163,7 +164,7 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetBatchMode() const
 
 bool AdaptiveSlidingWindowCubeBasicAPITiling::CalcBasicBlock()
 {
-    if (compileInfo_.npuArch != NpuArch::DAV_3510 && compileInfo_.npuArch != NpuArch::DAV_9201 &&
+    if (compileInfo_.npuArch != Ops::Base::DAV_3510 && compileInfo_.npuArch != NpuArch::DAV_9201 &&
         compileInfo_.npuArch != NpuArch::DAV_9202) {
         return AdaptiveSlidingWindowTiling::CalcBasicBlock();
     }
@@ -244,7 +245,7 @@ ge::graphStatus AdaptiveSlidingWindowCubeBasicAPITiling::DoLibApiTiling()
 
 void AdaptiveSlidingWindowCubeBasicAPITiling::CalculateNBufferNum()
 {
-    if (compileInfo_.npuArch != NpuArch::DAV_3510) {
+    if (compileInfo_.npuArch != Ops::Base::DAV_3510) {
         CalculateLegacyNBufferNum();
         return;
     }
@@ -324,10 +325,10 @@ AdaptiveSlidingWindowCubeBasicAPITiling::CubeL1Plan AdaptiveSlidingWindowCubeBas
     }
 
     // Candidates 2-4 only pay off when the roofline is MTE2-bound; A-full-load is always treated as bound.
-    const bool isMte2Bound = ctx.isAFullLoad || IsMte2Bound(qmmv3_tiling_const::ASCEND_950_MAX_HBM_BW_TBPS *
-                                                                qmmv3_tiling_const::MTE2_BW_UTILIZATION,
-                                                            qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS *
-                                                                qmmv3_tiling_const::MTE2_BW_UTILIZATION);
+    const bool isMte2Bound = ctx.isAFullLoad ||
+                             IsMte2Bound(
+                                 qmmv3_tiling_const::DAV_3510_MAX_HBM_BW_TBPS * qmmv3_tiling_const::MTE2_BW_UTILIZATION,
+                                 qmmv3_tiling_const::DAV_3510_MAX_L2_BW_TBPS * qmmv3_tiling_const::MTE2_BW_UTILIZATION);
     if (!isMte2Bound) {
         return plan;
     }
@@ -534,7 +535,7 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateAFullLoadStatus()
                                       aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                                       adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     bool selectAFullLoad = isAFullLoadCandidate;
-    if (selectAFullLoad && compileInfo_.npuArch == NpuArch::DAV_3510) {
+    if (selectAFullLoad && compileInfo_.npuArch == Ops::Base::DAV_3510) {
         const bool aFullSelectsMultiBuffer = CanSelectMultiBufferByL1Plan(true, realBaseMSize, adaptiveWin_.baseN);
         if (!aFullSelectsMultiBuffer) {
             const bool nonFullSelectsMultiBuffer = CanSelectMultiBufferByL1Plan(false, adaptiveWin_.baseM,

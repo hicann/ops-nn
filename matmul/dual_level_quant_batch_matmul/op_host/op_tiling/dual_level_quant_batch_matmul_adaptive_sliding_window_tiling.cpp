@@ -18,6 +18,7 @@
 #include "../../op_kernel/dual_level_quant_batch_matmul_tiling_data.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include "error_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace platform_ascendc;
 using namespace optiling::tool;
@@ -358,7 +359,7 @@ bool DualLevelQuantBatchMatmulTilingASW::OptimizeEdgeBasicBlock()
                    matmulInfo_.level1GroupSize == MICROSCALE_GROUP_SIZE;
     bool balanceAfterFixp = matmulInfo_.kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024);
     bool isInnerAxisAlign = GetSizeWithDataType(matmulInfo_.kSize, matmulInfo_.x1Dtype) % MTE2_CACHELINE_SIZE == 0UL;
-    adaptiveWin_.windowLen = compileInfo_.npuArch == NpuArch::DAV_3510 ? WINDOW_LEN : WINDOW_LEN_FOR_96;
+    adaptiveWin_.windowLen = compileInfo_.npuArch == Ops::Base::DAV_3510 ? WINDOW_LEN : WINDOW_LEN_FOR_96;
     if (mBaseTail > 0UL && !matmulInfo_.transA &&
         (isInnerAxisAlign || (matmulInfo_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         if (!GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain)) {

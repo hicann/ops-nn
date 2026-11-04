@@ -24,6 +24,7 @@
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using Ops::NN::SwapLastTwoDimValue;
@@ -95,7 +96,7 @@ static aclnnStatus CheckSocValid()
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
         case NpuArch::DAV_9201:
             break;
         default: {

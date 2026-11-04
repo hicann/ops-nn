@@ -15,6 +15,8 @@
 
 #include "common/inc/op_host/op_const_def_nn.h"
 #include "register/op_def_registry.h"
+#include "version/metadef_version.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class QuantBatchMatmulV3 : public OpDef {
@@ -325,8 +327,8 @@ public:
 
         this->AICore().AddConfig("ascend310p", config_310p);
 
-        OpAICoreConfig config950;
-        config950.Input("x1")
+        OpAICoreConfig configDav3510;
+        configDav3510.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
                        ge::DT_INT8,          ge::DT_INT8,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E4M3FN,
@@ -433,7 +435,7 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .IgnoreContiguous();
 
-        config950.Input("x2")
+        configDav3510.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
                        ge::DT_INT8,          ge::DT_INT8,          ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
@@ -570,7 +572,7 @@ public:
                  ge::FORMAT_ND})
             .IgnoreContiguous();
 
-        config950.Input("scale")
+        configDav3510.Input("scale")
             .ParamType(REQUIRED)
             .DataType(
                 {ge::DT_UINT64,      ge::DT_UINT64,      ge::DT_BF16,        ge::DT_FLOAT,       ge::DT_BF16,
@@ -698,7 +700,7 @@ public:
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                  ge::FORMAT_ND});
 
-        config950.Input("offset")
+        configDav3510.Input("offset")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -785,7 +787,7 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config950.Input("bias")
+        configDav3510.Input("bias")
             .ParamType(OPTIONAL)
             .DataType(
                 {ge::DT_INT32, ge::DT_INT32,   ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT,
@@ -873,7 +875,7 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config950.Input("pertoken_scale")
+        configDav3510.Input("pertoken_scale")
             .ParamType(OPTIONAL)
             .DataType(
                 {ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,       ge::DT_FLOAT,
@@ -971,7 +973,7 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config950.Output("y")
+        configDav3510.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
                        ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,
@@ -1062,15 +1064,15 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        config950.DynamicCompileStaticFlag(true)
+        configDav3510.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend950", config950);
-        this->AICore().AddConfig("ascend350", config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, configDav3510);
+        this->AICore().AddConfig("ascend350", configDav3510);
 
         OpAICoreConfig config960;
         config960.Input("x1")

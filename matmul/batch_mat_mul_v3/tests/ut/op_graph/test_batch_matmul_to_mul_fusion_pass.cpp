@@ -59,21 +59,22 @@ void SetPlatformInfo910B()
     PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
-void SetPlatformInfo91095()
+void SetPlatformInfoDav3510()
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
     platformInfo.soc_info.ai_core_cnt = 24;
+    platformInfo.soc_info.arch_type = 3510;
     platformInfo.ai_core_spec.ub_size = 192 * 1024;
     platformInfo.ai_core_spec.l0_a_size = 64 * 1024;
     platformInfo.ai_core_spec.l0_b_size = 64 * 1024;
     platformInfo.ai_core_spec.l0_c_size = 1024 * 1024;
     platformInfo.ai_core_spec.l1_size = 1024 * 1024;
-    optionalInfo.soc_version = "Ascend910_95";
+    optionalInfo.soc_version = "dav3510";
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_fix_pipe_l0c2out"] = {"float16"};
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_out2l1_nd2nz"] = {"float16"};
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
@@ -385,13 +386,13 @@ TEST_F(BatchMatMul2MulFusionPassTest, bmmToMulFusionKNot1NotChangedFail)
     EXPECT_EQ(CountNodes(graph, "Mul"), 0);
 }
 
-// ===================== 91095 platform =====================
+// ===================== dav_3510 platform =====================
 
-TEST_F(BatchMatMul2MulFusionPassTest, bmmToMulFusion91095NotChangedFail)
+TEST_F(BatchMatMul2MulFusionPassTest, bmmToMulFusionDav3510NotChangedFail)
 {
-    SetPlatformInfo91095();
-    auto graph = BuildMatMulLikeGraph("bmmToMul91095", "BatchMatMul", {4800, 300, 1}, {4800, 1, 256}, {4800, 300, 256},
-                                      DT_FLOAT, false, false);
+    SetPlatformInfoDav3510();
+    auto graph = BuildMatMulLikeGraph("bmmToMulDav3510", "BatchMatMul", {4800, 300, 1}, {4800, 1, 256},
+                                      {4800, 300, 256}, DT_FLOAT, false, false);
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
     BatchMatMul2MulFusionPass pass;

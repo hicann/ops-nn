@@ -19,6 +19,7 @@
 #include "securec.h"
 #include "common/inc/error_util.h"
 #include "version/ge-compiler_version.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "acl/acl_rt.h"
 
 using namespace ge;
@@ -117,13 +118,14 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
 // 判断当前ARCH是否为DAV_3510或后续兼容版本，后续新增兼容ARCH在此函数内追加
 bool IsNpuArch3510Series()
 {
-    static const std::set<std::string> arch35SocList = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
         return false;
     }
-    return arch35SocList.count(platformInfo.str_info.short_soc_version) > 0;
+    return (platformInfo.soc_info.arch_type == static_cast<int32_t>(Ops::Base::DAV_3510) ||
+            platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9201) ||
+            platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9202));
 }
 
 constexpr int32_t kGeCompilerVersion900 = 90000000;

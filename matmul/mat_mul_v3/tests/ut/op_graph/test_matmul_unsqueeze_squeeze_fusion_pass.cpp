@@ -492,7 +492,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulBoth1dFp16FusionSuccess)
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulBoth1dDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulBoth1dDequant", "BatchMatMul", {16}, {16}, {16}, DT_INT8, false, false, {},
                                       {}, {true, DT_FLOAT16, {1}});
@@ -557,7 +557,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulWithDequantNoL0c2outFusionSuc
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulWithDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulWithDequantL0c2out", "BatchMatMul", {1536}, {1536, 1000}, {1000}, DT_INT8,
                                       false, false, {}, {}, {true, DT_FLOAT16, {1}});
@@ -579,7 +579,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulWithDequantL0c2outFusionSucce
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulBoth1dWithDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulBoth1dDequantL0c2out", "BatchMatMul", {-1}, {-1}, {-1}, DT_INT8, false,
                                       false, {}, {}, {true, DT_FLOAT16, {1}});
@@ -598,7 +598,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulBoth1dWithDequantL0c2outFusio
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulV2WithBiasDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulV2BiasDequant", "MatMulV2", {1536}, {1536, 1000}, {1000}, DT_INT8, false,
                                       false, {1000}, {}, {true, DT_FLOAT16, {1}});
@@ -620,7 +620,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulV2WithBiasDequantL0c2outFusio
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulV2WithOffsetWDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulV2OffsetWDequant", "MatMulV2", {1536}, {1536, 1000}, {1000}, DT_INT8,
                                       false, false, {}, {1}, {true, DT_FLOAT16, {1}});
@@ -642,7 +642,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulV2WithOffsetWDequantL0c2outFu
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulX2OneDimDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("matMulX2OneDimDequant", "MatMul", {1000, 1536}, {1536}, {1000}, DT_INT8, false,
                                       false, {}, {}, {true, DT_FLOAT16, {1}});
@@ -664,7 +664,7 @@ TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, matMulX2OneDimDequantL0c2outFusionS
 
 TEST_F(MatMulUnsqueezeSqueezeFusionPassTest, batchMatMulX2OneDimDequantL0c2outFusionSuccess)
 {
-    SetPlatformInfoWithL0c2out("Ascend950", "Ascend950");
+    SetPlatformInfoWithL0c2out("dav3510", "dav3510");
 
     auto graph = BuildMatMulLikeGraph("batchMatMulX2OneDimDequant", "BatchMatMul", {8, 1000, 1536}, {1536}, {8, 1000},
                                       DT_INT8, false, false, {}, {}, {true, DT_FLOAT16, {1}});

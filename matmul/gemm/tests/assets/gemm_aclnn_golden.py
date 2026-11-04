@@ -9,9 +9,9 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""ACLNN-level golden for aclnnGemm (Ascend950).
+"""ACLNN-level golden for aclnnGemm (DAV_3510).
 
-On Ascend950 aclnnGemm shares the aclnnAddmm computation graph:
+On DAV_3510 aclnnGemm shares the aclnnAddmm computation graph:
     out = alpha * op(A) @ op(B) + beta * C,  op(X) = X.T if trans else X,
 so the golden reuses AclnnAddmmTestSpec with pre-transposed inputs.
 """

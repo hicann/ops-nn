@@ -13,6 +13,7 @@
 #include "error_util.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include <cmath>
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 static constexpr uint32_t INDEX_X = 0;
@@ -56,14 +57,13 @@ ge::graphStatus MatmulEmuSplitWeightTiling::GetPlatformInfo()
     OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "platformInfo is null"),
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    OP_TILING_CHECK(
-        socVersion != platform_ascendc::SocVersion::ASCEND950 && socVersion != platform_ascendc::SocVersion::ASCEND350,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "MatmulEmuSplitWeight only supports Ascend950 and Ascend350, "
-                              "current socVersion is %d",
-                              static_cast<int32_t>(socVersion)),
-        return ge::GRAPH_FAILED);
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    OP_TILING_CHECK(npuArch != Ops::Base::DAV_3510,
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
+                                          "MatmulEmuSplitWeight only supports dav3510, "
+                                          "current npuArch is %d",
+                                          static_cast<int32_t>(npuArch)),
+                    return ge::GRAPH_FAILED);
     aicNum_ = ascendcPlatform.GetCoreNumAic();
     aivNum_ = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1Size_);

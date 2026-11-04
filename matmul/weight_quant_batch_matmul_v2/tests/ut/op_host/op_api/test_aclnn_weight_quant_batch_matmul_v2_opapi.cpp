@@ -18,6 +18,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 using namespace op;
@@ -84,10 +85,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_v3_success)
     EXPECT_TRUE(ret == ACLNN_SUCCESS || ret == ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_nz_invalid_weight_nd)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_nz_invalid_weight_nd)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -178,10 +178,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_nz_func_wrong_plat
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_RUNTIME_ERROR);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int4_nz_transposed)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int4_nz_transposed)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({32, 64}, ACL_INT4, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -192,10 +191,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int4_nz_transposed)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_large_k)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int8_nz_large_k)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 65536}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({32, 65536}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -220,10 +218,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_uint64_scale_y_not
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bias_wrong_dtype)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int8_nz_bias_wrong_dtype)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({4, 2, 16, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -235,10 +232,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bias_wrong_
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_pergroup_invalid)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_fp8_pergroup_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -249,10 +245,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_pergroup_invali
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pergroup_invalid)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int8_nz_pergroup_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc antiquantScale = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -263,10 +258,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pergroup_in
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pertensor_scale_invalid)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int8_nz_pertensor_scale_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc antiquantScale = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -277,10 +271,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pertensor_s
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_nz_weight_invalid)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_fp8_nz_weight_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc antiquantScale = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -291,10 +284,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_nz_weight_inval
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bf16_bias_invalid)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_int8_nz_bf16_bias_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc antiquantScale = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
@@ -306,10 +298,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bf16_bias_i
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_float_weight_preprocess)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_float_weight_preprocess)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -320,10 +311,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_float_weight_prepro
     ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_float_weight_uint8_scale_preprocess)
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, dav3510_float_weight_uint8_scale_preprocess)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc antiquantScale = TensorDesc({64}, ACL_UINT8, ACL_FORMAT_ND);

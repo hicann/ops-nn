@@ -19,6 +19,7 @@
 #include "matmul_v3_tiling_helper.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include "platform/platform_infos_def.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using Ops::NN::MathUtil;
 namespace {
@@ -151,7 +152,7 @@ void ResetBaseDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args
 using ResetBaseFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, ResetBaseFunc> ResetBaseFuncMap = {
-    {NpuArch::DAV_3510, ResetBaseDav3510},
+    {Ops::Base::DAV_3510, ResetBaseDav3510},
     {NpuArch::DAV_9201, ResetBaseDav3510},
     {NpuArch::DAV_9202, ResetBaseDav3510},
 };
@@ -229,7 +230,7 @@ using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const Mat
                                            fe::PlatFormInfos*);
 
 const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
-    {NpuArch::DAV_3510, GetL0C2OutDav3510},
+    {Ops::Base::DAV_3510, GetL0C2OutDav3510},
     {NpuArch::DAV_9201, GetL0C2OutDav9201},
     {NpuArch::DAV_9202, GetL0C2OutDav9201},
 };
@@ -322,7 +323,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 bool IsMatMulTiling(const MatMulV3Args& args, NpuArch npuArch)
 {
-    return args.batchInfo == nullptr || (npuArch == NpuArch::DAV_3510 && args.batchInfo->batchA == 1UL &&
+    return args.batchInfo == nullptr || (npuArch == Ops::Base::DAV_3510 && args.batchInfo->batchA == 1UL &&
                                          args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
 }
 
@@ -356,7 +357,7 @@ uint64_t MatMulV3TilingHelper::CalcUbDB(const MatmulV3CompileInfo& compileInfo, 
 uint64_t MatMulV3TilingHelper::GetAivToAicRatio(const MatmulV3CompileInfo& compileInfo)
 {
     // 3510: AIV数量为AIC的2倍；9201/9202: AIV与AIC数量相等
-    return compileInfo.npuArch == NpuArch::DAV_3510 ? NUM_TWO : NUM_ONE;
+    return compileInfo.npuArch == Ops::Base::DAV_3510 ? NUM_TWO : NUM_ONE;
 }
 
 void MatMulV3TilingHelper::CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,

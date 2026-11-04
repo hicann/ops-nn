@@ -14,6 +14,7 @@
  */
 #include "common/inc/op_host/op_const_def_nn.h"
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
@@ -96,7 +97,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend950", aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig);
         this->AICore().AddConfig("ascend350", aicConfig);
 
         // ascend960dt/ascend960pr(v121): 独立 config, 复用 arch35 kernel路径

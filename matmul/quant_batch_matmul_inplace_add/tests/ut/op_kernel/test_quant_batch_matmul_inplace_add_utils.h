@@ -281,8 +281,8 @@ public:
         return sizeof(float);
     }
 
-    static void TestOneParamCase950(const QuantBatchMatmulInplaceAddTestParam& param,
-                                    decltype(s_funcMapApt)& funcMapApt)
+    static void TestOneParamCaseDav3510(const QuantBatchMatmulInplaceAddTestParam& param,
+                                        decltype(s_funcMapApt)& funcMapApt)
     {
         int64_t batchA = param.batchA > 0 ? param.batchA : 1L;
         int64_t batchB = param.batchB > 0 ? param.batchB : 1L;

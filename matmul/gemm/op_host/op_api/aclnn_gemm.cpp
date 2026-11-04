@@ -31,6 +31,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -58,7 +59,7 @@ static inline bool CheckNotNull(const aclTensor* A, const aclTensor* B, const ac
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
+    return (npuArch == NpuArch::DAV_2201) || (npuArch == Ops::Base::DAV_3510);
 }
 
 static inline bool CheckFormat(const aclTensor* A, const aclTensor* B, const aclTensor* C, const aclTensor* out)

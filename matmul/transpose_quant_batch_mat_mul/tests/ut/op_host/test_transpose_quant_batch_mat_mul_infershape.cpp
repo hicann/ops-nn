@@ -28,9 +28,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic01)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -72,9 +72,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic02)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -116,9 +116,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic03)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -160,9 +160,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic04)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -204,9 +204,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidBatchSplitFactor)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -246,9 +246,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidK)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -288,9 +288,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidN)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -329,9 +329,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, TQBMM_mxfp8)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -370,9 +370,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermX1)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -411,9 +411,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermX2)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -452,9 +452,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermY)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -494,9 +494,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, BasicPermX2_0_2_1)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -537,9 +537,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, BasicHifp8)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_shape;
@@ -578,9 +578,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InferDataType_Fp16)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_datatype;
@@ -613,9 +613,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InferDataType_Bf16)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_datatype;
@@ -648,9 +648,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InferDataType_InvalidDtype)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_datatype;
@@ -682,9 +682,9 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InferDataType_AttrsNull)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeQuantBatchMatMul")->infer_datatype;

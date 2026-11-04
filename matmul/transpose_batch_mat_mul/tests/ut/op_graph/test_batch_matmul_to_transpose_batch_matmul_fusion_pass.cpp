@@ -58,6 +58,9 @@ static void SetPlatform(const std::string& socVersion, uint32_t aiCoreCnt = 24)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     platformInfo.soc_info.ai_core_cnt = static_cast<int32_t>(aiCoreCnt);
+    platformInfo.soc_info.arch_type = (socVersion == "dav3510" || socVersion == "Ascend350") ?
+                                          3510 :
+                                          ((socVersion == "Ascend910B" || socVersion == "Ascend910_93") ? 2201 : -1);
     platformInfo.str_info.short_soc_version = socVersion;
     optionalInfo.soc_version = socVersion;
     fe::PlatformInfoManager::Instance().platform_info_map_.clear();
@@ -402,7 +405,7 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1DynamicShape)
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
-// Test: pattern1 no fusion - k/n not aligned to 128 (non-950 platform)
+// Test: pattern1 no fusion - k/n not aligned to 128 (non-dav_3510 platform)
 TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1KnUnaligned)
 {
     auto graphBuilder = es::EsGraphBuilder("test_pattern1_kn_unaligned");
@@ -582,7 +585,7 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern2HasBias)
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
-// Test: pattern2 no fusion - inner axis >= 65536 (non-950)
+// Test: pattern2 no fusion - inner axis >= 65536 (non-dav_3510)
 TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern2InnerAxisExceed)
 {
     auto graphBuilder = es::EsGraphBuilder("test_pattern2_inner_axis");
@@ -948,14 +951,14 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1BatchMatMulV2)
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
-// ==================== Ascend950 perm_x2=[0,2,1] Tests ====================
+// ==================== DAV_3510 perm_x2=[0,2,1] Tests ====================
 
-// Test: pattern1 fusion success - Ascend950 with perm_x2=[0,2,1] input transpose on x2
-TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX2_021)
+// Test: pattern1 fusion success - DAV_3510 with perm_x2=[0,2,1] input transpose on x2
+TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Dav3510PermX2_021)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
-    auto graphBuilder = es::EsGraphBuilder("test_p1_950_perm_x2_021");
+    auto graphBuilder = es::EsGraphBuilder("test_p1_dav3510_perm_x2_021");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     auto x1Desc = MakeTensorDesc({4, 128, 64}, DT_FLOAT16);
@@ -992,12 +995,12 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX2_0
     }
 }
 
-// Test: pattern1 fusion success - Ascend950 with perm_x1=[1,0,2] + perm_x2=[0,2,1]
-TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX1_102_PermX2_021)
+// Test: pattern1 fusion success - DAV_3510 with perm_x1=[1,0,2] + perm_x2=[0,2,1]
+TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Dav3510PermX1_102_PermX2_021)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
-    auto graphBuilder = es::EsGraphBuilder("test_p1_950_perm_x1_102_x2_021");
+    auto graphBuilder = es::EsGraphBuilder("test_p1_dav3510_perm_x1_102_x2_021");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     auto x1OrigDesc = MakeTensorDesc({128, 4, 64}, DT_FLOAT16);
@@ -1038,12 +1041,12 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX1_1
     }
 }
 
-// Test: pattern1 no fusion - Ascend950 perm_x1=[0,2,1] should be rejected
-TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX1_021Rejected)
+// Test: pattern1 no fusion - DAV_3510 perm_x1=[0,2,1] should be rejected
+TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Dav3510PermX1_021Rejected)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
-    auto graphBuilder = es::EsGraphBuilder("test_p1_950_perm_x1_021_reject");
+    auto graphBuilder = es::EsGraphBuilder("test_p1_dav3510_perm_x1_021_reject");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     auto x1OrigDesc = MakeTensorDesc({4, 64, 128}, DT_FLOAT16);
@@ -1077,12 +1080,12 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950PermX1_0
     EXPECT_EQ(status, SUCCESS);
 }
 
-// Test: pattern1 fusion success - Ascend950 with Transpose (const input) perm_x1=[1,0,2]
-TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950TransposePermX1_102)
+// Test: pattern1 fusion success - DAV_3510 with Transpose (const input) perm_x1=[1,0,2]
+TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Dav3510TransposePermX1_102)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
-    auto graphBuilder = es::EsGraphBuilder("test_p1_950_trans_perm_x1_102");
+    auto graphBuilder = es::EsGraphBuilder("test_p1_dav3510_trans_perm_x1_102");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     auto x1OrigDesc = MakeTensorDesc({128, 4, 64}, DT_FLOAT16);
@@ -1121,12 +1124,12 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950Transpos
     }
 }
 
-// Test: pattern1 fusion success - Ascend950 with Transpose (const input) perm_x2=[0,2,1]
-TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend950TransposePermX2_021)
+// Test: pattern1 fusion success - DAV_3510 with Transpose (const input) perm_x2=[0,2,1]
+TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Dav3510TransposePermX2_021)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
-    auto graphBuilder = es::EsGraphBuilder("test_p1_950_trans_perm_x2_021");
+    auto graphBuilder = es::EsGraphBuilder("test_p1_dav3510_trans_perm_x2_021");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     auto x1Desc = MakeTensorDesc({4, 128, 64}, DT_FLOAT16);
@@ -1249,7 +1252,7 @@ TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1Ascend910BNoTrans
 // Graph: bmm -> trans3(perm=102) -> reshape1 -> reshape2 -> trans4(perm=102) -> output
 TEST_F(BatchMatMul2TransposeBatchMatMulFusionPassTest, Pattern1BatchSplitFactorGt1)
 {
-    SetPlatform("Ascend950");
+    SetPlatform("dav3510");
 
     auto graphBuilder = es::EsGraphBuilder("test_p1_bsf_gt1");
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();

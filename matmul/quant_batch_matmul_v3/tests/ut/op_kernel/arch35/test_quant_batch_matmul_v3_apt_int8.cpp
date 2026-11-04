@@ -21,7 +21,7 @@
 #include "arch35/quant_batch_matmul_v3_tiling_data.h"
 
 using namespace std;
-class QBMMV3_950_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam> {
+class QBMMV3_dav3510_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam> {
 protected:
     static void SetUpTestCase()
     {
@@ -36,11 +36,11 @@ protected:
     }
 };
 
-TEST_P(QBMMV3_950_mx, mxTest)
+TEST_P(QBMMV3_dav3510_mx, mxTest)
 {
     QuantBatchMatmulV3TestParam param = GetParam();
-    QuantBatchMatmulV3TestUtils::TestOneParamCase950(param, s_funcMapApt);
+    QuantBatchMatmulV3TestUtils::TestOneParamCaseDav3510(param, s_funcMapApt);
 }
 
-INSTANTIATE_TEST_CASE_P(QBMM950, QBMMV3_950_mx,
-                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend950", "INT8_FLOW")));
+INSTANTIATE_TEST_CASE_P(QBMM_DAV_3510, QBMMV3_dav3510_mx,
+                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Dav3510", "INT8_FLOW")));

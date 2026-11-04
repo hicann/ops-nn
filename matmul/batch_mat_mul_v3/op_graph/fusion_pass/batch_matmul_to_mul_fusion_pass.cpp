@@ -185,9 +185,9 @@ bool IsBatchEqual(const std::vector<int64_t>& batchDimForX1, const std::vector<i
     return true;
 }
 
-bool CheckSocNeedBatchMatMulToMul91095(const PlatformInfo& platformInfo, const BatchMatMulToMulArgs& args,
-                                       DataType x1Dtype, DataType x2Dtype, DataType outDtype,
-                                       const std::vector<int64_t>& shapeX1, const std::vector<int64_t>& shapeX2)
+bool CheckSocNeedBatchMatMulToMulDav3510(const PlatformInfo& platformInfo, const BatchMatMulToMulArgs& args,
+                                         DataType x1Dtype, DataType x2Dtype, DataType outDtype,
+                                         const std::vector<int64_t>& shapeX1, const std::vector<int64_t>& shapeX2)
 {
     bool checkBf16Scene = (x1Dtype == DT_BF16) && (x2Dtype == DT_BF16) && (outDtype == DT_BF16);
     bool checkFp16Scene = (x1Dtype == DT_FLOAT16) && (x2Dtype == DT_FLOAT16) && (outDtype == DT_FLOAT16);
@@ -233,7 +233,7 @@ bool CheckSocNeedBatchMatMulToMul(const PlatformInfo& platformInfo, const BatchM
         return CheckSocNeedBatchMatMulToMul910B(args, x1Dtype, x2Dtype, outDtype);
     }
     if (IsNpuArch3510Series()) {
-        return CheckSocNeedBatchMatMulToMul91095(platformInfo, args, x1Dtype, x2Dtype, outDtype, shapeX1, shapeX2);
+        return CheckSocNeedBatchMatMulToMulDav3510(platformInfo, args, x1Dtype, x2Dtype, outDtype, shapeX1, shapeX2);
     }
     // default
     return true;

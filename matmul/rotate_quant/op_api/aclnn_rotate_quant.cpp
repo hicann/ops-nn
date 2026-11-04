@@ -31,6 +31,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/contiguous.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace Ops::NN;
@@ -88,19 +89,19 @@ static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_HIF4 =
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
+    {Ops::Base::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST_INT},
-    {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_MX},
+    {Ops::Base::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_MX},
     {NpuArch::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_MX},
     {NpuArch::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_MX}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST_INT},
-    {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_MX},
+    {Ops::Base::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_MX},
     {NpuArch::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_MX},
     {NpuArch::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_MX}};
 

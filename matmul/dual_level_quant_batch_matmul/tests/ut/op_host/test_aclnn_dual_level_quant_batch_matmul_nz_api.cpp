@@ -17,6 +17,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 enum ContiguousType { CONTIGUOUS, TRANSPOSE_LAST_TWO_DIMS, NOT_CONTIGUOUS };
 
@@ -62,11 +63,12 @@ struct DualLevelQuantMatmulNzTestParam {
     ContiguousType ctgsY = CONTIGUOUS;
 };
 
-class l2_dual_level_quant_batch_matmul_nz_test_950 : public testing::TestWithParam<DualLevelQuantMatmulNzTestParam> {
+class l2_dual_level_quant_batch_matmul_nz_test_dav3510
+    : public testing::TestWithParam<DualLevelQuantMatmulNzTestParam> {
 protected:
-    static void SetUpTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_950 SetUp" << endl; }
+    static void SetUpTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_dav3510 SetUp" << endl; }
 
-    static void TearDownTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_950 TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_dav3510 TearDown" << endl; }
 };
 
 static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
@@ -185,7 +187,7 @@ static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
     std::cout << "run case start: " << param.caseName << std::endl;
     // 引用op_api_ut_common中的符号，确保libop_api_ut_common.so被链接，从而提供LegacyCommonMgr桩
     (void)GetOpUtSrcPath();
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
     aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
     aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Level0ScaleFormat,
@@ -215,7 +217,7 @@ static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
     }
 }
 
-TEST_P(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_generalTest)
+TEST_P(l2_dual_level_quant_batch_matmul_nz_test_dav3510, dav3510_generalTest)
 {
     DualLevelQuantMatmulNzTestParam param = GetParam();
     TestOneParamCase(param);
@@ -256,190 +258,190 @@ static vector<DualLevelQuantMatmulNzTestParam> MakeCasesParams()
 {
     vector<DualLevelQuantMatmulNzTestParam> cases;
 
-    cases.push_back(MakeBaseParam("Ascend950_case_dual_a4w4_weight_nz"));
+    cases.push_back(MakeBaseParam("Dav3510_case_dual_a4w4_weight_nz"));
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x1Type = ACL_FLOAT16;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_y_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_y_dtype", ACLNN_ERR_PARAM_INVALID);
         p.yType = ACL_FLOAT;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_nd_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_nd_format", ACLNN_ERR_PARAM_INVALID);
         p.x2Format = ACL_FORMAT_ND;
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x2Type = ACL_FLOAT16;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x1Level0ScaleType = ACL_FLOAT16;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x1Level1ScaleType = ACL_FLOAT;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x2Level0ScaleType = ACL_FLOAT16;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
         p.x2Level1ScaleType = ACL_FLOAT;
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_format", ACLNN_ERR_PARAM_INVALID);
         p.x1Format = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
         p.x1Level0ScaleFormat = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
         p.x1Level1ScaleFormat = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
         p.x2Level0ScaleFormat = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
         p.x2Level1ScaleFormat = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_bias_format", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_bias_format", ACLNN_ERR_PARAM_INVALID);
         p.biasOptionalFormat = ACL_FORMAT_NCHW;
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_1d", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_1d", ACLNN_ERR_PARAM_INVALID);
         p.x1 = {7168};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x2_3d", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x2_3d", ACLNN_ERR_PARAM_INVALID);
         p.x2 = {1, 1536, 3584};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_y_1d", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_y_1d", ACLNN_ERR_PARAM_INVALID);
         p.y = {1536};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_bias_3d", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_bias_3d", ACLNN_ERR_PARAM_INVALID);
         p.biasOptional = {1, 1, 1536};
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_k_odd", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_k_odd", ACLNN_ERR_PARAM_INVALID);
         p.x1 = {1, 7169};
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_not_contiguous", ACLNN_ERR_PARAM_INVALID);
         p.ctgsX1 = NOT_CONTIGUOUS;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_y_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_y_not_contiguous", ACLNN_ERR_PARAM_INVALID);
         p.ctgsY = NOT_CONTIGUOUS;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l0_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
         p.ctgsX1Level0Scale = NOT_CONTIGUOUS;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_x1_l1_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
         p.ctgsX1Level1Scale = NOT_CONTIGUOUS;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_bias_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_bias_not_contiguous", ACLNN_ERR_PARAM_INVALID);
         p.ctgsBiasOptional = NOT_CONTIGUOUS;
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_k_mismatch", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_k_mismatch", ACLNN_ERR_PARAM_INVALID);
         p.x2 = {1536, 1792};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_m_lt_1", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_m_lt_1", ACLNN_ERR_PARAM_INVALID);
         p.x1 = {0, 7168};
         p.y = {0, 1536};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_y_m_mismatch", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_y_m_mismatch", ACLNN_ERR_PARAM_INVALID);
         p.y = {2, 1536};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_y_n_mismatch", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_y_n_mismatch", ACLNN_ERR_PARAM_INVALID);
         p.y = {1, 1000};
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_bias_2d", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_bias_2d", ACLNN_ERR_PARAM_INVALID);
         p.biasOptional = {1, 1536};
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_bias_shape_mismatch", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_bias_shape_mismatch", ACLNN_ERR_PARAM_INVALID);
         p.biasOptional = {1000};
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_transpose_x1", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_transpose_x1", ACLNN_ERR_PARAM_INVALID);
         p.transposeX1 = true;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_transpose_x2", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_transpose_x2", ACLNN_ERR_PARAM_INVALID);
         p.transposeX2 = false;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_level0_group_size", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_level0_group_size", ACLNN_ERR_PARAM_INVALID);
         p.level0GroupSize = 256;
         cases.push_back(p);
     }
     {
-        auto p = MakeBaseParam("Ascend950_case_invalid_level1_group_size", ACLNN_ERR_PARAM_INVALID);
+        auto p = MakeBaseParam("Dav3510_case_invalid_level1_group_size", ACLNN_ERR_PARAM_INVALID);
         p.level1GroupSize = 16;
         cases.push_back(p);
     }
 
     {
-        auto p = MakeBaseParam("Ascend950_case_success_no_bias");
+        auto p = MakeBaseParam("Dav3510_case_success_no_bias");
         p.isBiasOptionalNotNull = false;
         cases.push_back(p);
     }
@@ -447,10 +449,10 @@ static vector<DualLevelQuantMatmulNzTestParam> MakeCasesParams()
     return cases;
 }
 
-static vector<DualLevelQuantMatmulNzTestParam> casesParamsAscend950Vec = MakeCasesParams();
+static vector<DualLevelQuantMatmulNzTestParam> casesParamsDav3510Vec = MakeCasesParams();
 
-INSTANTIATE_TEST_SUITE_P(Ascend950_DualLevelQuantMatmulNz, l2_dual_level_quant_batch_matmul_nz_test_950,
-                         testing::ValuesIn(casesParamsAscend950Vec));
+INSTANTIATE_TEST_SUITE_P(Dav3510_DualLevelQuantMatmulNz, l2_dual_level_quant_batch_matmul_nz_test_dav3510,
+                         testing::ValuesIn(casesParamsDav3510Vec));
 
 static void ThreadFunc(const DualLevelQuantMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
@@ -472,17 +474,17 @@ static void TestMultiThread(const DualLevelQuantMatmulNzTestParam* params, size_
     }
 }
 
-TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_dav3510, dav3510_multi_thread)
 {
     // 用3个线程测试
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
-    TestMultiThread(casesParamsAscend950Vec.data(), casesParamsAscend950Vec.size(), 3);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TestMultiThread(casesParamsDav3510Vec.data(), casesParamsDav3510Vec.size(), 3);
 }
 
-TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_unsupported_soc)
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_dav3510, dav3510_unsupported_soc)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
-    auto param = MakeBaseParam("Ascend950_case_unsupported_soc");
+    auto param = MakeBaseParam("Dav3510_case_unsupported_soc");
 
     aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
     aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
@@ -506,9 +508,9 @@ TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_unsupported_soc)
     EXPECT_EQ(aclRet, ACLNN_ERR_RUNTIME_ERROR);
 }
 
-TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_nullptr_check)
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_dav3510, dav3510_nullptr_check)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     uint64_t workspaceSize = 0U;
     aclOpExecutor* exe = nullptr;
     aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(nullptr, nullptr, nullptr, nullptr, nullptr,
@@ -517,7 +519,7 @@ TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_nullptr_check)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_phase2_run)
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_dav3510, dav3510_phase2_run)
 {
     aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNz(nullptr, 0, nullptr, nullptr);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);

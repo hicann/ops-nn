@@ -18,6 +18,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 enum ContiguousType { CONTIGUOUS, TRANSPOSE_LAST_TWO_DIMS, NOT_CONTIGUOUS };
 
@@ -57,28 +58,27 @@ struct WeightQuantBatchMatmulNzTestParam {
     ContiguousType ctgsY = CONTIGUOUS;
 };
 
-class l2_weight_quant_batch_matmul_nz_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulNzTestParam> {
+class l2_weight_quant_batch_matmul_nz_test_dav3510 : public testing::TestWithParam<WeightQuantBatchMatmulNzTestParam> {
 protected:
     static void SetUpTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_nz_test_950 SetUp" << endl;
-        archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_3510);
-        versionManager = std::make_unique<op::SocVersionManager>(op::SocVersion::ASCEND950);
+        cout << "l2_weight_quant_batch_matmul_nz_test_dav3510 SetUp" << endl;
+        archManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510);
     }
 
     static void TearDownTestCase()
     {
         versionManager.reset();
         archManager.reset();
-        cout << "l2_weight_quant_batch_matmul_nz_test_950 TearDown" << endl;
+        cout << "l2_weight_quant_batch_matmul_nz_test_dav3510 TearDown" << endl;
     }
 
     static std::unique_ptr<op::NpuArchManager> archManager;
     static std::unique_ptr<op::SocVersionManager> versionManager;
 };
 
-std::unique_ptr<op::NpuArchManager> l2_weight_quant_batch_matmul_nz_test_950::archManager;
-std::unique_ptr<op::SocVersionManager> l2_weight_quant_batch_matmul_nz_test_950::versionManager;
+std::unique_ptr<op::NpuArchManager> l2_weight_quant_batch_matmul_nz_test_dav3510::archManager;
+std::unique_ptr<op::SocVersionManager> l2_weight_quant_batch_matmul_nz_test_dav3510::versionManager;
 
 static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
@@ -236,14 +236,14 @@ static void TestOneParamCase(const WeightQuantBatchMatmulNzTestParam& param)
     }
 }
 
-TEST_P(l2_weight_quant_batch_matmul_nz_test_950, ascend950_generalTest)
+TEST_P(l2_weight_quant_batch_matmul_nz_test_dav3510, dav3510_generalTest)
 {
     WeightQuantBatchMatmulNzTestParam param = GetParam();
     TestOneParamCase(param);
 }
 
-static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
-    {"Ascend950_case_a16mxf4_nd_weight_fp4",
+static WeightQuantBatchMatmulNzTestParam casesParamsDav3510[] = {
+    {"Dav3510_case_a16mxf4_nd_weight_fp4",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -271,7 +271,7 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_nd_w4_nz_transweight_error",
+    {"Dav3510_case_nd_w4_nz_transweight_error",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -301,14 +301,13 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
      TRANSPOSE_LAST_TWO_DIMS},
 };
 
-INSTANTIATE_TEST_SUITE_P(Ascend950_WeightQuantBatchMatmulNz, l2_weight_quant_batch_matmul_nz_test_950,
-                         testing::ValuesIn(casesParamsAscend950));
+INSTANTIATE_TEST_SUITE_P(Dav3510_WeightQuantBatchMatmulNz, l2_weight_quant_batch_matmul_nz_test_dav3510,
+                         testing::ValuesIn(casesParamsDav3510));
 
 static void ThreadFunc(const WeightQuantBatchMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
 {
-    op::NpuArchManager archMgr(NpuArch::DAV_3510);
-    op::SocVersionManager socMgr(op::SocVersion::ASCEND950);
+    op::NpuArchManager archMgr(Ops::Base::DAV_3510);
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
@@ -326,14 +325,14 @@ static void TestMultiThread(const WeightQuantBatchMatmulNzTestParam* params, siz
     }
 }
 
-TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_single_thread)
+TEST_F(l2_weight_quant_batch_matmul_nz_test_dav3510, dav3510_single_thread)
 {
-    for (size_t i = 0; i < sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam); ++i) {
-        TestOneParamCase(casesParamsAscend950[i]);
+    for (size_t i = 0; i < sizeof(casesParamsDav3510) / sizeof(WeightQuantBatchMatmulNzTestParam); ++i) {
+        TestOneParamCase(casesParamsDav3510[i]);
     }
 }
 
-TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
+TEST_F(l2_weight_quant_batch_matmul_nz_test_dav3510, dav3510_multi_thread)
 {
-    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
+    TestMultiThread(casesParamsDav3510, sizeof(casesParamsDav3510) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
 }

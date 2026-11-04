@@ -22,10 +22,11 @@
 #include "base_block_calculator.h"
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
                                                static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::CUBE_ASW;
 } // namespace

@@ -20,6 +20,7 @@
 
 #include "tiling/platform/platform_ascendc.h"
 #include "op_host/tiling_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -32,7 +33,7 @@ constexpr int32_t BASIC_ASWT = 4;
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> MatMulV3PrioritiesMap = {
-    {NpuArch::DAV_3510,
+    {Ops::Base::DAV_3510,
      {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::TO_MULTI_MUL, strategy::BASIC_STREAM_K,
       strategy::BASIC_ASWT}},
     {NpuArch::DAV_9201,

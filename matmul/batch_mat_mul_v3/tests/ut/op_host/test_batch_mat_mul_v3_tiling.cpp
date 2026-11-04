@@ -65,6 +65,22 @@ bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingK
     return false;
 }
 
+bool IsDav3510CompileInfo(const string& compileInfo)
+{
+    return compileInfo.find(R"("npuArch": "dav3510")") != string::npos ||
+           compileInfo.find(R"("npuArch":"dav3510")") != string::npos;
+}
+
+void GetPlatFormInfosDavAware(const string& compileInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
+                              map<string, string>& intrinsics, map<string, string>& socVersion)
+{
+    GetPlatFormInfos(compileInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    if (IsDav3510CompileInfo(compileInfo)) {
+        socVersion.clear();
+        socVersion["NpuArch"] = "3510";
+    }
+}
+
 static string TilingData2Str(const gert::TilingData* tiling_data, const string& case_name, uint64_t tilingKey)
 {
     if (tiling_data == nullptr) {
@@ -183,7 +199,7 @@ TEST_P(BatchMatMulV3TilingRuntime, general_cases)
     map<string, string> intrinsics;
     map<string, string> soc_version;
     map<string, string> aicore_memory_rates;
-    GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(param.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling;
@@ -720,13 +736,13 @@ static TilingTestParam ascend910B_cases_params[] = {
      "0 0 0 1 0 1 1 1 16 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 "
      "31 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "}};
 
-static TilingTestParam ascend950_cases_params[] = {
-    {"BatchMatMulV3_950_test_iterbatch_1",
+static TilingTestParam dav3510_cases_params[] = {
+    {"BatchMatMulV3_dav3510_test_iterbatch_1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -748,12 +764,12 @@ static TilingTestParam ascend950_cases_params[] = {
      2UL,
      "32 320 32 32 160 32 32 160 32 32 32 1 1 1 1 0 0 33686528 0 160 1 0 100 0 1024 100 1 "},
     // singleCoreM 256->16
-    {"BatchMatMulV3_950_test_asw_1",
+    {"BatchMatMulV3_dav3510_test_asw_1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -776,12 +792,12 @@ static TilingTestParam ascend950_cases_params[] = {
      "1 1 1 1 16 16 16 16 16 16 1 1 1 1 1 0 0 33686529 0 16 1 0 1 0 1024 1 1 "},
     // singeCoreK / baseK < 8  -> 之前stepK= 1 全载场景去掉上述判断代码以后, stepK = 2
     // bmm aFullLoad basic
-    {"BatchMatMulV3_950_test_al1fullload_2",
+    {"BatchMatMulV3_dav3510_test_al1fullload_2",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -804,12 +820,12 @@ static TilingTestParam ascend950_cases_params[] = {
      "32 11 2687 29 16 128 32 256 128 32 29 1 1 1 1 0 0 16909313 0 256 1 0 230 0 1024 230 1 "},
     // singleCoreM 256->64
     // 拆分tiling后修复bmm b全载tilingKey和adjustTiling不匹配问题, apiLevel_未赋值导致ubDb未正确计算
-    {"BatchMatMulV3_950_test_bl1fullload_1",
+    {"BatchMatMulV3_dav3510_test_bl1fullload_1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -830,12 +846,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      131090UL,
      "32 64 16 3680 64 16 96 128 256 32 3680 1 1 1 1 0 0 33686529 0 128 1 0 47 0 1024 47 1 "},
-    {"BatchMatMulV3_950_test_iterbatch_basicapi_fp32_01",
+    {"BatchMatMulV3_dav3510_test_iterbatch_basicapi_fp32_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":false,"adj_x2":false, "offset_x":0, "enable_hf32":true},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -856,12 +872,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      258UL,
      "32 32 32 1200 32 8 1 32 32 32 0 1 0 0 "},
-    {"BatchMatMulV3_950_test_iterbatch_basicapi_fixpip_opt_fp32_01",
+    {"BatchMatMulV3_dav3510_test_iterbatch_basicapi_fixpip_opt_fp32_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":false,"adj_x2":true, "offset_x":0, "enable_hf32":true},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -882,12 +898,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      2097474UL,
      "47 77 8 90 3 3 1 48 80 16 0 1 0 0 "},
-    {"BatchMatMulV3_950_test_batchmatmultomul_fp32_01",
+    {"BatchMatMulV3_dav3510_test_batchmatmultomul_fp32_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -908,12 +924,12 @@ static TilingTestParam ascend950_cases_params[] = {
      64,
      513UL,
      "4 976 2400 64 38 12 2 2 47 8 "},
-    {"BatchMatMulV3_950_test_batchmatmultomul_fp32_02",
+    {"BatchMatMulV3_dav3510_test_batchmatmultomul_fp32_02",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -934,12 +950,12 @@ static TilingTestParam ascend950_cases_params[] = {
      64,
      513UL,
      "976 8 2400 64 38 7 3 1 53 8 "},
-    {"BatchMatMulV3_950_test_batchmatmultomul_N1",
+    {"BatchMatMulV3_dav3510_test_batchmatmultomul_N1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
     "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -965,7 +981,7 @@ static TilingTestParam ascend950_cases_params[] = {
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
     "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,"vector_core_cnt": 64,  "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,"vector_core_cnt": 64,  "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -986,12 +1002,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      833UL,
      "1 4 976 2400 8 8 8 256 64 1 0 1 "},
-    {"BatchMatMulV3_950_test_streamk_basicapi_01",
+    {"BatchMatMulV3_dav3510_test_streamk_basicapi_01",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"adj_x1":true,"adj_x2":true, "offset_x":0, "enable_hf32":true},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -1012,12 +1028,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      2101330UL,
      "32 133 204 217211 144 208 128 144 208 32 13576 1 1 1 1 0 0 16843265 0 144 1 0 2 0 1024 2 1 "},
-    {"BatchMatMulV3_950_test_swat_1",
+    {"BatchMatMulV3_dav3510_test_swat_1",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -1038,12 +1054,12 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      17UL,
      "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1 1024 1804 1 "},
-    {"BatchMatMulV3_950_test_swat_2",
+    {"BatchMatMulV3_dav3510_test_swat_2",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -1065,7 +1081,7 @@ static TilingTestParam ascend950_cases_params[] = {
      65UL,
      "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 13851 0 1 1024 21 1 "},
     // {
-    //   "BatchMatMulV3_950_test_basiciterbatch_02", "BatchMatMulV3", R"({"_pattern": "MatMul",
+    //   "BatchMatMulV3_dav3510_test_basiciterbatch_02", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
     //     "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":
     //     false, "l2_size":134217728},"binary_mode_flag":true, "block_dim":{"CORE_NUM":32, "vector_core_cnt":
@@ -1074,13 +1090,13 @@ static TilingTestParam ascend950_cases_params[] = {
     //     "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false,
     //     "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     //     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64,
-    //     "socVersion": "Ascend950" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    //     "socVersion": "DAV_3510" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     //   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, true, false, 0, true,
     //   {88, 40, 151}, {88, 40, 1917}, {88, 151, 1917}, false, 0, 0, 32, 529UL, "151 1917 40 88 1 1 1 160 192 48 ",
     //   DT_FLOAT16, DT_FLOAT16
     // },
     // {
-    //   "BatchMatMulV3_950_test_basiciterbatch_03", "BatchMatMulV3", R"({"_pattern": "MatMul",
+    //   "BatchMatMulV3_dav3510_test_basiciterbatch_03", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
     //     "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":
     //     false, "l2_size":134217728},"binary_mode_flag":true, "block_dim":{"CORE_NUM":32, "vector_core_cnt":
@@ -1089,13 +1105,13 @@ static TilingTestParam ascend950_cases_params[] = {
     //     "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false,
     //     "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     //     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64,
-    //     "socVersion": "Ascend950" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    //     "socVersion": "DAV_3510" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     //   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, true, true, 0, true,
     //   {5653, 255, 64}, {5653, 128, 255}, {5653, 64, 128}, false, 0, 0, 32, 593UL, "64 128 255 5653 2 1 1 64 64 256 ",
     //   DT_FLOAT16, DT_FLOAT16
     // },
     // {
-    //   "BatchMatMulV3_950_test_basiciterbatch_05", "BatchMatMulV3", R"({"_pattern": "MatMul",
+    //   "BatchMatMulV3_dav3510_test_basiciterbatch_05", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
     //     "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":
     //     false, "l2_size":134217728},"binary_mode_flag":true, "block_dim":{"CORE_NUM":32, "vector_core_cnt":
@@ -1104,17 +1120,17 @@ static TilingTestParam ascend950_cases_params[] = {
     //     "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": false,
     //     "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     //     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64,
-    //     "socVersion": "Ascend950" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    //     "socVersion": "DAV_3510" }, "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     //   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0,
     //   true, {512, 150, 150}, {512, 150, 37}, {512, 150, 37}, false, 0, 0, 32, 513UL, "150 37 150 512 1 1 1 48 48 160
     //   "
     // },
-    {"BatchMatMulV3_950_test_bmm_iterbatch_broadcast",
+    {"BatchMatMulV3_dav3510_test_bmm_iterbatch_broadcast",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":1},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -1139,7 +1155,7 @@ static TilingTestParam ascend950_cases_params[] = {
      "1  0 "}};
 
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3910B, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));
-INSTANTIATE_TEST_CASE_P(BatchMatMulV3950, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend950_cases_params));
+INSTANTIATE_TEST_CASE_P(BatchMatMulV3Dav3510, BatchMatMulV3TilingRuntime, testing::ValuesIn(dav3510_cases_params));
 
 TEST_F(BatchMatMulV3TilingRuntime, fail_case)
 {
@@ -1177,7 +1193,7 @@ TEST_F(BatchMatMulV3TilingRuntime, fail_case)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1286,7 +1302,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1363,7 +1379,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed_1)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1377,7 +1393,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed_1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1440,7 +1456,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1454,7 +1470,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_batchbias_failed)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1517,7 +1533,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_two_dim_bias_failed)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1531,7 +1547,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_two_dim_bias_failed)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1594,7 +1610,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l0_iterbatchbias_success)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
       "binary_attrs":{"bias_flag":true, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1608,7 +1624,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l0_iterbatchbias_success)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1686,7 +1702,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l1_iterbatchbias_success)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
       "binary_attrs":{"bias_flag":true, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1700,7 +1716,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l1_iterbatchbias_success)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1746,7 +1762,7 @@ TEST_F(BatchMatMulV3TilingRuntime, bias_cases_l1_iterbatchbias_success)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
+TEST_F(BatchMatMulV3TilingRuntime, dav3510_transpose_non_contiguous_cases)
 {
     gert::StorageShape x1_shape = {{512, 150, 150}, {512, 150, 150}};
     gert::StorageShape x2_shape = {{512, 150, 32}, {2457600}};
@@ -1770,7 +1786,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
  	       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
  	       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
- 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+ 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
  	       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1784,7 +1800,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1650";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1827,7 +1843,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     uint32_t block_dim = tiling_context->GetBlockDim();
-    string case_name = "BatchMatMulV3TilingRuntime_950_transpose_non_contiguous_cases";
+    string case_name = "BatchMatMulV3TilingRuntime_dav3510_transpose_non_contiguous_cases";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData("150 32 150 512 4 1 0 96 32 160 512 1 0 0", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
@@ -1836,7 +1852,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
 
-TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
+TEST_F(BatchMatMulV3TilingRuntime, dav3510_transpose_non_contiguous_cases1)
 {
     gert::StorageShape x1_shape = {{512, 150, 150}, {512, 150, 150}};
     gert::StorageShape x2_shape = {{512, 32, 150}, {2457600}};
@@ -1861,7 +1877,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true},
  	       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
  	       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
- 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+ 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
  	       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1875,7 +1891,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1650";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
@@ -1917,7 +1933,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     uint32_t block_dim = tiling_context->GetBlockDim();
-    string case_name = "BatchMatMulV3TilingRuntime_950_transpose_non_contiguous_cases1";
+    string case_name = "BatchMatMulV3TilingRuntime_dav3510_transpose_non_contiguous_cases1";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData("150 32 150 512 4 1 0 96 32 160 512 1 0 0 ", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
@@ -1955,7 +1971,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true},
  	       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
  	       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
- 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+ 	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "npuArch": "dav3510" },
  	       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
     optiling::MatmulV3CompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -1970,7 +1986,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     map<string, string> intrinsics;
     map<string, string> soc_version;
     map<string, string> aicore_memory_rates;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(compile_info_string, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1650";
     aicore_memory_rates["ddr_rate"] = "31";
     aicore_memory_rates["l2_rate"] = "100";

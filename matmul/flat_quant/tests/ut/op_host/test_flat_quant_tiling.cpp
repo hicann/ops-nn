@@ -22,6 +22,8 @@
 #include "../../../op_host/flat_quant_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
+#include "base/err_mgr.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace ut_util;
 using namespace std;
@@ -886,7 +888,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_int4_tiling_001)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -966,7 +968,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_int4_tiling_002)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1046,7 +1048,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_001)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1125,7 +1127,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_002)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1205,7 +1207,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_003)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1285,7 +1287,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_004)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1364,7 +1366,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_005)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1443,7 +1445,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_006)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1521,7 +1523,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_007)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");
@@ -1599,7 +1601,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_mxfp4_tiling_008)
     struct FlatQuantCompileInfo {
         int64_t aicNum = 32;
         int64_t aivNum = 64;
-        NpuArch npuArch = NpuArch::DAV_3510;
+        NpuArch npuArch = Ops::Base::DAV_3510;
     } compile_info;
 
     std::string op_type("FlatQuant");

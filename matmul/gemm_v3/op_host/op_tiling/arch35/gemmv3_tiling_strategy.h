@@ -20,13 +20,14 @@
 
 #include "tiling/platform/platform_ascendc.h"
 #include "op_host/tiling_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace gemmv3 {
 namespace strategy {
 constexpr int32_t BASE = 999;
 
-const static std::map<NpuArch, std::vector<int32_t>> Gemmv3PrioritiesMap = {{NpuArch::DAV_3510, {strategy::BASE}},
+const static std::map<NpuArch, std::vector<int32_t>> Gemmv3PrioritiesMap = {{Ops::Base::DAV_3510, {strategy::BASE}},
                                                                             {NpuArch::DAV_9201, {strategy::BASE}},
                                                                             {NpuArch::DAV_9202, {strategy::BASE}}};
 

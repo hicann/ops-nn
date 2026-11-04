@@ -15,6 +15,7 @@
 
 #include "register/op_def_registry.h"
 #include "common/inc/op_host/op_const_def_nn.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class QuantBatchMatmulV4 : public OpDef {
@@ -818,7 +819,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
 
-        this->AICore().AddConfig("ascend950", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
         this->AICore().AddConfig("ascend350", aicore_config);
 
         OpAICoreConfig config_910BC;

@@ -25,6 +25,29 @@
 
 using namespace std;
 
+static bool IsDav3510CompileInfo(const string& compileInfo)
+{
+    return compileInfo.find(R"("npuArch": "dav3510")") != string::npos ||
+           compileInfo.find(R"("npuArch":"dav3510")") != string::npos;
+}
+
+static void GetPlatFormInfosDavAware(const string& compileInfo, map<string, string>& socInfos,
+                                     map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                                     map<string, string>& socVersion)
+{
+    GetPlatFormInfos(compileInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    if (IsDav3510CompileInfo(compileInfo)) {
+        socVersion.clear();
+        socVersion["NpuArch"] = "3510";
+    } else if (compileInfo.find(R"("npuArch": "dav9201")") != string::npos ||
+               compileInfo.find(R"("npuArch":"dav9201")") != string::npos) {
+        socVersion["NpuArch"] = "9201";
+    } else if (compileInfo.find(R"("npuArch": "dav9202")") != string::npos ||
+               compileInfo.find(R"("npuArch":"dav9202")") != string::npos) {
+        socVersion["NpuArch"] = "9202";
+    }
+}
+
 struct RotateQuantArch35Data {
     string case_name;
     string compile_info;
@@ -64,7 +87,7 @@ TEST_P(TilingRotateQuantArch35, rotate_quant_arch35_tiling)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(test_params.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(test_params.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
     if (test_params.compile_info.find("\"socVersion\": \"Ascend350\"") != string::npos) {
         soc_version["NpuArch"] = "3510";
     }
@@ -163,26 +186,25 @@ TEST_P(TilingRotateQuantArch35, rotate_quant_arch35_tiling)
     }
 }
 
-// Ascend950 platform: 32 AIC + 64 AIV (aicNum:aivNum = 1:2)
-static const string COMPILE_INFO_950 = R"({
+static const string COMPILE_INFO_DAV_3510 = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "1",
     "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
     "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "CORE_NUM": 32, "npuArch": "dav3510",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 64}
 })";
 
-// Ascend950 with non-1:2 aic:aiv ratio (cube=32, vector=48)
-static const string COMPILE_INFO_950_BAD_RATIO = R"({
+// DAV_3510 with non-1:2 aic:aiv ratio (cube=32, vector=48)
+static const string COMPILE_INFO_DAV_3510_BAD_RATIO = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "1",
     "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
     "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "CORE_NUM": 32, "npuArch": "dav3510",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 48}
 })";
@@ -193,9 +215,10 @@ static RotateQuantArch35Data MakeDav920SeriesCase(const string& soc, bool hif4, 
 {
     RotateQuantArch35Data data;
     data.case_name = soc + (hif4 ? "_hif4" : multiRot ? "_mx_multi_rot" : "_mx_shared");
-    data.compile_info = COMPILE_INFO_950;
-    const string oldSoc = "Ascend950";
-    data.compile_info.replace(data.compile_info.find(oldSoc), oldSoc.size(), soc);
+    data.compile_info = COMPILE_INFO_DAV_3510;
+    const string oldArch = "dav3510";
+    const string newArch = (soc == "Ascend960DT") ? "dav9201" : "dav9202";
+    data.compile_info.replace(data.compile_info.find(oldArch), oldArch.size(), newArch);
     const string oldCores = "\"vector_core_cnt\": 64";
     data.compile_info.replace(data.compile_info.find(oldCores), oldCores.size(),
                               "\"vector_core_cnt\": " + std::to_string(vectorCores));
@@ -228,13 +251,13 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
     MakeDav920SeriesCase("Ascend960DT", false, false, 64),
     MakeDav920SeriesCase("Ascend960PR", false, false, 64),
     {"bf16_fp8_k256_shared",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{1025, 768}, {1025, 768}},
      {{256, 256}, {256, 256}},
      {{1025, 768}, {1025, 768}},
      {{1025, 12, 2}, {1025, 12, 2}}},
     {"fp16_fp4_k256_multi_rot",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{1025, 768}, {1025, 768}},
      {{3, 256, 256}, {3, 256, 256}},
      {{1025, 768}, {1025, 768}},
@@ -242,15 +265,15 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT4_E2M1},
     {"bf16_fp8_k256_single_row",
-     COMPILE_INFO_950,
+     COMPILE_INFO_DAV_3510,
      {{1, 256}, {1, 256}},
      {{256, 256}, {256, 256}},
      {{1, 256}, {1, 256}},
      {{1, 4, 2}, {1, 4, 2}}},
-    // 0: BF16 + FLOAT8_E4M3FN, 950 with 1:2 core ratio -> 控核通过, tiling成功
+    // 0: BF16 + FLOAT8_E4M3FN, dav_3510 with 1:2 core ratio -> 控核通过, tiling成功
     // scale shape按契约推导: x=[128,128] -> [128, CeilDiv(128,64)=2, 2]
-    {"bf16_fp8e4m3_950_ratio_1to2",
-     COMPILE_INFO_950,
+    {"bf16_fp8e4m3_dav3510_ratio_1to2",
+     COMPILE_INFO_DAV_3510,
      {{128, 128}, {128, 128}},
      {{64, 64}, {64, 64}},
      {{128, 128}, {128, 128}},
@@ -266,8 +289,8 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_SUCCESS},
     // 1: same shape/dtype but aic:aiv not 1:2 (cube=32, vector=48) -> 控核校验失败 (IsCapable false,
     // arch注册表最终返回GRAPH_FAILED)
-    {"bf16_fp8e4m3_950_ratio_not_1to2_fail",
-     COMPILE_INFO_950_BAD_RATIO,
+    {"bf16_fp8e4m3_dav3510_ratio_not_1to2_fail",
+     COMPILE_INFO_DAV_3510_BAD_RATIO,
      {{128, 128}, {128, 128}},
      {{64, 64}, {64, 64}},
      {{128, 128}, {128, 128}},
@@ -282,8 +305,8 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_FAILED},
     // 2: 扁平一维scale（总元素数128*2*2=512与推导一致）-> 放行, tiling成功
-    {"bf16_fp8e4m3_950_flat_scale_ok",
-     COMPILE_INFO_950,
+    {"bf16_fp8e4m3_dav3510_flat_scale_ok",
+     COMPILE_INFO_DAV_3510,
      {{128, 128}, {128, 128}},
      {{64, 64}, {64, 64}},
      {{128, 128}, {128, 128}},
@@ -298,8 +321,8 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_SUCCESS},
     // 3: 扁平一维scale但总元素数(500)与推导(512)不符 -> 校验失败
-    {"bf16_fp8e4m3_950_flat_scale_wrong_num_fail",
-     COMPILE_INFO_950,
+    {"bf16_fp8e4m3_dav3510_flat_scale_wrong_num_fail",
+     COMPILE_INFO_DAV_3510,
      {{128, 128}, {128, 128}},
      {{64, 64}, {64, 64}},
      {{128, 128}, {128, 128}},
@@ -338,9 +361,12 @@ static vector<RotateQuantArch35Data> MakeEffectiveMOverflowCases()
         for (const auto& boundary : boundaries) {
             RotateQuantArch35Data data;
             data.case_name = string(soc) + "_shared_effective_m_" + boundary.name;
-            data.compile_info = COMPILE_INFO_950;
-            const string oldSoc = "Ascend950";
-            data.compile_info.replace(data.compile_info.find(oldSoc), oldSoc.size(), soc);
+            data.compile_info = COMPILE_INFO_DAV_3510;
+            const string oldArch = "dav3510";
+            const string newArch = (soc == string("Ascend960DT")) ? "dav9201" :
+                                   (soc == string("Ascend960PR")) ? "dav9202" :
+                                                                    oldArch;
+            data.compile_info.replace(data.compile_info.find(oldArch), oldArch.size(), newArch);
             const bool isDav920Series = string(soc) == "Ascend960DT" || string(soc) == "Ascend960PR";
             if (isDav920Series) {
                 const string oldCores = "\"vector_core_cnt\": 64";
@@ -443,10 +469,14 @@ static void CheckGroupedTiling(int64_t groupNum, int64_t rotNum, int64_t groupTy
                                int64_t k = 32, int64_t rotSlices = 0, int64_t ratio = 3)
 {
     RotateQuantArch35Data test_params;
-    test_params.compile_info = COMPILE_INFO_950;
-    const auto socPos = test_params.compile_info.find("Ascend950");
-    ASSERT_NE(socPos, string::npos);
-    test_params.compile_info.replace(socPos, string("Ascend950").size(), socVersion);
+    test_params.compile_info = COMPILE_INFO_DAV_3510;
+    const string oldArch = "dav3510";
+    const string newArch = (socVersion == "Ascend960DT") ? "dav9201" :
+                           (socVersion == "Ascend960PR") ? "dav9202" :
+                                                           oldArch;
+    const auto archPos = test_params.compile_info.find(oldArch);
+    ASSERT_NE(archPos, string::npos);
+    test_params.compile_info.replace(archPos, oldArch.size(), newArch);
     const bool isDav920Series = socVersion == "Ascend960DT" || socVersion == "Ascend960PR";
     if (isDav920Series) {
         const string oldCores = "\"vector_core_cnt\": 64";
@@ -469,9 +499,10 @@ static void CheckGroupedTiling(int64_t groupNum, int64_t rotNum, int64_t groupTy
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(test_params.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(test_params.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
     // Use the real core ratio and architecture so rejection reaches the group guard.
     soc_version["NpuArch"] = isDav920Series ? (socVersion == "Ascend960DT" ? "9201" : "9202") : "3510";
+    soc_version["Short_SoC_version"] = socVersion;
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();

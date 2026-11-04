@@ -19,6 +19,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 using namespace ut_str;
@@ -162,7 +163,7 @@ protected:
 TEST_P(QuantMatmulActivationQuantWeightNzAclnnTest, CsvTest)
 {
     const auto& param = GetParam();
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
 
     auto x1Desc = BuildTensorDesc(param.x1ShapeStr, param.x1DtypeStr, param.x1FormatStr, param.x1StorageStr);
     auto x2Desc = BuildTensorDesc(param.x2ShapeStr, param.x2DtypeStr, param.x2FormatStr, param.x2StorageStr);

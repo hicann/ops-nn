@@ -27,6 +27,7 @@
 #include "register/op_def_registry.h"
 #include "op_host/tiling_templates_registry.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 using namespace optiling;
@@ -113,7 +114,7 @@ constexpr size_t MATRIX_COLUMN_DIM_INDEX = 2UL;
 
 inline bool IsDav3510Series(NpuArch arch)
 {
-    return arch == NpuArch::DAV_3510 || arch == NpuArch::DAV_9201 || arch == NpuArch::DAV_9202;
+    return arch == Ops::Base::DAV_3510 || arch == NpuArch::DAV_9201 || arch == NpuArch::DAV_9202;
 }
 
 } // namespace

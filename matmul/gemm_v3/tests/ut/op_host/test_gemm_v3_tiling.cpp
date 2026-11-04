@@ -34,6 +34,22 @@ bool IsDisplayTilingdata(const string& case_name, size_t index)
     return false;
 }
 
+bool IsDav3510CompileInfo(const string& compileInfo)
+{
+    return compileInfo.find(R"("npuArch": "dav3510")") != string::npos ||
+           compileInfo.find(R"("npuArch":"dav3510")") != string::npos;
+}
+
+void GetPlatFormInfosDavAware(const string& compileInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
+                              map<string, string>& intrinsics, map<string, string>& socVersion)
+{
+    GetPlatFormInfos(compileInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    if (IsDav3510CompileInfo(compileInfo)) {
+        socVersion.clear();
+        socVersion["NpuArch"] = "3510";
+    }
+}
+
 static string TilingData2Str(const gert::TilingData* tiling_data, const string& case_name)
 {
     if (tiling_data == nullptr) {
@@ -152,7 +168,7 @@ TEST_P(GemmV3TilingRuntime, general_cases)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
-    GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    GetPlatFormInfosDavAware(param.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1650";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str()), nullptr);
@@ -231,17 +247,17 @@ static const string kAscend910bCompileInfo =
       "hardware_info":{"BT_SIZE":1024, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":196608, "L2_SIZE":201326592, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":131072, "CORE_NUM":24, "vector_core_cnt":48, "socVersion":"Ascend910B"},
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
 
-static const string kAscend950CompileInfo =
+static const string kDav3510CompileInfo =
     R"({"_pattern": "GemmV3", "attrs":{"alpha":1.0, "beta":1.0, "transpose_a":false,"transpose_b":false, "enable_hf32":false},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num":0,
-      "hardware_info":{"BT_SIZE":4096, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_l12bt":true, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":253952, "L2_SIZE":134217728, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":262144, "CORE_NUM":32, "socVersion":"Ascend950"},
+      "hardware_info":{"BT_SIZE":4096, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_l12bt":true, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":253952, "L2_SIZE":134217728, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":262144, "CORE_NUM":32, "npuArch": "dav3510"},
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
 
 static TilingTestParam general_cases_params[] = {
-    {"GemmV3_950_basic_test01",
+    {"GemmV3_dav3510_basic_test01",
      "GemmV3",
-     kAscend950CompileInfo,
+     kDav3510CompileInfo,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -261,9 +277,9 @@ static TilingTestParam general_cases_params[] = {
      30,
      0UL,
      "30 249 311 512 512 48 64 512 48 64 256 4 4 1 1 0 0 0 0 1 1 1 1 2 2 2 2 2 0 0 1 1 1 1 1 0 0 0 4 0"},
-    {"GemmV3_950_reject_bias_broadcast_n",
+    {"GemmV3_dav3510_reject_bias_broadcast_n",
      "GemmV3",
-     kAscend950CompileInfo,
+     kDav3510CompileInfo,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -291,9 +307,9 @@ static TilingTestParam general_cases_params[] = {
      0,
      0,
      ge::GRAPH_FAILED},
-    {"GemmV3_950_reject_bias_broadcast_m",
+    {"GemmV3_dav3510_reject_bias_broadcast_m",
      "GemmV3",
-     kAscend950CompileInfo,
+     kDav3510CompileInfo,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
      ge::FORMAT_ND,

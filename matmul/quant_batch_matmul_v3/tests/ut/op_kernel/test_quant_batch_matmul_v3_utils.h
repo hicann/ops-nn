@@ -36,12 +36,13 @@
 using QuantBatchMatmulAptFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR,
                                          GM_ADDR);
 
-static std::unordered_map<uint64_t, QuantBatchMatmulAptFunc> s_funcMapApt =
-    {{260UL, quant_batch_matmul_v3<0, 1, 0, 1, 0>}
+static std::unordered_map<uint64_t, QuantBatchMatmulAptFunc> s_funcMapApt = {
+    {260UL, quant_batch_matmul_v3<0, 1, 0, 1, 0>}
 #if SUPPORT_PERTILE
-    ,{1024UL, quant_batch_matmul_v3<0, 0, 0, 4>}
+    ,
+    {1024UL, quant_batch_matmul_v3<0, 0, 0, 4>}
 #endif
-    };
+};
 #else
 #include "quant_batch_matmul_v3.cpp"
 using QuantBatchMatmulFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
@@ -284,7 +285,7 @@ public:
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     // 实践中发现此处如果不传入s_funcMapApt会导致符号合并等编译器行为问题
     // 必须传入s_funcMapApt以实现多数据流
-    static void TestOneParamCase950(const QuantBatchMatmulV3TestParam& param, decltype(s_funcMapApt)& funcMapApt)
+    static void TestOneParamCaseDav3510(const QuantBatchMatmulV3TestParam& param, decltype(s_funcMapApt)& funcMapApt)
     {
         std::function<void(PARAM_LIST_DEF)> func = [&param, &funcMapApt](PARAM_LIST_DEF) {
             auto key = param.tilingKey;

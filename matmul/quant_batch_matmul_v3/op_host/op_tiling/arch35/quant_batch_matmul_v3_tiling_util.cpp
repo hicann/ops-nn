@@ -19,16 +19,17 @@
 #include "quant_batch_matmul_v3_checker.h"
 #include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
 #include "quant_batch_matmul_v3_checker_arch_9201.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace {
-// Minimum HBM bandwidth of Ascend 950 series, in TB/s.
+// Minimum HBM bandwidth of DAV_3510 series, in TB/s.
 constexpr double HBM_BW = 1.4;
-// Minimum L2 bandwidth of Ascend 950 series, in TB/s.
+// Minimum L2 bandwidth of DAV_3510 series, in TB/s.
 constexpr double L2_BW = 5.2;
-// MXFP4 Cube throughput of 32-core Ascend 950 series, in TFLOPS.
+// MXFP4 Cube throughput of 32-core DAV_3510 series, in TFLOPS.
 constexpr double MXFP4_CUBE_THROUGHPUT = 1728.0;
-// MXFP8 Cube throughput of 32-core Ascend 950 series, in TFLOPS.
+// MXFP8 Cube throughput of 32-core DAV_3510 series, in TFLOPS.
 constexpr double MXFP8_CUBE_THROUGHPUT = 864.0;
 constexpr double MMAD_OPS_PER_DOT = 2.0;
 constexpr uint64_t MMAD_BLOCK_SIZE = 256UL;
@@ -165,7 +166,7 @@ bool QuantBatchMatMulV3TilingUtil::CheckDtype(gert::TilingContext* context, cons
                                               const QuantBatchMatmulV3CompileInfo& compileInfo)
 {
     switch (compileInfo.npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
             return CheckDtypeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams);
         case NpuArch::DAV_9201:
         case NpuArch::DAV_9202:
@@ -187,7 +188,7 @@ bool QuantBatchMatMulV3TilingUtil::CheckShape(gert::TilingContext* context, cons
                                               const std::vector<int64_t>& dimValueOfMKN)
 {
     switch (compileInfo.npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
             return CheckShapeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams, mandatoryShape, biasShape,
                                                                     pertokenShape, dimValueOfMKN);
         case NpuArch::DAV_9201:

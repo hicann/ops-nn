@@ -161,6 +161,9 @@ static void SetPlatformInfo(const std::string& socVersion)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     platformInfo.soc_info.ai_core_cnt = 24;
+    platformInfo.soc_info.arch_type = (socVersion == "dav3510" || socVersion == "Ascend350") ?
+                                          3510 :
+                                          ((socVersion == "Ascend910B" || socVersion == "Ascend910_93") ? 2201 : -1);
     platformInfo.ai_core_spec.l1_size = 512 * 1024;
     platformInfo.soc_info.l2_size = 192 * 1024 * 1024;
     optionalInfo.soc_version = socVersion;

@@ -16,6 +16,7 @@
 
 #include "tiling/platform/platform_ascendc.h"
 #include "op_host/tiling_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace matmul_emu_split_weight {
@@ -23,7 +24,7 @@ namespace strategy {
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> MatmulEmuSplitWeightPrioritiesMap = {
-    {NpuArch::DAV_3510, {strategy::BASE}},
+    {Ops::Base::DAV_3510, {strategy::BASE}},
 };
 
 inline std::vector<int32_t> GetMatmulEmuSplitWeightPriorities(NpuArch npuArch)

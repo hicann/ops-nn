@@ -90,7 +90,7 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
 
 bool TransposeQuantBatchMatMulAswTiling::IsCapable()
 {
-    uint64_t aivToAicRatio = (compileInfo_.npuArch == NpuArch::DAV_3510) ? NUM_TWO : NUM_ONE;
+    uint64_t aivToAicRatio = (compileInfo_.npuArch == Ops::Base::DAV_3510) ? NUM_TWO : NUM_ONE;
     if (!IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX)) &&
         compileInfo_.aivNum != compileInfo_.aicNum * aivToAicRatio) {
         OP_LOGE(args_.opName,

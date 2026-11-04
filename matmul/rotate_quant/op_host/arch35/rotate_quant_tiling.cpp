@@ -26,6 +26,7 @@
 #include "register/op_def_registry.h"
 #include "op_host/tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 constexpr uint32_t X_INDEX = 0;
@@ -333,7 +334,7 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeDtype()
     auto scaleDtype = context_->GetOutputDesc(SCALE_INDEX)->GetDataType();
 
     OP_TILING_CHECK(inputParams_.dataType != ge::DT_FLOAT16 && inputParams_.dataType != ge::DT_BF16,
-                    OP_LOGE(inputParams_.opName, "x dtype should be fp16 or bf16 for ascend950."),
+                    OP_LOGE(inputParams_.opName, "x dtype should be fp16 or bf16 for dav3510."),
                     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(inputParams_.dataType != rotDtype,
@@ -342,7 +343,7 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeDtype()
     OP_TILING_CHECK(yDtype != ge::DT_FLOAT4_E2M1 && yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2 &&
                         yDtype != Ops::NN::DT_HIFLOAT4,
                     OP_LOGE(inputParams_.opName,
-                            "y dtype should be in [FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT4] for ascend950."),
+                            "y dtype should be in [FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT4] for dav3510."),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(yDtype == Ops::NN::DT_HIFLOAT4 && !IsDav920Series(compileInfo_.npuArch),
                     OP_LOGE(inputParams_.opName, "HIFLOAT4 output is only supported on DAV_9201/DAV_9202."),
@@ -391,7 +392,7 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeDtype()
                         return ge::GRAPH_FAILED);
     } else {
         OP_TILING_CHECK(scaleDtype != ge::DT_FLOAT8_E8M0,
-                        OP_LOGE(inputParams_.opName, "scale dtype should be FLOAT8_E8M0 for ascend950."),
+                        OP_LOGE(inputParams_.opName, "scale dtype should be FLOAT8_E8M0 for dav3510."),
                         return ge::GRAPH_FAILED);
     }
 
@@ -781,7 +782,7 @@ ge::graphStatus RotateQuantAptTiling::PostTiling()
 }
 
 // 注册tiling类（950与DAV_9201/DAV_9202复用同一个arch35 tiling类，分别按arch注册）
-REGISTER_TILING_TEMPLATE_WITH_ARCH(RotateQuant, RotateQuantAptTiling, static_cast<int32_t>(NpuArch::DAV_3510),
+REGISTER_TILING_TEMPLATE_WITH_ARCH(RotateQuant, RotateQuantAptTiling, static_cast<int32_t>(Ops::Base::DAV_3510),
                                    TEMPLATE_PRIORITY);
 static Ops::NN::Optiling::RegisterArch g_rotateQuantAptTiling9201Register = Ops::NN::Optiling::RegisterArch(
                                                                                 "RotateQuant")

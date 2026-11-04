@@ -234,8 +234,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
                                 "cube_core_cnt": aicNum,
                                 "vector_core_cnt": aivNum,
                                 "core_type_list": "CubeCore,VectorCore",
-                                "socVersion" : "Ascend950",
-                                "NpuArch" : "3510"
+                                "npuArch" : "dav3510"
                             }})";
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -248,6 +247,8 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     // 6为替换原aivNum字符串的长度，配置vector_core_cnt
     compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    socVersion.clear();
+    socVersion["NpuArch"] = "3510";
     aicoreSpec["cube_freq"] = "1650";
 
     // platform info

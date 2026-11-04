@@ -8,13 +8,14 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350" "ascend960dt" "ascend960pr")
-# 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35" "arch35" "arch35")
+# 设置算子定义时支持的芯片架构（ascend910b/ascend910_93 同属 dav_2201，ascend950/ascend350 同属 dav_3510，
+# ascend960dt 属 dav_9201，ascend960pr 属 dav_9202）
+set(SUPPORT_NPU_ARCH "dav_2201" "dav_3510" "dav_9201" "dav_9202")
+# 设置每种芯片架构对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
+set(SUPPORT_TILING_DIR "arch22" "arch35" "arch35" "arch35")
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
+    NPU_ARCH ${SUPPORT_NPU_ARCH}
     TILING_DIR ${SUPPORT_TILING_DIR}
     DISABLE_IN_OPP TRUE
 )

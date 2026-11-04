@@ -10,11 +10,11 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 """
-quant_batch_matmul_v4 kernel golden 实现 (仅覆盖 Ascend 950 场景)。
+quant_batch_matmul_v4 kernel golden 实现 (仅覆盖 DAV_3510 场景)。
 
 本模块包含 V4 kernel 的 TestSpec 类和入口函数 qbmmv4_kernel_compute。
 
-950 V4 支持的量化模式 (对应 arch35 tiling QuantType 枚举):
+dav_3510 V4 支持的量化模式 (对应 arch35 tiling QuantType 枚举):
   - MX (4):               FP8×FP4 + E8M0 scale 预乘
   - T_CG (PER_GROUP 3):   FP8×FP4 + BF16/FP16 x2Scale + UINT64 yScale
   - PER_TILE (5):         INT8×INT8 + FLOAT32 多维 per-tile scale
@@ -43,7 +43,7 @@ FP4_INPUT_DTYPE = ("float4_e2m1",)
 
 
 # ============================================================================
-# V4 量化模式判定 (仅 950, 对齐 arch35 tiling QuantType 枚举)
+# V4 量化模式判定 (仅 dav_3510, 对齐 arch35 tiling QuantType 枚举)
 # ============================================================================
 
 
@@ -258,7 +258,7 @@ def compute_per_tile(
 
     量化模式 (对应 arch35 QuantType::PER_TILE):
     - x1=INT8, x2=INT8, x1Scale=FLOAT32 [M, ceil(K/gK)], x2Scale=FLOAT32 [ceil(K/gK), ceil(N/gN)]
-    - 950 约束: groupSizeM=1, groupSizeN=128, groupSizeK=128
+    - dav_3510 约束: groupSizeM=1, groupSizeN=128, groupSizeK=128
 
     kernel (CMCT Pertile, block_epilogue_pertile.h):
     - cube: INT8xINT8->INT32 matmul per K-tile(128)
@@ -328,7 +328,7 @@ def compute_int4_asymmetrical(
     量化模式 (对应 arch35 QuantType::INT4_ASYMMETRICAL):
     - x1=INT4, x2=INT4, x1Scale=FLOAT32 [M, 1], x2Scale=FLOAT32 [ceil(K/256), N],
       x2Offset=FLOAT16 [ceil(K/256), N]
-    - 950 约束: groupSizeK=256, transA=false, transB=true, K 对齐 1024, N 对齐 256
+    - dav_3510 约束: groupSizeK=256, transA=false, transB=true, K 对齐 1024, N 对齐 256
 
     kernel (quant_batch_matmul_v4_pergroup.h, DequantAndAccu + X2OffsetProcess):
     - INT4->INT8 预处理后做 INT8xINT8->INT32 matmul per K-group(256)
@@ -409,7 +409,7 @@ def qbmmv4_kernel_compute(
 ):
     """quant_batch_matmul_v4 的 kernel 级别 numpy 模拟计算入口。
 
-    根据量化模式分发到对应的计算函数 (仅 950 V4 场景):
+    根据量化模式分发到对应的计算函数 (仅 dav_3510 V4 场景):
     - MX:                compute_mx (E8M0 scale 预乘)
     - T_CG:              compute_t_cg (FP8 x FP4 per-group + yScale 后乘)
     - PER_TILE:          compute_per_tile (INT8 x INT8 per-tile 累加)

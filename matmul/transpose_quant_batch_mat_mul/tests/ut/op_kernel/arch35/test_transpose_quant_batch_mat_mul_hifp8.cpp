@@ -10,7 +10,7 @@
 
 /*!
  * \file test_transpose_quant_batch_mat_mul_hifp8.cpp
- * \brief Kernel UT for the Ascend950 HIFP8 fixpipe-quant tensor API path.
+ * \brief Kernel UT for the DAV_3510 HIFP8 fixpipe-quant tensor API path.
  */
 
 #define DTYPE_X1 hifloat8_t

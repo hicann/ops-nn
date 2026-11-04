@@ -47,8 +47,8 @@ bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingK
         (index >= 48UL && index <= 57UL)) {
         return true;
     }
-    // 非950tiling要检查57位以后的tilingdata
-    if (case_name.find("MatMulV3_950") == string::npos && index > 57UL) {
+    // 非dav_3510 tiling要检查57位以后的tilingdata
+    if (case_name.find("MatMulV3_dav3510") == string::npos && index > 57UL) {
         return true;
     }
     // 基础API校验全部的tilingdata

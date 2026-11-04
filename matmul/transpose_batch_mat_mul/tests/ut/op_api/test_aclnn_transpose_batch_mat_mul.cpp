@@ -21,6 +21,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace std;
@@ -607,7 +608,7 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_case_cubeMathType4)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_transpose_batch_mat_mul_test, ascend91095_tbmm_case_1)
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_tbmm_case_1)
 {
     int64_t M = 13;
     int64_t K = 304;
@@ -863,9 +864,9 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_batch_split_factor_zero
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_transpose_batch_mat_mul_test, ascend950_tbmm_cubeMathType_neg1)
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_tbmm_cubeMathType_neg1)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     int64_t M = 32;
     int64_t K = 512;
     int64_t N = 128;

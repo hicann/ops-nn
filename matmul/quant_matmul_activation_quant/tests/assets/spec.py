@@ -55,7 +55,7 @@ _MX_GROUP_SIZE = 32
 
 
 def _ftz_float32(value):
-    """Flush FP32 subnormals to signed zero, as the 950 VF pipes do by default."""
+    """Flush FP32 subnormals to signed zero, as the dav_3510 VF pipes do by default."""
     value = np.asarray(value, dtype=np.float32)
     signed_zero = np.copysign(np.float32(0.0), value)
     return np.where(np.abs(value) < _FP32_TINY, signed_zero, value).astype(

@@ -18,10 +18,10 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "platform/platform_info.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace ge;
 namespace ops {
-static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"};
 static const int32_t DTYPE_FLOAT4_E2M1 = 40;
 static const int32_t DTYPE_HIFLOAT4 = 42;
 static constexpr size_t FLATQUANT_K_IDX = 0;
@@ -47,7 +47,9 @@ static bool IsFlatQuantMxFp4DavidSupport()
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     auto ret = fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo);
-    return (ret == GRAPH_SUCCESS && FlatQuantMXFP4DavidSupportSoc.count(platformInfo.str_info.short_soc_version) > 0);
+    return (ret == GRAPH_SUCCESS && (platformInfo.soc_info.arch_type == static_cast<int32_t>(Ops::Base::DAV_3510) ||
+                                     platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9201) ||
+                                     platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9202)));
 }
 
 static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
@@ -67,7 +69,7 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
-    if (IsFlatQuantMxFp4DavidSupport()) { // Only for 950
+    if (IsFlatQuantMxFp4DavidSupport()) { // Only for dav_3510
         // Validate dst_type_max parameter if provided
         const float* dstTypeMax = nullptr;
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_THREE) {
@@ -173,7 +175,7 @@ static ge::graphStatus InferDataType4FlatQuant(gert::InferDataTypeContext* conte
         return GRAPH_FAILED;
     }
 
-    if (IsFlatQuantMxFp4DavidSupport()) { // For 950
+    if (IsFlatQuantMxFp4DavidSupport()) { // For dav_3510
         const int32_t* outxDtype = nullptr;
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_TWO) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);

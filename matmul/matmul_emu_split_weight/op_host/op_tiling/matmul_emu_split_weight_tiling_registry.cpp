@@ -15,6 +15,7 @@
 #include "register/op_impl_registry.h"
 #include "error_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using optiling::matmul_emu_split_weight::MatmulEmuSplitWeightBaseTiling;
 using optiling::matmul_emu_split_weight::MatmulEmuSplitWeightTiling;
@@ -35,9 +36,8 @@ static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* conte
     OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "platformInfo is null"),
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion == platform_ascendc::SocVersion::ASCEND950 ||
-        socVersion == platform_ascendc::SocVersion::ASCEND350) {
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if (npuArch == Ops::Base::DAV_3510) {
         return MatmulEmuSplitWeightTiling(context).DoTiling();
     }
 

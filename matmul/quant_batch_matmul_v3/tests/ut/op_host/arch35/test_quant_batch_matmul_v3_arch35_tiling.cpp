@@ -13,13 +13,13 @@
 #include "../../../../op_host/mx_scale_nz_shape.h"
 #include "../../../../op_host/op_tiling/quant_batch_matmul_v3_tiling_cache_key.h"
 
-static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams950 = GetParams("Ascend950");
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParamsDav3510 = GetParams("Dav3510");
 
-INSTANTIATE_TEST_CASE_P(QUANTMM950, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams950));
+INSTANTIATE_TEST_CASE_P(QUANTMM_DAV_3510, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParamsDav3510));
 
-TEST_F(TestQuantBatchMatmulV3Tiling, multiThread950)
+TEST_F(TestQuantBatchMatmulV3Tiling, multiThreadDav3510)
 {
-    TestMultiThread(kCasesParams950.data(), kCasesParams950.size(), 3);
+    TestMultiThread(kCasesParamsDav3510.data(), kCasesParamsDav3510.size(), 3);
 }
 
 TEST(QuantBatchMatmulScaleNzShape, CanonicalAxesAndPadding)

@@ -312,9 +312,10 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
         {"Short_SoC_version", param.socVersion},
         {"SoC_version", param.socVersion},
     };
-    const map<string, string> soc2Arch = {{"Ascend950", "3510"}};
+    const map<string, string> soc2Arch = {{"Dav3510", "3510"}};
     auto soc2ArchIter = soc2Arch.find(param.socVersion);
     if (soc2ArchIter != soc2Arch.end()) {
+        socVersionInfos.clear();
         socVersionInfos["NpuArch"] = soc2ArchIter->second;
     }
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
@@ -341,7 +342,7 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
 
 TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest) { TestOneParamCase(GetParam()); }
 
-INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAdd950, QuantBatchMatmulInplaceAddTiling,
+INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAddDav3510, QuantBatchMatmulInplaceAddTiling,
                          testing::ValuesIn(GetParams()), SanitizeCaseName);
 
 } // namespace

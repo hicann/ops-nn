@@ -19,6 +19,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace std;
@@ -520,9 +521,9 @@ TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_shape_invalid)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_success)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_mx_fp8_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -535,9 +536,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_success)
 }
 
 // MX路径空Tensor（M=0）: 维度非负即可，走IsEmpty早退返回成功，不应被dim>0校验拦截
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_empty_tensor_success)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_mx_fp8_empty_tensor_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({0, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({0, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -549,9 +550,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_empty_tensor_success)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_rot_k)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_mx_invalid_rot_k)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -563,9 +564,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_rot_k)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_k256_all_mx_dtypes)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_k256_all_mx_dtypes)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (auto inType : {ACL_FLOAT16, ACL_BF16}) {
         for (auto outType : {ACL_FLOAT4_E2M1, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E5M2}) {
             for (bool multiRot : {false, true}) {
@@ -589,9 +590,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_k256_all_mx_dtypes)
     }
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_k256_all_mx_dtypes)
+TEST_F(l2_rotate_quant_test, dav3510_grouped_rotate_quant_k256_all_mx_dtypes)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (auto inType : {ACL_FLOAT16, ACL_BF16}) {
         for (auto outType : {ACL_FLOAT4_E2M1, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E5M2}) {
             for (int64_t type : {0, 1}) {
@@ -610,9 +611,9 @@ TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_k256_all_mx_dtypes)
     }
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_round_mode)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_mx_invalid_round_mode)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -624,9 +625,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_round_mode)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp4_invalid_dst_type_max)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_mx_fp4_invalid_dst_type_max)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -638,9 +639,9 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp4_invalid_dst_type_max)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_metadata)
+TEST_F(l2_rotate_quant_test, dav3510_grouped_rotate_quant_v2_metadata)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (int64_t type : {0, 1}) {
         TensorDesc x = TensorDesc({29, 96}, ACL_BF16, ACL_FORMAT_ND);
         TensorDesc rot = TensorDesc({7, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -655,9 +656,9 @@ TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_metadata)
     }
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_per_n_rotation)
+TEST_F(l2_rotate_quant_test, dav3510_grouped_rotate_quant_v2_per_n_rotation)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     for (int64_t k : {32, 256}) {
         for (auto inType : {ACL_FLOAT16, ACL_BF16}) {
             for (auto outType : {ACL_FLOAT4_E2M1, ACL_FLOAT8_E4M3FN, ACL_FLOAT8_E5M2}) {
@@ -681,9 +682,9 @@ TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_per_n_rotation)
     }
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_rejects_invalid_4d_rotation)
+TEST_F(l2_rotate_quant_test, dav3510_grouped_rotate_quant_v2_rejects_invalid_4d_rotation)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({7, 96}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc groups = TensorDesc({7}, ACL_INT64, ACL_FORMAT_ND);
     TensorDesc y = TensorDesc({7, 96}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -704,9 +705,9 @@ TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_rejects_invalid_4
     EXPECT_EQ(ut.TestGetWorkspaceSize(&size), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_invalid_metadata)
+TEST_F(l2_rotate_quant_test, dav3510_grouped_rotate_quant_v2_invalid_metadata)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     // Vary E, rotation E, group-list dtype, and representation independently.
     struct Case {
         int64_t e, rotE, type;
@@ -730,9 +731,9 @@ TEST_F(l2_rotate_quant_test, ascend950_grouped_rotate_quant_v2_invalid_metadata)
     }
 }
 
-TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_v2_null_groups_keep_n_axis_rotation)
+TEST_F(l2_rotate_quant_test, dav3510_rotate_quant_v2_null_groups_keep_n_axis_rotation)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x = TensorDesc({7, 96}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot = TensorDesc({3, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y = TensorDesc({7, 96}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);

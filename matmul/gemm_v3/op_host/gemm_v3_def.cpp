@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class GemmV3 : public OpDef {
@@ -83,7 +84,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("softsync.flag", "true");
-        this->AICore().AddConfig("ascend950", aicConfig_95);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig_95);
         this->AICore().AddConfig("ascend350", aicConfig_95);
         this->AICore().AddConfig("ascend960dt", aicConfig_95);
         this->AICore().AddConfig("ascend960pr", aicConfig_95);

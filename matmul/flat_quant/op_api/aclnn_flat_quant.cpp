@@ -30,6 +30,7 @@
 #include "opdev/make_op_executor.h"
 #include "op_api/aclnn_util.h"
 #include "common/inc/op_host/op_const_def_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -87,25 +88,25 @@ static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_HIF4 =
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
+    {Ops::Base::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_GROUP_LIST_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &GROUP_LIST_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_3510, &GROUP_LIST_DTYPE_SUPPORT_LIST},
+    {Ops::Base::DAV_3510, &GROUP_LIST_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9201, &GROUP_LIST_DTYPE_SUPPORT_LIST},
     {NpuArch::DAV_9202, &GROUP_LIST_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_REGBASE},
+    {Ops::Base::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_REGBASE},
     {NpuArch::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_REGBASE},
     {NpuArch::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_REGBASE}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE},
+    {Ops::Base::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE},
     {NpuArch::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_REGBASE},
     {NpuArch::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_REGBASE}};
 
@@ -496,7 +497,7 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* kroneckerP1,
 static bool CheckGroupList(const aclTensor* groupListOptional, int64_t groupListType)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+    if (curArch == Ops::Base::DAV_3510 || curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
         OP_CHECK(groupListOptional == nullptr,
                  OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON("aclnnFlatQuant", "groupListOptional",
                                                           "for ascend950, groupListOptional only supports nullptr"),

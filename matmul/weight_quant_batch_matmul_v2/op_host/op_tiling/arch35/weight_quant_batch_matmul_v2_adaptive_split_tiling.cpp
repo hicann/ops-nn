@@ -22,6 +22,7 @@
 #include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace platform_ascendc;
 
@@ -148,7 +149,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::DoOpTiling()
     OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
                     OP_LOGE(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
     if (compileInfoPtr_->socVersion != SocVersion::ASCEND910_55) {
-        // 950上默认给L1的n轴大小为256
+        // dav3510上默认给L1的n轴大小为256
         l1NMaxSize_ = 256UL;
     } else {
         // 910_55上默认给L1的n轴大小转置情况下为128，非转置情况下为256
@@ -902,6 +903,6 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::GetWorkspaceSize()
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2TilingAS,
-                                   static_cast<int32_t>(NpuArch::DAV_3510), ADAPTIVE_SPLIT_PRIORITY);
+                                   static_cast<int32_t>(Ops::Base::DAV_3510), ADAPTIVE_SPLIT_PRIORITY);
 } // namespace weight_quant_batch_matmul_v2
 } // namespace optiling

@@ -16,6 +16,7 @@
 #include "matmul_v3_tiling_strategy.h"
 #include "matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using Ops::NN::MathUtil;
 namespace {
@@ -53,7 +54,7 @@ bool CheckStreamKDPSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const
 using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
-    {NpuArch::DAV_3510, CheckStreamKDPSKTilingDav3510},
+    {Ops::Base::DAV_3510, CheckStreamKDPSKTilingDav3510},
     {NpuArch::DAV_9201, CheckStreamKDPSKTilingDav3510},
     {NpuArch::DAV_9202, CheckStreamKDPSKTilingDav3510},
 };
@@ -261,7 +262,7 @@ using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo&, const MatM
                                           const gert::TilingContext*);
 
 const static std::map<NpuArch, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
-    {NpuArch::DAV_3510, CheckStreamKSKTilingDav3510},
+    {Ops::Base::DAV_3510, CheckStreamKSKTilingDav3510},
     {NpuArch::DAV_9201, CheckStreamKSKTilingDav9201},
     {NpuArch::DAV_9202, CheckStreamKSKTilingDav9201},
 };
@@ -281,7 +282,7 @@ MatMulV3L0C2Out GetL0C2OutFlagDav3510(const MatMulV3Args& args)
 using GetL0C2OutFlagFunc = MatMulV3L0C2Out (*)(const MatMulV3Args&);
 
 const static std::map<NpuArch, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
-    {NpuArch::DAV_3510, GetL0C2OutFlagDav3510},
+    {Ops::Base::DAV_3510, GetL0C2OutFlagDav3510},
 };
 
 // ND_FIXPIPE_1_2场景partial在workspace按32元素(128B)对齐宽度读写，计算n方向cnt个tile的对齐宽度总和

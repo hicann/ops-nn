@@ -13,6 +13,7 @@
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_info.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace ge;
 using namespace std;
@@ -166,12 +167,14 @@ TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_case_0)
     }
 }
 
-static void CheckGroupedInferShapePlatform(const string& socVersion, ge::graphStatus expected, int64_t rotSlices = 0)
+static void CheckGroupedInferShapePlatform(const string& socVersion, ge::graphStatus expected, int64_t rotSlices = 0,
+                                           int32_t archType = 0)
 {
     SCOPED_TRACE(::testing::Message() << "soc=" << socVersion << ", rotSlices=" << rotSlices);
     fe::PlatformInfo platform;
     fe::OptionalInfo optional;
     platform.str_info.short_soc_version = socVersion;
+    platform.soc_info.arch_type = archType;
     optional.soc_version = socVersion;
     fe::PlatformInfoManager::Instance().platform_info_map_[socVersion] = platform;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optional);
@@ -220,7 +223,7 @@ static void CheckGroupedInferShapePlatform(const string& socVersion, ge::graphSt
 
 TEST_F(RotateQuantInferShape, GroupedRotationWithoutAlphaUsesOptionalInputIndex)
 {
-    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_SUCCESS);
+    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_SUCCESS, 0, static_cast<int32_t>(Ops::Base::DAV_3510));
 }
 
 TEST_F(RotateQuantInferShape, GroupedRotationRequiresAscend950)
@@ -233,8 +236,8 @@ TEST_F(RotateQuantInferShape, GroupedRotationRequiresAscend950)
 
 TEST_F(RotateQuantInferShape, GroupedPerNRotation)
 {
-    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_SUCCESS, 3);
-    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_FAILED, 2);
+    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_SUCCESS, 3, static_cast<int32_t>(Ops::Base::DAV_3510));
+    CheckGroupedInferShapePlatform("Ascend950", ge::GRAPH_FAILED, 2, static_cast<int32_t>(Ops::Base::DAV_3510));
     CheckGroupedInferShapePlatform("Ascend350", ge::GRAPH_FAILED, 3);
 }
 
@@ -245,6 +248,7 @@ static void CheckOptionalAlphaInferShape(bool hasAlpha, int64_t groupNum, int64_
     fe::PlatformInfo platform;
     fe::OptionalInfo optional;
     platform.str_info.short_soc_version = "Ascend950";
+    platform.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
     optional.soc_version = "Ascend950";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platform;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optional);

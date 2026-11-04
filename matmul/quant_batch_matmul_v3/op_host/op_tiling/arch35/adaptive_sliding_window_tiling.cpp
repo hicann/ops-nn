@@ -510,7 +510,7 @@ double AdaptiveSlidingWindowTiling::EstimateMatmulMacTimeUs(uint64_t kAlignSize)
     const double macsPerCycle = static_cast<double>(
         GetShapeWithDataType(qmmv3_tiling_const::B8_CUBE_MACS_PER_CYCLE, inputParams_.aDtype));
     return totalMacs / static_cast<double>(CalUsedCoreNum()) / macsPerCycle /
-           qmmv3_tiling_const::ASCEND_950_CUBE_FREQ_MHZ;
+           qmmv3_tiling_const::DAV_3510_CUBE_FREQ_MHZ;
 }
 
 uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum(uint32_t mTile, uint32_t nTile)

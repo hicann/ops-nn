@@ -13,6 +13,7 @@
 #include "op_api/op_api_def_nn.h"
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -51,7 +52,7 @@ bool NeedCubeGoHF32(const op::DataType cubeTensorPromoteType, int8_t cubeMathTyp
 inline bool IsNpuArch3510Series()
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return (npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202);
+    return (npuArch == ::Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202);
 }
 
 // 检查针对x芯片，cube算子是否支持FP32

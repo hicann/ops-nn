@@ -9,7 +9,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""ACLNN 层 golden 实现 (仅覆盖 Ascend 950 场景)。
+"""ACLNN 层 golden 实现 (仅覆盖 DAV_3510 场景)。
 
 对应 C++ aclnnQuantMatmulV5 接口,按输入参数路由到 V4 或 V3 kernel golden。
 

@@ -31,6 +31,7 @@
 #include "util/math_util.h"
 #include "quant_matmul_checker.h"
 #include "quant_matmul_v4_common.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace quant_matmul_v4;
@@ -200,10 +201,10 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (isA4W4) {
-        // a4w4 support 910B 910_93 950，其余暂不支持
+        // a4w4 support 910B 910_93 dav_3510，其余暂不支持
         switch (npuArch) {
             case NpuArch::DAV_2201:
-            case NpuArch::DAV_3510:
+            case Ops::Base::DAV_3510:
             case NpuArch::DAV_9201:
             case NpuArch::DAV_9202:
                 break;
@@ -216,7 +217,7 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
     } else {
         switch (npuArch) {
             case NpuArch::DAV_2201:
-            case NpuArch::DAV_3510:
+            case Ops::Base::DAV_3510:
             case NpuArch::DAV_9201:
             case NpuArch::DAV_9202:
             case NpuArch::DAV_2002:
@@ -289,7 +290,7 @@ static aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, 
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (formatX2 != op::Format::FORMAT_FRACTAL_NZ ||
         (isNotOneDim &&
-         (npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202))) {
+         (npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202))) {
         CHECK_RET(TensorContiguousProcess(x2, transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
     }
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ) {
@@ -465,7 +466,7 @@ static bool IsX1Transdata(const aclTensor* x1, const aclTensor* x2, int64_t dtyp
 
 static aclnnStatus A8W4ProcessYScaleTensor(const aclTensor* x1Scale, const aclTensor*& yScale, aclOpExecutor* executor)
 {
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 || IsNpuArch92()) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510 || IsNpuArch92()) {
         // A8W4场景输入的INT64转为UINT64
         if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
             auto castYScale = executor->CreateView(yScale, yScale->GetViewShape(), yScale->GetViewOffset());
@@ -596,7 +597,7 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
     bool isA8W4I = isA8W4Int(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4I;
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) &&
+    if ((npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) &&
         !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto x2DimNum = x2->GetViewShape().GetDimNum();

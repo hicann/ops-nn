@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "tiling/platform/platform_ascendc.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace strategy {
@@ -36,7 +37,7 @@ constexpr int32_t X2_PERGROUP = 9L;
 inline uint32_t GetAivNumPerAic(NpuArch npuArch)
 {
     switch (npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
             return 2U;
         case NpuArch::DAV_9201:
         case NpuArch::DAV_9202:
@@ -58,7 +59,7 @@ inline const std::vector<int32_t>& GetQuantBatchMatmulV3Priorities(NpuArch npuAr
                                                            strategy::CUBE_BASIC_API_ASW, strategy::CUBE_ASW};
     static const std::vector<int32_t> emptyPriorities = {};
     switch (npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
             return dav3510Priorities;
         case NpuArch::DAV_9201:
         case NpuArch::DAV_9202:

@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class MatMulV3 : public OpDef {
@@ -163,7 +164,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.PrecisionReduceFlag(true).ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend950", aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig);
         this->AICore().AddConfig("ascend350", aicConfig);
         this->AICore().AddConfig("ascend960dt", aicConfig);
         this->AICore().AddConfig("ascend960pr", aicConfig);

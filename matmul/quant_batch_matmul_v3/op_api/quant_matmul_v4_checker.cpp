@@ -31,6 +31,7 @@
 #include "util/math_util.h"
 #include "quant_matmul_checker.h"
 #include "quant_matmul_v4_common.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace quant_matmul_v4;
@@ -1195,7 +1196,7 @@ aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTensor* x2,
                                        const aclTensor* x2Scale, const aclTensor* out)
 {
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
+    if (npuArch != Ops::Base::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
         return ACLNN_SUCCESS;
     }
 
@@ -1279,7 +1280,7 @@ aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleOptional optionalTens
                         const aclTensor* out, const char* apiName)
 {
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
+    if (npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
         return CheckParamsDAV3510(mandatoryTensors, optionalTensors, boolsTrans, out, apiName);
     } else {
         // 1. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验

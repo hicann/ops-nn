@@ -20,6 +20,7 @@
 #include "platform/soc_spec.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "util/math_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 constexpr uint64_t PER_BLOCK_BASE_SIZE_256 = 256UL;
@@ -353,7 +354,7 @@ bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode
         return true;
     }
     switch (compileInfo_.npuArch) {
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
         case NpuArch::DAV_9201:
         case NpuArch::DAV_9202:
             return mode == BaseBlockMode::PERBLOCK ? AdjustBaseBlockPerblock() : AdjustBaseBlockDefault();
@@ -369,7 +370,7 @@ bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode
 void BaseBlockCalculator::OptimizeBaseBlockForLoadBalance(BaseBlockMode mode)
 {
     const bool enableLoadBalance = inputParams_.isMxPerGroup || mode == BaseBlockMode::CUBE_BASIC;
-    if (!enableLoadBalance || compileInfo_.npuArch != NpuArch::DAV_3510) {
+    if (!enableLoadBalance || compileInfo_.npuArch != Ops::Base::DAV_3510) {
         return;
     }
     // For pure Cube K-inner operands, conservatively keep the original base below the unscaled K threshold.
@@ -517,11 +518,11 @@ bool BaseBlockCalculator::ShouldKeepOriginForRoofline(uint64_t curBaseM, uint64_
 
     // Match EstimateMatmulMacTimeUs: B8 peak is scaled by input element size and replicated over active AICs.
     const double macsPerCycle = static_cast<double>(qmmv3_tiling_const::B8_CUBE_MACS_PER_CYCLE) / dtypeBytes;
-    const double cubeMacsPerUs = macsPerCycle * qmmv3_tiling_const::ASCEND_950_CUBE_FREQ_MHZ *
+    const double cubeMacsPerUs = macsPerCycle * qmmv3_tiling_const::DAV_3510_CUBE_FREQ_MHZ *
                                  static_cast<double>(compileInfo_.aicNum);
     // Use effective L2 bandwidth here to avoid over-constraining MX candidates at the early base-block stage.
-    const double l2BytesPerUs = qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS *
-                                qmmv3_tiling_const::MTE2_BW_UTILIZATION * qmmv3_tiling_const::BYTES_PER_US_PER_TBPS;
+    const double l2BytesPerUs = qmmv3_tiling_const::DAV_3510_MAX_L2_BW_TBPS * qmmv3_tiling_const::MTE2_BW_UTILIZATION *
+                                qmmv3_tiling_const::BYTES_PER_US_PER_TBPS;
     const double rooflineIntensity = cubeMacsPerUs / l2BytesPerUs;
     const double originComputeBoundLimit = rooflineIntensity * (1.0 + LOAD_BALANCE_ROOFLINE_MARGIN);
     const double candidateMte2BoundLimit = rooflineIntensity * (1.0 - LOAD_BALANCE_ROOFLINE_MARGIN);

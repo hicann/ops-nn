@@ -17,6 +17,8 @@
 #include "../op_host/mx_scale_nz_shape.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "version/metadef_version.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace ge;
@@ -1276,7 +1278,7 @@ bool QuantMatmulChecker::CheckScaleDimRange() const
 
 bool QuantMatmulChecker::CheckGroupSize() const
 {
-    if (npuArch_ != NpuArch::DAV_3510 && npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
+    if (npuArch_ != Ops::Base::DAV_3510 && npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
         return true;
     }
     const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
@@ -2122,7 +2124,7 @@ aclnnStatus QuantMatmulChecker::CheckDtype() const
         case NpuArch::DAV_2201:
             CHECK_RET(CheckDtypeOnlyL0c2out() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
-        case NpuArch::DAV_3510:
+        case Ops::Base::DAV_3510:
         case NpuArch::DAV_9201:
         case NpuArch::DAV_9202:
             CHECK_RET(CheckDtypeL0c2outOrL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);

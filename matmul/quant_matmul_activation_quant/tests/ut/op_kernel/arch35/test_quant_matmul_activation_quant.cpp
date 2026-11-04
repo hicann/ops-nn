@@ -97,7 +97,7 @@
 namespace {
 const QuantMatmulActivationQuantKernelCsvLoadResult& GetKernelCases()
 {
-    static const auto result = QuantMatmulActivationQuantKernelTestUtils::GetParams("Ascend950", QMMAQ_CSV_TARGET);
+    static const auto result = QuantMatmulActivationQuantKernelTestUtils::GetParams("Dav3510", QMMAQ_CSV_TARGET);
     return result;
 }
 
@@ -111,7 +111,7 @@ protected:
     }
 };
 
-QMMAQ_TEST(QMMAQ_CSV_SUITE, LoadsAscend950Cases)
+QMMAQ_TEST(QMMAQ_CSV_SUITE, LoadsDav3510Cases)
 {
     const auto& result = GetKernelCases();
     for (const auto& error : result.errors) {
@@ -123,13 +123,13 @@ QMMAQ_TEST(QMMAQ_CSV_SUITE, LoadsAscend950Cases)
 QMMAQ_TEST_P(QMMAQ_KERNEL_SUITE, ComputesValuesScalesAndPreservesGuards)
 {
 #ifdef __CCE_KT_TEST__
-    QuantMatmulActivationQuantKernelTestUtils::TestOneParamCase950(GetParam());
+    QuantMatmulActivationQuantKernelTestUtils::TestOneParamCaseDav3510(GetParam());
 #else
     GTEST_SKIP() << "Kernel CPU simulator is unavailable";
 #endif
 }
 
-QMMAQ_INSTANTIATE_TEST_SUITE_P(Ascend950, QMMAQ_KERNEL_SUITE, testing::ValuesIn(GetKernelCases().params),
+QMMAQ_INSTANTIATE_TEST_SUITE_P(Dav3510, QMMAQ_KERNEL_SUITE, testing::ValuesIn(GetKernelCases().params),
                                [](const testing::TestParamInfo<QuantMatmulActivationQuantKernelTestParam>& info) {
                                    return info.param.caseName;
                                });

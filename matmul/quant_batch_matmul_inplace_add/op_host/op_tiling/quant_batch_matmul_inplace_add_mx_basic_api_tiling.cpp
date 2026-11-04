@@ -20,12 +20,13 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_key.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 
 namespace {
 constexpr int32_t MX_BASIC_API_TILING_PRIORITY = 0;
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
                                                static_cast<int32_t>(NpuArch::DAV_9201)};
 } // namespace
 

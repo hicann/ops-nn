@@ -29,6 +29,18 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
   set(out_src_path ${ASCEND_AUTOGEN_PATH}/${sub_dir})
   file(MAKE_DIRECTORY ${out_src_path})
   get_filename_component(out_src_path ${out_src_path} REALPATH)
+  if(module_sources AND DEFINED OPBASE_SOURCE_PATH
+      AND EXISTS ${OPBASE_SOURCE_PATH}/src/op_common/op_host/util/op_arch_helper.cpp)
+    list(APPEND module_sources ${OPBASE_SOURCE_PATH}/src/op_common/op_host/util/op_arch_helper.cpp)
+  endif()
+  set(OPBUILD_LINK_OPTS "")
+  if(NOT ENABLE_CROSS_COMPILE AND EXISTS ${ASCEND_CANN_PACKAGE_PATH}/${SYSTEM_PREFIX}/lib64/libops_base.so)
+    set(OPBUILD_LINK_OPTS "-L${ASCEND_CANN_PACKAGE_PATH}/${SYSTEM_PREFIX}/lib64" "-lops_base")
+  endif()
+  set(OPBUILD_COMPILE_OPTS "-I${CMAKE_SOURCE_DIR}")
+  if(DEFINED OPBASE_SOURCE_PATH AND EXISTS ${OPBASE_SOURCE_PATH}/include)
+    list(APPEND OPBUILD_COMPILE_OPTS "-I${OPBASE_SOURCE_PATH}/include")
+  endif()
   # opbuild_gen_aclnn/opbuild_gen_aclnnInner/opbuild_gen_aclnnExc
   if(module_sources AND ENABLE_GEN_ACLNN)
     if (module_sources)
@@ -36,7 +48,8 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
         SRC ${module_sources}
         PACKAGE opbuild_gen_${prefix}
         OPTIONS OPS_PROTO_SEPARATE 1 OPS_PROJECT_NAME ${prefix} OPS_ACLNN_GEN ${need_gen_aclnn}
-        COMPILE_OPTIONS "-I${CMAKE_SOURCE_DIR}"
+        COMPILE_OPTIONS ${OPBUILD_COMPILE_OPTS}
+        LINK_OPTIONS ${OPBUILD_LINK_OPTS}
         OUT_DIR ${out_src_path}
       )
       execute_process(COMMAND bash -c "rm -fr ${out_src_path}/*.ini"

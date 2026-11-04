@@ -67,15 +67,16 @@ TEST_F(FlatQuantProto, inferDtype_case_1)
     }
 }
 
-TEST_F(FlatQuantProto, inferDtype_950_case_1)
+TEST_F(FlatQuantProto, inferDtype_dav3510_case_1)
 {
-    // mock Ascend950
+    // mock DAV_3510
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.soc_info.arch_type = 3510;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FlatQuant"), nullptr);
@@ -111,14 +112,15 @@ TEST_F(FlatQuantProto, inferDtype_950_case_1)
     }
 }
 
-TEST_F(FlatQuantProto, inferDtype_950_case_2)
+TEST_F(FlatQuantProto, inferDtype_dav3510_case_2)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.soc_info.arch_type = 3510;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FlatQuant"), nullptr);
@@ -196,15 +198,16 @@ TEST_F(FlatQuantProto, infershape_case_1)
     ASSERT_EQ(Ops::Base::ToString(*quantScale), "[16]");
 }
 
-TEST_F(FlatQuantProto, infershape_950_case_1)
+TEST_F(FlatQuantProto, infershape_dav3510_case_1)
 {
-    // mock Ascend950
+    // mock DAV_3510
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.soc_info.arch_type = 3510;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FlatQuant")->infer_shape;
 
@@ -241,15 +244,16 @@ TEST_F(FlatQuantProto, infershape_950_case_1)
     ASSERT_EQ(Ops::Base::ToString(*quantScale), "[16, 64, 2]");
 }
 
-TEST_F(FlatQuantProto, infershape_950_case_2)
+TEST_F(FlatQuantProto, infershape_dav3510_case_2)
 {
-    // mock Ascend950
+    // mock DAV_3510
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
+    platformInfo.soc_info.arch_type = 3510;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FlatQuant")->infer_shape;
 

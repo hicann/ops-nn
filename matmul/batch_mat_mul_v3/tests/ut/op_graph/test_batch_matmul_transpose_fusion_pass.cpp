@@ -41,20 +41,20 @@ constexpr int64_t DIM_64 = 64;
 constexpr int64_t DIM_128 = 128;
 constexpr int64_t DIM_256 = 256;
 
-void SetPlatformInfo950()
+void SetPlatformInfoDav3510()
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
     platformInfo.soc_info.ai_core_cnt = 24;
     platformInfo.ai_core_spec.l1_size = 512 * 1024;
     platformInfo.soc_info.l2_size = 192 * 1024 * 1024;
-    optionalInfo.soc_version = "Ascend950";
+    optionalInfo.soc_version = "dav3510";
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_fix_pipe_l0c2out"] = {"float16"};
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_out2l1_nd2nz"] = {"float16"};
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_l12bt"] = {"bf16"};
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_fix_pipe_post_eltwise_func_list"] = {"float16"};
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
@@ -260,7 +260,7 @@ std::shared_ptr<Graph> BuildGraph(const std::string& name, const GraphConfig& cf
 
 class BatchMatMulTransposeFusionPassTest : public testing::Test {
 protected:
-    void SetUp() override { SetPlatformInfo950(); }
+    void SetUp() override { SetPlatformInfoDav3510(); }
     class TestablePass : public ops::BatchMatMulTransposeFusionPass {};
 };
 

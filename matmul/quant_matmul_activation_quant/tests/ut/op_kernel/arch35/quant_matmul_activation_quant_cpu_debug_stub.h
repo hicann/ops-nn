@@ -57,7 +57,7 @@ inline uint8_t* GetBufferBaseAddress()
         return buffers.GetHardwareBaseAddr(AscendC::Hardware::BIAS);
     } else if constexpr (std::is_same_v<Location, location::l0scalea>) {
         // MX scale storage is separate from L0A/L0B in the CPU simulator, as in
-        // AscendC's LoadData2DL12L0A/B implementation for Ascend950.
+        // AscendC's LoadData2DL12L0A/B implementation for DAV_3510.
         return buffers.cpuL0AMx;
     } else if constexpr (std::is_same_v<Location, location::l0scaleb>) {
         return buffers.cpuL0BMx;

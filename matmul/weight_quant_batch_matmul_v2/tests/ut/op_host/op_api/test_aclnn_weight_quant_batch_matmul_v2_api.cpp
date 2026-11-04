@@ -20,6 +20,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 enum ContiguousType { CONTIGUOUS, TRANSPOSE_LAST_TWO_DIMS, NOT_CONTIGUOUS };
 
@@ -106,25 +107,24 @@ protected:
 std::unique_ptr<op::NpuArchManager> l2_weight_quant_batch_matmul_v2_test_910::archManager;
 std::unique_ptr<op::SocVersionManager> l2_weight_quant_batch_matmul_v2_test_910::versionManager;
 
-class l2_weight_quant_batch_matmul_v2_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
+class l2_weight_quant_batch_matmul_v2_test_dav3510 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
 protected:
     static void SetUpTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_v2_test_950 SetUp" << endl;
-        archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_3510);
-        versionManager = std::make_unique<op::SocVersionManager>(op::SocVersion::ASCEND950);
+        cout << "l2_weight_quant_batch_matmul_v2_test_dav3510 SetUp" << endl;
+        archManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510);
     }
     static void TearDownTestCase()
     {
         versionManager.reset();
         archManager.reset();
-        cout << "l2_weight_quant_batch_matmul_v2_test_950 TearDown" << endl;
+        cout << "l2_weight_quant_batch_matmul_v2_test_dav3510 TearDown" << endl;
     }
     static std::unique_ptr<op::NpuArchManager> archManager;
     static std::unique_ptr<op::SocVersionManager> versionManager;
 };
-std::unique_ptr<op::NpuArchManager> l2_weight_quant_batch_matmul_v2_test_950::archManager;
-std::unique_ptr<op::SocVersionManager> l2_weight_quant_batch_matmul_v2_test_950::versionManager;
+std::unique_ptr<op::NpuArchManager> l2_weight_quant_batch_matmul_v2_test_dav3510::archManager;
+std::unique_ptr<op::SocVersionManager> l2_weight_quant_batch_matmul_v2_test_dav3510::versionManager;
 
 static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
@@ -299,7 +299,7 @@ TEST_P(l2_weight_quant_batch_matmul_v2_test_910, ascend910_generalTest)
     TestOneParamCase(param);
 }
 
-TEST_P(l2_weight_quant_batch_matmul_v2_test_950, ascend950_generalTest)
+TEST_P(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_generalTest)
 {
     WeightQuantBatchMatmulV2TestParam param = GetParam();
     TestOneParamCase(param);
@@ -2470,8 +2470,8 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910[] = {
      ACLNN_ERR_RUNTIME_ERROR},
 };
 
-static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
-    {"Ascend950_case_nd_f8_invalid_soc",
+static WeightQuantBatchMatmulV2TestParam casesParamsDav3510[] = {
+    {"Dav3510_case_nd_f8_invalid_soc",
      {96, 11264},
      {11264, 1664},
      {1, 1664},
@@ -2496,7 +2496,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      false,
      false,
      ACLNN_ERR_PARAM_INVALID},
-    {"Ascend950_case_nd_w4_nz_transweight_error",
+    {"Dav3510_case_nd_w4_nz_transweight_error",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -2524,7 +2524,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      TRANSPOSE_LAST_TWO_DIMS,
      TRANSPOSE_LAST_TWO_DIMS},
-    {"Ascend950_case_nd_aqoffset_int32_invalid",
+    {"Dav3510_case_nd_aqoffset_int32_invalid",
      {96, 11264},
      {11264, 1664},
      {1, 1664},
@@ -2549,7 +2549,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      false,
      false,
      ACLNN_ERR_PARAM_INVALID},
-    {"Ascend950_case_a16mxf4_nd_weight_fp4",
+    {"Dav3510_case_a16mxf4_nd_weight_fp4",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2577,7 +2577,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_weight_fp32",
+    {"Dav3510_case_a16mxf4_nd_weight_fp32",
      {2, 64},
      {64, 16}, // weight N=16 is packed (8 FP4 in 1 FP32), host unpacks to logical N=128
      {2, 128},
@@ -2605,7 +2605,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_weight_fp4_uint8_scale",
+    {"Dav3510_case_a16mxf4_nd_weight_fp4_uint8_scale",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2633,7 +2633,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_weight_fp32_uint8_scale",
+    {"Dav3510_case_a16mxf4_nd_weight_fp32_uint8_scale",
      {2, 64},
      {64, 16}, // weight N=16 is packed (8 FP4 in 1 FP32), host unpacks to logical N=128
      {2, 128},
@@ -2661,7 +2661,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_invalid_group_size",
+    {"Dav3510_case_a16mxf4_nd_invalid_group_size",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -2689,7 +2689,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_invalid_antiquant_offset",
+    {"Dav3510_case_a16mxf4_nd_invalid_antiquant_offset",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2717,7 +2717,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_nd_fp8_e4m3_offset_not_null_invalid",
+    {"Dav3510_case_nd_fp8_e4m3_offset_not_null_invalid",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2745,7 +2745,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_nd_hifloat8_offset_not_null_invalid",
+    {"Dav3510_case_nd_hifloat8_offset_not_null_invalid",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2773,7 +2773,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend950_case_a16mxf4_nd_invalid_shape",
+    {"Dav3510_case_a16mxf4_nd_invalid_shape",
      {2, 64},
      {64, 129},
      {2, 129},
@@ -2984,25 +2984,24 @@ INSTANTIATE_TEST_SUITE_P(Ascend310P_WeightQuantBatchMatmulV2, l2_weight_quant_ba
                          testing::ValuesIn(casesParamsAscend310P));
 INSTANTIATE_TEST_SUITE_P(Ascend910_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910,
                          testing::ValuesIn(casesParamsAscend910));
-INSTANTIATE_TEST_SUITE_P(Ascend950_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_950,
-                         testing::ValuesIn(casesParamsAscend950));
+INSTANTIATE_TEST_SUITE_P(Dav3510_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_dav3510,
+                         testing::ValuesIn(casesParamsDav3510));
 
 static void ThreadFunc(const WeightQuantBatchMatmulV2TestParam* params, size_t testcase_num, size_t thread_idx,
-                       size_t thread_num, NpuArch arch, op::SocVersion soc)
+                       size_t thread_num, NpuArch arch)
 {
     op::NpuArchManager archMgr(arch);
-    op::SocVersionManager socMgr(soc);
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
 static void TestMultiThread(const WeightQuantBatchMatmulV2TestParam* params, size_t testcase_num, size_t thread_num,
-                            NpuArch arch, op::SocVersion soc)
+                            NpuArch arch)
 {
     std::vector<std::thread> threads(thread_num);
     for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num, arch, soc);
+        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num, arch);
     }
 
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -3013,25 +3012,25 @@ static void TestMultiThread(const WeightQuantBatchMatmulV2TestParam* params, siz
 TEST_F(l2_weight_quant_batch_matmul_v2_test_910B2, ascend910B2_multi_thread)
 {
     TestMultiThread(casesParamsAscend910B2, sizeof(casesParamsAscend910B2) / sizeof(WeightQuantBatchMatmulV2TestParam),
-                    3, NpuArch::DAV_2201, op::SocVersion::ASCEND910B);
+                    3, NpuArch::DAV_2201);
 }
 
 TEST_F(l2_weight_quant_batch_matmul_v2_test_310P, ascend310P_multi_thread)
 {
     TestMultiThread(casesParamsAscend310P, sizeof(casesParamsAscend310P) / sizeof(WeightQuantBatchMatmulV2TestParam), 3,
-                    NpuArch::DAV_2002, op::SocVersion::ASCEND310P);
+                    NpuArch::DAV_2002);
 }
 
 TEST_F(l2_weight_quant_batch_matmul_v2_test_910, ascend910_multi_thread)
 {
     TestMultiThread(casesParamsAscend910, sizeof(casesParamsAscend910) / sizeof(WeightQuantBatchMatmulV2TestParam), 3,
-                    NpuArch::DAV_1001, op::SocVersion::ASCEND910);
+                    NpuArch::DAV_1001);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_multi_thread)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_multi_thread)
 {
-    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulV2TestParam), 3,
-                    NpuArch::DAV_3510, op::SocVersion::ASCEND950);
+    TestMultiThread(casesParamsDav3510, sizeof(casesParamsDav3510) / sizeof(WeightQuantBatchMatmulV2TestParam), 3,
+                    Ops::Base::DAV_3510);
 }
 
 // innerPrecise invalid value (V3 API)
@@ -3078,8 +3077,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_310P, ascend310P_quantScaleNotNull)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: INT8 NZ weight with per-group antiquantGroupSize > 0
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerGroup)
+// dav_3510: INT8 NZ weight with per-group antiquantGroupSize > 0
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_int8NzPerGroup)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
@@ -3092,8 +3091,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerGroup)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: INT8 NZ weight with per-tensor scale (shape size == 1)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerTensor)
+// dav_3510: INT8 NZ weight with per-tensor scale (shape size == 1)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_int8NzPerTensor)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
@@ -3106,8 +3105,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerTensor)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: INT8 NZ weight with transposed x (per-channel)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzTransposedX)
+// dav_3510: INT8 NZ weight with transposed x (per-channel)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_int8NzTransposedX)
 {
     auto x = CreateTensorDesc({11264, 96}, ACL_BF16, ACL_FORMAT_ND, TRANSPOSE_LAST_TWO_DIMS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
@@ -3120,8 +3119,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzTransposedX)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: FP4 weight with per-channel/per-tensor (antiquantGroupSize == 0)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp4PerChannel)
+// dav_3510: FP4 weight with per-channel/per-tensor (antiquantGroupSize == 0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_fp4PerChannel)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3134,9 +3133,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp4PerChannel)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: MX A16F4 ND——uint8 承载 E8M0 antiquantScale 的 dtype 修正在 V3 入口同样生效
-// （与参数化用例 Ascend950_case_a16mxf4_nd_weight_fp4_uint8_scale 同组合，走 V3 入口）
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_a16mxf4Fp4Uint8ScaleV3)
+// dav_3510: MX A16F4 ND——uint8 承载 E8M0 antiquantScale 的 dtype 修正在 V3 入口同样生效
+// （与参数化用例 DAV_3510_case_a16mxf4_nd_weight_fp4_uint8_scale 同组合，走 V3 入口）
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_a16mxf4Fp4Uint8ScaleV3)
 {
     auto x = CreateTensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3149,8 +3148,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_a16mxf4Fp4Uint8ScaleV
     EXPECT_EQ(ret, ACLNN_SUCCESS);
 }
 
-// 950: FP8 weight with MX mode (antiquantScale=FLOAT8_E8M0)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8MxMode)
+// dav_3510: FP8 weight with MX mode (antiquantScale=FLOAT8_E8M0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_fp8MxMode)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3163,8 +3162,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8MxMode)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: FP8 weight with per-group (antiquantGroupSize > 0)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerGroup)
+// dav_3510: FP8 weight with per-group (antiquantGroupSize > 0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_fp8PerGroup)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3177,8 +3176,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerGroup)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: FP8 weight with per-tensor (scale shape size == 1, n != 1)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerTensor)
+// dav_3510: FP8 weight with per-tensor (scale shape size == 1, n != 1)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_fp8PerTensor)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3191,8 +3190,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerTensor)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: BF16 x with FP4/FP8 weight + bias dtype not BF16
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchFp4)
+// dav_3510: BF16 x with FP4/FP8 weight + bias dtype not BF16
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_biasDtypeMismatchFp4)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3206,8 +3205,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchFp4)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: BF16 x with INT8 NZ weight + bias dtype not FLOAT
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchInt8Nz)
+// dav_3510: BF16 x with INT8 NZ weight + bias dtype not FLOAT
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_biasDtypeMismatchInt8Nz)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
@@ -3221,8 +3220,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchInt8
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: BF16 x with INT8 ND weight + bias dtype not BF16/FLOAT (default branch)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchDefault)
+// dav_3510: BF16 x with INT8 ND weight + bias dtype not BF16/FLOAT (default branch)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_biasDtypeMismatchDefault)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3236,8 +3235,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchDefa
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: NZ weight with unsupported dtype (INT32)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_nzWeightUnsupportedDtype)
+// dav_3510: NZ weight with unsupported dtype (INT32)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_nzWeightUnsupportedDtype)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
@@ -3250,8 +3249,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_nzWeightUnsupportedDt
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: INT8 NZ weight with large K (exceeds M_K_N_MAX_VALUE)
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzLargeK)
+// dav_3510: INT8 NZ weight with large K (exceeds M_K_N_MAX_VALUE)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_int8NzLargeK)
 {
     constexpr int64_t kLargeK = 100000;
     auto x = CreateTensorDesc({96, kLargeK}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
@@ -3265,8 +3264,8 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzLargeK)
     EXPECT_NE(ret, ACLNN_SUCCESS);
 }
 
-// 950: antiquantScale dtype mismatch with antiquantOffset
-TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_antiquantOffsetDtypeMismatch)
+// dav_3510: antiquantScale dtype mismatch with antiquantOffset
+TEST_F(l2_weight_quant_batch_matmul_v2_test_dav3510, dav3510_antiquantOffsetDtypeMismatch)
 {
     auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
     auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);

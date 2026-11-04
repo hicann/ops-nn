@@ -25,6 +25,7 @@
 #include "log/log.h"
 #include "op_host/tiling_templates_registry.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace QuantBatchMatmulV3Arch35TilingKey;
 
@@ -49,7 +50,7 @@ using optiling::qmmv3_tiling_const::MX_GROUP_SIZE;
 using optiling::qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
 using optiling::qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
 using optiling::qmmv3_tiling_const::NUM_HALF;
-// Benefit thresholds are tuned for DAV_3510/Ascend950 QBMM MX StreamK. Sizes are bytes, time is ns, and permille
+// Benefit thresholds are tuned for DAV_3510 QBMM MX StreamK. Sizes are bytes, time is ns, and permille
 // values use 1000 as the denominator. The transfer model uses 4 TB/s for MTE2/AIV paths. Fixpipe uses 80% of
 // 5.2 TB/s when every candidate N tile width is aligned and 25% otherwise. The unaligned value is based on the
 // 1.308 TB/s median measured by the N-tail profiling suite. The fixed overhead and safety margin come from
@@ -72,7 +73,7 @@ constexpr uint64_t BENEFIT_TIME_SAFETY_NUM = 6UL;
 constexpr uint64_t BENEFIT_TIME_SAFETY_DEN = 5UL;
 constexpr uint64_t FIXPIPE_N_ALIGN_ELEMENTS = 32UL;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_STREAMK;
 
 uint64_t SafeCeilDiv(uint64_t value, uint64_t factor) { return factor == 0UL ? 0UL : ops::CeilDiv(value, factor); }

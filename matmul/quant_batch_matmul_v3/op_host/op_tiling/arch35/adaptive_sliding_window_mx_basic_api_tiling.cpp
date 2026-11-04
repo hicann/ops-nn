@@ -57,7 +57,7 @@ const MxTilingCapabilities& GetMxTilingCapabilities(NpuArch npuArch)
     }
 }
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
                                                static_cast<int32_t>(NpuArch::DAV_9201),
                                                static_cast<int32_t>(NpuArch::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_BASIC_API_ASW;
@@ -107,7 +107,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
     return IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
-           (compileInfo_.npuArch == NpuArch::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+           (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
            IsHif4BlazeCapable();
 }
 
@@ -148,7 +148,7 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
-    const bool supportsBlaze = npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201;
+    const bool supportsBlaze = npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201;
     return IsTensorApiEnabled() && supportsBlaze && IsHif4BlazeCapable() ?
                static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
@@ -163,7 +163,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
 {
     // L0C ping-pong remains a DAV_3510-only template; Ascend960 does not register kernel type 9/10.
-    const bool useMxL0CPingpong = compileInfo_.npuArch == NpuArch::DAV_3510 && IsMxL0CPingpong(inputParams_);
+    const bool useMxL0CPingpong = compileInfo_.npuArch == Ops::Base::DAV_3510 && IsMxL0CPingpong(inputParams_);
     if (isAFullLoad_ && useMxL0CPingpong) {
         return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
     }
@@ -315,7 +315,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::DeriveScaleKL1(uint32_t& scaleFa
     uint64_t scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
                                  static_cast<uint64_t>(scaleFactorB) * stepKb * baseK);
     const uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
-    if (compileInfo_.npuArch == NpuArch::DAV_3510 && IsMxL0CPingpong(inputParams_) &&
+    if (compileInfo_.npuArch == Ops::Base::DAV_3510 && IsMxL0CPingpong(inputParams_) &&
         outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT && scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
         AdjustScaleFactorForL0CPingpong(scaleFactorA, static_cast<uint32_t>(stepKa), static_cast<uint32_t>(baseK));
         AdjustScaleFactorForL0CPingpong(scaleFactorB, static_cast<uint32_t>(stepKb), static_cast<uint32_t>(baseK));
@@ -365,9 +365,9 @@ AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPIT
     // triple-buffer only when the current double buffer cannot cover K and MTE2 is expected to dominate.
     const bool canUseCurrentThreeBuffer = currentParams.isAFullLoad ||
                                           (isCurrentTwoBufferNotOverK &&
-                                           IsMte2Bound(qmmv3_tiling_const::ASCEND_950_MAX_HBM_BW_TBPS *
+                                           IsMte2Bound(qmmv3_tiling_const::DAV_3510_MAX_HBM_BW_TBPS *
                                                            qmmv3_tiling_const::MTE2_BW_UTILIZATION,
-                                                       qmmv3_tiling_const::ASCEND_950_MAX_L2_BW_TBPS *
+                                                       qmmv3_tiling_const::DAV_3510_MAX_L2_BW_TBPS *
                                                            qmmv3_tiling_const::MTE2_BW_UTILIZATION));
     if (canUseCurrentThreeBuffer && CanFitL1BufferNum(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER)) {
         return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER);

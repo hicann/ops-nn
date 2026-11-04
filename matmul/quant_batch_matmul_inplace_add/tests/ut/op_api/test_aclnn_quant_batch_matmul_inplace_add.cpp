@@ -23,6 +23,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace ut_str;
 using namespace std;
@@ -144,7 +145,7 @@ static vector<QuantBatchMatmulInplaceAddTestParam> GetParams()
     vector<QuantBatchMatmulInplaceAddTestParam> params;
     const auto rows = GetCsvRows();
     for (const auto& row : rows) {
-        if (row.socVersion != "Ascend950") {
+        if (row.socVersion != "Dav3510") {
             continue;
         }
         params.push_back(row);
@@ -178,10 +179,10 @@ protected:
     static void TearDownTestCase() { cout << "QuantBatchMatmulInplaceAddApiTest TearDown" << endl; }
 };
 
-TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
+TEST_P(QuantBatchMatmulInplaceAddApiTest, dav3510_csv_test)
 {
     const auto& param = GetParam();
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
 
     TensorDesc x1Desc = TensorDesc(param.x1Shape, param.x1Type, param.x1Format).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc(param.x2Shape, param.x2Type, param.x2Format).ValueRange(-1, 1);
@@ -200,12 +201,12 @@ TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(Ascend950QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddApiTest,
+INSTANTIATE_TEST_SUITE_P(Dav3510QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddApiTest,
                          testing::ValuesIn(GetParams()), SanitizeCaseName);
 
-TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_x2_nz_format_invalid)
+TEST_F(QuantBatchMatmulInplaceAddApiTest, dav3510_x2_nz_format_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_FRACTAL_NZ).ValueRange(-1, 1);
     TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -217,9 +218,9 @@ TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_x2_nz_format_invalid)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_y_ref_nz_format_invalid)
+TEST_F(QuantBatchMatmulInplaceAddApiTest, dav3510_y_ref_nz_format_invalid)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -231,9 +232,9 @@ TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_y_ref_nz_format_invalid)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_hif8_success)
+TEST_F(QuantBatchMatmulInplaceAddApiTest, dav3510_hif8_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);

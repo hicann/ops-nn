@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class DualLevelQuantBatchMatmul : public OpDef {
@@ -65,17 +66,17 @@ public:
         this->Attr("level0_group_size").AttrType(OPTIONAL).Int(LEVEL0_GROUP_SIZE);
         this->Attr("level1_group_size").AttrType(OPTIONAL).Int(LEVEL1_GROUP_SIZE);
 
-        OpAICoreConfig config950;
-        config950.DynamicCompileStaticFlag(true)
+        OpAICoreConfig configDav3510;
+        configDav3510.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend950", config950);
-        this->AICore().AddConfig("ascend350", config950);
-        this->AICore().AddConfig("ascend960dt", config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, configDav3510);
+        this->AICore().AddConfig("ascend350", configDav3510);
+        this->AICore().AddConfig("ascend960dt", configDav3510);
     }
 
     static constexpr int64_t LEVEL0_GROUP_SIZE = 512L;

@@ -18,6 +18,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 using namespace op;
@@ -1155,7 +1156,7 @@ TEST_F(l2_batch_matmul_test, ascend910B2_fp32_0)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_test, ascend950_test_bmm2mm)
+TEST_F(l2_batch_matmul_test, dav3510_test_bmm2mm)
 {
     auto tensor_1_desc = TensorDesc({69, 16, 224}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1, 224, 112}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -1170,7 +1171,7 @@ TEST_F(l2_batch_matmul_test, ascend950_test_bmm2mm)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_test, ascend950_test_bmm2m)
+TEST_F(l2_batch_matmul_test, dav3510_test_bmm2m)
 {
     auto tensor_1_desc = TensorDesc({2400, 4, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({2400, 1, 976}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1184,9 +1185,9 @@ TEST_F(l2_batch_matmul_test, ascend950_test_bmm2m)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_test, ascend950_test_bmm2m_N1)
+TEST_F(l2_batch_matmul_test, dav3510_test_bmm2m_N1)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({2400, 20, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({2400, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({2400, 20, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.005, 0.005);
@@ -1198,9 +1199,9 @@ TEST_F(l2_batch_matmul_test, ascend950_test_bmm2m_N1)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_test, ascend950_fp16_fp16_fp32_output)
+TEST_F(l2_batch_matmul_test, dav3510_fp16_fp16_fp32_output)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({8, 16, 20}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 20}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1212,9 +1213,9 @@ TEST_F(l2_batch_matmul_test, ascend950_fp16_fp16_fp32_output)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_test, ascend950_bf16_bf16_fp32_output)
+TEST_F(l2_batch_matmul_test, dav3510_bf16_bf16_fp32_output)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({8, 16, 20}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 20}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1261,10 +1262,10 @@ TEST_F(l2_batch_matmul_test, ascend910B2_bf16_6)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-// 接口整改异常用例 - 950
-TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - dav_3510
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -1279,9 +1280,9 @@ TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -1296,9 +1297,9 @@ TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -1313,9 +1314,9 @@ TEST_F(l2_batch_matmul_test, batch_matmul_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_batch_matmul_test, batch_matmul_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -1330,9 +1331,9 @@ TEST_F(l2_batch_matmul_test, batch_matmul_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_batch_matmul_test, batch_matmul_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -1347,9 +1348,9 @@ TEST_F(l2_batch_matmul_test, batch_matmul_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_batch_matmul_test, batch_matmul_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_test, batch_matmul_dav3510_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto tensor_2_desc = TensorDesc({8, 1, 5000}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto out_tensor_desc = TensorDesc({8, 10, 5000}, ACL_FLOAT, ACL_FORMAT_ND)
@@ -2494,7 +2495,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckStreamK_Fp32Keep_Align32_False)
 // L644~646：命中 mergebatch 模板 -> CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_MergeHit_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(2);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2515,7 +2516,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_MergeHit_Continuo
 // L648~651：A 连续但 iterbatch 校验不过（batch <= aicore）-> CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_AContig_IterBatchMiss_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2534,7 +2535,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_AContig_IterBatch
 // L653~656：A 非连续转置且 iterbatch 校验通过 -> CONTINUOUS（仅支持多 batch 载入模板）
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_ATranspose_IterBatchHit_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2556,7 +2557,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_ATranspose_IterBa
 // L657~660：A 非连续转置且 iterbatch 不过 -> AB_NON_CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_ATranspose_ABNonContinuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2576,7 +2577,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_ATranspose_ABNonC
 // L661~663：仅 B 非连续转置且 iterbatch 通过 -> B_NON_CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_BNonContinuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2597,7 +2598,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_BNonContinuous)
 // L625~627（附加覆盖）：A/B 均非连续转置且 A 不需换轴、B 也不需换轴 -> CONTINUOUS 拦截
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_BothTransposedNoSwap_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
     auto* executor = uniqueExecutor.get();
@@ -2616,7 +2617,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_BothTransposedNoS
 // L638~641（附加覆盖）：转置场景下左右 dtype 不一致 -> CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_DtypeMismatch_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2738,7 +2739,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_NzFormat_False)
 // L1248~1250：mat2 非连续转置校验不过（连续张量）-> false（需 3510 arch 与 iterbatch 通过）
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_Mat2Contiguous_False)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2758,7 +2759,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_Mat2Contiguous_False)
 // L1258~1260：二维 bias 形状与 aM/bN 不匹配 -> false
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_2dBiasShapeMismatch_False)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2780,7 +2781,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_2dBiasShapeMismatch_False)
 // L1262~1265：三维 bias 形状与 aM/bN 不匹配 -> false
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_3dBiasShapeMismatch_False)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2801,7 +2802,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_3dBiasShapeMismatch_False)
 // L1252~1269：三维 bias 形状完全匹配 -> true（覆盖全部形状校验与成功日志）
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_3dBiasShapeMatch_True)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -2968,7 +2969,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckStreamK_BatchNotEqual_False)
 // L630~631：mat2 非转置（连续张量）-> CONTINUOUS
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckNonContigTranspose_BNotTransposed_Continuous)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
     auto* executor = uniqueExecutor.get();
@@ -3001,7 +3002,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_NullBias_False)
 // L1244~1246：iterbatch 校验不过（batch < aicore）-> false
 TEST_F(BatchMatmulL0OpDirectTest, Util_CheckFusedmm_IterBatchMiss_False)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto uniqueExecutor = CREATE_EXECUTOR();
     ASSERT_NE(uniqueExecutor.get(), nullptr);
@@ -3044,7 +3045,7 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_ExecFusedmmOp_TransposedSelf)
 // checkFusedmm 全通过 -> ExecFusedmmOp 全链路（3510 arch + iterbatch 满足 + mat2 非连续转置视图）
 TEST_F(BatchMatmulL0OpDirectTest, baddbmm_fusedmm_3510_end2end)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto batch1 = TensorDesc({128, 16, 32}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -3064,7 +3065,7 @@ TEST_F(BatchMatmulL0OpDirectTest, baddbmm_fusedmm_3510_end2end)
 // checkFusedmm 在 mat2 连续时于 L1249~1250 返回 false，回落常规 baddbmm 链路
 TEST_F(BatchMatmulL0OpDirectTest, baddbmm_fusedmm_Mat2Contiguous_Fallback)
 {
-    NpuArchManager archManager(NpuArch::DAV_3510);
+    NpuArchManager archManager(Ops::Base::DAV_3510);
     CoreNumGuard coreGuard(8);
     auto self = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto batch1 = TensorDesc({128, 16, 32}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);

@@ -52,7 +52,9 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "opdev/op_executor.h"
-
+// 提前消耗 op_const_def.h 的 include guard：生产 cube_util.h 在白盒命名空间内的 include 因此成为空操作，
+// 使 matmul_util_real 内不再展开仅含 arch 常量的 Ops::Base，using 声明回退解析到全局 math_util.h 的完整 Ops::Base
+#include "op_common/op_host/util/op_const_def.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 

@@ -10,7 +10,7 @@
 
 /*!
  * \file quant_matmul_activation_quant.cpp
- * \brief Ascend950 entry dispatch for GELU, SwiGLU and SiLU MX quantization.
+ * \brief DAV_3510 entry dispatch for GELU, SwiGLU and SiLU MX quantization.
  */
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"

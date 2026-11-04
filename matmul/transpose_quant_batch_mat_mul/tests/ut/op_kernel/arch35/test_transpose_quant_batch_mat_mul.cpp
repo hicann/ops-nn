@@ -10,7 +10,7 @@
 
 /*!
  * \file test_transpose_quant_batch_mat_mul.cpp
- * \brief Kernel UT for the Ascend950 FP8 TENSOR_LEVEL mix tensor API path.
+ * \brief Kernel UT for the DAV_3510 FP8 TENSOR_LEVEL mix tensor API path.
  */
 
 #define DTYPE_X1 fp8_e5m2_t

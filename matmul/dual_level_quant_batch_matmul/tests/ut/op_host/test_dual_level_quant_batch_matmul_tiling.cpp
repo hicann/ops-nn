@@ -19,6 +19,7 @@
 
 #include "log/log.h"
 #include "nlohmann/json.hpp"
+#include "op_common/op_host/util/op_const_def.h"
 
 #define protected public
 #define private public
@@ -40,6 +41,23 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 using namespace optiling;
+
+static bool IsDav3510CompileInfo(const string& compileInfo)
+{
+    return compileInfo.find(R"("npuArch": "dav3510")") != string::npos ||
+           compileInfo.find(R"("npuArch":"dav3510")") != string::npos;
+}
+
+static void GetPlatFormInfosDavAware(const string& compileInfo, map<string, string>& socInfos,
+                                     map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                                     map<string, string>& socVersion)
+{
+    GetPlatFormInfos(compileInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
+    if (IsDav3510CompileInfo(compileInfo)) {
+        socVersion.clear();
+        socVersion["NpuArch"] = "3510";
+    }
+}
 
 static constexpr uint64_t M = 2048;
 static constexpr uint64_t N = 2048;
@@ -182,7 +200,7 @@ static gert::Shape TransNd2Nz(const gert::Shape& inShape)
 
 static void SetNpuArch(DualLevelQuantBatchMatmulCompileInfo& compileInfo, const std::string& npuArch)
 {
-    static std::unordered_map<std::string, NpuArch> npuArchMap{{"DAV_3510", NpuArch::DAV_3510},
+    static std::unordered_map<std::string, NpuArch> npuArchMap{{"DAV_3510", Ops::Base::DAV_3510},
                                                                {"UnknowNpuArch", NpuArch::DAV_RESV}};
     compileInfo.npuArch = npuArchMap.count(npuArch) > 0 ? npuArchMap[npuArch] : NpuArch::DAV_RESV;
 }
@@ -215,10 +233,10 @@ static void InitPlatformInfo(const std::string& npuArch, gert::TilingContext* ti
                           "UB_SIZE": 245760, "L2_SIZE": 134217728, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore",
-                          "socVersion": "Ascend950"}
+                          "npuArch": "dav3510"}
                           })";
     }
-    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, npuArchInfos);
+    GetPlatFormInfosDavAware(compileInfoStr, socInfos, aicoreSpec, intrinsics, npuArchInfos);
     aicoreSpec["cube_freq"] = "1650";
 
     if (aicNum > 0) {

@@ -29,6 +29,7 @@
 #include "quant_matmul_common_check.h"
 #include "common/inc/op_host/op_const_def_nn.h"
 #include "log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using Ops::Base::CeilDiv;
@@ -321,7 +322,7 @@ static inline bool CheckDimRange(TupleInput& inputTensors, TupleQuant& quantTens
                                                  "The shape dim of out cannot be larger than 6D");
         return false;
     }
-    if (x1Scale != nullptr && op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 &&
+    if (x1Scale != nullptr && op::GetCurrentPlatformInfo().GetCurNpuArch() != Ops::Base::DAV_3510 &&
         op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 && !IsNpuArch92()) {
         OP_CHECK_WRONG_DIMENSION(x2Scale, 1, return false);
     }
@@ -578,7 +579,7 @@ static inline bool CheckFormat(const TupleInput& inputTensors, const TupleQuant&
     auto yOffset = std::get<INDEX_Y_OFFSET_IN_QUANT_TUPLE>(quantTensors);
 
     CHECK_RET(x1->GetStorageFormat() == op::Format::FORMAT_ND, false);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && !IsNpuArch92()) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() != Ops::Base::DAV_3510 && !IsNpuArch92()) {
         CHECK_RET(x2->GetStorageFormat() == op::Format::FORMAT_ND, false);
     }
     CHECK_RET(x2Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
@@ -801,7 +802,7 @@ static inline bool CheckX1X2Shape(const TupleInput& inputTensors, const TupleQua
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
     bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510 && isX2Nz) {
+    if (npuArch == Ops::Base::DAV_3510 && isX2Nz) {
         if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 kOpName, "n", std::to_string(x2NDim).c_str(),
@@ -848,7 +849,7 @@ static inline bool CheckShape(const TupleInput& inputTensors, const TupleQuant& 
 static inline aclnnStatus CheckParamsA8W4Float(const TupleInput& inputTensors, const TupleQuant& quantTensors,
                                                const TupleAttr& boolsTrans, const aclTensor* out)
 {
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510 || IsNpuArch92()) {
         // 1. 校验dtype是否符合要求
         CHECK_RET(CheckDtype(inputTensors, quantTensors, out), ACLNN_ERR_PARAM_INVALID);
         // 2. 检查format是否符合要求
@@ -1058,7 +1059,7 @@ static aclTensor* ProcessScaleTensor(const aclTensor* scale)
 
 static aclnnStatus A8W4ProcessYScaleTensor(const aclTensor* x1Scale, const aclTensor*& yScale, aclOpExecutor* executor)
 {
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510) {
         // A8W4场景输入的INT64转为UINT64
         if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
             auto castedYScale = executor->CreateView(yScale, yScale->GetViewShape(), yScale->GetViewOffset());
@@ -1132,7 +1133,15 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
     }
 
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && !isPseudoQuant) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 && isA8W4FloatTCG(x1, x2, x1Scale)) {
+        if (groupSize != SUPPORTED_GROUP_SIZE) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "groupSize", std::to_string(groupSize).c_str(),
+                                                  "when the quant mode is A8W4 TCG, the value of groupSize must be 32");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510 && !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto x2DimNum = x2->GetViewShape().GetDimNum();
         if (x1DimNum >= PENULTIMATE_DIM && x2DimNum >= PENULTIMATE_DIM) {
@@ -1243,7 +1252,7 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor* x1, const aclTen
                           groupSize),
                    DFX_OUT(out));
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510) {
         OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
         OP_CHECK(
             x2Scale == nullptr || !IsFormatNZ(x2Scale),

@@ -18,6 +18,7 @@
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 using namespace optiling;
@@ -41,7 +42,7 @@ MatMulV3L0C2Out GetL0C2OutFlagDav3510(const MatmulV3CompileInfo& compileInfo, co
 using GetL0C2OutFlagFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const MatMulV3Args&);
 
 const static std::map<NpuArch, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
-    {NpuArch::DAV_3510, GetL0C2OutFlagDav3510},
+    {Ops::Base::DAV_3510, GetL0C2OutFlagDav3510},
 };
 } // namespace
 

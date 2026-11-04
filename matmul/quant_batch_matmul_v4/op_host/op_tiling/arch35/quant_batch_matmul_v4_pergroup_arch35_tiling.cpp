@@ -20,6 +20,7 @@
 #include "graph/utils/type_utils.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 
@@ -203,7 +204,7 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::IsCapable()
         return false;
     }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (ascendcPlatform.GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (ascendcPlatform.GetCurNpuArch() != Ops::Base::DAV_3510) {
         return false;
     }
     if (!CheckPergroupAttrs()) {

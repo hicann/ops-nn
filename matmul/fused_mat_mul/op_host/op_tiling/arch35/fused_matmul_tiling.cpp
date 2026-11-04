@@ -22,13 +22,14 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
 #include "register/op_impl_registry.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace {
 using namespace optiling;
 
 // NpuArch -> supported opTypes
 const std::unordered_map<NpuArch, std::vector<std::string>> NpuArchFusedOpSupport = {
-    {NpuArch::DAV_3510, {"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh", "sigmoid", "scale_add"}},
+    {Ops::Base::DAV_3510, {"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh", "sigmoid", "scale_add"}},
     {NpuArch::DAV_9201, {"", "relu", "16cast32"}},
     {NpuArch::DAV_9202, {"", "relu", "16cast32"}},
     {NpuArch::DAV_RESV, {"relu", "quant", "relu_quant"}},

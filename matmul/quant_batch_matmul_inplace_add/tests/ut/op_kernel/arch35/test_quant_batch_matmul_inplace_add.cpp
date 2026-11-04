@@ -10,7 +10,7 @@
 
 /*!
  * \file test_quant_batch_matmul_inplace_add.cpp
- * \brief Kernel UT for the Ascend950 HiFloat8 cube basic-api path.
+ * \brief Kernel UT for the DAV_3510 HiFloat8 cube basic-api path.
  */
 
 #define DTYPE_X1 hifloat8_t

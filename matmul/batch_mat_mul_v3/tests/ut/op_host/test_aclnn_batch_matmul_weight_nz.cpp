@@ -18,6 +18,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api/op_api_def_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 using namespace op;
@@ -42,36 +43,36 @@ protected:
     }
 };
 
-TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_fp16_out_weight_nz)
+TEST_F(l2_batch_matmul_weight_nz_test, dav3510_test_aligned_fp16_out_weight_nz)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_bf16_out_weight_nz)
+TEST_F(l2_batch_matmul_weight_nz_test, dav3510_test_aligned_bf16_out_weight_nz)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_BF16, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_fp16_fp32_out_weight_nz)
+TEST_F(l2_batch_matmul_weight_nz_test, dav3510_test_aligned_fp16_fp32_out_weight_nz)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, ascend950_test_aligned_bf16_fp32_out_weight_nz)
+TEST_F(l2_batch_matmul_weight_nz_test, dav3510_test_aligned_bf16_fp32_out_weight_nz)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -126,46 +127,46 @@ TEST_F(l2_batch_matmul_weight_nz_test, ascend910B_test_aligned_fp32_out_weight_n
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 接口整改异常用例 950
-TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 dav_3510
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_dav3510_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_dav3510_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_dav3510_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_dav3510_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
 }
 
-TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_dav3510_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);

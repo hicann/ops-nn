@@ -19,6 +19,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_convert_weight_to_int4_pack.h"
 #include "acl/acl_rt.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -98,7 +99,7 @@ static int32_t PackToINT8(int32_t a, int32_t b, DataType dtype)
 static int64_t GetNdToNzC0Size(bool c032Flag)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510) {
+    if (npuArch == Ops::Base::DAV_3510) {
         if (c032Flag) {
             return static_cast<int64_t>(C0_32) / static_cast<int64_t>(INT4_NUM_IN_BYTE);
         } else {
@@ -221,7 +222,7 @@ static bool CheckStorageShapeValid(const aclTensor* weightInt4Pack, int64_t weig
     int64_t expDim1 = CeilDiv(weightInt4PackDimFirst, CUBE_BLOCK_SIZE);
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (weightInt4Pack->GetDataType() == DataType::DT_INT4) {
-        int64_t lastDimSize = npuArch == NpuArch::DAV_3510 ? storageDim3 : INT4_NUM_IN_32B;
+        int64_t lastDimSize = npuArch == Ops::Base::DAV_3510 ? storageDim3 : INT4_NUM_IN_32B;
         int64_t expDim0 = CeilDiv(weightInt4PackDimLast, lastDimSize);
         if ((storageDim0 != expDim0) || (storageDim1 != expDim1) || (storageDim2 != CUBE_BLOCK_SIZE) ||
             (storageDim3 != lastDimSize)) {
@@ -236,7 +237,7 @@ static bool CheckStorageShapeValid(const aclTensor* weightInt4Pack, int64_t weig
     }
 
     if (weightInt4Pack->GetDataType() == DataType::DT_INT32) {
-        int64_t lastDimSize = npuArch == NpuArch::DAV_3510 ? C0_16 / INT4_NUM_IN_INT32 : INT4_NUM_IN_INT32;
+        int64_t lastDimSize = npuArch == Ops::Base::DAV_3510 ? C0_16 / INT4_NUM_IN_INT32 : INT4_NUM_IN_INT32;
         int64_t expDim0 = CeilDiv(weightInt4PackDimLast, lastDimSize);
         if ((storageDim0 != expDim0) || (storageDim1 != expDim1) || (storageDim2 != CUBE_BLOCK_SIZE) ||
             (storageDim3 != lastDimSize)) {
@@ -401,7 +402,7 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor* weight
     int64_t weightInt4PackDimNum = weightInt4Pack->GetStorageShape().GetDimNum();
     int64_t weightInt4PackDimLast = weightInt4Pack->GetStorageShape().GetDim(weightInt4PackDimNum - 1);
     // 若传入的weightInt4Pack的storageShape的最后一维为32，且为3510,则为s8s4分支
-    bool c032Flag = weightInt4PackDimLast == C0_32 && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
+    bool c032Flag = weightInt4PackDimLast == C0_32 && GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510;
     auto shapeSize = weight->GetViewShape().GetShapeSize();
 
     // 从device拷贝数据到host

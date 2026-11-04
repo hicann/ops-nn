@@ -19,6 +19,7 @@
 #include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace platform_ascendc;
 using Ops::NN::Optiling::RecursiveSum;
@@ -364,6 +365,6 @@ int64_t WeightQuantBatchMatmulV2RegBase::DumpCVTilingDataToLog(bool debugLevel) 
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(WeightQuantBatchMatmulV2, WeightQuantBatchMatmulV2RegBase,
-                                   static_cast<int32_t>(NpuArch::DAV_3510), ANTI_REG_PRIORITY);
+                                   static_cast<int32_t>(Ops::Base::DAV_3510), ANTI_REG_PRIORITY);
 
 } // namespace optiling

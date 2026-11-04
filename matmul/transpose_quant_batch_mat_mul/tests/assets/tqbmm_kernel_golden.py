@@ -9,7 +9,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""Kernel-level golden for TransposeQuantBatchMatMul (Ascend 950).
+"""Kernel-level golden for TransposeQuantBatchMatMul (DAV_3510).
 
 op: transpose_quant_batch_mat_mul
 formula:
@@ -29,7 +29,7 @@ Precision modes follow the tiling decision tree
     3. otherwise -> FP8 (K-C): fp32 vector dequant on AIV, y = (acc * x2_scale)
        * x1_scale (see VFDoDequant).
 
-Ascend 950 constraints (tiling checks, documented for test-case reference):
+DAV_3510 constraints (tiling checks, documented for test-case reference):
     - perm_x1: [1, 0, 2] only; perm_y: [1, 0, 2] only;
     - perm_x2: [0, 1, 2] for every mode, [0, 2, 1] only for MXFP8 / HIFP8;
     - FP8 mode: K == 512 and N == 128; MXFP8: K % 64 == 0, x2 may be FRACTAL_NZ
@@ -147,7 +147,7 @@ def _kernel_compute(
     batch_split_factor=1,
     **kwargs,
 ):
-    """Core numpy simulation of transpose_quant_batch_mat_mul on Ascend 950.
+    """Core numpy simulation of transpose_quant_batch_mat_mul on DAV_3510.
 
     bias / group_size / batch_split_factor are accepted but not used, matching
     the kernel: bias is never read, group_size only matters for the MXFP8

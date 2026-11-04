@@ -23,6 +23,7 @@
 
 #include "log/log.h"
 #include "nlohmann/json.hpp"
+#include "op_common/op_host/util/op_const_def.h"
 
 #define protected public
 #define private public
@@ -105,10 +106,14 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     }
     map<string, string> soc2Arch = {
         {"Ascend910B2", "2201"}, {"Ascend910B4", "2201"}, {"Ascend310P3", "2002"},
-        {"Ascend950", "3510"},   {"MC62CM12AA", "5102"},
+        {"Dav3510", "3510"},     {"MC62CM12AA", "5102"},
     };
     auto soc2ArchIter = soc2Arch.find(socVersion);
     if (soc2ArchIter != soc2Arch.end()) {
+        soc_version_infos["NpuArch"] = soc2ArchIter->second;
+    }
+    if (socVersion == "Dav3510") {
+        soc_version_infos.clear();
         soc_version_infos["NpuArch"] = soc2ArchIter->second;
     }
     map<string, string> socInfos;
@@ -140,7 +145,7 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 20,
                             "cube_core_cnt": 20, "vector_core_cnt": 40, "core_type_list": "CubeCore,VectorCore"}
                             })";
-    } else if (socVersion.compare("Ascend950") == 0) {
+    } else if (socVersion.compare("Dav3510") == 0) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -304,7 +309,7 @@ static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const st
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams910B2 = LoadParams("Ascend910B2");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams910B4 = LoadParams("Ascend910B4");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams310P3 = LoadParams("Ascend310P3");
-    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams950 = LoadParams("Ascend950");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsDav3510 = LoadParams("Dav3510");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsMC62CM12AA = LoadParams("MC62CM12AA");
     if (socVersion == "Ascend910B2") {
         return kCasesParams910B2;
@@ -315,8 +320,8 @@ static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const st
     if (socVersion == "Ascend310P3") {
         return kCasesParams310P3;
     }
-    if (socVersion == "Ascend950") {
-        return kCasesParams950;
+    if (socVersion == "Dav3510") {
+        return kCasesParamsDav3510;
     }
     return kCasesParamsMC62CM12AA;
 }
@@ -752,18 +757,17 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) &&
                        (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
         bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
-        bool isAscend950 = socVersion == "Ascend950";
-        bool tensorApiCapable = IsTensorapiCapable() && isAscend950;
-        //  非 Blaze 不支持 weightNz BasicAPI 路径；950 非 TensorAPI 场景跳过 MX 出参校验
-        bool skipMxCheckWithoutTensorApi = isAscend950 && !tensorApiCapable && (isMxfp8 || isMxfp4);
+        bool isDav3510 = socVersion == "Dav3510";
+        bool tensorApiCapable = IsTensorapiCapable() && isDav3510;
+        //  非 Blaze 不支持 weightNz BasicAPI 路径；dav_3510 非 TensorAPI 场景跳过 MX 出参校验
+        bool skipMxCheckWithoutTensorApi = isDav3510 && !tensorApiCapable && (isMxfp8 || isMxfp4);
         // tilingKey布局: ATRANS[0:1] BTRANS[2:3] BATCHMODE[4:7] KERNELTYPE[8:15] APILEVEL[16:17]
         // CSV用例基于TensorAPI(Blaze)运行环境生成，950非TensorAPI场景tiling走非Blaze路径，出参与预期不一致，跳过校验
         constexpr uint64_t apiLevelShift = 16UL;
         constexpr uint64_t apiLevelMask = 0x3UL << apiLevelShift;
         bool expectBlazeApiLevel = (tilingKey & apiLevelMask) ==
                                    (static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) << apiLevelShift);
-        bool skipBlazeCheckWithoutTensorApi = isAscend950 && !tensorApiCapable && expectBlazeApiLevel;
-
+        bool skipBlazeCheckWithoutTensorApi = isDav3510 && !tensorApiCapable && expectBlazeApiLevel;
         if (tilingStub || (weightNz && !tensorApiCapable) || skipMxCheckWithoutTensorApi ||
             skipBlazeCheckWithoutTensorApi) {
             return;
@@ -880,7 +884,7 @@ void QuantBatchMatmulV3TilingTestParam::Test() const
 
 TEST(QuantBatchMatmulV3TilingCsv, ShouldLoadValidCases)
 {
-    for (const auto& socVersion : {"Ascend910B2", "Ascend910B4", "Ascend310P3", "Ascend950", "MC62CM12AA"}) {
+    for (const auto& socVersion : {"Ascend910B2", "Ascend910B4", "Ascend310P3", "Dav3510", "MC62CM12AA"}) {
         const auto& loadResult = GetParamsLoadResult(socVersion);
         for (const auto& error : loadResult.errors) {
             ADD_FAILURE() << error;
@@ -1002,7 +1006,7 @@ static BaseBlockRes ComputeStreamKBaseBlock(bool isMxPerGroup, bool transA, bool
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
     compileInfo.l0cSize = 262144UL;
-    compileInfo.npuArch = NpuArch::DAV_3510;
+    compileInfo.npuArch = Ops::Base::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
     EXPECT_TRUE(calculator.Compute(BaseBlockMode::STREAMK));
@@ -1029,7 +1033,7 @@ static BaseBlockRes ComputeCubeBasicBaseBlock(bool transA, bool transB, uint64_t
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
     compileInfo.l0cSize = 262144UL;
-    compileInfo.npuArch = NpuArch::DAV_3510;
+    compileInfo.npuArch = Ops::Base::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
     EXPECT_TRUE(calculator.Compute(BaseBlockMode::CUBE_BASIC));
@@ -1056,7 +1060,7 @@ static BaseBlockRes ComputeMxBaseBlock(bool transA, bool transB, uint64_t mSize,
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
     compileInfo.l0cSize = 262144UL;
-    compileInfo.npuArch = NpuArch::DAV_3510;
+    compileInfo.npuArch = Ops::Base::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
     EXPECT_TRUE(calculator.Compute(BaseBlockMode::DEFAULT));
@@ -1078,7 +1082,7 @@ TEST(QuantBatchMatmulV3CubeBasicBaseBlock, RejectsZeroShapeBeforeBaseBlockScorin
     compileInfo.aicNum = 32U;
     compileInfo.l0aSize = 65536UL;
     compileInfo.l0bSize = 65536UL;
-    compileInfo.npuArch = NpuArch::DAV_3510;
+    compileInfo.npuArch = Ops::Base::DAV_3510;
 
     BaseBlockCalculator calculator(inputParams, compileInfo);
     EXPECT_FALSE(calculator.Compute(BaseBlockMode::CUBE_BASIC));

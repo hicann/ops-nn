@@ -24,6 +24,7 @@
 #include "op_cache_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "arch35/weight_quant_batch_matmul_v2_checker_for_920r1.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using Ops::NN::TilingPrepareForOpCache;
 using Ops::NN::Optiling::TilingRegistry;
@@ -63,7 +64,7 @@ static ge::graphStatus ArchNotSupportMmadS8S4(gert::TilingContext* context, plat
     auto platformInfoPtr = context->GetPlatformInfo();
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_3510) {
         OP_LOGI(context->GetNodeName(), "DAV_3510 Platform support Intrinsic_data_move_l12bt bf16");
         return TilingRegistryArch::GetInstance().DoTilingImpl(context);
     } else if (socVersion == platform_ascendc::SocVersion::ASCEND910B ||

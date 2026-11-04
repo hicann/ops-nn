@@ -313,8 +313,8 @@ private:
                               param.weightDtype == 35 && param.outputDtype == 35;
         const bool e4m3WeightNz = IsWeightNz(param) && param.inputDtype == 36 && param.weightDtype == 36 &&
                                   param.outputDtype == 36;
-        const bool ndDtypes = e4m3 || e5m2 || e5m2Gelu;
-        if (param.socVersion != "Ascend950" || !(ndDtypes || e4m3WeightNz)) {
+        const bool ndDtypes = (e4m3 || e5m2 || e5m2Gelu) && param.weightDtype == 35;
+        if (param.socVersion != "Dav3510" || !(ndDtypes || e4m3WeightNz)) {
             throw std::runtime_error("socVersion/kernelUtTarget/dtypes do not match a compiled kernel specialization");
         }
         if (IsWeightNz(param) && param.activation != 2 && param.activation != 3) {
@@ -488,7 +488,7 @@ private:
     }
 
 public:
-    static void TestOneParamCase950(const QuantMatmulActivationQuantKernelTestParam& item)
+    static void TestOneParamCaseDav3510(const QuantMatmulActivationQuantKernelTestParam& item)
     {
         ValidateParam(item);
         const auto data = MakeTiling(item);
