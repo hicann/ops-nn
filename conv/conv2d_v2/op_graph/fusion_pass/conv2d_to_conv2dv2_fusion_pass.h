@@ -42,8 +42,8 @@ protected:
 
 private:
     bool AdjustLayout(const ge::GraphPtr& graph, ge::GNode& fusedNode);
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode);
-    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode);
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
+    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode) override;
 };
 
 } // namespace Conv

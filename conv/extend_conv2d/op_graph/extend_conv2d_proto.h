@@ -41,21 +41,19 @@ namespace ge {
 * the second output, which is of the scalar type or channelwise type.
 * @li clip_value1: An optional 1D tensor. Truncated value of clip relu corresponding to the seccond output.
 * The value is of the scalar type.
-*\n
 * The following are the supported data types and data formats:
 *\n
-| Tensor    | x        | filter   | bias    | scale0/1     | relu_weight0/1 | clip_value0/1 | y0/1    |\n
-| :-------: | :------: | :------: | :-----: | :----------: | :------------: | :-----------: | :-----: |\n
-| Data Type | int8     | int8     | int32   | uint64/int64 | float32        | int8          | float16/int8 |\n
-|           | hifloat8 | hifloat8 | float32 | uint64/int64 | float32        | hifloat8      |
-float32/float16/bfloat16/hifloat8 |\n |           | float8   | float8   | float32 | uint64/int64 | float32        |
-float8        | float32/float16/bfloat16/float8_e4m3 |\n | Format    | NCHW     | NCHW     | ND      | ND           | ND
-| ND            | NCHW    |\n
-
-| Tensor    | x        | filter   | bias    | scale0/1     | relu_weight0/1 | clip_value0/1 | y0/1    |\n
-| :-------: | :------: | :------: | :-----: | :----------: | :------------: | :-----------: | :-----: |\n
-| Data Type | int8     | int8     | int32   | uint64/int64 | float32        | int8          | float16/int8 |\n
-| Format    | NHWC     | HWCN     | ND      | ND           | ND             | ND            | NHWC    |\n
+|Tensor   |x       |filter  |bias   |scale0/1    |relu_weight0/1|clip_value0/1|y0/1                                |\n
+|:-------:|:------:|:------:|:-----:|:----------:|:------------:|:-----------:|:----------------------------------:|\n
+|Data Type|int8    |int8    |int32  |uint64/int64|float32       |int8         |float16/int8                        |\n
+|         |hifloat8|hifloat8|float32|uint64/int64|float32       |hifloat8     |float32/float16/bfloat16/hifloat8   |\n
+|         |float8  |float8  |float32|uint64/int64|float32       |float8       |float32/float16/bfloat16/float8_e4m3|\n
+|Format   |NCHW    |NCHW    |ND     |ND          |ND            |ND           |NCHW                                |\n
+*\n
+|Tensor   |x   |filter|bias |scale0/1    |relu_weight0/1|clip_value0/1|y0/1        |\n
+|:-------:|:--:|:----:|:---:|:----------:|:------------:|:-----------:|:----------:|\n
+|Data Type|int8|int8  |int32|uint64/int64|float32       |int8         |float16/int8|\n
+|Format   |NHWC|HWCN  |ND   |ND          |ND            |ND           |NHWC        |\n
 *\n
 * @par Attributes:
 * @li strides: Required. A list of 4 integers. The stride of the sliding window
@@ -102,7 +100,7 @@ float8        | float32/float16/bfloat16/float8_e4m3 |\n | Format    | NCHW     
 * @li y1: The second output of ExtendConv2D. A 4D Tensor of output feature map. Has the same type as "x".
 * y1 must always be provided by the caller, and carries a valid result only when "dual_output" is true.
 * With the format "NCHW", the data is stored in the order of: [n, out_channels, out_height, out_width].
-*\n
+*
 *     out_height = (h + pad_top + pad_bottom -
 *                   (dilation_h * (kernel_h - 1) + 1))
 *                  / stride_h + 1

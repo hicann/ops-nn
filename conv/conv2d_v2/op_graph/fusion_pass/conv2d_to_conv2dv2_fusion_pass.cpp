@@ -29,7 +29,7 @@ void Conv2dToConv2dV2FusionPass::InitMember()
     convDescInfo = ConvDescInfo();
 }
 
-bool Conv2dToConv2dV2FusionPass::MeetRequirements(const GNode&)
+bool Conv2dToConv2dV2FusionPass::MeetRequirements([[maybe_unused]] const GNode& convNode)
 {
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch, true),
                       OP_LOGD(convDescInfo.nodeNameStr, "Current soc not supported, no fusion."), return false);
