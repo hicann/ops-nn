@@ -124,24 +124,15 @@ static graphStatus GetAvgPoolWindowAndStride(const int64_t* ksizeArray, const in
 
 static graphStatus SetAvgPoolOutput(InferShapeContext* context, AvgPoolInputs& inputs, const std::string& opName)
 {
-    const gert::CompileTimeTensorDesc* tensordescOutput = context->GetOutputDesc(OUT_IDX_AVGPOOL);
-    OP_LOGE_IF(tensordescOutput == nullptr, GRAPH_FAILED, opName, "Get output failed.");
-    auto formatOut = tensordescOutput->GetOriginFormat();
     auto shapeOut = context->GetOutputShape(OUT_IDX_AVGPOOL);
     OP_LOGE_IF(shapeOut == nullptr, GRAPH_FAILED, opName, "Get output shape failed.");
 
+    // 输出 shape 按 data_format 决定的 N/C/H/W 位置设置，不依赖图推理阶段可能为 ND 占位的输出 desc format
     shapeOut->SetDimNum(SUPPORTED_DIM_NUM);
-    // NC1HWC0(NCHW/NHWC)
-    if (formatOut == Format::FORMAT_NCHW || formatOut == Format::FORMAT_NHWC) {
-        shapeOut->SetDim(inputs.xnPosition, inputs.outN);
-        shapeOut->SetDim(inputs.xcPosition, inputs.outC);
-        shapeOut->SetDim(inputs.xhPosition, inputs.outH);
-        shapeOut->SetDim(inputs.xwPosition, inputs.outW);
-    } else {
-        OP_LOGE_FOR_INVALID_FORMAT(opName, "y", std::to_string(static_cast<int32_t>(formatOut)).c_str(),
-                                   "NCHW or NHWC");
-        return GRAPH_FAILED;
-    }
+    shapeOut->SetDim(inputs.xnPosition, inputs.outN);
+    shapeOut->SetDim(inputs.xcPosition, inputs.outC);
+    shapeOut->SetDim(inputs.xhPosition, inputs.outH);
+    shapeOut->SetDim(inputs.xwPosition, inputs.outW);
     return GRAPH_SUCCESS;
 }
 
