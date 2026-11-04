@@ -74,6 +74,7 @@ if(UT_TEST_ALL OR OP_API_UT)
           rt2_registry
           error_manager
           c_sec
+          ${CMAKE_DL_LIBS}
           )
   ## exec ophost ut exe
   if(ENABLE_UT_EXEC)
