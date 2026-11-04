@@ -64,6 +64,7 @@ const std::vector<std::string> convTypes = {"Conv2D", "DepthwiseConv2D", "Conv3D
 class __attribute__((visibility("default"))) AABiasaddConvFusion : public ConvFusionBasePass {
 protected:
     void InitMember() override;
+    void OrderMatchedNodes(std::vector<ge::GNode>& matchedNodes) override;
     bool CheckMatchStructure(const ge::GNode& matchNode) override;
     bool MeetRequirements(const ge::GNode& convNode) override;
     std::set<ge::AscendString> GetNodeTypes() const override;

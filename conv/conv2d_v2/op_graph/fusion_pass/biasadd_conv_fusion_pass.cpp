@@ -13,8 +13,10 @@
  */
 #include "biasadd_conv_fusion_pass.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -276,6 +278,37 @@ bool PrepareTargetBiasDesc(const TensorDesc& convSideInputDesc, GNode& biasSourc
     return true;
 }
 
+const std::vector<std::string> legacyOutputTypeOrder = {"BiasAdd", "Add"};
+
+std::pair<int32_t, std::string> GetLegacyOrderKey(const GNode& convNode)
+{
+    AscendString convName;
+    (void)convNode.GetName(convName);
+    std::string consumerType;
+    std::string consumerName = (convName.GetString() == nullptr) ? std::string() : convName.GetString();
+
+    const auto consumers = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
+    for (const auto& consumer : consumers) {
+        if (consumer.first == nullptr) {
+            continue;
+        }
+        AscendString type;
+        AscendString name;
+        if (consumer.first->GetType(type) == GRAPH_SUCCESS && consumer.first->GetName(name) == GRAPH_SUCCESS &&
+            name.GetString() != nullptr) {
+            consumerType = (type.GetString() == nullptr) ? std::string() : type.GetString();
+            consumerName = name.GetString();
+            break;
+        }
+    }
+    // Types outside the legacy pattern output list never anchor a legacy match; sort them
+    // last (they are rejected in CheckMatchStructure anyway, order is irrelevant).
+    auto rank = static_cast<int32_t>(
+        std::find(legacyOutputTypeOrder.begin(), legacyOutputTypeOrder.end(), consumerType) -
+        legacyOutputTypeOrder.begin());
+    return {rank, consumerName};
+}
+
 } // namespace
 
 void AABiasaddConvFusion::InitMember()
@@ -297,6 +330,16 @@ std::set<AscendString> AABiasaddConvFusion::GetNodeTypes() const
         types.insert(AscendString(type.c_str()));
     }
     return types;
+}
+
+// Keeps the legacy pass visible processing order: sorted by the (pattern type rank,
+// name) of the Add/BiasAdd node consuming each conv. stable_sort preserves the graph
+// order for convs sharing one consumer (both rejected later, order irrelevant).
+void AABiasaddConvFusion::OrderMatchedNodes(std::vector<GNode>& matchedNodes)
+{
+    std::stable_sort(matchedNodes.begin(), matchedNodes.end(), [](const GNode& lhs, const GNode& rhs) {
+        return GetLegacyOrderKey(lhs) < GetLegacyOrderKey(rhs);
+    });
 }
 
 void AABiasaddConvFusion::PrintGraphStructure() const {}
@@ -521,7 +564,10 @@ bool AABiasaddConvFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     FUSION_PASS_CHECK(graph == nullptr, OP_LOGE(FUSION_NAME, "%s graph is nullptr.", convDescInfo.nodeNameStr.c_str()),
                       return false);
 
-    std::vector<GNode> nodesBeforeFuse = {convNode, *addNode};
+    // Removed node first: the legacy pattern framework records the fused (removed)
+    // output node before the surviving conv, and the om graph keeps that order in
+    // _datadump_original_op_names/_original_op_attrs_in_fusion_process.
+    std::vector<GNode> nodesBeforeFuse = {*addNode, convNode};
     FUSION_PASS_CHECK_NOLOG(!ReportMatchNodes(nodesBeforeFuse, passContext), return false);
     FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
@@ -535,6 +581,9 @@ bool AABiasaddConvFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     std::vector<GNode> nodesAfterFuse = {convNode};
     FUSION_PASS_CHECK_NOLOG(!ReportFuseNodes(nodesBeforeFuse, nodesAfterFuse, passContext), return false);
 
+    if (!ConvFusionUtilsPass::CopyDumpOutputMapping(*addNode, convNode)) {
+        OP_LOGE(FUSION_NAME, "Copy datadump output mapping from %s failed.", addNodeName.c_str());
+    }
     FUSION_PASS_CHECK(graph->RemoveNode(*addNode) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "Remove fused add node failed."), return false);
     if (isReshapeMode && !reshapeHasOtherConsumer) {
@@ -547,5 +596,9 @@ bool AABiasaddConvFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     OP_LOGD(FUSION_NAME, "BiasaddConv fusion success for node %s.", convName.GetString());
     return true;
 }
+
+#if GE_COMPILER_VERSION_NUM >= 90300000U
+REG_FUSION_PASS(AABiasaddConvFusion).Stage(CustomPassStage::kCompatibleInherited);
+#endif
 
 } // namespace Ops

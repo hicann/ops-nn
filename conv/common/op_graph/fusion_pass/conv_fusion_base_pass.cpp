@@ -136,6 +136,7 @@ Status ConvFusionBasePass::Run(GraphPtr& graph, CustomPassContext& pass_context)
     std::vector<GNode> matchedNodes = {};
 
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetMatchedNodes(graph, matchedNodes, GetNodeTypes()), return FAILED);
+    OrderMatchedNodes(matchedNodes);
     FUSION_PASS_CHECK(matchedNodes.empty(), OP_LOGD(fusionName, "No matched node, exit."), return GRAPH_NOT_CHANGED);
 
     int32_t effectTimes = 0;

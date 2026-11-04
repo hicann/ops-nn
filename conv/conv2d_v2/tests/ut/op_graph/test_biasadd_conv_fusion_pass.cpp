@@ -5730,3 +5730,159 @@ TEST_F(AABiasaddConvFusionTest, p0SubgraphDataParentConstConv2dNoFixpipeMustFuse
     EXPECT_STREQ(biasSrcName.GetString(), "bias_data");
     ClearPlatform();
 }
+
+class OrderPeerBiasaddConvFusion : public AABiasaddConvFusion {
+public:
+    void OrderMatchedNodesForTest(std::vector<GNode>& matchedNodes) { OrderMatchedNodes(matchedNodes); }
+};
+
+static bool FindNodeByName(const std::shared_ptr<Graph>& graph, const std::string& name, GNode& result)
+{
+    for (auto& node : graph->GetDirectNode()) {
+        AscendString curName;
+        if (node.GetName(curName) == GRAPH_SUCCESS && curName.GetString() != nullptr && name == curName.GetString()) {
+            result = node;
+            return true;
+        }
+    }
+    return false;
+}
+
+static std::vector<std::string> GetMatchedNodeNamesInOrder(const std::shared_ptr<Graph>& graph)
+{
+    std::vector<GNode> matchedNodes;
+    ConvFusionUtils::ConvFusionUtilsPass::GetMatchedNodes(graph, matchedNodes, {AscendString("Conv2D")});
+    OrderPeerBiasaddConvFusion peer;
+    peer.OrderMatchedNodesForTest(matchedNodes);
+    std::vector<std::string> names;
+    for (auto& node : matchedNodes) {
+        AscendString name;
+        if (node.GetName(name) == GRAPH_SUCCESS && name.GetString() != nullptr) {
+            names.emplace_back(name.GetString());
+        }
+    }
+    return names;
+}
+
+TEST_F(AABiasaddConvFusionTest, legacyOrderTwoBranchesSortedByConsumerName)
+{
+    std::vector<int64_t> dimsX{1, 56, 56, 64};
+    std::vector<int64_t> dimsFilter{64, 1, 1, 64};
+    std::vector<int64_t> dimsBias{64};
+    std::vector<int64_t> dimsOut{1, 28, 28, 64};
+
+    auto graphBuilder = es::EsGraphBuilder("order_two_branches");
+    auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, dimsX);
+    // Graph-node-order first branch whose consumer name sorts later: convolution_1 -> BiasAdd_1.
+    auto filter1 = BuildConstNode(graphBuilder, "filter_1", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto bias1 = BuildConstNodeWithValue(graphBuilder, "bias_1", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto conv1Out = BuildConvNode(graphBuilder, "convolution_1", x, filter1,
+                                  {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*conv1Out.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasadd1Out = BuildBiasAddNode(graphBuilder, "BiasAdd_1", conv1Out, bias1);
+    SetOutputDesc(*biasadd1Out.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    // Graph-node-order second branch whose consumer name sorts first: convolution -> BiasAdd.
+    auto filter = BuildConstNode(graphBuilder, "filter", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto bias = BuildConstNodeWithValue(graphBuilder, "bias", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto convOut = BuildConvNode(graphBuilder, "convolution", x, filter,
+                                 {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*convOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasaddOut = BuildBiasAddNode(graphBuilder, "BiasAdd", convOut, bias);
+    SetOutputDesc(*biasaddOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({biasadd1Out, biasaddOut});
+    ASSERT_NE(graph, nullptr);
+
+    std::vector<GNode> matchedNodes;
+    ASSERT_TRUE(ConvFusionUtils::ConvFusionUtilsPass::GetMatchedNodes(graph, matchedNodes, {AscendString("Conv2D")}));
+    ASSERT_EQ(matchedNodes.size(), 2U);
+    AscendString graphFirstName;
+    ASSERT_EQ(matchedNodes[0].GetName(graphFirstName), GRAPH_SUCCESS);
+    EXPECT_STREQ(graphFirstName.GetString(), "convolution_1");
+
+    EXPECT_EQ(GetMatchedNodeNamesInOrder(graph), (std::vector<std::string>{"convolution", "convolution_1"}));
+}
+
+TEST_F(AABiasaddConvFusionTest, legacyOrderBiasAddConsumerBeforeAddConsumer)
+{
+    std::vector<int64_t> dimsX{1, 56, 56, 64};
+    std::vector<int64_t> dimsFilter{64, 1, 1, 64};
+    std::vector<int64_t> dimsBias{64};
+    std::vector<int64_t> dimsOut{1, 28, 28, 64};
+
+    auto graphBuilder = es::EsGraphBuilder("order_mixed_consumers");
+    auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, dimsX);
+    // Graph-node-order first: conv_b whose consumer is BiasAdd "zzz_biasadd".
+    auto filterB = BuildConstNode(graphBuilder, "filter_b", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto biasB = BuildConstNodeWithValue(graphBuilder, "bias_b", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto convBOut = BuildConvNode(graphBuilder, "conv_b", x, filterB, {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*convBOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasaddOut = BuildBiasAddNode(graphBuilder, "zzz_biasadd", convBOut, biasB);
+    SetOutputDesc(*biasaddOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    // Graph-node-order second: conv_a whose consumer is Add "aaa_add".
+    auto filterA = BuildConstNode(graphBuilder, "filter_a", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto biasA = BuildConstNodeWithValue(graphBuilder, "bias_a", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto convAOut = BuildConvNode(graphBuilder, "conv_a", x, filterA, {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*convAOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto addOut = BuildAddNode(graphBuilder, "aaa_add", convAOut, biasA);
+    SetOutputDesc(*addOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({biasaddOut, addOut});
+    ASSERT_NE(graph, nullptr);
+
+    // Legacy BiasaddFusion pattern declares output types {BiasAdd, Add} in definition
+    // order (std::vector, not name-sorted): BiasAdd consumers are visited first.
+    EXPECT_EQ(GetMatchedNodeNamesInOrder(graph), (std::vector<std::string>{"conv_b", "conv_a"}));
+}
+
+TEST_F(AABiasaddConvFusionTest, twoBranchesFusedWithDumpMappingInherited)
+{
+    SetUpFixpipePlatform();
+    std::vector<int64_t> dimsX{1, 56, 56, 64};
+    std::vector<int64_t> dimsFilter{64, 1, 1, 64};
+    std::vector<int64_t> dimsBias{64};
+    std::vector<int64_t> dimsOut{1, 28, 28, 64};
+
+    auto graphBuilder = es::EsGraphBuilder("two_branches_dump_mapping");
+    auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, dimsX);
+    auto filter1 = BuildConstNode(graphBuilder, "filter_1", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto bias1 = BuildConstNodeWithValue(graphBuilder, "bias_1", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto conv1Out = BuildConvNode(graphBuilder, "convolution_1", x, filter1,
+                                  {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*conv1Out.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasadd1Out = BuildBiasAddNode(graphBuilder, "BiasAdd_1", conv1Out, bias1);
+    SetOutputDesc(*biasadd1Out.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto filter = BuildConstNode(graphBuilder, "filter", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto bias = BuildConstNodeWithValue(graphBuilder, "bias", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto convOut = BuildConvNode(graphBuilder, "convolution", x, filter,
+                                 {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*convOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasaddOut = BuildBiasAddNode(graphBuilder, "BiasAdd", convOut, bias);
+    SetOutputDesc(*biasaddOut.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({biasadd1Out, biasaddOut});
+    RunPass(graph, SUCCESS);
+
+    EXPECT_EQ(CountNodes(graph, "BiasAdd"), 0);
+    EXPECT_EQ(CountNodes(graph, "Conv2D"), 2);
+    const std::vector<std::pair<std::string, std::string>> convToPatternOutput = {{"convolution", "BiasAdd"},
+                                                                                  {"convolution_1", "BiasAdd_1"}};
+    for (const auto& item : convToPatternOutput) {
+        GNode fusedConv;
+        ASSERT_TRUE(FindNodeByName(graph, item.first, fusedConv));
+        const auto biasSrc = fusedConv.GetInDataNodesAndPortIndexs(2);
+        ASSERT_NE(biasSrc.first, nullptr);
+        AttrValue value;
+        ASSERT_EQ(fusedConv.GetOutputAttr("_datadump_origin_name", 0, value), GRAPH_SUCCESS);
+        AscendString dumpName;
+        ASSERT_EQ(value.GetAttrValue(dumpName), GRAPH_SUCCESS);
+        EXPECT_STREQ(dumpName.GetString(), item.second.c_str());
+        ASSERT_EQ(fusedConv.GetOutputAttr("_datadump_origin_output_index", 0, value), GRAPH_SUCCESS);
+        int64_t dumpIndex = -1;
+        ASSERT_EQ(value.GetAttrValue(dumpIndex), GRAPH_SUCCESS);
+        EXPECT_EQ(dumpIndex, 0);
+        EXPECT_EQ(fusedConv.GetOutputAttr("_datadump_origin_format", 0, value), GRAPH_SUCCESS);
+        EXPECT_EQ(fusedConv.GetOutputAttr("_datadump_origin_data_type", 0, value), GRAPH_SUCCESS);
+    }
+    ClearPlatform();
+}

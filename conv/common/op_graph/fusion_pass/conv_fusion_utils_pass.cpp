@@ -13,6 +13,7 @@
 #include "ge/compliant_node_builder.h"
 #include "platform/platform_info.h"
 #include "runtime/runtime/base.h"
+#include "version/ge-compiler_version.h"
 
 namespace Ops {
 namespace NN {
@@ -141,8 +142,6 @@ bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode& convNode, ConvBaseAttrs& 
         HF32_PRECISION_MODES_INT.begin(), HF32_PRECISION_MODES_INT.end(),
         [&opImplModeEnum](const int64_t& targetPrecisionModeInt) { return opImplModeEnum == targetPrecisionModeInt; });
     baseAttrs.enableHf32 = (convDescInfo.fmapDtype == DataType::DT_FLOAT && isHf32OpImplMode);
-
-    // Reset impl mode to default for V2-family fused nodes (canndev SetImplMode semantics).
     baseAttrs.opImplModeEnum = 0x1;
 
     return true;
@@ -552,6 +551,58 @@ std::set<std::string> ConvFusionUtilsPass::CollectNodeTypeNames(const GraphPtr& 
         }
     }
     return names;
+}
+
+bool ConvFusionUtilsPass::CopyDumpOutputMapping(const GNode& source, GNode& target)
+{
+    const auto readText = [&source](const char* key, AscendString& text) {
+        AttrValue value;
+        return source.GetOutputAttr(key, OUTPUT_INDEX, value) == GRAPH_SUCCESS &&
+               value.GetAttrValue(text) == GRAPH_SUCCESS && text.GetString() != nullptr;
+    };
+    const auto writeText = [&target](const char* key, const AscendString& text) {
+        return target.SetOutputAttr(key, OUTPUT_INDEX, es::CreateFrom(text)) == GRAPH_SUCCESS;
+    };
+    AscendString name;
+    if (!readText("_datadump_origin_name", name) || name.GetString()[0] == '\0') {
+        std::vector<AscendString> names;
+        if (source.GetAttr("_datadump_original_op_names", names) == GRAPH_SUCCESS && !names.empty()) {
+            name = names.front();
+        } else if (source.GetName(name) != GRAPH_SUCCESS) {
+            return false;
+        }
+    }
+    AttrValue value;
+    int64_t index = 0;
+    if (source.GetOutputAttr("_datadump_origin_output_index", OUTPUT_INDEX, value) == GRAPH_SUCCESS) {
+        (void)value.GetAttrValue(index);
+    }
+    TensorDesc desc;
+    FUSION_PASS_CHECK(source.GetOutputDesc(OUTPUT_INDEX, desc) != GRAPH_SUCCESS,
+                      OP_LOGE(UTIL_NAME, "Get dump source output desc failed."), return false);
+    AscendString format;
+    if (!readText("_datadump_origin_format", format) ||
+        TypeUtils::SerialStringToFormat(format.GetString()) == FORMAT_RESERVED) {
+        format = AscendString(TypeUtils::FormatToSerialString(desc.GetOriginFormat()).c_str());
+    }
+    AscendString dtype;
+    if (!readText("_datadump_origin_data_type", dtype) ||
+        TypeUtils::SerialStringToDataType(dtype.GetString()) == DT_UNDEFINED) {
+#if GE_COMPILER_VERSION_NUM >= 90300000U
+        const auto originType = desc.GetOriginDataType();
+#else
+        const auto originType = DT_UNDEFINED;
+#endif
+        dtype = AscendString(originType == DT_UNDEFINED ? "RESERVED" :
+                                                          TypeUtils::DataTypeToSerialString(originType).c_str());
+    }
+    FUSION_PASS_CHECK(!writeText("_datadump_origin_name", name) ||
+                          target.SetOutputAttr("_datadump_origin_output_index", OUTPUT_INDEX, es::CreateFrom(index)) !=
+                              GRAPH_SUCCESS ||
+                          !writeText("_datadump_origin_data_type", dtype) ||
+                          !writeText("_datadump_origin_format", format),
+                      OP_LOGE(UTIL_NAME, "Write dump output mapping failed."), return false);
+    return true;
 }
 
 bool ConvFusionUtilsPass::FindNewNodeOfType(const GraphPtr& graph, const AscendString& nodeType,

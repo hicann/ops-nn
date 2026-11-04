@@ -203,6 +203,7 @@ public:
     static std::vector<int64_t> ReorderNchwToNhwc(const std::vector<int64_t>& attr);
     static std::vector<int64_t> ReorderNhwcToNchw(const std::vector<int64_t>& attr);
     static bool CopyConvOtherAttrs(const ge::GNode& srcNode, ge::GNode& dstNode);
+    static bool CopyDumpOutputMapping(const ge::GNode& source, ge::GNode& target);
     static std::set<std::string> CollectNodeTypeNames(const ge::GraphPtr& graph, const ge::AscendString& nodeType);
     static bool FindNewNodeOfType(const ge::GraphPtr& graph, const ge::AscendString& nodeType,
                                   const std::set<std::string>& namesBefore, ge::GNode& newNode);
