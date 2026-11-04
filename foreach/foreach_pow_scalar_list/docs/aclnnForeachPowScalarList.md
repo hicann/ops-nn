@@ -170,8 +170,8 @@ aclnnStatus aclnnForeachPowScalarList(
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="4">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -179,6 +179,9 @@ aclnnStatus aclnnForeachPowScalarList(
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>scalars中元素的个数与x中Tensor的个数不相等。</td>
     </tr>
   </tbody></table>
 

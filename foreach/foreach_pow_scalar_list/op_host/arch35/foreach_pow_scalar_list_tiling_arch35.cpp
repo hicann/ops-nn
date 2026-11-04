@@ -12,6 +12,7 @@
 
 #include <limits>
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
@@ -23,11 +24,109 @@ namespace optiling {
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int32_t INPUT_IDX_SCALARS = 1;
+constexpr int32_t OUTPUT_IDX_0 = 0;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
 constexpr int32_t MAX_TENSOR_NUM = 256;
+constexpr size_t MAX_DIM_NUM = 8;
 
 struct ForeachPowScalarListCompileInfo {};
+
+static ge::graphStatus CheckTensorListNum(gert::TilingContext* context, uint64_t tensorNum)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+
+    // y与x的列表长度必须一致，否则按x下标写y会越界
+    auto outInstanceInfoPtr = computeNodeInfoPtr->GetOutputInstanceInfo(OUTPUT_IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outInstanceInfoPtr);
+    uint64_t outTensorNum = outInstanceInfoPtr->GetInstanceNum();
+    OP_CHECK_IF(
+        outTensorNum != tensorNum,
+        OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "y", outTensorNum, std::to_string(tensorNum).c_str()),
+        return ge::GRAPH_FAILED);
+
+    // scalars的元素个数必须等于x中Tensor的个数，kernel按x下标读取scalars[tensorId]
+    auto scalarsShapePtr = context->GetRequiredInputShape(INPUT_IDX_SCALARS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsShapePtr);
+    int64_t scalarsNum = scalarsShapePtr->GetStorageShape().GetShapeSize();
+    // GetShapeSize返回负值表示shape含未知维（-1）或乘积溢出，此时不是真实元素数：
+    // 动态shape编译期无法静态判定，跳过该校验，交由shape具体化后的运行时tiling保证
+    if (scalarsNum < 0) {
+        OP_LOGD(context->GetNodeName(), "Skip scalars num check: scalars shape size is unknown (%ld).", scalarsNum);
+    } else {
+        OP_CHECK_IF(scalarsNum != static_cast<int64_t>(tensorNum),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "scalars", std::to_string(scalarsNum).c_str(),
+                                                  std::to_string(tensorNum).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckTensorListDtype(gert::TilingContext* context, uint64_t tensorNum)
+{
+    auto firstDescPtr = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, firstDescPtr);
+    ge::DataType listDtype = firstDescPtr->GetDataType();
+    for (uint64_t i = 1; i < tensorNum; i++) {
+        auto descPtr = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, descPtr);
+        OP_CHECK_IF(
+            descPtr->GetDataType() != listDtype,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(descPtr->GetDataType()).c_str(),
+                ("The dtypes of all tensors in the input tensor list x must be the same, but the dtype of x[" +
+                 std::to_string(i) + "] is inconsistent with x[0]")
+                    .c_str()),
+            return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckTensorListShape(gert::TilingContext* context, uint64_t tensorNum)
+{
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto xShapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
+        auto xStorageShape = xShapePtr->GetStorageShape();
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() > MAX_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                         "less than or equal to 8"),
+            return ge::GRAPH_FAILED);
+
+        auto outShapePtr = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outShapePtr);
+        auto outStorageShape = outShapePtr->GetStorageShape();
+        OP_CHECK_IF(outStorageShape.GetDimNum() > MAX_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "y",
+                                                 std::to_string(outStorageShape.GetDimNum()).c_str(),
+                                                 "less than or equal to 8"),
+                    return ge::GRAPH_FAILED);
+
+        // out的shape size必须大于等于x的shape size，否则kernel按x元素数写入会越界
+        int64_t xShapeSize = xStorageShape.GetShapeSize();
+        int64_t outShapeSize = outStorageShape.GetShapeSize();
+        // GetShapeSize返回负值表示shape含未知维（-1）或乘积溢出，此时大小关系无意义：
+        // 动态shape编译期跳过该静态校验，交由shape具体化后的运行时tiling保证
+        if (xShapeSize < 0 || outShapeSize < 0) {
+            OP_LOGD(context->GetNodeName(),
+                    "Skip shape size check of x[%lu]: unknown or overflowed shape size (%ld and %ld).", i, xShapeSize,
+                    outShapeSize);
+        } else {
+            OP_CHECK_IF(xShapeSize > outShapeSize,
+                        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                            context->GetNodeName(), "x and y",
+                            (std::to_string(xShapeSize) + " and " + std::to_string(outShapeSize)).c_str(),
+                            ("The shape size of y[" + std::to_string(i) +
+                             "] must be greater than or equal to that of x[" + std::to_string(i) + "]")
+                                .c_str()),
+                        return ge::GRAPH_FAILED);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -57,6 +156,14 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dataType = inputDesc->GetDataType();
+
+    // 入参约束校验：list长度/dtype一致性/维度/输出缓冲区大小
+    OP_CHECK_IF(CheckTensorListNum(context, tensorNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckTensorListNum failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckTensorListDtype(context, tensorNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckTensorListDtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckTensorListShape(context, tensorNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckTensorListShape failed"), return ge::GRAPH_FAILED);
 
     ForeachPowScalarListTilingData* tiling = context->GetTilingData<ForeachPowScalarListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);

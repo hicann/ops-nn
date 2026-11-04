@@ -172,8 +172,8 @@ aclnnStatus aclnnForeachPowScalarList(
       <td>The data types of x and out are different.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="4">561002</td>
       <td>The shapes of x and out do not satisfy the constraints.</td>
     </tr>
     <tr>
@@ -181,6 +181,9 @@ aclnnStatus aclnnForeachPowScalarList(
     </tr>
     <tr>
       <td>The dimensions of tensors in x or out exceed 8.</td>
+    </tr>
+    <tr>
+      <td>The number of elements in scalars is not equal to the number of tensors in x.</td>
     </tr>
   </tbody></table>
 
