@@ -1,0 +1,367 @@
+# LayerNormGrad
+
+## Applicable Products
+
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR&950DT products</term>: Supported
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 products</term>: Supported
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 products</term>: Supported
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 inference products</term>: Not supported
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas inference products</term>: Not supported
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas training products</term>: Not supported
+<!-- end id6 -->
+
+## Function
+
+- Operator function: the backward propagation of LayerNorm. It computes the gradients of the input tensors so that model parameters can be updated during backward propagation.
+- Computation formula:
+
+  $$
+  rstd = \frac{1}{\sqrt{variance + epsilon}}
+  $$
+
+  $$
+  res\_for\_gamma = (input - mean) \times rstd
+  $$
+
+  $$
+  dy\_g = gradOut \times weight
+  $$
+
+  $$
+  temp_1 = 1/N \times \sum_{reduce\_axis\_1} gradOut \times weight
+  $$
+
+  $$
+  temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_1}(gradOut \times weight \times (input - mean) \times rstd)
+  $$
+
+  $$
+  gradInputOut = (gradOut \times weight - (temp_1 + temp_2)) \times rstd
+  $$
+
+  $$
+  gradWeightOut =  \sum_{reduce\_axis\_0}gradOut \times (input - mean) \times rstd
+  $$
+
+  $$
+  gradBiasOut = \sum_{reduce\_axis\_0}gradOut
+  $$
+
+  where N is the dimensions of the axis on which the normalization computation is performed, that is, the size of the normalization axis dimensions.
+
+## Ascend IR Definition
+
+The header file containing the Ascend IR definition: [layer_norm_grad_proto.h](../op_graph/layer_norm_grad_proto.h)
+
+```c++
+REG_OP(LayerNormGrad)
+    .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(variance, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(mean, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OP_END_FACTORY_REG(LayerNormGrad)
+```
+
+## Parameters
+
+| Parameter name | Input/Attribute/Output | Description | Usage instructions | Data type | Data format | Dimensions (shape) |
+| --- | --- | --- | --- | --- | --- | --- |
+| dy (Tensor) | Required input | Gradient of the forward output, corresponding to `gradOut` in the formula. | Empty tensors are supported; at least 1 dimension. | float32, float16, bfloat16 | ND | At least 1 dimension, with the shape [A1,...,Ai,R1,...,Rj] |
+| x (Tensor) | Required input | Input of the forward layer normalization, corresponding to `input` in the formula. | Empty tensors are supported; the data type and shape must be consistent with `dy`. | float32, float16, bfloat16 | ND | Consistent with `dy` |
+| variance (Tensor) | Required input | Variance obtained from the forward computation, corresponding to `variance` in the formula. | Empty tensors are supported; the shape must be consistent with `mean`. | float32, float16, bfloat16 | ND | Same dimensions as `x`, with the shape [A1,...,Ai,1,...,1] |
+| mean (Tensor) | Required input | Mean obtained from the forward computation, corresponding to `mean` in the formula. | Empty tensors are supported; the shape must be consistent with `variance`. | float32, float16, bfloat16 | ND | Consistent with `variance` |
+| gamma (Tensor) | Required input | Scaling weight used by the forward computation, corresponding to `weight` in the formula. | Empty tensors are supported; at least 1 dimension, and the shape must be consistent with the trailing dimensions of `dy`. | float32, float16, bfloat16 | ND | At least 1 dimension, with the shape [R1,...,Rj] |
+| pd_x (Tensor) | Required output | Gradient of input `x`, corresponding to `gradInputOut` in the formula. | Empty tensors are supported; the data type and shape must be consistent with `x` and `dy`. | float32, float16, bfloat16 | ND | Consistent with `dy` |
+| pd_gamma (Tensor) | Required output | Gradient of the scaling weight `gamma`, corresponding to `gradWeightOut` in the formula. | Empty tensors are supported; the shape is consistent with `gamma`; the data type is the same as `gamma`. | float32, float16, bfloat16 | ND | Consistent with `gamma` |
+| pd_beta (Tensor) | Required output | Gradient of the bias, corresponding to `gradBiasOut` in the formula. | Empty tensors are supported; the shape is consistent with `gamma`; the data type is the same as `gamma`. | float32, float16, bfloat16 | ND | Consistent with `gamma` |
+
+- <term>Atlas A3 products</term> and <term>Atlas A2 products</term>: empty tensors are not supported.
+
+## Constraints
+
+- The data types and shapes of `dy`, `x`, and `pd_x` must be the same; the shapes of `variance` and `mean` must be the same.
+- `gamma` is at least 1 dimension, must satisfy `rank(gamma) <= rank(dy)`, and each dimension of `gamma` must equal the corresponding trailing dimension of `dy`; the non-normalized dimensions of `variance` and `mean` are consistent with `x`, and the normalized dimensions all have a size of 1.
+
+## Invocation Sample
+
+The following is the sample code, for reference only. For the compilation and execution process in GE graph mode, refer to [Operator Invocation](../../../docs/zh/invocation/quick_op_invocation.md#ge图模式).
+
+```c++
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file test_geir_layer_norm_grad.cpp
+ * \brief GE graph construction sample for LayerNormGrad.
+ */
+
+#include <cmath>
+#include <cstring>
+#include <cstdint>
+#include <cstdio>
+#include <map>
+#include <new>
+#include <string>
+#include <vector>
+
+#include "array_ops.h"
+#include "ge_api.h"
+#include "ge_api_types.h"
+#include "graph.h"
+#include "tensor.h"
+#include "types.h"
+#include "../op_graph/layer_norm_grad_proto.h"
+
+#define FAILED (-1)
+#define SUCCESS 0
+
+#define CHECK_RET(cond, return_expr) \
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
+
+#define LOG_PRINT(message, ...)              \
+    do {                                     \
+        std::printf(message, ##__VA_ARGS__); \
+    } while (0)
+
+using namespace ge;
+using std::vector;
+
+namespace {
+std::string GetGeError()
+{
+    const AscendString errorMessage = GEGetErrorMsgV2();
+    return errorMessage.GetString() == nullptr ? "" : errorMessage.GetString();
+}
+
+int32_t GenerateFloatData(const vector<int64_t>& shape, float value, TensorDesc& desc, Tensor& tensor)
+{
+    int64_t elementCount = 1;
+    for (const int64_t dim : shape) {
+        CHECK_RET(dim > 0, LOG_PRINT("[ERROR] Input dimensions must be positive.\n"); return FAILED);
+        elementCount *= dim;
+    }
+    desc.SetRealDimCnt(shape.size());
+    auto ret = tensor.SetTensorDesc(desc);
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetTensorDesc failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+    vector<float> data(elementCount, static_cast<float>(value));
+    ret = tensor.SetData(reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(float));
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetData failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+    return SUCCESS;
+}
+
+#define ADD_INPUT(index, inputName, inputShape, inputValue)                                                           \
+    do {                                                                                                              \
+        auto inputOp = op::Data("input_" #index).set_attr_index((index) - 1);                                         \
+        TensorDesc inputDesc(Shape(inputShape), FORMAT_ND, DT_FLOAT);                                                 \
+        inputDesc.SetPlacement(kPlacementHost);                                                                       \
+        Tensor inputTensor;                                                                                           \
+        auto dataRet = GenerateFloatData(inputShape, inputValue, inputDesc, inputTensor);                             \
+        CHECK_RET(dataRet == SUCCESS, return FAILED);                                                                 \
+        auto ret = inputOp.update_input_desc_x(inputDesc);                                                            \
+        CHECK_RET(ret == GRAPH_SUCCESS, LOG_PRINT("[ERROR] Data::update_input_desc_x failed, status=%u, error=%s\n",  \
+                                                  ret, GetGeError().c_str());                                         \
+                  return FAILED);                                                                                     \
+        ret = inputOp.update_output_desc_y(inputDesc);                                                                \
+        CHECK_RET(ret == GRAPH_SUCCESS, LOG_PRINT("[ERROR] Data::update_output_desc_y failed, status=%u, error=%s\n", \
+                                                  ret, GetGeError().c_str());                                         \
+                  return FAILED);                                                                                     \
+        ret = node.update_input_desc_##inputName(inputDesc);                                                          \
+        CHECK_RET(ret == GRAPH_SUCCESS,                                                                               \
+                  LOG_PRINT("[ERROR] Operator::update_input_desc_" #inputName " failed, status=%u, error=%s\n", ret,  \
+                            GetGeError().c_str());                                                                    \
+                  return FAILED);                                                                                     \
+        node.set_input_##inputName(inputOp);                                                                          \
+        inputTensors.push_back(inputTensor);                                                                          \
+        inputOps.push_back(inputOp);                                                                                  \
+        ret = graph.AddOp(inputOp);                                                                                   \
+        CHECK_RET(ret == GRAPH_SUCCESS,                                                                               \
+                  LOG_PRINT("[ERROR] Graph::AddOp failed, status=%u, error=%s\n", ret, GetGeError().c_str());         \
+                  return FAILED);                                                                                     \
+    } while (0)
+
+#define SET_OUTPUT(outputName, outputShape)                                                                            \
+    do {                                                                                                               \
+        TensorDesc outputDesc(Shape(outputShape), FORMAT_ND, DT_FLOAT);                                                \
+        auto ret = node.update_output_desc_##outputName(outputDesc);                                                   \
+        CHECK_RET(ret == GRAPH_SUCCESS,                                                                                \
+                  LOG_PRINT("[ERROR] Operator::update_output_desc_" #outputName " failed, status=%u, error=%s\n", ret, \
+                            GetGeError().c_str());                                                                     \
+                  return FAILED);                                                                                      \
+    } while (0)
+
+int32_t BuildGraph(Graph& graph, vector<Tensor>& inputTensors, vector<Operator>& inputOps, vector<Operator>& outputOps)
+{
+    auto node = op::LayerNormGrad("layer_norm_grad");
+    vector<int64_t> xShape = {2, 3, 4};
+    vector<int64_t> statisticShape = {2, 3, 1};
+    vector<int64_t> parameterShape = {4};
+
+    ADD_INPUT(1, dy, xShape, 1.0f);
+    ADD_INPUT(2, x, xShape, 0.0f);
+    ADD_INPUT(3, variance, statisticShape, 4.0f);
+    ADD_INPUT(4, mean, statisticShape, 0.0f);
+    ADD_INPUT(5, gamma, parameterShape, 4.0f);
+
+    // Six rows: x=[-2,2,-2,2], dy=[1,2,3,4], mean=0, variance=4.
+    const float xRow[] = {-2.0f, 2.0f, -2.0f, 2.0f};
+    const float dyRow[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    const size_t count = inputTensors[0].GetSize() / sizeof(float);
+    vector<float> xValues(count);
+    vector<float> dyValues(count);
+    for (size_t i = 0; i < count; ++i) {
+        xValues[i] = xRow[i % 4];
+        dyValues[i] = dyRow[i % 4];
+    }
+    auto ret = inputTensors[0].SetData(reinterpret_cast<uint8_t*>(dyValues.data()), dyValues.size() * sizeof(float));
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetData(dy) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+    ret = inputTensors[1].SetData(reinterpret_cast<uint8_t*>(xValues.data()), xValues.size() * sizeof(float));
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Tensor::SetData(x) failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              return FAILED);
+
+    SET_OUTPUT(pd_x, xShape);
+    SET_OUTPUT(pd_gamma, parameterShape);
+    SET_OUTPUT(pd_beta, parameterShape);
+    outputOps.push_back(node);
+    return SUCCESS;
+}
+
+// These examples use simple FP32 inputs, so every output has a simple
+// analytically known value. Check all elements, not only the printed preview.
+bool CheckOutput(const Tensor& tensor, const std::string& name, const vector<int64_t>& shape,
+                 const vector<float>& expectedPattern)
+{
+    const auto desc = tensor.GetTensorDesc();
+    size_t count = 1;
+    for (const int64_t dim : shape) {
+        count *= static_cast<size_t>(dim);
+    }
+    CHECK_RET(desc.GetShape().GetDims() == shape && desc.GetDataType() == DT_FLOAT && desc.GetFormat() == FORMAT_ND &&
+                  tensor.GetSize() == count * sizeof(float) && tensor.GetData() != nullptr,
+              LOG_PRINT("[CHECK] %s FAIL: unexpected shape, dtype, format, or data size\n", name.c_str());
+              return false);
+    vector<float> values(count);
+    std::memcpy(values.data(), tensor.GetData(), count * sizeof(float));
+    CHECK_RET(!expectedPattern.empty() && count % expectedPattern.size() == 0,
+              LOG_PRINT("[CHECK] %s FAIL: invalid expected pattern\n", name.c_str());
+              return false);
+    size_t mismatches = 0;
+    for (size_t i = 0; i < count; ++i) {
+        const float expected = expectedPattern[i % expectedPattern.size()];
+        const float tolerance = 1e-4f + 1e-5f * std::fabs(expected);
+        if (!std::isfinite(values[i]) || std::fabs(values[i] - expected) > tolerance) {
+            if (mismatches == 0) {
+                LOG_PRINT("[CHECK] %s[%zu]=%.9g expected=%.9g tolerance=%.9g\n", name.c_str(), i, values[i], expected,
+                          tolerance);
+            }
+            ++mismatches;
+        }
+    }
+    LOG_PRINT("[CHECK] %s first values=[", name.c_str());
+    for (size_t i = 0; i < count && i < 4; ++i) {
+        LOG_PRINT("%s%.9g", i == 0 ? "" : ", ", values[i]);
+    }
+    LOG_PRINT("] expected pattern=[");
+    for (size_t i = 0; i < expectedPattern.size(); ++i) {
+        LOG_PRINT("%s%.9g", i == 0 ? "" : ", ", expectedPattern[i]);
+    }
+    LOG_PRINT("], checked=%zu, mismatches=%zu: %s\n", count, mismatches, mismatches == 0 ? "PASS" : "FAIL");
+    return mismatches == 0;
+}
+
+int32_t ValidateOutputs(const vector<Tensor>& outputs)
+{
+    CHECK_RET(outputs.size() == 3, LOG_PRINT("[CHECK] FAIL: expected 3 outputs, got %zu\n", outputs.size());
+              return FAILED);
+    bool ok = true;
+    // xhat=[-1,1,-1,1], gamma*rstd=2, mean(dy)=2.5, mean(dy*xhat)=0.5.
+    // dx=2*(dy-2.5-xhat*0.5); dgamma=6*dy*xhat; dbeta=6*dy.
+    ok = CheckOutput(outputs[0], "dx", {2, 3, 4}, {-2.0f, -2.0f, 2.0f, 2.0f}) && ok;
+    ok = CheckOutput(outputs[1], "dgamma", {4}, {-6.0f, 12.0f, -18.0f, 24.0f}) && ok;
+    ok = CheckOutput(outputs[2], "dbeta", {4}, {6.0f, 12.0f, 18.0f, 24.0f}) && ok;
+    LOG_PRINT("[CHECK] total: %s\n", ok ? "PASS" : "FAIL");
+    return ok ? SUCCESS : FAILED;
+}
+
+int32_t RunGraph(Graph& graph, const vector<Tensor>& inputTensors)
+{
+    std::map<AscendString, AscendString> buildOptions;
+    Session* session = new (std::nothrow) Session(buildOptions);
+    CHECK_RET(session != nullptr, LOG_PRINT("[ERROR] Session allocation failed.\n"); return FAILED);
+
+    constexpr uint32_t graphId = 0;
+    std::map<AscendString, AscendString> graphOptions;
+    auto ret = session->AddGraph(graphId, graph, graphOptions);
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Session::AddGraph failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              delete session; return FAILED);
+
+    vector<Tensor> outputTensors;
+    ret = session->RunGraph(graphId, inputTensors, outputTensors);
+    CHECK_RET(ret == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] Session::RunGraph failed, status=%u, error=%s\n", ret, GetGeError().c_str());
+              delete session; return FAILED);
+    LOG_PRINT("LayerNormGrad graph run success, output count: %zu\n", outputTensors.size());
+    const int32_t result = ValidateOutputs(outputTensors);
+    delete session;
+    return result;
+}
+} // namespace
+
+int main()
+{
+    std::map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
+    auto status = GEInitialize(globalOptions);
+    CHECK_RET(status == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] GEInitialize failed, status=%u, error=%s\n", status, GetGeError().c_str());
+              return FAILED);
+
+    Graph graph("layer_norm_grad_graph");
+    vector<Tensor> inputTensors;
+    vector<Operator> inputOps;
+    vector<Operator> outputOps;
+    int32_t ret = BuildGraph(graph, inputTensors, inputOps, outputOps);
+    if (ret == SUCCESS) {
+        graph.SetInputs(inputOps).SetOutputs(outputOps);
+        ret = RunGraph(graph, inputTensors);
+    }
+
+    status = GEFinalize();
+    CHECK_RET(status == GRAPH_SUCCESS,
+              LOG_PRINT("[ERROR] GEFinalize failed, status=%u, error=%s\n", status, GetGeError().c_str());
+              return FAILED);
+    return ret;
+}
+```
