@@ -23,11 +23,12 @@ namespace ge {
  * @brief Computes Centralization. result = x - mean(x, axes).
 
  * @par Inputs:
- * x: An ND tensor of type float16 or float32.
+ * x: An ND tensor of type float16 or float32, with rank in [1, 8].
 
  * @par Attributes:
- * axes: The dimensions to reduce. A list of unique dimensions in the range [-rank(x), rank(x)).
- * Negative dimensions are accepted. Defaults to {-1}.
+ * axes: The dimensions to reduce, in the range [-rank(x), rank(x)). Negative dimensions are accepted.
+ * Duplicate dimensions are deduplicated. When unset, the last axis is reduced (default {-1}).
+ * An empty list means no reduction (output is zero).
 
  * @par Outputs:
  * y: A tensor with the same shape and type as x.

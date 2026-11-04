@@ -41,8 +41,10 @@ constexpr int64_t kSmallContiguousMaxWorkingSetElements = 1024;
 constexpr int64_t kMaxShapeDim = std::numeric_limits<int64_t>::max();
 constexpr int64_t kMaxShapeElements = std::numeric_limits<int64_t>::max();
 constexpr size_t kSmallContiguousMaxWorkingSetBytes = 16UL * 1024UL;
-constexpr size_t kLargeContiguousSmallInnerMaxBufferBytes = 64UL * 1024UL;
 constexpr size_t kSystemWorkspaceBytes = 16UL * 1024UL * 1024UL;
+// UB 预留：TPipe 元数据、事件与对齐开销不参与 buffer 均分。
+constexpr size_t kUbReservedBytes = 8UL * 1024UL;
+constexpr size_t kUbAlignBytes = 32UL;
 constexpr uint32_t kEmptyKey = 8000;
 constexpr uint32_t kFastKey = 7000;
 constexpr uint32_t kGenericKey = 0;
@@ -94,11 +96,6 @@ static ge::graphStatus ValidateRuntimeDim(gert::TilingContext* context, int64_t 
     return GRAPH_SUCCESS;
 }
 
-static int64_t AlignToBlockElements(int64_t elements, int64_t blockElems)
-{
-    return CeilDiv(elements, blockElems) * blockElems;
-}
-
 static int64_t AlignToVectorElements(int64_t elements)
 {
     return CeilDiv(elements, kRegbaseVectorElements) * kRegbaseVectorElements;
@@ -109,95 +106,263 @@ static size_t DataTypeBytes(ge::DataType dtype) { return dtype == DT_FLOAT ? siz
 static ge::graphStatus SetBufferBytes(gert::TilingContext* context, const char* label, int64_t elements,
                                       size_t elementBytes, uint32_t& bytes)
 {
-    int64_t byteCount = 0;
-    if (CheckedMul(context, label, elements, static_cast<int64_t>(elementBytes), std::numeric_limits<uint32_t>::max(),
-                   byteCount) != GRAPH_SUCCESS) {
+    constexpr int64_t kByteLimit = std::numeric_limits<uint32_t>::max();
+    const int64_t elementBytes64 = static_cast<int64_t>(elementBytes);
+    if (elements < 0 || elementBytes64 <= 0 || elements > kByteLimit / elementBytes64) {
+        const std::string product = std::to_string(elements) + "*" + std::to_string(elementBytes);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), label, product.c_str(),
+                                              "buffer bytes are invalid or exceed the uint32 range");
         return GRAPH_FAILED;
     }
-    bytes = static_cast<uint32_t>(byteCount);
+    bytes = static_cast<uint32_t>(elements * elementBytes64);
     return GRAPH_SUCCESS;
 }
 
-// 选择均值累加的槽数：2 的幂，且槽缓冲占用不超过 UB 的 1/16。
-// 这是通用做法（参考 bn3d_training_reduce 的 PickAccSlots / 通用 DichotomyAdd），
-// 对所有 dtype 生效，不区分 fp32/fp16。
-static int64_t ChooseAccSlots(int64_t count, int64_t sumElements, uint64_t ubSize)
+// 每条路径在 UB 上同时存活的 buffer 数量，必须与 kernel Init 里的 InitBuffer 一一对应：
+//   Generic: in/out 各 depth 份 + 1 份 sum；
+//   Fast:    in/out 各 bufNum 份；
+//   LargeTrailing: in/out 各 2 份 + calc + mean + sum。
+static int64_t GenericLiveBufferCount(const CentralizationTilingData* tiling)
 {
-    if (count <= 1 || sumElements <= 0) {
+    const bool singleDepth = tiling->smallContiguous != 0 || tiling->largeContiguousSmallInner != 0;
+    return (singleDepth ? 1 : 2) * 2 + 1;
+}
+
+static size_t UbUsableBytes(uint64_t ubSize)
+{
+    return ubSize > kUbReservedBytes ? static_cast<size_t>(ubSize - kUbReservedBytes) : 0UL;
+}
+
+static size_t AlignDownBytes(size_t bytes) { return bytes / kUbAlignBytes * kUbAlignBytes; }
+
+// 均值累加槽数：sum 节点可用 budgetBytes，按 sumElements * factor 的每槽占用反算。
+// factor=1 仅存 sum，factor=2 同时存 sum 与 correction。
+static int64_t ChooseAccSlots(int64_t count, int64_t sumElements, size_t budgetBytes, int64_t factor)
+{
+    if (count <= 1 || sumElements <= 0 || factor <= 0) {
         return 1;
     }
-    const int64_t perSlotBytes = sumElements * static_cast<int64_t>(sizeof(float));
-    const int64_t budgetBytes = static_cast<int64_t>(ubSize) / 16;
+    const size_t perSlotBytes = static_cast<size_t>(sumElements) * sizeof(float) * static_cast<size_t>(factor);
+    if (perSlotBytes == 0) {
+        return 1;
+    }
     int64_t slots = 1;
-    while (slots < 16 && (slots * 2) <= count && (slots * 2) * perSlotBytes <= budgetBytes) {
+    while (slots < 16 && (slots * 2) <= count && static_cast<size_t>(slots * 2) * perSlotBytes <= budgetBytes) {
         slots *= 2;
     }
     return slots;
 }
 
-static ge::graphStatus ConfigureBufferBytes(gert::TilingContext* context, CentralizationTilingData* tiling,
-                                            ge::DataType dtype, uint64_t ubSize)
+static const char* GenericPathName(const CentralizationTilingData* tiling)
 {
-    const int64_t blockElems = dtype == DT_FLOAT ? 8LL : 16LL;
+    if (tiling->smallContiguous != 0) {
+        return tiling->smallContiguousMode == 2 ? "small2" : "small1";
+    }
+    if (tiling->largeContiguousSmallInner != 0) {
+        return "lcsi";
+    }
+    if (tiling->contiguousGeneric != 0) {
+        return "contiguous";
+    }
+    if (tiling->irregularVectorizable != 0) {
+        return "irregular";
+    }
+    if (tiling->largePath != 0) {
+        return "large";
+    }
+    return "scalar";
+}
+
+static const char* PathName(uint32_t key, const CentralizationTilingData* tiling)
+{
+    switch (key) {
+        case kEmptyKey:
+            return "empty";
+        case kFastKey:
+            return "fast";
+        case kLargeTrailingKey:
+            return "largeTrailing";
+        case kLargeKey:
+            return "large";
+        case kGenericKey:
+            return GenericPathName(tiling);
+        default:
+            return "unknown";
+    }
+}
+
+// 按“峰值并行存活 buffer 数 + UB 总量”给每个存活节点均分可用空间：
+//   perBufferBytes = (UB - 预留 - 固定小 buffer) / 存活节点数
+// 再按 perBufferBytes 反算并 clamp 各 tile，保证 sum(存活 buffer) <= UB。
+static ge::graphStatus ConfigureBufferBytes(gert::TilingContext* context, CentralizationTilingData* tiling,
+                                            ge::DataType dtype, uint64_t ubSize, uint32_t key)
+{
     const size_t elementBytes = DataTypeBytes(dtype);
+    if (key == kEmptyKey) {
+        tiling->genericInputBufferBytes = 0;
+        tiling->genericOutputBufferBytes = 0;
+        tiling->genericSumBufferBytes = 0;
+        return GRAPH_SUCCESS;
+    }
+
+    const size_t usableBytes = UbUsableBytes(ubSize);
+    int64_t liveBuffers = 0;
+    size_t fixedBytes = 0;
+    if (key == kLargeTrailingKey) {
+        liveBuffers = 6;  // in x2 + out x2 + calc + mean + sum
+        fixedBytes = 128; // sumBuf_ 固定 128B
+    } else if (key == kFastKey) {
+        liveBuffers = 2 * (tiling->bufNum > 0 ? tiling->bufNum : 2);
+    } else {
+        liveBuffers = GenericLiveBufferCount(tiling);
+    }
+    if (liveBuffers <= 0 || usableBytes <= fixedBytes) {
+        const std::string reason = "invalid UB budget for path " + std::string(PathName(key, tiling)) +
+                                   ": liveBuffers=" + std::to_string(liveBuffers) +
+                                   ", usableBytes=" + std::to_string(usableBytes) +
+                                   ", fixedBytes=" + std::to_string(fixedBytes);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(ubSize).c_str(),
+                                              reason.c_str());
+        return GRAPH_FAILED;
+    }
+    const size_t perBufferBytes = AlignDownBytes((usableBytes - fixedBytes) / static_cast<size_t>(liveBuffers));
+    if (perBufferBytes == 0) {
+        const std::string reason = "no usable UB space for path " + std::string(PathName(key, tiling)) +
+                                   ": usableBytes=" + std::to_string(usableBytes) +
+                                   ", fixedBytes=" + std::to_string(fixedBytes) +
+                                   ", liveBuffers=" + std::to_string(liveBuffers);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(ubSize).c_str(),
+                                              reason.c_str());
+        return GRAPH_FAILED;
+    }
+
+    if (key == kFastKey) {
+        // Fast 的 buffer 字节由 kernel 按 ubFactor/rowsPerLoop 计算，此处只做一致性保护。
+        const int64_t maxCols = static_cast<int64_t>(perBufferBytes / elementBytes);
+        tiling->ubFactor = std::max<int64_t>(1, std::min<int64_t>(tiling->ubFactor, maxCols));
+        return GRAPH_SUCCESS;
+    }
+
+    if (key == kLargeTrailingKey) {
+        if (SetBufferBytes(context, "large trailing input buffer bytes",
+                           static_cast<int64_t>(perBufferBytes / elementBytes), elementBytes,
+                           tiling->largeTrailingInputBufferBytes) != GRAPH_SUCCESS ||
+            SetBufferBytes(context, "large trailing output buffer bytes",
+                           static_cast<int64_t>(perBufferBytes / elementBytes), elementBytes,
+                           tiling->largeTrailingOutputBufferBytes) != GRAPH_SUCCESS ||
+            SetBufferBytes(context, "large trailing calc buffer bytes",
+                           static_cast<int64_t>(perBufferBytes / sizeof(float)), sizeof(float),
+                           tiling->largeTrailingCalcBufferBytes) != GRAPH_SUCCESS ||
+            SetBufferBytes(context, "large trailing mean buffer bytes",
+                           static_cast<int64_t>(perBufferBytes / sizeof(float)), sizeof(float),
+                           tiling->largeTrailingMeanBufferBytes) != GRAPH_SUCCESS) {
+            const std::string reason = "failed to set largeTrailing buffer bytes for path " +
+                                       std::string(PathName(key, tiling));
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(perBufferBytes).c_str(),
+                                                  reason.c_str());
+            return GRAPH_FAILED;
+        }
+        // LargeTrailing 的累加槽是标量数组，不占 UB，按 reduce 链长取 2 的幂。
+        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, 1, perBufferBytes, 1);
+        return GRAPH_SUCCESS;
+    }
+
     const bool smallContiguous = tiling->smallContiguous != 0;
     const bool largeContiguousSmallInner = tiling->largeContiguousSmallInner != 0;
-    int64_t smallInputElements = 0;
-    if (tiling->smallContiguousMode == 2) {
-        const int64_t alignedMeanElements = AlignToVectorElements(tiling->smallContiguousMeanElements);
-        if (CheckedMul(context, "generic input buffer elements", tiling->reduceCount, alignedMeanElements,
-                       kMaxShapeElements, smallInputElements) != GRAPH_SUCCESS) {
-            return GRAPH_FAILED;
+    int64_t inputElements = 0;
+    int64_t sumElements = 0;
+    int64_t sumFactor = 1;
+    bool singleAccSlot = false;
+    if (smallContiguous) {
+        const int64_t alignedMean = AlignToVectorElements(tiling->smallContiguousMeanElements);
+        if (tiling->smallContiguousMode == 2) {
+            inputElements = tiling->reduceCount * alignedMean;
+            sumElements = alignedMean;
+            sumFactor = 1; // ProcessSmallWholeBlockTask 只维护 sum
+        } else {
+            inputElements = AlignToVectorElements(tiling->smallContiguousBlockElements);
+            sumElements = alignedMean;
+            sumFactor = 1;
+            singleAccSlot = true; // ProcessSmallInnerOneTask 使用标量均值，不消费累加槽
         }
+    } else if (largeContiguousSmallInner) {
+        const int64_t alignedInner = AlignToVectorElements(tiling->contiguousInnerCount);
+        const int64_t maxReduceTile = static_cast<int64_t>(perBufferBytes /
+                                                           (static_cast<size_t>(alignedInner) * elementBytes));
+        tiling->largeContiguousReduceTile = maxReduceTile > 0 ?
+                                                std::max<int64_t>(
+                                                    1, std::min<int64_t>(tiling->reduceCount, maxReduceTile)) :
+                                                1;
+        inputElements = tiling->largeContiguousReduceTile * alignedInner;
+        sumElements = alignedInner;
+        sumFactor = 2; // Kahan: sum + correction
+    } else if (tiling->contiguousGeneric != 0) {
+        const int64_t maxTile = static_cast<int64_t>(perBufferBytes / elementBytes);
+        const int64_t naturalTile = std::max<int64_t>(1, tiling->contiguousInnerTileElements);
+        const int64_t tile = std::max<int64_t>(
+            1, std::min<int64_t>(naturalTile, std::min<int64_t>(maxTile, kGenericContiguousTileElements)));
+        tiling->contiguousInnerTileElements = tile;
+        tiling->contiguousInnerTileCount = CeilDiv(tiling->contiguousInnerCount, tile);
+        inputElements = tile;
+        sumElements = kGenericContiguousTileElements;
+        sumFactor = 2; // ProcessContiguousTask 同时维护 sum 与 correction
+    } else if (tiling->irregularVectorizable != 0) {
+        const int64_t maxTile = static_cast<int64_t>(perBufferBytes / elementBytes);
+        const int64_t naturalTile = std::max<int64_t>(1, tiling->irregularVectorTileElements);
+        const int64_t tile = std::max<int64_t>(1, std::min<int64_t>(naturalTile, maxTile));
+        tiling->irregularVectorTileElements = tile;
+        tiling->irregularVectorTileCount = CeilDiv(tiling->irregularVectorInnerCount, tile);
+        inputElements = tile;
+        sumElements = kGenericContiguousTileElements;
+        sumFactor = 1;
     } else {
-        smallInputElements = AlignToVectorElements(tiling->smallContiguousBlockElements);
+        // large（7020）与 generic scalar：ProcessBlock 固定按 32B block 搬运
+        inputElements = std::max<int64_t>(
+            1, std::min<int64_t>(kGenericContiguousTileElements, static_cast<int64_t>(perBufferBytes / elementBytes)));
+        sumElements = 1; // ProcessLarge/ProcessOutputBlocks 使用标量槽，不占 sumBuf_
+        sumFactor = 1;
     }
-    int64_t largeInputElements = 0;
-    if (largeContiguousSmallInner) {
-        const int64_t alignedInnerCount = AlignToVectorElements(tiling->contiguousInnerCount);
-        int64_t dataElements = 0;
-        if (CheckedMul(context, "large contiguous data elements", tiling->largeContiguousReduceTile, alignedInnerCount,
-                       kMaxShapeElements, dataElements) != GRAPH_SUCCESS) {
-            return GRAPH_FAILED;
-        }
-        largeInputElements = AlignToBlockElements(dataElements, blockElems);
+    if (static_cast<size_t>(inputElements) * elementBytes > perBufferBytes) {
+        const std::string reason = "input tile exceeds per-buffer budget for path " +
+                                   std::string(PathName(key, tiling)) +
+                                   ": inputElements=" + std::to_string(inputElements) +
+                                   ", elementBytes=" + std::to_string(elementBytes) +
+                                   ", perBufferBytes=" + std::to_string(perBufferBytes);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(inputElements).c_str(),
+                                              reason.c_str());
+        return GRAPH_FAILED;
     }
-    const int64_t inputElements = smallContiguous ?
-                                      smallInputElements :
-                                      (largeContiguousSmallInner ? largeInputElements : kGenericContiguousTileElements);
-    const int64_t sumElements = smallContiguous ?
-                                    AlignToVectorElements(tiling->smallContiguousMeanElements) :
-                                    (largeContiguousSmallInner ? AlignToVectorElements(tiling->contiguousInnerCount) :
-                                                                 kGenericContiguousTileElements);
-
-    const bool useAccumulatorSlots = tiling->contiguousGeneric != 0 && !largeContiguousSmallInner &&
-                                     !(smallContiguous && tiling->smallContiguousMode == 1);
-    if (useAccumulatorSlots) {
-        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, sumElements, ubSize);
-    } else if (tiling->largePath != 0) {
-        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, 1, ubSize);
+    // dense 路径的 slot 占用 UB；large/largeTrailing 的 slot 是标量，不占 UB。
+    if (smallContiguous || largeContiguousSmallInner || tiling->contiguousGeneric != 0 ||
+        tiling->irregularVectorizable != 0) {
+        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, sumElements, perBufferBytes, sumFactor);
     } else {
+        tiling->numAccSlots = ChooseAccSlots(tiling->reduceCount, 1, perBufferBytes, 1);
+    }
+    if (singleAccSlot || largeContiguousSmallInner || tiling->irregularVectorizable != 0) {
         tiling->numAccSlots = 1;
     }
-    // 连续路径 slot 同时保存 sum 与 correction，buffer 翻倍
-    // 连续 slot / largeContiguousSmallInner 需要 sum+correction 双区
-    const int64_t sumBufferElements = sumElements * tiling->numAccSlots *
-                                      ((useAccumulatorSlots || largeContiguousSmallInner) ? 2 : 1);
+    const int64_t sumBufferElements = sumElements * tiling->numAccSlots * sumFactor;
+    if (static_cast<size_t>(sumBufferElements) * sizeof(float) > perBufferBytes) {
+        const std::string reason = "sum buffer exceeds per-buffer budget for path " +
+                                   std::string(PathName(key, tiling)) + ": sumElements=" + std::to_string(sumElements) +
+                                   ", slots=" + std::to_string(tiling->numAccSlots) +
+                                   ", factor=" + std::to_string(sumFactor) +
+                                   ", perBufferBytes=" + std::to_string(perBufferBytes);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(sumBufferElements).c_str(),
+                                              reason.c_str());
+        return GRAPH_FAILED;
+    }
 
-    if (SetBufferBytes(context, "generic input buffer bytes", inputElements, elementBytes,
-                       tiling->genericInputBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "generic output buffer bytes", inputElements, elementBytes,
-                       tiling->genericOutputBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "generic sum buffer bytes", sumBufferElements, sizeof(float),
-                       tiling->genericSumBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "large trailing input buffer bytes", kKernelTileElements, elementBytes,
-                       tiling->largeTrailingInputBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "large trailing output buffer bytes", kKernelTileElements, elementBytes,
-                       tiling->largeTrailingOutputBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "large trailing calc buffer bytes", kKernelTileElements, sizeof(float),
-                       tiling->largeTrailingCalcBufferBytes) != GRAPH_SUCCESS ||
-        SetBufferBytes(context, "large trailing mean buffer bytes", kKernelTileElements, sizeof(float),
-                       tiling->largeTrailingMeanBufferBytes) != GRAPH_SUCCESS) {
+    if (SetBufferBytes(context, "generic input buffer bytes", static_cast<int64_t>(perBufferBytes / elementBytes),
+                       elementBytes, tiling->genericInputBufferBytes) != GRAPH_SUCCESS ||
+        SetBufferBytes(context, "generic output buffer bytes", static_cast<int64_t>(perBufferBytes / elementBytes),
+                       elementBytes, tiling->genericOutputBufferBytes) != GRAPH_SUCCESS ||
+        SetBufferBytes(context, "generic sum buffer bytes", static_cast<int64_t>(perBufferBytes / sizeof(float)),
+                       sizeof(float), tiling->genericSumBufferBytes) != GRAPH_SUCCESS) {
+        const std::string reason = "failed to set generic buffer bytes for path " + std::string(PathName(key, tiling));
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(perBufferBytes).c_str(),
+                                              reason.c_str());
         return GRAPH_FAILED;
     }
     return GRAPH_SUCCESS;
@@ -241,36 +406,35 @@ static ge::graphStatus ResolveAxes(gert::TilingContext* context, int64_t rank, s
     const auto* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const auto* attr = attrs->GetAttrPointer<gert::ContinuousVector>(0);
-    if (attr == nullptr || attr->GetSize() == 0) {
+    if (attr == nullptr) {
+        // 未设置：沿用 proto 默认 {-1}，归约最后一轴。
         axes.push_back(rank - 1);
         return GRAPH_SUCCESS;
     }
-    if (attr->GetSize() > static_cast<size_t>(kMaxRank)) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes", "too many",
-                                              "axes length must not exceed rank and 8");
-        return GRAPH_FAILED;
+    if (attr->GetSize() == 0) {
+        // 显式空列表：不归约（canndev DSL 下 reduce_sum(axis=[]) 为 identity）。
+        return GRAPH_SUCCESS;
     }
     const auto* data = reinterpret_cast<const int64_t*>(attr->GetData());
-    std::array<bool, kMaxRank> used{};
     for (size_t i = 0; i < attr->GetSize(); ++i) {
         int64_t axis = data[i];
         if (axis < -rank) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes", std::to_string(data[i]).c_str(),
-                                                  "each axis must be unique and within [-rank, rank)");
+                                                  "each axis must be within [-rank, rank)");
             return GRAPH_FAILED;
         }
         if (axis < 0) {
             axis += rank;
         }
-        if (axis < 0 || axis >= rank || used[static_cast<size_t>(axis)]) {
+        if (axis < 0 || axis >= rank) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes", std::to_string(data[i]).c_str(),
-                                                  "each axis must be unique and within [-rank, rank)");
+                                                  "each axis must be within [-rank, rank)");
             return GRAPH_FAILED;
         }
-        used[static_cast<size_t>(axis)] = true;
         axes.push_back(axis);
     }
     std::sort(axes.begin(), axes.end());
+    axes.erase(std::unique(axes.begin(), axes.end()), axes.end());
     return GRAPH_SUCCESS;
 }
 
@@ -280,8 +444,9 @@ static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t& ran
     const auto* xDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
-    rank = static_cast<int64_t>(xShape->GetStorageShape().GetDimNum());
-    if (rank <= 0 || rank > kMaxRank) {
+    const auto& storageShape = xShape->GetStorageShape();
+    rank = static_cast<int64_t>(storageShape.GetDimNum());
+    if (storageShape.IsScalar() || rank > kMaxRank) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x", std::to_string(rank).c_str(),
                                               "rank must be in [1, 8]");
         return GRAPH_FAILED;
@@ -502,7 +667,8 @@ static ge::graphStatus BuildTilingData(gert::TilingContext* context, const gert:
             return GRAPH_FAILED;
         }
     }
-    if (IsContinuousAxes(axes)) {
+    // 空 axes：reduceRank=0、reduceCount=1，路径选择会走 Fast，按单元素归约得到 y = x - x = 0。
+    if (!axes.empty() && IsContinuousAxes(axes)) {
         const int64_t reduceStart = axes.front();
         const int64_t reduceEnd = axes.back();
         tiling->contiguousOuterCount = 1;
@@ -651,31 +817,23 @@ static ge::graphStatus ConfigureLargePath(gert::TilingContext* context, Centrali
     return GRAPH_SUCCESS;
 }
 
-// DataCopyExtParams 的 rowCount/blockCount 是 uint16，blockLen/srcStride/dstStride 是 uint32。
-// 计数本身用 64 位，只有真正落到这些硬件 ABI 字段的 tile 尺寸需要在这里显式收口。
-static ge::graphStatus ValidateKernelAbi(gert::TilingContext* context, const CentralizationTilingData* tiling)
+// DataCopyExtParams 的 rowCount/blockCount 是 uint16；计数本身用 64 位，
+// 真正落到 ABI 字段的 tile 尺寸在这里 clamp，不把 shape 判非法。
+// 当前 UB 下 rows 不会触发该上限，保留作为未来更大 UB 的防御性收口。
+static void ClampKernelAbi(CentralizationTilingData* tiling)
 {
     constexpr int64_t kAbiCountMax = std::numeric_limits<uint16_t>::max();
-    if (tiling->rowsPerBatch > kAbiCountMax || tiling->rowsPerLoop > kAbiCountMax) {
-        return ReportInvalidShape(context, "rowsPerBatch", std::to_string(tiling->rowsPerBatch),
-                                  "DataCopyExtParams row count must be <= 65535");
-    }
-    if (tiling->smallContiguous != 0 && tiling->reduceCount > kAbiCountMax) {
-        return ReportInvalidShape(context, "reduceCount", std::to_string(tiling->reduceCount),
-                                  "small contiguous DataCopyExtParams block count must be <= 65535");
-    }
-    return GRAPH_SUCCESS;
+    tiling->rowsPerBatch = std::min(tiling->rowsPerBatch, kAbiCountMax);
+    tiling->rowsPerLoop = std::min(tiling->rowsPerLoop, kAbiCountMax);
 }
 
 static ge::graphStatus FinalizePath(gert::TilingContext* context, CentralizationTilingData* tiling, ge::DataType dtype,
                                     uint32_t key, uint32_t blockDim, uint64_t ubSize)
 {
-    if (ConfigureBufferBytes(context, tiling, dtype, ubSize) != GRAPH_SUCCESS) {
+    if (ConfigureBufferBytes(context, tiling, dtype, ubSize, key) != GRAPH_SUCCESS) {
         return GRAPH_FAILED;
     }
-    if (ValidateKernelAbi(context, tiling) != GRAPH_SUCCESS) {
-        return GRAPH_FAILED;
-    }
+    ClampKernelAbi(tiling);
     tiling->blockFactor = tiling->groupCount > 0 ? CeilDiv(tiling->groupCount, static_cast<int64_t>(blockDim)) : 1;
     context->SetBlockDim(blockDim);
     context->SetTilingKey(key);
@@ -728,16 +886,100 @@ static void ApplyIrregularVectorPath(CentralizationTilingData* tiling, int64_t c
     tiling->rowsPerBatch = 1;
 }
 
+static bool SmallContiguousFitsUb(const CentralizationTilingData* tiling, int64_t blockElements, size_t elementBytes,
+                                  uint64_t ubSize)
+{
+    // depth=1：in + out + sum 三个存活节点。mode 由 contiguousInnerCount 决定：
+    // inner==1 走整块标量均值（mode 1），否则整块 padded 向量均值（mode 2）。
+    const size_t perBuffer = AlignDownBytes(UbUsableBytes(ubSize) / 3);
+    if (perBuffer == 0) {
+        return false;
+    }
+    const int64_t innerCount = tiling->contiguousInnerCount;
+    int64_t inputElements = 0;
+    int64_t sumElements = 0;
+    if (innerCount != 1) {
+        const int64_t alignedMean = AlignToVectorElements(innerCount);
+        inputElements = tiling->reduceCount * alignedMean;
+        sumElements = alignedMean;
+    } else {
+        inputElements = AlignToVectorElements(blockElements);
+        sumElements = AlignToVectorElements(innerCount);
+    }
+    return static_cast<size_t>(inputElements) * elementBytes <= perBuffer &&
+           static_cast<size_t>(sumElements) * sizeof(float) <= perBuffer;
+}
+
+static bool LcsiUbFits(const CentralizationTilingData* tiling, size_t elementBytes, uint64_t ubSize)
+{
+    // depth=1：in + out + sum，lcsi 的 sum 同时存 sum/correction
+    const size_t perBuffer = AlignDownBytes(UbUsableBytes(ubSize) / 3);
+    const int64_t alignedInner = AlignToVectorElements(tiling->contiguousInnerCount);
+    return perBuffer >= static_cast<size_t>(alignedInner) * elementBytes &&
+           perBuffer >= static_cast<size_t>(alignedInner) * sizeof(float) * 2;
+}
+
+static bool ContiguousUbFits(const CentralizationTilingData* tiling, size_t elementBytes, uint64_t ubSize)
+{
+    // depth=2：in/out 各 2 份 + sum 1 份；sum 固定按 kGenericContiguousTileElements 分配
+    const size_t perBuffer = AlignDownBytes(UbUsableBytes(ubSize) / 5);
+    const int64_t tile = std::max<int64_t>(
+        1, std::min<int64_t>(tiling->contiguousInnerTileElements, kGenericContiguousTileElements));
+    return perBuffer >= static_cast<size_t>(tile) * elementBytes &&
+           perBuffer >= static_cast<size_t>(kGenericContiguousTileElements) * sizeof(float) * 2;
+}
+
+static bool IrregularUbFits(const CentralizationTilingData* tiling, size_t elementBytes, uint64_t ubSize)
+{
+    // depth=2：in/out 各 2 份 + sum 1 份；不规则 vector 的 sum 固定按 256 元素分配
+    const size_t perBuffer = AlignDownBytes(UbUsableBytes(ubSize) / 5);
+    const int64_t tile = std::max<int64_t>(
+        1, std::min<int64_t>(tiling->irregularVectorTileElements, kGenericContiguousTileElements));
+    return perBuffer >= static_cast<size_t>(tile) * elementBytes &&
+           perBuffer >= static_cast<size_t>(kGenericContiguousTileElements) * sizeof(float);
+}
+
+static bool FastUbFits(const CentralizationTilingData* tiling, size_t elementBytes, uint64_t ubSize,
+                       size_t& perBufferBytes)
+{
+    const int64_t liveBuffers = 2 * (tiling->bufNum > 0 ? tiling->bufNum : 2);
+    if (liveBuffers <= 0) {
+        return false;
+    }
+    perBufferBytes = AlignDownBytes(UbUsableBytes(ubSize) / static_cast<size_t>(liveBuffers));
+    if (perBufferBytes == 0) {
+        return false;
+    }
+    return static_cast<size_t>(AlignToVectorElements(tiling->reduceCount)) * elementBytes <= perBufferBytes;
+}
+
+static bool LargeTrailingUbFits(size_t elementBytes, uint64_t ubSize)
+{
+    constexpr size_t kSumBytes = 128;
+    const size_t usable = UbUsableBytes(ubSize);
+    if (usable <= kSumBytes) {
+        return false;
+    }
+    const size_t perBuffer = AlignDownBytes((usable - kSumBytes) / 6);
+    return perBuffer >= static_cast<size_t>(kKernelTileElements) * elementBytes &&
+           perBuffer >= static_cast<size_t>(kKernelTileElements) * sizeof(float);
+}
+
 static void ApplyFastPath(CentralizationTilingData* tiling, int64_t coreNum, size_t* workspace, uint32_t& key,
-                          uint32_t& blockDim)
+                          uint32_t& blockDim, size_t perBufferBytes, size_t elementBytes)
 {
     key = kFastKey;
     blockDim = static_cast<uint32_t>(std::max<int64_t>(1, std::min<int64_t>(coreNum, tiling->groupCount)));
     workspace[0] = 0;
     tiling->alignedReduce = AlignToVectorElements(tiling->reduceCount);
     tiling->ubFactor = tiling->alignedReduce;
-    tiling->rowsPerLoop = 1;
-    tiling->rowsPerBatch = 1;
+    // Fast 的 in/out 各 bufNum 份，每份 = rowsPerLoop * alignedReduce * sizeof(T)。
+    const size_t rowBytes = static_cast<size_t>(tiling->alignedReduce) * elementBytes;
+    const int64_t maxRows = rowBytes > 0 ? static_cast<int64_t>(perBufferBytes / rowBytes) : 1;
+    const int64_t rows = std::max<int64_t>(
+        1, std::min<int64_t>(maxRows, static_cast<int64_t>(std::numeric_limits<uint16_t>::max())));
+    tiling->rowsPerLoop = rows;
+    tiling->rowsPerBatch = rows;
 }
 
 static void ApplyGenericScalarPath(CentralizationTilingData* tiling, uint32_t& blockDim)
@@ -807,46 +1049,53 @@ static ge::graphStatus ConfigurePath(gert::TilingContext* context, Centralizatio
     }
     const size_t elementBytes = dtype == DT_FLOAT ? sizeof(float) : sizeof(uint16_t);
     const size_t smallContiguousWorkingSetBytes = static_cast<size_t>(smallContiguousUbElements) * elementBytes;
-    const size_t meanBytes = static_cast<size_t>(CeilDiv(tiling->contiguousInnerCount, kRegbaseVectorElements) *
-                                                 kRegbaseVectorElements) *
-                             sizeof(float);
-    const size_t estimatedSmallUbBytes = smallContiguousWorkingSetBytes * 2 + meanBytes;
     const bool canUseLargeContiguousSmallInner = continuousAxes && !trailing && tiling->largePath != 0 &&
                                                  largeRowParallel && tiling->contiguousInnerCount > 1 &&
                                                  tiling->contiguousInnerCount <= kRegbaseVectorElements;
-    if (canUseLargeContiguousSmallInner) {
-        const int64_t alignedInnerCount = AlignToVectorElements(tiling->contiguousInnerCount);
-        const size_t perTensorBudgetBytes = std::max<size_t>(
-            static_cast<size_t>(blockElems) * elementBytes,
-            std::min<size_t>(kLargeContiguousSmallInnerMaxBufferBytes, static_cast<size_t>(ubSize / 8)));
-        const int64_t budgetElements = static_cast<int64_t>(perTensorBudgetBytes / elementBytes);
-        const int64_t maxDataElements = std::max<int64_t>(alignedInnerCount, budgetElements);
-        tiling->largeContiguousReduceTile = std::max<int64_t>(1, maxDataElements / alignedInnerCount);
-    }
+    // 小路径的 tile 不可再切（kernel 一次处理整块），必须整块放进 in/out/sum 的均分预算。
     const bool useSmallContiguous = continuousAxes && !trailing && smallContiguousBlockElements > 0 &&
                                     smallContiguousBlockElements <= kSmallContiguousMaxWorkingSetElements &&
                                     smallContiguousWorkingSetBytes <= kSmallContiguousMaxWorkingSetBytes &&
-                                    estimatedSmallUbBytes <= static_cast<size_t>(ubSize / 4);
+                                    SmallContiguousFitsUb(tiling, smallContiguousBlockElements, elementBytes, ubSize);
+    const bool lcsiFits = canUseLargeContiguousSmallInner && LcsiUbFits(tiling, elementBytes, ubSize);
+    const bool contiguousFits = ContiguousUbFits(tiling, elementBytes, ubSize);
+    const bool irregularFits = IrregularUbFits(tiling, elementBytes, ubSize);
     const bool useContiguousGeneric = continuousAxes && !trailing && tiling->contiguousInnerCount > 1 &&
                                       (tiling->largePath == 0 ||
-                                       contiguousTaskCount >= std::max<int64_t>(1, coreNum / 2) || largeRowParallel);
+                                       contiguousTaskCount >= std::max<int64_t>(1, coreNum / 2) || largeRowParallel) &&
+                                      (contiguousFits || lcsiFits);
     const bool useIrregularVector = !trailing && tiling->contiguousGeneric == 0 && tiling->largePath == 0 &&
                                     ((tiling->irregularVectorInnerCount > 1 && tiling->irregularVectorTaskCount > 0) ||
-                                     tiling->irregularReduceSuffixElements > 1);
+                                     tiling->irregularReduceSuffixElements > 1) &&
+                                    irregularFits;
+    size_t fastPerBufferBytes = 0;
     if (useSmallContiguous) {
         ApplySmallContiguousPath(tiling, coreNum, smallContiguousBlockElements, workspace, key, blockDim);
     } else if (useContiguousGeneric) {
-        ApplyContiguousGenericPath(tiling, coreNum, contiguousTaskCount, canUseLargeContiguousSmallInner, workspace,
-                                   key, blockDim);
+        ApplyContiguousGenericPath(tiling, coreNum, contiguousTaskCount, lcsiFits, workspace, key, blockDim);
     } else if (useIrregularVector) {
         ApplyIrregularVectorPath(tiling, coreNum, workspace, key, blockDim);
     } else if (tiling->largePath) {
-        if (ConfigureLargePath(context, tiling, coreNum, trailing, largeCoresPerRow, workspace, key, blockDim) !=
-            GRAPH_SUCCESS) {
+        // LargeTrailing 的 tile 固定 1024 元素；放不下时回退到 Generic large（7020）。
+        const bool useLargeTrailing = trailing && LargeTrailingUbFits(elementBytes, ubSize);
+        if (ConfigureLargePath(context, tiling, coreNum, useLargeTrailing, largeCoresPerRow, workspace, key,
+                               blockDim) != GRAPH_SUCCESS) {
             return GRAPH_FAILED;
         }
     } else if (trailing && tiling->reduceCount <= kFastReduceLimit) {
-        ApplyFastPath(tiling, coreNum, workspace, key, blockDim);
+        if (FastUbFits(tiling, elementBytes, ubSize, fastPerBufferBytes)) {
+            ApplyFastPath(tiling, coreNum, workspace, key, blockDim, fastPerBufferBytes, elementBytes);
+        } else {
+            // Fast 的列宽不能切分，放不下时回退到按 reduce 分块的 LargeTrailing / Generic large。
+            tiling->largePath = 1;
+            tiling->ubFactor = 0; // 清理 Fast 残留配置，最终路径不消费这两个字段
+            tiling->alignedReduce = 0;
+            const bool useLargeTrailing = LargeTrailingUbFits(elementBytes, ubSize);
+            if (ConfigureLargePath(context, tiling, coreNum, useLargeTrailing, 1, workspace, key, blockDim) !=
+                GRAPH_SUCCESS) {
+                return GRAPH_FAILED;
+            }
+        }
     } else {
         ApplyGenericScalarPath(tiling, blockDim);
     }

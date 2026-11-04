@@ -36,6 +36,7 @@ public:
         eventSToMte3_ = static_cast<event_t>(pipe_->FetchEventID(HardEvent::S_MTE3));
         eventMte3ToMte2_ = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE3_MTE2));
         eventMte2ToS_ = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE2_S));
+        InitScale();
     }
 
     __aicore__ inline void Process()
@@ -60,6 +61,24 @@ private:
         float sum;
         float correction;
     };
+
+    // 通用 2 的幂输入缩放：z = x * inputScale, y = ((z - mean_z) - meanLow_z) * outputScale
+    // power 取 >= 2*reduceCount 的 2 的幂，保证 sum(z) <= max|x| < FLT_MAX，永不溢出。
+    // power 使用 uint64_t，避免 reduceCount 接近 int64 上限时有符号左移溢出。
+    float inputScale_ = 1.0f;
+    float outputScale_ = 1.0f;
+
+    __aicore__ inline void InitScale()
+    {
+        uint64_t power = 1;
+        const uint64_t reduceCount = static_cast<uint64_t>(tiling_->reduceCount);
+        while (power < reduceCount) {
+            power <<= 1;
+        }
+        power <<= 1; // 1 bit headroom
+        inputScale_ = 1.0f / static_cast<float>(power);
+        outputScale_ = static_cast<float>(power);
+    }
 
     __aicore__ inline int64_t Min(int64_t lhs, int64_t rhs) const { return lhs < rhs ? lhs : rhs; }
 
@@ -125,6 +144,8 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
+        Muls(calc, calc, inputScale_, static_cast<uint32_t>(alignedElements));
+        PipeBarrier<PIPE_V>();
         LocalTensor<float> sum = sumBuf_.Get<float>();
         uint32_t srcShape[2] = {1, static_cast<uint32_t>(alignedElements)};
         ReduceSum<float, Pattern::Reduce::AR, true>(sum, calc, srcShape, true);
@@ -155,6 +176,8 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
+        Muls(calc, calc, inputScale_, static_cast<uint32_t>(alignedElements));
+        PipeBarrier<PIPE_V>();
         LocalTensor<float> sum = sumBuf_.Get<float>();
         CompensatedSum partial{0.0f, 0.0f};
         for (int64_t layer = 0; layer < validElements; layer += kReduceLayerElements) {
@@ -250,12 +273,17 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
+        Muls(calc, calc, inputScale_, static_cast<uint32_t>(alignedElements));
+        PipeBarrier<PIPE_V>();
+
         LocalTensor<float> meanTensor = meanBuf_.Get<float>();
         Duplicate(meanTensor, mean, static_cast<int32_t>(alignedElements));
 
         PipeBarrier<PIPE_V>();
 
         Sub(calc, calc, meanTensor, static_cast<uint32_t>(alignedElements));
+        PipeBarrier<PIPE_V>();
+        Muls(calc, calc, outputScale_, static_cast<uint32_t>(alignedElements));
         PipeBarrier<PIPE_V>();
 
         LocalTensor<T> output = outQueue_.AllocTensor<T>();

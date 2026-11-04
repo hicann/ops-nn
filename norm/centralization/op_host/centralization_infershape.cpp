@@ -7,13 +7,8 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include <array>
-#include <cstdint>
 #include <string>
-#include <vector>
 
-#include "graph/utils/type_utils.h"
-#include "graph/operator_reg.h"
 #include "op_common/log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
@@ -22,108 +17,7 @@ using namespace ge;
 namespace ops {
 namespace {
 constexpr int64_t kMaxRank = 8;
-constexpr size_t kAttrAxesIdx = 0;
-
-static ge::graphStatus ValidateDataType(gert::InferDataTypeContext* context)
-{
-    const ge::DataType xDtype = context->GetInputDataType(0);
-    if (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype),
-                                  "FLOAT or FLOAT16");
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-static ge::graphStatus ValidateAxesValues(const char* nodeName, const int64_t* axesData, size_t axesSize, int64_t rank)
-{
-    if (axesSize > static_cast<size_t>(rank)) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(nodeName, "axes", std::to_string(axesSize).c_str(), std::to_string(rank).c_str());
-        return ge::GRAPH_FAILED;
-    }
-
-    std::array<bool, kMaxRank> used{};
-    for (size_t i = 0; i < axesSize; ++i) {
-        const int64_t rawAxis = axesData[i];
-        if (rawAxis < -rank) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName, "axes", std::to_string(rawAxis).c_str(),
-                                                  "each axis must be unique and within [-rank, rank)");
-            return ge::GRAPH_FAILED;
-        }
-        const int64_t axis = rawAxis < 0 ? rawAxis + rank : rawAxis;
-        if (axis < 0 || axis >= rank || used[static_cast<size_t>(axis)]) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName, "axes", std::to_string(rawAxis).c_str(),
-                                                  "each axis must be unique and within [-rank, rank)");
-            return ge::GRAPH_FAILED;
-        }
-        used[static_cast<size_t>(axis)] = true;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-static ge::graphStatus ValidateAxes(gert::InferShapeContext* context, int64_t rank)
-{
-    const auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const auto* axesAttr = attrs->GetListInt(kAttrAxesIdx);
-    if (axesAttr == nullptr || axesAttr->GetSize() == 0) {
-        return ge::GRAPH_SUCCESS;
-    }
-    const int64_t* axesData = axesAttr->GetData();
-    OP_CHECK_NULL_WITH_CONTEXT(context, axesData);
-    return ValidateAxesValues(context->GetNodeName(), axesData, axesAttr->GetSize(), rank);
-}
-
-static ge::graphStatus ValidateShapeAndAxes(gert::InferShapeContext* context, const gert::Shape& xShape)
-{
-    if (Ops::Base::IsUnknownRank(xShape)) {
-        return ge::GRAPH_SUCCESS;
-    }
-
-    const int64_t rank = static_cast<int64_t>(xShape.GetDimNum());
-    if (rank <= 0 || rank > kMaxRank) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x", std::to_string(rank).c_str(),
-                                              "rank must be in [1, 8]");
-        return ge::GRAPH_FAILED;
-    }
-    return ValidateAxes(context, rank);
-}
 } // namespace
-
-// Register the 1.0 entry locally so graph inference does not fall back to the legacy implementation.
-static ge::graphStatus InferShapeAndType4Centralization(ge::Operator& op)
-{
-    const auto xDesc = op.GetInputDesc(0U);
-    const auto dtype = xDesc.GetDataType();
-    if (dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16) {
-        return ge::GRAPH_FAILED;
-    }
-    const auto dims = xDesc.GetShape().GetDims();
-    if (dims != ge::UNKNOWN_RANK) {
-        const auto rank = static_cast<int64_t>(dims.size());
-        if (rank <= 0 || rank > kMaxRank) {
-            return ge::GRAPH_FAILED;
-        }
-        std::vector<int64_t> axes{-1};
-        (void)op.GetAttr("axes", axes);
-        ge::AscendString nodeName;
-        (void)op.GetName(nodeName);
-        if (ValidateAxesValues(nodeName.GetString(), axes.data(), axes.size(), rank) != ge::GRAPH_SUCCESS) {
-            return ge::GRAPH_FAILED;
-        }
-    }
-    auto yDesc = op.GetOutputDesc(0U);
-    yDesc.SetShape(xDesc.GetShape());
-    yDesc.SetOriginShape(xDesc.GetOriginShape());
-    yDesc.SetDataType(dtype);
-    std::vector<std::pair<int64_t, int64_t>> shapeRange;
-    if (xDesc.GetShapeRange(shapeRange) == ge::GRAPH_SUCCESS) {
-        yDesc.SetShapeRange(shapeRange);
-    }
-    return op.UpdateOutputDesc(0U, yDesc);
-}
-
-COMMON_INFER_FUNC_REG(Centralization, InferShapeAndType4Centralization);
 
 static ge::graphStatus InferShape4Centralization(gert::InferShapeContext* context)
 {
@@ -137,7 +31,10 @@ static ge::graphStatus InferShape4Centralization(gert::InferShapeContext* contex
         OP_LOGD(context, "x is unknown rank, set output to unknown rank");
         return ge::GRAPH_SUCCESS;
     }
-    if (ValidateShapeAndAxes(context, *xShape) != ge::GRAPH_SUCCESS) {
+    const int64_t rank = static_cast<int64_t>(xShape->GetDimNum());
+    if (xShape->IsScalar() || rank > kMaxRank) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x", std::to_string(rank).c_str(),
+                                              "rank must be in [1, 8]");
         return ge::GRAPH_FAILED;
     }
     *yShape = *xShape;
@@ -147,9 +44,6 @@ static ge::graphStatus InferShape4Centralization(gert::InferShapeContext* contex
 static ge::graphStatus InferDataType4Centralization(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context, "Begin to do InferDataType4Centralization.");
-    if (ValidateDataType(context) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
     context->SetOutputDataType(0, context->GetInputDataType(0));
     return ge::GRAPH_SUCCESS;
 }

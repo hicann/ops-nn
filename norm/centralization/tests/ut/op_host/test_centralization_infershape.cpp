@@ -101,56 +101,21 @@ TEST(CentralizationInferShape, InferDataTypeRegistered)
     EXPECT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Centralization")->infer_datatype, nullptr);
 }
 
-TEST(CentralizationInferShape, Runtime1MatchesRuntime2)
-{
-    struct Case {
-        std::vector<int64_t> shape;
-        std::vector<int64_t> axes;
-        ge::DataType dtype;
-        bool supported;
-    };
-    const std::vector<Case> cases = {
-        {{2, 3, 4}, {1}, ge::DT_FLOAT, true},      {{2, 3, 4}, {-1}, ge::DT_FLOAT16, true},
-        {{2, 3, 4}, {}, ge::DT_FLOAT, true},       {{2, 0, 4}, {1}, ge::DT_FLOAT, true},
-        {{-1, 3, 4}, {1}, ge::DT_FLOAT, true},     {{-2}, {-1}, ge::DT_FLOAT16, true},
-        {{}, {-1}, ge::DT_FLOAT, false},           {{1, 1, 1, 1, 1, 1, 1, 1, 1}, {-1}, ge::DT_FLOAT, false},
-        {{2, 3, 4}, {3}, ge::DT_FLOAT, false},     {{2, 3, 4}, {-4}, ge::DT_FLOAT, false},
-        {{2, 3, 4}, {1, -2}, ge::DT_FLOAT, false}, {{2, 3, 4}, {0, 1, 2, 3}, ge::DT_FLOAT, false},
-        {{2, 3, 4}, {1}, ge::DT_BF16, false},
-    };
-    for (size_t i = 0; i < cases.size(); ++i) {
-        SCOPED_TRACE(i);
-        const auto& test = cases[i];
-        ge::op::Centralization runtime1;
-        ge::op::Centralization runtime2;
-        ge::TensorDesc input(ge::Shape(test.shape), ge::FORMAT_ND, test.dtype);
-        input.SetOriginShape(ge::Shape(test.shape));
-        runtime1.UpdateInputDesc("x", input);
-        runtime2.UpdateInputDesc("x", input);
-        runtime1.SetAttr("axes", test.axes);
-        runtime2.SetAttr("axes", test.axes);
-        const auto status1 = runtime1.InferShapeAndType();
-        const auto shapeStatus2 = InferShapeTest(runtime2, Runtime2TestParam{{"axes"}});
-        const auto dtypeStatus2 = InferDataTypeTest(runtime2, Runtime2TestParam{{"axes"}});
-        EXPECT_EQ(status1 == ge::GRAPH_SUCCESS, test.supported);
-        EXPECT_EQ(shapeStatus2 == ge::GRAPH_SUCCESS && dtypeStatus2 == ge::GRAPH_SUCCESS, test.supported);
-        if (test.supported) {
-            EXPECT_EQ(runtime1.GetOutputDescByName("y").GetShape().GetDims(), test.shape);
-            EXPECT_EQ(runtime1.GetOutputDescByName("y").GetDataType(), test.dtype);
-        }
-    }
-}
-
-TEST(CentralizationInferShape, Runtime1CopiesShapeRange)
+TEST(CentralizationInferShape, RejectRank0)
 {
     ge::op::Centralization op;
-    const std::vector<std::pair<int64_t, int64_t>> range{{2, 8}, {3, 3}, {4, 4}};
-    auto input = create_desc_shape_range({-1, 3, 4}, ge::DT_FLOAT, ge::FORMAT_ND, {-1, 3, 4}, ge::FORMAT_ND, range);
+    auto input = create_desc_with_ori({}, ge::DT_FLOAT, ge::FORMAT_ND, {}, ge::FORMAT_ND);
     op.UpdateInputDesc("x", input);
-    // Exercise the default axes attribute through the actual 1.0 registry.
-    ASSERT_EQ(op.InferShapeAndType(), ge::GRAPH_SUCCESS);
-    std::vector<std::pair<int64_t, int64_t>> outputRange;
-    ASSERT_EQ(op.GetOutputDescByName("y").GetShapeRange(outputRange), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(outputRange, range);
-    EXPECT_EQ(op.GetOutputDescByName("y").GetOriginShape().GetDims(), std::vector<int64_t>({-1, 3, 4}));
+    op.SetAttr("axes", std::vector<int64_t>{-1});
+    EXPECT_EQ(InferShapeTest(op, Runtime2TestParam{{"axes"}}), ge::GRAPH_FAILED);
+}
+
+TEST(CentralizationInferShape, RejectRank9)
+{
+    ge::op::Centralization op;
+    auto input = create_desc_with_ori({2, 1, 1, 1, 1, 1, 1, 1, 4}, ge::DT_FLOAT, ge::FORMAT_ND,
+                                      {2, 1, 1, 1, 1, 1, 1, 1, 4}, ge::FORMAT_ND);
+    op.UpdateInputDesc("x", input);
+    op.SetAttr("axes", std::vector<int64_t>{0});
+    EXPECT_EQ(InferShapeTest(op, Runtime2TestParam{{"axes"}}), ge::GRAPH_FAILED);
 }

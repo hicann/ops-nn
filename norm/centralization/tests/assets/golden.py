@@ -17,15 +17,23 @@ import torch
 
 
 def _normalized_axes(axes, rank):
-    values = [-1] if axes is None or len(axes) == 0 else list(axes)
-    return tuple(axis + rank if axis < 0 else axis for axis in values)
+    if axes is None:
+        # 未设置：沿用 IR 默认 {-1}，归约最后一轴。
+        return (rank - 1,)
+    if len(axes) == 0:
+        # 显式空列表：不归约。
+        return ()
+    values = [axis + rank if axis < 0 else axis for axis in axes]
+    return tuple(sorted(set(values)))
 
 
 def _centralize(x, axes):
     compute = x.double()
-    result = compute - torch.mean(
-        compute, dim=_normalized_axes(axes, x.dim()), keepdim=True
-    )
+    normalized = _normalized_axes(axes, x.dim())
+    if len(normalized) == 0:
+        # 空axes表示no-reduce：mean(x, [])==x，结果恒为0。
+        return (compute - compute).to(x.dtype)
+    result = compute - torch.mean(compute, dim=normalized, keepdim=True)
     return result.to(x.dtype)
 
 
