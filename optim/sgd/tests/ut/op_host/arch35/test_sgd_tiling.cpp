@@ -27,6 +27,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -36,6 +37,7 @@
 #include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
+#include "graph/types.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 
@@ -53,6 +55,8 @@ protected:
 namespace {
 constexpr size_t SGD_INPUT_NUM = 6;
 constexpr size_t SGD_OUTPUT_NUM = 1;
+constexpr std::array<ge::Format, SGD_INPUT_NUM + SGD_OUTPUT_NUM> ND_FORMATS = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
                   map<string, string>& intrinsics, map<string, string>& socVersion)
@@ -77,7 +81,9 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
                              gert::StorageShape& accumShape, gert::StorageShape& momentumShape,
                              gert::StorageShape& statShape, ge::DataType paramDtype, ge::DataType otherDtype,
                              float dampening, float weightDecay, bool nesterov, bool provideAttrs,
-                             uint64_t* outTilingKey)
+                             uint64_t* outTilingKey,
+                             const std::array<ge::Format, SGD_INPUT_NUM + SGD_OUTPUT_NUM>& storageFormats = ND_FORMATS,
+                             const std::array<ge::Format, SGD_INPUT_NUM + SGD_OUTPUT_NUM>& originFormats = ND_FORMATS)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -101,8 +107,6 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
     }
 
     SgdUtCompileInfo compileInfo;
-    auto inFormat = ge::FORMAT_ND;
-
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs;
     if (provideAttrs) {
         attrs = {{"dampening", Ops::NN::AnyValue::CreateFrom<float>(dampening)},
@@ -117,13 +121,13 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
                       .OutputShapes({&paramShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, paramDtype, inFormat, inFormat)
-                      .NodeInputTd(1, otherDtype, inFormat, inFormat)
-                      .NodeInputTd(2, otherDtype, inFormat, inFormat)
-                      .NodeInputTd(3, otherDtype, inFormat, inFormat)
-                      .NodeInputTd(4, otherDtype, inFormat, inFormat)
-                      .NodeInputTd(5, otherDtype, inFormat, inFormat)
-                      .NodeOutputTd(0, paramDtype, inFormat, inFormat)
+                      .NodeInputTd(0, paramDtype, originFormats[0], storageFormats[0])
+                      .NodeInputTd(1, otherDtype, originFormats[1], storageFormats[1])
+                      .NodeInputTd(2, otherDtype, originFormats[2], storageFormats[2])
+                      .NodeInputTd(3, otherDtype, originFormats[3], storageFormats[3])
+                      .NodeInputTd(4, otherDtype, originFormats[4], storageFormats[4])
+                      .NodeInputTd(5, otherDtype, originFormats[5], storageFormats[5])
+                      .NodeOutputTd(0, paramDtype, originFormats[6], storageFormats[6])
                       .NodeAttrs(attrs)
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -193,6 +197,64 @@ TEST_F(TestSgdTiling, sgd_tiling_optional_attrs_all_omitted_use_defaults)
     ASSERT_EQ(RunSgdTilingNormal({16, 16}, ge::DT_FLOAT, 0.0f, 0.0f, false, &explicitKey), ge::GRAPH_SUCCESS);
     EXPECT_EQ(BizBits(implicitKey), BizExpect(false, false, false));
     EXPECT_EQ(BizBits(implicitKey), BizBits(explicitKey));
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_rejects_private_storage_format_on_each_port)
+{
+    gert::StorageShape big = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    gert::StorageShape one = {{1}, {1}};
+    const std::array<const char*, SGD_INPUT_NUM + SGD_OUTPUT_NUM> portNames = {
+        "parameters", "gradient", "learning_rate", "accum", "momentum", "stat", "parameters_out"};
+    const auto nzWithSubformat = static_cast<ge::Format>(ge::GetFormatFromSub(ge::FORMAT_FRACTAL_NZ, 1));
+    for (auto format : {ge::FORMAT_FRACTAL_NZ, ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_Z, nzWithSubformat}) {
+        for (size_t port = 0; port < portNames.size(); ++port) {
+            SCOPED_TRACE(testing::Message() << "port=" << portNames[port] << ", storage_format=" << format);
+            auto storageFormats = ND_FORMATS;
+            storageFormats[port] = format;
+            EXPECT_EQ(RunSgdTiling(big, big, one, big, one, big, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, true,
+                                   nullptr, storageFormats),
+                      ge::GRAPH_FAILED);
+        }
+    }
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_accepts_public_storage_format_on_each_port)
+{
+    gert::StorageShape big = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    gert::StorageShape one = {{1, 1, 1, 1}, {1, 1, 1, 1}};
+    const std::array<const char*, SGD_INPUT_NUM + SGD_OUTPUT_NUM> portNames = {
+        "parameters", "gradient", "learning_rate", "accum", "momentum", "stat", "parameters_out"};
+    uint64_t ndTilingKey = 0;
+    ASSERT_EQ(RunSgdTiling(big, big, one, big, one, big, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, &ndTilingKey),
+              ge::GRAPH_SUCCESS);
+    for (auto format : {ge::FORMAT_NCHW, ge::FORMAT_NHWC}) {
+        for (size_t port = 0; port < portNames.size(); ++port) {
+            SCOPED_TRACE(testing::Message() << "port=" << portNames[port] << ", storage_format=" << format);
+            auto storageFormats = ND_FORMATS;
+            auto originFormats = ND_FORMATS;
+            storageFormats[port] = format;
+            originFormats[port] = format;
+            uint64_t tilingKey = 0;
+            auto ret = RunSgdTiling(big, big, one, big, one, big, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, true,
+                                    &tilingKey, storageFormats, originFormats);
+            EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+            if (ret == ge::GRAPH_SUCCESS) {
+                EXPECT_EQ(tilingKey, ndTilingKey);
+            }
+        }
+    }
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_accepts_nd_storage_with_nchw_origin)
+{
+    gert::StorageShape big = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    gert::StorageShape one = {{1}, {1}};
+    const std::array<ge::Format, SGD_INPUT_NUM + SGD_OUTPUT_NUM> originFormats = {
+        ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_ND,  ge::FORMAT_NCHW,
+        ge::FORMAT_ND,   ge::FORMAT_NCHW, ge::FORMAT_NCHW};
+    EXPECT_EQ(RunSgdTiling(big, big, one, big, one, big, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, true, nullptr,
+                           ND_FORMATS, originFormats),
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(TestSgdTiling, sgd_tiling_K1_dampening_only_fp32)

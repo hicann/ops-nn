@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <array>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -18,6 +19,7 @@
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
+#include "graph/types.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
@@ -29,6 +31,7 @@ using namespace ge;
 
 namespace {
 const std::string OP_TYPE = "Relu6Grad";
+constexpr std::array<ge::Format, 3> ND_FORMATS = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 const std::string COMPILE_INFO_JSON = R"({
       "hardware_info": {
         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -51,7 +54,10 @@ protected:
 // equals input dtype. Returns the tiling function status so callers can
 // assert either SUCCESS or FAILED depending on what they're testing.
 static ge::graphStatus RunTiling(ge::DataType gradDtype, ge::DataType featDtype, ge::DataType outDtype,
-                                 gert::StorageShape& gShape, gert::StorageShape& fShape, gert::StorageShape& outShape)
+                                 gert::StorageShape& gShape, gert::StorageShape& fShape, gert::StorageShape& outShape,
+                                 const std::array<ge::Format, 3>& storageFormats = ND_FORMATS,
+                                 const std::array<ge::Format, 3>& originFormats = ND_FORMATS,
+                                 uint64_t* outTilingKey = nullptr)
 {
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -99,13 +105,18 @@ static ge::graphStatus RunTiling(ge::DataType gradDtype, ge::DataType featDtype,
                       .OutputShapes({&outShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, gradDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, featDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, gradDtype, originFormats[0], storageFormats[0])
+                      .NodeInputTd(1, featDtype, originFormats[1], storageFormats[1])
+                      .NodeOutputTd(0, outDtype, originFormats[2], storageFormats[2])
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    return tiling_func(holder.GetContext<gert::TilingContext>());
+    auto context = holder.GetContext<gert::TilingContext>();
+    auto ret = tiling_func(context);
+    if (ret == ge::GRAPH_SUCCESS && outTilingKey != nullptr) {
+        *outTilingKey = context->GetTilingKey();
+    }
+    return ret;
 }
 
 TEST_F(Relu6GradTilingTest, same_shape_fp32)
@@ -124,6 +135,54 @@ TEST_F(Relu6GradTilingTest, same_shape_bf16)
 {
     gert::StorageShape s = {{16, 16}, {16, 16}};
     EXPECT_EQ(RunTiling(ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, s, s, s), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(Relu6GradTilingTest, rejects_private_storage_format_on_each_port)
+{
+    gert::StorageShape s = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    const std::array<const char*, 3> portNames = {"gradients", "features", "backprops"};
+    const auto nzWithSubformat = static_cast<ge::Format>(ge::GetFormatFromSub(ge::FORMAT_FRACTAL_NZ, 1));
+    for (auto format : {ge::FORMAT_FRACTAL_NZ, ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_Z, nzWithSubformat}) {
+        for (size_t port = 0; port < portNames.size(); ++port) {
+            SCOPED_TRACE(testing::Message() << "port=" << portNames[port] << ", storage_format=" << format);
+            auto storageFormats = ND_FORMATS;
+            storageFormats[port] = format;
+            EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, s, s, s, storageFormats), ge::GRAPH_FAILED);
+        }
+    }
+}
+
+TEST_F(Relu6GradTilingTest, accepts_public_storage_format_on_each_port)
+{
+    gert::StorageShape s = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    const std::array<const char*, 3> portNames = {"gradients", "features", "backprops"};
+    uint64_t ndTilingKey = 0;
+    ASSERT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, s, s, s, ND_FORMATS, ND_FORMATS, &ndTilingKey),
+              ge::GRAPH_SUCCESS);
+    for (auto format : {ge::FORMAT_NCHW, ge::FORMAT_NHWC}) {
+        for (size_t port = 0; port < portNames.size(); ++port) {
+            SCOPED_TRACE(testing::Message() << "port=" << portNames[port] << ", storage_format=" << format);
+            auto storageFormats = ND_FORMATS;
+            auto originFormats = ND_FORMATS;
+            storageFormats[port] = format;
+            originFormats[port] = format;
+            uint64_t tilingKey = 0;
+            auto ret = RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, s, s, s, storageFormats, originFormats,
+                                 &tilingKey);
+            EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+            if (ret == ge::GRAPH_SUCCESS) {
+                EXPECT_EQ(tilingKey, ndTilingKey);
+            }
+        }
+    }
+}
+
+TEST_F(Relu6GradTilingTest, accepts_nd_storage_with_nchw_origin)
+{
+    gert::StorageShape s = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    const std::array<ge::Format, 3> originFormats = {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, s, s, s, ND_FORMATS, originFormats),
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Relu6GradTilingTest, axis_broadcast_fp32)

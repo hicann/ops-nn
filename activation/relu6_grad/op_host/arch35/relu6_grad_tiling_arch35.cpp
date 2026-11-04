@@ -12,6 +12,8 @@
  * \file relu6_grad_tiling_arch35.cpp
  * \brief
  */
+// Include op-api utilities before host headers to preserve host logging macros.
+#include "opdev/format_utils.h"
 #include "relu6_grad_tiling_arch35.h"
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
@@ -60,6 +62,12 @@ ge::graphStatus Relu6GradTiling::DoOpTiling()
     OP_LOGD(context_->GetNodeName(), "Relu6GradTiling RunTiling enter.");
     auto gradInputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradInputDesc);
+    const auto gradInputFormat = gradInputDesc->GetStorageFormat();
+    OP_CHECK_IF(op::IsPrivateFormat(op::GetPrimaryFormat(gradInputFormat)),
+                OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "gradients",
+                                           ge::TypeUtils::FormatToSerialString(gradInputFormat).c_str(),
+                                           "a non-private storage format"),
+                return ge::GRAPH_FAILED);
     ge::DataType gradInputDtype = gradInputDesc->GetDataType();
     OP_CHECK_IF(gradInputDtype != ge::DT_FLOAT16 && gradInputDtype != ge::DT_BF16 && gradInputDtype != ge::DT_FLOAT,
                 OP_LOGE(context_->GetNodeName(),
@@ -69,6 +77,12 @@ ge::graphStatus Relu6GradTiling::DoOpTiling()
 
     auto featInputDesc = context_->GetInputDesc(FEATURES_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, featInputDesc);
+    const auto featInputFormat = featInputDesc->GetStorageFormat();
+    OP_CHECK_IF(op::IsPrivateFormat(op::GetPrimaryFormat(featInputFormat)),
+                OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "features",
+                                           ge::TypeUtils::FormatToSerialString(featInputFormat).c_str(),
+                                           "a non-private storage format"),
+                return ge::GRAPH_FAILED);
     ge::DataType featInputDtype = featInputDesc->GetDataType();
     OP_CHECK_IF(featInputDtype != gradInputDtype,
                 OP_LOGE(context_->GetNodeName(), "input features dtype %s not equal gradients dtype %s.",
@@ -78,6 +92,12 @@ ge::graphStatus Relu6GradTiling::DoOpTiling()
 
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    const auto outputFormat = outputDesc->GetStorageFormat();
+    OP_CHECK_IF(op::IsPrivateFormat(op::GetPrimaryFormat(outputFormat)),
+                OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "backprops",
+                                           ge::TypeUtils::FormatToSerialString(outputFormat).c_str(),
+                                           "a non-private storage format"),
+                return ge::GRAPH_FAILED);
     ge::DataType outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(outputDtype != gradInputDtype,
                 OP_LOGE(context_->GetNodeName(), "output backprops dtype %s not same as input gradients %s.",

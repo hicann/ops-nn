@@ -12,7 +12,10 @@
  * \file sgd_tiling.cpp
  * \brief
  */
+// Include op-api utilities before host headers to preserve host logging macros.
+#include "opdev/format_utils.h"
 #include "sgd_tiling.h"
+#include <array>
 #include <limits>
 #include <graph/utils/type_utils.h>
 #include "error_util.h"
@@ -148,6 +151,27 @@ ge::graphStatus SgdRegbaseTiling::CheckSameDtype(int32_t inputIdx, const ge::Dat
 
 ge::graphStatus SgdRegbaseTiling::CheckShapeAndType()
 {
+    constexpr std::array<const char*, 6> inputNames = {"parameters", "gradient", "learning_rate",
+                                                       "accum",      "momentum", "stat"};
+    for (size_t inputIdx = 0; inputIdx < inputNames.size(); ++inputIdx) {
+        const auto* inputDesc = tilingContext_->GetInputDesc(inputIdx);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
+        const auto inputFormat = inputDesc->GetStorageFormat();
+        OP_CHECK_IF(op::IsPrivateFormat(op::GetPrimaryFormat(inputFormat)),
+                    OP_LOGE_FOR_INVALID_FORMAT(tilingContext_->GetNodeName(), inputNames[inputIdx],
+                                               ge::TypeUtils::FormatToSerialString(inputFormat).c_str(),
+                                               "a non-private storage format"),
+                    return ge::GRAPH_FAILED);
+    }
+    const auto* outputDesc = tilingContext_->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
+    const auto outputFormat = outputDesc->GetStorageFormat();
+    OP_CHECK_IF(op::IsPrivateFormat(op::GetPrimaryFormat(outputFormat)),
+                OP_LOGE_FOR_INVALID_FORMAT(tilingContext_->GetNodeName(), "parameters output",
+                                           ge::TypeUtils::FormatToSerialString(outputFormat).c_str(),
+                                           "a non-private storage format"),
+                return ge::GRAPH_FAILED);
+
     auto inputShape = tilingContext_->GetInputShape(IDX_PARAMETERS);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto inputStorageShape = inputShape->GetStorageShape();
