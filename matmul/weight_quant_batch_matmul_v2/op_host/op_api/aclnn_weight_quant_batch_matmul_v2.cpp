@@ -1333,7 +1333,7 @@ static bool CheckOptionalNotNull(const aclTensor* quantScaleOptional, const aclT
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
         op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510) {
         if (quantScaleOptional != nullptr || quantOffsetOptional != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Current Soc does not support quantScaleOptional or quantOffsetOptional");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current Soc does not support quantScaleOptional or quantOffsetOptional.");
             return false;
         }
     }
@@ -2282,7 +2282,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
     aclnnStatus socRes = CheckSocValid();
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckWeightFormat(weight), ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;
@@ -2332,7 +2332,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(
     aclnnStatus socRes = CheckSocValid();
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckWeightFormat(weight), ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;
@@ -2383,7 +2383,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
     aclnnStatus socRes = CheckNzSocValid();
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_INVALID);
     OP_CHECK(IsNzFormat(weight),
              OP_LOGE_FOR_INVALID_FORMAT(kOpNzName, "weight", op::ToString(weight->GetStorageFormat()).GetString(),
                                         "FORMAT_FRACTAL_NZ"),

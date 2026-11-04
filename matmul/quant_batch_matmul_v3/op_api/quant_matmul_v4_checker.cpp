@@ -755,16 +755,16 @@ bool CheckA8W4FloatQuantType(const aclTensor* x1, const aclTensor* x2, const acl
         const bool isMx = IsMicroScaling(perTokenScale, x2Scale) &&
                           x2Scale->GetDataType() == (isHiF4 ? Ops::NN::DT_HIFLOAT4_SCALE : DataType::DT_FLOAT8_E8M0);
         if (!isMx && (isHiF4 || !IsTCG(perTokenScale, x2Scale))) {
-            std::string scaleInfo = std::string("perTokenScale=") +
+            std::string scaleInfo = std::string("x1Scale=") +
                                     op::ToString(perTokenScale != nullptr ? perTokenScale->GetDataType() :
                                                                             op::DataType::DT_UNDEFINED)
                                         .GetString() +
-                                    ", scale=" + op::ToString(x2Scale->GetDataType()).GetString();
+                                    ", x2Scale=" + op::ToString(x2Scale->GetDataType()).GetString();
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                "aclnnQuantMatmulV4", "perTokenScale/scale", scaleInfo.c_str(),
+                "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1Scale/x2Scale", scaleInfo.c_str(),
                 "A8W4 float scenario only supports FP4 MX with two FLOAT8_E8M0 scales, "
-                "npuArch DAV9201/9202 HiF4 MX with FLOAT8_E8M0 perTokenScale and HIFLOAT4_SCALE scale, "
-                "or FP4 TCG quantization (perTokenScale is null and scale is BF16 or FLOAT16)");
+                "npuArch DAV9201/9202 HiF4 MX with FLOAT8_E8M0 x1Scale and HIFLOAT4_SCALE x2Scale, "
+                "or FP4 T-CG quantization (x1Scale is null and x2Scale is BF16 or FLOAT16)");
             return false;
         }
     }
@@ -803,19 +803,19 @@ static bool CheckA8W4TcGDtype(const aclTensor* x2Scale, const aclTensor* bias, c
     if (bias != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias", "not null",
-            "in A8W4 scenario, when the quantization mode is t-cg, bias must be null");
+            "in A8W4 scenario, when the quantization mode is T-CG, bias must be null");
         return false;
     }
     if (yScale == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "yScale", "null",
-            "in A8W4 scenario, when the quantization mode is t-cg, yScale can not be null");
+            "in A8W4 scenario, when the quantization mode is T-CG, yScale can not be null");
         return false;
     }
     if (x2Scale == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale", "null",
-            "in A8W4 scenario, when the quantization mode is t-cg, x2Scale can not be null");
+            "in A8W4 scenario, when the quantization mode is T-CG, x2Scale can not be null");
         return false;
     }
     if (x2Scale->GetDataType() != DataType::DT_BF16 && x2Scale->GetDataType() != DataType::DT_FLOAT16) {
@@ -829,7 +829,7 @@ static bool CheckA8W4TcGDtype(const aclTensor* x2Scale, const aclTensor* bias, c
                                                FormatString("%s, %s", op::ToString(x2Scale->GetDataType()).GetString(),
                                                             op::ToString(out->GetDataType()).GetString())
                                                    .c_str(),
-                                               "in A8W4 TCG, x2Scale and out must have the same dtype");
+                                               "in A8W4 T-CG, x2Scale and out must have the same dtype");
         return false;
     }
     if (!CheckType(yScale->GetDataType(), Y_SCALE_SUPPORT_LIST)) {
@@ -893,7 +893,7 @@ static bool CheckA8W4Dtype(const TupleTensor& mandatoryTensors, const TupleOptio
         FormatString("%s, %s", x1Scale == nullptr ? "null" : op::ToString(x1Scale->GetDataType()).GetString(),
                      x2Scale == nullptr ? "null" : op::ToString(x2Scale->GetDataType()).GetString())
             .c_str(),
-        "in A8W4 scenario, the quantization mode must be mx or t-cg");
+        "in A8W4 scenario, the quantization mode must be MX or T-CG");
     return false;
 }
 
@@ -1329,13 +1329,13 @@ bool CheckInputAttrExistence(const TupleAttr& boolsTrans, const TupleTensor& man
     if ((x1Scale == nullptr || (isArch92S8S4 && !isMsd)) && transposeX2) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
-            "in A8W4 NZ TCG or npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales, transposeX2 must be false");
+            "in A8W4 NZ T-CG or npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales, transposeX2 must be false");
         return false;
     } else if (IsMicroScaling(x1Scale, x2Scale) && !transposeX2) {
         // A8W4 scenario with mx quant mode
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
-            "in A8W4 scenario with NZ format, when the quantization mode is mx, transposeX2 must be true");
+            "in A8W4 scenario with NZ format, when the quantization mode is MX, transposeX2 must be true");
         return false;
     }
     if (isArch92S8S4 && !isMsd) {

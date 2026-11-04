@@ -352,17 +352,20 @@ static inline bool CheckScaleDimRangeA8W4(TupleQuant& quantTensors, bool isA8W4I
         }
     } else {
         size_t expectDimNum = IsMicroScaling(x1Scale, x2Scale) ? MAX_MX_SCALE_DIM : MAX_SCALE_DIM;
+        std::string quantMode = IsMicroScaling(x1Scale, x2Scale) ? "MxA8W4" : "A8W4 T-CG";
         if (x1Scale != nullptr && x1Scale->GetViewShape().GetDimNum() != expectDimNum) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 kOpName, "x1Scale", std::to_string(x1Scale->GetViewShape().GetDimNum()).c_str(),
-                ("When the quant mode is A8W4, the shape dim of x1Scale must be " + std::to_string(expectDimNum) + "D")
+                ("When the quant mode is " + quantMode + ", the shape dim of x1Scale must be " +
+                 std::to_string(expectDimNum) + "D")
                     .c_str());
             return false;
         }
         if (x2Scale->GetViewShape().GetDimNum() != expectDimNum) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 kOpName, "x2Scale", std::to_string(x2Scale->GetViewShape().GetDimNum()).c_str(),
-                ("When the quant mode is A8W4, the shape dim of x2Scale must be " + std::to_string(expectDimNum) + "D")
+                ("When the quant mode is " + quantMode + ", the shape dim of x2Scale must be " +
+                 std::to_string(expectDimNum) + "D")
                     .c_str());
             return false;
         }
@@ -985,7 +988,9 @@ static inline bool CheckA8W4FloatQuantType(const aclTensor* x1, const aclTensor*
                                     ", x2Scale=" + op::ToString(x2Scale->GetDataType()).GetString();
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                 kOpName, "x1Scale/x2Scale", scaleInfo.c_str(),
-                "A8W4 float scenario only supports MX quantization or TCG quantization");
+                "A8W4 float scenario only supports "
+                "MX quantization (x1Scale and x2Scale are FLOAT8_E8M0) "
+                "or T-CG quantization (x1Scale is null and x2Scale is BF16 or FLOAT16)");
             return false;
         }
     }
