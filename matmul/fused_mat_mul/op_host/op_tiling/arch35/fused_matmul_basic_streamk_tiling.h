@@ -25,18 +25,19 @@ using matmul_v3_advanced::MatMulV3BasicStreamKTiling;
 class FusedMatMulStreamKTiling : public MatMulV3BasicStreamKTiling {
 public:
     FusedMatMulStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BasicStreamKTiling(context, cfg){};
+        : MatMulV3BasicStreamKTiling(context, cfg) {};
 
     ~FusedMatMulStreamKTiling() override = default;
 
 protected:
     bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
 };
 
 class FusedMatMulBatchStreamKTiling : public BatchMatMulV3BasicStreamKTiling {
 public:
     FusedMatMulBatchStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3BasicStreamKTiling(context, cfg){};
+        : BatchMatMulV3BasicStreamKTiling(context, cfg) {};
 
     ~FusedMatMulBatchStreamKTiling() override = default;
 

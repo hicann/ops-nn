@@ -271,6 +271,16 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling()
         AdjustSmallNTiling(opType);
         UpdateBFullLoadDepth();
     }
+    // add/mul融合需AIV参与, OTF模板无AIV流水: 重映射1V2.
+    if (IsAddMulOpType(opType) && fullLoad_ == MatMulV3FullLoad::NONE_FULL_LOAD &&
+        l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY && !isSplitK_) {
+        // 重映射1V2并统一FP32累加器+splitM双AIV(B16累加器+DUAL_DST_SPLIT_M存在设备侧缺口):
+        // INNER保留attr原值(默认1=高性能): 累加器类型由kernel组装侧按1V2组合强制FP32,
+        // 融合域随用户语义——ip=1时融合前acc先舍回输出dtype, 恢复legacy bf16累加精度
+        // (ip=0显式高精度保持FP32域融合); 仅流水升1V2, 不改变融合精度行为.
+        l0C2Out_ = MatMulV3L0C2Out::ND_FIXPIPE_1_2;
+        runInfo_.splitM = true;
+    }
     return status;
 }
 uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
@@ -279,12 +289,16 @@ uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    const char* opTypePtr = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    std::string opType = opTypePtr == nullptr ? "" : opTypePtr;
+    // relu/empty(主线)与add/mul(本分支)同切TENSOR_LEVEL; add/mul无需平台判断.
     MatMulV3ApiLevel apiLevel = MatMulV3ApiLevel::BASIC_LEVEL;
     if ((opType == "relu" || opType == "") && compileInfo_.npuArch != NpuArch::DAV_RESV) {
         apiLevel = MatMulV3ApiLevel::TENSOR_LEVEL;
+    } else if (IsAddMulOpType(opType) && !isSplitK_) {
+        // splitK的add/mul保持BASIC(remap也排除了splitK; TENSOR侧无splitK处理).
+        apiLevel = MatMulV3ApiLevel::TENSOR_LEVEL;
     }
-
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetFullLoad(fullLoad_)
         .SetModel(MatMulV3Model::BASIC)

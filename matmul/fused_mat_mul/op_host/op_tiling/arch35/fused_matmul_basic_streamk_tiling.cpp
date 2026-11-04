@@ -61,6 +61,19 @@ bool FusedMatMulStreamKTiling::IsCapable()
     return MatMulV3BasicStreamKTiling::IsCapable();
 }
 
+ge::graphStatus FusedMatMulStreamKTiling::DoOpTiling()
+{
+    // add/mul纯SK切TENSOR_LEVEL; 其余opType及splitK保持BASIC.
+    ge::graphStatus status = MatMulV3BasicStreamKTiling::DoOpTiling();
+    auto attrs = context_->GetAttrs();
+    const char* opTypePtr = attrs != nullptr ? attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX) : nullptr;
+    std::string opType = opTypePtr == nullptr ? "" : opTypePtr;
+    if (IsAddMulOpType(opType) && !isSplitK_) {
+        basicApi_ = false;
+    }
+    return status;
+}
+
 bool FusedMatMulBatchStreamKTiling::IsCapable()
 {
     if (!IsFusedMatMulBmmShape(context_)) {

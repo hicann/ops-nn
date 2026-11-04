@@ -52,13 +52,21 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
         if (opType == "add" || opType == "mul") {
             auto it = FUSED_OP_TYPE_MAP.find(opType);
             if (it != FUSED_OP_TYPE_MAP.end()) {
-                const uint64_t batchModel = IsFusedMatMulBmmShape(context_) ? MAT_MUL_FOR_FUSED_BATCH :
-                                                                              MAT_MUL_FOR_BATCH;
-                return GET_TPL_TILING_KEY(static_cast<uint64_t>(MAT_MUL_BASIC_LEVEL), static_cast<uint64_t>(F_NO_TRANS),
-                                          batchModel, static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
-                                          static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD),
-                                          static_cast<uint64_t>(MAT_MUL_ON_THE_FLY), static_cast<uint64_t>(it->second),
-                                          static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
+                if (IsFusedMatMulBmmShape(context_)) {
+                    // BMM K=0 add/mul stays on the legacy basic-level kernels.
+                    return GET_TPL_TILING_KEY(
+                        static_cast<uint64_t>(MAT_MUL_BASIC_LEVEL), static_cast<uint64_t>(F_NO_TRANS),
+                        MAT_MUL_FOR_FUSED_BATCH, static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
+                        static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD), static_cast<uint64_t>(MAT_MUL_ON_THE_FLY),
+                        static_cast<uint64_t>(it->second), static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
+                }
+                // MM K=0 add/mul runs on the Tensor-API path (AIV-only copy/zero).
+                // 960 无需平台判断: IsCapable() 的 920x 非 relu 排除已保证到达此处仅在 DAV_3510.
+                return GET_TPL_TILING_KEY(
+                    static_cast<uint64_t>(MAT_MUL_TENSOR_LEVEL), static_cast<uint64_t>(F_NO_TRANS), MAT_MUL_FOR_BATCH,
+                    static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO), static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD),
+                    static_cast<uint64_t>(MAT_MUL_ON_THE_FLY), static_cast<uint64_t>(it->second),
+                    static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
             }
         }
     }

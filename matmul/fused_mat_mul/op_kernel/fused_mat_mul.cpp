@@ -40,6 +40,7 @@
 #include "../mat_mul_v3/arch35/mat_mul_streamk.h"
 #include "../mat_mul_v3/arch35/mat_mul_al1_full_load.h"
 #include "../mat_mul_v3/arch35/mat_mul_bl1_full_load.h"
+#include "arch35/fused_mat_mul_elemwise.h" // MM add/mul组装(独立文件, 对齐mat_mul_pingpong_basic.h模式)
 #endif
 
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
@@ -233,6 +234,7 @@ __aicore__ inline void FusedMatMulKEqZeroMul(GM_ADDR biasGM, GM_ADDR yGM, GM_ADD
         MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, yGM, tilingData);
     }
 }
+
 #endif
 template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
           int8_t L0C2OUT_MODEL, int8_t OPTYPE, int8_t INNER_PRECISE>
@@ -743,6 +745,24 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
                 }
+            }
+        } else if constexpr (OPTYPE == F_OPTYPE_ADD || OPTYPE == F_OPTYPE_MUL) { // OpType = Add | Mul
+            if constexpr (MODEL == MAT_MUL_K_EQUAL_ZERO) {
+                if constexpr (OPTYPE == F_OPTYPE_ADD) {
+                    FusedMatMulKEqZeroAdd<BATCH_ITER_MODEL>(x3GM, yGM, tilingGM);
+                } else {
+                    FusedMatMulKEqZeroMul<BATCH_ITER_MODEL>(biasGM, yGM, tilingGM);
+                }
+            } else if constexpr (MODEL == MAT_MUL_STREAM_K) {
+                GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                FusedMatMulAdvanced::FusedMatMulAddMulStreamKKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aTran,
+                                                                    bTran, OPTYPE, INNER_PRECISE, L0C2OUT_MODEL>(
+                    x1GM, x2GM, biasGM, x3GM, yGM, workspaceGM, tilingData);
+            } else {
+                GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+                FusedMatMulAdvanced::FusedMatMulAddMulKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aTran, bTran,
+                                                             OPTYPE, INNER_PRECISE, L0C2OUT_MODEL, FULL_LOAD>(
+                    x1GM, x2GM, biasGM, x3GM, yGM, workspaceGM, tilingData);
             }
         }
     } else { // 高阶API
