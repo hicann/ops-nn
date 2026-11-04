@@ -207,7 +207,7 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_dtype_invalid_out)
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_NE(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_shape_invalid_out)
@@ -216,7 +216,7 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_shape_invalid_out)
     auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto zeroPointDesc = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto outDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto maskDesc = TensorDesc({1, 2}, ACL_BOOL, ACL_FORMAT_ND);
 
     float fake_quant_enbled = 0;
@@ -230,7 +230,7 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_shape_invalid_out)
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_quant_val)
@@ -239,7 +239,7 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_quant_val)
     auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto zeroPointDesc = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto outDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto maskDesc = TensorDesc({1, 2}, ACL_BOOL, ACL_FORMAT_ND);
 
     float fake_quant_enbled = 0;
@@ -253,7 +253,7 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_quant_val)
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_rank0_scalar)
@@ -278,4 +278,26 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_rank0_scalar)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_out_dtype_not_supported)
+{
+    const std::array<aclDataType, 3> invalidOutTypes = {ACL_INT8, ACL_DOUBLE, ACL_BOOL};
+    for (auto outType : invalidOutTypes) {
+        auto selfDesc = TensorDesc({1, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto zeroPointDesc = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND);
+        auto outDesc = TensorDesc({1, 2}, outType, ACL_FORMAT_ND);
+        auto maskDesc = TensorDesc({1, 2}, ACL_BOOL, ACL_FORMAT_ND);
+
+        float fakeQuantEnabled = 1.0f;
+        int64_t quantMin = 0;
+        int64_t quantMax = 255;
+        auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                            INPUT(selfDesc, scaleDesc, zeroPointDesc, fakeQuantEnabled, quantMin, quantMax),
+                            OUTPUT(outDesc, maskDesc));
+        uint64_t workspaceSize = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    }
 }

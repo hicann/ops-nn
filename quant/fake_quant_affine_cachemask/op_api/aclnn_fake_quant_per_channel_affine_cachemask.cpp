@@ -49,14 +49,10 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, DTYPE_SUPPORT_LIST, return false);
+    // out is an output contract too: docs only allow FLOAT16/FLOAT32. CanCast alone is not
+    // enough because float->int / float->bool are considered castable and silently truncate.
+    OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoint, ZERO_POINT_DTYPE_SUPPORT_LIST, return false);
-
-    op::DataType promoteType = op::PromoteType(self->GetDataType(), scale->GetDataType());
-    if (!CanCast(DataType(out->GetDataType()), promoteType)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Promote dtype %s can't be cast to the desired output type %s.",
-                op::ToString(promoteType).GetString(), op::ToString(DataType(out->GetDataType())).GetString());
-        return false;
-    }
     OP_CHECK_DTYPE_NOT_MATCH(mask, op::DataType::DT_BOOL, return false);
     return true;
 }
