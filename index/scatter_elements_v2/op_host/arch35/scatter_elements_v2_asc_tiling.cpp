@@ -56,7 +56,7 @@ constexpr int64_t MIN_DATA_ELEMENTS_PER_CORE = 1024;
 constexpr int64_t MIN_SORT_ELEMENTS_PER_CORE = 1024;
 constexpr int64_t MIN_INDEX_BYTES_PER_CORE = 1024;
 constexpr int64_t SMALL_SHAPE_SIMT_LANES = 64;
-constexpr int64_t SMALL_SHAPE_MAX_THREAD_NUM = 1024;
+constexpr int64_t SMALL_SHAPE_MAX_UPDATES = 8192;
 constexpr int64_t SIMT_UB_RES_SIZE = 640;
 constexpr uint32_t MAX_SORT_SPACE = 10240;
 constexpr int64_t PHASE_THREAD_NUM = 1024; // Phase1/Phase3 每核 stride-loop 粒度（按索引总数切核）
@@ -576,9 +576,9 @@ void ScatterElementsV2AscTiling::ComputeSmallShapeLaunch()
         coreNum = warpCount;
     }
     coreNum = std::min(coreNum, totalCoreNum_);
+    const int64_t maxThreads = ScatterElements::SMALL_SHAPE_THREAD_LIMITS[rank_ - 1];
     smallShapeThreadNum_ = std::min(
-        SMALL_SHAPE_MAX_THREAD_NUM,
-        Ops::Base::CeilAlign(Ops::Base::CeilDiv(allAxis_, coreNum), SMALL_SHAPE_SIMT_LANES));
+        maxThreads, Ops::Base::CeilAlign(Ops::Base::CeilDiv(allAxis_, coreNum), SMALL_SHAPE_SIMT_LANES));
     // Thread alignment can leave whole cores idle, especially at the hardware
     // core limit. Keep only cores that receive at least one update.
     usedCoreNum_ = std::min(coreNum, Ops::Base::CeilDiv(allAxis_, smallShapeThreadNum_));
@@ -783,8 +783,9 @@ ge::graphStatus ScatterElementsV2AscTiling::DoLibApiTiling() { return ge::GRAPH_
 bool ScatterElementsV2AscTiling::CanUseSmallShapeFast() const
 {
     return !isScalarUpdates_ && !context_->GetDeterministic() && reduction_ == REDUCTION_NONE && rank_ >= 1 &&
-           rank_ <= 2 && allAxis_ > 0 && allAxis_ <= 4096 && dataAxis_ > 0 && dataAxis_ <= MAX_INT32_NUM &&
-           updatesAxis_ > 0 && updatesAxis_ <= MAX_INT32_NUM;
+           rank_ <= static_cast<int16_t>(ScatterElements::SMALL_SHAPE_MAX_RANK) && allAxis_ > 0 &&
+           allAxis_ <= SMALL_SHAPE_MAX_UPDATES && dataAxis_ > 0 && dataAxis_ <= MAX_INT32_NUM && updatesAxis_ > 0 &&
+           updatesAxis_ <= MAX_INT32_NUM;
 }
 
 uint64_t ScatterElementsV2AscTiling::GetTilingKey() const
@@ -857,14 +858,23 @@ ge::graphStatus ScatterElementsV2AscTiling::PostTiling()
     }
     context_->SetScheduleMode(1);
     if (CanUseSmallShapeFast()) {
-        const ScatterElements::ScatterElementsV2SmallShapeTiling fastTiling{static_cast<uint32_t>(allAxis_),
-                                                                            static_cast<uint32_t>(rank_),
-                                                                            static_cast<uint32_t>(dim_),
-                                                                            static_cast<uint32_t>(dataStride_[0]),
-                                                                            static_cast<uint32_t>(indicesStride_[0]),
-                                                                            static_cast<uint32_t>(updatesStride_[0]),
-                                                                            static_cast<uint32_t>(smallShapeThreadNum_),
-                                                                            0};
+        ScatterElements::ScatterElementsV2SmallShapeTiling fastTiling{};
+        fastTiling.allAxis = static_cast<uint32_t>(allAxis_);
+        fastTiling.rank = static_cast<uint32_t>(rank_);
+        fastTiling.dim = static_cast<uint32_t>(dim_);
+        fastTiling.threads = static_cast<uint32_t>(smallShapeThreadNum_);
+        fastTiling.dataStride = static_cast<uint32_t>(dataStride_[0]);
+        fastTiling.indicesStride = static_cast<uint32_t>(indicesStride_[0]);
+        fastTiling.updatesStride = static_cast<uint32_t>(updatesStride_[0]);
+        fastTiling.axisStride = dim_ == rank_ - 1 ? 1 : static_cast<uint32_t>(dataStride_[dim_]);
+        for (int16_t d = 0; d < rank_; ++d) {
+            const uint32_t stride = d == rank_ - 1 ? 1 : static_cast<uint32_t>(dataStride_[d]);
+            fastTiling.targetStrides[d] = d == dim_ ? 0 : stride;
+            if (d < rank_ - 1) {
+                fastTiling.indicesStrides[d] = static_cast<uint32_t>(indicesStride_[d]);
+                fastTiling.updatesStrides[d] = static_cast<uint32_t>(updatesStride_[d]);
+            }
+        }
         if (context_->GetRawTilingData()->GetCapacity() < sizeof(fastTiling)) {
             return ge::GRAPH_FAILED;
         }

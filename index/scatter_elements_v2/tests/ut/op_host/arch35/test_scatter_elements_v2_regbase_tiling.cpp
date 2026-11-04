@@ -168,9 +168,10 @@ static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType indices_dtype,
     auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     ASSERT_EQ(tiling_key, tilingKeyValue);
     if (tiling_key / 1000000 == 3) {
-        ASSERT_EQ(raw_tiling_data->GetDataSize(), 8 * sizeof(uint32_t));
+        constexpr size_t wordCount = 32;
+        ASSERT_EQ(raw_tiling_data->GetDataSize(), wordCount * sizeof(uint32_t));
         const auto* fields = reinterpret_cast<const uint32_t*>(raw_tiling_data->GetData());
-        std::vector<int64_t> actual(fields, fields + 8);
+        std::vector<int64_t> actual(fields, fields + wordCount);
         EXPECT_EQ(actual, ParseTilingData(expectTilingData));
         return;
     }
@@ -205,7 +206,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_int8_int64_dim1)
     gert::StorageShape shape1 = {{10}, {10}};
     gert::StorageShape shape2 = {{10}, {10}};
     gert::StorageShape shape3 = {{10}, {10}};
-    string expectTilingData = "10 1 0 1 1 1 64 0";
+    string expectTilingData = "10 1 0 64 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
     uint64_t tilingKeyValue = 3001001;
 
     ExecuteTestCase(ge::DT_INT8, ge::DT_INT64, ge::DT_INT8, shape1, shape2, shape3, 0, "none", tilingKeyValue,
@@ -231,7 +232,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_int32_int64_dim2)
     gert::StorageShape shape1 = {{3, 5}, {3, 5}};
     gert::StorageShape shape2 = {{2, 3}, {2, 3}};
     gert::StorageShape shape3 = {{2, 5}, {2, 5}};
-    string expectTilingData = "6 2 1 5 3 5 64 0";
+    string expectTilingData = "6 2 1 64 5 3 5 1 5 0 0 0 0 0 0 0 3 0 0 0 0 0 0 5 0 0 0 0 0 0 0 0";
     uint64_t tilingKeyValue = 3001004;
 
     ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 1, "none", tilingKeyValue,
@@ -243,9 +244,8 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_bfloat16_int32_dim2)
     gert::StorageShape shape1 = {{10, 38, 26}, {10, 38, 26}};
     gert::StorageShape shape2 = {{10, 18, 26}, {10, 18, 26}};
     gert::StorageShape shape3 = {{10, 28, 96}, {10, 28, 96}};
-    string expectTilingData = "988 26 1 1 1 1 1 468 26 1 1 1 1 1 2688 96 1 1 1 1 1 32768 4680 9880 26880 1 1 1 0 0 0 1 "
-                              "1 0 131075 0 0 0 0 0 0 0 0 0 0 0 0 ";
-    uint64_t tilingKeyValue = 1000002;
+    string expectTilingData = "4680 3 2 512 988 468 2688 1 988 26 0 0 0 0 0 0 468 26 0 0 0 0 0 2688 96 0 0 0 0 0 0 0";
+    uint64_t tilingKeyValue = 3000002;
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_INT32, ge::DT_BF16, shape1, shape2, shape3, 2, "none", tilingKeyValue,
                     expectTilingData, 0);

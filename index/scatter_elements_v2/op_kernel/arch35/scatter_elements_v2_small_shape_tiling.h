@@ -13,17 +13,29 @@
 #include <cstdint>
 
 namespace ScatterElements {
+constexpr uint32_t SMALL_SHAPE_MAX_RANK = 8;
+
+// Launch policy is shared by host tiling and the SIMT launch bound.
+constexpr uint32_t SMALL_SHAPE_THREAD_LIMITS[SMALL_SHAPE_MAX_RANK] = {1024, 1024, 512, 512, 512, 512, 512, 512};
+
+// All small-update kernels use this layout. The scatter-axis target stride
+// is zero because the index value replaces that coordinate.
 struct ScatterElementsV2SmallShapeTiling {
     uint32_t allAxis;
     uint32_t rank;
     uint32_t dim;
+    uint32_t threads;
+    // Keep the low-rank scalar arguments together in the first 32 bytes.
     uint32_t dataStride;
     uint32_t indicesStride;
     uint32_t updatesStride;
-    uint32_t threads;
-    uint32_t reserved;
+    uint32_t axisStride;
+    uint32_t targetStrides[SMALL_SHAPE_MAX_RANK];
+    uint32_t indicesStrides[SMALL_SHAPE_MAX_RANK - 1];
+    uint32_t updatesStrides[SMALL_SHAPE_MAX_RANK - 1];
+    uint32_t reserved[2];
 };
-static_assert(sizeof(ScatterElementsV2SmallShapeTiling) == 32);
+static_assert(sizeof(ScatterElementsV2SmallShapeTiling) == 128);
 } // namespace ScatterElements
 
 #endif

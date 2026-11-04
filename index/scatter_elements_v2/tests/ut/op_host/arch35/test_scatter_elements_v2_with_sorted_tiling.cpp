@@ -743,13 +743,13 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_last_axis_preserves_source_
     RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, index, updates, -1, "none", 0, result);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 3000004UL);
-    EXPECT_EQ(result.rawTilingSize, 32UL);
+    EXPECT_EQ(result.rawTilingSize, 128UL);
     EXPECT_EQ(result.blockDim, 6U);
     EXPECT_EQ(result.smallShape.allAxis, 1713U);
     EXPECT_EQ(result.smallShape.dim, 1U);
-    EXPECT_EQ(result.smallShape.dataStride, 1718U);
-    EXPECT_EQ(result.smallShape.indicesStride, 1713U);
-    EXPECT_EQ(result.smallShape.updatesStride, 1723U);
+    EXPECT_EQ(result.smallShape.targetStrides[0], 1718U);
+    EXPECT_EQ(result.smallShape.indicesStrides[0], 1713U);
+    EXPECT_EQ(result.smallShape.updatesStrides[0], 1723U);
     EXPECT_EQ(result.smallShape.threads, 320U);
 }
 
@@ -764,14 +764,14 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_first_axis_preserves_source
     EXPECT_EQ(result.tilingKey, 3001008UL);
     EXPECT_EQ(result.blockDim, 32U);
     EXPECT_EQ(result.smallShape.dim, 0U);
-    EXPECT_EQ(result.smallShape.updatesStride, 2757U);
+    EXPECT_EQ(result.smallShape.updatesStrides[0], 2757U);
     EXPECT_EQ(result.smallShape.threads, 64U);
 }
 
 TEST_F(ScatterElementsV2WithSortedTiling, small_none_launch_adapts_to_update_count)
 {
     gert::StorageShape data = {{65536}, {65536}};
-    gert::StorageShape updates = {{8192}, {8192}};
+    gert::StorageShape updates = {{32768}, {32768}};
     struct LaunchCase {
         int64_t count;
         uint32_t cores;
@@ -785,7 +785,8 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_launch_adapts_to_update_cou
                                                     {1024, 4, 256},
                                                     {2048, 6, 384},
                                                     {3072, 7, 448},
-                                                    {4096, 8, 512}}) {
+                                                    {4096, 8, 512},
+                                                    {8192, 12, 704}}) {
         SCOPED_TRACE(test.count);
         gert::StorageShape index = {{test.count}, {test.count}};
         WithSortedTilingResult result;
@@ -837,15 +838,15 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_launch_respects_core_and_th
 
 TEST_F(ScatterElementsV2WithSortedTiling, small_none_limit_and_deterministic_fallback)
 {
-    gert::StorageShape data = {{8192}, {8192}};
-    gert::StorageShape updates = {{8192}, {8192}};
-    for (int64_t count : {4096, 4097}) {
+    gert::StorageShape data = {{32768}, {32768}};
+    gert::StorageShape updates = {{32768}, {32768}};
+    for (int64_t count : {8192, 8193, 16384}) {
         gert::StorageShape index = {{count}, {count}};
         WithSortedTilingResult result;
         RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, index, updates, 0, "none", 0, result);
         ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-        EXPECT_EQ(result.tilingKey / 1000000, count == 4096 ? 3UL : 1UL);
-        if (count == 4096) {
+        EXPECT_EQ(result.tilingKey / 1000000, count == 8192 ? 3UL : 1UL);
+        if (count == 8192) {
             RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, index, updates, 0, "none", 1, result);
             ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
             EXPECT_NE(result.tilingKey / 1000000, 3UL);
@@ -866,4 +867,85 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_scalar_updates_use_original
         EXPECT_EQ(result.scalarUpdates, 1);
         EXPECT_EQ(result.physicalUpdates, 1);
     }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, small_none_general_3d_all_axes_preserve_independent_strides)
+{
+    gert::StorageShape data = {{5, 7, 11}, {5, 7, 11}};
+    gert::StorageShape index = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape updates = {{4, 5, 6}, {4, 5, 6}};
+    const uint32_t dataStrides[] = {77, 11, 1};
+    for (int64_t axis = -3; axis < 3; ++axis) {
+        SCOPED_TRACE(axis);
+        const auto dim = static_cast<uint32_t>((axis + 3) % 3);
+        WithSortedTilingResult result;
+        RunWithSortedTilingCase(DT_FLOAT, DT_INT64, DT_FLOAT, data, index, updates, axis, "none", 0, result);
+        ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+        ASSERT_EQ(result.tilingKey, 3001004UL);
+        EXPECT_EQ(result.rawTilingSize, 128UL);
+        EXPECT_EQ(result.smallShape.rank, 3U);
+        EXPECT_EQ(result.smallShape.dim, dim);
+        EXPECT_EQ(result.smallShape.allAxis, 24U);
+        EXPECT_EQ(result.smallShape.axisStride, dataStrides[dim]);
+        for (uint32_t d = 0; d < 3; ++d) {
+            EXPECT_EQ(result.smallShape.targetStrides[d], d == dim ? 0U : dataStrides[d]);
+        }
+        EXPECT_EQ(result.smallShape.indicesStrides[0], 12U);
+        EXPECT_EQ(result.smallShape.indicesStrides[1], 4U);
+        EXPECT_EQ(result.smallShape.updatesStrides[0], 30U);
+        EXPECT_EQ(result.smallShape.updatesStrides[1], 6U);
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, small_none_rank8_limits_threads_and_keeps_last_axis_stride)
+{
+    gert::StorageShape data = {{3, 3, 3, 3, 3, 3, 5, 5}, {3, 3, 3, 3, 3, 3, 5, 5}};
+    gert::StorageShape index = {{2, 2, 2, 2, 2, 2, 4, 4}, {2, 2, 2, 2, 2, 2, 4, 4}};
+    gert::StorageShape updates = {{4, 4, 4, 4, 4, 4, 6, 6}, {4, 4, 4, 4, 4, 4, 6, 6}};
+    for (int64_t axis = 0; axis < 8; ++axis) {
+        WithSortedTilingResult result;
+        RunWithSortedTilingCase(DT_INT64, DT_INT32, DT_INT64, data, index, updates, axis, "none", 0, result, 1);
+        ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+        ASSERT_EQ(result.tilingKey, 3000008UL);
+        EXPECT_EQ(result.smallShape.rank, 8U);
+        EXPECT_EQ(result.smallShape.threads, 512U);
+        EXPECT_EQ(result.blockDim, 1U);
+        EXPECT_EQ(result.smallShape.targetStrides[7], axis == 7 ? 0U : 1U);
+        EXPECT_EQ(result.smallShape.indicesStrides[6], 4U);
+        EXPECT_EQ(result.smallShape.updatesStrides[6], 6U);
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, small_none_nd_limit_and_fallbacks)
+{
+    gert::StorageShape data = {{7, 65, 2733}, {7, 65, 2733}};
+    gert::StorageShape updates = {{6, 64, 2732}, {6, 64, 2732}};
+    gert::StorageShape admitted = {{4, 32, 64}, {4, 32, 64}};
+    gert::StorageShape aboveLimit = {{3, 1, 2731}, {3, 1, 2731}};
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, admitted, updates, 1, "none", 0, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 3000004UL);
+    EXPECT_EQ(result.smallShape.allAxis, 8192U);
+    EXPECT_LE(result.smallShape.threads, 512U);
+    RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, aboveLimit, updates, 1, "none", 0, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey / 1000000, 1UL);
+    for (const std::string& reduction : {"none", "add", "mul"}) {
+        for (int deterministic : {0, 1}) {
+            if (reduction == "none" && deterministic == 0) {
+                continue;
+            }
+            RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, data, admitted, updates, 1, reduction, deterministic,
+                                    result);
+            ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+            EXPECT_LT(result.tilingKey / 1000000, 3UL);
+        }
+    }
+    gert::StorageShape largeData = {{65536, 65536, 2}, {65536, 65536, 2}};
+    gert::StorageShape index = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape src = {{3, 4, 5}, {3, 4, 5}};
+    RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, largeData, index, src, -1, "none", 0, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey / 1000000, 1UL);
 }
