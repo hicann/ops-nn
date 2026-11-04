@@ -20,6 +20,7 @@ import sys
 import numpy as np
 
 # Import common utilities
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(
     0,
     os.path.join(
@@ -27,6 +28,7 @@ sys.path.insert(
     ),
 )
 import matmul_golden_util as _util
+import qbmmv3_scalenz_util as _scalenz
 
 
 # PerBlock 模式支持的输入 dtype（FP8/HIF8，不含 FP4）
@@ -736,7 +738,13 @@ class QuantBatchMatmulV3TestSpec:
             and kwargs.get("scale_dtype") not in ("uint64", "int64")
         ):
             ori_shape = input_ori_shapes[2] if len(input_ori_shapes) > 2 else None
-            deq_scale = _util.nz_to_nd(deq_scale, ori_shape)
+            if _util.dtype_to_str(deq_scale.dtype) == "float8_e8m0":
+                deq_scale = _scalenz.scale_nz_to_nd(deq_scale, ori_shape)
+                # compute_mx consumes the old ND contract when transpose_x2 is true.
+                if transpose_x2:
+                    deq_scale = np.swapaxes(deq_scale, -3, -2)
+            else:
+                deq_scale = _util.nz_to_nd(deq_scale, ori_shape)
 
         # 调用 kernel compute
         return qbmmv3_kernel_compute(

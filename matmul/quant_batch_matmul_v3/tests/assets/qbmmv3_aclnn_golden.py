@@ -34,6 +34,7 @@ sys.path.insert(
 
 import matmul_golden_util as _util
 import qbmmv3_kernel_golden as _kernel
+import qbmmv3_scalenz_util as _scalenz
 
 
 # ============================================================================
@@ -287,6 +288,17 @@ class AclnnQuantMatmulWeightNzTestSpec:
             x1, x2, x2Scale, x2Offset, bias, x1Scale
         )
 
+        formats = kwargs.get("tensor_formats", ())
+        is_mx = (
+            x2Scale is not None and _util.dtype_to_str(x2Scale.dtype) == "float8_e8m0"
+        )
+        if is_mx and _scalenz.is_nz(formats, 1):
+            x2_np = _scalenz.aclnn_mx_nz_to_nd(x2)
+        if is_mx and _scalenz.is_nz(formats, 3):
+            x2Scale_np = _scalenz.aclnn_mx_nz_to_nd(x2Scale, scale=True)
+            if transposeX2:
+                x2Scale_np = np.swapaxes(x2Scale_np, -3, -2)
+
         deq_scale, u64_offset = _util.decode_u64_scale(x2Scale_np)
         if u64_offset is not None and x2Offset_np is None:
             x2Offset_np = u64_offset
@@ -328,6 +340,17 @@ class AclnnQuantMatmulWeightNzTestSpec:
     ):
         # 对 x2Scale 和 x1Scale 做 E8M0 清洗 + UINT64 生成
         _customize_inputs_impl(x1, x2, x2Scale, x2Offset, bias, x1Scale, **kwargs)
+        if (
+            x2Scale is not None
+            and _util.dtype_to_str(x2Scale.dtype) == "float8_e8m0"
+            and _scalenz.is_nz(kwargs.get("tensor_formats", ()), 3)
+        ):
+            storage = _scalenz.storage_view(x2Scale)
+            cleaned = _util.sanitize_e8m0_scale(
+                storage, kwargs.get("testcase_name", "unknown")
+            )
+            if cleaned is not storage:
+                _util.write_back(storage, cleaned)
 
 
 __spec__ = {

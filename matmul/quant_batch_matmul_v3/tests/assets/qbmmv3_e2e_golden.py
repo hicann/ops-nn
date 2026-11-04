@@ -84,7 +84,46 @@ def _decode_fp4_carrier(arr, dtype_code, axis, expect_dim):
         stacked = np.stack([lo, hi], axis=ax + 1)
         new_shape = arr.shape[:ax] + (arr.shape[ax] * 2,) + arr.shape[ax + 1 :]
         return stacked.reshape(new_shape)
-    return _decode_fp4_nibble(arr & 0x0F)
+    if expect_dim == arr.shape[ax]:
+        return _decode_fp4_nibble(arr & 0x0F)
+    raise ValueError(
+        f"FP4 carrier axis {arr.shape[ax]} cannot represent {expect_dim} elements"
+    )
+
+
+def _fp4_axes_and_k(x1, x2, a, b, a_dtype, b_dtype, pertoken, scale):
+    """Resolve packed/unpacked K from both operands and MX group counts.
+
+    For small K where both encodings fit the same scale group, the public
+    two-elements-per-byte API convention takes precedence.
+    """
+    a_byte = a_dtype == _ACL_FLOAT4_E2M1 and a.dtype == np.uint8
+    b_byte = b_dtype == _ACL_FLOAT4_E2M1 and b.dtype == np.uint8
+    if not (a_byte or b_byte):
+        return None
+    if min(a.ndim, b.ndim) < 2:
+        raise ValueError("FP4 matmul inputs must have at least two dimensions")
+
+    def axis(tensor):
+        strides = (
+            tensor.stride()
+            if hasattr(tensor, "stride")
+            else tuple(s // tensor.itemsize for s in tensor.strides)
+        )
+        return -2 if strides[-2] == 1 and strides[-1] != 1 else -1
+
+    aa, ba = axis(x1), axis(x2)
+    a_k, b_k = a.shape[-1], b.shape[-2]
+    candidates = ({a_k, 2 * a_k} if a_byte and aa == -1 else {a_k}) & (
+        {b_k, 2 * b_k} if b_byte and ba == -2 else {b_k}
+    )
+    for tensor, kg_axis in ((pertoken, -2), (scale, -3)):
+        if tensor is not None and tensor.ndim >= 3 and tensor.shape[-1] == 2:
+            kg = tensor.shape[kg_axis]
+            candidates = {k for k in candidates if (k + 63) // 64 == kg}
+    if not candidates:
+        raise ValueError("FP4 carrier K axes do not match the MX scale group counts")
+    return aa, ba, max(candidates)
 
 
 # ============================================================================
@@ -100,9 +139,8 @@ class TorchNpuQuantMatmulTestSpec:
        output_dtype, x1_dtype, x2_dtype, pertoken_scale_dtype,
        scale_dtype, group_sizes, y_scale) -> Tensor
 
-    transpose 从 tensor stride 推断（detect_transpose_from_strides）。
-    output_dtype 从参数值推断（CANN int → dtype str）。
-    x1_dtype/x2_dtype 等从 tensor dtype 获取，不使用单独参数。
+    Golden 按逻辑视图计算；stride 仅用于确定 FP4 字节载体的打包轴。
+    output_dtype 使用 torch ScalarType；x1_dtype/x2_dtype 声明 FP4 载体语义。
     """
 
     @staticmethod
@@ -142,8 +180,7 @@ class TorchNpuQuantMatmulTestSpec:
             x1, x2, scale, offset, pertoken_scale, bias
         )
 
-        # fp4 uint8 载体解码（x1_dtype/x2_dtype=296）：压缩轴为 x1 的 M 轴 / x2 的 N 轴，
-        # 由 pertoken/scale 的逻辑维自动判定压缩（2/字节）或直存（1/字节）约定。
+        # fp4 uint8 载体解码（x1_dtype/x2_dtype=296），逻辑 M/N 从 scale 获取。
         # pertoken 约定 (M,G,2)：M 在 -3；scale 约定 (G,N,2)：N 在 -2（低维约定取不到时为 None）
         if pertoken_np is None or pertoken_np.ndim < 2:
             m_expect = None
@@ -157,8 +194,18 @@ class TorchNpuQuantMatmulTestSpec:
             n_expect = scale_np.shape[-2]
         else:
             n_expect = scale_np.shape[-1]
-        x1_np = _decode_fp4_carrier(x1_np, x1_dtype, axis=-2, expect_dim=m_expect)
-        x2_np = _decode_fp4_carrier(x2_np, x2_dtype, axis=-1, expect_dim=n_expect)
+
+        packed = _fp4_axes_and_k(
+            x1, x2, x1_np, x2_np, x1_dtype, x2_dtype, pertoken_np, scale_np
+        )
+        if packed is not None:
+            a_axis, b_axis, logical_k = packed
+            x1_np = _decode_fp4_carrier(
+                x1_np, x1_dtype, a_axis, m_expect if a_axis == -2 else logical_k
+            )
+            x2_np = _decode_fp4_carrier(
+                x2_np, x2_dtype, b_axis, n_expect if b_axis == -1 else logical_k
+            )
 
         deq_scale, u64_offset = _util.decode_u64_scale(scale_np)
         if u64_offset is not None and offset_np is None:
