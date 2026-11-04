@@ -48,6 +48,8 @@ int64_t Conv2dTiling::GetTiling(optiling::Conv2DTilingData& tiling)
         return -1;
     }
 
+    SetIsWeightBypassL1();
+
     ret = CheckTilingRes();
     if (ret == -1) {
         OP_LOGE(nodeType, "conv2d api tiling check tiling result failed.");
@@ -83,6 +85,14 @@ bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optilin
     }
     SetTilingData(tiling);
     return true;
+}
+
+void Conv2dTiling::SetIsWeightBypassL1()
+{
+    if (outputOrder == static_cast<int8_t>(OutputOrder::HW) && platformInfo.npuArch == Ops::Base::DAV_5162) {
+        isWeightBypassL1 = std::static_pointer_cast<ConvTilingAlgorithmHWmode>(algoPtr)->GetIsWeightBypassFlag();
+        isTilingKh = std::static_pointer_cast<ConvTilingAlgorithmHWmode>(algoPtr)->GetIsL0TilingKh();
+    }
 }
 
 void Conv2dTiling::Infer5hdShape()
@@ -351,6 +361,7 @@ void Conv2dTiling::SetTilingData(optiling::Conv2DTilingData& tiling)
     tiling.set_nBL1(static_cast<uint32_t>(l1TilingInfo.nBL1));
     tiling.set_kL0(static_cast<uint32_t>(l0TilingInfo.kL0));
     tiling.set_nL0(static_cast<uint32_t>(l0TilingInfo.nL0));
+    tiling.set_khConv(static_cast<uint32_t>(l0TilingInfo.khConv));
 
     tiling.set_orgHi(static_cast<uint64_t>(shapeInfo.orgHi));
     tiling.set_orgWi(static_cast<uint64_t>(shapeInfo.orgWi));
@@ -1020,7 +1031,7 @@ bool Conv2dTiling::CheckInstructionLimits()
 {
     if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
         this->isDmaFlag = true;
-        if (platformInfo.isCubeVectorFuse) {
+        if (platformInfo.isCubeVectorFuse || platformInfo.npuArch == Ops::Base::DAV_5162) {
             OP_LOGE(nodeType, "Conv2d does not support DMA mode. "
                               "Please adjust the parameters to satisfy Load3D constraints (see above error details).");
             return false;

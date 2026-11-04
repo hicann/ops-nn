@@ -25,7 +25,8 @@ void ConvTilingAlgorithmHWmode::InitPingPong()
     this->dbValue.pbBL1 = tilingIns_->isDmaFlag ? SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
     this->dbValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->dbValue.pbBL0 = DOUBLE_BUFFER_NUM;
-    this->dbValue.pbCL0 = SINGLE_BUFFER_NUM;
+    this->dbValue.pbCL0 = tilingIns_->platformInfo.npuArch == Ops::Base::DAV_5162 ? DOUBLE_BUFFER_NUM :
+                                                                                    SINGLE_BUFFER_NUM;
 
     L1TilingParams inputTiling;
     inputTiling.kAL1 = tilingIns_->cubeInfo.k0;
@@ -52,11 +53,71 @@ int64_t ConvTilingAlgorithmHWmode::Process()
     GetHoWoNL0Tiling();
     GetKhKwL1Tiling();
     GetL1Tiling();
-    GetKL0Tiling();
+    if (isL0TilingKh) {
+        if (CalcL0Conv() == -1) {
+            return -1;
+        }
+    } else {
+        GetKL0Tiling();
+    }
     SetL0TilingRes();
     GetUbTiling();
     CheckL0DoubleBuffer();
     SetPBufferRes();
+    SetWeightBypassFlag();
+    return 0;
+}
+
+void ConvTilingAlgorithmHWmode::SetWeightBypassFlag()
+{
+    if (tilingIns_->platformInfo.npuArch != Ops::Base::DAV_5162) {
+        return;
+    }
+    isWeightBypassL1 = false;
+    if (tilingIns_->l1TilingInfo.nBL1 == tilingIns_->l0TilingInfo.nL0 &&
+        tilingIns_->l1TilingInfo.kBL1 == tilingIns_->l0TilingInfo.kL0 &&
+        tilingIns_->l0TilingInfo.khConv == tilingIns_->shapeInfo.orgkH) {
+        isWeightBypassL1 = true;
+    }
+}
+
+int64_t ConvTilingAlgorithmHWmode::CalcL0Conv()
+{
+    if (tilingIns_->platformInfo.npuArch != Ops::Base::DAV_5162) {
+        return 0;
+    }
+
+    // if minKh overflow l0BSize, close BL0 pingpong
+    uint32_t minKh = std::max(tilingIns_->attrInfo.padTop, tilingIns_->attrInfo.padBottom) + 1;
+    if (CalcBL0Size(tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.orgkW * minKh, l0Params.nL0) >
+        tilingIns_->platformInfo.l0BSize) {
+        this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
+    }
+
+    int64_t khConvMin = 1;
+    int64_t khConvMax = tilingIns_->shapeInfo.orgkH;
+    int64_t khConvCalc = 0;
+    while (khConvMin <= khConvMax) {
+        int64_t mid = khConvMin + (khConvMax - khConvMin) / 2;
+        uint64_t curKL0 = tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.orgkW * mid;
+        if (CalcBL0Size(curKL0, l0Params.nL0) <= tilingIns_->platformInfo.l0BSize) {
+            khConvCalc = mid;
+            khConvMin = mid + 1;
+        } else {
+            khConvMax = mid - 1;
+        }
+    }
+
+    l0Params.khConv = khConvCalc;
+    tilingIns_->l0TilingInfo.khConv = l0Params.khConv;
+    l0Params.kL0 = tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.orgkW * tilingIns_->shapeInfo.orgkH;
+
+    if (tilingIns_->l0TilingInfo.khConv <= tilingIns_->attrInfo.padTop ||
+        tilingIns_->l0TilingInfo.khConv <= tilingIns_->attrInfo.padBottom) {
+        OP_LOGE(tilingIns_->nodeType, "khConv(%d) less than padTop(%d) or padBottom(%d).",
+                tilingIns_->l0TilingInfo.khConv, tilingIns_->attrInfo.padTop, tilingIns_->attrInfo.padBottom);
+        return -1;
+    }
     return 0;
 }
 
@@ -71,18 +132,25 @@ void ConvTilingAlgorithmHWmode::GetKL0Tiling()
         CalcCommFactorOfTwoNum(kAL1WithKhKw, l1Params.kBL1, l0TilingRange.kL0Range);
     }
     uint64_t validKL0 = 0;
-    while (l0Params.kL0Index < l0TilingRange.kL0Range.size()) {
-        if (l0TilingRange.kL0Range[l0Params.kL0Index] % tilingIns_->cubeInfo.k0 == 0) {
-            uint64_t tmpKL0 = l0TilingRange.kL0Range[l0Params.kL0Index];
-            if (CalcAL0Size(l0Params.hoL0 * l0Params.woL0, tmpKL0) <= tilingIns_->platformInfo.l0ASize &&
-                CalcBL0Size(tmpKL0, l0Params.nL0) <= tilingIns_->platformInfo.l0BSize) {
-                validKL0 = tmpKL0;
-                l0Params.kL0Index++;
+    if (tilingIns_->platformInfo.npuArch == Ops::Base::DAV_5162) {
+        validKL0 = l0Params.kL0;
+        UpdateHoWoForArch5162();
+        l0Params.khConv = tilingIns_->shapeInfo.orgkH;
+        tilingIns_->l0TilingInfo.khConv = l0Params.khConv;
+    } else {
+        while (l0Params.kL0Index < l0TilingRange.kL0Range.size()) {
+            if (l0TilingRange.kL0Range[l0Params.kL0Index] % tilingIns_->cubeInfo.k0 == 0) {
+                uint64_t tmpKL0 = l0TilingRange.kL0Range[l0Params.kL0Index];
+                if (CalcAL0Size(l0Params.hoL0 * l0Params.woL0, tmpKL0) <= tilingIns_->platformInfo.l0ASize &&
+                    CalcBL0Size(tmpKL0, l0Params.nL0) <= tilingIns_->platformInfo.l0BSize) {
+                    validKL0 = tmpKL0;
+                    l0Params.kL0Index++;
+                } else {
+                    break;
+                }
             } else {
-                break;
+                l0Params.kL0Index++;
             }
-        } else {
-            l0Params.kL0Index++;
         }
     }
     l0Params.kL0 = validKL0 > tilingIns_->cubeInfo.k0 ? validKL0 : tilingIns_->cubeInfo.k0;
@@ -100,6 +168,30 @@ void ConvTilingAlgorithmHWmode::GetKL0Tiling()
                             tilingIns_->platformInfo.l0BSize);
     if (bMNFullLoadRet && bKFullLoadRet && bCheckL0SizeRet) {
         l0Params.kL0 = this->l1TilingCalc.kBL1MaxSize / tilingIns_->shapeInfo.singlekD;
+    }
+}
+
+void ConvTilingAlgorithmHWmode::UpdateHoWoForArch5162()
+{
+    for (auto index = l0TilingRange.woL0Range.size(); index-- > 0;) {
+        if (CalcCL0Size(l0Params.hoL0 * l0TilingRange.woL0Range[index], l0Params.nL0) <=
+            tilingIns_->platformInfo.l0CSize) {
+            l0Params.woL0 = l0TilingRange.woL0Range[index];
+            l0Params.woL0Index = index;
+            break;
+        }
+    }
+
+    while (CalcCL0Size(l0TilingRange.hoL0Range[l0Params.hoL0Index] * l0Params.woL0, l0Params.nL0) <=
+           tilingIns_->platformInfo.l0CSize) {
+        if (l0TilingRange.hoL0Range[l0Params.hoL0Index] < l1Params.hoAL1 &&
+            l0Params.hoL0Index < l0TilingRange.hoL0Range.size() - 1) {
+            l0Params.hoL0 = l0TilingRange.hoL0Range[l0Params.hoL0Index];
+            l0Params.hoL0Index++;
+        } else {
+            l0Params.hoL0 = min(l1Params.hoAL1, l0TilingRange.hoL0Range.back());
+            break;
+        }
     }
 }
 
@@ -226,6 +318,18 @@ void ConvTilingAlgorithmHWmode::SetHoL0ForC04()
 
 void ConvTilingAlgorithmHWmode::UpdateL0TilingParamsIndex(bool& indexOverflowTag)
 {
+    if (tilingIns_->platformInfo.npuArch == Ops::Base::DAV_5162) {
+        if (l0Params.nL0Index < l0TilingRange.nL0Range.size() - 1 && !isL0TilingKh) {
+            l0Params.nL0Index++;
+        } else if (l0Params.woL0Index < l0TilingRange.woL0Range.size() - 1) {
+            l0Params.woL0Index++;
+        } else if (l0Params.hoL0Index < l0TilingRange.hoL0Range.size() - 1 && isL0TilingKh) {
+            l0Params.hoL0Index++;
+        } else {
+            indexOverflowTag = true;
+        }
+        return;
+    }
     if (l0Params.nL0 < l0Params.hoL0 * l0Params.woL0) {
         if (l0Params.nL0Index < l0TilingRange.nL0Range.size() - 1) {
             l0Params.nL0Index++;
@@ -249,12 +353,40 @@ void ConvTilingAlgorithmHWmode::UpdateL0TilingParamsIndex(bool& indexOverflowTag
     }
 }
 
+uint64_t ConvTilingAlgorithmHWmode::InitKL0()
+{
+    if (tilingIns_->platformInfo.npuArch != Ops::Base::DAV_5162) {
+        return tilingIns_->cubeInfo.k0;
+    }
+    uint64_t kL1Size = tilingIns_->shapeInfo.singleCi1 * tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.orgkH *
+                       tilingIns_->shapeInfo.orgkW;
+    uint64_t minKL0 = kL1Size / tilingIns_->shapeInfo.singleCi1;
+    uint64_t maxKL0 = tilingIns_->platformInfo.l0BSize / this->dbValue.pbBL0 / this->weightDTypeSize /
+                      tilingIns_->cubeInfo.n0;
+    CalcCommFactor(kL1Size, kL1Size, this->l0TilingRange.kL0Range);
+    if (minKL0 * tilingIns_->cubeInfo.n0 * weightDTypeSize > tilingIns_->platformInfo.l0BSize) {
+        isL0TilingKh = true;
+        return tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.orgkW;
+    } else {
+        if (minKL0 * tilingIns_->cubeInfo.n0 * weightDTypeSize > tilingIns_->platformInfo.l0BSize / DOUBLE_BUFFER_NUM) {
+            maxKL0 *= DOUBLE_BUFFER_NUM;
+            this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
+        }
+        for (auto it = l0TilingRange.kL0Range.rbegin(); it != l0TilingRange.kL0Range.rend(); ++it) {
+            if (*it <= maxKL0 && *it % minKL0 == 0 && *it / minKL0 >= 1) {
+                return *it;
+            }
+        }
+        return minKL0;
+    }
+}
+
 void ConvTilingAlgorithmHWmode::HoWoNL0TilingDecision()
 {
     l0Params.hoL0 = l0TilingRange.hoL0Range[l0Params.hoL0Index];
     l0Params.woL0 = l0TilingRange.woL0Range[l0Params.woL0Index];
     l0Params.nL0 = l0TilingRange.nL0Range[l0Params.nL0Index];
-    l0Params.kL0 = tilingIns_->cubeInfo.k0;
+    l0Params.kL0 = InitKL0();
     bool l0BufferNotOverflowFlag = CheckL0Buffer(l0Params.hoL0 * l0Params.woL0, l0Params.kL0, l0Params.nL0);
     uint64_t usedL1Size = CalcL1SizeForL0Tiling(l0Params.hoL0, l0Params.woL0, l0Params.nL0);
     uint64_t usedBTSize = CalcBTSize(l0Params.nL0);
@@ -366,6 +498,9 @@ void ConvTilingAlgorithmHWmode::SetL0TilingRes()
     tilingIns_->l0TilingInfo.woL0 = l0Params.woL0;
     tilingIns_->l0TilingInfo.kL0 = l0Params.kL0;
     tilingIns_->l0TilingInfo.nL0 = l0Params.nL0;
+    if (tilingIns_->platformInfo.npuArch == Ops::Base::DAV_5162) {
+        tilingIns_->l0TilingInfo.khConv = l0Params.khConv;
+    }
 }
 
 bool ConvTilingAlgorithmHWmode::CheckWoL0FullLoadC04Mode() const
@@ -437,7 +572,7 @@ void ConvTilingAlgorithmHWmode::L0TilingRest(bool kFullLoadFlag)
     // when al0 & bl0 open db but kl0 tiling not fullLoad Kl1, need close db and update l0 tiling
     bool resetFlag = this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM &&
                      kFullLoadFlag;
-    if (!resetFlag) {
+    if (!resetFlag || tilingIns_->platformInfo.npuArch == Ops::Base::DAV_5162) {
         return;
     }
 

@@ -45,6 +45,8 @@ struct L0TilingParams {
     uint64_t woL0 = 0;
     uint64_t kL0 = 0;
     uint64_t nL0 = 0;
+
+    uint64_t khConv = 0;
 };
 
 struct L1TilingRange {
@@ -119,10 +121,12 @@ public:
     {
         this->minBurstNum = MIN_BURST_SIZE / DTYPE_SIZE_TAB.at(tilingIns_->descInfo.fMapType.dtype);
     };
-    ~ConvTilingAlgorithmHWmode() override{};
+    ~ConvTilingAlgorithmHWmode() override {};
     int64_t Process() override;
     void SetL1TilingRes() override;
     void SetL0TilingRes() override;
+    bool GetIsWeightBypassFlag() const { return isWeightBypassL1; }
+    bool GetIsL0TilingKh() const { return isL0TilingKh; }
 
 private:
     // L1 tiling
@@ -174,12 +178,15 @@ private:
     void IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t tmpHoAL1, uint64_t tmpWoAL1, uint64_t tmpNBL1);
     uint64_t IterKwL1();
     uint64_t IterKhL1(uint64_t kwL1Res);
+    uint64_t InitKL0();
     void GetCaseStatus();
     void GetHoWoNL0Tiling();
     void GetHoWoNL0TilingRange();
     void HoWoNL0TilingDecision();
     void UpdateL0TilingParamsIndex(bool& indexOverflowTag);
     void SetHoL0ForC04();
+    void SetWeightBypassFlag();
+    void UpdateHoWoForArch5162();
     void GetKL0Tiling();
     uint64_t CalcL1SizeForL0Tiling(uint64_t currHoL0, uint64_t currWoL0, uint64_t currNL0);
     // L0 tiling
@@ -191,6 +198,7 @@ private:
     void GetKhKwL1Tiling();
     void ScaleBiasUbTilingDecision();
     void GetUbTiling();
+    int64_t CalcL0Conv();
     L1TilingCalc l1TilingCalc;
     L1TilingInit l1TilingInit;
     std::unordered_map<L1TilingMode, L1TilingInit> l1TilingInitMap;
@@ -201,6 +209,8 @@ private:
     L0TilingParams l0Params;
 
     uint32_t minBurstNum = 0;
+    bool isWeightBypassL1 = false;
+    bool isL0TilingKh = false;
 };
 
 } // namespace conv_tiling_algo_hw

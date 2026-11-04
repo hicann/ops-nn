@@ -101,18 +101,25 @@ namespace ConvKey {
 #define CONV_NORMAL_KERNEL 0
 #define CONV_BIG_KERNEL 1
 
+#define CONV_TO_L1_DISABLE 0
+#define CONV_TO_L1_ENABLE_WEIGHT_BY_PASS 1
+#define CONV_TO_L1_ENABLE_L1 2
+#define CONV_TO_L1_ENABLE_TILING_KH 3
+
 #if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
 #define CONV2D_SCALAR_OPT_SEL(...)                                                                       \
     , ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, CONV_MULTI_BATCH, CONV_ONE_BATCH),             \
         ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, CONV_HAS_PAD, CONV_NO_PAD),                     \
         ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, __VA_ARGS__),                             \
         ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, CONV_NOT_SMALL_KERNEL, CONV_SMALL_KERNEL, \
-                             CONV_SMALL_KERNEL_FM_PARTLOAD)
+                             CONV_SMALL_KERNEL_FM_PARTLOAD),                                             \
+        ASCENDC_TPL_UINT_SEL(ConvToL1, ASCENDC_TPL_UI_LIST, CONV_TO_L1_DISABLE)
 #else
 #define CONV2D_SCALAR_OPT_SEL(...)                                                                                 \
     , ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, 0), ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, 0), \
         ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, 0),                                                 \
-        ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, 0)
+        ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, 0),                                                 \
+        ASCENDC_TPL_UINT_SEL(ConvToL1, ASCENDC_TPL_UI_LIST, CONV_TO_L1_DISABLE)
 #endif
 
 #define CONV_COMMON_ONLY_MN_FULLLOAD_SEL()                                                                           \

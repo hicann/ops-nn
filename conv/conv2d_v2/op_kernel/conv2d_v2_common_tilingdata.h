@@ -91,6 +91,7 @@ struct Conv2DTilingData {
     uint32_t cout = 0;
     uint32_t kh = 0;
     uint32_t kw = 0;
+    uint32_t khConv = 0;
     uint32_t batchDim = 0;
     uint32_t groupDim = 0;
     uint32_t nDim = 0;

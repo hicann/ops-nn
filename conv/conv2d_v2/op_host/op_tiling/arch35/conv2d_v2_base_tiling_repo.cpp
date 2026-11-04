@@ -156,6 +156,7 @@ void Conv2dBaseTiling::TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2Tunne
         tilingData_.set_enlarge(optGroupInfo_.enlarge);
     }
     tilingData_.set_innerBatch(convRepoTiling->innerBatch);
+    RestoreKhConvTiling(convRepoTiling->khConv);
 }
 
 void Conv2dBaseTiling::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling)

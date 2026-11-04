@@ -28,6 +28,15 @@ ge::graphStatus Conv2dBaseTiling::CheckOptionalInputLeagal()
         return ge::GRAPH_FAILED;
     }
 
+    if (GetConvToL1Mode() != CONV_TO_L1_DISABLE) {
+        if (CheckExtendReluWeightLegal() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        if (CheckExtendClipValueLegal() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -615,6 +624,10 @@ bool Conv2dBaseTiling::CheckScaleLegal(uint32_t scaleIndex, uint8_t& quantMode, 
 
     return true;
 }
+
+ge::graphStatus Conv2dBaseTiling::CheckExtendReluWeightLegal() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus Conv2dBaseTiling::CheckExtendClipValueLegal() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputSpecial()
 {

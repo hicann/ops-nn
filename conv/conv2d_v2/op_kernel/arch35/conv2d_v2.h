@@ -28,7 +28,8 @@ using namespace conv2d;
 template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
           int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode, int8_t InnerBatch,
           int8_t BatchOne = 0, int8_t NoPad = 0, int8_t SmallWeight = 0,
-          IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE, typename Output1T = half, int8_t FmapDataSrc = 0>
+          IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE, typename Output1T = half, int8_t FmapDataSrc = 0,
+          int8_t ConvToL1 = 0, typename ClipValue0T = float, typename ClipValue1T = float>
 struct Conv2DV1Param : public Conv2dParam {
     __aicore__ inline Conv2DV1Param() {}
     constexpr static int8_t fmapTiling = FmapTiling;
@@ -47,6 +48,9 @@ struct Conv2DV1Param : public Conv2dParam {
     constexpr static int8_t isExtendConv2d = static_cast<int8_t>(ExtendConv2DFlag);
     using Output1Dtype = Output1T;
     constexpr static int8_t fmapDataSrc = FmapDataSrc; // 0 for DDR; 1 for L1
+    constexpr static int8_t convToL1 = ConvToL1;
+    using ClipValue0Dtype = ClipValue0T;
+    using ClipValue1Dtype = ClipValue1T;
 };
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
@@ -85,8 +89,13 @@ public:
     using BIAS_T = typename BIAS_TYPE::T;
     using SCALE_T = typename SCALE_TYPE::T;
     using RELU_WEIGHT_T = float;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    using CLIP_VALUE_0_T = typename CONV_CFG::ClipValue0Dtype;
+    using CLIP_VALUE_1_T = typename CONV_CFG::ClipValue1Dtype;
+#else
     using CLIP_VALUE_0_T = typename OUTPUT_TYPE::T;
     using CLIP_VALUE_1_T = typename CONV_CFG::Output1Dtype;
+#endif
 
     // Conv2d API
     Conv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG> conv;
@@ -155,7 +164,7 @@ public:
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static int8_t IS_EXTEND_CONV2D = CONV_CFG::isExtendConv2d;
     constexpr static bool isConv3D = false;
-#if defined(__DAV_35_FAMILY__)
+#if defined(__DAV_35_FAMILY__) || (__NPU_ARCH__ == 5162)
     constexpr static bool IS_OPTGROUP_PRELOAD = false;
 #else
     constexpr static bool IS_OPTGROUP_PRELOAD = (CONV_CFG::fmapTiling ==

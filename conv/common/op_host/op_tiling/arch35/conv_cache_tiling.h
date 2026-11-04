@@ -118,6 +118,7 @@ struct Conv2dCacheTilingData {
     uint32_t woL0 = 0;
     uint32_t kL0 = 0;
     uint32_t nL0 = 0;
+    uint32_t khConv = 0;
     uint32_t pBufferFlag = 0;
     uint32_t enlarge = 0;
     uint32_t singleCoreGroups = 0;

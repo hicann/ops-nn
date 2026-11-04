@@ -82,6 +82,7 @@ void Conv2dBaseTiling::GetCachedTilingDataAux()
     cachedTilingData_.enableC04Flag = flagInfo_.enableC04Flag;
     cachedTilingData_.mSplitModeFlag = flagInfo_.mSplitModeFlag;
     cachedTilingData_.unionDataXt = tilingData_.get_unionDataXt();
+    cachedTilingData_.khConv = tilingData_.get_khConv();
 }
 
 void Conv2dBaseTiling::GetCachedTilingData()
@@ -235,6 +236,7 @@ void Conv2dBaseTiling::TranslateCachedApiTilingPartTwo()
     tilingData_.set_clipMode1(fixpipeInfo_.clipMode1);
     tilingData_.set_innerBatch(cachedTilingData_.innerBatch);
     tilingData_.set_unionDataXt(cachedTilingData_.unionDataXt);
+    RestoreKhConvTiling(cachedTilingData_.khConv);
 }
 
 void Conv2dBaseTiling::TranslateCachedApiTilingPartOne()

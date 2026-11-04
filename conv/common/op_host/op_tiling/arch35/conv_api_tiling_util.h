@@ -26,6 +26,7 @@
 #include <tiling/platform/platform_ascendc.h>
 #include "platform/soc_spec.h"
 #include "conv_template_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace conv_tiling {
 using namespace std;

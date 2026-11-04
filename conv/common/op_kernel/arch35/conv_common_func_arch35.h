@@ -19,7 +19,11 @@
 #include <cstring>
 #include "conv_config.h"
 #include "conv_framework_util_arch35.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
 #include "conv_iterate_impl.h"
+#else
+#include "../arch51/conv_iterate_impl_51.h"
+#endif
 #include "conv_opt_group_impl.h"
 #include "conv_util.h"
 
@@ -149,6 +153,18 @@ struct SetFixpipeParams {
                     self->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                     self->ctx.enableVectorRelu = true;
                 }
+                if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+                    if (self->ctx.convTilingData->clipMode0 == static_cast<uint8_t>(ClipMode::SCALARCLIPRELU)) {
+                        typename Intf::ClipValue0T clipMaxRaw = fixpipeParams.clipValue0.GetValue(0);
+                        if constexpr (std::is_integral<typename Intf::OutputT>::value) {
+                            int16_t clipMaxS16 = static_cast<int16_t>(clipMaxRaw);
+                            self->ctx.clipValue0 = static_cast<uint64_t>(reinterpret_cast<uint16_t&>(clipMaxS16));
+                        } else {
+                            float16_t clipMaxHalf = static_cast<float16_t>(clipMaxRaw);
+                            self->ctx.clipValue0 = static_cast<uint64_t>(reinterpret_cast<uint16_t&>(clipMaxHalf));
+                        }
+                    }
+                }
             } else {
                 if (self->ctx.convTilingData->quantMode0 != static_cast<uint8_t>(QuantModeType::NO_QUANT)) {
                     self->ctx.isFirstIterate = true;
@@ -197,6 +213,18 @@ struct GetTensorC {
             }
         }
     }
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    template <template <typename> class TensorTypeT, const FixpipeConfig& config, bool sync = true>
+    static __aicore__ inline void call(Intf* self, const TensorTypeT<typename Intf::OutputT>& output,
+                                       IterateParam& iterParam, CopyUbInfo* ubInfo = nullptr,
+                                       bool enSequentialWrite = false);
+
+    template <template <typename> class TensorTypeT, const FixpipeConfig& config, bool sync = true>
+    static __aicore__ inline void call(Intf* self, const TensorTypeT<typename Intf::OutputT>& output0,
+                                       const GlobalTensor<typename Intf::Output1T>& output1, IterateParam& iterParam,
+                                       CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false);
+#endif
 };
 
 template <class Intf, uint32_t ImplType>
@@ -255,6 +283,11 @@ struct ConvPreProcess {
                                     self->ctx.reluWeightL1[self->ctx.reluWeight1L1offset], self->ctx.reluWeight1GM,
                                     scaleLoadNum, 0);
                             }
+                            if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+                                self->ctx.queueReluWeightL1.EnQue(self->ctx.reluWeightL1);
+                                self->ctx.reluWeightL1 = self->ctx.queueReluWeightL1
+                                                             .template DeQue<typename Intf::ReluWeightT>();
+                            }
                         }
                     }
                     if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
@@ -264,8 +297,20 @@ struct ConvPreProcess {
                     }
                 }
             }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+            SetFixpipePreQuantFlag(self->ctx.deqScalar0);
+            if (self->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                FixPipeReluAlphaBitModeParams leakyReluParam;
+                leakyReluParam.SetPreValue(static_cast<uint32_t>(self->ctx.preReluScalar0));
+                SetFixPipeReluAlpha(leakyReluParam);
+            }
+            if (self->ctx.convTilingData->clipMode0 == static_cast<uint8_t>(ClipMode::SCALARCLIPRELU)) {
+                FixpipeClipReluParams<uint16_t, uint16_t> clipReluParam;
+                clipReluParam.preValue = (static_cast<uint16_t>(self->ctx.clipValue0));
+                SetFixPipeClipRelu(clipReluParam);
+            }
+#endif
         }
-
         self->ctx.cl0PingPongFlag = 0;
     }
 };
@@ -317,7 +362,23 @@ struct IterateAll {
                 self->ctx.dequantUB2GmTools.SetOutputGm(output0);
             }
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
+        IterateProcess(self, output0, output1, enPartialSum);
+#else
+        IterateParam iterParam;
+        Iterate<Intf, ImplType>::InitIterParam(self, iterParam);
+        IterateProcess(self, output0, output1, iterParam, enPartialSum);
+#endif
+        ConvPostProcess<Intf, ImplType>::call(self);
 
+        return false;
+    }
+
+    template <bool sync = true>
+    static __aicore__ inline void IterateProcess(Intf* self, const GlobalTensor<typename Intf::OutputT>& output0,
+                                                 const GlobalTensor<typename Intf::Output1T>& output1,
+                                                 bool enPartialSum = false)
+    {
         while (Iterate<Intf, ImplType>::call(self, enPartialSum)) {
             if ASCEND_IS_AIC_CONV {
                 if constexpr (Intf::isDeQuantFlag) {
@@ -343,10 +404,6 @@ struct IterateAll {
                 }
             }
         }
-
-        ConvPostProcess<Intf, ImplType>::call(self);
-
-        return false;
     }
 
     template <bool sync = true>
@@ -389,6 +446,18 @@ struct IterateAll {
             }
         }
     }
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    template <bool sync = true>
+    static __aicore__ inline void IterateProcess(Intf* self, const GlobalTensor<typename Intf::OutputT>& output0,
+                                                 const GlobalTensor<typename Intf::Output1T>& output1,
+                                                 IterateParam& iterParam, bool enPartialSum = false);
+
+    template <bool sync = true>
+    static __aicore__ inline void GetExtendTensorC(Intf* self, const GlobalTensor<typename Intf::OutputT>& output0,
+                                                   const GlobalTensor<typename Intf::Output1T>& output1,
+                                                   IterateParam& iterParam);
+#endif
 };
 
 template <class Intf, uint32_t ImplType>
@@ -397,7 +466,9 @@ struct End {
     {
         if ASCEND_IS_AIC_CONV {
             self->ctx.queueAL1.FreeAllEvent();
-            self->ctx.queueBL1.FreeAllEvent();
+            if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::OPEN_WEIGHT_BY_PASS)) {
+                self->ctx.queueBL1.FreeAllEvent();
+            }
             if constexpr (!Intf::isDeQuantFlag) {
                 self->ctx.queueBiasL1.FreeAllEvent();
                 self->ctx.queueScaleL1.FreeAllEvent();
@@ -407,6 +478,11 @@ struct End {
 
             if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
                 self->ctx.queueCL0.FreeAllEvent();
+            }
+            if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+                if (self->ctx.enableVectorQuant) {
+                    self->ctx.queueScaleFB.FreeAllEvent();
+                }
             }
         }
         if constexpr (Intf::preFusionFlag) {
@@ -424,9 +500,11 @@ struct End {
 template <class Intf>
 __aicore__ inline void InitBufferWithDoubleBuf(Intf* self)
 {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
     self->ctx.pipe.InitBuffer(self->ctx.al0Buf, L0A_SIZE);
-    self->ctx.pipe.InitBuffer(self->ctx.bl0Buf, L0B_SIZE);
     self->ctx.wholeAl0Tensor = self->ctx.al0Buf.template Get<typename Intf::FmapT>();
+#endif
+    self->ctx.pipe.InitBuffer(self->ctx.bl0Buf, L0B_SIZE);
     self->ctx.wholeBl0Tensor = self->ctx.bl0Buf.template Get<typename Intf::WeightT>();
 
     int8_t cl0db = (self->ctx.convTilingData->pBufferFlag & 0x04) >> 2;
@@ -443,6 +521,9 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf* self)
     } else {
         self->ctx.pipe.InitBuffer(self->ctx.l0cBuf, L0C_SIZE);
         self->ctx.wholeCl0Tensor = self->ctx.l0cBuf.template Get<typename Intf::L0cT>();
+        if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+            self->ctx.wholeL1ResTensor = self->ctx.l0cBuf.template Get<typename Intf::OutputT>();
+        }
     }
 
     if (!((self->ctx.convTilingData->pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET)) {
@@ -451,14 +532,16 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf* self)
         self->ctx.pipe.InitBuffer(self->ctx.queueAL1, DOUBLE_BUF, self->ctx.convTilingData->aL1SpaceSize);
     }
 
-    if constexpr (!Intf::bL1DBFlag) {
-        self->ctx.pipe.InitBuffer(self->ctx.queueBL1, 1, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
-    } else {
-        if constexpr (Intf::weightUbTrans || Intf::groupOptPreloadFlag) {
-            self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf, self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
-            self->ctx.bL1Tensor = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>();
+    if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::OPEN_WEIGHT_BY_PASS)) {
+        if constexpr (!Intf::bL1DBFlag) {
+            self->ctx.pipe.InitBuffer(self->ctx.queueBL1, 1, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
         } else {
-            self->ctx.pipe.InitBuffer(self->ctx.queueBL1, DOUBLE_BUF, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
+            if constexpr (Intf::weightUbTrans || Intf::groupOptPreloadFlag) {
+                self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf, self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
+                self->ctx.bL1Tensor = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>();
+            } else {
+                self->ctx.pipe.InitBuffer(self->ctx.queueBL1, DOUBLE_BUF, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
+            }
         }
     }
 
@@ -510,6 +593,10 @@ __aicore__ inline void InitBuffer(Intf* self)
             }
             if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 scaleL1SpaceSize += scale0L1Size;
+                if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+                    uint64_t scaleFBSize = AlignB(self->ctx.convTilingData->nL0 * Intf::sizeOfScale, C0_SIZE);
+                    self->ctx.pipe.InitBuffer(self->ctx.queueScaleFB, 1, scaleFBSize);
+                }
             }
             if (self->ctx.convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 self->ctx.scale1L1offset = scaleL1SpaceSize / Intf::sizeOfScale;
@@ -526,6 +613,11 @@ __aicore__ inline void InitBuffer(Intf* self)
                                              self->ctx.convTilingData->nL0 * Intf::sizeOfReluWeight;
             if (self->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                 reluWeightL1SpaceSize += reluWeight0L1Size;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+                uint64_t reluFBSize = AlignB(self->ctx.convTilingData->nL0 * Intf::sizeOfReluWeight,
+                                             DST_MEM_BLOCK_PRE_RELU_UINT);
+                self->ctx.pipe.InitBuffer(self->ctx.queueReluWeightFB, 1, reluFBSize);
+#endif
             }
             if (self->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                 self->ctx.reluWeight1L1offset = reluWeightL1SpaceSize / Intf::sizeOfReluWeight;
@@ -577,6 +669,10 @@ __aicore__ inline void InitSubApiParams(Intf* self)
         self->ctx.copyOutIns.SetParams(self);
         if constexpr (Intf::isExtendConv2d) {
             self->ctx.copyOutIns1.SetParams(self);
+            if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
+                self->ctx.loadScaleFBIns.SetParams(self);
+                self->ctx.loadReluWeightFBIns.SetParams(self);
+            }
         }
     } else {
         self->ctx.dequantL0C2UBTools.SetParams(self);

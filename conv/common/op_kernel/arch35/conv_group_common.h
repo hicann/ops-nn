@@ -215,7 +215,8 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::DealFixpiepP
                             convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                         }
                     } else if (convOps->convTilingData->quantMode0 ==
-                               static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                                   static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
+                               convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                         convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                     }
                 } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {

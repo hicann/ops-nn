@@ -32,7 +32,7 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
 
 template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
           int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode, int8_t InnerBatch,
-          int8_t BatchOne, int8_t NoPad, int8_t SmallWeight, int8_t SmallKernel, int8_t IsASWT>
+          int8_t BatchOne, int8_t NoPad, int8_t SmallWeight, int8_t SmallKernel, int8_t IsASWT, int8_t ConvToL1 = 0>
 __global__ __aicore__ void quant_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR scale, GM_ADDR bias, GM_ADDR offset,
                                         GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {

@@ -72,6 +72,7 @@ TILING_DATA_FIELD_DEF(uint32_t, coutOffsetBlock);
 TILING_DATA_FIELD_DEF(uint32_t, nL1DivBlockSize);
 TILING_DATA_FIELD_DEF(uint32_t, kernelH);
 TILING_DATA_FIELD_DEF(uint32_t, kernelW);
+TILING_DATA_FIELD_DEF(uint32_t, khConv);
 TILING_DATA_FIELD_DEF(uint32_t, strideH);
 TILING_DATA_FIELD_DEF(uint32_t, strideW);
 TILING_DATA_FIELD_DEF(uint32_t, dilationH);

@@ -50,8 +50,13 @@ public:
     using BIAS_T = typename BIAS_TYPE::T;
     using SCALE_T = uint64_t;
     using RELU_WEIGHT_T = float;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    using CLIP_VALUE_0_T = typename CONV_CFG::ClipValue0Dtype;
+    using CLIP_VALUE_1_T = typename CONV_CFG::ClipValue1Dtype;
+#else
     using CLIP_VALUE_0_T = typename OUTPUT_TYPE::T;
     using CLIP_VALUE_1_T = typename CONV_CFG::Output1Dtype;
+#endif
 
     using Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::conv;
     using Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::convTilingData;

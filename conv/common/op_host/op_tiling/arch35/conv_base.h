@@ -100,9 +100,15 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_WITHOUT_BIAS_D
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_FUSE = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}};
 
+// [fmap, weight, output, bias]
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_5162 = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}};
+
 // arch-keyed dtype support list maps (extend by adding new arch keys)
 const std::map<std::string, std::vector<std::vector<ge::DataType>>> CONV_SUPPORTED_TYPES_MAP = {
-    {NPU_ARCH_KEY_3510, CONV_SUPPORTED_TYPES_DAV}, {NPU_ARCH_KEY_FUSE, CONV_SUPPORTED_TYPES_FUSE}};
+    {NPU_ARCH_KEY_3510, CONV_SUPPORTED_TYPES_DAV},
+    {NPU_ARCH_KEY_FUSE, CONV_SUPPORTED_TYPES_FUSE},
+    {NPU_ARCH_KEY_5162, CONV_SUPPORTED_TYPES_5162}};
 
 // [fmap, weight, output, bias]
 const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES_WITH_BIAS = {
@@ -152,6 +158,13 @@ const std::vector<std::vector<ge::DataType>> EXTENDCONV2D_SUPPORTED_TYPES_FUSE =
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32}};
 
 // [fmap, weight, output, bias]
+const std::vector<std::vector<ge::DataType>> EXTENDCONV2D_SUPPORTED_TYPES_5162 = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32}};
+
+// [fmap, weight, output, bias]
 const std::vector<std::vector<ge::DataType>> EXTENDCONV_SUPPORTED_TYPES_NCHW = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
@@ -175,7 +188,9 @@ const std::vector<std::vector<ge::DataType>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16}};
 
 const std::map<std::string, std::vector<std::vector<ge::DataType>>> EXTENDCONV_SUPPORTED_TYPES_NCHW_MAP = {
-    {NPU_ARCH_KEY_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW}, {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORTED_TYPES_FUSE}};
+    {NPU_ARCH_KEY_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW},
+    {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORTED_TYPES_FUSE},
+    {NPU_ARCH_KEY_5162, EXTENDCONV2D_SUPPORTED_TYPES_5162}};
 
 const std::map<std::string, std::vector<std::vector<ge::DataType>>> EXTENDCONV_SUPPORTED_TYPES_NHWC_MAP = {
     {NPU_ARCH_KEY_3510, EXTENDCONV_SUPPORTED_TYPES_NHWC}, {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORTED_TYPES_FUSE}};

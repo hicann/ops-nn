@@ -97,6 +97,7 @@ TILING_DATA_FIELD_DEF(uint32_t, cin);
 TILING_DATA_FIELD_DEF(uint32_t, cout);
 TILING_DATA_FIELD_DEF(uint32_t, kh);
 TILING_DATA_FIELD_DEF(uint32_t, kw);
+TILING_DATA_FIELD_DEF(uint32_t, khConv);
 TILING_DATA_FIELD_DEF(uint32_t, batchDim);
 TILING_DATA_FIELD_DEF(uint32_t, groupDim);
 TILING_DATA_FIELD_DEF(uint32_t, nDim);

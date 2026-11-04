@@ -91,10 +91,18 @@ union UnionDataXm {
 };
 
 const static uint64_t L0A_SIZE = 65536;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+const static uint64_t L0B_SIZE = 16384;
+const static uint64_t L0B_HALF_SIZE = 8192;
+const static uint64_t FB_SIZE = 2048;
+const static uint64_t DST_MEM_BLOCK_PRE_RELU_UINT = 64;
+const static uint64_t DST_MEM_BLOCK_PRE_QUANT_UINT = 128;
+#else
 const static uint64_t L0B_SIZE = 65536;
+const static uint64_t L0B_HALF_SIZE = 32768;
+#endif
 const static uint64_t L0C_SIZE = 262144;
 const static uint64_t L0A_HALF_SIZE = 32768;
-const static uint64_t L0B_HALF_SIZE = 32768;
 const static uint64_t L0C_HALF_SIZE = 131072;
 const static uint64_t C0_SIZE = 32;
 const static uint64_t BT_SIZE = 64;
@@ -209,7 +217,7 @@ constexpr FixpipeConfig CFG_ROW_MAJOR_FIXED_POINT = {CO2Layout::ROW_MAJOR, false
 };
 constexpr FixpipeConfig CFG_ROW_MAJOR_UB = {CO2Layout::ROW_MAJOR, true};
 
-#if defined(__DAV_35_FAMILY__)
+#if defined(__DAV_35_FAMILY__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162))
 #define ASCEND_IS_AIC_CONV constexpr(true)
 #define ASCEND_IS_AIV_CONV constexpr(true)
 #else
@@ -258,6 +266,30 @@ static __aicore__ inline ASWTBlockIndex CalcASWTBlockIndex(uint64_t taskIdx, uin
 }
 
 enum class QuantModeType : std::uint8_t { NO_QUANT = 0, SCALAR_QUANT, VECTOR_QUANT };
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+struct MappingMode {
+    QuantMode_t quantMode;
+    pre_quant_t preQuantMode;
+};
+
+const MappingMode mappingTable[] = {
+    {QuantMode_t::VREQ8, pre_quant_t::REQS8_Vector},
+    {QuantMode_t::REQ8, pre_quant_t::REQS8_Scalar},
+    {QuantMode_t::VDEQF16, pre_quant_t::DEQF16_Vector},
+    {QuantMode_t::DEQF16, pre_quant_t::DEQF16_Scalar},
+};
+
+__aicore__ inline pre_quant_t MapQuantModeToPreQuant(QuantMode_t quantMode)
+{
+    for (const auto& entry : mappingTable) {
+        if (entry.quantMode == quantMode) {
+            return entry.preQuantMode;
+        }
+    }
+    return pre_quant_t::No_Quant;
+}
+#endif
 
 } // namespace conv
 

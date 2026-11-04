@@ -505,7 +505,9 @@ __aicore__ inline void SetMNBeforeIterateK(Intf* self, MmadParams& mmadParams)
         } else {
             mmadParams.m = self->ctx.innerBatch * currentML0;
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
         mmadParams.disableGemv = true;
+#endif
     } else {
         mmadParams.m = self->ctx.currentML0Align;
     }
@@ -549,7 +551,7 @@ __aicore__ inline void FreeL1Tensor(Intf* self)
         }
     }
 
-    if constexpr (!Intf::weightUbTrans) {
+    if constexpr (!Intf::weightUbTrans && (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::OPEN_WEIGHT_BY_PASS))) {
         if (!self->ctx.kBL1fullload) {
             self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
         }
@@ -562,6 +564,16 @@ __aicore__ inline void FreeL1Tensor(Intf* self)
 
         self->ctx.queueBiasBT.FreeTensor(self->ctx.biasBT);
     }
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    if (self->ctx.enableVectorQuant) {
+        self->ctx.queueScaleFB.FreeTensor(self->ctx.scaleFB);
+    }
+
+    if (self->ctx.enableVectorRelu) {
+        self->ctx.queueReluWeightFB.FreeTensor(self->ctx.reluWeightFB);
+    }
+#endif
 }
 
 template <class Intf>

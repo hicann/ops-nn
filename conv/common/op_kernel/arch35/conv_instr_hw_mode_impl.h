@@ -18,6 +18,7 @@
 
 #include "conv_config.h"
 #include "conv_util.h"
+#include "conv_instr_impl_declare.h"
 
 namespace ConvFunc {
 using namespace AscendC;
@@ -178,329 +179,300 @@ private:
     UnionDataXm xm_;
 };
 
-template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-class CopyOutToolsHWMode {
-public:
-    __aicore__ inline CopyOutToolsHWMode() {}
-    __aicore__ inline void SetParams(Intf* self)
-    {
-        self_ = self;
-        valueHoWo_ = self_->ctx.convTilingData->orgHo * self_->ctx.convTilingData->orgWo;
-    }
-
-    __aicore__ inline void SetMN(uint64_t m, uint64_t n)
-    {
-        currentML0_ = m;
-        currentNL0_ = n;
-    }
-
-    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& intriParams)
-    {
-        if constexpr (Intf::isDmaFlag) {
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::SetFixpipeIntriParams(
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& intriParams)
+{
+    if constexpr (Intf::isDmaFlag) {
+        intriParams.mSize = self_->ctx.currentWoL0;
+        intriParams.params.srcNzMatrixStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
+        intriParams.params.dnNum = self_->ctx.currentHoL0;
+        intriParams.params.dstDnMatrixStride = self_->ctx.singleCoreWo;
+    } else {
+        if (likely(self_->ctx.convTilingData->woL0 >= self_->ctx.singleCoreWo)) {
+            intriParams.mSize = currentML0_;
+            intriParams.params.srcNzMatrixStride = 0;
+            intriParams.params.dnNum = 1;
+            intriParams.params.dstDnMatrixStride = 0;
+        } else {
             intriParams.mSize = self_->ctx.currentWoL0;
-            intriParams.params.srcNzMatrixStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
+            intriParams.params.srcNzMatrixStride = self_->ctx.currentWoL0;
             intriParams.params.dnNum = self_->ctx.currentHoL0;
             intriParams.params.dstDnMatrixStride = self_->ctx.singleCoreWo;
-        } else {
-            if (likely(self_->ctx.convTilingData->woL0 >= self_->ctx.singleCoreWo)) {
-                intriParams.mSize = currentML0_;
-                intriParams.params.srcNzMatrixStride = 0;
-                intriParams.params.dnNum = 1;
-                intriParams.params.dstDnMatrixStride = 0;
-            } else {
-                intriParams.mSize = self_->ctx.currentWoL0;
-                intriParams.params.srcNzMatrixStride = self_->ctx.currentWoL0;
-                intriParams.params.dnNum = self_->ctx.currentHoL0;
-                intriParams.params.dstDnMatrixStride = self_->ctx.singleCoreWo;
-            }
         }
-
-        intriParams.nSize = currentNL0_;
-        intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
-            intriParams.dstStride = self_->ctx.convTilingData->orgDo * valueHoWo_;
-        } else {
-            intriParams.dstStride = valueHoWo_;
-        }
-        intriParams.params.srcNzC0Stride = 1;
-        SetBaseParams<CO2Layout::COLUMN_MAJOR>(intriParams);
     }
 
-    __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& intriParams)
-    {
-        uint64_t effectiveCout = ConvGetEffectiveCout<Intf::formatOutput, ConvCoutFallback::ORG_CO>(
-            self_->ctx.convTilingData);
-        if constexpr (Intf::isDmaFlag) {
-            intriParams.mSize = self_->ctx.currentWoL0;
-            intriParams.params.srcNdStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
-            intriParams.params.ndNum = self_->ctx.currentHoL0;
-            intriParams.params.dstNdStride = self_->ctx.singleCoreWo * effectiveCout;
-        } else if (likely(self_->ctx.convTilingData->woL0 >= self_->ctx.singleCoreWo)) {
-            intriParams.mSize = currentML0_;
-            intriParams.params.srcNdStride = 0;
-            intriParams.params.ndNum = 1;
-            intriParams.params.dstNdStride = 0;
-        } else {
-            intriParams.mSize = self_->ctx.currentWoL0;
-            intriParams.params.srcNdStride = self_->ctx.currentWoL0;
-            intriParams.params.ndNum = self_->ctx.currentHoL0;
-            intriParams.params.dstNdStride = self_->ctx.singleCoreWo * effectiveCout;
-        }
+    intriParams.nSize = currentNL0_;
+    intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
+    if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        intriParams.dstStride = self_->ctx.convTilingData->orgDo * valueHoWo_;
+    } else {
+        intriParams.dstStride = valueHoWo_;
+    }
+    intriParams.params.srcNzC0Stride = 1;
+    SetBaseParams<CO2Layout::COLUMN_MAJOR>(intriParams);
+}
 
-        intriParams.dstStride = effectiveCout;
-        intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
-        intriParams.nSize = currentNL0_;
-        SetBaseParams<CO2Layout::ROW_MAJOR>(intriParams);
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::SetFixpipeIntriParamsHWC(
+    FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& intriParams)
+{
+    uint64_t effectiveCout = ConvGetEffectiveCout<Intf::formatOutput, ConvCoutFallback::ORG_CO>(
+        self_->ctx.convTilingData);
+    if constexpr (Intf::isDmaFlag) {
+        intriParams.mSize = self_->ctx.currentWoL0;
+        intriParams.params.srcNdStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
+        intriParams.params.ndNum = self_->ctx.currentHoL0;
+        intriParams.params.dstNdStride = self_->ctx.singleCoreWo * effectiveCout;
+    } else if (likely(self_->ctx.convTilingData->woL0 >= self_->ctx.singleCoreWo)) {
+        intriParams.mSize = currentML0_;
+        intriParams.params.srcNdStride = 0;
+        intriParams.params.ndNum = 1;
+        intriParams.params.dstNdStride = 0;
+    } else {
+        intriParams.mSize = self_->ctx.currentWoL0;
+        intriParams.params.srcNdStride = self_->ctx.currentWoL0;
+        intriParams.params.ndNum = self_->ctx.currentHoL0;
+        intriParams.params.dstNdStride = self_->ctx.singleCoreWo * effectiveCout;
     }
 
-    template <CO2Layout format>
-    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsArch3510<format>& intriParams,
-                                                   CopyUbInfo* ubInfo = nullptr)
-    {
-        if (ubInfo == nullptr) {
-            return;
-        }
-        uint64_t unUsedNL0 = currentNL0_ >= ubInfo->nLoopIdx * ubInfo->nUb ?
-                                 currentNL0_ - ubInfo->nLoopIdx * ubInfo->nUb :
-                                 0;
-        uint64_t unUsedML0 = currentML0_ >= ubInfo->mLoopIdx * ubInfo->mUb ?
-                                 currentML0_ - ubInfo->mLoopIdx * ubInfo->mUb :
-                                 0;
-        ubInfo->realNUb = unUsedNL0 < ubInfo->nUb ? unUsedNL0 : ubInfo->nUb;
-        ubInfo->realHUb = 0;
-        ubInfo->realWUb = unUsedML0 < ubInfo->mUb ? unUsedML0 : ubInfo->mUb;
-        ubInfo->realBatchUb = 1;
-        ubInfo->outBatchIdx = self_->ctx.batchIter + ubInfo->batchLoopIdx * ubInfo->batchUb;
-        if constexpr (Intf::isKL1NL0FullLoad) {
-            ubInfo->outCIdx = ubInfo->nLoopIdx * ubInfo->nUb;
-        } else {
-            ubInfo->outCIdx = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-                              self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0 + ubInfo->nLoopIdx * ubInfo->nUb;
-        }
-        ubInfo->outHIdx = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 +
-                          self_->ctx.hoL0Iter * self_->ctx.convTilingData->hoL0 +
-                          ubInfo->mLoopIdx * ubInfo->mUb / self_->ctx.convTilingData->woL0;
-        if (self_->ctx.woL1SmallTail == 0) {
-            ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+    intriParams.dstStride = effectiveCout;
+    intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
+    intriParams.nSize = currentNL0_;
+    SetBaseParams<CO2Layout::ROW_MAJOR>(intriParams);
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+template <CO2Layout format>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::SetFixpipeIntriParamsUb(
+    FixpipeParamsArch3510<format>& intriParams, CopyUbInfo* ubInfo)
+{
+    if (ubInfo == nullptr) {
+        return;
+    }
+    uint64_t unUsedNL0 = currentNL0_ >= ubInfo->nLoopIdx * ubInfo->nUb ? currentNL0_ - ubInfo->nLoopIdx * ubInfo->nUb :
+                                                                         0;
+    uint64_t unUsedML0 = currentML0_ >= ubInfo->mLoopIdx * ubInfo->mUb ? currentML0_ - ubInfo->mLoopIdx * ubInfo->mUb :
+                                                                         0;
+    ubInfo->realNUb = unUsedNL0 < ubInfo->nUb ? unUsedNL0 : ubInfo->nUb;
+    ubInfo->realHUb = 0;
+    ubInfo->realWUb = unUsedML0 < ubInfo->mUb ? unUsedML0 : ubInfo->mUb;
+    ubInfo->realBatchUb = 1;
+    ubInfo->outBatchIdx = self_->ctx.batchIter + ubInfo->batchLoopIdx * ubInfo->batchUb;
+    if constexpr (Intf::isKL1NL0FullLoad) {
+        ubInfo->outCIdx = ubInfo->nLoopIdx * ubInfo->nUb;
+    } else {
+        ubInfo->outCIdx = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+                          self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0 + ubInfo->nLoopIdx * ubInfo->nUb;
+    }
+    ubInfo->outHIdx = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 +
+                      self_->ctx.hoL0Iter * self_->ctx.convTilingData->hoL0 +
+                      ubInfo->mLoopIdx * ubInfo->mUb / self_->ctx.convTilingData->woL0;
+    if (self_->ctx.woL1SmallTail == 0) {
+        ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+                          self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0 +
+                          ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTilingData->woL0;
+    } else {
+        if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
+            ubInfo->outWIdx = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) +
                               self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0 +
                               ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTilingData->woL0;
         } else {
-            if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
-                ubInfo->outWIdx = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->woL1 +
-                                   self_->ctx.woAL1Tail) +
-                                  self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0 +
-                                  ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTilingData->woL0;
-            } else {
-                ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
-                                  self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0 +
-                                  ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTilingData->woL0;
-            }
+            ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+                              self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0 +
+                              ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTilingData->woL0;
         }
-
-        intriParams.nSize = AlignB(ubInfo->realNUb, BLOCK_L0_N);
-        intriParams.mSize = AlignB(ubInfo->realWUb, BLOCK_L0_M);
-        intriParams.srcStride = self_->ctx.currentML0Align;
-        if constexpr (format == CO2Layout::ROW_MAJOR) {
-            intriParams.dstStride = AlignB(ubInfo->realNUb, BLOCK_L0_N);
-            intriParams.params.dstNdStride = 0;
-            intriParams.params.srcNdStride = 0;
-            intriParams.params.ndNum = 1;
-        } else if constexpr (format == CO2Layout::COLUMN_MAJOR) {
-            intriParams.dstStride = AlignB(ubInfo->realWUb, BLOCK_L0_M);
-            ;
-            intriParams.params.dnNum = 1;
-            intriParams.params.dstDnMatrixStride = 0;
-            intriParams.params.srcNzMatrixStride = 0;
-            intriParams.params.srcNzC0Stride = 1;
-        }
-        SetBaseParams<format>(intriParams);
     }
 
-    template <CO2Layout format>
-    __aicore__ inline void SetBaseParams(FixpipeParamsArch3510<format>& intriParams)
-    {
-        intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
-        if (self_->ctx.convTilingData->hasScale == 0) {
-            intriParams.deqScalar = DEQ_SCALAR_ONE;
-        }
-        if constexpr (Intf::isExtendConv2d) {
-            if constexpr (FixpipeIdx == 0) {
-                intriParams.reluEn = self_->ctx.convTilingData->reluMode0 != 0;
+    intriParams.nSize = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+    intriParams.mSize = AlignB(ubInfo->realWUb, BLOCK_L0_M);
+    intriParams.srcStride = self_->ctx.currentML0Align;
+    if constexpr (format == CO2Layout::ROW_MAJOR) {
+        intriParams.dstStride = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+        intriParams.params.dstNdStride = 0;
+        intriParams.params.srcNdStride = 0;
+        intriParams.params.ndNum = 1;
+    } else if constexpr (format == CO2Layout::COLUMN_MAJOR) {
+        intriParams.dstStride = AlignB(ubInfo->realWUb, BLOCK_L0_M);
+        ;
+        intriParams.params.dnNum = 1;
+        intriParams.params.dstDnMatrixStride = 0;
+        intriParams.params.srcNzMatrixStride = 0;
+        intriParams.params.srcNzC0Stride = 1;
+    }
+    SetBaseParams<format>(intriParams);
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+template <CO2Layout format>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::SetBaseParams(
+    FixpipeParamsArch3510<format>& intriParams)
+{
+    intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
+    if (self_->ctx.convTilingData->hasScale == 0) {
+        intriParams.deqScalar = DEQ_SCALAR_ONE;
+    }
+    if constexpr (Intf::isExtendConv2d) {
+        if constexpr (FixpipeIdx == 0) {
+            intriParams.reluEn = self_->ctx.convTilingData->reluMode0 != 0;
 #if defined(__DAV_35_FAMILY__)
-                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode0);
-                if (self_->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
-                    intriParams.reluScalar = self_->ctx.preReluScalar0;
-                } else if (self_->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
-                    intriParams.vectorRelu = self_->ctx.reluWeightL1[GetExtendConv2dScaleL1Addr()].GetPhyAddr();
-                }
-#endif
-                intriParams.deqScalar = self_->ctx.deqScalar0;
-            } else {
-                intriParams.reluEn = self_->ctx.convTilingData->reluMode1 != 0;
-#if defined(__DAV_35_FAMILY__)
-                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode1);
-                if (self_->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
-                    intriParams.reluScalar = self_->ctx.preReluScalar1;
-                } else if (self_->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
-                    intriParams
-                        .vectorRelu = self_->ctx
-                                          .reluWeightL1[GetExtendConv2dScaleL1Addr() + self_->ctx.reluWeight1L1offset]
-                                          .GetPhyAddr();
-                }
-#endif
-                intriParams.deqScalar = self_->ctx.deqScalar1;
+            intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode0);
+            if (self_->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                intriParams.reluScalar = self_->ctx.preReluScalar0;
+            } else if (self_->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                intriParams.vectorRelu = self_->ctx.reluWeightL1[GetExtendConv2dScaleL1Addr()].GetPhyAddr();
             }
-        }
-        if constexpr (FixpipeIdx == 1) {
-            intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
+#endif
+            intriParams.deqScalar = self_->ctx.deqScalar0;
         } else {
-            if constexpr (Intf::isExtendConv2d) {
-                if (self_->ctx.convTilingData->dualOutput) {
-                    intriParams.unitFlag = UNIT_FLAG_ENABLE_ONLY;
-                } else {
-                    intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-                }
+            intriParams.reluEn = self_->ctx.convTilingData->reluMode1 != 0;
+#if defined(__DAV_35_FAMILY__)
+            intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode1);
+            if (self_->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                intriParams.reluScalar = self_->ctx.preReluScalar1;
+            } else if (self_->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                intriParams
+                    .vectorRelu = self_->ctx.reluWeightL1[GetExtendConv2dScaleL1Addr() + self_->ctx.reluWeight1L1offset]
+                                      .GetPhyAddr();
+            }
+#endif
+            intriParams.deqScalar = self_->ctx.deqScalar1;
+        }
+    }
+    if constexpr (FixpipeIdx == 1) {
+        intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
+    } else {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self_->ctx.convTilingData->dualOutput) {
+                intriParams.unitFlag = UNIT_FLAG_ENABLE_ONLY;
             } else {
                 intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
             }
+        } else {
+            intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
         }
     }
+}
 
-    __aicore__ inline uint64_t CalcFixpipeOffset()
-    {
-        uint64_t offset = self_->ctx.batchIter * self_->ctx.outputOneBatchSize;
-        uint64_t offsetH = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 +
-                           self_->ctx.hoL0Iter * self_->ctx.convTilingData->hoL0;
-        uint64_t offsetW;
-        if (self_->ctx.woL1SmallTail == 0) {
-            offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+__aicore__ inline uint64_t CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::CalcFixpipeOffset()
+{
+    uint64_t offset = self_->ctx.batchIter * self_->ctx.outputOneBatchSize;
+    uint64_t offsetH = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 +
+                       self_->ctx.hoL0Iter * self_->ctx.convTilingData->hoL0;
+    uint64_t offsetW;
+    if (self_->ctx.woL1SmallTail == 0) {
+        offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+                  self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
+    } else {
+        if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
+            offsetW = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) +
                       self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
         } else {
-            if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
-                offsetW = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) +
-                          self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
-            } else {
-                offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
-                          self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
-            }
-        }
-
-        uint64_t offsetCout = 0U;
-        if constexpr (!Intf::isKL1NL0FullLoad) {
-            offsetCout = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-                         self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
-        }
-        if constexpr (Intf::groupOptPreloadFlag) {
-            offsetCout += self_->ctx.groupOptIter * self_->ctx.convTilingData->orgCo /
-                          self_->ctx.convTilingData->groups * self_->ctx.convTilingData->enlarge;
-        }
-        uint64_t effectiveCout = ConvGetEffectiveCout<Intf::formatOutput, ConvCoutFallback::ORG_CO>(
-            self_->ctx.convTilingData);
-
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
-            offset += offsetCout * self_->ctx.convTilingData->orgDo * valueHoWo_ + self_->ctx.dOutIter * valueHoWo_ +
-                      offsetH * self_->ctx.convTilingData->orgWo + offsetW;
-        } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC) {
-            offset += self_->ctx.dOutIter * valueHoWo_ * effectiveCout +
-                      offsetH * self_->ctx.convTilingData->orgWo * effectiveCout + offsetW * effectiveCout + offsetCout;
-        } else if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
-            offset += offsetCout * valueHoWo_ + offsetH * self_->ctx.convTilingData->orgWo + offsetW;
-        } else {
-            offset += offsetH * self_->ctx.convTilingData->orgWo * effectiveCout + offsetW * effectiveCout + offsetCout;
-        }
-
-        return offset;
-    }
-
-    template <template <typename> class TensorTypeT, const FixpipeConfig& config>
-    __aicore__ inline void ExtendConv2DFixpipe(const TensorTypeT<OutputT>& output,
-                                               FixpipeParamsArch3510<config.format>& intriParams, uint64_t offset)
-    {
-        if (self_->ctx.enableVectorQuant) {
-            if constexpr (FixpipeIdx == 0) {
-                Fixpipe<OutputT, typename Intf::L0cT, config>(
-                    output[offset], self_->ctx.cl0, self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr()], intriParams);
-            } else {
-                Fixpipe<OutputT, typename Intf::L0cT, config>(
-                    output[offset], self_->ctx.cl0,
-                    self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr() + self_->ctx.scale1L1offset], intriParams);
-            }
-        } else {
-            Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
+            offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 +
+                      self_->ctx.woL0Iter * self_->ctx.convTilingData->woL0;
         }
     }
 
-    __aicore__ inline uint64_t GetExtendConv2dScaleL1Addr()
-    {
-        if constexpr (Intf::isKL1NL0FullLoad) {
-            return 0;
+    uint64_t offsetCout = 0U;
+    if constexpr (!Intf::isKL1NL0FullLoad) {
+        offsetCout = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+                     self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
+    }
+    if constexpr (Intf::groupOptPreloadFlag) {
+        offsetCout += self_->ctx.groupOptIter * self_->ctx.convTilingData->orgCo / self_->ctx.convTilingData->groups *
+                      self_->ctx.convTilingData->enlarge;
+    }
+    uint64_t effectiveCout = ConvGetEffectiveCout<Intf::formatOutput, ConvCoutFallback::ORG_CO>(
+        self_->ctx.convTilingData);
+
+    if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        offset += offsetCout * self_->ctx.convTilingData->orgDo * valueHoWo_ + self_->ctx.dOutIter * valueHoWo_ +
+                  offsetH * self_->ctx.convTilingData->orgWo + offsetW;
+    } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC) {
+        offset += self_->ctx.dOutIter * valueHoWo_ * effectiveCout +
+                  offsetH * self_->ctx.convTilingData->orgWo * effectiveCout + offsetW * effectiveCout + offsetCout;
+    } else if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        offset += offsetCout * valueHoWo_ + offsetH * self_->ctx.convTilingData->orgWo + offsetW;
+    } else {
+        offset += offsetH * self_->ctx.convTilingData->orgWo * effectiveCout + offsetW * effectiveCout + offsetCout;
+    }
+
+    return offset;
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+template <template <typename> class TensorTypeT, const FixpipeConfig& config>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::ExtendConv2DFixpipe(
+    const TensorTypeT<OutputT>& output, FixpipeParamsArch3510<config.format>& intriParams, uint64_t offset)
+{
+    if (self_->ctx.enableVectorQuant) {
+        if constexpr (FixpipeIdx == 0) {
+            Fixpipe<OutputT, typename Intf::L0cT, config>(
+                output[offset], self_->ctx.cl0, self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr()], intriParams);
+        } else {
+            Fixpipe<OutputT, typename Intf::L0cT, config>(
+                output[offset], self_->ctx.cl0,
+                self_->ctx.scaleL1[GetExtendConv2dScaleL1Addr() + self_->ctx.scale1L1offset], intriParams);
         }
-        if (self_->ctx.convTilingData->fixpParamsFullLoadFlag) {
-            return self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-                   self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
-        }
+    } else {
+        Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
+    }
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+__aicore__ inline uint64_t CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::GetExtendConv2dScaleL1Addr()
+{
+    if constexpr (Intf::isKL1NL0FullLoad) {
         return 0;
     }
+    if (self_->ctx.convTilingData->fixpParamsFullLoadFlag) {
+        return self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+               self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
+    }
+    return 0;
+}
 
-    template <template <typename> class TensorTypeT, const FixpipeConfig& config>
-    __aicore__ inline void CopyOut(const TensorTypeT<OutputT>& output, CopyUbInfo* ubInfo = nullptr)
-    {
-        uint64_t offset = 0;
-        if constexpr (Intf::posOutput == TPosition::GM) {
-            offset = CalcFixpipeOffset();
-        }
+template <class Intf, typename OutputT, uint64_t FixpipeIdx>
+template <template <typename> class TensorTypeT, const FixpipeConfig& config>
+__aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::CopyOut(const TensorTypeT<OutputT>& output,
+                                                                              CopyUbInfo* ubInfo)
+{
+    uint64_t offset = 0;
+    if constexpr (Intf::posOutput == TPosition::GM) {
+        offset = CalcFixpipeOffset();
+    }
 
-        FixpipeParamsArch3510<config.format> intriParams;
+    FixpipeParamsArch3510<config.format> intriParams;
 #if defined(__DAV_35_FAMILY__)
-        if constexpr (Intf::isFixedPoint) {
-            intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
-        }
+    if constexpr (Intf::isFixedPoint) {
+        intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
+    }
 #endif
-        if constexpr (Intf::posOutput == TPosition::VECCALC) {
-            SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
-            if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
-                return;
-            }
-        } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
-            SetFixpipeIntriParamsHWC(intriParams);
-        } else {
-            SetFixpipeIntriParams(intriParams);
+    if constexpr (Intf::posOutput == TPosition::VECCALC) {
+        SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
+        if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+            return;
         }
+    } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
+        SetFixpipeIntriParamsHWC(intriParams);
+    } else {
+        SetFixpipeIntriParams(intriParams);
+    }
 
-        if constexpr (Intf::isExtendConv2d) {
-            ExtendConv2DFixpipe<TensorTypeT, config>(output, intriParams, offset);
-        } else if constexpr (Intf::isQuantScene) {
-            if (self_->ctx.convTilingData->hasScale != 0) {
-                Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0,
-                                                              self_->ctx.scaleL1[GetScaleL1Addr()], intriParams);
-            } else {
-                Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
-            }
+    if constexpr (Intf::isExtendConv2d) {
+        ExtendConv2DFixpipe<TensorTypeT, config>(output, intriParams, offset);
+    } else if constexpr (Intf::isQuantScene) {
+        if (self_->ctx.convTilingData->hasScale != 0) {
+            Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0,
+                                                          self_->ctx.scaleL1[GetScaleL1Addr()], intriParams);
         } else {
             Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
         }
+    } else {
+        Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);
     }
-
-private:
-    Intf* self_ = nullptr;
-    uint64_t valueHoWo_ = 0;
-    uint64_t currentML0_ = 0;
-    uint64_t currentNL0_ = 0;
-
-    __aicore__ inline uint64_t GetScaleL1Addr()
-    {
-        if constexpr (Intf::isKL1NL0FullLoad) {
-            return 0;
-        }
-        if constexpr (Intf::isQuantScene) {
-            if (self_->ctx.convTilingData->hasScale != 0 && self_->ctx.convTilingData->fixpParamsFullLoadFlag) {
-                return self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-                       self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
-            }
-        }
-        return 0;
-    }
-};
+}
 
 }; // namespace ConvFunc
 

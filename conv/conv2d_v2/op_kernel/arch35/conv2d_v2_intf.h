@@ -71,17 +71,23 @@ struct Conv2dIntf {
     constexpr static bool hasML0IterFlag = !(ConvParam::l0PingPong == 0 || ConvParam::fmapTiling == 1) ||
                                            !(ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV));
     constexpr static bool kl0FullLoadFlag = (ConvParam::l0PingPong == 1 || ConvParam::l0PingPong == 2) &&
+                                            ConvParam::convToL1 !=
+                                                static_cast<int8_t>(ConvToL1::OPEN_WEIGHT_L1_WITH_CUT_KERNEL) &&
                                             ConvParam::groupType != static_cast<int8_t>(ConvGroupType::ORI_GROUP_CONV);
     constexpr static bool preFusionFlag = ConvParam::fmapDataSrc == 1;
+    constexpr static int8_t convToL1Mode = ConvParam::convToL1;
 
     constexpr static bool kPreLoadAFlag = ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::AL1_OPEN) &&
-                                          ConvParam::weightTiling == 0;
+                                          ConvParam::weightTiling == 0 &&
+                                          ConvParam::convToL1 == static_cast<int8_t>(ConvToL1::CLOSE);
     constexpr static bool kPreLoadBFlag = ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::BL1_OPEN) &&
-                                          ConvParam::fmapTiling == 0;
+                                          ConvParam::fmapTiling == 0 &&
+                                          ConvParam::convToL1 == static_cast<int8_t>(ConvToL1::CLOSE);
     constexpr static bool kPreLoadABFlag = ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN) &&
-                                           ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
+                                           ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV) &&
+                                           ConvParam::convToL1 == static_cast<int8_t>(ConvToL1::CLOSE);
     constexpr static bool kPreLoadFlag = kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
-#if defined(__DAV_35_FAMILY__)
+#if defined(__DAV_35_FAMILY__) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5162)
     constexpr static bool groupOptPreloadFlag = false;
 #else
     constexpr static bool groupOptPreloadFlag = ConvParam::groupType ==

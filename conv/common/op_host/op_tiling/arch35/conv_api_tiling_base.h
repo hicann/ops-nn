@@ -96,6 +96,7 @@ struct L0TilingRes {
     uint64_t kL0 = 0;
     uint64_t nL0 = 0;
     uint64_t mL0 = 0;
+    uint64_t khConv = 0;
 };
 
 struct UbTilingRes {

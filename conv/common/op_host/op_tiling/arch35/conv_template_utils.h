@@ -253,6 +253,12 @@ constexpr size_t NDHWC_H_IDX = 2;
 constexpr size_t NDHWC_W_IDX = 3;
 constexpr size_t NDHWC_C_IDX = 4;
 
+// convToL1
+constexpr uint64_t CONV_TO_L1_DISABLE = 0;
+constexpr uint64_t CONV_TO_L1_ENABLE_WEIGHT_BY_PASS = 1;
+constexpr uint64_t CONV_TO_L1_ENABLE_L1 = 2;
+constexpr uint64_t CONV_TO_L1_ENABLE_TILING_KH = 3;
+
 // Fix shift val，A16W8：29位，A16W16: 58位
 constexpr uint32_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
 constexpr uint32_t FIX_SHIFT_VAL_LEN_A16W8 = 29;
@@ -452,6 +458,7 @@ struct ConvTilingKeyPara {
     uint64_t smallWeight = 0;
     uint64_t smallKernel = 0;
     uint64_t bigKernel = 0;
+    uint64_t convToL1 = 0;
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {

@@ -144,6 +144,7 @@ struct TilingParam {
     uint32_t cout;
     uint32_t kh;
     uint32_t kw;
+    uint32_t khConv;
     uint32_t batchDim;
     uint32_t groupDim;
     uint32_t nDim;

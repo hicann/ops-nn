@@ -391,13 +391,22 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendConv2dReluWeightAndClipValue(const 
     // get enable relu and input ptr
     auto enableReluPtr = context_->GetAttrs()->GetBool(enabelReluInputIdx);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, enableReluPtr);
+
+    auto clipValuePtr = context_->GetOptionalInputShape(clipValueInputIdx);
+    if (GetConvToL1Mode() != CONV_TO_L1_DISABLE && clipValuePtr != nullptr) {
+        if (outputIdx == 0) {
+            fixpipeInfo_.clipMode0 = static_cast<uint8_t>(ClipMode::SCALARCLIPRELU);
+        } else {
+            fixpipeInfo_.clipMode1 = static_cast<uint8_t>(ClipMode::SCALARCLIPRELU);
+        }
+    }
+
     if (!*enableReluPtr) {
         OP_LOGD(context_->GetNodeType(), "AscendC: reluMode is NORELU.");
         return ge::GRAPH_SUCCESS;
     }
 
     // default is nullptr
-    auto clipValuePtr = context_->GetOptionalInputShape(clipValueInputIdx);
     auto reluWeightShapePtr = context_->GetOptionalInputShape(reluWeightInputIdx);
     if (reluWeightShapePtr == nullptr) {
         reluMode = static_cast<uint8_t>(ReluMode::NORMALRELU);

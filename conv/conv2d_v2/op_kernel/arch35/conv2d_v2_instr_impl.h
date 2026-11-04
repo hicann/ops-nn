@@ -307,6 +307,15 @@ public:
             LoadAl1DataHWC(kAL1Iter, batchIter, groupOptIter);
         }
     }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+    __aicore__ inline void UpdatePaddingHiWiAL1(IterateParam& iterParam);
+    __aicore__ inline void UpdatePadIdxAL1(IterateParam& iterParam, uint64_t woAL1Iter, uint64_t hoAL1Iter);
+    __aicore__ inline void UpdateHiWiAL1(IterateParam& iterParam);
+    __aicore__ inline void SetDn2NzIntriParams(IterateParam& iterParam, Dn2NzParams& intriParams, uint64_t kAL1Iter);
+    __aicore__ inline void LoadAl1Data(IterateParam& iterParam, uint64_t kAL1Iter, uint64_t batchIter,
+                                       uint64_t groupOptIter);
+    __aicore__ inline void LoadAL1(IterateParam& iterParam);
+#endif
 
 private:
     Intf* self_ = nullptr;

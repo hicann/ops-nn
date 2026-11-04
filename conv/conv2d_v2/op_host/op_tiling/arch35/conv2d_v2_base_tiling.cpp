@@ -24,6 +24,10 @@
 #include "conv/common/op_kernel/arch35/conv_tilingkey.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_base.h"
 
+constexpr uint64_t L1_FAKE_SIZE_5162 = 524288;
+constexpr uint64_t L0A_FAKE_SIZE_5162 = 786432;
+constexpr uint64_t L0C_FAKE_SIZE_5162 = 262144;
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
@@ -53,6 +57,7 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::FB, opInfo_->fbSize);
         tilingCache.SetSocVersion(opInfo_->npuArch, *opInfo_);
     }
+    SetArch5162BufferSize();
     apiInputPlatformInfo.aivPerAic = opInfo_->aivNum / opInfo_->aicoreNum;
     SetApiInputPlatformInfo();
     return ge::GRAPH_SUCCESS;
@@ -239,7 +244,7 @@ void Conv2dBaseTiling::GetDescInfo()
         descInfo_.biasFormat = static_cast<ge::Format>(
             GetPrimaryFormat(context_->GetOptionalInputDesc(biasIndex)->GetStorageFormat()));
     }
-    if (opInfo_->isCubeVectorFuse) {
+    if (opInfo_->isCubeVectorFuse || IsArch5162(opInfo_->npuArch)) {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
     } else {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
@@ -255,6 +260,10 @@ bool Conv2dBaseTiling::IsEnableC04()
 {
     if (opInfo_->isCubeVectorFuse) {
         return descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
+    }
+
+    if (IsArch5162(opInfo_->npuArch)) {
+        return false;
     }
 
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG || descInfo_.weightFormat == ge::Format::FORMAT_NHWC) {
@@ -381,6 +390,24 @@ ge::graphStatus Conv2dBaseTiling::ParseAndCheckInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+void Conv2dBaseTiling::SetArch5162BufferSize()
+{
+    if (IsArch5162(opInfo_->npuArch)) {
+        opInfo_->l1Size = L1_FAKE_SIZE_5162;
+        opInfo_->l0aSize = L0A_FAKE_SIZE_5162;
+        opInfo_->l0cSize = L0C_FAKE_SIZE_5162;
+    }
+}
+
+void Conv2dBaseTiling::RestoreKhConvTiling(uint64_t khConv)
+{
+    tilingData_.set_khConv(khConv);
+    bool isWeightBypass = tilingData_.get_nBL1() == tilingData_.get_nL0() &&
+                          tilingData_.get_kBL1() == tilingData_.get_kL0() && khConv == tilingData_.get_kernelH();
+    conv2dApiTiling_.SetIsWeightBypassL1(isWeightBypass);
+    conv2dApiTiling_.SetIsTilingKh(khConv < tilingData_.get_kernelH());
+}
+
 ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
 {
     if (GetAndCheckInfo() != ge::GRAPH_SUCCESS) {
@@ -433,8 +460,10 @@ ge::graphStatus Conv2dBaseTiling::CheckNullPtr()
         auto clipValue0Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_0_INDEX);
         auto clipValue1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_1_INDEX);
         OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, offsetWDesc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue0Desc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue1Desc);
+        if (!IsArch5162(opInfo_->npuArch)) {
+            OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue0Desc);
+            OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue1Desc);
+        }
     }
     return ge::GRAPH_SUCCESS;
 }

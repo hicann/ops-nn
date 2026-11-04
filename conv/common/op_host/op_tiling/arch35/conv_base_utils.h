@@ -29,6 +29,7 @@ inline bool IsCubeVectorFuseSoc(fe::PlatFormInfos& platformInfo)
 const std::string NPU_ARCH_KEY_3510 = "3510";
 const std::string NPU_ARCH_KEY_FUSE = "FUSE";
 const std::string NPU_ARCH_KEY_9201 = "9201";
+const std::string NPU_ARCH_KEY_5162 = "5162";
 
 inline const std::string& GetNpuArchKey(fe::PlatFormInfos& platformInfo)
 {
@@ -147,6 +148,10 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_9201 = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
+const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_5162 = {
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_FRACTAL_Z, ge::Format::FORMAT_NCHW}};
+
 const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}};
 
@@ -210,11 +215,16 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_9201
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
+const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_5162 = {
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_FRACTAL_Z, ge::Format::FORMAT_NCHW}};
+
 // arch-keyed format support list maps (extend by adding new arch keys)
 const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV2D_FORMAT_LIST_MAP = {
     {NPU_ARCH_KEY_3510, SUPPORT_CONV2D_FORMAT_LIST},
     {NPU_ARCH_KEY_FUSE, SUPPORT_CONV2D_FORMAT_LIST_FUSE},
-    {NPU_ARCH_KEY_9201, SUPPORT_CONV2D_FORMAT_LIST_9201}};
+    {NPU_ARCH_KEY_9201, SUPPORT_CONV2D_FORMAT_LIST_9201},
+    {NPU_ARCH_KEY_5162, SUPPORT_CONV2D_FORMAT_LIST_5162}};
 
 const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV3D_FORMAT_LIST_MAP = {
     {NPU_ARCH_KEY_3510, SUPPORT_CONV3D_FORMAT_LIST}, {NPU_ARCH_KEY_9201, SUPPORT_CONV3D_FORMAT_LIST_9201}};
@@ -228,7 +238,8 @@ const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_QUANT_
 const std::map<std::string, std::vector<std::vector<ge::Format>>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP = {
     {NPU_ARCH_KEY_3510, EXTENDCONV2D_SUPPORT_FORMAT_LIST},
     {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORT_FORMAT_LIST_FUSE},
-    {NPU_ARCH_KEY_9201, EXTENDCONV2D_SUPPORT_FORMAT_LIST_9201}};
+    {NPU_ARCH_KEY_9201, EXTENDCONV2D_SUPPORT_FORMAT_LIST_9201},
+    {NPU_ARCH_KEY_5162, EXTENDCONV2D_SUPPORT_FORMAT_LIST_5162}};
 
 const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV2D_DEFAULT_FORMAT_LIST_MAP = {
     {NPU_ARCH_KEY_3510, SUPPORT_CONV2D_DEFAULT_FORMAT_LIST},

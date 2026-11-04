@@ -441,6 +441,12 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitFixpipeBuffer
                                 extendParams->reluWeight0 +
                                 reluWeightStartAddr * sizeof(typename CONV::RELU_WEIGHT_T)));
                     }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+                    if (convTilingData->clipMode0 == static_cast<uint8_t>(ClipMode::SCALARCLIPRELU)) {
+                        convOps->fixpipeParams.clipValue0.SetGlobalBuffer(
+                            reinterpret_cast<__gm__ typename CONV::CLIP_VALUE_0_T*>(extendParams->clipValue0));
+                    }
+#endif
                     if (convTilingData->dualOutput) {
                         if (convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                             convOps->fixpipeParams.scale1.SetGlobalBuffer(

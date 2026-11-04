@@ -75,6 +75,10 @@ public:
     uint64_t CalcC04UbLoadMaxNsize(const ConvC04Info& c04Info) const;
     void GetWeightUBTiling(ConvWeightUbTransParams& params);
     void GetDmaUbTiling(ConvDmaParams& params);
+    bool GetIsWeightBypassL1() const { return isWeightBypassL1; }
+    bool GetIsTilingKh() const { return isTilingKh; }
+    void SetIsWeightBypassL1(bool flag) { isWeightBypassL1 = flag; }
+    void SetIsTilingKh(bool flag) { isTilingKh = flag; }
 
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
@@ -109,6 +113,9 @@ private:
     bool CheckBasicBlockInfoPhase1(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const override;
     bool CheckBasicBlockInfoPhase2(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) override;
     bool CheckL1SizeLimitsKernelFullLoad(bool isC04);
+    void SetIsWeightBypassL1();
+    bool isWeightBypassL1 = false;
+    bool isTilingKh = false;
 };
 } // namespace conv_tiling
 

@@ -194,7 +194,7 @@ ge::graphStatus Conv2dBaseTiling::GetTilingSplitMode()
                               oriShapeAttrInfo_.oriFmapW <= ENABLE_MMODE_LOAD3D_W_SIZE_LIMIT;
     bool tryMmodeCondition2 = featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG &&
                               orgWo <= ENABLE_MMODE_CONV1D_WO_LIMIT_128;
-    if (!flagHWCheckFirst && (tryMmodeCondition1 || tryMmodeCondition2) &&
+    if (!IsArch5162(opInfo_->npuArch) && !flagHWCheckFirst && (tryMmodeCondition1 || tryMmodeCondition2) &&
         convBase_.CheckL1SizeLimitsInMSplitMode() == ge::GRAPH_SUCCESS) { // M split mode check, conv1d/dma skip M split
         flagInfo_.mSplitModeFlag = true;
         auto strategy = std::make_shared<conv_tiling::Conv2DBasicBlockStrategy>();

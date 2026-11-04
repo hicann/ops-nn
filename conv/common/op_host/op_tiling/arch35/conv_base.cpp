@@ -380,6 +380,8 @@ void ConvBase::GetSupportedFormats(bool is2dFlag, std::stringstream& ss,
         archKey = NPU_ARCH_KEY_3510;
     } else if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
         archKey = NPU_ARCH_KEY_9201;
+    } else if (npuArch == Ops::Base::DAV_5162) {
+        archKey = NPU_ARCH_KEY_5162;
     }
 
     if (!archKey.empty()) {

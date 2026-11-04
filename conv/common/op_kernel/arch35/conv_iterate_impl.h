@@ -16,94 +16,13 @@
 #ifndef CONV_ITERATE_IMPL_H
 #define CONV_ITERATE_IMPL_H
 
-#include "conv_config.h"
-#include "conv_framework_util_arch35.h"
-#include "conv_iterate_base_impl.h"
-#include "conv_iterate_hw_mode_impl.h"
-#include "conv_iterate_m_mode_impl.h"
-#include "conv_util.h"
-#if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
-#include "../../conv3d_v2/arch35/conv3d_v2_dequant_impl.h"
-#endif
+#include "conv_iterate_impl_declare.h"
 
 namespace ConvFunc {
 using namespace AscendC;
 using namespace conv;
 
-CONV_DECLARE_REG_IMPL(Iterate);
 CONV_DECLARE_REG_IMPL(PreFusionProcess);
-
-template <class Intf, uint32_t ImplType>
-struct Iterate {
-    template <bool sync = true>
-    static __aicore__ inline bool call(Intf* self, bool enPartialSum = false, bool* updateL1Flag = nullptr)
-    {
-        if ASCEND_IS_AIC_CONV {
-            if constexpr (Intf::preFusionFlag) {
-                self->ctx.updateL1Flag = false;
-            }
-            if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-                bool ret = IterateImplMMode(self, enPartialSum);
-                if constexpr (Intf::preFusionFlag) {
-                    if (updateL1Flag != nullptr) {
-                        *updateL1Flag = self->ctx.updateL1Flag;
-                    }
-                }
-                return ret;
-            } else {
-                return IterateImplHWMode(self, enPartialSum);
-            }
-        }
-        if ASCEND_IS_AIV_CONV {
-            if constexpr (Intf::groupOptPreloadFlag) {
-                return OptGroupPreloadVecImpl<Intf>(self);
-            } else if constexpr (Intf::groupOptNDFlag) {
-                return OptGroupVecImpl<Intf>(self);
-            } else if constexpr (Intf::c04NDFlag) {
-                return self->ctx.c04ProcessTools.C04VecImpl(self);
-            } else if constexpr (Intf::weightUbTrans) {
-                return self->ctx.weightUbProcessTools.WeightUbTransVecImpl(self);
-            } else if constexpr (Intf::isDmaFlag) {
-                return self->ctx.dmaProcessTools.DmaVecImpl(self);
-            } else if constexpr (Intf::isDeQuantFlag) {
-#if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
-                return Conv3dFunc::DeQuantVecImpl<Intf>(self);
-#endif
-            }
-        }
-        return false;
-    }
-
-    static __aicore__ inline bool IterateImplHWMode(Intf* self, bool enPartialSum);
-    static __aicore__ inline bool IterateImplMMode(Intf* self, bool enPartialSum);
-    static __aicore__ inline void IterateK(Intf* self);
-    static __aicore__ inline void IterateBiasScale(Intf* self);
-    static __aicore__ inline void SetInitialMmadParams(Intf* self, MmadParams& mmadParams, const uint64_t& currentKL0);
-    static __aicore__ inline void SetFinalMmadParams(Intf* self, MmadParams& mmadParams, const uint64_t& currentKL0);
-    static __aicore__ inline void ReduceK(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline void ReduceOneK(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline void ReduceKPreloadFmapIter(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                         const uint64_t& kIter, const uint64_t& multiKAL1);
-    static __aicore__ inline void ReduceKPreloadWeightIter(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                           const uint64_t& kIter, const uint64_t& multiKBL1);
-    static __aicore__ inline void ReduceKPreloadFmapIter(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                         bool ddr2l0LoopKExactDivideMultiKAL1, const uint64_t& kIter,
-                                                         const uint64_t& multiKAL1);
-    static __aicore__ inline void ReduceKPreloadWeightIter(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                           bool ddr2l0LoopKExactDivideMultiKBL1, const uint64_t& kIter,
-                                                           const uint64_t& multiKBL1);
-    static __aicore__ inline void ReduceKPreload(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline void ReduceKFmapPreload(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline void ReduceGroupOptFmapPreload(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline void UpdateNextGroupOptIters(Intf* self, TempIters& tempIters);
-    static __aicore__ inline void ReduceKPreloadWithWeightFullloadL0(Intf* self, MmadParams& mmadParams);
-    static __aicore__ inline bool UpdateItersByFmap(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                    const uint64_t& kIter, const uint64_t& multiKAL1);
-    static __aicore__ inline bool UpdateItersByWeight(Intf* self, TempIters& tempIters, bool updateIterByFmapTag,
-                                                      const uint64_t& kIter, const uint64_t& multiKBL1);
-    static __aicore__ inline bool UpdateCommonIters(Intf* self, TempIters& tempIters);
-    static __aicore__ inline void ConfigUpdateL1Flag(Intf* self);
-};
 
 template <class Intf, uint32_t ImplType>
 struct PreFusionProcess {
@@ -132,6 +51,46 @@ struct PreFusionProcess {
         self->ctx.eventIdMte1ToMte3 = eventIdMte1ToMte3;
     }
 };
+
+template <class Intf, uint32_t ImplType>
+template <bool sync>
+__aicore__ bool Iterate<Intf, ImplType>::call(Intf* self, bool enPartialSum, bool* updateL1Flag)
+{
+    if ASCEND_IS_AIC_CONV {
+        if constexpr (Intf::preFusionFlag) {
+            self->ctx.updateL1Flag = false;
+        }
+        if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
+            bool ret = IterateImplMMode(self, enPartialSum);
+            if constexpr (Intf::preFusionFlag) {
+                if (updateL1Flag != nullptr) {
+                    *updateL1Flag = self->ctx.updateL1Flag;
+                }
+            }
+            return ret;
+        } else {
+            return IterateImplHWMode(self, enPartialSum);
+        }
+    }
+    if ASCEND_IS_AIV_CONV {
+        if constexpr (Intf::groupOptPreloadFlag) {
+            return OptGroupPreloadVecImpl<Intf>(self);
+        } else if constexpr (Intf::groupOptNDFlag) {
+            return OptGroupVecImpl<Intf>(self);
+        } else if constexpr (Intf::c04NDFlag) {
+            return self->ctx.c04ProcessTools.C04VecImpl(self);
+        } else if constexpr (Intf::weightUbTrans) {
+            return self->ctx.weightUbProcessTools.WeightUbTransVecImpl(self);
+        } else if constexpr (Intf::isDmaFlag) {
+            return self->ctx.dmaProcessTools.DmaVecImpl(self);
+        } else if constexpr (Intf::isDeQuantFlag) {
+#if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
+            return Conv3dFunc::DeQuantVecImpl<Intf>(self);
+#endif
+        }
+    }
+    return false;
+}
 
 template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceOneK(Intf* self, MmadParams& mmadParams)

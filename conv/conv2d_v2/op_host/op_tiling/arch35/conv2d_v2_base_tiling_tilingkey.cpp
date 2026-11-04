@@ -171,7 +171,7 @@ uint64_t Conv2dBaseTiling::GetOutputOrderVal()
 
 uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 {
-    if (IsSmallKernelBlocked()) {
+    if (IsSmallKernelBlocked() || IsArch5162(opInfo_->npuArch)) {
         return CONV_NOT_SMALL_KERNEL;
     }
 
@@ -387,6 +387,18 @@ uint64_t Conv2dBaseTiling::GetNoPad() const
     return CONV_HAS_PAD;
 }
 
+uint64_t Conv2dBaseTiling::GetConvToL1Mode() const
+{
+    if (!conv2dApiTiling_.GetIsWeightBypassL1() && conv2dApiTiling_.GetIsTilingKh()) {
+        return CONV_TO_L1_ENABLE_TILING_KH;
+    }
+
+    if (!conv2dApiTiling_.GetIsWeightBypassL1()) {
+        return CONV_TO_L1_ENABLE_L1;
+    }
+    return CONV_TO_L1_ENABLE_WEIGHT_BY_PASS;
+}
+
 ge::graphStatus Conv2dBaseTiling::SetTilingKey()
 {
     tilingKeyPara_.groupType = GetGroupTypeVal();
@@ -403,14 +415,15 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
                                     flagInfo_.isASWT ?
                                 CONV_ASWT_ENABLE :
                                 CONV_ASWT_DISABLE;
-    if (IsWeightNZFormat(descInfo_.weightFormat)) {
+    if (IsWeightNZFormat(descInfo_.weightFormat) && !IsArch5162(opInfo_->npuArch)) {
         tilingKeyPara_.batchOne = static_cast<uint64_t>(tilingData_.get_singleCoreBatch() == 1);
         tilingKeyPara_.noPad = GetNoPad();
         tilingKeyPara_.smallWeight = GetSmallWeightVal();
     }
     tilingKeyPara_.smallKernel = GetSmallKernelVal();
     ReSetTilingKeyPara();
-    if (IsWeightNZFormat(descInfo_.weightFormat)) {
+    tilingKeyPara_.convToL1 = IsArch5162(opInfo_->npuArch) ? GetConvToL1Mode() : CONV_TO_L1_DISABLE;
+    if (IsWeightNZFormat(descInfo_.weightFormat) && !IsArch5162(opInfo_->npuArch)) {
         tilingKey_ = GET_TPL_TILING_KEY(
             tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong, tilingKeyPara_.l0PingPong,
             tilingKeyPara_.outputOrder, tilingKeyPara_.groupType, tilingKeyPara_.enableSmallChannel,
@@ -422,7 +435,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
             tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong, tilingKeyPara_.l0PingPong,
             tilingKeyPara_.outputOrder, tilingKeyPara_.groupType, tilingKeyPara_.enableSmallChannel,
             tilingKeyPara_.weightUbTrans, tilingKeyPara_.fmapCppyMode, tilingKeyPara_.innerBatch, 0, 0, 0,
-            tilingKeyPara_.smallKernel, tilingKeyPara_.isAswt);
+            tilingKeyPara_.smallKernel, tilingKeyPara_.isAswt, tilingKeyPara_.convToL1);
     }
 
     OP_LOGD(paramInfo_.nodeType.c_str(), "AscendC: c04 mode status is: %d.", flagInfo_.enableC04Flag);
@@ -434,7 +447,8 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
        << "], weightUbTrans[" << tilingKeyPara_.weightUbTrans << "], fmapCppyMode[" << tilingKeyPara_.fmapCppyMode
        << "], innerBatch[" << tilingKeyPara_.innerBatch << "], batchOne[" << tilingKeyPara_.batchOne << "], noPad["
        << tilingKeyPara_.noPad << "], smallWeight[" << tilingKeyPara_.smallWeight << "], smallKernel["
-       << tilingKeyPara_.smallKernel << "], isAswt[" << tilingKeyPara_.isAswt << "].";
+       << tilingKeyPara_.smallKernel << "], isAswt[" << tilingKeyPara_.isAswt << "], convToL1["
+       << tilingKeyPara_.convToL1 << "].";
     OP_LOGD(paramInfo_.nodeType.c_str(), "%s", ss.str().c_str());
     return ge::GRAPH_SUCCESS;
 }

@@ -83,6 +83,10 @@ public:
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::BiasT> loadBiasL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::ScaleT> loadScaleL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::ReluWeightT> loadReluWeightL1Ins;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+        ConvFunc::LoadChannelWiseFBTools<Intf, typename Config::ScaleT> loadScaleFBIns;
+        ConvFunc::LoadChannelWiseFBTools<Intf, typename Config::ReluWeightT> loadReluWeightFBIns;
+#endif
         LoadAL0Tools loadAL0Ins;
         ConvFunc::LoadBL0Tools<Intf> loadBL0Ins;
         ConvFunc::LoadBiasBtTools<Intf, typename Config::BiasT, typename Config::L0cT> loadBiasBTIns;

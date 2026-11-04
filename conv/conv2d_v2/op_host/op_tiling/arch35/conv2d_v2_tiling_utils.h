@@ -122,6 +122,8 @@ struct Conv2dOriginFormatAixsPosInfo {
     uint32_t wIndex = 0;
 };
 
+inline bool IsArch5162(const NpuArch shortSoc) { return shortSoc == Ops::Base::DAV_5162; }
+
 // the function used by judgeing operation type
 inline bool isQuantConv2D(const string& nodeType) { return nodeType == "QuantConv2D"; }
 

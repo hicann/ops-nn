@@ -86,6 +86,7 @@ protected:
     void GetCachedTilingData();
     void GetCachedTilingDataAux();
     void DoBasicBlock();
+    void RestoreKhConvTiling(uint64_t khConv);
     ge::graphStatus GetTilingFromFastTiling();
 
     // ASWT
@@ -221,6 +222,8 @@ private:
     ge::graphStatus CheckNullPtr();
     ge::graphStatus CheckOptionalInputLeagal();
     ge::graphStatus CheckExtendScaleLegal();
+    ge::graphStatus CheckExtendReluWeightLegal();
+    ge::graphStatus CheckExtendClipValueLegal();
     ge::graphStatus CheckExtendConv2dReluWeightAndClipValue(const uint32_t outputIdx, uint8_t& reluMode);
     ge::graphStatus CheckAttrsLeagal();
     ge::graphStatus CheckExtendReluLegal();
@@ -237,6 +240,8 @@ private:
     gert::Shape GetWeightShape(const gert::StorageShape* weightShapePtr) const;
     void SetUnionDataXt(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void PrintInputArgs(shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput);
+    void SetArch5162BufferSize();
+    uint64_t GetConvToL1Mode() const;
 };
 } // namespace conv_ops_tiling
 } // namespace optiling

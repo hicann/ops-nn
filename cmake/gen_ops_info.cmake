@@ -638,6 +638,10 @@ function(gen_ops_info_and_python)
       DESTINATION ${IMPL_INSTALL_DIR}/common/arch35
     )
     install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/arch51/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/arch51
+    )
+    install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/pool_utils/
       DESTINATION ${IMPL_INSTALL_DIR}/common/pool_utils
     )

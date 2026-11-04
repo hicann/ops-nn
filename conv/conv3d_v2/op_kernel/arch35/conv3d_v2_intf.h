@@ -94,6 +94,7 @@ struct Conv3dIntf {
     constexpr static bool groupOptNZFlag = false;
     constexpr static bool isConv3D = true;
     constexpr static bool groupOptPreloadFlag = false;
+    constexpr static int8_t convToL1Mode = static_cast<int8_t>(ConvToL1::CLOSE);
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     constexpr static bool preAllocateFlag = !(ConvParam::groupType ==

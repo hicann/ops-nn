@@ -98,6 +98,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, kAL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kBL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, khL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kwL1);
+TUNING_TILING_DATA_FIELD_DEF(uint32_t, khConv);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, multiNBL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, hoL0);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, woL0);
@@ -154,17 +155,17 @@ DECLARE_SCHEMA(
     FIELD(Conv2DV2TunnerTiling, singleCoreCo), FIELD(Conv2DV2TunnerTiling, singleCoreHo),
     FIELD(Conv2DV2TunnerTiling, singleCoreWo), FIELD(Conv2DV2TunnerTiling, hoL1), FIELD(Conv2DV2TunnerTiling, woL1),
     FIELD(Conv2DV2TunnerTiling, kAL1), FIELD(Conv2DV2TunnerTiling, kBL1), FIELD(Conv2DV2TunnerTiling, khL1),
-    FIELD(Conv2DV2TunnerTiling, kwL1), FIELD(Conv2DV2TunnerTiling, multiNBL1), FIELD(Conv2DV2TunnerTiling, hoL0),
-    FIELD(Conv2DV2TunnerTiling, woL0), FIELD(Conv2DV2TunnerTiling, kL0), FIELD(Conv2DV2TunnerTiling, nL0),
-    FIELD(Conv2DV2TunnerTiling, pBufferFlag), FIELD(Conv2DV2TunnerTiling, kernelHxkernelW),
-    FIELD(Conv2DV2TunnerTiling, cinAInCore), FIELD(Conv2DV2TunnerTiling, cinATailInCore),
-    FIELD(Conv2DV2TunnerTiling, oriHinxWin), FIELD(Conv2DV2TunnerTiling, cinOffsetBlockInGM),
-    FIELD(Conv2DV2TunnerTiling, mStep), FIELD(Conv2DV2TunnerTiling, fmapKStride), FIELD(Conv2DV2TunnerTiling, nStep),
-    FIELD(Conv2DV2TunnerTiling, kStep), FIELD(Conv2DV2TunnerTiling, weightKStride),
-    FIELD(Conv2DV2TunnerTiling, coutOffsetBlock), FIELD(Conv2DV2TunnerTiling, cinBInCore),
-    FIELD(Conv2DV2TunnerTiling, cinBTailInCore), FIELD(Conv2DV2TunnerTiling, nBL1),
-    FIELD(Conv2DV2TunnerTiling, nL1DivBlockSize), FIELD(Conv2DV2TunnerTiling, strideH),
-    FIELD(Conv2DV2TunnerTiling, strideW), FIELD(Conv2DV2TunnerTiling, dilationH),
+    FIELD(Conv2DV2TunnerTiling, kwL1), FIELD(Conv2DV2TunnerTiling, khConv), FIELD(Conv2DV2TunnerTiling, multiNBL1),
+    FIELD(Conv2DV2TunnerTiling, hoL0), FIELD(Conv2DV2TunnerTiling, woL0), FIELD(Conv2DV2TunnerTiling, kL0),
+    FIELD(Conv2DV2TunnerTiling, nL0), FIELD(Conv2DV2TunnerTiling, pBufferFlag),
+    FIELD(Conv2DV2TunnerTiling, kernelHxkernelW), FIELD(Conv2DV2TunnerTiling, cinAInCore),
+    FIELD(Conv2DV2TunnerTiling, cinATailInCore), FIELD(Conv2DV2TunnerTiling, oriHinxWin),
+    FIELD(Conv2DV2TunnerTiling, cinOffsetBlockInGM), FIELD(Conv2DV2TunnerTiling, mStep),
+    FIELD(Conv2DV2TunnerTiling, fmapKStride), FIELD(Conv2DV2TunnerTiling, nStep), FIELD(Conv2DV2TunnerTiling, kStep),
+    FIELD(Conv2DV2TunnerTiling, weightKStride), FIELD(Conv2DV2TunnerTiling, coutOffsetBlock),
+    FIELD(Conv2DV2TunnerTiling, cinBInCore), FIELD(Conv2DV2TunnerTiling, cinBTailInCore),
+    FIELD(Conv2DV2TunnerTiling, nBL1), FIELD(Conv2DV2TunnerTiling, nL1DivBlockSize),
+    FIELD(Conv2DV2TunnerTiling, strideH), FIELD(Conv2DV2TunnerTiling, strideW), FIELD(Conv2DV2TunnerTiling, dilationH),
     FIELD(Conv2DV2TunnerTiling, dilationW), FIELD(Conv2DV2TunnerTiling, padTop), FIELD(Conv2DV2TunnerTiling, padBottom),
     FIELD(Conv2DV2TunnerTiling, padLeft), FIELD(Conv2DV2TunnerTiling, padRight),
     FIELD(Conv2DV2TunnerTiling, iterateMNOrder), FIELD(Conv2DV2TunnerTiling, biasFullLoadFlag),

@@ -42,6 +42,7 @@ public:
         }
     }
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
     __aicore__ inline void LoadBL1() { LoadBL1(self_->ctx.kBL1Iter, self_->ctx.nBL1Iter); }
 
     __aicore__ inline void LoadBL1(uint64_t kBL1Iter, uint64_t nBL1Iter)
@@ -73,6 +74,9 @@ public:
         }
         DataCopyPad<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], dataCopyParams, padParams);
     }
+#else
+    __aicore__ inline void LoadBL1(IterateParam& iterParam);
+#endif
 
 private:
     Intf* self_ = nullptr;

@@ -86,6 +86,10 @@ enum class ConvInnerBatch : std::uint8_t { SINGLE_BATCH = 0, KERNEL_1X1_MULTI_BA
 
 enum class IsExtendConv2D : std::uint8_t { FALSE = 0, TRUE };
 
+enum class ClipMode : std::uint8_t { NOCLIPRELU = 0, SCALARCLIPRELU };
+
+enum class ConvToL1 : std::uint8_t { CLOSE = 0, OPEN_WEIGHT_BY_PASS, OPEN_WEIGHT_L1, OPEN_WEIGHT_L1_WITH_CUT_KERNEL };
+
 struct ConvParam {
     __aicore__ inline ConvParam(){};
     constexpr static int8_t fmapTiling = 0;
@@ -113,7 +117,7 @@ struct GetDstType<float> {
 
 template <>
 struct GetDstType<half> {
-#if defined(__DAV_35_FAMILY__)
+#if defined(__DAV_35_FAMILY__) || (__NPU_ARCH__ == 5162)
     using Type = int32_t;
 #else
     using Type = float;
@@ -157,8 +161,13 @@ struct ConvDataType {
     using BiasT = typename BIAS_TYPE::T;
     using ScaleT = typename SCALE_TYPE::T;
     using ReluWeightT = float;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
     using ClipValue0T = typename OUTPUT_TYPE::T;
     using ClipValue1T = typename CONV_CFG::Output1Dtype;
+#else
+    using ClipValue0T = typename CONV_CFG::ClipValue0Dtype;
+    using ClipValue1T = typename CONV_CFG::ClipValue1Dtype;
+#endif
     using L0cT = typename GetDstType<FmapT>::Type;
 
     constexpr static uint32_t configID = (uint32_t)ConvCfgTypeID::CONV_ID_Normal;
@@ -201,10 +210,7 @@ public:
         GlobalTensor<typename ConvDataType::ScaleT> scale1gm;
         GlobalTensor<typename ConvDataType::ReluWeightT> reluWeightGM;
         GlobalTensor<typename ConvDataType::ReluWeightT> reluWeight1GM;
-        TQue<QuePosition::A1, 1> queueBiasL1;       // BiasL1
-        TQue<QuePosition::A1, 1> queueScaleL1;      // ScaleL1
-        TQue<QuePosition::A1, 1> queueReluWeightL1; // ReluWeightL1
-        TQue<TPosition::C2, 1> queueBiasBT;         // BT
+        TQue<TPosition::C2, 1> queueBiasBT; // BT
         TQue<QuePosition::CO1, 1> queueCL0;
         TBuf<TPosition::A2> al0Buf;
         TBuf<TPosition::B2> bl0Buf;
@@ -220,6 +226,25 @@ public:
         LocalTensor<typename ConvDataType::L0cT> biasBT;
         LocalTensor<typename ConvDataType::L0cT> wholeCl0Tensor;
         LocalTensor<typename ConvDataType::L0cT> cl0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
+        TQue<QuePosition::A1, 1> queueBiasL1;       // BiasL1
+        TQue<QuePosition::A1, 1> queueScaleL1;      // ScaleL1
+        TQue<QuePosition::A1, 1> queueReluWeightL1; // ReluWeightL1
+#else
+        TQue<QuePosition::B1, 1> queueBiasL1;
+        TQue<QuePosition::B1, 1> queueScaleL1;
+        TQue<QuePosition::B1, 1> queueReluWeightL1;
+        TQue<TPosition::C2PIPE2GM, 1> queueScaleFB;
+        TQue<TPosition::C2PIPE2GM, 1> queueReluWeightFB;
+
+        LocalTensor<typename ConvDataType::ScaleT> scaleFB;
+        LocalTensor<typename ConvDataType::ReluWeightT> reluWeightFB;
+        LocalTensor<typename ConvDataType::OutputT> wholeL1ResTensor;
+        LocalTensor<typename ConvDataType::OutputT> l1Res;
+
+        uint16_t l1ResPingPongFlag = 0;
+        uint64_t clipValue0 = 0;
+#endif
 
         uint8_t enableBias = false; // 是否有bias
         uint8_t enableVectorQuant = false; // 是否有vector类型scale，双输出场景下任一scale为vector类型，即为true
@@ -397,6 +422,74 @@ public:
         uint16_t al1PingPongFlag = 0;
     };
 };
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+struct IterateParam {
+    uint64_t kIter = 0;
+    uint64_t batchIter = 0;
+    uint64_t kAL1Iter = 0;
+    uint64_t kBL1Iter = 0;
+    uint64_t nBL1Iter = 0;
+    uint64_t kAL0Iter = 0;
+    uint64_t kBL0Iter = 0;
+    uint64_t nL0Iter = 0;
+    uint64_t multiKAL1 = 1;
+    uint64_t multiKBL1 = 1;
+    uint64_t maxKAL1Iter = 0;
+    uint64_t maxKBL1Iter = 0;
+    uint64_t maxNBL1Iter = 0;
+    uint64_t maxKL0Iter = 0;
+    uint64_t maxNL0Iter = 0;
+    uint64_t l12l0LoopH = 0;
+    uint64_t l12l0LoopW = 0;
+    uint64_t hoAL1Tail = 0;
+    uint64_t woAL1Tail = 0;
+    uint64_t woL1SmallTail = 0;
+    uint64_t hoL0Tail = 0;
+    uint64_t woL0Tail = 0;
+    uint64_t currentHoL1 = 0;
+    uint64_t currentWoL1 = 0;
+    uint64_t currentHoL0 = 0;
+    uint64_t currentWoL0 = 0;
+    uint64_t kL0Tail = 0;
+    uint64_t nL0Tail = 0;
+    uint64_t kAL0Tail = 0;
+    uint64_t currentL1Hin = 0;
+    uint64_t currentNBL1 = 0;
+    uint64_t currentNL0Align = 0;
+    uint64_t currentML0Align = 0;
+    uint64_t khIter = 0;
+    uint64_t hoL0Iter = 0;
+    uint64_t woL0Iter = 0;
+    uint64_t hoAL1Iter = 0;
+    uint64_t woAL1Iter = 0;
+    uint64_t maxHoL0Iter = 0;
+    uint64_t maxWoL0Iter = 0;
+    uint64_t maxHoL1Iter = 0;
+    uint64_t maxWoL1Iter = 0;
+    uint64_t ddr2l1LoopBatch = 0;
+    uint64_t ddr2l1LoopN = 0;
+    uint64_t ddr2l1LoopH = 0;
+    uint64_t ddr2l1LoopW = 0;
+    uint64_t ddr2l0LoopK = 0;
+    uint64_t l12l0LoopN = 0;
+    int64_t hiStartPos = -1;
+    int64_t wiStartPos = 0;
+    uint64_t dilatedKernelH = 0;
+    uint64_t dilatedKernelW = 0;
+    uint64_t singleCoreWo = 0;
+    uint64_t singleCoreCi = 0;
+    uint64_t kAL1Tail = 0;
+    uint64_t nBL1Tail = 0;
+    uint64_t kBL1Tail = 0;
+    uint64_t maxAL1Iter = 0;
+    uint64_t maxKhIter = 0;
+    uint64_t khConvTail = 0;
+    uint64_t kBL1AlignK0Tail = 0;
+    uint16_t al1PingPongFlag = 0;
+    bool cubeWaitMte1Flag = false;
+};
+#endif
 
 } // namespace conv
 #endif
