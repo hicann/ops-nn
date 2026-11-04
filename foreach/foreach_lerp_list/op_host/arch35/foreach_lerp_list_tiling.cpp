@@ -72,12 +72,8 @@ static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int
     return ge::GRAPH_FAILED;
 }
 
-// The kernel indexes x1/x2/weight with the same tensorId and interprets both x2 and weight with DTYPE_X1,
-// so all three tensor lists must have the same instance count, per-element dtype and storage shape, and x1
-// must stay within the supported dimension limit. The output y is also written with DTYPE_X1, so its
-// per-element dtype must equal the x1 dtype and its storage shape must equal the x1 storage shape;
-// otherwise the kernel writes elements with the x1 element width and layout into a y buffer declared as
-// another dtype or a different shape, producing misaligned garbage or out-of-bounds writes.
+// x1/x2/weight must have the same instance count, dtype and storage shape. y must have the same
+// origin shape as x1; its storage may be larger but must hold numel(x1) elements.
 // GE/IR tiling does not validate this by itself.
 static ge::graphStatus CheckForeachLerpListInputConsistency(gert::TilingContext* context)
 {
@@ -143,8 +139,18 @@ static ge::graphStatus CheckForeachLerpListInputConsistency(gert::TilingContext*
             return ge::GRAPH_FAILED);
         auto yShapePtr = context->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
-        OP_CHECK_IF((yShapePtr->GetStorageShape() != x1Shape),
-                    OP_LOGE(context, "y[%lu] storage shape != x1 storage shape", i), return ge::GRAPH_FAILED);
+        const gert::Shape& x1OriginShape = x1ShapePtr->GetOriginShape();
+        const gert::Shape& yOriginShape = yShapePtr->GetOriginShape();
+        OP_CHECK_IF((x1OriginShape != yOriginShape), OP_LOGE(context, "y[%lu] origin shape != x1 origin shape", i),
+                    return ge::GRAPH_FAILED);
+        auto yShape = yShapePtr->GetStorageShape();
+        OP_CHECK_IF((yShape.GetDimNum() > static_cast<size_t>(MAX_SUPPORT_DIMS_NUMS)),
+                    OP_LOGE(context, "y[%lu] dim num %zu exceeds max %d", i, yShape.GetDimNum(), MAX_SUPPORT_DIMS_NUMS),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF((yShape.GetShapeSize() < x1Shape.GetShapeSize()),
+                    OP_LOGE(context, "y[%lu] shape size %ld < x1 shape size %ld", i, yShape.GetShapeSize(),
+                            x1Shape.GetShapeSize()),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF((x2ShapePtr->GetStorageShape() != x1Shape) || (weightShapePtr->GetStorageShape() != x1Shape),
                     OP_LOGE(context, "shape mismatch at index %lu among x1/x2/weight", i), return ge::GRAPH_FAILED);
     }

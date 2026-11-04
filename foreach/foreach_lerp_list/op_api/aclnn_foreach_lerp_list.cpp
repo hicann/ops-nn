@@ -108,6 +108,7 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
 
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_MAX_DIM((*x1)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_MAX_DIM((*out)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     for (uint64_t i = 0; i < x1->Size(); i++) {
@@ -115,8 +116,18 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*weight)[i], return false);
     }
 
+    // out must have the same view shape as x1; its storage must hold numel(x1) elements.
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*out)[i], return false);
+        int64_t x1StorageSize = (*x1)[i]->GetStorageShape().GetShapeSize();
+        int64_t outStorageSize = (*out)[i]->GetStorageShape().GetShapeSize();
+        if (outStorageSize < x1StorageSize) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The storage shape size of the %lu th tensor in tensor list out should be greater than or equal "
+                    "to that of the tensor in the same position of x1, x1 is %ld, out is %ld.",
+                    i, x1StorageSize, outStorageSize);
+            return false;
+        }
     }
     return true;
 }

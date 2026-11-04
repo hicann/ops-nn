@@ -88,8 +88,9 @@ TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_mixed_out_layouts)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
 }
 
-// out must match the corresponding x1 shape exactly; fewer elements are rejected with PARAM_INVALID.
-// x1/x2/weight are {2,4} while out is {2,3}, so the shapes (and element counts) differ.
+// out is rejected with PARAM_INVALID when its view shape differs from the corresponding x1.
+// x1/x2/weight are {2,4} while out is {2,3}, so out's view shape does not match and it also holds
+// fewer elements.
 TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_smaller_out_shape_size)
 {
     auto x1 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -106,15 +107,50 @@ TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_smaller_out_shape_size)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
-// Regression guard for the strict shape contract restored by the "out >= x1" rollback:
-// out must match the corresponding x1 shape exactly, so more elements alone are not accepted.
-// x1/x2/weight are {2,4} (8 elements) while out is {2,5} (10 elements); the shapes differ.
-TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_larger_out_shape_size)
+// out must keep the same view shape as x1. x1/x2/weight are {2,4} while out is {2,5}; even though
+// out holds more elements (10 > 8), its view shape ({2,5}) differs from x1's ({2,4}) and is rejected.
+TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_larger_out_view_shape_mismatch)
 {
     auto x1 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto x2 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
     auto weight = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
     auto out = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto weightList = TensorListDesc({weight});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachLerpList, INPUT(x1List, x2List, weightList), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// out must keep the same view shape as x1 even when the element count matches:
+// x1/x2/weight are {2,4} and out is {1,8}; both hold 8 elements, but out's view shape is not {2,4}.
+TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_same_numel_diff_view_shape)
+{
+    auto x1 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weight = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto weightList = TensorListDesc({weight});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachLerpList, INPUT(x1List, x2List, weightList), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// Even with enough elements, out rank above 8 is rejected with PARAM_INVALID.
+// x1/x2/weight are {2,4} (8 elements) while out is a 9-D tensor holding the same 8 elements.
+TEST_F(l2_foreach_lerp_list_test, foreach_lerp_list_test_out_exceeds_max_dim)
+{
+    auto x1 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weight = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto out = TensorDesc({1, 1, 1, 1, 1, 1, 1, 1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto x1List = TensorListDesc({x1});
     auto x2List = TensorListDesc({x2});
     auto weightList = TensorListDesc({weight});

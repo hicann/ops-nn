@@ -87,8 +87,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>x1（aclTensorList*）</td>
       <td>输入</td>
-      <td>表示进行线性插值计算的第一个输入张量列表。对应公式中的`x1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`weight`的shape一致。</li></ul></td>
+      <td>表示进行线性插值计算的第一个输入张量列表。对应公式中的<code>x1</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参<code>x2</code>、<code>weight</code>的shape一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -97,8 +97,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
-      <td>表示进行线性插值计算的第二个输入张量列表。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
+      <td>表示进行线性插值计算的第二个输入张量列表。对应公式中的<code>x2</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参<code>x1</code>一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -107,8 +107,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>weight（aclTensorList*）</td>
       <td>输入</td>
-      <td>表示进行线性插值计算的插值系数张量列表。对应公式中的`weight`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
+      <td>表示进行线性插值计算的插值系数张量列表。对应公式中的<code>weight</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参<code>x1</code>的数据类型、数据格式和shape一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -117,8 +117,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>out（aclTensorList*）</td>
       <td>输出</td>
-      <td>表示进行线性插值计算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式、shape和shape size与入参`x1`的数据类型、数据格式、shape和shape size一致。</li></ul></td>
+      <td>表示进行线性插值计算的输出张量列表。对应公式中的<code>y</code>。</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参<code>x1</code>的数据类型和数据格式一致，shape与入参<code>x1</code>一致，storage shape size不小于入参<code>x1</code>的storage shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>x1、x2、weight、out的TensorList长度不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2、weight、out的shape不一致（包括out的shape size与x1的shape size不一致）。</td>
+      <td>x1、x2、weight的shape不一致，或out的shape与x1不一致、out的storage shape size小于x1的storage shape size。</td>
     </tr>
     <tr>
       <td>x1、x2、weight、out中存在维度超过8维的Tensor。</td>
@@ -245,6 +245,7 @@ aclnnStatus aclnnForeachLerpList(
 
 - 数据格式：仅支持 ND 格式，不支持FRACTAL_Z、FRACTAL_NZ等私有格式。传入私有格式时，aclnnForeachLerpListGetWorkspaceSize接口返回161002（ACLNN_ERR_PARAM_INVALID）。
 - 维度与列表长度：每个Tensor的维度范围为0-8，超过8维时接口返回161002（ACLNN_ERR_PARAM_INVALID）；TensorList长度上限为256，超过上限时在内部tiling阶段返回561002（ACLNN_ERR_INNER_TILING_ERROR）。
+- out 的 shape 需与 x1 一致，且 storage shape size 不小于 x1。
 - 确定性计算：
   - aclnnForeachLerpList默认确定性实现。
 

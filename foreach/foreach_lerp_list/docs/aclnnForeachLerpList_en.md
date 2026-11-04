@@ -89,8 +89,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>x1 (aclTensorList*)</td>
       <td>Input</td>
-      <td>Indicates the first input tensor list for linear interpolation. Corresponds to `x1` in the formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The shape is consistent with the shapes of input parameters `x2` and `weight`.</li></ul></td>
+      <td>Indicates the first input tensor list for linear interpolation. Corresponds to <code>x1</code> in the formula.</td>
+      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The shape is consistent with the shapes of input parameters <code>x2</code> and <code>weight</code>.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -99,8 +99,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>x2 (aclTensorList*)</td>
       <td>Input</td>
-      <td>Indicates the second input tensor list for linear interpolation. Corresponds to `x2` in the formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type, data format, and shape are the same as those of input parameter `x1`.</li></ul></td>
+      <td>Indicates the second input tensor list for linear interpolation. Corresponds to <code>x2</code> in the formula.</td>
+      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type, data format, and shape are the same as those of input parameter <code>x1</code>.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -109,8 +109,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>weight (aclTensorList*)</td>
       <td>Input</td>
-      <td>Indicates the tensor list of interpolation coefficients used for linear interpolation. This parameter is `weight` in the corresponding formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type, data format, and shape are the same as those of input parameter `x1`.</li></ul></td>
+      <td>Indicates the tensor list of interpolation coefficients used for linear interpolation. This parameter is <code>weight</code> in the corresponding formula.</td>
+      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type, data format, and shape are the same as those of input parameter <code>x1</code>.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -119,8 +119,8 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
-      <td>Output tensor list for the linear interpolation computation. Corresponds to `y` in the formula.</td>
-      <td><ul><li>Does not support empty tensor.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are consistent with input parameter `x1`, and the shape size is greater than or equal to the shape size of input parameter `x1`.</li></ul></td>
+      <td>Output tensor list for the linear interpolation computation. Corresponds to <code>y</code> in the formula.</td>
+      <td><ul><li>Does not support empty tensor.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are consistent with input parameter <code>x1</code>, the shape is the same as that of input parameter <code>x1</code>, and the storage shape size is greater than or equal to the storage shape size of input parameter <code>x1</code>.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnForeachLerpList(
     <tr>
       <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="3">561002</td>
-      <td>The shapes of x1, x2, weight, and out do not meet the constraints.</td>
+      <td>The shapes or storage shape sizes of x1, x2, weight, and out do not meet the constraints.</td>
     </tr>
     <tr>
       <td>The data types of tensors in x1, x2, weight, or out are inconsistent.</td>
@@ -239,6 +239,7 @@ aclnnStatus aclnnForeachLerpList(
 
 ## Constraints
 
+- The shape of out must be the same as that of x1, and the storage shape size of out must be greater than or equal to that of x1.
 - Deterministic computation:
   - aclnnForeachLerpList defaults to a deterministic implementation.
 

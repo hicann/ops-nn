@@ -182,7 +182,7 @@ TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_dtype_
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
 }
 
-// Negative 6: y shape/element count differs from x1 -> must be rejected.
+// Negative 6: y has fewer elements than x1 -> must be rejected.
 TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_shape_mismatch)
 {
     ForeachLerpListCompileInfo compileInfo{48, 196608};
@@ -200,8 +200,9 @@ TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_shape_
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
 }
 
-// Negative 7: y has the same element count as x1 but a different storage shape -> must be rejected.
-TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_same_numel_diff_shape)
+// Negative: y's origin shape {1,6} differs from x1's {2,3}; even though both hold 6 elements,
+// the origin shapes must be identical, so it must be rejected.
+TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_origin_shape_same_numel_diff_shape)
 {
     ForeachLerpListCompileInfo compileInfo{48, 196608};
     gert::TilingContextPara para(
@@ -212,8 +213,85 @@ TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_same_n
             {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
         },
         {
-            {{{1, 6}, {1, 6}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // same 6 elements as x1, different shape
+            {{{1, 6}, {1, 6}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // same 6 elements as x1, different origin shape
         },
         std::vector<uint32_t>{1, 1, 1}, std::vector<uint32_t>{1}, &compileInfo, 48, 196608, 4096);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
+}
+
+// Negative: y's origin shape {2,4} differs from x1's {2,3}; even though y's storage size (8) is
+// larger than x1's (6), the origin shapes must be identical, so it must be rejected.
+TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_origin_shape_larger)
+{
+    ForeachLerpListCompileInfo compileInfo{48, 196608};
+    gert::TilingContextPara para("ForeachLerpList",
+                                 {
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                 },
+                                 {
+                                     {{{2, 4}, {2, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // storage size 8 >= x1's 6
+                                 },
+                                 std::vector<uint32_t>{1, 1, 1}, std::vector<uint32_t>{1}, &compileInfo, 48, 196608,
+                                 4096);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
+}
+
+// Positive: y keeps the same origin shape as x1 ({2,3}) while its storage shape is {2,4};
+// the storage shape size 8 >= x1's 6, so it must be accepted.
+TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_pos_y_storage_larger_origin_shape_same)
+{
+    ForeachLerpListCompileInfo compileInfo{48, 196608};
+    gert::TilingContextPara para(
+        "ForeachLerpList",
+        {
+            {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+            {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+            {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+        },
+        {
+            {{{2, 3}, {2, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // origin {2,3}, storage size 8 >= 6
+        },
+        std::vector<uint32_t>{1, 1, 1}, std::vector<uint32_t>{1}, &compileInfo, 48, 196608, 4096);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, 0, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+// Negative: y keeps the same origin shape as x1 ({2,3}), but x1's storage is {2,4} (size 8)
+// while y's storage is {2,3} (size 6 < 8), so it must be rejected.
+TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_storage_smaller_origin_shape_same)
+{
+    ForeachLerpListCompileInfo compileInfo{48, 196608};
+    gert::TilingContextPara para(
+        "ForeachLerpList",
+        {
+            {{{2, 3}, {2, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // origin {2,3}, storage size 8
+            {{{2, 3}, {2, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // origin {2,3}, storage size 8
+            {{{2, 3}, {2, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // origin {2,3}, storage size 8
+        },
+        {
+            {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // origin {2,3}, storage size 6 < 8
+        },
+        std::vector<uint32_t>{1, 1, 1}, std::vector<uint32_t>{1}, &compileInfo, 48, 196608, 4096);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
+}
+
+// Negative 7: y rank exceeds the supported maximum (8) -> must be rejected even with enough elements.
+TEST_F(ForeachLerpListArch35Tiling, foreach_lerp_list_arch35_tiling_neg_y_dim_too_high)
+{
+    ForeachLerpListCompileInfo compileInfo{48, 196608};
+    gert::TilingContextPara para("ForeachLerpList",
+                                 {
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     {{{2, 3}, {2, 3}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                 },
+                                 {
+                                     {{{1, 1, 1, 1, 1, 1, 1, 1, 6}, {1, 1, 1, 1, 1, 1, 1, 1, 6}},
+                                      ge::DT_FLOAT16,
+                                      ge::FORMAT_ND}, // 9-D, same 6 elements as x1
+                                 },
+                                 std::vector<uint32_t>{1, 1, 1}, std::vector<uint32_t>{1}, &compileInfo, 48, 196608,
+                                 4096);
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::vector<size_t>{});
 }
